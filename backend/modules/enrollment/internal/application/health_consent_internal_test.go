@@ -81,7 +81,7 @@ func TestValidateHealthConsent(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := validateHealthConsent(healthSchema(), tc.req)
+			err := validateHealthConsent(healthSchema(), tc.req, nil)
 
 			if !tc.refused {
 				assert.NoError(t, err)
@@ -116,4 +116,41 @@ func TestLegalBlocksSnapshotEntry_RecordsTheGuardianAgreement(t *testing.T) {
 	require.Len(t, entry.Blocks, 2)
 	assert.Equal(t, enrollmentNative.GuardianAgreementLabel, entry.Blocks[0].GuardianAgreementLabel)
 	assert.Empty(t, entry.Blocks[1].GuardianAgreementLabel)
+}
+
+// A request from before #2787 holds health answers without the flag. An edit
+// or a change request that keeps them unchanged, and its approval, pass; a new
+// or changed answer still needs the consent.
+func TestValidateHealthConsent_UnchangedStoredAnswerPasses(t *testing.T) {
+	t.Parallel()
+
+	stored := []*enrollmentNative.RequestChild{{ID: 7, CustomData: formValues(map[string]any{"gesundheit": "Nussallergie"})}}
+	unchanged := healthSubmission(" Nussallergie ", nil)
+	unchanged.Children[0].ID = 7
+	changed := healthSubmission("Nussallergie, Asthma", nil)
+	changed.Children[0].ID = 7
+	sibling := healthSubmission("Laktose", nil)
+	sibling.Children[0].ID = 8
+
+	assert.NoError(t, validateHealthConsent(healthSchema(), unchanged, stored))
+	for _, req := range []SubmitRequest{changed, sibling} {
+		var rejected *enrollmentNative.InvalidInputError
+		require.True(t, errors.As(validateHealthConsent(healthSchema(), req, stored), &rejected))
+		assert.Equal(t, enrollmentNative.CodeHealthConsentRequired, rejected.Code)
+	}
+}
+
+// Withdrawing the health consent through the status page while health
+// answers stay stored is refused; the full form withdraws both together.
+func TestValidateStoredHealthConsent(t *testing.T) {
+	t.Parallel()
+
+	withAnswer := []*enrollmentNative.RequestChild{{ID: 7, CustomData: formValues(map[string]any{"gesundheit": "Nussallergie"})}}
+	withoutAnswer := []*enrollmentNative.RequestChild{{ID: 7}}
+
+	var rejected *enrollmentNative.InvalidInputError
+	require.True(t, errors.As(validateStoredHealthConsent(healthSchema(), map[string]any{"health_data": false}, withAnswer), &rejected))
+	assert.Equal(t, enrollmentNative.CodeHealthConsentRequired, rejected.Code)
+	assert.NoError(t, validateStoredHealthConsent(healthSchema(), map[string]any{"health_data": true}, withAnswer))
+	assert.NoError(t, validateStoredHealthConsent(healthSchema(), map[string]any{}, withoutAnswer))
 }

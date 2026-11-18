@@ -263,7 +263,7 @@ func (s *Intake) editInTenant(ctx context.Context, token string, patch enrollmen
 	if err := applyEditPatch(lockedReq, patch); err != nil {
 		return err
 	}
-	if err := s.writeEditPatch(ctx, lockedReq, patch.ConsentFlags != nil); err != nil {
+	if err := s.writeEditPatch(ctx, lockedReq, children, patch.ConsentFlags != nil); err != nil {
 		return err
 	}
 	return s.markParentChanged(ctx, lockedReq.ID)
@@ -311,7 +311,7 @@ func applyEditPatch(req *enrollmentNative.Request, patch enrollmentNative.EditPa
 
 // writeEditPatch filters the patched guardian answers against the request's
 // immutable schema and the consent flags against its legal contract.
-func (s *Intake) writeEditPatch(ctx context.Context, req *enrollmentNative.Request, consentPatched bool) error {
+func (s *Intake) writeEditPatch(ctx context.Context, req *enrollmentNative.Request, children []*enrollmentNative.RequestChild, consentPatched bool) error {
 	var schema *enrollmentNative.FormSchema
 	if req.SchemaID != nil {
 		loaded, err := s.intakeSchema(ctx, *req.SchemaID)
@@ -343,6 +343,9 @@ func (s *Intake) writeEditPatch(ctx context.Context, req *enrollmentNative.Reque
 			return fmt.Errorf("edit: resolve legal blocks: %w", err)
 		}
 		req.ConsentFlags = formValues(filterConsentFlags(formMap(req.ConsentFlags), blocks))
+		if err := validateStoredHealthConsent(schema, formMap(req.ConsentFlags), children); err != nil {
+			return err
+		}
 	}
 	return s.deps.Requests.UpdateRequestGuardian(ctx, req, false)
 }

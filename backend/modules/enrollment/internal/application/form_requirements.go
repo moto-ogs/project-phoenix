@@ -449,34 +449,70 @@ func customDataField(childIdx int, key string) string {
 	return fmt.Sprintf("children.%d.custom_data.%s", childIdx, key)
 }
 
-// validateHealthConsent refuses health answers without the health consent
-// (Art. 9 Abs. 2 lit. a DSGVO, #2787). Without health answers the consent
-// is not needed: the enrollment never depends on it.
-func validateHealthConsent(schema *enrollmentNative.FormSchema, req SubmitRequest) error {
-	if !schema.AsksForHealthInformation() {
+// validateHealthConsent refuses new or changed health answers without the
+// health consent (Art. 9 Abs. 2 lit. a DSGVO, #2787). Without health answers
+// the consent is not needed: the enrollment never depends on it. An answer a
+// stored child already holds unchanged passes: requests from before #2787
+// carry health answers without the flag, and a change request or its
+// approval must not stall on them.
+func validateHealthConsent(schema *enrollmentNative.FormSchema, req SubmitRequest, existingChildren []*enrollmentNative.RequestChild) error {
+	if !schema.AsksForHealthInformation() || healthConsentGiven(req.ConsentFlags) {
 		return nil
 	}
-	if given, ok := req.ConsentFlags[enrollmentNative.ConsentKeyHealthData].(bool); ok && given {
-		return nil
+	stored := make(map[int64]string, len(existingChildren))
+	for _, child := range existingChildren {
+		stored[child.ID] = healthAnswers(schema, formMap(child.CustomData))
 	}
 	for idx, child := range req.Children {
-		if childHasHealthAnswer(schema, child) {
-			return enrollmentNative.InvalidInput(enrollmentNative.CodeHealthConsentRequired, "consent_flags."+enrollmentNative.ConsentKeyHealthData,
-				fmt.Errorf("%w: child %d has health information without the health consent", enrollmentNative.ErrInvalidSubmission, idx))
+		answers := healthAnswers(schema, child.CustomData)
+		if answers == "" {
+			continue
+		}
+		if previous, ok := stored[child.ID]; ok && child.ID > 0 && previous == answers {
+			continue
+		}
+		return healthConsentRequired(idx)
+	}
+	return nil
+}
+
+// validateStoredHealthConsent refuses a consent change that leaves stored
+// health answers without the health consent (#2787). The parent withdraws it
+// together with the answers through the full form.
+func validateStoredHealthConsent(schema *enrollmentNative.FormSchema, flags map[string]any, children []*enrollmentNative.RequestChild) error {
+	if !schema.AsksForHealthInformation() || healthConsentGiven(flags) {
+		return nil
+	}
+	for idx, child := range children {
+		if healthAnswers(schema, formMap(child.CustomData)) != "" {
+			return healthConsentRequired(idx)
 		}
 	}
 	return nil
 }
 
-func childHasHealthAnswer(schema *enrollmentNative.FormSchema, child SubmitChild) bool {
+func healthConsentGiven(flags map[string]any) bool {
+	given, ok := flags[enrollmentNative.ConsentKeyHealthData].(bool)
+	return ok && given
+}
+
+func healthConsentRequired(idx int) error {
+	return enrollmentNative.InvalidInput(enrollmentNative.CodeHealthConsentRequired, "consent_flags."+enrollmentNative.ConsentKeyHealthData,
+		fmt.Errorf("%w: child %d has health information without the health consent", enrollmentNative.ErrInvalidSubmission, idx))
+}
+
+// healthAnswers joins a child's non-empty health answers in field order; ""
+// when there are none.
+func healthAnswers(schema *enrollmentNative.FormSchema, custom map[string]any) string {
+	var parts []string
 	for i := range schema.Fields {
 		f := &schema.Fields[i]
 		if f.Target != enrollmentNative.TargetStudentHealthInfo {
 			continue
 		}
-		if answer, ok := child.CustomData[f.Key].(string); ok && strings.TrimSpace(answer) != "" {
-			return true
+		if answer, ok := custom[f.Key].(string); ok && strings.TrimSpace(answer) != "" {
+			parts = append(parts, f.Key+"="+strings.TrimSpace(answer))
 		}
 	}
-	return false
+	return strings.Join(parts, "\n")
 }
