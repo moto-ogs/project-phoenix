@@ -28,7 +28,7 @@ vi.mock("~/components/auth/sentry-session-context", () => ({
   SentrySessionContext: empty,
 }));
 vi.mock("~/lib/swr/scope-boundary", () => ({ SWRScopeBoundary: empty }));
-vi.mock("~/components/notifications/service-worker-registrar", () => ({
+vi.mock("~/components/notifications/push-subscription-sync", () => ({
   PushSubscriptionSync: empty,
 }));
 vi.mock("~/components/analytics/parent-portal-analytics-session", () => ({

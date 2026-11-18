@@ -15,6 +15,7 @@ import { SWRConfig } from "~/lib/swr/testing";
 import {
   PARENT_NOTIFICATION_FEED,
   useNotificationFeed,
+  useNotificationFeedUnread,
 } from "./use-notification-feed";
 
 vi.unmock("swr");
@@ -276,6 +277,37 @@ describe("notification feed reconciliation", () => {
       expect(feed.onUnreadCount).not.toHaveBeenCalled();
     },
   );
+});
+
+describe("bell badge shared by several views", () => {
+  it("loads the count once per live event, however many views show it", async () => {
+    api.parentNotificationFeedApi.fetchUnreadCount.mockResolvedValue(2);
+    // The bell in the head and the bottom bar read the same count.
+    const { result, unmount } = renderHook(
+      () => [
+        useNotificationFeedUnread(true, PARENT_NOTIFICATION_FEED),
+        useNotificationFeedUnread(true, PARENT_NOTIFICATION_FEED),
+      ],
+      { wrapper },
+    );
+    await advance();
+    expect(result.current.map((view) => view.unreadCount)).toEqual([2, 2]);
+    expect(
+      api.parentNotificationFeedApi.fetchUnreadCount,
+    ).toHaveBeenCalledTimes(1);
+
+    api.parentNotificationFeedApi.fetchUnreadCount.mockResolvedValue(3);
+    act(() => {
+      window.dispatchEvent(new CustomEvent("notification-feed-refresh"));
+    });
+    await advance(600);
+
+    expect(result.current.map((view) => view.unreadCount)).toEqual([3, 3]);
+    expect(
+      api.parentNotificationFeedApi.fetchUnreadCount,
+    ).toHaveBeenCalledTimes(2);
+    unmount();
+  });
 });
 
 describe("parents portal feed (#7140)", () => {

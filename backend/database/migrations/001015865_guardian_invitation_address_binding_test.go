@@ -28,19 +28,8 @@ func TestGuardianInvitationAddressBinding(t *testing.T) {
 		created := testpkg.CreateTestGuardianProfile(t, db, seed)
 		return created.ID, *created.Email
 	}
-	// Named limit (#7295): in production Identity & Access stamps expires_at
-	// on its own clock (CreateGuardianInvitation), but this migration's Up and
-	// its rollback (Down) judge it against statement_timestamp(), the
-	// database clock; the profile's updated_at is stamped by its trigger.
-	// Migration SQL stays unchanged, so the fixture places expiry on the
-	// clock the migration judges with. With the Go clock on another day an
-	// owner-stamped expiry would be judged on the wrong day by Up and Down.
-	databaseNow := func() time.Time {
-		t.Helper()
-		var now time.Time
-		require.NoError(t, db.NewRaw(`SELECT clock_timestamp()`).Scan(ctx, &now))
-		return now
-	}
+	// These fixtures use the clock the migration reads.
+	databaseNow := func() time.Time { return testpkg.DatabaseNow(t, db) }
 	// invitation plants a pre-migration row; issuedAgo places its last write
 	// before (positive) or after (negative) the profile's.
 	invitation := func(profileID int64, status string, accepted bool, issuedAgo time.Duration) int64 {
@@ -140,7 +129,18 @@ func TestGuardianInvitationAddressBinding(t *testing.T) {
 	_, err = db.NewRaw(`UPDATE users.guardian_profiles SET email = ? WHERE id = ?`,
 		fmt.Sprintf("changed-later-%d@example.test", time.Now().UnixNano()), unchangedProfile).Exec(ctx)
 	require.NoError(t, err)
+	// A legacy server one month behind PostgreSQL still sees this link as
+	// live even though its recorded expiry is before the database day.
+	legacyNow := databaseNow().AddDate(0, -1, 0)
+	legacy := invitation(unchangedProfile, "not_required", false, 0)
+	_, err = db.NewRaw(`UPDATE auth.guardian_invitations SET email = ?, expires_at = ? WHERE id = ?`,
+		unchangedEmail, legacyNow.Add(48*time.Hour), legacy).Exec(ctx)
+	require.NoError(t, err)
+
 	require.NoError(t, guardianInvitationAddressBindingDown(ctx, db))
+	var legacyExpiry time.Time
+	require.NoError(t, db.NewRaw(`SELECT expires_at FROM auth.guardian_invitations WHERE id = ?`, legacy).Scan(ctx, &legacyExpiry))
+	assert.False(t, legacyExpiry.After(legacyNow), "Down invalidates the changed-address link for the legacy server clock too")
 	var expires time.Time
 	require.NoError(t, db.NewRaw(`SELECT expires_at FROM auth.guardian_invitations WHERE id = ?`, bound).Scan(ctx, &expires))
 	assert.False(t, expires.After(databaseNow()), "Down ends a link whose address the profile no longer has")

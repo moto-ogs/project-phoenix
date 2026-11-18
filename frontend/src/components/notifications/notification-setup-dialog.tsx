@@ -30,9 +30,9 @@ import {
   needsIOSInstall,
   subscribePush,
   syncExistingPushSubscription,
-  verifyPushConfiguration,
   type PushPortal,
 } from "~/lib/push-api";
+import { usePushPublicKey } from "~/lib/hooks/use-push-public-key";
 import {
   canPromptInstall,
   isAndroidDevice,
@@ -109,6 +109,8 @@ export function NotificationSetupDialog({
     () => setupStorageKey(portal, accountId, tenantSlug),
     [accountId, portal, tenantSlug],
   );
+  // Shared with the session sync and the settings card: one read per page.
+  const pushKey = usePushPublicKey(portal);
   const [mode, setMode] = useState<SetupMode | null>(null);
   const [types, setTypes] = useState<NotificationPreferenceType[]>([]);
   const [busy, setBusy] = useState(false);
@@ -153,10 +155,13 @@ export function NotificationSetupDialog({
       return;
     }
 
+    // Every path below needs the server's answer about Web Push first.
+    if (pushKey.state === "loading") return;
+
     const inspect = async () => {
       if (needsIOSInstall()) {
         try {
-          await verifyPushConfiguration(portal);
+          pushKey.require();
           if (active) setMode("install-ios");
         } catch (err) {
           // Prüfung ohne Zutun der Person: scheitert sie, öffnet sich der
@@ -178,7 +183,7 @@ export function NotificationSetupDialog({
         !installAccepted
       ) {
         try {
-          await verifyPushConfiguration(portal);
+          pushKey.require();
           if (active) setMode("install-android");
         } catch (err) {
           // Prüfung ohne Zutun der Person: scheitert sie, öffnet sich der
@@ -199,9 +204,10 @@ export function NotificationSetupDialog({
       }
 
       try {
+        const publicKey = pushKey.require();
         const [preferences, subscription] = await Promise.all([
           fetchNotificationPreferences(portal),
-          syncExistingPushSubscription(portal),
+          syncExistingPushSubscription(portal, publicKey),
         ]);
         if (!active) return;
         if (!preferences.tenant_enabled) return;
@@ -230,6 +236,7 @@ export function NotificationSetupDialog({
     installationCompleted,
     installPromptReady,
     portal,
+    pushKey,
     restartToken,
     storageKey,
   ]);
@@ -276,7 +283,7 @@ export function NotificationSetupDialog({
     dialogErrors.clear();
     const preferences = tenantAdminKeys.notificationPreferences(portal);
     try {
-      const pushRequest = subscribePush(portal);
+      const pushRequest = subscribePush(portal, pushKey.load);
       const preferenceRequests = types
         .filter((type) => type.available && !type.enabled)
         .map((type) => setNotificationPreference(type.key, true, portal));
