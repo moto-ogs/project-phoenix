@@ -1,162 +1,6 @@
 {
   "entries": [
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "reason": "Read-only newly exposed target: workforce reaches api/common.UploadStorage.Open (tenant-runtime) through api/common.UploadStorage.Open. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.UploadFiles.Open (delivery-platform) through api/common.UploadStorage.Open. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.UploadFiles.Open (delivery-platform) through modules/delivery/objects.UploadFiles.Open. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "reason": "Read-only newly exposed target: workforce reaches api/common.UploadStorage.PublicDir (tenant-runtime) through api/common.UploadStorage.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.UploadFiles.PublicDir (delivery-platform) through api/common.UploadStorage.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.UploadFiles.PublicDir (delivery-platform) through modules/delivery/objects.UploadFiles.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "classification": "platform",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "reason": "Platform protocol participation (mutation): workforce reaches api/common.UploadStorage.RemoveUpload (tenant-runtime) through api/common.UploadStorage.RemoveUpload. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "classification": "platform",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/delivery/objects.UploadFiles.RemoveUpload (delivery-platform) through api/common.UploadStorage.RemoveUpload. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.RemoveUpload",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.RemoveUpload",
-      "classification": "platform",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/delivery/objects.UploadFiles.RemoveUpload (delivery-platform) through modules/delivery/objects.UploadFiles.RemoveUpload. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.RemoveUpload",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "classification": "platform",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "reason": "Platform protocol participation (mutation): workforce reaches api/common.UploadStorage.SaveNamed (tenant-runtime) through api/common.UploadStorage.SaveNamed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "classification": "platform",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/delivery/objects.UploadFiles.SaveNamed (delivery-platform) through api/common.UploadStorage.SaveNamed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.SaveNamed",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.SaveNamed",
-      "classification": "platform",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/delivery/objects.UploadFiles.SaveNamed (delivery-platform) through modules/delivery/objects.UploadFiles.SaveNamed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.SaveNamed",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "reason": "Read-only newly exposed target: workforce reaches api/common.UploadStorage.StoredPath (tenant-runtime) through api/common.UploadStorage.StoredPath. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.UploadFiles.StoredPath (delivery-platform) through api/common.UploadStorage.StoredPath. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.StoredPath",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.StoredPath",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.UploadFiles.StoredPath (delivery-platform) through modules/delivery/objects.UploadFiles.StoredPath. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.StoredPath",
-      "target_owner": "delivery-platform"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/planexport.service.ExportBetreuungsplan",
       "classification": "query",
       "effect": "query",
@@ -9127,33 +8971,14 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDocumentUploads.PublicDir",
-      "reason": "Read-only newly exposed target: workforce reaches api/common.UploadStorage.PublicDir (tenant-runtime) through api/common.UploadStorage.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.RemovePrivate",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDocumentObjectRemover.RemovePrivate",
+      "reason": "Remove only the named staff document; Workforce retains the durable cleanup intent until the object is gone.",
       "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDocumentUploads.PublicDir",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.UploadFiles.PublicDir (delivery-platform) through api/common.UploadStorage.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDocumentUploads.PublicDir",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.UploadFiles.PublicDir (delivery-platform) through modules/delivery/objects.UploadFiles.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.RemovePrivate",
       "target_owner": "delivery-platform"
     },
     {
@@ -17325,44 +17150,24 @@
       "target_owner": "shift-plan-sync"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.OpenPrivate",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.OpenPrivate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.PrivateUploads.OpenPrivate (delivery-platform) through modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate. No persistent, lock or scope effect; opens sealed objects of #3840 (ADR 0098).",
+      "reason": "Read object bytes after Workforce has authorized the document; Delivery opens sealed bytes without changing storage.",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.OpenPrivate",
       "target_owner": "delivery-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.OpenPrivate",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.SealedPrivateUploadsBackend (delivery-platform) through modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate. No persistent, lock or scope effect; opens sealed objects of #3840 (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.SealedPrivateUploadsBackend",
-      "target_owner": "delivery-platform"
-    },
-    {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.SaveSealed",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.SaveSealed",
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/delivery/objects.PrivateUploads.SaveSealed (delivery-platform) through modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Sealed write of #3840.",
+      "reason": "Write the staff document under its existing tenant key with the category's sealing ring. Workforce retains the cleanup intent when the write or metadata transaction fails.",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.SaveSealed",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.SaveSealed",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.SealedPrivateUploadsBackend (delivery-platform) through modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed. No persistent, lock or scope effect; opens sealed objects of #3840 (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.SealedPrivateUploadsBackend",
       "target_owner": "delivery-platform"
     },
     {

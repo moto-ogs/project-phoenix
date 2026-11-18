@@ -8,6 +8,7 @@ import (
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	email "github.com/moto-ogs/project-phoenix/modules/delivery/mail"
+	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	identityBindingPorts "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports"
@@ -35,7 +36,7 @@ type IdentityMailState func(ctx context.Context, tenantID, id int64) (deliveryCo
 // flows, the demo access and the caller context. Delivery is built first,
 // so the guardian and staff mails enqueue into its outbox directly.
 func BuildIdentityAccess(
-	db transactionruntime.Database, unit rootUnitOfWork, env RootEnvironment, tokens TokenAdapter,
+	db transactionruntime.Database, unit rootUnitOfWork, env RootEnvironment, tokens TokenAdapter, uploads nativeUploads.UploadFiles,
 	organizations organizationtenancy.Capability, persons peopledirectory.Capability, membership schoolmembership.Capability,
 	settings settingsCompose.BatchSettingsService, audit AuditOwner, operatorAuditLog OperatorAuditEntries,
 	mailSender email.Mailer, mailDispatcher email.Dispatcher, mailFrom email.Email, deliveryRuntime *deliveryCompose.Runtime, mailIdentity email.ReplyToResolver, outbox IdentityMailOutbox,
@@ -49,8 +50,7 @@ func BuildIdentityAccess(
 		return nil, nil, fmt.Errorf("identity access: transactional outbox is required")
 	}
 	cfg, links := env.Config, env.Links
-	authLogger := env.Logger.With("service", "auth")
-	platformLogger := env.Logger.With("service", "platform")
+	authLogger, platformLogger := env.Logger.With("service", "auth"), env.Logger.With("service", "platform")
 	tenantDomain, operatorFrontendURL, err := identityPortalHosts(cfg.TenantDomain, cfg.OperatorHostname, links.FrontendURL)
 	if err != nil {
 		return nil, nil, err
@@ -116,7 +116,8 @@ func BuildIdentityAccess(
 	// The deliveries record their outcome through the recorder the
 	// composition hands them at construction.
 	module, err := NewIdentityAccessWithSessions(identityaccessCompose.Dependencies{
-		DB: db.Pool(), Observe: requiredIdentityAccessObservation(env.Observe.IdentityAccess), TenantRuntime: unit, Now: env.Now,
+		RemoveErasedAvatarFile: uploads.RemoteAccountAvatarRemover(),
+		DB:                     db.Pool(), Observe: requiredIdentityAccessObservation(env.Observe.IdentityAccess), TenantRuntime: unit, Now: env.Now,
 		MFA: mfa, Lifecycle: lifecycle, Operators: operators, Demo: demo,
 		Resets: PasswordResetDependencies(&PasswordResetWiring{
 			Dispatcher: mailDispatcher, DefaultFrom: mailFrom, Durable: durable,

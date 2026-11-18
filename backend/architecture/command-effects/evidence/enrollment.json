@@ -3082,7 +3082,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment.RequestUploads.SweepUploadObjects",
-      "binding_digest": "e556d3ccd40c564aa6df35a77a1604b9",
+      "binding_digest": "cc4de57dd30488d2b6b8613475a5c3c3",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.UploadObjectSweep.SweepUploadObjects",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Coordinator.Remove",
@@ -3090,15 +3090,15 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment.RequestUploads.SweepUploadObjects",
-      "binding_digest": "60a3ef249601d0548faa8a0688cbb4a8",
+      "binding_digest": "872573de7f34183512c791d99edb88b4",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.UploadObjectSweep.SweepUploadObjects",
       "source_owner": "enrollment",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploadsBackend",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Private",
       "target_owner": "delivery-platform"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment.RequestUploads.SweepUploadObjects",
-      "binding_digest": "60a3ef249601d0548faa8a0688cbb4a8",
+      "binding_digest": "231d611d39f178faddb7414a52186f78",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.UploadObjectSweep.SweepUploadObjects",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/filestorage/compose.NewDocumentCoordinator",

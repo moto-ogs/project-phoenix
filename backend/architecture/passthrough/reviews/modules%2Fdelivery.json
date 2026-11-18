@@ -26,6 +26,16 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0292",
+      "id": "modules/delivery/internal/adapters/s3objects/Backend.RemoveObject",
+      "reason": "Validates the key and translates an already absent object into a successful idempotent removal."
+    },
+    {
+      "decision": "0292",
+      "id": "modules/delivery/internal/adapters/s3objects/Backend.TenantObjects",
+      "reason": "Validates the tenant prefix and bucket versioning before listing, counting or deleting matching keys."
+    },
+    {
       "decision": "0090",
       "id": "modules/delivery/internal/application/Runtime.EmailStatus",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."

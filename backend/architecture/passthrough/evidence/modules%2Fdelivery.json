@@ -37,6 +37,20 @@
     },
     {
       "build": "production",
+      "evidence": "func (s *Backend) RemoveObject(ctx context.Context, key string) error {\n\tif err := validateKey(key); err != nil {\n\t\treturn err\n\t}\n\terr := objectError(ctx, \"remove\", s.client.RemoveObject(ctx, s.bucket, key, minio.RemoveObjectOptions{}))\n\tif errors.Is(err, contract.ErrNotFound) {\n\t\treturn nil\n\t}\n\treturn err\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/delivery/internal/adapters/s3objects/Backend.RemoveObject",
+      "owner": "modules/delivery"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s *Backend) TenantObjects(ctx context.Context, kind, layout string, tenantID int64, remove bool) (int64, error) {\n\tprefix, err := contract.TenantObjectPrefix(kind, layout, tenantID)\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\tif err := s.requireUnversionedBucket(ctx); err != nil {\n\t\treturn 0, err\n\t}\n\tlist := s.client.ListObjectsIter(ctx, s.bucket, minio.ListObjectsOptions{Prefix: prefix, Recursive: true})\n\tif !remove {\n\t\treturn countObjects(list)\n\t}\n\treturn s.removeObjects(ctx, list)\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/delivery/internal/adapters/s3objects/Backend.TenantObjects",
+      "owner": "modules/delivery"
+    },
+    {
+      "build": "production",
       "evidence": "func (r *Runtime) EmailStatus(ctx context.Context, tenantID, id int64) (deliveryContract.State, bool, error) {\n\tif r == nil || r.Store == nil {\n\t\treturn \"\", false, errors.New(\"delivery compose: service is not initialized\")\n\t}\n\tif tenantID \u003c= 0 || id \u003c= 0 {\n\t\treturn \"\", false, errors.New(\"delivery compose: tenant and e-mail intent are required\")\n\t}\n\tintent, found, err := r.Store.EmailStatus(ctx, tenantID, id)\n\tif err != nil || !found {\n\t\treturn \"\", found, err\n\t}\n\treturn deliveryContract.State(intent.Status), true, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/delivery/internal/application/Runtime.EmailStatus",

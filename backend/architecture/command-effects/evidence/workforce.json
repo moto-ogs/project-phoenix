@@ -1,126 +1,6 @@
 {
   "entries": [
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "binding_digest": "18c12c313c2909e3834f6ec7007699e0",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "binding_digest": "8f54725846cab6b43fce8c6e218211e1",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
-      "binding_digest": "8f54725846cab6b43fce8c6e218211e1",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "binding_digest": "ae153405bd75ecff75190c3ecebdb96f",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "binding_digest": "7d17a8427057e6abfda5ba1a6a18d2ee",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "binding_digest": "7d17a8427057e6abfda5ba1a6a18d2ee",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "binding_digest": "898708533b442531816204abf4738cdf",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "binding_digest": "d1d97f460a300724545069d0d80a70a1",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.RemoveUpload",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.RemoveUpload",
-      "binding_digest": "d1d97f460a300724545069d0d80a70a1",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.RemoveUpload",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "binding_digest": "7076d0f72752f589db04698a7aadf912",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "binding_digest": "95d7193af813ebd6283c6058ee42beed",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.SaveNamed",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.SaveNamed",
-      "binding_digest": "95d7193af813ebd6283c6058ee42beed",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.SaveNamed",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "binding_digest": "185a5fb1c655532e6986ffc02fc3666c",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "binding_digest": "d97b0fdd3e730e9e004327d413a93662",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.StoredPath",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.StoredPath",
-      "binding_digest": "d97b0fdd3e730e9e004327d413a93662",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.StoredPath",
-      "target_owner": "delivery-platform"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/planexport.service.ExportBetreuungsplan",
       "binding_digest": "2b205a71d6fb50f1c62de9c241721691",
       "port": "github.com/moto-ogs/project-phoenix/modules/planexport.Service.ExportBetreuungsplan",
@@ -6577,27 +6457,11 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "binding_digest": "ae153405bd75ecff75190c3ecebdb96f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDocumentUploads.PublicDir",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.RemovePrivate",
+      "binding_digest": "053cef465e23a2a3f1fbdf0bd54d1d4b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDocumentObjectRemover.RemovePrivate",
       "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "binding_digest": "7d17a8427057e6abfda5ba1a6a18d2ee",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDocumentUploads.PublicDir",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "binding_digest": "7d17a8427057e6abfda5ba1a6a18d2ee",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDocumentUploads.PublicDir",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.RemovePrivate",
       "target_owner": "delivery-platform"
     },
     {
@@ -12449,35 +12313,19 @@
       "target_owner": "shift-plan-sync"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.OpenPrivate",
-      "binding_digest": "a7f79a17ef6a8297645b965f4660e831",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.OpenPrivate",
+      "binding_digest": "e94f6166fdc322188c19c92b118d8d70",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.OpenPrivate",
       "target_owner": "delivery-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.OpenPrivate",
-      "binding_digest": "78b1a3796dffb15c22cc96be2ef2d33c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.SealedPrivateUploadsBackend",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.SaveSealed",
-      "binding_digest": "8d25ca4dce6a671a9053e22112a60a10",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.SaveSealed",
+      "binding_digest": "08b7d4f5949c1eb0f29992631c001124",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.SaveSealed",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.SaveSealed",
-      "binding_digest": "ae9f51937676866baaea51b5d52a8609",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.SealedPrivateUploadsBackend",
       "target_owner": "delivery-platform"
     },
     {

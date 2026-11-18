@@ -7,6 +7,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 )
 
 // TenantObjects counts or removes a complete tenant namespace, including
@@ -14,8 +16,8 @@ import (
 // OpenRoot confines traversal; symlinks and special files fail closed. No
 // filename or underlying filesystem error is exposed to evidence or logs.
 func (l *Local) TenantObjects(ctx context.Context, kind, layout string, tenantID int64, remove bool) (int64, error) {
-	if tenantID <= 0 || kind == "" || strings.ContainsAny(kind, "/\\.") || (layout != "tenantDir" && layout != "tenantPrefix") {
-		return 0, ErrInvalidKey
+	if _, err := contract.TenantObjectPrefix(kind, layout, tenantID); err != nil {
+		return 0, err
 	}
 	root, err := os.OpenRoot(l.Root)
 	if err != nil {
@@ -144,4 +146,20 @@ func visitTenantEntry(ctx context.Context, root *os.Root, name, prefix string, r
 		}
 	}
 	return count, nil
+}
+
+// TenantObjectSources lets maintenance include a retained local uploads root
+// in the same erasure as the live bucket during cutover.
+type TenantObjectSources []UploadBackend
+
+func (s TenantObjectSources) TenantObjects(ctx context.Context, kind, layout string, tenantID int64, remove bool) (int64, error) {
+	var total int64
+	for _, source := range s {
+		count, err := source.TenantObjects(ctx, kind, layout, tenantID, remove)
+		total += count
+		if err != nil {
+			return total, err
+		}
+	}
+	return total, nil
 }

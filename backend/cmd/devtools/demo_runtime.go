@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/objects"
+	uploadCompose "github.com/moto-ogs/project-phoenix/modules/delivery/objects/compose"
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	organizationcompose "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/compose"
 	presencecompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
@@ -154,7 +156,11 @@ func newDemoCleanup(db transactionruntime.Database, now func() time.Time, upload
 	if err != nil {
 		return nil, nil, err
 	}
-	erasure, err := organizationcompose.NewDemoSchoolErasure(db.Pool(), objects.NewLocal(uploadsRoot))
+	backend, err := uploadCompose.NewBackend(context.Background(), objects.UploadStorageConfigFrom(os.Getenv), uploadsRoot)
+	if err != nil {
+		return nil, nil, err
+	}
+	erasure, err := organizationcompose.NewDemoSchoolErasure(db.Pool(), backend)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -88,7 +88,6 @@ var moduleFuncLenAllowlist = map[string]int{
 	"api/root_test_root.go:composeTestRootWith":                          282,
 	"api/serve_mounts_students.go:mountStudentRoutes":                    117,
 	"api/serve_mounts_students.go:requestReviewDependencies":             100,
-	"api/settings_composition.go:newSettingsResource":                    61,
 	"api/student_owner_http_test_helpers.go:NewStudentHTTPTestResources": 164,
 	"api/student_owner_http_test_helpers.go:newStudentHTTPTestReviews":   103,
 	"api/student_test_helpers.go:newStudentTestModule":                   315,
@@ -592,7 +591,7 @@ var moduleFuncLenAllowlist = map[string]int{
 	"roots/owners/root_identity.go:BuildIdentityAccess":                                      106,
 	// ADR 0078: the worker composes the Meal Plan whose orders it settles.
 	// ADR 0263: the worker hands its clock to the Timetable owner (+3).
-	"roots/owners/root_worker.go:ComposeWorker": 350,
+	"roots/owners/root_worker.go:ComposeWorker": 349,
 	// ADR 0110: the worker passes the retention of the public holiday
 	// registrations.
 	"roots/owners/worker.go:NewWorker": 87,

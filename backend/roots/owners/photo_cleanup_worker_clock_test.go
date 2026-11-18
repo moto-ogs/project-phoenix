@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	fileStorageCompose "github.com/moto-ogs/project-phoenix/modules/filestorage/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -34,7 +35,7 @@ func TestFileStoreCleanerSweepsOnTheWorkersClock(t *testing.T) {
 	before := testpkg.DatabaseNow(t, admin)
 	var removed int
 	require.NoError(t, testpkg.WithinTenantTransaction(ctx, admin, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
-		removed, err = newFileStoreCleaner(db, nil, slog.New(slog.DiscardHandler), now)(txCtx)
+		removed, err = newFileStoreCleaner(db, nil, slog.New(slog.DiscardHandler), now, nativeUploads.UploadFiles{})(txCtx)
 		return err
 	}))
 	after := testpkg.DatabaseNow(t, admin)

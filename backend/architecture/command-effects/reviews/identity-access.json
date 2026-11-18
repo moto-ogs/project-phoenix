@@ -7061,6 +7061,16 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.CleanupErasedAccountAvatars",
+      "classification": "",
+      "effect": "unknown",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.CleanupErasedAccountAvatars",
+      "reason": "",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.RemoteAccountAvatarRemover",
+      "target_owner": "delivery-platform"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.CleanupErasedAccountAvatars",
       "classification": "platform",

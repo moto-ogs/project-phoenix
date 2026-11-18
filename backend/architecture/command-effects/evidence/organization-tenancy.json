@@ -73,6 +73,22 @@
       "target_owner": "delivery-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.UploadBackend.TenantObjects",
+      "binding_digest": "2520797cda913eaa266c04fa6a94f736",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ErasureFiles.TenantObjects",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.UploadBackend.TenantObjects",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.TenantObjectSources.TenantObjects",
+      "binding_digest": "4fa982bc457e3abe2dd7f635bbf24b46",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ErasureFiles.TenantObjects",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.TenantObjectSources.TenantObjects",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/operatordashboard/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DashboardCounts, github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DashboardOrganization, github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DashboardSchool, github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DashboardPWAUsage].AllSchoolsPWAUsage",
       "binding_digest": "07cc4d00b9155d85639ca8d58a2892f8",
       "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.OperatorDashboard.AllSchoolsPWAUsage",
