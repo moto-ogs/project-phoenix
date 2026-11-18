@@ -634,7 +634,8 @@ const DESKTOP_ONLY_VARIANT_RE = /^(?:lg|xl|2xl|print|min-\[)/;
 function hasPhoneFixed(text) {
   return text.split(/\s+/).some((token) => {
     const variants = token.split(":");
-    if (variants.pop() !== "fixed") return false;
+    // `!fixed` (v3) and `fixed!` (v4) are the important forms of the same utility.
+    if (variants.pop()?.replace(/^!|!$/g, "") !== "fixed") return false;
     return !variants.some((variant) => DESKTOP_ONLY_VARIANT_RE.test(variant));
   });
 }

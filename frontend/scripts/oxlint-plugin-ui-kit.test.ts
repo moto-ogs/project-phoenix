@@ -62,10 +62,11 @@ describe.concurrent("ui-kit/fixed-layer-follows-viewport", () => {
         'export const D = () => <div className={open ? "fixed inset-0" : FIXED_LAYER_SHIFT} />;',
         'export const F = () => <div className="max-sm:fixed max-sm:inset-0" />;',
         'export const G = () => <div className="md:fixed md:inset-0" />;',
+        'export const H = () => <div className="max-sm:fixed! max-sm:inset-0" />;',
       ].join("\n"),
       "src/components/students/probe-fixed.tsx",
     );
-    expect(reports(output)).toBe(7);
+    expect(reports(output)).toBe(8);
   });
 
   it("accepts the shift, lg:fixed, enum values and prose", async () => {
