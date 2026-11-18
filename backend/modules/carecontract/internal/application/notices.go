@@ -45,8 +45,8 @@ var _ carecontract.Notices = (*Notices)(nil)
 type NoticePorts struct {
 	Templates carecontract.NoticeTemplates
 	Post      carecontract.NoticePost
-	// Sender reads the complete letterhead before a confirmation goes to the
-	// Delivery outbox.
+	// Sender reads the complete letterhead before the office's recording of
+	// a received letter is confirmed; the parents' button does not need it.
 	Sender carecontract.TraegerSender
 	// Addressees is required for the office's decided end, unused by the
 	// parents portal.
@@ -348,12 +348,8 @@ func (n *Notices) confirm(ctx context.Context, record ContractRecord, d declarat
 			return err
 		}
 	}
-	letterhead, err := n.sender.TraegerLetterhead(ctx, d.organizationID)
-	if err != nil {
-		return fmt.Errorf("care contract: letterhead: %w", err)
-	}
-	if letterheadMissing(letterhead) {
-		return carecontract.ErrLetterheadMissing
+	if err := n.requireOfficeLetterhead(ctx, d); err != nil {
+		return err
 	}
 	traeger := strings.TrimSpace(firstText(d.traeger, record.Version.Terms.ContractPartner))
 	template, err := n.templates.NoticeTemplate(ctx, d.organizationID, templateKind(*notice))
@@ -388,7 +384,28 @@ func (n *Notices) confirm(ctx context.Context, record ContractRecord, d declarat
 	return trailContract(ctx, n.store, d.organizationID, d.accountID, record, action, details)
 }
 
-// noticeTrail is the trail entry of a declaration: its kind, channel and
+// requireOfficeLetterhead refuses the office's recording of a received
+// letter while the Träger has no complete letterhead: the office names the
+// Träger in the confirmation from its first line and can repair it and
+// record again (#7177). The parents' button never waits for it: their
+// confirmation names the Träger's organization, and a withdrawal or
+// termination by the button must not depend on the Träger's settings
+// (§ 312k BGB), nor may the withdrawal period run out meanwhile.
+func (n *Notices) requireOfficeLetterhead(ctx context.Context, d declaration) error {
+	if d.channel != carecontract.NoticeChannelOffice {
+		return nil
+	}
+	letterhead, err := n.sender.TraegerLetterhead(ctx, d.organizationID)
+	if err != nil {
+		return fmt.Errorf("care contract: letterhead: %w", err)
+	}
+	if letterheadMissing(letterhead) {
+		return carecontract.ErrLetterheadMissing
+	}
+	return nil
+}
+
+// noticeTrailis the trail entry of a declaration: its kind, channel and
 // days, and the mail that confirmed it. The reason stays with the
 // declaration; the trail names only the kind.
 func noticeTrail(notice ports.NewNotice, channel string, versionID, noticeID, outboxID int64) (string, map[string]any) {

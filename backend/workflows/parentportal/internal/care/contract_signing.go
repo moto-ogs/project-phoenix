@@ -26,6 +26,9 @@ var (
 	// ErrContractWithdrawalNoticeRequired reports a signature without the
 	// confirmation of the withdrawal notice.
 	ErrContractWithdrawalNoticeRequired = errors.New("parent: withdrawal notice must be confirmed")
+	// ErrContractLetterheadMissing reports a signature while the Träger has
+	// no complete letterhead for the confirmation of the contract (#7177).
+	ErrContractLetterheadMissing = errors.New("parent: the Träger has no letterhead for the contract")
 )
 
 // ContractSignatureInput is the signature as the parents give it.
