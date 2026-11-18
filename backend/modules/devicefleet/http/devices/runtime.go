@@ -32,6 +32,14 @@ type Runtime struct {
 	// AuditStatusChange records one effective status change with the acting
 	// account: a block, an unblock or another status (#2317).
 	AuditStatusChange func(r *http.Request, entry StatusAudit)
+	// History records and reads the Gerätelebenszyklus (#2321): every
+	// effective change writes an entry in the request's transaction.
+	History devicefleet.LifecycleHistory
+	// Actor is the staff account behind the request.
+	Actor func(*http.Request) int64
+	// ActorNames names the school's staff accounts a history shows, in one
+	// read; an account without a person is left out.
+	ActorNames func(context.Context, []int64) (map[int64]string, error)
 	// Now is the root's clock the statistics and scan answers are stamped
 	// with.
 	Now func() time.Time

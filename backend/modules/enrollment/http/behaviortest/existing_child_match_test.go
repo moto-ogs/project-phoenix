@@ -96,9 +96,11 @@ func parentAccountLinkedTo(t *testing.T, db *bun.DB, studentID int64, role strin
 }
 
 type existingChildSubmission struct {
-	accountID *int64
-	email     string
-	children  []enrollmentAPI.SubmitChild
+	// healthConsent ticks the health consent of a form asking health information (#2787).
+	healthConsent bool
+	accountID     *int64
+	email         string
+	children      []enrollmentAPI.SubmitChild
 }
 
 func submitChild(firstName, lastName string, birthday calendar.Date) enrollmentAPI.SubmitChild {
@@ -112,6 +114,10 @@ func (env *existingChildEnv) submit(t *testing.T, in existingChildSubmission) *e
 	if email == "" {
 		email = "existing-child@example.com"
 	}
+	flags := rolloverConsentFlags()
+	if in.healthConsent {
+		flags["health_data"] = true
+	}
 	res, err := env.matching.Submit(testpkg.Ctx(t), enrollmentAPI.SubmitRequest{
 		TenantID:               testpkg.Tenant(t),
 		PhaseID:                env.sourcePhase.ID,
@@ -120,7 +126,7 @@ func (env *existingChildEnv) submit(t *testing.T, in existingChildSubmission) *e
 		GuardianEmail:          email,
 		GuardianAccountID:      in.accountID,
 		GuardianSubmitEligible: in.accountID != nil,
-		ConsentFlags:           testFormValues(rolloverConsentFlags()),
+		ConsentFlags:           testFormValues(flags),
 		Children:               in.children,
 	})
 	require.NoError(t, err)
@@ -590,7 +596,7 @@ func TestExistingChild_OfficeProtectionSurvivesRolloverDescendants(t *testing.T)
 	existing := enrolledChild(t, env.db, "Paul", "Offen", existingChildBirthday)
 	input := submitChild("Paul", "Offen", existingChildBirthday)
 	input.CustomData = testFormValues(map[string]any{"health_info": "synthetic-unrelated-value"})
-	submitted := env.submit(t, existingChildSubmission{children: []enrollmentAPI.SubmitChild{input}})
+	submitted := env.submit(t, existingChildSubmission{children: []enrollmentAPI.SubmitChild{input}, healthConsent: true})
 	require.NoError(t, env.decide(t, enrollmentAPI.DecideInput{RequestID: submitted.Request.ID, ChildID: submitted.Children[0].ID, ExistingStudentID: &existing.ID}))
 
 	roll := validRolloverRequest(env.rolloverTestEnv, enrollmentNative.PhaseRolloverModeOptOut, true)

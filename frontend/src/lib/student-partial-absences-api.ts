@@ -15,14 +15,14 @@ export interface StudentPartialAbsence {
 }
 
 interface BackendPartialAbsence {
-  id: number;
-  student_id: number;
+  id: number | string;
+  student_id: number | string;
   date: string;
   from_time: string;
   reason?: string;
   pickup_time?: string;
   auto?: boolean;
-  created_by: number;
+  created_by: number | string;
   created_at: string;
   updated_at: string;
 }

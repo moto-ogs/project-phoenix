@@ -32,7 +32,33 @@ func StudentRouteContracts() []common.RouteContract {
 			Query:    []common.QueryParam{{Name: "include_privacy_consent", Kind: common.QueryBool}},
 			Response: StudentDetailResponse{},
 		},
+		{
+			Method: "GET", Pattern: "/{id}/attendance-history", Portals: tenant,
+			// RFC 3339 instants.
+			Query:    []common.QueryParam{{Name: "start", Kind: common.QueryString}, {Name: "end", Kind: common.QueryString}},
+			Response: attendanceHistoryResponse{},
+		},
+		{
+			Method: "GET", Pattern: "/day-log", Portals: tenant,
+			Query:    []common.QueryParam{{Name: "date", Kind: common.QueryDate}, {Name: "group_id", Kind: common.QueryID}},
+			Response: dayLogResponse{},
+		},
+		{Method: "GET", Pattern: "/{id}/status-days", Portals: tenant, Query: statusDayRangeQuery(), Response: []studentpresence.StudentStatusDayResponse{}},
+		{
+			Method: "GET", Pattern: "/status-days", Portals: tenant,
+			Query: append(statusDayRangeQuery(),
+				common.QueryParam{Name: "group_id", Kind: common.QueryID},
+				common.QueryParam{Name: "page", Kind: common.QueryInt}, common.QueryParam{Name: "page_size", Kind: common.QueryInt},
+				common.QueryParam{Name: "status", Kind: common.QueryString}, common.QueryParam{Name: "q", Kind: common.QueryString},
+			),
+			Response: statusDayOverviewResponse{},
+		},
 	}
+}
+
+// statusDayRangeQuery is the day range both status-day reads take.
+func statusDayRangeQuery() []common.QueryParam {
+	return []common.QueryParam{{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate}}
 }
 
 // studentListQuery names every parameter the list handler reads;

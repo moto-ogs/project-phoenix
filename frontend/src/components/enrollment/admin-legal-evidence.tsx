@@ -49,10 +49,20 @@ const DATE_TIME: Intl.DateTimeFormatOptions = {
 
 function LegalAnswer({
   kind,
+  required,
   answer,
   versionUncertain,
-}: Readonly<{ kind: string; answer: unknown; versionUncertain: boolean }>) {
+}: Readonly<{
+  kind: string;
+  required: boolean;
+  answer: unknown;
+  versionUncertain: boolean;
+}>) {
   if (kind === "notice") return <StatusBadge tone="gray" label="Hinweis" />;
+  // Since #2787 the form shows the Datenschutzinformation without a
+  // checkbox; older submissions kept their tick.
+  if (kind === "privacy_notice" && !required)
+    return <StatusBadge tone="gray" label="Angezeigt" />;
   if (versionUncertain && typeof answer === "boolean")
     return (
       <StatusBadge
@@ -97,6 +107,7 @@ function LegalEvidenceBlock({
       <span className="max-sm:col-start-2">
         <LegalAnswer
           kind={block.kind}
+          required={block.required !== false}
           answer={answer}
           versionUncertain={versionUncertain || textFromSettings}
         />
@@ -130,7 +141,12 @@ function LegalEvidenceBlock({
       {isOpen ? (
         <div className="space-y-3 px-3 pt-1 pb-3 break-words text-gray-700 sm:pl-9">
           {block.label && (
-            <p className="font-medium text-gray-900">{block.label}</p>
+            <p className="font-medium text-gray-900">
+              {block.label}
+              {block.guardian_agreement_label
+                ? ` ${block.guardian_agreement_label}`
+                : null}
+            </p>
           )}
           {block.text && <LegalMarkdown text={block.text} />}
           {block.attachments?.length ? (

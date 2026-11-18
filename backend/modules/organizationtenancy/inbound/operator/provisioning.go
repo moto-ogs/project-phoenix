@@ -31,6 +31,7 @@ type ProvisioningResource struct {
 	traegerStaffReleaseAudit   organizationtenancy.TraegerStaffReleaseChangeAudit
 	requiredDetails            organizationtenancy.SchoolRequiredDetailsProvisioning
 	deviceBlocking             organizationtenancy.DeviceBlockingProvisioning
+	deviceHistory              organizationtenancy.DeviceHistoryProvisioning
 }
 
 // ProvisioningConfig holds the provisioning routes' dependencies.
@@ -56,6 +57,9 @@ type ProvisioningConfig struct {
 	// DeviceBlocking blocks and unblocks devices (#2317). Without it those
 	// routes answer 500.
 	DeviceBlocking organizationtenancy.DeviceBlockingProvisioning
+	// DeviceHistory reads the history of a device (#2321). Without it that
+	// route answers 500.
+	DeviceHistory organizationtenancy.DeviceHistoryProvisioning
 }
 
 // NewProvisioningResource creates a new provisioning resource.
@@ -68,6 +72,7 @@ func NewProvisioningResource(cfg ProvisioningConfig) *ProvisioningResource {
 		traegerStaffReleaseAudit:   cfg.TraegerStaffReleaseAudit,
 		requiredDetails:            cfg.RequiredDetails,
 		deviceBlocking:             cfg.DeviceBlocking,
+		deviceHistory:              cfg.DeviceHistory,
 	}
 }
 

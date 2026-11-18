@@ -7317,6 +7317,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (d provisioningDevices) RecordDeviceLifecycle(ctx context.Context, entry organizationtenancy.DeviceLifecycleEntry) error {\n\treturn d.history.RecordLifecycleEvent(ctx, devicefleet.RecordLifecycleEvent{DeviceRowID: entry.DeviceRowID, Action: devicefleet.LifecycleAction(entry.Action), ActorKind: devicefleet.LifecycleActorOperator, ActorID: entry.OperatorID, Changes: devicefleet.LifecycleChanges(entry.Changes)})\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/provisioningDevices.RecordDeviceLifecycle",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (d provisioningDevices) UpdateDevice(ctx context.Context, device organizationCompose.ProvisioningDevice) error {\n\t_, err := d.devices.UpdateDevice(ctx, devicefleet.UpdateDevice{ID: device.ID, DeviceID: device.DeviceID, DeviceType: device.DeviceType, Name: device.Name, Status: devicefleet.DeviceStatus(device.Status), APIKey: device.APIKey, APIKeyHash: device.APIKeyHash, MaskedAPIKey: device.MaskedAPIKey, LastSeen: device.LastSeen, RegisteredByID: device.RegisteredByID, RoomID: device.RoomID, ArchivedAt: device.ArchivedAt, TransferredToDeviceID: device.TransferredToDeviceID})\n\tif err != nil {\n\t\treturn deviceWriteError(err)\n\t}\n\treturn nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/provisioningDevices.UpdateDevice",

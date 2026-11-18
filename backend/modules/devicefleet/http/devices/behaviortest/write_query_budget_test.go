@@ -44,7 +44,7 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 				testpkg.OwnTenant(t)
 				db, fleet := composeDeviceFleet(t)
 				var transactionStamp time.Time
-				runtime := testRuntime()
+				runtime := testRuntime(fleet)
 				success := runtime.Success
 				runtime.Success = func(w http.ResponseWriter, r *http.Request, status int, data any, message string) {
 					raw, present := testpkg.TransactionFromContext(r.Context())

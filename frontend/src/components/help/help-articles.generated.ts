@@ -2090,8 +2090,8 @@ export const devicesTopic = function devicesTopic(): HelpTopic {
           "Klappe in der Seitenleiste `Verwaltung` auf.",
           "Öffne `Datenverwaltung` und danach `Geräte`.",
           "Wähle ein Gerät aus der Liste.",
-          "Lies bei `Verbindung`, ob das Gerät `Online` oder `Offline` ist.",
-          "Lies bei `Letzter Standort`, wo es zuletzt benutzt wurde.",
+          "Lies oben, ob das Gerät `Online` oder `Offline` ist und wann es sich zuletzt gemeldet hat.",
+          "Lies bei `Raum`, wo das Gerät steht.",
           "Lies bei `Status`, ob es `Aktiv` ist.",
         ],
       },
@@ -2118,6 +2118,16 @@ export const devicesTopic = function devicesTopic(): HelpTopic {
         ],
       },
       {
+        title: "Nachsehen, wer ein Gerät geändert hat",
+        description:
+          "Zum Beispiel, wenn ein Gerät plötzlich gesperrt ist oder anders heißt.",
+        steps: [
+          "Wähle das Gerät aus der Liste.",
+          "Wähle den Reiter `Verlauf`.",
+          "Lies, wer das Gerät wann angelegt, geändert, gesperrt oder entsperrt hat.",
+        ],
+      },
+      {
         title: "Ein Gerät entfernen",
         description:
           "Zum Beispiel, wenn ein Tablet kaputt ist oder nicht mehr gebraucht wird.",
@@ -2130,9 +2140,10 @@ export const devicesTopic = function devicesTopic(): HelpTopic {
       },
     ],
     result:
-      "Du siehst für jedes Gerät, ob es erreichbar ist und wo es zuletzt stand.",
+      "Du siehst für jedes Gerät, ob es erreichbar ist, wo es steht und wer es zuletzt geändert hat.",
     notes: [
-      "Steht bei `Letzter Standort` `Noch nicht verwendet`, wurde am Gerät noch nichts gescannt.",
+      "Steht oben `Noch nie verbunden`, hat sich das Gerät noch nie bei moto gemeldet.",
+      "Änderungen durch das moto-Team stehen im `Verlauf` als `moto-Support`.",
       "Nach dem Anlegen zeigt moto einmalig einen Zugangscode. Nur das Gerät braucht ihn.",
       "Gib diesen Code nicht weiter. Er ist danach nicht mehr zu sehen.",
       "Ein gesperrtes Gerät kann sich sofort nicht mehr anmelden. Es bleibt mit Raum und bisherigen Anwesenheiten in der Liste und zeigt `Gesperrt`.",
@@ -2142,7 +2153,7 @@ export const devicesTopic = function devicesTopic(): HelpTopic {
       "Arbeitet deine OGS ohne NFC, fehlt `Geräte` in der `Datenverwaltung`.",
     ],
     troubleshootingDetails: [
-      "Ein Gerät meldet sich nicht? Prüfe `Verbindung` und `Status` in der Liste.",
+      "Ein Gerät meldet sich nicht? Wähle es aus und prüfe oben `Online` oder `Offline` und den `Status`.",
       "`Offline` und der Strom stimmt? Prüfe das WLAN am Standort des Geräts.",
       "Ein Gerät meldet „gesperrt“ oder „nicht aktiv“? Prüfe, ob in der Liste `Gesperrt` steht, und wähle `Entsperren`.",
       "Entfernen klappt nicht, weil eine Sitzung läuft? Beende die Sitzung am Gerät und versuche es noch einmal.",
@@ -2692,7 +2703,8 @@ export const enrollmentFormTopic = function enrollmentFormTopic(): HelpTopic {
           "Soll die Antwort später beim Kind stehen? Nimm einen `Stammdaten-Vorschlag` und wähle `Hinzufügen`.",
           "Zur Auswahl stehen unter anderem `Abholzeiten`, `Ankunftszeiten`, `Erlaubte Heimwege` und `Gesundheitsinformationen`.",
           "Geht es nur um diese eine Anmeldung? Wähle `+ Freie Zusatzfrage`.",
-          "Frage etwas zum Kind, zum Beispiel zu Allergien oder zum Schwimmen? Schalte bei der Frage `Pro Kind abfragen` ein. Dann beantworten Eltern sie für jedes Kind.",
+          "Frage etwas zum Kind, zum Beispiel zum Schwimmen? Schalte bei der Frage `Pro Kind abfragen` ein. Dann beantworten Eltern sie für jedes Kind.",
+          "Für Allergien und andere Gesundheitsangaben nimm den Stammdaten-Vorschlag `Gesundheitsinformationen`, keine freie Zusatzfrage. Nur dort fragt das Formular die nötige Einwilligung der Eltern ab.",
           "Willst du nur etwas erklären, ohne zu fragen? Wähle `Infotext`.",
         ],
       },
@@ -2776,6 +2788,9 @@ export const enrollmentFormTopic = function enrollmentFormTopic(): HelpTopic {
       "Haben deine Betreuungsangebote eine Gehzeit, brauchst du keine Frage nach `Abholzeiten`. Eine Antwort darauf ersetzt die Gehzeit des Angebots beim Kind.",
       "Die Zustimmungen `Datenschutzinformation`, `Fotoeinwilligung` und `E-Mail-Kontakt` tragen `Aus Einstellungen übernommen`. Sie kommen aus deinen Einstellungen und lassen sich je Vorlage ausblenden.",
       "Über `+ Eigene Zustimmung hinzufügen` ergänzt du einen Text, der nur in dieser Vorlage steht.",
+      "Die `Datenschutzinformation` hat kein Häkchen. Eltern sehen den Text und können ihn öffnen. moto speichert bei jeder Anmeldung, welche Fassung das Formular gezeigt hat.",
+      "Für Fotos im Internet schaltest du bei der Zustimmung `Einvernehmen aller Sorgeberechtigten abfragen` ein. Mit dem Häkchen bestätigen Eltern dann auch, dass alle anderen Sorgeberechtigten einverstanden sind.",
+      "Fragst du `Gesundheitsinformationen` ab, zeigt das Formular dazu eine Einwilligung für Gesundheitsangaben. Eltern müssen nichts eintragen. Tragen sie etwas ein, setzen sie dafür das Häkchen. Deshalb lässt sich `Pflichtfrage` bei diesem Feld nicht einschalten.",
 
       "Jede PDF-Datei darf höchstens 10 MB groß sein.",
       "Eltern können alle Dateien ohne Elternkonto öffnen und herunterladen.",

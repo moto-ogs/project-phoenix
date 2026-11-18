@@ -284,6 +284,12 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 		}
 		elem, err := b.schema(t.Elem(), where, request)
 		return Schema{Kind: KindMap, Elem: &elem, Nullable: true}, err
+	case reflect.Interface:
+		// An empty interface holds whatever JSON was stored or sent; a nil
+		// one renders as null.
+		if t.NumMethod() == 0 {
+			return Schema{Kind: KindJSON, Nullable: true}, nil
+		}
 	case reflect.Struct:
 		name, err := b.object(t, where, request)
 		return Schema{Kind: KindRef, Ref: name}, err

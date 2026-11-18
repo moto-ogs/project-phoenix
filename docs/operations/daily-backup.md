@@ -538,6 +538,15 @@ weder den Produktionshost noch den Monitoring-Host dafür gelesen.
    `restore_school_erasure_disabled=<Anzahl>`,
    `restore_billing_retention_disabled=<Anzahl>` bzw.
    `restore_data_return_disabled=<Anzahl>` gemeldet, keine Login-Namen.
+   Persönliche Lesezugänge und der Metrik-Exporter (etwa `dev_*` mit
+   `pg_read_all_data`, `postgres_exporter` mit `pg_monitor`) werden ebenfalls
+   auf **NOLOGIN** gesetzt und als `restore_external_logins_disabled=<Anzahl>`
+   gemeldet. Zulässig ist das nur, wenn alle Mitgliedschaften eingebaute
+   Leserollen sind (`pg_read_all_data`, `pg_monitor`, `pg_read_all_stats`,
+   `pg_read_all_settings`, `pg_stat_scan_tables`, ohne ADMIN-Option), der
+   Login keine erhöhten Attribute, keine Mitglieder und nach dem Datenimport
+   keine direkten Rechte oder Objekte hat. Den Exporter und benötigte
+   Lesezugänge danach mit neuem Passwort einzeln freischalten.
    Alle anderen unbekannten LOGIN-Rollen werden weiterhin abgewiesen.
    Vor Wiederholung deren Zweck/Mapping klären und das Verfahren gezielt erweitern.
    Persönliche Diagnosezugänge nach Restore **bewusst einzeln neu freischalten**:

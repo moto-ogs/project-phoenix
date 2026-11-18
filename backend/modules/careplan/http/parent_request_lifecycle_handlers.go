@@ -22,6 +22,16 @@ type parentRequestMarkDoner interface {
 	MarkDone(ctx context.Context, requestID int64, expectedVersion, reason string, reviewedBy int64) error
 }
 
+// parentRequestDoneResponse confirms a request marked done.
+type parentRequestDoneResponse struct {
+	Status string `json:"status"`
+}
+
+// parentRequestCorrectedResponse names the corrected decision.
+type parentRequestCorrectedResponse struct {
+	Approved bool `json:"approved"`
+}
+
 type markRequestDoneBody struct {
 	ExpectedVersion string `json:"expected_version"`
 	Reason          string `json:"reason"`
@@ -82,7 +92,7 @@ func (rs *Resource) markParentRequestDone(w http.ResponseWriter, r *http.Request
 		renderError(w, r, parentRequestLifecycleErrorRenderer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"status": "done"}, "Request marked done")
+	common.Respond(w, r, http.StatusOK, parentRequestDoneResponse{Status: "done"}, "Request marked done")
 }
 
 // parentRequestLifecycleErrorRenderer carries the not-found and not-pending
@@ -180,5 +190,5 @@ func (rs *Resource) correctParentRequestDecision(w http.ResponseWriter, r *http.
 		renderError(w, r, parentRequestLifecycleErrorRenderer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]bool{"approved": *body.Approve}, "Decision corrected")
+	common.Respond(w, r, http.StatusOK, parentRequestCorrectedResponse{Approved: *body.Approve}, "Decision corrected")
 }

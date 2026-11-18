@@ -93,6 +93,7 @@ func (s *administration) CreateDevice(ctx context.Context, device *Device) error
 		DeviceID: device.DeviceID, DeviceType: device.DeviceType, Name: device.Name,
 		Status: DeviceStatus(device.Status), APIKey: device.APIKey, APIKeyHash: device.APIKeyHash, MaskedAPIKey: device.MaskedAPIKey,
 		LastSeen: device.LastSeen, RegisteredByID: device.RegisteredByID, RoomID: device.RoomID,
+		RecordedBy: recordedBy(ctx),
 	})
 	if err != nil {
 		return &AdministrationError{Op: "CreateDevice", Err: err}
@@ -204,7 +205,7 @@ func (s *administration) writeDeviceEdit(ctx context.Context, device *Device, ed
 	}
 	updated, err := s.devices.ApplyDeviceEdit(ctx, DeviceEdit{
 		ID: device.ID, DeviceID: device.DeviceID, DeviceType: device.DeviceType, Name: device.Name,
-		RegisteredByID: device.RegisteredByID, Status: status,
+		RegisteredByID: device.RegisteredByID, Status: status, RecordedBy: recordedBy(ctx),
 	})
 	if errors.Is(err, ErrDeviceNotFound) {
 		return Device{}, &AdministrationError{Op: "UpdateDevice", Err: ErrAdministrationDeviceNotFound}
@@ -489,4 +490,11 @@ func validateAdministrationDevice(device *Device) error {
 		return errors.New("invalid device status")
 	}
 	return nil
+}
+
+// recordedBy is the actor WithLifecycleActor set on ctx: a create or an edit
+// made with it records itself in the device's history (#2321).
+func recordedBy(ctx context.Context) *LifecycleActorRef {
+	actor, _ := LifecycleActorFrom(ctx)
+	return actor
 }

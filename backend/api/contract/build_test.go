@@ -447,6 +447,7 @@ func TestARegisteredPointerAnswersTheObjectOrNull(t *testing.T) {
 type stored struct {
 	Old json.RawMessage `json:"old,omitempty"`
 	Raw json.RawMessage `json:"raw"`
+	Any any             `json:"any"`
 }
 
 // presence tells an absent key from null, as the template writes do.
@@ -475,7 +476,8 @@ func TestARawValueAndAValueReaderTravelAsWhatTheyHold(t *testing.T) {
 	require.NoError(t, err)
 	fields := fieldsOf(t, doc, "stored")
 	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["raw"].Schema, "any JSON value, null included")
-	assert.Equal(t, Schema{Kind: KindJSON}, fields["old"].Schema, "omitempty leaves an empty value out")
+	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["old"].Schema, "omitempty leaves an empty value out; a stored null still travels")
+	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["any"].Schema, "an empty interface holds any JSON")
 	assert.True(t, fields["old"].Optional)
 	assert.Equal(t, Schema{Kind: KindLegacyID, Nullable: true}, fieldsOf(t, doc, "presenceBody")["track_id"].Schema, "the wrapper reads its Value")
 

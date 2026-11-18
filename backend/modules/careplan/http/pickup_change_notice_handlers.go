@@ -53,12 +53,7 @@ func (rs *Resource) readPickupChangeNotices(w http.ResponseWriter, r *http.Reque
 	if !ok {
 		return
 	}
-	var body struct {
-		Notices []struct {
-			RequestID  int64     `json:"request_id,string"`
-			InformedAt time.Time `json:"informed_at"`
-		} `json:"notices"`
-	}
+	var body pickupChangeNoticesReadRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid pickup change notice revisions")))
 		return
@@ -73,6 +68,17 @@ func (rs *Resource) readPickupChangeNotices(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	common.Respond(w, r, http.StatusOK, renderPickupChangeNotices(notices), "Pickup change notices read")
+}
+
+// pickupChangeNoticesReadRequest names the markers the reader saw, each at
+// the revision it was shown in.
+type pickupChangeNoticesReadRequest struct {
+	Notices []pickupChangeNoticeRevision `json:"notices"`
+}
+
+type pickupChangeNoticeRevision struct {
+	RequestID  int64     `json:"request_id,string"`
+	InformedAt time.Time `json:"informed_at"`
 }
 
 func renderPickupChangeNotices(notices []careplan.PickupChangeTeamNotice) []pickupChangeNoticeResponse {

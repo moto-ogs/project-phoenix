@@ -109,7 +109,7 @@ describe("ChildConsentsSection", () => {
       screen.getByText("Allgemeine Geschäftsbedingungen (AGB)"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Datenschutz zur Kenntnis genommen"),
+      screen.getByText("Datenschutzinformation erhalten"),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("Kontakt per E-Mail erlaubt"),

@@ -55,37 +55,37 @@ export interface ArrivalData {
 }
 
 interface BackendArrivalSchedule {
-  id: number;
-  student_id: number;
+  id: number | string;
+  student_id: number | string;
   weekday: number;
   weekday_name: string;
   expected_arrival: string;
   source?: "class_schedule" | "staff";
   source_class?: string;
   notes?: string | null;
-  created_by: number;
+  created_by: number | string;
   created_at: string;
   updated_at: string;
 }
 
 interface BackendArrivalException {
-  id: number;
-  student_id: number;
+  id: number | string;
+  student_id: number | string;
   exception_date: string;
   expected_arrival?: string | null;
   reason?: string | null;
   source?: string;
-  created_by: number;
+  created_by: number | string;
   created_at: string;
   updated_at: string;
 }
 
 interface BackendArrivalNote {
-  id: number;
-  student_id: number;
+  id: number | string;
+  student_id: number | string;
   note_date: string;
   content: string;
-  created_by: number;
+  created_by: number | string;
   created_at: string;
   updated_at: string;
 }
@@ -227,7 +227,7 @@ function mapArrivalData(data: BackendArrivalData): ArrivalData {
 export async function fetchBulkArrivalScheduleStatus(
   studentIds: string[],
 ): Promise<number> {
-  const status = await bffJson<{ student_ids: number[] }>(
+  const status = await bffJson<{ student_ids: (number | string)[] }>(
     "/api/students/arrival-schedules/status",
     {
       method: "POST",

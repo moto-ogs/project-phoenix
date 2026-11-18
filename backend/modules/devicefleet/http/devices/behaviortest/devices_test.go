@@ -31,7 +31,7 @@ func setupDevicesModule(t *testing.T) *testContext {
 
 	db, fleet := composeDeviceFleet(t)
 
-	resource := devices.NewResource(devicefleet.NewAdministration(fleet, time.Now), testRuntime())
+	resource := devices.NewResource(devicefleet.NewAdministration(fleet, time.Now), testRuntime(fleet))
 
 	return &testContext{
 		db:       db,

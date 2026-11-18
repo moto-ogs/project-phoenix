@@ -64,6 +64,9 @@ type LegalBlockSnapshot struct {
 	// text) the form offered next to the German one (#3377). The server does
 	// not learn which language the guardian read.
 	Translations map[string]map[string]string `json:"translations,omitempty"`
+	// GuardianAgreementLabel is the custodian sentence the ticked checkbox
+	// carried, empty when the block asked for none (#2787).
+	GuardianAgreementLabel string `json:"guardian_agreement_label,omitempty"`
 }
 
 // LegalBlocksSnapshotEntry records one parent-facing (re)submission:

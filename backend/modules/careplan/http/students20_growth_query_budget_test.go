@@ -42,7 +42,7 @@ func TestStudents20ArrivalGrowthQueryBudget(t *testing.T) {
 		require.NoError(t, tc.db.NewSelect().Model(row).WherePK().Scan(testpkg.Ctx(t)))
 		expectedSchedules = append(expectedSchedules, studentsAPI.ArrivalScheduleResponse{ID: row.ID, StudentID: child.ID, Weekday: i + 1, WeekdayName: weekdayName, ExpectedArrival: "08:15", Source: "staff", CreatedBy: staff.ID, CreatedAt: row.CreatedAt.Format(time.RFC3339), UpdatedAt: row.UpdatedAt.Format(time.RFC3339)})
 	}
-	var expectedExceptions []studentsAPI.ArrivalExceptionResponse
+	var expectedExceptions []studentsAPI.StudentArrivalExceptionResponse
 	var expectedNotes []studentsAPI.ArrivalNoteResponse
 	counter := testpkg.CaptureQueriesForContext(t, tc.db)
 	for _, n := range []int{3, 8} {
@@ -53,7 +53,7 @@ func TestStudents20ArrivalGrowthQueryBudget(t *testing.T) {
 			require.NoError(t, tc.db.NewSelect().Model(exception).WherePK().Scan(testpkg.Ctx(t)))
 			require.NoError(t, tc.db.NewSelect().Model(note).WherePK().Scan(testpkg.Ctx(t)))
 
-			expectedExceptions = append(expectedExceptions, studentsAPI.ArrivalExceptionResponse{ID: exception.ID, StudentID: child.ID, ExceptionDate: date.String(), Reason: &reason, Source: "staff", CreatedBy: staff.ID, CreatedAt: exception.CreatedAt.Format(time.RFC3339), UpdatedAt: exception.UpdatedAt.Format(time.RFC3339)})
+			expectedExceptions = append(expectedExceptions, studentsAPI.StudentArrivalExceptionResponse{ID: exception.ID, StudentID: child.ID, ExceptionDate: date.String(), Reason: &reason, Source: "staff", CreatedBy: staff.ID, CreatedAt: exception.CreatedAt.Format(time.RFC3339), UpdatedAt: exception.UpdatedAt.Format(time.RFC3339)})
 			expectedNotes = append(expectedNotes, studentsAPI.ArrivalNoteResponse{ID: note.ID, StudentID: child.ID, NoteDate: date.String(), Content: note.Content, CreatedBy: staff.ID, CreatedAt: note.CreatedAt.Format(time.RFC3339), UpdatedAt: note.UpdatedAt.Format(time.RFC3339)})
 		}
 		counter.Reset()

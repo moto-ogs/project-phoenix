@@ -538,6 +538,55 @@ describe("OperatorDevicesPage", () => {
     });
   });
 
+  // --- History (#2321) ---
+
+  it("opens the device history from its menu, with schools and without staff names", async () => {
+    withDefaultSWR({ allDevices: [mockDevice] });
+    const base = mockUseSWR.getMockImplementation()!;
+    mockUseSWR.mockImplementation((key: unknown) =>
+      key === `operator-device-history-${mockDevice.id}`
+        ? {
+            data: [
+              {
+                id: "1",
+                action: "blocked",
+                actorKind: "school_staff",
+                actorName: null,
+                changes: {},
+                occurredAt: "2026-03-18T09:00:00Z",
+                schoolName: "Alte Schule",
+              },
+              {
+                id: "2",
+                action: "transferred_in",
+                actorKind: "operator",
+                actorName: null,
+                changes: {},
+                occurredAt: "2026-03-20T09:00:00Z",
+                schoolName: "Test School",
+              },
+            ],
+            isLoading: false,
+            mutate: () => undefined,
+          }
+        : base(key),
+    );
+
+    render(<OperatorDevicesPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Aktionen für/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /^Verlauf/ }));
+
+    expect(await screen.findByText("Gesperrt")).toBeInTheDocument();
+    expect(
+      screen.getByText("Von anderer Schule übernommen"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/^Personal der Schule · Alte Schule/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/^moto-Support · Test School/)).toBeInTheDocument();
+  });
+
   // --- Block (#2317) ---
 
   it("blocks a device from its menu and offers to undo it", async () => {

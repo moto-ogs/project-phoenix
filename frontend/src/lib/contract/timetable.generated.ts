@@ -139,8 +139,8 @@ export interface DeviationHistoryEvent {
   related_staff_name?: string;
   actor_account_id?: string;
   actor_name?: string;
-  old_value?: unknown;
-  new_value?: unknown;
+  old_value?: unknown | null;
+  new_value?: unknown | null;
   reason?: string;
   occurred_at: string;
 }
@@ -158,8 +158,8 @@ export const DeviationHistoryEventSchema: z.ZodType<DeviationHistoryEvent, unkno
   related_staff_name: z.string().optional(),
   actor_account_id: int64StringOrNumber.optional(),
   actor_name: z.string().optional(),
-  old_value: z.unknown().optional(),
-  new_value: z.unknown().optional(),
+  old_value: z.unknown().nullable().optional(),
+  new_value: z.unknown().nullable().optional(),
   reason: z.string().optional(),
   occurred_at: z.string(),
 });

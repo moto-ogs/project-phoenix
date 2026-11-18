@@ -50,7 +50,7 @@ func deviceFixtureOn(t *testing.T, db *bun.DB) deviceRemovalFixture {
 	router := testutil.NewTenantRouter(db)
 	router.Use(SecurityPrincipalMiddleware)
 	router.Route("/devices", func(r chi.Router) {
-		NewIoTAdministration(devicefleet.NewAdministration(devices.IoT.Fleet(), time.Now), presence, logger, time.Now)(r, func(next http.Handler) http.Handler { return next })
+		NewIoTAdministration(devicefleet.NewAdministration(devices.IoT.Fleet(), time.Now), mustDeviceHistory(t, devices.IoT.Fleet()), routerDeviceActors{}, presence, logger, time.Now)(r, func(next http.Handler) http.Handler { return next })
 	})
 	return deviceRemovalFixture{db: db, fleet: devices.IoT.Fleet(), router: router, audit: audit}
 }

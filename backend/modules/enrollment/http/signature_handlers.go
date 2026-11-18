@@ -387,15 +387,9 @@ func signatureProofConsents(req *capability.Request) (lists.Record, error) {
 }
 
 func signatureProofLegalBlock(block capability.LegalBlockSnapshot, flags map[string]any) lists.SubRecord {
-	answer := "Nicht zugestimmt"
-	if block.Kind == capability.LegalBlockKindNotice || block.Kind == capability.LegalBlockKindPrivacyNotice {
-		answer = "Zur Kenntnis genommen"
-	} else if accepted, ok := flags[block.Key].(bool); ok && accepted {
-		answer = "Zugestimmt"
-	}
 	fields := []lists.Field{
-		proofField("Bestätigung", block.Label),
-		proofField("Antwort", answer),
+		proofField("Bestätigung", strings.TrimSpace(block.Label+" "+block.GuardianAgreementLabel)),
+		proofField("Antwort", signatureProofLegalAnswer(block, flags)),
 		proofField("Text", block.Text),
 	}
 	for _, attachment := range block.Attachments {
@@ -406,4 +400,21 @@ func signatureProofLegalBlock(block capability.LegalBlockSnapshot, flags map[str
 		fields = append(fields, proofField(label, attachment.DocumentURL))
 	}
 	return lists.SubRecord{Title: proofText(block.Title), Fields: fields}
+}
+
+// signatureProofLegalAnswer names what the parent did with a block. A
+// notice, and since #2787 the Datenschutzinformation, has no checkbox: the
+// form showed it, the parent confirmed nothing.
+func signatureProofLegalAnswer(block capability.LegalBlockSnapshot, flags map[string]any) string {
+	switch {
+	case block.Kind == capability.LegalBlockKindNotice,
+		block.Kind == capability.LegalBlockKindPrivacyNotice && !block.Required:
+		return "Angezeigt"
+	case block.Kind == capability.LegalBlockKindPrivacyNotice:
+		return "Zur Kenntnis genommen"
+	}
+	if accepted, ok := flags[block.Key].(bool); ok && accepted {
+		return "Zugestimmt"
+	}
+	return "Nicht zugestimmt"
 }

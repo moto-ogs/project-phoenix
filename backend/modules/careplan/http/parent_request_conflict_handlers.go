@@ -18,6 +18,12 @@ import (
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
+// parentRequestConflictResolvedResponse counts the requests a conflict
+// resolution decided.
+type parentRequestConflictResolvedResponse struct {
+	ResolvedCount int `json:"resolved_count"`
+}
+
 type resolveConflictBody struct {
 	Kind string `json:"kind"`
 	// RequestIDs and ExpectedVersions are positional pairs, echoed back from
@@ -58,7 +64,7 @@ func (rs *Resource) resolveRequestConflict(w http.ResponseWriter, r *http.Reques
 		renderError(w, r, resolveConflictErrorRenderer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int{"resolved_count": len(input.RequestIDs)}, "Conflict resolved")
+	common.Respond(w, r, http.StatusOK, parentRequestConflictResolvedResponse{ResolvedCount: len(input.RequestIDs)}, "Conflict resolved")
 }
 
 // toInput parses the wire body. Only shape errors are decided here — whether

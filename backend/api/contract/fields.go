@@ -186,6 +186,10 @@ func (b *builder) omission(field *Field, t reflect.Type, options []string) {
 			field.Schema.Nullable = false
 		}
 	}
+	if field.Schema.Kind == KindJSON {
+		// Present JSON may itself be null.
+		field.Schema.Nullable = true
+	}
 }
 
 // numericID decides a bare int64. With ,string it is an identifier that
