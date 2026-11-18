@@ -626,9 +626,18 @@ const noGenericBrandColors = makeClassStringRule({
     "Generic Tailwind hue '{{match}}…' is not a brand color. Use a moto-* semantic token, LOCATION_COLORS (~/lib/location-helper), or a kit component (see .claude/rules/frontend-ui-kit.md).",
 });
 
-// A standalone `fixed` utility; `md:fixed`, `fixed-…` and prose such as
-// "fixed-height" do not count.
-const FIXED_UTILITY_RE = /(?:^|\s)fixed(?=\s|$)/;
+// A `fixed` utility that can apply on a phone: bare or behind a variant such
+// as `max-sm:` or `md:` (a phone in landscape is wider than `md`). Only the
+// `lg:` and wider breakpoints and `print:` stay out; `fixed-…` and prose such
+// as "fixed-height" do not count.
+const DESKTOP_ONLY_VARIANT_RE = /^(?:lg|xl|2xl|print|min-\[)/;
+function hasPhoneFixed(text) {
+  return text.split(/\s+/).some((token) => {
+    const variants = token.split(":");
+    if (variants.pop() !== "fixed") return false;
+    return !variants.some((variant) => DESKTOP_ONLY_VARIANT_RE.test(variant));
+  });
+}
 // Outside a className or cn() call, a string only counts as a class list when
 // it has nothing but lower-case utility characters and at least one utility
 // with a dash, so an enum value "fixed" or English prose stays out.
@@ -654,6 +663,24 @@ function isClassCall(node) {
     node.callee.type === "Identifier" &&
     CLASS_FUNCTIONS.has(node.callee.name)
   );
+}
+
+// Branches of a condition on the way from the `fixed` string up to its class
+// list: the other branch never renders together with that string, so a shift
+// there does not count.
+function exclusiveBranches(node, scope) {
+  const excluded = new WeakSet();
+  for (let child = node; child && child !== scope; child = child.parent) {
+    const parent = child.parent;
+    if (!parent) break;
+    if (parent.type === "ConditionalExpression") {
+      excluded.add(parent.test);
+      excluded.add(parent.consequent === child ? parent.alternate : parent.consequent);
+    } else if (parent.type === "LogicalExpression") {
+      excluded.add(parent.left === child ? parent.right : parent.left);
+    }
+  }
+  return excluded;
 }
 
 function mentionsFixedShift(node, seen = new WeakSet()) {
@@ -698,7 +725,7 @@ const fixedLayerFollowsViewport = {
     );
 
     const check = (node, text) => {
-      if (!FIXED_UTILITY_RE.test(text)) return;
+      if (!hasPhoneFixed(text)) return;
       if (exceptions.some((entry) => text.includes(entry.match))) return;
 
       // The class list a string belongs to: the className attribute, else the
@@ -727,7 +754,7 @@ const fixedLayerFollowsViewport = {
         if (!tokens.some((token) => token !== "fixed" && token.includes("-")))
           return;
       }
-      if (mentionsFixedShift(scope)) return;
+      if (mentionsFixedShift(scope, exclusiveBranches(node, scope))) return;
       context.report({
         node,
         messageId: "missingShift",

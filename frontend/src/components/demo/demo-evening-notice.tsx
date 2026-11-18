@@ -8,7 +8,6 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useCurrentTimestamp } from "~/lib/hooks/use-current-timestamp";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { isWeekendDay, useDemoDayNotice } from "./demo-weekend-notice";
-import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
 // Pro Tag einmal von selbst; danach öffnet „Warum?“ in der Zeile ihn.
 const SEEN_KEY = "moto-demo-evening-notice";
@@ -62,7 +61,9 @@ export function DemoEveningRow({
   return (
     <div
       role="note"
-      className={`fixed inset-x-0 top-12 z-50 flex h-8 items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 text-xs text-gray-900 ${FIXED_LAYER_SHIFT}`}
+      // Rendered inside the demo banner, whose FIXED_LAYER_SHIFT makes it this
+      // row's containing block: the row moves with the banner already.
+      className="fixed inset-x-0 top-12 z-50 flex h-8 items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 text-xs text-gray-900"
     >
       <ClockIcon
         aria-hidden="true"

@@ -28,9 +28,27 @@ export const fixedLayerShiftExceptions = [
   },
   {
     file: "src/components/ui/drawer.tsx",
-    match: "fixed inset-",
+    match: "fixed inset-x-0 bottom-0 mt-24",
     reason:
-      "Richtungsklassen des Blatts; DrawerContent hängt FIXED_LAYER_SHIFT im selben cn() an.",
+      "Richtungsklasse des Blatts; DrawerContent hängt FIXED_LAYER_SHIFT im selben cn() an.",
+  },
+  {
+    file: "src/components/ui/drawer.tsx",
+    match: "fixed inset-y-0 left-0 flex h-full",
+    reason:
+      "Richtungsklasse des Blatts; DrawerContent hängt FIXED_LAYER_SHIFT im selben cn() an.",
+  },
+  {
+    file: "src/components/ui/drawer.tsx",
+    match: "fixed inset-0 flex h-dvh max-h-dvh",
+    reason:
+      "Richtungsklasse des Blatts; DrawerContent hängt FIXED_LAYER_SHIFT im selben cn() an.",
+  },
+  {
+    file: "src/components/demo/demo-evening-notice.tsx",
+    match: "fixed inset-x-0 top-12 z-50",
+    reason:
+      "Steht im verschobenen Demo-Banner, das ihr fester Bezugsrahmen ist; eine eigene Verschiebung käme doppelt.",
   },
   {
     file: "src/components/ui/portal-shell.tsx",

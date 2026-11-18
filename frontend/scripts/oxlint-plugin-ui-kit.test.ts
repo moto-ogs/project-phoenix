@@ -59,13 +59,16 @@ describe.concurrent("ui-kit/fixed-layer-follows-viewport", () => {
         'export const B = () => <div className={`fixed ${open ? "top-0" : ""}`} />;',
         'export const C = () => <div className={cn("fixed inset-0", open && "flex")} />;',
         'export const POSITION = "fixed bottom-20 left-4 z-40";',
+        'export const D = () => <div className={open ? "fixed inset-0" : FIXED_LAYER_SHIFT} />;',
+        'export const F = () => <div className="max-sm:fixed max-sm:inset-0" />;',
+        'export const G = () => <div className="md:fixed md:inset-0" />;',
       ].join("\n"),
       "src/components/students/probe-fixed.tsx",
     );
-    expect(reports(output)).toBe(4);
+    expect(reports(output)).toBe(7);
   });
 
-  it("accepts the shift, md:fixed, enum values and prose", async () => {
+  it("accepts the shift, lg:fixed, enum values and prose", async () => {
     const { output } = await lintSource(
       [
         'import { cn } from "~/lib/utils";',
@@ -75,7 +78,7 @@ describe.concurrent("ui-kit/fixed-layer-follows-viewport", () => {
         'export const B = () => <div className={cn("fixed inset-0", open ? FIXED_LAYER_SHIFT : "")} />;',
         "export const C = () => <div className={`fixed inset-0 ${FIXED_LAYER_SHIFT_INSET}`} />;",
         "export const POSITION = `fixed bottom-20 left-4 ${FIXED_LAYER_SHIFT}`;",
-        'export const D = () => <div className="md:fixed md:inset-0" />;',
+        'export const D = () => <div className="lg:fixed lg:inset-0" />;',
         'export const mode = { days_of_week_mode: "fixed" };',
         'export const text = "The early debit is fixed by a later due date.";',
       ].join("\n"),
