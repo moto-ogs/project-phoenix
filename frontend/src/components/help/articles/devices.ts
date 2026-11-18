@@ -27,6 +27,16 @@ export function devicesTopic(): HelpTopic {
         ],
       },
       {
+        title: "Freie Geräteplätze nachsehen",
+        description:
+          "Deine Schule hat so viele Geräteplätze, wie sie bei moto gekauft hat. Jedes registrierte Gerät belegt einen Platz, auch ein gesperrtes.",
+        steps: [
+          "Öffne `Datenverwaltung` und danach `Geräte`.",
+          "Lies unter dem Titel die Zeile `Geräteplätze`, zum Beispiel `4 von 5 belegt` und `1 frei`.",
+          "Steht dort `voll`, entferne ein Gerät, das du nicht mehr brauchst, oder melde dich beim moto-Team.",
+        ],
+      },
+      {
         title: "Ein Gerät von Hand anlegen",
         description:
           "Nur nötig, wenn ein Gerät nicht in der Liste steht. Frage vorher beim moto-Team nach.",
@@ -78,16 +88,19 @@ export function devicesTopic(): HelpTopic {
       "Nach dem Anlegen zeigt moto einmalig einen Zugangscode. Nur das Gerät braucht ihn.",
       "Gib diesen Code nicht weiter. Er ist danach nicht mehr zu sehen.",
       "Ein gesperrtes Gerät kann sich sofort nicht mehr anmelden. Es bleibt mit Raum und bisherigen Anwesenheiten in der Liste und zeigt `Gesperrt`.",
-      "Ein entferntes Gerät kann sich nicht mehr anmelden. Bisherige Anwesenheiten bleiben erhalten.",
+      "Ein entferntes Gerät kann sich nicht mehr anmelden. Bisherige Anwesenheiten bleiben erhalten. Sein Geräteplatz wird frei.",
     ],
     differences: [
       "Arbeitet deine OGS ohne NFC, fehlt `Geräte` in der `Datenverwaltung`.",
+      "Fehlt die Zeile `Geräteplätze`, hat moto für deine Schule noch keine Grenze festgelegt.",
+      "Fehlen `+ Gerät`, `Bearbeiten`, `Sperren` und `Entfernen`, darfst du Geräte nur ansehen. Dafür braucht deine Rolle das Recht `Geräte registrieren, bearbeiten, sperren und entfernen`.",
     ],
     troubleshootingDetails: [
       "Ein Gerät meldet sich nicht? Wähle es aus und prüfe oben `Online` oder `Offline` und den `Status`.",
       "`Offline` und der Strom stimmt? Prüfe das WLAN am Standort des Geräts.",
       "Ein Gerät meldet „gesperrt“ oder „nicht aktiv“? Prüfe, ob in der Liste `Gesperrt` steht, und wähle `Entsperren`.",
       "Entfernen klappt nicht, weil eine Sitzung läuft? Beende die Sitzung am Gerät und versuche es noch einmal.",
+      "`+ Gerät` lässt sich nicht wählen? Alle Geräteplätze sind belegt. Entferne ein altes Gerät oder melde dich beim moto-Team.",
     ],
     related: [
       HELP_TOPICS.leadNfcSettings,

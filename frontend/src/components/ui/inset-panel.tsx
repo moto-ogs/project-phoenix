@@ -5,7 +5,8 @@ import { cn } from "~/lib/utils";
 type InsetPanelTone = "muted" | "white" | "danger" | "warning";
 type InsetPanelPadding = "tight" | "compact" | "sm" | "md";
 
-type InsetPanelElement = "div" | "section" | "p" | "dl" | "ul" | "li";
+type InsetPanelElement =
+  "div" | "section" | "p" | "dl" | "ul" | "li" | "figure";
 
 interface InsetPanelProps extends HTMLAttributes<HTMLElement> {
   readonly tone?: InsetPanelTone;

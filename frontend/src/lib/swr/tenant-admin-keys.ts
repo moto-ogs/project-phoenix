@@ -76,6 +76,8 @@ export const tenantAdminKeys = {
   /** The history of one device (`fetchDeviceHistory`, #2321). */
   deviceHistory: (id: string) =>
     `database-device-history-${encodeURIComponent(id)}`,
+  /** The school's Geräteplätze and how many its devices occupy (#2312). */
+  deviceSlots: () => "database-devices-slots",
   /**
    * Every child of the Datenverwaltung with arrival times and pending
    * withdrawals; the SSE hook refreshes every key containing this name.

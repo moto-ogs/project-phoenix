@@ -11,6 +11,7 @@ const CodeIotDeviceInActiveSession = "iot.device_in_active_session"
 const CodeIotDeviceInactive = "iot.device_inactive"
 const CodeIotDevicePinInvalid = "iot.device_pin_invalid"
 const CodeIotDevicePinRequired = "iot.device_pin_required"
+const CodeIotDeviceSlotsFull = "iot.device_slots_full"
 const CodeIotInvalidRfidTag = "iot.invalid_rfid_tag"
 const CodeIotInvalidStaffClockRequest = "iot.invalid_staff_clock_request"
 const CodeIotInvalidStaffClockState = "iot.invalid_staff_clock_state"
@@ -49,6 +50,7 @@ var errorCodeClassesIot = []errorCodeClass{
 	{CodeIotDeviceInactive, "permission"},
 	{CodeIotDevicePinInvalid, "permission"},
 	{CodeIotDevicePinRequired, "permission"},
+	{CodeIotDeviceSlotsFull, "business_rejection"},
 	{CodeIotInvalidRfidTag, "input"},
 	{CodeIotInvalidStaffClockRequest, "input"},
 	{CodeIotInvalidStaffClockState, "business_rejection"},

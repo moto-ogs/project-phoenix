@@ -2,6 +2,7 @@ DELETE /api/iot/*/{id} -> nfc_anwesenheit
 DELETE /api/iot/staff/{staffId}/rfid -> nfc_anwesenheit
 GET /api/iot/*/ -> nfc_anwesenheit
 GET /api/iot/*/active -> nfc_anwesenheit
+GET /api/iot/*/device-slots -> nfc_anwesenheit
 GET /api/iot/*/device/{deviceId} -> nfc_anwesenheit
 GET /api/iot/*/maintenance -> nfc_anwesenheit
 GET /api/iot/*/offline -> nfc_anwesenheit

@@ -26,6 +26,8 @@
   "device_active_session": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "device_other_organization": "У вас немає доступу до: {object}. Зверніться до школи.",
   "device_same_school": "Не вдалося змінити: {object}. Перевірте поточний стан.",
+  "device_slots_full": "Не вдалося змінити: {object}. Перевірте поточний стан.",
+  "device_slots_below_occupied": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "person_not_found": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "person_has_supervisions": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "caregiver_capability_blocked": "Не вдалося змінити: {object}. Перевірте поточний стан.",

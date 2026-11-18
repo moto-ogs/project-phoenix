@@ -78,6 +78,7 @@ describe("DevicesMasterDetail", () => {
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
+        canManage
       />,
     );
 
@@ -96,6 +97,7 @@ describe("DevicesMasterDetail", () => {
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
+        canManage
       />,
     );
 
@@ -104,6 +106,34 @@ describe("DevicesMasterDetail", () => {
     expect(screen.getByText("Foyer")).toBeInTheDocument();
     // Einmal als Pille in der Liste, einmal im Feld „Verbindung“.
     expect(screen.getAllByText("Online")).toHaveLength(2);
+  });
+
+  it("shows a device without edit, block or remove to devices:read (#2312)", () => {
+    const blocked: Device = { ...onlineDevice, status: "inactive" };
+    render(
+      <DevicesMasterDetail
+        groupDefinitions={flatGroup([blocked])}
+        selectedId="1"
+        selectedDevice={blocked}
+        onSelect={onSelect}
+        onSaveDevice={onSaveDevice}
+        onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+        canManage={false}
+      />,
+    );
+
+    expect(screen.getByText("kiosk-001")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /bis es jemand mit dem Recht „Geräte verwalten“ entsperrt/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Bearbeiten")).not.toBeInTheDocument();
+    expect(screen.queryByText("Entfernen")).not.toBeInTheDocument();
+    expect(screen.queryByText("Entsperren")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sperren")).not.toBeInTheDocument();
   });
 
   it("opens the inline edit form from the header and triggers delete", () => {
@@ -117,6 +147,7 @@ describe("DevicesMasterDetail", () => {
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
+        canManage
       />,
     );
 
@@ -146,6 +177,7 @@ describe("DevicesMasterDetail", () => {
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
+        canManage
       />,
     );
 
@@ -161,6 +193,7 @@ describe("DevicesMasterDetail", () => {
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
+        canManage
       />,
     );
 
@@ -200,6 +233,7 @@ describe("DevicesMasterDetail", () => {
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
+        canManage
       />,
     );
 
@@ -219,6 +253,7 @@ describe("DevicesMasterDetail", () => {
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
+        canManage
       />,
     );
 
@@ -251,6 +286,7 @@ describe("DevicesMasterDetail", () => {
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
+        canManage
       />,
     );
 
@@ -273,6 +309,7 @@ describe("DevicesMasterDetail", () => {
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
+        canManage
       />,
     );
 
@@ -291,6 +328,7 @@ describe("DevicesMasterDetail", () => {
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
+        canManage
       />,
     );
 
@@ -307,6 +345,7 @@ describe("DevicesMasterDetail", () => {
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
+        canManage
       />,
     );
 
@@ -331,6 +370,7 @@ describe("DevicesMasterDetail", () => {
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
+        canManage
       />,
     );
 

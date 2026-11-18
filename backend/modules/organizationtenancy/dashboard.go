@@ -51,6 +51,8 @@ type DashboardSchool struct {
 	// ChildQuotaBundles is nil when the school has no Kinderkontingent.
 	ChildQuotaBundles    *int
 	ChildQuotaBundleSize int
+	// DeviceSlots is nil when moto has not set the Geräteplätze (#2312).
+	DeviceSlots *int
 }
 
 // PWAPortalStaff and PWAPortalParent are the portal labels the operator

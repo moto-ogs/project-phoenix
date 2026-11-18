@@ -107,6 +107,21 @@ func (s fakeOwnerStore) SetSchoolChildQuota(ctx context.Context, id int64, bundl
 	value, err := s.engine.SetSchoolChildQuota(ctx, id, quota)
 	return value, domain.OperationStats{}, err
 }
+func (s fakeOwnerStore) LockSchoolDeviceSlots(context.Context, int64) (domain.OperationStats, error) {
+	s.engine.deviceSlotLocks++
+	return domain.OperationStats{}, nil
+}
+func (s fakeOwnerStore) SetSchoolDeviceSlots(_ context.Context, id int64, slots *int) (organizationtenancy.School, domain.OperationStats, error) {
+	if err := s.engine.call("SetSchoolDeviceSlots"); err != nil {
+		return organizationtenancy.School{}, domain.OperationStats{}, err
+	}
+	school, ok := s.engine.schools[id]
+	if !ok {
+		return organizationtenancy.School{}, domain.OperationStats{}, organizationtenancy.ErrSchoolNotFound
+	}
+	school.DeviceSlots = slots
+	return *school, domain.OperationStats{}, nil
+}
 func (s fakeOwnerStore) SetSchoolDeleted(ctx context.Context, id int64, deleted bool) (domain.OperationStats, error) {
 	var err error
 	if deleted {

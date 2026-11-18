@@ -9,6 +9,7 @@ import {
   mailStatusCopy,
 } from "~/lib/email-delivery-status";
 import type { LetterMailStatus } from "~/lib/traeger-billing-api";
+import type { LetterSendCounts } from "./letter-send-state";
 
 /** What both kinds of letter know about their last mail. */
 export interface LetterMailState {
@@ -124,4 +125,54 @@ export function canSendMail(mailing: LetterMailState): boolean {
     mailing.mailOutcome !== "delayed" &&
     !heldBackNote(mailing)
   );
+}
+
+// What a provider's report makes a failed mail, as the backend counts it for
+// the letters of a monthly run (`careSummary`, #4684).
+const FAILED_OUTCOMES: ReadonlySet<MailOutcome> = new Set<MailOutcome>([
+  "undeliverable",
+  "complained",
+  "blocked",
+  "provider_blocked",
+  "unsubscribed",
+  "send_failed",
+  "held_by_stop",
+  "cancelled",
+  "unknown",
+]);
+
+/**
+ * The counts of the send state for letters whose list comes without a
+ * summary (holiday runs, #7406), counted like the backend counts the
+ * letters of a monthly run: each letter in exactly one tile.
+ */
+export function letterSendCounts(
+  mailings: readonly LetterMailState[],
+): LetterSendCounts {
+  let sent = 0;
+  let queued = 0;
+  let failed = 0;
+  let notSent = 0;
+  let withoutEmail = 0;
+  for (const mailing of mailings) {
+    const outcome = mailing.mailOutcome;
+    if (outcome && FAILED_OUTCOMES.has(outcome)) failed++;
+    else if (outcome === "delayed" || outcome === "overdue") queued++;
+    else if (mailing.status === "sent") sent++;
+    else if (mailing.status === "queued") queued++;
+    else if (mailing.status === "failed" || mailing.status === "unknown")
+      failed++;
+    else {
+      notSent++;
+      if (!mailing.recipientEmail.trim()) withoutEmail++;
+    }
+  }
+  return {
+    letters: mailings.length,
+    sent,
+    queued,
+    failed,
+    notSent,
+    withoutEmail,
+  };
 }

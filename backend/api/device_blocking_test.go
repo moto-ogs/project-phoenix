@@ -30,7 +30,7 @@ func (f deviceRemovalFixture) setStatus(t *testing.T, deviceID, status string, p
 	t.Helper()
 	claims := testutil.DefaultTestClaims()
 	if len(permissions) == 0 {
-		permissions = []string{"iot:update"}
+		permissions = []string{"devices:manage"}
 	} else {
 		// A staff account without the admin role holds only the given
 		// permissions.
@@ -159,7 +159,7 @@ func TestDeviceEditWithAStatusChangeIsAudited(t *testing.T) {
 	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/devices/%d", device.ID),
 		map[string]string{"device_id": device.DeviceID, "device_type": "terminal", "status": "inactive"},
 		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("iot:update"),
+		testutil.WithPermissions("devices:manage"),
 	)
 
 	rr := testutil.ExecuteRequest(f.router, req)
@@ -181,7 +181,7 @@ func TestDeviceBlockingStaysInsideTheSchoolAndNeedsThePermission(t *testing.T) {
 	testutil.AssertNotFound(t, f.setStatus(t, foreign.DeviceID, "inactive"))
 	assert.Equal(t, devicefleet.DeviceStatusActive, devicefleet.DeviceStatus(f.stored(t, foreign.ID).Status), "another school's device stays usable")
 
-	denied := f.setStatus(t, own.DeviceID, "inactive", "iot:read")
+	denied := f.setStatus(t, own.DeviceID, "inactive", "devices:read")
 	assert.Equal(t, http.StatusForbidden, denied.Code, denied.Body.String())
 	assert.Equal(t, devicefleet.DeviceStatusActive, devicefleet.DeviceStatus(f.stored(t, own.ID).Status))
 

@@ -21,4 +21,5 @@ POST /operator/schools/{id}/invite-admin
 POST /operator/schools/{id}/restore
 PUT /operator/schools/{id}
 PUT /operator/schools/{id}/accounts/{accountId}/mfa/override
+PUT /operator/schools/{id}/device-slots
 PUT /operator/schools/{id}/settings/values/{key}

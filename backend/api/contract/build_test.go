@@ -420,3 +420,16 @@ func TestTypeScriptImportsOpenEnumForASharedRequest(t *testing.T) {
 		assert.NotContains(t, files[name], "type OpenEnum", name)
 	}
 }
+
+// A route that may answer "there is none now" registers a pointer: its data
+// is the object or null. Every other registered object is never null.
+func TestARegisteredPointerAnswersTheObjectOrNull(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{get("/api/rows/current", &inner{}), get("/api/rows/{id}", inner{})}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+	source := files["rows.generated.ts"]
+	assert.Contains(t, source, "response: success(innerSchema.nullable()),")
+	assert.Contains(t, source, "response: success(innerSchema),")
+}

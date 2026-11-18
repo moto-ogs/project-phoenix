@@ -5,7 +5,7 @@
 // solange der Vertrag wartet, die Erinnerungen. Ein Vertrag, den die Eltern
 // auf Papier unterschrieben haben, wird hier mit seinem PDF erfasst.
 
-import { Download, FileSignature, Upload } from "lucide-react";
+import { Download, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 
@@ -13,6 +13,7 @@ import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { DataField, DataGrid } from "~/components/ui/data-field";
+import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
@@ -73,7 +74,6 @@ export function CareContractSignatureCard({
   return (
     <>
       <SectionCard
-        icon={FileSignature}
         title="Unterschrift"
         description={
           signature
@@ -194,14 +194,17 @@ function SignatureDetails({
           </div>
         ) : signature.imagePng ? (
           <figure className="flex flex-col gap-1">
-            <div className="moto-content-surface flex h-28 items-center justify-center rounded-xl border p-3">
+            <InsetPanel
+              tone="white"
+              className="flex h-28 items-center justify-center"
+            >
               {/* oxlint-disable-next-line nextjs/no-img-element -- a data URL of the stored signature, no remote image */}
               <img
                 src={`data:image/png;base64,${signature.imagePng}`}
                 alt={`Unterschrift von ${signature.signerName}`}
                 className="max-h-full max-w-full object-contain"
               />
-            </div>
+            </InsetPanel>
             <figcaption className="text-sm text-gray-500">
               Gespeicherte Unterschrift
             </figcaption>

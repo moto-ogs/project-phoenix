@@ -234,8 +234,11 @@ func (b *builder) unused(options Options) error {
 // rendered from a non-nil slice; a handler that passes a nil slice sends
 // null, which the decoder rejects instead of reading an empty list.
 func (b *builder) top(zero any, where string, request bool) (Schema, error) {
-	s, err := b.schema(reflect.TypeOf(zero), where, request)
-	s.Nullable = false
+	t := reflect.TypeOf(zero)
+	s, err := b.schema(t, where, request)
+	// A registered pointer says the route may answer null: there is no such
+	// object now.
+	s.Nullable = !request && t != nil && t.Kind() == reflect.Pointer
 	return s, err
 }
 

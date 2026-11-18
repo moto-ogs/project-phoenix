@@ -51,11 +51,12 @@ type TenantFacts = ports.TenantFacts
 
 // Dependencies are the collaborators the Device Fleet owner needs.
 type Dependencies struct {
-	DB        *bun.DB
-	Rooms     facilitiesModule.Query
-	Presence  application.PresenceQuery
-	Dashboard DashboardSources
-	Tenants   TenantFacts
+	DB          *bun.DB
+	Rooms       facilitiesModule.Query
+	Presence    application.PresenceQuery
+	Dashboard   DashboardSources
+	Tenants     TenantFacts
+	DeviceSlots ports.DeviceSlotLimits // Geräteplätze of a registration (#2312); unset where none registers
 	// Now is the owner's clock. The info-point aggregate derives the rendered
 	// calendar day and the "later today" cut-off from it, so a graph that
 	// serves the dashboard must supply Berlin time (timezone.Now); device-only
@@ -102,7 +103,7 @@ func New(dependencies Dependencies) (devicefleet.Capability, error) {
 		tenants = application.UncomposedDashboard{}
 	}
 	runtime := postgres.DatabaseRuntime(dependencies.DB)
-	service := application.New(application.Dependencies{
+	return application.New(application.Dependencies{
 		Devices:   postgres.NewDeviceStore(runtime, now),
 		Displays:  postgres.NewDisplayStore(runtime, now),
 		Scans:     postgres.NewUnregisteredTagScanStore(runtime),
@@ -110,13 +111,12 @@ func New(dependencies Dependencies) (devicefleet.Capability, error) {
 		Rooms:     application.RoomDirectory{Rooms: dependencies.Rooms},
 		Presence:  presence,
 		Dashboard: dashboard,
-		Tenants:   tenants,
-		Tx:        postgres.NewTransaction(dependencies.DB),
-		Tokens:    credentials.DisplayTokens{},
-		APIKeys:   credentials.DeviceKeys{Minter: dependencies.APIKeys},
-		Now:       ports.Clock(now),
-		Window:    devicefleet.OnlineWindowFromMinutes(dependencies.OnlineWindowMinutes),
-		Observe:   dependencies.Observe,
-	})
-	return service, nil
+		Tenants:   tenants, Slots: dependencies.DeviceSlots,
+		Tx:      postgres.NewTransaction(dependencies.DB),
+		Tokens:  credentials.DisplayTokens{},
+		APIKeys: credentials.DeviceKeys{Minter: dependencies.APIKeys},
+		Now:     ports.Clock(now),
+		Window:  devicefleet.OnlineWindowFromMinutes(dependencies.OnlineWindowMinutes),
+		Observe: dependencies.Observe,
+	}), nil
 }

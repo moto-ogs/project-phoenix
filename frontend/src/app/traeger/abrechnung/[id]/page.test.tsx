@@ -266,8 +266,12 @@ describe("TraegerBillingRunPage", () => {
     ];
     renderPage();
 
+    // Navigation stands in the page menu beside the one head action (#7406).
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Weitere Aktionen" }),
+    );
     expect(
-      await screen.findByRole("link", { name: "Zum Ferienzeitraum" }),
+      await screen.findByRole("menuitem", { name: /Zum Ferienzeitraum/ }),
     ).toHaveAttribute("href", "/ferien/5");
   });
 
@@ -277,9 +281,11 @@ describe("TraegerBillingRunPage", () => {
     // Anker: der Lauf ist geladen, seine Statuszeile steht.
     expect((await screen.findAllByText("Muster, Eva"))[0]).toBeInTheDocument();
     expect(screen.getAllByText("Vorschau")[0]).toBeInTheDocument();
+    // Without the right the page has no menu, so no way to the period.
     expect(
-      screen.queryByRole("link", { name: "Zum Ferienzeitraum" }),
+      screen.queryByRole("button", { name: "Weitere Aktionen" }),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText("Zum Ferienzeitraum")).not.toBeInTheDocument();
   });
 
   it("shows the preview of every family with its positions", async () => {

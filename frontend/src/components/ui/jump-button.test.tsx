@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { JumpButton, jumpTo } from "./jump-button";
@@ -87,5 +88,34 @@ describe("JumpButton", () => {
     expect(
       screen.getByRole("heading", { name: "Ansprechperson" }),
     ).toHaveFocus();
+  });
+
+  it("opens the closed tab of the target first, then jumps there", async () => {
+    function Tabs() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <JumpButton
+            targetId="parents"
+            tooltip="Springt zu Telefon und E-Mail-Adresse der Eltern."
+            reveal={() => setOpen(true)}
+          >
+            Zu den Eltern
+          </JumpButton>
+          {open ? (
+            <section id="parents">
+              <h2>Eltern</h2>
+            </section>
+          ) : null}
+        </>
+      );
+    }
+    render(<Tabs />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Zu den Eltern" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Eltern" })).toHaveFocus(),
+    );
   });
 });
