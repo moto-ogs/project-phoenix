@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { fireEvent, render as renderUi, screen } from "@testing-library/react";
 import type { PortalSessionSnapshot } from "~/lib/portal-session-snapshot.server";
+import { deferred } from "~/test/helpers/form-modal-pending";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { authMock, notFoundMock, readPortalSessionSnapshotMock } = vi.hoisted(
@@ -283,7 +284,7 @@ describe("TenantLayout", () => {
   });
 
   it("keeps fresh settings when a lookup started before invalidation finishes later", async () => {
-    const earlier = Promise.withResolvers<Response>();
+    const earlier = deferred<Response>();
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockReturnValueOnce(earlier.promise)
