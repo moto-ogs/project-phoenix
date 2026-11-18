@@ -1,6 +1,9 @@
 import type { HelpTopic } from "../help-types";
 import { HELP_TOPICS } from "~/lib/help-topics";
-import { SIMPLE_NAV_DIFFERENCE } from "../help-article-shared";
+import {
+  OWN_STAFF_PROFILE_TROUBLESHOOTING,
+  SIMPLE_NAV_DIFFERENCE,
+} from "../help-article-shared";
 
 // Eigener Dienstplan (#3821): eigene Seite unter `Team`, nur lesend.
 export function ownShiftPlanTopic(): HelpTopic {
@@ -33,6 +36,7 @@ export function ownShiftPlanTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "`Mein Dienstplan` fehlt? Dann plant Ihre OGS die Schichten nicht in moto.",
+      OWN_STAFF_PROFILE_TROUBLESHOOTING,
     ],
     related: [HELP_TOPICS.trackWorkTime, HELP_TOPICS.mySchedule],
   };

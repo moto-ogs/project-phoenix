@@ -29,9 +29,9 @@ func (s *service) ListSchoolCalendar(ctx context.Context, from, to appointmentca
 	if s.cfg.SchoolDays == nil {
 		return nil, errors.New("school calendar days are not configured")
 	}
-	staff, err := s.cfg.UserContext.GetCurrentStaff(ctx)
+	staff, err := s.currentStaff(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%w: current staff required", ErrForbidden)
+		return nil, err
 	}
 	appointments, err := s.listAppointmentsVisibleToStaff(ctx, staff.ID, toCalendarDate(from), toCalendarDate(to))
 	if err != nil {

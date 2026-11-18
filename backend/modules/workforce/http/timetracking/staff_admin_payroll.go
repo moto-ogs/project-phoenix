@@ -89,7 +89,7 @@ func (rs *StaffAdminResource) updatePayrollNumber(w http.ResponseWriter, r *http
 	}
 	changedBy, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 

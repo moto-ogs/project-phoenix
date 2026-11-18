@@ -59,6 +59,7 @@ import {
   STAFF_FLAT_PAGES,
 } from "~/lib/section-navigation";
 import { STAFF_NAV_CONCEPTS } from "~/lib/staff-navigation";
+import { useHasOwnStaff } from "~/lib/hooks/use-user-context";
 import { useOptionalSupervision } from "~/lib/supervision-context";
 import {
   useChildSearchOnlyNavigation,
@@ -188,6 +189,7 @@ export function useSearchablePages(): readonly SearchEntry[] {
   const childSearchOnlyNavigation = useChildSearchOnlyNavigation();
   const { overviewEnabled } = useOptionalSupervision();
   const canOpenRequestsPage = changeRequestAccess.canOpenRequestsPage;
+  const hasOwnStaff = useHasOwnStaff();
 
   return useMemo(() => {
     const isAdmin = hasRole(session, "admin");
@@ -197,6 +199,7 @@ export function useSearchablePages(): readonly SearchEntry[] {
       isAdmin,
       isCaregiver: isCaregiver(session),
       openCareGroupMode,
+      hasOwnStaff,
     };
     const catalogViewer = {
       session,
@@ -296,6 +299,7 @@ export function useSearchablePages(): readonly SearchEntry[] {
     return [...entries.values()];
   }, [
     session,
+    hasOwnStaff,
     settings,
     moduleNav,
     openCareGroupMode,

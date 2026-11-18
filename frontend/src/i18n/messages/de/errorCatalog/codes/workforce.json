@@ -127,5 +127,6 @@
   "pool_block_taken": "Diese Person ist zu dieser Zeit schon geblockt. Bitte wählen Sie eine andere Zeit.",
   "pool_springer_not_found": "Diese Person ist an diesem Tag nicht im Vertretungspool. Bitte laden Sie die Woche neu.",
   "pool_springer_busy": "Die Person arbeitet zu dieser Zeit an einer anderen Schule. Bitte wählen Sie eine andere Zeit.",
-  "traeger_payroll_not_ready": "Die Lohndatei kann noch nicht entstehen. Die Prüfung auf der Seite nennt, was noch fehlt."
+  "traeger_payroll_not_ready": "Die Lohndatei kann noch nicht entstehen. Die Prüfung auf der Seite nennt, was noch fehlt.",
+  "no_staff_profile": "Dafür brauchen Sie in dieser Schule ein eigenes Personalprofil. Bitte fragen Sie die Leitung."
 }
