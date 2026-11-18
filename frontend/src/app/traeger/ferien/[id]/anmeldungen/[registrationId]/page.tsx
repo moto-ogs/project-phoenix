@@ -607,8 +607,9 @@ function HolidayRegistrationContent() {
   }
 
   // Metadata is needed for the cards, but the registration still owns its
-  // head while the period or schools are loading again.
-  const metadataReady = Boolean(period && schools);
+  // head while the period or schools are loading again. Cached metadata no
+  // longer permits rendering after its revalidation refused access.
+  const metadataReady = Boolean(period && schools) && !metadataRefused;
   const tabContent: Record<
     Exclude<RegistrationTab, "uebersicht">,
     ReactNode
