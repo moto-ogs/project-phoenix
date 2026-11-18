@@ -84,6 +84,10 @@ func TestDataImportCutover_StaffOwnerFailuresRollbackAndReplay(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
 	tables := []string{"users.persons", "users.staff_school_memberships", "users.staff_employment_profiles", "users.teachers", "users.staff_master_data", "users.staff_qualifications", "auth.invitation_tokens"}
+	queries := make(testpkg.SnapshotQueries, len(tables))
+	for _, table := range tables {
+		queries[table] = `SELECT count(*) FROM ` + table + ` WHERE tenant_id = ?0`
+	}
 	for _, table := range tables {
 		t.Run(table, func(t *testing.T) {
 			tenantID := testpkg.OwnTenant(t)
@@ -95,13 +99,9 @@ func TestDataImportCutover_StaffOwnerFailuresRollbackAndReplay(t *testing.T) {
 			require.NoError(t, err)
 			actor := newImporter(t, db)
 			role := testpkg.CreateTestRoleForTenant(t, db, "Betreuungskraft", tenantID)
-			counts := func() []int {
+			counts := func() map[string]int {
 				t.Helper()
-				result := make([]int, len(tables))
-				for i, name := range tables {
-					require.NoError(t, db.NewSelect().TableExpr(name).ColumnExpr("count(*)").Where("tenant_id = ?", tenantID).Scan(testpkg.Ctx(t), &result[i]))
-				}
-				return result
+				return queries.ReadCounts(t, testpkg.Ctx(t), db, tenantID)
 			}
 			run := func() (*importModels.ImportResult[importModels.StaffImportRow], error) {
 				t.Helper()
@@ -140,8 +140,9 @@ func TestDataImportCutover_StaffOwnerFailuresRollbackAndReplay(t *testing.T) {
 			require.NoError(t, err)
 			require.Zero(t, replay.ErrorCount, "%+v", replay.Errors)
 			assert.Equal(t, 1, replay.CreatedCount)
-			for i, count := range counts() {
-				assert.Equal(t, before[i]+1, count, "%s is created exactly once after retry", tables[i])
+			after := counts()
+			for _, name := range tables {
+				assert.Equal(t, before[name]+1, after[name], "%s is created exactly once after retry", name)
 			}
 			assert.Len(t, mailer.Messages(), 1, "only the committed invitation sends mail")
 		})

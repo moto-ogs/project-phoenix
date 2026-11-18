@@ -34,10 +34,11 @@ import (
 const erasedQuickly = 2 * time.Second
 
 type erasureFixture struct {
-	db     *bun.DB
-	owner  identityaccess.Owner
-	base   context.Context
-	school int64
+	db             *bun.DB
+	owner          identityaccess.Owner
+	base           context.Context
+	school         int64
+	snapshotReader testpkg.SnapshotReader
 }
 
 func newErasureFixture(t *testing.T) erasureFixture {
@@ -48,6 +49,11 @@ func newErasureFixture(t *testing.T) erasureFixture {
 	owner, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}})
 	require.NoError(t, err)
 	f := erasureFixture{db: db, owner: owner, base: testpkg.WithTenantRuntime(t, t.Context(), db), school: school}
+	queries := make(testpkg.SnapshotQueries, len(erasureSnapshotRows))
+	for table, predicate := range erasureSnapshotRows {
+		queries[table] = testpkg.TableSnapshotQuery(db, table, predicate)
+	}
+	f.snapshotReader = queries.Prepare(t, db)
 	// The clone may hold unused accounts of its own; the first run takes
 	// them, so the counts below are the test's accounts only.
 	f.eraseNow(t)
@@ -81,23 +87,18 @@ func (f erasureFixture) unusedAccount(t *testing.T, label string) int64 {
 // erasureSnapshotRows selects, per table, every row of one account the
 // erasure may change or write.
 var erasureSnapshotRows = map[string]string{
-	"auth.accounts":                    `FROM auth.accounts AS r WHERE r.id = ?`,
-	"auth.account_tenants":             `FROM auth.account_tenants AS r WHERE r.account_id = ?`,
-	"auth.account_roles":               `FROM auth.account_roles AS r WHERE r.account_id = ?`,
-	"auth.tokens":                      `FROM auth.tokens AS r WHERE r.account_id = ?`,
-	"users.profiles":                   `FROM users.profiles AS r WHERE r.account_id = ?`,
-	"auth.account_avatar_file_cleanup": `FROM auth.account_avatar_file_cleanup AS r WHERE r.avatar LIKE '%-' || ? || '.png'`,
+	"auth.accounts":                    `r.id = $1`,
+	"auth.account_tenants":             `r.account_id = $1`,
+	"auth.account_roles":               `r.account_id = $1`,
+	"auth.tokens":                      `r.account_id = $1`,
+	"users.profiles":                   `r.account_id = $1`,
+	"auth.account_avatar_file_cleanup": `r.avatar LIKE '%-' || ($1::bigint)::text || '.png'`,
 }
 
 func (f erasureFixture) snapshot(t *testing.T, accountID int64) map[string]string {
 	t.Helper()
-	snapshot := make(map[string]string, len(erasureSnapshotRows))
-	for table, rows := range erasureSnapshotRows {
-		var content string
-		require.NoError(t, f.db.NewRaw(`SELECT COALESCE(jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text), '[]'::jsonb)::text `+rows, accountID).
-			Scan(t.Context(), &content), table)
-		snapshot[table] = content
-	}
+	snapshot, err := f.snapshotReader(t.Context(), accountID)
+	require.NoError(t, err)
 	return snapshot
 }
 

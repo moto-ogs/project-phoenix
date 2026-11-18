@@ -28,11 +28,12 @@ func rowsHoldingTheVisitor(t *testing.T, db *bun.DB) map[string]int {
 		WHERE c.relkind IN ('r', 'p') AND NOT c.relispartition
 		  AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')`).Scan(ctx, &tables))
 	require.NotEmpty(t, tables, "schema discovery must not pass vacuously")
-	rows := map[string]int{}
+	queries := make(testpkg.SnapshotQueries, len(tables))
 	for _, table := range tables {
-		var count int
-		require.NoError(t, db.NewRaw(fmt.Sprintf(`SELECT count(*) FROM %s AS row WHERE row::text LIKE ?`, table),
-			"%"+visitorLast+"%").Scan(ctx, &count), table)
+		queries[table] = fmt.Sprintf(`SELECT count(*) FROM %s AS row WHERE row::text LIKE ?0`, table)
+	}
+	rows := map[string]int{}
+	for table, count := range queries.ReadCounts(t, ctx, db, "%"+visitorLast+"%") {
 		if count > 0 {
 			rows[table] = count
 		}

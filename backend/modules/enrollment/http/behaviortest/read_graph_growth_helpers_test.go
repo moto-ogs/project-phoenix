@@ -18,7 +18,8 @@ import (
 // records or consume sequences, including through a database-side effect.
 func growthReadOnlyGET(t *testing.T, f *enrollmentGrowthFixture, router http.Handler, counter *testpkg.QueryCounter, token, path string) (json.RawMessage, testpkg.QueryMeasurement) {
 	t.Helper()
-	before := enrollmentReadState(t, f)
+	snapshot := prepareEnrollmentReadState(t, f)
+	before := snapshot()
 	req := httptest.NewRequest(http.MethodGet, path, nil)
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
@@ -27,7 +28,7 @@ func growthReadOnlyGET(t *testing.T, f *enrollmentGrowthFixture, router http.Han
 	counter.Reset()
 	testpkg.MeasuredHTTPRequest(counter, testpkg.MountedQueryBudgetRouter("/api/enrollment", router), rec, req)
 	queries := counter.Queries()
-	require.Equal(t, before, enrollmentReadState(t, f), "read graph changed database state")
+	require.Equal(t, before, snapshot(), "read graph changed database state")
 	for _, query := range queries {
 		upper := strings.ToUpper(strings.TrimSpace(query))
 		require.False(t, strings.HasPrefix(upper, "INSERT ") || strings.HasPrefix(upper, "UPDATE ") || strings.HasPrefix(upper, "DELETE ") || strings.Contains(upper, "NEXTVAL("), query)
@@ -61,17 +62,21 @@ func growthReadOnlyGET(t *testing.T, f *enrollmentGrowthFixture, router http.Han
 	return body.Data, counter.Measurement(queries)
 }
 
-func enrollmentReadState(t *testing.T, f *enrollmentGrowthFixture) map[string]string {
+func prepareEnrollmentReadState(t *testing.T, f *enrollmentGrowthFixture) func() map[string]string {
 	t.Helper()
 	ctx := testpkg.Ctx(t)
-	state := map[string]string{}
-	for _, table := range []string{"enrollment.requests", "enrollment.request_children", "enrollment.request_guardians", "enrollment.change_requests", "enrollment.change_request_messages", "enrollment.request_reads", "enrollment.care_offering_bookings"} {
-		var data string
-		require.NoError(t, f.env.db.NewRaw("SELECT COALESCE(jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text), '[]'::jsonb)::text FROM "+table+" AS r WHERE tenant_id = ?", testpkg.Tenant(t)).Scan(ctx, &data))
-		state[table] = data
+	queries := testpkg.SnapshotQueries{
+		"sequences": `SELECT COALESCE(jsonb_agg(to_jsonb(s) ORDER BY schemaname, sequencename), '[]'::jsonb)
+			FROM pg_sequences AS s WHERE schemaname NOT LIKE 'pg_%'`,
 	}
-	var sequences string
-	require.NoError(t, f.env.db.NewRaw("SELECT COALESCE(jsonb_agg(to_jsonb(s) ORDER BY schemaname, sequencename),'[]'::jsonb)::text FROM pg_sequences AS s WHERE schemaname NOT LIKE 'pg_%'").Scan(ctx, &sequences))
-	state["sequences"] = sequences
-	return state
+	for _, table := range []string{"enrollment.requests", "enrollment.request_children", "enrollment.request_guardians", "enrollment.change_requests", "enrollment.change_request_messages", "enrollment.request_reads", "enrollment.care_offering_bookings"} {
+		queries[table] = testpkg.TableSnapshotQuery(f.env.db, table, "r.tenant_id = $1")
+	}
+	read := queries.Prepare(t, f.env.db)
+	return func() map[string]string {
+		t.Helper()
+		state, err := read(ctx, testpkg.Tenant(t))
+		require.NoError(t, err)
+		return state
+	}
 }
