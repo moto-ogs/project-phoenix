@@ -24,7 +24,8 @@ func InsertTestGuardianInvitation(t *testing.T, db *bun.DB, invitation *Guardian
 		invitation.TenantID = Tenant(t)
 	}
 	if invitation.ExpiresAt.IsZero() {
-		invitation.ExpiresAt = time.Now().Add(48 * time.Hour)
+		// The database clock stamps and judges the expiry (ADR 0285, Nachtrag).
+		invitation.ExpiresAt = DatabaseNow(t, db).Add(48 * time.Hour)
 	}
 	if invitation.ApprovalStatus == "" {
 		invitation.ApprovalStatus = "not_required"

@@ -687,6 +687,59 @@ describe("TenantPage", () => {
     expect(within(band).getAllByRole("tab")).toHaveLength(2);
   });
 
+  // #7303: ohne Zeile darunter schließen die Reiter die Kopfkarte ab
+  // (Spec Regel 7); mit Suchzeile trennt die Grundlinie Reiter und Suche.
+  it.each([
+    {
+      name: "ohne Suchzeile",
+      search: undefined,
+      tabsLast: true,
+      headerClasses: ["sm:pb-0", "compact:pb-0", "max-sm:p-4"],
+    },
+    {
+      name: "mit Suchzeile",
+      search: { value: "", onChange: vi.fn(), placeholder: "Suchen" },
+      tabsLast: false,
+      headerClasses: ["p-5", "max-sm:p-4"],
+    },
+  ])(
+    "setzt die Grundlinie der Reiter $name",
+    ({ search, tabsLast, headerClasses }) => {
+      const { container } = render(
+        <TenantPage
+          title="Einstellungen"
+          search={search}
+          tabs={{
+            value: "operations",
+            onChange: vi.fn(),
+            items: [
+              { value: "operations", label: "Betrieb" },
+              { value: "gdpr", label: "Datenschutz" },
+            ],
+            label: "Einstellungsbereiche",
+          }}
+        >
+          <p>Inhalt</p>
+        </TenantPage>,
+      );
+
+      const header = container.querySelector("header")!;
+      const band = screen.getByRole("tablist", {
+        name: "Einstellungsbereiche",
+      });
+      const bandWrapper = header.querySelector(".group\\/tabs")!;
+      expect(bandWrapper).toContainElement(band);
+      // Ab sm entfällt die Linie des Bandes, wenn es die letzte Zeile ist.
+      expect(bandWrapper.firstElementChild).toHaveClass(
+        "border-b",
+        "sm:group-last/tabs:border-b-0",
+      );
+      expect(header.lastElementChild === bandWrapper).toBe(tabsLast);
+      expect(header).toHaveClass(...headerClasses);
+      expect(header.className.includes("pb-0")).toBe(tabsLast);
+    },
+  );
+
   it("legt die Erklärung hinter einen Info-Knopf neben dem Titel", () => {
     render(
       <TenantPage

@@ -3,7 +3,10 @@ import { StrictMode } from "react";
 import { expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { ExportRecipient } from "~/lib/traeger-export-handovers-api";
-import { ExportRecipientFormCard } from "./export-recipient-cards";
+import {
+  ExportHandoverHistoryCard,
+  ExportRecipientFormCard,
+} from "./export-recipient-cards";
 
 const RECIPIENT: ExportRecipient = {
   id: "7",
@@ -40,4 +43,20 @@ it("updates an untouched recipient draft in Strict Mode", () => {
   view.rerender(form(updated));
 
   expect(screen.getByLabelText("Zielordner")).toHaveValue("/archiv");
+});
+
+// The table brings its own frame; a flush card put it straight onto the card
+// frame (#7303). The card keeps its inset around the table.
+it("keeps the card inset around the handover table", () => {
+  render(
+    <ToastProvider>
+      <ExportHandoverHistoryCard handovers={[]} />
+    </ToastProvider>,
+  );
+
+  expect(
+    screen
+      .getByRole("heading", { name: "Letzte Übergaben" })
+      .closest("section"),
+  ).toHaveClass("p-5");
 });

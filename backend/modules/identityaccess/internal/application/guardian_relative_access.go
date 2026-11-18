@@ -347,7 +347,7 @@ func (l *AccountLifecycle) ensureStudentLink(ctx context.Context, studentID, gua
 // an open invitation for the same child and profile.
 func (l *AccountLifecycle) createStudentInvitation(ctx context.Context, req domain.InviteToStudentRequest, profile domain.GuardianProfile, tenantID int64, approvalStatus string, profileCreated, roleUpgrade bool) (domain.GuardianInvitation, error) {
 	studentID := req.StudentID
-	open, err := l.openStudentInvitations(ctx, profile.ID, studentID, l.sessions.now())
+	open, err := l.openStudentInvitations(ctx, profile.ID, studentID)
 	if err != nil {
 		return domain.GuardianInvitation{}, failed(opGuardianInviteToStudent, err)
 	}
@@ -384,12 +384,12 @@ func (l *AccountLifecycle) createStudentInvitation(ctx context.Context, req doma
 // one the mail would carry no usable link.
 func (l *AccountLifecycle) reissueStudentInvitationLink(ctx context.Context, invitation domain.GuardianInvitation, profile domain.GuardianProfile) (domain.GuardianInvitation, error) {
 	readExpiry := invitation.ExpiresAt
-	expiry, err := l.delivery.InvitationExpiry(ctx)
+	expiresAt, err := l.invitationExpiry(ctx)
 	if err != nil {
 		return domain.GuardianInvitation{}, failed(opGuardianInviteToStudent, err)
 	}
 	issueGuardianInvitationLink(&invitation, profile)
-	invitation.ExpiresAt = l.sessions.now().Add(expiry)
+	invitation.ExpiresAt = expiresAt
 	invitation.EmailSentAt = nil
 	invitation.EmailError = nil
 	if err := l.invitations.UpdateGuardianInvitation(ctx, invitation, invitation.ApprovalStatus, readExpiry); err != nil {
@@ -402,8 +402,11 @@ func (l *AccountLifecycle) reissueStudentInvitationLink(ctx context.Context, inv
 // child that a direct link just overtook: the account now has access, so a
 // still-pending row would linger in the staff queue forever.
 func (l *AccountLifecycle) closeSupersededApprovalRequests(ctx context.Context, guardianProfileID, studentID int64) error {
-	now := l.sessions.now()
-	open, err := l.openStudentInvitations(ctx, guardianProfileID, studentID, now)
+	now, err := l.invitationTime(ctx)
+	if err != nil {
+		return failed(opGuardianInviteToStudent, err)
+	}
+	open, err := l.openStudentInvitations(ctx, guardianProfileID, studentID)
 	if err != nil {
 		return failed(opGuardianInviteToStudent, err)
 	}
@@ -492,7 +495,11 @@ func (l *AccountLifecycle) pendingInvitation(ctx context.Context, op string, inv
 	if !invitation.IsPendingApproval() {
 		return domain.GuardianInvitation{}, failed(op, fmt.Errorf("invitation is not awaiting approval"))
 	}
-	if guardianApprovalExpired(invitation, l.sessions.now()) {
+	now, err := l.invitationTime(ctx)
+	if err != nil {
+		return domain.GuardianInvitation{}, failed(op, err)
+	}
+	if guardianApprovalExpired(invitation, now) {
 		return domain.GuardianInvitation{}, failed(op, identityaccess.ErrGuardianInvitationExpired)
 	}
 	return invitation, nil
@@ -527,12 +534,11 @@ func (l *AccountLifecycle) cleanupOrphanProfile(ctx context.Context, invitation 
 			slog.String("error", err.Error()))
 		return
 	}
-	now := l.sessions.now()
 	for _, inv := range invitations {
 		if inv.ID == invitation.ID {
 			continue
 		}
-		if guardianInvitationNonFinal(inv, now) {
+		if guardianInvitationNonFinal(inv) {
 			return
 		}
 	}
@@ -547,17 +553,19 @@ func guardianApprovalExpired(inv domain.GuardianInvitation, now time.Time) bool 
 	return !inv.ExpiresAt.IsZero() && !inv.ExpiresAt.After(now)
 }
 
-func guardianInvitationNonFinal(inv domain.GuardianInvitation, now time.Time) bool {
+// guardianInvitationNonFinal judges an invitation as the store read it, at
+// the database time of that read.
+func guardianInvitationNonFinal(inv domain.GuardianInvitation) bool {
 	if inv.AcceptedAt != nil {
 		return false
 	}
 	if inv.ApprovalStatus == domain.GuardianInvitationApprovalRejected {
 		return false
 	}
-	return inv.ExpiresAt.IsZero() || inv.ExpiresAt.After(now)
+	return inv.ExpiresAt.IsZero() || !inv.Expired
 }
 
-func (l *AccountLifecycle) openStudentInvitations(ctx context.Context, guardianProfileID, studentID int64, now time.Time) ([]domain.GuardianInvitation, error) {
+func (l *AccountLifecycle) openStudentInvitations(ctx context.Context, guardianProfileID, studentID int64) ([]domain.GuardianInvitation, error) {
 	invitations, err := l.invitations.ListGuardianInvitationsByProfile(ctx, guardianProfileID)
 	if err != nil {
 		return nil, err
@@ -567,7 +575,7 @@ func (l *AccountLifecycle) openStudentInvitations(ctx context.Context, guardianP
 		if inv.StudentID == nil || *inv.StudentID != studentID {
 			continue
 		}
-		if guardianInvitationNonFinal(inv, now) {
+		if guardianInvitationNonFinal(inv) {
 			open = append(open, inv)
 		}
 	}
@@ -740,11 +748,11 @@ func (l *AccountLifecycle) waiveInvitationApproval(ctx context.Context, openInvi
 		openInvitation.ApprovalStatus = domain.GuardianInvitationApprovalNotRequired
 		openInvitation.ApprovedBy = nil
 		openInvitation.ApprovedAt = nil
-		expiry, err := l.delivery.InvitationExpiry(ctx)
+		expiresAt, err := l.invitationExpiry(ctx)
 		if err != nil {
 			return domain.GuardianInvitation{}, failed(opGuardianInviteToStudent, err)
 		}
-		openInvitation.ExpiresAt = l.sessions.now().Add(expiry)
+		openInvitation.ExpiresAt = expiresAt
 		openInvitation.EmailSentAt = nil
 		openInvitation.EmailError = nil
 		if err := l.invitations.UpdateGuardianInvitation(ctx, openInvitation, domain.GuardianInvitationApprovalPending, readExpiry); err != nil {

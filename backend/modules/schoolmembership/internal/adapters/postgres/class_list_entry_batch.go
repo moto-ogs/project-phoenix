@@ -129,18 +129,21 @@ func classListEntryKeyColumns(fields []schoolmembership.ClassListEntryFields) (f
 // keepClassTimeSQL gives a child a class-list entry joins the class time the
 // entry stood for (#4803): from the Berlin day the entry was created, when
 // the child's care starts later. A child without an OGS place and a child in
-// care already need none.
+// care already need none. A class time kept from another class gives way.
 const keepClassTimeSQL = `UPDATE users.student_school_memberships AS m
-SET class_member_from = LEAST(COALESCE(m.class_member_from, joined.since), joined.since)
+SET class_member_from = joined.since, class_member_class = joined.school_class
 FROM (
-	SELECT pair.student_id, MIN((entry.created_at AT TIME ZONE 'Europe/Berlin')::date) AS since
+	SELECT pair.student_id, MIN((entry.created_at AT TIME ZONE 'Europe/Berlin')::date) AS since,
+		MIN(entry.school_class) AS school_class
 	FROM unnest(?::bigint[], ?::bigint[]) AS pair(entry_id, student_id)
 	JOIN users.class_list_entries AS entry ON entry.tenant_id = ? AND entry.id = pair.entry_id
 	GROUP BY pair.student_id
 ) AS joined
 WHERE m.tenant_id = ? AND m.student_profile_id = joined.student_id AND m.deleted_at IS NULL
 	AND NOT m.without_care_place
-	AND COALESCE(m.first_care_from, m.enrolled_from) > joined.since`
+	AND COALESCE(m.first_care_from, m.enrolled_from) > joined.since
+	AND (m.class_member_from IS NULL OR m.class_member_from > joined.since
+		OR LOWER(TRIM(m.class_member_class)) IS DISTINCT FROM LOWER(TRIM(m.school_class)))`
 
 // KeepClassTimeOfJoinedChildren records, in one statement, the class time
 // of the children class-list entries join before the entries go (#4803).

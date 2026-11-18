@@ -50,18 +50,34 @@ func (rs *ReportTemplateResource) TraegerRouter(protectedTraegerRoutes func(chi.
 // ReportTemplateRequest is the body of POST /traeger/report-templates and
 // PUT /traeger/report-templates/{id}.
 type ReportTemplateRequest struct {
-	Name         string                                      `json:"name"`
-	Sections     []string                                    `json:"sections"`
-	KeyDateMonth int                                         `json:"key_date_month"`
-	KeyDateDay   int                                         `json:"key_date_day"`
-	Districts    []organizationtenancy.TraegerReportDistrict `json:"districts"`
+	Name         string                  `json:"name"`
+	Sections     []string                `json:"sections"`
+	KeyDateMonth int                     `json:"key_date_month"`
+	KeyDateDay   int                     `json:"key_date_day"`
+	Districts    []ReportDistrictRequest `json:"districts"`
 }
 
 // Bind accepts the body; the Owner validates it.
 func (req *ReportTemplateRequest) Bind(*http.Request) error { return nil }
 
 func (req *ReportTemplateRequest) input() organizationtenancy.TraegerReportTemplateInput {
-	return organizationtenancy.TraegerReportTemplateInput(*req)
+	input := organizationtenancy.TraegerReportTemplateInput{
+		Name: req.Name, Sections: req.Sections, KeyDateMonth: req.KeyDateMonth, KeyDateDay: req.KeyDateDay,
+	}
+	if req.Districts != nil {
+		input.Districts = make([]organizationtenancy.TraegerReportDistrict, 0, len(req.Districts))
+		for _, district := range req.Districts {
+			input.Districts = append(input.Districts, organizationtenancy.TraegerReportDistrict(district))
+		}
+	}
+	return input
+}
+
+// ReportDistrictRequest assigns a school to a Sozialraum in a request; the
+// contract keeps a request type apart from the answer's (ADR 0270).
+type ReportDistrictRequest struct {
+	SchoolID int64  `json:"school_id"`
+	District string `json:"district"`
 }
 
 func (rs *ReportTemplateResource) list(w http.ResponseWriter, r *http.Request) {

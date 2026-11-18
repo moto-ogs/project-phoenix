@@ -29,6 +29,9 @@ type GuardianInvitationRecord struct {
 	// RecipientEmail is the normalized address the link was issued for, or
 	// "" for a legacy link without a recorded recipient (#6294).
 	RecipientEmail string
+	// Expired reports whether the link ran out, judged by the owner on the
+	// clock that stamps it.
+	Expired bool
 }
 
 // GuardianInvitations is the consumer-owned port over the Identity & Access

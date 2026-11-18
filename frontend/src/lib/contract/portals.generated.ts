@@ -10,6 +10,9 @@ import { routes as schoolStaffMessages } from "./school-staff-messages.generated
 import { routes as staffMessages } from "./staff-messages.generated";
 import { routes as students } from "./students.generated";
 import { routes as traegerBillingFamilies } from "./traeger-billing-families.generated";
+import { routes as traegerDocuments } from "./traeger-documents.generated";
+import { routes as traegerMasterData } from "./traeger-master-data.generated";
+import { routes as traegerReportTemplates } from "./traeger-report-templates.generated";
 
 /** The registered routes of each portal, by the scope of its session token. */
 export const portalRoutes = {
@@ -18,6 +21,24 @@ export const portalRoutes = {
   ],
   org: [
     traegerBillingFamilies["GET /traeger/billing-families/debtor-number-format"],
+    traegerDocuments["DELETE /traeger/documents/{id}"],
+    traegerDocuments["DELETE /traeger/documents/{id}/releases/{releaseId}"],
+    traegerDocuments["GET /traeger/documents/audiences"],
+    traegerDocuments["POST /traeger/documents/{id}/releases"],
+    traegerMasterData["DELETE /traeger/master-data/bank-accounts/{id}"],
+    traegerMasterData["GET /traeger/master-data/"],
+    traegerMasterData["GET /traeger/master-data/document-templates"],
+    traegerMasterData["GET /traeger/master-data/document-templates/{kind}"],
+    traegerMasterData["POST /traeger/master-data/bank-accounts"],
+    traegerMasterData["POST /traeger/master-data/document-templates/{kind}/preview"],
+    traegerMasterData["POST /traeger/master-data/document-templates/{kind}/versions"],
+    traegerMasterData["PUT /traeger/master-data/bank-accounts/{id}"],
+    traegerMasterData["PUT /traeger/master-data/contact"],
+    traegerMasterData["PUT /traeger/master-data/withdrawal-contact"],
+    traegerReportTemplates["DELETE /traeger/report-templates/{id}"],
+    traegerReportTemplates["GET /traeger/report-templates/"],
+    traegerReportTemplates["POST /traeger/report-templates/"],
+    traegerReportTemplates["PUT /traeger/report-templates/{id}"],
   ],
   parent: [
     parentMe["GET /parent/me/enrollable-schools"],

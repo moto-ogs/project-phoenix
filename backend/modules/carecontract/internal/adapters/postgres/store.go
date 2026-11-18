@@ -94,14 +94,37 @@ func (Store) Templates(ctx context.Context, organizationID int64) ([]ports.Templ
 	if err != nil {
 		return nil, err
 	}
-	var rows []templateRow
-	if err := db.NewRaw(`SELECT `+templateColumns+` FROM care_contract.contract_templates
-		WHERE organization_id = ? ORDER BY school_id, care_offering_id`, organizationID).Scan(ctx, &rows); err != nil {
+	var rows []struct {
+		templateRow
+		Versions         []string `bun:"versions,array"`
+		VersionsComplete bool     `bun:"versions_complete"`
+	}
+	// The trail holds the conditions texts of every saved version of a template
+	// (ports.VersionsDetail). A save before they were recorded left an entry
+	// without them: that template's history is incomplete. The Träger's
+	// template entries are grouped by template once and joined, so the read
+	// stays one pass over the trail however many templates there are.
+	// Binds: ?0 the detail, ?1 the template action, ?2 the Träger.
+	if err := db.NewRaw(`SELECT t.id, t.school_id, t.care_offering_id, t.term_kind, t.term_months,
+			t.notice_months, t.notice_to, t.special_termination, t.special_termination_note,
+			t.statute_required, t.statute_title, t.statute_url, t.contract_partner, t.updated_at,
+			COALESCE(h.versions, '{}') AS versions, COALESCE(h.complete, false) AS versions_complete
+		FROM care_contract.contract_templates AS t
+		LEFT JOIN (SELECT e.details->>'template_id' AS template_id,
+				COALESCE(array_agg(DISTINCT v.version ORDER BY v.version) FILTER (WHERE v.version IS NOT NULL), '{}') AS versions,
+				bool_and(jsonb_typeof(e.details->?0) IS NOT DISTINCT FROM 'array') AS complete
+			FROM care_contract.contract_events AS e
+			LEFT JOIN LATERAL jsonb_array_elements_text(CASE jsonb_typeof(e.details->?0) WHEN 'array' THEN e.details->?0 ELSE '[]' END) AS v(version) ON true
+			WHERE e.organization_id = ?2 AND e.contract_id IS NULL AND e.action = ?1
+			GROUP BY e.details->>'template_id') AS h ON h.template_id = t.id::text
+		WHERE t.organization_id = ?2 ORDER BY t.school_id, t.care_offering_id`,
+		ports.VersionsDetail, ports.ActionTemplate, organizationID).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("care contract postgres: templates: %w", err)
 	}
 	result := make([]ports.TemplateRow, len(rows))
 	for i, row := range rows {
-		result[i] = ports.TemplateRow{SchoolID: row.SchoolID, OfferingID: row.CareOfferingID, Template: row.template()}
+		result[i] = ports.TemplateRow{SchoolID: row.SchoolID, OfferingID: row.CareOfferingID, Template: row.template(),
+			Versions: row.Versions, VersionsComplete: row.VersionsComplete}
 	}
 	return result, nil
 }

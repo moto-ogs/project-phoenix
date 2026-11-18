@@ -712,10 +712,16 @@ type lifecycleInvitations struct {
 	insertErr  error
 	updateErr  error
 	pendingErr error
+	// now is the database clock the store stamps and judges on.
+	now func() time.Time
 }
 
 func newLifecycleInvitations() *lifecycleInvitations {
-	return &lifecycleInvitations{rows: map[int64]domain.GuardianInvitation{}, nextID: 900}
+	return &lifecycleInvitations{rows: map[int64]domain.GuardianInvitation{}, nextID: 900, now: time.Now}
+}
+
+func (s *lifecycleInvitations) DatabaseTime(context.Context) (time.Time, domain.OperationStats, error) {
+	return s.now(), domain.OperationStats{Queries: 1}, nil
 }
 
 func (s *lifecycleInvitations) add(invitation domain.GuardianInvitation) domain.GuardianInvitation {
@@ -730,13 +736,19 @@ func (s *lifecycleInvitations) FindGuardianInvitation(_ context.Context, id int6
 		return domain.GuardianInvitation{}, false, s.findErr
 	}
 	invitation, ok := s.rows[id]
-	return invitation, ok, nil
+	return s.read(invitation), ok, nil
+}
+
+// read reports the expiry at the database time of the read, as the store does.
+func (s *lifecycleInvitations) read(invitation domain.GuardianInvitation) domain.GuardianInvitation {
+	invitation.Expired = !invitation.ExpiresAt.After(s.now())
+	return invitation
 }
 
 func (s *lifecycleInvitations) sorted(match func(domain.GuardianInvitation) bool) []domain.GuardianInvitation {
 	var result []domain.GuardianInvitation
 	for _, invitation := range s.rows {
-		if match(invitation) {
+		if invitation = s.read(invitation); match(invitation) {
 			result = append(result, invitation)
 		}
 	}
@@ -786,7 +798,7 @@ func (s *lifecycleInvitations) FindGuardianInvitationByToken(_ context.Context, 
 	return domain.GuardianInvitation{}, false, nil
 }
 
-func (s *lifecycleInvitations) ListOpenGuardianInvitations(_ context.Context, profileIDs []int64, now time.Time) ([]domain.GuardianInvitation, error) {
+func (s *lifecycleInvitations) ListOpenGuardianInvitations(_ context.Context, profileIDs []int64) ([]domain.GuardianInvitation, error) {
 	if s.listErr != nil {
 		return nil, s.listErr
 	}
@@ -795,23 +807,24 @@ func (s *lifecycleInvitations) ListOpenGuardianInvitations(_ context.Context, pr
 		wanted[id] = true
 	}
 	return s.sorted(func(invitation domain.GuardianInvitation) bool {
-		return wanted[invitation.GuardianProfileID] && guardianInvitationNonFinal(invitation, now)
+		return wanted[invitation.GuardianProfileID] && guardianInvitationNonFinal(invitation)
 	}), nil
 }
 
-func (s *lifecycleInvitations) ListRedeemableGuardianInvitations(_ context.Context, now time.Time) ([]domain.GuardianInvitation, error) {
+func (s *lifecycleInvitations) ListRedeemableGuardianInvitations(_ context.Context) ([]domain.GuardianInvitation, error) {
 	if s.listErr != nil {
 		return nil, s.listErr
 	}
 	return s.sorted(func(invitation domain.GuardianInvitation) bool {
-		return guardianInvitationNonFinal(invitation, now) && !invitation.IsPendingApproval()
+		return guardianInvitationNonFinal(invitation) && !invitation.IsPendingApproval()
 	}), nil
 }
 
-func (s *lifecycleInvitations) AcceptGuardianInvitation(_ context.Context, id int64, token string, acceptedAt time.Time) (bool, error) {
+func (s *lifecycleInvitations) AcceptGuardianInvitation(_ context.Context, id int64, token string) (bool, error) {
 	if s.updateErr != nil {
 		return false, s.updateErr
 	}
+	acceptedAt := s.now()
 	invitation, ok := s.rows[id]
 	if !ok || invitation.Token != token || invitation.AcceptedAt != nil || invitation.Redeemable(acceptedAt) != nil {
 		return false, nil
@@ -962,7 +975,8 @@ func tenantContext() context.Context {
 	return (&fakeRuntime{}).WithTenantID(context.Background(), lifecycleTenant)
 }
 
-func (s *lifecycleInvitations) InvalidateGuardianInvitations(_ context.Context, profileID int64, now time.Time, includePendingApprovals bool) error {
+func (s *lifecycleInvitations) InvalidateGuardianInvitations(_ context.Context, profileID int64, includePendingApprovals bool) error {
+	now := s.now()
 	for id, row := range s.rows {
 		if !includePendingApprovals && row.ApprovalStatus == domain.GuardianInvitationApprovalPending {
 			continue

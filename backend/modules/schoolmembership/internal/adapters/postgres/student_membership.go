@@ -49,6 +49,21 @@ func (s *Store) EnrollStudent(ctx context.Context, input schoolmembership.Studen
 	return id, stats, err
 }
 
+// classMemberFromNext keeps the class time before the place when a child
+// without an OGS place gets one (#4803): granting the place moves the
+// enrollment start to the place. A class time kept from an earlier class
+// does not carry over into the current one. ?0 is the renewal's
+// without-place mark.
+const classMemberFromNext = `class_member_from = CASE WHEN student.without_care_place AND NOT ?0::boolean
+	THEN COALESCE(CASE WHEN LOWER(TRIM(student.class_member_class)) = LOWER(TRIM(student.school_class))
+		THEN student.class_member_from END,
+		student.enrolled_from, (student.created_at AT TIME ZONE 'Europe/Berlin')::date)
+	ELSE student.class_member_from END`
+
+// classMemberClassNext binds that class time to the class it was spent in.
+const classMemberClassNext = `class_member_class = CASE WHEN student.without_care_place AND NOT ?0::boolean
+	THEN student.school_class ELSE student.class_member_class END`
+
 func (s *Store) RenewStudentEnrollment(ctx context.Context, input schoolmembership.StudentEnrollment, today string) (int64, domain.OperationStats, error) {
 	db, scope, err := s.database(ctx)
 	if err != nil {
@@ -82,11 +97,7 @@ func (s *Store) RenewStudentEnrollment(ctx context.Context, input schoolmembersh
             THEN COALESCE(?::date, ?::date) ELSE (?) END`, input.WithoutCarePlace, from, day,
 			bun.SafeQuery(firstCareFromNextValue, day, input.Status, from)).
 		Set(carePausedAfterNext, restart).Set(careResumedFromNext, day, input.Status, from, restart).
-		// Granting the place moves the enrollment start to the place; the
-		// class time before it stays the child's (#4803).
-		Set(`class_member_from = CASE WHEN student.without_care_place AND NOT ?::boolean
-            THEN COALESCE(student.class_member_from, student.enrolled_from, (student.created_at AT TIME ZONE 'Europe/Berlin')::date)
-            ELSE student.class_member_from END`, input.WithoutCarePlace).
+		Set(classMemberFromNext, input.WithoutCarePlace).Set(classMemberClassNext, input.WithoutCarePlace).
 		Set("group_id = ?", input.GroupID).Set("without_care_place = ?", input.WithoutCarePlace).
 		Where("student.tenant_id = ?", scope.TenantID).Where("student.student_profile_id = ?", input.StudentID).
 		Where("student.deleted_at IS NULL").
