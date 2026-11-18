@@ -8,6 +8,7 @@ import { routes as schoolClassDay } from "./school-class-day.generated";
 import { routes as schoolNotifications } from "./school-notifications.generated";
 import { routes as schoolParentLetters } from "./school-parent-letters.generated";
 import { routes as schoolStaffMessages } from "./school-staff-messages.generated";
+import { routes as schoolSupervisions } from "./school-supervisions.generated";
 import { routes as staffMessages } from "./staff-messages.generated";
 import { routes as students } from "./students.generated";
 import { routes as traegerBillingFamilies } from "./traeger-billing-families.generated";
@@ -108,6 +109,14 @@ export const portalRoutes = {
     schoolStaffMessages["POST /school/staff-messages/threads/open"],
     schoolStaffMessages["POST /school/staff-messages/threads/{threadID}"],
     schoolStaffMessages["POST /school/staff-messages/threads/{threadID}/leave"],
+    schoolSupervisions["GET /school/supervisions/"],
+    schoolSupervisions["GET /school/supervisions/{id}/roster"],
+    schoolSupervisions["GET /school/supervisions/{id}/students/{student_id}/sheet"],
+    schoolSupervisions["POST /school/supervisions/{id}/complete"],
+    schoolSupervisions["POST /school/supervisions/{id}/start"],
+    schoolSupervisions["POST /school/supervisions/{id}/students/{student_id}/check-in"],
+    schoolSupervisions["POST /school/supervisions/{id}/students/{student_id}/check-out"],
+    schoolSupervisions["PUT /school/supervisions/{id}/students/{student_id}/homework-feedback"],
   ],
   tenant: [
     notifications["DELETE /api/notifications/preferences/"],

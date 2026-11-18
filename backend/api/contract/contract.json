@@ -928,6 +928,39 @@
     },
     {
       "method": "GET",
+      "pattern": "/school/supervisions/",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolSupervisionsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/supervisions/{id}/roster",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OperationRoster"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/supervisions/{id}/students/{student_id}/sheet",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SupervisionStudentSheet"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/billing-families/debtor-number-format",
       "portals": [
         "org"
@@ -1418,6 +1451,54 @@
     },
     {
       "method": "POST",
+      "pattern": "/school/supervisions/{id}/complete",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CompleteOperationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ScheduledInstance"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/supervisions/{id}/start",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "startOperationResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/supervisions/{id}/students/{student_id}/check-in",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OperationRoster"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/supervisions/{id}/students/{student_id}/check-out",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OperationRoster"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/documents/{id}/releases",
       "portals": [
         "org"
@@ -1698,6 +1779,21 @@
         "ref": "preferenceRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/school/supervisions/{id}/students/{student_id}/homework-feedback",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HomeworkFeedbackRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "HomeworkFeedbackResponse"
+      }
     },
     {
       "method": "PUT",
@@ -2546,6 +2642,24 @@
       ]
     },
     {
+      "name": "CompleteOperationRequest",
+      "go_type": "timetablehttp.CompleteOperationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "confirmed_present_student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "ContactRequest",
       "go_type": "traeger.ContactRequest",
       "request": true,
@@ -3171,6 +3285,59 @@
       ]
     },
     {
+      "name": "HomeworkFeedbackRequest",
+      "go_type": "timetablehttp.HomeworkFeedbackRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "HomeworkFeedbackResponse",
+      "go_type": "timetablehttp.HomeworkFeedbackResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "HomeworkRequest",
       "go_type": "classdayhttp.HomeworkRequest",
       "request": true,
@@ -3274,6 +3441,71 @@
         },
         {
           "name": "last_sender_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InstanceConflictWarning",
+      "go_type": "timetable.InstanceConflictWarning",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "resource_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "message",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "can_override",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "conflicting_instance_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "conflicting_title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "overlap_start",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "overlap_end",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -3668,6 +3900,766 @@
               "kind": "ref",
               "ref": "NewGuardianPhone"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperationHomeworkFeedback",
+      "go_type": "timetable.OperationHomeworkFeedback",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperationParallelPresence",
+      "go_type": "timetable.OperationParallelPresence",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperationPlannedInstance",
+      "go_type": "timetable.OperationPlannedInstance",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "activity_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_overdue",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "minutes_until_start",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "expected_students_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "present_students_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "not_scheduled_students_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "current_students_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "planned_students_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "is_spontaneous",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "assigned_staff_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "is_assigned",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_primary",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_substitute",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_absent",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "roster_preview",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "OperationRosterRow"
+            }
+          }
+        },
+        {
+          "name": "pickup_times_loaded",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "pickup_times_redacted",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "warnings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "InstanceConflictWarning"
+            }
+          }
+        },
+        {
+          "name": "can_start",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "start_available_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_expires_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "can_reopen",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "reopen_until",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "cancel_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "planning_track_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "planning_track_color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_names",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "OperationStaffName"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperationRoster",
+      "go_type": "timetable.OperationRoster",
+      "fields": [
+        {
+          "name": "instance",
+          "schema": {
+            "kind": "ref",
+            "ref": "OperationRosterInstance"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OperationRosterRow"
+            }
+          }
+        },
+        {
+          "name": "pickup_times_loaded",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "pickup_times_redacted",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "moved_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "can_operate",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_start",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_end",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_edit_attendance",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_report_absence",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_record_homework_feedback",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperationRosterHomework",
+      "go_type": "timetable.OperationRosterHomework",
+      "fields": [
+        {
+          "name": "subject",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperationRosterInstance",
+      "go_type": "timetable.OperationRosterInstance",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_spontaneous",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "active_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_duty",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "list_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "can_complete",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "complete_available_at",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperationRosterRow",
+      "go_type": "timetable.OperationRosterRow",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "student_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "planned",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_unplanned",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "currently_present",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "visit_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "substatus",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "checked_in_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "checked_out_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "visit_entry_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "warnings",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "OperationRosterWarning"
+            }
+          }
+        },
+        {
+          "name": "parallel_present_in",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "OperationParallelPresence"
+          }
+        },
+        {
+          "name": "care_day_status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "teacher_hints",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "OperationTeacherHint"
+            }
+          }
+        },
+        {
+          "name": "homework",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "OperationRosterHomework"
+            }
+          }
+        },
+        {
+          "name": "homework_feedback",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "OperationHomeworkFeedback"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperationRosterWarning",
+      "go_type": "timetable.OperationRosterWarning",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "message",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_arrival",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slot_start",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "expected_group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "current_education_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperationStaffName",
+      "go_type": "timetable.OperationStaffName",
+      "fields": [
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "display_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_substitute",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperationTeacherHint",
+      "go_type": "timetable.OperationTeacherHint",
+      "fields": [
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "author_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -4120,6 +5112,190 @@
       ]
     },
     {
+      "name": "ScheduledInstance",
+      "go_type": "timetable.ScheduledInstance",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "activity_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "required_staff",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "list_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_spontaneous",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "understaffed_ack",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "understaffed_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cancel_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_by",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "started_by",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "started_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "completed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "completed_by",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "reopen_until",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolDayChild",
       "go_type": "classday.SchoolDayChild",
       "fields": [
@@ -4377,6 +5553,23 @@
           "name": "name",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolSupervisionsResponse",
+      "go_type": "timetablehttp.SchoolSupervisionsResponse",
+      "fields": [
+        {
+          "name": "instances",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OperationPlannedInstance"
+            }
           }
         }
       ]
@@ -5990,6 +7183,129 @@
             "elem": {
               "kind": "ref",
               "ref": "SharedNote"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SupervisionContact",
+      "go_type": "classday.SupervisionContact",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "relationship",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phones",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SupervisionStudentSheet",
+      "go_type": "classday.SupervisionStudentSheet",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "arrival",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "departure",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_contacts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SupervisionContact"
+            }
+          }
+        },
+        {
+          "name": "emergency_contacts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SupervisionContact"
             }
           }
         }
@@ -8535,6 +9851,41 @@
           "name": "resent_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "startOperationResponse",
+      "go_type": "timetablehttp.startOperationResponse",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active_group_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "warnings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "InstanceConflictWarning"
+            }
           }
         }
       ]

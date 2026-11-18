@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
 	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
+	"github.com/moto-ogs/project-phoenix/modules/classday"
 	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
@@ -15,6 +16,7 @@ import (
 	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
 	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
+	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
 )
@@ -38,6 +40,8 @@ func ContractDocument() (contract.Document, error) {
 		{"/api/parent-announcements", announcementAPI.RouteContracts(common.PortalTenant)},
 		{"/school/parent-letters", announcementAPI.RouteContracts(common.PortalSchool)},
 		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
+		// Class Day owns the child sheet the supervision route answers with.
+		{"/school/supervisions", timetableHTTP.SchoolSupervisionRouteContracts(classday.SupervisionStudentSheet{})},
 		{"/school/staff-messages", staffMessagingAPI.RouteContracts(common.PortalSchool)},
 		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
 		{"/traeger/master-data", organizationTenancyTraeger.MasterDataRouteContracts()},
