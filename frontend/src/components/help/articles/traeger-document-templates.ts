@@ -38,7 +38,7 @@ export function traegerDocumentTemplatesTopic(): HelpTopic {
         steps: [
           "Wähle unten in der Navigation `Einstellungen`.",
           "Wähle `Briefkopf und Vorlagen` und dann `Vorlagen`.",
-          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
           "Die Datei zeigt für jedes Dokument, ob es die Standardvorlage oder eine eigene Vorlage nutzt.",
         ],
       },

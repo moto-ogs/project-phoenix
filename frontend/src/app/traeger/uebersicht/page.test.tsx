@@ -460,7 +460,7 @@ function renderAlerts(
           "Deinem Träger sind noch keine Schulen zugeordnet.",
         )
       : screen.findByRole("link", {
-          name: options.canChange ? "Grenzen ändern" : "Grenzen ansehen",
+          name: options.canChange ? "Grenzen bearbeiten" : "Grenzen ansehen",
         });
 }
 
@@ -539,7 +539,7 @@ describe("school alerts", () => {
       },
     );
     expect(
-      screen.getByRole("link", { name: "Grenzen ändern" }),
+      screen.getByRole("link", { name: "Grenzen bearbeiten" }),
     ).toBeInTheDocument();
   });
 

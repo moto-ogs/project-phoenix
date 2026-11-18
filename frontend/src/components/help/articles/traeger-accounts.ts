@@ -52,7 +52,7 @@ export function traegerAccountsTopic(): HelpTopic {
         steps: [
           "Wähle unten in der Navigation `Einstellungen`.",
           "Wähle `Mitglieder und Rollen`.",
-          "Wähle oben `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Personen und offenen Einladungen.",
+          "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Personen und offenen Einladungen.",
           "Den Verlauf lädst du mit `Herunterladen` beim `Verlauf` herunter.",
         ],
       },

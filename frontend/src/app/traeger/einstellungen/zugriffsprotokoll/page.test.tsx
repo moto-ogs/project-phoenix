@@ -226,11 +226,16 @@ describe("TraegerAccessLogPage", () => {
     renderPage();
     await screen.findByRole("table");
 
-    // Export als Menü im Seitenkopf (#5146).
+    // Export im Drei-Punkte-Menü des Seitenkopfs (#5146, #7416).
+    expect(
+      screen.queryByRole("button", { name: "Zugriffsprotokoll herunterladen" }),
+    ).not.toBeInTheDocument();
     fireEvent.click(
-      screen.getByRole("button", { name: "Zugriffsprotokoll herunterladen" }),
+      (await screen.findAllByRole("button", { name: "Weitere Aktionen" })).at(
+        -1,
+      )!,
     );
-    fireEvent.click(await screen.findByRole("menuitem", { name: "CSV" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: /CSV/ }));
 
     await waitFor(() =>
       expect(mockDownloadBlob).toHaveBeenCalledWith(
@@ -253,11 +258,16 @@ describe("TraegerAccessLogPage", () => {
     renderPage();
     await screen.findByRole("table");
 
-    // Export als Menü im Seitenkopf (#5146).
+    // Export im Drei-Punkte-Menü des Seitenkopfs (#5146, #7416).
+    expect(
+      screen.queryByRole("button", { name: "Zugriffsprotokoll herunterladen" }),
+    ).not.toBeInTheDocument();
     fireEvent.click(
-      screen.getByRole("button", { name: "Zugriffsprotokoll herunterladen" }),
+      (await screen.findAllByRole("button", { name: "Weitere Aktionen" })).at(
+        -1,
+      )!,
     );
-    fireEvent.click(await screen.findByRole("menuitem", { name: "CSV" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: /CSV/ }));
 
     expect(
       await screen.findByText(/Der Export hat mehr als 10000 Einträge/),
