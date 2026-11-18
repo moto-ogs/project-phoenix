@@ -5988,6 +5988,17 @@
       "target_owner": "school-membership"
     },
     {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.AcceptSchoolInvitation",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.AcceptSchoolInvitation",
+      "reason": "Guarded leaf command (mutation): identity-access reaches modules/workforce.EmploymentResetter.ApplyInvitedGender (workforce) through modules/identityaccess/internal/application.engine.AcceptSchoolInvitation. The invitation's stored gender is written through Workforce's audited Stammdaten person section; the command refuses to run outside the acceptance's tenant transaction, keeps Workforce's own validation and audit, takes only its owner-local staff row lock and needs no cross-owner protocol (ADR 0067 command participation).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "target_owner": "workforce"
+    },
+    {
       "adr": "0083",
       "approval_adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.AcceptSchoolInvitation",
@@ -14655,6 +14666,17 @@
       "target_owner": "school-membership"
     },
     {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/api.InvitationCapability.AcceptSchoolInvitation",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolInvitations.AcceptSchoolInvitation",
+      "reason": "Guarded leaf command (mutation): identity-access reaches modules/workforce.EmploymentResetter.ApplyInvitedGender (workforce) through api.InvitationCapability.AcceptSchoolInvitation. The invitation's stored gender is written through Workforce's audited Stammdaten person section; the command refuses to run outside the acceptance's tenant transaction, keeps Workforce's own validation and audit, takes only its owner-local staff row lock and needs no cross-owner protocol (ADR 0067 command participation).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "target_owner": "workforce"
+    },
+    {
       "adr": "0083",
       "approval_adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/api.InvitationCapability.AcceptSchoolInvitation",
@@ -14903,6 +14925,17 @@
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Teacher.IsDeleted",
       "target_owner": "school-membership"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.AcceptSchoolInvitation",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolInvitations.AcceptSchoolInvitation",
+      "reason": "Guarded leaf command (mutation): identity-access reaches modules/workforce.EmploymentResetter.ApplyInvitedGender (workforce) through modules/identityaccess.Owner.AcceptSchoolInvitation. The invitation's stored gender is written through Workforce's audited Stammdaten person section; the command refuses to run outside the acceptance's tenant transaction, keeps Workforce's own validation and audit, takes only its owner-local staff row lock and needs no cross-owner protocol (ADR 0067 command participation).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "target_owner": "workforce"
     },
     {
       "adr": "0083",
@@ -19664,6 +19697,17 @@
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Teacher.IsDeleted",
       "target_owner": "school-membership"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.AcceptSchoolInvitation",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.Invitations.AcceptSchoolInvitation",
+      "reason": "Guarded leaf command (mutation): identity-access reaches modules/workforce.EmploymentResetter.ApplyInvitedGender (workforce) through modules/identityaccess.Owner.AcceptSchoolInvitation. The invitation's stored gender is written through Workforce's audited Stammdaten person section; the command refuses to run outside the acceptance's tenant transaction, keeps Workforce's own validation and audit, takes only its owner-local staff row lock and needs no cross-owner protocol (ADR 0067 command participation).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "target_owner": "workforce"
     },
     {
       "adr": "0083",

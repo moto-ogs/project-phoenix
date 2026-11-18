@@ -124,6 +124,7 @@ describe("POST /api/invitations", () => {
       firstName: "John",
       lastName: "Doe",
       position: "Math Teacher",
+      gender: "female",
     };
 
     const createdInvitation = {
@@ -155,6 +156,7 @@ describe("POST /api/invitations", () => {
         first_name: "John",
         last_name: "Doe",
         position: "Math Teacher",
+        gender: "female",
       },
     );
 

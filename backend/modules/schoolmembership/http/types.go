@@ -123,6 +123,12 @@ type TeacherResponse struct {
 	TeacherID      int64  `json:"teacher_id"`
 	Specialization string `json:"specialization,omitempty"`
 	Role           string `json:"role,omitempty"`
+	// RoleForm names the grammatical form the free-text Role takes for this
+	// person: "feminine" or "masculine", from the gender in the personnel
+	// record. Omitted without a stated gender, for "diverse" (the inclusive
+	// form is the default then, so the value would only disclose it) and
+	// without a Role.
+	RoleForm       string `json:"role_form,omitempty"`
 	Qualifications string `json:"qualifications,omitempty"`
 }
 
@@ -291,6 +297,20 @@ type enrichment struct {
 	// invitationPending: an open invitation names the staff member's person
 	// (#4573); only read for external caregivers without an account.
 	invitationPending bool
+	// roleForm: see TeacherResponse.RoleForm.
+	roleForm string
+}
+
+// roleFormFor maps the stated gender to the form of the position. Only
+// female and male pick a form; everything else keeps the default.
+func roleFormFor(gender string) string {
+	switch gender {
+	case "female":
+		return "feminine"
+	case "male":
+		return "masculine"
+	}
+	return ""
 }
 
 func newPersonResponse(person *Person, email, avatar string) *PersonResponse {
@@ -372,6 +392,9 @@ func buildTeacherResponse(access staffFieldAccess, staff schoolmembership.Staff,
 		Specialization: strings.TrimSpace(teacher.Specialization),
 		Role:           teacher.Role,
 		Qualifications: teacher.Qualifications,
+	}
+	if strings.TrimSpace(teacher.Role) != "" {
+		response.RoleForm = data.roleForm
 	}
 	// Free-text qualifications are personnel data; Specialization and Role
 	// are the pedagogical labels the group and substitution screens display.

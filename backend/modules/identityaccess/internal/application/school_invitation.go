@@ -131,7 +131,7 @@ func (s *SchoolInvitation) createInvitation(ctx context.Context, request domain.
 	invitation := domain.SchoolInvitation{
 		TenantID: tenantID, Email: email, Token: uuid.Must(uuid.NewV4()).String(), RoleID: request.RoleID,
 		RoleName: role.Name, ExpiresAt: time.Time{}.Add(s.expiry), FirstName: trimmedName(request.FirstName),
-		LastName: trimmedName(request.LastName), Position: trimmed(request.Position),
+		LastName: trimmedName(request.LastName), Position: trimmed(request.Position), Gender: trimmed(request.Gender),
 		EmploymentAction: invitationEmploymentAction(request),
 		ResetMasterData:  request.ResetMasterData, ResetQualifications: request.ResetQualifications, ResetWorkTime: request.ResetWorkTime,
 		CaregiverEnabled: request.CaregiverEnabled, PersonID: request.PersonID,

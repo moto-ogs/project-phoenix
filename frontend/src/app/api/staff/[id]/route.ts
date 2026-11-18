@@ -1,4 +1,5 @@
 // app/api/staff/[id]/route.ts
+import type { RoleForm } from "~/lib/position-title";
 import type { NextRequest } from "next/server";
 import { apiGet, apiPut, apiDelete } from "~/lib/api-helpers.server";
 import { ApiResponseError } from "~/lib/api-response-error.server";
@@ -28,6 +29,8 @@ interface BackendStaffResponse {
   teacher_id?: number;
   specialization?: string;
   role?: string;
+  /** Form der Position aus den Stammdaten (`feminine`/`masculine`), fehlt ohne Angabe. */
+  role_form?: RoleForm;
   qualifications?: string;
   employment_type?: string;
   account_role?: string;
@@ -126,6 +129,7 @@ export const GET = createGetHandler(
         avatar: staff.person?.avatar ?? null,
         specialization: staff.specialization ?? null,
         role: staff.role ?? null,
+        role_form: staff.role_form ?? null,
         qualifications: staff.qualifications ?? null,
         tag_id: staff.person?.tag_id ?? null,
         staff_notes: staff.staff_notes ?? null,

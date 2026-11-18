@@ -55,6 +55,7 @@ import {
 } from "./stammdaten-section-forms";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { InsetPanel } from "~/components/ui/inset-panel";
+import { STAFF_GENDER_LABELS } from "~/lib/staff-gender";
 
 // Stammdaten tab (#1417 Tranche 2b + #1423): the master-data home of one
 // staff member. Sections Person / Kontakt / Arbeitsvertrag / Qualifikationen
@@ -71,12 +72,6 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 // Vorgang, Fehler stehen oben im Bearbeiten-Bereich und am Feld (#2511).
 
 const logger = createLogger({ component: "StammdatenTab" });
-
-const genderLabels: Record<string, string> = {
-  female: "Weiblich",
-  male: "Männlich",
-  diverse: "Divers",
-};
 
 /** Ein Wert oder der Gedankenstrich für „nicht hinterlegt". */
 function Value({
@@ -605,7 +600,7 @@ export function StammdatenTab({
                       <Value
                         value={
                           stammdaten.person.gender
-                            ? (genderLabels[stammdaten.person.gender] ?? null)
+                            ? STAFF_GENDER_LABELS[stammdaten.person.gender]
                             : null
                         }
                       />

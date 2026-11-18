@@ -33,6 +33,8 @@ type CreateInvitationRequest struct {
 	FirstName           string                          `json:"first_name"`
 	LastName            string                          `json:"last_name"`
 	Position            string                          `json:"position"`
+	// Gender is the optional Stammdaten gender; empty leaves it unset.
+	Gender string `json:"gender"`
 }
 
 func (req *CreateInvitationRequest) Bind(_ *http.Request) error {
@@ -46,6 +48,7 @@ func (req *CreateInvitationRequest) Bind(_ *http.Request) error {
 	req.FirstName = strings.TrimSpace(req.FirstName)
 	req.LastName = strings.TrimSpace(req.LastName)
 	req.Position = strings.TrimSpace(req.Position)
+	req.Gender = strings.TrimSpace(req.Gender)
 
 	return validation.ValidateStruct(req,
 		validation.Field(&req.Email, validation.Required, is.Email),
@@ -59,6 +62,7 @@ func (req *CreateInvitationRequest) Bind(_ *http.Request) error {
 		validation.Field(&req.FirstName, validation.Length(0, 100)),
 		validation.Field(&req.LastName, validation.Length(0, 100)),
 		validation.Field(&req.Position, validation.Length(0, 100)),
+		validation.Field(&req.Gender, validation.In("female", "male", "diverse")),
 		validation.Field(&req.ResetMasterData, noResetForNew),
 		validation.Field(&req.ResetQualifications, noResetForNew),
 		validation.Field(&req.ResetWorkTime, noResetForNew),
@@ -80,6 +84,7 @@ type InvitationResponse struct {
 	FirstName           *string                         `json:"first_name,omitempty"`
 	LastName            *string                         `json:"last_name,omitempty"`
 	Position            *string                         `json:"position,omitempty"`
+	Gender              *string                         `json:"gender,omitempty"`
 	CreatedBy           int64                           `json:"created_by"`
 	Creator             string                          `json:"creator,omitempty"`
 	DeliveryStatus      string                          `json:"delivery_status"`
@@ -165,6 +170,10 @@ func (rs *Resource) buildInvitationRequest(r *http.Request, req *CreateInvitatio
 		position := req.Position
 		invitationReq.Position = &position
 	}
+	if req.Gender != "" {
+		gender := req.Gender
+		invitationReq.Gender = &gender
+	}
 	return invitationReq
 }
 
@@ -223,6 +232,7 @@ func toInvitationResponse(invitation identityaccess.SchoolInvitation) Invitation
 		FirstName:       invitation.FirstName,
 		LastName:        invitation.LastName,
 		Position:        invitation.Position,
+		Gender:          invitation.Gender,
 		CreatedBy:       invitationCreatedByValue(invitation.CreatedBy),
 		Creator:         invitation.CreatorEmail,
 		DeliveryStatus:  deriveDeliveryStatus(invitation.Delivery.SentAt, invitation.Delivery.Error),

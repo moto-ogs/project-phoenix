@@ -187,6 +187,7 @@ func newStaffResource(
 		WorkStatusMap:       runtime.WorkStatusMap,
 		AbsenceMap:          runtime.AbsenceMap,
 		AbsenceLabelMap:     runtime.AbsenceLabelMap,
+		StaffGenders:        runtime.StaffGenders,
 		AccountRoles:        runtime.AccountRoles,
 		AccountEmails:       runtime.AccountEmails,
 		AccountAvatars:      runtime.AccountAvatars,

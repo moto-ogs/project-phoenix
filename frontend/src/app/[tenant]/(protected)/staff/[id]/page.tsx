@@ -537,7 +537,7 @@ export default function StaffDetailContent() {
       return <StaffDetailSkeleton referrer={referrer} backLabel={backLabel} />;
     return (
       <TenantPage
-        title="Mitarbeiter"
+        title="Mitarbeitende"
         back
         backHref={referrer}
         backLabel={backLabel}
@@ -549,7 +549,7 @@ export default function StaffDetailContent() {
   if (!isLoading && (staffNotFound || !staff)) {
     return (
       <TenantPage
-        title="Mitarbeiter"
+        title="Mitarbeitende"
         back
         backHref={referrer}
         backLabel={backLabel}
@@ -738,7 +738,7 @@ export default function StaffDetailContent() {
       title={
         staff
           ? `${staff.firstName} ${staff.lastName}`
-          : (preview?.name ?? "Mitarbeiter")
+          : (preview?.name ?? "Mitarbeitende")
       }
       stats={staff ? statusLine : preview?.context}
       statsLoading={!staff && !preview?.context}

@@ -211,7 +211,7 @@ describe("activitiesConfig", () => {
     } as unknown as Activity;
 
     const subtitle = activitiesConfig.list.item.subtitle?.(mockActivity);
-    expect(subtitle).toBe("Kein Hauptbetreuer");
+    expect(subtitle).toBe("Keine Hauptbetreuung");
   });
 
   it("has custom labels", () => {

@@ -12,6 +12,7 @@ import (
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
+	workforceModule "github.com/moto-ogs/project-phoenix/modules/workforce"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -133,6 +134,7 @@ type StaffMembershipRuntime struct {
 	WorkStatusMap       func(context.Context) (map[int64]string, error)
 	AbsenceMap          func(context.Context) (map[int64]string, error)
 	AbsenceLabelMap     func(context.Context) (map[int64]string, error)
+	StaffGenders        func(context.Context, []int64) (map[int64]string, error)
 	AccountRoles        func(context.Context, []int64) (map[int64]string, error)
 	AccountEmails       func(context.Context, []int64) (map[int64]string, error)
 	AccountAvatars      func(context.Context, []int64) (map[int64]string, error)
@@ -159,7 +161,7 @@ type StaffMembershipRuntime struct {
 // offboarding carries the database and the employment owner the caller
 // composed; the access, the cleanup, the broadcaster, the logger and the
 // authorization of the offboarding workflow are bound here.
-func bindStaffMembershipRuntime(users peoplePorts.PersonDirectory, education schoolstructure.GroupManagement, staffDay workforceCompose.StaffDayStatus, hub *realtime.Hub, offboarding offboardingcompose.Dependencies, identity identityaccess.Owner, logger *slog.Logger, hooks StaffMembershipHooks) StaffMembershipRuntime {
+func bindStaffMembershipRuntime(users peoplePorts.PersonDirectory, education schoolstructure.GroupManagement, staffDay workforceCompose.StaffDayStatus, genders workforceModule.StaffGenderReader, hub *realtime.Hub, offboarding offboardingcompose.Dependencies, identity identityaccess.Owner, logger *slog.Logger, hooks StaffMembershipHooks) StaffMembershipRuntime {
 	if hooks.ResolveEditorStaffID == nil || hooks.QueueOffboardedDocumentCleanup == nil {
 		panic("staff membership runtime: offboarding hooks are required")
 	}
@@ -181,6 +183,7 @@ func bindStaffMembershipRuntime(users peoplePorts.PersonDirectory, education sch
 		WorkStatusMap:   staffDay.GetTodayPresenceMap,
 		AbsenceMap:      staffDay.GetTodayAbsenceMap,
 		AbsenceLabelMap: staffDay.GetTodayAbsenceLabelMap,
+		StaffGenders:    genders.StaffGenders,
 		AccountRoles:    identity.GetAccountRoleNames,
 		AccountEmails:   identity.GetAccountEmails,
 		AccountAvatars:  identity.GetAccountAvatars,

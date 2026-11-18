@@ -1,5 +1,6 @@
 "use client";
 
+import { positionForForm } from "~/lib/position-title";
 import { EmptyState } from "~/components/ui/empty-state";
 import { DatabaseListItem } from "~/components/database/database-list-item";
 import { DatabaseListLayout } from "~/components/database/database-list-layout";
@@ -54,7 +55,7 @@ function buildSubtitle(teacher: Teacher): string {
     teacher.role &&
     teacher.role.toLowerCase() !== displayRole?.toLowerCase() &&
     teacher.role.toLowerCase() !== teacher.account_role?.toLowerCase()
-      ? teacher.role
+      ? positionForForm(teacher.role, teacher.role_form)
       : null;
   const roleLine = [displayRole, position].filter(Boolean).join(" · ");
   if (roleLine) return roleLine;
