@@ -2092,7 +2092,7 @@ export const ERROR_CATALOG = {
       "workforce.traeger_staff_hire_invalid":
         "Die Person konnte nicht eingestellt werden. Bitte prüfe deine Angaben.",
       "workforce.traeger_staff_import_changed":
-        "Seit der Vorschau hat sich etwas an den Personalakten geändert. Bitte prüfe die Vorschau noch einmal und übernehme dann.",
+        "Seit der Vorschau hat sich etwas an den Personalakten geändert. Bitte prüfe die Vorschau noch einmal und übernimm dann.",
       "workforce.traeger_staff_import_file_invalid":
         "moto kann die Datei nicht lesen. Bitte wähle eine CSV-Datei mit Überschriften in der ersten Zeile und mindestens einer Person.",
       "workforce.traeger_staff_import_file_too_large":

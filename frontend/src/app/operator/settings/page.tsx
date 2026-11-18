@@ -19,6 +19,7 @@ import { TenantPage } from "~/components/ui/tenant-page";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { apiErrorFromResponse } from "~/lib/api-error";
+import { getSessionPersonName } from "~/lib/auth-utils";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { sessionFetch } from "~/lib/session-cache";
@@ -64,7 +65,8 @@ const operatorSettingsLoadingFallback = (
 function OperatorSettingsContent() {
   const { data: session, status, update: updateSession } = useSession();
   const { success: toastSuccess } = useToast();
-  const sessionName = session?.user?.name ?? "";
+  // An address is never a name (#7305); it stays in the email field only.
+  const sessionName = getSessionPersonName(session);
   const sessionEmail = session?.user?.email ?? "";
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);

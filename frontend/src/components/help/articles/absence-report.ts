@@ -16,7 +16,7 @@ export function absenceReportTopic(): HelpTopic {
       "Öffne oben rechts das Menü mit den drei Punkten.",
       "Wähle `Abwesenheiten`.",
       "Wähle oben den Zeitraum.",
-      "Filteere bei Bedarf nach `Status` und `Gruppe`.",
+      "Filtere bei Bedarf nach `Status` und `Gruppe`.",
     ],
     result:
       "Unter `Eingetragene Abwesenheitstage` steht jeder Tag mit Kind und Grund.",

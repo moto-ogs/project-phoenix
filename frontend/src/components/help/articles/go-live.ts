@@ -37,7 +37,7 @@ export function goLiveTopic(
                 "Lege die `Gruppen` an. Jede Gruppe bekommt einen Raum und eine Gruppenleitung.",
               ]
             : []),
-          "Übernehme die Kinder aus einer Liste. Oder lege sie einzeln an.",
+          "Übernimm die Kinder aus einer Liste. Oder lege sie einzeln an.",
           "Trage die Betreuungszeiten der Kinder ein.",
           "Trage unter `Schuljahr und Kalender` Schuljahr, Ferien und Schließtage ein.",
           ...(usesNfc ? ["Richte die NFC-Geräte und die Armbänder ein."] : []),

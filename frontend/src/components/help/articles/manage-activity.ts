@@ -55,7 +55,7 @@ export function manageActivityTopic(
     title: "Eine Aktivität anlegen oder ändern",
     question: "Wie lege ich eine Aktivität an oder ändere sie?",
     summary:
-      "Lege eine Aktivität für NFC-Tablets an oder änder eine eigene Aktivität.",
+      "Lege eine Aktivität für NFC-Tablets an oder ändere eine eigene Aktivität.",
     group: "gruppen",
     audience: "caregiver",
     icon: "Sparkles",

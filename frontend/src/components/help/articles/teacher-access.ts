@@ -29,6 +29,7 @@ export function teacherAccessTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Der Link funktioniert nicht mehr? Frag die OGS nach einer neuen Einladung.",
+      "Du hast ein moto-Konto, aber noch keinen Zugang zu moto schule? Wähle in der Einladung `Andere moto-Adresse wählen`. Wähle dann deine bisherige Schule oder `Für Eltern`. Melde dich dort an und nimm die Einladung an.",
     ],
     related: [
       HELP_TOPICS.teacherLogin,

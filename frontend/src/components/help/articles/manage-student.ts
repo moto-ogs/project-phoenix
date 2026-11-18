@@ -46,7 +46,7 @@ export function manageStudentTopic(): HelpTopic {
         steps: [
           "Wähle den Reiter `Stammdaten`.",
           "Wähle `Bearbeiten`.",
-          "Änder die benötigten Angaben.",
+          "Ändere die benötigten Angaben.",
           "Wähle `Speichern`.",
         ],
       },

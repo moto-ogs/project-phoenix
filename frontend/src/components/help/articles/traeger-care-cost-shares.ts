@@ -74,7 +74,7 @@ export function traegerCareCostSharesTopic(): HelpTopic {
       "Ein stornierter Beitrag steht in der Liste, zählt aber nicht zur Summe.",
     ],
     notes: [
-      "moto speichert nur Art, Anteil, Zeitraum und Aktenzeichen. Den Bescheid behaltest du.",
+      "moto speichert nur Art, Anteil, Zeitraum und Aktenzeichen. Den Bescheid behältst du.",
       "Jedes Öffnen des Reiters `Kostenübernahmen` steht im Zugriffsprotokoll.",
     ],
     related: [

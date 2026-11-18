@@ -14,7 +14,7 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
-import { getUserDisplayName } from "~/lib/auth-utils";
+import { getGreetingName } from "~/lib/auth-utils";
 import { formatDate } from "~/lib/date-helpers";
 import { useTimeBasedGreeting } from "~/lib/greeting";
 import { LOCATION_COLORS } from "~/lib/location-helper";
@@ -115,6 +115,7 @@ export function SupervisionsOverview({
 }>) {
   const greeting = useTimeBasedGreeting();
   const { data: session } = useSession();
+  const greetingName = getGreetingName(session);
   const summary = summarizeDay(instances);
 
   const description =
@@ -124,7 +125,7 @@ export function SupervisionsOverview({
 
   return (
     <SectionCard
-      title={`${greeting}, ${getUserDisplayName(session)}`}
+      title={greetingName ? `${greeting}, ${greetingName}` : greeting}
       description={description}
     >
       {instances.length === 0 ? (

@@ -1,6 +1,7 @@
 package application
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -45,33 +46,91 @@ func paymentFacts(payment *parentbilling.InvoicePayment, letters calendar.Date) 
 		return []LetterFact{{Label: "Zahlen bis", Value: due}}
 	}
 	if isDirectDebit(payment) {
-		facts := []LetterFact{{Label: "Zahlungsweg", Value: paymentMethodLabel(payment.Method)}, {Label: "Abbuchung am", Value: due}}
-		if mandate := payment.Mandate; mandate != nil {
-			// The pre-notification of the SEPA direct debit (#4695, ADR 0171):
-			// the account only as its mask.
-			facts = append(facts, LetterFact{Label: "Konto", Value: mandate.IBANMasked},
-				LetterFact{Label: "Mandatsreferenz", Value: mandate.Reference},
-				LetterFact{Label: "Gläubiger-ID", Value: mandate.CreditorID})
-		}
-		return facts
+		return []LetterFact{{Label: "Zahlungsweg", Value: paymentMethodLabel(payment.Method)}, {Label: "Abbuchung am", Value: due}}
 	}
 	return []LetterFact{{Label: "Zahlungsweg", Value: paymentMethodLabel(payment.Method)}, {Label: "Zahlen bis", Value: due}}
 }
 
-// directDebitText says when the Träger collects the amount; the payment
-// text of the Träger asks for a transfer, so a direct debit never uses it.
-// With its mandate the sentence is the pre-notification of the SEPA direct
-// debit (#4695, ADR 0171): amount, date, the masked account, the creditor
-// identifier and the mandate reference.
-func directDebitText(amountCents int64, due calendar.Date, reference string, mandate *parentbilling.InvoiceMandate) string {
+// directDebitText announces the collection using the invoice's frozen payment.
+func directDebitText(amountCents int64, due calendar.Date, reference string, mandate *parentbilling.InvoiceMandate,
+	holder, recipient, secondRecipient string,
+) string {
 	if mandate == nil {
 		return fmt.Sprintf("Wir buchen %s am %s von eurem Konto ab. Verwendungszweck: %s. Ihr müsst nichts überweisen.",
 			formatEuro(amountCents), germanDate(due), reference)
 	}
-	return fmt.Sprintf("Wir buchen %s am %s per SEPA-Lastschrift von eurem Konto %s ab. "+
-		"Gläubiger-ID: %s. Mandatsreferenz: %s. Verwendungszweck: %s. "+
-		"Ihr müsst nichts überweisen. Bitte achtet darauf, dass das Konto an diesem Tag gedeckt ist.",
-		formatEuro(amountCents), germanDate(due), mandate.IBANMasked, mandate.CreditorID, mandate.Reference, reference)
+	lines := []string{
+		fmt.Sprintf("Wir buchen %s am %s per SEPA-Lastschrift ab.", formatEuro(amountCents), germanDate(due)),
+		"Ist der Termin kein Bankarbeitstag? Dann buchen wir am nächsten Bankarbeitstag ab.",
+	}
+	if holder != "" {
+		lines = append(lines, "Kontoinhaber: "+holder)
+	}
+	lines = append(lines,
+		"Konto: "+mandate.IBANMasked+" · Mandatsreferenz: "+mandate.Reference,
+		"Gläubiger-ID: "+mandate.CreditorID+" · Verwendungszweck: "+reference,
+		"Ihr müsst nichts überweisen. Am Abbuchungstag muss genug Geld auf dem Konto sein.",
+	)
+	if holder != "" && !sameBillingName(holder, recipient) && !sameBillingName(holder, secondRecipient) {
+		lines = append(lines, "Seid ihr nicht der Kontoinhaber? Dann gebt dieses Schreiben bitte weiter.")
+	}
+	return strings.Join(lines, "\n")
+}
+
+// withDirectDebitNotice makes sure a custom template carries the notice.
+func withDirectDebitNotice(blocks []LetterBlock, text string, payment *parentbilling.InvoicePayment, totalCents int64) []LetterBlock {
+	if totalCents <= 0 || !isDirectDebit(payment) || paymentMandate(payment) == nil {
+		return blocks
+	}
+	notice := LetterBlock{Heading: "SEPA-Lastschrift", Text: text}
+	for i, block := range blocks {
+		if block.Text == text && block.Heading == "" && len(block.Facts) == 0 {
+			blocks[i] = notice
+			return blocks
+		}
+		if strings.Contains(block.Text, text) {
+			return blocks
+		}
+	}
+	return append(blocks, notice)
+}
+
+func sameBillingName(a, b string) bool {
+	return strings.EqualFold(strings.Join(strings.Fields(a), " "), strings.Join(strings.Fields(b), " "))
+}
+
+func secondLetterRecipient(kind, name string) string {
+	if kind == parentbilling.RecipientBoth {
+		return name
+	}
+	return ""
+}
+
+func hasInvoiceAccountHolder(payment *parentbilling.InvoicePayment) bool {
+	return isDirectDebit(payment) && payment.Mandate != nil && len(payment.Mandate.HolderSealed) > 0
+}
+
+// addHolderSnapshotRead records which invoices opened their stored holder.
+// The invoice's audit trail survives independently of the original mandate.
+func addHolderSnapshotRead(details map[string]any, id, totalCents int64, payment *parentbilling.InvoicePayment) {
+	if totalCents > 0 && hasInvoiceAccountHolder(payment) {
+		ids, _ := details["account_holder_snapshot_ids"].([]int64)
+		details["account_holder_snapshot_ids"] = append(ids, id)
+	}
+}
+
+// invoiceAccountHolder opens the invoice's own copy, which uses the same
+// Träger and reference binding as the sealed field on the mandate.
+func invoiceAccountHolder(cipher parentbilling.BankDataCipher, organizationID int64, payment *parentbilling.InvoicePayment) (string, error) {
+	if !hasInvoiceAccountHolder(payment) {
+		return "", nil
+	}
+	mandate := payment.Mandate
+	holder, err := cipher.Open(mandate.HolderSealed, holderContext(organizationID, mandate.Reference))
+	if err != nil {
+		return "", errors.New("parent billing: the invoice account holder does not open")
+	}
+	return strings.Join(strings.Fields(string(holder)), " "), nil
 }
 
 // paymentMandate is the mandate of a payment, nil without one.

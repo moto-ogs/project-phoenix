@@ -35,7 +35,7 @@ export function loginProblemTopic(nfcEnabled: boolean | null): HelpTopic {
         : [
             "Die vierstellige Geräte-PIN des NFC-Tablets ist nicht dein persönliches moto-Passwort.",
           ]),
-      "Ein Sicherheitscode kann nur für kurze Zeit verwendet werden. Forder bei Bedarf einen neuen Code an.",
+      "Ein Sicherheitscode kann nur für kurze Zeit verwendet werden. Fordere bei Bedarf einen neuen Code an.",
     ],
     related: [HELP_TOPICS.login, HELP_TOPICS.acceptInvitation],
   };

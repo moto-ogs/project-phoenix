@@ -17,7 +17,7 @@ export function mealPlanTopic(): HelpTopic {
     steps: [
       "Klappe in der Seitenleiste `Eltern` auf.",
       "Öffne `Speiseplan`.",
-      "Blätter oben unter dem Titel mit den Pfeilen zur gewünschten Woche. `Diese Woche` bringt dich zurück.",
+      "Blättere oben unter dem Titel mit den Pfeilen zur gewünschten Woche. `Diese Woche` bringt dich zurück.",
       "Trage bei einem Tag unter `Gericht eintragen…` das Gericht ein.",
       "Trage bei Bedarf einen `Hinweis (optional)` dazu ein.",
       "Öffne unter dem Gericht die Auswahl `Allergene` und hake die Allergene an. Danach stehen dort die Buchstaben, zum Beispiel `A, G`.",

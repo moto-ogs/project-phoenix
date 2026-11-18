@@ -48,7 +48,7 @@ export const STAFF_ONBOARDING_STEP_CONTENT: Readonly<
   },
   supervision: {
     title: "Eine Aufsicht starten",
-    description: "Übernehme einen Raum oder einen geplanten Termin.",
+    description: "Übernimm einen Raum oder einen geplanten Termin.",
     hints: [],
     helpTopic: HELP_TOPICS.activeSupervision,
   },

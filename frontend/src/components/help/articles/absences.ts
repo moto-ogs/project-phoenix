@@ -95,7 +95,7 @@ export function absencesTopic(): HelpTopic {
       "Fehlen `Krank melden` und `Entschuldigen`? Frage deine Leitung, ob deine Rolle Abwesenheiten bearbeiten darf.",
       "Steht dort `Gesund melden` oder `Entschuldigung aufheben`? Dann ist das Kind heute krank gemeldet oder entschuldigt.",
       "Fehlt `Ab Uhrzeit`? Dann darfst du nur ganze Tage entschuldigen.",
-      "Steht beim Tag `Automatisch (Abholzeit)`? Dann kommt die Entschuldigung aus der früheren Abholzeit. Ändeere dafür die Abholzeit des Tages.",
+      "Steht beim Tag `Automatisch (Abholzeit)`? Dann kommt die Entschuldigung aus der früheren Abholzeit. Ändere dafür die Abholzeit des Tages.",
       // #5698: Teilentschuldigung bewusst durch eine Tagesmeldung ersetzen.
       "Ist ein gewählter Tag schon `Ab Uhrzeit` entschuldigt? Dann nennt das Fenster den Tag und speichert nur die anderen Tage. Soll die Meldung den ganzen Tag gelten, wähle zum Beispiel `Durch Krankmeldung ersetzen`. Geänderte Betreuungsblöcke und die Abholzeit gelten dann wieder wie geplant. Die Wahl fehlt, wenn du `Ab Uhrzeit` nicht bearbeiten darfst.",
     ],

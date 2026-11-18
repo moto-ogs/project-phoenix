@@ -485,7 +485,7 @@ export const absenceReportTopic = function absenceReportTopic(): HelpTopic {
       "Öffne oben rechts das Menü mit den drei Punkten.",
       "Wähle `Abwesenheiten`.",
       "Wähle oben den Zeitraum.",
-      "Filteere bei Bedarf nach `Status` und `Gruppe`.",
+      "Filtere bei Bedarf nach `Status` und `Gruppe`.",
     ],
     result:
       "Unter `Eingetragene Abwesenheitstage` steht jeder Tag mit Kind und Grund.",
@@ -600,7 +600,7 @@ export const absencesTopic = function absencesTopic(): HelpTopic {
       "Fehlen `Krank melden` und `Entschuldigen`? Frage deine Leitung, ob deine Rolle Abwesenheiten bearbeiten darf.",
       "Steht dort `Gesund melden` oder `Entschuldigung aufheben`? Dann ist das Kind heute krank gemeldet oder entschuldigt.",
       "Fehlt `Ab Uhrzeit`? Dann darfst du nur ganze Tage entschuldigen.",
-      "Steht beim Tag `Automatisch (Abholzeit)`? Dann kommt die Entschuldigung aus der früheren Abholzeit. Ändeere dafür die Abholzeit des Tages.",
+      "Steht beim Tag `Automatisch (Abholzeit)`? Dann kommt die Entschuldigung aus der früheren Abholzeit. Ändere dafür die Abholzeit des Tages.",
       // #5698: Teilentschuldigung bewusst durch eine Tagesmeldung ersetzen.
       "Ist ein gewählter Tag schon `Ab Uhrzeit` entschuldigt? Dann nennt das Fenster den Tag und speichert nur die anderen Tage. Soll die Meldung den ganzen Tag gelten, wähle zum Beispiel `Durch Krankmeldung ersetzen`. Geänderte Betreuungsblöcke und die Abholzeit gelten dann wieder wie geplant. Die Wahl fehlt, wenn du `Ab Uhrzeit` nicht bearbeiten darfst.",
     ],
@@ -719,7 +719,7 @@ export const activeSupervisionTopic = function activeSupervisionTopic(
     title: "Eine Aufsicht starten, führen und beenden",
     question: "Wie arbeite ich mit einer laufenden Aufsicht?",
     summary:
-      "Übernehme einen Raum oder einen geplanten Termin und halte die Kinderliste aktuell.",
+      "Übernimm einen Raum oder einen geplanten Termin und halte die Kinderliste aktuell.",
     group: "gruppen",
     audience: ["caregiver", "lead"],
     icon: "Eye",
@@ -775,7 +775,7 @@ export const activeSupervisionTopic = function activeSupervisionTopic(
           // #4571: live geprüft im Dialog `Anwesende Kinder hinzufügen`.
           "Du kennst die Kinder an ihrem Betreuungsangebot, zum Beispiel „bis 16 Uhr“? Wähle `Nach Angebot` und darunter das Angebot. Dann stehen dort nur Kinder, die dieses Angebot heute gebucht haben. Kinder, die heute früher gehen oder abgemeldet sind, fehlen. moto merkt sich das Angebot für das nächste Mal.",
           "Prüfe geplante Abholzeiten und Hinweise in der Liste.",
-          "Wechselt ein Kind den Raum oder geht nach Hause? Ändeere seinen Aufenthaltsort.",
+          "Wechselt ein Kind den Raum oder geht nach Hause? Ändere seinen Aufenthaltsort.",
         ],
       },
       {
@@ -853,7 +853,7 @@ export const activitiesCatalogTopic =
           title: "Eine Aktivität ändern",
           steps: [
             "Öffne `Aktivitäten` und wähle die Aktivität aus der Liste.",
-            "Ändeere die Angaben unter `Stammdaten`.",
+            "Ändere die Angaben unter `Stammdaten`.",
             "Wähle `Speichern`.",
           ],
         },
@@ -3222,7 +3222,7 @@ export const goLiveTopic = function goLiveTopic(
                 "Lege die `Gruppen` an. Jede Gruppe bekommt einen Raum und eine Gruppenleitung.",
               ]
             : []),
-          "Übernehme die Kinder aus einer Liste. Oder lege sie einzeln an.",
+          "Übernimm die Kinder aus einer Liste. Oder lege sie einzeln an.",
           "Trage die Betreuungszeiten der Kinder ein.",
           "Trage unter `Schuljahr und Kalender` Schuljahr, Ferien und Schließtage ein.",
           ...(usesNfc ? ["Richte die NFC-Geräte und die Armbänder ein."] : []),
@@ -4551,7 +4551,7 @@ export const loginProblemTopic = function loginProblemTopic(
         : [
             "Die vierstellige Geräte-PIN des NFC-Tablets ist nicht dein persönliches moto-Passwort.",
           ]),
-      "Ein Sicherheitscode kann nur für kurze Zeit verwendet werden. Forder bei Bedarf einen neuen Code an.",
+      "Ein Sicherheitscode kann nur für kurze Zeit verwendet werden. Fordere bei Bedarf einen neuen Code an.",
     ],
     related: [HELP_TOPICS.login, HELP_TOPICS.acceptInvitation],
   };
@@ -4667,7 +4667,7 @@ export const manageActivityTopic = function manageActivityTopic(
     title: "Eine Aktivität anlegen oder ändern",
     question: "Wie lege ich eine Aktivität an oder ändere sie?",
     summary:
-      "Lege eine Aktivität für NFC-Tablets an oder änder eine eigene Aktivität.",
+      "Lege eine Aktivität für NFC-Tablets an oder ändere eine eigene Aktivität.",
     group: "gruppen",
     audience: "caregiver",
     icon: "Sparkles",
@@ -4736,7 +4736,7 @@ export const manageStudentTopic = function manageStudentTopic(): HelpTopic {
         steps: [
           "Wähle den Reiter `Stammdaten`.",
           "Wähle `Bearbeiten`.",
-          "Änder die benötigten Angaben.",
+          "Ändere die benötigten Angaben.",
           "Wähle `Speichern`.",
         ],
       },
@@ -4918,7 +4918,7 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
     steps: [
       "Klappe in der Seitenleiste `Eltern` auf.",
       "Öffne `Speiseplan`.",
-      "Blätter oben unter dem Titel mit den Pfeilen zur gewünschten Woche. `Diese Woche` bringt dich zurück.",
+      "Blättere oben unter dem Titel mit den Pfeilen zur gewünschten Woche. `Diese Woche` bringt dich zurück.",
       "Trage bei einem Tag unter `Gericht eintragen…` das Gericht ein.",
       "Trage bei Bedarf einen `Hinweis (optional)` dazu ein.",
       "Öffne unter dem Gericht die Auswahl `Allergene` und hake die Allergene an. Danach stehen dort die Buchstaben, zum Beispiel `A, G`.",
@@ -8384,7 +8384,7 @@ export const settingsGuideTopic = function settingsGuideTopic(): HelpTopic {
     id: HELP_TOPICS.settingsGuide,
     title: "Die wichtigsten Einstellungen im Überblick",
     question: "Welche Einstellungen gibt es, und was bewirken sie?",
-    summary: "Was du in welchem Bereich der Einstellungen festlegen.",
+    summary: "Was du in welchem Bereich der Einstellungen festlegst.",
     group: "konfiguration",
     audience: "lead",
     icon: "SlidersHorizontal",
@@ -9720,6 +9720,7 @@ export const teacherAccessTopic = function teacherAccessTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Der Link funktioniert nicht mehr? Frag die OGS nach einer neuen Einladung.",
+      "Du hast ein moto-Konto, aber noch keinen Zugang zu moto schule? Wähle in der Einladung `Andere moto-Adresse wählen`. Wähle dann deine bisherige Schule oder `Für Eltern`. Melde dich dort an und nimm die Einladung an.",
     ],
     related: [
       HELP_TOPICS.teacherLogin,
@@ -11273,7 +11274,7 @@ export const traegerBillingRunTopic =
         {
           title: "Leeren Lauf verwerfen",
           description:
-            "Hat ein offener Lauf nichts abzurechnen, lässt er sich nicht freigeben. Das passiert zum Beispiel, wenn alle Anmeldungen storniert sind. Solange er offen ist, starte für den Ferienzeitraum keinen neuen Lauf. Dann verwerfst du ihn.",
+            "Hat ein offener Lauf nichts abzurechnen, lässt er sich nicht freigeben. Das passiert zum Beispiel, wenn alle Anmeldungen storniert sind. Solange er offen ist, starte für den Ferienzeitraum keinen neuen Lauf. Dann verwirfst du ihn.",
           steps: [
             "Öffne den Lauf. Steht dort `Dieser Lauf hat nichts abzurechnen`, wähle oben `Leeren Lauf verwerfen`.",
             "Wähle im Fenster `Verwerfen`.",
@@ -11431,7 +11432,7 @@ export const traegerBillingRunTopic =
         "Im Ferienzeitraum fehlt `Zur Abrechnung`? Der Zeitraum ist noch ein Entwurf, oder deine Rolle ist nicht Abrechnung.",
         "Im Lauf fehlt `Zum Ferienzeitraum`? Deine Rolle darf die Ferienbetreuung nicht öffnen.",
         "`Lauf freigeben` lässt sich nicht wählen? Es fehlt das Muster der Rechnungsnummern, oder der Lauf hat keine Rechnung.",
-        "Statt `Lauf freigeben` steht `Leeren Lauf verwerfen`? Der Lauf hat nichts abzurechnen. Verwerfe ihn, dann ist der Ferienzeitraum frei.",
+        "Statt `Lauf freigeben` steht `Leeren Lauf verwerfen`? Der Lauf hat nichts abzurechnen. Verwirf ihn, dann ist der Ferienzeitraum frei.",
         "Du siehst oben in der Karte `Rechnungen` kein Menü mit den drei Punkten? Der Lauf ist noch nicht freigegeben.",
         "Ein Klick auf eine Rechnung zeigt kein Schreiben? Die Schreiben des Laufs sind noch nicht erstellt. Erstelle sie bei `Bestätigungsschreiben`.",
         "Auf dem Handy oder einem schmalen Bildschirm steht das Schreiben an der Stelle der Liste. Mit `Zurück zu den Rechnungen` kommst du zur Liste.",
@@ -11504,8 +11505,8 @@ export const traegerBillingTermsTopic =
             "Öffne einen Monatslauf unter `Abrechnungsläufe` und `Monatsbeiträge`.",
             "Wähle bei der Rechnung des Kindes das Menü mit den drei Punkten und dann `Empfänger und Zahlung`. Es öffnet sich eine eigene Seite.",
             "Wähle bei `Rechnung an`: `Person im Vertrag`, `Beide Eltern` oder `Andere Person`.",
-            "Bei `Beide Eltern` tragst du den Namen des zweiten Elternteils ein. Beide Namen stehen dann auf der Rechnung.",
-            "Bei `Andere Person` tragst du Name, E-Mail-Adresse und Anschrift ein. Die Rechnung geht dann an diese Person.",
+            "Bei `Beide Eltern` trägst du den Namen des zweiten Elternteils ein. Beide Namen stehen dann auf der Rechnung.",
+            "Bei `Andere Person` trägst du Name, E-Mail-Adresse und Anschrift ein. Die Rechnung geht dann an diese Person.",
             "Wähle bei Bedarf einen eigenen `Zahlungsweg`. `Wie in den Abrechnungsvorgaben` nimmt den dort eingestellten Zahlungsweg.",
             "Wähle bei Bedarf einen `Eigenen Zahltag`, zum Beispiel den 15. des Monats.",
             "Wähle `Speichern`.",
@@ -11573,7 +11574,7 @@ export const traegerBriefkopfTopic =
             "Trage bei `Absender im Briefkopf` Name und Anschrift ein. Jede Zeile im Feld ist eine Zeile im Brief. Die erste Zeile steht fett und in deiner Farbe.",
             "Klicke bei `Farbe für Briefe und Rechnungen` auf eine der Farben.",
             "Passt keine Farbe, wähle `Eigene Farbe`. Klicke dann auf den farbigen Kreis und wähle deine Farbe. Steht im Logo-Entwurf ein Farbcode, trage ihn in das Feld daneben ein: eine Raute und sechs Zeichen.",
-            "Trage bei `Fußzeile` zum Beispiel Vorstand, Amtsgericht und Steuernummer ein, jede Angabe in eine eigene Zeile.",
+            "Trage bei `Fußzeile` zum Beispiel Vorstand, Amtsgericht und Steuernummer ein. Auch eine zweite Bankverbindung und dein Hinweis zur Umsatzsteuer können dort stehen. Schreibe jede Angabe in eine eigene Zeile.",
             "moto speichert jedes Feld von selbst.",
           ],
         },
@@ -11743,7 +11744,7 @@ export const traegerCareContractsTopic =
         {
           title: "Kinder und bestehende Verträge importieren",
           description:
-            "Hast du Kinder und Verträge schon in einem anderen Programm, zum Beispiel OGS Connect? Dann übernehmst du alle auf einmal aus einer CSV-Datei. Jeder Vertrag gilt sofort als abgeschlossen. Die Eltern bekommen keine Mail. moto bewahrt die Datei nicht auf.",
+            "Hast du Kinder und Verträge schon in einem anderen Programm, zum Beispiel OGS Connect? Dann übernimmst du alle auf einmal aus einer CSV-Datei. Jeder Vertrag gilt sofort als abgeschlossen. Die Eltern bekommen keine Mail. moto bewahrt die Datei nicht auf.",
           steps: [
             "Trage zuerst die `Vertragsbedingungen` für jedes Modul ein. Ohne Bedingungen übernimmt moto keinen Vertrag für das Modul.",
             "Speichere die Kinder im anderen Programm als CSV-Datei. Die erste Zeile enthält die Überschriften, jede weitere Zeile ein Kind.",
@@ -11803,7 +11804,7 @@ export const traegerCareContractsTopic =
         "Beim ersten Senden hält moto das PDF fest. Änderst du danach Bedingungen oder Brieftext, bleibt der versendete Vertrag gleich.",
         "Unter `Versand` siehst du, ob die Mail gesendet wurde. Mit `Versand aktualisieren` prüfst du den neuen Stand. Mit `Erneut senden` geht dasselbe PDF noch einmal an die Eltern; moto fragt vorher. Bei einem aktiven Vertrag steht `Erneut senden` im Menü mit den drei Punkten oben rechts. Eine zweite Nachricht aufs Handy gibt es dabei nicht. Nur eine korrigierte Mail-Adresse bekommt eine eigene Nachricht.",
         "Neben jedem Versand steht, was aus der Mail geworden ist: wie bei der Abrechnung. Der Hinweis oben nennt den Grund und den nächsten Schritt. Bei `Verzögert` wartest du. Hat die Schule die Mails gestoppt, kläre das mit der Schule. Bei `Gesperrt` klärt das der moto-Support. Solange das gilt, ist `Erneut senden` aus.",
-        "Den Brieftext des Vertrags ändest du unter `Einstellungen` → `Briefkopf und Vorlagen` bei der Vorlage `Vertrag`.",
+        "Den Brieftext des Vertrags änderst du unter `Einstellungen` → `Briefkopf und Vorlagen` bei der Vorlage `Vertrag`.",
         "Mit `PDF herunterladen` bekommst du den Vertrag zum Drucken, etwa für Familien ohne Mail.",
         "Wartet ein versendeter Vertrag auf die Unterschrift, bekommen die Eltern Erinnerungen per Mail. Es gibt höchstens drei. Bereits abgeschlossene Verträge bekommen keine Erinnerung. Nach wie vielen Tagen, lege unter `Einstellungen` → `Allgemein` im Bereich `Betreuungsverträge` fest. Bei 0 gibt es keine Erinnerung.",
         "Der Link in der Mail gilt einmal und 30 Tage. Jede Erinnerung bringt einen neuen Link.",
@@ -11934,7 +11935,7 @@ export const traegerCareCostSharesTopic =
         "Ein stornierter Beitrag steht in der Liste, zählt aber nicht zur Summe.",
       ],
       notes: [
-        "moto speichert nur Art, Anteil, Zeitraum und Aktenzeichen. Den Bescheid behaltest du.",
+        "moto speichert nur Art, Anteil, Zeitraum und Aktenzeichen. Den Bescheid behältst du.",
         "Jedes Öffnen des Reiters `Kostenübernahmen` steht im Zugriffsprotokoll.",
       ],
       related: [
@@ -14648,7 +14649,7 @@ export const traegerSepaMandatesTopic =
       title: "Lastschrift und SEPA-Mandate",
       question: "Wie buche ich Beiträge per Lastschrift ab?",
       summary:
-        "Du trägst deine Gläubiger-ID ein und erfasst das SEPA-Mandat jeder Familie. Die Rechnung kündigt die Abbuchung dann an: mit Betrag, Datum, Konto, Gläubiger-ID und Mandatsreferenz. moto bucht kein Geld ab.",
+        "Du trägst deine Gläubiger-ID und die Mandate der Familien ein. Die Rechnung kündigt die Abbuchung an. moto bucht kein Geld ab.",
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "Repeat",
@@ -14731,7 +14732,7 @@ export const traegerSepaMandatesTopic =
         },
       ],
       result:
-        "Im nächsten Monatslauf steht auf jeder Rechnung mit Lastschrift die Vorabankündigung: Betrag, Tag der Abbuchung, Konto (verdeckt), Gläubiger-ID und Mandatsreferenz. Der Betrag ist das, was die Familie zahlt, also ohne den Anteil eines Kostenträgers.",
+        "Neue Lastschrift-Rechnungen nennen den Betrag, den Abbuchungstag und den Kontoinhaber. Dort stehen auch die verdeckte IBAN, die Gläubiger-ID und die Mandatsreferenz. Ist der Kontoinhaber jemand anderes? Dann bittet das Schreiben darum, es an diese Person weiterzugeben. Der Betrag enthält nur den Anteil der Familie.",
       notes: [
         "Die Mandate siehst du unter `Familien und Zahlung` im Reiter `Lastschrift`. Die Liste zeigt zuerst die gültigen; mit `Alle` siehst du auch die widerrufenen.",
         "Ein Mandat aus der Eltern-App hat die Herkunft `von den Eltern`. moto speichert dazu den bestätigten Text mit Prüfsumme, das Konto der Eltern und die Uhrzeit. Widerrufen die Eltern in der App, gilt das ab dem nächsten Monatslauf.",

@@ -103,7 +103,7 @@
   "traeger_staff_hire_duplicate": "Diese Person gibt es vielleicht schon. Bitte prüfe die Angaben.",
   "traeger_staff_hire_incomplete": "Die Person ist nur zum Teil angelegt. Bitte stelle sie nicht noch einmal ein.",
   "traeger_staff_hire_invalid": "Die Person konnte nicht eingestellt werden. Bitte prüfe deine Angaben.",
-  "traeger_staff_import_changed": "Seit der Vorschau hat sich etwas an den Personalakten geändert. Bitte prüfe die Vorschau noch einmal und übernehme dann.",
+  "traeger_staff_import_changed": "Seit der Vorschau hat sich etwas an den Personalakten geändert. Bitte prüfe die Vorschau noch einmal und übernimm dann.",
   "traeger_staff_import_file_invalid": "moto kann die Datei nicht lesen. Bitte wähle eine CSV-Datei mit Überschriften in der ersten Zeile und mindestens einer Person.",
   "traeger_staff_import_file_too_large": "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
   "traeger_staff_import_mapping_invalid": "Die Zuordnung der Spalten passt nicht zur Datei. Bitte wähle für jedes Pflichtfeld eine Spalte.",

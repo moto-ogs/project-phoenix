@@ -211,7 +211,7 @@ export function ExportRecipientFormCard({
   const formats = recipient?.formats ?? [];
   const deleteDescription =
     formats.length > 0
-      ? `moto löscht Adresse, Benutzername und Passwort. ${formatsText(formats)} kannst du danach nur herunterladen, bis du sie einem anderen Empfänger zuordnen. Der Verlauf der Übergaben bleibt.`
+      ? `moto löscht Adresse, Benutzername und Passwort. ${formatsText(formats)} kannst du danach nur herunterladen, bis du sie einem anderen Empfänger zuordnest. Der Verlauf der Übergaben bleibt.`
       : "moto löscht Adresse, Benutzername und Passwort. Der Empfänger bekommt keine Datei, nichts geht auf den Download zurück. Der Verlauf der Übergaben bleibt.";
 
   return (

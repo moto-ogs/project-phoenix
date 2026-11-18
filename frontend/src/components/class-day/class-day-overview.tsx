@@ -40,7 +40,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { TileCard } from "~/components/ui/tile-card";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { StatCard } from "~/components/ui/stat-card";
-import { getUserDisplayName } from "~/lib/auth-utils";
+import { getGreetingName } from "~/lib/auth-utils";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import { useTimeBasedGreeting } from "~/lib/greeting";
 import type { ClassDayReport } from "~/lib/class-day-api";
@@ -508,10 +508,11 @@ function ClassDayOverviewLoading() {
 export function ClassDayOverview({ notices, ...props }: ClassDayOverviewProps) {
   const greeting = useTimeBasedGreeting();
   const { data: session } = useSession();
+  const greetingName = getGreetingName(session);
 
   return (
     <TenantPage
-      title={`${greeting}, ${getUserDisplayName(session)}`}
+      title={greetingName ? `${greeting}, ${greetingName}` : greeting}
       prominent
       info={
         <Suspense fallback={null}>

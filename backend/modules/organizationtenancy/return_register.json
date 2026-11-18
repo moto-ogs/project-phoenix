@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "bb5a41cbd09ffdf8a58ac008adb2aae62113d981650baf84ce38d1f9470e2bf7",
+  "catalogSHA256": "5bd36dff2ac146bb761ba43eeda2f1b527cb6c24fb46a4a16c8c1a2b0f4e0e8b",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -19788,6 +19788,12 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "account_holder",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -19815,7 +19821,10 @@
       "packages": [
         "school",
         "organization"
-      ]
+      ],
+      "excludedColumns": {
+        "account_holder_sealed": "Frozen account holder opened for the Träger return; ciphertext is never exported."
+      }
     },
     {
       "name": "parent_billing.run_letters",
@@ -22557,6 +22566,12 @@
           "type": "character varying",
           "udt": "varchar",
           "nullable": true
+        },
+        {
+          "name": "account_holder",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -22584,7 +22599,10 @@
       "packages": [
         "school",
         "organization"
-      ]
+      ],
+      "excludedColumns": {
+        "account_holder_sealed": "Frozen account holder opened for the Träger return; ciphertext is never exported."
+      }
     },
     {
       "name": "parent_billing.care_meal_positions",

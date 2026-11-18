@@ -82,8 +82,8 @@ export function WeekdayRosterSection({
       : "Der Regeltermin findet nur an einem Wochentag statt. Sobald weitere Wochentage ausgewählt sind, kann die Zuordnung pro Tag festgelegt werden.";
   } else if (form.perWeekdayRoster) {
     description = childrenFromSource
-      ? "Jeder Wochentag hat eigenes Personal. Änderungen gelten nur für den ausgewählten Tag, bis du sie auf alle Tage übertragen."
-      : "Jeder Wochentag hat eine eigene Zuordnung. Änderungen gelten nur für den ausgewählten Tag, bis du sie auf alle Tage übertragen.";
+      ? "Jeder Wochentag hat eigenes Personal. Änderungen gelten nur für den ausgewählten Tag, bis du sie auf alle Tage überträgst."
+      : "Jeder Wochentag hat eine eigene Zuordnung. Änderungen gelten nur für den ausgewählten Tag, bis du sie auf alle Tage überträgst.";
   } else {
     description = childrenFromSource
       ? "Alle Wochentage haben dasselbe Personal. Wechsle zu „Pro Wochentag“, wenn montags andere Personen zuständig sind als dienstags."

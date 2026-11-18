@@ -146,7 +146,7 @@ export function UnsavedChangesDialog({
       <p className="text-sm leading-6 text-gray-600">
         {isPreview
           ? "Für die externe Vorschau muss die Vorlage zuerst gespeichert werden."
-          : "Du hast Änderungen an dieser Vorlage. Speichere sie, bevor du den Bereich verlässt, oder verwerfe sie bewusst."}
+          : "Du hast Änderungen an dieser Vorlage. Speichere sie, bevor du den Bereich verlässt, oder verwirf sie bewusst."}
       </p>
       {saveValidationMessage || pendingUploadMessage ? (
         <div className="mt-4 space-y-3">

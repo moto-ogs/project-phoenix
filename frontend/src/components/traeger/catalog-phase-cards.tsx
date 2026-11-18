@@ -306,7 +306,7 @@ export function CatalogOfferingsCard({
       >
         <p className="text-sm text-gray-700">
           „{target?.draft.fields.name}“ verschwindet aus den Schulen, sobald du
-          das nächste Mal übertragst. Hat ein Kind das Angebot schon gebucht,
+          das nächste Mal überträgst. Hat ein Kind das Angebot schon gebucht,
           schaltet moto es dort nur aus. Das lässt sich nicht rückgängig machen.
         </p>
       </ConfirmationModal>

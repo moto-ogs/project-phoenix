@@ -24,6 +24,7 @@ func TestBankDataRekeyJobOpensBothSourcesWithoutLegacy(t *testing.T) {
 	org := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{
 		Name: "CLI rekey", Slug: fmt.Sprintf("cli-rekey-%d", testpkg.UniqueTestTenantID(t)),
 	}).ID
+	school := testpkg.CreateTestSchoolInOrganization(t, db, org, "CLI rekey school")
 	legacyKeys, bankKeys := testpkg.NewTestHealthDataKeys(), testpkg.NewTestHealthDataKeys()
 	legacy, err := securityRuntimeCompose.NewFieldCipher(legacyKeys)
 	require.NoError(t, err)
@@ -46,6 +47,7 @@ func TestBankDataRekeyJobOpensBothSourcesWithoutLegacy(t *testing.T) {
 			return err
 		}
 		contractID, invoiceID := testpkg.UniqueTestTenantID(t), testpkg.UniqueTestTenantID(t)
+		runID := testpkg.UniqueTestTenantID(t)
 		var mandateID int64
 		if err := tx.NewRaw(`INSERT INTO parent_billing.sepa_mandates
  (organization_id, family_email, care_contract_id, reference, signed_on, kind, sequence,
@@ -67,13 +69,36 @@ func TestBankDataRekeyJobOpensBothSourcesWithoutLegacy(t *testing.T) {
  VALUES (?, 'Kämmerei', ?), (?, 'Steuerbüro', ?)`, org, recipientPassword, org, recipientPassword); err != nil {
 			return err
 		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO parent_billing.care_invoices
+ (id, organization_id, run_id, number, number_year, number_sequence, issued_on, billing_month,
+  care_contract_id, school_id, school_name, child_first_name, child_last_name, recipient_first_name,
+  recipient_last_name, recipient_email, month_rule, total_cents, payment_method, due_on, due_source,
+  mandate_id, mandate_reference, mandate_signed_on, creditor_id, debtor_iban_masked, sequence_type, account_holder_sealed)
+ VALUES (?, ?, ?, 'CLI-COPY', 2026, 1, '2026-10-01', '2026-10-01',
+  ?, ?, 'CLI school', 'Mia', 'Muster', 'Eva', 'Muster', 'eva@example.invalid', 'pro_rata', 100,
+  'direct_debit', '2026-12-01', 'run', ?, ?, '2026-09-01', 'DE98ZZZ09999999999', 'masked', 'RCUR', ?)`,
+			invoiceID, org, runID, contractID, school, mandateID, reference, holder); err != nil {
+			return err
+		}
+		periodID, registrationID := testpkg.UniqueTestTenantID(t), testpkg.UniqueTestTenantID(t)
+		if _, err := tx.ExecContext(ctx, `INSERT INTO parent_billing.documents
+ (organization_id, run_id, service, number, number_year, number_sequence, issued_on,
+  holiday_period_id, holiday_registration_id, recipient_first_name, recipient_last_name,
+  recipient_email, service_from, service_until, total_cents, payment_method, due_on, due_source,
+  mandate_id, mandate_reference, mandate_signed_on, creditor_id, debtor_iban_masked, sequence_type, account_holder_sealed)
+ VALUES (?, ?, 'holiday', 'CLI-HOLIDAY', 2026, 1, '2026-10-01',
+  ?, ?, 'Eva', 'Muster', 'eva@example.invalid', '2026-10-19', '2026-10-23', 100,
+  'direct_debit', '2026-12-01', 'run', ?, ?, '2026-09-01', 'DE98ZZZ09999999999', 'masked', 'RCUR', ?)`,
+			org, runID, periodID, registrationID, mandateID, reference, holder); err != nil {
+			return err
+		}
 		_, err := tx.ExecContext(ctx, `INSERT INTO parent_billing.sepa_debits
  (organization_id, mandate_id, care_contract_id, run_kind, run_id, care_invoice_id,
   invoice_number, amount_cents, due_on, sequence_type, creditor_id, mandate_reference,
   mandate_signed_on, account_holder_sealed, iban_sealed, status)
  VALUES (?, ?, ?, 'care', ?, ?, 'CLI-COPY', 100, '2026-12-01', 'RCUR',
  'DE98ZZZ09999999999', ?, '2026-09-01', ?, ?, 'pending')`,
-			org, mandateID, contractID, testpkg.UniqueTestTenantID(t), invoiceID, reference, holder, iban)
+			org, mandateID, contractID, runID, invoiceID, reference, holder, iban)
 		return err
 	}))
 	transition, err := securityRuntimeCompose.NewBankDataCipher(bankKeys, legacyKeys)
@@ -100,6 +125,15 @@ func TestBankDataRekeyJobOpensBothSourcesWithoutLegacy(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "Synthetic CLI holder", string(plain))
 	}
+	for _, source := range []string{"care_invoices", "documents"} {
+		require.Contains(t, output.String(), "source="+source+" scanned_total=1 changed_total=1")
+		var snapshot []byte
+		require.NoError(t, db.NewRaw(`SELECT account_holder_sealed FROM ? WHERE organization_id = ?`,
+			bun.Ident("parent_billing."+source), org).Scan(ctx, &snapshot))
+		plain, err := bankOnly.Open(snapshot, aad("account_holder"))
+		require.NoError(t, err, source)
+		require.Equal(t, "Synthetic CLI holder", string(plain), source)
+	}
 	var sealedProof []byte
 	require.NoError(t, db.NewRaw(`SELECT text_sealed FROM parent_billing.sepa_mandate_consents WHERE organization_id = ?`, org).Scan(ctx, &sealedProof))
 	plain, err := bankOnly.Open(sealedProof, consentAAD)
@@ -120,4 +154,6 @@ func TestBankDataRekeyJobOpensBothSourcesWithoutLegacy(t *testing.T) {
 	require.Contains(t, output.String(), "source=mandates scanned_total=1 changed_total=0")
 	require.Contains(t, output.String(), "source=debits scanned_total=1 changed_total=0")
 	require.Contains(t, output.String(), "source=consents scanned_total=1 changed_total=0")
+	require.Contains(t, output.String(), "source=care_invoices scanned_total=1 changed_total=0")
+	require.Contains(t, output.String(), "source=documents scanned_total=1 changed_total=0")
 }

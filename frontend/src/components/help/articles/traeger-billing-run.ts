@@ -86,7 +86,7 @@ export function traegerBillingRunTopic(): HelpTopic {
       {
         title: "Leeren Lauf verwerfen",
         description:
-          "Hat ein offener Lauf nichts abzurechnen, lässt er sich nicht freigeben. Das passiert zum Beispiel, wenn alle Anmeldungen storniert sind. Solange er offen ist, starte für den Ferienzeitraum keinen neuen Lauf. Dann verwerfst du ihn.",
+          "Hat ein offener Lauf nichts abzurechnen, lässt er sich nicht freigeben. Das passiert zum Beispiel, wenn alle Anmeldungen storniert sind. Solange er offen ist, starte für den Ferienzeitraum keinen neuen Lauf. Dann verwirfst du ihn.",
         steps: [
           "Öffne den Lauf. Steht dort `Dieser Lauf hat nichts abzurechnen`, wähle oben `Leeren Lauf verwerfen`.",
           "Wähle im Fenster `Verwerfen`.",
@@ -244,7 +244,7 @@ export function traegerBillingRunTopic(): HelpTopic {
       "Im Ferienzeitraum fehlt `Zur Abrechnung`? Der Zeitraum ist noch ein Entwurf, oder deine Rolle ist nicht Abrechnung.",
       "Im Lauf fehlt `Zum Ferienzeitraum`? Deine Rolle darf die Ferienbetreuung nicht öffnen.",
       "`Lauf freigeben` lässt sich nicht wählen? Es fehlt das Muster der Rechnungsnummern, oder der Lauf hat keine Rechnung.",
-      "Statt `Lauf freigeben` steht `Leeren Lauf verwerfen`? Der Lauf hat nichts abzurechnen. Verwerfe ihn, dann ist der Ferienzeitraum frei.",
+      "Statt `Lauf freigeben` steht `Leeren Lauf verwerfen`? Der Lauf hat nichts abzurechnen. Verwirf ihn, dann ist der Ferienzeitraum frei.",
       "Du siehst oben in der Karte `Rechnungen` kein Menü mit den drei Punkten? Der Lauf ist noch nicht freigegeben.",
       "Ein Klick auf eine Rechnung zeigt kein Schreiben? Die Schreiben des Laufs sind noch nicht erstellt. Erstelle sie bei `Bestätigungsschreiben`.",
       "Auf dem Handy oder einem schmalen Bildschirm steht das Schreiben an der Stelle der Liste. Mit `Zurück zu den Rechnungen` kommst du zur Liste.",

@@ -13,7 +13,7 @@ export function settingsGuideTopic(): HelpTopic {
     id: HELP_TOPICS.settingsGuide,
     title: "Die wichtigsten Einstellungen im Überblick",
     question: "Welche Einstellungen gibt es, und was bewirken sie?",
-    summary: "Was du in welchem Bereich der Einstellungen festlegen.",
+    summary: "Was du in welchem Bereich der Einstellungen festlegst.",
     group: "konfiguration",
     audience: "lead",
     icon: "SlidersHorizontal",

@@ -113,7 +113,7 @@ export function traegerCareContractsTopic(): HelpTopic {
       {
         title: "Kinder und bestehende Verträge importieren",
         description:
-          "Hast du Kinder und Verträge schon in einem anderen Programm, zum Beispiel OGS Connect? Dann übernehmst du alle auf einmal aus einer CSV-Datei. Jeder Vertrag gilt sofort als abgeschlossen. Die Eltern bekommen keine Mail. moto bewahrt die Datei nicht auf.",
+          "Hast du Kinder und Verträge schon in einem anderen Programm, zum Beispiel OGS Connect? Dann übernimmst du alle auf einmal aus einer CSV-Datei. Jeder Vertrag gilt sofort als abgeschlossen. Die Eltern bekommen keine Mail. moto bewahrt die Datei nicht auf.",
         steps: [
           "Trage zuerst die `Vertragsbedingungen` für jedes Modul ein. Ohne Bedingungen übernimmt moto keinen Vertrag für das Modul.",
           "Speichere die Kinder im anderen Programm als CSV-Datei. Die erste Zeile enthält die Überschriften, jede weitere Zeile ein Kind.",
@@ -173,7 +173,7 @@ export function traegerCareContractsTopic(): HelpTopic {
       "Beim ersten Senden hält moto das PDF fest. Änderst du danach Bedingungen oder Brieftext, bleibt der versendete Vertrag gleich.",
       "Unter `Versand` siehst du, ob die Mail gesendet wurde. Mit `Versand aktualisieren` prüfst du den neuen Stand. Mit `Erneut senden` geht dasselbe PDF noch einmal an die Eltern; moto fragt vorher. Bei einem aktiven Vertrag steht `Erneut senden` im Menü mit den drei Punkten oben rechts. Eine zweite Nachricht aufs Handy gibt es dabei nicht. Nur eine korrigierte Mail-Adresse bekommt eine eigene Nachricht.",
       "Neben jedem Versand steht, was aus der Mail geworden ist: wie bei der Abrechnung. Der Hinweis oben nennt den Grund und den nächsten Schritt. Bei `Verzögert` wartest du. Hat die Schule die Mails gestoppt, kläre das mit der Schule. Bei `Gesperrt` klärt das der moto-Support. Solange das gilt, ist `Erneut senden` aus.",
-      "Den Brieftext des Vertrags ändest du unter `Einstellungen` → `Briefkopf und Vorlagen` bei der Vorlage `Vertrag`.",
+      "Den Brieftext des Vertrags änderst du unter `Einstellungen` → `Briefkopf und Vorlagen` bei der Vorlage `Vertrag`.",
       "Mit `PDF herunterladen` bekommst du den Vertrag zum Drucken, etwa für Familien ohne Mail.",
       "Wartet ein versendeter Vertrag auf die Unterschrift, bekommen die Eltern Erinnerungen per Mail. Es gibt höchstens drei. Bereits abgeschlossene Verträge bekommen keine Erinnerung. Nach wie vielen Tagen, lege unter `Einstellungen` → `Allgemein` im Bereich `Betreuungsverträge` fest. Bei 0 gibt es keine Erinnerung.",
       "Der Link in der Mail gilt einmal und 30 Tage. Jede Erinnerung bringt einen neuen Link.",

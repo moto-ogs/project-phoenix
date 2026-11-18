@@ -7,7 +7,7 @@ export function traegerSepaMandatesTopic(): HelpTopic {
     title: "Lastschrift und SEPA-Mandate",
     question: "Wie buche ich Beiträge per Lastschrift ab?",
     summary:
-      "Du trägst deine Gläubiger-ID ein und erfasst das SEPA-Mandat jeder Familie. Die Rechnung kündigt die Abbuchung dann an: mit Betrag, Datum, Konto, Gläubiger-ID und Mandatsreferenz. moto bucht kein Geld ab.",
+      "Du trägst deine Gläubiger-ID und die Mandate der Familien ein. Die Rechnung kündigt die Abbuchung an. moto bucht kein Geld ab.",
     group: "anmeldeverwaltung",
     audience: "traeger",
     icon: "Repeat",
@@ -90,7 +90,7 @@ export function traegerSepaMandatesTopic(): HelpTopic {
       },
     ],
     result:
-      "Im nächsten Monatslauf steht auf jeder Rechnung mit Lastschrift die Vorabankündigung: Betrag, Tag der Abbuchung, Konto (verdeckt), Gläubiger-ID und Mandatsreferenz. Der Betrag ist das, was die Familie zahlt, also ohne den Anteil eines Kostenträgers.",
+      "Neue Lastschrift-Rechnungen nennen den Betrag, den Abbuchungstag und den Kontoinhaber. Dort stehen auch die verdeckte IBAN, die Gläubiger-ID und die Mandatsreferenz. Ist der Kontoinhaber jemand anderes? Dann bittet das Schreiben darum, es an diese Person weiterzugeben. Der Betrag enthält nur den Anteil der Familie.",
     notes: [
       "Die Mandate siehst du unter `Familien und Zahlung` im Reiter `Lastschrift`. Die Liste zeigt zuerst die gültigen; mit `Alle` siehst du auch die widerrufenen.",
       "Ein Mandat aus der Eltern-App hat die Herkunft `von den Eltern`. moto speichert dazu den bestätigten Text mit Prüfsumme, das Konto der Eltern und die Uhrzeit. Widerrufen die Eltern in der App, gilt das ab dem nächsten Monatslauf.",

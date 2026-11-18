@@ -182,7 +182,10 @@ verarbeitet dafür zusätzlich die Quelle `consents`, einschließlich Nachweisen
 widerrufener Mandate. Er sperrt und filtert die Nachweiszeilen nach Träger,
 behält das AAD aus Feld, Träger und Mandatsreferenz bei und ändert ausschließlich
 das Chiffrat. Text, Prüfsumme und übrige Nachweisfelder bleiben gleich.
-Die Rotationsprüfung verlangt `changed_total=0` für alle drei Quellen des Trägers (`mandates`, `debits`, `consents`).
+Die Rotationsprüfung verlangt `changed_total=0` für jede ausgegebene Quelle
+des Trägers. Dazu gehören auch die Rechnungen aus #7359. Die Quellen
+`care_invoices` und `documents` drehen die versiegelte Kopie des
+Kontoinhabers mit derselben Feld-, Träger- und Mandatsbindung wie beim Mandat.
 
 ## Ergänzung 10.11.2026: Legacy-Ring geleert (#6508)
 

@@ -48,7 +48,7 @@ export function activeSupervisionTopic(
     title: "Eine Aufsicht starten, führen und beenden",
     question: "Wie arbeite ich mit einer laufenden Aufsicht?",
     summary:
-      "Übernehme einen Raum oder einen geplanten Termin und halte die Kinderliste aktuell.",
+      "Übernimm einen Raum oder einen geplanten Termin und halte die Kinderliste aktuell.",
     group: "gruppen",
     audience: ["caregiver", "lead"],
     icon: "Eye",
@@ -104,7 +104,7 @@ export function activeSupervisionTopic(
           // #4571: live geprüft im Dialog `Anwesende Kinder hinzufügen`.
           "Du kennst die Kinder an ihrem Betreuungsangebot, zum Beispiel „bis 16 Uhr“? Wähle `Nach Angebot` und darunter das Angebot. Dann stehen dort nur Kinder, die dieses Angebot heute gebucht haben. Kinder, die heute früher gehen oder abgemeldet sind, fehlen. moto merkt sich das Angebot für das nächste Mal.",
           "Prüfe geplante Abholzeiten und Hinweise in der Liste.",
-          "Wechselt ein Kind den Raum oder geht nach Hause? Ändeere seinen Aufenthaltsort.",
+          "Wechselt ein Kind den Raum oder geht nach Hause? Ändere seinen Aufenthaltsort.",
         ],
       },
       {

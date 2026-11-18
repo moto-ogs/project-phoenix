@@ -127,7 +127,7 @@ describe("Träger header name (#6870)", () => {
     await waitFor(() => expect(headerName()).toHaveTextContent("Karl Kasse"));
   });
 
-  it("keeps the e-mail address for an account without a name", async () => {
+  it("uses the neutral fallback for an account without a name", async () => {
     api.fetchTraegerProfile.mockResolvedValue({
       accountId: "4",
       email: "kasse@traeger.example",
@@ -136,15 +136,15 @@ describe("Träger header name (#6870)", () => {
     renderPortal();
 
     await waitFor(() => expect(api.fetchTraegerProfile).toHaveBeenCalled());
-    expect(headerName()).toHaveTextContent("kasse@traeger.example");
+    expect(headerName()).toHaveTextContent("Träger-Büro");
   });
 
-  it("keeps the e-mail address when the profile cannot be read", async () => {
+  it("uses the neutral fallback when the profile cannot be read", async () => {
     api.fetchTraegerProfile.mockRejectedValue(new Error("offline"));
     renderPortal();
 
     await waitFor(() => expect(api.fetchTraegerProfile).toHaveBeenCalled());
-    expect(headerName()).toHaveTextContent("kasse@traeger.example");
+    expect(headerName()).toHaveTextContent("Träger-Büro");
   });
 
   it("takes a name saved under „Konto“ without signing in again", async () => {
@@ -161,7 +161,7 @@ describe("Träger header name (#6870)", () => {
     renderPortal(<TraegerAccountPage />);
 
     const field = await screen.findByRole("textbox", { name: /Dein Name/ });
-    expect(headerName()).toHaveTextContent("kasse@traeger.example");
+    expect(headerName()).toHaveTextContent("Träger-Büro");
     fireEvent.change(field, { target: { value: "Karl Kasse" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
@@ -234,7 +234,7 @@ describe("Träger header name (#6870)", () => {
       </ToastProvider>,
     );
 
-    expect(headerName()).toHaveTextContent("kasse@traeger.example");
+    expect(headerName()).toHaveTextContent("Träger-Büro");
     await act(async () =>
       answer({
         accountId: "4",

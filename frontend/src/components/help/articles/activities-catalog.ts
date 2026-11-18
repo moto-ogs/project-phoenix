@@ -35,7 +35,7 @@ export function activitiesCatalogTopic(): HelpTopic {
         title: "Eine Aktivität ändern",
         steps: [
           "Öffne `Aktivitäten` und wähle die Aktivität aus der Liste.",
-          "Ändeere die Angaben unter `Stammdaten`.",
+          "Ändere die Angaben unter `Stammdaten`.",
           "Wähle `Speichern`.",
         ],
       },
