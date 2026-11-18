@@ -15,6 +15,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { testClockDay } from "~/test/clock-instant";
 import type {
   BillingKeyDateCount,
   BillingKeyDay,
@@ -28,7 +29,11 @@ const {
   mockToastSuccess,
   mockToastError,
   mockSetBreadcrumb,
+  mockListOrganizations,
+  mockListSchools,
 } = vi.hoisted(() => ({
+  mockListOrganizations: vi.fn(),
+  mockListSchools: vi.fn(),
   mockGetKeyDay: vi.fn(),
   mockUpdateKeyDay: vi.fn(),
   mockListKeyDateCounts: vi.fn(),
@@ -76,8 +81,8 @@ vi.mock("~/lib/operator/billing-api", async () => {
 // The key day dialog reads the Träger and schools it can reach.
 vi.mock("~/lib/operator/provisioning-api", () => ({
   operatorProvisioningService: {
-    listOrganizations: () => Promise.resolve([]),
-    listSchools: () => Promise.resolve([]),
+    listOrganizations: mockListOrganizations,
+    listSchools: mockListSchools,
   },
 }));
 
@@ -121,9 +126,11 @@ describe("OperatorBillingPage", () => {
     vi.clearAllMocks();
     mockGetKeyDay.mockResolvedValue(keyDay);
     mockDownload.mockResolvedValue(undefined);
+    mockListOrganizations.mockResolvedValue([]);
+    mockListSchools.mockResolvedValue([]);
   });
 
-  it("names every key date of a month when schools count on their own day (#7301)", async () => {
+  it("shows each school's own key date in its row (#7301)", async () => {
     mockListKeyDateCounts.mockResolvedValue([
       count({ schoolId: "11", keyDate: "2026-08-15" }),
       count({
@@ -134,28 +141,66 @@ describe("OperatorBillingPage", () => {
     ]);
     renderPage();
 
-    expect(
-      await screen.findByText(/^Stichtage vom 05\.08\.2026 bis 15\.08\.2026\./),
-    ).toBeInTheDocument();
-    const linden = screen
-      .getAllByText("OGS Lindenweg")
+    const linden = (await screen.findAllByText("OGS Lindenweg"))
       .map((cell) => cell.closest("tr"))
       .find(Boolean) as HTMLElement;
     expect(within(linden).getByText("05.08.2026")).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: /^Stichtag/ }),
+    ).toBeInTheDocument();
   });
 
-  it("names one key date and shows no key date column when every school shares it", async () => {
-    mockListKeyDateCounts.mockResolvedValue([count()]);
+  it("lists the schools still without figures in the running month (#7301)", async () => {
+    const month = testClockDay(0).slice(0, 7);
+    mockListKeyDateCounts.mockResolvedValue([
+      count({
+        period: `${month}-01`,
+        keyDate: `${month}-05`,
+        recordedAt: `${month}-05T05:00:00Z`,
+      }),
+    ]);
+    mockGetKeyDay.mockResolvedValue({
+      ...keyDay,
+      overrides: [
+        {
+          scope: "organization",
+          id: "4",
+          name: "Träger Nord",
+          organizationName: "",
+          keyDay: 20,
+          nextKeyDate: `${month}-20`,
+          updatedAt: "2026-08-01T08:00:00Z",
+        },
+      ],
+    });
+    mockListOrganizations.mockResolvedValue([
+      { id: "4", name: "Träger Nord", deletedAt: null },
+    ]);
+    mockListSchools.mockResolvedValue([
+      { id: "11", organizationId: "4", name: "OGS Am Berg", deletedAt: null },
+      { id: "13", organizationId: "4", name: "OGS Neu", deletedAt: null },
+      {
+        id: "14",
+        organizationId: "4",
+        name: "OGS Alt",
+        deletedAt: "2026-01-01",
+      },
+    ]);
     renderPage();
 
+    const neu = (await screen.findAllByText("OGS Neu"))
+      .map((cell) => cell.closest("tr"))
+      .find(Boolean) as HTMLElement;
+    // Its Träger's own day gives the key date of the month.
     expect(
-      await screen.findByText(/^Stichtag 15\.08\.2026\./),
+      within(neu).getByText(`20.${month.slice(5, 7)}.${month.slice(0, 4)}`),
     ).toBeInTheDocument();
+    expect(within(neu).getByText("noch nicht erfasst")).toBeInTheDocument();
+    expect(screen.queryAllByText("OGS Alt")).toHaveLength(0);
+    expect(screen.getByText("1 von 2")).toBeInTheDocument();
+    expect(screen.getByText("Schulen erfasst")).toBeInTheDocument();
     expect(
-      screen.queryByRole("columnheader", { name: /^Stichtag/ }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("columnheader", { name: /Schule/ }),
+      screen.getByText(/^Eine Schule hat für .* noch keine Zahlen\./),
     ).toBeInTheDocument();
   });
 
@@ -247,7 +292,7 @@ describe("OperatorBillingPage", () => {
     renderPage();
 
     expect(await screen.findAllByText("OGS Am See")).not.toHaveLength(0);
-    expect(screen.getByText(/^Stichtag 15\.08\.2026\./)).toBeInTheDocument();
+    expect(screen.getAllByText("15.08.2026")).not.toHaveLength(0);
     expect(screen.queryAllByText("OGS Juli")).toHaveLength(0);
     expect(screen.getByText("200")).toBeInTheDocument();
     expect(screen.getByText("5")).toBeInTheDocument();

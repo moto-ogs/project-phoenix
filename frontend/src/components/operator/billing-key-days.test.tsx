@@ -107,6 +107,7 @@ function Harness({
     <BillingKeyDays
       keyDay={keyDay}
       loading={false}
+      loadError={null}
       capturedThisMonth={captured}
       onChanged={setKeyDay}
     />

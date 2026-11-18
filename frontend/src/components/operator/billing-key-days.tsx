@@ -7,7 +7,7 @@ import { Button } from "~/components/ui/button";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { DataField } from "~/components/ui/data-field";
-import { EmptyState } from "~/components/ui/empty-state";
+import type { FormError } from "~/components/ui/form-error";
 import { FieldLabel } from "~/components/ui/field-label";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { FormModal } from "~/components/ui/form-modal";
@@ -171,12 +171,15 @@ function KeyDayRow({
 export function BillingKeyDays({
   keyDay,
   loading,
+  loadError,
   capturedThisMonth,
   onChanged,
 }: Readonly<{
   /** The key day with its overrides; undefined while it loads or failed. */
   keyDay: BillingKeyDay | undefined;
   loading: boolean;
+  /** Why the key day did not load, with its retry; shown in the card. */
+  loadError: FormError | null;
   /** Schools with figures for the running month; undefined until loaded. */
   capturedThisMonth: ReadonlySet<string> | undefined;
   /** Takes the key day the write answered, overrides included. */
@@ -239,11 +242,7 @@ export function BillingKeyDays({
       {loading ? (
         <SkeletonRows rows={2} />
       ) : !keyDay ? (
-        <EmptyState
-          variant="compact"
-          title="Stichtage konnten nicht geladen werden"
-          description="Lade sie oben mit „Wiederholen“ neu."
-        />
+        <LoadErrorAlert error={loadError} actionLayout="responsive" />
       ) : (
         <ResponsiveActionList>
           <KeyDayRow
