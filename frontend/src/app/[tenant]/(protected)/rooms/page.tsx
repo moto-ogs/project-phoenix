@@ -17,7 +17,7 @@ import { Button } from "~/components/ui/button";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { TileCard } from "~/components/ui/tile-card";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import type {
@@ -560,7 +560,17 @@ function RoomsPageContent() {
   const roomSummary = (() => {
     if (!roomsData) return null;
     const occupied = roomsData.filter((room) => room.isOccupied).length;
-    return `${roomsData.length} ${roomsData.length === 1 ? "Raum" : "Räume"} · ${occupied} belegt`;
+    return (
+      <TenantPageStats
+        items={[
+          {
+            value: roomsData.length,
+            label: roomsData.length === 1 ? "Raum" : "Räume",
+          },
+          { value: occupied, label: "belegt" },
+        ]}
+      />
+    );
   })();
 
   return (

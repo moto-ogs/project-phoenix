@@ -41,6 +41,7 @@ import {
   formatDecimalHours,
   isStaleAfterModelSave,
 } from "~/components/staff/arbeitszeit-hours";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 const CACHE_KEY = workTimeModelKeys.catalog();
 // Der Reiter „Arbeitszeitmodell“ liest die Vorlagen unter diesem Schlüssel.
@@ -149,9 +150,19 @@ const config: CatalogConfig<WorkTimeModel> = {
     const archived = models.filter((model) => model.archivedAt).length;
     const offered = models.length - archived;
     const head = `${formatCount(offered)} ${offered === 1 ? "Vorlage" : "Vorlagen"}`;
-    return archived > 0
-      ? `${head} · ${formatCount(archived)} nicht mehr angeboten`
-      : head;
+    return archived > 0 ? (
+      <TenantPageStats
+        items={[
+          {
+            value: formatCount(offered),
+            label: offered === 1 ? "Vorlage" : "Vorlagen",
+          },
+          { value: formatCount(archived), label: "nicht mehr angeboten" },
+        ]}
+      />
+    ) : (
+      head
+    );
   },
   toRow: (model) => ({
     name: model.name,

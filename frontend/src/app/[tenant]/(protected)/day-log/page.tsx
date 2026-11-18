@@ -35,7 +35,7 @@ import {
 } from "~/components/ui/slide-over";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useErrorFixLink } from "~/components/ui/error-fix-slot";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import {
@@ -488,9 +488,16 @@ export default function DayLogPage() {
 
   // Statuszeile unter dem Titel: gewählter Tag und die Zahl der Kinder aus dem
   // geladenen Protokoll.
-  const statusLine = data
-    ? `${formatStatusDate(dateISO)} · ${data.counters.total} Kinder`
-    : formatStatusDate(dateISO);
+  const statusLine = data ? (
+    <TenantPageStats
+      items={[
+        { label: formatStatusDate(dateISO) },
+        { value: data.counters.total, label: "Kinder" },
+      ]}
+    />
+  ) : (
+    formatStatusDate(dateISO)
+  );
 
   return (
     <TenantPage

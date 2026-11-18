@@ -114,7 +114,7 @@ import {
   type FormModalOperation,
   useFormModalPending,
 } from "~/components/ui/use-form-modal-pending";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { DesktopOnlyNotice } from "~/components/ui/desktop-only-notice";
 import {
   berlinTodayISO,
@@ -982,7 +982,7 @@ export function PhasesEditor() {
       stats={
         pageLoad.error
           ? undefined
-          : `${activePhaseCount} aktiv · ${Math.max(phases.length - activePhaseCount, 0)} in Vorbereitung`
+          : phasesStatusLine(activePhaseCount, phases.length)
       }
       statsLoading={loading}
       actions={
@@ -2268,5 +2268,17 @@ function SchoolClassListEditor({
         </p>
       )}
     </div>
+  );
+}
+
+/** Statuszeile der Kopfkarte: aktive Phasen und Phasen in Vorbereitung. */
+function phasesStatusLine(activeCount: number, total: number) {
+  return (
+    <TenantPageStats
+      items={[
+        { value: activeCount, label: "aktiv" },
+        { value: Math.max(total - activeCount, 0), label: "in Vorbereitung" },
+      ]}
+    />
   );
 }

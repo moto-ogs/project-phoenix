@@ -280,9 +280,12 @@ describe("RoomDetailPage", () => {
     expect(
       screen.getByRole("heading", { name: "Gruppenraum Sonne" }),
     ).toBeInTheDocument();
+    // Statuszeile ohne Trennpunkt und mit höchstens drei Angaben (#7402):
+    // die Etage entfällt, sie steht unter „Rauminformationen“.
     expect(
-      screen.getByText("Hauptgebäude · Etage 1 · Gruppenraum · 20 Plätze"),
-    ).toBeInTheDocument();
+      screen.getByText("Hauptgebäude").parentElement?.parentElement,
+    ).toHaveTextContent(/^HauptgebäudeGruppenraum20Plätze$/);
+    expect(screen.queryByText("Etage 1")).not.toBeInTheDocument();
     expect(screen.getByText("Belegt")).toBeInTheDocument();
     expect(screen.getByTestId("room-overview")).toBeInTheDocument();
     // Ohne rooms:update gibt es keinen Stammdaten-Reiter und keine

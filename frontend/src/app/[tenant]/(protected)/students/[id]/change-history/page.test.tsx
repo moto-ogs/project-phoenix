@@ -207,7 +207,8 @@ describe("StudentChangeHistoryPage", () => {
         catalogText("general.server", "die Liste der Änderungen"),
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/0 Einträge/)).not.toBeInTheDocument();
+    // Statuszeile: Zahl und Wort stehen in eigenen Elementen (#7402).
+    expect(screen.queryByText(/^(\d+ )?Einträge?$/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
 

@@ -34,7 +34,7 @@ import {
   errorAlertActions,
 } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import NavigationLink from "~/components/ui/navigation-link";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { MessageComposer } from "~/components/messaging/message-composer";
@@ -559,13 +559,26 @@ function MessageThreadContent() {
   // Eine Leitungs-Unterhaltung trägt das vorne in der Statuszeile (#5200).
   // Gezählt wird, was angekommen ist, nicht die Blase auf dem Weg (#5011).
   const sentCount = confirmedThread?.messages.length ?? 0;
-  const statusLine = thread
-    ? `${thread.audience === "leadership" ? `${LEADERSHIP_AUDIENCE_LABEL} · ` : ""}${relationshipLabel(thread.relationship_type)} von ${thread.student_name}${
-        messagesLoading
-          ? ""
-          : ` · ${sentCount} ${sentCount === 1 ? "Nachricht" : "Nachrichten"}`
-      }`
-    : null;
+  const statusLine = thread ? (
+    <TenantPageStats
+      items={[
+        ...(thread.audience === "leadership"
+          ? [{ label: LEADERSHIP_AUDIENCE_LABEL }]
+          : []),
+        {
+          label: `${relationshipLabel(thread.relationship_type)} von ${thread.student_name}`,
+        },
+        ...(messagesLoading
+          ? []
+          : [
+              {
+                value: sentCount,
+                label: sentCount === 1 ? "Nachricht" : "Nachrichten",
+              },
+            ]),
+      ]}
+    />
+  ) : null;
 
   if (!showSkeleton && !thread) {
     return (

@@ -8,7 +8,7 @@ import {
 } from "~/components/database/grade-transitions/grade-transitions-manager";
 import { DesktopOnlyNotice } from "~/components/ui/desktop-only-notice";
 import { ForbiddenPage } from "~/components/ui/forbidden-page";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { hasPermission } from "~/lib/auth-utils";
 
 export default function GradeTransitionsPage() {
@@ -47,11 +47,17 @@ export default function GradeTransitionsPage() {
     if (!canRead) return "Kein Zugriff auf Schuljahreswechsel";
     if (!summary) return null;
     if (summary.total === 0) return "Noch kein Schuljahreswechsel angelegt";
-    const parts: string[] = [];
-    if (summary.latestYear) parts.push(`Schuljahr ${summary.latestYear}`);
-    parts.push(`${summary.total} Wechsel`);
-    parts.push(`${summary.applied} angewendet`);
-    return parts.join(" · ");
+    return (
+      <TenantPageStats
+        items={[
+          ...(summary.latestYear
+            ? [{ label: `Schuljahr ${summary.latestYear}` }]
+            : []),
+          { value: summary.total, label: "Wechsel" },
+          { value: summary.applied, label: "angewendet" },
+        ]}
+      />
+    );
   })();
 
   return (

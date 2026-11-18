@@ -8,7 +8,7 @@ import { CollectionGrid } from "~/components/ui/collection-grid";
 import { Button } from "~/components/ui/button";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { TileCard } from "~/components/ui/tile-card";
 import {
   isOwnGroup,
@@ -71,9 +71,17 @@ function GroupOverviewContent() {
 
   const ownCount = sortedGroups.filter(isOwnGroup).length;
   const stats =
-    groups.length > 0
-      ? `${groups.length} ${groups.length === 1 ? "Gruppe" : "Gruppen"} · ${ownCount} eigene`
-      : null;
+    groups.length > 0 ? (
+      <TenantPageStats
+        items={[
+          {
+            value: groups.length,
+            label: groups.length === 1 ? "Gruppe" : "Gruppen",
+          },
+          { value: ownCount, label: "eigene" },
+        ]}
+      />
+    ) : null;
 
   return (
     <TenantPage

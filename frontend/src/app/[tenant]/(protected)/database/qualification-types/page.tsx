@@ -28,6 +28,7 @@ import { staffQualificationKeys } from "~/lib/swr/staff-keys";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 const CACHE_KEY = staffQualificationKeys.types();
 
@@ -129,7 +130,17 @@ const config: CatalogConfig<QualificationType> = {
   stats: (types) => {
     const live = types.filter((type) => !type.archived);
     const mandatory = live.filter((type) => type.mandatory).length;
-    return `${formatCount(live.length)} ${live.length === 1 ? "Art" : "Arten"} · ${formatCount(mandatory)} Pflicht`;
+    return (
+      <TenantPageStats
+        items={[
+          {
+            value: formatCount(live.length),
+            label: live.length === 1 ? "Art" : "Arten",
+          },
+          { value: formatCount(mandatory), label: "Pflicht" },
+        ]}
+      />
+    );
   },
   toRow: (type) => ({
     name: type.name,

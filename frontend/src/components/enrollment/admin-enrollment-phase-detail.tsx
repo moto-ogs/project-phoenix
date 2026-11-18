@@ -61,7 +61,7 @@ import {
   type DataTableColumn,
   DataTableStatusBadge,
 } from "~/components/ui/data-table";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { SectionCard } from "~/components/ui/section-card";
 import type {
   ActiveFilter,
@@ -918,7 +918,20 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
       back
       backHref={overviewPath}
       backLabel="Zurück zur Anmeldungs-Übersicht"
-      stats={`${formatDate(phase.service_start_date)} bis ${formatDate(phase.service_end_date)} · ${stats.total} ${stats.total === 1 ? "Eingang" : "Eingänge"} · ${stats.open} offen`}
+      stats={
+        <TenantPageStats
+          items={[
+            {
+              label: `${formatDate(phase.service_start_date)} bis ${formatDate(phase.service_end_date)}`,
+            },
+            {
+              value: stats.total,
+              label: stats.total === 1 ? "Eingang" : "Eingänge",
+            },
+            { value: stats.open, label: "offen" },
+          ]}
+        />
+      }
       leading={
         /* Unter sm gibt das Symbol dem Titel die Breite, die das Menü neben
            ihm belegt: „Wiederanmeldung“ bräche sonst mitten im Wort. */

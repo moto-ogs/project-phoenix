@@ -19,7 +19,7 @@ import {
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import {
   resolveStudentReferrer,
   studentHistoryBack,
@@ -771,15 +771,30 @@ function StudentRoomHistoryPageContent() {
   // aus den Daten, die die Seite ohnehin geladen hat. Ohne geladenes
   // Protokoll steht keine "0 Tage erfasst" neben dem Ladefehler (#2517).
   const dayCount = history ? history.days.length : null;
-  const dayLine =
+  const dayStat =
     dayCount === null
       ? null
-      : `${dayCount} ${dayCount === 1 ? "Tag" : "Tage"} erfasst`;
-  const studentMeta = student
-    ? [student.school_class, student.group_name, dayLine]
-        .filter(Boolean)
-        .join(" · ")
-    : "";
+      : {
+          value: dayCount,
+          label: `${dayCount === 1 ? "Tag" : "Tage"} erfasst`,
+        };
+  const dayLine = dayStat ? `${dayStat.value} ${dayStat.label}` : null;
+  const studentFacts = student
+    ? [student.school_class, student.group_name].filter(
+        (part): part is string => Boolean(part),
+      )
+    : [];
+  const studentMeta =
+    studentFacts.length + (dayStat ? 1 : 0) > 1 ? (
+      <TenantPageStats
+        items={[
+          ...studentFacts.map((label) => ({ label })),
+          ...(dayStat ? [dayStat] : []),
+        ]}
+      />
+    ) : (
+      (studentFacts[0] ?? null)
+    );
   // Eine ausgeschaltete Funktion ist ein Zustand, kein Fehler. Erkannt wird
   // sie am Schalter im Datensatz des Kindes, nicht am Text der 403-Antwort.
   const featureDisabled = student?.attendance_log_enabled === false;
@@ -800,7 +815,7 @@ function StudentRoomHistoryPageContent() {
         {...back}
         leading={<ConceptIconTile concept={changeHistoryConcept} size="page" />}
         title={displayName || "Anwesenheitsprotokoll"}
-        stats={studentMeta || dayLine}
+        stats={studentMeta ?? dayLine}
         statsLoading={loading}
         loading={loading}
         error={pageError}

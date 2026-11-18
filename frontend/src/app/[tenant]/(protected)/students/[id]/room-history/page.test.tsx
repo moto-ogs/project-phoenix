@@ -144,6 +144,17 @@ vi.mock("~/components/students/attendance-correction-modal", () => ({
 
 // Mock fetch to simulate backend responses
 const mockFetch = vi.fn();
+
+/**
+ * Die Zahl der erfassten Tage in der Statuszeile. Zahl und Wort stehen dort
+ * in eigenen Elementen, ohne Trennpunkt (#7402); das Paar liest sich daher
+ * als „3Tage erfasst“.
+ */
+function dayCountStat(): string | null {
+  return (
+    screen.queryByText(/^Tage? erfasst$/)?.parentElement?.textContent ?? null
+  );
+}
 global.fetch = mockFetch;
 
 function mockStudentResponse(overrides?: Record<string, unknown>) {
@@ -321,9 +332,8 @@ describe("StudentRoomHistoryPage", () => {
     setupFetch(mockAttendanceHistoryResponse());
     render(<StudentRoomHistoryPage />);
 
-    // The group name renders as its own interpolated text node next to the
-    // school class (" · Sterne"), so match it as a substring rather than an
-    // exact string.
+    // The group name is its own fact in the status line next to the school
+    // class; match it as a substring rather than an exact string.
     await waitFor(() => {
       expect(screen.getByText(/Sterne/)).toBeInTheDocument();
     });
@@ -459,7 +469,10 @@ describe("StudentRoomHistoryPage", () => {
       ).toBeInTheDocument();
     });
     // #2517: keine Zählung aus einem Protokoll, das nie geladen wurde.
-    expect(screen.queryByText(/0 Tage erfasst/)).not.toBeInTheDocument();
+    // Die Statuszeile setzt Zahl und Wort in eigene Elemente (#7402).
+    expect(
+      screen.queryByText(/^(\d+ )?Tage? erfasst$/),
+    ).not.toBeInTheDocument();
   });
 
   // Der Name schmückt nur den Kopf: ohne Kinddatensatz zeigt die Seite das
@@ -1192,7 +1205,7 @@ describe("StudentRoomHistoryPage", () => {
 
     async function openFirstDay() {
       render(<StudentRoomHistoryPage />);
-      expect(await screen.findByText(/1 Tag erfasst/)).toBeInTheDocument();
+      await waitFor(() => expect(dayCountStat()).toBe("1Tag erfasst"));
       fireEvent.click(screen.getByText(/Montag, 06/).closest("tr")!);
       expect(
         (await screen.findAllByText("Korrigieren")).length,
@@ -1220,14 +1233,14 @@ describe("StudentRoomHistoryPage", () => {
       await waitFor(() => expect(historyCalls()).toBe(3));
 
       second.resolve(snapshot(3));
-      expect(await screen.findByText(/3 Tage erfasst/)).toBeInTheDocument();
+      await waitFor(() => expect(dayCountStat()).toBe("3Tage erfasst"));
       first.resolve(snapshot(2));
       await first.promise;
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       // Anker: der Stand nach der zweiten Korrektur steht weiter da.
-      expect(screen.getByText(/3 Tage erfasst/)).toBeInTheDocument();
-      expect(screen.queryByText(/2 Tage erfasst/)).not.toBeInTheDocument();
+      expect(dayCountStat()).toBe("3Tage erfasst");
+      expect(dayCountStat()).not.toBe("2Tage erfasst");
     });
 
     it("keeps the confirmed protocol and shows a failed refresh above it", async () => {
@@ -1249,7 +1262,7 @@ describe("StudentRoomHistoryPage", () => {
         ),
       ).toBeInTheDocument();
       // Die bestätigten Tage bleiben unter dem Hinweis stehen.
-      expect(screen.getByText(/1 Tag erfasst/)).toBeInTheDocument();
+      expect(dayCountStat()).toBe("1Tag erfasst");
       expect(screen.getAllByText(/Montag, 06/).length).toBeGreaterThan(0);
     });
 
@@ -1268,14 +1281,16 @@ describe("StudentRoomHistoryPage", () => {
 
       routeParams.id = "43";
       rerender(<StudentRoomHistoryPage />);
-      expect(await screen.findByText(/3 Tage erfasst/)).toBeInTheDocument();
+      await waitFor(() => expect(dayCountStat()).toBe("3Tage erfasst"));
       previousChild.resolve(snapshot(1));
       await previousChild.promise;
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       // Anker: das Protokoll des jetzt gezeigten Kindes steht weiter da.
-      expect(screen.getByText(/3 Tage erfasst/)).toBeInTheDocument();
-      expect(screen.queryByText(/1 Tag erfasst/)).not.toBeInTheDocument();
+      expect(screen.getByText("Tage erfasst").parentElement).toHaveTextContent(
+        /^3Tage erfasst$/,
+      );
+      expect(screen.queryByText("Tag erfasst")).not.toBeInTheDocument();
     });
 
     it("shows no error of the child shown before while the next one loads", async () => {
@@ -1298,7 +1313,7 @@ describe("StudentRoomHistoryPage", () => {
         return Promise.resolve(mockStudentResponse());
       });
       const { rerender } = render(<StudentRoomHistoryPage />);
-      expect(await screen.findByText(/1 Tag erfasst/)).toBeInTheDocument();
+      await waitFor(() => expect(dayCountStat()).toBe("1Tag erfasst"));
       fireEvent.click(screen.getByText(/Montag, 06/).closest("tr")!);
       await correct();
       const message =
@@ -1314,7 +1329,7 @@ describe("StudentRoomHistoryPage", () => {
       ).toBeInTheDocument();
       expect(screen.queryByText(message)).not.toBeInTheDocument();
       nextChild.resolve(snapshot(3));
-      expect(await screen.findByText(/3 Tage erfasst/)).toBeInTheDocument();
+      await waitFor(() => expect(dayCountStat()).toBe("3Tage erfasst"));
     });
   });
 });

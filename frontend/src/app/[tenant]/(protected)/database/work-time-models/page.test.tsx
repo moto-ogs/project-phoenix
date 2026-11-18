@@ -138,9 +138,10 @@ describe("Arbeitszeitmodelle (#6891)", () => {
       screen.getAllByText("40 Std. pro Woche · 1 Woche · 2 Personen").length,
     ).toBeGreaterThan(0);
     expect(screen.getByText("Nicht mehr in der Auswahl")).toBeInTheDocument();
+    // Zahl und Wort stehen in eigenen Elementen, die Paare ohne Trennpunkt.
     expect(
-      screen.getByText("1 Vorlage · 1 nicht mehr angeboten"),
-    ).toBeInTheDocument();
+      screen.getByText("nicht mehr angeboten").parentElement?.parentElement,
+    ).toHaveTextContent(/^1Vorlage1nicht mehr angeboten$/);
   });
 
   it("says before saving whom a change reaches", () => {

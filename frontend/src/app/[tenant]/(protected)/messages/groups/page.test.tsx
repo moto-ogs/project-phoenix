@@ -44,6 +44,15 @@ vi.mock("~/components/messaging/new-group-message-modal", () => ({
 }));
 import GroupMessagesPage from "./page";
 
+/**
+ * Findet die Statuszeile aus genau diesen Angaben. Die Angaben stehen ohne
+ * Trennpunkt nebeneinander, Zahl und Wort in eigenen Elementen.
+ */
+function statusLine(...parts: string[]) {
+  return (_: string, element: Element | null) =>
+    element?.tagName === "SPAN" && element.textContent === parts.join("");
+}
+
 describe("Gruppennachrichten: Liste", () => {
   beforeEach(() => {
     push.mockReset();
@@ -108,7 +117,7 @@ describe("Gruppennachrichten: Liste", () => {
   it("counts threads in the status line", () => {
     render(<GroupMessagesPage />);
     expect(
-      screen.getByText("2 Gruppennachrichten · 1 offen"),
+      screen.getByText(statusLine("2", "Gruppennachrichten", "1", "offen")),
     ).toBeInTheDocument();
   });
 

@@ -34,7 +34,7 @@ import {
 } from "~/components/ui/page-header/OverflowMenu";
 import type { FilterConfig } from "~/components/ui/page-header/types";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { formatCount } from "~/lib/format-utils";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
@@ -296,17 +296,28 @@ export default function ClassListEntriesPage() {
   // nur die angelegten Kinder, entfällt die Gesamtzahl, statt sie still
   // auszulassen (#2517).
   const statusLine =
-    entries === undefined
-      ? null
-      : [
+    entries === undefined ? null : (
+      <TenantPageStats
+        items={[
           ...(students === undefined
             ? []
             : [
-                `${formatCount(allRows.length)} ${allRows.length === 1 ? "Kind" : "Kinder"}`,
+                {
+                  value: formatCount(allRows.length),
+                  label: allRows.length === 1 ? "Kind" : "Kinder",
+                },
               ]),
-          `${formatCount(entryRows.length)} ohne Betreuung`,
-          `${formatCount(duplicateCount)} mögliche ${duplicateCount === 1 ? "Dublette" : "Dubletten"}`,
-        ].join(" · ");
+          {
+            value: formatCount(entryRows.length),
+            label: "ohne Betreuung",
+          },
+          {
+            value: formatCount(duplicateCount),
+            label: `mögliche ${duplicateCount === 1 ? "Dublette" : "Dubletten"}`,
+          },
+        ]}
+      />
+    );
   const rosterSummary =
     students === undefined
       ? ""

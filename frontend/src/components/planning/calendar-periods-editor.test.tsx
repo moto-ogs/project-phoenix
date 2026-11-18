@@ -290,12 +290,17 @@ describe("CalendarPeriodsEditor", () => {
     expect(
       screen.queryByText("Noch keine Kalenderzeiträume"),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText(/0 Zeiträume/)).not.toBeInTheDocument();
+    // Wert und Wort der Statuszeile stehen in eigenen Elementen.
+    expect(document.body).not.toHaveTextContent(/0\s*Zeiträume/);
     expect(mockToastError).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
 
-    expect(await screen.findByText("Schuljahr 26/27")).toBeInTheDocument();
+    // Der laufende Zeitraum steht auch in der Statuszeile; gemeint ist die
+    // Zeile der Liste.
+    expect(
+      await screen.findByText("Schuljahr 26/27", { selector: "p" }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByText(
         catalogText("general.unavailable", "die Liste der Zeiträume"),
@@ -326,7 +331,11 @@ describe("CalendarPeriodsEditor", () => {
 
     // Ohne Umbruch an beliebiger Stelle zieht ein langes Wort die
     // Namensspalte über die Tabellenbreite hinaus (320px, #2033).
-    const name = await screen.findByText("Sommerferienbetreuung");
+    // Der laufende Zeitraum steht auch in der Statuszeile; gemeint ist die
+    // Zeile der Liste.
+    const name = await screen.findByText("Sommerferienbetreuung", {
+      selector: "p",
+    });
     expect(name).toHaveClass("wrap-anywhere");
     expect(name).not.toHaveClass("truncate");
     expect(name.parentElement?.className).not.toMatch(/max-w-\[/);
@@ -348,7 +357,13 @@ describe("CalendarPeriodsEditor", () => {
     });
     const actions = createPeriodButton.parentElement;
     // Statuszeile statt Erklärsatz (Kopfkarten-Sweep): gezählte Zeiträume.
-    const description = await screen.findByText(/1 Zeitraum · 1 aktiv/);
+    // Wert und Wort stehen in eigenen Elementen, die Paare ohne Trennpunkt.
+    const description = await screen.findByText(
+      (_, element) =>
+        element?.tagName === "SPAN" &&
+        // Davor steht der laufende Zeitraum, wenn heute in ihm liegt.
+        element.textContent?.endsWith("1Zeitraum1aktiv") === true,
+    );
 
     // Seit der Umstellung auf die Kopfkarte (PageIntro/SectionCard) umbrechen
     // die Aktionen auf jeder Breite, und der Textblock bleibt schrumpfbar.

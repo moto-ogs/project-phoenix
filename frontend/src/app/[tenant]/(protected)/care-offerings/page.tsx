@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { CareOfferingsEditor } from "~/components/enrollment/care-offerings-editor";
 import { SkeletonRegion } from "~/components/ui/page-skeletons";
 import { DataTableSkeleton as TableSkeleton } from "~/components/ui/data-table";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { DesktopOnlyNotice } from "~/components/ui/desktop-only-notice";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
 
@@ -27,9 +27,17 @@ export default function CareOfferingsPage() {
     <TenantPage
       title="Angebote"
       stats={
-        summary && summary !== "unavailable"
-          ? `${summary.total} ${summary.total === 1 ? "Angebot" : "Angebote"} · ${summary.active} aktiv`
-          : null
+        summary && summary !== "unavailable" ? (
+          <TenantPageStats
+            items={[
+              {
+                value: summary.total,
+                label: summary.total === 1 ? "Angebot" : "Angebote",
+              },
+              { value: summary.active, label: "aktiv" },
+            ]}
+          />
+        ) : null
       }
       statsLoading={summary === null}
     >

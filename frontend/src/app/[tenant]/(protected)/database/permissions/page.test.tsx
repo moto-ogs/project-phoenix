@@ -264,7 +264,10 @@ describe("PermissionsPage", () => {
     render(<PermissionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Berechtigungen · /)).toBeInTheDocument();
+      // Zahl und Wort stehen in eigenen Elementen, die Paare ohne Trennpunkt.
+      expect(screen.getByTestId("page-intro")).toHaveTextContent(
+        /\d+Berechtigungen\d+Bereich/,
+      );
     });
     expect(
       screen.queryByLabelText("Berechtigung erstellen"),

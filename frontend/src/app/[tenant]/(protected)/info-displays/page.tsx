@@ -4,7 +4,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 
 import { BrandedQrCode } from "~/components/qr-code/branded-qr-code";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { DataTable, DataTableStatusBadge } from "~/components/ui/data-table";
 import type { DataTableColumn } from "~/components/ui/data-table";
@@ -389,9 +389,14 @@ function InfoDisplaysPageContent() {
       title="Info-Displays"
       // Ohne geladene Liste keine "0 Displays" neben dem Ladefehler (#2517).
       stats={
-        displays === undefined
-          ? null
-          : `${total} ${total === 1 ? "Display" : "Displays"} · ${active} aktiv`
+        displays === undefined ? null : (
+          <TenantPageStats
+            items={[
+              { value: total, label: total === 1 ? "Display" : "Displays" },
+              { value: active, label: "aktiv" },
+            ]}
+          />
+        )
       }
       statsLoading={listLoading}
       actions={

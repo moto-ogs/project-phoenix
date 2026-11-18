@@ -5,7 +5,7 @@ import {
   AdminEnrollmentsList,
   type AdminEnrollmentsSummary,
 } from "~/components/enrollment/admin-enrollments-list";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { DesktopOnlyNotice } from "~/components/ui/desktop-only-notice";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
 import { PhaseExpiryWarnings } from "~/components/enrollment/phase-expiry-warnings";
@@ -88,17 +88,29 @@ export default function AdminEnrollmentsPage() {
     [],
   );
   const statusLine =
-    summary && summary !== "unavailable"
-      ? [
-          `${summary.activePhases} ${summary.activePhases === 1 ? "Phase" : "Phasen"} aktiv`,
-          `${summary.requests} ${summary.requests === 1 ? "Anmeldung" : "Anmeldungen"}`,
-          summary.openChangeRequests !== null && summary.openChangeRequests > 0
-            ? `${summary.openChangeRequests} offene ${summary.openChangeRequests === 1 ? "Änderungsanfrage" : "Änderungsanfragen"}`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(" · ")
-      : null;
+    summary && summary !== "unavailable" ? (
+      <TenantPageStats
+        items={[
+          {
+            value: summary.activePhases,
+            label: `${summary.activePhases === 1 ? "Phase" : "Phasen"} aktiv`,
+          },
+          {
+            value: summary.requests,
+            label: summary.requests === 1 ? "Anmeldung" : "Anmeldungen",
+          },
+          ...(summary.openChangeRequests !== null &&
+          summary.openChangeRequests > 0
+            ? [
+                {
+                  value: summary.openChangeRequests,
+                  label: `offene ${summary.openChangeRequests === 1 ? "Änderungsanfrage" : "Änderungsanfragen"}`,
+                },
+              ]
+            : []),
+        ]}
+      />
+    ) : null;
 
   return (
     <TenantPage

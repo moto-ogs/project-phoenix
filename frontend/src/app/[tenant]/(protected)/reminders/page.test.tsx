@@ -141,8 +141,8 @@ describe("RemindersPage", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("Keine aktiven Erinnerungen")).toBeNull();
     // Keine Zählung aus einer Liste, die nie geladen wurde.
-    expect(screen.queryByText(/0 anstehend/)).toBeNull();
-    expect(screen.queryByText(/0 überfällig/)).toBeNull();
+    expect(screen.queryByText("anstehend")).toBeNull();
+    expect(screen.queryByText("überfällig")).toBeNull();
   });
 
   it("counts upcoming and overdue reminders of a loaded list", () => {
@@ -152,7 +152,10 @@ describe("RemindersPage", () => {
       data: { reminders: [], count: 0, enabled: true },
     });
     renderWithToast(<RemindersPage />);
-    expect(screen.getByText("0 anstehend · 0 überfällig")).toBeInTheDocument();
+    // Statuszeile: Wert-Label-Paare ohne Trennpunkt (#7402).
+    expect(
+      screen.getByText("anstehend").parentElement?.parentElement,
+    ).toHaveTextContent(/^0anstehend0überfällig$/);
   });
 
   // #4765: an activity that runs over is neither upcoming nor overdue.
@@ -173,8 +176,8 @@ describe("RemindersPage", () => {
     });
     renderWithToast(<RemindersPage />);
     expect(
-      screen.getByText("0 anstehend · 0 überfällig · 1 AG dauert länger"),
-    ).toBeInTheDocument();
+      screen.getByText("anstehend").parentElement?.parentElement,
+    ).toHaveTextContent(/^0anstehend0überfällig1AG dauert länger$/);
     expect(
       screen.getByText("Turnhalle · 2 Kinder zur Abholung"),
     ).toBeInTheDocument();

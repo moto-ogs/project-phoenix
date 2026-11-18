@@ -31,6 +31,7 @@ import { useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useTimetableEnabled } from "~/lib/tenant-context";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 const CACHE_KEY = tenantAdminKeys.planningTracks();
 const DEFAULT_COLOR: string = LOCATION_COLORS.OTHER_ROOM;
@@ -61,6 +62,22 @@ function sections(): SectionConfig[] {
       ],
     },
   ];
+}
+
+/** Statuszeile der Kopfkarte aus den bereits geladenen Planungsspuren. */
+function planningTrackStats(tracks: readonly PlanningTrack[]) {
+  const archived = tracks.filter((track) => track.archivedAt).length;
+  const active = tracks.length - archived;
+  return archived > 0 ? (
+    <TenantPageStats
+      items={[
+        { value: formatCount(active), label: "in der Auswahl" },
+        { value: formatCount(archived), label: "archiviert" },
+      ]}
+    />
+  ) : (
+    `${formatCount(active)} ${active === 1 ? "Planungsspur" : "Planungsspuren"}`
+  );
 }
 
 function PlanningTracksPageContent() {
@@ -124,13 +141,7 @@ function PlanningTracksPageContent() {
       searchPlaceholder: "Planungsspur suchen…",
       emptyDescription:
         "Legen Sie eine Planungsspur an, um Regeltermine im Betreuungsplan farblich zu bündeln.",
-      stats: (tracks) => {
-        const archived = tracks.filter((track) => track.archivedAt).length;
-        const active = tracks.length - archived;
-        return archived > 0
-          ? `${formatCount(active)} in der Auswahl · ${formatCount(archived)} archiviert`
-          : `${formatCount(active)} ${active === 1 ? "Planungsspur" : "Planungsspuren"}`;
-      },
+      stats: planningTrackStats,
       toRow: (track) => ({
         name: track.name,
         color: track.color,

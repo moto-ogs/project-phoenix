@@ -33,7 +33,7 @@ import {
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { TenantPasswordChangeModal } from "~/components/auth/tenant-password-change-modal";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { TrustedDevicesSection } from "~/components/settings/trusted-devices-section";
 import { PasskeySettingsSection } from "~/components/settings/passkey-settings-section";
 import { NotificationPreferencesSection } from "~/components/settings/notification-preferences-section";
@@ -192,11 +192,18 @@ function ProfileContent() {
   }
 
   const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+  const statsParts = [fullName, formData.email].filter(Boolean);
 
   return (
     <TenantPage
       title="Profil"
-      stats={[fullName, formData.email].filter(Boolean).join(" · ")}
+      stats={
+        statsParts.length > 1 ? (
+          <TenantPageStats items={statsParts.map((label) => ({ label }))} />
+        ) : (
+          statsParts.join("")
+        )
+      }
       // Das Profilbild sitzt im Kopf der Seite, wie der Avatar auf jeder
       // Detailseite. Ändern ist eine Aktion im Kopf: das frühere Hover-Overlay
       // gab es auf Touch-Geräten gar nicht (#5599).

@@ -14,7 +14,7 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import type {
   ActiveFilter,
   FilterConfig,
@@ -209,13 +209,18 @@ export default function QualificationsPage() {
   ];
 
   const loading = isLoading && data === undefined;
-  const statusLine = loading
-    ? undefined
-    : [
-        `${formatCount(counts.expiring_soon)} laufen bald ab`,
-        `${formatCount(counts.expired)} abgelaufen`,
-        `${formatCount(counts.missing)} fehlen`,
-      ].join(" · ");
+  const statusLine = loading ? undefined : (
+    <TenantPageStats
+      items={[
+        {
+          value: formatCount(counts.expiring_soon),
+          label: "laufen bald ab",
+        },
+        { value: formatCount(counts.expired), label: "abgelaufen" },
+        { value: formatCount(counts.missing), label: "fehlen" },
+      ]}
+    />
+  );
 
   return (
     <TenantPage

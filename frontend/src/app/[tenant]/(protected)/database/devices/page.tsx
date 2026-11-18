@@ -41,6 +41,7 @@ import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { ModuleRouteGuard } from "~/components/tenant/module-route-guard";
 import { devicesConcept } from "~/lib/concepts/devices";
 import { foldForSearch } from "~/lib/search-fold";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 const logger = createLogger({ component: "DatabaseDevicesPage" });
 
@@ -142,7 +143,17 @@ function DevicesPageContent() {
   const statusLine = useMemo(() => {
     const devices = devicesData ?? [];
     const online = devices.filter((d) => d.is_online).length;
-    return `${formatCount(devices.length)} ${devices.length === 1 ? "Gerät" : "Geräte"} · ${formatCount(online)} online`;
+    return (
+      <TenantPageStats
+        items={[
+          {
+            value: formatCount(devices.length),
+            label: devices.length === 1 ? "Gerät" : "Geräte",
+          },
+          { value: formatCount(online), label: "online" },
+        ]}
+      />
+    );
   }, [devicesData]);
 
   const filters: FilterConfig[] = useMemo(() => [], []);

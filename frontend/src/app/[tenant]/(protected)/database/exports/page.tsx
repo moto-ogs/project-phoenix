@@ -27,7 +27,7 @@ import {
   type ExportMenuOption,
 } from "~/components/ui/export-menu";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
 import { exportEmergencySnapshot } from "~/lib/emergency-export-api";
@@ -161,7 +161,14 @@ export default function DatabaseExportsPage() {
       ? 1
       : 0) +
     (zeiterfassungBooked ? 1 : 0); // Zeitnachweis
-  const statusLine = `${listCount} ${listCount === 1 ? "Liste" : "Listen"} · ${linkCount} auf anderen Seiten`;
+  const statusLine = (
+    <TenantPageStats
+      items={[
+        { value: listCount, label: listCount === 1 ? "Liste" : "Listen" },
+        { value: linkCount, label: "auf anderen Seiten" },
+      ]}
+    />
+  );
 
   const runExport = async (key: string, task: () => Promise<void>) => {
     setBusy((current) => new Set(current).add(key));

@@ -30,6 +30,7 @@ import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { roomsConcept } from "~/lib/concepts/rooms";
 import { foldForSearch } from "~/lib/search-fold";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 type RoomsGroupingMode = "none" | "building" | "floor";
 
@@ -118,7 +119,17 @@ function RoomsPageContent() {
   const statusLine = useMemo(() => {
     const rooms = roomsData ?? [];
     const occupied = rooms.filter((r) => r.isOccupied).length;
-    return `${formatCount(rooms.length)} ${rooms.length === 1 ? "Raum" : "Räume"} · ${formatCount(occupied)} belegt`;
+    return (
+      <TenantPageStats
+        items={[
+          {
+            value: formatCount(rooms.length),
+            label: rooms.length === 1 ? "Raum" : "Räume",
+          },
+          { value: formatCount(occupied), label: "belegt" },
+        ]}
+      />
+    );
   }, [roomsData]);
 
   const uniqueCategories = useMemo(() => {

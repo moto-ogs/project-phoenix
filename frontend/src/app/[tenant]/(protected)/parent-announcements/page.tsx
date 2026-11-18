@@ -22,7 +22,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import type {
   FilterConfig,
   ActiveFilter,
@@ -507,7 +507,14 @@ function ParentAnnouncementsContent() {
             : ofKind.length === 1
               ? "Mitteilung"
               : "Mitteilungen";
-    return `${ofKind.length} ${noun} · ${published} veröffentlicht`;
+    return (
+      <TenantPageStats
+        items={[
+          { value: ofKind.length, label: noun },
+          { value: published, label: "veröffentlicht" },
+        ]}
+      />
+    );
   })();
 
   const filterConfigs: FilterConfig[] = useMemo(

@@ -11,7 +11,7 @@ import { redirect, useSearchParams } from "next/navigation";
 import { BellSimpleRingingIcon, CaretRightIcon } from "@phosphor-icons/react";
 import { CollectionGrid } from "~/components/ui/collection-grid";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { TileCard } from "~/components/ui/tile-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { formatDate } from "~/lib/date-helpers";
@@ -759,28 +759,30 @@ function StaffPageContent() {
       // Dieselben Zustände wie die Badges auf den Karten: "Abwesend" ist der
       // Standard für "nicht eingestempelt", gemeldete Arten (Krank, Urlaub …)
       // tragen ihren eigenen Namen. So passt die Zeile zu dem, was man sieht.
-      const byLocation = new Map<string, number>();
+      // Die Statuszeile trägt höchstens drei Angaben (#7402); die gemeldeten
+      // Arten zeigen die Badges der Karten und der Filter „Status“.
       let clockedIn = 0;
+      let absent = 0;
       for (const member of filteredStaff) {
         // Die Kopfkarte zählt die Bezeichnungen der Karten. Dadurch ist etwa
         // „Zuhause“ wie auf der Karte „Anwesend“ und verschwindet nicht aus
         // der Zusammenfassung.
         const location = getStaffLocationStatus(member).label;
-        if (location === "Anwesend") {
-          clockedIn += 1;
-        } else {
-          byLocation.set(location, (byLocation.get(location) ?? 0) + 1);
-        }
+        if (location === "Anwesend") clockedIn += 1;
+        else if (location === "Abwesend") absent += 1;
       }
-      const parts = [
-        `${filteredStaff.length} ${filteredStaff.length === 1 ? "Person" : "Personen"}`,
-        `${clockedIn} anwesend`,
-        `${byLocation.get("Abwesend") ?? 0} abwesend`,
-      ];
-      for (const [location, count] of byLocation) {
-        if (location !== "Abwesend") parts.push(`${count} ${location}`);
-      }
-      return parts.join(" · ");
+      return (
+        <TenantPageStats
+          items={[
+            {
+              value: filteredStaff.length,
+              label: filteredStaff.length === 1 ? "Person" : "Personen",
+            },
+            { value: clockedIn, label: "anwesend" },
+            { value: absent, label: "abwesend" },
+          ]}
+        />
+      );
     }
     if (documentDirectory === undefined) return undefined;
     const count = documentDirectory.length;

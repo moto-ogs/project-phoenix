@@ -55,7 +55,7 @@ import {
   type OverflowMenuEntry,
 } from "~/components/ui/page-header/OverflowMenu";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { PlanLegend } from "~/components/ui/planning/plan-legend";
 import { SegmentedControl } from "~/components/ui/segmented-control";
@@ -2192,22 +2192,37 @@ function TimetablesContent() {
   // Ohne geladene Daten gibt es keine Zahl: „0 Termine“ neben dem Ladefehler
   // läse sich als leere Woche.
   const statusLine =
-    (contentError ?? contentErrorPending)
-      ? ""
-      : [
-          ...(view === "series"
+    (contentError ?? contentErrorPending) ? (
+      ""
+    ) : (
+      <TenantPageStats
+        items={
+          view === "series"
             ? [
-                `${templates.length} ${templates.length === 1 ? "Regeltermin" : "Regeltermine"}`,
+                {
+                  value: templates.length,
+                  label:
+                    templates.length === 1 ? "Regeltermin" : "Regeltermine",
+                },
               ]
             : [
-                `${instanceCount} ${instanceCount === 1 ? "Termin" : "Termine"}`,
+                {
+                  value: instanceCount,
+                  label: instanceCount === 1 ? "Termin" : "Termine",
+                },
                 ...(canManageSchedules && openConflicts.length > 0
                   ? [
-                      `${openConflicts.length} ${openConflicts.length === 1 ? "Konflikt" : "Konflikte"}`,
+                      {
+                        value: openConflicts.length,
+                        label:
+                          openConflicts.length === 1 ? "Konflikt" : "Konflikte",
+                      },
                     ]
                   : []),
-              ]),
-        ].join(" · ");
+              ]
+        }
+      />
+    );
 
   const overlays = (
     <>

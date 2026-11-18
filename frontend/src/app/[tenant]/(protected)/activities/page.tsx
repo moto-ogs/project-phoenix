@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { hasSessionAccess } from "~/lib/session-access";
 import { CollectionGrid } from "~/components/ui/collection-grid";
 import { Button } from "~/components/ui/button";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { TileCard } from "~/components/ui/tile-card";
 import type {
   FilterConfig,
@@ -300,11 +300,25 @@ function ActivitiesPageContent() {
     searchTerm !== "" || categoryFilter !== "all" || myActivitiesFilter;
   // Ohne geladene Liste steht keine "0 Aktivitäten" neben dem Ladefehler
   // (#2517).
-  const stats = !pageData
-    ? null
-    : hasFilters
-      ? `${filteredActivities.length} von ${activities.length} Aktivitäten · ${categories.length} ${categories.length === 1 ? "Kategorie" : "Kategorien"}`
-      : `${activities.length} ${activities.length === 1 ? "Aktivität" : "Aktivitäten"} · ${categories.length} ${categories.length === 1 ? "Kategorie" : "Kategorien"}`;
+  const stats = !pageData ? null : (
+    <TenantPageStats
+      items={[
+        hasFilters
+          ? {
+              value: `${filteredActivities.length} von ${activities.length}`,
+              label: "Aktivitäten",
+            }
+          : {
+              value: activities.length,
+              label: activities.length === 1 ? "Aktivität" : "Aktivitäten",
+            },
+        {
+          value: categories.length,
+          label: categories.length === 1 ? "Kategorie" : "Kategorien",
+        },
+      ]}
+    />
+  );
 
   return (
     <>

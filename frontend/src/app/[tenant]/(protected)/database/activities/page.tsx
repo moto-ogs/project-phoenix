@@ -38,6 +38,7 @@ import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { ModuleRouteGuard } from "~/components/tenant/module-route-guard";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { foldForSearch } from "~/lib/search-fold";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 const logger = createLogger({ component: "DatabaseActivitiesPage" });
 
@@ -115,15 +116,19 @@ function ActivitiesPageContent() {
     const categories = new Set(
       activities.map((a) => a.category_name).filter(Boolean),
     ).size;
-    const parts = [
-      `${formatCount(activities.length)} ${activities.length === 1 ? "Aktivität" : "Aktivitäten"}`,
-    ];
-    if (categories > 0) {
-      parts.push(
-        `${formatCount(categories)} ${categories === 1 ? "Kategorie" : "Kategorien"}`,
-      );
-    }
-    return parts.join(" · ");
+    const label = activities.length === 1 ? "Aktivität" : "Aktivitäten";
+    if (categories === 0) return `${formatCount(activities.length)} ${label}`;
+    return (
+      <TenantPageStats
+        items={[
+          { value: formatCount(activities.length), label },
+          {
+            value: formatCount(categories),
+            label: categories === 1 ? "Kategorie" : "Kategorien",
+          },
+        ]}
+      />
+    );
   }, [activitiesData]);
 
   const uniqueCategories = useMemo(() => {

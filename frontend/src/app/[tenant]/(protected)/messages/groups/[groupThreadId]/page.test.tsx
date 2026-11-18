@@ -67,6 +67,15 @@ vi.mock("~/lib/parent-group-threads-api", async (importOriginal) => ({
 }));
 import GroupMessagePage from "./page";
 
+/**
+ * Findet die Statuszeile aus genau diesen Angaben. Die Angaben stehen ohne
+ * Trennpunkt nebeneinander, Zahl und Wort in eigenen Elementen.
+ */
+function statusLine(...parts: string[]) {
+  return (_: string, element: Element | null) =>
+    element?.tagName === "SPAN" && element.textContent === parts.join("");
+}
+
 function detail(closed: boolean) {
   return {
     thread: {
@@ -122,7 +131,7 @@ describe("Gruppennachricht: Objektseite", () => {
       screen.getByText("Wer bringt einen Kuchen mit?"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Gruppe Bären · 1 von 2 Familien gelesen"),
+      screen.getByText(statusLine("Gruppe Bären", "1 von 2 Familien gelesen")),
     ).toBeInTheDocument();
     const list = screen.getByTestId("group-read-list");
     const felix = within(list)
@@ -160,7 +169,9 @@ describe("Gruppennachricht: Objektseite", () => {
       screen.queryByRole("textbox", { name: "Nachricht" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByText("Gruppe Bären · 1 von 2 Familien gelesen · Geschlossen"),
+      screen.getByText(
+        statusLine("Gruppe Bären", "1 von 2 Familien gelesen", "Geschlossen"),
+      ),
     ).toBeInTheDocument();
   });
 

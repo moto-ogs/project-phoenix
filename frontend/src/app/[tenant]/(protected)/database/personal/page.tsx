@@ -44,6 +44,7 @@ import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { staffConcept } from "~/lib/concepts/staff";
 import { foldForSearch } from "~/lib/search-fold";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 type StaffGroupingMode = "none" | "role";
 
@@ -158,13 +159,19 @@ function TeachersPageContent() {
     const roles = new Set(
       teachers.map((t) => t.account_role?.trim()).filter(Boolean),
     ).size;
-    const parts = [
-      `${formatCount(teachers.length)} ${teachers.length === 1 ? "Person" : "Personen"}`,
-    ];
-    if (roles > 0) {
-      parts.push(`${formatCount(roles)} ${roles === 1 ? "Rolle" : "Rollen"}`);
-    }
-    return parts.join(" · ");
+    const label = teachers.length === 1 ? "Person" : "Personen";
+    if (roles === 0) return `${formatCount(teachers.length)} ${label}`;
+    return (
+      <TenantPageStats
+        items={[
+          { value: formatCount(teachers.length), label },
+          {
+            value: formatCount(roles),
+            label: roles === 1 ? "Rolle" : "Rollen",
+          },
+        ]}
+      />
+    );
   }, [teachersData]);
 
   const existingPositions = useMemo(() => {

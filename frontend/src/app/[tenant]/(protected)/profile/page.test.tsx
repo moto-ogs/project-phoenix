@@ -300,7 +300,8 @@ describe("ProfilePage", () => {
       await waitFor(() => {
         expect(screen.getByText("John")).toBeInTheDocument();
         expect(screen.getByText("Doe")).toBeInTheDocument();
-        expect(screen.getByText("john.doe@example.com")).toBeInTheDocument();
+        // Einmal in der Statuszeile, einmal im Feld „E-Mail“ (#7402).
+        expect(screen.getAllByText("john.doe@example.com")).toHaveLength(2);
         expect(screen.queryByLabelText("Vorname")).not.toBeInTheDocument();
       });
     });

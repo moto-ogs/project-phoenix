@@ -58,6 +58,15 @@ vi.mock("~/components/messaging/new-message-modal", () => ({
 
 import MessagesPage from "./page";
 
+/**
+ * Findet die Statuszeile aus genau diesen Angaben. Die Angaben stehen ohne
+ * Trennpunkt nebeneinander, Zahl und Wort in eigenen Elementen.
+ */
+function statusLine(...parts: string[]) {
+  return (_: string, element: Element | null) =>
+    element?.tagName === "SPAN" && element.textContent === parts.join("");
+}
+
 describe("Nachrichten: Statuszeile bei Ladefehler (#2517)", () => {
   beforeEach(() => {
     mockInbox.threads = undefined;
@@ -76,7 +85,7 @@ describe("Nachrichten: Statuszeile bei Ladefehler (#2517)", () => {
         catalogText("general.unavailable", "die Liste der Nachrichten"),
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/0 Unterhaltungen/)).not.toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/0\s*Unterhaltungen/);
   });
 
   it("still counts a loaded, empty inbox", async () => {
@@ -84,7 +93,9 @@ describe("Nachrichten: Statuszeile bei Ladefehler (#2517)", () => {
     render(<MessagesPage />);
 
     expect(
-      await screen.findByText(/0 Unterhaltungen · 0 ungelesen/),
+      await screen.findByText(
+        statusLine("0", "Unterhaltungen", "0", "ungelesen"),
+      ),
     ).toBeInTheDocument();
   });
 });

@@ -282,9 +282,10 @@ describe("ParentAnnouncementsPage (#3115)", () => {
     listState.data = [letter];
     render(<ParentAnnouncementsPage />);
 
+    // Statuszeile: Wert-Label-Paare ohne Trennpunkt (#7402).
     expect(
-      await screen.findByText("1 Elternbrief · 1 veröffentlicht"),
-    ).toBeInTheDocument();
+      (await screen.findByText("veröffentlicht")).parentElement?.parentElement,
+    ).toHaveTextContent(/^1Elternbrief1veröffentlicht$/);
   });
 
   it("shows and retries a failed preview child load instead of an empty-school message", async () => {
@@ -686,6 +687,8 @@ describe("ParentAnnouncementsPage: scheduled reminder (#3162)", () => {
     // #2517: keine Zählung aus einer Liste, die nie geladen wurde.
     expect(screen.queryByText(/0 Mitteilungen/)).not.toBeInTheDocument();
     expect(screen.queryByText(/0 veröffentlicht/)).not.toBeInTheDocument();
+    // Die Statuszeile setzt Zahl und Wort in eigene Elemente (#7402).
+    expect(screen.queryByText("veröffentlicht")).not.toBeInTheDocument();
   });
 });
 
@@ -791,8 +794,8 @@ describe("ParentAnnouncementsPage: Einverständnisse (#3430)", () => {
     ).toBeGreaterThan(0);
     expect(screen.queryByText("Sommerfest")).not.toBeInTheDocument();
     expect(
-      screen.getByText("1 Einverständnis · 0 veröffentlicht"),
-    ).toBeInTheDocument();
+      screen.getByText("veröffentlicht").parentElement?.parentElement,
+    ).toHaveTextContent(/^1Einverständnis0veröffentlicht$/);
     expect(
       screen.getByRole("tab", { name: /Einverständnisse/ }),
     ).toBeInTheDocument();

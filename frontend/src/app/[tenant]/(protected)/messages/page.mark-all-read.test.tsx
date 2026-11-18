@@ -79,6 +79,8 @@ vi.mock("~/components/ui/tenant-page", async () => {
   const { OverflowMenu } =
     await import("~/components/ui/page-header/OverflowMenu");
   return {
+    // Die Attrappe zeigt keine Statuszeile; die Paare braucht hier niemand.
+    TenantPageStats: () => null,
     TenantPage: ({
       overflowMenu,
       children,

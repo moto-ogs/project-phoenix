@@ -96,7 +96,7 @@ describe("InfoDisplaysPage error path (#2517)", () => {
       ),
     ).toBeInTheDocument();
     // #2517: keine Zählung aus einer Liste, die nie geladen wurde.
-    expect(screen.queryByText(/0 Displays/)).not.toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/0\s*Displays/);
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     expect(mocks.mutate).toHaveBeenCalled();
   });

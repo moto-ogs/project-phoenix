@@ -11,7 +11,7 @@ import { DataTable } from "~/components/ui/data-table";
 import type { DataTableColumn } from "~/components/ui/data-table";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { TileCard } from "~/components/ui/tile-card";
 import { SurveyAnswerModal } from "~/components/surveys/survey-answer-modal";
 import { SurveyCreateSlideOver } from "~/components/surveys/survey-create-slide-over";
@@ -147,13 +147,24 @@ function SurveysContent() {
   const loading = active.data === undefined && !activeError;
 
   const stats =
-    view === "alle"
-      ? surveys.data === undefined
-        ? null
-        : `${list.length} ${list.length === 1 ? "Umfrage" : "Umfragen"} · ${list.filter((s) => s.status === "open").length} laufen`
-      : toAnswer.data === undefined
-        ? null
-        : `${pendingCount} offen für Sie`;
+    view === "alle" ? (
+      surveys.data === undefined ? null : (
+        <TenantPageStats
+          items={[
+            {
+              value: list.length,
+              label: list.length === 1 ? "Umfrage" : "Umfragen",
+            },
+            {
+              value: list.filter((s) => s.status === "open").length,
+              label: "laufen",
+            },
+          ]}
+        />
+      )
+    ) : toAnswer.data === undefined ? null : (
+      `${pendingCount} offen für Sie`
+    );
 
   const columns: DataTableColumn<Survey>[] = [
     {

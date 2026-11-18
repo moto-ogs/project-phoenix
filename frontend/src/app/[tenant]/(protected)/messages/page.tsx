@@ -5,7 +5,7 @@ import { messageKeys } from "~/lib/swr/portal-keys";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSWRAuth } from "~/lib/swr";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { LEADERSHIP_AUDIENCE_LABEL } from "~/lib/messaging-status";
 import { TileCard } from "~/components/ui/tile-card";
@@ -165,9 +165,17 @@ function MessagesInboxContent() {
   // Ohne geladene Inbox steht keine "0 Unterhaltungen" neben dem Ladefehler
   // (#2517).
   const inboxSummary =
-    threads === undefined
-      ? null
-      : `${threadList.length} ${threadList.length === 1 ? "Unterhaltung" : "Unterhaltungen"} · ${unreadThreads} ungelesen`;
+    threads === undefined ? null : (
+      <TenantPageStats
+        items={[
+          {
+            value: threadList.length,
+            label: threadList.length === 1 ? "Unterhaltung" : "Unterhaltungen",
+          },
+          { value: unreadThreads, label: "ungelesen" },
+        ]}
+      />
+    );
 
   const composeButton = messagingEnabled ? (
     <Button

@@ -10,7 +10,7 @@ import {
   type OverflowMenuEntry,
 } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { StaffNoticeAcknowledgementsModal } from "~/components/staff-notices/staff-notice-acknowledgements-modal";
 import { StaffNoticeModal } from "~/components/staff-notices/staff-notice-modal";
 import { TodayNoticeList } from "~/components/staff-notices/today-notice-list";
@@ -208,13 +208,20 @@ function TagesinformationenContent() {
   // Bestand. Der frühere Erklärsatz steht in der Hilfe, nicht im Kopf. Eine
   // Zahl steht nur für eine geladene Liste da, nie "0 heute" neben einem
   // Ladefehler (#2517).
+  const statusItems = [
+    ...(todayData === undefined
+      ? []
+      : [{ value: todayNotices.length, label: "heute" }]),
+    ...(isAdmin && data !== undefined
+      ? [{ value: notices.length, label: "insgesamt" }]
+      : []),
+  ];
   const statusLine =
-    [
-      todayData === undefined ? null : `${todayNotices.length} heute`,
-      isAdmin && data !== undefined ? `${notices.length} insgesamt` : null,
-    ]
-      .filter(Boolean)
-      .join(" · ") || null;
+    statusItems.length > 1 ? (
+      <TenantPageStats items={statusItems} />
+    ) : statusItems[0] ? (
+      `${statusItems[0].value} ${statusItems[0].label}`
+    ) : null;
 
   return (
     <TenantPage
