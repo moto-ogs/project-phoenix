@@ -6,11 +6,12 @@ import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { CustomSelect } from "~/components/ui/custom-select";
+import { DataField } from "~/components/ui/data-field";
 import { EmptyState } from "~/components/ui/empty-state";
-import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { ConfirmationModal } from "~/components/ui/modal";
 import { FieldLabel } from "~/components/ui/field-label";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { FormModal } from "~/components/ui/form-modal";
+import { ConfirmationModal } from "~/components/ui/modal";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
@@ -26,6 +27,7 @@ import {
   useApiFormError,
   useToast,
 } from "~/contexts/ToastContext";
+import { calendarConcept } from "~/lib/concepts/calendar";
 import { organizationsConcept } from "~/lib/concepts/organizations";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { berlinTodayISO, formatDate } from "~/lib/date-helpers";
@@ -49,7 +51,7 @@ import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
 import { useSWRAuth } from "~/lib/swr";
 import { operatorProvisioningKeys } from "~/lib/swr/portal-keys";
 
-const logger = createLogger({ component: "BillingKeyDayOverrides" });
+const logger = createLogger({ component: "BillingKeyDays" });
 
 const KEY_DAY_OPTIONS = Array.from(
   { length: BILLING_KEY_DAY_MAX - BILLING_KEY_DAY_MIN + 1 },
@@ -64,20 +66,24 @@ const SCOPE_ITEMS = [
   { value: "school", label: "Schule" },
 ] as const;
 
-/** The dialog: a new own day, or the day of one listed override. */
+/** The dialog: the standard, a new own day, or one listed own day. */
 type Editing =
+  | { readonly mode: "standard" }
   | { readonly mode: "create" }
   | { readonly mode: "edit"; readonly override: BillingKeyDayOverride };
+
+/** Whose day the dialog sets: every school without one, or an own day. */
+type Reach = "standard" | BillingKeyDayScope;
 
 function overrideKey(override: BillingKeyDayOverride): string {
   return `${override.scope}-${override.id}`;
 }
 
-/** What the override replaces, in the words of the list. */
+/** What an own day replaces, in the words of the list. */
 function overrideMeta(override: BillingKeyDayOverride): string {
   return override.scope === "school"
     ? `Schule von ${override.organizationName}`
-    : "Träger, gilt für alle Schulen ohne eigenen Stichtag";
+    : "Träger, für seine Schulen ohne eigenen Stichtag";
 }
 
 /** Ends a sentence once, also after a name like „Ganztag Nord e. V.“. */
@@ -117,12 +123,52 @@ function fallbackSentence(
       );
 }
 
+/** One row of the card: icon, name and what it covers, day, menu. */
+function KeyDayRow({
+  icon,
+  name,
+  meta,
+  keyDay,
+  nextKeyDate,
+  menu,
+}: Readonly<{
+  icon: React.ReactNode;
+  name: string;
+  meta: string;
+  keyDay: number;
+  nextKeyDate: string;
+  menu: React.ReactNode;
+}>) {
+  return (
+    <ResponsiveActionRow>
+      <div className="flex min-w-0 items-center gap-3">
+        {icon}
+        <div className="min-w-0">
+          <p className="text-sm font-semibold break-words text-gray-900">
+            {name}
+          </p>
+          <p className="text-sm break-words text-gray-500">{meta}</p>
+        </div>
+      </div>
+      <ResponsiveRowActions leading={36} menu={menu}>
+        <p className="text-sm whitespace-nowrap text-gray-900 tabular-nums sm:text-right">
+          <span className="font-semibold">Jeden Monat am {keyDay}.</span>
+          <span className="block text-gray-500">
+            nächster am {formatDate(nextKeyDate)}
+          </span>
+        </p>
+      </ResponsiveRowActions>
+    </ResponsiveActionRow>
+  );
+}
+
 /**
- * Own key days of Träger and schools (#7301): a contract that names another
- * day than the standard gets it here. A school's day wins over its
- * Träger's, a Träger's over the standard. Only the moto team sets them.
+ * The key days of the operator billing report (#2791, #7301): the standard
+ * of every school first, then the own days of Träger and schools whose
+ * contract names another day. A school's day wins over its Träger's, a
+ * Träger's over the standard. Only the moto team sets them.
  */
-export function BillingKeyDayOverrides({
+export function BillingKeyDays({
   keyDay,
   loading,
   capturedThisMonth,
@@ -173,48 +219,61 @@ export function BillingKeyDayOverrides({
     }
   };
 
-  const count = overrides?.length ?? 0;
-
   return (
     <SectionCard
-      title="Eigene Stichtage"
-      description={
-        standardDay
-          ? `Für Verträge mit einem anderen Tag als dem ${standardDay}. Der Tag einer Schule geht dem ihres Trägers vor.`
-          : "Für Verträge mit einem anderen Tag als dem Standard. Der Tag einer Schule geht dem ihres Trägers vor."
-      }
+      title="Stichtage"
+      description="Der Standard gilt für jede Schule ohne eigenen Stichtag. Nennt ein Vertrag einen anderen Tag, bekommt der Träger oder die Schule ihn hier. Der Tag einer Schule geht dem ihres Trägers vor."
       action={
         <Button
           type="button"
           variant="outline"
           size="md"
           onClick={() => setEditing({ mode: "create" })}
-          disabled={!overrides}
-          disabledReason="Geht erst, wenn der Stichtag oben geladen ist."
+          disabled={!keyDay}
+          disabledReason="Geht erst, wenn die Stichtage geladen sind."
         >
-          Stichtag festlegen
+          Eigenen Stichtag festlegen
         </Button>
       }
     >
       {loading ? (
         <SkeletonRows rows={2} />
-      ) : !overrides ? (
+      ) : !keyDay ? (
         <EmptyState
           variant="compact"
-          title="Eigene Stichtage konnten nicht geladen werden"
+          title="Stichtage konnten nicht geladen werden"
           description="Lade sie oben mit „Wiederholen“ neu."
-        />
-      ) : count === 0 ? (
-        <EmptyState
-          variant="compact"
-          title="Alle Schulen zählen am Standard-Stichtag"
-          description="Braucht ein Vertrag einen anderen Tag, lege ihn oben mit „Stichtag festlegen“ fest."
         />
       ) : (
         <ResponsiveActionList>
-          {overrides.map((override) => (
-            <ResponsiveActionRow key={overrideKey(override)}>
-              <div className="flex min-w-0 items-center gap-3">
+          <KeyDayRow
+            icon={<ConceptIconTile concept={calendarConcept} size="sm" />}
+            name="Standard"
+            meta={
+              keyDay.overrides.length === 0
+                ? "Für alle Schulen"
+                : "Für alle Schulen ohne eigenen Stichtag"
+            }
+            keyDay={keyDay.keyDay}
+            nextKeyDate={keyDay.nextKeyDate}
+            menu={
+              <OverflowMenu
+                ariaLabel="Aktionen für den Standard"
+                items={[
+                  {
+                    label: "Tag ändern",
+                    description:
+                      "Legt den Tag für alle Schulen ohne eigenen Stichtag fest.",
+                    onClick: () => setEditing({ mode: "standard" }),
+                  },
+                ]}
+              />
+            }
+          />
+          {keyDay.overrides.map((override) => (
+            <KeyDayRow
+              key={overrideKey(override)}
+              icon={
                 <ConceptIconTile
                   concept={
                     override.scope === "school"
@@ -223,45 +282,29 @@ export function BillingKeyDayOverrides({
                   }
                   size="sm"
                 />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold break-words text-gray-900">
-                    {override.name}
-                  </p>
-                  <p className="text-sm break-words text-gray-500">
-                    {overrideMeta(override)}
-                  </p>
-                </div>
-              </div>
-              <ResponsiveRowActions
-                leading={36}
-                menu={
-                  <OverflowMenu
-                    ariaLabel={`Aktionen für ${override.name}`}
-                    items={[
-                      {
-                        label: "Tag ändern",
-                        description: "Legt einen anderen Tag im Monat fest.",
-                        onClick: () => setEditing({ mode: "edit", override }),
-                      },
-                      {
-                        label: "Eigenen Stichtag aufheben",
-                        description: "moto fragt vorher nach.",
-                        onClick: () => setRemoving(override),
-                      },
-                    ]}
-                  />
-                }
-              >
-                <p className="text-sm whitespace-nowrap text-gray-900 tabular-nums sm:text-right">
-                  <span className="font-semibold">
-                    Jeden Monat am {override.keyDay}.
-                  </span>
-                  <span className="block text-gray-500">
-                    nächster am {formatDate(override.nextKeyDate)}
-                  </span>
-                </p>
-              </ResponsiveRowActions>
-            </ResponsiveActionRow>
+              }
+              name={override.name}
+              meta={overrideMeta(override)}
+              keyDay={override.keyDay}
+              nextKeyDate={override.nextKeyDate}
+              menu={
+                <OverflowMenu
+                  ariaLabel={`Aktionen für ${override.name}`}
+                  items={[
+                    {
+                      label: "Tag ändern",
+                      description: "Legt einen anderen Tag im Monat fest.",
+                      onClick: () => setEditing({ mode: "edit", override }),
+                    },
+                    {
+                      label: "Eigenen Stichtag aufheben",
+                      description: "moto fragt vorher nach.",
+                      onClick: () => setRemoving(override),
+                    },
+                  ]}
+                />
+              }
+            />
           ))}
         </ResponsiveActionList>
       )}
@@ -286,18 +329,15 @@ export function BillingKeyDayOverrides({
         </p>
       </ConfirmationModal>
 
-      {editing ? (
-        <KeyDayOverrideModal
+      {editing && keyDay ? (
+        <KeyDayModal
           editing={editing}
-          overrides={overrides ?? []}
-          standardDay={standardDay}
+          keyDay={keyDay}
           capturedThisMonth={capturedThisMonth}
           onClose={() => setEditing(null)}
-          onSaved={(updated, saved) => {
+          onSaved={(updated, message) => {
             onChanged(updated);
-            toastSuccess(
-              `${sentence(`${saved.name} zählt ab jetzt am ${saved.keyDay}`)} Nächster Stichtag: ${formatDate(saved.nextKeyDate)}.`,
-            );
+            toastSuccess(message);
           }}
         />
       ) : null}
@@ -310,13 +350,20 @@ interface TargetOption {
   readonly label: string;
 }
 
-/** The live Träger and schools that have no own day yet, by name. */
-function useTargetOptions(
+interface LiveSchool {
+  readonly id: string;
+  readonly name: string;
+  readonly organizationId: string;
+}
+
+/**
+ * The live Träger and schools: the choices of a new own day (those without
+ * one yet) and the schools a changed day reaches.
+ */
+function useTargets(
   scope: BillingKeyDayScope,
   overrides: readonly BillingKeyDayOverride[],
 ) {
-  // Both lists load for either scope: a Träger's day reaches its schools,
-  // and the dialog names those that would miss the running month.
   const organizations = useSWRAuth(
     operatorProvisioningKeys.organizations(),
     () => operatorProvisioningService.listOrganizations(),
@@ -327,13 +374,19 @@ function useTargetOptions(
     () => operatorProvisioningService.listSchools(),
     { revalidateOnFocus: false },
   );
-  const failed = scope === "school" ? schools.error : organizations.error;
   const loadError = useSwrLoadError(
-    failed,
-    scope === "school" ? "die Liste der Schulen" : "die Liste der Träger",
-    () => void (scope === "school" ? schools.mutate() : organizations.mutate()),
+    organizations.error ?? schools.error,
+    "die Liste der Träger und Schulen",
+    () => {
+      void organizations.mutate();
+      void schools.mutate();
+    },
   );
 
+  const liveSchools = useMemo<LiveSchool[]>(
+    () => (schools.data ?? []).filter((school) => school.deletedAt == null),
+    [schools.data],
+  );
   const options = useMemo<TargetOption[]>(() => {
     const taken = new Set(
       overrides
@@ -353,8 +406,8 @@ function useTargetOptions(
         .sort((a, b) => a.label.localeCompare(b.label, "de"));
     }
     const names = new Map(live.map((org) => [org.id, org.name]));
-    return (schools.data ?? [])
-      .filter((school) => school.deletedAt == null && !taken.has(school.id))
+    return liveSchools
+      .filter((school) => !taken.has(school.id))
       .map((school) => {
         const traeger = names.get(school.organizationId);
         return {
@@ -363,130 +416,155 @@ function useTargetOptions(
         };
       })
       .sort((a, b) => a.label.localeCompare(b.label, "de"));
-  }, [organizations.data, schools.data, overrides, scope]);
+  }, [organizations.data, liveSchools, overrides, scope]);
 
-  const liveSchools = useMemo(
-    () => (schools.data ?? []).filter((school) => school.deletedAt == null),
-    [schools.data],
-  );
   const loading = organizations.isLoading || schools.isLoading;
   return { options, loading, loadError, schools: liveSchools };
 }
 
 /**
  * The schools a new day that is already reached this month leaves without
- * figures for it: those the day reaches that have none yet. A Träger's day
- * reaches its schools without an own day.
+ * figures for it: those the day reaches that have none yet. The standard
+ * reaches every school whose Träger and itself have no own day; a Träger's
+ * day its schools without an own day; a school's day the school.
  */
 function schoolsMissingTheMonth(
-  scope: BillingKeyDayScope,
+  reach: Reach,
   targetId: string,
-  schools: readonly { id: string; name: string; organizationId: string }[],
+  schools: readonly LiveSchool[],
   overrides: readonly BillingKeyDayOverride[],
   captured: ReadonlySet<string>,
 ): string[] {
-  const ownDay = new Set(
-    overrides
-      .filter((override) => override.scope === "school")
-      .map((override) => override.id),
-  );
+  const ownDay = (scope: BillingKeyDayScope) =>
+    new Set(
+      overrides
+        .filter((override) => override.scope === scope)
+        .map((override) => override.id),
+    );
+  const schoolDays = ownDay("school");
+  const traegerDays = ownDay("organization");
   return schools
-    .filter((school) =>
-      scope === "school"
-        ? school.id === targetId
-        : school.organizationId === targetId && !ownDay.has(school.id),
-    )
+    .filter((school) => {
+      switch (reach) {
+        case "school":
+          return school.id === targetId;
+        case "organization":
+          return (
+            school.organizationId === targetId && !schoolDays.has(school.id)
+          );
+        default:
+          return (
+            !schoolDays.has(school.id) &&
+            !traegerDays.has(school.organizationId)
+          );
+      }
+    })
     .filter((school) => !captured.has(school.id))
     .map((school) => school.name)
     .sort((a, b) => a.localeCompare(b, "de"));
 }
 
-function KeyDayOverrideModal({
+function KeyDayModal({
   editing,
-  overrides,
-  standardDay,
+  keyDay: current,
   capturedThisMonth,
   onClose,
   onSaved,
 }: Readonly<{
   editing: Editing;
-  overrides: readonly BillingKeyDayOverride[];
-  standardDay: number | undefined;
+  keyDay: BillingKeyDay;
   capturedThisMonth: ReadonlySet<string> | undefined;
   onClose: () => void;
-  onSaved: (keyDay: BillingKeyDay, saved: BillingKeyDayOverride) => void;
+  onSaved: (keyDay: BillingKeyDay, message: string) => void;
 }>) {
   const existing = editing.mode === "edit" ? editing.override : null;
+  const standard = editing.mode === "standard";
   const [scope, setScope] = useState<BillingKeyDayScope>(
     existing?.scope ?? "organization",
   );
   const [targetId, setTargetId] = useState(existing?.id ?? "");
-  const [day, setDay] = useState(existing ? String(existing.keyDay) : "");
+  const initialDay = standard ? current.keyDay : existing?.keyDay;
+  const [day, setDay] = useState(initialDay ? String(initialDay) : "");
   const save = useFormModalPending();
   const errors = useApiFormError();
-  const targets = useTargetOptions(scope, overrides);
+  const targets = useTargets(scope, current.overrides);
+  const reach: Reach = standard ? "standard" : scope;
 
   const today = berlinTodayISO();
-  const keyDay = day === "" ? null : Number(day);
-  const unchanged = existing !== null && keyDay === existing.keyDay;
-  const ready = targetId !== "" && keyDay !== null && !unchanged;
-  const targetName =
-    existing?.name ??
-    targets.options.find((option) => option.value === targetId)?.label ??
-    "";
+  const newDay = day === "" ? null : Number(day);
+  const unchanged = initialDay !== undefined && newDay === initialDay;
+  const chosen = standard || targetId !== "";
+  const ready = chosen && newDay !== null && !unchanged;
+  const targetName = standard
+    ? ""
+    : (existing?.name ??
+      (scope === "school"
+        ? targets.schools.find((school) => school.id === targetId)?.name
+        : targets.options.find((option) => option.value === targetId)?.label) ??
+      "");
 
-  const submit = async () => {
-    if (!ready || keyDay === null) return;
-    await save.run(async (op) => {
-      errors.clear();
-      let updated: BillingKeyDay;
-      try {
-        updated = await operatorBillingService.setKeyDayOverride(
-          scope,
-          targetId,
-          keyDay,
-        );
-      } catch (saveError) {
-        logger.warn("billing_key_day_override_save_failed", {
-          error: saveError instanceof Error ? saveError.message : "unknown",
-        });
-        if (op.isCurrent()) {
-          void errors.show(saveError, { object: "der eigene Stichtag" });
-        }
-        return;
-      }
-      const saved = updated.overrides.find(
-        (override) => override.scope === scope && override.id === targetId,
-      );
-      if (saved) onSaved(updated, saved);
-      if (op.isCurrent()) onClose();
-    });
-  };
-
-  const passed = keyDay !== null && keyDayPassedThisMonth(keyDay, today);
-  const shortName =
-    existing?.name ??
-    (scope === "school"
-      ? targets.schools.find((school) => school.id === targetId)?.name
-      : targetName) ??
-    "";
+  const passed = newDay !== null && keyDayPassedThisMonth(newDay, today);
   // Unknown until the figures and the school list are loaded; then the
   // dialog names who misses the month instead of guessing.
   const missing =
-    passed && capturedThisMonth && !targets.loading && targetId !== ""
+    passed && capturedThisMonth && !targets.loading && chosen
       ? schoolsMissingTheMonth(
-          scope,
+          reach,
           targetId,
           targets.schools,
-          overrides,
+          current.overrides,
           capturedThisMonth,
         )
       : null;
   const skipsMonth = passed && (missing === null || missing.length > 0);
-  const scopeHint =
-    scope === "school"
-      ? "Gilt nur für diese Schule, auch wenn ihr Träger einen eigenen Tag hat."
-      : "Gilt für alle Schulen des Trägers, die keinen eigenen Tag haben.";
+
+  const submit = async () => {
+    if (!ready || newDay === null) return;
+    await save.run(async (op) => {
+      errors.clear();
+      let updated: BillingKeyDay;
+      try {
+        updated = standard
+          ? await operatorBillingService.updateKeyDay(newDay)
+          : await operatorBillingService.setKeyDayOverride(
+              scope,
+              targetId,
+              newDay,
+            );
+      } catch (saveError) {
+        logger.warn("billing_key_day_save_failed", {
+          error: saveError instanceof Error ? saveError.message : "unknown",
+        });
+        if (op.isCurrent()) {
+          void errors.show(saveError, { object: "der Stichtag" });
+        }
+        return;
+      }
+      if (standard) {
+        onSaved(
+          updated,
+          `Der Standard ist jetzt der ${updated.keyDay}. Nächster Stichtag: ${formatDate(updated.nextKeyDate)}.`,
+        );
+      } else {
+        const saved = updated.overrides.find(
+          (override) => override.scope === scope && override.id === targetId,
+        );
+        if (saved) {
+          onSaved(
+            updated,
+            `${sentence(`${saved.name} zählt ab jetzt am ${saved.keyDay}`)} Nächster Stichtag: ${formatDate(saved.nextKeyDate)}.`,
+          );
+        }
+      }
+      if (op.isCurrent()) onClose();
+    });
+  };
+
+  const title = standard
+    ? "Standard-Stichtag"
+    : existing
+      ? `Stichtag von ${existing.name}`
+      : "Eigener Stichtag";
 
   return (
     <FormModal
@@ -494,7 +572,7 @@ function KeyDayOverrideModal({
       onClose={onClose}
       pending={save}
       size="md"
-      title={existing ? `Stichtag von ${existing.name}` : "Eigener Stichtag"}
+      title={title}
       error={errors.error}
       footer={
         <>
@@ -512,7 +590,7 @@ function KeyDayOverrideModal({
             disabledReason={
               unchanged
                 ? "Wähle einen anderen Tag als den bisherigen."
-                : existing
+                : standard || existing
                   ? "Wähle zuerst den Tag im Monat."
                   : "Wähle zuerst, für wen der Tag gilt, und den Tag im Monat."
             }
@@ -523,8 +601,16 @@ function KeyDayOverrideModal({
       }
     >
       <div className="space-y-5">
-        {existing ? (
-          <p className="text-sm text-gray-600">{overrideMeta(existing)}</p>
+        {standard ? (
+          <DataField label="Gilt für">
+            Alle Schulen ohne eigenen Stichtag
+          </DataField>
+        ) : existing ? (
+          <DataField label="Gilt für">
+            {existing.scope === "school"
+              ? `${existing.name}, Schule von ${existing.organizationName}`
+              : `${existing.name} und seine Schulen ohne eigenen Stichtag`}
+          </DataField>
         ) : (
           <>
             <div className="space-y-2">
@@ -538,7 +624,11 @@ function KeyDayOverrideModal({
                   setTargetId("");
                 }}
               />
-              <p className="text-sm text-gray-500">{scopeHint}</p>
+              <p className="text-sm text-gray-500">
+                {scope === "school"
+                  ? "Gilt nur für diese Schule, auch wenn ihr Träger einen eigenen Tag hat."
+                  : "Gilt für alle Schulen des Trägers, die keinen eigenen Tag haben."}
+              </p>
             </div>
             <LoadErrorAlert error={targets.loadError} />
             <CustomSelect
@@ -560,7 +650,6 @@ function KeyDayOverrideModal({
               value={targetId}
               options={targets.options}
               onChange={setTargetId}
-              error={errors.fieldError("school_id")}
             />
           </>
         )}
@@ -570,9 +659,9 @@ function KeyDayOverrideModal({
             label="Tag im Monat"
             required
             hint={
-              standardDay
-                ? `Standard ist der ${standardDay}. Höchstens der 28., damit jeder Monat den Tag hat.`
-                : "Höchstens der 28., damit jeder Monat den Tag hat."
+              standard
+                ? "Höchstens der 28., damit jeder Monat den Tag hat."
+                : `Standard ist der ${current.keyDay}. Höchstens der 28., damit jeder Monat den Tag hat.`
             }
             value={day}
             options={KEY_DAY_OPTIONS}
@@ -580,10 +669,10 @@ function KeyDayOverrideModal({
             error={errors.fieldError("key_day")}
           />
         </div>
-        {keyDay !== null && targetId !== "" && !unchanged ? (
+        {newDay !== null && chosen && !unchanged ? (
           <KeyDayPreview
-            name={shortName}
-            keyDay={keyDay}
+            name={targetName}
+            keyDay={newDay}
             today={today}
             passed={passed}
             missing={missing}
@@ -609,6 +698,7 @@ function KeyDayPreview({
   passed,
   missing,
 }: Readonly<{
+  /** The Träger or school; empty for the standard. */
   name: string;
   keyDay: number;
   today: string;
@@ -618,11 +708,14 @@ function KeyDayPreview({
 }>) {
   const next = formatDate(nextBillingKeyDate(keyDay, today));
   const month = billingMonthName(today);
+  const nextLine = name
+    ? `Nächster Stichtag von ${name}: ${next}.`
+    : `Nächster Stichtag: ${next}.`;
   if (!passed) {
     return (
       <Alert
         type="info"
-        message={`Nächster Stichtag von ${name}: ${next}. Schon erfasste Monate bleiben, wie sie sind.`}
+        message={`${nextLine} Schon erfasste Monate bleiben, wie sie sind.`}
       />
     );
   }

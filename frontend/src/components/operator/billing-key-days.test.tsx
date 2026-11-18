@@ -65,7 +65,7 @@ vi.mock("~/lib/operator/provisioning-api", () => ({
   },
 }));
 
-import { BillingKeyDayOverrides } from "./billing-key-day-overrides";
+import { BillingKeyDays } from "./billing-key-days";
 
 const traegerNord: BillingKeyDayOverride = {
   scope: "organization",
@@ -104,7 +104,7 @@ function Harness({
     overrides: initial,
   });
   return (
-    <BillingKeyDayOverrides
+    <BillingKeyDays
       keyDay={keyDay}
       loading={false}
       capturedThisMonth={captured}
@@ -167,7 +167,7 @@ describe("BillingKeyDayOverrides", () => {
 
     expect(await screen.findByText("Träger Nord")).toBeInTheDocument();
     expect(
-      screen.getByText("Träger, gilt für alle Schulen ohne eigenen Stichtag"),
+      screen.getByText("Träger, für seine Schulen ohne eigenen Stichtag"),
     ).toBeInTheDocument();
     expect(screen.getByText("Schule von Träger Nord")).toBeInTheDocument();
     expect(screen.getByText("Jeden Monat am 20.")).toBeInTheDocument();
@@ -177,9 +177,10 @@ describe("BillingKeyDayOverrides", () => {
   it("says that every school counts on the standard when none has its own day", async () => {
     renderOverrides([]);
 
-    expect(
-      await screen.findByText("Alle Schulen zählen am Standard-Stichtag"),
-    ).toBeInTheDocument();
+    // The standard is the only row and covers every school.
+    expect(await screen.findByText("Standard")).toBeInTheDocument();
+    expect(screen.getByText("Für alle Schulen")).toBeInTheDocument();
+    expect(screen.getByText("Jeden Monat am 15.")).toBeInTheDocument();
   });
 
   it("gives a school its own day and confirms the next key date", async () => {
@@ -193,7 +194,9 @@ describe("BillingKeyDayOverrides", () => {
     renderOverrides([traegerNord]);
     await screen.findByText("Träger Nord");
 
-    fireEvent.click(screen.getByRole("button", { name: "Stichtag festlegen" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Eigenen Stichtag festlegen" }),
+    );
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "Schule" }));
     await choose("Schule", "OGS Lindenweg (Träger Süd)");

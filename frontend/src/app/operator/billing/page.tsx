@@ -1,29 +1,18 @@
 "use client";
 
 import { operatorBillingKeys } from "~/lib/swr/portal-keys";
-import { Suspense, useMemo, useRef, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 // eslint-disable-next-line no-restricted-imports -- operator pages are not tenant-scoped
 import { useSWRAuth } from "~/lib/swr";
-import {
-  FormErrorAlert,
-  LoadErrorAlert,
-} from "~/components/ui/form-error-alert";
-import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
-import { BillingKeyDayOverrides } from "~/components/operator/billing-key-day-overrides";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { BillingKeyDays } from "~/components/operator/billing-key-days";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
-import { DataField, DataGrid } from "~/components/ui/data-field";
-import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { SectionCard } from "~/components/ui/section-card";
-import {
-  useApiErrorDisplay,
-  useApiFormError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import {
@@ -35,31 +24,15 @@ import {
 } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import {
-  BILLING_KEY_DAY_MAX,
-  BILLING_KEY_DAY_MIN,
   billingMonth,
   operatorBillingService,
   type BillingKeyDateCount,
-  type BillingKeyDay,
 } from "~/lib/operator/billing-api";
-import {
-  billingMonthName,
-  keyDayPassedThisMonth,
-  nextBillingKeyDate,
-} from "~/lib/operator/billing-key-day";
 
 const logger = createLogger({ component: "OperatorBillingPage" });
 
 const KEY_DAY_SWR_KEY = operatorBillingKeys.keyDay();
 const COUNTS_SWR_KEY = operatorBillingKeys.counts();
-
-const KEY_DAY_OPTIONS = Array.from(
-  { length: BILLING_KEY_DAY_MAX - BILLING_KEY_DAY_MIN + 1 },
-  (_, index) => {
-    const day = String(BILLING_KEY_DAY_MIN + index);
-    return { value: day, label: `${day}.` };
-  },
-);
 
 /** "September 2026" for a period (YYYY-MM-01). */
 function monthLabel(period: string): string {
@@ -132,130 +105,28 @@ const COLUMNS: DataTableColumn<BillingKeyDateCount>[] = [
   },
 ];
 
-function KeyDaySection({
-  keyDay,
-  loading,
-  onSaved,
-}: Readonly<{
-  keyDay: BillingKeyDay | undefined;
-  loading: boolean;
-  onSaved: (keyDay: BillingKeyDay) => void;
-}>) {
-  const { success: toastSuccess } = useToast();
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [saving, setSaving] = useState(false);
-  const formRef = useRef<HTMLDivElement>(null);
-  const saveErrors = useApiFormError(formRef);
-
-  const startEditing = () => {
-    setDraft(String(keyDay?.keyDay ?? ""));
-    saveErrors.clear();
-    setEditing(true);
-  };
-
-  const save = async () => {
-    setSaving(true);
-    saveErrors.clear();
-    try {
-      const updated = await operatorBillingService.updateKeyDay(Number(draft));
-      onSaved(updated);
-      setEditing(false);
-      toastSuccess(`Stichtag ist jetzt der ${updated.keyDay}. des Monats.`);
-    } catch (saveError) {
-      logger.warn("billing_key_day_update_failed", {
-        error: saveError instanceof Error ? saveError.message : "unknown",
-      });
-      void saveErrors.show(saveError, { object: "die Änderung des Stichtags" });
-    } finally {
-      setSaving(false);
-    }
-  };
-
+/** How moto counts, for the info next to the title: read to learn the page. */
+function CountingRules() {
   return (
-    <SectionCard
-      title="Stichtag"
-      description="Am Stichtag hält moto für jede Schule fest, wie viele Kinder und Terminals aktiv sind. Diese Zahlen ändern sich danach nicht mehr. Der Standard gilt für jede Schule ohne eigenen Stichtag."
-      action={
-        editing || !keyDay ? undefined : (
-          <Button
-            type="button"
-            variant="outline"
-            size="md"
-            onClick={startEditing}
-          >
-            Standard ändern
-          </Button>
-        )
-      }
-    >
-      {editing ? (
-        <div ref={formRef} className="space-y-4">
-          <FormErrorAlert message={saveErrors.error} />
-          <div className="max-w-xs">
-            <CustomSelect
-              id="billing-key-day"
-              name="key_day"
-              label="Tag im Monat"
-              hint="Gilt ab dem nächsten Stichtag. Schon erfasste Monate bleiben, wie sie sind. Höchstens der 28., damit jeder Monat den Tag hat."
-              error={saveErrors.fieldError("key_day")}
-              value={draft}
-              options={KEY_DAY_OPTIONS}
-              onChange={setDraft}
-            />
-          </div>
-          {draft !== "" &&
-          draft !== String(keyDay?.keyDay) &&
-          keyDayPassedThisMonth(Number(draft), berlinTodayISO()) ? (
-            <Alert
-              type="warning"
-              message={`Der ${draft}. ist im ${billingMonthName(berlinTodayISO())} schon vorbei. Schulen ohne Zahlen für diesen Monat bekommen keine mehr. Nächster Stichtag: ${formatDate(nextBillingKeyDate(Number(draft), berlinTodayISO()))}.`}
-            />
-          ) : null}
-          <EditActions
-            onCancel={() => setEditing(false)}
-            onSave={() => void save()}
-            saving={saving}
-            disabled={draft === "" || draft === String(keyDay?.keyDay)}
-          />
-        </div>
-      ) : (
-        <DataGrid>
-          <DataField label="Standard">
-            {loading || !keyDay ? "–" : `Jeden Monat am ${keyDay.keyDay}.`}
-          </DataField>
-          <DataField label="Nächster Stichtag">
-            {loading || !keyDay ? "–" : formatDate(keyDay.nextKeyDate)}
-          </DataField>
-        </DataGrid>
-      )}
-    </SectionCard>
-  );
-}
-
-function CountingRulesSection() {
-  return (
-    <SectionCard
-      title="So wird gezählt"
-      description="Maßgeblich ist der Stand am Stichtag ab 6 Uhr."
-      collapsible
-      defaultCollapsed
-    >
-      <DataGrid>
-        <DataField label="Aktive Kinder">
-          Kinder mit dem Status „aktiv“. Ein sofort aktiviertes Kind zählt auch
-          vor dem geplanten Betreuungsbeginn. Nicht gezählt werden Kinder mit
-          dem Status „ausstehend“, mit beendeter Betreuung, nach dem Schulabgang
-          und gelöschte Kinder.
-        </DataField>
-        <DataField label="Aktive Terminals">
-          Physische Geräte mit dem Status „aktiv“. Auch offline Geräte zählen.
-          Nicht gezählt werden inaktive Geräte, Geräte in Wartung und die
-          Erfassung im Browser. Ein umgezogenes Gerät zählt nur bei der neuen
-          Schule.
-        </DataField>
-      </DataGrid>
-    </SectionCard>
+    <div className="space-y-2">
+      <p>
+        Am Stichtag hält moto ab 6 Uhr für jede Schule fest, wie viele Kinder
+        und Terminals aktiv sind. Diese Zahlen ändern sich danach nicht mehr.
+        Fällt die Erfassung aus, holt moto sie im selben Monat nach.
+      </p>
+      <p>
+        <strong>Aktive Kinder:</strong> Kinder mit dem Status „aktiv“. Ein
+        sofort aktiviertes Kind zählt auch vor dem geplanten Betreuungsbeginn.
+        Nicht gezählt werden Kinder mit dem Status „ausstehend“, mit beendeter
+        Betreuung, nach dem Schulabgang und gelöschte Kinder.
+      </p>
+      <p>
+        <strong>Aktive Terminals:</strong> Physische Geräte mit dem Status
+        „aktiv“. Auch offline Geräte zählen. Nicht gezählt werden inaktive
+        Geräte, Geräte in Wartung und die Erfassung im Browser. Ein umgezogenes
+        Gerät zählt nur bei der neuen Schule.
+      </p>
+    </div>
   );
 }
 
@@ -381,6 +252,7 @@ function OperatorBillingPageContent() {
   return (
     <TenantPage
       title="Stichtagszahlen"
+      info={<CountingRules />}
       statsLoading={countsLoading}
       stats={
         hasCounts ? (
@@ -445,20 +317,12 @@ function OperatorBillingPageContent() {
         )}
       </SectionCard>
 
-      <KeyDaySection
-        keyDay={keyDay}
-        loading={keyDayLoading}
-        onSaved={(updated) => void mutateKeyDay(updated, false)}
-      />
-
-      <BillingKeyDayOverrides
+      <BillingKeyDays
         keyDay={keyDay}
         loading={keyDayLoading}
         capturedThisMonth={capturedThisMonth}
         onChanged={(updated) => void mutateKeyDay(updated, false)}
       />
-
-      <CountingRulesSection />
     </TenantPage>
   );
 }

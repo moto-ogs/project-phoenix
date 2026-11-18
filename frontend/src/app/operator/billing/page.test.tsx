@@ -73,6 +73,14 @@ vi.mock("~/lib/operator/billing-api", async () => {
   };
 });
 
+// The key day dialog reads the Träger and schools it can reach.
+vi.mock("~/lib/operator/provisioning-api", () => ({
+  operatorProvisioningService: {
+    listOrganizations: () => Promise.resolve([]),
+    listSchools: () => Promise.resolve([]),
+  },
+}));
+
 import OperatorBillingPage from "./page";
 
 const keyDay: BillingKeyDay = {
@@ -156,7 +164,7 @@ describe("OperatorBillingPage", () => {
     renderPage();
 
     expect(await screen.findByText("Jeden Monat am 15.")).toBeInTheDocument();
-    expect(screen.getByText("15.09.2026")).toBeInTheDocument();
+    expect(screen.getByText("nächster am 15.09.2026")).toBeInTheDocument();
   });
 
   it("uses Stichtagszahlen as the report title", async () => {
@@ -191,8 +199,11 @@ describe("OperatorBillingPage", () => {
     mockListKeyDateCounts.mockResolvedValue([]);
     renderPage();
 
+    // #7301: the counting rules sit in the info next to the title.
     fireEvent.click(
-      await screen.findByRole("button", { name: "So wird gezählt ausklappen" }),
+      await screen.findByRole("button", {
+        name: "Erklärung zu Stichtagszahlen",
+      }),
     );
     expect(
       await screen.findByText(/Auch offline Geräte zählen/),
@@ -203,8 +214,11 @@ describe("OperatorBillingPage", () => {
     mockListKeyDateCounts.mockResolvedValue([]);
     renderPage();
 
+    // #7301: the counting rules sit in the info next to the title.
     fireEvent.click(
-      await screen.findByRole("button", { name: "So wird gezählt ausklappen" }),
+      await screen.findByRole("button", {
+        name: "Erklärung zu Stichtagszahlen",
+      }),
     );
     expect(
       await screen.findByText(/Ein sofort aktiviertes Kind zählt auch/),
@@ -321,7 +335,25 @@ describe("OperatorBillingPage", () => {
     );
   });
 
-  it("changes the key day through the edit state", async () => {
+  /** Opens the standard's dialog through its row menu (#7301). */
+  async function openStandardDialog() {
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Aktionen für den Standard" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /Tag ändern/ }),
+    );
+    return screen.findByRole("dialog");
+  }
+
+  async function chooseDay(dialog: HTMLElement, day: string) {
+    fireEvent.click(
+      within(dialog).getByRole("combobox", { name: /Tag im Monat/ }),
+    );
+    fireEvent.click(await screen.findByRole("option", { name: day }));
+  }
+
+  it("changes the standard key day in its dialog", async () => {
     mockListKeyDateCounts.mockResolvedValue([]);
     mockUpdateKeyDay.mockResolvedValue({
       ...keyDay,
@@ -330,22 +362,25 @@ describe("OperatorBillingPage", () => {
     });
     renderPage();
 
+    const dialog = await openStandardDialog();
+    const save = within(dialog).getByRole("button", {
+      name: "Stichtag festlegen",
+    });
+    // The standard day itself is no change.
+    expect(save).toHaveAttribute("aria-disabled", "true");
+    await chooseDay(dialog, "10.");
     fireEvent.click(
-      await screen.findByRole("button", { name: "Standard ändern" }),
+      within(dialog).getByRole("button", { name: "Stichtag festlegen" }),
     );
-    const save = screen.getByRole("button", { name: "Speichern" });
-    expect(save).toBeDisabled();
-
-    fireEvent.click(screen.getByRole("combobox"));
-    fireEvent.click(within(screen.getByRole("listbox")).getByText("10."));
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => expect(mockUpdateKeyDay).toHaveBeenCalledWith(10));
     expect(await screen.findByText("Jeden Monat am 10.")).toBeInTheDocument();
-    expect(mockToastSuccess).toHaveBeenCalled();
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "Der Standard ist jetzt der 10. Nächster Stichtag: 10.10.2026.",
+    );
   });
 
-  it("keeps the edit state open and says so when saving fails", async () => {
+  it("keeps the dialog open and says so when saving fails", async () => {
     mockListKeyDateCounts.mockResolvedValue([]);
     mockUpdateKeyDay.mockRejectedValue(
       new ApiError("key day out of range", 400, {
@@ -355,22 +390,19 @@ describe("OperatorBillingPage", () => {
     );
     renderPage();
 
+    const dialog = await openStandardDialog();
+    await chooseDay(dialog, "20.");
     fireEvent.click(
-      await screen.findByRole("button", { name: "Standard ändern" }),
+      within(dialog).getByRole("button", { name: "Stichtag festlegen" }),
     );
-    fireEvent.click(screen.getByRole("combobox"));
-    fireEvent.click(within(screen.getByRole("listbox")).getByText("20."));
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(
-      await screen.findByText(
-        catalogText("general.input", "die Änderung des Stichtags"),
+      await within(dialog).findByText(
+        catalogText("general.input", "der Stichtag"),
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText("key day out of range")).toBeNull();
     expect(mockToastError).not.toHaveBeenCalled();
-    expect(
-      screen.getByRole("button", { name: "Speichern" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });
