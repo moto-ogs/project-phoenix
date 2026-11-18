@@ -5,7 +5,7 @@ import type {
   TraegerPlanningShift,
 } from "~/lib/traeger-planning-api";
 
-import { weekSuggestions } from "./planning-format";
+import { suggestionSentence, weekSuggestions } from "./planning-format";
 
 const MON = "2026-09-07";
 const TUE = "2026-09-08";
@@ -204,6 +204,29 @@ describe("weekSuggestions", () => {
     // A rest under 30 minutes gets no suggestion of its own.
     expect(weekSuggestions({ ...person, plannedMinutes: 1180 }, MON).size).toBe(
       0,
+    );
+  });
+
+  it("never leads above the daily maximum over all schools", () => {
+    // 7 h at Süd and a 10-hour day: Nord gets the 3 h that are left.
+    const person = {
+      ...PERSON,
+      ...nordOnThursday(300),
+      shifts: [
+        shift({ startTime: "07:00", endTime: "14:30", breakMinutes: 30 }),
+      ],
+    };
+    const suggestions = weekSuggestions(person, WED, 600).get(THU) ?? [];
+    expect(suggestions).toMatchObject([
+      {
+        contractMinutes: 300,
+        minutes: 180,
+        startTime: "15:00",
+        endTime: "18:00",
+      },
+    ]);
+    expect(suggestionSentence(suggestions[0]!)).toBe(
+      "Laut Arbeitsvertrag 5 h an OGS Nord. moto schlägt 3 h vor, mehr ginge über das Soll der Woche oder die Höchstzeit am Tag. Prüfe Beginn und Ende.",
     );
   });
 

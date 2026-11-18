@@ -37,6 +37,7 @@ import { describeWorkingTimeWarning } from "~/lib/working-time";
 import {
   plannedOfSoll,
   sollTone,
+  suggestionSentence,
   warningsOfDay,
   type ContractSuggestion,
   weekSuggestions,
@@ -51,6 +52,8 @@ interface PlanningWeekGridProps {
   readonly todayIso: string;
   /** `false`: der Träger plant außerhalb von moto, keine neuen Schichten. */
   readonly canPlan: boolean;
+  /** Höchstzeit am Tag aus den Regeln; 0 ohne Grenze. */
+  readonly maxDailyMinutes: number;
   readonly onPlan: (person: TraegerPlanningPerson, date: string) => void;
   /** Übernimmt einen Vorschlag aus dem Arbeitsvertrag in den Dialog (#7381). */
   readonly onPlanSuggestion: (
@@ -134,6 +137,7 @@ export function PlanningWeekGrid({
   colors,
   todayIso,
   canPlan,
+  maxDailyMinutes,
   onPlan,
   onPlanSuggestion,
   onOpenShift,
@@ -178,11 +182,11 @@ export function PlanningWeekGrid({
         canPlan
           ? people.map((person) => [
               person.recordId,
-              weekSuggestions(person, todayIso),
+              weekSuggestions(person, todayIso, maxDailyMinutes),
             ])
           : [],
       ),
-    [canPlan, people, todayIso],
+    [canPlan, maxDailyMinutes, people, todayIso],
   );
 
   const usedSchools = useMemo(() => {
@@ -301,7 +305,7 @@ export function PlanningWeekGrid({
           {suggestion.schoolName}
         </span>
       }
-      title={`Laut Arbeitsvertrag ${formatPlannedHours(suggestion.minutes)} an ${suggestion.schoolName}. Öffnet „Schicht planen“ mit ${suggestion.startTime}–${suggestion.endTime}.`}
+      title={`${suggestionSentence(suggestion, { askToCheck: false })} Öffnet „Schicht planen“ mit ${suggestion.startTime}–${suggestion.endTime}.`}
       onClick={() => onPlanSuggestion(person, suggestion)}
       details={`${suggestion.schoolName}, aus dem Arbeitsvertrag, noch nicht geplant, Schicht planen`}
     />

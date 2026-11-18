@@ -250,6 +250,7 @@ export default function TraegerStaffPlanningPage() {
           colors={colors}
           todayIso={today}
           canPlan={canPlan}
+          maxDailyMinutes={shownWeek.rules.maxDailyMinutes}
           onPlan={(person, date) => setTarget({ kind: "create", person, date })}
           onPlanSuggestion={(person, suggestion) =>
             setTarget({

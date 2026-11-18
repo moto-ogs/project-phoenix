@@ -22,7 +22,6 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
-import { formatPlannedHours } from "~/lib/shift-helpers";
 import {
   changeTraegerShift,
   planTraegerShift,
@@ -31,7 +30,7 @@ import {
   type TraegerPlanningShift,
 } from "~/lib/traeger-planning-api";
 
-import type { ContractSuggestion } from "./planning-format";
+import { suggestionSentence, type ContractSuggestion } from "./planning-format";
 
 const logger = createLogger({ component: "PlanShiftModal" });
 
@@ -285,7 +284,7 @@ export function PlanShiftModal({
               ? ". Die Schicht gehört zu einer Serie der Schule. Die Änderung gilt nur für diesen Tag."
               : null}
             {!editing && target.suggestion
-              ? `. Laut Arbeitsvertrag ${formatPlannedHours(target.suggestion.minutes)} an ${target.suggestion.schoolName}. Prüfe Beginn und Ende.`
+              ? `. ${suggestionSentence(target.suggestion)}`
               : null}
           </p>
           {editing ? (

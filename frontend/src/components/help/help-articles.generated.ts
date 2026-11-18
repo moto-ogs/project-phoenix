@@ -15118,7 +15118,7 @@ export const traegerStaffPlanningTopic =
         "Dieselbe Prüfung läuft, wenn eine Schule selbst eine Schicht plant.",
         "Das Soll kommt aus dem Arbeitsvertrag. Feiertage und Schließtage zählen nicht.",
         "Der Vertrag kennt nur Stunden. Den Beginn nimmt moto von der Uhrzeit, zu der die Person in dieser Woche an der Schule meistens anfängt, sonst 8:00 Uhr. Arbeitet sie an dem Tag schon an einer anderen Schule, liegt der Vorschlag mit 30 Minuten Abstand davor oder danach. Die Pause rechnet moto nach dem Gesetz für den ganzen Tag dazu.",
-        "Alle Vorschläge zusammen führen nie über das Soll der Woche. Ist es fast erreicht, schlägt moto nur noch den Rest vor.",
+        "Alle Vorschläge zusammen führen nie über das Soll der Woche, und keiner über die Höchstzeit am Tag. Ist eine Grenze fast erreicht, schlägt moto nur noch den Rest vor und sagt das im Dialog.",
         "Jedes Anzeigen und jeder Download der Woche steht im Zugriffsprotokoll jeder Schule.",
         "moto prüft die Regeln als Hilfe. Ob eine Planung erlaubt ist, entscheidest du.",
       ],

@@ -152,7 +152,12 @@ export interface ContractSuggestion {
   readonly schoolName: string;
   /** "YYYY-MM-DD" */
   readonly date: string;
-  /** Vorgeschlagene Arbeitszeit, netto: Soll des Tages, höchstens der Rest der Woche. */
+  /** Soll des Tages an dieser Schule laut Arbeitsvertrag, netto. */
+  readonly contractMinutes: number;
+  /**
+   * Vorgeschlagene Arbeitszeit, netto: das Soll des Tages, höchstens der Rest
+   * der Woche und der Höchstzeit am Tag.
+   */
   readonly minutes: number;
   /** "HH:MM" */
   readonly startTime: string;
@@ -300,8 +305,8 @@ function candidateStarts(
  * ist. Vergangene Tage bekommen keinen.
  *
  * Die Woche wird einmal von vorn durchgerechnet: Zusammen führen die
- * Vorschläge nie über das Soll der Woche; ein Rest unter 30 Minuten bleibt
- * ohne Vorschlag. Der Beginn ist der übliche der Person an dieser Schule,
+ * Vorschläge nie über das Soll der Woche und keiner über die Höchstzeit des
+ * Tages; ein Rest unter 30 Minuten bleibt ohne Vorschlag. Der Beginn ist der übliche der Person an dieser Schule,
  * sonst 08:00; passt er nicht, der früheste freie ab 06:00 mit 30 Minuten
  * Abstand zu jeder anderen Schicht, und bis 23:59. Die Pause deckt den ganzen Tag an allen Schulen,
  * wie die Prüfung beim Speichern.
@@ -309,6 +314,8 @@ function candidateStarts(
 export function weekSuggestions(
   person: TraegerPlanningPerson,
   todayIso: string,
+  /** Höchstens so viele Minuten am Tag an allen Schulen; 0 ohne Grenze. */
+  maxDailyMinutes = 0,
 ): Map<string, ContractSuggestion[]> {
   const result = new Map<string, ContractSuggestion[]>();
   if (person.sollMinutes === null) return result;
@@ -359,7 +366,9 @@ export function weekSuggestions(
       const site = person.sites.find(
         (entry) => entry.schoolId === day.schoolId,
       );
-      const minutes = Math.min(day.minutes, remaining);
+      const dayLeft =
+        maxDailyMinutes > 0 ? maxDailyMinutes - dayNet(busy) : Infinity;
+      const minutes = Math.min(day.minutes, remaining, dayLeft);
       if (!site || minutes < MINIMUM_SUGGESTION_MINUTES) continue;
       const slot = place(
         minutes,
@@ -374,6 +383,7 @@ export function weekSuggestions(
         schoolId: day.schoolId,
         schoolName: site.schoolName,
         date,
+        contractMinutes: day.minutes,
         minutes,
         startTime: minutesToClock(slot.start),
         endTime: minutesToClock(slot.end),
@@ -383,4 +393,24 @@ export function weekSuggestions(
     if (suggestions.length > 0) result.set(date, suggestions);
   }
   return result;
+}
+
+/**
+ * Der Satz zum Vorschlag: was der Vertrag sagt und warum weniger. Der Dialog
+ * hängt die Bitte an, Beginn und Ende zu prüfen.
+ */
+export function suggestionSentence(
+  suggestion: ContractSuggestion,
+  { askToCheck = true }: { readonly askToCheck?: boolean } = {},
+): string {
+  const parts = [
+    `Laut Arbeitsvertrag ${formatPlannedHours(suggestion.contractMinutes)} an ${suggestion.schoolName}.`,
+  ];
+  if (suggestion.minutes < suggestion.contractMinutes) {
+    parts.push(
+      `moto schlägt ${formatPlannedHours(suggestion.minutes)} vor, mehr ginge über das Soll der Woche oder die Höchstzeit am Tag.`,
+    );
+  }
+  if (askToCheck) parts.push("Prüfe Beginn und Ende.");
+  return parts.join(" ");
 }
