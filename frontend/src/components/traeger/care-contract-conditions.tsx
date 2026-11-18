@@ -121,9 +121,14 @@ export function CareContractConditions({
   );
   // Without a choice in the address the desktop opens the first offering
   // still without conditions; a phone shows the list first, since the
-  // conditions open over it.
-  const shownKey =
-    selectedKey ?? (isMobile || !firstOpen ? null : offeringKey(firstOpen));
+  // conditions open over it. The default goes into the address once: saving
+  // it changes which offering lacks conditions, and a default computed on
+  // every render would then move the form to the next one.
+  const defaultKey = isMobile || !firstOpen ? null : offeringKey(firstOpen);
+  const shownKey = selectedKey ?? defaultKey;
+  useEffect(() => {
+    if (selectedKey === null && defaultKey !== null) onSelect(defaultKey);
+  }, [selectedKey, defaultKey, onSelect]);
   const selected =
     shownKey === null
       ? undefined

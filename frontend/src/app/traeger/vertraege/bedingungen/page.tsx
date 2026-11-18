@@ -5,7 +5,7 @@
 // Angebots übernimmt sie; ohne sie entsteht für das Angebot kein Entwurf.
 
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useCallback } from "react";
 import { CareContractConditions } from "~/components/traeger/care-contract-conditions";
 import { careContractTabs } from "~/components/traeger/care-contract-tabs";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
@@ -29,6 +29,11 @@ export default function TraegerVertragsbedingungenPage() {
 function VertragsbedingungenContent() {
   const searchParams = useSearchParams();
   const updateUrlParams = useUpdateUrlParams();
+  // Stable, because the conditions write their default choice in an effect.
+  const selectOffering = useCallback(
+    (key: string | null) => updateUrlParams({ [OFFERING_PARAM]: key }),
+    [updateUrlParams],
+  );
   const {
     data: offerings,
     loading,
@@ -71,7 +76,7 @@ function VertragsbedingungenContent() {
         <CareContractConditions
           offerings={offerings}
           selectedKey={searchParams.get(OFFERING_PARAM)}
-          onSelect={(key) => updateUrlParams({ [OFFERING_PARAM]: key })}
+          onSelect={selectOffering}
           onSaved={(saved) => {
             void mutate(
               offerings.map((offering) =>

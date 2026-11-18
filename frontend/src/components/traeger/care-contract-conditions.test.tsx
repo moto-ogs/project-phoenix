@@ -225,4 +225,41 @@ describe("CareContractConditions", () => {
     );
     expect(onSelect).toHaveBeenCalledWith("3-6");
   });
+
+  it("writes the first offering without conditions into the address once", () => {
+    const onSelect = vi.fn();
+    const done: OfferingTemplate = {
+      ...OPEN,
+      offeringId: "4",
+      offeringName: "Frühbetreuung",
+      template: {
+        id: "7",
+        updatedAt: "2026-09-09T10:00:00Z",
+        termKind: "school_year",
+        termMonths: null,
+        noticeMonths: 1,
+        noticeTo: "month_end",
+        contractPartner: "",
+        specialTermination: false,
+        specialTerminationNote: "",
+        statuteRequired: false,
+        statuteTitle: "",
+        statuteUrl: "",
+      },
+    };
+    render(
+      <ToastProvider>
+        <CareContractConditions
+          offerings={[done, OPEN]}
+          selectedKey={null}
+          onSelect={onSelect}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    // From then on the address holds the choice: saving it, which changes
+    // which offering lacks conditions, cannot move the form elsewhere.
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith("3-5");
+  });
 });
