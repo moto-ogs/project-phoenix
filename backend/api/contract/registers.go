@@ -97,6 +97,7 @@ var legacyNumericIDs = []string{
 	"http.NoticeResponse.ClosingDayID",
 	"http.NoticeResponse.ID",
 	"http.NoticeResponse.SchoolID",
+	"httpadapter.RoomResponse.ID",
 	"notifications.feedEntryResponse.ID",
 	"organizationtenancy.TraegerBankAccount.ID",
 	"organizationtenancy.TraegerDocumentGroup.ID",

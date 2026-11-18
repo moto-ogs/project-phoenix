@@ -16,6 +16,7 @@ import (
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
 	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
 	enrollmentHTTP "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+	roomsHTTP "github.com/moto-ogs/project-phoenix/modules/facilities/http"
 	filestoreAPI "github.com/moto-ogs/project-phoenix/modules/filestorage/http/files"
 	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
 	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
@@ -55,6 +56,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/api/files", filestoreAPI.RouteContracts()},
 		{"/api/enrollment/phases", enrollmentHTTP.PhaseRouteContracts()},
 		{"/api/holiday-closure-notices", holidayClosureNoticeHTTP.SchoolRouteContracts()},
+		{"/api/rooms", roomsHTTP.RouteContracts()},
 		// The platform announcements' http role may not import the contract
 		// types; the root names their answer.
 		{"/api/platform", []common.RouteContract{

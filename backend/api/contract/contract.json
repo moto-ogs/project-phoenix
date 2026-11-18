@@ -737,6 +737,37 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/rooms/by-category",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "category",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "RoomResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/rooms/{id}/removal-impact",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "RoomRemovalImpactResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/staff-messages/",
       "portals": [
         "tenant"
@@ -9229,6 +9260,202 @@
               "kind": "ref",
               "ref": "ReportDistrictRequest"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoomReferencesResponse",
+      "go_type": "httpadapter.RoomReferencesResponse",
+      "fields": [
+        {
+          "name": "activity_groups",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "upcoming_blocks",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "education_groups",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "devices",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "past_blocks",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "archived_activity_groups",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "has_session_history",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoomRemovalImpactResponse",
+      "go_type": "httpadapter.RoomRemovalImpactResponse",
+      "fields": [
+        {
+          "name": "outcome",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active_session",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "care_offering",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "references",
+          "schema": {
+            "kind": "ref",
+            "ref": "RoomReferencesResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoomResponse",
+      "go_type": "httpadapter.RoomResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "building",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "floor",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "capacity",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "category",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_occupied",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "supervisor_names",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_system",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_open_room",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "archived_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
           }
         }
       ]

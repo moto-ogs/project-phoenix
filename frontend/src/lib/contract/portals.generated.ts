@@ -14,6 +14,7 @@ import { routes as parentAnnouncements } from "./parent-announcements.generated"
 import { routes as parentMe } from "./parent-me.generated";
 import { routes as platform } from "./platform.generated";
 import { routes as pwa } from "./pwa.generated";
+import { routes as rooms } from "./rooms.generated";
 import { routes as schoolCalendar } from "./school-calendar.generated";
 import { routes as schoolClassDay } from "./school-class-day.generated";
 import { routes as schoolNotifications } from "./school-notifications.generated";
@@ -235,6 +236,8 @@ export const portalRoutes = {
     platform["GET /api/platform/announcements/unread"],
     platform["POST /api/platform/announcements/{id}/dismiss"],
     pwa["POST /api/pwa/usage"],
+    rooms["GET /api/rooms/by-category"],
+    rooms["GET /api/rooms/{id}/removal-impact"],
     staffMessages["GET /api/staff-messages/"],
     staffMessages["GET /api/staff-messages/recipients"],
     staffMessages["GET /api/staff-messages/threads/{threadID}"],
