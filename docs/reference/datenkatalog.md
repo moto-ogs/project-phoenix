@@ -130,9 +130,10 @@ Die manuelle Ergänzungs-/Drittpersonenprüfung und Schulfreigabe sind Bestandte
 des [Verfahrens](../operations/auskunft-und-rueckgabe.md#6-personenauskunft-auf-weisung-der-schule),
 nicht durch `COMPLETE` erledigt.
 
-**Offen:** produktiver Nachweis, manuelle Nebensystemschritte,
-Wiederholung nach Restore (3837-d), organisatorische Fristenbestätigung
-(3838-d) und Data-Act-Abgleich (3838-e).
+**Offen:** produktiver Nachweis, manuelle Nebensystemschritte und
+Wiederholung nach Restore (3837-d). Die Fristen (3838-d) sind am 16.11.2026
+bestätigt. Den Data-Act-Abgleich (3838-e) erfüllen Register und HTTPS-Abruf
+(#6548, #6550).
 Die Katalogeinträge selbst sind
 keine Berechtigungen und kein produktiver Durchführungsnachweis.
 Die breiten Ausschlüsse geheimer/undurchsichtiger Container bleiben wirksam;
