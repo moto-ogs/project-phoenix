@@ -262,6 +262,8 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 		"POST /traeger/holiday-registrations/link-key ",
 		"PUT /traeger/billing-families/debtor-number Bearer traeger-token",
 		"PUT /traeger/number-ranges/holiday Bearer traeger-token",
+		// The numbers continue those of the program used before (#7358).
+		"PUT /traeger/number-ranges/holiday/start Bearer traeger-token",
 		// The Abrechnung chooses the kind of document (#4688).
 		"PUT /traeger/billing-document-kinds/holiday Bearer traeger-token",
 		"POST /traeger/billing-runs/ Bearer traeger-token",

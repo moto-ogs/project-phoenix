@@ -33,18 +33,16 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useSession } from "next-auth/react";
-import {
-  liftAllRefusals,
-  liftRefusal,
-  markRefused,
-  refusalFor,
-  subscribeRefusals,
-} from "~/lib/resource-refusals";
 import { swrConfig, immutableConfig } from "./config";
 import {
   isAccessRefusal,
   isReadRefusal,
+  liftAllRefusals,
+  liftRefusal,
+  markRefused,
   noteShownDataRefusal,
+  refusalFor,
+  subscribeRefusals,
 } from "~/lib/access-refusal";
 import {
   DiscardedAnswer,
@@ -519,17 +517,26 @@ function useScopedSWR<T, E>(
   // later render can show it; the refusal stays in its own store.
   const withdraw = refused && raw !== undefined;
   useEffect(() => {
-    if (!withdraw) return;
-    // Counted here too: this effect can run before SWR calls onError, and
-    // then the cache no longer holds the data that callback looks for.
-    if (isAccessRefusal(ownError ?? refusal)) noteShownDataRefusal();
-    // SWR calls onError only for the hook that started the request and still
-    // reads its key. A refusal known from the cache alone is recorded here,
-    // before the removal clears that error.
-    if (fullKey !== null && isReadRefusal(ownError))
+    if (!withdraw || fullKey === null) return;
+    // The render that asked for this is over: a read may have succeeded
+    // since. Only a refusal that still stands withdraws anything.
+    const refusedNow =
+      isReadRefusal(ownError) && cache.get(fullKey)?.error === ownError;
+    if (!refusedNow && refusalFor(fullKey) === undefined) return;
+    if (refusedNow) {
+      // Counted here too: this effect can run before SWR calls onError, and
+      // then the cache no longer holds the data that callback looks for. A
+      // refusal already in force is not counted again when another view
+      // writes the key: no shown data was refused then.
+      noteShownDataRefusal();
+      // SWR calls onError only for the hook that started the request and
+      // still reads its key. A refusal known from the cache alone is
+      // recorded here, before the removal clears that error.
       markRefused(fullKey, ownError);
+    }
     void mutate(undefined, { revalidate: false });
-  }, [withdraw, mutate, fullKey, ownError, refusal]);
+    // `raw` too: a value another view writes under a refusal goes as well.
+  }, [withdraw, raw, mutate, fullKey, ownError, refusal, cache]);
   return {
     data: refused ? undefined : data,
     error,

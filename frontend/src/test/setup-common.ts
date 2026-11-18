@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, vi } from "vitest";
 
 import { installSessionCookieExit } from "~/lib/session-cookie-exit.server";
-import { liftAllRefusals } from "~/lib/resource-refusals";
+import { liftAllRefusals } from "~/lib/access-refusal";
 import { freezeTestClock } from "./clock";
 
 process.env.API_URL = "http://server:8080";

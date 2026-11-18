@@ -59,6 +59,7 @@ type guardianContactRow struct {
 	TenantID               int64   `bun:"tenant_id,notnull"`
 	FirstName              string  `bun:"first_name"`
 	LastName               string  `bun:"last_name"`
+	Salutation             *string `bun:"salutation"`
 	Email                  *string `bun:"email"`
 	AddressStreet          *string `bun:"address_street"`
 	AddressCity            *string `bun:"address_city"`
@@ -70,13 +71,13 @@ type guardianContactRow struct {
 // guardianContactColumns are the columns a contact write sets. Everything
 // else on the profile (account link, notes, portal locale) stays as stored.
 var guardianContactColumns = []string{
-	"first_name", "last_name", "email", "address_street", "address_city",
+	"first_name", "last_name", "salutation", "email", "address_street", "address_city",
 	"address_postal_code", "preferred_contact_method", "language_preference",
 }
 
 func newGuardianContactRow(contact domain.GuardianContact, tenantID int64) *guardianContactRow {
 	return &guardianContactRow{
-		TenantID: tenantID, FirstName: contact.FirstName, LastName: contact.LastName, Email: contact.Email,
+		TenantID: tenantID, FirstName: contact.FirstName, LastName: contact.LastName, Salutation: contact.Salutation, Email: contact.Email,
 		AddressStreet: contact.AddressStreet, AddressCity: contact.AddressCity, AddressPostalCode: contact.PostalCode,
 		PreferredContactMethod: contact.PreferredContactMethod, LanguagePreference: contact.LanguagePreference,
 	}

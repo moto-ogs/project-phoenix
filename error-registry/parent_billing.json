@@ -144,6 +144,21 @@
       "legacy": "parent_billing.number_range_missing"
     },
     {
+      "code": "parent_billing.number_range_start_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "parent_billing.number_range_start_invalid"
+    },
+    {
+      "code": "parent_billing.number_range_start_taken",
+      "class": "business_rejection",
+      "parameters": [
+        "last_number",
+        "last_sequence"
+      ],
+      "legacy": "parent_billing.number_range_start_taken"
+    },
+    {
       "code": "parent_billing.bank_account_missing",
       "class": "business_rejection",
       "parameters": [],

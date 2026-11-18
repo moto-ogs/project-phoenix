@@ -10,7 +10,7 @@ import (
 
 func toDomainGuardianContact(record peopledirectory.GuardianContactRecord) domain.GuardianContact {
 	return domain.GuardianContact{
-		FirstName: record.FirstName, LastName: record.LastName, Email: record.Email,
+		FirstName: record.FirstName, LastName: record.LastName, Salutation: record.Salutation, Email: record.Email,
 		AddressStreet: record.AddressStreet, AddressCity: record.AddressCity, PostalCode: record.AddressPostalCode,
 		PreferredContactMethod: record.PreferredContactMethod, LanguagePreference: record.LanguagePreference,
 	}

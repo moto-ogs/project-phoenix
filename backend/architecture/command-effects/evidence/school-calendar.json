@@ -3162,7 +3162,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.calendarGuardianPort.ListPortalContacts",
-      "binding_digest": "19840c29baeb5e6d8432a9add8b9a1ab",
+      "binding_digest": "af222116faa6091392c79ce5bdb7df0f",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports.GuardianDirectory.ListPortalContacts",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts",

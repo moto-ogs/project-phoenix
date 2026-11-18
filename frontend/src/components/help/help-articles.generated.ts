@@ -6759,6 +6759,16 @@ export const parentGuardiansTopic = function parentGuardiansTopic(): HelpTopic {
         ],
       },
       {
+        title: "Die eigene Anrede wählen",
+        description:
+          "Die Anrede ist freiwillig. Mit Anrede beginnen E-Mails zum Beispiel mit `Liebe Karin` oder `Lieber Jonas`, ohne Anrede mit `Guten Tag` und Ihrem Namen.",
+        steps: [
+          "Tippen Sie bei Ihrem eigenen Namen auf den Stift `Bearbeiten`.",
+          "Wählen Sie bei `Anrede` `Frau`, `Herr` oder `Keine Angabe`.",
+          "Tippen Sie auf `Speichern`.",
+        ],
+      },
+      {
         title: "Einer Person App-Zugang geben",
         steps: [
           "Gehen Sie zur Karte `Verbundene Konten`.",
@@ -6776,6 +6786,7 @@ export const parentGuardiansTopic = function parentGuardiansTopic(): HelpTopic {
       "Das Abholrecht wegnehmen geht sofort und ohne Unterschrift.",
       "Holt jemand nur an einem einzigen Tag ab? Dann ändern Sie die Abholung für diesen Tag.",
       "Ein Kontakt braucht kein eigenes Konto. Zum Beispiel Oma oder Opa.",
+      "Eine Anrede wählt jede Person nur für sich selbst. Bei anderen Kontakten fehlt das Feld.",
       "Eine E-Mail beim Kontakt lädt niemanden ein. Der App-Zugang ist ein eigener Schritt.",
     ],
     differences: [
@@ -9721,6 +9732,7 @@ export const teacherAccessTopic = function teacherAccessTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Der Link funktioniert nicht mehr? Bitten Sie die OGS um eine neue Einladung.",
+      "Sie haben ein moto-Konto, aber noch keinen Zugang zu moto schule? Wählen Sie in der Einladung `Andere moto-Adresse wählen`. Wählen Sie dann Ihre bisherige Schule oder `Für Eltern`. Melden Sie sich dort an und nehmen Sie die Einladung an.",
     ],
     related: [
       HELP_TOPICS.teacherLogin,
@@ -11202,6 +11214,9 @@ export const traegerBillingRunTopic =
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "FileText",
+      image: "/help/screens/traeger-naechste-rechnungsnummer.webp",
+      imageAlt:
+        "Die Karte Rechnungsnummern der Ferien: Muster, nächste Nummer und letzte laufende Nummer, darunter der Verlauf mit Zeitpunkt und Person.",
       requirements: [
         "Ihre Rolle im Träger-Büro ist Abrechnung. Nur diese Rolle sieht in der Navigation die Bereiche unter `Finanzen`.",
         "Der Ferienzeitraum ist veröffentlicht, und die Anmeldungen sind bestätigt.",
@@ -11217,6 +11232,18 @@ export const traegerBillingRunTopic =
             "Wählen Sie bei `Rechnungsnummern der Ferien` den Knopf `Muster festlegen`.",
             "Tragen Sie das Muster ein, zum Beispiel FE-{JJJJ}-{NNNN}. {NNNN} ist die laufende Nummer, {JJJJ} das Jahr.",
             "Wählen Sie `Speichern`.",
+          ],
+        },
+        {
+          title: "Nummern aus dem bisherigen Programm fortführen",
+          description:
+            "Nur nötig, wenn Ihre Rechnungen nicht bei 1 beginnen sollen.",
+          steps: [
+            "Wählen Sie bei `Rechnungsnummern der Ferien` den Knopf `Nächste Nummer ändern`.",
+            "Tragen Sie die Nummer nach der letzten Rechnung Ihres bisherigen Programms ein, zum Beispiel 7100.",
+            "Prüfen Sie darunter, welche Nummer die nächste Rechnung bekommt.",
+            "Wählen Sie `Speichern`.",
+            "Mit `Verlauf ansehen` sehen Sie, wer die Nummer wann geändert hat.",
           ],
         },
         {
@@ -12043,6 +12070,17 @@ export const traegerCareMonthsTopic =
           ],
         },
         {
+          title: "Nummern aus dem bisherigen Programm fortführen",
+          description:
+            "Nur nötig, wenn Ihre Rechnungen nicht bei 1 beginnen sollen.",
+          steps: [
+            "Wählen Sie bei `Rechnungsnummern der Monatsbeiträge` den Knopf `Nächste Nummer ändern`.",
+            "Tragen Sie die Nummer nach der letzten Rechnung Ihres bisherigen Programms ein.",
+            "Wählen Sie `Speichern`.",
+            "Mit `Verlauf ansehen` sehen Sie, wer die Nummer wann geändert hat.",
+          ],
+        },
+        {
           title: "Monatslauf starten und prüfen",
           steps: [
             "Wählen Sie `Abrechnungsläufe` und dann den Reiter `Monatsbeiträge`.",
@@ -12806,8 +12844,9 @@ export const traegerDatevExportTopic =
             "Wählen Sie oben rechts `Konten und Kostenstellen`.",
             "Unter `Erlöskonten` wählen Sie bei `Monatsbeiträge`, `Mensa`, `Ferienbetreuung` oder `Mittagessen in den Ferien` `Ändern`. Tragen Sie das Konto ein und wählen Sie `Speichern`. Ein Angebot kann ein eigenes Konto haben.",
             "Ohne eigenes Konto bucht `Mittagessen in den Ferien` auf das Konto der `Ferienbetreuung`. Daneben steht dann `wie Ferienbetreuung`.",
-            "Unter `Kostenstellen (KOST1)` wählen Sie bei der Schule `Neue Kostenstelle`. Wählen Sie den Tag bei `Gilt ab` und tragen Sie die `Kostenstelle` ein.",
-            "Eine Ferienwoche bucht auf die Kostenstelle der Schule, an der sie stattfindet. Die Kostenstelle bei `Ferienbetreuung` ist der Ersatz, wenn diese Schule keine hat.",
+            "Unter `Kostenstellen (KOST1)` steht jede Schule mit zwei Zeilen. Wählen Sie bei `Monatsbeiträge und Mensa` `Neue Kostenstelle`. Wählen Sie den Tag bei `Gilt ab` und tragen Sie die `Kostenstelle` ein.",
+            "Bucht Ihr Steuerbüro die Ferienbetreuung einer Schule getrennt? Dann tragen Sie bei `Ferienbetreuung` dieser Schule eine eigene Kostenstelle ein. Ohne sie bucht eine Ferienwoche auf die Kostenstelle der Schule. Daneben steht dann `wie Monatsbeiträge`.",
+            "Eine Ferienwoche bucht auf die Schule, an der sie stattfindet. Hat diese Schule keine Kostenstelle, gilt `Ersatz für die Ferienbetreuung` unter `Alle Schulen`. Daneben steht dann `Ersatz-Kostenstelle`.",
             "Eine `Zweite Kostenstelle (KOST2)` je Angebot tragen Sie nur ein, wenn Ihr Steuerbüro sie braucht.",
           ],
         },
@@ -12850,7 +12889,7 @@ export const traegerDatevExportTopic =
         "Über der Liste steht `Die DATEV-Datei fehlt noch`? Es fehlen DATEV-Werte. Der Hinweis nennt sie. Bis dahin lässt sich `DATEV` nicht wählen.",
         "Beim Lauf steht `Alles exportiert`? Alle Buchungen sind schon in einer DATEV-Datei. Darunter steht ihre Nummer.",
         "Sie können die DATEV-Werte nur ansehen? Ändern darf, wer im Träger-Büro das Recht für die Einstellungen hat.",
-        "Im `Exportprotokoll` steht `… mit Ersatz-Kostenstelle`? Diese Ferienwochen fanden an einer Schule ohne Kostenstelle statt. Die Datei bucht sie auf die Kostenstelle der `Ferienbetreuung`. Darunter stehen Rechnung, Woche und Grund. Tragen Sie für die Schule eine Kostenstelle ein. Das gilt für neue Rechnungen.",
+        "Im `Exportprotokoll` steht `… mit Ersatz-Kostenstelle`? Diese Ferienwochen fanden an einer Schule ohne Kostenstelle statt. Die Datei bucht sie auf den `Ersatz für die Ferienbetreuung`. Darunter stehen Rechnung, Woche und Grund. Tragen Sie für die Schule eine Kostenstelle ein. Das gilt für neue Rechnungen.",
         "Im `Exportprotokoll` steht `… mit Konten vom Exporttag`? Diese Rechnungen wurden ausgestellt, bevor moto die Konten festgehalten hat. Die Datei nutzt dann die Werte vom Tag des Exports.",
       ],
       troubleshootingDetails: [

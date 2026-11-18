@@ -9,6 +9,7 @@
  * (ADR 0196). Die Zahlen kommen aus den Teilnehmerlisten (ADR 0116).
  */
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import type { ClosingDayDraft } from "~/components/planning/closing-day-modal";
 import { ApiError } from "~/lib/api-error";
 import {
@@ -49,10 +50,7 @@ export function useHostedHolidayWeeks(open: boolean) {
       // die Teilnehmerlisten oder bei einem Fehler bleibt das Speichern
       // möglich, und der Träger sieht den Schließtag trotzdem.
       onError: (err: unknown) => {
-        if (
-          err instanceof ApiError &&
-          (err.status === 401 || err.status === 403)
-        ) {
+        if (err instanceof ApiError && isAccessRefusal(err)) {
           return;
         }
         logger.warn("closing_day_hosted_weeks_failed", {

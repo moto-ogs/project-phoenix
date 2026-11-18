@@ -15,6 +15,7 @@ type GuardianProfile struct {
 	Email        *string
 	FirstName    string
 	LastName     string
+	Salutation   string
 	PortalLocale *string
 }
 

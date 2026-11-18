@@ -265,8 +265,8 @@ func NewBillingRunHTTP(settings TraegerBrandingSettings, delivery deliveryRuntim
 	registrations := parentBillingBillingRegistrations{periods: enrollmentCompose.NewHolidayPeriods(now, nil), review: review,
 		hosts: enrollmentCompose.NewHolidayWeekHosts()}
 	requireBilling := common.RequiresPermission(identityaccess.TraegerRightBillingManage)
-	runs, kinds := parentBillingCompose.NewBillingRuns(registrations, parentBillingSettings{settings: settings}, newParentBillingLetterheads(settings), today, now)
-	return parentBillingHTTP.NewBillingRunResource(runs, runs,
+	runs, kinds := parentBillingCompose.NewBillingRuns(registrations, parentBillingSettings{settings: settings}, newParentBillingLetterheads(settings), parentBillingActorNames{names: owners.NewTraegerMemberNames()}, today, now)
+	return parentBillingHTTP.NewBillingRunResource(runs, runs, runs,
 			parentBillingCompose.NewBillingLetters(newParentBillingLetterheads(settings), today, now),
 			parentBillingCompose.NewBillingLetterMail(parentBillingLetterPost{settings: settings, delivery: delivery, outcomes: outcomes}, now),
 			requireBilling, traegerListRenderer(NewSimpleListRenderer())),

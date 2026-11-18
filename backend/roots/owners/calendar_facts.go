@@ -198,6 +198,7 @@ func (p calendarGuardianPort) ListPortalContacts(ctx context.Context, guardianID
 		contact := calendarCompose.GuardianContact{Profile: calendarCompose.GuardianProfile{
 			ID: value.GuardianProfileID, AccountID: &value.AccountID, Email: value.Email,
 			FirstName: value.FirstName, LastName: value.LastName, PortalLocale: value.PortalLocale,
+			Salutation: guardianSalutation(value.Salutation),
 		}}
 		if value.StudentID != nil {
 			portalAccess, permissionErr := guardianPortalAccessGranted(value.PortalPermission)
@@ -376,7 +377,7 @@ func calendarGuardian(value *peopledirectory.GuardianProfileSnapshot) *calendarC
 	if value == nil {
 		return nil
 	}
-	return &calendarCompose.GuardianProfile{ID: value.ID, AccountID: value.AccountID, Email: value.Email, FirstName: value.FirstName, LastName: value.LastName, PortalLocale: value.PortalLocale}
+	return &calendarCompose.GuardianProfile{ID: value.ID, AccountID: value.AccountID, Email: value.Email, FirstName: value.FirstName, LastName: value.LastName, Salutation: guardianSalutation(value.Salutation), PortalLocale: value.PortalLocale}
 }
 
 func calendarAccount(value identityaccess.ParentCalendarFeedAccount) *calendarCompose.Account {
