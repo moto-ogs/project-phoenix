@@ -102,6 +102,22 @@ describe("weekSuggestions", () => {
     ]);
   });
 
+  it("does not take the break from the gap to the next shift", () => {
+    // 5 h at Süd from 13:40 plus 5 h at Nord need 45 minutes. Lengthening
+    // Nord to the back would shrink the counted gap; it starts earlier.
+    const person = {
+      ...PERSON,
+      ...nordOnThursday(300),
+      shifts: [shift({ startTime: "13:40", endTime: "18:40" })],
+    };
+    const [nord] = on(person, THU);
+    expect(nord).toMatchObject({
+      startTime: "07:55",
+      endTime: "13:00",
+      breakMinutes: 5,
+    });
+  });
+
   it("gives a long day its statutory break", () => {
     expect(on({ ...PERSON, ...nordOnThursday(420) }, THU)).toMatchObject([
       { startTime: "08:00", endTime: "15:30", breakMinutes: 30 },

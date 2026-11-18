@@ -245,9 +245,10 @@ const fitsBetween = (slot: Busy, busy: readonly Busy[]) =>
 
 /**
  * Legt `minutes` netto in den Tag: ab dem ersten passenden Beginn, mit der
- * Pause, die der ganze Tag an allen Schulen braucht. Weil jede andere
- * Schicht 30 Minuten entfernt bleibt, zählen die Lücken als Pause und
- * bleiben es auch, wenn die eigene Pause wächst.
+ * Pause, die der ganze Tag an allen Schulen braucht. Fehlt dem Tag Pause,
+ * wird der Vorschlag länger, nach hinten oder nach vorn; angenommen wird er
+ * nur, wenn die Pause danach wirklich reicht, denn eine längere Schicht
+ * verkürzt die Lücke zur nächsten, die selbst als Pause zählt.
  */
 function place(
   minutes: number,
@@ -255,19 +256,19 @@ function place(
   busy: readonly Busy[],
 ): Busy | null {
   const total = dayNet(busy) + minutes;
+  const breakShort = (slot: Busy) =>
+    requiredBreak(total) - dayBreaks([...busy, slot].sort(byStart));
   for (const start of starts) {
     const own = requiredBreak(minutes);
     const first = { start, end: start + minutes + own, breakMinutes: own };
     if (!fitsBetween(first, busy)) continue;
-    const missing =
-      requiredBreak(total) - dayBreaks([...busy, first].sort(byStart));
+    const missing = breakShort(first);
     if (missing <= 0) return first;
-    const longer = {
-      start,
-      end: first.end + missing,
-      breakMinutes: own + missing,
-    };
-    if (fitsBetween(longer, busy)) return longer;
+    const longer = [
+      { start, end: first.end + missing, breakMinutes: own + missing },
+      { start: start - missing, end: first.end, breakMinutes: own + missing },
+    ].find((slot) => fitsBetween(slot, busy) && breakShort(slot) <= 0);
+    if (longer) return longer;
   }
   return null;
 }
