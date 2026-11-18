@@ -3,6 +3,7 @@ package devices
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -87,7 +88,7 @@ func (rs *Resource) getDevice(w http.ResponseWriter, r *http.Request) {
 // getDeviceByDeviceID handles getting a device by its device ID
 func (rs *Resource) getDeviceByDeviceID(w http.ResponseWriter, r *http.Request) {
 	// Get device ID from URL
-	deviceID := chi.URLParam(r, "deviceId")
+	deviceID := deviceIDParam(r)
 	if deviceID == "" {
 		rs.runtime.Failure(w, r, http.StatusBadRequest, errors.New(errMsgDeviceIDRequired), "")
 		return
@@ -262,6 +263,18 @@ func (rs *Resource) removalPreflight(r *http.Request, id int64) (devicefleet.Dev
 	return device, session, err
 }
 
+// deviceIDParam reads the hardware device ID from the path. Chi routes on
+// the escaped path when the client escaped a character such as the colon of
+// a MAC address, so the parameter is unescaped once; an invalid escape
+// yields an empty ID, which the handlers reject.
+func deviceIDParam(r *http.Request) string {
+	id, err := url.PathUnescape(chi.URLParam(r, "deviceId"))
+	if err != nil {
+		return ""
+	}
+	return id
+}
+
 // updateDeviceStatus sets the status of a live device. "inactive" blocks
 // it (Gerätesperre, #2317): device authentication then refuses its kiosk
 // with iot.device_inactive, while the device keeps its row, room, history,
@@ -269,7 +282,7 @@ func (rs *Resource) removalPreflight(r *http.Request, id int64) (devicefleet.Dev
 // credential. The row stays locked from the read to the write; setting the
 // status the device already has changes nothing and records no audit entry.
 func (rs *Resource) updateDeviceStatus(w http.ResponseWriter, r *http.Request) {
-	deviceID := chi.URLParam(r, "deviceId")
+	deviceID := deviceIDParam(r)
 	if deviceID == "" {
 		rs.runtime.Failure(w, r, http.StatusBadRequest, errors.New(errMsgDeviceIDRequired), "")
 		return
@@ -316,7 +329,7 @@ func (rs *Resource) lockDeviceByDeviceID(r *http.Request, deviceID string) (devi
 // pingDevice handles pinging a device to update its last seen time
 func (rs *Resource) pingDevice(w http.ResponseWriter, r *http.Request) {
 	// Get device ID from URL
-	deviceID := chi.URLParam(r, "deviceId")
+	deviceID := deviceIDParam(r)
 	if deviceID == "" {
 		rs.runtime.Failure(w, r, http.StatusBadRequest, errors.New(errMsgDeviceIDRequired), "")
 		return

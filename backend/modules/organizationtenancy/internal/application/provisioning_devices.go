@@ -310,37 +310,35 @@ func (p *Provisioning) DeleteDevice(ctx context.Context, id int64, operatorID in
 // to the write. Setting the state the device already has changes nothing
 // and records no second audit entry. The virtual manual web check-in device
 // cannot be blocked.
-func (p *Provisioning) SetDeviceBlocked(ctx context.Context, id int64, blocked bool, operatorID int64, clientIP net.IP) (*organizationtenancy.OperatorDevice, error) {
+func (p *Provisioning) SetDeviceBlocked(ctx context.Context, id int64, blocked bool, operatorID int64, clientIP net.IP) error {
 	if id <= 0 {
-		return nil, invalidData("device id is required")
+		return invalidData("device id is required")
 	}
-	return adminValue(ctx, p, func(adminCtx context.Context) (*organizationtenancy.OperatorDevice, error) {
+	return p.inAdmin(ctx, func(adminCtx context.Context) error {
 		device, err := p.findDevice(adminCtx, id)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if device.DeviceID == domain.WebManualDeviceID {
-			return nil, &organizationtenancy.DeviceProtectedError{DeviceID: id, Reason: webManualDeviceReason}
+			return &organizationtenancy.DeviceProtectedError{DeviceID: id, Reason: webManualDeviceReason}
 		}
 		status, action := domain.DeviceStatusActive, domain.AuditActionUnblock
 		if blocked {
 			status, action = domain.DeviceStatusInactive, domain.AuditActionBlock
 		}
-		if device.Status != status {
-			previous := device.Status
-			device.Status = status
-			if err := p.devices.UpdateDevice(adminCtx, device); err != nil {
-				return nil, fmt.Errorf("SetDeviceBlocked: %w", err)
-			}
-			if err := p.recordAction(adminCtx, operatorID, action, domain.AuditResourceDevice, &id, clientIP, map[string]any{
-				"device_id":       device.DeviceID,
-				"school_id":       device.TenantID,
-				"previous_status": previous,
-			}); err != nil {
-				return nil, err
-			}
+		if device.Status == status {
+			return nil
 		}
-		return p.listedDevice(adminCtx, "SetDeviceBlocked", id)
+		previous := device.Status
+		device.Status = status
+		if err := p.devices.UpdateDevice(adminCtx, device); err != nil {
+			return fmt.Errorf("SetDeviceBlocked: %w", err)
+		}
+		return p.recordAction(adminCtx, operatorID, action, domain.AuditResourceDevice, &id, clientIP, map[string]any{
+			"device_id":       device.DeviceID,
+			"school_id":       device.TenantID,
+			"previous_status": previous,
+		})
 	})
 }
 

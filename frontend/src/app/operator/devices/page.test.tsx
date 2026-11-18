@@ -104,6 +104,8 @@ vi.mock("~/lib/iot-helpers", () => ({
   getDeviceStatusDisplayName: (status: string) => `status:${status}`,
   formatLastSeen: (lastSeen: string) => `formatted:${lastSeen}`,
   isDeviceBlocked: (device: { status: string }) => device.status === "inactive",
+  isSystemDevice: (device: { deviceId: string }) =>
+    device.deviceId === "WEB-MANUAL-001",
   DEVICE_TYPE_OPTIONS: { terminal: "Terminal", info_point: "Info-Point" },
 }));
 
@@ -577,6 +579,20 @@ describe("OperatorDevicesPage", () => {
     expect(
       screen.getByRole("menuitem", { name: /^Entsperren/ }),
     ).toBeInTheDocument();
+  });
+
+  it("offers no block for the protected manual web device", () => {
+    withDefaultSWR({
+      allDevices: [{ ...mockDevice, deviceId: "WEB-MANUAL-001" }],
+    });
+
+    render(<OperatorDevicesPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Aktionen für/ }));
+    expect(
+      screen.getByRole("menuitem", { name: /^Entfernen/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /^Sperren/ })).toBeNull();
   });
 
   // --- Columns and headers ---

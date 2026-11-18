@@ -339,15 +339,19 @@ function DevicesPageContent() {
         setBlockPending(false);
       }
       if (blocked) {
+        const message = `Das Gerät „${title}“ ist gesperrt. Es kann sich erst wieder anmelden, wenn du es entsperrst.`;
+        // Undo restores access, so it is offered only when the device had it.
         toastSuccess(
-          `Das Gerät „${title}“ ist gesperrt. Es kann sich erst wieder anmelden, wenn du es entsperrst.`,
-          {
-            action: {
-              label: "Rückgängig",
-              tooltip: "Entsperrt das Gerät sofort wieder.",
-              onClick: () => void setBlocked(device, false),
-            },
-          },
+          message,
+          device.status === "active"
+            ? {
+                action: {
+                  label: "Rückgängig",
+                  tooltip: "Entsperrt das Gerät sofort wieder.",
+                  onClick: () => void setBlocked(device, false),
+                },
+              }
+            : undefined,
         );
       } else {
         toastSuccess(

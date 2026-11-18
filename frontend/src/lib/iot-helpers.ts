@@ -118,6 +118,16 @@ export function getDeviceTypeDisplayName(deviceType: string): string {
 }
 
 /**
+ * The virtual device of manual web check-ins; every school has one. It
+ * cannot be blocked, transferred or removed (backend WebManualDeviceID).
+ */
+export function isSystemDevice(
+  device: Readonly<{ deviceId: string }>,
+): boolean {
+  return device.deviceId === "WEB-MANUAL-001";
+}
+
+/**
  * A blocked device (Gerätesperre, #2317) is a live device with the status
  * "inactive": its kiosk is refused until someone unblocks it.
  */

@@ -320,7 +320,7 @@ type SchoolSummary struct {
 // (Gerätesperre, #2317). The operator provisioning serves it beside its
 // facade.
 type DeviceBlockingProvisioning interface {
-	SetDeviceBlocked(ctx context.Context, id int64, blocked bool, operatorID int64, clientIP net.IP) (*OperatorDevice, error)
+	SetDeviceBlocked(ctx context.Context, id int64, blocked bool, operatorID int64, clientIP net.IP) error
 }
 
 // SchoolRequiredDetailsProvisioning reports what each school still lacks

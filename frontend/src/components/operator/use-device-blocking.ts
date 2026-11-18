@@ -37,7 +37,8 @@ export function useDeviceBlocking(onChanged: RefreshAfterWrite) {
         });
         return;
       }
-      if (blocked) {
+      // Undo restores access, so it is offered only when the device had it.
+      if (blocked && device.status === "active") {
         toastSuccess(
           `${title} ist gesperrt. Der Kiosk wird abgewiesen, bis du das Gerät entsperrst.`,
           {
@@ -47,6 +48,10 @@ export function useDeviceBlocking(onChanged: RefreshAfterWrite) {
               onClick: () => void setBlocked(device, false),
             },
           },
+        );
+      } else if (blocked) {
+        toastSuccess(
+          `${title} ist gesperrt. Der Kiosk wird abgewiesen, bis du das Gerät entsperrst.`,
         );
       } else {
         toastSuccess(`${title} ist entsperrt und kann sich wieder anmelden.`);

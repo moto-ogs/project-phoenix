@@ -8,6 +8,7 @@ import {
   getDeviceStatusDisplayName,
   formatLastSeen,
   isDeviceBlocked,
+  isSystemDevice,
 } from "~/lib/iot-helpers";
 import { DataTable } from "~/components/ui/data-table";
 import type { DataTableColumn } from "~/components/ui/data-table";
@@ -166,7 +167,7 @@ export function DevicesTable({
               onClick: () => onSetKey(row),
             });
           }
-          if (onSetBlocked) {
+          if (onSetBlocked && !isSystemDevice(row)) {
             const blocked = isDeviceBlocked(row);
             items.push({
               label: blocked ? "Entsperren" : "Sperren",

@@ -3107,9 +3107,9 @@ func (m *mockProvisioningService) RecordTraegerSettingChange(context.Context, or
 	return nil
 }
 
-type deviceBlockingFn func(ctx context.Context, id int64, blocked bool, operatorID int64, clientIP net.IP) (*organizationtenancy.OperatorDevice, error)
+type deviceBlockingFn func(ctx context.Context, id int64, blocked bool, operatorID int64, clientIP net.IP) error
 
-func (fn deviceBlockingFn) SetDeviceBlocked(ctx context.Context, id int64, blocked bool, operatorID int64, clientIP net.IP) (*organizationtenancy.OperatorDevice, error) {
+func (fn deviceBlockingFn) SetDeviceBlocked(ctx context.Context, id int64, blocked bool, operatorID int64, clientIP net.IP) error {
 	return fn(ctx, id, blocked, operatorID, clientIP)
 }
 
@@ -3129,12 +3129,12 @@ func TestProvisioningResource_BlockAndUnblockDevice(t *testing.T) {
 		t.Run(name+" passes the target state and answers without data", func(t *testing.T) {
 			t.Parallel()
 			resource := NewProvisioningResource(ProvisioningConfig{DeviceBlocking: deviceBlockingFn(
-				func(_ context.Context, id int64, gotBlocked bool, operatorID int64, clientIP net.IP) (*organizationtenancy.OperatorDevice, error) {
+				func(_ context.Context, id int64, gotBlocked bool, operatorID int64, clientIP net.IP) error {
 					assert.Equal(t, int64(55), id)
 					assert.Equal(t, blocked, gotBlocked)
 					assert.Equal(t, int64(42), operatorID)
 					assert.Equal(t, "203.0.113.50", clientIP.String())
-					return &organizationtenancy.OperatorDevice{ID: 55, Status: "inactive"}, nil
+					return nil
 				})})
 			rr := httptest.NewRecorder()
 
@@ -3152,9 +3152,9 @@ func TestProvisioningResource_BlockAndUnblockDevice(t *testing.T) {
 	t.Run("rejects an invalid device id", func(t *testing.T) {
 		t.Parallel()
 		resource := NewProvisioningResource(ProvisioningConfig{DeviceBlocking: deviceBlockingFn(
-			func(context.Context, int64, bool, int64, net.IP) (*organizationtenancy.OperatorDevice, error) {
+			func(context.Context, int64, bool, int64, net.IP) error {
 				t.Fatal("an invalid id reached the service")
-				return nil, nil
+				return nil
 			})})
 		rr := httptest.NewRecorder()
 		resource.BlockDevice(rr, request("nope"))
@@ -3164,8 +3164,8 @@ func TestProvisioningResource_BlockAndUnblockDevice(t *testing.T) {
 	t.Run("renders the protected system device", func(t *testing.T) {
 		t.Parallel()
 		resource := NewProvisioningResource(ProvisioningConfig{DeviceBlocking: deviceBlockingFn(
-			func(context.Context, int64, bool, int64, net.IP) (*organizationtenancy.OperatorDevice, error) {
-				return nil, &organizationtenancy.DeviceProtectedError{DeviceID: 55, Reason: "system device"}
+			func(context.Context, int64, bool, int64, net.IP) error {
+				return &organizationtenancy.DeviceProtectedError{DeviceID: 55, Reason: "system device"}
 			})})
 		rr := httptest.NewRecorder()
 		resource.BlockDevice(rr, request("55"))

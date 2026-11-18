@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -120,6 +121,20 @@ func TestDeviceUnblockingRestoresAccessWithTheSameKeyAndIsIdempotent(t *testing.
 	require.Len(t, entries, 2, "only effective changes are audited")
 	assert.Equal(t, "blocked", entries[0]["outcome"])
 	assert.Equal(t, "unblocked", entries[1]["outcome"])
+}
+
+// A hardware ID such as a MAC address reaches the route escaped
+// (encodeURIComponent turns the colon into %3A); the route still finds it.
+func TestDeviceBlockingFindsAHardwareIDWithAColon(t *testing.T) {
+	t.Parallel()
+	f := newDeviceBlockingFixture(t)
+	device := testpkg.CreateTestDevice(t, f.db, "AA:BB:CC")
+	require.Contains(t, device.DeviceID, ":")
+
+	rr := f.setStatus(t, strings.ReplaceAll(device.DeviceID, ":", "%3A"), "inactive")
+
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	assert.Equal(t, devicefleet.DeviceStatusInactive, devicefleet.DeviceStatus(f.stored(t, device.ID).Status))
 }
 
 func TestDeviceBlockingStaysInsideTheSchoolAndNeedsThePermission(t *testing.T) {

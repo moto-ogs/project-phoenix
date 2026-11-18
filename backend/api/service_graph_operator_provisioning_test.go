@@ -1218,11 +1218,9 @@ func TestOperatorProvisioningIntegration_BlockDevice_KeepsKeyRoomAndHistory(t *t
 		return row
 	}
 
-	blocked, err := graph.DeviceBlocking.SetDeviceBlocked(ctx, created.ID, true, operatorID, provisioningTestClientIP)
-	require.NoError(t, err)
-	assert.Equal(t, "inactive", blocked.Status)
-	assert.Nil(t, blocked.APIKey, "the answer carries no credential")
+	require.NoError(t, graph.DeviceBlocking.SetDeviceBlocked(ctx, created.ID, true, operatorID, provisioningTestClientIP))
 	row := stored()
+	assert.Equal(t, "inactive", row.Status)
 	assert.Nil(t, row.ArchivedAt, "a blocked device stays live")
 	require.NotNil(t, row.APIKeyHash)
 	assert.Equal(t, originalHash, *row.APIKeyHash, "blocking keeps the credential")
@@ -1234,11 +1232,9 @@ func TestOperatorProvisioningIntegration_BlockDevice_KeepsKeyRoomAndHistory(t *t
 		return d.ID == created.ID && d.Status == "inactive"
 	}), "the blocked device stays listed and occupies its Geräteplatz")
 
-	_, err = graph.DeviceBlocking.SetDeviceBlocked(ctx, created.ID, true, operatorID, provisioningTestClientIP)
-	require.NoError(t, err)
-	unblocked, err := graph.DeviceBlocking.SetDeviceBlocked(ctx, created.ID, false, operatorID, provisioningTestClientIP)
-	require.NoError(t, err)
-	assert.Equal(t, "active", unblocked.Status)
+	require.NoError(t, graph.DeviceBlocking.SetDeviceBlocked(ctx, created.ID, true, operatorID, provisioningTestClientIP))
+	require.NoError(t, graph.DeviceBlocking.SetDeviceBlocked(ctx, created.ID, false, operatorID, provisioningTestClientIP))
+	assert.Equal(t, "active", stored().Status)
 	require.NotNil(t, stored().APIKeyHash)
 	assert.Equal(t, originalHash, *stored().APIKeyHash, "the unblocked kiosk keeps its key")
 

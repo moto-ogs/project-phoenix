@@ -687,6 +687,25 @@ describe("DevicesPage", () => {
     });
   });
 
+  it("offers no undo when the blocked device had no access before", async () => {
+    setSwrData([
+      { ...mockDevices[0]!, status: "maintenance" },
+      mockDevices[1]!,
+    ]);
+    setSelectedDevice("1");
+    mockSetDeviceBlocked.mockResolvedValue(undefined);
+
+    render(<DevicesPage />);
+    fireEvent.click(await screen.findByTestId("trigger-block"));
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        expect.stringContaining("ist gesperrt"),
+        undefined,
+      );
+    });
+  });
+
   it("shows a failed block as an action error without a success toast", async () => {
     setSelectedDevice("1");
     const failure = new ApiError("forbidden", 403, {

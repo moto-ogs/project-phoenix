@@ -807,11 +807,8 @@ func TestProvisioningSetDeviceBlocked(t *testing.T) {
 		h := newHarness(t)
 		seed(h)
 
-		device, err := h.svc.SetDeviceBlocked(context.Background(), 1, true, testOperatorID, operatorIP)
+		require.NoError(t, h.svc.SetDeviceBlocked(context.Background(), 1, true, testOperatorID, operatorIP))
 
-		require.NoError(t, err)
-		assert.Equal(t, domain.DeviceStatusInactive, device.Status)
-		assert.Equal(t, "Burbach", device.SchoolName)
 		require.Len(t, h.devices.updated, 1)
 		assert.Equal(t, domain.DeviceStatusInactive, h.devices.updated[0].Status)
 		assert.Equal(t, "...-key", h.devices.updated[0].MaskedAPIKey, "the credential stays for the unblock")
@@ -831,10 +828,10 @@ func TestProvisioningSetDeviceBlocked(t *testing.T) {
 		blocked.Status = domain.DeviceStatusInactive
 		h.devices.add(blocked)
 
-		device, err := h.svc.SetDeviceBlocked(context.Background(), 1, false, testOperatorID, operatorIP)
+		require.NoError(t, h.svc.SetDeviceBlocked(context.Background(), 1, false, testOperatorID, operatorIP))
 
-		require.NoError(t, err)
-		assert.Equal(t, domain.DeviceStatusActive, device.Status)
+		require.Len(t, h.devices.updated, 1)
+		assert.Equal(t, domain.DeviceStatusActive, h.devices.updated[0].Status)
 		entry := h.onlyAudit(t, domain.AuditActionUnblock, domain.AuditResourceDevice, 1)
 		assert.Equal(t, "inactive", auditChanges(t, entry)["previous_status"])
 	})
@@ -844,10 +841,8 @@ func TestProvisioningSetDeviceBlocked(t *testing.T) {
 		h := newHarness(t)
 		seed(h)
 
-		device, err := h.svc.SetDeviceBlocked(context.Background(), 1, false, testOperatorID, operatorIP)
+		require.NoError(t, h.svc.SetDeviceBlocked(context.Background(), 1, false, testOperatorID, operatorIP))
 
-		require.NoError(t, err)
-		assert.Equal(t, domain.DeviceStatusActive, device.Status)
 		assert.Empty(t, h.devices.updated)
 		assert.Empty(t, h.audit.entries, "a repeated action is not audited again")
 	})
@@ -858,7 +853,7 @@ func TestProvisioningSetDeviceBlocked(t *testing.T) {
 		seed(h)
 		h.audit.err = errBoom
 
-		_, err := h.svc.SetDeviceBlocked(context.Background(), 1, true, testOperatorID, operatorIP)
+		err := h.svc.SetDeviceBlocked(context.Background(), 1, true, testOperatorID, operatorIP)
 
 		require.ErrorIs(t, err, errBoom)
 		assert.ErrorIs(t, h.tx.lastErr, errBoom)
@@ -896,9 +891,8 @@ func TestProvisioningSetDeviceBlocked(t *testing.T) {
 			h := newHarness(t)
 			seed(h)
 
-			device, err := h.svc.SetDeviceBlocked(context.Background(), tc.id, true, testOperatorID, operatorIP)
+			err := h.svc.SetDeviceBlocked(context.Background(), tc.id, true, testOperatorID, operatorIP)
 
-			assert.Nil(t, device)
 			tc.check(t, err)
 			assert.Empty(t, h.devices.updated)
 			assert.Empty(t, h.audit.entries)

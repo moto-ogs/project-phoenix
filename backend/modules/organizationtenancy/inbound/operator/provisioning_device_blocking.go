@@ -29,7 +29,7 @@ func (rs *ProvisioningResource) setDeviceBlocked(w http.ResponseWriter, r *http.
 		return
 	}
 	operatorID := int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)
-	if _, err := rs.deviceBlocking.SetDeviceBlocked(r.Context(), deviceID, blocked, operatorID, common.ParseClientIP(r)); err != nil {
+	if err := rs.deviceBlocking.SetDeviceBlocked(r.Context(), deviceID, blocked, operatorID, common.ParseClientIP(r)); err != nil {
 		common.RenderError(w, r, ProvisioningErrorRenderer(err))
 		return
 	}

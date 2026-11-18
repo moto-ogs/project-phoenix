@@ -331,8 +331,8 @@ function DeviceStammdatenTab({
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="min-w-48 flex-1 text-sm text-gray-600">
-              Das Gerät kann sich anmelden. Sperrst du es, wird es sofort
-              abgewiesen, bis du es wieder entsperrst.
+              Sperrst du das Gerät, wird es sofort abgewiesen, bis du es wieder
+              entsperrst.
             </p>
             <Button
               type="button"
