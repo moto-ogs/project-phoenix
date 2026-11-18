@@ -28,15 +28,15 @@ const emailEventInsertSQL = `INSERT INTO platform.email_delivery_events
 	ON CONFLICT (outbox_id, provider, provider_event_id) DO NOTHING`
 
 const emailEventStateSQL = `UPDATE platform.email_outbox
-	SET delivery_state = ?, delivery_state_at = ?, updated_at = ?
-	WHERE id = ?`
+	SET delivery_state = ?0, delivery_state_at = ?1, delivery_state_recorded_at = ?2, updated_at = ?2
+	WHERE id = ?3`
 
 // The fallback's outcome is unknown, so the provider's state of the mail ends
 // here. It gets attempts of its own: those spent on the provider say nothing about
 // it. A mail still in the worker's hands stays there: finalizing it puts it back
 // in the queue, and does the same with its attempts.
 const emailEventRerouteSQL = `UPDATE platform.email_outbox
-	SET fallback_requested_at = ?0, delivery_state = NULL, delivery_state_at = NULL,
+	SET fallback_requested_at = ?0, delivery_state = NULL, delivery_state_at = NULL, delivery_state_recorded_at = NULL,
 		status = CASE WHEN status = 'sent' THEN 'pending' ELSE status END,
 		next_retry_at = CASE WHEN status = 'sent' THEN ?0 ELSE next_retry_at END,
 		attempts = CASE WHEN status = 'sent' THEN 0 ELSE attempts END,
@@ -271,7 +271,8 @@ func (s *Store) DeleteUnheldEmailSuppressions(ctx context.Context, tenantID int6
 			WHERE known.tenant_id = ?0 AND known.address = suppression.address)`, tenantID))
 }
 
-const openProviderMailsSQL = `SELECT id, provider_message_id, delivery_state, delivery_state_at, sent_at, delivery_checked_at
+const openProviderMailsSQL = `SELECT id, provider_message_id, delivery_state,
+	COALESCE(delivery_state_recorded_at, delivery_state_at) AS state_age_from, sent_at, delivery_checked_at
 	FROM platform.email_outbox
 	WHERE status = 'sent' AND provider_message_id IS NOT NULL AND fallback_requested_at IS NULL
 		AND (delivery_state IS NULL OR delivery_state = 'delayed')
@@ -283,7 +284,7 @@ type providerMailRow struct {
 	ID                int64      `bun:"id"`
 	ProviderMessageID string     `bun:"provider_message_id"`
 	DeliveryState     *string    `bun:"delivery_state"`
-	DeliveryStateAt   *time.Time `bun:"delivery_state_at"`
+	StateAgeFrom      *time.Time `bun:"state_age_from"`
 	SentAt            time.Time  `bun:"sent_at"`
 	CheckedAt         *time.Time `bun:"delivery_checked_at"`
 }
@@ -299,7 +300,7 @@ func (s *Store) OpenProviderMails(ctx context.Context, query domain.ProviderMail
 	}
 	mails := make([]domain.ProviderMail, 0, len(rows))
 	for _, row := range rows {
-		mail := domain.ProviderMail{ID: row.ID, ProviderMessageID: row.ProviderMessageID, StateAt: row.DeliveryStateAt, SentAt: row.SentAt, CheckedAt: row.CheckedAt}
+		mail := domain.ProviderMail{ID: row.ID, ProviderMessageID: row.ProviderMessageID, StateAt: row.StateAgeFrom, SentAt: row.SentAt, CheckedAt: row.CheckedAt}
 		if row.DeliveryState != nil {
 			mail.State = domain.EmailDeliveryState(*row.DeliveryState)
 		}
