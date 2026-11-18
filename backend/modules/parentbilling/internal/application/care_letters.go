@@ -169,13 +169,14 @@ func (l *CareLetters) CreateCareLetters(ctx context.Context, reviewer parentbill
 		return parentbilling.CareLetters{}, err
 	}
 	current.letters = &set
+	details := map[string]any{"invoice_count": len(invoices), "invoice_ids": invoiceIDs(invoices)}
 	for _, content := range contents {
 		if err := l.storeLetter(ctx, reviewer, &current, content); err != nil {
 			return parentbilling.CareLetters{}, err
 		}
+		addHolderSnapshotRead(details, content.invoice.ID, content.invoice.TotalCents, content.invoice.Payment)
 	}
-	if err := l.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, current.run.ID, reviewer.AccountID, careEventLetters,
-		map[string]any{"invoice_count": len(invoices), "invoice_ids": invoiceIDs(invoices)}); err != nil {
+	if err := l.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, current.run.ID, reviewer.AccountID, careEventLetters, details); err != nil {
 		return parentbilling.CareLetters{}, fmt.Errorf("parent billing: record care letters: %w", err)
 	}
 	return l.overview(ctx, reviewer, current)
@@ -208,7 +209,10 @@ func (l *CareLetters) PreviewCareLetter(ctx context.Context, reviewer parentbill
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
-	if err := l.recordRead(ctx, reviewer, current.run.ID, map[string]any{"letter": "preview", "invoice_id": invoices[0].ID}); err != nil {
+	invoice := invoices[0]
+	details := map[string]any{"letter": "preview", "invoice_id": invoice.ID}
+	addHolderSnapshotRead(details, invoice.ID, invoice.TotalCents, invoice.Payment)
+	if err := l.recordRead(ctx, reviewer, current.run.ID, details); err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
 	return file, nil

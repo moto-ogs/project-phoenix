@@ -61,7 +61,7 @@ var _ parentbilling.BillingLetterService = (*BillingLetters)(nil)
 // NewBillingLetters builds the letters. today bounds the payment date.
 func NewBillingLetters(store LetterStore, letterheads parentbilling.BillingLetterheads, renderer LetterRenderer, bankData parentbilling.BankDataCipher, today func() calendar.Date) *BillingLetters {
 	if store == nil || letterheads == nil || renderer == nil || bankData == nil || today == nil {
-		panic("parent billing: the store, the letterheads, the renderer and the clock are required")
+		panic("parent billing: the store, the letterheads, the renderer, the bank data cipher and the clock are required")
 	}
 	return &BillingLetters{store: store, letterheads: letterheads, renderer: renderer, bankData: bankData, today: today}
 }
@@ -94,6 +94,7 @@ func (b *BillingLetters) CreateBillingLetters(ctx context.Context, reviewer pare
 	if err != nil {
 		return parentbilling.BillingLetters{}, err
 	}
+	details := map[string]any{"document_count": len(documents)}
 	for _, document := range documents {
 		file, err := b.render(reviewer.OrganizationID, runLetterContent(run, documents, document, input, head))
 		if err != nil {
@@ -102,9 +103,9 @@ func (b *BillingLetters) CreateBillingLetters(ctx context.Context, reviewer pare
 		if err := b.store.InsertDocumentLetter(ctx, reviewer.OrganizationID, run.ID, document.ID, file); err != nil {
 			return parentbilling.BillingLetters{}, fmt.Errorf("parent billing: store letter: %w", err)
 		}
+		addHolderSnapshotRead(details, document.ID, document.TotalCents, document.Payment)
 	}
-	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventLetters,
-		map[string]any{"document_count": len(documents)}); err != nil {
+	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventLetters, details); err != nil {
 		return parentbilling.BillingLetters{}, fmt.Errorf("parent billing: record letters: %w", err)
 	}
 	return letters, nil
@@ -135,7 +136,9 @@ func (b *BillingLetters) PreviewBillingLetter(ctx context.Context, reviewer pare
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
-	if err := b.recordRead(ctx, reviewer, run.ID, invoice.ID, "preview"); err != nil {
+	details := map[string]any{"document_id": invoice.ID, "letter": "preview"}
+	addHolderSnapshotRead(details, invoice.ID, invoice.TotalCents, invoice.Payment)
+	if err := b.recordRead(ctx, reviewer, run.ID, details); err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
 	return file, nil
@@ -160,7 +163,7 @@ func (b *BillingLetters) BillingLetter(ctx context.Context, reviewer parentbilli
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
-	if err := b.recordRead(ctx, reviewer, run.ID, documentID, "download"); err != nil {
+	if err := b.recordRead(ctx, reviewer, run.ID, map[string]any{"document_id": documentID, "letter": "download"}); err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
 	return file, nil
@@ -326,9 +329,8 @@ func letterFilePrefix(documentKind string) string {
 	return "bestaetigung-"
 }
 
-func (b *BillingLetters) recordRead(ctx context.Context, reviewer parentbilling.HolidayReviewer, runID, documentID int64, letter string) error {
-	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, runID, reviewer.AccountID, runEventRead,
-		map[string]any{"document_id": documentID, "letter": letter}); err != nil {
+func (b *BillingLetters) recordRead(ctx context.Context, reviewer parentbilling.HolidayReviewer, runID int64, details map[string]any) error {
+	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, runID, reviewer.AccountID, runEventRead, details); err != nil {
 		return fmt.Errorf("parent billing: record letter read: %w", err)
 	}
 	return nil

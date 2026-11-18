@@ -99,13 +99,33 @@ func sameBillingName(a, b string) bool {
 	return strings.EqualFold(strings.Join(strings.Fields(a), " "), strings.Join(strings.Fields(b), " "))
 }
 
+func secondLetterRecipient(kind, name string) string {
+	if kind == parentbilling.RecipientBoth {
+		return name
+	}
+	return ""
+}
+
+func hasInvoiceAccountHolder(payment *parentbilling.InvoicePayment) bool {
+	return isDirectDebit(payment) && payment.Mandate != nil && len(payment.Mandate.HolderSealed) > 0
+}
+
+// addHolderSnapshotRead records which invoices opened their stored holder.
+// The invoice's audit trail survives independently of the original mandate.
+func addHolderSnapshotRead(details map[string]any, id, totalCents int64, payment *parentbilling.InvoicePayment) {
+	if totalCents > 0 && hasInvoiceAccountHolder(payment) {
+		ids, _ := details["account_holder_snapshot_ids"].([]int64)
+		details["account_holder_snapshot_ids"] = append(ids, id)
+	}
+}
+
 // invoiceAccountHolder opens the invoice's own copy, which uses the same
 // Träger and reference binding as the sealed field on the mandate.
 func invoiceAccountHolder(cipher parentbilling.BankDataCipher, organizationID int64, payment *parentbilling.InvoicePayment) (string, error) {
-	mandate := paymentMandate(payment)
-	if !isDirectDebit(payment) || mandate == nil || len(mandate.HolderSealed) == 0 {
+	if !hasInvoiceAccountHolder(payment) {
 		return "", nil
 	}
+	mandate := payment.Mandate
 	holder, err := cipher.Open(mandate.HolderSealed, holderContext(organizationID, mandate.Reference))
 	if err != nil {
 		return "", errors.New("parent billing: the invoice account holder does not open")

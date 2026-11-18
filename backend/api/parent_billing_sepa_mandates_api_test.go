@@ -226,6 +226,15 @@ func TestSEPAMandateReachesTheInvoiceAsPrenotification(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/letters/preview"), careLettersInput())
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.True(t, bytes.HasPrefix(rec.Body.Bytes(), []byte("%PDF-")), "the stored holder opens for the letter")
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/letters"), careLettersInput())
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	var holderAudit []string
+	require.NoError(t, f.db.NewRaw(`SELECT event.action FROM parent_billing.care_run_events event
+		JOIN parent_billing.care_invoices invoice ON invoice.organization_id = event.organization_id AND invoice.run_id = event.run_id
+		WHERE event.run_id = ? AND invoice.care_contract_id = ?
+			AND event.details->'account_holder_snapshot_ids' = jsonb_build_array(invoice.id)
+		ORDER BY event.id`, run.ID, contract).Scan(context.Background(), &holderAudit))
+	assert.Equal(t, []string{"read", "letters"}, holderAudit, "preview and creation record the opened invoice snapshot")
 
 	// A revocation ends the mandate; the revoked one stays as history, and
 	// the issued invoice keeps its copy.

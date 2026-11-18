@@ -107,12 +107,22 @@ func TestCareInvoiceDirectDebitGolden(t *testing.T) {
 
 func TestDirectDebitForwardingDependsOnTheNamedRecipients(t *testing.T) {
 	t.Parallel()
-	for _, holder := range []string{"Eva Beispiel", "  EVA   Beispiel ", "", "Nora Muster"} {
+	for _, tc := range []struct {
+		holder, kind, second string
+		wantsForwarding      bool
+	}{
+		{holder: "Eva Beispiel"},
+		{holder: "  EVA   Beispiel "},
+		{},
+		{holder: "Nora Muster", kind: parentbilling.RecipientBoth, second: "Nora Muster"},
+		{holder: "Jan Muster", kind: parentbilling.RecipientBoth, second: "Nora Muster", wantsForwarding: true},
+		{holder: "Nora Muster", kind: parentbilling.RecipientApplicant, second: "Nora Muster", wantsForwarding: true},
+	} {
 		content := sepaInvoice()
-		content.invoice.Recipient.Kind = parentbilling.RecipientBoth
-		content.invoice.Recipient.SecondName = "Nora Muster"
-		content.accountHolder = holder
-		assert.NotContains(t, carePaymentText(content), "geben Sie dieses Schreiben bitte weiter", holder)
+		content.invoice.Recipient.Kind = tc.kind
+		content.invoice.Recipient.SecondName = tc.second
+		content.accountHolder = tc.holder
+		assert.Equal(t, tc.wantsForwarding, strings.Contains(carePaymentText(content), "geben Sie dieses Schreiben bitte weiter"), tc)
 	}
 }
 
