@@ -11188,8 +11188,8 @@ export const traegerArrivalPickupTimesTopic =
         "Lies oben die Hauptzeiten: `Meiste Ankünfte` und `Meiste Abholungen`.",
         "Lies die Felder unter `Ankunft` und `Abholung`. Je dunkler ein Feld, desto mehr Kinder. Die Zahl im Feld ist der Durchschnitt eines Tages.",
         "Zeige auf ein Feld oder tippe darauf. Darunter steht dann die genaue Zahl.",
-        "Wähle unter `Je Schule` eine Schule oder oben den Filter `Schule`. Dann siehst du nur diese Schule.",
-        "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Mit einer gewählten Schule enthält die Datei nur diese Schule.",
+        "Wähle unter `Je Schule` eine Schule oder oben neben dem Zeitraum eine Schule. Dann siehst du nur diese Schule.",
+        "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Mit einer gewählten Schule enthält die Datei nur diese Schule.",
       ],
       result:
         "Du siehst, wann an jeder Schule viele Kinder kommen und gehen. Plane für diese Zeiten mehr Personal ein.",
@@ -12744,8 +12744,8 @@ export const traegerDailyAttendanceTopic =
         "Wähle oben den Zeitraum. Am Anfang ist es die letzte Woche bis gestern. Ein Zeitraum hat höchstens 31 Tage.",
         "Lies oben die Zahlen: `Kinder am Tag`, `Verweildauer`, `Längster Tag` und `Abwesend gemeldet`.",
         "Lies unter `Je Tag`, wie viele Kinder an jedem Tag da waren und wie viele krank, entschuldigt oder auf Klassenfahrt waren.",
-        "Wähle oben den Filter `Schule`, um nur eine Schule zu sehen.",
-        "Wähle `Herunterladen` und dann `CSV`. Diese Datei reichst du beim Land ein. `PDF` und `Excel` sind für deine eigene Ablage.",
+        "Wähle oben neben dem Zeitraum eine Schule, um nur sie zu sehen.",
+        "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `CSV`. Diese Datei reichst du beim Land ein. `PDF` und `Excel` sind für deine eigene Ablage.",
       ],
       result:
         "Du hast die Datei mit einer Zeile je Kind und Tag. Sie enthält keine Namen.",
@@ -14144,7 +14144,7 @@ export const traegerKeyDateCountsTopic =
         "Lies darunter die Zahlen jeder Schule.",
         "Wähle unter `Alle Monate` einen Monat, um seine Zahlen zu sehen.",
         "Wähle bei Bedarf oben eine Schule. Die Summe zeigt dann nur diese Schule.",
-        "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Monate, für alle Schulen oder die gewählte Schule.",
+        "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Monate, für alle Schulen oder die gewählte Schule.",
       ],
       result:
         "Du siehst für jede Schule, wie viele aktive Kinder und aktive Geräte moto am Stichtag gezählt hat.",
@@ -14294,7 +14294,7 @@ export const traegerOccupancyTopic =
         "Lies oben die Summe für alle Schulen und die freien Plätze.",
         "Wähle einen Reiter: `Schulen`, `Gruppen` oder `Betreuungsformen`.",
         "Wähle bei Bedarf oben eine Schule.",
-        "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Mit einer gewählten Schule enthält die Datei nur diese Schule.",
+        "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Mit einer gewählten Schule enthält die Datei nur diese Schule.",
       ],
       result:
         "Du siehst für jede Schule, wie viele Kinder in welcher Gruppe sind und welches Betreuungsangebot sie heute gebucht haben. Du siehst auch, wo noch Plätze frei sind.",
@@ -14448,7 +14448,7 @@ export const traegerReportsTopic = function traegerReportsTopic(): HelpTopic {
       "Prüfe den Stichtag. moto schlägt den letzten 15. Oktober vor. Mit den Pfeilen springst du ein Jahr vor oder zurück.",
       "Hat die Vorlage Sozialräume, wähle `Je Schule` oder `Je Sozialraum`.",
       "Wähle in der Tabelle der Kinder eine Zeile, um die Betreuungsformen zu sehen.",
-      "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+      "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
     ],
     result:
       "Du hast eine Datei mit den Zahlen aller Schulen und einer Zeile „Gesamt“. Du kannst sie an Jugendamt oder Kommune schicken.",
@@ -14511,7 +14511,7 @@ export const traegerSchoolComparisonTopic =
         "Wähle bei Bedarf rechts daneben die Schulen. Ohne Auswahl vergleicht moto alle Schulen.",
         "Wähle bei `Rangfolge` eine Kennzahl, zum Beispiel `Plätze belegt`. Die Schule mit der größten Zahl steht oben.",
         "Wähle bei `Kennzahlen je Schule` die Spalten, die du vergleichen willst.",
-        "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält die gewählten Schulen und Kennzahlen.",
+        "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält die gewählten Schulen und Kennzahlen.",
       ],
       result:
         "Du siehst, welche Schule voller oder leerer ist als die anderen und wie weit sie vom Schnitt entfernt ist.",
@@ -15588,7 +15588,7 @@ export const traegerUtilizationTopic =
         "Wähle einen Reiter: `Schulen`, `Betreuungsformen` oder `Räume`.",
         "Wähle eine Zeile der Tabelle. Das Diagramm zeigt dann den Verlauf dieser Zeile.",
         "Wähle über dem Diagramm `Tage`, `Wochen` oder `Monate`.",
-        "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Zahlen je Tag. Mit einer gewählten Schule nur diese Schule.",
+        "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Zahlen je Tag. Mit einer gewählten Schule nur diese Schule.",
       ],
       result:
         "Du siehst, wie voll die Plätze im Durchschnitt waren, an welchem Tag am meisten los war und welche Betreuungsformen voll waren.",

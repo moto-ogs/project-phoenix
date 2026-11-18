@@ -415,9 +415,9 @@ describe("TraegerOccupancyPage", () => {
     await screen.findByText("14 von 16");
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Belegung herunterladen" }),
+      screen.getAllByRole("button", { name: "Weitere Aktionen" })[0]!,
     );
-    fireEvent.click(await screen.findByRole("menuitem", { name: "CSV" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: /^CSV/ }));
 
     await vi.waitFor(() =>
       expect(mockDownloadBlob).toHaveBeenCalledWith(
@@ -465,9 +465,9 @@ describe("TraegerOccupancyPage", () => {
       if (source === "export") {
         mockDownload.mockRejectedValue(refusal);
         fireEvent.click(
-          screen.getByRole("button", { name: "Belegung herunterladen" }),
+          screen.getAllByRole("button", { name: "Weitere Aktionen" })[0]!,
         );
-        const csv = await screen.findByRole("menuitem", { name: "CSV" });
+        const csv = await screen.findByRole("menuitem", { name: /^CSV/ });
         await act(async () => {
           fireEvent.click(csv);
         });
@@ -497,12 +497,15 @@ describe("TraegerOccupancyPage", () => {
       expect(
         screen.queryByPlaceholderText("Schule oder Ort suchen…"),
       ).not.toBeInTheDocument();
+      // The export sits in the page menu now: its entries stay, disabled.
       fireEvent.click(
-        screen.getByRole("button", { name: "Belegung herunterladen" }),
+        screen.getAllByRole("button", { name: "Weitere Aktionen" })[0]!,
       );
-      expect(
-        screen.queryByRole("menuitem", { name: "CSV" }),
-      ).not.toBeInTheDocument();
+      const staleCsv = await screen.findByRole("menuitem", { name: /^CSV/ });
+      expect(staleCsv).toBeDisabled();
+      const downloads = mockDownload.mock.calls.length;
+      fireEvent.click(staleCsv);
+      expect(mockDownload).toHaveBeenCalledTimes(downloads);
       assign.mockRestore();
     },
   );
@@ -516,9 +519,9 @@ describe("TraegerOccupancyPage", () => {
       await screen.findByText("14 von 16");
 
       fireEvent.click(
-        screen.getByRole("button", { name: "Belegung herunterladen" }),
+        screen.getAllByRole("button", { name: "Weitere Aktionen" })[0]!,
       );
-      fireEvent.click(await screen.findByRole("menuitem", { name: "CSV" }));
+      fireEvent.click(await screen.findByRole("menuitem", { name: /^CSV/ }));
 
       expect(await screen.findByRole("alert")).toBeInTheDocument();
       expect(screen.getByText("14 von 16")).toBeInTheDocument();
@@ -529,10 +532,10 @@ describe("TraegerOccupancyPage", () => {
         screen.getByText("09.09.2026, Stand 12:00 Uhr"),
       ).toBeInTheDocument();
       fireEvent.click(
-        screen.getByRole("button", { name: "Belegung herunterladen" }),
+        screen.getAllByRole("button", { name: "Weitere Aktionen" })[0]!,
       );
       expect(
-        await screen.findByRole("menuitem", { name: "CSV" }),
+        await screen.findByRole("menuitem", { name: /^CSV/ }),
       ).toBeEnabled();
     },
   );

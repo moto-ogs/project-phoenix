@@ -9,6 +9,7 @@
 import { useMemo, useState } from "react";
 import { CalendarOff, School } from "lucide-react";
 import type { DateRange } from "react-day-picker";
+import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DateRangePicker } from "~/components/ui/date-range-picker";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -19,10 +20,7 @@ import {
   type HeatmapTone,
 } from "~/components/ui/heatmap";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import type {
-  ActiveFilter,
-  FilterConfig,
-} from "~/components/ui/page-header/types";
+import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
@@ -43,9 +41,10 @@ import {
 } from "~/components/traeger/arrival-pickup-model";
 import { useTraegerArrivalPickupTimes } from "~/components/traeger/use-traeger-arrival-pickup-times";
 import {
-  TraegerListExportMenu,
   traegerExportScope,
+  useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
+import { shiftWindow } from "~/components/traeger/utilization-model";
 import type { MotoConcept } from "~/lib/moto-concepts";
 import { childrenConcept } from "~/lib/concepts/children";
 import { pickupConcept } from "~/lib/concepts/pickup";
@@ -328,7 +327,7 @@ function schoolColumns(
         <div className="min-w-0">
           <span className="font-medium text-gray-900">{school.name}</span>
           {school.city ? (
-            <span className="block text-xs text-gray-500 max-md:hidden">
+            <span className="block text-sm text-gray-500 max-md:hidden">
               {school.city}
             </span>
           ) : null}
@@ -347,7 +346,7 @@ function schoolColumns(
           <span className="text-sm text-gray-900 tabular-nums">
             <span className="font-semibold">{days}</span>
             {school.firstDay && firstOfAll && school.firstDay > firstOfAll ? (
-              <span className="block text-xs text-gray-500">
+              <span className="block text-sm text-gray-500">
                 ab {formatDate(school.firstDay)}
               </span>
             ) : null}
@@ -425,34 +424,38 @@ export default function TraegerArrivalPickupPage() {
     }
   }
 
-  const filters: FilterConfig[] =
-    schools.length > 1
-      ? [
-          {
-            id: "school",
-            label: "Schule",
-            type: "dropdown",
-            value: schoolId,
-            onChange: (value) => setSchoolId(value as string),
-            options: [
-              { value: "", label: "Alle Schulen" },
-              ...schools.map((school) => ({
-                value: school.id,
-                label: school.name,
-              })),
-            ],
-          },
-        ]
-      : [];
-  const activeFilters: ActiveFilter[] = selected
-    ? [
-        {
-          id: "school",
-          label: selected.name,
-          onRemove: () => setSchoolId(""),
-        },
-      ]
-    : [];
+  // Die Pfeile schieben den Zeitraum um seine Länge, innerhalb der Auswahl.
+  const bounds = {
+    min: toISODate(daysBefore(yesterday, MAX_DAYS - 1)),
+    max: toISODate(yesterday),
+  };
+  const previousPeriod = shiftWindow(period, -1, bounds);
+  const nextPeriod = shiftWindow(period, 1, bounds);
+  const initialRange = defaultRange(yesterday);
+  const defaultPeriod = {
+    from: toISODate(initialRange.from!),
+    to: toISODate(initialRange.to!),
+  };
+  const onDefault =
+    period.from === defaultPeriod.from && period.to === defaultPeriod.to;
+  function showPeriod(next: ArrivalPickupPeriod) {
+    setPeriod(next);
+    setRange({ from: parseISODate(next.from), to: parseISODate(next.to) });
+  }
+
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerArrivalPickupTimes(
+        period,
+        format,
+        selected?.id ?? undefined,
+      ),
+    scope: traegerExportScope(selected?.name),
+    fallbackName: `ankunft-und-abholung-${period.from}-bis-${period.to}`,
+    errorObject: "die Ankunfts- und Abholzeiten",
+    unavailable: !times,
+    onError: reportError,
+  });
 
   const withData = heatmap !== null && hasData(heatmap);
 
@@ -468,34 +471,7 @@ export default function TraegerArrivalPickupPage() {
           zählt erst morgen mit. moto zeigt hier keine Namen von Kindern.
         </>
       }
-      actions={
-        <>
-          <DateRangePicker
-            value={range}
-            onChange={changeRange}
-            presets={rangePresets(yesterday)}
-            toMax={yesterday}
-            fromMin={daysBefore(yesterday, MAX_DAYS - 1)}
-            className="w-full sm:w-auto"
-            triggerClassName="w-full sm:w-auto"
-          />
-          <TraegerListExportMenu
-            download={(format) =>
-              downloadTraegerArrivalPickupTimes(
-                period,
-                format,
-                selected?.id ?? undefined,
-              )
-            }
-            scope={traegerExportScope(selected?.name)}
-            ariaLabel="Ankunft und Abholung herunterladen"
-            fallbackName={`ankunft-und-abholung-${period.from}-bis-${period.to}`}
-            errorObject="die Ankunfts- und Abholzeiten"
-            unavailable={!times}
-            onError={reportError}
-          />
-        </>
-      }
+      overflowMenu={exportItems}
       stats={
         times ? (
           <TenantPageStats
@@ -520,9 +496,48 @@ export default function TraegerArrivalPickupPage() {
             }
           : null
       }
-      filters={filters.length > 0 ? filters : undefined}
-      activeFilters={activeFilters}
-      onClearAllFilters={() => setSchoolId("")}
+      searchSlot={
+        <PlanningContextBar
+          withoutContextRow
+          navigationInGroup
+          navigationSlot={
+            <DateRangePicker
+              value={range}
+              onChange={changeRange}
+              presets={rangePresets(yesterday)}
+              toMax={yesterday}
+              fromMin={daysBefore(yesterday, MAX_DAYS - 1)}
+              className="min-w-0"
+              embedded
+            />
+          }
+          onPrevious={
+            previousPeriod ? () => showPeriod(previousPeriod) : undefined
+          }
+          onNext={nextPeriod ? () => showPeriod(nextPeriod) : undefined}
+          previousLabel="Zeitraum davor"
+          nextLabel="Zeitraum danach"
+          onToday={onDefault ? undefined : () => showPeriod(defaultPeriod)}
+          todayLabel="Letzte 4 Wochen"
+          actions={
+            schools.length > 1 ? (
+              <CustomSelect
+                ariaLabel="Schule"
+                value={schoolId}
+                onChange={setSchoolId}
+                options={[
+                  { value: "", label: "Alle Schulen" },
+                  ...schools.map((school) => ({
+                    value: school.id,
+                    label: school.name,
+                  })),
+                ]}
+                className="min-w-0 md:w-64"
+              />
+            ) : undefined
+          }
+        />
+      }
     >
       <Figures
         heatmap={heatmap}

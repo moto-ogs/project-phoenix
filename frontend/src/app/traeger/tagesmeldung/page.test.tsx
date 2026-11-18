@@ -273,9 +273,7 @@ describe("TraegerDailyAttendancePage", () => {
     renderPage();
     await screen.findByRole("heading", { name: /^Je Tag/ });
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Tagesmeldung herunterladen" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: /CSV/ }));
 
     await vi.waitFor(() =>

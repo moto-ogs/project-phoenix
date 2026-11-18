@@ -32,12 +32,12 @@ import { UtilizationChildrenSection } from "~/components/traeger/utilization-chi
 import { FreshPerTraeger } from "~/components/traeger/fresh-per-traeger";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import {
-  daysBetween,
   defaultGranularity,
   offeringRows,
   roomRows,
   schoolRows,
   shiftDays,
+  shiftWindow,
   utilizationBuckets,
   utilizationFigures,
   utilizationPresets,
@@ -56,10 +56,11 @@ import {
   schoolColumns,
 } from "~/components/traeger/utilization-tables";
 import {
-  TraegerListExportMenu,
   traegerExportScope,
+  useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import { hasPermission } from "~/lib/auth-utils";
+import { calendarConcept } from "~/lib/concepts/calendar";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { childrenConcept } from "~/lib/concepts/children";
 import { roomsConcept } from "~/lib/concepts/rooms";
@@ -80,7 +81,10 @@ const UtilizationChart = dynamic(
     import("~/components/traeger/utilization-chart").then(
       (module) => module.UtilizationChart,
     ),
-  { ssr: false, loading: () => <Skeleton className="h-72" aria-hidden /> },
+  {
+    ssr: false,
+    loading: () => <Skeleton shape="inner" className="h-72" aria-hidden />,
+  },
 );
 
 const ALL_SCHOOLS = "all";
@@ -158,6 +162,7 @@ function Figures({
             : "Kein Tag mit Platzgrenze"
         }
         tone={figures.peak && figures.peak.share >= 1 ? "orange" : "neutral"}
+        icon={<MotoConceptIcon concept={calendarConcept} />}
         loading={loading}
       />
       <StatCard
@@ -352,15 +357,8 @@ function TraegerUtilizationContent() {
     from: parseISODate(period.from),
     to: parseISODate(period.to),
   };
-  const length = windowLength(period);
-  const canShiftForward = period.to < today;
-  const shift = (direction: number) => {
-    let to = shiftDays(period.to, direction * length);
-    if (to > today) to = today;
-    const delta = daysBetween(period.to, to);
-    if (delta === 0) return;
-    changeWindow({ from: shiftDays(period.from, delta), to });
-  };
+  const previousWindow = shiftWindow(period, -1, { max: today });
+  const nextWindow = shiftWindow(period, 1, { max: today });
   const onDefault =
     period.from === defaultWindow.from && period.to === defaultWindow.to;
   const chart = VIEW_CHART[view];
@@ -388,6 +386,18 @@ function TraegerUtilizationContent() {
       variant: "dot" as const,
     },
   ];
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerUtilization(
+        period,
+        schoolId === ALL_SCHOOLS ? undefined : schoolId,
+        format,
+      ),
+    scope: traegerExportScope(selectedSchool?.name),
+    fallbackName: `auslastung-${period.from}-bis-${period.to}`,
+    errorObject: "die Auslastung",
+    unavailable: !utilization,
+  });
   const chartEmpty =
     selection === null ||
     selection.points.every(
@@ -405,26 +415,12 @@ function TraegerUtilizationContent() {
           Kinder der Betreuungsformen mit Platzgrenze. „Anwesend“ sind die
           Kinder mit Check-in. Ein Tag ohne Check-in, etwa in den Ferien, hat
           keine Zahl. Heute zählt erst, wenn der Tag vorbei ist. Die Kinder von
-          heute stehen unter „Belegung“. Mit „Herunterladen“ bekommst du alle
-          Zahlen je Tag als PDF, Excel oder CSV.
+          heute stehen unter „Belegung“. Im Drei-Punkte-Menü unter
+          „Herunterladen“ bekommst du alle Zahlen je Tag als PDF, Excel oder
+          CSV.
         </>
       }
-      actions={
-        <TraegerListExportMenu
-          download={(format) =>
-            downloadTraegerUtilization(
-              period,
-              schoolId === ALL_SCHOOLS ? undefined : schoolId,
-              format,
-            )
-          }
-          scope={traegerExportScope(selectedSchool?.name)}
-          ariaLabel="Auslastung herunterladen"
-          fallbackName={`auslastung-${period.from}-bis-${period.to}`}
-          errorObject="die Auslastung"
-          unavailable={!utilization}
-        />
-      }
+      overflowMenu={exportItems}
       stats={
         utilization ? (
           <TenantPageStats
@@ -481,8 +477,10 @@ function TraegerUtilizationContent() {
               embedded
             />
           }
-          onPrevious={() => shift(-1)}
-          onNext={canShiftForward ? () => shift(1) : undefined}
+          onPrevious={
+            previousWindow ? () => changeWindow(previousWindow) : undefined
+          }
+          onNext={nextWindow ? () => changeWindow(nextWindow) : undefined}
           previousLabel="Zeitraum davor"
           nextLabel="Zeitraum danach"
           onToday={onDefault ? undefined : () => changeWindow(defaultWindow)}
@@ -569,7 +567,7 @@ function TraegerUtilizationContent() {
         }
       >
         {loading ? (
-          <Skeleton className="h-72" aria-hidden />
+          <Skeleton shape="inner" className="h-72" aria-hidden />
         ) : chartEmpty ? (
           <EmptyState
             variant="compact"
