@@ -25,22 +25,21 @@ import (
 //
 // The schema is built once per test binary into a package-local template;
 // each test gets its own clone of it and may change it (#6962).
+const (
+	exportFixtureSchool      int64 = 10001
+	exportFixtureOtherSchool int64 = 10002
+)
+
 func exportFixture(t *testing.T) (*bun.DB, organizationtenancy.DataLifecycleCatalog, int64, int64) {
 	t.Helper()
 	db := testpkg.SetupIsolatedTestDBFrom(t, exportSchemaTemplate)
-	a, b := testpkg.UniqueTestTenantID(t), testpkg.UniqueTestTenantID(t)
 	catalog, err := readExportCatalog()
 	require.NoError(t, err)
-	for _, table := range catalog.Tables {
-		for _, school := range []int64{a, b} {
-			insertExportFixtureRow(t, db, table, school)
-		}
-	}
-	return db, catalog, a, b
+	return db, catalog, exportFixtureSchool, exportFixtureOtherSchool
 }
 
-// exportSchemaTemplate replaces every catalog schema of a migrated clone
-// with the fixture tables.
+// exportSchemaTemplate replaces the catalog schemas with fixture tables and
+// seeds both synthetic schools once. Every test gets its own writable clone.
 var exportSchemaTemplate = testpkg.NewIsolatedTemplate("export-fixture-schema", func(ctx context.Context, db *bun.DB) error {
 	catalog, err := readExportCatalog()
 	if err != nil {
@@ -52,6 +51,12 @@ var exportSchemaTemplate = testpkg.NewIsolatedTemplate("export-fixture-schema", 
 	for _, table := range catalog.Tables {
 		if err := createExportFixtureTable(ctx, db, table); err != nil {
 			return err
+		}
+		for _, school := range [...]int64{exportFixtureSchool, exportFixtureOtherSchool} {
+			row := exportFixtureRow(table, school)
+			if _, err := db.NewInsert().TableExpr(table.Name).Model(&row).Exec(ctx); err != nil {
+				return fmt.Errorf("seed export fixture %s: %w", table.Name, err)
+			}
 		}
 	}
 	return nil
@@ -146,8 +151,7 @@ func createExportFixtureTable(ctx context.Context, db *bun.DB, table organizatio
 	return nil
 }
 
-func insertExportFixtureRow(t *testing.T, db *bun.DB, table organizationtenancy.LifecycleTable, school int64) {
-	t.Helper()
+func exportFixtureRow(table organizationtenancy.LifecycleTable, school int64) map[string]any {
 	row := map[string]any{"id": school, "fixture_school": school, "fixture_label": fmt.Sprintf("synthetic-school-%d", school),
 		"account_id": school, "user_id": school, "organization_id": school, "announcement_id": school, "email": fmt.Sprintf("fixture-%d@example.invalid", school)}
 	if table.Scope == "tenant" {
@@ -176,8 +180,7 @@ func insertExportFixtureRow(t *testing.T, db *bun.DB, table organizationtenancy.
 	for name := range table.ExcludeSecretColumns {
 		row[name] = "excluded-" + table.Name + "-" + name
 	}
-	_, err := db.NewInsert().TableExpr(table.Name).Model(&row).Exec(t.Context())
-	require.NoError(t, err)
+	return row
 }
 
 func fixtureUploads(t *testing.T, db *bun.DB, catalog organizationtenancy.DataLifecycleCatalog, a, b int64) string {
