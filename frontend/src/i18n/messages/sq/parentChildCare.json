@@ -53,7 +53,11 @@
     "submitDirectTooltip": "E çregjistron fëmijën menjëherë. {careTerm} e sheh menjëherë.",
     "submitRequestTooltip": "E dërgon menjëherë mungesën si kërkesë. {careTerm} duhet ta konfirmojë.",
     "submitTooltip": "E dërgon menjëherë mungesën te {careTerm}.",
-    "submitBlocked": "{careTerm} nuk pranon tani mungesa këtu."
+    "submitBlocked": "{careTerm} nuk pranon tani mungesa këtu.",
+    "requestSentSchoolBodyWithoutCarePlace": "Shkolla ka shënuar tashmë diçka për këto ditë. Ajo e kontrollon njoftimin tuaj. Deri atëherë vlen shënimi i saj.",
+    "requestSentPartlyBodyWithoutCarePlace": "Ditët e lira janë njoftuar. Për ditët e tjera shkolla e kontrollon njoftimin tuaj. Deri atëherë vlen shënimi i saj.",
+    "submitBlockedWithoutCarePlace": "Shkolla nuk pranon tani mungesa këtu.",
+    "schoolSickDayWithoutCarePlace": "{date}: shkolla e ka shënuar si të sëmurë"
   },
   "summary": {
     "none": "Asnjë mungesë",

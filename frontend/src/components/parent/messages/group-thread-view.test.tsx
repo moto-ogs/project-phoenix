@@ -243,10 +243,9 @@ describe("ParentGroupThreadView (#4784)", () => {
     mockedThread.mockResolvedValue({ ...sommerfest, closed: true });
     renderView();
     expect(
-      await screen.findByText(
-        "Diese Gruppennachricht ist geschlossen. Sie können der OGS weiter im Chat zu Ihrem Kind schreiben.",
-      ),
+      await screen.findByText("Diese Gruppennachricht ist geschlossen."),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/weiter im Chat/)).toBeNull();
     expect(
       screen.queryByRole("link", { name: "Zum Chat mit der OGS" }),
     ).not.toBeInTheDocument();

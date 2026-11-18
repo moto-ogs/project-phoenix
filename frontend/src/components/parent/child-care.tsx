@@ -859,7 +859,11 @@ export function SickNoteModal({
               )}
               disabledReason={
                 !sickEnabled && !excusedEnabled
-                  ? t("sick.submitBlocked")
+                  ? t(
+                      withoutCarePlace
+                        ? "sick.submitBlockedWithoutCarePlace"
+                        : "sick.submitBlocked",
+                    )
                   : undefined
               }
               isLoading={submitting}
@@ -880,9 +884,17 @@ export function SickNoteModal({
       {submitted ? (
         <p role="status" className="text-sm leading-6 text-gray-700">
           {submitted === "partly_pending"
-            ? t("sick.requestSentPartlyBody")
+            ? t(
+                withoutCarePlace
+                  ? "sick.requestSentPartlyBodyWithoutCarePlace"
+                  : "sick.requestSentPartlyBody",
+              )
             : requiresApproval === false
-              ? t("sick.requestSentSchoolBody")
+              ? t(
+                  withoutCarePlace
+                    ? "sick.requestSentSchoolBodyWithoutCarePlace"
+                    : "sick.requestSentSchoolBody",
+                )
               : withoutCarePlace
                 ? t("sick.requestSentBodyWithoutCarePlace")
                 : t("sick.requestSentBody")}
@@ -962,13 +974,18 @@ export function SickNoteModal({
                             ),
                             time: day.time,
                           })
-                        : t("sick.schoolSickDay", {
-                            date: formatCalendarDate(
-                              day.date,
-                              locale,
-                              SCHOOL_DAY_FORMAT,
-                            ),
-                          })}
+                        : t(
+                            withoutCarePlace
+                              ? "sick.schoolSickDayWithoutCarePlace"
+                              : "sick.schoolSickDay",
+                            {
+                              date: formatCalendarDate(
+                                day.date,
+                                locale,
+                                SCHOOL_DAY_FORMAT,
+                              ),
+                            },
+                          )}
                     </li>
                   ))}
                 </ul>

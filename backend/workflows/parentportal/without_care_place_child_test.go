@@ -119,6 +119,7 @@ func TestParentPortal_ChildWithoutCarePlace(t *testing.T) {
 		assert.True(t, flags.EmergencyContactManageAllowed)
 		assert.False(t, flags.MealPlanEnabled)
 		assert.False(t, flags.MealRegistrationEnabled)
+		assert.False(t, flags.RequestSubmitEnabled, "requests for offerings and the weekly plan go to the OGS")
 
 		assert.True(t, flags.SickNoteEnabled)
 		assert.True(t, flags.ExcusedNoteEnabled)

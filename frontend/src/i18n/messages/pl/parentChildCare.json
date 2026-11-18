@@ -53,7 +53,11 @@
     "submitDirectTooltip": "Od razu zgłasza nieobecność Państwa dziecka. {careTerm} widzi to od razu.",
     "submitRequestTooltip": "Od razu wysyła nieobecność jako prośbę. {careTerm} musi potwierdzić.",
     "submitTooltip": "Od razu wysyła zgłoszenie nieobecności do {careTerm}.",
-    "submitBlocked": "{careTerm} nie przyjmuje tu teraz zgłoszeń nieobecności."
+    "submitBlocked": "{careTerm} nie przyjmuje tu teraz zgłoszeń nieobecności.",
+    "requestSentSchoolBodyWithoutCarePlace": "Szkoła wpisała już coś na te dni. Sprawdzi Państwa zgłoszenie. Do tego czasu obowiązuje jej wpis.",
+    "requestSentPartlyBodyWithoutCarePlace": "Wolne dni są zgłoszone. Na pozostałe dni szkoła sprawdzi Państwa zgłoszenie. Do tego czasu obowiązuje jej wpis.",
+    "submitBlockedWithoutCarePlace": "Szkoła nie przyjmuje tu teraz zgłoszeń nieobecności.",
+    "schoolSickDayWithoutCarePlace": "{date}: zgłoszone jako chore przez szkołę"
   },
   "summary": {
     "none": "Brak zwolnienia",

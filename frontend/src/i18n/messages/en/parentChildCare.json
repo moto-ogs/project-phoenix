@@ -53,7 +53,11 @@
     "submitDirectTooltip": "Reports your child absent right away. The {careTerm} sees it at once.",
     "submitRequestTooltip": "Sends the absence as a request right away. The {careTerm} must confirm.",
     "submitTooltip": "Sends the absence to the {careTerm} right away.",
-    "submitBlocked": "The {careTerm} does not accept absences here at the moment."
+    "submitBlocked": "The {careTerm} does not accept absences here at the moment.",
+    "requestSentSchoolBodyWithoutCarePlace": "The school has already entered something for these days. It will check your report. Until then, its entry applies.",
+    "requestSentPartlyBodyWithoutCarePlace": "The free days are reported. For the other days, the school will check your report. Until then, its entry applies.",
+    "submitBlockedWithoutCarePlace": "The school does not accept absences here at the moment.",
+    "schoolSickDayWithoutCarePlace": "{date}: reported sick by the school"
   },
   "summary": {
     "none": "No absence",

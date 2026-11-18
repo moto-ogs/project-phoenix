@@ -53,7 +53,11 @@
     "submitDirectTooltip": "Meldet Ihr Kind sofort ab. Die {careTerm} sieht es gleich.",
     "submitRequestTooltip": "Schickt die Abmeldung sofort als Anfrage. Die {careTerm} muss bestätigen.",
     "submitTooltip": "Schickt die Abmeldung sofort an die {careTerm}.",
-    "submitBlocked": "Die {careTerm} nimmt hier zurzeit keine Abmeldung an."
+    "submitBlocked": "Die {careTerm} nimmt hier zurzeit keine Abmeldung an.",
+    "requestSentSchoolBodyWithoutCarePlace": "Die Schule hat für diese Tage schon etwas eingetragen. Sie prüft Ihre Meldung. Bis dahin gilt ihr Eintrag.",
+    "requestSentPartlyBodyWithoutCarePlace": "Die freien Tage sind gemeldet. Für die anderen Tage prüft die Schule Ihre Meldung. Bis dahin gilt ihr Eintrag.",
+    "submitBlockedWithoutCarePlace": "Die Schule nimmt hier zurzeit keine Abmeldung an.",
+    "schoolSickDayWithoutCarePlace": "{date}: von der Schule krank gemeldet"
   },
   "summary": {
     "none": "Keine Abmeldung",

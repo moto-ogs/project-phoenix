@@ -53,7 +53,11 @@
     "submitDirectTooltip": "Одразу повідомляє про відсутність дитини. {careTerm} бачить це одразу.",
     "submitRequestTooltip": "Одразу надсилає відсутність як запит. {careTerm} має підтвердити.",
     "submitTooltip": "Одразу надсилає повідомлення про відсутність до {careTerm}.",
-    "submitBlocked": "{careTerm} зараз не приймає тут повідомлення про відсутність."
+    "submitBlocked": "{careTerm} зараз не приймає тут повідомлення про відсутність.",
+    "requestSentSchoolBodyWithoutCarePlace": "Школа вже внесла записи на ці дні. Вона перевірить ваше повідомлення. До того часу діє її запис.",
+    "requestSentPartlyBodyWithoutCarePlace": "Вільні дні повідомлено. Щодо інших днів школа перевірить ваше повідомлення. До того часу діє її запис.",
+    "submitBlockedWithoutCarePlace": "Школа зараз не приймає тут повідомлення про відсутність.",
+    "schoolSickDayWithoutCarePlace": "{date}: школа позначила хворобу"
   },
   "summary": {
     "none": "Немає повідомлення про відсутність",

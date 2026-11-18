@@ -321,7 +321,10 @@ export function ParentGroupThreadView({
           </div>
         ) : thread.closed ? (
           <div className="space-y-2">
-            <p className="text-sm leading-6 text-gray-600">{t("closedNote")}</p>
+            <p className="text-sm leading-6 text-gray-600">
+              {/* Ohne Kind mit OGS-Platz gibt es keinen Chat (#4803). */}
+              {chatLink ? t("closedNote") : t("closedNoteWithoutChat")}
+            </p>
             {chatLink}
           </div>
         ) : writable === null ? (

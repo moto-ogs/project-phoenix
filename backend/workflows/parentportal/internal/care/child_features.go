@@ -66,6 +66,8 @@ func withoutCarePlaceFlags(flags ChildFeatureFlags) ChildFeatureFlags {
 	flags.PickupManageAllowed = false
 	flags.MealPlanEnabled = false
 	flags.MealRegistrationEnabled = false
+	// Requests for offerings and the weekly plan go to the OGS.
+	flags.RequestSubmitEnabled = false
 	return flags
 }
 

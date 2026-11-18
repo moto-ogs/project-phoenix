@@ -1494,6 +1494,34 @@ describe("SickNoteModal — Teil-Abwesenheit der Schule", () => {
     ).toBeInTheDocument();
   });
 
+  // #4803: die Antwort für ein Kind ohne OGS-Platz nennt die Schule.
+  it("nennt nach dem Senden für ein Kind ohne OGS-Platz die Schule", async () => {
+    const onSubmit = vi.fn().mockResolvedValue("pending");
+    render(
+      <SickNoteModal
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+        sickRequiresApproval={false}
+        careExceptions={[schoolPartial(TEST_CLOCK_TODAY, "11:30")]}
+        withoutCarePlace
+      />,
+    );
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Grund / Hinweis" }), {
+      target: { value: "Fieber" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Krankmeldung senden" }),
+    );
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(
+      await screen.findByText(
+        "Die Schule hat für diese Tage schon etwas eingetragen. Sie prüft Ihre Meldung. Bis dahin gilt ihr Eintrag.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/OGS/)).toBeNull();
+  });
+
   it("zählt eine Krankmeldung der OGS als Schuleintrag", () => {
     render(
       <SickNoteModal
