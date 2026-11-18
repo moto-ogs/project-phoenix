@@ -8,6 +8,7 @@
  * und Steuerdaten. Personendaten werden nie zwischengespeichert; jede Anfrage
  * steht im Zugriffsprotokoll der Schulen. Backend-IDs werden hier zu Strings.
  */
+import type { PersonRequest } from "~/lib/contract/traeger-staff-records.generated";
 import {
   downloadTraegerList,
   type TraegerListFile,
@@ -525,6 +526,35 @@ export async function updateStaffPersonnelNumber(
       body: { personnel_number: value },
     }),
   );
+}
+
+/** Name und Geburtstag der Akte, wie die Personalverwaltung sie korrigiert. */
+export interface StaffPersonInput {
+  readonly firstName: string;
+  readonly lastName: string;
+  /** Kalendertag `YYYY-MM-DD`; leer entfernt den Geburtstag. */
+  readonly birthday: string;
+}
+
+/**
+ * Korrigiert Vorname, Nachname und Geburtstag der Akte (#7379). Jeder
+ * geänderte Wert steht danach mit seinem alten Wert im Verlauf; die
+ * Angaben an den Schulen bleiben unverändert. Die Antwort trägt keine Akte:
+ * Wer sie zeigt, lädt sie neu.
+ */
+export async function updateStaffPerson(
+  id: string,
+  input: StaffPersonInput,
+): Promise<void> {
+  const body: PersonRequest = {
+    first_name: input.firstName,
+    last_name: input.lastName,
+    birthday: input.birthday === "" ? null : input.birthday,
+  };
+  await traegerRequest<unknown>(recordPath(id, "/person"), {
+    method: "PUT",
+    body,
+  });
 }
 
 export async function revealStaffFinancial(

@@ -318,6 +318,7 @@ export const nodeLogicTestFiles = [
   "src/components/traeger/holiday-period-model.test.ts",
   "src/components/traeger/holiday-rebooking-model.test.ts",
   "src/components/traeger/shell/traeger-nav-active.test.ts",
+  "src/components/traeger/staff/staff-record-format.test.ts",
   "src/components/traeger/traeger-help.test.ts",
   "src/lib/absence-type-api.test.ts",
   "src/lib/attendance-actor.test.ts",

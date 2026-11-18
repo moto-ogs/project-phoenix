@@ -17,6 +17,7 @@ import (
 	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
 	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
+	workforceTraegerStaff "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
 )
@@ -48,6 +49,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/traeger/report-templates", organizationTenancyTraeger.ReportTemplateRouteContracts()},
 		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
 		{"/traeger/notifications", schoolFeedRouteContracts(common.PortalTraeger)},
+		{"/traeger/staff-records", workforceTraegerStaff.RecordRouteContracts()},
 		{"/caterer", catererPortalHTTP.RouteContracts()},
 		{"/caterer/notifications", schoolFeedRouteContracts(common.PortalCaterer)},
 	}

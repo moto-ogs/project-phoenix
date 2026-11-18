@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // „Person einstellen“ (#7206, ADR 0089 sections 1 and 3): the
@@ -27,8 +28,11 @@ func (e *StaffHireError) Unwrap() error { return ErrStaffHireInvalid }
 
 func hireInvalid(field, reason string) error { return &StaffHireError{Field: field, Reason: reason} }
 
-// maxHireNameLength is the width of the name columns of a person and a record.
-const maxHireNameLength = 255
+// maxHireNameLength is the longest name a hire takes: the person every
+// Einsatzort creates allows 200 characters (peopledirectory.MaxNameLength),
+// fewer than the record's 255, so a longer name is refused before anything
+// is created.
+const maxHireNameLength = 200
 
 // StaffHireSite is the Soll of one Einsatzort of a hire, Monday to Friday.
 type StaffHireSite struct {
@@ -56,11 +60,9 @@ type StaffHire struct {
 // hire as it is saved. today refuses a birthday that has not come yet. A
 // refused contract value is a ContractError, like in the contract dialog.
 func NormalizeStaffHire(hire StaffHire, today calendar.Date) (StaffHire, error) {
-	hire.FirstName, hire.LastName = strings.TrimSpace(hire.FirstName), strings.TrimSpace(hire.LastName)
-	for _, name := range []struct{ field, value string }{{"first_name", hire.FirstName}, {"last_name", hire.LastName}} {
-		if name.value == "" || len(name.value) > maxHireNameLength {
-			return StaffHire{}, hireInvalid(name.field, "a name of at most 255 characters is required")
-		}
+	hire.FirstName, hire.LastName = textnorm.Name(hire.FirstName), textnorm.Name(hire.LastName)
+	if field, ok := invalidStaffName(hire.FirstName, hire.LastName, maxHireNameLength); ok {
+		return StaffHire{}, hireInvalid(field, "a name of at most 200 characters is required")
 	}
 	hire.Birthday = strings.TrimSpace(hire.Birthday)
 	if birthday, err := calendar.ParseDate(hire.Birthday); err != nil || birthday.After(today) {
@@ -125,7 +127,8 @@ const (
 // already keeps: HireMatchNameBirthday for the same name and birthday,
 // HireMatchName for the same name of a person without a birthday, and ""
 // otherwise. A different birthday tells two people apart. Names compare
-// without case and surrounding or repeated spaces.
+// in NFC, without case and surrounding or repeated spaces, so a decomposed
+// „Müller“ a school stored matches the typed one.
 func (h StaffHire) NameMatch(firstName, lastName, birthday string) string {
 	if !sameName(h.FirstName, firstName) || !sameName(h.LastName, lastName) {
 		return ""
@@ -141,6 +144,6 @@ func (h StaffHire) NameMatch(firstName, lastName, birthday string) string {
 }
 
 func sameName(a, b string) bool {
-	a, b = strings.Join(strings.Fields(a), " "), strings.Join(strings.Fields(b), " ")
+	a, b = strings.Join(strings.Fields(textnorm.Name(a)), " "), strings.Join(strings.Fields(textnorm.Name(b)), " ")
 	return a != "" && strings.EqualFold(a, b)
 }

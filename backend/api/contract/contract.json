@@ -1908,6 +1908,18 @@
         "kind": "ref",
         "ref": "TraegerReportTemplate"
       }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/traeger/staff-records/{id}/person",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PersonRequest"
+      },
+      "no_data": true
     }
   ],
   "enums": [
@@ -4822,6 +4834,35 @@
           "name": "without_portal",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PersonRequest",
+      "go_type": "traegerstaff.PersonRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "birthday",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
           }
         }
       ]

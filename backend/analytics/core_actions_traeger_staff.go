@@ -16,6 +16,7 @@ var traegerStaffCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/traeger/staff-records/hire"}:                  notCaptured,
 	{http.MethodDelete, "/traeger/staff-records/{id}"}:                notCaptured,
 	{http.MethodPut, "/traeger/staff-records/{id}/personnel-number"}:  notCaptured,
+	{http.MethodPut, "/traeger/staff-records/{id}/person"}:            notCaptured,
 	{http.MethodPost, "/traeger/staff-records/{id}/financial/reveal"}: notCaptured,
 	{http.MethodPut, "/traeger/staff-records/{id}/financial"}:         notCaptured,
 	// The Nachweise of the records (#4707).

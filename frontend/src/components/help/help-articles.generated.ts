@@ -15247,7 +15247,8 @@ export const traegerStaffProofsTopic =
 
 /**
  * `/traeger/personal` (#4705, ADR 0089): eine Personalakte über alle
- * Schulen. Vorschläge prüfen und verknüpfen, Personalnummer und Bank- und
+ * Schulen. Vorschläge prüfen und verknüpfen, Name und Geburtstag
+ * korrigieren (#7379), Personalnummer und Bank- und
  * Steuerdaten pflegen, Personal aus einer Datei importieren (#4724), eine
  * neue Person einstellen (#7206), eine Akte auflösen. Nur mit der Rolle Personal und
  * nach der Freigabe „Personal beim Träger“.
@@ -15325,6 +15326,17 @@ export const traegerStaffRecordsTopic =
           ],
         },
         {
+          title: "Name oder Geburtstag korrigieren",
+          description:
+            "Zum Beispiel, wenn der Geburtstag fehlt oder ein Name falsch geschrieben ist. Die Angaben an den Schulen ändern sich dadurch nicht.",
+          steps: [
+            "Öffne die Akte im Reiter `Akten`.",
+            "Wähle bei `Person` den Knopf `Ändern`.",
+            "Korrigiere Vorname, Nachname oder Geburtstag. Den Geburtstag tippst du als TT.MM.JJJJ, auf dem Handy auch ohne Punkte.",
+            "Wähle `Speichern`.",
+          ],
+        },
+        {
           title: "Personalnummer eintragen",
           steps: [
             "Öffne die Akte im Reiter `Akten`.",
@@ -15360,6 +15372,7 @@ export const traegerStaffRecordsTopic =
         "Der Import verknüpft keine Akte von selbst mit einer Schule. Das bestätigst du unter `Vorschläge`.",
         "moto bewahrt die Datei nicht auf. Im `Verlauf` jeder Akte stehen Dateiname und Zeile. `Bisherige Importe` zeigt, wer wann welche Datei übernommen hat.",
         "Ein Wert, den du beim Verknüpfen nicht wählst, bleibt mit seiner Schule im `Verlauf` der Akte.",
+        "Korrigierst du Name oder Geburtstag, steht der alte Wert im `Verlauf` der Akte. Deine Listen, Exporte, die `Vorschläge` und die Prüfung beim Einstellen nutzen danach die neuen Werte. Die Schulen pflegen ihre eigenen Angaben weiter selbst.",
         "Jede Schule sieht weiter nur ihr eigenes Personal. Sie sieht keine Akte und keine anderen Schulen.",
         "Jedes Anzeigen der Bank- und Steuerdaten steht im Zugriffsprotokoll jeder Schule der Person.",
         "Jeder Download der Liste steht im Zugriffsprotokoll jeder Schule.",
