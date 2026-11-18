@@ -244,7 +244,7 @@ const permissionDescriptions: Record<string, string> = {
   "staff:documents":
     "Allgemeine Personalunterlagen von Mitarbeitenden verwalten (Arbeitsvertrag, Zeugnis, Bewerbung, Sonstiges)",
   "staff:manage":
-    "Mitarbeiter-Datensätze anderer Personen ändern (Notizen, Betreuungsprofil, Qualifikationen)",
+    "Personal-Datensätze anderer Personen ändern (Notizen, Betreuungsprofil, Qualifikationen)",
 
   // Personalunterlagen und Unterlagen der Kinder
   "staff_documents:health":

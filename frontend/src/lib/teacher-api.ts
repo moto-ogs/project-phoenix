@@ -92,7 +92,7 @@ function buildStaffRequestBody(
 ): string {
   if (!/^\d+$/.test(personId)) {
     throw new Error(
-      "Der Mitarbeiter-Datensatz konnte nicht angelegt werden: ungültige Personen-ID.",
+      "Der Personal-Datensatz konnte nicht angelegt werden: ungültige Personen-ID.",
     );
   }
   return JSON.stringify({ person_id: personId, ...fields });
