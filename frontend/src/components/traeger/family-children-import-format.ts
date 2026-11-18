@@ -40,7 +40,7 @@ export const FAMILY_IMPORT_FIELD_HINTS: Partial<
     "Alle Kinder der Familie, auch Geschwister ohne Vertrag. Eine ganze Zahl von 1 bis 20.",
 };
 
-export const FAMILY_IMPORT_STATUS: Record<
+const FAMILY_IMPORT_STATUS: Record<
   FamilyImportRowStatus,
   { readonly label: string; readonly tone: StatusBadgeTone }
 > = {
@@ -51,6 +51,16 @@ export const FAMILY_IMPORT_STATUS: Record<
   invalid: { label: "Fehlerhaft", tone: "red" },
   imported: { label: "Übernommen", tone: "green" },
 };
+
+/** Gespeicherte Widersprüche werden in der Familienliste geklärt. */
+export function familyImportStatus(row: FamilyImportRow): {
+  readonly label: string;
+  readonly tone: StatusBadgeTone;
+} {
+  return row.problems.some((problem) => problem.code === "confirmations_differ")
+    ? { label: "Verschiedene Angaben", tone: "red" }
+    : FAMILY_IMPORT_STATUS[row.status];
+}
 
 /** Der Name des Kindes, „–“ ohne Namen. */
 export function familyImportChild(row: FamilyImportRow): string {
@@ -95,6 +105,8 @@ export function familyImportProblemText(
         : `Das Kind steht schon in Zeile ${row.repeatsLine}.`;
     case "rows_differ":
       return "Geschwister derselben Familie nennen verschiedene Zahlen. moto übernimmt keine.";
+    case "confirmations_differ":
+      return "Für diese Familie sind verschiedene Kinderzahlen bestätigt. Bestätigen Sie die Kinderzahl in der Familienliste.";
     default:
       return `${label} prüfen.`;
   }

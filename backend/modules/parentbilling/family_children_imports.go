@@ -52,7 +52,7 @@ const (
 	// FamilyImportDiffers names another number than the Abrechnung
 	// confirmed: the import never overwrites it.
 	FamilyImportDiffers = "differs"
-	// FamilyImportConflict contradicts another row of the file.
+	// FamilyImportConflict contradicts another row or stored confirmations.
 	FamilyImportConflict = "conflict"
 	// FamilyImportInvalid misses a field, carries no number or names no
 	// single child with a contract.
@@ -79,6 +79,9 @@ const (
 	// numbers.
 	FamilyImportProblemRepeated   = "repeated"
 	FamilyImportProblemRowsDiffer = "rows_differ"
+	// FamilyImportProblemConfirmationsDiffer requires an office decision
+	// between conflicting stored confirmations, not a correction of the file.
+	FamilyImportProblemConfirmationsDiffer = "confirmations_differ"
 )
 
 // FamilyChildrenImportColumns names per field the header of the column it
@@ -204,6 +207,9 @@ const (
 	// ImportedChildrenRowsDiffer are rows of one family with different
 	// numbers: the import takes over none of them.
 	ImportedChildrenRowsDiffer = "rows_differ"
+	// ImportedChildrenConfirmationsDiffer cannot be resolved by a file:
+	// the family carries conflicting confirmations that the office must settle.
+	ImportedChildrenConfirmationsDiffer = "confirmations_differ"
 	// ImportedChildrenInvalid is no whole number from 1 to MaxFamilyChildren.
 	ImportedChildrenInvalid = "invalid"
 )
@@ -222,5 +228,7 @@ type ContractImportFamilyChildren interface {
 	// DecideImportedFamilyChildren answers per row what the import does with
 	// its number, as the numbers stand before the call, and with save takes
 	// the new ones over for the contracts just stored and records each.
+	// It holds the billing lock until the caller's transaction ends, also
+	// without save, so fingerprint validation and storage share one state.
 	DecideImportedFamilyChildren(ctx context.Context, reviewer HolidayReviewer, numbers []ImportedFamilyChildren, save bool) ([]ImportedFamilyChildrenDecision, error)
 }

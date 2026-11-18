@@ -173,10 +173,10 @@ func (f *FamilyNumbers) DecideImportedFamilyChildren(ctx context.Context, review
 	if len(numbers) == 0 {
 		return []parentbilling.ImportedFamilyChildrenDecision{}, nil
 	}
-	if save {
-		if err := f.holdForImport(ctx, reviewer.OrganizationID); err != nil {
-			return nil, err
-		}
+	// The first decision supplies the fingerprint, before contracts exist.
+	// Keep it stable until the caller stores the contracts and their numbers.
+	if err := f.holdForImport(ctx, reviewer.OrganizationID); err != nil {
+		return nil, err
 	}
 	counts, err := f.store.FamilyChildCounts(ctx, reviewer.OrganizationID)
 	if err != nil {

@@ -18,12 +18,12 @@ import type {
 } from "~/lib/traeger-family-children-import-api";
 import { childrenLabel } from "./family-children-format";
 import {
-  FAMILY_IMPORT_STATUS,
   type FamilyImportFilter,
   familyImportChild,
   familyImportOpenRows,
   familyImportOutcomeText,
   familyImportProblemText,
+  familyImportStatus,
   matchesFamilyImportFilter,
   numberCountLabel,
 } from "./family-children-import-format";
@@ -53,7 +53,7 @@ function footerText(result: FamilyImportResult): string {
     return "Alle Zahlen der Datei sind schon bestätigt.";
   }
   if (left > 0) {
-    return `${left === 1 ? "1 Zeile bleibt" : `${left} Zeilen bleiben`} draußen. Korrigieren Sie die Datei und laden Sie sie noch einmal.`;
+    return `${left === 1 ? "1 Zeile bleibt" : `${left} Zeilen bleiben`} draußen. Prüfen Sie den Hinweis bei jeder offenen Zeile.`;
   }
   return "Jede Zahl gilt als von Ihnen bestätigt, ab dem ersten Tag des Vertrags.";
 }
@@ -110,12 +110,7 @@ export function FamilyChildrenImportPreviewCard({
     {
       key: "status",
       header: "Stand",
-      render: (row) => (
-        <StatusBadge
-          tone={FAMILY_IMPORT_STATUS[row.status].tone}
-          label={FAMILY_IMPORT_STATUS[row.status].label}
-        />
-      ),
+      render: (row) => <StatusBadge {...familyImportStatus(row)} />,
       stacked: "meta",
     },
     {

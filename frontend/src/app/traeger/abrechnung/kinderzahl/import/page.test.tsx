@@ -191,6 +191,48 @@ describe("Kinderzahl nachtragen", () => {
     );
   });
 
+  it("distinguishes stored confirmations from conflicting file rows", async () => {
+    await choose(
+      preview({
+        counts: {
+          ready: 0,
+          same: 0,
+          differs: 0,
+          conflict: 2,
+          invalid: 0,
+          imported: 0,
+        },
+        rows: [
+          row(2, {
+            status: "conflict",
+            problems: [{ field: "children", code: "confirmations_differ" }],
+          }),
+          row(3, {
+            status: "conflict",
+            childFirstName: "Noah",
+            problems: [{ field: "children", code: "rows_differ" }],
+          }),
+        ],
+      }),
+    );
+    expect(screen.getAllByText("Verschiedene Angaben").length).toBeGreaterThan(
+      0,
+    );
+    expect(
+      screen.getAllByText("Widerspruch in der Datei").length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(
+        "Für diese Familie sind verschiedene Kinderzahlen bestätigt. Bestätigen Sie die Kinderzahl in der Familienliste.",
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByText(
+        "2 Zeilen bleiben draußen. Prüfen Sie den Hinweis bei jeder offenen Zeile.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("reads the file again when the preview changed before the import", async () => {
     await choose();
     api.applyFamilyChildrenImport.mockRejectedValueOnce(

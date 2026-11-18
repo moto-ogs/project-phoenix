@@ -12410,6 +12410,7 @@ export const traegerCareReductionsTopic =
             "Prüfen Sie unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Hat die Datei keine Spalte für die Schule, wählen Sie `Schule für alle Zeilen`.",
             "Prüfen Sie die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. Bei `Fehlerhaft` und `Widerspruch in der Datei` steht der Grund in der Spalte `Hinweis`.",
             "`Andere Zahl bestätigt` heißt: Für die Familie gilt schon eine andere Zahl. moto ändert sie nicht. Ändern Sie sie in der Liste über `Kinderzahl ändern`.",
+            "`Verschiedene Angaben` heißt: Für die Familie sind verschiedene Kinderzahlen bestätigt. Bestätigen Sie die Kinderzahl in der Familienliste. Die Datei löst diesen Widerspruch nicht.",
             "Ist die bisherige Zahl einer Familie abgelaufen? Dann übernimmt moto die Zahl aus der Datei. Sie gilt ab dem Tag nach dem Ablauf.",
             "Wählen Sie unten `übernehmen`. Die Zahlen stehen danach in der Liste mit dem Stand `Bestätigt`.",
           ],

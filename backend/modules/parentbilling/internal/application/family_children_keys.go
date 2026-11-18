@@ -140,16 +140,37 @@ func (n *familyNumbers) count() (count *parentbilling.FamilyChildCount, differin
 // so that they also protect confirmations scheduled for a later day.
 func (n *familyNumbers) countOn(day calendar.Date) (*parentbilling.FamilyChildCount, bool) {
 	count, differing := n.count()
+	ownStarted := false
+	if n.decided() {
+		_, ownStarted = n.own.InForceOn(day)
+	}
+	if !ownStarted && n.broughtDifferOn(day) {
+		return n.withStatement(nil), true
+	}
 	if !n.decided() && !differing {
 		if current := n.broughtCoverageOn(day); current != nil {
 			count = current
 		}
-	} else if n.decided() {
-		if _, started := n.own.InForceOn(day); !started {
-			count = n.withBroughtCoverage(day)
-		}
+	} else if n.decided() && !ownStarted {
+		count = n.withBroughtCoverage(day)
 	}
 	return n.withStatement(count), differing
+}
+
+// broughtDifferOn checks the confirmations that actually hold on the day,
+// including retained ones below equal confirmations scheduled for later.
+func (n *familyNumbers) broughtDifferOn(day calendar.Date) bool {
+	var number *int
+	for _, source := range n.brought {
+		confirmation, _ := source.InForceOn(day)
+		if children, ok := validFamilyConfirmation(confirmation, day); ok {
+			if number != nil && *number != children {
+				return true
+			}
+			number = &children
+		}
+	}
+	return false
 }
 
 // withBroughtCoverage retains coverage before the first own confirmation

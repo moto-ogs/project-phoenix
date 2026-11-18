@@ -155,7 +155,7 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 	for i := range rows {
 		if found := numbers[rows[i].family]; found != nil {
 			if _, differing := found.count(); differing {
-				rows[i].status = parentbilling.ImportedChildrenRowsDiffer
+				rows[i].status = parentbilling.ImportedChildrenConfirmationsDiffer
 			}
 		}
 	}
@@ -221,6 +221,10 @@ func (c *familyImportCandidate) settle() {
 		return nil
 	}
 	switch {
+	case has(parentbilling.ImportedChildrenConfirmationsDiffer):
+		c.row.Status = parentbilling.FamilyImportConflict
+		c.row.Problems = append(c.row.Problems, parentbilling.FamilyChildrenImportProblem{
+			Field: parentbilling.FamilyImportFieldChildren, Code: parentbilling.FamilyImportProblemConfirmationsDiffer})
 	case has(parentbilling.ImportedChildrenRowsDiffer):
 		c.row.Status = parentbilling.FamilyImportConflict
 		c.row.Problems = append(c.row.Problems, parentbilling.FamilyChildrenImportProblem{

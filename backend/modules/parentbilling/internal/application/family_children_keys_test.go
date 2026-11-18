@@ -113,8 +113,82 @@ func TestFamilyImportRejectsConflictingCarriedConfirmations(t *testing.T) {
 			row: parentbilling.FamilyChildrenImportRow{Children: ptr(children)}}}
 		decideFamilyImport(rows, numbers, today)
 		assert.Equal(t, parentbilling.FamilyImportConflict, rows[0].row.Status)
+		assert.Equal(t, []parentbilling.FamilyChildrenImportProblem{{Field: parentbilling.FamilyImportFieldChildren, Code: "confirmations_differ"}}, rows[0].row.Problems)
 		assert.Empty(t, newImportedChildren(rows[0].decided), "a file cannot supersede conflicting carried confirmations")
 	}
+}
+
+func TestFamilyListDetectsConflictingRetainedConfirmations(t *testing.T) {
+	t.Parallel()
+	from, today, future := calendar.NewDate(2027, 1, 1), calendar.NewDate(2027, 1, 10), calendar.NewDate(2027, 2, 1)
+	counts := []parentbilling.FamilyChildCount{
+		{ID: 1, ContractID: 1, FamilyEmail: "contract:1", ConfirmedChildren: ptr(4), ValidFrom: &future,
+			Confirmations: []parentbilling.FamilyChildConfirmation{{Children: ptr(2), ValidFrom: &from}}},
+		{ID: 2, ContractID: 2, FamilyEmail: "contract:2", ConfirmedChildren: ptr(4), ValidFrom: &future,
+			Confirmations: []parentbilling.FamilyChildConfirmation{{Children: ptr(3), ValidFrom: &from}}},
+	}
+	recipients := map[int64]parentbilling.CareRecipient{1: {Email: "family@example.org"}, 2: {Email: "family@example.org"}}
+	for _, ordered := range [][]parentbilling.FamilyChildCount{counts, {counts[1], counts[0]}} {
+		families := groupFamilies(nil, recipients, ordered, today)
+		require.Len(t, families, 1)
+		assert.Equal(t, parentbilling.FamilyChildrenDiffering, families[0].Status)
+		assert.Nil(t, families[0].Count, "neither conflicting confirmation is the family's number")
+		assert.Empty(t, familyChildrenIn(ordered, recipients, from), "the list agrees with billing")
+		families = groupFamilies(nil, recipients, ordered, future)
+		assert.Equal(t, parentbilling.FamilyChildrenConfirmed, families[0].Status)
+		assert.Equal(t, ptr(4), families[0].Count.ConfirmedChildren)
+	}
+	counts = append(counts, parentbilling.FamilyChildCount{ID: 3, ContractID: 1, FamilyEmail: "family@example.org",
+		ConfirmedChildren: ptr(4), ValidFrom: &future})
+	families := groupFamilies(nil, recipients, counts, today)
+	assert.Equal(t, parentbilling.FamilyChildrenDiffering, families[0].Status, "a future own confirmation does not settle today's conflict")
+	counts[1].Confirmations[0].ValidUntil = ptr(today.AddDays(-1))
+	families = groupFamilies(nil, recipients, counts, today)
+	assert.False(t, families[0].Differing, "an expired confirmation does not contradict the valid one")
+}
+
+// A concurrent removal can commit until the first billing lock is held.
+type familyImportRaceStore struct {
+	familySourceStore
+	locked, read bool
+	stored       []parentbilling.ImportedFamilyChildren
+}
+
+func (s *familyImportRaceStore) LockCareBilling(context.Context, int64) error {
+	if !s.locked && s.read {
+		s.counts = nil
+	}
+	s.locked = true
+	return nil
+}
+
+func (s *familyImportRaceStore) FamilyChildCounts(context.Context, int64) ([]parentbilling.FamilyChildCount, error) {
+	s.read = true
+	return s.counts, nil
+}
+
+func (s *familyImportRaceStore) ConfirmImportedFamilyChildren(_ context.Context, _, _ int64, numbers []parentbilling.ImportedFamilyChildren) error {
+	s.stored = append(s.stored, numbers...)
+	return nil
+}
+
+func TestContractFamilyImportLocksBeforeTheFingerprintDecision(t *testing.T) {
+	t.Parallel()
+	from := calendar.NewDate(2027, 1, 1)
+	store := &familyImportRaceStore{familySourceStore: familySourceStore{counts: []parentbilling.FamilyChildCount{
+		{ID: 1, ContractID: 1, FamilyEmail: "family@example.org", ConfirmedChildren: ptr(2), ValidFrom: &from},
+	}}}
+	families := FamilyNumbers{store: store}
+	reviewer := parentbilling.HolidayReviewer{OrganizationID: 9, AccountID: 8}
+	rows := []parentbilling.ImportedFamilyChildren{{Line: 2, FamilyEmail: "family@example.org", Children: 2, ValidFrom: from}}
+	preview, err := families.DecideImportedFamilyChildren(context.Background(), reviewer, rows, false)
+	require.NoError(t, err)
+	require.Equal(t, []parentbilling.ImportedFamilyChildrenDecision{{Line: 2, Status: parentbilling.ImportedChildrenSame}}, preview)
+	rows[0].ContractID = 2
+	applied, err := families.DecideImportedFamilyChildren(context.Background(), reviewer, rows, true)
+	require.NoError(t, err)
+	assert.Equal(t, preview, applied, "the fingerprint decision stays valid until the contracts and numbers are stored")
+	assert.Empty(t, store.stored, "a confirmation removed between the two decisions must never be restored")
 }
 
 func TestFutureOwnConfirmationKeepsCarriedCoverageVisible(t *testing.T) {
