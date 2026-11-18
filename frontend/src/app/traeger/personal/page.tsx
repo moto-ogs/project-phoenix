@@ -12,9 +12,14 @@ import {
   UploadSimpleIcon,
   UserPlusIcon,
 } from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
 import { StaffLinkModal } from "~/components/traeger/staff/staff-link-modal";
+import {
+  parseStaffOverviewTab,
+  staffSubpageHref,
+  type StaffOverviewTab,
+} from "~/components/traeger/staff/staff-overview-tab";
 import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import {
@@ -42,9 +47,6 @@ import {
   type StaffRecordSummary,
   type StaffSuggestion,
 } from "~/lib/traeger-staff-api";
-import { traegerPath } from "~/lib/traeger-url";
-
-type Tab = "vorschlaege" | "akten" | "ohne-akte";
 
 const INFO =
   "Hier führen Sie jede Person, die Ihr Träger beschäftigt, mit einer Akte über alle Schulen. moto schlägt vor, welche Beschäftigungen an verschiedenen Schulen dieselbe Person sind. Sie prüfen jeden Vorschlag und verknüpfen ihn. Die Akte führt die Personalnummer des Trägers und die Bank- und Steuerdaten. Die Schulen arbeiten weiter mit ihrem Personal wie bisher. Lehrkräfte des Landes und Kräfte anderer Träger bekommen keine Akte.";
@@ -214,7 +216,17 @@ const linkRequestOf = (suggestion: StaffSuggestion) => ({
 });
 
 export default function TraegerStaffRecordsPage() {
+  // `useSearchParams` braucht eine Suspense-Grenze.
+  return (
+    <Suspense fallback={<TenantPage title="Personalakten" loading />}>
+      <StaffRecordsContent />
+    </Suspense>
+  );
+}
+
+function StaffRecordsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { success } = useToast();
   const {
     data: overview,
@@ -226,7 +238,10 @@ export default function TraegerStaffRecordsPage() {
     fetchStaffOverview,
     "die Personalakten",
   );
-  const [tab, setTab] = useState<Tab | null>(null);
+  // Der Reiter steht in der Adresse (#7377): Abbrechen und Zurück einer
+  // Unterseite führen so auf ihn zurück, und der Zurück-Knopf des Browsers
+  // auch.
+  const tab = parseStaffOverviewTab(searchParams?.get("tab"));
   const [linking, setLinking] = useState<Omit<
     StaffLinkInput,
     "choices"
@@ -257,7 +272,18 @@ export default function TraegerStaffRecordsPage() {
   );
   const columns = useMemo(() => suggestionColumns(records), [records]);
   const released = overview?.release != null;
-  const active: Tab = tab ?? (proposals.length > 0 ? "vorschlaege" : "akten");
+  const active: StaffOverviewTab =
+    tab ?? (proposals.length > 0 ? "vorschlaege" : "akten");
+  const changeTab = (next: string) => {
+    const params = new URLSearchParams(searchParams?.toString());
+    params.set("tab", next);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
+  // Unterseiten merken sich auch den aufgelösten Standard-Reiter. Ein Import
+  // kann Vorschläge erzeugen; der Rückweg bleibt trotzdem auf dem Reiter,
+  // von dem das Träger-Büro kam.
+  const recordHref = (id: string) =>
+    staffSubpageHref(`/traeger/personal/${id}`, active);
 
   return (
     <TenantPage
@@ -297,7 +323,7 @@ export default function TraegerStaffRecordsPage() {
               unavailable={overview.records.length === 0}
             />
             <ButtonLink
-              href={traegerPath("/traeger/personal/import")}
+              href={staffSubpageHref("/traeger/personal/import", active)}
               className="gap-2"
               variant="outline"
               size="md"
@@ -307,7 +333,7 @@ export default function TraegerStaffRecordsPage() {
               Personal importieren
             </ButtonLink>
             <ButtonLink
-              href={traegerPath("/traeger/personal/einstellen")}
+              href={staffSubpageHref("/traeger/personal/einstellen", active)}
               className="gap-2"
               variant="primary"
               size="md"
@@ -325,8 +351,9 @@ export default function TraegerStaffRecordsPage() {
         released
           ? {
               value: active,
-              onChange: (value) => setTab(value as Tab),
+              onChange: changeTab,
               label: "Bereiche der Personalakten",
+              inUrl: true,
               items: [
                 {
                   value: "vorschlaege",
@@ -347,7 +374,7 @@ export default function TraegerStaffRecordsPage() {
             setLinking(null);
             success(`Die Akte von ${staffName(record)} ist verknüpft.`);
             reload();
-            router.push(traegerPath(`/traeger/personal/${record.id}`));
+            router.push(recordHref(record.id));
           }}
         />
       }
@@ -408,9 +435,7 @@ export default function TraegerStaffRecordsPage() {
             rows={[...overview.records]}
             getRowKey={(record) => record.id}
             stackedOnMobile
-            onRowClick={(record) =>
-              router.push(traegerPath(`/traeger/personal/${record.id}`))
-            }
+            onRowClick={(record) => router.push(recordHref(record.id))}
             emptyState={
               <EmptyState
                 icon={

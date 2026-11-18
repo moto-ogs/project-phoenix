@@ -49,11 +49,12 @@ vi.mock("~/lib/traeger-time-account-api", async (original) => ({
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",
 }));
+const address = vi.hoisted(() => ({ search: "" }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, replace: vi.fn() }),
   useParams: () => ({ id: "5" }),
   usePathname: () => "/personal/5",
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(address.search),
 }));
 
 import TraegerStaffRecordPage from "./page";
@@ -160,7 +161,22 @@ function renderPage() {
 describe("TraegerStaffRecordPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    address.search = "";
     api.fetchStaffRecord.mockResolvedValue(RECORD);
+  });
+
+  // #7377: Zurück führt auf den Reiter der Personalakten, von dem man kam.
+  it("leads back to the tab of the Personalakten it came from", async () => {
+    address.search = "from=akten";
+    renderPage();
+    expect(
+      await screen.findByRole("link", { name: /Zurück zu den Personalakten/ }),
+    ).toHaveAttribute(
+      "href",
+      // Der Rückweg läuft über den Pfad-Kontext von TenantPage; die
+      // Testumgebung setzt davor ihr Tenant-Präfix.
+      expect.stringMatching(/\/personal\?tab=akten$/),
+    );
   });
 
   it("shows the Einsatzorte, the masked bank values and the trail", async () => {

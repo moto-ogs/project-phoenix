@@ -37,7 +37,11 @@ import {
   type StaffHireMatch,
   type StaffRecordDetail,
 } from "~/lib/traeger-staff-api";
-import { traegerPath } from "~/lib/traeger-url";
+import {
+  staffOverviewHref,
+  staffSubpageHref,
+  type StaffOverviewTab,
+} from "./staff-overview-tab";
 import { KindChoice, WeekHoursRow } from "./staff-contract-dialogs";
 import {
   CONTRACT_KIND_LABELS,
@@ -350,7 +354,11 @@ function ReviewStep({ draft }: Readonly<{ draft: HireDraft }>) {
 
 function DuplicateBody({
   matches,
-}: Readonly<{ matches: readonly StaffHireMatch[] }>) {
+  from,
+}: Readonly<{
+  matches: readonly StaffHireMatch[];
+  from: StaffOverviewTab | null;
+}>) {
   return (
     <div className="space-y-3 text-sm text-gray-700">
       <p>moto kennt schon eine Person mit diesem Namen und Geburtsdatum:</p>
@@ -360,7 +368,7 @@ function DuplicateBody({
             <li key={`record-${match.recordId}`}>
               Es gibt schon eine Personalakte.{" "}
               <ButtonLink
-                href={traegerPath(`${PERSONAL}/${match.recordId}`)}
+                href={staffSubpageHref(`${PERSONAL}/${match.recordId}`, from)}
                 variant="link"
                 newTab
                 tooltip="Öffnet die vorhandene Akte in einem neuen Tab."
@@ -388,7 +396,12 @@ function DuplicateBody({
 function HiredCard({
   record,
   onRestart,
-}: Readonly<{ record: StaffRecordDetail; onRestart: () => void }>) {
+  from,
+}: Readonly<{
+  record: StaffRecordDetail;
+  onRestart: () => void;
+  from: StaffOverviewTab | null;
+}>) {
   const schools = record.employments.map((site) => site.schoolName);
   return (
     <SectionCard>
@@ -401,7 +414,7 @@ function HiredCard({
         action={
           <div className="flex flex-wrap justify-center gap-3">
             <ButtonLink
-              href={traegerPath(`${PERSONAL}/${record.id}`)}
+              href={staffSubpageHref(`${PERSONAL}/${record.id}`, from)}
               variant="primary"
               size="md"
               tooltip="Öffnet die neue Akte mit Vertrag und Einsatzorten."
@@ -438,7 +451,12 @@ function HiredCard({
 function IncompleteCard({
   name,
   incomplete,
-}: Readonly<{ name: string; incomplete: StaffHireIncomplete }>) {
+  from,
+}: Readonly<{
+  name: string;
+  incomplete: StaffHireIncomplete;
+  from: StaffOverviewTab | null;
+}>) {
   const schools = incomplete.schools.join(", ");
   const description = incomplete.recordId
     ? `Die Akte und der Arbeitsvertrag sind gespeichert. moto konnte sie nur nicht noch einmal laden. Bitte öffnen Sie die Akte und prüfen Sie Vertrag und Schulen.`
@@ -454,7 +472,10 @@ function IncompleteCard({
         action={
           incomplete.recordId ? (
             <ButtonLink
-              href={traegerPath(`${PERSONAL}/${incomplete.recordId}`)}
+              href={staffSubpageHref(
+                `${PERSONAL}/${incomplete.recordId}`,
+                from,
+              )}
               variant="primary"
               size="md"
               tooltip="Öffnet die gespeicherte Akte."
@@ -463,7 +484,7 @@ function IncompleteCard({
             </ButtonLink>
           ) : (
             <ButtonLink
-              href={traegerPath(PERSONAL)}
+              href={staffOverviewHref("ohne-akte")}
               variant="primary"
               size="md"
               tooltip="Öffnet die Personalakten. Die Person steht dort unter „Ohne Akte“."
@@ -481,12 +502,18 @@ function StepActions({
   step,
   saving,
   onBack,
-}: Readonly<{ step: number; saving: boolean; onBack: () => void }>) {
+  cancelHref,
+}: Readonly<{
+  step: number;
+  saving: boolean;
+  onBack: () => void;
+  cancelHref: string;
+}>) {
   let back: ReactNode;
   if (step === 0) {
     back = (
       <ButtonLink
-        href={traegerPath(PERSONAL)}
+        href={cancelHref}
         variant="outline"
         size="md"
         noTooltip="Abbrechen führt zurück zu den Personalakten, ohne etwas anzulegen."
@@ -549,7 +576,16 @@ function stepOfRefusal(err: unknown): number {
 export function StaffHireWizard({
   schools,
   today,
-}: Readonly<{ schools: readonly School[]; today: string }>) {
+  from,
+}: Readonly<{
+  schools: readonly School[];
+  today: string;
+  /**
+   * Reiter der Personalakten, von dem man kam: Abbrechen führt dorthin,
+   * und eine geöffnete Akte führt mit Zurück dorthin.
+   */
+  from: StaffOverviewTab | null;
+}>) {
   const [draft, setDraft] = useState(() => emptyHireDraft(schools));
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -652,6 +688,7 @@ export function StaffHireWizard({
         <IncompleteCard
           name={`${draft.firstName.trim()} ${draft.lastName.trim()}`}
           incomplete={incomplete}
+          from={from}
         />
       </div>
     );
@@ -660,7 +697,7 @@ export function StaffHireWizard({
   if (hired) {
     return (
       <div ref={stepRef} className="flex flex-col gap-6">
-        <HiredCard record={hired} onRestart={restart} />
+        <HiredCard record={hired} onRestart={restart} from={from} />
       </div>
     );
   }
@@ -703,7 +740,12 @@ export function StaffHireWizard({
           ) : null}
           {step === HIRE_REVIEW_STEP ? <ReviewStep draft={draft} /> : null}
         </div>
-        <StepActions step={step} saving={saving} onBack={back} />
+        <StepActions
+          step={step}
+          saving={saving}
+          onBack={back}
+          cancelHref={staffOverviewHref(from)}
+        />
       </form>
       <ConfirmationModal
         isOpen={matches !== null}
@@ -717,7 +759,7 @@ export function StaffHireWizard({
         loadingText="Stellt ein…"
         isBackdropDismissDisabled
       >
-        <DuplicateBody matches={matches ?? []} />
+        <DuplicateBody matches={matches ?? []} from={from} />
       </ConfirmationModal>
     </>
   );
