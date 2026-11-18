@@ -482,6 +482,9 @@ func mealPlanRouteContracts() []common.RouteContract {
 	daily := []common.QueryParam{{Name: "date", Kind: common.QueryDate}, {Name: "include", Kind: common.QueryString}}
 	week := []common.QueryParam{{Name: "week_start", Kind: common.QueryDate}}
 	return []common.RouteContract{
+		{Method: "GET", Pattern: "/meal-plan/", Portals: portals, Query: week, Response: types.Week},
+		{Method: "PUT", Pattern: "/meal-plan/{date}", Portals: portals, Request: types.Day, NoData: true},
+		{Method: "DELETE", Pattern: "/meal-plan/{date}", Portals: portals, NoData: true},
 		{Method: "GET", Pattern: "/meal-plan/orders", Portals: portals, Query: window, Response: types.Orders},
 		{Method: "GET", Pattern: "/meal-plan/participants", Portals: portals, Query: daily, Response: types.DailyList},
 		{Method: "GET", Pattern: "/meal-plan/participants/week", Portals: portals, Query: week, Response: types.WeeklyList},

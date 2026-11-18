@@ -120,6 +120,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/meal-plan/{date}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/notifications/preferences/",
       "portals": [
         "tenant"
@@ -1206,6 +1214,26 @@
       "response": {
         "kind": "ref",
         "ref": "SchoolCatererResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/meal-plan/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "week_start",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "MealPlanWeekEntryResponse"
+        }
       }
     },
     {
@@ -11542,6 +11570,18 @@
         "kind": "ref",
         "ref": "ScheduleChangedResponse"
       }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/meal-plan/{date}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SetDayRequest"
+      },
+      "no_data": true
     },
     {
       "method": "PUT",
@@ -31184,6 +31224,39 @@
       ]
     },
     {
+      "name": "DishRequest",
+      "go_type": "mealplan.DishRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "dish",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "allergens",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "DocumentKindOverview",
       "go_type": "parentbilling.DocumentKindOverview",
       "fields": [
@@ -41595,6 +41668,47 @@
     {
       "name": "MealPlanEntryResponse",
       "go_type": "parent.MealPlanEntryResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "dish",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "allergens",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MealPlanWeekEntryResponse",
+      "go_type": "mealplan.MealPlanWeekEntryResponse",
       "fields": [
         {
           "name": "date",
@@ -56554,6 +56668,25 @@
             "elem": {
               "kind": "ref",
               "ref": "BreakDurationUpdate"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SetDayRequest",
+      "go_type": "mealplan.SetDayRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "dishes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "DishRequest"
             }
           }
         }
