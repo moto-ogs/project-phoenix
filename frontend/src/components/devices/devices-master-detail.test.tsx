@@ -113,7 +113,7 @@ describe("DevicesMasterDetail", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("Löschen"));
+    fireEvent.click(screen.getByText("Entfernen"));
     expect(onDeleteClick).toHaveBeenCalled();
 
     // Bearbeitet wird im Detailbereich, nicht in einem Modal daneben: der

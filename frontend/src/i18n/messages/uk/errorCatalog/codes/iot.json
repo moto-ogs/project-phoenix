@@ -33,5 +33,6 @@
   "student_already_active": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "student_not_present": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "wc_needs_staff": "Не вдалося обробити: {object}. Спробуйте пізніше.",
-  "wc_not_configured": "Не вдалося обробити: {object}. Спробуйте пізніше."
+  "wc_not_configured": "Не вдалося обробити: {object}. Спробуйте пізніше.",
+  "device_in_active_session": "Не вдалося змінити: {object}. Перевірте поточний стан."
 }

@@ -660,9 +660,58 @@ describe("DevicesPage", () => {
     fireEvent.click(screen.getByTestId("confirm-delete"));
 
     expect(await screen.findByTestId("delete-error")).toHaveTextContent(
-      catalogText("general.permission", "das Löschen des Geräts"),
+      catalogText("general.permission", "das Entfernen des Geräts"),
     );
     expect(screen.getByTestId("confirmation-modal")).toBeInTheDocument();
+  });
+
+  it("explains a removal an open session blocks and keeps the dialog", async () => {
+    setSelectedDevice("1");
+    mockRemove.mockRejectedValueOnce(
+      new ApiError("active session", 409, {
+        code: "iot.device_in_active_session",
+      }),
+    );
+
+    render(<DevicesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("device-detail-panel")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId("trigger-delete"));
+    fireEvent.click(await screen.findByTestId("confirm-delete"));
+
+    expect(await screen.findByTestId("delete-error")).toHaveTextContent(
+      "Auf diesem Gerät läuft gerade eine Sitzung. Beende sie zuerst am Gerät, dann kannst du es entfernen.",
+    );
+    expect(screen.getByTestId("confirmation-modal")).toBeInTheDocument();
+    expect(mockReplace).not.toHaveBeenCalledWith("/tenant/database/devices", {
+      scroll: false,
+    });
+  });
+
+  it("reloads the list when the device is already gone", async () => {
+    setSelectedDevice("1");
+    mockRemove.mockRejectedValueOnce(
+      new ApiError("gone", 404, { code: "general.not_found" }),
+    );
+
+    render(<DevicesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("device-detail-panel")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId("trigger-delete"));
+    fireEvent.click(await screen.findByTestId("confirm-delete"));
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/tenant/database/devices", {
+        scroll: false,
+      });
+    });
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "Das Gerät „Eingang Kiosk“ ist hier nicht mehr verfügbar.",
+    );
   });
 
   it("preserves the once-only API key in the detail panel after create", async () => {

@@ -884,12 +884,12 @@ describe("OperatorSchoolDetailPage", () => {
           name: /Aktionen für/,
         }),
       );
-      fireEvent.click(screen.getByRole("menuitem", { name: "Löschen" }));
+      fireEvent.click(screen.getByRole("menuitem", { name: "Entfernen" }));
 
-      // The DeleteDeviceModal renders "Gerät löschen" as a heading.
+      // The DeleteDeviceModal renders "Gerät entfernen" as a heading.
       await waitFor(() => {
         expect(
-          screen.getByRole("heading", { name: "Gerät löschen" }),
+          screen.getByRole("heading", { name: "Gerät entfernen" }),
         ).toBeInTheDocument();
       });
     });
@@ -906,11 +906,13 @@ describe("OperatorSchoolDetailPage", () => {
           name: /Aktionen für/,
         }),
       );
-      fireEvent.click(screen.getByRole("menuitem", { name: "Löschen" }));
+      fireEvent.click(screen.getByRole("menuitem", { name: "Entfernen" }));
 
-      // Two-step confirm: click "Ja, löschen" then "Endgültig löschen"
-      fireEvent.click(await screen.findByText("Ja, löschen"));
-      fireEvent.click(await screen.findByText("Endgültig löschen"));
+      // Two-step confirm: click "Ja, entfernen" then "Gerät entfernen"
+      fireEvent.click(await screen.findByText("Ja, entfernen"));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Gerät entfernen" }),
+      );
 
       await waitFor(() => {
         expect(mockDeleteDevice).toHaveBeenCalledWith("1");

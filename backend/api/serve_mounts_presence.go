@@ -156,7 +156,7 @@ func newIoTResource(
 		Logger:    logger.With("service", "device-scan"), Now: now,
 	})
 	return iotAPI.NewResource(iotAPI.ServiceDependencies{
-		Administration:   NewIoTAdministration(devicefleetCompose.NewAdministration(iot.Fleet(), now), now),
+		Administration:   NewIoTAdministration(devicefleetCompose.NewAdministration(iot.Fleet(), now), presence, logger.With("handler", "iot-devices"), now),
 		Runtime:          NewIoTHTTPRuntime(now),
 		DeviceScan:       deviceScan,
 		OpenRooms:        deviceScan,

@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -76,7 +77,7 @@ func newKioskDataBudgetFixture(t *testing.T) (*bun.DB, http.Handler, activityCon
 	auth := testutil.NewDeviceAuthenticators(devices.IoT.Fleet(), schools, settings)
 	resource := iotcompose.NewResource(iotcompose.ServiceDependencies{
 		Runtime: NewIoTHTTPRuntime(time.Now), ErrorReports: NewIoTErrorReporter(nil, nil),
-		Administration: NewIoTAdministration(devicefleet.NewAdministration(devices.IoT.Fleet(), time.Now), time.Now),
+		Administration: NewIoTAdministration(devicefleet.NewAdministration(devices.IoT.Fleet(), time.Now), routerRemovalSessions{}, slog.Default(), time.Now),
 		Directory:      data.Directory, Rooms: data.RoomAvailability, Configuration: data.Configuration,
 		FeedbackService: feedback.Feedback, FeedbackStudents: identity.FeedbackStudents,
 		FeedbackResponseObserver: func(int, string) {},

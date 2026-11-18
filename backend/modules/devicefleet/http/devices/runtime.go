@@ -1,6 +1,7 @@
 package devices
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -20,6 +21,14 @@ type Runtime struct {
 	// field the conflict is about (#2517).
 	ConflictOnField     func(w http.ResponseWriter, r *http.Request, err error, code, field string)
 	ConstraintViolation func(error) bool
+	// ConflictWithDetails renders a 409 with a registered code and the
+	// structured values the screen shows.
+	ConflictWithDetails func(w http.ResponseWriter, r *http.Request, err error, code string, details map[string]any)
+	// ActiveSession reads the open kiosk session of a device row in the
+	// request's tenant transaction; nil when the device runs none (#2319).
+	ActiveSession func(ctx context.Context, deviceRowID int64) (*RemovalSession, error)
+	// AuditRemoval records one removal outcome with the acting account.
+	AuditRemoval func(r *http.Request, entry RemovalAudit)
 	// Now is the root's clock the statistics and scan answers are stamped
 	// with.
 	Now func() time.Time
@@ -29,6 +38,34 @@ type Runtime struct {
 // device already uses (error-registry/). This package does not import
 // api/common, so it names the code once here.
 const codeDeviceIDTaken = "iot.device_id_taken"
+
+// codeDeviceInActiveSession is the registered code of a removal an open
+// kiosk session blocks (error-registry/iot.json).
+const codeDeviceInActiveSession = "iot.device_in_active_session"
+
+// RemovalSession is the open kiosk session that protects a device from
+// removal: ending it first keeps the session and its visits consistent.
+type RemovalSession struct {
+	ID        int64
+	StartedAt time.Time
+	RoomID    int64
+}
+
+// The outcomes of a removal request the audit trail distinguishes.
+const (
+	RemovalOutcomeRemoved       = "removed"
+	RemovalOutcomeActiveSession = "rejected_active_session"
+	RemovalOutcomeProtected     = "rejected_protected"
+)
+
+// RemovalAudit is one removal outcome. It names the device row, never its
+// credential.
+type RemovalAudit struct {
+	DeviceRowID int64
+	DeviceID    string
+	Outcome     string
+	SessionID   *int64
+}
 
 func (rs *Resource) renderError(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, devicefleet.ErrAdministrationDuplicateDeviceID) && rs.runtime.ConflictOnField != nil {

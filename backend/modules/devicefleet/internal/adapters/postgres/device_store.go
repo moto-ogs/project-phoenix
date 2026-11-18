@@ -212,15 +212,27 @@ func (s *DeviceStore) UpdateStatusByDeviceID(ctx context.Context, deviceID strin
 	return affected, stats, nil
 }
 
-// Delete removes one device row and reports how many rows matched.
+// Delete removes one device from the fleet (Geräteentfernung, #2319) and
+// reports how many rows changed. The row stays as archived history, so
+// attendance, sessions and audit entries keep resolving to the same device
+// identity. One statement clears the credential, deactivates the device,
+// drops its room and stamps archived_at: access ends and the Geräteplatz,
+// which counts live devices only, is released together. The predicate on
+// archived_at makes a repeated removal change nothing and release nothing.
 func (s *DeviceStore) Delete(ctx context.Context, id int64) (int64, domain.OperationStats, error) {
 	db, scope, err := s.database(ctx)
 	if err != nil {
 		return 0, domain.OperationStats{}, err
 	}
-	query := db.NewDelete().Model((*deviceRow)(nil)).
+	query := db.NewUpdate().Model((*deviceRow)(nil)).
 		ModelTableExpr(deviceTableExpr).
-		Where(`"device".id = ?`, id)
+		Set("archived_at = ?", s.now()).
+		Set("status = ?", string(devicefleet.DeviceStatusInactive)).
+		Set("api_key_hash = NULL").
+		Set("masked_api_key = ''").
+		Set("room_id = NULL").
+		Where(`"device".id = ?`, id).
+		Where(deviceNotArchive)
 	if !scope.AcrossSchools {
 		query = query.Where(`"device".tenant_id = ?`, scope.TenantID)
 	}
@@ -229,7 +241,7 @@ func (s *DeviceStore) Delete(ctx context.Context, id int64) (int64, domain.Opera
 	result, err := query.Exec(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
-		return 0, stats, fmt.Errorf("devicefleet postgres: delete device: %w", err)
+		return 0, stats, fmt.Errorf("devicefleet postgres: archive device: %w", err)
 	}
 	affected, err := result.RowsAffected()
 	if err != nil {

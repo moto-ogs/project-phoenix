@@ -177,8 +177,10 @@ func schoolBankSnapshot(t *testing.T, ctx context.Context, db *bun.DB, school in
 		strip = ""
 	}
 	var guardians, staff string
-	require.NoError(t, db.NewRaw(`SELECT coalesce(jsonb_agg(to_jsonb(g) `+strip+` ORDER BY id), '[]')::text FROM users.guardian_financial_data g WHERE tenant_id = ?`, school).Scan(ctx, &guardians))
-	require.NoError(t, db.NewRaw(`SELECT coalesce(jsonb_agg(to_jsonb(s) `+strip+` ORDER BY id), '[]')::text FROM users.staff_financial_data s WHERE tenant_id = ?`, school).Scan(ctx, &staff))
+	require.NoError(t, db.NewRaw(`SELECT
+		(SELECT coalesce(jsonb_agg(to_jsonb(g) `+strip+` ORDER BY id), '[]')::text FROM users.guardian_financial_data g WHERE tenant_id = ?0),
+		(SELECT coalesce(jsonb_agg(to_jsonb(s) `+strip+` ORDER BY id), '[]')::text FROM users.staff_financial_data s WHERE tenant_id = ?0)`,
+		school).Scan(ctx, &guardians, &staff))
 	return guardians + staff
 }
 

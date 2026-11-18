@@ -7,6 +7,7 @@ const CodeIotDeviceApiKeyFormatInvalid = "iot.device_api_key_format_invalid"
 const CodeIotDeviceApiKeyInvalid = "iot.device_api_key_invalid"
 const CodeIotDeviceApiKeyRequired = "iot.device_api_key_required"
 const CodeIotDeviceIdTaken = "iot.device_id_taken"
+const CodeIotDeviceInActiveSession = "iot.device_in_active_session"
 const CodeIotDeviceInactive = "iot.device_inactive"
 const CodeIotDevicePinInvalid = "iot.device_pin_invalid"
 const CodeIotDevicePinRequired = "iot.device_pin_required"
@@ -44,6 +45,7 @@ var errorCodeClassesIot = []errorCodeClass{
 	{CodeIotDeviceApiKeyInvalid, "permission"},
 	{CodeIotDeviceApiKeyRequired, "permission"},
 	{CodeIotDeviceIdTaken, "business_rejection"},
+	{CodeIotDeviceInActiveSession, "business_rejection"},
 	{CodeIotDeviceInactive, "permission"},
 	{CodeIotDevicePinInvalid, "permission"},
 	{CodeIotDevicePinRequired, "permission"},

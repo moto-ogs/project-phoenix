@@ -33,5 +33,6 @@
   "student_already_active": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "student_not_present": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "wc_needs_staff": "{object} işlenemedi. Daha sonra yeniden deneyin.",
-  "wc_not_configured": "{object} işlenemedi. Daha sonra yeniden deneyin."
+  "wc_not_configured": "{object} işlenemedi. Daha sonra yeniden deneyin.",
+  "device_in_active_session": "{object} değiştirilemedi. Güncel durumu kontrol edin."
 }

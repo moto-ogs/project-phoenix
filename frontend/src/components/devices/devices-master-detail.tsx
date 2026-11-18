@@ -162,7 +162,8 @@ function DeviceDetailContent({
       </Button>
       <DetailDeleteButton
         onClick={onDeleteClick}
-        tooltip="Löscht das Gerät mit seinem Schlüssel, moto fragt vorher nach."
+        label="Entfernen"
+        tooltip="Entfernt das Gerät aus moto, moto fragt vorher nach."
       />
     </>
   );

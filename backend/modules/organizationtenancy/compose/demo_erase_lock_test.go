@@ -162,20 +162,23 @@ var snapshotRows = map[string]string{
 	"platform.demo_school_states":      `FROM (SELECT to_jsonb(s) - 'erasure_deferrals' AS row FROM platform.demo_school_states AS s WHERE s.name = ?2) AS r`,
 }
 
-func snapshotVisitor(t *testing.T, db *bun.DB, schoolID int64, accounts visitorAccounts, slug string) visitorSnapshot {
-	t.Helper()
-	snapshot := make(visitorSnapshot, len(snapshotRows))
-	ids := bun.List([]int64{accounts.caregiver, accounts.parent})
+var visitorSnapshotQueries = func() testpkg.SnapshotQueries {
+	queries := make(testpkg.SnapshotQueries, len(snapshotRows))
 	for table, rows := range snapshotRows {
 		row := "to_jsonb(r)"
 		if table == "platform.demo_school_states" {
 			row = "r.row"
 		}
-		var content string
-		require.NoError(t, db.NewRaw(`SELECT COALESCE(jsonb_agg(`+row+` ORDER BY `+row+`::text), '[]'::jsonb)::text `+rows, ids, schoolID, slug).
-			Scan(t.Context(), &content), table)
-		snapshot[table] = content
+		queries[table] = `SELECT COALESCE(jsonb_agg(` + row + ` ORDER BY ` + row + `::text), '[]'::jsonb) ` + rows
 	}
+	return queries
+}()
+
+func snapshotVisitor(t *testing.T, db *bun.DB, schoolID int64, accounts visitorAccounts, slug string) visitorSnapshot {
+	t.Helper()
+	ids := bun.List([]int64{accounts.caregiver, accounts.parent})
+	snapshot, err := visitorSnapshotQueries.Read(t.Context(), db, ids, schoolID, slug)
+	require.NoError(t, err)
 	return snapshot
 }
 
