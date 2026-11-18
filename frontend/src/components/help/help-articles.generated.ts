@@ -15051,8 +15051,9 @@ export const traegerStaffContractsTopic =
 /**
  * `/traeger/personal/einsatzplanung` (#4708, ADR 0242): die Woche aller
  * Personen mit Personalakte über alle Einsatzorte, das Planen einer Schicht
- * im Dienstplan einer Schule, die Prüfung der Arbeitszeitregeln und der
- * Schalter `Einsatzplanung in moto` in den Einstellungen.
+ * im Dienstplan einer Schule, die Vorschläge aus dem Arbeitsvertrag (#7381),
+ * die Prüfung der Arbeitszeitregeln und der Schalter `Einsatzplanung in moto`
+ * in den Einstellungen.
  */
 export const traegerStaffPlanningTopic =
   function traegerStaffPlanningTopic(): HelpTopic {
@@ -15078,6 +15079,15 @@ export const traegerStaffPlanningTopic =
             "Wähle in der Zeile der Person den freien Tag.",
             "Wähle den `Einsatzort` und trage `Beginn`, `Ende` und `Pause` ein.",
             "Wähle `Planen`.",
+          ],
+        },
+        {
+          title: "Einen Vorschlag aus dem Arbeitsvertrag planen",
+          steps: [
+            "Gestrichelt steht `Vorschlag`: die Stunden aus dem Arbeitsvertrag für diesen Tag an dieser Schule. Dort ist noch keine Schicht geplant.",
+            "Wähle den Vorschlag. moto trägt `Einsatzort`, `Beginn`, `Ende` und `Pause` ein.",
+            "Prüfe `Beginn` und `Ende` und ändere sie, wenn nötig.",
+            "Wähle `Planen`. Erst dann steht die Schicht im Dienstplan.",
           ],
         },
         {
@@ -15119,12 +15129,15 @@ export const traegerStaffPlanningTopic =
         "moto zählt alle Schulen der Person zusammen: die Stunden am Tag, die Ruhezeit, die Pausen und das Soll der Woche.",
         "Dieselbe Prüfung läuft, wenn eine Schule selbst eine Schicht plant.",
         "Das Soll kommt aus dem Arbeitsvertrag. Feiertage und Schließtage zählen nicht.",
+        "Der Vertrag kennt nur Stunden. Den Beginn nimmt moto von der Uhrzeit, zu der die Person in dieser Woche an der Schule meistens anfängt, sonst 8:00 Uhr. Arbeitet sie an dem Tag schon an einer anderen Schule, liegt der Vorschlag mit 30 Minuten Abstand davor oder danach. Die Pause rechnet moto nach dem Gesetz für den ganzen Tag dazu.",
+        "Alle Vorschläge zusammen führen nie über das Soll der Woche, und keiner über die Höchstzeit am Tag. Ist eine Grenze fast erreicht, schlägt moto nur noch den Rest vor und sagt das im Dialog.",
         "Jedes Anzeigen und jeder Download der Woche steht im Zugriffsprotokoll jeder Schule.",
         "moto prüft die Regeln als Hilfe. Ob eine Planung erlaubt ist, entscheidest du.",
       ],
       differences: [
         "Oben steht `Einsatzplanung in moto ist aus`: dein Träger plant außerhalb von moto. Neue Schichten sind dann überall gesperrt. Geplante Schichten bleiben.",
         "Eine Schule fehlt in der Woche: moto konnte sie gerade nicht lesen. Lade die Seite später neu.",
+        "Kein `Vorschlag` zu sehen: Der Tag ist vorbei, an der Schule steht schon eine Schicht (auch eine abgesagte), das Soll der Woche ist schon geplant, die Person ist abwesend, der Vertrag hat für den Tag kein Soll, oder der Tag ist ein Feiertag oder Schließtag der Schule.",
       ],
       troubleshootingDetails: [
         "„Die Person arbeitet … schon an einem anderen Einsatzort“: Zur selben Zeit hat die Person eine Schicht an einer anderen Schule. Wähle eine andere Zeit.",
