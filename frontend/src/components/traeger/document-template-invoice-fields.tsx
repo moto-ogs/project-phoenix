@@ -1,5 +1,5 @@
 import { CheckboxCard } from "~/components/ui/checkbox-card";
-import { FieldErrorHint } from "~/components/ui/field-error-hint";
+import { FormFieldset } from "~/components/ui/form-fieldset";
 import type { DocumentTemplateInvoiceLayout } from "~/lib/traeger-document-templates";
 
 /**
@@ -25,24 +25,17 @@ export function DocumentTemplateInvoiceFields({
     onChange({ ...layout, [part]: value });
 
   return (
-    <fieldset
-      aria-describedby={
-        error ? "template-invoice-error" : "template-invoice-hint"
+    <FormFieldset
+      legend="Rechnungstabelle"
+      hint={
+        <>
+          So zeigt die Tabelle {"{{positionen}}"} die gebuchten Wochen. Woche,
+          Betrag und Gesamtbetrag stehen immer darin.
+        </>
       }
-      aria-invalid={error ? true : undefined}
-      className="border-t border-gray-100 pt-5"
+      error={error}
     >
-      <legend className="float-left w-full text-sm font-semibold text-gray-900">
-        Rechnungstabelle
-      </legend>
-      <p
-        id="template-invoice-hint"
-        className="clear-left mt-1 text-sm text-gray-600"
-      >
-        So zeigt die Tabelle {"{{positionen}}"} die gebuchten Wochen. Woche,
-        Betrag und Gesamtbetrag stehen immer darin.
-      </p>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
         <CheckboxCard
           checked={layout.groupByChild}
           onChange={(checked) => set("groupByChild", checked)}
@@ -59,7 +52,6 @@ export function DocumentTemplateInvoiceFields({
           hint="Zum Beispiel „Vormittag“ oder „Nachmittag“."
         />
       </div>
-      <FieldErrorHint id="template-invoice-error" message={error} />
-    </fieldset>
+    </FormFieldset>
   );
 }

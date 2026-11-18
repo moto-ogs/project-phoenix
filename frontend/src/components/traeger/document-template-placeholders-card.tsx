@@ -1,6 +1,7 @@
 import { Button } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
+import { SectionLabel } from "~/components/ui/section-label";
 import type { DocumentTemplatePlaceholder } from "~/lib/traeger-document-templates";
 
 /** Die Schreibregeln des Brieftexts, wie das Backend sie liest (ADR 0152). */
@@ -89,9 +90,9 @@ export function DocumentTemplatePlaceholdersCard({
           ))}
         </DataGrid>
       )}
-      <h3 className="mt-6 text-sm font-semibold text-gray-900">
+      <SectionLabel as="h3" className="mt-6">
         So schreibst du den Brieftext
-      </h3>
+      </SectionLabel>
       <ul className="mt-2 space-y-1 text-sm text-gray-600">
         {RULES.map((rule) => (
           <li key={rule.mark}>
