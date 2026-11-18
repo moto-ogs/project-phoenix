@@ -958,13 +958,15 @@ function HolidayRegistrationContent() {
         >
           <LoadErrorAlert error={previewLoad.error ?? readersError} />
           <LoadErrorAlert error={afterWrite.error} />
-          <HolidayRegistrationMailProblemsAlert
-            problems={registration.mailProblems}
-            outcomes={(registration.mails ?? []).map((mail) => mail.outcome)}
-            cancelled={cancelled}
-            parentsSectionId={PARENTS_SECTION_ID}
-            revealParents={() => changeTab("eltern")}
-          />
+          {metadataReady ? (
+            <HolidayRegistrationMailProblemsAlert
+              problems={registration.mailProblems}
+              outcomes={(registration.mails ?? []).map((mail) => mail.outcome)}
+              cancelled={cancelled}
+              parentsSectionId={PARENTS_SECTION_ID}
+              revealParents={() => changeTab("eltern")}
+            />
+          ) : null}
           {metadataReady && tab === "uebersicht" ? (
             <>
               {deletionNotice ? (

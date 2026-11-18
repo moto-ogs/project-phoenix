@@ -552,6 +552,12 @@ describe("TraegerHolidayRegistrationPage", () => {
     mockPeriod.mockRejectedValue(
       new ApiError("unavailable", 503, { code: "general.unavailable" }),
     );
+    mockRegistration.mockResolvedValue({
+      ...HOLIDAY_REGISTRATION,
+      mailProblems: [
+        { kind: "holiday_registration_received", state: "failed" },
+      ],
+    });
     render(
       <ToastProvider>
         <TraegerHolidayRegistrationPage />
@@ -574,6 +580,9 @@ describe("TraegerHolidayRegistrationPage", () => {
     expect(screen.getByRole("button", { name: "Bestätigen" })).toBeEnabled();
     await openHeadMenu();
     expect(screen.getByText("Herunterladen")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Zu den Eltern" }),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps only non-interactive header chrome after metadata access is refused", async () => {
