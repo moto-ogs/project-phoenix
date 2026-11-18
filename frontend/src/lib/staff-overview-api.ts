@@ -39,7 +39,7 @@ export interface BackendDashboardSummary {
 }
 
 export interface BackendTimeTrackingOverviewRow {
-  staff_id: number;
+  staff_id: number | string;
   first_name: string;
   last_name: string;
   name: string;

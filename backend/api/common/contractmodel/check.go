@@ -123,6 +123,8 @@ func (c *checker) value(at string, s Schema, raw json.RawMessage) {
 		}
 	case KindRef:
 		c.object(at, s.Ref, raw)
+	case KindJSON:
+		// Any JSON value: the decoder above already read it.
 	default:
 		if reason := scalar(s.Kind, raw); reason != "" {
 			c.failf(at, "want %s, found %s", reason, shown(raw))

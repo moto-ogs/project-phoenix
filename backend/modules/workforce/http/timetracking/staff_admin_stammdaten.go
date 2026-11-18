@@ -236,9 +236,9 @@ func newStammdatenResponse(data *workforce.StaffStammdaten, types []workforce.Qu
 	return resp
 }
 
-// stammdatenAck is the uniform PUT response; the tab refetches the section
+// StammdatenAck is the uniform PUT response; the tab refetches the section
 // afterwards, so the ack carries no data.
-type stammdatenAck struct {
+type StammdatenAck struct {
 	StaffID int64 `json:"staff_id"`
 }
 
@@ -267,7 +267,7 @@ func (rs *StaffAdminResource) runStammdatenUpdate(w http.ResponseWriter, r *http
 		}
 		return
 	}
-	common.Respond(w, r, http.StatusOK, &stammdatenAck{StaffID: id}, "Stammdaten updated successfully")
+	common.Respond(w, r, http.StatusOK, &StammdatenAck{StaffID: id}, "Stammdaten updated successfully")
 }
 
 func (rs *StaffAdminResource) updateStammdatenPerson(w http.ResponseWriter, r *http.Request) {
@@ -470,5 +470,5 @@ func (rs *StaffAdminResource) updateStammdatenFinancial(w http.ResponseWriter, r
 		}
 		return
 	}
-	common.Respond(w, r, http.StatusOK, &stammdatenAck{StaffID: staffID}, "Stammdaten updated successfully")
+	common.Respond(w, r, http.StatusOK, &StammdatenAck{StaffID: staffID}, "Stammdaten updated successfully")
 }

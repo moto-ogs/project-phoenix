@@ -101,7 +101,7 @@ async function readOne(response: Response): Promise<AbsenceType> {
 
 class AbsenceTypeService {
   async getAbsenceTypes(): Promise<AbsenceType[]> {
-    const response = await sessionFetch("/api/staff/absence-types");
+    const response = await sessionFetch("/api/absence-types");
     return readList(response);
   }
 
@@ -113,7 +113,7 @@ class AbsenceTypeService {
       requestable?: boolean;
     },
   ): Promise<AbsenceType> {
-    const response = await sessionFetch("/api/staff/absence-types", {
+    const response = await sessionFetch("/api/absence-types", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -145,7 +145,7 @@ class AbsenceTypeService {
       schoolLimitDays?: number | null;
     },
   ): Promise<AbsenceType> {
-    const response = await sessionFetch(`/api/staff/absence-types/${id}`, {
+    const response = await sessionFetch(`/api/absence-types/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -197,7 +197,7 @@ class AbsenceTypeService {
       half_day: String(booking.halfDay),
     });
     const response = await sessionFetch(
-      `/api/staff/absence-types/${absenceTypeId}/allowances/${staffId}/preview?${query.toString()}`,
+      `/api/absence-types/${absenceTypeId}/allowances/${staffId}/preview?${query.toString()}`,
     );
     if (!response.ok) {
       throw await readError(

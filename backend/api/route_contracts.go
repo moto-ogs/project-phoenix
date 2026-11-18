@@ -19,6 +19,8 @@ import (
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
 	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
+	workforceModule "github.com/moto-ogs/project-phoenix/modules/workforce"
+	timeTrackingHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
 	workforceTraegerStaff "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	worktimemodelsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/worktimemodels"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
@@ -44,6 +46,11 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/school/parent-letters", announcementAPI.RouteContracts(common.PortalSchool)},
 		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
 		{"/api/work-time-models", worktimemodelsHTTP.RouteContracts()},
+		{"/api/staff", timeTrackingHTTP.StaffAdminRouteContracts()},
+		{"/api/staff", staffMembershipRouteContracts()},
+		{"/api/absence-types", absenceTypeRouteContracts()},
+		{"/api/shift-types", shiftTypeRouteContracts()},
+		{"/api/staff-shifts", staffShiftRouteContracts()},
 		// Class Day owns the child sheet the supervision route answers with.
 		{"/school/calendar", calendarAPI.SchoolRouteContracts()},
 		{"/school/supervisions", timetableHTTP.SchoolSupervisionRouteContracts(classday.SupervisionStudentSheet{})},
@@ -98,6 +105,7 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[careStudentsHTTP.StudentRequest]():       contract.ReadsFields,
 		reflect.TypeFor[careStudentsHTTP.UpdateStudentRequest](): contract.ReadsFields,
 		reflect.TypeFor[careStudentsHTTP.CompanionEntry]():       contract.ReadsLaxIDs,
+		reflect.TypeFor[workforceModule.BreakDurationUpdate]():   contract.ReadsLaxIDs,
 	}
 	// Appointments keeps its own day type.
 	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date]()}

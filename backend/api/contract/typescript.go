@@ -413,6 +413,8 @@ func (w *tsWriter) tsType(s Schema, request bool) string {
 		t = "Record<string, " + w.tsType(*s.Elem, request) + ">"
 	case KindRef:
 		t = s.Ref
+	case KindJSON:
+		t = "unknown"
 	}
 	if s.Nullable {
 		t += " | null"
@@ -453,6 +455,8 @@ func (w *tsWriter) zod(s Schema) string {
 		z = "z.record(z.string(), " + w.zod(*s.Elem) + ")"
 	case KindRef:
 		z = s.Ref + "Schema"
+	case KindJSON:
+		z = "z.unknown()"
 	}
 	if s.Nullable {
 		z += ".nullable()"

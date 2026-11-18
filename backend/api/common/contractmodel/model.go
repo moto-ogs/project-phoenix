@@ -20,6 +20,9 @@ const (
 	KindArray    = "array"
 	KindMap      = "map"
 	KindRef      = "ref"
+	// KindJSON is any JSON value the contract does not describe: a
+	// json.RawMessage the backend passes through as it was stored.
+	KindJSON = "json"
 )
 
 // Schema is one value on the wire.
