@@ -8584,6 +8584,30 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/time-tracking/absences/{id}/cancel",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/time-tracking/absences/{id}/resubmit",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ResubmitAbsenceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "nullable": true,
+        "ref": "StaffAbsenceResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/time-tracking/break/end",
       "portals": [
         "tenant"
@@ -8617,6 +8641,21 @@
       "request": {
         "kind": "ref",
         "ref": "CheckInRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SessionResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/time-tracking/check-out",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CheckOutRequest"
       },
       "response": {
         "kind": "ref",
@@ -25741,6 +25780,20 @@
             "kind": "string"
           }
         },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CheckOutRequest",
+      "go_type": "timetracking.CheckOutRequest",
+      "request": true,
+      "fields": [
         {
           "name": "reason",
           "optional": true,
@@ -50148,6 +50201,20 @@
           "schema": {
             "kind": "ref",
             "ref": "SelectOptions"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ResubmitAbsenceRequest",
+      "go_type": "timetracking.ResubmitAbsenceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

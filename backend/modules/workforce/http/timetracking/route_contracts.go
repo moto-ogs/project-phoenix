@@ -25,6 +25,7 @@ func RouteContracts(shift, allowance any) []common.RouteContract {
 	absence := workforce.StaffAbsenceResponse{}
 	return []common.RouteContract{
 		{Method: "POST", Pattern: "/check-in", Portals: portals, Request: CheckInRequest{}, Response: session},
+		{Method: "POST", Pattern: "/check-out", Portals: portals, Request: CheckOutRequest{}, Response: session},
 		{Method: "GET", Pattern: "/current", Portals: portals, Response: &SessionResponse{}},
 		{Method: "GET", Pattern: "/config", Portals: portals, Response: ConfigResponse{}},
 		{Method: "GET", Pattern: "/holidays", Portals: portals, Query: days, Response: []workforce.PublicHoliday{}},
@@ -43,6 +44,8 @@ func RouteContracts(shift, allowance any) []common.RouteContract {
 		{Method: "POST", Pattern: "/absences", Portals: portals, Request: workforce.CreateAbsenceRequest{}, Response: absence},
 		{Method: "PUT", Pattern: "/absences/{id}", Portals: portals, Request: workforce.UpdateAbsenceRequest{}, Response: absence},
 		{Method: "DELETE", Pattern: "/absences/{id}", Portals: portals, NoData: true},
+		{Method: "POST", Pattern: "/absences/{id}/cancel", Portals: portals, NoData: true},
+		{Method: "POST", Pattern: "/absences/{id}/resubmit", Portals: portals, Request: ResubmitAbsenceRequest{}, Response: &workforce.StaffAbsenceResponse{}},
 		{Method: "GET", Pattern: "/absences/mails", Portals: portals, Response: AbsenceRequestMailsResponse{}},
 		{Method: "POST", Pattern: "/vacation/request", Portals: portals, Request: workforce.RequestVacationRequest{}, Response: absence},
 		{Method: "GET", Pattern: "/vacation/quota", Portals: portals, Query: year, Response: workforce.VacationQuotaSummary{}},

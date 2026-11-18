@@ -379,6 +379,11 @@ export interface CreateAbsenceRequest {
   note?: string;
 }
 
+/** Go: timetracking.ResubmitAbsenceRequest */
+export interface ResubmitAbsenceRequest {
+  note?: string;
+}
+
 /** Go: timetracking.StartBreakRequest */
 export interface StartBreakRequest {
   planned_duration_minutes?: number | null;
@@ -387,6 +392,11 @@ export interface StartBreakRequest {
 /** Go: timetracking.CheckInRequest */
 export interface CheckInRequest {
   status?: string;
+  reason?: string;
+}
+
+/** Go: timetracking.CheckOutRequest */
+export interface CheckOutRequest {
   reason?: string;
 }
 
@@ -583,6 +593,19 @@ export const routes = {
     request: requestBody<CreateAbsenceRequest>(),
     response: success(StaffAbsenceResponseSchema),
   },
+  "POST /api/time-tracking/absences/{id}/cancel": {
+    method: "POST",
+    pattern: "/api/time-tracking/absences/{id}/cancel",
+    portals: ["tenant"],
+    response: noData,
+  },
+  "POST /api/time-tracking/absences/{id}/resubmit": {
+    method: "POST",
+    pattern: "/api/time-tracking/absences/{id}/resubmit",
+    portals: ["tenant"],
+    request: requestBody<ResubmitAbsenceRequest>(),
+    response: success(StaffAbsenceResponseSchema.nullable()),
+  },
   "POST /api/time-tracking/break/end": {
     method: "POST",
     pattern: "/api/time-tracking/break/end",
@@ -601,6 +624,13 @@ export const routes = {
     pattern: "/api/time-tracking/check-in",
     portals: ["tenant"],
     request: requestBody<CheckInRequest>(),
+    response: success(SessionResponseSchema),
+  },
+  "POST /api/time-tracking/check-out": {
+    method: "POST",
+    pattern: "/api/time-tracking/check-out",
+    portals: ["tenant"],
+    request: requestBody<CheckOutRequest>(),
     response: success(SessionResponseSchema),
   },
   "POST /api/time-tracking/vacation/request": {

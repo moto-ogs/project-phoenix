@@ -556,6 +556,11 @@ func (rs *Resource) cancelAbsence(w http.ResponseWriter, r *http.Request) {
 	common.RespondNoContent(w, r)
 }
 
+// ResubmitAbsenceRequest is the note a Rückfrage is answered with (#1419).
+type ResubmitAbsenceRequest struct {
+	Note string `json:"note"`
+}
+
 // resubmitAbsence handles POST /api/time-tracking/absences/{id}/resubmit —
 // the MA answers a Rückfrage by amending their note and re-requesting (#1419).
 func (rs *Resource) resubmitAbsence(w http.ResponseWriter, r *http.Request) {
@@ -569,9 +574,7 @@ func (rs *Resource) resubmitAbsence(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var req struct {
-		Note string `json:"note"`
-	}
+	var req ResubmitAbsenceRequest
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
