@@ -73,7 +73,7 @@ describe("holiday places summary", () => {
     // Zahl und Text sind ein Paar der Statuszeile (#7402).
     expect(
       (await screen.findByText("Kind wartet auf einen Platz")).parentElement,
-    ).toHaveTextContent("1Kind wartet auf einen Platz");
+    ).toHaveTextContent("1 Kind wartet auf einen Platz");
     expect(screen.getAllByRole("link", { name: /Tom Platz/ })).toHaveLength(3);
 
     // #7304: the week cards sit in one grid, so the last one keeps its height.

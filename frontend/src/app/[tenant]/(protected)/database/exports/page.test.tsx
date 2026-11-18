@@ -107,7 +107,7 @@ describe("DatabaseExportsPage", () => {
     expect(screen.getByRole("link", { name: "Zum Personal" })).toBeVisible();
     const links = screen.getByText("auf anderen Seiten");
     expect(links).toBeVisible();
-    expect(links.previousElementSibling).toHaveTextContent(/^5$/);
+    expect(links.parentElement).toHaveTextContent(/^5 auf anderen Seiten$/);
   });
 
   it("hides exports from modules the school did not book", () => {
@@ -128,6 +128,6 @@ describe("DatabaseExportsPage", () => {
     ).not.toBeInTheDocument();
     const links = screen.getByText("auf anderen Seiten");
     expect(links).toBeVisible();
-    expect(links.previousElementSibling).toHaveTextContent(/^3$/);
+    expect(links.parentElement).toHaveTextContent(/^3 auf anderen Seiten$/);
   });
 });

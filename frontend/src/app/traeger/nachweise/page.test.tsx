@@ -123,7 +123,7 @@ describe("TraegerStaffProofsPage", () => {
     // Statuszeile: drei Paare ohne Trennpunkt (#7402).
     expect(
       (await screen.findByText("laufen bald ab")).parentElement?.parentElement,
-    ).toHaveTextContent("1abgelaufen1fehlen1laufen bald ab");
+    ).toHaveTextContent("1 abgelaufen, 1 fehlen, 1 laufen bald ab");
     expect(
       screen.getByRole("link", { name: "Mira Sommer" }),
     ).toBeInTheDocument();

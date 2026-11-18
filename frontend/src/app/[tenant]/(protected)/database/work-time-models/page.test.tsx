@@ -141,7 +141,7 @@ describe("Arbeitszeitmodelle (#6891)", () => {
     // Zahl und Wort stehen in eigenen Elementen, die Paare ohne Trennpunkt.
     expect(
       screen.getByText("nicht mehr angeboten").parentElement?.parentElement,
-    ).toHaveTextContent(/^1Vorlage1nicht mehr angeboten$/);
+    ).toHaveTextContent(/^1 Vorlage, 1 nicht mehr angeboten$/);
   });
 
   it("says before saving whom a change reaches", () => {

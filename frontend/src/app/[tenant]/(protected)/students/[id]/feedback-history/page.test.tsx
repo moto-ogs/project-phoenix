@@ -449,7 +449,7 @@ describe("StudentFeedbackHistoryPage", () => {
         render(<StudentFeedbackHistoryPage />);
         expect(
           (await screen.findByText("Einträge")).parentElement,
-        ).toHaveTextContent(/^4Einträge$/);
+        ).toHaveTextContent(/^4 Einträge$/);
         for (const [label, count] of [
           ["Heute", 1],
           ["Diese Woche", 3],
@@ -460,7 +460,7 @@ describe("StudentFeedbackHistoryPage", () => {
             expect(
               screen.getByText(count === 1 ? "Eintrag" : "Einträge")
                 .parentElement,
-            ).toHaveTextContent(count === 1 ? /^1Eintrag$/ : /^3Einträge$/),
+            ).toHaveTextContent(count === 1 ? /^1 Eintrag$/ : /^3 Einträge$/),
           );
         }
       } finally {

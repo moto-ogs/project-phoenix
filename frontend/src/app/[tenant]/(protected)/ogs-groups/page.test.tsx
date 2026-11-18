@@ -866,7 +866,7 @@ describe("OGSGroupPage", () => {
       // Wert-Label-Paare ohne Trennpunkt (#7402).
       expect(
         screen.getByText("entschuldigt").parentElement?.parentElement,
-      ).toHaveTextContent(/von 3da1krank1entschuldigt$/);
+      ).toHaveTextContent(/von 3 da, 1 krank, 1 entschuldigt$/);
       expect(screen.queryByText("3 Kinder")).not.toBeInTheDocument();
     });
   });
@@ -915,7 +915,7 @@ describe("OGSGroupPage", () => {
 
     expect(
       (await screen.findByText("entschuldigt")).parentElement?.parentElement,
-    ).toHaveTextContent(/von 3da1krank0entschuldigt$/);
+    ).toHaveTextContent(/von 3 da, 1 krank, 0 entschuldigt$/);
   });
 
   // Ort vor Status, Entscheidung A (#6407): Ein eingechecktes, krank

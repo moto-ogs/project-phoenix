@@ -12,6 +12,7 @@ import type {
   ReactNode,
   RefObject,
 } from "react";
+import { Fragment } from "react";
 import {
   useCallback,
   useEffect,
@@ -372,34 +373,33 @@ export function TenantPageStats({
           </>
         );
         return (
-          // Paare ohne Label (nur ein Wert) teilen sich das leere Label; erst
-          // die Position macht den Schlüssel eindeutig.
-          <span
-            key={`${index}-${item.label}`}
-            className="inline-flex items-center gap-1.5"
-          >
+          <Fragment key={`${index}-${item.label}`}>
             {index > 0 ? <span className="sr-only">, </span> : null}
-            {item.onSelect ? (
-              <Button
-                type="button"
-                variant="link"
-                size="md"
-                // Unterstrichen auch ohne Maus: sonst liest sich der Knopf
-                // wie die übrigen Zahlen der Zeile, die nur Anzeige sind.
-                className="gap-1.5 underline decoration-gray-300 underline-offset-4"
-                aria-label={item.selectLabel}
-                // Filtert nur die Ansicht; die Daten bleiben unverändert.
-                tooltip={kitDefault(
-                  "Filtert die Liste auf genau diese Einträge.",
-                )}
-                onClick={item.onSelect}
-              >
-                {pair}
-              </Button>
-            ) : (
-              pair
-            )}
-          </span>
+            {/* Paare ohne Label (nur ein Wert) teilen sich das leere Label;
+                erst die Position macht den Schlüssel eindeutig. */}
+            <span className="inline-flex items-center gap-1.5">
+              {item.onSelect ? (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="md"
+                  // Unterstrichen auch ohne Maus: sonst liest sich der Knopf
+                  // wie die übrigen Zahlen der Zeile, die nur Anzeige sind.
+                  className="gap-1.5 underline decoration-gray-300 underline-offset-4"
+                  aria-label={item.selectLabel}
+                  // Filtert nur die Ansicht; die Daten bleiben unverändert.
+                  tooltip={kitDefault(
+                    "Filtert die Liste auf genau diese Einträge.",
+                  )}
+                  onClick={item.onSelect}
+                >
+                  {pair}
+                </Button>
+              ) : (
+                pair
+              )}
+            </span>
+          </Fragment>
         );
       })}
     </span>

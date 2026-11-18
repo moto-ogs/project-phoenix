@@ -73,7 +73,7 @@ import GroupMessagePage from "./page";
  */
 function statusLine(...parts: string[]) {
   return (_: string, element: Element | null) =>
-    element?.tagName === "SPAN" && element.textContent === parts.join("");
+    element?.tagName === "SPAN" && element.textContent === parts.join(", ");
 }
 
 function detail(closed: boolean) {

@@ -73,7 +73,7 @@ describe("TraegerHolidayPeriodsPage", () => {
     // Statuszeile: Zahl und Wort als Paar, ohne Trennpunkt (#7402).
     expect(
       screen.getByText("veröffentlicht").parentElement?.parentElement,
-    ).toHaveTextContent("1Ferienzeitraum1veröffentlicht");
+    ).toHaveTextContent("1 Ferienzeitraum, 1 veröffentlicht");
     expect(screen.queryByText("·")).not.toBeInTheDocument();
     expect(
       within(table).getByText("11.01.2027 bis 26.02.2027"),

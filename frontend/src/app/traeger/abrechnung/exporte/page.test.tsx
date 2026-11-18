@@ -119,10 +119,10 @@ it("opens older runs page by page and keeps them after a download", async () => 
   expect(
     await screen.findByText("Du siehst 1 von 2 Läufen."),
   ).toBeInTheDocument();
-  expect(screen.getByText("Läufe").parentElement).toHaveTextContent("2Läufe");
+  expect(screen.getByText("Läufe").parentElement).toHaveTextContent("2 Läufe");
   expect(
     screen.getByText("noch nicht exportiert").parentElement,
-  ).toHaveTextContent("2noch nicht exportiert");
+  ).toHaveTextContent("2 noch nicht exportiert");
   expect(
     screen.queryAllByRole("button", {
       name: "Sollstellung von Monatsbeiträge März 2026 herunterladen",

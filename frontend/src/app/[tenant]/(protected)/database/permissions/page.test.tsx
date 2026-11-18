@@ -264,9 +264,9 @@ describe("PermissionsPage", () => {
     render(<PermissionsPage />);
 
     await waitFor(() => {
-      // Zahl und Wort stehen in eigenen Elementen, die Paare ohne Trennpunkt.
+      // Zahl und Wort stehen in eigenen Elementen, visuell ohne Trennpunkt.
       expect(screen.getByTestId("page-intro")).toHaveTextContent(
-        /\d+Berechtigungen\d+Bereich/,
+        /\d+ Berechtigungen, \d+ Bereich/,
       );
     });
     expect(

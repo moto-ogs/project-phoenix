@@ -183,7 +183,7 @@ describe("Beendete Betreuungen", () => {
     // Die Statuszeile nennt Zahl und Seite, das Blättern darunter die Seite.
     const head = document.querySelector("header");
     if (!head) throw new Error("page head missing");
-    expect(head).toHaveTextContent(/137Kinder/);
+    expect(head).toHaveTextContent(/137 Kinder/);
     expect(within(head).getByText("Seite 1 von 3")).toBeVisible();
     expect(screen.getAllByText("Seite 1 von 3")).toHaveLength(2);
     expect(

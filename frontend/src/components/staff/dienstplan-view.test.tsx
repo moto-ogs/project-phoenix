@@ -1010,7 +1010,7 @@ describe("DienstplanView", () => {
       screen.getByText(
         (_, element) =>
           element?.tagName === "SPAN" &&
-          element.textContent === "0Dienste2Personen",
+          element.textContent === "0 Dienste, 2 Personen",
       ),
     ).toBeInTheDocument();
   });

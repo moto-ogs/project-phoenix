@@ -110,9 +110,9 @@ describe("Klassenliste: Zähler bei Ladefehler (#2517)", () => {
     ).toBeInTheDocument();
     // Die Einträge zählen weiter, die Gesamtzahl ohne die angelegten Kinder
     // stünde falsch da.
-    // Zahl und Wort stehen in eigenen Elementen, die Paare ohne Trennpunkt.
+    // Zahl und Wort stehen in eigenen Elementen, visuell ohne Trennpunkt.
     const withoutCare = screen.getByText("ohne Betreuung");
-    expect(withoutCare.previousElementSibling).toHaveTextContent(/^1$/);
+    expect(withoutCare.parentElement).toHaveTextContent(/^1 ohne Betreuung$/);
     const statusLine = withoutCare.parentElement?.parentElement;
     expect(statusLine).not.toHaveTextContent(/\d+Kind/);
     expect(
@@ -150,7 +150,7 @@ describe("Klassenliste: Zähler bei Ladefehler (#2517)", () => {
     // Zahl und Wort stehen in eigenen Elementen, die Paare ohne Trennpunkt.
     expect(
       screen.getByText("ohne Betreuung").parentElement?.parentElement,
-    ).toHaveTextContent(/^2Kinder1ohne Betreuung/);
+    ).toHaveTextContent(/^2 Kinder, 1 ohne Betreuung/);
     expect(
       screen.getByText(/1 davon sind in moto angelegt/),
     ).toBeInTheDocument();

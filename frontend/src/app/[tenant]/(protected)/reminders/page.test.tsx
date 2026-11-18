@@ -152,10 +152,10 @@ describe("RemindersPage", () => {
       data: { reminders: [], count: 0, enabled: true },
     });
     renderWithToast(<RemindersPage />);
-    // Statuszeile: Wert-Label-Paare ohne Trennpunkt (#7402).
+    // Statuszeile: Wert-Label-Paare ohne sichtbaren Trennpunkt (#7402).
     expect(
       screen.getByText("anstehend").parentElement?.parentElement,
-    ).toHaveTextContent(/^0anstehend0überfällig$/);
+    ).toHaveTextContent(/^0 anstehend, 0 überfällig$/);
   });
 
   // #4765: an activity that runs over is neither upcoming nor overdue.
@@ -177,7 +177,7 @@ describe("RemindersPage", () => {
     renderWithToast(<RemindersPage />);
     expect(
       screen.getByText("anstehend").parentElement?.parentElement,
-    ).toHaveTextContent(/^0anstehend0überfällig1AG dauert länger$/);
+    ).toHaveTextContent(/^0 anstehend, 0 überfällig, 1 AG dauert länger$/);
     expect(
       screen.getByText("Turnhalle · 2 Kinder zur Abholung"),
     ).toBeInTheDocument();

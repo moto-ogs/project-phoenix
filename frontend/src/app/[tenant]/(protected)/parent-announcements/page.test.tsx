@@ -285,7 +285,7 @@ describe("ParentAnnouncementsPage (#3115)", () => {
     // Statuszeile: Wert-Label-Paare ohne Trennpunkt (#7402).
     expect(
       (await screen.findByText("veröffentlicht")).parentElement?.parentElement,
-    ).toHaveTextContent(/^1Elternbrief1veröffentlicht$/);
+    ).toHaveTextContent(/^1 Elternbrief, 1 veröffentlicht$/);
   });
 
   it("shows and retries a failed preview child load instead of an empty-school message", async () => {
@@ -795,7 +795,7 @@ describe("ParentAnnouncementsPage: Einverständnisse (#3430)", () => {
     expect(screen.queryByText("Sommerfest")).not.toBeInTheDocument();
     expect(
       screen.getByText("veröffentlicht").parentElement?.parentElement,
-    ).toHaveTextContent(/^1Einverständnis0veröffentlicht$/);
+    ).toHaveTextContent(/^1 Einverständnis, 0 veröffentlicht$/);
     expect(
       screen.getByRole("tab", { name: /Einverständnisse/ }),
     ).toBeInTheDocument();

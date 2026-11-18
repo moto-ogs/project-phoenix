@@ -209,7 +209,7 @@ describe("OwnDienstplanView", () => {
     // 4 h + 3 h + 4 h geplant (die ausgefallene Schicht zählt nicht), Soll
     // 5 × 4 h.
     const stats = screen.getByText("geplant").parentElement?.parentElement;
-    expect(stats?.textContent).toBe("11 hgeplant20 hSoll−9 hDifferenz");
+    expect(stats?.textContent).toBe("11 h geplant, 20 h Soll, −9 h Differenz");
 
     // Lesend: kein Anlegen, kein Bearbeiten.
     expect(

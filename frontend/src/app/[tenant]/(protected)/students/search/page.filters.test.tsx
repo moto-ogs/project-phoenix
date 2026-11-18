@@ -1018,7 +1018,7 @@ describe("StudentSearchPage — Kinder nur über Alle Kinder (#1321)", () => {
     // Das Kind der Mocks ist „Anwesend“, also in einem Raum der OGS.
     expect(
       (await screen.findByText("in der OGS")).parentElement?.parentElement,
-    ).toHaveTextContent(/^1Kind1in der OGS0krank$/);
+    ).toHaveTextContent(/^1 Kind, 1 in der OGS, 0 krank$/);
   });
 });
 

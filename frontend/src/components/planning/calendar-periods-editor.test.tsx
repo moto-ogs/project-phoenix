@@ -362,7 +362,7 @@ describe("CalendarPeriodsEditor", () => {
       (_, element) =>
         element?.tagName === "SPAN" &&
         // Davor steht der laufende Zeitraum, wenn heute in ihm liegt.
-        element.textContent?.endsWith("1Zeitraum1aktiv") === true,
+        element.textContent?.endsWith("1 Zeitraum, 1 aktiv") === true,
     );
 
     // Seit der Umstellung auf die Kopfkarte (PageIntro/SectionCard) umbrechen

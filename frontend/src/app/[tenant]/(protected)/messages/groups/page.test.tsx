@@ -50,7 +50,7 @@ import GroupMessagesPage from "./page";
  */
 function statusLine(...parts: string[]) {
   return (_: string, element: Element | null) =>
-    element?.tagName === "SPAN" && element.textContent === parts.join("");
+    element?.tagName === "SPAN" && element.textContent === parts.join(", ");
 }
 
 describe("Gruppennachrichten: Liste", () => {
@@ -117,7 +117,7 @@ describe("Gruppennachrichten: Liste", () => {
   it("counts threads in the status line", () => {
     render(<GroupMessagesPage />);
     expect(
-      screen.getByText(statusLine("2", "Gruppennachrichten", "1", "offen")),
+      screen.getByText(statusLine("2 Gruppennachrichten", "1 offen")),
     ).toBeInTheDocument();
   });
 

@@ -64,7 +64,7 @@ import MessagesPage from "./page";
  */
 function statusLine(...parts: string[]) {
   return (_: string, element: Element | null) =>
-    element?.tagName === "SPAN" && element.textContent === parts.join("");
+    element?.tagName === "SPAN" && element.textContent === parts.join(", ");
 }
 
 describe("Nachrichten: Statuszeile bei Ladefehler (#2517)", () => {
@@ -93,9 +93,7 @@ describe("Nachrichten: Statuszeile bei Ladefehler (#2517)", () => {
     render(<MessagesPage />);
 
     expect(
-      await screen.findByText(
-        statusLine("0", "Unterhaltungen", "0", "ungelesen"),
-      ),
+      await screen.findByText(statusLine("0 Unterhaltungen", "0 ungelesen")),
     ).toBeInTheDocument();
   });
 });

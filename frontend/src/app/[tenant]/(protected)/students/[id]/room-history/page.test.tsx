@@ -147,8 +147,8 @@ const mockFetch = vi.fn();
 
 /**
  * Die Zahl der erfassten Tage in der Statuszeile. Zahl und Wort stehen dort
- * in eigenen Elementen, ohne Trennpunkt (#7402); das Paar liest sich daher
- * als „3Tage erfasst“.
+ * in eigenen Elementen. Der unsichtbare Abstand erhält die verständliche
+ * Textdarstellung „3 Tage erfasst“ (#7402).
  */
 function dayCountStat(): string | null {
   return (
@@ -1205,7 +1205,7 @@ describe("StudentRoomHistoryPage", () => {
 
     async function openFirstDay() {
       render(<StudentRoomHistoryPage />);
-      await waitFor(() => expect(dayCountStat()).toBe("1Tag erfasst"));
+      await waitFor(() => expect(dayCountStat()).toBe("1 Tag erfasst"));
       fireEvent.click(screen.getByText(/Montag, 06/).closest("tr")!);
       expect(
         (await screen.findAllByText("Korrigieren")).length,
@@ -1233,14 +1233,14 @@ describe("StudentRoomHistoryPage", () => {
       await waitFor(() => expect(historyCalls()).toBe(3));
 
       second.resolve(snapshot(3));
-      await waitFor(() => expect(dayCountStat()).toBe("3Tage erfasst"));
+      await waitFor(() => expect(dayCountStat()).toBe("3 Tage erfasst"));
       first.resolve(snapshot(2));
       await first.promise;
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       // Anker: der Stand nach der zweiten Korrektur steht weiter da.
-      expect(dayCountStat()).toBe("3Tage erfasst");
-      expect(dayCountStat()).not.toBe("2Tage erfasst");
+      expect(dayCountStat()).toBe("3 Tage erfasst");
+      expect(dayCountStat()).not.toBe("2 Tage erfasst");
     });
 
     it("keeps the confirmed protocol and shows a failed refresh above it", async () => {
@@ -1262,7 +1262,7 @@ describe("StudentRoomHistoryPage", () => {
         ),
       ).toBeInTheDocument();
       // Die bestätigten Tage bleiben unter dem Hinweis stehen.
-      expect(dayCountStat()).toBe("1Tag erfasst");
+      expect(dayCountStat()).toBe("1 Tag erfasst");
       expect(screen.getAllByText(/Montag, 06/).length).toBeGreaterThan(0);
     });
 
@@ -1281,14 +1281,14 @@ describe("StudentRoomHistoryPage", () => {
 
       routeParams.id = "43";
       rerender(<StudentRoomHistoryPage />);
-      await waitFor(() => expect(dayCountStat()).toBe("3Tage erfasst"));
+      await waitFor(() => expect(dayCountStat()).toBe("3 Tage erfasst"));
       previousChild.resolve(snapshot(1));
       await previousChild.promise;
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       // Anker: das Protokoll des jetzt gezeigten Kindes steht weiter da.
       expect(screen.getByText("Tage erfasst").parentElement).toHaveTextContent(
-        /^3Tage erfasst$/,
+        /^3 Tage erfasst$/,
       );
       expect(screen.queryByText("Tag erfasst")).not.toBeInTheDocument();
     });
@@ -1313,7 +1313,7 @@ describe("StudentRoomHistoryPage", () => {
         return Promise.resolve(mockStudentResponse());
       });
       const { rerender } = render(<StudentRoomHistoryPage />);
-      await waitFor(() => expect(dayCountStat()).toBe("1Tag erfasst"));
+      await waitFor(() => expect(dayCountStat()).toBe("1 Tag erfasst"));
       fireEvent.click(screen.getByText(/Montag, 06/).closest("tr")!);
       await correct();
       const message =
@@ -1329,7 +1329,7 @@ describe("StudentRoomHistoryPage", () => {
       ).toBeInTheDocument();
       expect(screen.queryByText(message)).not.toBeInTheDocument();
       nextChild.resolve(snapshot(3));
-      await waitFor(() => expect(dayCountStat()).toBe("3Tage erfasst"));
+      await waitFor(() => expect(dayCountStat()).toBe("3 Tage erfasst"));
     });
   });
 });

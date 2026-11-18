@@ -1185,7 +1185,7 @@ describe("StudentSearchPage", () => {
       await waitFor(() => {
         expect(
           screen.getByText("in der OGS").parentElement?.parentElement,
-        ).toHaveTextContent(/^1Kind0in der OGS1krank$/);
+        ).toHaveTextContent(/^1 Kind, 0 in der OGS, 1 krank$/);
       });
     });
 
@@ -1219,7 +1219,7 @@ describe("StudentSearchPage", () => {
       await waitFor(() => {
         expect(
           screen.getByText("in der OGS").parentElement?.parentElement,
-        ).toHaveTextContent(/^3Kinder2in der OGS1krank$/);
+        ).toHaveTextContent(/^3 Kinder, 2 in der OGS, 1 krank$/);
       });
     });
 
@@ -1367,7 +1367,7 @@ describe("StudentSearchPage", () => {
       await waitFor(() => {
         expect(
           screen.getByText("in der OGS").parentElement?.parentElement,
-        ).toHaveTextContent(/^4Kinder1in der OGS0krank$/);
+        ).toHaveTextContent(/^4 Kinder, 1 in der OGS, 0 krank$/);
       });
       expect(
         screen.getByText(new RegExp(`^${mockStudents[0]!.first_name}\\b`)),
