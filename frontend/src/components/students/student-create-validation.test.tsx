@@ -87,13 +87,11 @@ describe("student creation required fields", () => {
     const lastName = screen.getByRole("textbox", { name: /Nachname/ });
     expect(lastName).toHaveAttribute("aria-invalid", "true");
     expect(lastName).toHaveAccessibleDescription(
-      /Bitte geben Sie den Nachnamen ein\./,
+      /Bitte gib den Nachnamen ein\./,
     );
     await waitFor(() => expect(lastName).toHaveFocus());
     // Anker: the real last-name control displays its local validation hint.
-    expect(
-      screen.getByText("Bitte geben Sie den Nachnamen ein."),
-    ).toBeVisible();
+    expect(screen.getByText("Bitte gib den Nachnamen ein.")).toBeVisible();
     expect(onCreate).not.toHaveBeenCalled();
   });
 
@@ -124,9 +122,7 @@ describe("student creation required fields", () => {
       expect(lastName).toHaveAttribute("aria-invalid", "true"),
     );
     expect(onCreate).toHaveBeenCalledOnce();
-    expect(lastName).toHaveAccessibleDescription(
-      "Bitte prüfen Sie dieses Feld.",
-    );
+    expect(lastName).toHaveAccessibleDescription("Bitte prüfe dieses Feld.");
     await waitFor(() => expect(lastName).toHaveFocus());
     expect(firstName).toHaveValue("Mia");
     expect(lastName).toHaveValue("Muster");

@@ -126,7 +126,7 @@ describe("MessageCountSection", () => {
 
     expect(
       await screen.findByText(
-        "Sie gehören zurzeit zu keiner Gruppe. Dann zeigt die Zahl nichts.",
+        "Du gehörst zurzeit zu keiner Gruppe. Dann zeigt die Zahl nichts.",
       ),
     ).toBeInTheDocument();
   });
@@ -136,7 +136,7 @@ describe("MessageCountSection", () => {
 
     await screen.findByRole("radio", { name: /Alle Nachrichten/ });
     expect(
-      screen.queryByText(/Sie gehören zurzeit zu keiner Gruppe/),
+      screen.queryByText(/Du gehörst zurzeit zu keiner Gruppe/),
     ).not.toBeInTheDocument();
   });
 

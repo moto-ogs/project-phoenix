@@ -72,7 +72,7 @@ export function thresholdsSentence(thresholds: TraegerAlertThresholds): string {
     thresholds.openEnrollments > 0
       ? `ab ${thresholds.openEnrollments === 1 ? "1 offenen Anmeldung" : `${thresholds.openEnrollments} offenen Anmeldungen`}`
       : "Anmeldungen: aus";
-  return `Ihre Grenzen: ${staff} · ${sick} · ${enrollments}`;
+  return `Deine Grenzen: ${staff} · ${sick} · ${enrollments}`;
 }
 
 /** „1 Schule“, „3 Schulen“: die Zahl im Titel der Karte. */

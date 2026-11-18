@@ -24,7 +24,7 @@ const INITIAL_ROWS = 5;
 
 function descriptionText(families: number): string {
   const who = families === 1 ? "Für 1 Familie" : `Für ${families} Familien`;
-  return `${who} gibt es in diesem Monat keine bestätigte Kinderzahl. Die Geschwisterregel zählt dort nur die Kinder mit Vertrag. Bestätigen Sie die Zahl vor der Freigabe, dann rechnet moto den Lauf neu.`;
+  return `${who} gibt es in diesem Monat keine bestätigte Kinderzahl. Die Geschwisterregel zählt dort nur die Kinder mit Vertrag. Bestätige die Zahl vor der Freigabe, dann rechnet moto den Lauf neu.`;
 }
 
 export function CareUncountedCard({

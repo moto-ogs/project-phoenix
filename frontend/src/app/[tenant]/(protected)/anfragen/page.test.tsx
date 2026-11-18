@@ -252,7 +252,7 @@ describe("AnfragenPage", () => {
 
     expect(
       await screen.findByText(
-        catalogText("general.unavailable", "die Prüfung Ihrer Freigaben"),
+        catalogText("general.unavailable", "die Prüfung deiner Freigaben"),
       ),
     ).toBeInTheDocument();
     expect(mockRedirect).not.toHaveBeenCalled();

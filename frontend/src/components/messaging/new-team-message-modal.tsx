@@ -136,7 +136,7 @@ export function NewTeamMessageModal({
           {!loading && !loadFailed && filtered.length === 0 && (
             <p className="py-3 text-center text-sm text-gray-500">
               {people.length === 0
-                ? "Es gibt niemanden, dem Sie schreiben können."
+                ? "Es gibt niemanden, dem du schreiben kannst."
                 : "Niemand gefunden."}
             </p>
           )}

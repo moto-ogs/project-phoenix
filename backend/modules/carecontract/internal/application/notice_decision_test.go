@@ -91,7 +91,7 @@ func TestUnacceptedReasonHoldsAsOrdinaryTermination(t *testing.T) {
 	require.NoError(t, err)
 	rendered, err := RenderNoticeMail(t.Context(), payload)
 	require.NoError(t, err)
-	assert.Equal(t, "Ihre Kündigung gilt als ordentliche Kündigung", rendered.Subject)
+	assert.Equal(t, "Deine Kündigung gilt als ordentliche Kündigung", rendered.Subject)
 	assert.Equal(t, rendered.Subject, rendered.Heading)
 
 	periods := f.versionsInForce(t, calendar.NewDate(2026, 12, 1), calendar.NewDate(2027, 1, 31))
@@ -136,7 +136,7 @@ func TestSetEndTellsTheParentsTheLastDayOnce(t *testing.T) {
 	options, err := f.notices.SetNoticeEnd(f.ctx, f.reviewer, f.contract, end)
 	require.NoError(t, err)
 	assert.Equal(t, carecontract.EndDecisionSet, options.Notice.EndDecision)
-	assert.Equal(t, "Ende für Lina Muster: letzter Tag 30.11.2026. Ganztag im Quartier e.V.\n\nEingang Ihrer Erklärung: 10.11.2026 um 11:00 Uhr",
+	assert.Equal(t, "Ende für Lina Muster: letzter Tag 30.11.2026. Ganztag im Quartier e.V.\n\nEingang deiner Erklärung: 10.11.2026 um 11:00 Uhr",
 		options.Notice.EndNoticeText)
 	mails := f.endMails()
 	require.Len(t, mails, 1)
@@ -146,7 +146,7 @@ func TestSetEndTellsTheParentsTheLastDayOnce(t *testing.T) {
 	require.NoError(t, err)
 	rendered, err := RenderNoticeMail(t.Context(), payload)
 	require.NoError(t, err)
-	assert.Equal(t, "Ende Ihres Betreuungsvertrags", rendered.Subject)
+	assert.Equal(t, "Ende deines Betreuungsvertrags", rendered.Subject)
 
 	_, err = f.notices.SetNoticeEnd(f.ctx, f.reviewer, f.contract, end)
 	assert.ErrorIs(t, err, carecontract.ErrNoticeEndNotOpen)

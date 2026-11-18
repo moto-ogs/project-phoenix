@@ -289,7 +289,7 @@ function OperatorSettingsContent() {
                 autoFocus
                 autoComplete="email"
                 pattern="[A-Za-z0-9._+%\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]+"
-                title="Bitte geben Sie eine gültige E-Mail-Adresse ein (z.B. name@beispiel.de)"
+                title="Bitte gib eine gültige E-Mail-Adresse ein (z.B. name@beispiel.de)"
                 value={emailChangeNewEmail}
                 onChange={(e) => setEmailChangeNewEmail(e.target.value)}
                 placeholder="neue@email.de"
@@ -364,7 +364,7 @@ function OperatorSettingsContent() {
 
       <SectionCard
         title="E-Mail-Adresse"
-        description="Die neue Adresse gilt erst, nachdem Sie den Link in der Bestätigungs-E-Mail geöffnet haben."
+        description="Die neue Adresse gilt erst, nachdem du den Link in der Bestätigungs-E-Mail geöffnet hast."
         actions={
           <Button
             type="button"
@@ -385,7 +385,7 @@ function OperatorSettingsContent() {
 
       <SectionCard
         title="Passwort"
-        description="Aktualisieren Sie Ihr Passwort regelmäßig für zusätzliche Sicherheit."
+        description="Aktualisiere dein Passwort regelmäßig für zusätzliche Sicherheit."
         actions={
           <Button
             type="button"

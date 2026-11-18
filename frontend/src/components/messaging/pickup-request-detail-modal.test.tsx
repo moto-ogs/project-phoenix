@@ -81,7 +81,7 @@ describe("PickupRequestDetailModal", () => {
     [
       403,
       "general.permission",
-      "Für dieses Kind dürfen Sie keine Anfragen ansehen.",
+      "Für dieses Kind darfst du keine Anfragen ansehen.",
     ],
     [
       404,
@@ -256,7 +256,7 @@ describe("PickupRequestDetailModal", () => {
       wrapper: Wrapper,
     });
     expect(
-      await screen.findByText(/dürfen Sie keine Anfragen ansehen/),
+      await screen.findByText(/darfst du keine Anfragen ansehen/),
     ).toBeInTheDocument();
   });
 

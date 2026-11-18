@@ -52,7 +52,7 @@ describe("ShellIntlProvider", () => {
       surveyForm: {
         anonymousTitle: "Anonym",
         submit: "Antwort absenden",
-        thanksTitle: "Danke, Ihre Antwort ist gespeichert.",
+        thanksTitle: "Danke, deine Antwort ist gespeichert.",
       },
     });
   });
@@ -86,7 +86,7 @@ describe("ShellIntlProvider", () => {
         consents: {
           title: "Einwilligungen und Bestätigungen",
           staffDescription:
-            "Eltern ändern die Foto-Einwilligung im Elternportal. Eltern ohne Elternportal sagen es Ihnen. Dann entfernen Sie unter „Bearbeiten“ beim Foto den Haken.",
+            "Eltern ändern die Foto-Einwilligung im Elternportal. Eltern ohne Elternportal sagen es dir. Dann entfernst du unter „Bearbeiten“ beim Foto den Haken.",
           items: {
             agb: "Allgemeine Geschäftsbedingungen (AGB)",
             data_processing: "Datenschutz zur Kenntnis genommen",

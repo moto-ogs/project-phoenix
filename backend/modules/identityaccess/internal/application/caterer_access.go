@@ -246,7 +246,7 @@ func (c *CatererAccess) EndCatererSchool(ctx context.Context, accountID int64) (
 	if !c.inSchool(ctx) {
 		return false, catererError(failed("end caterer school", errSchoolTransactionRequired))
 	}
-	ended, _, err := c.store.EndCatererSchool(ctx, accountID, c.now())
+	ended, _, err := c.store.EndCatererSchool(ctx, accountID)
 	if err != nil {
 		return false, catererError(failed("end caterer school", err))
 	}
@@ -365,7 +365,7 @@ func (c *CatererAccess) accept(ctx context.Context, token string, registration d
 	}
 	// The supply starts with the acceptance; a school has one running
 	// supply (uq_caterer_school_active).
-	if _, err := c.store.InsertCatererSchool(ctx, catererID, invitation.DeliveryAddress, accountID, c.now()); err != nil {
+	if _, err := c.store.InsertCatererSchool(ctx, catererID, invitation.DeliveryAddress, accountID); err != nil {
 		return domain.CatererAcceptance{}, err
 	}
 	return domain.CatererAcceptance{AccountID: accountID, CatererID: catererID, TenantID: invitation.TenantID}, nil

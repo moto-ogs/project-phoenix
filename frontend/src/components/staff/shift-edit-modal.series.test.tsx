@@ -740,7 +740,7 @@ describe("ShiftEditModal series rule editing at the end of a segment", () => {
       await screen.findByText(/Die Änderungen gelten ab 08\.09\.2026/),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Setzen Sie „Gültig bis" auf ein späteres Datum/),
+      screen.getByText(/Setze „Gültig bis" auf ein späteres Datum/),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Serie speichern" }));
@@ -933,7 +933,7 @@ describe("ShiftEditModal error display", () => {
     fireEvent.click(screen.getByRole("button", { name: "Serie speichern" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      /Setzen Sie „Gültig bis" auf ein späteres Datum/,
+      /Setze „Gültig bis" auf ein späteres Datum/,
     );
     expect(splitSeries).not.toHaveBeenCalled();
   });

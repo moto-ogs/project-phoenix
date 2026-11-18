@@ -116,7 +116,7 @@ describe("RequestFeedDialog", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "RSS-Link erstellen" }));
 
-    const input = await screen.findByLabelText("Ihr RSS-Link");
+    const input = await screen.findByLabelText("Dein RSS-Link");
     expect(input).toHaveValue("https://schule.test/api/request-feed/secret");
     expect(
       screen.getByText(/persönliche Daten stehen nicht im Feed/),
@@ -153,7 +153,7 @@ describe("RequestFeedDialog", () => {
       screen.getByRole("button", { name: "Alten Link ersetzen" }),
     );
     await waitFor(() => expect(rotate).toHaveBeenCalledOnce());
-    expect(await screen.findByLabelText("Ihr RSS-Link")).toHaveValue(
+    expect(await screen.findByLabelText("Dein RSS-Link")).toHaveValue(
       "https://schule.test/api/request-feed/new",
     );
   });
@@ -172,7 +172,7 @@ describe("RequestFeedDialog", () => {
 
     expect(
       await screen.findByText(
-        "Das Abo ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Das Abo ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -204,7 +204,7 @@ describe("RequestFeedDialog", () => {
     // Im Dialog, nicht als Toast: der läge hinter dem Hintergrund.
     expect(
       await within(screen.getByRole("dialog")).findByText(
-        "Für das Abo fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
+        "Für das Abo fehlt dir die Berechtigung. Bitte frage die Schule.",
       ),
     ).toBeVisible();
     expect(
@@ -228,7 +228,7 @@ describe("RequestFeedDialog", () => {
 
     expect(
       await within(screen.getByRole("dialog")).findByText(
-        /markieren Sie den Link und kopieren Sie ihn selbst/,
+        /markiere den Link und kopiere ihn selbst/,
       ),
     ).toBeVisible();
   });

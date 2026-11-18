@@ -52,8 +52,8 @@ function seriesMessage(series: LetterSeries): string {
   if (series.withoutEmail > 0) {
     parts.push(
       series.withoutEmail === 1
-        ? "1 Familie hat keine Mail-Adresse: Bitte drucken Sie ihr Schreiben."
-        : `${series.withoutEmail} Familien haben keine Mail-Adresse: Bitte drucken Sie deren Schreiben.`,
+        ? "1 Familie hat keine Mail-Adresse: Bitte drucke ihr Schreiben."
+        : `${series.withoutEmail} Familien haben keine Mail-Adresse: Bitte drucke deren Schreiben.`,
     );
   }
   return parts.join(" ");
@@ -141,7 +141,7 @@ export function BillingMailCard({ runId }: Readonly<{ runId: string }>) {
   return (
     <SectionCard
       title="Versand per Mail"
-      description="Jede Familie bekommt ihr Schreiben als PDF im Anhang einer Mail. Hat sie mit dieser Adresse ein Konto in der Eltern-App, liegt es auch dort unter „Dokumente“. Familien ohne E-Mail geben Sie das gedruckte Schreiben."
+      description="Jede Familie bekommt ihr Schreiben als PDF im Anhang einer Mail. Hat sie mit dieser Adresse ein Konto in der Eltern-App, liegt es auch dort unter „Dokumente“. Familien ohne E-Mail gibst du das gedruckte Schreiben."
       actions={
         <div className="flex flex-wrap gap-2">
           <Button
@@ -178,7 +178,7 @@ export function BillingMailCard({ runId }: Readonly<{ runId: string }>) {
             „An alle Familien senden“ schickt nur Mails, die noch nicht gesendet
             sind.
             {failed
-              ? " Kam eine Mail nicht an, senden Sie sie erneut. Stimmt die Adresse nicht, drucken Sie das Schreiben."
+              ? " Kam eine Mail nicht an, sende sie erneut. Stimmt die Adresse nicht, drucke das Schreiben."
               : null}
           </p>
           <ul className="divide-y divide-gray-100">
@@ -199,7 +199,7 @@ export function BillingMailCard({ runId }: Readonly<{ runId: string }>) {
                   </p>
                   <p className="truncate text-sm text-gray-600">
                     {mailing.recipientEmail ||
-                      "Keine Mail-Adresse: Bitte drucken Sie das Schreiben."}
+                      "Keine Mail-Adresse: Bitte drucke das Schreiben."}
                   </p>
                 </div>
                 <div className="flex min-w-0 flex-wrap items-center gap-2">

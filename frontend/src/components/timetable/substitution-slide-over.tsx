@@ -506,17 +506,17 @@ export function SubstitutionSlideOver({
     );
   // Warum „Speichern“ gesperrt ist (#6773); `save()` prüft dieselbe Sperre.
   const saveBlockedReason = !hasChanges
-    ? "Ändern Sie zuerst etwas an diesem Termin."
+    ? "Ändere zuerst etwas an diesem Termin."
     : !cancel && !peopleValid
-      ? "Wählen Sie zuerst für jede abwesende Person die Termine aus."
+      ? "Wähle zuerst für jede abwesende Person die Termine aus."
       : noticeIncomplete && noticeDraft?.send
-        ? "Geben Sie zuerst Betreff und Text an die Eltern ein."
+        ? "Gib zuerst Betreff und Text an die Eltern ein."
         : undefined;
   // Solange moto die Familien noch zählt, bleibt „Speichern“ nur nativ
   // gesperrt: ein Ladezustand, kein Grund für den Nutzer (#6773).
   const noticeLoading = noticeIncomplete && !noticeDraft?.send;
   const saveTooltip = !cancel
-    ? "Speichert Ihre Änderungen an Besetzung und Abwesenheiten."
+    ? "Speichert deine Änderungen an Besetzung und Abwesenheiten."
     : guardianNoticePayload(noticeDraft, noticeReach)
       ? "Sagt diesen Termin ab und informiert die Eltern sofort per App und E-Mail."
       : "Sagt diesen Termin ab, die Eltern bekommen keine Nachricht.";
@@ -1002,9 +1002,8 @@ export function SubstitutionSlideOver({
                     // read access to the plan — surface that instead of the
                     // "past/completed" message, which would be misleading (#1840).
                     <InsetPanel as="p" framed className="text-sm text-gray-500">
-                      Sie haben nur Leserechte für den Vertretungsplan.
-                      Änderungen können nur Personen mit Verwaltungsrechten
-                      vornehmen.
+                      Du hast nur Leserechte für den Vertretungsplan. Änderungen
+                      können nur Personen mit Verwaltungsrechten vornehmen.
                     </InsetPanel>
                   ) : (
                     <InsetPanel as="p" framed className="text-sm text-gray-500">

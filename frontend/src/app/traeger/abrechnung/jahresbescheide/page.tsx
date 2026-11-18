@@ -150,7 +150,7 @@ export default function TraegerJahresbescheidePage() {
   return (
     <TenantPage
       title="Abrechnung"
-      info="Hier setzen Sie den Beitrag für mehrere Monate eines Jahres in einem Bescheid fest. Jede Familie bekommt je Vertrag einen Bescheid mit Monatsraten. Für diese Monate berechnet der Monatslauf keine Betreuung erneut. Essen rechnet er weiterhin ab."
+      info="Hier setzt du den Beitrag für mehrere Monate eines Jahres in einem Bescheid fest. Jede Familie bekommt je Vertrag einen Bescheid mit Monatsraten. Für diese Monate berechnet der Monatslauf keine Betreuung erneut. Essen rechnet er weiterhin ab."
       stats={
         runs.length > 0 ? (
           <TenantPageStats
@@ -226,7 +226,7 @@ export default function TraegerJahresbescheidePage() {
             <EmptyState
               icon={<FileText className="h-12 w-12" aria-hidden="true" />}
               title="Noch kein Jahreslauf."
-              description={`Starten Sie oben einen Lauf, zum Beispiel ab ${formatMonth(data.list.suggestedMonth)}.`}
+              description={`Starte oben einen Lauf, zum Beispiel ab ${formatMonth(data.list.suggestedMonth)}.`}
             />
           }
         />

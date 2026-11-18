@@ -92,13 +92,13 @@ export function familyImportProblemText(
     case "too_long":
       return `${label} ist zu lang.`;
     case "unknown":
-      return "Diese Schule gehört nicht zu Ihrem Träger.";
+      return "Diese Schule gehört nicht zu deinem Träger.";
     case "ambiguous":
       return problem.field === "school"
         ? "Mehrere Schulen heißen so. Bitte eine Schule für die Datei wählen."
-        : "Mehrere Kinder der Schule heißen so. Ergänzen Sie das Geburtsdatum in der Datei.";
+        : "Mehrere Kinder der Schule heißen so. Ergänze das Geburtsdatum in der Datei.";
     case "no_contract":
-      return "moto findet an dieser Schule keinen Vertrag für das Kind. Prüfen Sie Name und Schule.";
+      return "moto findet an dieser Schule keinen Vertrag für das Kind. Prüfe Name und Schule.";
     case "repeated":
       return row.repeatsLine === null
         ? "Das Kind steht mehrmals in der Datei."
@@ -106,7 +106,7 @@ export function familyImportProblemText(
     case "rows_differ":
       return "Geschwister derselben Familie nennen verschiedene Zahlen. moto übernimmt keine.";
     case "confirmations_differ":
-      return "Für diese Familie sind verschiedene Kinderzahlen bestätigt. Bestätigen Sie die Kinderzahl in der Familienliste.";
+      return "Für diese Familie sind verschiedene Kinderzahlen bestätigt. Bestätige die Kinderzahl in der Familienliste.";
     default:
       return `${label} prüfen.`;
   }
@@ -118,7 +118,7 @@ export function familyImportOutcomeText(row: FamilyImportRow): string | null {
     case "same":
       return "Diese Zahl ist für die Familie schon bestätigt.";
     case "differs":
-      return `Bestätigt ${row.confirmedChildren === 1 ? "ist" : "sind"} ${childrenLabel(row.confirmedChildren ?? 0)}. moto ändert die Zahl nicht. Ändern Sie sie in der Liste.`;
+      return `Bestätigt ${row.confirmedChildren === 1 ? "ist" : "sind"} ${childrenLabel(row.confirmedChildren ?? 0)}. moto ändert die Zahl nicht. Ändere sie in der Liste.`;
     default:
       return null;
   }

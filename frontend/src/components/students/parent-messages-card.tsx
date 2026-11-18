@@ -132,7 +132,7 @@ export function ParentMessagesCard({
           }
           description={
             messagingEnabled
-              ? "Schreiben Sie den Eltern die erste Nachricht."
+              ? "Schreibe den Eltern die erste Nachricht."
               : undefined
           }
         />
@@ -167,7 +167,7 @@ export function ParentMessagesCard({
                     {thread.last_message_body && (
                       <span className="mt-0.5 block truncate text-sm text-gray-700">
                         {thread.last_sender_kind === "staff" && (
-                          <span className="text-gray-500">Sie: </span>
+                          <span className="text-gray-500">Du: </span>
                         )}
                         {thread.last_message_body}
                       </span>

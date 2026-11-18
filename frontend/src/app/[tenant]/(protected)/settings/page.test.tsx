@@ -215,7 +215,7 @@ describe("SettingsPage", () => {
 
     expect(
       await screen.findByText(
-        "Diese Einstellung gibt es nur für Schulen mit NFC-Tablets. Ihre Schule nutzt keine NFC-Tablets.",
+        "Diese Einstellung gibt es nur für Schulen mit NFC-Tablets. Deine Schule nutzt keine NFC-Tablets.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Inhalt settings-operations")).toBeInTheDocument();

@@ -76,7 +76,7 @@ const TEAM_INFORM_LABEL = "Speichern und Team informieren";
 const TEAM_INFORM_TOOLTIP =
   "Speichert die Notiz. Alle im Team sehen sie danach als neu.";
 const TEAM_INFORM_NEEDS_ALL_STAFF =
-  "Wählen Sie bei „Wer sieht die Notiz?“ zuerst „Ganzes Team“.";
+  "Wähle bei „Wer sieht die Notiz?“ zuerst „Ganzes Team“.";
 
 /** What the author reads after the team was told. */
 function teamInformedMessage(informed: number): string {
@@ -318,7 +318,7 @@ function NoteMeta({
           compact
           tone="red"
           label="Neu"
-          accessibleLabel="Neu: Diese Notiz wurde mit Ihnen geteilt."
+          accessibleLabel="Neu: Diese Notiz wurde mit dir geteilt."
         />
       ) : null}
       {parts.length > 0 ? (
@@ -957,7 +957,7 @@ export function StudentNotizenTab({
               referenceChoices={referenceOptions(referenceNames)}
               referenceHint={
                 activityError
-                  ? "Die Angebote konnten nicht geladen werden. Sie können die Notiz trotzdem ohne Angebot speichern."
+                  ? "Die Angebote konnten nicht geladen werden. Du kannst die Notiz trotzdem ohne Angebot speichern."
                   : undefined
               }
             />
@@ -967,7 +967,7 @@ export function StudentNotizenTab({
         {notes.length === 0 && !composing ? (
           <EmptyState
             title="Noch keine Notizen"
-            description="Schreiben Sie die erste Notiz über „Neue Notiz“ oben."
+            description="Schreibe die erste Notiz über „Neue Notiz“ oben."
           />
         ) : null}
 

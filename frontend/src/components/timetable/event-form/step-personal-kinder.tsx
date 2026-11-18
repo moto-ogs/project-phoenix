@@ -671,7 +671,7 @@ export function StepPersonalKinder({
                     {/* Erklärtext gehört direkt unter die Legend, Legend und
                         Text bilden einen Kopf. */}
                     <p className="mt-1 text-xs leading-5 text-gray-500">
-                      Sie können die Kinder nach Jahrgang oder nach einzelnen
+                      Du kannst die Kinder nach Jahrgang oder nach einzelnen
                       Klassen eingrenzen. Beides zusammen geht nicht.
                     </p>
                     <div className="mt-1">
@@ -793,7 +793,7 @@ export function StepPersonalKinder({
                   ) : sourceRosterDiff ? (
                     <InsetPanel framed>
                       <p className="text-xs font-semibold text-gray-700">
-                        Das ändert sich gegenüber Ihrer bisherigen Kinderliste
+                        Das ändert sich gegenüber deiner bisherigen Kinderliste
                       </p>
                       {sourceRosterDiff.added.length > 0 && (
                         <p className="mt-1 text-xs text-gray-600">
@@ -809,7 +809,7 @@ export function StepPersonalKinder({
                       )}
                       <p className="mt-1 text-xs text-gray-500">
                         Beim Speichern übernimmt der Regeltermin die Kinder aus
-                        dem Angebot. Ihre bisherige Auswahl wird ersetzt.
+                        dem Angebot. Deine bisherige Auswahl wird ersetzt.
                       </p>
                     </InsetPanel>
                   ) : null}
@@ -839,7 +839,7 @@ export function StepPersonalKinder({
                 type="info"
                 message={
                   showCohortButton
-                    ? `${audienceText} Mit der Schaltfläche darunter können Sie die aktuell passenden Kinder zusätzlich fest auswählen.`
+                    ? `${audienceText} Mit der Schaltfläche darunter kannst du die aktuell passenden Kinder zusätzlich fest auswählen.`
                     : audienceText
                 }
               />

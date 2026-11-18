@@ -120,13 +120,13 @@ export function TraegerDocumentReleaseModal({
     formErrors.clear();
     const missing: Record<string, string> = {};
     if (scope !== "all" && !schoolId) {
-      missing.school_id = "Bitte wählen Sie eine Schule.";
+      missing.school_id = "Bitte wähle eine Schule.";
     }
     if (scope === "group" && !groupId) {
-      missing.group_id = "Bitte wählen Sie eine Gruppe.";
+      missing.group_id = "Bitte wähle eine Gruppe.";
     }
     if (Object.keys(missing).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", missing);
+      formErrors.invalid("Bitte prüfe deine Angaben.", missing);
       return;
     }
     await save.run(async (op) => {
@@ -175,7 +175,7 @@ export function TraegerDocumentReleaseModal({
         }}
       >
         <p className="text-sm text-gray-600">
-          Sie geben „{documentTitle}“ frei. Sie können die Freigabe jederzeit
+          Du gibst „{documentTitle}“ frei. Du kannst die Freigabe jederzeit
           zurücknehmen.
         </p>
         <div className="space-y-2">
@@ -255,7 +255,7 @@ export function TraegerDocumentReleaseModal({
         <InsetPanel padding="md">
           <p className="text-xs font-medium text-gray-500">Sichtbar für</p>
           <p className="mt-0.5 text-sm font-semibold text-gray-900">
-            {preview ?? "Bitte wählen Sie oben aus."}
+            {preview ?? "Bitte wähle oben aus."}
           </p>
           <p className="mt-1 text-sm text-gray-600">{WHERE[audience]}</p>
         </InsetPanel>

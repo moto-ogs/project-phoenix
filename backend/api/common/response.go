@@ -38,15 +38,39 @@ func (r *Response) Render(_ http.ResponseWriter, _ *http.Request) error {
 	return nil
 }
 
+// answerObserver sees every success answer before it is written and may
+// refuse it. Production installs none; the test build holds the answers
+// against the contract (answer_contract_test_helpers.go).
+var answerObserver func(r *http.Request, status int, data any, envelope any) error
+
+// answerObserved reports whether the answer may be written. A refused answer
+// has been replaced by a 500 that names the reason.
+func answerObserved(w http.ResponseWriter, r *http.Request, status int, data any, envelope any) bool {
+	if answerObserver == nil {
+		return true
+	}
+	if err := answerObserver(r, status, data, envelope); err != nil {
+		RenderError(w, r, ErrorInternalServer(err))
+		return false
+	}
+	return true
+}
+
 // Respond sends a structured response. Statuses that forbid a body (204, 205,
 // 304) are sent without the envelope.
 func Respond(w http.ResponseWriter, r *http.Request, status int, data interface{}, message string) {
 	if !statusAllowsBody(status) {
-		w.WriteHeader(status)
+		if answerObserved(w, r, status, nil, nil) {
+			w.WriteHeader(status)
+		}
+		return
+	}
+	response := NewResponse(data, message)
+	if !answerObserved(w, r, status, data, response) {
 		return
 	}
 	render.Status(r, status)
-	if err := render.Render(w, r, NewResponse(data, message)); err != nil {
+	if err := render.Render(w, r, response); err != nil {
 		slog.Default().ErrorContext(r.Context(), "failed to render response", slog.String("error", err.Error()))
 		RenderError(w, r, ErrorInternalServerWrap("error rendering response", err))
 	}
@@ -77,6 +101,9 @@ func isInterimStatus(status int) bool {
 
 // RespondNoContent sends a 204 No Content response
 func RespondNoContent(w http.ResponseWriter, r *http.Request) {
+	if !answerObserved(w, r, http.StatusNoContent, nil, nil) {
+		return
+	}
 	render.NoContent(w, r)
 }
 
@@ -136,8 +163,12 @@ func (p *PaginatedResponse) Render(_ http.ResponseWriter, _ *http.Request) error
 
 // RespondPaginated sends a paginated response using PaginationParams struct
 func RespondPaginated(w http.ResponseWriter, r *http.Request, status int, data interface{}, params PaginationParams, message string) {
+	response := NewPaginatedResponse(data, params.Page, params.PageSize, params.Total, message)
+	if !answerObserved(w, r, status, data, response) {
+		return
+	}
 	render.Status(r, status)
-	if err := render.Render(w, r, NewPaginatedResponse(data, params.Page, params.PageSize, params.Total, message)); err != nil {
+	if err := render.Render(w, r, response); err != nil {
 		slog.Default().ErrorContext(r.Context(), "failed to render paginated response", slog.String("error", err.Error()))
 		RenderError(w, r, ErrorInternalServerWrap("error rendering paginated response", err))
 	}

@@ -1,6 +1,6 @@
 {
   "title": "Anfrage bearbeiten",
-  "intro": "Ändern Sie Ihre Anfrage, solange die {careTerm} noch nicht entschieden hat.",
+  "intro": "Ändere deine Anfrage, solange die {careTerm} noch nicht entschieden hat.",
   "editedAt": "Geändert am {date}",
   "firstDay": "Erster Tag",
   "lastDay": "Letzter Tag",
@@ -9,8 +9,8 @@
   "timeFormatHint": "Uhrzeit im Format 15:30",
   "timeExample": "z. B. 15:30",
   "reasonLabel": "Grund / Hinweis an die {careTerm}",
-  "reasonRequired": "Bitte geben Sie einen kurzen Hinweis für die {careTerm} ein.",
-  "valueRequired": "Bitte tragen Sie einen Wert ein.",
+  "reasonRequired": "Bitte gib einen kurzen Hinweis für die {careTerm} ein.",
+  "valueRequired": "Bitte trage einen Wert ein.",
   "submit": "Änderung speichern",
   "saving": "Wird gespeichert …",
   "cancel": "Abbrechen",

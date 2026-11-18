@@ -239,7 +239,7 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.queryByRole("button", { name: "Papiervertrag erfassen" }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText(/Dann erfassen Sie den/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Dann erfasst du den/)).not.toBeInTheDocument();
     expect(
       screen.queryByText(
         "Nach dem Senden können die Eltern online unterschreiben.",
@@ -428,7 +428,7 @@ describe("TraegerVertragPage", () => {
 
   it.each([
     ["stopped", /Die Schule hat die Mails an diese Person gestoppt/],
-    ["address", /bei einer Ihrer Schulen gesperrt/],
+    ["address", /bei einer deiner Schulen gesperrt/],
     ["provider", /moto-Support/],
     ["provider_unknown", /später noch einmal/],
     ["delayed", /nicht noch einmal/],
@@ -452,7 +452,7 @@ describe("TraegerVertragPage", () => {
       renderPage();
 
       expect(await screen.findByText(text)).toBeInTheDocument();
-      expect(screen.queryByText(/Prüfen Sie die Adresse/)).toBeNull();
+      expect(screen.queryByText(/Prüfe die Adresse/)).toBeNull();
       const resend = screen.getByRole("button", { name: "Erneut senden" });
       expect(resend).toHaveAttribute("aria-disabled", "true");
       expect(resend).toHaveAccessibleDescription(expect.stringMatching(/\S/));

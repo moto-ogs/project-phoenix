@@ -96,7 +96,7 @@ function dayHintLength(text: string): number {
   return [...text].length;
 }
 
-const DAY_HINT_TOO_LONG = `Der Hinweis ist zu lang. Bitte kürzen Sie ihn auf ${DAY_HINT_MAX_LENGTH} Zeichen.`;
+const DAY_HINT_TOO_LONG = `Der Hinweis ist zu lang. Bitte kürze ihn auf ${DAY_HINT_MAX_LENGTH} Zeichen.`;
 
 /** Ziel des Hinweises: die ganze Klasse oder ein Kind (seine ID als Text). */
 const CLASS_TARGET = "class";
@@ -436,8 +436,8 @@ export function ClassDayClass({
   });
   const saveHint = async () => {
     if (trimmedHint === "") {
-      hintErrors.invalid("Bitte schreiben Sie einen Hinweis.", {
-        day_hint: "Bitte schreiben Sie einen Hinweis.",
+      hintErrors.invalid("Bitte schreibe einen Hinweis.", {
+        day_hint: "Bitte schreibe einen Hinweis.",
       });
       return;
     }
@@ -797,7 +797,7 @@ export function ClassDayClass({
               <div className="space-y-3 p-4">
                 <p className="text-sm text-gray-600">
                   {ogsRows.length > 0
-                    ? "Diese Kinder gehen jetzt in die OGS. Tippen Sie bei jedem Kind, das nicht da ist, auf „Nicht da“."
+                    ? "Diese Kinder gehen jetzt in die OGS. Tippe bei jedem Kind, das nicht da ist, auf „Nicht da“."
                     : "Heute geht kein Kind aus dieser Klasse in die OGS."}
                 </p>
                 {ogsRows.length > 0 ? (
@@ -858,7 +858,7 @@ export function ClassDayClass({
               <div className="space-y-3">
                 <FormErrorAlert message={withdrawErrors.error} />
                 <p className="text-sm text-gray-600">
-                  Die OGS sieht die Übergabe dann nicht mehr. Sie können die
+                  Die OGS sieht die Übergabe dann nicht mehr. Du kannst die
                   Klasse danach neu übergeben.
                 </p>
               </div>
@@ -960,8 +960,8 @@ export function ClassDayClass({
             title="Hinweis löschen?"
             description={
               <p>
-                Die OGS sieht den Hinweis danach nicht mehr. Sie können
-                jederzeit einen neuen schreiben.
+                Die OGS sieht den Hinweis danach nicht mehr. Du kannst jederzeit
+                einen neuen schreiben.
               </p>
             }
             gate={{ mode: "twoStep", firstStepLabel: "Ja, löschen" }}
@@ -1014,8 +1014,8 @@ export function ClassDayClass({
                   Anwesenheit am Vormittag: {morningSummaryLine(rows, draft)}
                 </p>
                 <p className="text-sm text-gray-600">
-                  Tippen Sie bei jedem Kind auf „Da“ oder „Fehlt“. Gemeldete
-                  Kinder stehen schon auf „Fehlt“.
+                  Tippe bei jedem Kind auf „Da“ oder „Fehlt“. Gemeldete Kinder
+                  stehen schon auf „Fehlt“.
                 </p>
               </div>
               {openCount > 0 ? (
@@ -1024,7 +1024,7 @@ export function ClassDayClass({
                   variant="outline"
                   size="md"
                   disabled={savingMorning}
-                  tooltip="Setzt alle offenen Kinder auf „Da“; Sie speichern danach."
+                  tooltip="Setzt alle offenen Kinder auf „Da“; du speicherst danach."
                   onClick={() =>
                     setDraftState({
                       key: reportKey,
@@ -1102,8 +1102,8 @@ export function ClassDayClass({
                 </p>
                 {canHandOver && !report.handover ? (
                   <p className="text-sm text-gray-600">
-                    Übergeben Sie die Klasse nach dem Unterricht. Die OGS sieht
-                    dann sofort, wer nicht da ist.
+                    Übergib die Klasse nach dem Unterricht. Die OGS sieht dann
+                    sofort, wer nicht da ist.
                   </p>
                 ) : null}
               </div>
@@ -1138,7 +1138,7 @@ export function ClassDayClass({
                   variant="primary"
                   size="md"
                   onClick={openHandover}
-                  tooltip="Öffnet die Übergabe, dort markieren Sie, wer nicht da ist."
+                  tooltip="Öffnet die Übergabe, dort markierst du, wer nicht da ist."
                 >
                   Klasse übergeben
                 </Button>
@@ -1232,7 +1232,7 @@ export function ClassDayClass({
             <EmptyState
               className="mt-4"
               title="Keine Klasse ausgewählt"
-              description="Diese Adresse nennt keine Klasse. Bitte gehen Sie zurück zu allen Klassen und wählen Sie eine aus."
+              description="Diese Adresse nennt keine Klasse. Bitte gehe zurück zu allen Klassen und wähle eine aus."
             />
           )}
 

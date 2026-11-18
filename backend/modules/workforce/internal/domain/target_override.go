@@ -144,7 +144,7 @@ func ValidateStaffTargetOverrideFields(fields StaffTargetOverrideFields) error {
 		return invalidTargetOverride("end_date must be a " + DateLayout + " date")
 	}
 	if end.Before(start) {
-		return invalidTargetOverrideWithCode(TargetOverrideRangeInvalidCode, TargetOverrideValues{}, "Das Ende liegt vor dem Anfang. Bitte prüfen Sie den Zeitraum.")
+		return invalidTargetOverrideWithCode(TargetOverrideRangeInvalidCode, TargetOverrideValues{}, "Das Ende liegt vor dem Anfang. Bitte prüfe den Zeitraum.")
 	}
 	if int(end.Sub(start).Hours()/24)+1 > MaxTargetOverrideDays {
 		return invalidTargetOverrideWithCode(TargetOverrideTooLongCode, TargetOverrideValues{MaxDays: MaxTargetOverrideDays},
@@ -163,10 +163,10 @@ func validateTargetOverrideMinutes(fields StaffTargetOverrideFields) error {
 		return nil
 	}
 	if len(fields.WeekdayMinutes) != TargetOverrideWeekdays {
-		return invalidTargetOverride("Bitte geben Sie für Montag bis Freitag jeweils Stunden ein.")
+		return invalidTargetOverride("Bitte gib für Montag bis Freitag jeweils Stunden ein.")
 	}
 	if fields.DailyMinutes != 0 {
-		return invalidTargetOverride("Bitte geben Sie entweder Stunden pro Tag oder Stunden für die Wochentage ein.")
+		return invalidTargetOverride("Bitte gib entweder Stunden pro Tag oder Stunden für die Wochentage ein.")
 	}
 	for _, minutes := range fields.WeekdayMinutes {
 		if minutes < 0 || minutes > MaxDailyMinutes {
@@ -184,7 +184,7 @@ func RejectTargetOverrideOverlap(existing []StaffTargetOverride, fields StaffTar
 			start, end := germanDate(other.StartDate), germanDate(other.EndDate)
 			return rejectedTargetOverride(
 				TargetOverrideOverlapCode, TargetOverrideValues{StartDate: start, EndDate: end},
-				"Für diesen Zeitraum gibt es schon eine Sonderarbeitszeit (%s bis %s). Löschen Sie diese zuerst oder wählen Sie andere Tage.",
+				"Für diesen Zeitraum gibt es schon eine Sonderarbeitszeit (%s bis %s). Lösche diese zuerst oder wähle andere Tage.",
 				start, end,
 			)
 		}
@@ -205,7 +205,7 @@ func RejectClosedTargetOverrideMonths(closed []*StaffMonthBalanceSnapshot, field
 			name := fmt.Sprintf("%s %d", germanMonthNames[snapshot.Month-1], snapshot.Year)
 			return rejectedTargetOverride(
 				TargetOverrideMonthClosedCode, TargetOverrideValues{Month: name},
-				"Der %s ist abgeschlossen. Öffnen Sie den Monat zuerst wieder. Das geht im Reiter Zeiterfassung.",
+				"Der %s ist abgeschlossen. Öffne den Monat zuerst wieder. Das geht im Reiter Zeiterfassung.",
 				name,
 			)
 		}

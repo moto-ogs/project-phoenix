@@ -99,7 +99,7 @@ export function AddUnplannedStudentModal({
             disabled={isAddingStudent || !target}
             disabledReason={
               load.kind === "loaded" && !isAddingStudent
-                ? "Wählen Sie zuerst ein Kind aus der Liste aus."
+                ? "Wähle zuerst ein Kind aus der Liste aus."
                 : undefined
             }
             tooltip="Trägt das Kind sofort als anwesend in diese Aktivität ein."

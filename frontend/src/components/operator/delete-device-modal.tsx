@@ -59,7 +59,7 @@ export function DeleteDeviceModal({
         device ? (
           <>
             <p>
-              Möchten Sie das Gerät{" "}
+              Möchtest du das Gerät{" "}
               <span className="font-mono font-medium">{device.deviceId}</span>
               {device.name && ` (${device.name})`} von{" "}
               <span className="font-medium">{device.schoolName}</span> wirklich

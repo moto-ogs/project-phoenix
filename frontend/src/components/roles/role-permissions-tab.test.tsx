@@ -713,7 +713,7 @@ describe("RolePermissionsTab", () => {
     expect(
       await screen.findByRole("checkbox", { name: "admin:*" }),
     ).toHaveAccessibleDescription(
-      "Nur für die Rolle Verwaltung. Sie können es entfernen, aber nicht wieder vergeben.",
+      "Nur für die Rolle Verwaltung. Du kannst es entfernen, aber nicht wieder vergeben.",
     );
   });
   it("offers no reserved permission and keeps one the role already holds removable", async () => {
@@ -742,7 +742,7 @@ describe("RolePermissionsTab", () => {
     });
     expect(held).toBeChecked();
     expect(held).toHaveAccessibleDescription(
-      "Nur für das moto-Team. Sie können es entfernen, aber nicht wieder vergeben.",
+      "Nur für das moto-Team. Du kannst es entfernen, aber nicht wieder vergeben.",
     );
     expect(
       screen.getByRole("checkbox", { name: "students:read" }),

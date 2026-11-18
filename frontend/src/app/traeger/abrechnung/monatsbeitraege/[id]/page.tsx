@@ -149,7 +149,7 @@ function feeNoticeHeldText(held: readonly CareFeeNoticeHold[]): string {
     held.length === 1
       ? `Der Jahresbescheid von ${list} setzt diesen Monat auf 0,00 €.`
       : `Die Jahresbescheide von ${list} setzen diesen Monat auf 0,00 €.`;
-  return `${subject} Der Monat bleibt gesperrt. Dieser Lauf rechnet dafür keine Betreuung ab. Wollen Sie den Monat abrechnen, stellen Sie einen neuen Bescheid aus.`;
+  return `${subject} Der Monat bleibt gesperrt. Dieser Lauf rechnet dafür keine Betreuung ab. Willst du den Monat abrechnen, stelle einen neuen Bescheid aus.`;
 }
 
 /** Why „Lauf freigeben“ is blocked, in the order the warnings show. */
@@ -165,10 +165,10 @@ function releaseBlockReason(run: CareRunDetail): string | undefined {
     return "Der Lauf hat keine Rechnung zum Freigeben.";
   }
   if (run.legalRemedyMissing) {
-    return "Tragen Sie zuerst die Rechtsbehelfsbelehrung in der Vorlage „Bescheid“ ein.";
+    return "Trage zuerst die Rechtsbehelfsbelehrung in der Vorlage „Bescheid“ ein.";
   }
   if (!run.numberRangeSet) {
-    return "Legen Sie zuerst das Muster der Rechnungsnummern für Monatsbeiträge fest.";
+    return "Lege zuerst das Muster der Rechnungsnummern für Monatsbeiträge fest.";
   }
   return undefined;
 }
@@ -259,7 +259,7 @@ export default function TraegerCareRunPage() {
       await changed(await discardCareRun(run.id));
       setConfirmingDiscard(false);
       success(
-        `Der Lauf ist verworfen. Für ${formatMonth(run.billingMonth)} können Sie einen neuen Lauf starten.`,
+        `Der Lauf ist verworfen. Für ${formatMonth(run.billingMonth)} kannst du einen neuen Lauf starten.`,
       );
     } catch (err) {
       logger.error("traeger_care_run_discard_failed", {
@@ -495,7 +495,7 @@ export default function TraegerCareRunPage() {
                 aus. Er bleibt als „Verworfen“ in der Liste.
               </p>
               <p>
-                Danach ist der Monat frei. Sie können sofort einen neuen Lauf
+                Danach ist der Monat frei. Du kannst sofort einen neuen Lauf
                 starten.
               </p>
             </div>
@@ -545,7 +545,7 @@ export default function TraegerCareRunPage() {
             ) : null}
             {run.duplicateChildren > 0 ? (
               <p className="mt-3 text-sm text-gray-700">
-                {notBilledLabel(run.duplicateChildren)} Das holen Sie mit einem
+                {notBilledLabel(run.duplicateChildren)} Das holst du mit einem
                 neuen Lauf nach, wenn ein Vertrag beendet ist.
               </p>
             ) : null}
@@ -564,7 +564,7 @@ export default function TraegerCareRunPage() {
               href={traegerPath("/traeger/abrechnung/jahresbescheide")}
               variant="surface"
               size="compact"
-              tooltip="Öffnet die Jahresbescheide, dort starten Sie einen neuen Jahreslauf."
+              tooltip="Öffnet die Jahresbescheide, dort startest du einen neuen Jahreslauf."
             >
               Neuen Bescheid ausstellen
             </ButtonLink>
@@ -590,8 +590,8 @@ export default function TraegerCareRunPage() {
               }
               description={
                 discarded
-                  ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für ${formatMonth(run.billingMonth)} können Sie einen neuen Lauf starten.`
-                  : `Für ${formatMonth(run.billingMonth)} gibt es keine Rechnung. Es fehlt auch kein Preis. Sie können den Lauf verwerfen. Danach ist der Monat frei für einen neuen Lauf.`
+                  ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für ${formatMonth(run.billingMonth)} kannst du einen neuen Lauf starten.`
+                  : `Für ${formatMonth(run.billingMonth)} gibt es keine Rechnung. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist der Monat frei für einen neuen Lauf.`
               }
               className="py-6"
             />
@@ -661,7 +661,7 @@ export default function TraegerCareRunPage() {
                 ? "Rechnungen ändern oder ausschließen: im Menü der Zeile. Bis zur Freigabe kommen neue Verträge und Preise dazu."
                 : run.previewCount === 0
                   ? "Der Lauf ist ohne Rechnungen abgeschlossen. Die Schulen sind wieder frei."
-                  : "Die Rechnungen sind ausgestellt und lassen sich nicht mehr ändern. Eine falsche Rechnung stornieren Sie auf der Seite „Schreiben“."
+                  : "Die Rechnungen sind ausgestellt und lassen sich nicht mehr ändern. Eine falsche Rechnung stornierst du auf der Seite „Schreiben“."
             }
             action={
               preview ? (
@@ -816,7 +816,7 @@ export default function TraegerCareRunPage() {
             <Alert
               type="warning"
               title="Rechtsbehelfsbelehrung fehlt"
-              message="Dieser Lauf stellt Gebührenbescheide aus. In der Vorlage „Gebührenbescheid“ fehlt die Rechtsbehelfsbelehrung. Wer die Rolle „Verwaltung“ hat, muss sie eintragen. Danach können Sie freigeben."
+              message="Dieser Lauf stellt Gebührenbescheide aus. In der Vorlage „Gebührenbescheid“ fehlt die Rechtsbehelfsbelehrung. Wer die Rolle „Verwaltung“ hat, muss sie eintragen. Danach kannst du freigeben."
               action={
                 <ButtonLink
                   href={traegerPath(
@@ -834,7 +834,7 @@ export default function TraegerCareRunPage() {
           {preview && run.previewCount > 0 && !run.numberRangeSet ? (
             <Alert
               type="warning"
-              message="Bevor Sie freigeben: Legen Sie das Muster der Rechnungsnummern für Monatsbeiträge fest."
+              message="Bevor du freigibst: Lege das Muster der Rechnungsnummern für Monatsbeiträge fest."
               action={
                 <ButtonLink
                   href={traegerPath("/traeger/einstellungen/abrechnung")}
@@ -850,14 +850,14 @@ export default function TraegerCareRunPage() {
           {preview && (run.amendmentConflicts ?? 0) > 0 ? (
             <Alert
               type="warning"
-              message={`${run.amendmentConflicts === 1 ? "Eine Änderung einer Rechnung passt" : `${run.amendmentConflicts ?? 0} Änderungen von Rechnungen passen`} nicht mehr. Nehmen Sie sie auf der Seite der Rechnung zurück. Erst dann können Sie freigeben.`}
+              message={`${run.amendmentConflicts === 1 ? "Eine Änderung einer Rechnung passt" : `${run.amendmentConflicts ?? 0} Änderungen von Rechnungen passen`} nicht mehr. Nimm sie auf der Seite der Rechnung zurück. Erst dann kannst du freigeben.`}
               action={
                 conflicted ? (
                   <Button
                     type="button"
                     variant="surface"
                     size="compact"
-                    tooltip="Öffnet die Rechnung, dort nehmen Sie die Änderung zurück."
+                    tooltip="Öffnet die Rechnung, dort nimmst du die Änderung zurück."
                     onClick={() => openAmend(conflicted)}
                   >
                     Rechnung öffnen

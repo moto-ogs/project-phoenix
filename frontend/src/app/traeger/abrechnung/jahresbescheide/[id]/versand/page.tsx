@@ -85,11 +85,11 @@ function sendAllBlockReason(
 ): string {
   if (summary.queued > 0) return "Die Bescheide werden gerade gesendet.";
   if (summary.failed > 0) {
-    return "Nicht angekommene Bescheide senden Sie über das Menü ihrer Zeile erneut.";
+    return "Nicht angekommene Bescheide sendest du über das Menü ihrer Zeile erneut.";
   }
-  if (missing > 0) return "Speichern Sie zuerst die übrigen Originale.";
+  if (missing > 0) return "Speichere zuerst die übrigen Originale.";
   if (summary.notSent > 0) {
-    return "Den übrigen Familien fehlt eine E-Mail-Adresse. Drucken Sie deren Bescheid.";
+    return "Den übrigen Familien fehlt eine E-Mail-Adresse. Drucke deren Bescheid.";
   }
   return "Alle Bescheide mit E-Mail-Adresse sind schon gesendet.";
 }
@@ -105,12 +105,12 @@ function seriesMessage(series: CareNoticeSeries): string {
   ];
   if (series.withoutEmail > 0) {
     parts.push(
-      `${familyCount(series.withoutEmail)} ohne E-Mail-Adresse: Bitte drucken Sie deren Bescheid.`,
+      `${familyCount(series.withoutEmail)} ohne E-Mail-Adresse: Bitte drucke deren Bescheid.`,
     );
   }
   if (series.recipientChanged > 0) {
     parts.push(
-      `${series.recipientChanged === 1 ? "1 Bescheid ging" : `${series.recipientChanged} Bescheide gingen`} nicht raus: Die Person zahlt nicht mehr für diesen Vertrag. Drucken Sie diesen Bescheid und geben Sie ihn der Familie auf Papier.`,
+      `${series.recipientChanged === 1 ? "1 Bescheid ging" : `${series.recipientChanged} Bescheide gingen`} nicht raus: Die Person zahlt nicht mehr für diesen Vertrag. Drucke diesen Bescheid und gib ihn der Familie auf Papier.`,
     );
   }
   return parts.join(" ");
@@ -124,7 +124,7 @@ function SendCell({ notice }: Readonly<{ notice: CareNoticeMailing }>) {
   return (
     <LetterSendCell
       letter={notice}
-      printInstruction="Bitte drucken Sie den Bescheid."
+      printInstruction="Bitte drucke den Bescheid."
     />
   );
 }
@@ -463,7 +463,7 @@ export default function TraegerCareNoticeDeliveryPage() {
                   <p>
                     {familyCount(summary.withoutEmail)} ohne E-Mail-Adresse{" "}
                     {summary.withoutEmail === 1 ? "bekommt" : "bekommen"}{" "}
-                    nichts. Drucken Sie deren Bescheid.
+                    nichts. Drucke deren Bescheid.
                   </p>
                 ) : null}
               </div>
@@ -475,7 +475,7 @@ export default function TraegerCareNoticeDeliveryPage() {
       {run && !released ? (
         <SectionCard
           title="Noch nicht ausgestellt"
-          description="Versenden können Sie erst ausgestellte Bescheide. Stellen Sie sie auf der Seite des Jahreslaufs aus."
+          description="Versenden kannst du erst ausgestellte Bescheide. Stelle sie auf der Seite des Jahreslaufs aus."
         />
       ) : null}
       {released && lettersError ? (
@@ -510,7 +510,7 @@ export default function TraegerCareNoticeDeliveryPage() {
       {released && summary && summary.letters > 0 ? (
         <SectionCard
           title="Versand an die Familien"
-          description="Jede Familie bekommt das gespeicherte Original per E-Mail. Hat sie mit dieser Adresse ein Konto in der Eltern-App, liegt es dort unter „Dokumente“. Familien ohne E-Mail geben Sie den gedruckten Bescheid."
+          description="Jede Familie bekommt das gespeicherte Original per E-Mail. Hat sie mit dieser Adresse ein Konto in der Eltern-App, liegt es dort unter „Dokumente“. Familien ohne E-Mail gibst du den gedruckten Bescheid."
           action={
             <div className="flex flex-wrap gap-2">
               <OverflowMenu
@@ -544,7 +544,7 @@ export default function TraegerCareNoticeDeliveryPage() {
             <Alert
               type="info"
               title="Keine förmliche Zustellung"
-              message="E-Mail und Eltern-App sind kein Nachweis, dass die Familie den Bescheid bekommen hat. Brauchen Sie einen Nachweis? Dann stellen Sie den Bescheid zusätzlich auf anderem Weg zu."
+              message="E-Mail und Eltern-App sind kein Nachweis, dass die Familie den Bescheid bekommen hat. Brauchst du einen Nachweis? Dann stelle den Bescheid zusätzlich auf anderem Weg zu."
             />
             {summary.queued > 0 ? (
               <p className="text-sm text-gray-600" role="status">
@@ -556,8 +556,8 @@ export default function TraegerCareNoticeDeliveryPage() {
             ) : null}
             {summary.failed > 0 ? (
               <p className="text-sm text-gray-600">
-                Einige Bescheide sind nicht angekommen. Senden Sie diese über
-                das Menü ihrer Zeile erneut oder drucken Sie sie.
+                Einige Bescheide sind nicht angekommen. Sende diese über das
+                Menü ihrer Zeile erneut oder drucke sie.
               </p>
             ) : null}
             {toSend === 0 &&
@@ -567,7 +567,7 @@ export default function TraegerCareNoticeDeliveryPage() {
             missing === 0 ? (
               <p className="text-sm text-gray-600">
                 Alle Bescheide mit E-Mail-Adresse sind gesendet. Einzelne
-                Bescheide senden Sie erneut über das Menü ihrer Zeile.
+                Bescheide sendest du erneut über das Menü ihrer Zeile.
               </p>
             ) : null}
           </div>

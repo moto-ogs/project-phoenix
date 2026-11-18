@@ -32,6 +32,7 @@ import { pathToFileURL } from 'node:url';
 import { checkLocalMigrationVersions } from './check-migration-versions.mjs';
 import { changedPaths } from './backend-source-ratchets.mjs';
 import { MODEL_PATH as CONTRACT_MODEL_PATH } from './check-contract-compat.mjs';
+import { REGISTER_PATH as PROXY_REGISTER_PATH } from './check-proxy-routes.mjs';
 
 // The paths that start CI's "Backend architecture ratchet" (main.yml, filter
 // backend-architecture). Keep both lists in step.
@@ -54,6 +55,10 @@ export function stepsFor(root, base, paths) {
     // The stale-contract check is a Go test and runs with the tests below.
     ...(paths.includes(CONTRACT_MODEL_PATH)
       ? [{ name: 'contract', command: ['node', 'scripts/check-contract-compat.mjs', base] }]
+      : []),
+    // A new pass-through route file belongs in the contract instead (#2352).
+    ...(paths.some(path => path.startsWith(`${PROXY_REGISTER_PATH}/`))
+      ? [{ name: 'proxy-routes', command: ['node', 'scripts/check-proxy-routes.mjs', base] }]
       : []),
     { name: 'tests', command: ['bash', 'scripts/test-changed.sh', '--fast', base] },
   ];

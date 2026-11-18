@@ -100,7 +100,7 @@ describe("NewTeamMessageModal", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/kaputt/)).not.toBeInTheDocument();
     expect(
-      screen.queryByText("Es gibt niemanden, dem Sie schreiben können."),
+      screen.queryByText("Es gibt niemanden, dem du schreiben kannst."),
     ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));

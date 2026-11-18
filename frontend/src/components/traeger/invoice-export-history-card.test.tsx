@@ -46,7 +46,7 @@ it("names who did each step of the invoice", async () => {
   );
 
   expect(await screen.findByText(/· von Eva Müller$/)).toBeInTheDocument();
-  expect(screen.getByText(/· von Ihnen$/)).toBeInTheDocument();
+  expect(screen.getByText(/· von dir$/)).toBeInTheDocument();
   expect(screen.getByText(/· von einem Konto ohne Namen$/)).toBeInTheDocument();
   expect(screen.getByText(/· von einem gelöschten Konto$/)).toBeInTheDocument();
   expect(fetchMock).toHaveBeenCalledWith(

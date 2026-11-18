@@ -84,14 +84,14 @@ function ActivePreviewBanner({
                 {previewTargetName ?? "Mitarbeitende Person"}
               </span>
             </span>
-            <span className="text-xs">Sie können nur lesen.</span>
+            <span className="text-xs">Du kannst nur lesen.</span>
           </span>
           <span className="hidden truncate sm:inline">
-            Vorschau: Sie sehen moto wie{" "}
+            Vorschau: du siehst moto wie{" "}
             <span className="font-semibold">
               {previewTargetName ?? "diese Person"}
             </span>
-            . Sie können nur lesen.
+            . Du kannst nur lesen.
           </span>
         </span>
       </p>
@@ -102,7 +102,7 @@ function ActivePreviewBanner({
         onClick={() => void handleEnd()}
         isLoading={isEnding}
         loadingText="Wird beendet …"
-        tooltip="Schließt die Vorschau und zeigt wieder Ihre eigene Ansicht."
+        tooltip="Schließt die Vorschau und zeigt wieder deine eigene Ansicht."
         className="shrink-0"
       >
         Vorschau beenden

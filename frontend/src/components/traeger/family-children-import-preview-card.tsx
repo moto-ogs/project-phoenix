@@ -53,9 +53,9 @@ function footerText(result: FamilyImportResult): string {
     return "Alle Zahlen der Datei sind schon bestätigt.";
   }
   if (left > 0) {
-    return `${left === 1 ? "1 Zeile bleibt" : `${left} Zeilen bleiben`} draußen. Prüfen Sie den Hinweis bei jeder offenen Zeile.`;
+    return `${left === 1 ? "1 Zeile bleibt" : `${left} Zeilen bleiben`} draußen. Prüfe den Hinweis bei jeder offenen Zeile.`;
   }
-  return "Jede Zahl gilt als von Ihnen bestätigt, ab dem ersten Tag des Vertrags.";
+  return "Jede Zahl gilt als von dir bestätigt, ab dem ersten Tag des Vertrags.";
 }
 
 export function FamilyChildrenImportPreviewCard({
@@ -156,7 +156,7 @@ export function FamilyChildrenImportPreviewCard({
       description={
         disabled
           ? "Die Vorschau zeigt den letzten geprüften Stand. Übernehmen ist erst nach der Prüfung möglich."
-          : "So würde moto jede Zeile übernehmen. Gespeichert wird erst, wenn Sie übernehmen."
+          : "So würde moto jede Zeile übernehmen. Gespeichert wird erst, wenn du übernimmst."
       }
       footer={
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

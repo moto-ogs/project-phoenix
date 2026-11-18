@@ -136,7 +136,7 @@ function fillRegistration() {
   fireEvent.click(
     screen.getByLabelText(/Ich darf die Anmeldung allein abgeben/),
   );
-  type(screen.getByLabelText("Ihr Vor- und Nachname"), "Eva Maria Muster");
+  type(screen.getByLabelText("Dein Vor- und Nachname"), "Eva Maria Muster");
 }
 
 describe("HolidayRegistrationForm language switch", () => {
@@ -147,7 +147,7 @@ describe("HolidayRegistrationForm language switch", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
-    await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+    await screen.findByText("Bitte prüfe deine Angaben");
 
     fireEvent.click(screen.getByRole("button", { name: /Sprache/ }));
     fireEvent.click(screen.getByRole("option", { name: "English" }));
@@ -184,7 +184,7 @@ describe("HolidayRegistrationForm language switch", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
-    await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+    await screen.findByText("Bitte prüfe deine Angaben");
     fireEvent.click(screen.getByRole("radio", { name: "Ja" }));
 
     fireEvent.click(screen.getByRole("button", { name: /Sprache/ }));

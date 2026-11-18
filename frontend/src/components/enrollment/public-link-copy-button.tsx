@@ -9,7 +9,7 @@ import { QrCodeButton } from "~/components/qr-code/qr-code-button";
 // Kein API-Fehler: der Browser hat das Kopieren verweigert. Der Link steht
 // daneben und lässt sich von Hand markieren.
 const COPY_FAILED =
-  "Der Link konnte nicht kopiert werden. Bitte markieren und kopieren Sie ihn selbst.";
+  "Der Link konnte nicht kopiert werden. Bitte markiere und kopiere ihn selbst.";
 
 /** The QR code of a phase's public form. */
 export const ENROLLMENT_QR_CODE = {
@@ -31,7 +31,7 @@ export function PublicLinkCopyButton({
   url,
   componentId,
   label = "Elternlink kopieren",
-  tooltip = "Kopiert den Link, damit Sie ihn an Eltern weitergeben können.",
+  tooltip = "Kopiert den Link, damit du ihn an Eltern weitergeben kannst.",
   qrCode,
 }: PublicLinkCopyButtonProps) {
   const { copied, copy } = useClipboardCopy(componentId, 2000);

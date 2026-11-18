@@ -61,7 +61,7 @@ export function StaffImportMappingCard({
   return (
     <SectionCard
       title="Spalten zuordnen"
-      description={`moto hat ${mapped} von ${STAFF_IMPORT_FIELDS.length} Feldern einer Spalte zugeordnet. Prüfen Sie die Auswahl.`}
+      description={`moto hat ${mapped} von ${STAFF_IMPORT_FIELDS.length} Feldern einer Spalte zugeordnet. Prüfe die Auswahl.`}
     >
       <div className="flex flex-col gap-6">
         {GROUPS.map((group) => (

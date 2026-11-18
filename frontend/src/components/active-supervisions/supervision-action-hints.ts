@@ -14,4 +14,4 @@ export const ADD_SUPERVISOR_HINT =
 
 /** Every „Beaufsichtigen“ for the Schulhof. */
 export const SCHULHOF_SUPERVISE_TOOLTIP =
-  "Trägt Sie sofort als Aufsicht auf dem Schulhof ein.";
+  "Trägt dich sofort als Aufsicht auf dem Schulhof ein.";

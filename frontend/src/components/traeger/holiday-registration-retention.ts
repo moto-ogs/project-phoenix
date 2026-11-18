@@ -9,8 +9,7 @@ interface Retained {
   readonly healthDeletesOn: string | null;
 }
 
-const DOWNLOAD_HINT =
-  "Laden Sie sie vorher herunter, wenn Sie sie länger brauchen.";
+const DOWNLOAD_HINT = "Lade sie vorher herunter, wenn du sie länger brauchst.";
 
 /** The sentence about the health information, when it goes earlier. */
 function healthSentence(first: string, registrations: readonly Retained[]) {
@@ -44,7 +43,7 @@ export function holidayDeletionNotice(
   const when =
     first === last
       ? `moto löscht diese Anmeldungen am ${formatDate(first)}.`
-      : `moto löscht diese Anmeldungen zwischen dem ${formatDate(first)} und dem ${formatDate(last)}. Den Tag sehen Sie in jeder Anmeldung.`;
+      : `moto löscht diese Anmeldungen zwischen dem ${formatDate(first)} und dem ${formatDate(last)}. Den Tag siehst du in jeder Anmeldung.`;
   return `${when} ${DOWNLOAD_HINT}${healthSentence(first, registrations)}`;
 }
 

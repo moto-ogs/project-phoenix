@@ -116,9 +116,9 @@ func TestTargetOverridesAPI_RejectsInvalidInput(t *testing.T) {
 		"negative":        {body: overrideBody("2026-10-19", "2026-10-23", -1), wire: hoursInvalid},
 		"inverted range":  {body: overrideBody("2026-10-23", "2026-10-19", 60), wire: `"code":"workforce.target_override_range_invalid"`},
 		"too long":        {body: overrideBody("2026-01-01", "2027-01-02", 60), wire: `"code":"workforce.target_override_too_long","details":{"max_days":366}`},
-		"missing minutes": {body: `{"start_date":"2026-10-19","end_date":"2026-10-23"}`, message: "Bitte geben Sie Stunden pro Tag oder Stunden für die Wochentage ein."},
-		"both targets":    {body: `{"start_date":"2026-10-19","end_date":"2026-10-23","daily_minutes":60,"weekday_minutes":[60,60,60,60,60]}`, message: "Bitte geben Sie entweder Stunden pro Tag oder Stunden für die Wochentage ein."},
-		"four weekdays":   {body: `{"start_date":"2026-10-19","end_date":"2026-10-23","weekday_minutes":[60,60,60,60]}`, message: "Bitte geben Sie für Montag bis Freitag jeweils Stunden ein."},
+		"missing minutes": {body: `{"start_date":"2026-10-19","end_date":"2026-10-23"}`, message: "Bitte gib Stunden pro Tag oder Stunden für die Wochentage ein."},
+		"both targets":    {body: `{"start_date":"2026-10-19","end_date":"2026-10-23","daily_minutes":60,"weekday_minutes":[60,60,60,60,60]}`, message: "Bitte gib entweder Stunden pro Tag oder Stunden für die Wochentage ein."},
+		"four weekdays":   {body: `{"start_date":"2026-10-19","end_date":"2026-10-23","weekday_minutes":[60,60,60,60]}`, message: "Bitte gib für Montag bis Freitag jeweils Stunden ein."},
 		"weekday over 12": {body: `{"start_date":"2026-10-19","end_date":"2026-10-23","weekday_minutes":[60,721,60,60,60]}`, wire: hoursInvalid},
 	} {
 		rec := ctx.post(path, tc.body, "time_tracking:manage")

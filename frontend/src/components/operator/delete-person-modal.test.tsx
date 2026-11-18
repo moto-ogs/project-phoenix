@@ -130,7 +130,7 @@ describe("DeletePersonModal", () => {
 
     expect(getDeleteButton()).toBeDisabled();
 
-    const input = screen.getByLabelText(/Geben Sie den vollständigen Namen/);
+    const input = screen.getByLabelText(/Gib den vollständigen Namen/);
     fireEvent.change(input, { target: { value: "Anna" } });
     expect(getDeleteButton()).toBeDisabled();
 
@@ -165,10 +165,9 @@ describe("DeletePersonModal", () => {
       />,
     );
 
-    fireEvent.change(
-      screen.getByLabelText(/Geben Sie den vollständigen Namen/),
-      { target: { value: "Anna Beispiel" } },
-    );
+    fireEvent.change(screen.getByLabelText(/Gib den vollständigen Namen/), {
+      target: { value: "Anna Beispiel" },
+    });
     fireEvent.click(getDeleteButton());
 
     await waitFor(() => {
@@ -197,10 +196,9 @@ describe("DeletePersonModal", () => {
       />,
     );
 
-    fireEvent.change(
-      screen.getByLabelText(/Geben Sie den vollständigen Namen/),
-      { target: { value: "Anna Beispiel" } },
-    );
+    fireEvent.change(screen.getByLabelText(/Gib den vollständigen Namen/), {
+      target: { value: "Anna Beispiel" },
+    });
     fireEvent.click(getDeleteButton());
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
@@ -241,10 +239,9 @@ describe("DeletePersonModal", () => {
       />,
     );
 
-    fireEvent.change(
-      screen.getByLabelText(/Geben Sie den vollständigen Namen/),
-      { target: { value: "Anna Beispiel" } },
-    );
+    fireEvent.change(screen.getByLabelText(/Gib den vollständigen Namen/), {
+      target: { value: "Anna Beispiel" },
+    });
     fireEvent.click(getDeleteButton());
 
     expect(
@@ -273,10 +270,9 @@ describe("DeletePersonModal", () => {
       />,
     );
 
-    fireEvent.change(
-      screen.getByLabelText(/Geben Sie den vollständigen Namen/),
-      { target: { value: "Anna Beispiel" } },
-    );
+    fireEvent.change(screen.getByLabelText(/Gib den vollständigen Namen/), {
+      target: { value: "Anna Beispiel" },
+    });
     fireEvent.click(getDeleteButton());
 
     await waitFor(() => {
@@ -306,10 +302,9 @@ describe("DeletePersonModal", () => {
       />,
     );
 
-    fireEvent.change(
-      screen.getByLabelText(/Geben Sie den vollständigen Namen/),
-      { target: { value: "Anna Beispiel" } },
-    );
+    fireEvent.change(screen.getByLabelText(/Gib den vollständigen Namen/), {
+      target: { value: "Anna Beispiel" },
+    });
     const button = getDeleteButton();
     fireEvent.click(button);
     fireEvent.click(button);
@@ -333,10 +328,9 @@ describe("DeletePersonModal", () => {
       />,
     );
 
-    fireEvent.change(
-      screen.getByLabelText(/Geben Sie den vollständigen Namen/),
-      { target: { value: "Anna Beispiel" } },
-    );
+    fireEvent.change(screen.getByLabelText(/Gib den vollständigen Namen/), {
+      target: { value: "Anna Beispiel" },
+    });
     fireEvent.click(getDeleteButton());
 
     await waitFor(() => {

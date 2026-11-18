@@ -66,7 +66,7 @@ func (rs *Resource) PreviewStaffImport(w http.ResponseWriter, r *http.Request) {
 
 // msgStaffImportModeForbidden is shown when a create-only importer asks for
 // update or upsert mode (#2906).
-const msgStaffImportModeForbidden = "Bestehende Mitarbeiter ändern geht mit Ihren Berechtigungen nicht. Wählen Sie „Nur neue anlegen“ oder fragen Sie die Leitung."
+const msgStaffImportModeForbidden = "Bestehende Mitarbeiter ändern geht mit deinen Berechtigungen nicht. Wähle „Nur neue anlegen“ oder frage die Leitung."
 
 // renderStaffImportError maps a refused import mode to 403 and everything
 // else to a 500 with the given client message.

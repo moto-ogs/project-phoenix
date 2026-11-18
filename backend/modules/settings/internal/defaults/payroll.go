@@ -31,7 +31,7 @@ func registerPayrollWageTypes() {
 		config.Register(config.Definition{
 			Key:             l.key,
 			Label:           l.label,
-			Description:     "Die Nummer dieser Lohnart in Ihrem DATEV (1 bis 4 Ziffern). Ohne Nummer fehlt diese Lohnart im DATEV-Export.",
+			Description:     "Die Nummer dieser Lohnart in deinem DATEV (1 bis 4 Ziffern). Ohne Nummer fehlt diese Lohnart im DATEV-Export.",
 			Type:            config.FieldText,
 			Default:         "",
 			ReadPermission:  payrollReadPermission,
@@ -51,7 +51,7 @@ func registerPayrollUnits() {
 		config.Register(config.Definition{
 			Key:             u.key,
 			Label:           u.label,
-			Description:     "Ob die Lohnart in DATEV Stunden oder Tage erwartet. Das steht in der Lohnabrechnung Ihres Trägers.",
+			Description:     "Ob die Lohnart in DATEV Stunden oder Tage erwartet. Das steht in der Lohnabrechnung deines Trägers.",
 			Type:            config.FieldSelect,
 			Default:         "",
 			ReadPermission:  payrollReadPermission,

@@ -1,10 +1,10 @@
 {
-  "eyebrow": "Ihr Konto",
+  "eyebrow": "Dein Konto",
   "languageTitle": "Sprache",
-  "languageDescription": "Wählen Sie die Sprache, in der moto angezeigt wird.",
+  "languageDescription": "Wähle die Sprache, in der moto angezeigt wird.",
   "appInstallTitle": "moto als App hinzufügen",
-  "appInstallDescription": "Installieren Sie moto nicht über Samsung Internet. Öffnen Sie moto dafür in Chrome.",
-  "appInstallGenericDescription": "Fügen Sie moto zum Startbildschirm Ihres Handys hinzu. Dann öffnen Sie moto wie eine App.",
+  "appInstallDescription": "Installiere moto nicht über Samsung Internet. Öffne moto dafür in Chrome.",
+  "appInstallGenericDescription": "Füge moto zum Startbildschirm deines Handys hinzu. Dann öffnest du moto wie eine App.",
   "appInstallGuide": "Anleitung öffnen",
   "appInstallGuideTooltip": "Öffnet die Anleitung für moto auf dem Startbildschirm."
 }

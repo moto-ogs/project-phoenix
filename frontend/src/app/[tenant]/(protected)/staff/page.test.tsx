@@ -345,7 +345,7 @@ describe("StaffPage", () => {
         screen.getByText("In moto eingetragen vom 02.09.2024 bis 31.07.2026."),
       ).toBeInTheDocument();
       expect(
-        screen.getByText(/Öffnen Sie eine Karte für die Angaben von damals/),
+        screen.getByText(/Öffne eine Karte für die Angaben von damals/),
       ).toBeInTheDocument();
       expect(screen.getByText("1 ehemalige Person")).toBeInTheDocument();
       expect(

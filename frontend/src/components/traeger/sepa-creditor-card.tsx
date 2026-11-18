@@ -80,7 +80,7 @@ function SepaCreditorModal({
     const compact = compactCode(creditorId);
     if (compact !== "" && !creditorIdLooksValid(compact)) {
       fields.creditor_id =
-        "Diese Gläubiger-ID stimmt nicht. Bitte prüfen Sie jedes Zeichen.";
+        "Diese Gläubiger-ID stimmt nicht. Bitte prüfe jedes Zeichen.";
     }
     const parsed = /^\d{1,2}$/.test(days.trim()) ? Number(days.trim()) : NaN;
     if (!(
@@ -89,7 +89,7 @@ function SepaCreditorModal({
       fields.prenotification_days = `Bitte eine Zahl von ${MIN_PRENOTIFICATION_DAYS} bis ${MAX_PRENOTIFICATION_DAYS} eingeben.`;
     }
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", fields);
+      formErrors.invalid("Bitte prüfe deine Angaben.", fields);
       return;
     }
     await save.run(async (op) => {
@@ -147,7 +147,7 @@ function SepaCreditorModal({
           spellCheck={false}
           maxLength={40}
           value={creditorId}
-          hint="Sie bekommen die Gläubiger-ID von der Bundesbank. Ohne sie gibt es keine Lastschrift."
+          hint="Du bekommst die Gläubiger-ID von der Bundesbank. Ohne sie gibt es keine Lastschrift."
           error={formErrors.fieldError("creditor_id") ?? undefined}
           onChange={(event) => setCreditorId(event.target.value)}
         />
@@ -167,7 +167,7 @@ function SepaCreditorModal({
           inputMode="numeric"
           maxLength={2}
           value={days}
-          hint="So viele Tage vor der Abbuchung muss die Rechnung bei der Familie sein. Üblich sind 14 Tage. Weniger nur, wenn Sie das mit den Familien vereinbart haben."
+          hint="So viele Tage vor der Abbuchung muss die Rechnung bei der Familie sein. Üblich sind 14 Tage. Weniger nur, wenn du das mit den Familien vereinbart hast."
           error={formErrors.fieldError("prenotification_days") ?? undefined}
           onChange={(event) => setDays(event.target.value)}
         />
@@ -240,7 +240,7 @@ export function SepaCreditorCard({
           <StatusBadge tone="warning" label="Gläubiger-ID fehlt" />
         ) : null
       }
-      description="Damit buchen Sie Beiträge per SEPA-Lastschrift ab. Das Mandat jeder Familie erfassen Sie bei ihrem Vertrag."
+      description="Damit buchst du Beiträge per SEPA-Lastschrift ab. Das Mandat jeder Familie erfasst du bei ihrem Vertrag."
       actions={
         <Button
           type="button"
@@ -290,7 +290,7 @@ export function SepaCreditorCard({
             <span className="mt-1 block text-sm font-normal text-gray-600">
               {onlineMandate
                 ? "Eltern erteilen und widerrufen das Mandat selbst, bei ihrem Vertrag."
-                : "Eltern geben das Mandat auf Papier ab. Sie erfassen es beim Vertrag der Familie."}
+                : "Eltern geben das Mandat auf Papier ab. Du erfasst es beim Vertrag der Familie."}
             </span>
           </DataField>
         )}

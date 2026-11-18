@@ -102,7 +102,7 @@ export function LateInviteModal({
     errors.clear();
     if (!phaseUrl) {
       errors.invalid(
-        "Der Link zur Anmeldephase fehlt. Bitte laden Sie die Seite neu.",
+        "Der Link zur Anmeldephase fehlt. Bitte lade die Seite neu.",
       );
       return;
     }
@@ -181,7 +181,7 @@ export function LateInviteModal({
                   url={generatedUrl}
                   componentId={`LateInvite:${phase.id}:${generatedUrl}`}
                   label="Nachzügler-Link kopieren"
-                  tooltip="Kopiert den Link, damit Sie ihn dieser Familie geben können."
+                  tooltip="Kopiert den Link, damit du ihn dieser Familie geben kannst."
                   qrCode={{
                     title: "QR-Code für den Nachzügler-Link",
                     fileName: "qr-code-nachzuegler-anmeldung",
@@ -207,7 +207,7 @@ export function LateInviteModal({
             size="md"
             isLoading={loading}
             loadingText="Erstelle..."
-            tooltip="Erstellt einen 14 Tage gültigen Link, den Sie selbst weitergeben."
+            tooltip="Erstellt einen 14 Tage gültigen Link, den du selbst weitergibst."
           >
             Link erstellen
           </Button>
@@ -276,7 +276,7 @@ export function ManualApprovedEnrollmentModal({
   const invalidateFamily = useInvalidateFamily();
   const configurationError =
     gradeLevelMax === null
-      ? "Die Klassenstufen der Schule fehlen. Bitte laden Sie die Seite neu."
+      ? "Die Klassenstufen der Schule fehlen. Bitte lade die Seite neu."
       : null;
 
   // Every opening starts with an empty form.
@@ -298,14 +298,14 @@ export function ManualApprovedEnrollmentModal({
     // was fehlt; `null` hält das Formular davon ab, Erfolg oder einen
     // zweiten Fehler zu melden.
     if (!trimmedReason) {
-      checks.invalid("Bitte geben Sie einen internen Grund an.", {
-        reason: "Bitte geben Sie einen Grund an.",
+      checks.invalid("Bitte gib einen internen Grund an.", {
+        reason: "Bitte gib einen Grund an.",
       });
       return null;
     }
     if (!externalConsentConfirmed) {
       checks.invalid(
-        "Bitte bestätigen Sie, dass die Einwilligung der Eltern vorliegt.",
+        "Bitte bestätige, dass die Einwilligung der Eltern vorliegt.",
       );
       return null;
     }

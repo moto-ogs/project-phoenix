@@ -261,7 +261,7 @@ describe("HomePage (Login)", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Melden Sie sich mit Ihrem Konto an."),
+        screen.getByText("Melde dich mit deinem Konto an."),
       ).toBeInTheDocument();
     });
   });
@@ -303,12 +303,12 @@ describe("HomePage (Login)", () => {
 
     // Anker: die Prüfanzeige steht statt des Formulars.
     expect(screen.getByRole("status")).toHaveTextContent(
-      "moto prüft Ihre Anmeldung.",
+      "moto prüft deine Anmeldung.",
     );
     expect(screen.queryByTestId("input-email")).not.toBeInTheDocument();
     // Während moto prüft, fordert die Karte zu nichts auf.
     expect(
-      screen.queryByText("Melden Sie sich mit Ihrem Konto an."),
+      screen.queryByText("Melde dich mit deinem Konto an."),
     ).not.toBeInTheDocument();
   });
 
@@ -524,7 +524,7 @@ describe("HomePage (Login)", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Ihr Konto ist ausgeschaltet/),
+        screen.getByText(/Dein Konto ist ausgeschaltet/),
       ).toBeInTheDocument();
     });
     expect(
@@ -822,15 +822,15 @@ describe("HomePage (Login)", () => {
       expect(screen.getByTestId("smart-redirect")).toBeInTheDocument();
     });
     const status = screen.getByRole("status");
-    expect(status).toHaveTextContent("Sie sind schon angemeldet");
-    expect(status).toHaveTextContent("moto öffnet jetzt Ihre Startseite …");
+    expect(status).toHaveTextContent("Du bist schon angemeldet");
+    expect(status).toHaveTextContent("moto öffnet jetzt deine Startseite …");
     expect(
       screen.getByRole("progressbar", {
-        name: "moto öffnet jetzt Ihre Startseite …",
+        name: "moto öffnet jetzt deine Startseite …",
       }),
     ).not.toHaveAttribute("aria-valuenow");
     expect(
-      screen.queryByText("Melden Sie sich mit Ihrem Konto an."),
+      screen.queryByText("Melde dich mit deinem Konto an."),
     ).not.toBeInTheDocument();
     expect(screen.queryByTestId("input-email")).not.toBeInTheDocument();
     expect(screen.queryByTestId("input-password")).not.toBeInTheDocument();
@@ -1238,7 +1238,7 @@ describe("Deliberate logout suppression", () => {
 
       // A notice, not an error (#2517).
       expect(screen.getByTestId("alert-info")).toHaveTextContent(
-        "Ihre Sitzung ist abgelaufen",
+        "Deine Sitzung ist abgelaufen",
       );
     },
   );

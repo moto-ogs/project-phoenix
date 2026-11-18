@@ -65,7 +65,7 @@ const logger = createLogger({ component: "TraegerClosingDaysPage" });
 const SETTINGS_RIGHT = "traeger_settings:manage";
 
 const INFO =
-  "Hier planen Sie Schließtage für Ihre Schulen, zum Beispiel einen Brückentag. An einem Schließtag ist die OGS zu: keine Ferienbetreuung, keine Termine, kein Soll. Die Feiertage kommen aus dem Bundesland der Schule. Das Bundesland legt das moto-Team fest.";
+  "Hier planst du Schließtage für deine Schulen, zum Beispiel einen Brückentag. An einem Schließtag ist die OGS zu: keine Ferienbetreuung, keine Termine, kein Soll. Die Feiertage kommen aus dem Bundesland der Schule. Das Bundesland legt das moto-Team fest.";
 
 export default function TraegerClosingDaysPage() {
   const { data: session } = useSession();
@@ -331,7 +331,7 @@ export default function TraegerClosingDaysPage() {
               tooltip="Plant einen Schließtag für eine oder alle Schulen und informiert betroffene Familien."
               disabledReason={
                 data
-                  ? "Ihrem Träger ist noch keine Schule zugeordnet. Das übernimmt das moto-Team."
+                  ? "Deinem Träger ist noch keine Schule zugeordnet. Das übernimmt das moto-Team."
                   : undefined
               }
             >
@@ -453,7 +453,7 @@ export default function TraegerClosingDaysPage() {
               title={`Keine Schließtage in ${year}`}
               description={
                 canManage
-                  ? "Legen Sie oben einen Schließtag an, zum Beispiel einen Brückentag."
+                  ? "Lege oben einen Schließtag an, zum Beispiel einen Brückentag."
                   : "Das Träger-Büro hat für dieses Jahr keine Schließtage geplant."
               }
             />
@@ -481,7 +481,7 @@ export default function TraegerClosingDaysPage() {
         <SectionCard
           title="Feiertage nach Bundesland"
           concept={calendarConcept}
-          description="Nur zur Information. Stimmt das Bundesland einer Schule nicht, schreiben Sie dem moto-Team."
+          description="Nur zur Information. Stimmt das Bundesland einer Schule nicht, schreibe dem moto-Team."
           loading={calendarLoading}
         >
           <div

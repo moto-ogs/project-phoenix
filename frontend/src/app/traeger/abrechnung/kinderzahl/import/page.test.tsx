@@ -127,12 +127,12 @@ describe("Kinderzahl nachtragen", () => {
     expect(screen.getAllByText("ab 01.08.2026").length).toBeGreaterThan(0);
     expect(
       screen.getAllByText(
-        "Bestätigt sind 2 Kinder. moto ändert die Zahl nicht. Ändern Sie sie in der Liste.",
+        "Bestätigt sind 2 Kinder. moto ändert die Zahl nicht. Ändere sie in der Liste.",
       ).length,
     ).toBeGreaterThan(0);
     expect(
       screen.getAllByText(
-        "moto findet an dieser Schule keinen Vertrag für das Kind. Prüfen Sie Name und Schule.",
+        "moto findet an dieser Schule keinen Vertrag für das Kind. Prüfe Name und Schule.",
       ).length,
     ).toBeGreaterThan(0);
     expect(screen.getByText(/2 Zeilen bleiben draußen/)).toBeInTheDocument();
@@ -223,12 +223,12 @@ describe("Kinderzahl nachtragen", () => {
     ).toBeGreaterThan(0);
     expect(
       screen.getAllByText(
-        "Für diese Familie sind verschiedene Kinderzahlen bestätigt. Bestätigen Sie die Kinderzahl in der Familienliste.",
+        "Für diese Familie sind verschiedene Kinderzahlen bestätigt. Bestätige die Kinderzahl in der Familienliste.",
       ).length,
     ).toBeGreaterThan(0);
     expect(
       screen.getByText(
-        "2 Zeilen bleiben draußen. Prüfen Sie den Hinweis bei jeder offenen Zeile.",
+        "2 Zeilen bleiben draußen. Prüfe den Hinweis bei jeder offenen Zeile.",
       ),
     ).toBeInTheDocument();
   });

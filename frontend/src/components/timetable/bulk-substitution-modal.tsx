@@ -522,7 +522,7 @@ export function BulkSubstitutionModal({
                   <div className="mt-2">
                     <Alert
                       type="warning"
-                      message={`Sie können höchstens ${MAX_SELECTED_DATES} Tage auf einmal speichern. Bitte wählen Sie Tage ab.`}
+                      message={`Du kannst höchstens ${MAX_SELECTED_DATES} Tage auf einmal speichern. Bitte wähle Tage ab.`}
                     />
                   </div>
                 )}
@@ -606,22 +606,22 @@ function bulkSaveBlockedReason(state: {
   tooManyDates: boolean;
 }): string | undefined {
   if (state.absentStaffId === "") {
-    return "Wählen Sie zuerst die abwesende Person aus.";
+    return "Wähle zuerst die abwesende Person aus.";
   }
   if (state.fromISO === "" || state.toISO === "") {
-    return "Wählen Sie zuerst den ersten und den letzten Tag aus.";
+    return "Wähle zuerst den ersten und den letzten Tag aus.";
   }
   if (!state.rangeValid) {
-    return "Wählen Sie einen kürzeren Zeitraum, höchstens acht Wochen.";
+    return "Wähle einen kürzeren Zeitraum, höchstens acht Wochen.";
   }
   if (state.rangeError) {
-    return "Laden Sie zuerst die Termine im Zeitraum neu.";
+    return "Lade zuerst die Termine im Zeitraum neu.";
   }
   if (state.selectedDays === 0) {
-    return "Wählen Sie mindestens einen Tag mit Terminen aus.";
+    return "Wähle mindestens einen Tag mit Terminen aus.";
   }
   if (state.tooManyDates) {
-    return `Wählen Sie höchstens ${MAX_SELECTED_DATES} Tage auf einmal aus.`;
+    return `Wähle höchstens ${MAX_SELECTED_DATES} Tage auf einmal aus.`;
   }
   return undefined;
 }

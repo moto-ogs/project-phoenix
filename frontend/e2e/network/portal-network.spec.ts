@@ -412,7 +412,7 @@ for (const analytics of [false, true]) {
             "multipart/form-data",
           );
           await visible(
-            page.getByText("Ihr Profilbild ist gespeichert.", { exact: true }),
+            page.getByText("Dein Profilbild ist gespeichert.", { exact: true }),
           );
         }
         await diagnosticControl(page, proof.entries);

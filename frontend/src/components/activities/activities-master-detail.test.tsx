@@ -282,7 +282,7 @@ describe("ActivitiesMasterDetail", () => {
         selectedId="1"
         selectedActivity={regularActivity}
         detailLoading={false}
-        detailError="Die Aktivität ist gerade nicht erreichbar. Bitte versuchen Sie es erneut."
+        detailError="Die Aktivität ist gerade nicht erreichbar. Bitte versuche es erneut."
         onSelect={onSelect}
         onSaveActivity={onSaveActivity}
         onResetForm={onResetForm}
@@ -293,7 +293,7 @@ describe("ActivitiesMasterDetail", () => {
 
     expect(
       screen.getByText(
-        "Die Aktivität ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Aktivität ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByTestId("database-form")).not.toBeInTheDocument();

@@ -148,7 +148,7 @@ export function PlanShiftModal({
   const submit = async () => {
     const invalid = draftErrors(draft);
     if (Object.keys(invalid).length > 0) {
-      errors.invalid("Bitte prüfen Sie die markierten Felder.", invalid);
+      errors.invalid("Bitte prüfe die markierten Felder.", invalid);
       return;
     }
     const input = {
@@ -275,7 +275,7 @@ export function PlanShiftModal({
               value={schoolName}
               readOnly
               controlSize="compact"
-              hint="Für einen anderen Einsatzort löschen Sie die Schicht und planen sie dort neu."
+              hint="Für einen anderen Einsatzort löschst du die Schicht und planst sie dort neu."
             />
           ) : (
             <CustomSelect

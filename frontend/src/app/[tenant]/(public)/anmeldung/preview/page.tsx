@@ -265,8 +265,8 @@ function EnrollmentPreviewPageContent() {
             </div>
             <p className="mt-4 max-w-3xl text-base leading-7 text-gray-600">
               {phaseId
-                ? "So sehen Eltern diese Anmeldephase mit ihren Betreuungsangeboten. Hier können Sie nichts absenden."
-                : "Hier sehen Sie nur die Fragen dieses Formulars. Die Betreuungsangebote fehlen hier. Sie sehen sie in der Vorschau einer Anmeldephase."}
+                ? "So sehen Eltern diese Anmeldephase mit ihren Betreuungsangeboten. Hier kannst du nichts absenden."
+                : "Hier siehst du nur die Fragen dieses Formulars. Die Betreuungsangebote fehlen hier. Du siehst sie in der Vorschau einer Anmeldephase."}
             </p>
           </SectionCard>
 
@@ -352,19 +352,19 @@ function parentViewUnavailableReason(
   enrollmentEnabled: boolean,
 ): string | null {
   if (!enrollmentEnabled) {
-    return "Die Online-Anmeldung ist für diese Schule ausgeschaltet. Schalten Sie unter „Einstellungen“ > „Anmeldung“ die „Online-Anmeldung“ ein.";
+    return "Die Online-Anmeldung ist für diese Schule ausgeschaltet. Schalte unter „Einstellungen“ > „Anmeldung“ die „Online-Anmeldung“ ein.";
   }
   if (!phase.is_active) {
-    return "Wählen Sie unter Anmeldephasen bei dieser Phase „Aktivieren“.";
+    return "Wähle unter Anmeldephasen bei dieser Phase „Aktivieren“.";
   }
   if (phase.enrollment_open_at && now < Date.parse(phase.enrollment_open_at)) {
-    return "Die Elternansicht ist erst ab der Öffnung erreichbar. Prüfen Sie unter Anmeldephasen „Öffnung“ und „Schließung“.";
+    return "Die Elternansicht ist erst ab der Öffnung erreichbar. Prüfe unter Anmeldephasen „Öffnung“ und „Schließung“.";
   }
   if (
     phase.enrollment_close_at &&
     now >= Date.parse(phase.enrollment_close_at)
   ) {
-    return "Das Anmeldefenster ist geschlossen. Prüfen Sie unter Anmeldephasen „Öffnung“ und „Schließung“.";
+    return "Das Anmeldefenster ist geschlossen. Prüfe unter Anmeldephasen „Öffnung“ und „Schließung“.";
   }
   return null;
 }
@@ -417,22 +417,20 @@ function PhasePreviewLinks({
   if (loading) return null;
   if (phases === null) {
     return (
-      <>
-        Öffnen Sie unter Anmeldephasen bei der Phase „Vorschau mit Angeboten“.
-      </>
+      <>Öffne unter Anmeldephasen bei der Phase „Vorschau mit Angeboten“.</>
     );
   }
   if (phases.length === 0) {
     return (
       <>
-        Diese Vorlage gehört noch zu keiner Anmeldephase. Wählen Sie sie unter
+        Diese Vorlage gehört noch zu keiner Anmeldephase. Wähle sie unter
         Anmeldephasen bei „Formular zuweisen“ aus.
       </>
     );
   }
   return (
     <>
-      So sehen Eltern das Formular mit Ihren Angeboten:
+      So sehen Eltern das Formular mit deinen Angeboten:
       <ul className="mt-3 space-y-2">
         {phases.map((phase) => (
           <li key={phase.id}>

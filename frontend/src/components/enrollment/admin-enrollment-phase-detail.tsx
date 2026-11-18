@@ -1088,7 +1088,7 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
                     <p className="mt-1 text-sm text-gray-500">
                       {requests.length === 0 && !reportLoading
                         ? "Sobald Eltern das Formular absenden, erscheinen die Eingänge hier."
-                        : "Passen Sie Status, Angebot, Betreuungstage, Zielklasse oder Suche an."}
+                        : "Passe Status, Angebot, Betreuungstage, Zielklasse oder Suche an."}
                     </p>
                   </div>
                 }
@@ -1487,7 +1487,7 @@ function PhaseChildActions({
                 ? "Als gelesen markieren"
                 : "Als ungelesen markieren",
               description:
-                "Ändert die Markierung nur für Sie, nicht für andere.",
+                "Ändert die Markierung nur für dich, nicht für andere.",
               onClick: () => onToggleRead(unread),
             },
           ]}

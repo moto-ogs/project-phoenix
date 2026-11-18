@@ -72,7 +72,7 @@ describe("working-time", () => {
       "Vor Di., 08.09.: nur 9,5 Stunden Ruhezeit. Nötig sind 11 Stunden.",
     );
     expect(at("rest_shortened", 600, 660)).toBe(
-      "Vor Di., 08.09.: 10 Stunden Ruhezeit statt 11 Stunden. Planen Sie dafür einen Ausgleich ein.",
+      "Vor Di., 08.09.: 10 Stunden Ruhezeit statt 11 Stunden. Plane dafür einen Ausgleich ein.",
     );
     expect(at("above_soll", 1500, 1200)).toBe(
       "Woche ab Di., 08.09.: 25 Stunden geplant. Das Soll ist 20 Stunden.",

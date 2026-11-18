@@ -168,7 +168,7 @@ export function FormPreview({
                 ? "Öffnet diese Formularvorlage in einem neuen Tab."
                 : onPreviewClick
                   ? "Speichert die Vorlage und öffnet die Vorschau in einem neuen Tab."
-                  : "Speichern Sie die Vorlage zuerst."
+                  : "Speichere die Vorlage zuerst."
             }
           />
         </>
@@ -178,7 +178,7 @@ export function FormPreview({
       <PreviewSection title="Kind" fields={coreFieldLabels("child")} />
       <PreviewSection
         title="Betreuungsangebot"
-        description="Die Angebote legen Sie in der Anmeldephase fest. Eltern sehen sie über den Link der Phase."
+        description="Die Angebote legst du in der Anmeldephase fest. Eltern sehen sie über den Link der Phase."
         fields={["Gewünschtes Angebot", "Betreuungstage"]}
       />
 
@@ -294,7 +294,7 @@ function getPreviewStatus({
 
   return {
     label: "Entwurf",
-    hint: "Speichern Sie die Vorlage zuerst. Danach können Sie sie in einer Anmeldephase auswählen.",
+    hint: "Speichere die Vorlage zuerst. Danach kannst du sie in einer Anmeldephase auswählen.",
     tone: "gray",
   };
 }

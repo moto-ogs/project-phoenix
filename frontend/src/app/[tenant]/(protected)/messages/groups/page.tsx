@@ -101,7 +101,7 @@ function GroupMessagesContent() {
               icon: <MotoConceptIcon concept={groupsConcept} size={48} />,
               title: "Noch keine Gruppennachrichten",
               description: messagingEnabled
-                ? "Mit einer Gruppennachricht schreiben Sie allen Eltern einer Gruppe, Klasse oder AG. Eltern antworten nur Ihnen."
+                ? "Mit einer Gruppennachricht schreibst du allen Eltern einer Gruppe, Klasse oder AG. Eltern antworten nur dir."
                 : "Der Nachrichtenaustausch mit den Eltern ist für diese Schule ausgeschaltet.",
             }
           : null

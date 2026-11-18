@@ -70,11 +70,11 @@ export function appointmentMailNote(
       names,
     );
     const families = names.length === 1 ? "der Familie" : "den Familien";
-    return `Nicht angekommen bei ${list}. Bitte sagen Sie ${families} direkt Bescheid. ${CHECK_ADDRESS_AT_GUARDIAN}`;
+    return `Nicht angekommen bei ${list}. Bitte sage ${families} direkt Bescheid. ${CHECK_ADDRESS_AT_GUARDIAN}`;
   }
   return undeliveredMailsNote(
     sumMailOutcomeCounts(Object.values(mails.kinds)),
-    "Welche Adresse betroffen ist, sehen Sie beim Kind unter „Erziehungsberechtigte“.",
+    "Welche Adresse betroffen ist, siehst du beim Kind unter „Erziehungsberechtigte“.",
   );
 }
 

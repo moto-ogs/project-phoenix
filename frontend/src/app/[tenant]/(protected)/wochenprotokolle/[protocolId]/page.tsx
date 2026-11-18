@@ -103,9 +103,9 @@ function editableWeekProtocolDays(protocol: WeekProtocol): WeekProtocolDay[] {
 function stateMessage(protocol: WeekProtocol): string {
   switch (protocol.status) {
     case "collecting":
-      return `Die Woche läuft noch. moto hält jeden Abend den Tag fest. Ab Freitagabend, ${formatDate(protocol.draftFrom)}, können Sie das Protokoll ergänzen.`;
+      return `Die Woche läuft noch. moto hält jeden Abend den Tag fest. Ab Freitagabend, ${formatDate(protocol.draftFrom)}, kannst du das Protokoll ergänzen.`;
     case "draft":
-      return `Ergänzen Sie die Tage und die Woche und schließen Sie das Protokoll ab. Sonst schließt moto es am ${formatDate(protocol.autoCloseOn)} mit den bisherigen Ergänzungen ab.`;
+      return `Ergänze die Tage und die Woche und schließe das Protokoll ab. Sonst schließt moto es am ${formatDate(protocol.autoCloseOn)} mit den bisherigen Ergänzungen ab.`;
     default:
       return protocol.closedAutomatically
         ? `moto hat das Protokoll am ${stamp(protocol.closedAt ?? "")} abgeschlossen. Es lässt sich nicht mehr ändern.`
@@ -333,7 +333,7 @@ function HeadActions({
   if (protocol.status === "closed") {
     // A download, not a page: a plain anchor in the kit's button look.
     return (
-      <ActionHint text="Speichert das abgeschlossene Protokoll als PDF auf Ihrem Gerät.">
+      <ActionHint text="Speichert das abgeschlossene Protokoll als PDF auf deinem Gerät.">
         <a
           href={weekProtocolsService.pdfUrl(protocol.id)}
           // Kennzeichen der Kopfkarte für ihre Bedienhöhe (wie `ButtonLink`).

@@ -219,7 +219,7 @@ function SettingsTabContent({
               variant="compact"
               icon={<SearchX className="h-5 w-5" aria-hidden="true" />}
               title={`Keine Einstellung passt zu „${query.trim()}“.`}
-              description="Versuchen Sie ein anderes Wort, zum Beispiel „Abholung“ oder „Eltern“."
+              description="Versuche ein anderes Wort, zum Beispiel „Abholung“ oder „Eltern“."
             />
           </SectionCard>
         ) : (

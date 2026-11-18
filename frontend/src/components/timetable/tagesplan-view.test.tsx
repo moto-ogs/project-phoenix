@@ -666,7 +666,7 @@ describe("TagesplanView", () => {
     render(<TagesplanView />);
 
     expect(
-      screen.getByText(/Sie sehen nur Termine, für die Sie eingeteilt sind/),
+      screen.getByText(/Du siehst nur Termine, für die du eingeteilt bist/),
     ).toBeInTheDocument();
   });
 

@@ -75,7 +75,7 @@ describe("ContractSigningView focus", () => {
     await waitFor(() => expect(notice).toHaveFocus());
     expect(notice).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bitte prüfen Sie die markierten Felder.",
+      "Bitte prüfe die markierten Felder.",
     );
     expect(mocks.sign).not.toHaveBeenCalled();
   });
@@ -90,10 +90,10 @@ describe("ContractSigningView focus", () => {
 
     submit();
 
-    const pad = screen.getByRole("group", { name: "Ihre Unterschrift" });
+    const pad = screen.getByRole("group", { name: "Deine Unterschrift" });
     await waitFor(() => expect(pad).toHaveFocus());
     expect(pad).toHaveAccessibleDescription(
-      "Bitte unterschreiben Sie und bestätigen Sie die Unterschrift.",
+      "Bitte unterschreibe und bestätige die Unterschrift.",
     );
   });
 

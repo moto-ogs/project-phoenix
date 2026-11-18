@@ -392,7 +392,7 @@ describe("CareOfferingsEditor", () => {
       }),
     ).toBeChecked();
     expect(
-      screen.getByText("Bedingung 1: Wählen Sie mindestens eine Klassenstufe."),
+      screen.getByText("Bedingung 1: Wähle mindestens eine Klassenstufe."),
     ).toBeVisible();
   });
 
@@ -427,12 +427,12 @@ describe("CareOfferingsEditor", () => {
     );
 
     expect(
-      screen.getByText("Bedingung 1: Wählen Sie mindestens eine Klassenstufe."),
+      screen.getByText("Bedingung 1: Wähle mindestens eine Klassenstufe."),
     ).toBeVisible();
     const create = screen.getByRole("button", { name: "Erstellen" });
     expect(create).toHaveAttribute("aria-disabled", "true");
     expect(create).toHaveAccessibleDescription(
-      "Vervollständigen Sie zuerst die markierten Bedingungen.",
+      "Vervollständige zuerst die markierten Bedingungen.",
     );
     const availabilityFields = within(
       screen.getByRole("group", {
@@ -506,7 +506,7 @@ describe("CareOfferingsEditor", () => {
 
     expect(
       screen.getByText(
-        "Bitte tragen Sie für jeden Betreuungstag eine Gehzeit ein: Mo.",
+        "Bitte trage für jeden Betreuungstag eine Gehzeit ein: Mo.",
       ),
     ).toBeVisible();
     expect(mocks.createCareOffering).not.toHaveBeenCalled();
@@ -751,7 +751,7 @@ describe("CareOfferingsEditor", () => {
     const create = screen.getByRole("button", { name: "Erstellen" });
     expect(create).toHaveAttribute("aria-disabled", "true");
     expect(create).toHaveAccessibleDescription(
-      "Wählen Sie einen passenden Regeltermin oder entfernen Sie ihn.",
+      "Wähle einen passenden Regeltermin oder entferne ihn.",
     );
 
     for (const day of ["Di", "Mi", "Do", "Fr"]) {
@@ -1466,7 +1466,7 @@ describe("CareOfferingsEditor", () => {
     ).toBeVisible();
     expect(save).toHaveAttribute("aria-disabled", "true");
     expect(save).toHaveAccessibleDescription(
-      "Wählen Sie einen passenden Regeltermin oder entfernen Sie ihn.",
+      "Wähle einen passenden Regeltermin oder entferne ihn.",
     );
 
     fireEvent.click(activeCheckbox);
@@ -1549,7 +1549,7 @@ describe("CareOfferingsEditor", () => {
     const save = screen.getByRole("button", { name: "Speichern" });
     expect(save).toHaveAttribute("aria-disabled", "true");
     expect(save).toHaveAccessibleDescription(
-      "Wählen Sie einen passenden Regeltermin oder entfernen Sie ihn.",
+      "Wähle einen passenden Regeltermin oder entferne ihn.",
     );
   });
 

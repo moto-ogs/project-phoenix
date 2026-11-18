@@ -116,7 +116,7 @@ export default function TraegerBriefkopfPage() {
   return (
     <TenantPage
       title="Briefkopf und Vorlagen"
-      info="Diese Angaben stehen auf allen Briefen und Rechnungen Ihres Trägers."
+      info="Diese Angaben stehen auf allen Briefen und Rechnungen deines Trägers."
       error={error}
       loading={loading || schemaLoading}
     >
@@ -125,7 +125,7 @@ export default function TraegerBriefkopfPage() {
           {!canEdit ? (
             <Alert
               type="info"
-              message="Sie können die Angaben nur ansehen. Ändern kann, wer im Träger-Büro die Rolle „Verwaltung“ hat."
+              message="Du kannst die Angaben nur ansehen. Ändern kann, wer im Träger-Büro die Rolle „Verwaltung“ hat."
             />
           ) : null}
           <SectionCard
@@ -134,7 +134,7 @@ export default function TraegerBriefkopfPage() {
               // The preview prints facts kept elsewhere: say where.
               <>
                 So sehen Kopf und Fuß eines Briefs aus. Die Vorschau ändert sich
-                mit Ihren Angaben. Die Ansprechperson ändern Sie unter{" "}
+                mit deinen Angaben. Die Ansprechperson änderst du unter{" "}
                 <NavigationLink
                   href={traegerPath("/traeger/einstellungen?bereich=kontakt")}
                   className="font-medium text-gray-900 underline underline-offset-2"

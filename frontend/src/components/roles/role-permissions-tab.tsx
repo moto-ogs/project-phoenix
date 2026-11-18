@@ -76,7 +76,7 @@ function permissionHint(permission: Permission): string | undefined {
       permission.resource === "admin"
         ? "die Rolle Verwaltung"
         : "das moto-Team";
-    return `Nur für ${owner}. Sie können es entfernen, aber nicht wieder vergeben.`;
+    return `Nur für ${owner}. Du kannst es entfernen, aber nicht wieder vergeben.`;
   }
   return riskyPermissionHint(permission.resource, permission.action);
 }
@@ -348,7 +348,7 @@ export function RolePermissionsTab({
           <p className="text-sm text-gray-500">
             {role.isSystem
               ? "Diese Rolle trägt keine Berechtigungen."
-              : "Noch keine Berechtigungen zugewiesen. Mit „Bearbeiten“ oben rechts wählen Sie aus, was diese Rolle darf."}
+              : "Noch keine Berechtigungen zugewiesen. Mit „Bearbeiten“ oben rechts wählst du aus, was diese Rolle darf."}
           </p>
         ) : (
           <SectionCard padding="none">
@@ -414,7 +414,7 @@ export function RolePermissionsTab({
             saving
               ? undefined
               : searchTerm.trim()
-                ? "Keine Berechtigung passt zu Ihrer Suche."
+                ? "Keine Berechtigung passt zu deiner Suche."
                 : "Es gibt keine Berechtigung zum Auswählen."
           }
           onClick={() => toggleMany(filteredPermissions)}

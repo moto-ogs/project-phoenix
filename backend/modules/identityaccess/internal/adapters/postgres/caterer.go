@@ -206,22 +206,22 @@ func (s *Store) AcceptCatererInvitation(ctx context.Context, invitationID, accou
 	return rows > 0, stats, err
 }
 
-func (s *Store) InsertCatererSchool(ctx context.Context, catererID int64, deliveryAddress string, startedBy int64, at time.Time) (domain.OperationStats, error) {
+func (s *Store) InsertCatererSchool(ctx context.Context, catererID int64, deliveryAddress string, startedBy int64) (domain.OperationStats, error) {
 	tenantID := s.scope(ctx).TenantID
 	if tenantID <= 0 {
 		return domain.OperationStats{}, fmt.Errorf("identity access postgres: a caterer supply needs the school's transaction")
 	}
-	row := catererSchoolRow{CatererID: catererID, TenantID: tenantID, DeliveryAddress: deliveryAddress, StartedAt: at, StartedBy: optionalCatererAccount(startedBy)}
+	row := catererSchoolRow{CatererID: catererID, TenantID: tenantID, DeliveryAddress: deliveryAddress, StartedBy: optionalCatererAccount(startedBy)}
 	_, stats, err := s.exec(ctx, "insert caterer school", func(db bun.IDB) executor {
-		return db.NewInsert().Model(&row).ExcludeColumn("ended_at", "ended_by_account_id")
+		return db.NewInsert().Model(&row).Value("started_at", databaseClock).ExcludeColumn("ended_at", "ended_by_account_id")
 	})
 	return stats, err
 }
 
-func (s *Store) EndCatererSchool(ctx context.Context, endedBy int64, at time.Time) (bool, domain.OperationStats, error) {
+func (s *Store) EndCatererSchool(ctx context.Context, endedBy int64) (bool, domain.OperationStats, error) {
 	rows, stats, err := s.exec(ctx, "end caterer school", func(db bun.IDB) executor {
 		return scopeTenantQuery(s.scope(ctx), db.NewUpdate().Model((*catererSchoolRow)(nil)).
-			Set("ended_at = ?", at).
+			Set(`ended_at = GREATEST("caterer_school".started_at, `+databaseClock+`)`).
 			Set("ended_by_account_id = ?", optionalCatererAccount(endedBy)).
 			Where(`"caterer_school".ended_at IS NULL`), `"caterer_school".tenant_id = ?`)
 	})

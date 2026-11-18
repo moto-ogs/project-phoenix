@@ -38,11 +38,11 @@ export function OfferingSuggestionRow({
       <p className="text-xs text-gray-700">
         {choices.length > 1
           ? combinedChoices
-            ? "Mehrere Angebotskombinationen passen zur Kinderliste. Wählen Sie eine Kombination."
-            : "Sollen nur Kinder kommen, die für ein Angebot angemeldet sind? Dazu passen mehrere Angebote. Wählen Sie eins."
+            ? "Mehrere Angebotskombinationen passen zur Kinderliste. Wähle eine Kombination."
+            : "Sollen nur Kinder kommen, die für ein Angebot angemeldet sind? Dazu passen mehrere Angebote. Wähle eins."
           : suggestion.offerings.length > 1
-            ? `Sollen nur die für ${offeringNamesFor(suggestion.offerings)} angemeldeten Kinder kommen? Dann verbinden Sie den Termin mit diesen Angeboten.`
-            : `Sollen nur die für ${offeringNamesFor(suggestion.offerings)} angemeldeten Kinder kommen? Dann verbinden Sie den Termin mit dem Angebot.`}
+            ? `Sollen nur die für ${offeringNamesFor(suggestion.offerings)} angemeldeten Kinder kommen? Dann verbindest du den Termin mit diesen Angeboten.`
+            : `Sollen nur die für ${offeringNamesFor(suggestion.offerings)} angemeldeten Kinder kommen? Dann verbindest du den Termin mit dem Angebot.`}
       </p>
       {choices.length > 1 ? (
         <div className="flex flex-wrap gap-2">

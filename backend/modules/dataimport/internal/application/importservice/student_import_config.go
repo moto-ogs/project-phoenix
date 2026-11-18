@@ -208,7 +208,7 @@ func validateEnrollmentDates(row *importModels.StudentImportRow) []importModels.
 		if err != nil {
 			errors = append(errors, importModels.ValidationError{
 				Field:    field,
-				Message:  fmt.Sprintf("Ungültiges Datumsformat für '%s'. Bitte verwenden Sie JJJJ-MM-TT, TT.MM.JJJJ oder TT.MM.JJ.", label),
+				Message:  fmt.Sprintf("Ungültiges Datumsformat für '%s'. Bitte verwende JJJJ-MM-TT, TT.MM.JJJJ oder TT.MM.JJ.", label),
 				Code:     "invalid_date_format",
 				Severity: importModels.ErrorSeverityError,
 			})
@@ -249,7 +249,7 @@ func validateConsentDates(row *importModels.StudentImportRow, now time.Time) []i
 		if err != nil {
 			errors = append(errors, importModels.ValidationError{
 				Field:    field,
-				Message:  fmt.Sprintf("Ungültiges Datumsformat für '%s'. Bitte verwenden Sie JJJJ-MM-TT, TT.MM.JJJJ oder TT.MM.JJ.", label),
+				Message:  fmt.Sprintf("Ungültiges Datumsformat für '%s'. Bitte verwende JJJJ-MM-TT, TT.MM.JJJJ oder TT.MM.JJ.", label),
 				Code:     "invalid_date_format",
 				Severity: importModels.ErrorSeverityError,
 			})
@@ -504,7 +504,7 @@ func normalizeStudentBirthday(row *importModels.StudentImportRow, now time.Time)
 	if trimmedBirthday := strings.TrimSpace(row.Birthday); trimmedBirthday != "" {
 		parsedBirthday, err := parseSupportedDate(trimmedBirthday, now)
 		if err != nil {
-			message := "Ungültiges Datumsformat. Bitte verwenden Sie eines dieser Formate: JJJJ-MM-TT (z.B. 2015-08-15), TT.MM.JJJJ (z.B. 15.08.2015) oder TT.MM.JJ (z.B. 15.08.15)"
+			message := "Ungültiges Datumsformat. Bitte verwende eines dieser Formate: JJJJ-MM-TT (z.B. 2015-08-15), TT.MM.JJJJ (z.B. 15.08.2015) oder TT.MM.JJ (z.B. 15.08.15)"
 			code := "invalid_date_format"
 			if stdErrors.Is(err, errFutureBirthday) {
 				message = "Ungültiges Geburtsdatum. Geburtstage in der Zukunft sind nicht erlaubt."

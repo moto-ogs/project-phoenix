@@ -147,7 +147,7 @@ func TestDeclarationProofDownloadsTheMotoPDF(t *testing.T) {
 	assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
 	assert.Equal(t, "%PDF-1.7", w.Body.String())
 	require.NotNil(t, renderer.doc)
-	assert.Equal(t, "Nachweis Ihrer Antwort", renderer.doc.Title)
+	assert.Equal(t, "Nachweis deiner Antwort", renderer.doc.Title)
 	assert.Equal(t, enrollmentTestNow(), renderer.doc.GeneratedAt, "the proof is issued on the resource clock")
 }
 

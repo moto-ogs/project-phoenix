@@ -619,7 +619,7 @@ test("a failed revocation still logs this device out and says so", async ({
   expect(await deleted).toBe(true);
 
   const notice = page.getByTestId("logout-not-revoked-notice");
-  await expect(notice).toContainText("Sie sind auf diesem Gerät abgemeldet");
+  await expect(notice).toContainText("Du bist auf diesem Gerät abgemeldet");
   await expect(page.locator('input[type="email"]')).toBeVisible();
   if (process.env.LATE_COOKIE_SHOT_DIR) {
     await page.screenshot({

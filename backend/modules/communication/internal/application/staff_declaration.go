@@ -109,7 +109,7 @@ type DeclarationSupport interface {
 	DeclarationFrozen(ctx context.Context, a *StaffParentAnnouncement) (bool, error)
 }
 
-const declarationReminderKicker = "Einverständnis: Ihre Antwort fehlt"
+const declarationReminderKicker = "Einverständnis: Deine Antwort fehlt"
 
 // normalizeDeclaration validates and completes the declaration settings. It
 // runs inside normalizeDelivery, after the delivery mode is known.
@@ -556,7 +556,7 @@ func (s *service) remindDeclaration(ctx context.Context, a *StaffParentAnnouncem
 	if len(recipients) == 0 {
 		return 0, nil
 	}
-	intro := "für Ihr Kind fehlt noch Ihre Antwort. Bitte stimmen Sie im Eltern-Portal zu oder lehnen Sie ab."
+	intro := "für dein Kind fehlt noch deine Antwort. Bitte stimme im Eltern-Portal zu oder lehne ab."
 	emailed, err := s.enqueueReminderEmails(ctx, a, recipients, declarationReminderKicker, intro, s.letterPortalURL(a.ID))
 	if err != nil {
 		return 0, err
@@ -612,9 +612,9 @@ func declarationMailSpec(a *StaffParentAnnouncement, spec mailSpec) mailSpec {
 		return spec
 	}
 	spec.kicker = declarationEmailKicker
-	intro := "wir bitten Sie um Ihr Einverständnis. Sie können im Eltern-Portal zustimmen oder ablehnen."
+	intro := "wir bitten dich um dein Einverständnis. Du kannst im Eltern-Portal zustimmen oder ablehnen."
 	if a.ResponseDeadline != nil {
-		intro = fmt.Sprintf("wir bitten Sie bis zum %s um Ihr Einverständnis. Sie können im Eltern-Portal zustimmen oder ablehnen.",
+		intro = fmt.Sprintf("wir bitten dich bis zum %s um dein Einverständnis. Du kannst im Eltern-Portal zustimmen oder ablehnen.",
 			a.ResponseDeadline.In(berlinLocation()).Format("02.01.2006"))
 	}
 	spec.intro = func(string) string { return intro }

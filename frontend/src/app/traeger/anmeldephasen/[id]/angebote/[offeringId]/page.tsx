@@ -31,7 +31,7 @@ export default function TraegerCatalogOfferingPage() {
   return (
     <TenantPage
       title={offering?.draft.fields.name ?? "Betreuungsangebot"}
-      info="Ihre Änderung erreicht die Schulen erst, wenn Sie übertragen. Hat eine Schule ein Feld selbst geändert, behält sie ihren Wert."
+      info="Deine Änderung erreicht die Schulen erst, wenn du überträgst. Hat eine Schule ein Feld selbst geändert, behält sie ihren Wert."
       back
       backHref={phaseHref}
       backLabel={
@@ -50,7 +50,7 @@ export default function TraegerCatalogOfferingPage() {
           onSaved={() => {
             void invalidate(traegerKeys.catalogFamily);
             success(
-              "Gespeichert. Die Schulen bekommen die Änderung, wenn Sie übertragen.",
+              "Gespeichert. Die Schulen bekommen die Änderung, wenn du überträgst.",
             );
             router.push(phaseHref);
           }}

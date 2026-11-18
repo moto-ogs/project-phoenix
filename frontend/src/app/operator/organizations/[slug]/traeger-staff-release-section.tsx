@@ -100,8 +100,8 @@ export function TraegerStaffReleaseSection({
   const grant = async () => {
     formErrors.clear();
     if (!representation) {
-      formErrors.invalid("Bitte wählen Sie die Erklärung des Trägers.", {
-        representation: "Bitte wählen Sie eine Erklärung.",
+      formErrors.invalid("Bitte wähle die Erklärung des Trägers.", {
+        representation: "Bitte wähle eine Erklärung.",
       });
       return;
     }

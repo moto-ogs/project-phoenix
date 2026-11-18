@@ -43,7 +43,7 @@ const logger = createLogger({ component: "TraegerKinderzahlImportPage" });
 const STEPS = ["Datei wählen", "Spalten zuordnen", "Prüfen und übernehmen"];
 
 const INFO =
-  "Hier tragen Sie die Kinderzahl vieler Familien auf einmal nach. Jede Zeile nennt ein Kind mit Vertrag und wie viele Kinder seine Familie hat. Die Zahl gilt als von Ihnen bestätigt. Eine schon bestätigte Zahl ändert moto nicht. Die Datei bewahrt moto nicht auf.";
+  "Hier trägst du die Kinderzahl vieler Familien auf einmal nach. Jede Zeile nennt ein Kind mit Vertrag und wie viele Kinder seine Familie hat. Die Zahl gilt als von dir bestätigt. Eine schon bestätigte Zahl ändert moto nicht. Die Datei bewahrt moto nicht auf.";
 
 const KINDERZAHL = "/traeger/abrechnung/kinderzahl";
 
@@ -98,7 +98,7 @@ export default function TraegerKinderzahlImportPage() {
   const choose = (chosen: File) => {
     if (!/\.(csv|txt)$/i.test(chosen.name)) {
       showMessage(
-        "Bitte wählen Sie eine CSV-Datei. Eine Excel-Datei speichern Sie vorher als CSV.",
+        "Bitte wähle eine CSV-Datei. Eine Excel-Datei speicherst du vorher als CSV.",
       );
       return;
     }
@@ -284,7 +284,7 @@ export default function TraegerKinderzahlImportPage() {
                 message={
                   reading
                     ? "Die Datei wird geprüft …"
-                    : "Die Datei ist noch nicht geprüft. Bitte prüfen Sie erneut."
+                    : "Die Datei ist noch nicht geprüft. Bitte prüfe erneut."
                 }
                 action={
                   !reading ? (
@@ -312,7 +312,7 @@ export default function TraegerKinderzahlImportPage() {
             {result && result.unmapped.length > 0 ? (
               <Alert
                 type="info"
-                message="Ordnen Sie alle Pflichtfelder zu. Dann zeigt moto die Zeilen."
+                message="Ordne alle Pflichtfelder zu. Dann zeigt moto die Zeilen."
               />
             ) : null}
           </>

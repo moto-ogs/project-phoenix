@@ -8,7 +8,7 @@ import (
 
 // msgReadOnlyPreview is shown verbatim when a write slips past the disabled
 // UI (direct API call, stale tab). German because it reaches school users.
-const msgReadOnlyPreview = "In der Vorschau können Sie nur lesen. Beenden Sie die Vorschau, um etwas zu ändern."
+const msgReadOnlyPreview = "In der Vorschau kannst du nur lesen. Beende die Vorschau, um etwas zu ändern."
 
 // readOnlyPOSTAllowlist names the POST routes that only READ data — exports,
 // dry-run previews, and bulk lookups whose ID list travels in the body. A

@@ -71,35 +71,35 @@ func datevDefinition(group config.Definition, key string, order int, label, desc
 
 var parentBillingDatevDefinitions = func() []config.Definition {
 	consultant := datevDefinition(datevClientGroup, config.KeyParentBillingDatevConsultantNumber, 10, "Beraternummer",
-		"Die Nummer Ihres Steuerbüros in DATEV, 4 bis 7 Ziffern. Sie steht in der DATEV-Datei oben. Ohne sie gibt es keine DATEV-Datei.")
+		"Die Nummer deines Steuerbüros in DATEV, 4 bis 7 Ziffern. Sie steht in der DATEV-Datei oben. Ohne sie gibt es keine DATEV-Datei.")
 	consultant.Validation = &config.ValidationRules{Pattern: &datevConsultantPattern, AllowEmpty: true}
 
 	client := datevDefinition(datevClientGroup, config.KeyParentBillingDatevClientNumber, 20, "Mandantennummer",
-		"Ihre Nummer beim Steuerbüro in DATEV, 1 bis 5 Ziffern. Ohne sie gibt es keine DATEV-Datei.")
+		"Deine Nummer beim Steuerbüro in DATEV, 1 bis 5 Ziffern. Ohne sie gibt es keine DATEV-Datei.")
 	client.Validation = &config.ValidationRules{Pattern: &datevClientPattern, AllowEmpty: true}
 
 	length := datevDefinition(datevClientGroup, config.KeyParentBillingDatevAccountLength, 30, "Länge der Sachkonten",
-		"So viele Ziffern haben Ihre Sachkonten in DATEV. Fragen Sie Ihr Steuerbüro. Debitoren haben eine Ziffer mehr.")
+		"So viele Ziffern haben deine Sachkonten in DATEV. Frage dein Steuerbüro. Debitoren haben eine Ziffer mehr.")
 	length.Type, length.Options = config.FieldSelect, datevAccountLengthOptions
 
 	chart := datevDefinition(datevClientGroup, config.KeyParentBillingDatevChartOfAccounts, 40, "Kontenrahmen",
-		"Der Kontenrahmen Ihrer Buchhaltung. Fragen Sie Ihr Steuerbüro.")
+		"Der Kontenrahmen deiner Buchhaltung. Frage dein Steuerbüro.")
 	chart.Type, chart.Options = config.FieldSelect, datevChartOptions
 
 	fiscal := datevDefinition(datevClientGroup, config.KeyParentBillingDatevFiscalYearStart, 50, "Beginn des Wirtschaftsjahres",
-		"In diesem Monat beginnt Ihr Wirtschaftsjahr. Bei den meisten Vereinen ist das der Januar.")
+		"In diesem Monat beginnt dein Wirtschaftsjahr. Bei den meisten Vereinen ist das der Januar.")
 	fiscal.Type, fiscal.Options, fiscal.Default = config.FieldSelect, datevMonthOptions, "1"
 
 	revenue := datevDefinition(datevBookingGroup, config.KeyParentBillingDatevRevenueAccount, 60, "Standard-Erlöskonto",
-		"Auf dieses Sachkonto bucht moto, wenn eine Leistung oder ein Angebot kein eigenes Erlöskonto hat. Es hat höchstens so viele Ziffern wie Ihre Sachkonten.")
+		"Auf dieses Sachkonto bucht moto, wenn eine Leistung oder ein Angebot kein eigenes Erlöskonto hat. Es hat höchstens so viele Ziffern wie deine Sachkonten.")
 	revenue.Validation = &config.ValidationRules{Pattern: &datevAccountPattern, AllowEmpty: true, MaxLength: &datevAccountMaxLength}
 
 	locked := datevDefinition(datevBookingGroup, config.KeyParentBillingDatevLocked, 70, "Buchungen festschreiben",
-		"Ist das an, sind die Buchungen nach dem Einlesen in DATEV festgeschrieben. Ihr Steuerbüro kann sie dann nicht mehr ändern.")
+		"Ist das an, sind die Buchungen nach dem Einlesen in DATEV festgeschrieben. Dein Steuerbüro kann sie dann nicht mehr ändern.")
 	locked.Type, locked.Default = config.FieldBoolean, false
 
 	costCenter := datevDefinition(datevBookingGroup, config.KeyParentBillingDatevCostCenterRequired, 80, "Kostenstelle ist Pflicht",
-		"Ist das an, braucht jede Buchung eine Kostenstelle der Schule. Die Kostenstellen tragen Sie unter Abrechnung bei Exporte ein.")
+		"Ist das an, braucht jede Buchung eine Kostenstelle der Schule. Die Kostenstellen trägst du unter Abrechnung bei Exporte ein.")
 	costCenter.Type, costCenter.Default = config.FieldBoolean, false
 
 	return []config.Definition{consultant, client, length, chart, fiscal, revenue, locked, costCenter}

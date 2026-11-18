@@ -12,20 +12,20 @@ export function teacherNoticesTopic(): HelpTopic {
     audience: "teacher",
     icon: "Megaphone",
     steps: [
-      "Öffnen Sie `Hinweise der Leitung`.",
-      "Lesen Sie die Hinweise für heute.",
-      "Wählen Sie bei Bedarf `Zur Kenntnis nehmen`.",
+      "Öffne `Hinweise der Leitung`.",
+      "Lies die Hinweise für heute.",
+      "Wähle bei Bedarf `Zur Kenntnis nehmen`.",
     ],
     result: "Bestätigte Hinweise tragen danach `Zur Kenntnis genommen`.",
     notes: [
-      "Sie sehen nur Hinweise, die für Lehrkräfte oder für alle gelten.",
+      "Du siehst nur Hinweise, die für Lehrkräfte oder für alle gelten.",
       "Ein Zähler neben dem Eintrag zeigt, wie viele Hinweise offen sind.",
     ],
     differences: [
       "Nicht jeder Hinweis verlangt eine Bestätigung. Dann fehlt der Knopf.",
     ],
     troubleshootingDetails: [
-      "moto meldet, die Kenntnisnahme sei nicht gespeichert worden? Versuchen Sie es noch einmal.",
+      "moto meldet, die Kenntnisnahme sei nicht gespeichert worden? Versuche es noch einmal.",
     ],
     related: [
       HELP_TOPICS.teacherMessages,

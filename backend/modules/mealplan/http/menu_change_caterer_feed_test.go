@@ -86,7 +86,7 @@ func TestMenuChangeReachesTheBellOfTheSchoolsCaterer(t *testing.T) {
 	require.Len(t, entries, 1)
 	assert.Equal(t, deliveryContract.NotificationCatererMealPlanChanged, entries[0].Type)
 	assert.Equal(t, "Speiseplan geändert", entries[0].Title)
-	assert.Equal(t, "Die Schule hat den Speiseplan für die Woche vom 10.06. bis 14.06.2030 geändert. Bitte prüfen Sie Ihre Planung.", entries[0].Body)
+	assert.Equal(t, "Die Schule hat den Speiseplan für die Woche vom 10.06. bis 14.06.2030 geändert. Bitte prüfe deine Planung.", entries[0].Body)
 	assert.Equal(t, "/caterer", entries[0].DeepLink)
 	assert.Equal(t, fmt.Sprint(f.tenantID), entries[0].SchoolID)
 	assert.Equal(t, "Grundschule Am Bach", entries[0].SchoolName)

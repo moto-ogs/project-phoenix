@@ -157,7 +157,7 @@ export function ChildOfferings({
         type="warning"
         announce="off"
         title="Betreuungsangebote"
-        message="Die gebuchten Angebote konnten nicht geladen werden. Bitte die Seite neu laden, bevor Sie über dieses Kind entscheiden."
+        message="Die gebuchten Angebote konnten nicht geladen werden. Bitte die Seite neu laden, bevor du über dieses Kind entscheidest."
         className="mt-3"
       />
     );

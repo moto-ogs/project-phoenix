@@ -85,7 +85,7 @@ export function existingChildHint(
   if (parentMayNoLongerEnroll(child)) {
     return {
       message:
-        "Dieser Elternteil darf das Kind nicht mehr anmelden. Prüfen Sie bitte die Angaben.",
+        "Dieser Elternteil darf das Kind nicht mehr anmelden. Prüfe bitte die Angaben.",
       duplicate: false,
       listsCandidates: false,
     };
@@ -100,8 +100,8 @@ export function existingChildHint(
       title: `${name} ist in dieser Phase schon angemeldet`,
       message: [
         `${phaseRequestGuardian(held.phase_request)} hat ${child.first_name} schon angemeldet.`,
-        "Ist es dasselbe Kind, lehnen Sie diese Anmeldung ab.",
-        `Tragen Sie ${guardian} dann in der Akte als Elternteil ein.`,
+        "Ist es dasselbe Kind, lehne diese Anmeldung ab.",
+        `Trage ${guardian} dann in der Akte als Elternteil ein.`,
       ].join(" "),
       duplicate: true,
       listsCandidates: true,
@@ -111,8 +111,8 @@ export function existingChildHint(
     title: `${name} ist vielleicht schon angemeldet`,
     message:
       count === 1
-        ? "In moto gibt es schon ein Kind mit diesem Namen und Geburtsdatum. Beim Bestätigen wählen Sie, ob es dasselbe Kind ist."
-        : `In moto gibt es schon ${count} Kinder mit diesem Namen und Geburtsdatum. Beim Bestätigen wählen Sie, ob eines davon dasselbe Kind ist.`,
+        ? "In moto gibt es schon ein Kind mit diesem Namen und Geburtsdatum. Beim Bestätigen wählst du, ob es dasselbe Kind ist."
+        : `In moto gibt es schon ${count} Kinder mit diesem Namen und Geburtsdatum. Beim Bestätigen wählst du, ob eines davon dasselbe Kind ist.`,
     duplicate: false,
     listsCandidates: true,
   };
@@ -123,7 +123,7 @@ export function existingChildHint(
  * other family.
  */
 export const DUPLICATE_ENROLLMENT_REASON =
-  "Ihr Kind ist schon über eine andere Anmeldung angemeldet.";
+  "Dein Kind ist schon über eine andere Anmeldung angemeldet.";
 
 /** Class and birthday of a candidate, for the card and the dialog. */
 export function candidateFacts(candidate: AdminExistingChildCandidate): string {
@@ -154,19 +154,19 @@ export function existingChildChoiceDescription(
   const existingOnly = child.existing_child_only === true;
   if (!hasCandidates) {
     return existingOnly
-      ? "Zu diesen Angaben wurde kein angemeldetes Kind gefunden. Diese Anmeldung ist nur für Kinder, die schon angemeldet sind. Prüfen Sie Name und Geburtsdatum. Sonst lehnen Sie die Anmeldung ab."
-      : "Zu diesen Angaben wurde kein angemeldetes Kind gefunden. Prüfen Sie Name und Geburtsdatum. Ist das Kind schon vorhanden, wählen Sie „Abbrechen“.";
+      ? "Zu diesen Angaben wurde kein angemeldetes Kind gefunden. Diese Anmeldung ist nur für Kinder, die schon angemeldet sind. Prüfe Name und Geburtsdatum. Sonst lehne die Anmeldung ab."
+      : "Zu diesen Angaben wurde kein angemeldetes Kind gefunden. Prüfe Name und Geburtsdatum. Ist das Kind schon vorhanden, wähle „Abbrechen“.";
   }
   const held = heldCandidate(child);
   if (held && onlyHeldCandidates(child)) {
     const next = options.canRejectDuplicate
-      ? "Ist es dasselbe Kind, lehnen Sie diese Anmeldung als doppelt ab."
-      : "Ist es dasselbe Kind, brechen Sie ab.";
+      ? "Ist es dasselbe Kind, lehne diese Anmeldung als doppelt ab."
+      : "Ist es dasselbe Kind, brich ab.";
     return `${phaseRequestGuardian(held.phase_request)} hat ${child.first_name} ${child.last_name} in dieser Phase schon angemeldet. ${next}`;
   }
-  const base = `Bitte wählen Sie für ${child.first_name} ${child.last_name}. Beim bestehenden Kind wird nur die Anmeldung verlängert. Die Eltern aus dieser Anmeldung bekommen dadurch keinen Zugang zum Kind.`;
+  const base = `Bitte wähle für ${child.first_name} ${child.last_name}. Beim bestehenden Kind wird nur die Anmeldung verlängert. Die Eltern aus dieser Anmeldung bekommen dadurch keinen Zugang zum Kind.`;
   return existingOnly
-    ? `${base} Ist es ein anderes Kind, lehnen Sie die Anmeldung ab.`
+    ? `${base} Ist es ein anderes Kind, lehne die Anmeldung ab.`
     : base;
 }
 
@@ -192,7 +192,7 @@ export function existingChildChoiceOptions(
           ? {
               disabled: true,
               disabledReason:
-                "Das Kind ist in dieser Phase schon angemeldet. Lehnen Sie diese Anmeldung ab.",
+                "Das Kind ist in dieser Phase schon angemeldet. Lehne diese Anmeldung ab.",
             }
           : {}),
       };
@@ -205,7 +205,7 @@ export function existingChildChoiceOptions(
           {
             value: "new",
             label: "Als neues Kind anlegen",
-            description: "Wählen Sie dies nur, wenn es ein anderes Kind ist.",
+            description: "Wähle dies nur, wenn es ein anderes Kind ist.",
           },
         ];
   // A duplicate of another enrollment of the phase is refused right here,
@@ -217,7 +217,7 @@ export function existingChildChoiceOptions(
             value: REJECT_DUPLICATE_CHOICE,
             label: "Als doppelt ablehnen",
             description:
-              "Lehnt diese doppelte Anmeldung sofort ab. Die Eltern lesen: Ihr Kind ist schon angemeldet.",
+              "Lehnt diese doppelte Anmeldung sofort ab. Die Eltern lesen: Dein Kind ist schon angemeldet.",
             primary: true,
           },
         ]

@@ -574,7 +574,7 @@ describe("SubstitutionSlideOver", () => {
 
     expect(
       screen.getByText(
-        "Diese Abwesenheit ist in der Zeiterfassung eingetragen. Sie können hier nur die Vertretung ändern.",
+        "Diese Abwesenheit ist in der Zeiterfassung eingetragen. Du kannst hier nur die Vertretung ändern.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Krankmeldung/)).not.toBeInTheDocument();
@@ -596,7 +596,7 @@ describe("SubstitutionSlideOver", () => {
 
     expect(
       screen.getByText(
-        "Diese Abwesenheit kommt aus einer Krankmeldung. Sie können hier nur die Vertretung ändern.",
+        "Diese Abwesenheit kommt aus einer Krankmeldung. Du kannst hier nur die Vertretung ändern.",
       ),
     ).toBeInTheDocument();
     expect(

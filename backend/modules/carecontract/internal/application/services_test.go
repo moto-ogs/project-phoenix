@@ -223,7 +223,7 @@ func TestContractMailSubjectNamesNoChild(t *testing.T) {
 	assert.NoError(t, err)
 	mail, err := RenderContractMail(context.Background(), payload)
 	assert.NoError(t, err)
-	assert.Equal(t, "Ihr Betreuungsvertrag", mail.Subject)
+	assert.Equal(t, "Dein Betreuungsvertrag", mail.Subject)
 	assert.Equal(t, "Lina Muster", mail.Content.ChildName, "the body names the child")
 }
 

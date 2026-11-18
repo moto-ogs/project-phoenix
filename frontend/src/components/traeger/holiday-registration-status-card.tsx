@@ -92,8 +92,8 @@ function statusText(registration: HolidayRegistrationDetail): string {
       ? "Die Anmeldung ist bestätigt."
       : "Die Anmeldung ist eingegangen und noch nicht bestätigt.";
   const frozen = registration.frozen
-    ? " Sie ist eingefroren. Zum Stornieren oder Umbuchen wählen Sie „Wieder öffnen“."
-    : " Nach dem Anmeldeschluss wird sie eingefroren. Zum Stornieren oder Umbuchen wählen Sie dann „Wieder öffnen“.";
+    ? " Sie ist eingefroren. Zum Stornieren oder Umbuchen wählst du „Wieder öffnen“."
+    : " Nach dem Anmeldeschluss wird sie eingefroren. Zum Stornieren oder Umbuchen wählst du dann „Wieder öffnen“.";
   return confirmed + frozen;
 }
 
@@ -105,7 +105,7 @@ function benefitsText(
 ): ReactNode {
   if (!registration.benefitsDeclared) return null;
   if (contribution?.exemptionAvailable) {
-    return "Die Eltern geben an, dass sie Leistungen beziehen. Bitte prüfen Sie den Nachweis.";
+    return "Die Eltern geben an, dass sie Leistungen beziehen. Bitte prüfe den Nachweis.";
   }
   if (!canManageBillingSettings) {
     return "Die Eltern geben an, dass sie Leistungen beziehen. Am ersten gebuchten Tag gilt keine Befreiungsregel. Die Rolle „Abrechnung“ legt sie an.";
@@ -113,7 +113,7 @@ function benefitsText(
   return (
     <>
       Die Eltern geben an, dass sie Leistungen beziehen. Am ersten gebuchten Tag
-      gilt keine Befreiungsregel. Sie legen sie unter{" "}
+      gilt keine Befreiungsregel. Du legst sie unter{" "}
       <NavigationLink
         href={traegerPath("/traeger/einstellungen/abrechnung")}
         className="font-medium underline"
@@ -139,7 +139,7 @@ function debtorNumberHints(
   format: DebtorNumberFormat,
 ): Record<string, string> | null {
   if (required && !value.trim()) {
-    return { debtor_number: "Bitte geben Sie die Debitorennummer ein." };
+    return { debtor_number: "Bitte gib die Debitorennummer ein." };
   }
   const formatError = debtorNumberFormatError(value, format);
   return formatError ? { debtor_number: formatError } : null;
@@ -151,7 +151,7 @@ function debtorNumberText(set: boolean, invoiced: boolean): string {
     ? ""
     : " Ohne Nummer steht im Schreiben die Rechnungsnummer als Verwendungszweck.";
   if (!invoiced) {
-    return `Sie steht im Schreiben als Verwendungszweck. Ändern können Sie sie, bis die Rechnung ausgestellt ist.${missing}`;
+    return `Sie steht im Schreiben als Verwendungszweck. Ändern kannst du sie, bis die Rechnung ausgestellt ist.${missing}`;
   }
   return set
     ? "Die Rechnung ist ausgestellt. Die Debitorennummer lässt sich nicht mehr ändern."
@@ -212,7 +212,7 @@ function DebtorNumberField({
     formErrors.clear();
     const hints = debtorNumberHints(value, required, format);
     if (hints) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", hints);
+      formErrors.invalid("Bitte prüfe deine Angaben.", hints);
       return;
     }
     setSaving(true);
@@ -369,7 +369,7 @@ function PayerChoice({
       value: "cost_bearer",
       label: "Kosten übernimmt ein Kostenträger",
       description:
-        "Die Familie bezahlt nichts. Sie fordern den Betrag beim Kostenträger an.",
+        "Die Familie bezahlt nichts. Du forderst den Betrag beim Kostenträger an.",
     });
   }
   return (
@@ -595,7 +595,7 @@ export function HolidayRegistrationStatusCard({
             : debtorNumberFormat,
         );
     if (hints) {
-      confirmErrors.invalid("Bitte prüfen Sie Ihre Angaben.", hints);
+      confirmErrors.invalid("Bitte prüfe deine Angaben.", hints);
       return;
     }
     setRunning("confirm");
@@ -696,7 +696,7 @@ export function HolidayRegistrationStatusCard({
           isLoading={running === "reopen"}
           loadingText="Öffnet …"
           disabled={running !== null}
-          tooltip="Öffnet die Anmeldung wieder, damit Sie stornieren oder umbuchen können."
+          tooltip="Öffnet die Anmeldung wieder, damit du stornieren oder umbuchen kannst."
           onClick={() => void run("reopen")}
         >
           Wieder öffnen
@@ -794,7 +794,7 @@ export function HolidayRegistrationStatusCard({
         {duplicateIds.length > 0 ? (
           <Alert
             type="warning"
-            message={`Vielleicht doppelt angemeldet: ${duplicateNames.join(", ")}. Die andere Anmeldung öffnen Sie beim Kind.`}
+            message={`Vielleicht doppelt angemeldet: ${duplicateNames.join(", ")}. Die andere Anmeldung öffnest du beim Kind.`}
             action={
               // The child cards render in every state, frozen and cancelled
               // too, so the way to them is always there (#7054).
@@ -1022,7 +1022,7 @@ export function HolidayRegistrationStatusCard({
           {invoiced ? (
             <li>
               Die Rechnung dieser Anmeldung bleibt bestehen. Soll die Familie
-              nicht zahlen, stornieren Sie sie danach in der Abrechnung.
+              nicht zahlen, storniere sie danach in der Abrechnung.
             </li>
           ) : null}
         </ul>

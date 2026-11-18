@@ -196,7 +196,7 @@ export function ArbeitszeitmodellTab({
   const scheduleEmpty = !schedule.model && schedule.entries.length === 0;
   const missingTargetText = `Ohne Soll zählen Krankheit, Urlaub und Fortbildung 0 Stunden. Gearbeitete Zeit zählt ganz als Plus. ${
     editable
-      ? "Tragen Sie mit „Bearbeiten“ die Wochenstunden aus dem Arbeitsvertrag ein."
+      ? "Trage mit „Bearbeiten“ die Wochenstunden aus dem Arbeitsvertrag ein."
       : MISSING_TARGET_OWNER
   }`;
 
@@ -265,7 +265,7 @@ export function ArbeitszeitmodellTab({
               hasTarget === false
                 ? missingTargetText
                 : editable
-                  ? "Tragen Sie mit „Bearbeiten“ die Wochenstunden aus dem Arbeitsvertrag ein."
+                  ? "Trage mit „Bearbeiten“ die Wochenstunden aus dem Arbeitsvertrag ein."
                   : "Das Arbeitszeitmodell trägt die Leitung ein."
             }
           />
@@ -514,7 +514,7 @@ function ArbeitszeitmodellEditor({
     formErrors.clear();
     try {
       if (mode === "template" && !selectedModelId) {
-        formErrors.invalid("Bitte wählen Sie eine Vorlage.");
+        formErrors.invalid("Bitte wähle eine Vorlage.");
         setSaving(false);
         return;
       }
@@ -701,8 +701,8 @@ function TemplateSelector({
     return (
       <div className="space-y-2">
         <InsetPanel as="p" padding="compact" className="text-xs text-gray-500">
-          Es gibt noch keine Vorlagen. Legen Sie eine unter „Arbeitszeitmodelle“
-          an. Oder speichern Sie ein eigenes Modell als Vorlage.
+          Es gibt noch keine Vorlagen. Lege eine unter „Arbeitszeitmodelle“ an.
+          Oder speichere ein eigenes Modell als Vorlage.
         </InsetPanel>
         <ManageTemplatesLink />
       </div>

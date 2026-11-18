@@ -560,9 +560,9 @@ describe("MobileBottomNav", () => {
       try {
         render(<MobileBottomNav />);
         // Ohne „Neu für Sie“ zählt „Mehr“ nur die Hinweise, ab 10 als „9+“.
-        expect(getBadge("9+ neu für Sie")).toHaveTextContent("9+");
+        expect(getBadge("9+ neu für dich")).toHaveTextContent("9+");
         const more = screen.getByRole("button", {
-          name: "Mehr 9+ neu für Sie",
+          name: "Mehr 9+ neu für dich",
         });
         // The sheet loads through next/dynamic: wait for it, no fixed sleep.
         expect(
@@ -630,10 +630,10 @@ describe("MobileBottomNav", () => {
         render(<MobileBottomNav />);
         // Zwei Einträge „Neu für Sie“ plus drei ungelesene Hinweise (#7148).
         const more = screen.getByRole("button", {
-          name: "Mehr 5 neu für Sie",
+          name: "Mehr 5 neu für dich",
         });
         fireEvent.click(more);
-        expect(screen.getByText("Neu für Sie")).toBeInTheDocument();
+        expect(screen.getByText("Neu für dich")).toBeInTheDocument();
         expect(
           screen.getByRole("link", { name: /Mia Muster/ }),
         ).toHaveAttribute(
@@ -744,7 +744,7 @@ describe("MobileBottomNav", () => {
 
       expect(
         screen.getByText(
-          "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+          "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
         ),
       ).toBeInTheDocument();
       expect(screen.getAllByText("Aktualisieren")).not.toHaveLength(0);

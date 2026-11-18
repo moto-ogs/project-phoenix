@@ -47,10 +47,10 @@ func traegerPayrollDefinition(key, category string, order int, label, descriptio
 
 func traegerPayrollDefinitions() []config.Definition {
 	consultant := traegerPayrollDefinition(config.KeyTraegerPayrollConsultantNumber, "datev-lohn", 10, "Beraternummer für den Lohn",
-		"Die Nummer Ihres Lohnbüros in DATEV, 1 bis 7 Ziffern. Sie steht oben in der LODAS-Datei. Lohn und Gehalt braucht sie nicht.")
+		"Die Nummer deines Lohnbüros in DATEV, 1 bis 7 Ziffern. Sie steht oben in der LODAS-Datei. Lohn und Gehalt braucht sie nicht.")
 	consultant.Validation = &config.ValidationRules{Pattern: &beraterPattern, AllowEmpty: true}
 	client := traegerPayrollDefinition(config.KeyTraegerPayrollClientNumber, "datev-lohn", 20, "Mandantennummer für den Lohn",
-		"Ihre Nummer beim Lohnbüro in DATEV, 1 bis 5 Ziffern. Sie steht oben in der LODAS-Datei. Lohn und Gehalt braucht sie nicht.")
+		"Deine Nummer beim Lohnbüro in DATEV, 1 bis 5 Ziffern. Sie steht oben in der LODAS-Datei. Lohn und Gehalt braucht sie nicht.")
 	client.Validation = &config.ValidationRules{Pattern: &mandantPattern, AllowEmpty: true}
 	definitions := []config.Definition{consultant, client}
 
@@ -60,7 +60,7 @@ func traegerPayrollDefinitions() []config.Definition {
 			order++
 			wageType := traegerPayrollDefinition(config.TraegerPayrollWageTypeKey(category, kind), "lohnarten", order,
 				"Lohnart "+traegerPayrollCategoryLabels[category]+" bei "+traegerPayrollKindLabels[kind],
-				"Die Nummer dieser Lohnart in Ihrem DATEV, 1 bis 4 Ziffern. Ohne Nummer fehlt der Wert in der Lohndatei.")
+				"Die Nummer dieser Lohnart in deinem DATEV, 1 bis 4 Ziffern. Ohne Nummer fehlt der Wert in der Lohndatei.")
 			wageType.Validation = &config.ValidationRules{Pattern: &lohnartPattern, AllowEmpty: true}
 			definitions = append(definitions, wageType)
 		}
@@ -68,7 +68,7 @@ func traegerPayrollDefinitions() []config.Definition {
 	for i, category := range config.TraegerPayrollDayCategories {
 		unit := traegerPayrollDefinition(config.TraegerPayrollUnitKey(category), "einheiten", 200+i,
 			"Einheit "+traegerPayrollCategoryLabels[category],
-			"Ob DATEV diese Lohnart in Stunden oder in Tagen erwartet. Das weiß Ihr Lohnbüro.")
+			"Ob DATEV diese Lohnart in Stunden oder in Tagen erwartet. Das weiß dein Lohnbüro.")
 		unit.Type, unit.Options = config.FieldSelect, unitOptions
 		definitions = append(definitions, unit)
 	}

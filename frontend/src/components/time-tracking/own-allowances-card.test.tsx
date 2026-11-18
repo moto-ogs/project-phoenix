@@ -62,7 +62,7 @@ describe("OwnAllowancesCard", () => {
     });
     expect(
       screen.getByText(
-        "Ihre Tage je Abwesenheitsart. Den Anspruch trägt Ihre Leitung ein.",
+        "Deine Tage je Abwesenheitsart. Den Anspruch trägt deine Leitung ein.",
       ),
     ).toBeInTheDocument();
     expect(within(card).getByText("Anspruch")).toBeInTheDocument();

@@ -226,9 +226,7 @@ describe("RolloverReviewQueue", () => {
     const field = screen.getByLabelText(/Klassenstufe für nächste Phase/);
     await waitFor(() => {
       expect(
-        screen.getByText(
-          "Bitte geben Sie die Klassenstufe als ganze Zahl ein.",
-        ),
+        screen.getByText("Bitte gib die Klassenstufe als ganze Zahl ein."),
       ).toBeInTheDocument();
     });
     expect(field).toHaveAttribute("aria-invalid", "true");

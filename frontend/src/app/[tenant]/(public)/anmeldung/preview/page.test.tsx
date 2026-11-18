@@ -374,7 +374,7 @@ describe("EnrollmentPreviewPage", () => {
     ).toBeGreaterThan(0);
     expect(
       screen.getByText(
-        "Wählen Sie unter Anmeldephasen bei dieser Phase „Aktivieren“.",
+        "Wähle unter Anmeldephasen bei dieser Phase „Aktivieren“.",
         { exact: false },
       ),
     ).toBeVisible();
@@ -567,7 +567,7 @@ describe("EnrollmentPreviewPage", () => {
       ).toBeVisible();
       expect(
         screen.getByText(
-          "Schalten Sie unter „Einstellungen“ > „Anmeldung“ die „Online-Anmeldung“ ein.",
+          "Schalte unter „Einstellungen“ > „Anmeldung“ die „Online-Anmeldung“ ein.",
           { exact: false },
         ),
       ).toBeVisible();

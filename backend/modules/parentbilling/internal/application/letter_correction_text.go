@@ -54,7 +54,7 @@ func cancellationLetter(content letterContent) Letter {
 		{Text: fmt.Sprintf("wir stornieren die Rechnung %s für „%s“. Grund: %s",
 			invoiceReference(content), content.run.PeriodName, sentence(content.document.Reason))},
 		{Facts: correctionFacts(content.document, "Storno gesamt")},
-		{Text: "Diese Rechnung gilt nicht mehr. Sie müssen sie nicht bezahlen. Haben Sie schon bezahlt? Dann melden Sie sich bitte bei uns.", Bold: true},
+		{Text: "Diese Rechnung gilt nicht mehr. Ihr müsst sie nicht bezahlen. Habt ihr schon bezahlt? Dann meldet euch bitte bei uns.", Bold: true},
 	}, letter.Blocks...)
 	return letter
 }
@@ -66,15 +66,15 @@ func creditLetter(content letterContent) Letter {
 		return noticeCreditLetter(content)
 	}
 	letter := correctionLetterFrame(content, "Gutschrift")
-	left := fmt.Sprintf("Für die Rechnung %s müssen Sie jetzt noch %s bezahlen.", content.document.ReferenceNumber, formatEuro(content.leftCents))
+	left := fmt.Sprintf("Für die Rechnung %s müsst ihr jetzt noch %s bezahlen.", content.document.ReferenceNumber, formatEuro(content.leftCents))
 	if content.leftCents <= 0 {
-		left = fmt.Sprintf("Für die Rechnung %s müssen Sie nichts mehr bezahlen.", content.document.ReferenceNumber)
+		left = fmt.Sprintf("Für die Rechnung %s müsst ihr nichts mehr bezahlen.", content.document.ReferenceNumber)
 	}
 	letter.Blocks = append([]LetterBlock{
-		{Text: fmt.Sprintf("zur Rechnung %s für „%s“ schreiben wir Ihnen %s gut. Grund: %s",
+		{Text: fmt.Sprintf("zur Rechnung %s für „%s“ schreiben wir euch %s gut. Grund: %s",
 			invoiceReference(content), content.run.PeriodName, formatEuro(-content.document.TotalCents), sentence(content.document.Reason))},
 		{Facts: correctionFacts(content.document, "Gutschrift gesamt")},
-		{Text: left + " Haben Sie schon mehr bezahlt? Dann melden Sie sich bitte bei uns.", Bold: true},
+		{Text: left + " Habt ihr schon mehr bezahlt? Dann meldet euch bitte bei uns.", Bold: true},
 	}, letter.Blocks...)
 	return letter
 }
@@ -112,7 +112,7 @@ func correctionFrame(content letterContent, kind, reference string) Letter {
 		Recipient:   recipientLines(document),
 		Facts:       facts,
 		Subject:     kind + link + reference + " " + document.ReferenceNumber + ": " + content.run.PeriodName,
-		Salutation:  "Sehr geehrte Familie " + strings.TrimSpace(document.RecipientLastName) + ",",
+		Salutation:  "Liebe Familie " + strings.TrimSpace(document.RecipientLastName) + ",",
 		Closing:     nonBlank("Mit freundlichen Grüßen", firstLine(sender)),
 		Footer:      nonBlank(append(textLines(head.FooterText), bankLine(head.BankAccount))...),
 	}
@@ -166,7 +166,7 @@ func noticeCancellationLetter(content letterContent) Letter {
 		{Text: fmt.Sprintf("wir heben den Gebührenbescheid %s für „%s“ auf. Grund: %s",
 			invoiceReference(content), content.run.PeriodName, sentence(content.document.Reason))},
 		{Facts: correctionFacts(content.document, "Aufgehoben gesamt")},
-		{Text: "Der Bescheid gilt nicht mehr. Sie müssen den Betrag nicht bezahlen. Haben Sie schon bezahlt? Dann melden Sie sich bitte bei uns.", Bold: true},
+		{Text: "Der Bescheid gilt nicht mehr. Ihr müsst den Betrag nicht bezahlen. Habt ihr schon bezahlt? Dann meldet euch bitte bei uns.", Bold: true},
 	}, letter.Blocks...)
 	letter.Blocks = append(letter.Blocks, correctionLegalRemedy(content)...)
 	return letter
@@ -176,15 +176,15 @@ func noticeCancellationLetter(content letterContent) Letter {
 // Gutschrift lowers the fee the notice set (#4688).
 func noticeCreditLetter(content letterContent) Letter {
 	letter := correctionFrame(content, "Änderungsbescheid", "Bescheid")
-	left := fmt.Sprintf("Nach dem Bescheid %s müssen Sie jetzt noch %s bezahlen.", content.document.ReferenceNumber, formatEuro(content.leftCents))
+	left := fmt.Sprintf("Nach dem Bescheid %s müsst ihr jetzt noch %s bezahlen.", content.document.ReferenceNumber, formatEuro(content.leftCents))
 	if content.leftCents <= 0 {
-		left = fmt.Sprintf("Nach dem Bescheid %s müssen Sie nichts mehr bezahlen.", content.document.ReferenceNumber)
+		left = fmt.Sprintf("Nach dem Bescheid %s müsst ihr nichts mehr bezahlen.", content.document.ReferenceNumber)
 	}
 	letter.Blocks = append([]LetterBlock{
 		{Text: fmt.Sprintf("wir ändern den Gebührenbescheid %s für „%s“ und setzen den Beitrag um %s niedriger fest. Grund: %s",
 			invoiceReference(content), content.run.PeriodName, formatEuro(-content.document.TotalCents), sentence(content.document.Reason))},
 		{Facts: correctionFacts(content.document, "Weniger gesamt")},
-		{Text: left + " Haben Sie schon mehr bezahlt? Dann melden Sie sich bitte bei uns.", Bold: true},
+		{Text: left + " Habt ihr schon mehr bezahlt? Dann meldet euch bitte bei uns.", Bold: true},
 	}, letter.Blocks...)
 	letter.Blocks = append(letter.Blocks, correctionLegalRemedy(content)...)
 	return letter

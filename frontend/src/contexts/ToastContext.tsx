@@ -205,7 +205,7 @@ const toastLabelsByLocale = {
 
 // Kept small so a failed presenter chunk can still show a localized message.
 const emergencyErrorByLocale: Record<AppLocale, string> = {
-  de: "{object} konnte nicht bearbeitet werden. Bitte versuchen Sie es später.",
+  de: "{object} konnte nicht bearbeitet werden. Bitte versuche es später.",
   en: "{object} could not be processed. Please try later.",
   pl: "Nie udało się przetworzyć: {object}. Spróbuj później.",
   ru: "Не удалось обработать: {object}. Повторите позже.",

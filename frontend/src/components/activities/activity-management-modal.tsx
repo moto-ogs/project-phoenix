@@ -455,7 +455,7 @@ export function ActivityManagementModal({
                 />
                 <p className="text-xs text-gray-600">
                   {readOnly
-                    ? "Sie können nur Aktivitäten bearbeiten, die Sie selbst erstellt haben."
+                    ? "Du kannst nur Aktivitäten bearbeiten, die du selbst erstellt hast."
                     : "Änderungen werden sofort wirksam."}
                 </p>
               </div>
@@ -470,7 +470,7 @@ export function ActivityManagementModal({
       <ConfirmDeleteModal
         isOpen={!readOnly && showDeleteConfirm}
         title="Aktivität löschen"
-        description={`Möchten Sie die Aktivität „${activity.name}“ wirklich löschen? Das lässt sich nicht rückgängig machen.`}
+        description={`Möchtest du die Aktivität „${activity.name}“ wirklich löschen? Das lässt sich nicht rückgängig machen.`}
         gate={{ mode: "twoStep" }}
         confirmTooltip="Löscht die Aktivität mit allen Anmeldungen sofort und endgültig."
         onConfirm={handleDelete}

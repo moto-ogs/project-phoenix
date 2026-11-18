@@ -470,7 +470,7 @@ interface ListSelectionBarProps {
   onInviteGuardians?: () => void;
 }
 
-const NO_SELECTION_REASON = "Wählen Sie zuerst mindestens ein Kind aus.";
+const NO_SELECTION_REASON = "Wähle zuerst mindestens ein Kind aus.";
 
 function ListSelectionBar({
   count,

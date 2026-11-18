@@ -102,5 +102,5 @@ func (rs *Resource) putMorningAttendance(w http.ResponseWriter, r *http.Request)
 		common.RenderError(w, r, morningAttendanceErrorRenderer(err))
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }

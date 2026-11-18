@@ -340,7 +340,7 @@ describe("ClassDayOverview for the Schulverwaltung", () => {
     await waitFor(() =>
       expect(fetchClassDay).toHaveBeenCalledWith("4a", "2026-09-09"),
     );
-    expect(screen.getByText("Ihre Klassen")).toBeVisible();
+    expect(screen.getByText("Deine Klassen")).toBeVisible();
     expect(fetchSchoolDay).not.toHaveBeenCalled();
   });
 });

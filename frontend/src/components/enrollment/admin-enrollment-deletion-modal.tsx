@@ -200,7 +200,7 @@ export function AdminEnrollmentDeletionModal({
                   announce="off"
                   icon={<ShieldAlert className="h-5 w-5" aria-hidden="true" />}
                   title="Löschung blockiert"
-                  message="Mindestens ein angelegtes Kind besteht noch. Löschen Sie das Kind zuerst über die Kindverwaltung; die Anmeldung löscht niemals still einen Kind-Datensatz."
+                  message="Mindestens ein angelegtes Kind besteht noch. Lösche das Kind zuerst über die Kindverwaltung; die Anmeldung löscht niemals still einen Kind-Datensatz."
                   details={
                     <div className="mt-2 flex flex-wrap gap-2">
                       {impact.blocking_student_ids.map((studentId) => (
@@ -233,9 +233,8 @@ export function AdminEnrollmentDeletionModal({
                     {impact.preserved_parent_accounts} Elternkonten werden nicht
                     gelöscht. Davon sind {impact.unlinked_guardian_profiles}{" "}
                     Profile und {impact.parent_accounts_without_students} Konten
-                    aktuell keinem Kind zugeordnet. Nutzen Sie dafür bei Bedarf
-                    den separaten Löschworkflow in der Kind- bzw.
-                    Kontoverwaltung.
+                    aktuell keinem Kind zugeordnet. Nutze dafür bei Bedarf den
+                    separaten Löschworkflow in der Kind- bzw. Kontoverwaltung.
                   </p>
                 </InsetPanel>
               ) : null}

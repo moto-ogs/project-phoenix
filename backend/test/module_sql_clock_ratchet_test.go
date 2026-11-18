@@ -120,6 +120,8 @@ var moduleSQLClockBudget = map[string]int{
 	// invitations (ADR 0285, Nachtrag): auth.account_is_unused keeps an
 	// account for them against statement_timestamp(), so their expiry,
 	// redemption, revocation, approval, open lists and cleanup read it too.
+	// It stamps caterer supply periods because the caterer feed's database
+	// functions check started_at against statement_timestamp() (#7147).
 	"modules/identityaccess": 5,
 	// Named exceptions on the database clock (ADR 0281): deleted_at of
 	// platform.schools (4), which the demo retirement functions stamp with

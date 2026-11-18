@@ -81,7 +81,7 @@ export function NotificationBridge() {
           ? Math.max(1, Math.ceil(event.detail.seconds))
           : 60;
       toast.warning(
-        `Zu viele Anfragen auf einmal. Bitte warten Sie ${seconds} Sekunden und versuchen Sie es dann erneut.`,
+        `Zu viele Anfragen auf einmal. Bitte warte ${seconds} Sekunden und versuche es dann erneut.`,
         { id: "rate-limit", duration: Math.min(10_000, seconds * 1000) },
       );
     };

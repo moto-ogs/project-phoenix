@@ -11,7 +11,7 @@ describe("ChildQuotaStatus", () => {
     expect(container).toHaveTextContent("Kinderkontingent: 48 von 50 belegt");
     expect(container).not.toHaveTextContent("voll");
     expect(screen.getByRole("tooltip")).toHaveTextContent(
-      "Ihr Vertrag erlaubt bis zu 50 Kinder. Es zählen aktive Kinder und Kinder, deren Betreuung später beginnt.",
+      "Dein Vertrag erlaubt bis zu 50 Kinder. Es zählen aktive Kinder und Kinder, deren Betreuung später beginnt.",
     );
     expect(screen.getByRole("tooltip")).not.toHaveTextContent("moto-Team");
   });
@@ -25,7 +25,7 @@ describe("ChildQuotaStatus", () => {
       "Kinderkontingent: 50 von 50 belegt · voll",
     );
     expect(screen.getByRole("tooltip")).toHaveTextContent(
-      "Für weitere Kinder melden Sie sich bitte beim moto-Team.",
+      "Für weitere Kinder melde dich bitte beim moto-Team.",
     );
   });
 

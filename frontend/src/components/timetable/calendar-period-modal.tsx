@@ -278,10 +278,9 @@ export function CalendarPeriodModal({
       return;
     }
     if (cycleLength > 1 && form.weekCycleAnchor === "") {
-      formErrors.invalid(
-        "Bitte geben Sie an, ab wann die Wiederholung zählt.",
-        { week_cycle_anchor: "Bitte ein Datum wählen." },
-      );
+      formErrors.invalid("Bitte gib an, ab wann die Wiederholung zählt.", {
+        week_cycle_anchor: "Bitte ein Datum wählen.",
+      });
       return;
     }
 
@@ -772,12 +771,12 @@ interface FieldProps {
 // #6845: Schichtserien bleiben mit ihrem Zeitraum verbunden, auch wenn sie
 // beendet sind. Ausschalten ist der Weg, der dann bleibt.
 const SHIFT_SERIES_BLOCK_HINT =
-  "Schichtserien bleiben mit ihrem Zeitraum verbunden, auch beendete. Gilt der Zeitraum nicht mehr? Dann nehmen Sie den Haken bei „Zeitraum im Plan verwenden“ heraus und speichern.";
+  "Schichtserien bleiben mit ihrem Zeitraum verbunden, auch beendete. Gilt der Zeitraum nicht mehr? Dann nimmst du den Haken bei „Zeitraum im Plan verwenden“ heraus und speicherst.";
 
 // #3594: Hinweis bei der Art „Ferien“. Der Zeitraum sagt keine Termine ab
 // und setzt kein Soll auf null; das tut nur ein Schließtag.
 const HOLIDAY_CLOSING_DAY_HINT =
-  "Ferien allein sagen keine Termine ab. Hat die OGS geschlossen? Dann legen Sie auf der Seite „Schuljahr und Kalender“ einen Schließtag an.";
+  "Ferien allein sagen keine Termine ab. Hat die OGS geschlossen? Dann legst du auf der Seite „Schuljahr und Kalender“ einen Schließtag an.";
 
 function Field({ label, htmlFor, required = false, children }: FieldProps) {
   return (
@@ -797,9 +796,8 @@ function Field({ label, htmlFor, required = false, children }: FieldProps) {
 // Grund für den gesperrten Speichern-Knopf; während des Speicherns bleibt er
 // ohne Grund nativ gesperrt (#6643).
 function missingFieldReason(form: FormState): string | undefined {
-  if (form.name.trim().length === 0)
-    return "Geben Sie zuerst eine Bezeichnung ein.";
+  if (form.name.trim().length === 0) return "Gib zuerst eine Bezeichnung ein.";
   if (form.startDate === "" || form.endDate === "")
-    return "Wählen Sie zuerst Startdatum und Enddatum aus.";
+    return "Wähle zuerst Startdatum und Enddatum aus.";
   return undefined;
 }

@@ -21,10 +21,9 @@ import (
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
 )
 
-// ContractDocument builds the model of the frontend/backend contract from
-// the typed registrations of every owner (ADR 0270). The mounts repeat the
-// ones in the serve mounts; the catalog check fails when they drift apart.
-func ContractDocument() (contract.Document, error) {
+// contractRegistrations lists every typed registration under its mount and
+// refuses one the route catalog does not know.
+func contractRegistrations() ([]contract.Registration, error) {
 	mounts := []struct {
 		prefix string
 		routes []common.RouteContract
@@ -54,7 +53,7 @@ func ContractDocument() (contract.Document, error) {
 	}
 	catalog, err := RouteCatalog()
 	if err != nil {
-		return contract.Document{}, err
+		return nil, err
 	}
 	known := make(map[string]bool, len(catalog))
 	for _, route := range catalog {
@@ -65,10 +64,21 @@ func ContractDocument() (contract.Document, error) {
 		for _, route := range mount.routes {
 			registration := contractRegistration(mount.prefix, route)
 			if !known[registration.Method+" "+registration.Pattern] {
-				return contract.Document{}, fmt.Errorf("typed route %s %s is not in the route catalog", registration.Method, registration.Pattern)
+				return nil, fmt.Errorf("typed route %s %s is not in the route catalog", registration.Method, registration.Pattern)
 			}
 			registrations = append(registrations, registration)
 		}
+	}
+	return registrations, nil
+}
+
+// ContractDocument builds the model of the frontend/backend contract from
+// the typed registrations of every owner (ADR 0270). The mounts repeat the
+// ones in the serve mounts; the catalog check fails when they drift apart.
+func ContractDocument() (contract.Document, error) {
+	registrations, err := contractRegistrations()
+	if err != nil {
+		return contract.Document{}, err
 	}
 	options := contract.Legacy(map[reflect.Type]string{
 		reflect.TypeFor[common.ID]():     contract.KindID,

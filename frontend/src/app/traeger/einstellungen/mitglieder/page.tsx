@@ -188,7 +188,7 @@ export default function TraegerAccountsPage() {
             <span className="text-gray-500">Kein Name</span>
           )}
           {member.email === ownEmail ? (
-            <span className="ml-1 text-gray-500">(Sie)</span>
+            <span className="ml-1 text-gray-500">(Du)</span>
           ) : null}
         </span>
       ),

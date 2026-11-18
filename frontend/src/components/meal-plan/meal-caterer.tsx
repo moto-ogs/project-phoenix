@@ -46,7 +46,7 @@ const EMPTY_FORM = { email: "", catererName: "", deliveryAddress: "" };
 function catererMailNote(invitation: MealCatererInvitation): string | null {
   return invitationMailNote(
     invitation,
-    "Stimmt die Adresse nicht, widerrufen Sie die Einladung und laden Sie neu ein.",
+    "Stimmt die Adresse nicht, widerrufe die Einladung und lade neu ein.",
   );
 }
 
@@ -292,7 +292,7 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
         size="md"
         className="gap-2"
         onClick={openInvite}
-        tooltip="Öffnet ein Formular, um Ihren Caterer per E-Mail einzuladen."
+        tooltip="Öffnet ein Formular, um deinen Caterer per E-Mail einzuladen."
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
         Caterer einladen
@@ -303,7 +303,7 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
   return (
     <SectionCard
       title="Caterer"
-      description="Ihr Caterer sieht die Bestellungen der Schule in seinem eigenen Zugang bei moto. Namen der Kinder sieht er nur, wenn Sie das in den Einstellungen einschalten."
+      description="Dein Caterer sieht die Bestellungen der Schule in seinem eigenen Zugang bei moto. Namen der Kinder sieht er nur, wenn du das in den Einstellungen einschaltest."
       actions={headerActions}
     >
       <LoadErrorAlert error={afterWrite.error} className="mb-4" />
@@ -323,13 +323,13 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
         </DataGrid>
       ) : !canManageSupply ? (
         <p className="text-sm text-gray-700">
-          Noch kein Caterer. Einen Caterer einladen können nur Admins Ihrer
+          Noch kein Caterer. Einen Caterer einladen können nur Admins deiner
           Schule.
         </p>
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-gray-700">
-            Noch kein Caterer. Laden Sie Ihren Caterer per E-Mail ein.
+            Noch kein Caterer. Lade deinen Caterer per E-Mail ein.
           </p>
 
           {openInvitations.length > 0 ? (
@@ -387,7 +387,7 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
                 form.catererName.trim() === ""
               }
               tooltip="Schickt dem Caterer sofort eine E-Mail mit dem Link zu seinem Zugang."
-              disabledReason="Geben Sie zuerst Name und E-Mail-Adresse des Caterers ein."
+              disabledReason="Gib zuerst Name und E-Mail-Adresse des Caterers ein."
             >
               Einladung senden
             </Button>
@@ -401,7 +401,7 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
           className="space-y-4"
         >
           <p className="text-sm text-gray-600">
-            Ihr Caterer bekommt eine E-Mail mit einem Link. Damit legt er sein
+            Dein Caterer bekommt eine E-Mail mit einem Link. Damit legt er sein
             Passwort fest.
           </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -475,8 +475,8 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
       >
         <p className="text-sm text-gray-600">
           {supply?.catererName || "Der Caterer"} sieht die Bestellungen der
-          Schule danach nicht mehr. Für einen neuen Caterer senden Sie danach
-          eine neue Einladung.
+          Schule danach nicht mehr. Für einen neuen Caterer sende danach eine
+          neue Einladung.
         </p>
       </ConfirmationModal>
     </SectionCard>

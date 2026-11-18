@@ -46,7 +46,7 @@ function RecipientStateNotice({
       href={traegerPath(EXPORT_RECIPIENT_PATH)}
       variant="ghost_tone"
       size="compact"
-      tooltip="Öffnet die Empfänger, dort ordnen Sie die Dateien zu."
+      tooltip="Öffnet die Empfänger, dort ordnest du die Dateien zu."
     >
       Dateien zuordnen
     </ButtonLink>
@@ -64,7 +64,7 @@ function RecipientStateNotice({
       <Alert
         type="info"
         title="Die Übergabe ist ausgeschaltet"
-        message="Schalten Sie sie unten ein, wenn moto Dateien an diesen Empfänger übergeben soll."
+        message="Schalte sie unten ein, wenn moto Dateien an diesen Empfänger übergeben soll."
         action={toAccess}
       />
     );
@@ -84,7 +84,7 @@ function RecipientStateNotice({
       <Alert
         type="info"
         title="Der Empfänger bekommt noch keine Datei"
-        message="Wählen Sie in der Übersicht, welche Dateien an ihn gehen."
+        message="Wähle in der Übersicht, welche Dateien an ihn gehen."
         action={assign}
       />
     );
@@ -101,7 +101,7 @@ function RecipientStateNotice({
         }
         message={
           last.state === "failed"
-            ? `${handoverReasonText(last.reason)} Prüfen Sie die Angaben unten und übergeben Sie die Datei bei den Exporten noch einmal.`
+            ? `${handoverReasonText(last.reason)} Prüfe die Angaben unten und übergib die Datei bei den Exporten noch einmal.`
             : HANDOVER_UNKNOWN_TEXT
         }
         actionLayout={last.state === "failed" ? "stacked" : undefined}
@@ -113,7 +113,7 @@ function RecipientStateNotice({
                 href={traegerPath(EXPORTS_PATH)}
                 variant="surface"
                 size="compact"
-                tooltip="Öffnet die Exporte, dort übergeben Sie die Datei noch einmal."
+                tooltip="Öffnet die Exporte, dort übergibst du die Datei noch einmal."
               >
                 Zu den Exporten
               </ButtonLink>

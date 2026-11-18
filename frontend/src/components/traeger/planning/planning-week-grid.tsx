@@ -317,7 +317,7 @@ export function PlanningWeekGrid({
   return (
     <div>
       <p id={scrollHintId} className="mb-2 text-xs text-gray-600 sm:hidden">
-        Wischen Sie zur Seite, um weitere Tage zu sehen.
+        Wische zur Seite, um weitere Tage zu sehen.
       </p>
       <ResourceGrid
         columns={columns}

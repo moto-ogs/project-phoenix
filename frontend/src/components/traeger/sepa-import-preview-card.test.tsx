@@ -134,7 +134,7 @@ describe("SepaImportPreviewCard", () => {
     );
     expect(
       screen.getByText(
-        /^517 Zeilen ohne Mandat: .* Konflikte sehen Sie mit Zeilennummer unten\.$/,
+        /^517 Zeilen ohne Mandat: .* Konflikte siehst du mit Zeilennummer unten\.$/,
       ),
     ).toBeInTheDocument();
     expect(

@@ -14,7 +14,7 @@ import { createExportRecipient } from "~/lib/traeger-export-handovers-api";
 import { traegerPath } from "~/lib/traeger-url";
 
 const INFO =
-  "Tragen Sie ein, wohin moto Dateien übergeben soll. Danach wählen Sie in der Übersicht, welche Dateien dieser Empfänger bekommt.";
+  "Trage ein, wohin moto Dateien übergeben soll. Danach wählst du in der Übersicht, welche Dateien dieser Empfänger bekommt.";
 
 export default function TraegerNewExportRecipientPage() {
   const router = useRouter();

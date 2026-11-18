@@ -103,7 +103,7 @@ describe("ParentSettingsPage", () => {
     });
     expect(
       screen.getByText(
-        "Fügen Sie moto zum Startbildschirm Ihres Handys hinzu. Dann öffnen Sie moto wie eine App.",
+        "Füge moto zum Startbildschirm deines Handys hinzu. Dann öffnest du moto wie eine App.",
       ),
     ).toBeInTheDocument();
     expect(

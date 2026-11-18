@@ -1744,7 +1744,7 @@ describe("StudentSearchPage", () => {
 
       await waitFor(() => {
         const errorElements = screen.getAllByText(
-          /Für die Liste der Kinder fehlt Ihnen die Berechtigung/,
+          /Für die Liste der Kinder fehlt dir die Berechtigung/,
         );
         expect(errorElements.length).toBeGreaterThan(0);
       });
@@ -2260,13 +2260,13 @@ describe("StudentSearchPage", () => {
       await waitFor(() => {
         expect(
           screen.getAllByText(
-            "Für die Liste der Kinder fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
+            "Für die Liste der Kinder fehlt dir die Berechtigung. Bitte frage die Schule.",
           ).length,
         ).toBeGreaterThan(0);
         // Der eingebettete Sperrzustand verwendet die einheitliche Forbidden-Überschrift
         // einschließlich Sperrsymbol statt eines text-only-Leerzustands.
         expect(
-          screen.getByText("Ihnen fehlt eine Berechtigung"),
+          screen.getByText("Dir fehlt eine Berechtigung"),
         ).toBeInTheDocument();
       });
     });
@@ -2289,7 +2289,7 @@ describe("StudentSearchPage", () => {
       await waitFor(() => {
         // Der Ladefehler steht im Fehlerzustand des Seitengerüsts.
         expect(screen.getByTestId("alert-error")).toHaveTextContent(
-          "Die Liste der Kinder konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+          "Die Liste der Kinder konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
         );
       });
       // #2517: Neben dem Ladefehler steht keine Zählung aus einer Liste,

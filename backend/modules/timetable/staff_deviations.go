@@ -124,7 +124,7 @@ const (
 )
 
 // deviationSaveErrorMessage is the client message of every internal failure.
-const deviationSaveErrorMessage = "Die Änderungen konnten nicht gespeichert werden. Versuchen Sie es erneut."
+const deviationSaveErrorMessage = "Die Änderungen konnten nicht gespeichert werden. Versuche es erneut."
 
 // DeviationBadRequest is a 400 with the given client message.
 func DeviationBadRequest(msg string) *DeviationError {

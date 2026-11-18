@@ -92,7 +92,7 @@ export function statedOn(count: FamilyChildCount): string {
 /** What the Abrechnung has to check, in one short line. */
 export function checkReason(family: FamilyChildren, today: string): string {
   if (family.status === "differing") {
-    return "Die Verträge der Familie nennen verschiedene Kinderzahlen. Bis Sie eine bestätigen, zählen nur die Kinder mit Vertrag.";
+    return "Die Verträge der Familie nennen verschiedene Kinderzahlen. Bis du eine bestätigst, zählen nur die Kinder mit Vertrag.";
   }
   const count = family.count;
   if (!count) return "";

@@ -76,8 +76,8 @@ export function OpenWithdrawalCard({
       }
     >
       <p className="text-sm text-gray-600">
-        {careWithdrawalNotice(row)} Tragen Sie das Ende jetzt mit „Betreuung
-        beenden“ ein.
+        {careWithdrawalNotice(row)} Trage das Ende jetzt mit „Betreuung beenden“
+        ein.
       </p>
     </RequestReviewCard>
   );

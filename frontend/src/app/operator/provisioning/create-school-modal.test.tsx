@@ -57,7 +57,7 @@ describe("CreateSchoolModal", () => {
 
     expect(mockCreateSchool).not.toHaveBeenCalled();
     expect(
-      screen.getByText("Bitte wählen Sie das Bundesland aus."),
+      screen.getByText("Bitte wähle das Bundesland aus."),
     ).toBeInTheDocument();
   });
 

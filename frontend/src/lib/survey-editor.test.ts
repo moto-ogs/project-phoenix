@@ -45,11 +45,9 @@ describe("validateSurveyDraft", () => {
       now,
     );
 
-    expect(errors.title).toBe("Bitte geben Sie einen Titel ein.");
+    expect(errors.title).toBe("Bitte gib einen Titel ein.");
     expect(errors.closesAt).toBe("Der Zeitpunkt muss in der Zukunft liegen.");
-    expect(errors.targets).toBe(
-      "Bitte wählen Sie, welche Eltern antworten sollen.",
-    );
+    expect(errors.targets).toBe("Bitte wähle, welche Eltern antworten sollen.");
   });
 
   it("rejects a closing time more than a year ahead", () => {

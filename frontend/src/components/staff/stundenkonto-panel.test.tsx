@@ -309,7 +309,7 @@ describe("StundenkontoPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Auszahlen" }));
 
     expect(
-      await screen.findByText("Bitte prüfen Sie die Stunden."),
+      await screen.findByText("Bitte prüfe die Stunden."),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Auszahlung (Stunden)")).toHaveAttribute(
       "aria-invalid",

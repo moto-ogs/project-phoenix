@@ -5,9 +5,9 @@ import type { ChildQuota } from "~/lib/child-quota-api";
 
 function explanation(quota: ChildQuota): string {
   const booked = `${formatCount(quota.booked)} ${quota.booked === 1 ? "Kind" : "Kinder"}`;
-  const text = `Ihr Vertrag erlaubt bis zu ${booked}. Es zählen aktive Kinder und Kinder, deren Betreuung später beginnt.`;
+  const text = `Dein Vertrag erlaubt bis zu ${booked}. Es zählen aktive Kinder und Kinder, deren Betreuung später beginnt.`;
   return quota.occupied >= quota.booked
-    ? `${text} Für weitere Kinder melden Sie sich bitte beim moto-Team.`
+    ? `${text} Für weitere Kinder melde dich bitte beim moto-Team.`
     : text;
 }
 

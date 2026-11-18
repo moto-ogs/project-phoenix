@@ -1,9 +1,9 @@
 {
   "eyebrow": "Eltern-Portal",
   "title": "Willkommen",
-  "fallbackSchool": "Ihre Schule",
-  "subtitle": "Bestätigen Sie Ihre Einladung für {school} und legen Sie Ihr persönliches Passwort fest.",
-  "errorHelpBefore": "Sie können eine neue Einladung bei der Schule anfordern oder sich über",
+  "fallbackSchool": "Deine Schule",
+  "subtitle": "Bestätige deine Einladung für {school} und lege dein persönliches Passwort fest.",
+  "errorHelpBefore": "Du kannst eine neue Einladung bei der Schule anfordern oder dich über",
   "startPage": "die Startseite",
   "errorHelpAfter": "anmelden.",
   "formErrors": {
@@ -11,7 +11,7 @@
     "passwordMismatch": "Die Passwörter stimmen nicht überein."
   },
   "acceptedTitle": "Konto erstellt",
-  "acceptedText": "Bitte melden Sie sich mit Ihren neuen Zugangsdaten an.",
+  "acceptedText": "Bitte melde dich mit deinen neuen Zugangsdaten an.",
   "invitationFor": "Einladung für",
   "passwordLabel": "Passwort",
   "confirmPasswordLabel": "Passwort bestätigen",

@@ -29,7 +29,7 @@ function openCatererPortal() {
 
 const SHELL_COPY = {
   title: "Willkommen im Caterer-Portal",
-  subtitle: "Melden Sie sich mit Ihrem Caterer-Konto an.",
+  subtitle: "Melde dich mit deinem Caterer-Konto an.",
 } as const;
 
 export default function CatererLoginPage() {
@@ -89,7 +89,7 @@ export default function CatererLoginPage() {
         <AuthProgress
           state="checking"
           title="Einen Moment bitte"
-          description="moto prüft Ihre Anmeldung."
+          description="moto prüft deine Anmeldung."
         />
       ) : (
         <PasswordLoginForm

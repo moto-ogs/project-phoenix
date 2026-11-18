@@ -150,9 +150,7 @@ describe("CalendarPeriodModal", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Anlegen" }));
     expect(
-      await screen.findByText(
-        "Bitte geben Sie an, ab wann die Wiederholung zählt.",
-      ),
+      await screen.findByText("Bitte gib an, ab wann die Wiederholung zählt."),
     ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Startdatum der Wiederholung"), {
@@ -426,7 +424,7 @@ describe("CalendarPeriodModal", () => {
     );
     expect(
       screen.getByText(
-        "Ferien allein sagen keine Termine ab. Hat die OGS geschlossen? Dann legen Sie auf der Seite „Schuljahr und Kalender“ einen Schließtag an.",
+        "Ferien allein sagen keine Termine ab. Hat die OGS geschlossen? Dann legst du auf der Seite „Schuljahr und Kalender“ einen Schließtag an.",
       ),
     ).toBeInTheDocument();
   });
@@ -674,7 +672,7 @@ describe("CalendarPeriodModal", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/Periode ueberlappt/)).not.toBeInTheDocument();
     expect(
-      await screen.findByText("Bitte prüfen Sie dieses Feld."),
+      await screen.findByText("Bitte prüfe dieses Feld."),
     ).toBeInTheDocument();
     // Der Alert oben im Panel ist die einzige Meldung (Bauart 2 Regel 5).
     expect(mockToastError).not.toHaveBeenCalled();

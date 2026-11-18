@@ -126,7 +126,7 @@ const config: CatalogConfig<QualificationType> = {
     "Arten von Nachweisen wie Erste Hilfe am Kind, mit Gültigkeit, Erinnerung und Pflicht. Wer welchen Nachweis hat, steht unter Nachweise.",
   searchPlaceholder: "Nachweisart suchen…",
   emptyDescription:
-    "Erste Hilfe am Kind, Rettungsfähigkeit und erweitertes Führungszeugnis sind immer da. Eigene Arten legen Sie oben an.",
+    "Erste Hilfe am Kind, Rettungsfähigkeit und erweitertes Führungszeugnis sind immer da. Eigene Arten legst du oben an.",
   stats: (types) => {
     const live = types.filter((type) => !type.archived);
     const mandatory = live.filter((type) => type.mandatory).length;

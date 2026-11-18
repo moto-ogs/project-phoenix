@@ -174,7 +174,7 @@ export const WithTooltip: Story = {
     variant: "outline",
     size: "md",
     children: "Speichern",
-    tooltip: "Übernimmt Ihre Auswahl für die Startseite aller Mitarbeitenden.",
+    tooltip: "Übernimmt deine Auswahl für die Startseite aller Mitarbeitenden.",
   },
 };
 
@@ -190,6 +190,6 @@ export const DisabledWithReason: Story = {
     children: "Krank melden",
     tooltip: "Meldet die ausgewählten Kinder für heute krank.",
     disabled: true,
-    disabledReason: "Wählen Sie zuerst mindestens ein Kind aus.",
+    disabledReason: "Wähle zuerst mindestens ein Kind aus.",
   },
 };

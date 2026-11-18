@@ -198,7 +198,7 @@ describe("OpenRoomSections (#3281)", () => {
     ).toEqual(["Block own", "Block planned"]);
     expect(screen.getByRole("heading", { name: "GT foreign" })).toBeVisible();
     expect(
-      screen.queryByText(/Sie sind für diese Aktivität nicht eingeplant/),
+      screen.queryByText(/Du bist für diese Aktivität nicht eingeplant/),
     ).not.toBeInTheDocument();
 
     // Folded, an own block names why it is the caller's.
@@ -242,7 +242,7 @@ describe("OpenRoomSections (#3281)", () => {
     renderRoom([block("foreign", { canOperate: false, spontaneous: true })]);
 
     expect(
-      screen.getByText("seit 11:00 Uhr · Sie sind hier nicht eingeplant."),
+      screen.getByText("seit 11:00 Uhr · Du bist hier nicht eingeplant."),
     ).toBeInTheDocument();
     expect(screen.queryByText(/11:00–11:45 Uhr/)).not.toBeInTheDocument();
   });
@@ -294,9 +294,7 @@ describe("OpenRoomSections (#3281)", () => {
       within(foreign).getByRole("heading", { name: "Block foreign" }),
     ).toBeInTheDocument();
     expect(
-      within(foreign).getByText(
-        /Sie sind für diese Aktivität nicht eingeplant/,
-      ),
+      within(foreign).getByText(/Du bist für diese Aktivität nicht eingeplant/),
     ).toBeInTheDocument();
     for (const name of BLOCK_ACTIONS) {
       expect(

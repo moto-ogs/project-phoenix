@@ -90,12 +90,12 @@ export function CreateSchoolModal({
       // constraint validation, so an Enter-submit with no organization lands
       // here and must produce a visible error instead of a silent return.
       if (!schoolOrgId || !schoolFederalState) {
-        invalid("Bitte prüfen Sie die markierten Felder.", {
+        invalid("Bitte prüfe die markierten Felder.", {
           ...(!schoolOrgId && {
-            organization_id: "Bitte wählen Sie einen Träger aus.",
+            organization_id: "Bitte wähle einen Träger aus.",
           }),
           ...(!schoolFederalState && {
-            federal_state: "Bitte wählen Sie das Bundesland aus.",
+            federal_state: "Bitte wähle das Bundesland aus.",
           }),
         });
         return;
@@ -105,13 +105,13 @@ export function CreateSchoolModal({
       if (!isValidSlug(schoolSlug)) {
         const hint =
           "Slug darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten.";
-        invalid("Bitte prüfen Sie die markierten Felder.", { slug: hint });
+        invalid("Bitte prüfe die markierten Felder.", { slug: hint });
         return;
       }
       if (!isValidSlug(schoolSubdomain)) {
         const hint =
           "Subdomain darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten.";
-        invalid("Bitte prüfen Sie die markierten Felder.", { subdomain: hint });
+        invalid("Bitte prüfe die markierten Felder.", { subdomain: hint });
         return;
       }
       setSchoolSaving(true);

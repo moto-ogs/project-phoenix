@@ -71,7 +71,7 @@ describe("ReportTemplateForm", () => {
       await screen.findByText("Eine Vorlage mit diesem Namen gibt es schon."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Bitte wählen Sie mindestens einen Abschnitt."),
+      screen.getByText("Bitte wähle mindestens einen Abschnitt."),
     ).toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
   });

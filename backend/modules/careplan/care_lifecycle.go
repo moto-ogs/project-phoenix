@@ -33,19 +33,19 @@ const (
 
 // Care lifecycle sentinels carry diagnostic detail; clients show the code catalog.
 var (
-	ErrCareExitNoStudents            = errors.New("bitte wählen Sie mindestens ein Kind aus")
+	ErrCareExitNoStudents            = errors.New("bitte wähle mindestens ein Kind aus")
 	ErrCareExitTooManyStudents       = errors.New("es können höchstens 500 Kinder auf einmal beendet werden")
 	ErrCareExitDayInPast             = errors.New("der letzte Betreuungstag darf nicht in der Vergangenheit liegen")
-	ErrCareExitPreviewChanged        = errors.New("die Betreuung wurde nicht beendet. Die Daten haben sich seit der Vorschau geändert. Bitte prüfen Sie die Vorschau erneut")
+	ErrCareExitPreviewChanged        = errors.New("die Betreuung wurde nicht beendet. Die Daten haben sich seit der Vorschau geändert. Bitte prüfe die Vorschau erneut")
 	ErrCareExitBlocked               = errors.New("die Betreuung wurde nicht beendet")
 	ErrCareExitNotPlanned            = errors.New("für dieses Kind ist kein Ende der Betreuung geplant")
-	ErrCareExitAlreadyEffective      = errors.New("die Betreuung ist bereits beendet und kann nicht mehr storniert werden. Nutzen Sie „Betreuung wieder aufnehmen“")
+	ErrCareExitAlreadyEffective      = errors.New("die Betreuung ist bereits beendet und kann nicht mehr storniert werden. Nutze „Betreuung wieder aufnehmen“")
 	ErrCareResumeNotEnded            = errors.New("die Betreuung dieses Kindes läuft noch")
 	ErrCareResumeMissing             = errors.New("für dieses Kind ist keine beendete Betreuung hinterlegt")
 	ErrCareResumeStartInPast         = errors.New("der neue Beginn darf nicht in der Vergangenheit liegen")
-	ErrCareResumeNotChecked          = errors.New("bitte bestätigen Sie zuerst die Prüfung. Gruppe, Angebote, Wochenplan und Zeiten bleiben sonst ungeprüft")
-	ErrCareResumeUnknownStudent      = errors.New("dieses Kind gibt es in Ihrer Schule nicht (mehr)")
-	ErrCareResumeAlumnus             = errors.New("dieses Kind wurde beim Schuljahreswechsel abgemeldet. Sie finden es unter Schuljahreswechsel, Bereich Abgänge")
+	ErrCareResumeNotChecked          = errors.New("bitte bestätige zuerst die Prüfung. Gruppe, Angebote, Wochenplan und Zeiten bleiben sonst ungeprüft")
+	ErrCareResumeUnknownStudent      = errors.New("dieses Kind gibt es in deiner Schule nicht (mehr)")
+	ErrCareResumeAlumnus             = errors.New("dieses Kind wurde beim Schuljahreswechsel abgemeldet. Du findest es unter Schuljahreswechsel, Bereich Abgänge")
 	ErrCareWithdrawalNotFound        = errors.New("diese Abmeldung gibt es nicht oder nicht mehr")
 	ErrCareWithdrawalAfterGap        = errors.New("der letzte Betreuungstag muss vor dem ersten Tag ohne Buchung liegen")
 	ErrCareWithdrawalAlreadyResolved = errors.New("die Abmeldung wurde bereits erledigt oder ist nicht mehr aktuell")
@@ -56,10 +56,10 @@ var (
 // technical condition, because they are listed one per child under the
 // headline "Die Betreuung wurde nicht beendet".
 const (
-	CareBlockerUnknown       = "Dieses Kind gibt es in Ihrer Schule nicht (mehr)."
-	CareBlockerAlumnus       = "Dieses Kind wurde beim Schuljahreswechsel abgemeldet. Sie finden es unter Schuljahreswechsel, Bereich Abgänge."
+	CareBlockerUnknown       = "Dieses Kind gibt es in deiner Schule nicht (mehr)."
+	CareBlockerAlumnus       = "Dieses Kind wurde beim Schuljahreswechsel abgemeldet. Du findest es unter Schuljahreswechsel, Bereich Abgänge."
 	CareBlockerAlreadyEnded  = "Die Betreuung dieses Kindes ist bereits beendet."
-	CareBlockerBeforeStart   = "Die Betreuung dieses Kindes beginnt erst am %s. Bitte wählen Sie einen späteren letzten Betreuungstag."
+	CareBlockerBeforeStart   = "Die Betreuung dieses Kindes beginnt erst am %s. Bitte wähle einen späteren letzten Betreuungstag."
 	CareBlockerResumeMissing = "Für dieses Kind ist keine beendete Betreuung hinterlegt."
 	// CareBlockerWithoutCarePlace keeps a child without an OGS place
 	// (#4803) out of an OGS care exit: it never had OGS care.

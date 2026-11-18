@@ -463,7 +463,7 @@ describe("ClassArrivalExceptionPanel", () => {
 
     expect(
       await screen.findByText(
-        "Für diesen Tag ist kein Betreuungsblock geplant. Bitte tragen Sie die Uhrzeit selbst ein.",
+        "Für diesen Tag ist kein Betreuungsblock geplant. Bitte trage die Uhrzeit selbst ein.",
       ),
     ).toBeInTheDocument();
     const time = screen.getByLabelText("Kommt um");
@@ -629,7 +629,7 @@ describe("ClassArrivalExceptionPanel", () => {
 
     expect(
       await screen.findByText(
-        "Die Abweichung wurde nicht gefunden. Bitte laden Sie die Seite neu.",
+        "Die Abweichung wurde nicht gefunden. Bitte lade die Seite neu.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText("boom")).not.toBeInTheDocument();
@@ -668,7 +668,7 @@ describe("ClassArrivalExceptionPanel", () => {
 
     expect(
       await screen.findByText(
-        "Die Abweichung konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Abweichung konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText(/req-class/)).toBeInTheDocument();
@@ -696,7 +696,7 @@ describe("ClassArrivalExceptionPanel", () => {
 
     expect(
       await screen.findByText(
-        "Die Liste der Abweichungen ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Liste der Abweichungen ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     expect(mockToastError).not.toHaveBeenCalled();

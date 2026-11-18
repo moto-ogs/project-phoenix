@@ -148,7 +148,7 @@ function PriceListPage() {
   return (
     <TenantPage
       title={billingAreaTitle("preise")}
-      info="Hier legen Sie die Monatspreise fest. Jede Schule hat eigene Preise, je Modul und gebuchtem Wochentag. Neue Preise gelten ab dem 1. eines Monats. Ferienpreise legen Sie im Ferienzeitraum fest."
+      info="Hier legst du die Monatspreise fest. Jede Schule hat eigene Preise, je Modul und gebuchtem Wochentag. Neue Preise gelten ab dem 1. eines Monats. Ferienpreise legst du im Ferienzeitraum fest."
       stats={
         data && modules > 0 ? (
           <TenantPageStats
@@ -218,7 +218,7 @@ function PriceListPage() {
         <EmptyState
           icon={<Tags className="h-12 w-12" aria-hidden="true" />}
           title="Noch keine Schule."
-          description="Preise gibt es für die Schulen Ihres Trägers."
+          description="Preise gibt es für die Schulen deines Trägers."
         />
       ) : null}
       {/* Equal school cards in a grid: grids do not grow (TenantPage body

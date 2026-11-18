@@ -982,9 +982,7 @@ describe("StaffDetailContent permissions", () => {
         canDelete,
       );
       fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
-      expect(screen.queryByText("Wählen Sie „Löschen“.") !== null).toBe(
-        canDelete,
-      );
+      expect(screen.queryByText("Wähle „Löschen“.") !== null).toBe(canDelete);
       expect(
         screen.queryByText(/Das kann nur, wer Personal löschen darf/) !== null,
       ).toBe(!canDelete);

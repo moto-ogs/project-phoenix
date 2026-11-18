@@ -379,7 +379,7 @@ export default function StaffImportPage() {
       void handleFileUpload(file);
     } else {
       importErrors.invalid(
-        "Diese Datei passt nicht. Bitte laden Sie eine CSV- oder Excel-Datei hoch.",
+        "Diese Datei passt nicht. Bitte lade eine CSV- oder Excel-Datei hoch.",
       );
     }
   };
@@ -446,8 +446,8 @@ export default function StaffImportPage() {
       {/* Info Section */}
       <SectionCard title="Import-Anleitung" icon={Info}>
         <ul className="list-inside list-disc space-y-1 text-sm text-gray-600">
-          <li>Laden Sie die Vorlage herunter (siehe unten)</li>
-          <li>Füllen Sie die Datei mit Ihren Mitarbeiterdaten aus</li>
+          <li>Lade die Vorlage herunter (siehe unten)</li>
+          <li>Fülle die Datei mit deinen Mitarbeiterdaten aus</li>
           <li>
             Die Spalte „Rolle“ muss exakt einer vorhandenen Rolle entsprechen
             {availableRoles.length > 0 && (
@@ -471,8 +471,8 @@ export default function StaffImportPage() {
             Einladung und setzt ihr Passwort selbst. Ohne E-Mail gibt es keinen
             Zugang
           </li>
-          <li>Laden Sie die Datei hier hoch und überprüfen Sie die Vorschau</li>
-          <li>Bestätigen Sie den Import</li>
+          <li>Lade die Datei hier hoch und überprüfe die Vorschau</li>
+          <li>Bestätige den Import</li>
         </ul>
       </SectionCard>
 
@@ -532,7 +532,7 @@ export default function StaffImportPage() {
           </>
         ) : (
           <p className="text-sm text-gray-600">
-            Mit Ihren Berechtigungen legt der Import nur neue Mitarbeiter an.
+            Mit deinen Berechtigungen legt der Import nur neue Mitarbeiter an.
             Zeilen, die es schon gibt, werden als Fehler gemeldet. Bestehende
             Datensätze ändert die Leitung.
           </p>

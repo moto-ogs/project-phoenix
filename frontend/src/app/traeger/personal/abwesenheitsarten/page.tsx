@@ -62,13 +62,13 @@ const errorMessage = (err: unknown) =>
 const INFO = (
   <div className="space-y-2">
     <p>
-      Hier legen Sie eigene Arten an, etwa Regenerationstag oder Umwandlungstag.
+      Hier legst du eigene Arten an, etwa Regenerationstag oder Umwandlungstag.
       Urlaub, Krank, Fortbildung, Sonstige und Freizeitausgleich gibt es immer.
     </p>
     <p>
-      moto trägt jede Art in jede Ihrer Schulen. Eine Schule darf abweichen, nur
-      für ihre eigenen Einsätze: Sie bietet die Art nicht an, oder sie erlaubt
-      weniger Tage. Mehr als das Kontingent erlaubt keine Schule.
+      moto trägt jede Art in jede deiner Schulen. Eine Schule darf abweichen,
+      nur für ihre eigenen Einsätze: Sie bietet die Art nicht an, oder sie
+      erlaubt weniger Tage. Mehr als das Kontingent erlaubt keine Schule.
     </p>
   </div>
 );
@@ -108,7 +108,7 @@ function CreateAbsenceTypeModal({
   const submit = async () => {
     const invalid = absenceTypeDraftErrors(draft);
     if (Object.keys(invalid).length > 0) {
-      errors.invalid("Bitte prüfen Sie die markierten Felder.", invalid);
+      errors.invalid("Bitte prüfe die markierten Felder.", invalid);
       return;
     }
     await save.run(async (op) => {
@@ -141,7 +141,7 @@ function CreateAbsenceTypeModal({
           onSave={() => formRef.current?.requestSubmit()}
           saving={save.pending}
           saveLabel="Anlegen"
-          saveTooltip="Legt die Art an und trägt sie sofort in alle Ihre Schulen."
+          saveTooltip="Legt die Art an und trägt sie sofort in alle deine Schulen."
         />
       }
     >
@@ -197,7 +197,7 @@ function AbsenceTypeCard({
     if (!draft) return;
     const invalid = absenceTypeDraftErrors(draft);
     if (Object.keys(invalid).length > 0) {
-      errors.invalid("Bitte prüfen Sie die markierten Felder.", invalid);
+      errors.invalid("Bitte prüfe die markierten Felder.", invalid);
       return;
     }
     void write(
@@ -279,7 +279,7 @@ function AbsenceTypeCard({
             onCancel={() => setDraft(null)}
             onSave={save}
             saving={saving}
-            saveTooltip="Speichert die Art und trägt die Änderung sofort in alle Ihre Schulen."
+            saveTooltip="Speichert die Art und trägt die Änderung sofort in alle deine Schulen."
           />
         ) : undefined
       }
@@ -320,8 +320,8 @@ function AbsenceTypeCard({
           </FramedList>
           {carried < type.schools.length ? (
             <p className="mt-2 text-sm text-gray-600">
-              Wählen Sie „Ändern“ und „Speichern“. Dann trägt moto die Art auch
-              in die übrigen Schulen.
+              Wähle „Ändern“ und „Speichern“. Dann trägt moto die Art auch in
+              die übrigen Schulen.
             </p>
           ) : null}
         </div>
@@ -406,7 +406,7 @@ export default function TraegerAbsenceTypesPage() {
             size="md"
             variant="primary"
             className="gap-2"
-            tooltip="Öffnet ein Formular für eine neue Abwesenheitsart Ihres Trägers."
+            tooltip="Öffnet ein Formular für eine neue Abwesenheitsart deines Trägers."
             onClick={() => setCreating(true)}
           >
             <PlusIcon className="h-4 w-4" aria-hidden="true" />
@@ -442,7 +442,7 @@ export default function TraegerAbsenceTypesPage() {
         <SectionCard>
           <EmptyState
             title="Noch keine eigene Abwesenheitsart."
-            description="Legen Sie oben eine Art an, zum Beispiel Regenerationstag. Hat eine Schule schon eine eigene Art mit demselben Namen, wird sie Teil Ihrer Art, mit allen Buchungen."
+            description="Lege oben eine Art an, zum Beispiel Regenerationstag. Hat eine Schule schon eine eigene Art mit demselben Namen, wird sie Teil deiner Art, mit allen Buchungen."
           />
         </SectionCard>
       ) : null}

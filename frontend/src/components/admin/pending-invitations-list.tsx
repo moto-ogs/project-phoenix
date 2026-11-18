@@ -51,7 +51,7 @@ interface PendingInvitationsListProps {
 function staffMailNote(invitation: PendingInvitation): string | null {
   return invitationMailNote(
     invitation,
-    "Stimmt die Adresse nicht, löschen Sie die Einladung und laden Sie neu ein.",
+    "Stimmt die Adresse nicht, lösche die Einladung und lade neu ein.",
   );
 }
 
@@ -375,7 +375,7 @@ export function PendingInvitationsList({
         confirmVariant="danger"
       >
         <p className="text-sm text-gray-600">
-          Möchten Sie die Einladung für{" "}
+          Möchtest du die Einladung für{" "}
           <span className="font-medium text-gray-900">
             {revokeTarget?.email}
           </span>{" "}

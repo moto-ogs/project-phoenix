@@ -175,7 +175,7 @@ describe("Hausaufgaben in der Lernzeit (#4796)", () => {
     );
 
     expect(
-      await within(dialog).findByText("Bitte wählen Sie eine Antwort."),
+      await within(dialog).findByText("Bitte wähle eine Antwort."),
     ).toBeInTheDocument();
     expect(save).not.toHaveBeenCalled();
   });

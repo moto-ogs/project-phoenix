@@ -52,11 +52,11 @@ export function TraegerLogoCard({
 
   const upload = async (file: File) => {
     if (!LOGO_TYPES.includes(file.type)) {
-      showMessage("Bitte wählen Sie ein Bild im Format PNG oder JPG.");
+      showMessage("Bitte wähle ein Bild im Format PNG oder JPG.");
       return;
     }
     if (file.size > TRAEGER_LOGO_MAX_BYTES) {
-      showMessage("Das Logo ist zu groß. Bitte wählen Sie ein Bild bis 1 MB.");
+      showMessage("Das Logo ist zu groß. Bitte wähle ein Bild bis 1 MB.");
       return;
     }
     setUploading(true);
@@ -165,7 +165,7 @@ export function TraegerLogoCard({
         }}
         onConfirm={() => void remove()}
         title="Logo entfernen?"
-        description="Briefe und Rechnungen haben danach kein Logo, bis Sie ein neues hochladen."
+        description="Briefe und Rechnungen haben danach kein Logo, bis du ein neues hochlädst."
         confirmLabel="Entfernen"
         loadingLabel="Wird entfernt …"
         gate={{ mode: "twoStep", firstStepLabel: "Ja, entfernen" }}

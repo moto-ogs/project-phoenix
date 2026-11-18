@@ -452,7 +452,7 @@ describe("FilteredBulkArrivalModal", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(
-      "Für die Klassenzeit fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
+      "Für die Klassenzeit fehlt dir die Berechtigung. Bitte frage die Schule.",
     );
     expect(alert).not.toHaveTextContent("Save failed");
     expect(mockToastError).not.toHaveBeenCalled();
@@ -608,7 +608,7 @@ describe("FilteredBulkArrivalModal", () => {
 
     expect(
       await screen.findByText(
-        "Die Klassenzeit ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Klassenzeit ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Montag")).toBeDisabled();

@@ -47,7 +47,7 @@ const classTimetableTitle = "Stundenplan geändert"
 // The lock-screen copy for families names no class: the class of a child is
 // family data, the entry shows it after login.
 const (
-	classTimetableParentPushBody = "Der Unterrichtsschluss in der Klasse Ihres Kindes ändert sich. Mehr dazu in moto."
+	classTimetableParentPushBody = "Der Unterrichtsschluss in der Klasse deines Kindes ändert sich. Mehr dazu in moto."
 	classTimetableParentLink     = "/children"
 )
 

@@ -132,7 +132,7 @@ describe("TraegerCareNoticeDeliveryPage", () => {
       screen.queryByText(/Alle Bescheide mit E-Mail-Adresse sind gesendet/),
     ).not.toBeInTheDocument();
     if ("failed" in counts) {
-      expect(screen.getByText(/erneut.*oder drucken/i)).toBeInTheDocument();
+      expect(screen.getByText(/erneut.*oder drucke/i)).toBeInTheDocument();
     }
     if ("queued" in counts) {
       expect(

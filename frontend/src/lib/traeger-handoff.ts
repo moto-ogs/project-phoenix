@@ -20,7 +20,7 @@ export const TRAEGER_HANDOFF_OPENING = "moto öffnet die Schule.";
 export const TRAEGER_HANDOFF_FAILED_TITLE =
   "Die Schule konnte nicht geöffnet werden.";
 export const TRAEGER_HANDOFF_FAILED_TEXT =
-  "Der Link gilt nur kurz und nur einmal. Bitte öffnen Sie die Schule noch einmal im Träger-Portal.";
+  "Der Link gilt nur kurz und nur einmal. Bitte öffne die Schule noch einmal im Träger-Portal.";
 export const TRAEGER_HANDOFF_BACK = "Zum Träger-Portal";
 /**
  * How long the entry page waits for the session check before it gives up

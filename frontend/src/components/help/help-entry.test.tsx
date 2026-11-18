@@ -48,7 +48,7 @@ describe("HelpEntry", () => {
     fireEvent.click(screen.getByText("Betreuungskraft"));
 
     expect(
-      screen.getByRole("heading", { name: "Wie arbeitet Ihre OGS?" }),
+      screen.getByRole("heading", { name: "Wie arbeitet deine OGS?" }),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Weiß ich nicht")).toHaveLength(3);
   });
@@ -76,7 +76,7 @@ describe("HelpEntry", () => {
 
     fireEvent.click(screen.getByText("Betreuungskraft"));
     const nfcQuestion = screen.getByRole("group", {
-      name: "Nutzt Ihre OGS ein NFC-Tablet?",
+      name: "Nutzt deine OGS ein NFC-Tablet?",
     });
     const yes = within(nfcQuestion).getByRole("button", { name: "Ja" });
     const no = within(nfcQuestion).getByRole("button", { name: "Nein" });
@@ -106,7 +106,7 @@ describe("HelpEntry", () => {
       presenceMode: "unknown",
     });
     expect(
-      screen.queryByRole("heading", { name: "Wie arbeitet Ihre OGS?" }),
+      screen.queryByRole("heading", { name: "Wie arbeitet deine OGS?" }),
     ).not.toBeInTheDocument();
   });
 

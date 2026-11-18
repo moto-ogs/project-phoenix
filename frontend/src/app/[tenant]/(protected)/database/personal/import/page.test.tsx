@@ -207,7 +207,7 @@ describe("StaffImportPage", () => {
 
     expect(screen.getByText("Import-Anleitung")).toBeInTheDocument();
     expect(
-      screen.getByText(/Füllen Sie die Datei mit Ihren Mitarbeiterdaten aus/),
+      screen.getByText(/Fülle die Datei mit deinen Mitarbeiterdaten aus/),
     ).toBeInTheDocument();
   });
 
@@ -922,7 +922,7 @@ describe("StaffImportPage", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "Diese Datei passt nicht. Bitte laden Sie eine CSV- oder Excel-Datei hoch.",
+          "Diese Datei passt nicht. Bitte lade eine CSV- oder Excel-Datei hoch.",
         ),
       ).toBeInTheDocument();
     });

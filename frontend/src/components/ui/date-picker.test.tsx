@@ -993,7 +993,7 @@ describe("ISODateInput", () => {
 
     expect(onChange).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bitte geben Sie ein gültiges Datum im Format TT.MM.JJJJ ein.",
+      "Bitte gib ein gültiges Datum im Format TT.MM.JJJJ ein.",
     );
     expect(input).toHaveAttribute("aria-invalid", "true");
   });

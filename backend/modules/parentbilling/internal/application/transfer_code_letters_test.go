@@ -49,7 +49,7 @@ func TestHolidayInvoiceByTransferCarriesTheTransferCode(t *testing.T) {
 		assert.Equal(t, "EUR92.50", amountOf(codes[0]), "the total of 9250 cents")
 		assert.Equal(t, "FE-2026-0007", remittance(codes[0]))
 		require.Positive(t, at[0], kind)
-		assert.Contains(t, letter.Blocks[at[0]-1].Text, "Bitte überweisen Sie 92,50 €", "the code follows the payment text")
+		assert.Contains(t, letter.Blocks[at[0]-1].Text, "Bitte überweist 92,50 €", "the code follows the payment text")
 	}
 }
 
@@ -131,7 +131,7 @@ func TestMonthlyInvoiceAndNoticeCarryTheTransferCode(t *testing.T) {
 	require.Len(t, codes, 1)
 	assert.Equal(t, "EUR54.01", amountOf(codes[0]))
 	assert.Equal(t, "MB-2027-0001", remittance(codes[0]))
-	assert.Contains(t, letter.Blocks[at[0]-1].Text, "Bitte überweisen Sie 54,01 €")
+	assert.Contains(t, letter.Blocks[at[0]-1].Text, "Bitte überweist 54,01 €")
 
 	notice := careLetterSJR()
 	notice.invoice.DocumentKind = parentbilling.DocumentKindFeeNotice
@@ -141,7 +141,7 @@ func TestMonthlyInvoiceAndNoticeCarryTheTransferCode(t *testing.T) {
 	codes, at = paymentCodes(letter)
 	require.Len(t, codes, 1)
 	assert.Equal(t, "MB-2027-0001 Buchungszeichen 5.0311.000123.4", remittance(codes[0]))
-	assert.Contains(t, letter.Blocks[at[0]-1].Text, "Bitte überweisen Sie 54,01 €")
+	assert.Contains(t, letter.Blocks[at[0]-1].Text, "Bitte überweist 54,01 €")
 	assert.NotEqual(t, legalRemedyHeading, letter.Blocks[at[0]].Heading, "the legal remedy stays last")
 	assert.False(t, letter.OnePage, "a fee notice keeps its full type")
 }
@@ -192,6 +192,6 @@ func TestNoTransferCodeWhenTheTraegerSwitchedItOff(t *testing.T) {
 		off := letter(true)
 		codes, _ := paymentCodes(off)
 		assert.Empty(t, codes, name)
-		assert.Contains(t, letterText(off), "Bitte überweisen Sie", "%s keeps the payment text", name)
+		assert.Contains(t, letterText(off), "Bitte überweis", "%s keeps the payment text", name)
 	}
 }

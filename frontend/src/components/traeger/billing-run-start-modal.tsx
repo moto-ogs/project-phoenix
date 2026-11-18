@@ -108,7 +108,7 @@ function RunStartModal({
   const submit = async () => {
     formErrors.clear();
     if (!value) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", {
+      formErrors.invalid("Bitte prüfe deine Angaben.", {
         [field.name]: field.missing,
       });
       return;
@@ -219,7 +219,7 @@ export function BillingRunStartModal({
         name: "holiday_period_id",
         label: "Ferienzeitraum",
         placeholder: "Ferienzeitraum wählen",
-        missing: "Bitte wählen Sie einen Ferienzeitraum.",
+        missing: "Bitte wähle einen Ferienzeitraum.",
       }}
       options={periods.map((period) => ({
         value: period.id,
@@ -230,7 +230,7 @@ export function BillingRunStartModal({
         onOpenRun
           ? {
               values: [...open.keys()],
-              hint: "Für diesen Ferienzeitraum ist schon ein Lauf in der Vorschau. Öffnen Sie ihn, statt einen neuen zu starten.",
+              hint: "Für diesen Ferienzeitraum ist schon ein Lauf in der Vorschau. Öffne ihn, statt einen neuen zu starten.",
               // The select above names the period; a long period name
               // would push the action under „Abbrechen“.
               openLabel: () => "Lauf öffnen",
@@ -241,7 +241,7 @@ export function BillingRunStartModal({
             }
           : undefined
       }
-      hint="Der Lauf rechnet alle bestätigten Anmeldungen ab, die noch keine Rechnung haben. Sie prüfen zuerst die Vorschau."
+      hint="Der Lauf rechnet alle bestätigten Anmeldungen ab, die noch keine Rechnung haben. Du prüfst zuerst die Vorschau."
       object="der Lauf"
       onClose={onClose}
       onStart={startBillingRun}

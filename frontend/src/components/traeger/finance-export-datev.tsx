@@ -77,7 +77,7 @@ export function DatevReadinessNotice({
       id={DATEV_READINESS_ID}
       type="warning"
       title="Die DATEV-Datei fehlt noch"
-      message="Es fehlen Werte Ihres Steuerbüros. Danach können Sie die Datei herunterladen."
+      message="Es fehlen Werte deines Steuerbüros. Danach kannst du die Datei herunterladen."
       details={<BulletList lines={datevSettingLines(readiness)} />}
       action={
         <ButtonLink
@@ -110,7 +110,7 @@ function datevProblemText(problem: DatevBookingProblem): string {
     case "revenue_account":
       return problem.reason === "missing"
         ? "Erlöskonto fehlt"
-        : "Erlöskonto ist länger als Ihre Sachkonten";
+        : "Erlöskonto ist länger als deine Sachkonten";
     case "cost_center":
       return problem.reason === "missing"
         ? "Kostenstelle fehlt"
@@ -166,10 +166,10 @@ export function DatevRefusedNotice({
     ["revenue_account", "cost_center", "cost_center_2"].includes(problem.field),
   );
   const correction = accounts
-    ? "Schon festgehaltene Konten und Kostenstellen bleiben unverändert. Auch ein Storno übernimmt diese Werte. Laden Sie dann die Sollstellung dieses Laufs herunter. Geben Sie die Datei und diesen Hinweis an Ihr Steuerbüro. Es kann die genannten Werte berichtigen und manuell in DATEV buchen. Der DATEV-Download dieses Laufs bleibt dann gesperrt. Korrigieren Sie unter „Konten und Kostenstellen“ die Werte für neue Rechnungen."
+    ? "Schon festgehaltene Konten und Kostenstellen bleiben unverändert. Auch ein Storno übernimmt diese Werte. Lade dann die Sollstellung dieses Laufs herunter. Gib die Datei und diesen Hinweis an dein Steuerbüro. Es kann die genannten Werte berichtigen und manuell in DATEV buchen. Der DATEV-Download dieses Laufs bleibt dann gesperrt. Korrigiere unter „Konten und Kostenstellen“ die Werte für neue Rechnungen."
     : runKind === "holiday"
-      ? "Bei Rechnungen ohne Gutschrift: Stornieren Sie die Rechnung. Korrigieren Sie die Debitorennummer in der Ferienanmeldung. Stellen Sie dann die Rechnung neu aus. Danach ist der Lauf wieder frei. Hat die Rechnung schon eine Gutschrift, ist kein Storno möglich. Laden Sie dann die Sollstellung für Ihr Steuerbüro herunter. Es kann die Buchungen daraus manuell in DATEV erfassen. Der DATEV-Download dieses Laufs bleibt gesperrt."
-      : "Tragen Sie bei der Familie die richtige Debitorennummer ein. Stornieren Sie dann die Rechnung und stellen Sie sie neu aus. Danach ist der Lauf wieder frei.";
+      ? "Bei Rechnungen ohne Gutschrift: Storniere die Rechnung. Korrigiere die Debitorennummer in der Ferienanmeldung. Stelle dann die Rechnung neu aus. Danach ist der Lauf wieder frei. Hat die Rechnung schon eine Gutschrift, ist kein Storno möglich. Lade dann die Sollstellung für dein Steuerbüro herunter. Es kann die Buchungen daraus manuell in DATEV erfassen. Der DATEV-Download dieses Laufs bleibt gesperrt."
+      : "Trage bei der Familie die richtige Debitorennummer ein. Storniere dann die Rechnung und stelle sie neu aus. Danach ist der Lauf wieder frei.";
   return (
     <Alert
       type="warning"
@@ -295,8 +295,8 @@ export function DatevRepeatDialog({
           title="Buchungen können doppelt in DATEV stehen"
           message={
             handover
-              ? "Übergeben Sie die Datei nur, wenn der Empfänger die frühere Datei nicht hat oder nicht einlesen konnte."
-              : "Geben Sie die Datei nur weiter, wenn Ihr Steuerbüro die frühere Datei nicht hat oder nicht einlesen konnte."
+              ? "Übergib die Datei nur, wenn der Empfänger die frühere Datei nicht hat oder nicht einlesen konnte."
+              : "Gib die Datei nur weiter, wenn dein Steuerbüro die frühere Datei nicht hat oder nicht einlesen konnte."
           }
           announce="off"
         />

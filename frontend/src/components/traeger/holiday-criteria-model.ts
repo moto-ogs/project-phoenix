@@ -43,7 +43,7 @@ export const CRITERION_TEMPLATES: readonly Omit<
   },
   {
     name: "Alleinerziehend und berufstätig",
-    question: "Sind Sie alleinerziehend und berufstätig?",
+    question: "Bist du alleinerziehend und berufstätig?",
     scope: "family",
   },
   {
@@ -55,7 +55,7 @@ export const CRITERION_TEMPLATES: readonly Omit<
   {
     name: "Besonderer Härtefall",
     question:
-      "Gibt es einen besonderen Härtefall in Ihrer Familie? Das Büro fragt dann bei Ihnen nach.",
+      "Gibt es einen besonderen Härtefall in deiner Familie? Das Büro fragt dann bei dir nach.",
     scope: "family",
   },
 ];
@@ -136,7 +136,7 @@ export function validateCriteria(
   drafts.forEach((draft, index) => {
     const name = draft.name.trim();
     if (!name) {
-      errors[`criteria.${index}.name`] = "Bitte geben Sie einen Namen ein.";
+      errors[`criteria.${index}.name`] = "Bitte gib einen Namen ein.";
     } else if (name.length > MAX_CRITERION_NAME) {
       errors[`criteria.${index}.name`] =
         `Der Name hat höchstens ${MAX_CRITERION_NAME} Zeichen.`;
@@ -147,7 +147,7 @@ export function validateCriteria(
     const question = draft.question.trim();
     if (!question) {
       errors[`criteria.${index}.question`] =
-        "Bitte schreiben Sie die Frage an die Eltern.";
+        "Bitte schreibe die Frage an die Eltern.";
     } else if (question.length > MAX_CRITERION_QUESTION) {
       errors[`criteria.${index}.question`] =
         `Die Frage hat höchstens ${MAX_CRITERION_QUESTION} Zeichen.`;

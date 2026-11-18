@@ -104,7 +104,7 @@ export function RequestFeedDialog({ isOpen, onClose }: RequestFeedDialogProps) {
       // Kein API-Fehler: die Zwischenablage hat abgelehnt. Der Link steht
       // markierbar im Feld, also nennt der Text den Weg von Hand.
       actionErrors.invalid(
-        "Kopieren hat nicht geklappt. Bitte markieren Sie den Link und kopieren Sie ihn selbst.",
+        "Kopieren hat nicht geklappt. Bitte markiere den Link und kopiere ihn selbst.",
       );
     }
   };
@@ -135,7 +135,7 @@ export function RequestFeedDialog({ isOpen, onClose }: RequestFeedDialogProps) {
               isLoading={saving}
               disabled={checking}
               loadingText="Link wird erstellt…"
-              tooltip="Erstellt Ihren persönlichen Link für neue Elternanfragen."
+              tooltip="Erstellt deinen persönlichen Link für neue Elternanfragen."
               onClick={() => void create()}
             >
               <Rss className="mr-2 size-4" aria-hidden />
@@ -172,8 +172,8 @@ export function RequestFeedDialog({ isOpen, onClose }: RequestFeedDialogProps) {
     >
       <div className="space-y-4 text-sm leading-6 text-gray-700">
         <p>
-          Ein RSS-Programm zeigt Ihnen neue Elternanfragen. Entscheiden können
-          Sie nur in moto.
+          Ein RSS-Programm zeigt dir neue Elternanfragen. Entscheiden kannst du
+          nur in moto.
         </p>
 
         <InsetPanel padding="md">
@@ -205,7 +205,7 @@ export function RequestFeedDialog({ isOpen, onClose }: RequestFeedDialogProps) {
             <FormRow>
               <Input
                 id="parent-request-feed-url"
-                label="Ihr RSS-Link"
+                label="Dein RSS-Link"
                 readOnly
                 value={url}
                 controlSize="compact"
@@ -229,8 +229,8 @@ export function RequestFeedDialog({ isOpen, onClose }: RequestFeedDialogProps) {
               </Button>
             </FormRow>
             <p className="text-xs leading-5 text-gray-500">
-              Fügen Sie diesen Link in Ihrem RSS-Programm ein. Verwalten Sie den
-              Link nur hier in moto.
+              Füge diesen Link in deinem RSS-Programm ein. Verwalte den Link nur
+              hier in moto.
             </p>
           </div>
         ) : null}

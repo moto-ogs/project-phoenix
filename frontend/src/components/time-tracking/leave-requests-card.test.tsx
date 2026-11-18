@@ -261,15 +261,15 @@ describe("LeaveRequestsCard resubmitted requests", () => {
     });
     fireEvent.click(submit);
     expect(
-      await screen.findByText("Bitte geben Sie eine kurze Antwort ein."),
+      await screen.findByText("Bitte gib eine kurze Antwort ein."),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Ihre Antwort")).toHaveAttribute(
+    expect(screen.getByLabelText("Deine Antwort")).toHaveAttribute(
       "aria-invalid",
       "true",
     );
     expect(mocks.resubmitAbsence).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText("Ihre Antwort"), {
+    fireEvent.change(screen.getByLabelText("Deine Antwort"), {
       target: { value: "Vertretung ist geklärt." },
     });
     fireEvent.click(submit);
@@ -417,7 +417,7 @@ describe("LeaveRequestsCard mail to the Leitung (#7058)", () => {
     expect(screen.getByText("1 nicht zustellbar")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Eine Mail kam nicht an. Sagen Sie der Leitung direkt Bescheid.",
+        "Eine Mail kam nicht an. Sage der Leitung direkt Bescheid.",
       ),
     ).toBeInTheDocument();
     expect(screen.getAllByTestId("absence-mail-status")).toHaveLength(1);

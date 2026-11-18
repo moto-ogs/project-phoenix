@@ -205,11 +205,11 @@ export function TraegerErasureOrderSection({
         {staleError}
         <SectionCard
           title="Löschauftrag"
-          description="Einen Löschauftrag erfassen Sie erst, wenn der Träger deaktiviert ist. Deaktivieren Sie ihn oben über den Status."
+          description="Einen Löschauftrag erfasst du erst, wenn der Träger deaktiviert ist. Deaktiviere ihn oben über den Status."
         >
           <Alert
             type="warning"
-            message="Vor dem Deaktivieren: Weisen Sie den Träger auf die Sicherung seiner aufbewahrungspflichtigen Unterlagen hin (AVV Ziff. 8.4). Nach dem Deaktivieren kann das Träger-Büro nichts mehr herunterladen, etwa die SEPA-Dateien."
+            message="Vor dem Deaktivieren: Weise den Träger auf die Sicherung seiner aufbewahrungspflichtigen Unterlagen hin (AVV Ziff. 8.4). Nach dem Deaktivieren kann das Träger-Büro nichts mehr herunterladen, etwa die SEPA-Dateien."
           />
         </SectionCard>
       </>
@@ -279,7 +279,7 @@ function OpenErasureOrder({
         description={
           order.startedAt
             ? "Das interne Löschverfahren hat begonnen. Der Auftrag kann nicht mehr zurückgenommen werden. Das moto-Team schließt die Löschung mit demselben Auftrag ab."
-            : `Ab dem ${formatDate(order.eraseNotBefore)} darf das moto-Team den Träger mit dem internen Löschverfahren endgültig löschen: alle Schulen mit ihren Daten, das Träger-Büro und den Träger selbst. Bis dahin können Sie den Auftrag zurücknehmen.`
+            : `Ab dem ${formatDate(order.eraseNotBefore)} darf das moto-Team den Träger mit dem internen Löschverfahren endgültig löschen: alle Schulen mit ihren Daten, das Träger-Büro und den Träger selbst. Bis dahin kannst du den Auftrag zurücknehmen.`
         }
         action={
           order.startedAt ? undefined : (
@@ -302,8 +302,8 @@ function OpenErasureOrder({
               title="Löschung so nicht möglich"
               message={
                 order.startedAt
-                  ? "Dieser Auftrag wurde ohne Hinweis auf die Unterlagen erfasst. Die Löschung läuft erst weiter, wenn Hinweis und Wahl eingetragen sind. Tragen Sie Hinweis und Wahl hier nach."
-                  : "Dieser Auftrag wurde ohne Hinweis auf die Unterlagen erfasst. Das Löschverfahren führt ihn so nicht aus. Tragen Sie Hinweis und Wahl hier nach."
+                  ? "Dieser Auftrag wurde ohne Hinweis auf die Unterlagen erfasst. Die Löschung läuft erst weiter, wenn Hinweis und Wahl eingetragen sind. Trage Hinweis und Wahl hier nach."
+                  : "Dieser Auftrag wurde ohne Hinweis auf die Unterlagen erfasst. Das Löschverfahren führt ihn so nicht aus. Trage Hinweis und Wahl hier nach."
               }
             />
           </div>
@@ -342,7 +342,7 @@ function OpenErasureOrder({
         loadingText="Wird zurückgenommen..."
       >
         <p className="text-sm text-gray-700">
-          Der Träger bleibt deaktiviert. Danach können Sie ihn wieder aktivieren
+          Der Träger bleibt deaktiviert. Danach kannst du ihn wieder aktivieren
           oder einen neuen Löschauftrag erfassen.
         </p>
       </ConfirmationModal>
@@ -428,7 +428,7 @@ function RecordErasureOrderForm({
   return (
     <SectionCard
       title="Löschauftrag"
-      description="Nach Vertragsende und schriftlicher Bestätigung erfassen Sie hier den Löschauftrag. Ab dem gewählten Tag darf das interne Löschverfahren den Träger mit allen Schulen endgültig löschen. Bis dahin läuft die Schonfrist."
+      description="Nach Vertragsende und schriftlicher Bestätigung erfasst du hier den Löschauftrag. Ab dem gewählten Tag darf das interne Löschverfahren den Träger mit allen Schulen endgültig löschen. Bis dahin läuft die Schonfrist."
     >
       <form
         ref={formRef}
@@ -614,7 +614,7 @@ function RecordsHandoverFields({
           <>
             Der Träger muss seine aufbewahrungspflichtigen Unterlagen selbst
             sichern: Rechnungen, Gutschriften, Bescheide, Verträge und
-            SEPA-Mandate (AVV Ziff. 8.4). Bieten Sie ihm vorher die Rückgabe an.
+            SEPA-Mandate (AVV Ziff. 8.4). Biete ihm vorher die Rückgabe an.
             Wählt der Kunde ausdrücklich die Löschung, gilt seine Wahl.
           </>
         }
@@ -623,8 +623,8 @@ function RecordsHandoverFields({
         <p className="text-sm text-gray-700">
           Die Rückgabe enthält alle Belege dieses Trägers mit Fassungen,
           Korrekturen und Originaldateien, dazu vollständige Bankdaten und
-          SEPA-Dateien. Übergeben Sie sie nur verschlüsselt. Erstellen Sie sie
-          im internen Verfahren (Runbook „Interne Auskunft und Datenrückgabe“):
+          SEPA-Dateien. Übergib sie nur verschlüsselt. Erstelle sie im internen
+          Verfahren (Runbook „Interne Auskunft und Datenrückgabe“):
         </p>
         <CopyField
           value={`tenant export --organization ${organizationId} --operator <IHRE_OPERATOR_ID> --uploads <UPLOAD_VERZEICHNIS> --out <NEUES_VERZEICHNIS>`}

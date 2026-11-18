@@ -594,7 +594,7 @@ func renderMessagingError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, communication.ErrParentMessageGuardianAccessRevoked):
 		common.RenderError(w, r, common.ErrorConflictMessage("Der Empfänger hat keinen Zugriff mehr auf dieses Kind."))
 	case errors.Is(err, communication.ErrParentMessageHandledBoundaryRequired):
-		common.RenderError(w, r, common.ErrorConflictMessage("Der Nachrichtenverlauf hat sich geändert. Bitte laden Sie die Seite neu."))
+		common.RenderError(w, r, common.ErrorConflictMessage("Der Nachrichtenverlauf hat sich geändert. Bitte lade die Seite neu."))
 	default:
 		common.RenderError(w, r, common.ErrorInternalServerWrap("messaging request failed", err))
 	}

@@ -67,7 +67,7 @@ export function importDebtorNumberText(row: ImportRow): string | null {
     case "same":
       return `Debitorennummer ${row.debtorNumber} ist schon eingetragen.`;
     case "siblings_differ":
-      return "Debitorennummer: Geschwister haben verschiedene Nummern. moto übernimmt keine. Tragen Sie die richtige Nummer bei der Familie ein.";
+      return "Debitorennummer: Geschwister haben verschiedene Nummern. moto übernimmt keine. Trage die richtige Nummer bei der Familie ein.";
     case "differs":
       return "Debitorennummer: In moto steht schon eine andere Nummer. moto ändert sie nicht.";
     case "invalid":
@@ -75,7 +75,7 @@ export function importDebtorNumberText(row: ImportRow): string | null {
     case "no_family":
       return "Debitorennummer: moto kennt die Familie nicht.";
     case "no_child":
-      return "Debitorennummer: Die Familie hat mehrere Kinder mit Vertrag. Wählen Sie als Zahler die Vertragsnummer, dann erkennt moto das Kind.";
+      return "Debitorennummer: Die Familie hat mehrere Kinder mit Vertrag. Wähle als Zahler die Vertragsnummer, dann erkennt moto das Kind.";
     case "rows_differ":
       return "Debitorennummer: Für dieses Kind stehen verschiedene Nummern in der Datei. moto übernimmt keine.";
     default:
@@ -143,9 +143,9 @@ export function importProblemText(problem: ImportProblem): string {
     case "too_long":
       return `${field} hat mehr als 70 Zeichen.`;
     case "payer_unknown":
-      return "Zu diesem Zahler gibt es bei Ihnen keinen Vertrag.";
+      return "Zu diesem Zahler gibt es bei dir keinen Vertrag.";
     case "payer_ambiguous":
-      return "Diese Debitorennummer haben bei Ihnen mehrere Familien oder Kinder. moto weiß nicht, wer zahlt.";
+      return "Diese Debitorennummer haben bei dir mehrere Familien oder Kinder. moto weiß nicht, wer zahlt.";
     case "family_unknown":
       return "Im Vertrag fehlt die E-Mail-Adresse der Familie.";
     case "creditor_mismatch":

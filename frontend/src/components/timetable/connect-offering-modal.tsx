@@ -205,7 +205,7 @@ export function ConnectOfferingModal({
       <div className="flex flex-col gap-4">
         <p className="text-sm text-gray-700">
           {selectedOfferings.length === 0
-            ? `${deviation.ambiguous ? "Mehrere Angebote passen zur Kinderliste. " : ""}Wählen Sie die Angebote, deren angemeldete Kinder kommen sollen.`
+            ? `${deviation.ambiguous ? "Mehrere Angebote passen zur Kinderliste. " : ""}Wähle die Angebote, deren angemeldete Kinder kommen sollen.`
             : preview
               ? `Ab ${formatDate(preview.from)} kommen nur noch die für ${offeringNamesFor(selectedOfferings)} angemeldeten Kinder. An- und Abmeldungen werden danach automatisch übernommen.`
               : `„${templateName}“ bekommt seine Kinder dann aus ${selectedOfferings.length > 1 ? "den Angeboten" : "dem Angebot"} ${offeringSetNames(selectedOfferings)}.`}

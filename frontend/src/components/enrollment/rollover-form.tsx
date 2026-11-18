@@ -168,21 +168,21 @@ export function RolloverForm({
     formErrors.clear();
     if (!draft.service_start_date || !draft.service_end_date) {
       formErrors.invalid(
-        "Bitte geben Sie Beginn und Ende des Betreuungszeitraums an.",
+        "Bitte gib Beginn und Ende des Betreuungszeitraums an.",
         {
           ...(draft.service_start_date
             ? {}
-            : { service_start_date: "Bitte wählen Sie den Beginn." }),
+            : { service_start_date: "Bitte wähle den Beginn." }),
           ...(draft.service_end_date
             ? {}
-            : { service_end_date: "Bitte wählen Sie das Ende." }),
+            : { service_end_date: "Bitte wähle das Ende." }),
         },
       );
       return;
     }
     if (!deadlineLocal) {
-      formErrors.invalid("Bitte geben Sie eine Frist für die Eltern an.", {
-        rollover_deadline: "Bitte wählen Sie eine Frist.",
+      formErrors.invalid("Bitte gib eine Frist für die Eltern an.", {
+        rollover_deadline: "Bitte wähle eine Frist.",
       });
       return;
     }
@@ -346,8 +346,8 @@ export function RolloverForm({
               label="Modus"
               hint={
                 draft.rollover_mode === "opt_out"
-                  ? "Eltern müssen nichts tun. Bis zur Frist können sie Angebote und Tage ändern oder abmelden. Danach prüfen Sie die Anmeldungen, außer bei automatischer Genehmigung."
-                  : "Eltern bestätigen bis zur Frist und können dabei Angebote und Tage ändern. Ohne Bestätigung wird die Anmeldung zurückgezogen. Bestätigte Anmeldungen prüfen Sie."
+                  ? "Eltern müssen nichts tun. Bis zur Frist können sie Angebote und Tage ändern oder abmelden. Danach prüfst du die Anmeldungen, außer bei automatischer Genehmigung."
+                  : "Eltern bestätigen bis zur Frist und können dabei Angebote und Tage ändern. Ohne Bestätigung wird die Anmeldung zurückgezogen. Bestätigte Anmeldungen prüfst du."
               }
               value={draft.rollover_mode}
               onChange={(value) =>
@@ -396,7 +396,7 @@ export function RolloverForm({
             checked={draft.rollover_auto_approve}
             onChange={(checked) => update("rollover_auto_approve", checked)}
             label="Vorgemerkte Anmeldungen automatisch genehmigen"
-            hint="Nur bei „Anmeldungen laufen weiter“. Nach der Frist bestätigt moto die Anmeldungen ohne Ihre Prüfung. Ist kein Platz mehr frei, entscheiden Sie selbst."
+            hint="Nur bei „Anmeldungen laufen weiter“. Nach der Frist bestätigt moto die Anmeldungen ohne deine Prüfung. Ist kein Platz mehr frei, entscheidest du selbst."
           />
         </div>
 

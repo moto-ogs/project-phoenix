@@ -68,7 +68,7 @@ export function FamilyChildrenImportMappingCard({
       description={
         collapsed
           ? `${mapped} von ${FAMILY_IMPORT_FIELDS.length} Feldern sind zugeordnet, alle Pflichtfelder sind dabei.`
-          : "Wählen Sie für jedes Feld die Spalte aus Ihrer Datei. moto hat schon passende Spalten vorgeschlagen."
+          : "Wähle für jedes Feld die Spalte aus deiner Datei. moto hat schon passende Spalten vorgeschlagen."
       }
       collapsible={complete}
       collapsed={collapsed}
@@ -108,7 +108,7 @@ export function FamilyChildrenImportMappingCard({
             ]}
             onChange={(schoolId) => onChange({ ...mapping, schoolId })}
             disabled={disabled}
-            hint="Ihre Datei hat keine Spalte für die Schule. Dann gilt eine Schule für alle Kinder."
+            hint="Deine Datei hat keine Spalte für die Schule. Dann gilt eine Schule für alle Kinder."
             error={
               missing.has("school")
                 ? "Bitte eine Spalte oder eine Schule wählen."

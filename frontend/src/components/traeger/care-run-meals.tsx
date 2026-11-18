@@ -215,8 +215,8 @@ export function CareRunMealsCard({
               Die Schule hat den Monat erneut freigegeben. Rechnung{" "}
               <span className="font-mono">{entry.invoiceNumber}</span>:
               abgerechnet {formatEuro(entry.billedCents)}, jetzt{" "}
-              {formatEuro(entry.newCents)}. Stornieren Sie die Rechnung. Der
-              nächste Lauf dieses Monats stellt sie neu aus.
+              {formatEuro(entry.newCents)}. Storniere die Rechnung. Der nächste
+              Lauf dieses Monats stellt sie neu aus.
             </p>
           </li>
         ))}

@@ -239,16 +239,14 @@ describe("InvitationForm", () => {
     );
     expect(
       screen.getByText(
-        "Die Einladung konnte nicht übernommen werden. Bitte prüfen Sie Ihre Angaben.",
+        "Die Einladung konnte nicht übernommen werden. Bitte prüfe deine Angaben.",
       ),
     ).toBeInTheDocument();
     expect(email).toHaveAttribute("aria-invalid", "true");
     const role = screen.getByLabelText("Rolle");
     expect(role).toHaveAttribute("aria-invalid", "true");
     expect(role).toHaveAttribute("aria-describedby", "invitation-role-error");
-    expect(screen.getAllByText("Bitte prüfen Sie dieses Feld.")).toHaveLength(
-      2,
-    );
+    expect(screen.getAllByText("Bitte prüfe dieses Feld.")).toHaveLength(2);
   });
 
   it("focuses the role when it is the only failed field", async () => {
@@ -444,7 +442,7 @@ describe("InvitationForm", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "Diese Person hat schon Zugang zu dieser Schule. Sie finden sie in der Personalliste.",
+          "Diese Person hat schon Zugang zu dieser Schule. Du findest sie in der Personalliste.",
         ),
       ).toBeInTheDocument();
     });
@@ -483,7 +481,7 @@ describe("InvitationForm", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "Für diese E-Mail-Adresse gibt es schon ein Konto. Bitte verwenden Sie eine andere Adresse.",
+          "Für diese E-Mail-Adresse gibt es schon ein Konto. Bitte verwende eine andere Adresse.",
         ),
       ).toBeInTheDocument();
     });
@@ -513,7 +511,7 @@ describe("InvitationForm", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "Die Einladung konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+          "Die Einladung konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
         ),
       ).toBeInTheDocument();
     });
@@ -695,7 +693,7 @@ describe("InvitationForm former employment hint", () => {
     await typeEmail(" Former@Example.com ");
 
     expect(
-      await screen.findByText("Diese Person war schon bei Ihnen beschäftigt"),
+      await screen.findByText("Diese Person war schon bei dir beschäftigt"),
     ).toBeInTheDocument();
     expect(mockFindFormerEmployment).toHaveBeenCalledWith(
       "former@example.com",
@@ -731,7 +729,7 @@ describe("InvitationForm former employment hint", () => {
       );
     });
     expect(
-      screen.queryByText("Diese Person war schon bei Ihnen beschäftigt"),
+      screen.queryByText("Diese Person war schon bei dir beschäftigt"),
     ).not.toBeInTheDocument();
   });
 
@@ -761,7 +759,7 @@ describe("InvitationForm former employment hint", () => {
 
     await typeEmail("former@example.com");
     expect(
-      await screen.findByText("Diese Person war schon bei Ihnen beschäftigt"),
+      await screen.findByText("Diese Person war schon bei dir beschäftigt"),
     ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("E-Mail-Adresse"), {
@@ -771,7 +769,7 @@ describe("InvitationForm former employment hint", () => {
 
     await waitFor(() => {
       expect(
-        screen.queryByText("Diese Person war schon bei Ihnen beschäftigt"),
+        screen.queryByText("Diese Person war schon bei dir beschäftigt"),
       ).not.toBeInTheDocument();
     });
   });
@@ -791,7 +789,7 @@ describe("InvitationForm former employment hint", () => {
 
     await typeEmail("former@example.com");
     expect(
-      await screen.findByText("Diese Person war schon bei Ihnen beschäftigt"),
+      await screen.findByText("Diese Person war schon bei dir beschäftigt"),
     ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("E-Mail-Adresse"), {
@@ -810,7 +808,7 @@ describe("InvitationForm former employment hint", () => {
     });
 
     expect(
-      screen.queryByText("Diese Person war schon bei Ihnen beschäftigt"),
+      screen.queryByText("Diese Person war schon bei dir beschäftigt"),
     ).not.toBeInTheDocument();
     expect(screen.getByText("Adresse wird geprüft…")).toBeDisabled();
   });
@@ -829,7 +827,7 @@ describe("InvitationForm former employment hint", () => {
     });
 
     expect(
-      screen.queryByText("Diese Person war schon bei Ihnen beschäftigt"),
+      screen.queryByText("Diese Person war schon bei dir beschäftigt"),
     ).not.toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByText("Einladung senden")).not.toBeDisabled();

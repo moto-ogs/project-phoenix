@@ -266,7 +266,7 @@ export default function CatererOverviewPage() {
   const loading = schoolResponse.isLoading || response.isLoading;
   const { error: schoolsLoadError } = useSwrResourceLoadError(
     [schoolResponse],
-    "Ihre Schulen",
+    "Deine Schulen",
     schoolResponse.mutate,
   );
   const { error: ordersLoadError } = useSwrResourceLoadError(
@@ -627,8 +627,8 @@ export default function CatererOverviewPage() {
           <LoadErrorAlert error={error} />
         ) : schools !== null && list.length === 0 ? (
           <p className="text-sm leading-6 text-gray-600">
-            Sie beliefern zurzeit keine Schule. Sobald eine Schule Sie einlädt,
-            sehen Sie hier ihre Bestellungen.
+            Du belieferst zurzeit keine Schule. Sobald eine Schule dich einlädt,
+            siehst du hier ihre Bestellungen.
           </p>
         ) : (
           <DataTable

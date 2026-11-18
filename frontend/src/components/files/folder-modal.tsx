@@ -96,16 +96,16 @@ export function FolderModal({
 
   const handleSave = async () => {
     const fields: Record<string, string> = {};
-    if (!name.trim()) fields.name = "Bitte geben Sie einen Namen ein.";
+    if (!name.trim()) fields.name = "Bitte gib einen Namen ein.";
     if (
       visibility === "selected" &&
       roleIds.length === 0 &&
       accountIds.length === 0
     ) {
-      fields.role_ids = "Bitte wählen Sie eine Rolle oder eine Person.";
+      fields.role_ids = "Bitte wähle eine Rolle oder eine Person.";
     }
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", fields);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fields);
       return;
     }
     await save.run(async (op) => {

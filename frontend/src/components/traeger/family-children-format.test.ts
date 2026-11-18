@@ -95,7 +95,7 @@ describe("a family without a mail address (#7356)", () => {
     expect(
       checkReason({ ...imported, status: "differing" }, "2026-09-09"),
     ).toBe(
-      "Die Verträge der Familie nennen verschiedene Kinderzahlen. Bis Sie eine bestätigen, zählen nur die Kinder mit Vertrag.",
+      "Die Verträge der Familie nennen verschiedene Kinderzahlen. Bis du eine bestätigst, zählen nur die Kinder mit Vertrag.",
     );
   });
 });

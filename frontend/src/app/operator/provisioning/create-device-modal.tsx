@@ -69,13 +69,13 @@ export function CreateDeviceModal({
       // unset lands here and must produce a visible error instead of a silent
       // return. The device-ID text input keeps its native `required`.
       if (!schoolId) {
-        const hint = "Bitte wählen Sie eine Schule aus.";
-        invalid("Bitte prüfen Sie die markierten Felder.", { school_id: hint });
+        const hint = "Bitte wähle eine Schule aus.";
+        invalid("Bitte prüfe die markierten Felder.", { school_id: hint });
         return;
       }
       if (!deviceType) {
-        const hint = "Bitte wählen Sie einen Gerätetyp aus.";
-        invalid("Bitte prüfen Sie die markierten Felder.", {
+        const hint = "Bitte wähle einen Gerätetyp aus.";
+        invalid("Bitte prüfe die markierten Felder.", {
           device_type: hint,
         });
         return;
@@ -139,7 +139,7 @@ export function CreateDeviceModal({
           />
 
           <p className="text-sm text-gray-600">
-            Kopieren Sie den API-Key jetzt. Er wird nur einmal angezeigt.
+            Kopiere den API-Key jetzt. Er wird nur einmal angezeigt.
           </p>
           {createdDevice.apiKey && (
             <div className="space-y-2">

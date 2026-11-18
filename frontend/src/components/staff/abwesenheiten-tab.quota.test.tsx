@@ -244,7 +244,7 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
     // The form alert announces the failure once; each field carries its
     // own hint as description (#5217: hints after Speichern stay quiet).
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bitte prüfen Sie die markierten Felder.",
+      "Bitte prüfe die markierten Felder.",
     );
     expect(fields.entitled).toHaveAccessibleDescription(
       "Bitte eine Zahl zwischen 0 und 366 eingeben.",

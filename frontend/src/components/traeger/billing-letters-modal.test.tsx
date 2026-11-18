@@ -67,7 +67,7 @@ it("names the invoices without a debtor number the payment text needs", async ()
   fireEvent.click(screen.getByRole("button", { name: "Schreiben erstellen" }));
   expect(
     await screen.findByText(
-      /^Rechnungen ohne Debitorennummer: 3\. Ihr Zahlungstext nennt aber die Debitorennummer\./,
+      /^Rechnungen ohne Debitorennummer: 3\. Dein Zahlungstext nennt aber die Debitorennummer\./,
     ),
   ).toBeInTheDocument();
 });

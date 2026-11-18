@@ -100,7 +100,7 @@ export function WorkTimeModelPeopleTab({ model }: WorkTimeModelPeopleTabProps) {
   let assignDisabledReason: string | undefined;
   if (archived) {
     assignDisabledReason =
-      "Die Vorlage wird nicht mehr angeboten. Bieten Sie sie zuerst wieder an.";
+      "Die Vorlage wird nicht mehr angeboten. Biete sie zuerst wieder an.";
   } else if (!loaded && !loadFailed) {
     assignDisabledReason = "Die Personen werden noch geladen.";
   } else if (!loaded) {
@@ -128,7 +128,7 @@ export function WorkTimeModelPeopleTab({ model }: WorkTimeModelPeopleTabProps) {
           onClick={() => setDialogOpen(true)}
           disabled={assignDisabledReason !== undefined}
           disabledReason={assignDisabledReason}
-          tooltip="Öffnet die Auswahl. Gespeichert wird erst nach Ihrer Bestätigung."
+          tooltip="Öffnet die Auswahl. Gespeichert wird erst nach deiner Bestätigung."
         >
           <UserPlus className="size-4" aria-hidden="true" />
           Personen zuordnen
@@ -157,7 +157,7 @@ export function WorkTimeModelPeopleTab({ model }: WorkTimeModelPeopleTabProps) {
           description={
             archived
               ? "Eine Vorlage, die nicht mehr angeboten wird, lässt sich nicht neu zuordnen."
-              : "Mit „Personen zuordnen“ wählen Sie, für wen ihr Soll gilt."
+              : "Mit „Personen zuordnen“ wählst du, für wen ihr Soll gilt."
           }
         />
       ) : (

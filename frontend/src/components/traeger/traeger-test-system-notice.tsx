@@ -18,8 +18,8 @@ export function TraegerTestSystemNotice() {
         <StatusBadge label="Testsystem" tone="orange" />
       </span>
       <p className="min-w-0 text-sm text-gray-700">
-        Hier probieren Sie moto aus. Alle Kinder sind erfunden. Tragen Sie hier
-        keine echten Daten ein.
+        Hier probierst du moto aus. Alle Kinder sind erfunden. Trage hier keine
+        echten Daten ein.
       </p>
     </div>
   );

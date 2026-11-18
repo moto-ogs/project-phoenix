@@ -34,10 +34,10 @@
     "pickupWithMode": "Abholung für {name} ändern",
     "pickupCompactWithMode": "Abholung ändern",
     "pickupHintWithMode": "Abholzeit oder Abholart für einen Tag ändern",
-    "profileTooltip": "Öffnet die Seite Ihres Kindes mit allen Angaben.",
-    "sickTooltip": "Öffnet das Formular, um Ihr Kind abzumelden.",
+    "profileTooltip": "Öffnet die Seite deines Kindes mit allen Angaben.",
+    "sickTooltip": "Öffnet das Formular, um dein Kind abzumelden.",
     "pickupTooltip": "Öffnet das Formular für eine Anfrage zur Abholzeit.",
     "pickupWithModeTooltip": "Öffnet das Formular für eine Anfrage zur Abholung.",
-    "messageTooltip": "Öffnet die Nachrichten mit der {careTerm} zu Ihrem Kind."
+    "messageTooltip": "Öffnet die Nachrichten mit der {careTerm} zu deinem Kind."
   }
 }

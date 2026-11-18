@@ -231,7 +231,7 @@ func TestRolloverOptInRendererSubjectFallbacks(t *testing.T) {
 	row.Payload[enrollment.EnrollmentPayloadPhaseName] = ""
 	mail, err = render(NewMailRenderers(nil, "", enrollmentTestToday).RolloverOptIn, row)
 	require.NoError(t, err)
-	assert.Equal(t, "Bitte bestätigen Sie die Anmeldung", mail.Subject)
+	assert.Equal(t, "Bitte bestätige die Anmeldung", mail.Subject)
 }
 
 func TestRolloverOptOutRendererHappyPath(t *testing.T) {
@@ -380,7 +380,7 @@ func TestChangeRequestRenderersRequireOnlyTheRecipient(t *testing.T) {
 	}})
 	require.NoError(t, err)
 	assert.Equal(t, "enrollment-change-request-question.html", mail.Template)
-	assert.Equal(t, "Rückfrage zu Ihrer Änderungsanfrage - OGS Sonnenschule", mail.Subject)
+	assert.Equal(t, "Rückfrage zu deiner Änderungsanfrage - OGS Sonnenschule", mail.Subject)
 	assert.Equal(t, "https://admin", contentOf(t, mail)["AdminURL"])
 }
 

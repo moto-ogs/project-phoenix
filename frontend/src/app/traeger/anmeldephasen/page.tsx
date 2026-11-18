@@ -103,7 +103,7 @@ export default function TraegerCatalogPhasesPage() {
   return (
     <TenantPage
       title="Anmeldephasen"
-      info="Hier legen Sie eine Anmeldephase mit Betreuungsangeboten einmal für mehrere Schulen an. Jede Schule bekommt eine eigene Kopie, sobald Sie sie freigeben und übertragen. Die Schule darf ihre Kopie ändern oder ausschalten."
+      info="Hier legst du eine Anmeldephase mit Betreuungsangeboten einmal für mehrere Schulen an. Jede Schule bekommt eine eigene Kopie, sobald du sie freigibst und überträgst. Die Schule darf ihre Kopie ändern oder ausschalten."
       stats={
         phases.length > 0 ? (
           <span>
@@ -154,7 +154,7 @@ export default function TraegerCatalogPhasesPage() {
           <EmptyState
             icon={<ClipboardList className="h-12 w-12" aria-hidden="true" />}
             title="Noch keine Anmeldephase."
-            description="Legen Sie oben eine Anmeldephase an. Danach fügen Sie die Betreuungsangebote hinzu."
+            description="Lege oben eine Anmeldephase an. Danach fügst du die Betreuungsangebote hinzu."
           />
         }
       />

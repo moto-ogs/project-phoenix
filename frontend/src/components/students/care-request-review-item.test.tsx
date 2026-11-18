@@ -382,7 +382,7 @@ describe("CareRequestReviewItem", () => {
     fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
     expect(mockDecide).not.toHaveBeenCalled();
     await expectErrorToast(
-      /Die Anfrage kann nicht freigegeben werden\. Bitte laden Sie die Seite neu\./,
+      /Die Anfrage kann nicht freigegeben werden\. Bitte lade die Seite neu\./,
     );
   });
 
@@ -438,7 +438,7 @@ describe("CareRequestReviewItem", () => {
     fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
 
     await expectErrorToast(
-      /Die Anfrage konnte nicht bearbeitet werden\. Bitte versuchen Sie es später erneut\./,
+      /Die Anfrage konnte nicht bearbeitet werden\. Bitte versuche es später erneut\./,
     );
     expect(onDecided).not.toHaveBeenCalled();
     expect(screen.getByText("Lara Beispiel")).toBeInTheDocument();

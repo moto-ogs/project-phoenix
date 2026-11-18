@@ -57,7 +57,7 @@ var (
 	// Care Plan refusals the enrollment routes map.
 	ErrCareOfferingsDisabled                        = errors.New("care offerings are disabled for this tenant")
 	ErrOfferingAdjustmentInvalid                    = errors.New("offering adjustment is invalid")
-	ErrCompleteWithdrawalConfirmationRequired       = errors.New("alle Betreuungstage werden entfernt. Bitte bestätigen Sie die Komplett-Abmeldung")
+	ErrCompleteWithdrawalConfirmationRequired       = errors.New("alle Betreuungstage werden entfernt. Bitte bestätige die Komplett-Abmeldung")
 	ErrDecisionRequestNotFound                      = errors.New("enrollment request not found")
 	ErrDecisionChildNotFound                        = errors.New("request child not found")
 	ErrCareOfferingNotFound                         = errors.New("care offering not found")

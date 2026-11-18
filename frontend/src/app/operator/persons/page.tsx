@@ -148,7 +148,7 @@ function OperatorPersonsPageContent() {
       {!selectedSchool ? (
         <SimpleEmptyState
           title="Keine Schule ausgewählt"
-          description="Wählen Sie eine Schule aus, um deren Personen anzuzeigen."
+          description="Wähle eine Schule aus, um deren Personen anzuzeigen."
         />
       ) : !schoolPersons ||
         (schoolPersonsError &&

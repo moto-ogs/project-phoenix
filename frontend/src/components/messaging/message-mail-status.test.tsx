@@ -29,7 +29,7 @@ describe("MessageMailBadge (#7058)", () => {
 describe("messageMailNote", () => {
   it("points to the guardian card when the mail did not arrive", () => {
     expect(messageMailNote("undeliverable")).toBe(
-      "Die Mail kam nicht an. Korrigieren Sie die Adresse beim Kind unter „Erziehungsberechtigte“.",
+      "Die Mail kam nicht an. Korrigiere die Adresse beim Kind unter „Erziehungsberechtigte“.",
     );
   });
 
@@ -65,7 +65,7 @@ describe("GroupMessageMailBadges", () => {
 
   it("names a refused mail and where to find the address", () => {
     expect(groupMessageMailNote({ delivered: 3, undeliverable: 2 })).toBe(
-      "2 Mails kamen nicht an. Welche Adresse betroffen ist, sehen Sie beim Kind unter „Erziehungsberechtigte“.",
+      "2 Mails kamen nicht an. Welche Adresse betroffen ist, siehst du beim Kind unter „Erziehungsberechtigte“.",
     );
     expect(groupMessageMailNote({ delivered: 3 })).toBeNull();
   });

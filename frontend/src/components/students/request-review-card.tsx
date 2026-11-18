@@ -373,7 +373,7 @@ export function RequestReviewCard({
                 error={
                   reasonError ??
                   (approveReasonMissing
-                    ? "Bitte tragen Sie eine Begründung ein."
+                    ? "Bitte trage eine Begründung ein."
                     : undefined)
                 }
                 placeholder={
@@ -393,7 +393,7 @@ export function RequestReviewCard({
                   variant="outline"
                   size="md"
                   disabled={busy}
-                  tooltip="Lehnt die Anfrage sofort ab, die Eltern sehen Ihre Begründung."
+                  tooltip="Lehnt die Anfrage sofort ab, die Eltern sehen deine Begründung."
                   onClick={onReject}
                 >
                   Ablehnen

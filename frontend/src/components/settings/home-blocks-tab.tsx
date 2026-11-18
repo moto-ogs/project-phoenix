@@ -262,7 +262,7 @@ export function HomeBlocksTab() {
           size="md"
           disabled={busy || !dirty}
           onClick={() => void save()}
-          tooltip="Übernimmt Ihre Auswahl für die Startseite aller Mitarbeitenden."
+          tooltip="Übernimmt deine Auswahl für die Startseite aller Mitarbeitenden."
         >
           {busy ? "Wird gespeichert …" : "Speichern"}
         </Button>
@@ -270,7 +270,7 @@ export function HomeBlocksTab() {
     >
       <div ref={formRef} className="space-y-6">
         <p className="text-sm leading-6 text-gray-600">
-          Legen Sie fest, was die Startseite allen zeigt. Bei „Frei wählbar“
+          Lege fest, was die Startseite allen zeigt. Bei „Frei wählbar“
           entscheidet jede Person selbst. „Immer anzeigen“ und „Aus“ gelten für
           alle.
         </p>

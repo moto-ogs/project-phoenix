@@ -156,7 +156,7 @@ describe("SettingsField retention windows (ADR 0048)", () => {
     expect(getByText("Nur Lesen")).toBeInTheDocument();
     expect(
       getByText(
-        "Diese Frist legt moto mit Ihrer Schule fest. Für eine Änderung wenden Sie sich an moto.",
+        "Diese Frist legt moto mit deiner Schule fest. Für eine Änderung wende dich an moto.",
       ),
     ).toBeInTheDocument();
   });

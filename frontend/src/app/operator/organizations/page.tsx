@@ -342,7 +342,7 @@ export default function OperatorOrganizationsPage() {
           activeOrganizations.length === 0 ? (
           <ProvisioningEmptyState
             title="Keine Träger"
-            description="Erstellen Sie einen neuen Träger, um Schulen zu verwalten."
+            description="Erstelle einen neuen Träger, um Schulen zu verwalten."
             buttonLabel="Neuer Träger"
             onAction={() => setCreateOrgOpen(true)}
           />

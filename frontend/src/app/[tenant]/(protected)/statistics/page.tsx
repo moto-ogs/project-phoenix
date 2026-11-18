@@ -117,7 +117,7 @@ const COURSE_VIEW_ITEMS: readonly { value: CourseView; label: string }[] = [
 
 /** Fehlendes Recht ist ein Zustand mit eigener Seite, kein Ladefehler. */
 const FORBIDDEN_MESSAGE =
-  "Ihr Konto darf die Statistik nicht sehen. Bitte wenden Sie sich an Ihre Administration.";
+  "Dein Konto darf die Statistik nicht sehen. Bitte wende dich an deine Administration.";
 
 function addDays(d: Date, days: number): Date {
   const r = new Date(d);
@@ -1148,7 +1148,7 @@ export default function StatisticsPage() {
               (courseDataAllBeforeWindow ? (
                 <EmptyState
                   title="Keine Kurstermine für diesen Zeitraum"
-                  description={`Termine werden ${data.course_data_days} Tage aufbewahrt. Wählen Sie einen Zeitraum ab ${formatDate(data.course_data_from)}.`}
+                  description={`Termine werden ${data.course_data_days} Tage aufbewahrt. Wähle einen Zeitraum ab ${formatDate(data.course_data_from)}.`}
                 />
               ) : (
                 <>
@@ -1198,12 +1198,12 @@ export default function StatisticsPage() {
               (data.room_history_disabled ? (
                 <EmptyState
                   title="Raumhistorie ist ausgeschaltet"
-                  description="Raumstatistiken brauchen das eingeschaltete Anwesenheitsprotokoll. Ihre Administration kann es unter Einstellungen > Datenschutz einschalten."
+                  description="Raumstatistiken brauchen das eingeschaltete Anwesenheitsprotokoll. Deine Administration kann es unter Einstellungen > Datenschutz einschalten."
                 />
               ) : roomDataAllBeforeWindow ? (
                 <EmptyState
                   title="Keine Raumdaten für diesen Zeitraum"
-                  description={`Wählen Sie einen Zeitraum ab ${formatDate(data.room_data_from)}.`}
+                  description={`Wähle einen Zeitraum ab ${formatDate(data.room_data_from)}.`}
                 />
               ) : (
                 <>

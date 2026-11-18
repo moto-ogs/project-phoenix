@@ -123,10 +123,10 @@ export default function TraegerSchoolsPage() {
       title="Schulen"
       info={
         <>
-          Alle Schulen Ihres Trägers. Neue Schulen ordnet das moto-Team zu. Ein
+          Alle Schulen deines Trägers. Neue Schulen ordnet das moto-Team zu. Ein
           Klick auf eine Schule zeigt ihre Zahlen und Stammdaten.
           {canOpen &&
-            " „Schul-App öffnen“ zeigt die Schule in einem neuen Tab. Dort haben Sie dieselben Rechte wie die Verwaltung der Schule. Mit „Zurück zur Träger-App“ kommen Sie wieder hierher."}
+            " „Schul-App öffnen“ zeigt die Schule in einem neuen Tab. Dort hast du dieselben Rechte wie die Verwaltung der Schule. Mit „Zurück zur Träger-App“ kommst du wieder hierher."}
         </>
       }
       stats={
@@ -181,8 +181,8 @@ export default function TraegerSchoolsPage() {
         emptyState={
           <EmptyState
             icon={<School className="h-12 w-12" aria-hidden="true" />}
-            title="Ihrem Träger sind noch keine Schulen zugeordnet."
-            description="Das moto-Team ordnet die Schulen Ihrem Träger zu."
+            title="Deinem Träger sind noch keine Schulen zugeordnet."
+            description="Das moto-Team ordnet die Schulen deinem Träger zu."
           />
         }
       />

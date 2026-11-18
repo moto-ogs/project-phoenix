@@ -61,7 +61,7 @@ const logger = createLogger({ component: "TeamChatThread" });
 
 const DISABLED_TITLE = "Der Team-Chat ist ausgeschaltet";
 const DISABLED_DESCRIPTION =
-  "Ihre Schule hat den Team-Chat ausgeschaltet. Wenden Sie sich an die OGS-Leitung, wenn Sie ihn nutzen möchten.";
+  "Deine Schule hat den Team-Chat ausgeschaltet. Wende dich an die OGS-Leitung, wenn du ihn nutzen möchtest.";
 
 export type {
   TeamChatThreadBack,
@@ -389,7 +389,7 @@ export function TeamChatThread({
     : messageCount;
   const audience = group
     ? "Nur die Mitglieder sehen diese Nachrichten. Wer neu dazukommt, sieht sie ab dem Beitritt."
-    : "Nur Sie beide sehen diese Nachrichten.";
+    : "Nur ihr beide seht diese Nachrichten.";
 
   const actions =
     group && thread && !showSkeleton ? (
@@ -471,7 +471,7 @@ export function TeamChatThread({
           ) : (
             <EmptyState
               title="Noch keine Nachrichten"
-              description="Schreiben Sie die erste Nachricht in dieser Unterhaltung."
+              description="Schreibe die erste Nachricht in dieser Unterhaltung."
             />
           )}
         </div>
@@ -483,7 +483,7 @@ export function TeamChatThread({
         {readOnlyThread ? (
           <Alert
             type="info"
-            message="Diese Person gehört nicht mehr zu Ihrer Schule. Sie können den Verlauf lesen, aber nicht mehr schreiben."
+            message="Diese Person gehört nicht mehr zu deiner Schule. Du kannst den Verlauf lesen, aber nicht mehr schreiben."
           />
         ) : chatEnabled ? (
           <MessageComposer
@@ -504,7 +504,7 @@ export function TeamChatThread({
         ) : (
           <Alert
             type="info"
-            message="Der Team-Chat ist ausgeschaltet. Sie können hier nicht schreiben."
+            message="Der Team-Chat ist ausgeschaltet. Du kannst hier nicht schreiben."
           />
         )}
       </div>

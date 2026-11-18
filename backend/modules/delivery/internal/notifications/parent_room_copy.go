@@ -21,6 +21,6 @@ func ParentRoomChangedCopy(locale string) (string, string) {
 	case "uk":
 		return "Приміщення змінено", "Заняття вашої дитини пройде в іншому приміщенні."
 	default:
-		return "Raum geändert", "Ein Termin Ihres Kindes findet in einem anderen Raum statt."
+		return "Raum geändert", "Ein Termin deines Kindes findet in einem anderen Raum statt."
 	}
 }

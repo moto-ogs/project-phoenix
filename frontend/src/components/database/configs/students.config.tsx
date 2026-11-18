@@ -37,7 +37,6 @@ export const studentsConfig = defineEntityConfig<Student>({
   labels: {
     createButton: "Neues Kind erstellen",
     detailModalTitle: "Kinddetails",
-    deleteConfirmation:
-      "Sind Sie sicher, dass Sie dieses Kind löschen möchten?",
+    deleteConfirmation: "Bist du sicher, dass du dieses Kind löschen möchtest?",
   },
 });

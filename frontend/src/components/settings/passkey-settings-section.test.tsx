@@ -149,7 +149,7 @@ describe("PasskeySettingsSection", () => {
       screen.getByText("Sicherheitscode per E-Mail senden"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Öffnen Sie danach Ihr E-Mail-Postfach/),
+      screen.getByText(/Öffne danach dein E-Mail-Postfach/),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "E-Mail senden" }));

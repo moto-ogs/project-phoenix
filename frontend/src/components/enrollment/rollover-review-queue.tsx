@@ -34,7 +34,7 @@ interface Props {
 }
 
 const REVIEW_QUEUE_DESCRIPTION =
-  "Kinder, die nicht automatisch übernommen werden konnten, meist weil ihre Klassenstufe nach Erhöhung über der Höchstgrenze liegt. Wählen Sie pro Eintrag, ob Sie das Kind behalten (ggf. mit anderer Klassenstufe), aus der nächsten Phase entfernen oder vorerst zurückstellen.";
+  "Kinder, die nicht automatisch übernommen werden konnten, meist weil ihre Klassenstufe nach Erhöhung über der Höchstgrenze liegt. Wähle pro Eintrag, ob du das Kind behältst (ggf. mit anderer Klassenstufe), aus der nächsten Phase entfernen oder vorerst zurückstellen.";
 
 function gradeFieldName(childId: string): string {
   return `grade-${childId}`;
@@ -124,7 +124,7 @@ export function RolloverReviewQueue({ phaseID }: Props) {
       // Lokale Prüfung: der Hinweis steht am Feld, der Fokus springt hin.
       decision.setFieldErrors({
         [gradeFieldName(item.child_id)]:
-          "Bitte geben Sie die Klassenstufe als ganze Zahl ein.",
+          "Bitte gib die Klassenstufe als ganze Zahl ein.",
       });
       return;
     }
