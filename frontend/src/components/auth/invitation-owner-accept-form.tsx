@@ -17,6 +17,7 @@ import { listAllTenants } from "~/lib/tenant-api";
 import type { TenantSummary } from "~/lib/tenant-api";
 import { schoolPortalLoginUrl } from "~/lib/school-url";
 import { parentsPortalLoginUrl } from "~/lib/parent-url";
+import { portalOfHost } from "~/lib/portal-paths";
 import { clientEnv } from "~/env.client";
 import { credentialError, INVITATION_REFUSALS } from "./credential-error";
 
@@ -47,6 +48,9 @@ export function InvitationOwnerAcceptForm({
   const [addressStatus, setAddressStatus] = useState<
     "idle" | "loading" | "error" | "ready"
   >("idle");
+  // Renders only in the browser: the page loads the invitation first. A
+  // choice that leads back to this portal would only reload the page (#7369).
+  const currentPortal = portalOfHost(window.location.host);
 
   function openInvitationAt(url: URL) {
     url.pathname = "/invite";
@@ -137,6 +141,13 @@ export function InvitationOwnerAcceptForm({
         <li>Kehren Sie danach zu dieser Einladung zurück.</li>
         <li>Prüfen Sie Ihren Namen und nehmen Sie die Einladung an.</li>
       </ol>
+      {currentPortal === "school" ? (
+        // Hier meldet sich nur an, wer schon Lehrkraft ist (#7369).
+        <p className="text-sm text-gray-700">
+          Sie melden sich bisher nicht als Lehrkraft an? Dann wählen Sie unten
+          „Andere moto-Adresse wählen“ und nehmen die Einladung dort an.
+        </p>
+      ) : null}
       <ButtonLink
         href={redirectToPath ?? "/"}
         target="_blank"
@@ -162,26 +173,30 @@ export function InvitationOwnerAcceptForm({
               Wählen Sie den Bereich, in dem Sie moto bisher nutzen.
             </p>
             <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                onClick={() =>
-                  openInvitationAt(new URL(parentsPortalLoginUrl()))
-                }
-              >
-                Für Eltern
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                onClick={() =>
-                  openInvitationAt(new URL(schoolPortalLoginUrl()))
-                }
-              >
-                Für Lehrkräfte
-              </Button>
+              {currentPortal === "parent" ? null : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  onClick={() =>
+                    openInvitationAt(new URL(parentsPortalLoginUrl()))
+                  }
+                >
+                  Für Eltern
+                </Button>
+              )}
+              {currentPortal === "school" ? null : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  onClick={() =>
+                    openInvitationAt(new URL(schoolPortalLoginUrl()))
+                  }
+                >
+                  Für Lehrkräfte
+                </Button>
+              )}
             </div>
             {addressStatus === "loading" ? (
               <p role="status" className="text-sm text-gray-600">

@@ -298,3 +298,49 @@ func TestInvitationConcurrentOwnerAcceptanceIsSingleUse(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, owner.PasswordHash, stored.PasswordHash)
 }
+
+// A staff account of another school without the Lehrkraft role, invited as
+// Lehrkraft, cannot sign in to the school portal before it accepts. It
+// accepts with the session of its former school, and the school portal of
+// the new school then lets it in (#7369).
+func TestInvitationAsLehrkraftAcceptsWithSessionOfAnotherSchool(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	auth := setupAuthService(t, db)
+	invitations := setupInvitationService(t, db)
+	formerSchool, _ := newSchoolTenant(t, db)
+	email, accountID := newSchoolAccount(t, db, auth, "invited-lehrkraft", formerSchool)
+	newSchool, _ := newSchoolTenant(t, db)
+	creator := testpkg.CreateTestAccount(t, db, "lehrkraft-invitation-creator")
+
+	invitation, err := invitations.CreateSchoolInvitation(testpkg.TenantContext(newSchool), identityaccess.SchoolInvitationRequest{
+		Email: email, RoleID: systemRoleID(t, db, "lehrkraft"), TenantID: newSchool, CreatedBy: creator.ID,
+		FirstName: testpkg.StrPtr("Lena"), LastName: testpkg.StrPtr("Lehrkraft"),
+		ActorPermissions: []string{usersManagePermission},
+	})
+	require.NoError(t, err)
+	preview, err := invitations.ValidateSchoolInvitation(context.Background(), invitation.Token)
+	require.NoError(t, err)
+	require.Equal(t, identityaccess.InvitationPortalSchool, preview.Portal)
+	require.True(t, preview.RequiresAccountLogin)
+	before, err := auth.HasSchoolPortalAccess(context.Background(), accountID, newSchool)
+	require.NoError(t, err)
+	require.False(t, before, "without the role the school portal cannot be the place to sign in first")
+
+	signer, err := sessiontoken.NewTokenAuthWithDurations(authTestFactoryConfig(false).JWTSecret, 15*time.Minute, 24*time.Hour)
+	require.NoError(t, err)
+	formerSession, err := tokentest.CreateJWT(signer, sessiontoken.AppClaims{
+		ID: int(accountID), Sub: email, Roles: []string{}, Scope: "tenant", TenantID: formerSchool,
+	})
+	require.NoError(t, err)
+	accepted, err := invitations.AcceptSchoolInvitation(context.Background(), invitation.Token, identityaccess.InvitationRegistration{OwnerAccessToken: formerSession})
+	require.NoError(t, err)
+	require.Equal(t, accountID, accepted.ID)
+
+	after, err := auth.HasSchoolPortalAccess(context.Background(), accountID, newSchool)
+	require.NoError(t, err)
+	require.True(t, after, "the accepted invitation opens the school portal of the new school")
+	stillMember, err := testpkg.ActiveAccountTenantExists(context.Background(), db, accountID, formerSchool)
+	require.NoError(t, err)
+	require.True(t, stillMember, "the former school keeps the account")
+}
