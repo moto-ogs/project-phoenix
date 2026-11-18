@@ -61,6 +61,11 @@ export function StaffPersonCard({
 }>) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<StaffPersonInput>(() => draftOf(record));
+  // The values the edit started from: an untouched draft saves nothing,
+  // even when the record was refreshed by another save meanwhile.
+  const [initial, setInitial] = useState<StaffPersonInput>(() =>
+    draftOf(record),
+  );
   const [birthdayValid, setBirthdayValid] = useState(true);
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -70,6 +75,7 @@ export function StaffPersonCard({
 
   const startEdit = () => {
     setDraft(draftOf(record));
+    setInitial(draftOf(record));
     setBirthdayValid(true);
     errors.clear();
     setEditing(true);
@@ -89,7 +95,7 @@ export function StaffPersonCard({
       errors.invalid("Bitte prüfen Sie den Namen.", missing);
       return;
     }
-    if (sameValues(next, draftOf(record))) {
+    if (sameValues(next, initial)) {
       setEditing(false);
       return;
     }

@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // The correction of the person in a Personalstamm (#7379): the
@@ -35,12 +36,15 @@ func (e *StaffPersonError) Error() string {
 
 func (e *StaffPersonError) Unwrap() error { return ErrStaffStammdatenInvalid }
 
-// NormalizeStaffPerson trims the names and checks every value: both names
-// are required and fit their columns, a birthday is a past day as
+// maxRecordNameLength is the width of the name columns of a record.
+const maxRecordNameLength = 255
+
+// NormalizeStaffPerson trims the names to NFC and checks every value: both
+// names are required and fit their columns, a birthday is a past day as
 // YYYY-MM-DD or empty. today refuses a birthday that has not come yet.
 func NormalizeStaffPerson(person StaffPerson, today calendar.Date) (StaffPerson, error) {
-	person.FirstName, person.LastName = strings.TrimSpace(person.FirstName), strings.TrimSpace(person.LastName)
-	if field, ok := invalidStaffName(person.FirstName, person.LastName); ok {
+	person.FirstName, person.LastName = textnorm.Name(person.FirstName), textnorm.Name(person.LastName)
+	if field, ok := invalidStaffName(person.FirstName, person.LastName, maxRecordNameLength); ok {
 		return StaffPerson{}, &StaffPersonError{Field: field, Reason: "is required, at most 255 characters"}
 	}
 	person.Birthday = strings.TrimSpace(person.Birthday)
@@ -56,10 +60,10 @@ func NormalizeStaffPerson(person StaffPerson, today calendar.Date) (StaffPerson,
 }
 
 // invalidStaffName names the first of two trimmed names that is empty or
-// wider than the name columns, which count characters, not bytes.
-func invalidStaffName(firstName, lastName string) (string, bool) {
+// longer than limit characters (not bytes: an umlaut is one character).
+func invalidStaffName(firstName, lastName string, limit int) (string, bool) {
 	for _, name := range []struct{ field, value string }{{StaffFieldFirstName, firstName}, {StaffFieldLastName, lastName}} {
-		if name.value == "" || utf8.RuneCountInString(name.value) > maxHireNameLength {
+		if name.value == "" || utf8.RuneCountInString(name.value) > limit {
 			return name.field, true
 		}
 	}

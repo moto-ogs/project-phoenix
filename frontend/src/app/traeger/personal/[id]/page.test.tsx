@@ -336,7 +336,7 @@ describe("TraegerStaffRecordPage", () => {
     fireEvent.change(
       within(card!).getByRole("textbox", { name: /Geburtstag/ }),
       {
-        target: { value: "12.04.1990" },
+        target: { value: "12041990" },
       },
     );
     fireEvent.click(within(card!).getByRole("button", { name: "Speichern" }));

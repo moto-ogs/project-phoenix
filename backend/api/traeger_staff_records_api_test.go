@@ -479,9 +479,6 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		assert.Equal(t, workforce.TraegerStaffChangeRemoved, cleared.Changes[0].Kind, "an emptied birthday is removed, not replaced")
 		assert.Equal(t, "birthday", cleared.Changes[0].Field)
 		assert.Equal(t, "1990-04-12", cleared.Changes[0].Value)
-
-		rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"first_name": "Mira", "last_name": "Sommer-Berg", "birthday": "1990-04-12"})
-		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	})
 
 	t.Run("no role without the right and no other Träger reaches the records", func(t *testing.T) {

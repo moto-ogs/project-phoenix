@@ -2,12 +2,20 @@ import { describe, expect, it } from "vitest";
 import type { StaffChange } from "~/lib/traeger-staff-api";
 import { staffChangeText } from "./staff-record-format";
 
-const change = (patch: Partial<StaffChange>): StaffChange => ({
-  kind: "changed",
-  field: "birthday",
-  value: "",
+const change = ({
+  kind = "changed",
+  field = "birthday",
+  value = "",
+}: {
+  kind?: StaffChange["kind"];
+  field?: StaffChange["field"];
+  value?: string;
+}): StaffChange => ({
+  kind,
+  field,
+  value,
+  schoolName: "",
   occurredAt: "2026-11-18T10:00:00Z",
-  ...patch,
 });
 
 // #7379: Korrekturen an Name und Geburtstag im Verlauf der Akte.

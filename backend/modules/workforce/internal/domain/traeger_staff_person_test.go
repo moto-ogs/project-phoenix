@@ -31,6 +31,10 @@ func TestNormalizeStaffPersonNamesTheRefusedField(t *testing.T) {
 		assert.ErrorIs(t, err, ErrStaffStammdatenInvalid, tc.name)
 	}
 
+	decomposed, err := NormalizeStaffPerson(StaffPerson{FirstName: "Jonas", LastName: "Mu\u0308ller"}, today)
+	require.NoError(t, err)
+	assert.Equal(t, "Müller", decomposed.LastName, "a pasted decomposed name is stored like the typed one")
+
 	umlauts := strings.Repeat("ü", 255)
 	person, err := NormalizeStaffPerson(StaffPerson{FirstName: umlauts, LastName: "Keller"}, today)
 	require.NoError(t, err, "the column counts characters: 255 umlauts fit although they take 510 bytes")
@@ -52,4 +56,21 @@ func TestPersonChangesKeepTheOldValueOfEveryChangedField(t *testing.T) {
 	record.Birthday = "1990-04-12"
 	assert.Equal(t, []StaffPersonChange{{Field: StaffFieldBirthday, Kind: StaffChangeRemoved, Before: "1990-04-12"}},
 		record.PersonChanges(StaffPerson{FirstName: "Mira", LastName: "Sommer"}), "an emptied birthday is removed")
+}
+
+// A hire creates a person at every Einsatzort, whose names allow 200
+// characters: a longer name is a field error before anything is created.
+func TestNormalizeStaffHireRefusesANameTheSchoolCannotTake(t *testing.T) {
+	t.Parallel()
+	today := calendar.NewDate(2026, 9, 9)
+	_, err := NormalizeStaffHire(StaffHire{FirstName: strings.Repeat("ü", 201), LastName: "Keller"}, today)
+	refused, ok := errors.AsType[*StaffHireError](err)
+	require.True(t, ok)
+	assert.Equal(t, StaffFieldFirstName, refused.Field)
+}
+
+func TestSamePersonComparesNamesInNFC(t *testing.T) {
+	t.Parallel()
+	hire := StaffHire{FirstName: "Jonas", LastName: "Müller", Birthday: "1990-04-12"}
+	assert.True(t, hire.SamePerson("jonas", "Mu\u0308ller", "1990-04-12"))
 }
