@@ -4,6 +4,8 @@ import {
   calendarDate,
   instant,
   int64String,
+  int64StringOrNumber,
+  noData,
   openEnum,
   requestBody,
   safeInt,
@@ -12,8 +14,10 @@ import {
 } from "./runtime";
 import {
   EventSchema,
+  ParentConferenceWindowSchema,
   type Event,
   type InvitationAnswer,
+  type ParentConferenceWindow,
 } from "./shared.generated";
 
 export const ENROLLMENT_PHASE_AUDIENCE_VALUES = ["existing_students", "linked_parents", "new_students", "open"] as const;
@@ -95,6 +99,969 @@ export const ParentCalendarFeedResponseSchema: z.ZodType<ParentCalendarFeedRespo
   webcal_url: z.string(),
 });
 
+/** Go: parent.ChildResponse */
+export interface ChildResponse {
+  student_id: string;
+  tenant_id: string;
+  first_name: string;
+  last_name: string;
+  school_class?: string;
+  status: string;
+  enrolled_from?: string;
+  enrolled_until?: string;
+  school_name: string;
+  school_slug: string;
+  care_ended: boolean;
+  without_care_place?: boolean;
+}
+
+export const ChildResponseSchema: z.ZodType<ChildResponse, unknown> = z.object({
+  student_id: z.string(),
+  tenant_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  school_class: z.string().optional(),
+  status: z.string(),
+  enrolled_from: z.string().optional(),
+  enrolled_until: z.string().optional(),
+  school_name: z.string(),
+  school_slug: z.string(),
+  care_ended: z.boolean(),
+  without_care_place: z.boolean().optional(),
+});
+
+/** Go: parent.CareOfferingItemResponse */
+export interface CareOfferingItemResponse {
+  id: string;
+  name: string;
+  description?: string;
+  weekdays: number[] | null;
+  price_cents?: number;
+  includes_lunch: boolean;
+  includes_holiday_care: boolean;
+  valid_from?: string;
+  valid_until?: string;
+  starts_later: boolean;
+}
+
+export const CareOfferingItemResponseSchema: z.ZodType<CareOfferingItemResponse, unknown> = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  weekdays: z.array(safeInt).nullable(),
+  price_cents: safeInt.optional(),
+  includes_lunch: z.boolean(),
+  includes_holiday_care: z.boolean(),
+  valid_from: z.string().optional(),
+  valid_until: z.string().optional(),
+  starts_later: z.boolean(),
+});
+
+/** Go: parent.OfferingDiffResponse */
+export interface OfferingDiffResponse {
+  label: string;
+  old_state: string;
+  old_days: string[] | null;
+  new_state: string;
+  new_days: string[] | null;
+  new_automatic_days?: string[];
+  new_rule_days?: string[];
+  auto_trigger_names?: string[];
+  is_course?: boolean;
+}
+
+export const OfferingDiffResponseSchema: z.ZodType<OfferingDiffResponse, unknown> = z.object({
+  label: z.string(),
+  old_state: z.string(),
+  old_days: z.array(z.string()).nullable(),
+  new_state: z.string(),
+  new_days: z.array(z.string()).nullable(),
+  new_automatic_days: z.array(z.string()).optional(),
+  new_rule_days: z.array(z.string()).optional(),
+  auto_trigger_names: z.array(z.string()).optional(),
+  is_course: z.boolean().optional(),
+});
+
+/** Go: parent.PendingOfferingChangeResponse */
+export interface PendingOfferingChangeResponse {
+  id: string;
+  created_at: string;
+  effective_from: string;
+  note?: string;
+  diff: OfferingDiffResponse[] | null;
+  submitted_by_self: boolean;
+}
+
+export const PendingOfferingChangeResponseSchema: z.ZodType<PendingOfferingChangeResponse, unknown> = z.object({
+  id: z.string(),
+  created_at: z.string(),
+  effective_from: z.string(),
+  note: z.string().optional(),
+  diff: z.array(OfferingDiffResponseSchema).nullable(),
+  submitted_by_self: z.boolean(),
+});
+
+/** Go: parent.OfferingRequestedItemResponse */
+export interface OfferingRequestedItemResponse {
+  id: string;
+  name: string;
+  weekdays: number[] | null;
+}
+
+export const OfferingRequestedItemResponseSchema: z.ZodType<OfferingRequestedItemResponse, unknown> = z.object({
+  id: z.string(),
+  name: z.string(),
+  weekdays: z.array(safeInt).nullable(),
+});
+
+/** Go: parent.OfferingDecisionResponse */
+export interface OfferingDecisionResponse {
+  id: string;
+  status: string;
+  decided_at: string;
+  effective_from: string;
+  reason?: string;
+  complete_withdrawal?: boolean;
+  requested: OfferingRequestedItemResponse[] | null;
+  applied?: OfferingDiffResponse[];
+  overridden_names?: string[];
+  submitted_by_self: boolean;
+}
+
+export const OfferingDecisionResponseSchema: z.ZodType<OfferingDecisionResponse, unknown> = z.object({
+  id: z.string(),
+  status: z.string(),
+  decided_at: z.string(),
+  effective_from: z.string(),
+  reason: z.string().optional(),
+  complete_withdrawal: z.boolean().optional(),
+  requested: z.array(OfferingRequestedItemResponseSchema).nullable(),
+  applied: z.array(OfferingDiffResponseSchema).optional(),
+  overridden_names: z.array(z.string()).optional(),
+  submitted_by_self: z.boolean(),
+});
+
+/** Go: parent.CareOfferingsResponse */
+export interface CareOfferingsResponse {
+  period_name?: string;
+  period_start?: string;
+  period_end?: string;
+  offerings: CareOfferingItemResponse[] | null;
+  can_request: boolean;
+  pending_request?: PendingOfferingChangeResponse;
+  earliest_effective_from?: string;
+  last_decision?: OfferingDecisionResponse;
+  changes_disabled_reason?: string;
+}
+
+export const CareOfferingsResponseSchema: z.ZodType<CareOfferingsResponse, unknown> = z.object({
+  period_name: z.string().optional(),
+  period_start: z.string().optional(),
+  period_end: z.string().optional(),
+  offerings: z.array(CareOfferingItemResponseSchema).nullable(),
+  can_request: z.boolean(),
+  pending_request: PendingOfferingChangeResponseSchema.optional(),
+  earliest_effective_from: z.string().optional(),
+  last_decision: OfferingDecisionResponseSchema.optional(),
+  changes_disabled_reason: z.string().optional(),
+});
+
+/** Go: parent.OfferingCatalogItemResponse */
+export interface OfferingCatalogItemResponse {
+  id: string;
+  name: string;
+  description?: string;
+  days_of_week_mode: string;
+  available_days: string[] | null;
+  selection_group?: string;
+  selection_rule: string;
+  is_required: boolean;
+  price_cents?: number;
+  includes_lunch: boolean;
+  includes_holiday_care: boolean;
+  selected: boolean;
+  selected_days: string[] | null;
+  automatic: boolean;
+  is_active: boolean;
+  capacity?: number;
+  free_slots?: number;
+}
+
+export const OfferingCatalogItemResponseSchema: z.ZodType<OfferingCatalogItemResponse, unknown> = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  days_of_week_mode: z.string(),
+  available_days: z.array(z.string()).nullable(),
+  selection_group: z.string().optional(),
+  selection_rule: z.string(),
+  is_required: z.boolean(),
+  price_cents: safeInt.optional(),
+  includes_lunch: z.boolean(),
+  includes_holiday_care: z.boolean(),
+  selected: z.boolean(),
+  selected_days: z.array(z.string()).nullable(),
+  automatic: z.boolean(),
+  is_active: z.boolean(),
+  capacity: safeInt.optional(),
+  free_slots: safeInt.optional(),
+});
+
+/** Go: parent.OfferingCatalogResponse */
+export interface OfferingCatalogResponse {
+  phase_name: string;
+  selection_mode: string;
+  earliest_effective_from: string;
+  latest_effective_from: string;
+  items: OfferingCatalogItemResponse[] | null;
+}
+
+export const OfferingCatalogResponseSchema: z.ZodType<OfferingCatalogResponse, unknown> = z.object({
+  phase_name: z.string(),
+  selection_mode: z.string(),
+  earliest_effective_from: z.string(),
+  latest_effective_from: z.string(),
+  items: z.array(OfferingCatalogItemResponseSchema).nullable(),
+});
+
+/** Go: parent.CareScheduleWeekdayResponse */
+export interface CareScheduleWeekdayResponse {
+  weekday: number;
+  status: string;
+  arrival?: string;
+  pickup?: string;
+  modes: string[] | null;
+}
+
+export const CareScheduleWeekdayResponseSchema: z.ZodType<CareScheduleWeekdayResponse, unknown> = z.object({
+  weekday: safeInt,
+  status: z.string(),
+  arrival: z.string().optional(),
+  pickup: z.string().optional(),
+  modes: z.array(z.string()).nullable(),
+});
+
+/** Go: parent.ParentCareRequestDiffResponse */
+export interface ParentCareRequestDiffResponse {
+  label: string;
+  old: string;
+  new: string;
+  weekday?: number;
+  care_kind?: string;
+  old_modes?: string[];
+  new_mode?: string;
+}
+
+export const ParentCareRequestDiffResponseSchema: z.ZodType<ParentCareRequestDiffResponse, unknown> = z.object({
+  label: z.string(),
+  old: z.string(),
+  new: z.string(),
+  weekday: safeInt.optional(),
+  care_kind: z.string().optional(),
+  old_modes: z.array(z.string()).optional(),
+  new_mode: z.string().optional(),
+});
+
+/** Go: parent.PendingCareRequestResponse */
+export interface PendingCareRequestResponse {
+  id: string;
+  created_at: string;
+  diff: ParentCareRequestDiffResponse[] | null;
+  submitted_by_self: boolean;
+}
+
+export const PendingCareRequestResponseSchema: z.ZodType<PendingCareRequestResponse, unknown> = z.object({
+  id: z.string(),
+  created_at: z.string(),
+  diff: z.array(ParentCareRequestDiffResponseSchema).nullable(),
+  submitted_by_self: z.boolean(),
+});
+
+/** Go: parent.CareScheduleRequestCapabilitiesResponse */
+export interface CareScheduleRequestCapabilitiesResponse {
+  arrival: boolean;
+  pickup: boolean;
+  departure_mode: boolean;
+}
+
+export const CareScheduleRequestCapabilitiesResponseSchema: z.ZodType<CareScheduleRequestCapabilitiesResponse, unknown> = z.object({
+  arrival: z.boolean(),
+  pickup: z.boolean(),
+  departure_mode: z.boolean(),
+});
+
+/** Go: parent.CareScheduleResponse */
+export interface CareScheduleResponse {
+  weekdays: CareScheduleWeekdayResponse[] | null;
+  pending_request?: PendingCareRequestResponse;
+  can_request: boolean;
+  request_capabilities: CareScheduleRequestCapabilitiesResponse;
+  today_absent: boolean;
+  today_date?: string;
+}
+
+export const CareScheduleResponseSchema: z.ZodType<CareScheduleResponse, unknown> = z.object({
+  weekdays: z.array(CareScheduleWeekdayResponseSchema).nullable(),
+  pending_request: PendingCareRequestResponseSchema.optional(),
+  can_request: z.boolean(),
+  request_capabilities: CareScheduleRequestCapabilitiesResponseSchema,
+  today_absent: z.boolean(),
+  today_date: z.string().optional(),
+});
+
+/** Go: parent.ChildConsentResponse */
+export interface ChildConsentResponse {
+  key: string;
+  state: string;
+  changed_at?: string;
+  can_withdraw: boolean;
+  can_grant: boolean;
+}
+
+export const ChildConsentResponseSchema: z.ZodType<ChildConsentResponse, unknown> = z.object({
+  key: z.string(),
+  state: z.string(),
+  changed_at: z.string().optional(),
+  can_withdraw: z.boolean(),
+  can_grant: z.boolean(),
+});
+
+/** Go: parent.CourseItemResponse */
+export interface CourseItemResponse {
+  id: string;
+  activity_group_id: string;
+  name: string;
+  description?: string;
+  available_days: string[] | null;
+  capacity?: number;
+  free_slots?: number;
+  booked: boolean;
+  requested: boolean;
+  waitlisted: boolean;
+  waitlist_position?: number;
+}
+
+export const CourseItemResponseSchema: z.ZodType<CourseItemResponse, unknown> = z.object({
+  id: z.string(),
+  activity_group_id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  available_days: z.array(z.string()).nullable(),
+  capacity: safeInt.optional(),
+  free_slots: safeInt.optional(),
+  booked: z.boolean(),
+  requested: z.boolean(),
+  waitlisted: z.boolean(),
+  waitlist_position: safeInt.optional(),
+});
+
+/** Go: parent.CoursesResponse */
+export interface CoursesResponse {
+  enabled: boolean;
+  can_request: boolean;
+  reason_required: boolean;
+  disabled_reason?: string;
+  phase_name?: string;
+  effective_from?: string;
+  pending_request_id?: string;
+  pending_submitted_by_self: boolean;
+  other_request_pending: boolean;
+  items: CourseItemResponse[] | null;
+}
+
+export const CoursesResponseSchema: z.ZodType<CoursesResponse, unknown> = z.object({
+  enabled: z.boolean(),
+  can_request: z.boolean(),
+  reason_required: z.boolean(),
+  disabled_reason: z.string().optional(),
+  phase_name: z.string().optional(),
+  effective_from: z.string().optional(),
+  pending_request_id: z.string().optional(),
+  pending_submitted_by_self: z.boolean(),
+  other_request_pending: z.boolean(),
+  items: z.array(CourseItemResponseSchema).nullable(),
+});
+
+/** Go: parent.ParentExcusedRequestResponse */
+export interface ParentExcusedRequestResponse {
+  id: string;
+  student_id: string;
+  absence_status: string;
+  status: string;
+  dates: string[] | null;
+  note: string;
+  decision_reason?: string;
+  created_at: string;
+  reviewed_at?: string;
+  is_self: boolean;
+}
+
+export const ParentExcusedRequestResponseSchema: z.ZodType<ParentExcusedRequestResponse, unknown> = z.object({
+  id: z.string(),
+  student_id: z.string(),
+  absence_status: z.string(),
+  status: z.string(),
+  dates: z.array(z.string()).nullable(),
+  note: z.string(),
+  decision_reason: z.string().optional(),
+  created_at: instant,
+  reviewed_at: instant.optional(),
+  is_self: z.boolean(),
+});
+
+/** Go: parent.ChildFeaturesResponse */
+export interface ChildFeaturesResponse {
+  conference_book_allowed: boolean;
+  care_ended: boolean;
+  without_care_place?: boolean;
+  sick_note_enabled: boolean;
+  excused_note_enabled: boolean;
+  sick_requires_approval: boolean;
+  excused_requires_approval: boolean;
+  notes_enabled: boolean;
+  request_submit_enabled: boolean;
+  pickup_change_enabled: boolean;
+  pickup_change_mode_enabled: boolean;
+  pickup_change_cutoff_time: string;
+  pickup_change_today_closed: boolean;
+  pickup_change_care_day_ended: boolean;
+  pickup_manage_allowed: boolean;
+  emergency_contact_manage_allowed: boolean;
+  guardian_contact_manage_allowed: boolean;
+  absence_request_edit_enabled: boolean;
+  related_accounts_invite_enabled: boolean;
+  related_accounts_remove_enabled: boolean;
+  master_data_edit_enabled: boolean;
+  master_data_contact_edit_enabled: boolean;
+  master_data_request_enabled: boolean;
+  meal_plan_enabled: boolean;
+  meal_registration_enabled: boolean;
+  has_open_change_request: boolean;
+  parent_news_enabled: boolean;
+  reason_required: boolean;
+  care_facility_term: string;
+}
+
+export const ChildFeaturesResponseSchema: z.ZodType<ChildFeaturesResponse, unknown> = z.object({
+  conference_book_allowed: z.boolean(),
+  care_ended: z.boolean(),
+  without_care_place: z.boolean().optional(),
+  sick_note_enabled: z.boolean(),
+  excused_note_enabled: z.boolean(),
+  sick_requires_approval: z.boolean(),
+  excused_requires_approval: z.boolean(),
+  notes_enabled: z.boolean(),
+  request_submit_enabled: z.boolean(),
+  pickup_change_enabled: z.boolean(),
+  pickup_change_mode_enabled: z.boolean(),
+  pickup_change_cutoff_time: z.string(),
+  pickup_change_today_closed: z.boolean(),
+  pickup_change_care_day_ended: z.boolean(),
+  pickup_manage_allowed: z.boolean(),
+  emergency_contact_manage_allowed: z.boolean(),
+  guardian_contact_manage_allowed: z.boolean(),
+  absence_request_edit_enabled: z.boolean(),
+  related_accounts_invite_enabled: z.boolean(),
+  related_accounts_remove_enabled: z.boolean(),
+  master_data_edit_enabled: z.boolean(),
+  master_data_contact_edit_enabled: z.boolean(),
+  master_data_request_enabled: z.boolean(),
+  meal_plan_enabled: z.boolean(),
+  meal_registration_enabled: z.boolean(),
+  has_open_change_request: z.boolean(),
+  parent_news_enabled: z.boolean(),
+  reason_required: z.boolean(),
+  care_facility_term: z.string(),
+});
+
+/** Go: parent.guardianPhoneResponse */
+export interface guardianPhoneResponse {
+  phone_number: string;
+  phone_type: string;
+  label?: string;
+  is_primary: boolean;
+}
+
+export const guardianPhoneResponseSchema: z.ZodType<guardianPhoneResponse, unknown> = z.object({
+  phone_number: z.string(),
+  phone_type: z.string(),
+  label: z.string().optional(),
+  is_primary: z.boolean(),
+});
+
+/** Go: parent.childGuardianResponse */
+export interface childGuardianResponse {
+  guardian_profile_id: string;
+  student_guardian_id: string;
+  first_name: string;
+  last_name: string;
+  salutation?: string;
+  email?: string;
+  phones: guardianPhoneResponse[] | null;
+  address_street?: string;
+  address_city?: string;
+  address_postal_code?: string;
+  relationship_type: string;
+  is_primary: boolean;
+  is_emergency_contact: boolean;
+  can_pickup: boolean;
+  pickup_weekdays?: number[];
+  pickup_notes?: string;
+  has_account: boolean;
+  is_self: boolean;
+  can_edit_contact: boolean;
+  can_manage_pickup: boolean;
+  contact_locked_own_account: boolean;
+  contact_locked_shared: boolean;
+  contact_locked_social_worker: boolean;
+  contact_locked_full_guardian: boolean;
+}
+
+export const childGuardianResponseSchema: z.ZodType<childGuardianResponse, unknown> = z.object({
+  guardian_profile_id: z.string(),
+  student_guardian_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  salutation: z.string().optional(),
+  email: z.string().optional(),
+  phones: z.array(guardianPhoneResponseSchema).nullable(),
+  address_street: z.string().optional(),
+  address_city: z.string().optional(),
+  address_postal_code: z.string().optional(),
+  relationship_type: z.string(),
+  is_primary: z.boolean(),
+  is_emergency_contact: z.boolean(),
+  can_pickup: z.boolean(),
+  pickup_weekdays: z.array(safeInt).optional(),
+  pickup_notes: z.string().optional(),
+  has_account: z.boolean(),
+  is_self: z.boolean(),
+  can_edit_contact: z.boolean(),
+  can_manage_pickup: z.boolean(),
+  contact_locked_own_account: z.boolean(),
+  contact_locked_shared: z.boolean(),
+  contact_locked_social_worker: z.boolean(),
+  contact_locked_full_guardian: z.boolean(),
+});
+
+/** Go: parent.MasterDataChangeResponse */
+export interface MasterDataChangeResponse {
+  id: string;
+  target: string;
+  field_key: string;
+  old_value?: unknown | null;
+  new_value: unknown | null;
+  status: string;
+  created_at: string;
+  is_self: boolean;
+}
+
+export const MasterDataChangeResponseSchema: z.ZodType<MasterDataChangeResponse, unknown> = z.object({
+  id: z.string(),
+  target: z.string(),
+  field_key: z.string(),
+  old_value: z.unknown().nullable().optional(),
+  new_value: z.unknown().nullable(),
+  status: z.string(),
+  created_at: z.string(),
+  is_self: z.boolean(),
+});
+
+/** Go: parent.MasterDataResponse */
+export interface MasterDataResponse {
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  birthday?: string;
+  school_class: string;
+  status: string;
+  enrolled_from?: string;
+  enrolled_until?: string;
+  health_info?: string;
+  guardian_profile_id: string;
+  email?: string;
+  address_street?: string;
+  address_city?: string;
+  address_postal_code?: string;
+  preferred_contact_method: string;
+  language_preference: string;
+  primary_phone?: string;
+  departure_days?: Record<string, string>;
+  allowed_departure_modes?: Record<string, string[] | null>;
+  pending_changes: MasterDataChangeResponse[] | null;
+}
+
+export const MasterDataResponseSchema: z.ZodType<MasterDataResponse, unknown> = z.object({
+  student_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  birthday: z.string().optional(),
+  school_class: z.string(),
+  status: z.string(),
+  enrolled_from: z.string().optional(),
+  enrolled_until: z.string().optional(),
+  health_info: z.string().optional(),
+  guardian_profile_id: z.string(),
+  email: z.string().optional(),
+  address_street: z.string().optional(),
+  address_city: z.string().optional(),
+  address_postal_code: z.string().optional(),
+  preferred_contact_method: z.string(),
+  language_preference: z.string(),
+  primary_phone: z.string().optional(),
+  departure_days: z.record(z.string(), z.string()).optional(),
+  allowed_departure_modes: z.record(z.string(), z.array(z.string()).nullable()).optional(),
+  pending_changes: z.array(MasterDataChangeResponseSchema).nullable(),
+});
+
+/** Go: parent.MealPlanEntryResponse */
+export interface MealPlanEntryResponse {
+  date: string;
+  position: number;
+  dish: string;
+  note?: string;
+  allergens: string[] | null;
+}
+
+export const MealPlanEntryResponseSchema: z.ZodType<MealPlanEntryResponse, unknown> = z.object({
+  date: z.string(),
+  position: safeInt,
+  dish: z.string(),
+  note: z.string().optional(),
+  allergens: z.array(z.string()).nullable(),
+});
+
+/** Go: portal.ParentConferenceOffer */
+export interface ParentConferenceOffer {
+  id: string;
+  school_class: string;
+  teacher_name: string;
+  date: string | null;
+  location?: string;
+  free_slots: ParentConferenceWindow[] | null;
+  booking?: ParentConferenceWindow;
+  can_change: boolean;
+}
+
+export const ParentConferenceOfferSchema: z.ZodType<ParentConferenceOffer, unknown> = z.object({
+  id: z.string(),
+  school_class: z.string(),
+  teacher_name: z.string(),
+  date: calendarDate.nullable(),
+  location: z.string().optional(),
+  free_slots: z.array(ParentConferenceWindowSchema).nullable(),
+  booking: ParentConferenceWindowSchema.optional(),
+  can_change: z.boolean(),
+});
+
+/** Go: parent.PickupChangeRequestResponse */
+export interface PickupChangeRequestResponse {
+  id: string;
+  date: string;
+  pickup_time: string | null;
+  previous_pickup_time?: string;
+  departure_mode: string | null;
+  previous_departure_modes?: string[];
+  reason: string;
+  status: string;
+  decision_reason?: string;
+  created_at: string;
+  reviewed_at?: string;
+  is_self: boolean;
+  pickup_person?: string;
+  pickup_person_guardian_profile_id?: string;
+  signed: boolean;
+}
+
+export const PickupChangeRequestResponseSchema: z.ZodType<PickupChangeRequestResponse, unknown> = z.object({
+  id: z.string(),
+  date: z.string(),
+  pickup_time: z.string().nullable(),
+  previous_pickup_time: z.string().optional(),
+  departure_mode: z.string().nullable(),
+  previous_departure_modes: z.array(z.string()).optional(),
+  reason: z.string(),
+  status: z.string(),
+  decision_reason: z.string().optional(),
+  created_at: instant,
+  reviewed_at: instant.optional(),
+  is_self: z.boolean(),
+  pickup_person: z.string().optional(),
+  pickup_person_guardian_profile_id: z.string().optional(),
+  signed: z.boolean(),
+});
+
+/** Go: parent.pickupPermissionRequestResponse */
+export interface pickupPermissionRequestResponse {
+  id: string;
+  guardian_profile_id: string;
+  person_name: string;
+  weekdays: number[] | null;
+  status: string;
+  decision_reason?: string;
+  created_at: string;
+  reviewed_at?: string;
+  is_self: boolean;
+  signed: boolean;
+}
+
+export const pickupPermissionRequestResponseSchema: z.ZodType<pickupPermissionRequestResponse, unknown> = z.object({
+  id: z.string(),
+  guardian_profile_id: z.string(),
+  person_name: z.string(),
+  weekdays: z.array(safeInt).nullable(),
+  status: z.string(),
+  decision_reason: z.string().optional(),
+  created_at: instant,
+  reviewed_at: instant.optional(),
+  is_self: z.boolean(),
+  signed: z.boolean(),
+});
+
+/** Go: parent.relatedAccountResponse */
+export interface relatedAccountResponse {
+  guardian_profile_id: string;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  relationship_type: string;
+  guardian_role?: string;
+  is_primary: boolean;
+  status: string;
+  is_self: boolean;
+}
+
+export const relatedAccountResponseSchema: z.ZodType<relatedAccountResponse, unknown> = z.object({
+  guardian_profile_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  email: z.string().optional(),
+  relationship_type: z.string(),
+  guardian_role: z.string().optional(),
+  is_primary: z.boolean(),
+  status: z.string(),
+  is_self: z.boolean(),
+});
+
+/** Go: parent.requestSharingRecipientResponse */
+export interface requestSharingRecipientResponse {
+  guardian_profile_id: string;
+  first_name: string;
+  last_name: string;
+  selected: boolean;
+}
+
+export const requestSharingRecipientResponseSchema: z.ZodType<requestSharingRecipientResponse, unknown> = z.object({
+  guardian_profile_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  selected: z.boolean(),
+});
+
+/** Go: parent.requestSharingResponse */
+export interface requestSharingResponse {
+  family_protected: boolean;
+  recipients: requestSharingRecipientResponse[] | null;
+}
+
+export const requestSharingResponseSchema: z.ZodType<requestSharingResponse, unknown> = z.object({
+  family_protected: z.boolean(),
+  recipients: z.array(requestSharingRecipientResponseSchema).nullable(),
+});
+
+/** Go: parent.ParentRequestEventResponse */
+export interface ParentRequestEventResponse {
+  event_type: string;
+  created_at: string;
+  version: string;
+}
+
+export const ParentRequestEventResponseSchema: z.ZodType<ParentRequestEventResponse, unknown> = z.object({
+  event_type: z.string(),
+  created_at: z.string(),
+  version: z.string(),
+});
+
+/** Go: parent.TodayStatusResponse */
+export interface TodayStatusResponse {
+  at_ogs: boolean | null;
+  state: string;
+  since?: string;
+  until?: string;
+  expected_from?: string;
+  pickup_time?: string;
+}
+
+export const TodayStatusResponseSchema: z.ZodType<TodayStatusResponse, unknown> = z.object({
+  at_ogs: z.boolean().nullable(),
+  state: z.string(),
+  since: z.string().optional(),
+  until: z.string().optional(),
+  expected_from: z.string().optional(),
+  pickup_time: z.string().optional(),
+});
+
+/** Go: care.SEPAMandateStatus */
+export interface SEPAMandateStatus {
+  enabled: boolean;
+  collection_eligible: boolean;
+}
+
+export const SEPAMandateStatusSchema: z.ZodType<SEPAMandateStatus, unknown> = z.object({
+  enabled: z.boolean(),
+  collection_eligible: z.boolean(),
+});
+
+/** Go: parent.BillingDocumentResponse */
+export interface BillingDocumentResponse {
+  id: string;
+  organization_id: string;
+  traeger_name: string;
+  kind: string;
+  number: string;
+  period_name: string;
+  service_from: string | null;
+  service_until: string | null;
+  issued_on: string | null;
+  total_cents: number;
+  child_names: string[] | null;
+  sent_at: string;
+  contract_status?: string;
+  can_sign?: boolean;
+  signed_at?: string;
+  replaced: boolean;
+  ends_on?: string;
+  can_end_contract?: boolean;
+  can_withdraw_contract?: boolean;
+  sepa_mandate?: SEPAMandateStatus;
+}
+
+export const BillingDocumentResponseSchema: z.ZodType<BillingDocumentResponse, unknown> = z.object({
+  id: z.string(),
+  organization_id: z.string(),
+  traeger_name: z.string(),
+  kind: z.string(),
+  number: z.string(),
+  period_name: z.string(),
+  service_from: calendarDate.nullable(),
+  service_until: calendarDate.nullable(),
+  issued_on: calendarDate.nullable(),
+  total_cents: safeInt,
+  child_names: z.array(z.string()).nullable(),
+  sent_at: instant,
+  contract_status: z.string().optional(),
+  can_sign: z.boolean().optional(),
+  signed_at: instant.optional(),
+  replaced: z.boolean(),
+  ends_on: calendarDate.optional(),
+  can_end_contract: z.boolean().optional(),
+  can_withdraw_contract: z.boolean().optional(),
+  sepa_mandate: SEPAMandateStatusSchema.optional(),
+});
+
+/** Go: parent.SharedDocumentResponse */
+export interface SharedDocumentResponse {
+  id: string;
+  organization_id: string;
+  traeger_name: string;
+  title: string;
+  file_name: string;
+  content_type: string;
+  size_bytes: number;
+  released_at: string;
+}
+
+export const SharedDocumentResponseSchema: z.ZodType<SharedDocumentResponse, unknown> = z.object({
+  id: z.string(),
+  organization_id: z.string(),
+  traeger_name: z.string(),
+  title: z.string(),
+  file_name: z.string(),
+  content_type: z.string(),
+  size_bytes: safeInt,
+  released_at: instant,
+});
+
+/** Go: carecontract.SigningService */
+export interface SigningService {
+  weekday: string;
+  module_name: string;
+  ends_at: string;
+  last_day: string | null;
+}
+
+export const SigningServiceSchema: z.ZodType<SigningService, unknown> = z.object({
+  weekday: z.string(),
+  module_name: z.string(),
+  ends_at: z.string(),
+  last_day: calendarDate.nullable(),
+});
+
+/** Go: carecontract.SigningContract */
+export interface SigningContract {
+  child_first_name: string;
+  child_last_name: string;
+  school_name: string;
+  phase_name: string;
+  effective_from: string | null;
+  ends_on: string | null;
+  price_cents: number | null;
+  services: SigningService[] | null;
+}
+
+export const SigningContractSchema: z.ZodType<SigningContract, unknown> = z.object({
+  child_first_name: z.string(),
+  child_last_name: z.string(),
+  school_name: z.string(),
+  phase_name: z.string(),
+  effective_from: calendarDate.nullable(),
+  ends_on: calendarDate.nullable(),
+  price_cents: safeInt.nullable(),
+  services: z.array(SigningServiceSchema).nullable(),
+});
+
+/** Go: carecontract.SigningSignature */
+export interface SigningSignature {
+  method: string;
+  signer_name: string;
+  signed_at: string;
+  early_start_requested: boolean;
+  withdrawal_ends_on: string | null;
+}
+
+export const SigningSignatureSchema: z.ZodType<SigningSignature, unknown> = z.object({
+  method: z.string(),
+  signer_name: z.string(),
+  signed_at: instant,
+  early_start_requested: z.boolean(),
+  withdrawal_ends_on: calendarDate.nullable(),
+});
+
+/** Go: carecontract.SigningView */
+export interface SigningView {
+  contract_id: string;
+  organization_id: string;
+  status: string;
+  traeger_name: string;
+  party_name: string;
+  version: SigningContract;
+  document_sha256: string;
+  withdrawal_notice: string[] | null;
+  signature: SigningSignature | null;
+}
+
+export const SigningViewSchema: z.ZodType<SigningView, unknown> = z.object({
+  contract_id: int64StringOrNumber,
+  organization_id: int64StringOrNumber,
+  status: z.string(),
+  traeger_name: z.string(),
+  party_name: z.string(),
+  version: SigningContractSchema,
+  document_sha256: z.string(),
+  withdrawal_notice: z.array(z.string()).nullable(),
+  signature: SigningSignatureSchema.nullable(),
+});
+
 /** Go: parent.EnrollablePhaseResponse */
 export interface EnrollablePhaseResponse {
   school_id: string;
@@ -130,6 +1097,758 @@ export const EnrollablePhaseResponseSchema: z.ZodType<EnrollablePhaseResponse, u
   audience: openEnum<EnrollmentPhaseAudience>(),
 });
 
+/** Go: parent.HolidayRegistrationEntryWeekResponse */
+export interface HolidayRegistrationEntryWeekResponse {
+  first_day: string | null;
+  last_day: string | null;
+  time_model_name: string;
+  placement: string;
+  lunch: boolean;
+}
+
+export const HolidayRegistrationEntryWeekResponseSchema: z.ZodType<HolidayRegistrationEntryWeekResponse, unknown> = z.object({
+  first_day: calendarDate.nullable(),
+  last_day: calendarDate.nullable(),
+  time_model_name: z.string(),
+  placement: z.string(),
+  lunch: z.boolean(),
+});
+
+/** Go: parent.HolidayRegistrationEntryChildResponse */
+export interface HolidayRegistrationEntryChildResponse {
+  first_name: string;
+  weeks: HolidayRegistrationEntryWeekResponse[] | null;
+}
+
+export const HolidayRegistrationEntryChildResponseSchema: z.ZodType<HolidayRegistrationEntryChildResponse, unknown> = z.object({
+  first_name: z.string(),
+  weeks: z.array(HolidayRegistrationEntryWeekResponseSchema).nullable(),
+});
+
+/** Go: parent.HolidayRegistrationEntryResponse */
+export interface HolidayRegistrationEntryResponse {
+  id: string;
+  traeger_name: string;
+  period_name: string;
+  first_day: string | null;
+  last_day: string | null;
+  submitted_at: string;
+  status: string;
+  children: HolidayRegistrationEntryChildResponse[] | null;
+}
+
+export const HolidayRegistrationEntryResponseSchema: z.ZodType<HolidayRegistrationEntryResponse, unknown> = z.object({
+  id: int64StringOrNumber,
+  traeger_name: z.string(),
+  period_name: z.string(),
+  first_day: calendarDate.nullable(),
+  last_day: calendarDate.nullable(),
+  submitted_at: instant,
+  status: z.string(),
+  children: z.array(HolidayRegistrationEntryChildResponseSchema).nullable(),
+});
+
+/** Go: parent.HolidayRegistrationEntriesResponse */
+export interface HolidayRegistrationEntriesResponse {
+  registrations: HolidayRegistrationEntryResponse[] | null;
+}
+
+export const HolidayRegistrationEntriesResponseSchema: z.ZodType<HolidayRegistrationEntriesResponse, unknown> = z.object({
+  registrations: z.array(HolidayRegistrationEntryResponseSchema).nullable(),
+});
+
+/** Go: parent.HolidayRegistrationOfferChildResponse */
+export interface HolidayRegistrationOfferChildResponse {
+  student_id: string;
+  first_name: string;
+}
+
+export const HolidayRegistrationOfferChildResponseSchema: z.ZodType<HolidayRegistrationOfferChildResponse, unknown> = z.object({
+  student_id: z.string(),
+  first_name: z.string(),
+});
+
+/** Go: parent.HolidayRegistrationOfferResponse */
+export interface HolidayRegistrationOfferResponse {
+  token: string;
+  name: string;
+  traeger_name: string;
+  registration_opens_on: string | null;
+  registration_closes_on: string | null;
+  first_day?: string;
+  last_day?: string;
+  open: boolean;
+  children: HolidayRegistrationOfferChildResponse[] | null;
+}
+
+export const HolidayRegistrationOfferResponseSchema: z.ZodType<HolidayRegistrationOfferResponse, unknown> = z.object({
+  token: z.string(),
+  name: z.string(),
+  traeger_name: z.string(),
+  registration_opens_on: calendarDate.nullable(),
+  registration_closes_on: calendarDate.nullable(),
+  first_day: calendarDate.optional(),
+  last_day: calendarDate.optional(),
+  open: z.boolean(),
+  children: z.array(HolidayRegistrationOfferChildResponseSchema).nullable(),
+});
+
+/** Go: parent.ParentGuardianReaderResponse */
+export interface ParentGuardianReaderResponse {
+  name: string;
+}
+
+export const ParentGuardianReaderResponseSchema: z.ZodType<ParentGuardianReaderResponse, unknown> = z.object({
+  name: z.string(),
+});
+
+/** Go: parent.ParentSchoolReadersResponse */
+export interface ParentSchoolReadersResponse {
+  kind: string;
+  names: string[] | null;
+  unnamed_count: number;
+}
+
+export const ParentSchoolReadersResponseSchema: z.ZodType<ParentSchoolReadersResponse, unknown> = z.object({
+  kind: z.string(),
+  names: z.array(z.string()).nullable(),
+  unnamed_count: safeInt,
+});
+
+/** Go: parent.ParentReadersResponse */
+export interface ParentReadersResponse {
+  guardian?: ParentGuardianReaderResponse;
+  school: ParentSchoolReadersResponse;
+}
+
+export const ParentReadersResponseSchema: z.ZodType<ParentReadersResponse, unknown> = z.object({
+  guardian: ParentGuardianReaderResponseSchema.optional(),
+  school: ParentSchoolReadersResponseSchema,
+});
+
+/** Go: parent.ThreadSummaryResponse */
+export interface ThreadSummaryResponse {
+  thread_id: string;
+  student_id: string;
+  student_name: string;
+  school_name: string;
+  counterpart_name: string;
+  last_message_at?: string;
+  last_sender_kind?: string;
+  last_message_body?: string;
+  last_message_kind?: string;
+  last_event_type?: string;
+  last_request_type?: string;
+  last_request_status?: string;
+  last_message_payload?: Record<string, unknown | null>;
+  last_message_read_by_staff: boolean;
+  unread: number;
+  audience: string;
+  readers: ParentReadersResponse;
+}
+
+export const ThreadSummaryResponseSchema: z.ZodType<ThreadSummaryResponse, unknown> = z.object({
+  thread_id: z.string(),
+  student_id: z.string(),
+  student_name: z.string(),
+  school_name: z.string(),
+  counterpart_name: z.string(),
+  last_message_at: instant.optional(),
+  last_sender_kind: z.string().optional(),
+  last_message_body: z.string().optional(),
+  last_message_kind: z.string().optional(),
+  last_event_type: z.string().optional(),
+  last_request_type: z.string().optional(),
+  last_request_status: z.string().optional(),
+  last_message_payload: z.record(z.string(), z.unknown().nullable()).optional(),
+  last_message_read_by_staff: z.boolean(),
+  unread: safeInt,
+  audience: z.string(),
+  readers: ParentReadersResponseSchema,
+});
+
+/** Go: parent.LeadershipOptionResponse */
+export interface LeadershipOptionResponse {
+  available: boolean;
+  names: string[] | null;
+  unnamed_count: number;
+}
+
+export const LeadershipOptionResponseSchema: z.ZodType<LeadershipOptionResponse, unknown> = z.object({
+  available: z.boolean(),
+  names: z.array(z.string()).nullable(),
+  unnamed_count: safeInt,
+});
+
+/** Go: parent.ParentMessageResponse */
+export interface ParentMessageResponse {
+  client_message_id?: string;
+  id: string;
+  sender_kind: string;
+  sender_name: string;
+  body: string;
+  created_at: string;
+  kind: string;
+  event_type?: string;
+  request_type?: string;
+  request_status?: string;
+  payload?: Record<string, unknown | null>;
+  ref_table?: string;
+  ref_id?: string;
+  applied_at?: string;
+  decision_reason?: string;
+  read_by_staff?: boolean;
+  group_thread_id?: string;
+  group_thread_title?: string;
+  attachments?: unknown | null;
+}
+
+export const ParentMessageResponseSchema: z.ZodType<ParentMessageResponse, unknown> = z.object({
+  client_message_id: z.string().optional(),
+  id: z.string(),
+  sender_kind: z.string(),
+  sender_name: z.string(),
+  body: z.string(),
+  created_at: instant,
+  kind: z.string(),
+  event_type: z.string().optional(),
+  request_type: z.string().optional(),
+  request_status: z.string().optional(),
+  payload: z.record(z.string(), z.unknown().nullable()).optional(),
+  ref_table: z.string().optional(),
+  ref_id: z.string().optional(),
+  applied_at: instant.optional(),
+  decision_reason: z.string().optional(),
+  read_by_staff: z.boolean().optional(),
+  group_thread_id: z.string().optional(),
+  group_thread_title: z.string().optional(),
+  attachments: z.unknown().nullable().optional(),
+});
+
+/** Go: parent.ThreadViewResponse */
+export interface ThreadViewResponse {
+  thread_id: string;
+  student_id: string;
+  student_name: string;
+  school_name: string;
+  counterpart_name: string;
+  audience: string;
+  readers: ParentReadersResponse;
+  leadership_option: LeadershipOptionResponse;
+  messages: ParentMessageResponse[] | null;
+}
+
+export const ThreadViewResponseSchema: z.ZodType<ThreadViewResponse, unknown> = z.object({
+  thread_id: z.string(),
+  student_id: z.string(),
+  student_name: z.string(),
+  school_name: z.string(),
+  counterpart_name: z.string(),
+  audience: z.string(),
+  readers: ParentReadersResponseSchema,
+  leadership_option: LeadershipOptionResponseSchema,
+  messages: z.array(ParentMessageResponseSchema).nullable(),
+});
+
+/** Go: parent.GroupThreadChildResponse */
+export interface GroupThreadChildResponse {
+  student_id: string;
+  first_name: string;
+  last_name: string;
+}
+
+export const GroupThreadChildResponseSchema: z.ZodType<GroupThreadChildResponse, unknown> = z.object({
+  student_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+});
+
+/** Go: parent.GroupThreadSummaryResponse */
+export interface GroupThreadSummaryResponse {
+  id: string;
+  title: string;
+  target_label: string;
+  school_name: string;
+  counterpart_name: string;
+  closed: boolean;
+  last_message_at?: string;
+  last_message_body: string;
+  unread: number;
+  children: GroupThreadChildResponse[] | null;
+  readers: ParentReadersResponse;
+}
+
+export const GroupThreadSummaryResponseSchema: z.ZodType<GroupThreadSummaryResponse, unknown> = z.object({
+  id: z.string(),
+  title: z.string(),
+  target_label: z.string(),
+  school_name: z.string(),
+  counterpart_name: z.string(),
+  closed: z.boolean(),
+  last_message_at: instant.optional(),
+  last_message_body: z.string(),
+  unread: safeInt,
+  children: z.array(GroupThreadChildResponseSchema).nullable(),
+  readers: ParentReadersResponseSchema,
+});
+
+/** Go: parent.GroupMessageResponse */
+export interface GroupMessageResponse {
+  id: string;
+  body: string;
+  created_at: string;
+  attachments?: unknown | null;
+}
+
+export const GroupMessageResponseSchema: z.ZodType<GroupMessageResponse, unknown> = z.object({
+  id: z.string(),
+  body: z.string(),
+  created_at: instant,
+  attachments: z.unknown().nullable().optional(),
+});
+
+/** Go: parent.GroupThreadViewResponse */
+export interface GroupThreadViewResponse {
+  id: string;
+  title: string;
+  target_label: string;
+  school_name: string;
+  counterpart_name: string;
+  closed: boolean;
+  last_message_at?: string;
+  last_message_body: string;
+  unread: number;
+  children: GroupThreadChildResponse[] | null;
+  readers: ParentReadersResponse;
+  messages: GroupMessageResponse[] | null;
+}
+
+export const GroupThreadViewResponseSchema: z.ZodType<GroupThreadViewResponse, unknown> = z.object({
+  id: z.string(),
+  title: z.string(),
+  target_label: z.string(),
+  school_name: z.string(),
+  counterpart_name: z.string(),
+  closed: z.boolean(),
+  last_message_at: instant.optional(),
+  last_message_body: z.string(),
+  unread: safeInt,
+  children: z.array(GroupThreadChildResponseSchema).nullable(),
+  readers: ParentReadersResponseSchema,
+  messages: z.array(GroupMessageResponseSchema).nullable(),
+});
+
+/** Go: parent.UnreadCountResponse */
+export interface UnreadCountResponse {
+  unread_count: number;
+}
+
+export const UnreadCountResponseSchema: z.ZodType<UnreadCountResponse, unknown> = z.object({
+  unread_count: safeInt,
+});
+
+/** Go: parent.AnnouncementOption */
+export interface AnnouncementOption {
+  id: string;
+  label: string;
+}
+
+export const AnnouncementOptionSchema: z.ZodType<AnnouncementOption, unknown> = z.object({
+  id: z.string(),
+  label: z.string(),
+});
+
+/** Go: parent.AnnouncementPollChild */
+export interface AnnouncementPollChild {
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  selected_options: string[] | null;
+}
+
+export const AnnouncementPollChildSchema: z.ZodType<AnnouncementPollChild, unknown> = z.object({
+  student_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  selected_options: z.array(z.string()).nullable(),
+});
+
+/** Go: parent.parentDeclarationVersionResponse */
+export interface parentDeclarationVersionResponse {
+  id: string;
+  version_no: number;
+  content_hash: string;
+}
+
+export const parentDeclarationVersionResponseSchema: z.ZodType<parentDeclarationVersionResponse, unknown> = z.object({
+  id: z.string(),
+  version_no: safeInt,
+  content_hash: z.string(),
+});
+
+/** Go: parent.declarationSignerStateResponse */
+export interface declarationSignerStateResponse {
+  first_name: string;
+  last_name: string;
+  action: string | null;
+  submitted_at: string | null;
+}
+
+export const declarationSignerStateResponseSchema: z.ZodType<declarationSignerStateResponse, unknown> = z.object({
+  first_name: z.string(),
+  last_name: z.string(),
+  action: z.string().nullable(),
+  submitted_at: instant.nullable(),
+});
+
+/** Go: parent.declarationEarlierVersionResponse */
+export interface declarationEarlierVersionResponse {
+  id: string;
+  version_no: number;
+  content_hash: string;
+  title: string;
+  body: string;
+}
+
+export const declarationEarlierVersionResponseSchema: z.ZodType<declarationEarlierVersionResponse, unknown> = z.object({
+  id: z.string(),
+  version_no: safeInt,
+  content_hash: z.string(),
+  title: z.string(),
+  body: z.string(),
+});
+
+/** Go: parent.declarationEarlierConsentResponse */
+export interface declarationEarlierConsentResponse {
+  version: declarationEarlierVersionResponse;
+  submitted_at: string;
+  allowed_actions: string[] | null;
+}
+
+export const declarationEarlierConsentResponseSchema: z.ZodType<declarationEarlierConsentResponse, unknown> = z.object({
+  version: declarationEarlierVersionResponseSchema,
+  submitted_at: instant,
+  allowed_actions: z.array(z.string()).nullable(),
+});
+
+/** Go: parent.parentDeclarationChildResponse */
+export interface parentDeclarationChildResponse {
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  can_submit: boolean;
+  state: string;
+  my_action: string | null;
+  my_submitted_at: string | null;
+  allowed_actions: string[] | null;
+  other_signers: declarationSignerStateResponse[] | null;
+  earlier_consent: declarationEarlierConsentResponse | null;
+}
+
+export const parentDeclarationChildResponseSchema: z.ZodType<parentDeclarationChildResponse, unknown> = z.object({
+  student_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  can_submit: z.boolean(),
+  state: z.string(),
+  my_action: z.string().nullable(),
+  my_submitted_at: instant.nullable(),
+  allowed_actions: z.array(z.string()).nullable(),
+  other_signers: z.array(declarationSignerStateResponseSchema).nullable(),
+  earlier_consent: declarationEarlierConsentResponseSchema.nullable(),
+});
+
+/** Go: parent.AnnouncementDeclarationResponse */
+export interface AnnouncementDeclarationResponse {
+  kind: string;
+  signers: string;
+  requires_password: boolean;
+  requires_signature: boolean;
+  deadline: string | null;
+  closed: boolean;
+  ended: boolean;
+  version: parentDeclarationVersionResponse | null;
+  children: parentDeclarationChildResponse[] | null;
+}
+
+export const AnnouncementDeclarationResponseSchema: z.ZodType<AnnouncementDeclarationResponse, unknown> = z.object({
+  kind: z.string(),
+  signers: z.string(),
+  requires_password: z.boolean(),
+  requires_signature: z.boolean(),
+  deadline: instant.nullable(),
+  closed: z.boolean(),
+  ended: z.boolean(),
+  version: parentDeclarationVersionResponseSchema.nullable(),
+  children: z.array(parentDeclarationChildResponseSchema).nullable(),
+});
+
+/** Go: parent.AnnouncementSurveyResponse */
+export interface AnnouncementSurveyResponse {
+  survey_id: string;
+  anonymous: boolean;
+  closes_at: string;
+  participated: boolean;
+}
+
+export const AnnouncementSurveyResponseSchema: z.ZodType<AnnouncementSurveyResponse, unknown> = z.object({
+  survey_id: z.string(),
+  anonymous: z.boolean(),
+  closes_at: instant,
+  participated: z.boolean(),
+});
+
+/** Go: parent.AnnouncementLetterResponse */
+export interface AnnouncementLetterResponse {
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  body: string;
+}
+
+export const AnnouncementLetterResponseSchema: z.ZodType<AnnouncementLetterResponse, unknown> = z.object({
+  student_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  body: z.string(),
+});
+
+/** Go: parent.AnnouncementResponse */
+export interface AnnouncementResponse {
+  id: string;
+  title: string;
+  body: string;
+  priority: string;
+  link_url?: string;
+  requires_acknowledgement: boolean;
+  delivery_mode: string;
+  school_name: string;
+  sender_name?: string;
+  sender_school_class?: string;
+  published_at?: string;
+  expires_at?: string;
+  read: boolean;
+  acknowledged: boolean;
+  response_type: string;
+  response_deadline?: string;
+  options?: AnnouncementOption[];
+  children?: AnnouncementPollChild[];
+  declaration?: AnnouncementDeclarationResponse;
+  system_kind?: string;
+  reminder_sent_at?: string;
+  reminder_text?: string;
+  survey?: AnnouncementSurveyResponse;
+  letters?: AnnouncementLetterResponse[];
+}
+
+export const AnnouncementResponseSchema: z.ZodType<AnnouncementResponse, unknown> = z.object({
+  id: z.string(),
+  title: z.string(),
+  body: z.string(),
+  priority: z.string(),
+  link_url: z.string().optional(),
+  requires_acknowledgement: z.boolean(),
+  delivery_mode: z.string(),
+  school_name: z.string(),
+  sender_name: z.string().optional(),
+  sender_school_class: z.string().optional(),
+  published_at: instant.optional(),
+  expires_at: instant.optional(),
+  read: z.boolean(),
+  acknowledged: z.boolean(),
+  response_type: z.string(),
+  response_deadline: instant.optional(),
+  options: z.array(AnnouncementOptionSchema).optional(),
+  children: z.array(AnnouncementPollChildSchema).optional(),
+  declaration: AnnouncementDeclarationResponseSchema.optional(),
+  system_kind: z.string().optional(),
+  reminder_sent_at: instant.optional(),
+  reminder_text: z.string().optional(),
+  survey: AnnouncementSurveyResponseSchema.optional(),
+  letters: z.array(AnnouncementLetterResponseSchema).optional(),
+});
+
+/** Go: parent.proofAttachmentResponse */
+export interface proofAttachmentResponse {
+  id: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  sha256: string;
+}
+
+export const proofAttachmentResponseSchema: z.ZodType<proofAttachmentResponse, unknown> = z.object({
+  id: z.string(),
+  filename: z.string(),
+  content_type: z.string(),
+  size_bytes: safeInt,
+  sha256: z.string(),
+});
+
+/** Go: parent.proofVersionResponse */
+export interface proofVersionResponse {
+  id: string;
+  version_no: number;
+  title: string;
+  body: string;
+  content_hash: string;
+  published_at: string;
+  attachments: proofAttachmentResponse[] | null;
+}
+
+export const proofVersionResponseSchema: z.ZodType<proofVersionResponse, unknown> = z.object({
+  id: z.string(),
+  version_no: safeInt,
+  title: z.string(),
+  body: z.string(),
+  content_hash: z.string(),
+  published_at: instant,
+  attachments: z.array(proofAttachmentResponseSchema).nullable(),
+});
+
+/** Go: parent.proofSignatureResponse */
+export interface proofSignatureResponse {
+  method: string;
+  typed_name: string | null;
+  image_data_url: string;
+  image_sha256: string;
+  signed_at: string;
+}
+
+export const proofSignatureResponseSchema: z.ZodType<proofSignatureResponse, unknown> = z.object({
+  method: z.string(),
+  typed_name: z.string().nullable(),
+  image_data_url: z.string(),
+  image_sha256: z.string(),
+  signed_at: instant,
+});
+
+/** Go: parent.proofSubmissionResponse */
+export interface proofSubmissionResponse {
+  id: string;
+  action: string;
+  submitted_at: string;
+  signer_name: string;
+  guardian_role: string;
+  version_no: number;
+  password_confirmed: boolean;
+  method: string;
+  content_hash: string;
+  record_hash: string;
+  signature: proofSignatureResponse | null;
+}
+
+export const proofSubmissionResponseSchema: z.ZodType<proofSubmissionResponse, unknown> = z.object({
+  id: z.string(),
+  action: z.string(),
+  submitted_at: instant,
+  signer_name: z.string(),
+  guardian_role: z.string(),
+  version_no: safeInt,
+  password_confirmed: z.boolean(),
+  method: z.string(),
+  content_hash: z.string(),
+  record_hash: z.string(),
+  signature: proofSignatureResponseSchema.nullable(),
+});
+
+/** Go: parent.declarationProofResponse */
+export interface declarationProofResponse {
+  title: string;
+  school_name: string;
+  child_name: string;
+  kind: string;
+  method_label: string;
+  generated_at: string;
+  versions: proofVersionResponse[] | null;
+  submissions: proofSubmissionResponse[] | null;
+  integrity_ok: boolean;
+}
+
+export const declarationProofResponseSchema: z.ZodType<declarationProofResponse, unknown> = z.object({
+  title: z.string(),
+  school_name: z.string(),
+  child_name: z.string(),
+  kind: z.string(),
+  method_label: z.string(),
+  generated_at: instant,
+  versions: z.array(proofVersionResponseSchema).nullable(),
+  submissions: z.array(proofSubmissionResponseSchema).nullable(),
+  integrity_ok: z.boolean(),
+});
+
+/** Go: parent.notificationFeedEntryResponse */
+export interface notificationFeedEntryResponse {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  deep_link: string;
+  created_at: string;
+  updated_at: string;
+  read_at: string | null;
+}
+
+export const notificationFeedEntryResponseSchema: z.ZodType<notificationFeedEntryResponse, unknown> = z.object({
+  id: int64StringOrNumber,
+  type: z.string(),
+  title: z.string(),
+  body: z.string(),
+  deep_link: z.string(),
+  created_at: instant,
+  updated_at: instant,
+  read_at: instant.nullable(),
+});
+
+/** Go: parent.notificationFeedPageResponse */
+export interface notificationFeedPageResponse {
+  entries: notificationFeedEntryResponse[] | null;
+  next_cursor: string | null;
+  unread_count: number;
+}
+
+export const notificationFeedPageResponseSchema: z.ZodType<notificationFeedPageResponse, unknown> = z.object({
+  entries: z.array(notificationFeedEntryResponseSchema).nullable(),
+  next_cursor: z.string().nullable(),
+  unread_count: safeInt,
+});
+
+/** Go: parent.notificationFeedCountResponse */
+export interface notificationFeedCountResponse {
+  unread_count: number;
+}
+
+export const notificationFeedCountResponseSchema: z.ZodType<notificationFeedCountResponse, unknown> = z.object({
+  unread_count: safeInt,
+});
+
+/** Go: parent.ParentProfileResponse */
+export interface ParentProfileResponse {
+  first_name: string;
+  last_name: string;
+  portal_locale: string | null;
+}
+
+export const ParentProfileResponseSchema: z.ZodType<ParentProfileResponse, unknown> = z.object({
+  first_name: z.string(),
+  last_name: z.string(),
+  portal_locale: z.string().nullable(),
+});
+
+/** Go: parent.PushPublicKeyResponse */
+export interface PushPublicKeyResponse {
+  public_key: string;
+}
+
+export const PushPublicKeyResponseSchema: z.ZodType<PushPublicKeyResponse, unknown> = z.object({
+  public_key: z.string(),
+});
+
+/** Go: parent.UpdateMasterDataRequest */
+export interface UpdateMasterDataRequest {
+  value?: unknown | null;
+}
+
 /** Go: parent.ParentInvitationStatusResponse */
 export interface ParentInvitationStatusResponse {
   status: string;
@@ -138,6 +1857,380 @@ export interface ParentInvitationStatusResponse {
 export const ParentInvitationStatusResponseSchema: z.ZodType<ParentInvitationStatusResponse, unknown> = z.object({
   status: z.string(),
 });
+
+/** Go: parent.OfferingSelectionBody */
+export interface OfferingSelectionBody {
+  offering_id?: string;
+  selected_days?: string[] | null;
+}
+
+/** Go: parent.OfferingChangeRequestBody */
+export interface OfferingChangeRequestBody {
+  offerings?: OfferingSelectionBody[] | null;
+  effective_from?: string;
+  note?: string;
+  complete_withdrawal_confirmed?: boolean;
+  recipient_guardian_profile_ids?: string[] | null;
+}
+
+/** Go: parent.declarationSignatureRequest */
+export interface declarationSignatureRequest {
+  method?: string;
+  image_png?: string;
+  typed_name?: string;
+  statement?: string;
+}
+
+/** Go: parent.CareScheduleRequestBody */
+export interface CareScheduleRequestBody {
+  payload?: Record<string, unknown | null> | null;
+  signature?: declarationSignatureRequest | null;
+}
+
+/** Go: parent.CourseRequestBody */
+export interface CourseRequestBody {
+  course_id?: string;
+  note?: string;
+}
+
+/** Go: parent.guardianPhoneRequest */
+export interface guardianPhoneRequest {
+  phone_number?: string;
+  phone_type?: string;
+  label?: string | null;
+  is_primary?: boolean;
+}
+
+/** Go: parent.createGuardianContactRequest */
+export interface createGuardianContactRequest {
+  first_name?: string;
+  last_name?: string;
+  salutation?: string | null;
+  email?: string | null;
+  address_street?: string | null;
+  address_city?: string | null;
+  address_postal_code?: string | null;
+  phones?: guardianPhoneRequest[] | null;
+  relationship_type?: string;
+  can_pickup?: boolean;
+  pickup_weekdays?: number[] | null;
+  pickup_signature?: declarationSignatureRequest | null;
+  is_emergency_contact?: boolean;
+  pickup_notes?: string | null;
+}
+
+/** Go: parent.updateGuardianRelationshipRequest */
+export interface updateGuardianRelationshipRequest {
+  can_pickup?: boolean | null;
+  is_emergency_contact?: boolean | null;
+  pickup_notes?: string | null;
+}
+
+/** Go: parent.pickupPermissionRequestBody */
+export interface pickupPermissionRequestBody {
+  weekdays?: number[] | null;
+  reason?: string;
+  signature?: declarationSignatureRequest | null;
+  relationship?: updateGuardianRelationshipRequest | null;
+}
+
+/** Go: parent.MasterDataChangeInput */
+export interface MasterDataChangeInput {
+  target?: string;
+  field_key?: string;
+  value?: unknown | null;
+}
+
+/** Go: parent.MasterDataChangeRequestBody */
+export interface MasterDataChangeRequestBody {
+  changes?: MasterDataChangeInput[] | null;
+  recipient_guardian_profile_ids?: string[] | null;
+}
+
+/** Go: parent.pickupSignatureStatementRequest */
+export interface pickupSignatureStatementRequest {
+  kind?: string;
+  person_name?: string;
+  weekdays?: number[] | null;
+  date?: string;
+  departure_mode?: string;
+}
+
+/** Go: parent.pickupSignatureStatementResponse */
+export interface pickupSignatureStatementResponse {
+  statement: string;
+}
+
+export const pickupSignatureStatementResponseSchema: z.ZodType<pickupSignatureStatementResponse, unknown> = z.object({
+  statement: z.string(),
+});
+
+/** Go: parent.inviteRelatedAccountRequest */
+export interface inviteRelatedAccountRequest {
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  confirm_role_upgrade?: boolean;
+}
+
+/** Go: parent.inviteRelatedAccountResponse */
+export interface inviteRelatedAccountResponse {
+  outcome: string;
+  guardian_profile_id: string;
+  existing_role?: string;
+}
+
+export const inviteRelatedAccountResponseSchema: z.ZodType<inviteRelatedAccountResponse, unknown> = z.object({
+  outcome: z.string(),
+  guardian_profile_id: z.string(),
+  existing_role: z.string().optional(),
+});
+
+/** Go: care.SEPAMandateInput */
+export interface SEPAMandateInput {
+  account_holder?: string;
+  iban?: string;
+  bic?: string;
+  street?: string;
+  postal_code?: string;
+  city?: string;
+  reference?: string;
+  text_sha256?: string;
+  holder_confirmed?: boolean;
+  account_token?: string;
+}
+
+/** Go: care.SEPAMandateText */
+export interface SEPAMandateText {
+  version: string;
+  reference: string;
+  text: string;
+  text_sha256: string;
+  account_token: string;
+}
+
+export const SEPAMandateTextSchema: z.ZodType<SEPAMandateText, unknown> = z.object({
+  version: z.string(),
+  reference: z.string(),
+  text: z.string(),
+  text_sha256: z.string(),
+  account_token: z.string(),
+});
+
+/** Go: care.SEPAMandateCreditor */
+export interface SEPAMandateCreditor {
+  name: string;
+  address: string;
+  creditor_id: string;
+}
+
+export const SEPAMandateCreditorSchema: z.ZodType<SEPAMandateCreditor, unknown> = z.object({
+  name: z.string(),
+  address: z.string(),
+  creditor_id: z.string(),
+});
+
+/** Go: care.SEPAMandateProof */
+export interface SEPAMandateProof {
+  channel: string;
+  version: string;
+  text_sha256: string;
+  text: string;
+  confirmed_at: string;
+}
+
+export const SEPAMandateProofSchema: z.ZodType<SEPAMandateProof, unknown> = z.object({
+  channel: z.string(),
+  version: z.string(),
+  text_sha256: z.string(),
+  text: z.string(),
+  confirmed_at: instant,
+});
+
+/** Go: care.SEPAMandateSummary */
+export interface SEPAMandateSummary {
+  collection_eligible: boolean;
+  id: string;
+  reference: string;
+  signed_on: string | null;
+  kind: string;
+  account_holder: string;
+  iban_masked: string;
+  bic: string;
+  source: string;
+  creditor_id: string;
+  revoked_on: string | null;
+  proof: SEPAMandateProof | null;
+}
+
+export const SEPAMandateSummarySchema: z.ZodType<SEPAMandateSummary, unknown> = z.object({
+  collection_eligible: z.boolean(),
+  id: int64String,
+  reference: z.string(),
+  signed_on: calendarDate.nullable(),
+  kind: z.string(),
+  account_holder: z.string(),
+  iban_masked: z.string(),
+  bic: z.string(),
+  source: z.string(),
+  creditor_id: z.string(),
+  revoked_on: calendarDate.nullable(),
+  proof: SEPAMandateProofSchema.nullable(),
+});
+
+/** Go: care.SEPAMandatePrefill */
+export interface SEPAMandatePrefill {
+  account_holder: string;
+  street: string;
+  postal_code: string;
+  city: string;
+}
+
+export const SEPAMandatePrefillSchema: z.ZodType<SEPAMandatePrefill, unknown> = z.object({
+  account_holder: z.string(),
+  street: z.string(),
+  postal_code: z.string(),
+  city: z.string(),
+});
+
+/** Go: care.SEPAMandateView */
+export interface SEPAMandateView {
+  enabled: boolean;
+  can_manage: boolean;
+  creditor_missing: boolean;
+  creditor: SEPAMandateCreditor | null;
+  mandate: SEPAMandateSummary | null;
+  prefill: SEPAMandatePrefill | null;
+}
+
+export const SEPAMandateViewSchema: z.ZodType<SEPAMandateView, unknown> = z.object({
+  enabled: z.boolean(),
+  can_manage: z.boolean(),
+  creditor_missing: z.boolean(),
+  creditor: SEPAMandateCreditorSchema.nullable(),
+  mandate: SEPAMandateSummarySchema.nullable(),
+  prefill: SEPAMandatePrefillSchema.nullable(),
+});
+
+/** Go: parent.ContractSignRequest */
+export interface ContractSignRequest {
+  method?: string;
+  image_png?: string;
+  typed_name?: string;
+  withdrawal_notice_acknowledged?: boolean;
+  early_start_requested?: boolean;
+}
+
+/** Go: parent.PostMessageRequest */
+export interface PostMessageRequest {
+  client_message_id?: string;
+  body?: string;
+  attachment_ids?: string[] | null;
+  group_thread_id?: string;
+  audience?: string;
+}
+
+/** Go: parent.stampRequest */
+export interface stampRequest {
+  published_at?: string | null;
+}
+
+/** Go: parent.AnnouncementAcknowledgedResponse */
+export interface AnnouncementAcknowledgedResponse {
+  acknowledged: boolean;
+}
+
+export const AnnouncementAcknowledgedResponseSchema: z.ZodType<AnnouncementAcknowledgedResponse, unknown> = z.object({
+  acknowledged: z.boolean(),
+});
+
+/** Go: parent.AnnouncementReadResponse */
+export interface AnnouncementReadResponse {
+  read: boolean;
+}
+
+export const AnnouncementReadResponseSchema: z.ZodType<AnnouncementReadResponse, unknown> = z.object({
+  read: z.boolean(),
+});
+
+/** Go: parent.respondRequest */
+export interface respondRequest {
+  student_id?: string;
+  option_ids?: string[] | null;
+  published_at?: string | null;
+}
+
+/** Go: parent.AnnouncementAnsweredResponse */
+export interface AnnouncementAnsweredResponse {
+  answered: boolean;
+}
+
+export const AnnouncementAnsweredResponseSchema: z.ZodType<AnnouncementAnsweredResponse, unknown> = z.object({
+  answered: z.boolean(),
+});
+
+/** Go: parent.EditOfferingChangeRequestBody */
+export interface EditOfferingChangeRequestBody {
+  offerings?: OfferingSelectionBody[] | null;
+  effective_from?: string;
+  note?: string;
+  complete_withdrawal_confirmed?: boolean;
+  recipient_guardian_profile_ids?: string[] | null;
+  expected_version?: string;
+}
+
+/** Go: parent.EditCareScheduleRequestBody */
+export interface EditCareScheduleRequestBody {
+  payload?: Record<string, unknown | null> | null;
+  expected_version?: string;
+  signature?: declarationSignatureRequest | null;
+}
+
+/** Go: parent.EditExcusedRequestBody */
+export interface EditExcusedRequestBody {
+  dates?: string[] | null;
+  note?: string;
+  expected_version?: string;
+}
+
+/** Go: parent.updateGuardianContactRequest */
+export interface updateGuardianContactRequest {
+  first_name?: string;
+  last_name?: string;
+  salutation?: string | null;
+  email?: string | null;
+  address_street?: string | null;
+  address_city?: string | null;
+  address_postal_code?: string | null;
+  phones?: guardianPhoneRequest[] | null;
+}
+
+/** Go: parent.EditMasterDataRequestBody */
+export interface EditMasterDataRequestBody {
+  new_value?: unknown | null;
+  expected_version?: string;
+}
+
+/** Go: parent.EditPickupChangeRequestBody */
+export interface EditPickupChangeRequestBody {
+  date?: string;
+  pickup_time?: string;
+  departure_mode?: string;
+  reason?: string;
+  expected_version?: string;
+  pickup_person_guardian_profile_id?: string | null;
+  signature?: declarationSignatureRequest | null;
+}
+
+/** Go: parent.requestSharingBody */
+export interface requestSharingBody {
+  recipient_guardian_profile_ids?: string[] | null;
+}
+
+/** Go: parent.UpdateParentProfileRequest */
+export interface UpdateParentProfileRequest {
+  portal_locale?: string;
+}
 
 /** Query of GET /parent/me/calendar */
 export interface GetParentMeCalendarQuery {
@@ -148,6 +2241,32 @@ export interface GetParentMeCalendarQuery {
 /** Query of GET /parent/me/calendar/appointments/{appointmentId}/overview */
 export interface GetParentMeCalendarAppointmentsAppointmentIdOverviewQuery {
   occurrence_date?: string;
+}
+
+/** Query of GET /parent/me/children/{studentId}/care-offerings/catalog */
+export interface GetParentMeChildrenStudentIdCareOfferingsCatalogQuery {
+  effective_from?: string;
+}
+
+/** Query of GET /parent/me/children/{studentId}/meal-plan */
+export interface GetParentMeChildrenStudentIdMealPlanQuery {
+  week_start?: string;
+}
+
+/** Query of GET /parent/me/messages/children/{studentId} */
+export interface GetParentMeMessagesChildrenStudentIdQuery {
+  audience?: string;
+}
+
+/** Query of GET /parent/me/news/{announcementId}/declaration/proof */
+export interface GetParentMeNewsAnnouncementIdDeclarationProofQuery {
+  student_id?: string;
+}
+
+/** Query of GET /parent/me/notifications/feed/ */
+export interface GetParentMeNotificationsFeedQuery {
+  cursor?: string;
+  limit?: number;
 }
 
 export const routes = {
@@ -171,11 +2290,257 @@ export const routes = {
     portals: ["parent"],
     response: success(ParentCalendarFeedResponseSchema),
   },
+  "GET /parent/me/children": {
+    method: "GET",
+    pattern: "/parent/me/children",
+    portals: ["parent"],
+    response: success(z.array(ChildResponseSchema)),
+  },
+  "GET /parent/me/children/{studentId}/care-offerings": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/care-offerings",
+    portals: ["parent"],
+    response: success(CareOfferingsResponseSchema),
+  },
+  "GET /parent/me/children/{studentId}/care-offerings/catalog": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/care-offerings/catalog",
+    portals: ["parent"],
+    query: ["effective_from"],
+    response: success(OfferingCatalogResponseSchema),
+  },
+  "GET /parent/me/children/{studentId}/care-schedule": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/care-schedule",
+    portals: ["parent"],
+    response: success(CareScheduleResponseSchema),
+  },
+  "GET /parent/me/children/{studentId}/consents": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/consents",
+    portals: ["parent"],
+    response: success(z.array(ChildConsentResponseSchema)),
+  },
+  "GET /parent/me/children/{studentId}/courses": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/courses",
+    portals: ["parent"],
+    response: success(CoursesResponseSchema),
+  },
+  "GET /parent/me/children/{studentId}/excused-requests": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/excused-requests",
+    portals: ["parent"],
+    response: success(z.array(ParentExcusedRequestResponseSchema)),
+  },
+  "GET /parent/me/children/{studentId}/features": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/features",
+    portals: ["parent"],
+    response: success(ChildFeaturesResponseSchema),
+  },
+  "GET /parent/me/children/{studentId}/guardians": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/guardians",
+    portals: ["parent"],
+    response: success(z.array(childGuardianResponseSchema)),
+  },
+  "GET /parent/me/children/{studentId}/master-data": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/master-data",
+    portals: ["parent"],
+    response: success(MasterDataResponseSchema),
+  },
+  "GET /parent/me/children/{studentId}/master-data/requests": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/master-data/requests",
+    portals: ["parent"],
+    response: success(z.array(MasterDataChangeResponseSchema)),
+  },
+  "GET /parent/me/children/{studentId}/meal-plan": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/meal-plan",
+    portals: ["parent"],
+    query: ["week_start"],
+    response: success(z.array(MealPlanEntryResponseSchema)),
+  },
+  "GET /parent/me/children/{studentId}/parent-conferences": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/parent-conferences",
+    portals: ["parent"],
+    response: success(z.array(ParentConferenceOfferSchema)),
+  },
+  "GET /parent/me/children/{studentId}/pickup-change-requests": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/pickup-change-requests",
+    portals: ["parent"],
+    response: success(z.array(PickupChangeRequestResponseSchema)),
+  },
+  "GET /parent/me/children/{studentId}/pickup-permission-requests": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/pickup-permission-requests",
+    portals: ["parent"],
+    response: success(z.array(pickupPermissionRequestResponseSchema)),
+  },
+  "GET /parent/me/children/{studentId}/related-accounts": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/related-accounts",
+    portals: ["parent"],
+    response: success(z.array(relatedAccountResponseSchema)),
+  },
+  "GET /parent/me/children/{studentId}/request-sharing-options": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/request-sharing-options",
+    portals: ["parent"],
+    response: success(requestSharingResponseSchema),
+  },
+  "GET /parent/me/children/{studentId}/request-sharing/{requestType}/{requestId}": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/request-sharing/{requestType}/{requestId}",
+    portals: ["parent"],
+    response: success(requestSharingResponseSchema),
+  },
+  "GET /parent/me/children/{studentId}/requests/{requestType}/{requestId}/events": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/requests/{requestType}/{requestId}/events",
+    portals: ["parent"],
+    response: success(z.array(ParentRequestEventResponseSchema)),
+  },
+  "GET /parent/me/children/{studentId}/today": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/today",
+    portals: ["parent"],
+    response: success(TodayStatusResponseSchema),
+  },
+  "GET /parent/me/documents": {
+    method: "GET",
+    pattern: "/parent/me/documents",
+    portals: ["parent"],
+    response: success(z.array(BillingDocumentResponseSchema)),
+  },
+  "GET /parent/me/documents/contracts": {
+    method: "GET",
+    pattern: "/parent/me/documents/contracts",
+    portals: ["parent"],
+    response: success(z.array(BillingDocumentResponseSchema)),
+  },
+  "GET /parent/me/documents/shared": {
+    method: "GET",
+    pattern: "/parent/me/documents/shared",
+    portals: ["parent"],
+    response: success(z.array(SharedDocumentResponseSchema)),
+  },
+  "GET /parent/me/documents/{organizationId}/contracts/{contractId}/signing": {
+    method: "GET",
+    pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/signing",
+    portals: ["parent"],
+    response: success(SigningViewSchema),
+  },
   "GET /parent/me/enrollable-schools": {
     method: "GET",
     pattern: "/parent/me/enrollable-schools",
     portals: ["parent"],
     response: success(z.array(EnrollablePhaseResponseSchema)),
+  },
+  "GET /parent/me/holiday-registration-entries": {
+    method: "GET",
+    pattern: "/parent/me/holiday-registration-entries",
+    portals: ["parent"],
+    response: success(HolidayRegistrationEntriesResponseSchema),
+  },
+  "GET /parent/me/holiday-registrations": {
+    method: "GET",
+    pattern: "/parent/me/holiday-registrations",
+    portals: ["parent"],
+    response: success(z.array(HolidayRegistrationOfferResponseSchema)),
+  },
+  "GET /parent/me/messages": {
+    method: "GET",
+    pattern: "/parent/me/messages",
+    portals: ["parent"],
+    response: success(z.array(ThreadSummaryResponseSchema)),
+  },
+  "GET /parent/me/messages/children/{studentId}": {
+    method: "GET",
+    pattern: "/parent/me/messages/children/{studentId}",
+    portals: ["parent"],
+    query: ["audience"],
+    response: success(ThreadViewResponseSchema),
+  },
+  "GET /parent/me/messages/children/{studentId}/threads": {
+    method: "GET",
+    pattern: "/parent/me/messages/children/{studentId}/threads",
+    portals: ["parent"],
+    response: success(z.array(ThreadSummaryResponseSchema)),
+  },
+  "GET /parent/me/messages/group-threads": {
+    method: "GET",
+    pattern: "/parent/me/messages/group-threads",
+    portals: ["parent"],
+    response: success(z.array(GroupThreadSummaryResponseSchema)),
+  },
+  "GET /parent/me/messages/group-threads/{groupThreadId}": {
+    method: "GET",
+    pattern: "/parent/me/messages/group-threads/{groupThreadId}",
+    portals: ["parent"],
+    response: success(GroupThreadViewResponseSchema),
+  },
+  "GET /parent/me/messages/unread-count": {
+    method: "GET",
+    pattern: "/parent/me/messages/unread-count",
+    portals: ["parent"],
+    response: success(UnreadCountResponseSchema),
+  },
+  "GET /parent/me/news": {
+    method: "GET",
+    pattern: "/parent/me/news",
+    portals: ["parent"],
+    response: success(z.array(AnnouncementResponseSchema)),
+  },
+  "GET /parent/me/news/unread-count": {
+    method: "GET",
+    pattern: "/parent/me/news/unread-count",
+    portals: ["parent"],
+    response: success(UnreadCountResponseSchema),
+  },
+  "GET /parent/me/news/{announcementId}/declaration/proof": {
+    method: "GET",
+    pattern: "/parent/me/news/{announcementId}/declaration/proof",
+    portals: ["parent"],
+    query: ["student_id"],
+    response: success(declarationProofResponseSchema),
+  },
+  "GET /parent/me/notifications/feed/": {
+    method: "GET",
+    pattern: "/parent/me/notifications/feed/",
+    portals: ["parent"],
+    query: ["cursor", "limit"],
+    response: success(notificationFeedPageResponseSchema),
+  },
+  "GET /parent/me/notifications/feed/unread-count": {
+    method: "GET",
+    pattern: "/parent/me/notifications/feed/unread-count",
+    portals: ["parent"],
+    response: success(notificationFeedCountResponseSchema),
+  },
+  "GET /parent/me/profile": {
+    method: "GET",
+    pattern: "/parent/me/profile",
+    portals: ["parent"],
+    response: success(ParentProfileResponseSchema),
+  },
+  "GET /parent/me/push/public-key": {
+    method: "GET",
+    pattern: "/parent/me/push/public-key",
+    portals: ["parent"],
+    response: success(PushPublicKeyResponseSchema),
+  },
+  "PATCH /parent/me/children/{studentId}/master-data/{target}/{field}": {
+    method: "PATCH",
+    pattern: "/parent/me/children/{studentId}/master-data/{target}/{field}",
+    portals: ["parent"],
+    request: requestBody<UpdateMasterDataRequest>(),
+    response: success(MasterDataResponseSchema),
   },
   "POST /parent/me/calendar/feed/rotate": {
     method: "POST",
@@ -189,5 +2554,196 @@ export const routes = {
     portals: ["parent"],
     request: requestBody<InvitationAnswer>(),
     response: success(ParentInvitationStatusResponseSchema),
+  },
+  "POST /parent/me/children/{studentId}/care-offerings/requests": {
+    method: "POST",
+    pattern: "/parent/me/children/{studentId}/care-offerings/requests",
+    portals: ["parent"],
+    request: requestBody<OfferingChangeRequestBody>(),
+    response: success(CareOfferingsResponseSchema),
+  },
+  "POST /parent/me/children/{studentId}/care-schedule/requests": {
+    method: "POST",
+    pattern: "/parent/me/children/{studentId}/care-schedule/requests",
+    portals: ["parent"],
+    request: requestBody<CareScheduleRequestBody>(),
+    response: success(CareScheduleResponseSchema),
+  },
+  "POST /parent/me/children/{studentId}/courses/requests": {
+    method: "POST",
+    pattern: "/parent/me/children/{studentId}/courses/requests",
+    portals: ["parent"],
+    request: requestBody<CourseRequestBody>(),
+    response: success(CoursesResponseSchema),
+  },
+  "POST /parent/me/children/{studentId}/courses/requests/{requestId}/withdraw": {
+    method: "POST",
+    pattern: "/parent/me/children/{studentId}/courses/requests/{requestId}/withdraw",
+    portals: ["parent"],
+    response: success(CoursesResponseSchema),
+  },
+  "POST /parent/me/children/{studentId}/guardians": {
+    method: "POST",
+    pattern: "/parent/me/children/{studentId}/guardians",
+    portals: ["parent"],
+    request: requestBody<createGuardianContactRequest>(),
+    response: success(childGuardianResponseSchema),
+  },
+  "POST /parent/me/children/{studentId}/guardians/{guardianProfileId}/pickup-permission-requests": {
+    method: "POST",
+    pattern: "/parent/me/children/{studentId}/guardians/{guardianProfileId}/pickup-permission-requests",
+    portals: ["parent"],
+    request: requestBody<pickupPermissionRequestBody>(),
+    response: success(pickupPermissionRequestResponseSchema),
+  },
+  "POST /parent/me/children/{studentId}/master-data/requests": {
+    method: "POST",
+    pattern: "/parent/me/children/{studentId}/master-data/requests",
+    portals: ["parent"],
+    request: requestBody<MasterDataChangeRequestBody>(),
+    response: success(z.array(MasterDataChangeResponseSchema)),
+  },
+  "POST /parent/me/children/{studentId}/pickup-signature-statement": {
+    method: "POST",
+    pattern: "/parent/me/children/{studentId}/pickup-signature-statement",
+    portals: ["parent"],
+    request: requestBody<pickupSignatureStatementRequest>(),
+    response: success(pickupSignatureStatementResponseSchema),
+  },
+  "POST /parent/me/children/{studentId}/related-accounts": {
+    method: "POST",
+    pattern: "/parent/me/children/{studentId}/related-accounts",
+    portals: ["parent"],
+    request: requestBody<inviteRelatedAccountRequest>(),
+    response: success(inviteRelatedAccountResponseSchema),
+  },
+  "POST /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/preview": {
+    method: "POST",
+    pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/preview",
+    portals: ["parent"],
+    request: requestBody<SEPAMandateInput>(),
+    response: success(SEPAMandateTextSchema),
+  },
+  "POST /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/revoke": {
+    method: "POST",
+    pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/revoke",
+    portals: ["parent"],
+    response: success(SEPAMandateViewSchema),
+  },
+  "POST /parent/me/documents/{organizationId}/contracts/{contractId}/sign": {
+    method: "POST",
+    pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/sign",
+    portals: ["parent"],
+    request: requestBody<ContractSignRequest>(),
+    response: success(SigningViewSchema),
+  },
+  "POST /parent/me/messages/children/{studentId}": {
+    method: "POST",
+    pattern: "/parent/me/messages/children/{studentId}",
+    portals: ["parent"],
+    request: requestBody<PostMessageRequest>(),
+    response: success(ThreadViewResponseSchema),
+  },
+  "POST /parent/me/news/{announcementId}/acknowledge": {
+    method: "POST",
+    pattern: "/parent/me/news/{announcementId}/acknowledge",
+    portals: ["parent"],
+    request: requestBody<stampRequest>(),
+    response: success(AnnouncementAcknowledgedResponseSchema),
+  },
+  "POST /parent/me/news/{announcementId}/read": {
+    method: "POST",
+    pattern: "/parent/me/news/{announcementId}/read",
+    portals: ["parent"],
+    request: requestBody<stampRequest>(),
+    response: success(AnnouncementReadResponseSchema),
+  },
+  "POST /parent/me/news/{announcementId}/respond": {
+    method: "POST",
+    pattern: "/parent/me/news/{announcementId}/respond",
+    portals: ["parent"],
+    request: requestBody<respondRequest>(),
+    response: success(AnnouncementAnsweredResponseSchema),
+  },
+  "POST /parent/me/notifications/feed/read-all": {
+    method: "POST",
+    pattern: "/parent/me/notifications/feed/read-all",
+    portals: ["parent"],
+    response: success(notificationFeedCountResponseSchema),
+  },
+  "POST /parent/me/notifications/feed/{id}/read": {
+    method: "POST",
+    pattern: "/parent/me/notifications/feed/{id}/read",
+    portals: ["parent"],
+    response: success(notificationFeedCountResponseSchema),
+  },
+  "POST /parent/me/pwa-usage": {
+    method: "POST",
+    pattern: "/parent/me/pwa-usage",
+    portals: ["parent"],
+    response: noData,
+  },
+  "PUT /parent/me/children/{studentId}/care-offerings/requests/{requestId}": {
+    method: "PUT",
+    pattern: "/parent/me/children/{studentId}/care-offerings/requests/{requestId}",
+    portals: ["parent"],
+    request: requestBody<EditOfferingChangeRequestBody>(),
+    response: success(CareOfferingsResponseSchema),
+  },
+  "PUT /parent/me/children/{studentId}/care-schedule/requests/{requestId}": {
+    method: "PUT",
+    pattern: "/parent/me/children/{studentId}/care-schedule/requests/{requestId}",
+    portals: ["parent"],
+    request: requestBody<EditCareScheduleRequestBody>(),
+    response: success(CareScheduleResponseSchema),
+  },
+  "PUT /parent/me/children/{studentId}/excused-requests/{requestId}": {
+    method: "PUT",
+    pattern: "/parent/me/children/{studentId}/excused-requests/{requestId}",
+    portals: ["parent"],
+    request: requestBody<EditExcusedRequestBody>(),
+    response: success(ParentExcusedRequestResponseSchema),
+  },
+  "PUT /parent/me/children/{studentId}/guardians/{guardianProfileId}/contact": {
+    method: "PUT",
+    pattern: "/parent/me/children/{studentId}/guardians/{guardianProfileId}/contact",
+    portals: ["parent"],
+    request: requestBody<updateGuardianContactRequest>(),
+    response: success(childGuardianResponseSchema),
+  },
+  "PUT /parent/me/children/{studentId}/guardians/{guardianProfileId}/pickup": {
+    method: "PUT",
+    pattern: "/parent/me/children/{studentId}/guardians/{guardianProfileId}/pickup",
+    portals: ["parent"],
+    request: requestBody<updateGuardianRelationshipRequest>(),
+    response: success(childGuardianResponseSchema),
+  },
+  "PUT /parent/me/children/{studentId}/master-data/requests/{requestId}": {
+    method: "PUT",
+    pattern: "/parent/me/children/{studentId}/master-data/requests/{requestId}",
+    portals: ["parent"],
+    request: requestBody<EditMasterDataRequestBody>(),
+    response: success(MasterDataChangeResponseSchema),
+  },
+  "PUT /parent/me/children/{studentId}/pickup-change-requests/{requestId}": {
+    method: "PUT",
+    pattern: "/parent/me/children/{studentId}/pickup-change-requests/{requestId}",
+    portals: ["parent"],
+    request: requestBody<EditPickupChangeRequestBody>(),
+    response: success(PickupChangeRequestResponseSchema),
+  },
+  "PUT /parent/me/children/{studentId}/request-sharing/{requestType}/{requestId}": {
+    method: "PUT",
+    pattern: "/parent/me/children/{studentId}/request-sharing/{requestType}/{requestId}",
+    portals: ["parent"],
+    request: requestBody<requestSharingBody>(),
+    response: success(requestSharingResponseSchema),
+  },
+  "PUT /parent/me/profile": {
+    method: "PUT",
+    pattern: "/parent/me/profile",
+    portals: ["parent"],
+    request: requestBody<UpdateParentProfileRequest>(),
+    response: success(ParentProfileResponseSchema),
   },
 } as const;

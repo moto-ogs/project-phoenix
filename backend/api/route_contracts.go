@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
 	"github.com/moto-ogs/project-phoenix/modules/appointments"
+	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	careContractHTTP "github.com/moto-ogs/project-phoenix/modules/carecontract/http"
 	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
 	"github.com/moto-ogs/project-phoenix/modules/classday"
@@ -18,6 +19,7 @@ import (
 	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
 	tagScanOperatorAPI "github.com/moto-ogs/project-phoenix/modules/devicefleet/inbound/operator"
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	enrollmentAPI "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	enrollmentHTTP "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	exportTransferHTTP "github.com/moto-ogs/project-phoenix/modules/exporttransfer/http"
 	identityOperatorAPI "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator"
@@ -132,6 +134,7 @@ func contractMounts() []contractMount {
 		{"/api/students", reviewStudentsHTTP.StudentRouteContracts()},
 		{"/api/students", enrollmentHTTP.StudentRouteContracts()},
 		{"/parent", parentAPI.MeRouteContracts()},
+		{"/parent", parentPortalRouteContracts()},
 		{"/api/notifications", notificationRouteContracts(common.PortalTenant)},
 		{"/school/class-day", classdayHTTP.RouteContracts()},
 		{"/school/notifications", notificationRouteContracts(common.PortalSchool)},
@@ -341,3 +344,16 @@ func traegerContractMounts() []contractMount {
 
 // ContractDocument builds the model of the frontend/backend contract from
 // the typed registrations of every owner (ADR 0270). The mounts repeat the
+
+// parentPortalRouteContracts registers the guardians' routes below /parent.
+// Enrollment renders the form load and submission (parentEnrollmentForms
+// binds it) and Care Contract the contract to sign
+// (NewParentContractDocuments), so their types are named here.
+func parentPortalRouteContracts() []common.RouteContract {
+	return parentAPI.PortalRouteContracts(parentAPI.ForeignContractTypes{
+		EnrollmentBootstrap:     enrollmentAPI.PublicEnrollmentFormBootstrapResponse{},
+		EnrollmentSubmitRequest: enrollmentAPI.SubmitEnrollmentRequest{},
+		EnrollmentSubmit:        enrollmentAPI.SubmitEnrollmentResponse{},
+		ContractSigning:         carecontract.SigningView{},
+	})
+}

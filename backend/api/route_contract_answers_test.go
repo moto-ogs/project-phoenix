@@ -20,7 +20,6 @@ import (
 //
 // Shrink only: give the route a test through its router and delete the line.
 var routesNoRouterTestAnswers = map[string]string{
-	"GET /parent/me/enrollable-schools":                             "no test answers the route",
 	"GET /school/parent-letters/letter-placeholders":                "no test answers the route",
 	"POST /school/parent-letters/letter-preview":                    "no test answers the route",
 	"DELETE /api/parent-announcements/{announcementId}":             "only a relative test router answers it; the staff and school portals share the pattern",

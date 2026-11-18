@@ -868,6 +868,84 @@ export const resentResponseSchema: z.ZodType<resentResponse, unknown> = z.object
   resent_count: safeInt,
 });
 
+/** Go: enrollment.TranslatedText */
+export interface TranslatedText {
+  text: string;
+  source?: string;
+}
+
+export const TranslatedTextSchema: z.ZodType<TranslatedText, unknown> = z.object({
+  text: z.string(),
+  source: z.string().optional(),
+});
+
+/** Go: enrollment.FormAttachment */
+export interface FormAttachment {
+  document_id?: string;
+  label: string;
+  document_url: string;
+}
+
+export const FormAttachmentSchema: z.ZodType<FormAttachment, unknown> = z.object({
+  document_id: z.string().optional(),
+  label: z.string(),
+  document_url: z.string(),
+});
+
+/** Go: enrollment.FormFieldOption */
+export interface FormFieldOption {
+  label: string;
+  value: string;
+  translations?: Record<string, Record<string, TranslatedText> | null>;
+}
+
+export const FormFieldOptionSchema: z.ZodType<FormFieldOption, unknown> = z.object({
+  label: z.string(),
+  value: z.string(),
+  translations: z.record(z.string(), z.record(z.string(), TranslatedTextSchema).nullable()).optional(),
+});
+
+/** Go: enrollment.FormFieldValidation */
+export interface FormFieldValidation {
+  min?: number;
+  max?: number;
+  pattern?: string;
+}
+
+export const FormFieldValidationSchema: z.ZodType<FormFieldValidation, unknown> = z.object({
+  min: z.number().optional(),
+  max: z.number().optional(),
+  pattern: z.string().optional(),
+});
+
+/** Go: enrollment.FormFileOptions */
+export interface FormFileOptions {
+  allowed_types: string[] | null;
+  max_size_mb: number;
+  multiple?: boolean;
+}
+
+export const FormFileOptionsSchema: z.ZodType<FormFileOptions, unknown> = z.object({
+  allowed_types: z.array(z.string()).nullable(),
+  max_size_mb: safeInt,
+  multiple: z.boolean().optional(),
+});
+
+/** Go: enrollment.VisibilityCondition */
+export interface VisibilityCondition {
+  source: string;
+  field?: string;
+  operator: string;
+  value?: unknown | null;
+}
+
+export const VisibilityConditionSchema: z.ZodType<VisibilityCondition, unknown> = z.object({
+  source: z.string(),
+  field: z.string().optional(),
+  operator: z.string(),
+  value: z.unknown().nullable().optional(),
+});
+
 /** Go: portal.Event */
 export interface Event {
   id: string;
@@ -933,6 +1011,17 @@ export const EventSchema: z.ZodType<Event, unknown> = z.object({
   can_edit: z.boolean(),
   can_view_overview: z.boolean(),
   school_event_type: z.string().optional(),
+});
+
+/** Go: portal.ParentConferenceWindow */
+export interface ParentConferenceWindow {
+  start_time: string;
+  end_time: string;
+}
+
+export const ParentConferenceWindowSchema: z.ZodType<ParentConferenceWindow, unknown> = z.object({
+  start_time: z.string(),
+  end_time: z.string(),
 });
 
 /** Go: portal.InvitationAnswer */
@@ -2143,30 +2232,6 @@ export const HolidayGuardianInputSchema: z.ZodType<HolidayGuardianInput, unknown
   phone: z.string(),
 });
 
-/** Go: enrollment.FormAttachment */
-export interface FormAttachment {
-  document_id?: string;
-  label: string;
-  document_url: string;
-}
-
-export const FormAttachmentSchema: z.ZodType<FormAttachment, unknown> = z.object({
-  document_id: z.string().optional(),
-  label: z.string(),
-  document_url: z.string(),
-});
-
-/** Go: enrollment.TranslatedText */
-export interface TranslatedText {
-  text: string;
-  source?: string;
-}
-
-export const TranslatedTextSchema: z.ZodType<TranslatedText, unknown> = z.object({
-  text: z.string(),
-  source: z.string().optional(),
-});
-
 /** Go: enrollment.FormLegalBlock */
 export interface FormLegalBlock {
   attachments?: FormAttachment[];
@@ -2200,60 +2265,6 @@ export const FormLegalBlockSchema: z.ZodType<FormLegalBlock, unknown> = z.object
   document_url: z.string().optional(),
   translations: z.record(z.string(), z.record(z.string(), TranslatedTextSchema).nullable()).optional(),
   guardian_agreement: z.boolean().optional(),
-});
-
-/** Go: enrollment.FormFieldOption */
-export interface FormFieldOption {
-  label: string;
-  value: string;
-  translations?: Record<string, Record<string, TranslatedText> | null>;
-}
-
-export const FormFieldOptionSchema: z.ZodType<FormFieldOption, unknown> = z.object({
-  label: z.string(),
-  value: z.string(),
-  translations: z.record(z.string(), z.record(z.string(), TranslatedTextSchema).nullable()).optional(),
-});
-
-/** Go: enrollment.FormFieldValidation */
-export interface FormFieldValidation {
-  min?: number;
-  max?: number;
-  pattern?: string;
-}
-
-export const FormFieldValidationSchema: z.ZodType<FormFieldValidation, unknown> = z.object({
-  min: z.number().optional(),
-  max: z.number().optional(),
-  pattern: z.string().optional(),
-});
-
-/** Go: enrollment.FormFileOptions */
-export interface FormFileOptions {
-  allowed_types: string[] | null;
-  max_size_mb: number;
-  multiple?: boolean;
-}
-
-export const FormFileOptionsSchema: z.ZodType<FormFileOptions, unknown> = z.object({
-  allowed_types: z.array(z.string()).nullable(),
-  max_size_mb: safeInt,
-  multiple: z.boolean().optional(),
-});
-
-/** Go: enrollment.VisibilityCondition */
-export interface VisibilityCondition {
-  source: string;
-  field?: string;
-  operator: string;
-  value?: unknown | null;
-}
-
-export const VisibilityConditionSchema: z.ZodType<VisibilityCondition, unknown> = z.object({
-  source: z.string(),
-  field: z.string().optional(),
-  operator: z.string(),
-  value: z.unknown().nullable().optional(),
 });
 
 /** Go: enrollment.HolidayFormField */

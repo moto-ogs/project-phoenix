@@ -10,8 +10,10 @@ import {
 } from "./runtime";
 import {
   EventSchema,
+  ParentConferenceWindowSchema,
   type Event,
   type InvitationAnswer,
+  type ParentConferenceWindow,
 } from "./shared.generated";
 
 /** Go: staffcalendarhttp.CalendarStatusResponse */
@@ -66,17 +68,6 @@ export const SchoolCalendarResponseSchema: z.ZodType<SchoolCalendarResponse, unk
   closing_days: z.array(SchoolDaysSchema).nullable(),
   holidays: z.array(SchoolDaysSchema).nullable(),
   classes: z.array(z.string()).nullable(),
-});
-
-/** Go: portal.ParentConferenceWindow */
-export interface ParentConferenceWindow {
-  start_time: string;
-  end_time: string;
-}
-
-export const ParentConferenceWindowSchema: z.ZodType<ParentConferenceWindow, unknown> = z.object({
-  start_time: z.string(),
-  end_time: z.string(),
 });
 
 /** Go: portal.ParentConferenceSlot */

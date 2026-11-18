@@ -47,6 +47,9 @@ type childReadRig struct {
 	settings childReadSettings
 	// now is the portal's clock, the one its decisions read.
 	now func() time.Time
+	// portal is the composed workflow, for a test that mounts it with more
+	// of the root's ports.
+	portal parentHTTP.PortalService
 }
 
 func newChildReadRig(t *testing.T) childReadRig {
@@ -107,7 +110,7 @@ func newChildReadRigOn(t *testing.T, db *bun.DB, with ...func(*portalCompose.Dep
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))
 	router.Use(RequestSettingsCacheMiddleware, RequestIdentityCacheMiddleware)
 	router.Mount("/parent", parentHTTP.NewResource(parentHTTP.ResourceConfig{Now: deps.Now, Parent: portal, MessageAttachmentFiles: NewMemoryMessageAttachmentStorageForTests()}).Router(ParentSessionChain))
-	return childReadRig{db: db, router: router, bookConference: owners.ParentConferenceBooking(portal), childCheckDelay: childCheckDelay, settings: settings.Settings, now: deps.Now}
+	return childReadRig{db: db, router: router, bookConference: owners.ParentConferenceBooking(portal), childCheckDelay: childCheckDelay, settings: settings.Settings, now: deps.Now, portal: portal}
 }
 
 type childReadSettings interface {

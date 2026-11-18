@@ -142,8 +142,6 @@ const DOWNLOAD_POLICY_FACTORIES: Record<string, string[]> = {
 // Non-JSON resources deliberately outside the private-download rule. Image,
 // legal-document and subscription caching is not changed by #5119.
 const NON_DOWNLOAD_RESOURCES: Record<string, string> = {
-  "parent/me/news/[announcementId]/declaration/proof":
-    "JSON proof metadata; the actual file is under proof/pdf",
   "traeger/master-data/logo":
     "Authenticated brand image, existing no-store policy",
   "public/enrollment-form-legal-documents/[filename]":
