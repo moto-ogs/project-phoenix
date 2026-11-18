@@ -11,6 +11,9 @@ export function traegerBillingRunTopic(): HelpTopic {
     group: "anmeldeverwaltung",
     audience: "traeger",
     icon: "FileText",
+    image: "/help/screens/traeger-naechste-rechnungsnummer.webp",
+    imageAlt:
+      "Die Karte Rechnungsnummern der Ferien: Muster, nächste Nummer und letzte laufende Nummer, darunter der Verlauf mit Zeitpunkt und Person.",
     requirements: [
       "Ihre Rolle im Träger-Büro ist Abrechnung. Nur diese Rolle sieht in der Navigation die Bereiche unter `Finanzen`.",
       "Der Ferienzeitraum ist veröffentlicht, und die Anmeldungen sind bestätigt.",
@@ -26,6 +29,18 @@ export function traegerBillingRunTopic(): HelpTopic {
           "Wählen Sie bei `Rechnungsnummern der Ferien` den Knopf `Muster festlegen`.",
           "Tragen Sie das Muster ein, zum Beispiel FE-{JJJJ}-{NNNN}. {NNNN} ist die laufende Nummer, {JJJJ} das Jahr.",
           "Wählen Sie `Speichern`.",
+        ],
+      },
+      {
+        title: "Nummern aus dem bisherigen Programm fortführen",
+        description:
+          "Nur nötig, wenn Ihre Rechnungen nicht bei 1 beginnen sollen.",
+        steps: [
+          "Wählen Sie bei `Rechnungsnummern der Ferien` den Knopf `Nächste Nummer ändern`.",
+          "Tragen Sie die Nummer nach der letzten Rechnung Ihres bisherigen Programms ein, zum Beispiel 7100.",
+          "Prüfen Sie darunter, welche Nummer die nächste Rechnung bekommt.",
+          "Wählen Sie `Speichern`.",
+          "Mit `Verlauf ansehen` sehen Sie, wer die Nummer wann geändert hat.",
         ],
       },
       {

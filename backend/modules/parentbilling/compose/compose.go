@@ -21,9 +21,9 @@ func NewHolidayContributions(registrations parentbilling.HolidayRegistrations, s
 	return application.NewHolidayContributions(postgres.NewStore(now), registrations, settings, today)
 }
 
-// NewBillingRuns builds the billing runs (#4668, ADR 0119, ADR 0122) and the kind of document per service (#4688) over the registrations and document templates the root binds; now stamps the overview (ADR 0275).
-func NewBillingRuns(registrations parentbilling.HolidayBillingRegistrations, settings parentbilling.HolidayBillingSettings, templates parentbilling.BillingDocumentTemplates, today func() calendar.Date, now func() time.Time) (*application.BillingRuns, parentbilling.BillingDocumentKinds) {
-	return application.NewBillingRuns(postgres.NewStore(now), registrations, settings, rendering.NewRenderer(now), templates, today), application.NewDocumentKinds(postgres.NewStore(now), templates)
+// NewBillingRuns builds the billing runs (#4668, ADR 0119, ADR 0122) and the kind of document per service (#4688) over the registrations and document templates the root binds; names names who set a start value of a number range (#7358); now stamps the overview (ADR 0275).
+func NewBillingRuns(registrations parentbilling.HolidayBillingRegistrations, settings parentbilling.HolidayBillingSettings, templates parentbilling.BillingDocumentTemplates, names parentbilling.ExportActorNames, today func() calendar.Date, now func() time.Time) (*application.BillingRuns, parentbilling.BillingDocumentKinds) {
+	return application.NewBillingRuns(postgres.NewStore(now), registrations, settings, rendering.NewRenderer(now), templates, names, today), application.NewDocumentKinds(postgres.NewStore(now), templates)
 }
 
 // NewBillingLetterMail builds the mail and print of the letters (#4670, ADR 0123) over the post and the clock the root binds.
