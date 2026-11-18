@@ -819,12 +819,10 @@ export function StaffHireWizard({
 
   return (
     <>
-      <form
-        ref={formRef}
-        noValidate
-        onSubmit={submit}
-        className="flex flex-col"
-      >
+      {/* Ein Raster wächst nicht mit dem Seitenrumpf (TenantPage): die
+          Schritt-Karte bleibt so hoch wie ihr Inhalt, Zurück und Weiter
+          stehen direkt unter den Feldern. */}
+      <form ref={formRef} noValidate onSubmit={submit} className="grid">
         {/* Eine Karte je Schritt: oben der Stepper, unten Zurück und
             Weiter (#7415). Der Name des Schritts steht im Stepper; die
             unsichtbare Überschrift nimmt beim Wechsel den Fokus. */}
