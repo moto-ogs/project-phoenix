@@ -218,7 +218,7 @@ type SchoolChildAttendance interface {
 // UtilizationChildren are the children of one school of the Träger by name
 // over the window, ordered by last and first name.
 type UtilizationChildren struct {
-	School   TraegerSchool            `json:"school"`
+	School   TraegerSchool     `json:"school"`
 	From     calendar.Date     `json:"from"`
 	To       calendar.Date     `json:"to"`
 	Children []ChildAttendance `json:"children"`

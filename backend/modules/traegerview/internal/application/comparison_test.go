@@ -16,13 +16,13 @@ func TestCompareSchoolsDerivesEveryFigureFromTheSeries(t *testing.T) {
 	schools := []traegerview.SchoolUtilization{
 		{
 			TraegerSchool: traegerview.TraegerSchool{ID: 1, Name: "OGS Am Bach"},
-			Places: 20, Booked: []int{16, 17, 19}, BookedPlaces: []int{15, 16, 17},
+			Places:        20, Booked: []int{16, 17, 19}, BookedPlaces: []int{15, 16, 17},
 			Present:        []*int{intPtr(12), nil, intPtr(15)},
 			AttendanceFrom: &from,
 		},
 		{
 			TraegerSchool: traegerview.TraegerSchool{ID: 2, Name: "OGS Lindenweg"},
-			Booked: []int{4, 4, 2}, BookedPlaces: []int{0, 0, 0},
+			Booked:        []int{4, 4, 2}, BookedPlaces: []int{0, 0, 0},
 			Present:        []*int{nil, intPtr(3), intPtr(5)},
 			AttendanceFrom: &late,
 		},

@@ -100,8 +100,8 @@ func (req *PhaseRequest) input() enrollment.TraegerPhaseInput {
 
 // OfferingRequest is the office's draft of a Träger care offering.
 type OfferingRequest struct {
-	Fields           OfferingFieldsRequest    `json:"fields"`
-	Prices           []OfferingPriceRequest       `json:"prices"`
+	Fields           OfferingFieldsRequest            `json:"fields"`
+	Prices           []OfferingPriceRequest           `json:"prices"`
 	ContractTemplate *OfferingContractTemplateRequest `json:"contract_template,omitempty"`
 }
 
