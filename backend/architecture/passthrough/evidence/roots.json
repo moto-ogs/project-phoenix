@@ -7380,6 +7380,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (s provisioningSettings) ReplyToAddresses(ctx context.Context, schoolIDs []int64) (map[int64]string, error) {\n\tsnapshots, err := s.settings.ResolveManyForTenants(ctx, schoolIDs, []string{configModels.KeyEmailReplyToAddress})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]string, len(snapshots))\n\tfor schoolID, snapshot := range snapshots {\n\t\tif result[schoolID], err = snapshot.String(configModels.KeyEmailReplyToAddress); err != nil {\n\t\t\treturn nil, err\n\t\t}\n\t}\n\treturn result, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/provisioningSettings.ReplyToAddresses",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (c pwaUsageCounts) PWAUsage(ctx context.Context, tenantID int64, window time.Duration) ([]deliveryCompose.PWAUsageRow, error) {\n\trows, err := c.provisioning.ListPWAUsage(ctx, window)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]deliveryCompose.PWAUsageRow, 0, len(rows))\n\tfor _, row := range rows {\n\t\tif tenantID \u003c= 0 || row.TenantID == tenantID {\n\t\t\tresult = append(result, deliveryCompose.PWAUsageRow(row))\n\t\t}\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/pwaUsageCounts.PWAUsage",

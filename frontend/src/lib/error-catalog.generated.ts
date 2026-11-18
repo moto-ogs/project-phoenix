@@ -604,8 +604,12 @@ export const ERROR_CATALOG = {
         "Der neue Zeitraum passt nicht zu einem vorgemerkten Kind. Bitte prüfen Sie zuerst dessen Betreuungszeitraum.",
       "enrollment.phase_school_classes_invalid":
         "Die angebotenen und die zugelassenen Klassen passen nicht zusammen. Bitte prüfen Sie die Klassen.",
+      "enrollment.phase_service_end_too_far":
+        "Das Ende darf höchstens 5 Jahre in der Zukunft liegen. Bitte wählen Sie ein früheres Ende.",
       "enrollment.phase_service_period_invalid":
         "Der Betreuungszeitraum ist unvollständig oder endet vor dem Beginn. Bitte prüfen Sie Beginn und Ende.",
+      "enrollment.phase_service_period_too_long":
+        "Der Betreuungszeitraum darf höchstens 2 Jahre lang sein. Bitte wählen Sie ein früheres Ende.",
       "enrollment.phase_window_invalid":
         "Das Anmeldefenster endet vor seinem Start. Bitte prüfen Sie Öffnung und Schließung.",
       "enrollment.pickup_time_not_allowed":

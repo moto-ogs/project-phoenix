@@ -57,10 +57,6 @@ var retentionControlTables = map[string]string{
 //   - the erasure of a retired demo school, whose Träger keeps no books,
 //     with the debtor numbers of the visitor's families it performs
 //     (platform.erase_demo_visitor_families, #6812);
-//   - the erasure of a demo order's own Träger once its last school is gone
-//     (platform.erase_retired_demo_traeger, ADR 0271): a Demo-Träger keeps
-//     no books either; its Nachweise go before the root, whose cascade their
-//     RESTRICT rule reference can stop (#7248);
 //   - the Beleg retention (#4720 slice 2, ADR 0184), which deletes a Beleg
 //     only after the period its Träger instructed, under the current
 //     Weisung, without an active suspension, after locking the Träger and
@@ -80,8 +76,11 @@ var retentionControlTables = map[string]string{
 //     file holds those bookings again. Invoices, Stornos, documents and the
 //     export file with its protocol entry stay.
 //
-// The erasure of a whole Träger after its export (#4657) deletes the
-// organization and reaches the Belege through its cascade.
+// The erasure of a whole Träger after its export (#4657), also of a demo
+// order's own Träger (platform.erase_retired_demo_traeger, ADR 0271),
+// deletes the organization and reaches the Belege through its cascade. The
+// Nachweise go there with their contracts: their key to the income level is
+// deferred over the cascade, not deleted by name (#7248).
 var belegErasureFunctions = []string{
 	"parent_billing.delete_due_belege",
 	"parent_billing.delete_expired_sepa_debit_downloads",
@@ -90,7 +89,6 @@ var belegErasureFunctions = []string{
 	"parent_billing.release_failed_handover_bookings",
 	"platform.erase_closed_demo_visitors",
 	"platform.erase_demo_visitor_families",
-	"platform.erase_retired_demo_traeger",
 }
 
 type belegForeignKey struct {

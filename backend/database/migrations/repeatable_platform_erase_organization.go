@@ -17,7 +17,8 @@ func init() {
 // platform.erase_organization(BIGINT, BIGINT, TEXT) (ADR 0223). Change the
 // function here; numbered migrations no longer define it. Since #6955 the
 // evidence also counts the devices the Träger-Portal remembered, which the
-// deletion of the Träger takes along by cascade.
+// deletion of the Träger takes along by cascade. Since #7248 it defers the
+// evidence's key to its income level over the root's cascade.
 const repeatablePlatformEraseOrganizationSQL = `
  CREATE OR REPLACE FUNCTION platform.erase_organization(p_org BIGINT, p_operator BIGINT, p_reference TEXT)
  RETURNS JSONB LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = pg_catalog
@@ -68,8 +69,13 @@ const repeatablePlatformEraseOrganizationSQL = `
    'platform.school_erasures', (SELECT count(*) FROM platform.school_erasures
     WHERE organization_id = p_org AND order_reference = v_order.order_reference AND status = 'completed'));
   -- The FKs of memberships, Träger roles, Träger sessions and the devices
-  -- the Träger-Portal remembered (#6955) cascade.
+  -- the Träger-Portal remembered (#6955) cascade. An evidence names its
+  -- income level and goes with its contract: its rule key is checked after
+  -- the whole cascade, not when the rules go first (#7248). IMMEDIATE checks
+  -- it again before anything else runs.
+  SET CONSTRAINTS parent_billing.fk_care_evidences_rule DEFERRED;
   DELETE FROM platform.organizations WHERE id = p_org;
+  SET CONSTRAINTS parent_billing.fk_care_evidences_rule IMMEDIATE;
   INSERT INTO platform.operator_audit_log (operator_id, action, resource_type, resource_id, changes)
   VALUES (p_operator, 'erase', 'organization', p_org,
    jsonb_build_object('order_id', v_order.id, 'order_reference', v_order.order_reference, 'row_counts', v_counts));

@@ -1,4 +1,5 @@
 import type { TenantPageTab } from "~/components/ui/tenant-page";
+import type { ChildScopeAnalyticsValue } from "~/lib/analytics-policy";
 
 /**
  * Reiter von „Alle Kinder“, wenn die Schule Kinder nur noch hier finden lässt
@@ -25,6 +26,18 @@ export function roomIdFromScope(scope: string): string | null {
   return scope.startsWith(ROOM_SCOPE_PREFIX)
     ? scope.slice(ROOM_SCOPE_PREFIX.length)
     : null;
+}
+
+/**
+ * Die Art eines Reiters für die Nutzungsanalyse (#5046): welcher Raum, steht
+ * nicht darin. `null` für einen unbekannten Wert.
+ */
+export function childScopeAnalyticsValue(
+  scope: string,
+): ChildScopeAnalyticsValue | null {
+  if (scope === ALL_CHILDREN_SCOPE) return "all";
+  if (scope === MY_GROUPS_SCOPE) return "groups";
+  return roomIdFromScope(scope) ? "room" : null;
 }
 
 /**

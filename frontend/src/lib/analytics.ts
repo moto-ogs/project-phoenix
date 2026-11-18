@@ -29,7 +29,10 @@ export type AnalyticsEvent =
   // nur der Typ des Eintrags (notification_type, allowlisted).
   | "notification_bell_opened"
   | "notification_feed_entry_clicked"
-  | "notification_feed_all_read";
+  | "notification_feed_all_read"
+  // Reiterwechsel auf „Alle Kinder“ (#5046): child_scope = all, groups oder
+  // room, ohne Raum oder Gruppe.
+  | "child_scope_tab_selected";
 
 function captureEvent(event: AnalyticsEvent, props?: Properties): void {
   capturePostHog(event, props);
