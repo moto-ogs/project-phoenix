@@ -54,7 +54,7 @@ import {
 } from "~/lib/timetable-helpers";
 import type { EnrichedInstance } from "~/lib/timetable-types";
 
-import { InstanceBlock } from "./instance-block";
+import { InstanceBlock, type BlockStaffing } from "./instance-block";
 import { StatusDot } from "~/components/ui/status-dot";
 import { PlanningDayChip } from "~/components/ui/planning/planning-context-bar";
 
@@ -121,6 +121,11 @@ interface WeeklyCalendarGridProps {
    */
   gapInstanceIds?: ReadonlySet<string>;
   /**
+   * Besetzung je Termin in der Zählweise der aufrufenden Fläche (#7493).
+   * Ohne Angabe zeigen die Blöcke „eingeteilt von benötigt“.
+   */
+  staffingByInstanceId?: ReadonlyMap<string, BlockStaffing>;
+  /**
    * OGS-Schließtage im sichtbaren Fenster, keyed YYYY-MM-DD → Grund (#2032).
    * Betroffene Tagesspalten werden neutral eingefärbt und mit dem Grund
    * beschriftet; geplant werden darf trotzdem (Ferien-/Notbetreuung).
@@ -172,6 +177,7 @@ export function WeeklyCalendarGrid({
   onSlotClick,
   planningDisabledDateISOs,
   gapInstanceIds,
+  staffingByInstanceId,
   closingDays,
   holidayCare,
   holidayCareHref,
@@ -694,6 +700,7 @@ export function WeeklyCalendarGrid({
                           width={`${laneSpan * widthPct}%`}
                           isSelected={selectedId === instance.id}
                           isGap={gapInstanceIds?.has(instance.id) ?? false}
+                          staffing={staffingByInstanceId?.get(instance.id)}
                           staffNames={staffNames}
                           onClick={() => onInstanceClick(instance)}
                         />
