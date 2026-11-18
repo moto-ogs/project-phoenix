@@ -225,7 +225,7 @@ func TestMenuChangeReachesGuardiansWithABookingAndRights(t *testing.T) {
 		assert.Equal(t, menuChangeType, entries[0].Type)
 		assert.Equal(t, "Speiseplan geändert", entries[0].Title)
 		assert.Equal(t, "Der Speiseplan für die Woche vom 10.06. bis 14.06.2030 hat sich geändert. Bitte prüfen Sie, ob die Essensbuchung Ihres Kindes noch passt.", entries[0].Body)
-		assert.Equal(t, "/meal-plan?week=2030-06-10", entries[0].DeepLink)
+		assert.Equal(t, fmt.Sprintf("/meal-plan?week=2030-06-10&school=%d", f.tenantID), entries[0].DeepLink)
 		assert.Nil(t, entries[0].ReadAt)
 	}
 	entries := f.entries(t, english.AccountID)
@@ -275,7 +275,7 @@ func TestMenuChangeFollowsWindowAndSchoolSwitch(t *testing.T) {
 	f.setMenu(t, "2030-06-26", "Gemüse")
 	entries := f.entries(t, family.AccountID)
 	require.Len(t, entries, 1)
-	assert.Equal(t, "/meal-plan?week=2030-06-24", entries[0].DeepLink)
+	assert.Equal(t, fmt.Sprintf("/meal-plan?week=2030-06-24&school=%d", f.tenantID), entries[0].DeepLink)
 	assert.Empty(t, f.pushes(t, family.AccountID), "a change more than 14 days ahead reaches the feed only")
 
 	// Who changes the menu hears nothing about it, also as a guardian with
@@ -300,4 +300,22 @@ func TestMenuChangeFollowsWindowAndSchoolSwitch(t *testing.T) {
 	f.setMenu(t, "2030-06-12", "Gemüse")
 	assert.Len(t, f.entries(t, family.AccountID), 2, "a school that switched it off writes no entry")
 	assert.Len(t, f.pushes(t, family.AccountID), 1, "and no push")
+}
+
+func TestMenuChangeWritesFeedOutsidePushWindow(t *testing.T) {
+	t.Parallel()
+	f := newMenuChangeFixture(t)
+	family := f.family(t, true)
+	f.consent(family.AccountID)
+
+	// Closing the window suppresses the push, but this notice is not held for
+	// a later retry: changing the menu must still commit its feed entry.
+	f.setMenu(t, "2030-06-12", "Fisch")
+	testpkg.SetTestTenantSetting(t, f.db, f.tenantID, "notifications.active_window_start", `""`)
+	f.setMenu(t, "2030-06-12", "Gemüse")
+
+	entries := f.entries(t, family.AccountID)
+	require.Len(t, entries, 1)
+	assert.Equal(t, menuChangeType, entries[0].Type)
+	assert.Empty(t, f.pushes(t, family.AccountID), "outside the window the entry is feed-only")
 }

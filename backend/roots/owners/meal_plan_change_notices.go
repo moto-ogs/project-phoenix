@@ -17,9 +17,10 @@ import (
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// mealPlanChangeDeepLink is the meal plan of the parents portal; the week
-// parameter opens the changed week.
-const mealPlanChangeDeepLink = "/meal-plan?week=%s"
+// mealPlanChangeDeepLink is the meal plan of the parents portal. A parent
+// account can belong to several schools, so the link identifies the affected
+// school as well as the changed week.
+const mealPlanChangeDeepLink = "/meal-plan?week=%s&school=%d"
 
 // mealPlanChangeRelatedType is the object a menu change notice is about: the
 // week, so changes to several days of one week bundle into one entry.
@@ -131,7 +132,7 @@ func (n mealPlanChangeNotices) NotifyMenuChanged(ctx context.Context, change mea
 			Type:           deliveryContract.NotificationMealPlanChanged,
 			IdempotencyKey: fmt.Sprintf("meal_plan_changed:%s:%s:%d", change.Date, locale, moment),
 			RelatedType:    mealPlanChangeRelatedType, RelatedID: mealPlanWeekID(week),
-			Title: pushTitle, Body: pushBody, DeepLink: fmt.Sprintf(mealPlanChangeDeepLink, week.String()), Priority: "normal",
+			Title: pushTitle, Body: pushBody, DeepLink: fmt.Sprintf(mealPlanChangeDeepLink, week.String(), tenant.FromContext(ctx)), Priority: "normal",
 			Audience: deliveryCompose.NotificationAudience{
 				TenantID: tenant.FromContext(ctx), Scope: deliveryCompose.NotificationAudienceScope("guardian"),
 				GuardianAccountIDs: group.accounts, StudentIDs: group.students,

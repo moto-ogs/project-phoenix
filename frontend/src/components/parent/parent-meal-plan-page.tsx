@@ -81,11 +81,11 @@ interface ChildOption {
   careTerm?: string;
 }
 
-// Parents read the meal plan for this and next week; with the registration on
-// they reach four weeks, so deadlines with a lead time stay reachable (#3873).
+// Parents reach the current week and the three following weeks. The meal plan
+// and the registration use this same range, so a notice always opens its plan.
 type WeekOffset = 0 | 1 | 2 | 3;
-const LAST_MEAL_PLAN_WEEK: WeekOffset = 1;
-const LAST_PARTICIPATION_WEEK: WeekOffset = 3;
+const LAST_MEAL_PLAN_WEEK: WeekOffset = 3;
+const LAST_PARTICIPATION_WEEK: WeekOffset = LAST_MEAL_PLAN_WEEK;
 
 function mondayISOFromOffset(todayISO: string, weekOffset: number): string {
   const base = parseISODate(todayISO);
@@ -106,7 +106,7 @@ function linkedWeekOffset(
 ): WeekOffset | null {
   if (!week || !isValidISODate(week)) return null;
   const monday = mondayISOFromOffset(week, 0);
-  for (let offset = 0; offset <= LAST_PARTICIPATION_WEEK; offset++) {
+  for (let offset = 0; offset <= LAST_MEAL_PLAN_WEEK; offset++) {
     if (mondayISOFromOffset(todayISO, offset) === monday) {
       return offset as WeekOffset;
     }
@@ -1234,10 +1234,13 @@ function ParticipationWeek({
 interface ParentMealPlanPageProps {
   /** Montag der Woche, die ein Link aus den Hinweisen öffnet (#7145). */
   readonly initialWeek?: string;
+  /** Schule des Hinweises; wird nur gewählt, wenn sie zum Elternkonto gehört. */
+  readonly initialSchool?: string;
 }
 
 export function ParentMealPlanPage({
   initialWeek,
+  initialSchool,
 }: ParentMealPlanPageProps = {}) {
   const locale = useLocale();
 
@@ -1271,11 +1274,19 @@ export function ParentMealPlanPage({
   const schools = resolved ?? knownSchools ?? NO_SCHOOLS;
   const hasLinkedChildren = (children.data?.length ?? 0) > 0;
   const [chosenStudent, setSelectedStudent] = useState<string | null>(null);
-  const selectedStudent = schools.some(
-    (school) => school.studentId === chosenStudent,
-  )
-    ? chosenStudent
-    : (schools[0]?.studentId ?? null);
+  const [linkedSchool, setLinkedSchool] = useState(initialSchool);
+  if (initialSchool !== linkedSchool) {
+    setLinkedSchool(initialSchool);
+    setSelectedStudent(null);
+  }
+  const selectedStudent =
+    initialSchool === linkedSchool &&
+    schools.some((school) => school.studentId === chosenStudent)
+      ? chosenStudent
+      : (schools.find((school) => school.tenantId === initialSchool)
+          ?.studentId ??
+        schools[0]?.studentId ??
+        null);
   // Der Plan gehört zur Schule des gewählten Kindes; seine Texte nennen die
   // Betreuung so, wie diese Schule sie nennt (#6082).
   const accountTerm = useCareFacilityTerm();
@@ -1332,18 +1343,8 @@ export function ParentMealPlanPage({
     [schools, selectedStudent],
   );
 
-  // A school without the registration only shows the meal plan, so a week
-  // beyond it cannot stay selected after switching to that school.
-  useEffect(() => {
-    if (selectedSchool && !selectedSchool.registrationEnabled) {
-      setWeekOffset((offset) =>
-        offset > LAST_MEAL_PLAN_WEEK ? LAST_MEAL_PLAN_WEEK : offset,
-      );
-    }
-  }, [selectedSchool]);
-
-  // Beyond next week parents only see their registration; the meal plan for
-  // those weeks is not public yet, so it is not loaded.
+  // The page never selects a later week, but this guard keeps the request
+  // scoped if an invalid state reaches it.
   const planLater = weekOffset > LAST_MEAL_PLAN_WEEK;
   // The key carries school and week: a slower answer of a previous
   // selection never shows under the new school's label or week.
