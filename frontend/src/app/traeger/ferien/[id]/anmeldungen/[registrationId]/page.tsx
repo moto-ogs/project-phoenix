@@ -570,7 +570,9 @@ function HolidayRegistrationContent() {
     backLabel: "Zurück zu den Anmeldungen",
   } as const;
 
-  if (loadError || !(registration && view && period && schools)) {
+  // Without the registration the page shows its loading or error state. With
+  // it, a recoverable error stands above the content (`keepContent`).
+  if (!(registration && view && period && schools)) {
     return (
       <TenantPage
         {...head}
@@ -845,6 +847,7 @@ function HolidayRegistrationContent() {
       {(status) => (
         <TenantPage
           {...head}
+          error={loadError}
           stats={
             <TenantPageStats
               items={[

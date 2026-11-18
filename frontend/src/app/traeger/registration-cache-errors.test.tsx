@@ -55,7 +55,9 @@ vi.mock("~/lib/tenant-context", () => ({
 }));
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: HOLIDAY_PERIOD.id, registrationId: "7" }),
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  // The registration keeps its tab in the address (#7410).
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 function Refresh() {
@@ -86,7 +88,8 @@ describe.each([
   {
     name: "detail",
     Page: RegistrationPage,
-    content: () => screen.queryByRole("heading", { name: "Eltern" }),
+    // The first tab of the registration opens with its status (#7410).
+    content: () => screen.queryByRole("heading", { name: "Status" }),
   },
 ])("registration $name metadata errors", ({ Page, content }) => {
   it.each([503, 401, 403, 404])(

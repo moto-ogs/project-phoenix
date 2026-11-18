@@ -514,7 +514,7 @@ const NO_REVEAL = () => {};
  * die einzige sichtbare Aktion im Seitenkopf, alles andere steht in dessen
  * Menü; die Karte zeigt nur den Status (#7410).
  */
-export function useHolidayRegistrationStatus({
+function useHolidayRegistrationStatus({
   periodId,
   registration,
   contribution,
