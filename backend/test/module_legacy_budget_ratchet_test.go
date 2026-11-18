@@ -354,7 +354,7 @@ var moduleLegacyFileBudgets = map[string]int{
 
 // ADR 0289: the maintenance seal constructors of the sealed document files in
 // modules/careplan/compose (+13) and modules/workforce/compose (+6).
-const moduleComposeBudgetTotal = 13666
+const moduleComposeBudgetTotal = 13660
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -453,7 +453,7 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0106: the Träger-Büro account management (+24).
 	// Raised by ADR 0187: the operator directory of the Träger export CLI (+11).
 	// Raised by ADR 0261: the owner's clock, its nil default and imports (+16).
-	"modules/identityaccess/compose": 1388, // raised by ADR 0077
+	"modules/identityaccess/compose": 1382, // raised by ADR 0077
 	// ADR 0269: the clock of the participation history (+2).
 	"modules/mealplan/compose": 104, // raised by ADR 0078 and ADR 0168
 	// ADR 0097: the isolated tenant return constructor, no retained logic moved.
@@ -519,7 +519,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0269: the default day of the real clock (+4).
 	// ADR 0278: the calendar import of the notices' day clock (+1) and the
 	// root's clock of the Records (+6).
-	"modules/schoolcalendar/compose":        169,
+	"modules/schoolcalendar/compose":        166,
 	"modules/schoolcalendar/portal/compose": 112,
 	// Raised by ADR 0076: the restricted administrative repair constructor.
 	// ADR 0151: the school figure constructor (+6).
@@ -547,7 +547,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0151: the school figure constructor (+13).
 	// ADR 0156: the contract Soll port (+4).
 	// ADR 0241: the presence series of the utilization (+7).
-	"modules/studentpresence/compose":                 273,
+	"modules/studentpresence/compose":                 270,
 	"modules/studentpresence/compose/presenceservice": 110,
 	"modules/supervisiondashboard/compose":            11,
 	// Raised by ADR 0128: the student template days constructor (+5), by

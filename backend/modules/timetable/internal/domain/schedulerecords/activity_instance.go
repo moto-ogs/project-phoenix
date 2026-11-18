@@ -122,11 +122,22 @@ type CompletionAttendanceSnapshot struct {
 	PickupExceptionID  *int64     `json:"pickup_exception_id,omitempty"`
 }
 
+// CompletionSupervisorVersion is the stored supervision state after completion.
+type CompletionSupervisorVersion struct {
+	UpdatedAtMicros int64  `json:"updated_at_us"`
+	GroupID         int64  `json:"group_id"`
+	StaffID         int64  `json:"staff_id"`
+	Role            string `json:"role"`
+	StartDate       string `json:"start_date"`
+	EndDate         string `json:"end_date,omitempty"`
+}
+
 type ActivityCompletionSnapshot struct {
-	ActiveGroupID int64                          `json:"active_group_id"`
-	VisitIDs      []int64                        `json:"visit_ids"`
-	SupervisorIDs []int64                        `json:"supervisor_ids"`
-	Attendance    []CompletionAttendanceSnapshot `json:"attendance"`
+	ActiveGroupID      int64                                 `json:"active_group_id"`
+	VisitIDs           []int64                               `json:"visit_ids"`
+	SupervisorVersions map[int64]CompletionSupervisorVersion `json:"supervisor_versions,omitempty"`
+	SupervisorIDs      []int64                               `json:"supervisor_ids"`
+	Attendance         []CompletionAttendanceSnapshot        `json:"attendance"`
 	// OwnerCompletedAt is the completion on the owner's clock, the one
 	// checkouts carry (#7295); completed_at is the database's.
 	OwnerCompletedAt *time.Time `json:"owner_completed_at,omitempty"`

@@ -254,6 +254,11 @@ func (c *Conclusions) concludeRecord(ctx context.Context, organizationID, contra
 // mail or a contract no longer sendable means a send of the office got there
 // first, which no one fixes: the run loses that race with an error.
 func sendHoldBack(err error) error {
+	// The Träger-Büro fixes a missing letterhead; the run concludes the
+	// contract once it is there (#7177).
+	if errors.Is(err, carecontract.ErrLetterheadMissing) {
+		return errHoldBack{reason: carecontract.SkipLetterheadMissing}
+	}
 	reason, ok := sendSkipReason(err)
 	if !ok || reason == carecontract.SkipMailPending || reason == carecontract.SkipNotSendable {
 		return err

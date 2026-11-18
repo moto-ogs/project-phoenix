@@ -86,10 +86,11 @@ type staffAbsenceAuditRow struct {
 	Note          string    `bun:"note"`
 	ChangedAt     time.Time `bun:"changed_at,nullzero,notnull"`
 	// The type columns are only set on a rebooking (#3258).
-	FromAbsenceType   *string `bun:"from_absence_type"`
-	ToAbsenceType     *string `bun:"to_absence_type"`
-	FromAbsenceTypeID *int64  `bun:"from_absence_type_id"`
-	ToAbsenceTypeID   *int64  `bun:"to_absence_type_id"`
+	FromAbsenceType   *string    `bun:"from_absence_type"`
+	ToAbsenceType     *string    `bun:"to_absence_type"`
+	FromAbsenceTypeID *int64     `bun:"from_absence_type_id"`
+	ToAbsenceTypeID   *int64     `bun:"to_absence_type_id"`
+	AuditRecordedAt   *time.Time `bun:"audit_recorded_at,scanonly"`
 }
 
 // AcquireXactLock takes the transaction-scoped advisory lock for key on the

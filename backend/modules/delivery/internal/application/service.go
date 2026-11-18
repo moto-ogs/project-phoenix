@@ -369,7 +369,11 @@ func intentOutcome(transport deliveryContract.Transport, row domain.Intent, now 
 	if transport != deliveryContract.TransportEmail {
 		return ""
 	}
-	return deliveryContract.EmailOutcomeAt(deliveryContract.EmailOutcomeOf(row.Status, &row.DeliveryState, row.LastError, ""), row.DeliveryStateAt, now)
+	ageFrom := row.DeliveryStateRecordedAt
+	if ageFrom == nil {
+		ageFrom = row.DeliveryStateAt // Legacy rows predate the owner's recording stamp.
+	}
+	return deliveryContract.EmailOutcomeAt(deliveryContract.EmailOutcomeOf(row.Status, &row.DeliveryState, row.LastError, ""), ageFrom, now)
 }
 
 // intents reads the intents of one related entity and observes the store's answer.

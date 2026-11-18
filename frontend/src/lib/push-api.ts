@@ -93,20 +93,36 @@ interface PublicKeyResponse {
   public_key?: string;
 }
 
-/** Fetches and validates the server's uncompressed P-256 VAPID public key. */
-async function getPushPublicKey(
-  portal: PushPortal,
-): Promise<Uint8Array<ArrayBuffer>> {
-  const response = await requestJson<PublicKeyResponse>(
-    `${basePath(portal)}/public-key`,
+/** The server's uncompressed P-256 VAPID public key. */
+export type PushPublicKey = Uint8Array<ArrayBuffer>;
+
+/** The failure of a push action on a server without Web Push. */
+export function pushConfigurationMissing(): ApiError {
+  return new ApiError(
+    "Web Push ist auf diesem Server nicht eingerichtet.",
+    404,
   );
-  const key = response.data?.public_key ?? response.public_key;
-  if (!key) {
-    throw new ApiError(
-      "Web Push ist auf diesem Server nicht eingerichtet.",
-      404,
+}
+
+/**
+ * Fetches and validates the server's VAPID public key. `null` is the valid
+ * answer of a server without Web Push. Read it through `usePushPublicKey`,
+ * so every reader of a page shares one request.
+ */
+export async function fetchPushPublicKey(
+  portal: PushPortal,
+): Promise<PushPublicKey | null> {
+  let response: PublicKeyResponse;
+  try {
+    response = await requestJson<PublicKeyResponse>(
+      `${basePath(portal)}/public-key`,
     );
+  } catch (error) {
+    if (isPushConfigurationMissing(error)) return null;
+    throw error;
   }
+  const key = response.data?.public_key ?? response.public_key;
+  if (!key) return null;
   try {
     const decoded = urlBase64ToUint8Array(key);
     if (decoded.length !== 65 || decoded[0] !== 4) {
@@ -116,12 +132,6 @@ async function getPushPublicKey(
   } catch {
     throw new ApiError("Der Web-Push-Schlüssel des Servers ist ungültig.", 502);
   }
-}
-
-export async function verifyPushConfiguration(
-  portal: PushPortal,
-): Promise<void> {
-  await getPushPublicKey(portal);
 }
 
 /** Registers /sw.js (idempotent) and returns the registration. */
@@ -143,12 +153,14 @@ export async function getExistingSubscription(): Promise<PushSubscription | null
  * Subscribes this device: requests permission (must be called from a user
  * gesture), creates the browser subscription, and persists it server-side.
  */
-export async function subscribePush(portal: PushPortal): Promise<void> {
-  // The settings UI preflights server configuration before enabling this
-  // action. Invoke permission directly in the click path so Safari preserves
-  // the transient user activation while the key is fetched again.
+export async function subscribePush(
+  portal: PushPortal,
+  loadPublicKey: () => Promise<PushPublicKey>,
+): Promise<void> {
+  // Invoke permission directly in the click path so Safari preserves the
+  // transient user activation while the key is read.
   const permissionPromise = Notification.requestPermission();
-  const publicKeyPromise = getPushPublicKey(portal);
+  const publicKeyPromise = loadPublicKey();
   const [permission, publicKey] = await Promise.all([
     permissionPromise,
     publicKeyPromise,
@@ -170,7 +182,7 @@ export async function subscribePush(portal: PushPortal): Promise<void> {
 async function replaceBrowserSubscription(
   registration: ServiceWorkerRegistration,
   existing: PushSubscription | null,
-  publicKey: Uint8Array<ArrayBuffer>,
+  publicKey: PushPublicKey,
 ): Promise<PushSubscription> {
   if (existing) {
     const removed = await existing.unsubscribe();
@@ -215,9 +227,9 @@ async function syncSubscription(
  */
 export async function syncExistingPushSubscription(
   portal: PushPortal,
+  publicKey: PushPublicKey,
 ): Promise<PushSubscription | null> {
   if (!isPushSupported()) return null;
-  const publicKey = await getPushPublicKey(portal);
   const registration = await registerPushServiceWorker();
   const existing = await registration.pushManager.getSubscription();
   if (!existing) return null;

@@ -555,7 +555,8 @@ func TestEndActivitySessionLocksGroupBeforeEnding(t *testing.T) {
 		GroupRepo: groupRepo, SchoolPresence: visitRepo, SupervisorRepo: supervisorRepo,
 	}}
 
-	require.NoError(t, svc.EndActivitySession(context.Background(), 1))
+	_, endErr := svc.EndActivitySession(context.Background(), 1)
+	require.NoError(t, endErr)
 	require.True(t, locked)
 	require.True(t, ended)
 }
@@ -647,7 +648,8 @@ func TestEndActivitySessionDoesNotBroadcastWhenCommitFails(t *testing.T) {
 	}}
 
 	ctx := withSessionTestRuntime(t, context.Background(), db)
-	require.ErrorContains(t, svc.EndActivitySession(ctx, 1), "commit failed")
+	_, endErr := svc.EndActivitySession(ctx, 1)
+	require.ErrorContains(t, endErr, "commit failed")
 	require.Zero(t, broadcaster.announcements)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
@@ -721,7 +723,7 @@ func TestEndActivitySession_FindByActiveGroupIDError(t *testing.T) {
 	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, GroupRepo: groupRepo, SchoolPresence: visitRepo, SupervisorRepo: supervisorRepo, Broadcaster: nil}}
 
 	// ACT
-	err = svc.EndActivitySession(ctx, 1)
+	_, err = svc.EndActivitySession(ctx, 1)
 
 	// ASSERT
 	require.Error(t, err)
@@ -804,7 +806,7 @@ func TestEndActivitySession_EndSupervisionError(t *testing.T) {
 	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, GroupRepo: groupRepo, SchoolPresence: visitRepo, SupervisorRepo: supervisorRepo, Broadcaster: nil}}
 
 	// ACT
-	err = svc.EndActivitySession(ctx, 1)
+	_, err = svc.EndActivitySession(ctx, 1)
 
 	// ASSERT
 	require.Error(t, err)

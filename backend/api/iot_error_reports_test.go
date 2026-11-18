@@ -208,7 +208,7 @@ func checkIoTErrorReportsRelay(t *testing.T, router http.Handler, fake *fakeSent
 		}
 		// The token bucket refills one token per second. A busy full-router
 		// test may take over a second to send 60 envelopes, so the 61st may
-		// legitimately succeed. The fixed-time unit test pins the exact burst.
+		// legitimately succeed.
 		var w *httptest.ResponseRecorder
 		for attempt := 61; attempt <= 120; attempt++ {
 			w = post(envelope, busy)

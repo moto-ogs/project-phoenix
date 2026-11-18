@@ -1091,6 +1091,8 @@ describe("proxy", () => {
       for (const path of [
         "/api/invitations/validate",
         "/api/invitations/accept",
+        // „Andere moto-Adresse wählen“ lists the schools (#7369).
+        "/api/tenant/list",
       ]) {
         const res = proxy(
           makeRequest(`http://${SCHOOL_HOSTNAME}${path}`, SCHOOL_HOSTNAME),
@@ -1918,6 +1920,7 @@ describe("proxy", () => {
         "/api/parent/auth/session",
         "/api/parent/me/children",
         "/api/tenant/resolve",
+        "/api/tenant/list",
         "/api/public/care-contract-signing/abc",
         "/api/public/login-image/a.webp",
         "/api/invitations/validate",

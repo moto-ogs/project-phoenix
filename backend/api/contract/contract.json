@@ -565,6 +565,38 @@
     },
     {
       "method": "GET",
+      "pattern": "/caterer/notifications/feed/",
+      "portals": [
+        "caterer"
+      ],
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "limit",
+          "kind": "int"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "schoolFeedPageResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/caterer/notifications/feed/unread-count",
+      "portals": [
+        "caterer"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "feedCountResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/caterer/schools",
       "portals": [
         "caterer"
@@ -1038,7 +1070,7 @@
       ],
       "response": {
         "kind": "ref",
-        "ref": "traegerFeedPageResponse"
+        "ref": "schoolFeedPageResponse"
       }
     },
     {
@@ -1263,6 +1295,28 @@
       "response": {
         "kind": "ref",
         "ref": "StudentResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/notifications/feed/read-all",
+      "portals": [
+        "caterer"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "feedCountResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/notifications/feed/{id}/read",
+      "portals": [
+        "caterer"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "feedCountResponse"
       }
     },
     {
@@ -9856,6 +9910,103 @@
       ]
     },
     {
+      "name": "schoolFeedEntryResponse",
+      "go_type": "notifications.schoolFeedEntryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "deep_link",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "read_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "schoolFeedPageResponse",
+      "go_type": "notifications.schoolFeedPageResponse",
+      "fields": [
+        {
+          "name": "entries",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "schoolFeedEntryResponse"
+            }
+          }
+        },
+        {
+          "name": "next_cursor",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "unread_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "startOperationResponse",
       "go_type": "timetablehttp.startOperationResponse",
       "fields": [
@@ -10097,103 +10248,6 @@
           "optional": true,
           "schema": {
             "kind": "string"
-          }
-        }
-      ]
-    },
-    {
-      "name": "traegerFeedEntryResponse",
-      "go_type": "notifications.traegerFeedEntryResponse",
-      "fields": [
-        {
-          "name": "id",
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "type",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "title",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "body",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "deep_link",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "created_at",
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "updated_at",
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "read_at",
-          "schema": {
-            "kind": "instant",
-            "nullable": true
-          }
-        },
-        {
-          "name": "school_id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "school_name",
-          "schema": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    {
-      "name": "traegerFeedPageResponse",
-      "go_type": "notifications.traegerFeedPageResponse",
-      "fields": [
-        {
-          "name": "entries",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "traegerFeedEntryResponse"
-            }
-          }
-        },
-        {
-          "name": "next_cursor",
-          "schema": {
-            "kind": "string",
-            "nullable": true
-          }
-        },
-        {
-          "name": "unread_count",
-          "schema": {
-            "kind": "int"
           }
         }
       ]

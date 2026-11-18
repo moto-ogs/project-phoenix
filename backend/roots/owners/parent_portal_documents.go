@@ -359,6 +359,8 @@ func parentSigningView(view carecontract.SigningView, err error) (parentportal.C
 		return nil, fmt.Errorf("%w: %w", parentportal.ErrContractWithdrawalNoticeRequired, err)
 	case errors.Is(err, carecontract.ErrContractNotSignable):
 		return nil, fmt.Errorf("%w: %w", parentportal.ErrContractNotSignable, err)
+	case errors.Is(err, carecontract.ErrLetterheadMissing):
+		return nil, fmt.Errorf("%w: %w", parentportal.ErrContractLetterheadMissing, err)
 	case err != nil:
 		return nil, err
 	}

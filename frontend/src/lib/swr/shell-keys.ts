@@ -29,6 +29,8 @@ export const ownSupervisionKeys = {
 // the previous account's answer.
 export const shellResourceKeys = {
   userContext: () => "user-context",
+  // The server's Web Push key, the same for every reader of a portal.
+  pushPublicKey: (portal: string) => `push-public-key:${portal}`,
   settingsSchema: () => "settings-schema",
   reminders: () => "reminders",
   changeRequestAccess: (accountId: string) =>

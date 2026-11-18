@@ -590,6 +590,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (f catererNotificationFeed) Page(ctx context.Context, accountID int64, cursor string, limit int) (notificationsHTTP.SchoolFeedPage, error) {\n\tpage, err := f.CatererNotificationFeed.Page(ctx, accountID, cursor, limit)\n\treturn schoolFeedPage(page), err\n}",
+      "form": "unclassified-evidence",
+      "id": "api/catererNotificationFeed.Page",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (r childQuotaStudentsReader) ChildQuotaUsage(ctx context.Context) (students.ChildQuotaUsage, bool, error) {\n\tusage, limited, err := r.usages.ChildQuotaUsage(ctx)\n\treturn students.ChildQuotaUsage{Booked: usage.Booked, Occupied: usage.Occupied}, limited, err\n}",
       "form": "unclassified-evidence",
       "id": "api/childQuotaStudentsReader.ChildQuotaUsage",
@@ -1815,7 +1822,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (f traegerNotificationFeed) Page(ctx context.Context, organizationID, accountID int64, cursor string, limit int) (notificationsHTTP.TraegerFeedPage, error) {\n\tpage, err := f.TraegerNotificationFeed.Page(ctx, organizationID, accountID, cursor, limit)\n\tif err != nil {\n\t\treturn notificationsHTTP.TraegerFeedPage{}, err\n\t}\n\tout := notificationsHTTP.TraegerFeedPage{NextCursor: page.NextCursor, UnreadCount: page.UnreadCount, Entries: make([]notificationsHTTP.TraegerFeedEntry, len(page.Entries))}\n\tfor i, entry := range page.Entries {\n\t\tout.Entries[i] = notificationsHTTP.TraegerFeedEntry{FeedEntry: notificationsHTTP.FeedEntry(entry.NotificationFeedEntry), SchoolID: entry.SchoolID, SchoolName: entry.SchoolName}\n\t}\n\treturn out, nil\n}",
+      "evidence": "func (f traegerNotificationFeed) Page(ctx context.Context, organizationID, accountID int64, cursor string, limit int) (notificationsHTTP.SchoolFeedPage, error) {\n\tpage, err := f.TraegerNotificationFeed.Page(ctx, organizationID, accountID, cursor, limit)\n\treturn schoolFeedPage(page), err\n}",
       "form": "unclassified-evidence",
       "id": "api/traegerNotificationFeed.Page",
       "owner": "roots"
@@ -3383,7 +3390,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p PushSubscriptionCleanup) ListLinks(ctx context.Context) ([]identityaccess.PushSubscriptionLink, error) {\n\tif p.Subscriptions == nil {\n\t\treturn nil, nil\n\t}\n\tlinks, err := p.Subscriptions.ListSessionLinks(ctx)\n\tresult := make([]identityaccess.PushSubscriptionLink, len(links))\n\tfor i, link := range links {\n\t\tresult[i] = identityaccess.PushSubscriptionLink(link)\n\t}\n\treturn result, err\n}",
+      "evidence": "func (p PushSubscriptionCleanup) ListLinks(ctx context.Context, afterID int64, limit int) ([]identityaccess.PushSubscriptionLink, error) {\n\tif p.Subscriptions == nil {\n\t\treturn nil, nil\n\t}\n\tlinks, err := p.Subscriptions.ListSessionLinks(ctx, afterID, limit)\n\tresult := make([]identityaccess.PushSubscriptionLink, len(links))\n\tfor i, link := range links {\n\t\tresult[i] = identityaccess.PushSubscriptionLink(link)\n\t}\n\treturn result, err\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/PushSubscriptionCleanup.ListLinks",
       "owner": "roots"
@@ -3624,13 +3631,6 @@
       "evidence": "func (a StatisticsAuditLog) SeenStatisticsAccessWithin(ctx context.Context, actorID int64, metadata map[string]string, window time.Duration) (bool, error) {\n\treturn a.Log.ExistsWithin(ctx, actorID, auditModels.ResourceTypeAttendanceStatistics, metadata, window)\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/StatisticsAuditLog.SeenStatisticsAccessWithin",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (a StatisticsReportPeriods) StatisticsHolidayPeriods(ctx context.Context, from, to timezone.Date) ([]presenceCompose.HolidayPeriod, error) {\n\tvalues, err := a.Periods.ListCalendarPeriods(ctx, schoolcalendar.HolidaysOverlapping(from.String(), to.String()))\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]presenceCompose.HolidayPeriod, 0, len(values))\n\tfor _, value := range values {\n\t\tresult = append(result, presenceCompose.HolidayPeriod{StartDate: timezone.Date(value.StartDate), EndDate: timezone.Date(value.EndDate)})\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/StatisticsReportPeriods.StatisticsHolidayPeriods",
       "owner": "roots"
     },
     {

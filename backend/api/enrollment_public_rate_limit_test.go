@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	customMiddleware "github.com/moto-ogs/project-phoenix/middleware"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +19,7 @@ func TestPublicEnrollmentRoutesHaveTheLimitOfThePublicLink(t *testing.T) {
 	t.Parallel()
 	ok := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	router := chi.NewRouter()
-	setupRateLimiting(router, nil, true, false)
+	setupRateLimiting(router, nil, true, false, customMiddleware.NewRateLimiter)
 	router.Get("/api/enrollment/phases/public/{tenantSlug}", ok)
 	router.Post("/api/enrollment/{tenantSlug}/submit", ok)
 	router.Get("/api/enrollment/admin/requests", ok)

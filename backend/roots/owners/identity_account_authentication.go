@@ -72,7 +72,7 @@ func NewIdentityAccessWithSessions(base identityaccessCompose.Dependencies, repo
 	}
 	base.Sessions = &identityBindingPorts.SessionDependencies{
 		Schools:             repos.schools,
-		Traeger:             TraegerMembershipDirectory{Memberships: repos.schools.Schools, Organizations: repos.schools.Schools, AccountRetention: organizationCompose.NewAccountRetention(observeOrganizationTenancy)},
+		Traeger:             TraegerMembershipDirectory{Memberships: repos.schools.Schools, Organizations: repos.schools.Schools, Names: NewTraegerMemberNames(), AccountRetention: organizationCompose.NewAccountRetention(observeOrganizationTenancy)},
 		PortalModules:       portalModules,
 		Persons:             PersonDirectory{Persons: repos.persons},
 		Passwords:           passwordVerifier{},
@@ -240,7 +240,27 @@ type TraegerMembershipDirectory struct {
 	Memberships organizationtenancy.TraegerMembershipQuery
 	// Organizations reads the Träger a parent's access names (ADR 0216).
 	Organizations organizationtenancy.OrganizationQuery
+	// Names reads the name of a Träger membership (#4693, #7305).
+	Names organizationtenancy.TraegerMemberNames
 	organizationtenancy.AccountRetention
+}
+
+// TraegerMemberName returns the account's name at the Träger, empty when
+// none is set.
+func (d TraegerMembershipDirectory) TraegerMemberName(ctx context.Context, organizationID, accountID int64) (string, error) {
+	if d.Names == nil {
+		return "", errors.New("the Träger member names are not composed")
+	}
+	names, err := d.Names.ListTraegerMemberNames(ctx, organizationID, []int64{accountID})
+	if err != nil {
+		return "", err
+	}
+	for _, name := range names {
+		if name.AccountID == accountID {
+			return name.Name, nil
+		}
+	}
+	return "", nil
 }
 
 // ListAccountTraegerOrganizations returns the Träger the account may sign in to.
@@ -474,11 +494,11 @@ func (p PushSubscriptionCleanup) DeleteUnboundByAccount(ctx context.Context, acc
 	return p.Subscriptions.DeleteUnboundByAccountForPortal(ctx, accountID, tenantID, portal)
 }
 
-func (p PushSubscriptionCleanup) ListLinks(ctx context.Context) ([]identityaccess.PushSubscriptionLink, error) {
+func (p PushSubscriptionCleanup) ListLinks(ctx context.Context, afterID int64, limit int) ([]identityaccess.PushSubscriptionLink, error) {
 	if p.Subscriptions == nil {
 		return nil, nil
 	}
-	links, err := p.Subscriptions.ListSessionLinks(ctx)
+	links, err := p.Subscriptions.ListSessionLinks(ctx, afterID, limit)
 	result := make([]identityaccess.PushSubscriptionLink, len(links))
 	for i, link := range links {
 		result[i] = identityaccess.PushSubscriptionLink(link)

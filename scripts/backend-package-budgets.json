@@ -1,30 +1,26 @@
 {
   "defaultSeconds": 90,
-  "defaultReason": "Slowest packages without an entry, 14.11.2026: at most 45 s in 16 runs after #7038, but 55-63 s in pull requests of 13.11. before it (modules/careplan/contracttest, modules/enrollment/http/behaviortest, modules/careplan/http); 90 s is about 1.5 times that maximum, because the runs after #7038 are one light Saturday.",
+  "defaultReason": "Pull request jobs on 4, 8 and 16 vCPUs, 14-18 November 2026 (#7076): packages without an entry took up to 61.7 s (modules/careplan/contracttest). 90 s is about 1.5 times the maximum and covers cmd (54.6 s) and internal/architecture (50.5 s).",
   "packages": {
     "api": {
-      "seconds": 240,
-      "reason": "25 runs after #7038 (14.11.2026, 07:50-11:10 UTC, light Saturday load): 91-140 s on blacksmith-8vcpu, 131-155 s for the full suite on blacksmith-4vcpu, 51-54 s in small selections there; budget is 1.5 times the maximum. Target is 60 s (ci-test-performance.md); lower this budget as the package gets faster."
+      "seconds": 280,
+      "reason": "Up to 185.3 s in a full 16-vCPU suite on 17 November 2026 (#7316, measured in #7076). Budget is 1.5 times the maximum, rounded up to 10 s. Target is 60 s (ci-test-performance.md)."
     },
     "modules/dataimport/importtest": {
-      "seconds": 160,
-      "reason": "23 runs after #7038 (14.11.2026): 63-97 s on blacksmith-8vcpu, 86-102 s for the full suite on blacksmith-4vcpu; budget is 1.5 times the maximum."
+      "seconds": 250,
+      "reason": "Up to 155.0 s in green jobs and 160.4 s in a 16-vCPU selection whose tests passed but whose 160 s budget failed on 17 November 2026 (#7326, measured in #7076). Budget is 1.5 times the latter maximum, rounded up to 10 s."
     },
     "database/migrations": {
-      "seconds": 130,
-      "reason": "21 runs after #7038 (14.11.2026): 46-68 s on blacksmith-8vcpu, 65-72 s for the full suite on blacksmith-4vcpu, 34 s in a small selection there. Migration pull requests on blacksmith-4vcpu took 71-107 s before #7038 and are barely measured since, so the budget stays above 1.5 times the new maximum (110 s) until weekday runs exist. Runs every migration on fresh databases."
+      "seconds": 140,
+      "reason": "Up to 91.2 s in a 16-vCPU selection whose tests passed on 17 November 2026 (#7316, measured in #7076). The 4-vCPU migration selection in #7069 took 33.7 s. Budget is 1.5 times the maximum, rounded up to 10 s. Runs every migration on fresh databases."
     },
     "modules/organizationtenancy/compose": {
-      "seconds": 175,
-      "reason": "37 runs of 16.-17.11.2026 on blacksmith-16vcpu across 13 branches (100-599 packages per job): 60-117 s, the maximum in a #7295 branch that does not touch the package; budget is 1.5 times the maximum. Locally the package takes 35 s alone, unchanged against development, so the spread is load from the packages running beside it. Earlier: 37-61 s on blacksmith-8vcpu after #7038. Per-test tenants for school lifecycle and erasure (#6452)."
+      "seconds": 180,
+      "reason": "Up to 116.6 s in 16-vCPU jobs whose tests passed but whose 100 s budget failed on 17 November 2026 (#7326, measured in #7076). Budget is 1.5 times the maximum, rounded up to 10 s. Per-test tenants for school lifecycle and erasure (#6452)."
     },
-    "cmd": {
+    "modules/enrollment/http/behaviortest": {
       "seconds": 100,
-      "reason": "23 runs after #7038 (14.11.2026): 16-34 s. On blacksmith-4vcpu it took 49-90 s before #7038 and is barely measured there since; lower it to the default once weekday runs on that runner exist."
-    },
-    "internal/architecture": {
-      "seconds": 110,
-      "reason": "16 runs after #7038 (14.11.2026): 20-45 s with the child-process builds in the warmed cache. They compile cold when a pull request changes much Go code: 53-100 s in six runs of 13.11. before the warm job ran these tests."
+      "reason": "Up to 66.3 s in a green 16-vCPU selection on 17 November 2026 (run 44189139316, measured in #7076). The package needs 100 s at 1.5 times its maximum, rounded up to 10 s. The shared 90 s budget covers the other packages without entries."
     }
   }
 }

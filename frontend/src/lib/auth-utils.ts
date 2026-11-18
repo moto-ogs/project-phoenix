@@ -127,14 +127,36 @@ export function canReadSupervisionData(session: Session | null): boolean {
 }
 
 /**
- * Get the user's display name
+ * Ob ein Name nur die Anmeldeadresse ist. Ein Konto ohne Personendaten trägt
+ * im Sitzungsnamen den Benutzernamen, und der ist meist die E-Mail-Adresse
+ * (#7305). Mit ihr wird nie gegrüßt und sie steht nie als Name da.
  */
-export function getUserDisplayName(session: Session | null): string {
-  if (!session?.user) return "User";
+function isAddressName(value: string): boolean {
+  return value.includes("@");
+}
 
-  if (session.user.firstName) {
-    return session.user.firstName;
-  }
+/**
+ * Der Name der Sitzung für Kopfzeile und Anzeige, leer, wenn er nur die
+ * Anmeldeadresse ist (#7305).
+ */
+export function getSessionPersonName(session: Session | null): string {
+  const name = session?.user?.name?.trim() ?? "";
+  return isAddressName(name) ? "" : name;
+}
 
-  return session.user.name ?? session.user.email ?? "User";
+/**
+ * Der Name für die Begrüßung: der Vorname, sonst das erste Wort des Namens
+ * der Sitzung. Eine Sitzung über den Träger trägt den ganzen Namen aus dem
+ * Träger-Konto als Vornamen; sie grüßt mit dessen erstem Wort. Ohne
+ * brauchbaren Namen nichts, dann grüßt die Seite ohne Anrede (#7305).
+ */
+export function getGreetingName(session: Session | null): string | undefined {
+  const user = session?.user;
+  const firstName = user?.firstName?.trim() ?? "";
+  const greeting =
+    firstName && !user?.viaTraeger
+      ? firstName
+      : (firstName || user?.name?.trim() || "").split(/\s+/)[0];
+  if (!greeting || isAddressName(greeting)) return undefined;
+  return greeting;
 }

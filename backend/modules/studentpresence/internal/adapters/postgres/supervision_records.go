@@ -71,14 +71,14 @@ func (s *Store) RemoveSupervision(ctx context.Context, id int64) (ports.Stats, e
 	return stats, err
 }
 
-func (s *Store) SetSupervisionEnd(ctx context.Context, id int64, date ports.Date, at time.Time) (int64, ports.Stats, error) {
+func (s *Store) SetSupervisionEnd(ctx context.Context, id int64, date ports.Date, _ time.Time) (int64, ports.Stats, error) {
 	db, tenantID, err := s.database(ctx)
 	if err != nil {
 		return 0, ports.Stats{}, err
 	}
 	started := time.Now()
 	result, err := db.NewUpdate().Table("active.group_supervisors").
-		Set("end_date = ?", date).Set("updated_at = ?", at).
+		Set("end_date = ?", date).
 		Where("tenant_id = ? AND id = ?", tenantID, id).Exec(ctx)
 	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
 	if err != nil {

@@ -68,6 +68,8 @@ export const ERROR_CATALOG = {
         "Die Datei lässt sich nicht lesen. Bitte wählen Sie eine CSV-Datei mit Überschriften in der ersten Zeile.",
       "care_contract.import_file_too_large":
         "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
+      "care_contract.letterhead_missing":
+        "Der Absender im Briefkopf fehlt. Ohne Name und Anschrift des Trägers wird kein Vertrag verschickt. Bitte tragen Sie ihn unter „Briefkopf und Vorlagen“ ein.",
       "care_contract.letterhead_too_long":
         "Absender oder Fußzeile sind zu lang für den Vertrag. Bitte kürzen Sie sie unter „Briefkopf und Vorlagen“. Das darf, wer das Recht „Einstellungen“ hat.",
       "care_contract.notice_end_not_open":
@@ -86,6 +88,8 @@ export const ERROR_CATALOG = {
         "Diese Auswahl ist so nicht möglich. Bitte ändern Sie die Auswahl.",
       "care_contract.signature_invalid":
         "Die Unterschrift fehlt oder ist leer. Bitte unterschreiben Sie noch einmal.",
+      "care_contract.signing_letterhead_missing":
+        "Ihre Unterschrift ist noch nicht gespeichert. Dem Träger fehlen noch Angaben. Bitte versuchen Sie es später noch einmal oder melden Sie sich beim Träger.",
       "care_contract.signing_link_invalid":
         "Dieser Link gilt nicht mehr. Er war schon benutzt oder ist abgelaufen. Den Vertrag finden Sie in der Eltern-App unter „Dokumente“. Oder fragen Sie beim Träger nach einem neuen Link.",
       "care_contract.special_termination_closed":
@@ -1121,6 +1125,8 @@ export const ERROR_CATALOG = {
         "Die letzte Mail an diese Familie ist noch unterwegs. Bitte warten Sie, sonst kommt sie doppelt an.",
       "parent_billing.letter_mail_pending":
         "Die Mail an diese Familie wird gerade gesendet. Bitte warten Sie, bis sie gesendet ist oder nicht zugestellt wurde.",
+      "parent_billing.letterhead_missing":
+        "Der Absender im Briefkopf fehlt. Ohne Name und Anschrift des Trägers entstehen keine Rechnungen oder Bescheide. Bitte tragen Sie ihn unter „Briefkopf und Vorlagen“ ein.",
       "parent_billing.letterhead_too_long":
         "Absender oder Fußzeile im Briefkopf sind zu lang für ein Schreiben. Bitte lassen Sie sie unter „Briefkopf und Vorlagen“ kürzen.",
       "parent_billing.number_range_invalid":
@@ -2192,6 +2198,8 @@ export const ERROR_CATALOG = {
         "This contract is already signed or is not waiting for a signature. Please reload the page.",
       "care_contract.field_invalid":
         "Some details are not valid. Please check your entries.",
+      "care_contract.letterhead_missing":
+        "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -2210,6 +2218,8 @@ export const ERROR_CATALOG = {
         "This selection is not possible. Please change your selection.",
       "care_contract.signature_invalid":
         "The signature is missing or empty. Please sign again.",
+      "care_contract.signing_letterhead_missing":
+        "Your signature has not been saved yet. The provider is still missing some details. Please try again later or contact the provider.",
       "care_contract.signing_link_invalid":
         "This link is no longer valid. It was already used or has expired. You can find the contract in the parent app under “Documents”, or ask the provider for a new link.",
       "care_contract.special_termination_closed":
@@ -2742,6 +2752,8 @@ export const ERROR_CATALOG = {
         "The fee cannot be calculated for these weeks. Please reload the page.",
       "parent_billing.letter_mail_block_unreadable":
         "We cannot check right now whether this address is blocked. Please try again later.",
+      "parent_billing.letterhead_missing":
+        "The sender in the letterhead is missing. No invoices or notices are created without the provider's name and address. Please add it under “Letterhead and templates”.",
       "parent_billing.online_mandate_disabled":
         "Your provider does not accept the direct debit mandate in the app right now.",
       "parent_billing.parent_document_not_found":
@@ -2954,6 +2966,8 @@ export const ERROR_CATALOG = {
         "Этот договор уже подписан или не ожидает подписи. Пожалуйста, обновите страницу.",
       "care_contract.field_invalid":
         "Некоторые данные указаны неверно. Проверьте введённые данные.",
+      "care_contract.letterhead_missing":
+        "В шапке отсутствуют данные отправителя. Договор не будет отправлен без названия и адреса организации. Добавьте их в разделе «Шапка и шаблоны».",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -2972,6 +2986,8 @@ export const ERROR_CATALOG = {
         "Такой выбор невозможен. Измените выбор.",
       "care_contract.signature_invalid":
         "Подпись отсутствует или пуста. Пожалуйста, подпишите ещё раз.",
+      "care_contract.signing_letterhead_missing":
+        "Ваша подпись ещё не сохранена. У организации ещё не хватает данных. Пожалуйста, попробуйте позже или свяжитесь с организацией.",
       "care_contract.signing_link_invalid":
         "Эта ссылка больше не действует. Она уже была использована или срок её действия истёк. Договор находится в приложении для родителей в разделе «Документы». Или попросите у организации новую ссылку.",
       "care_contract.special_termination_closed":
@@ -3445,6 +3461,8 @@ export const ERROR_CATALOG = {
         "Не удаётся рассчитать взнос за эти недели. Пожалуйста, обновите страницу.",
       "parent_billing.letter_mail_block_unreadable":
         "Сейчас нельзя проверить, заблокирован ли этот адрес. Попробуйте позже.",
+      "parent_billing.letterhead_missing":
+        "В бланке отсутствуют данные отправителя. Без названия и адреса организации счета и решения не создаются. Добавьте их в разделе «Бланк и шаблоны».",
       "parent_billing.online_mandate_disabled":
         "Ваш попечитель сейчас не принимает мандат на прямое дебетование в приложении.",
       "parent_billing.parent_document_not_found":
@@ -3578,6 +3596,8 @@ export const ERROR_CATALOG = {
         "Kjo kontratë është nënshkruar tashmë ose nuk pret nënshkrim. Ju lutemi rifreskoni faqen.",
       "care_contract.field_invalid":
         "Disa të dhëna nuk janë të sakta. Kontrolloni të dhënat.",
+      "care_contract.letterhead_missing":
+        "Në kokën e letrës mungojnë të dhënat e dërguesit. Kontrata nuk dërgohet pa emrin dhe adresën e ofruesit. Shtojini te „Koka e letrës dhe shabllonet”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -3596,6 +3616,8 @@ export const ERROR_CATALOG = {
         "Kjo zgjedhje nuk është e mundur. Ndryshoni zgjedhjen.",
       "care_contract.signature_invalid":
         "Nënshkrimi mungon ose është bosh. Ju lutemi nënshkruani përsëri.",
+      "care_contract.signing_letterhead_missing":
+        "Nënshkrimi juaj nuk është ruajtur ende. Ofruesit i mungojnë ende disa të dhëna. Ju lutemi provoni më vonë ose kontaktoni ofruesin.",
       "care_contract.signing_link_invalid":
         "Ky link nuk është më i vlefshëm. Është përdorur tashmë ose ka skaduar. Kontratën e gjeni në aplikacionin për prindër te „Dokumente“. Ose kërkoni një link të ri nga ofruesi.",
       "care_contract.special_termination_closed":
@@ -4083,6 +4105,8 @@ export const ERROR_CATALOG = {
         "Pagesa për këto javë nuk mund të llogaritet. Ju lutemi ringarkoni faqen.",
       "parent_billing.letter_mail_block_unreadable":
         "Tani nuk mund të kontrollohet nëse kjo adresë është e bllokuar. Ju lutemi provoni përsëri më vonë.",
+      "parent_billing.letterhead_missing":
+        "Mungon dërguesi në kokën e letrës. Pa emrin dhe adresën e ofruesit nuk krijohen fatura ose vendime. Shtojini te „Koka e letrës dhe modelet“.",
       "parent_billing.online_mandate_disabled":
         "Ofruesi juaj nuk e pranon tani mandatin e debitimit direkt në aplikacion.",
       "parent_billing.parent_document_not_found":
@@ -4218,6 +4242,8 @@ export const ERROR_CATALOG = {
         "Ta umowa jest już podpisana lub nie czeka na podpis. Odśwież stronę.",
       "care_contract.field_invalid":
         "Niektóre dane są nieprawidłowe. Sprawdź wpisane dane.",
+      "care_contract.letterhead_missing":
+        "Brakuje nadawcy w nagłówku. Umowa nie zostanie wysłana bez nazwy i adresu organizatora. Dodaj je w „Nagłówek i szablony”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -4236,6 +4262,8 @@ export const ERROR_CATALOG = {
         "Taki wybór nie jest możliwy. Zmień wybór.",
       "care_contract.signature_invalid":
         "Brak podpisu lub podpis jest pusty. Podpisz jeszcze raz.",
+      "care_contract.signing_letterhead_missing":
+        "Twój podpis nie został jeszcze zapisany. Organizatorowi brakuje jeszcze danych. Proszę spróbować później lub skontaktować się z organizatorem.",
       "care_contract.signing_link_invalid":
         "Ten link jest już nieważny. Został użyty lub wygasł. Umowę znajdziesz w aplikacji dla rodziców w zakładce „Dokumenty”. Możesz też poprosić organizatora o nowy link.",
       "care_contract.special_termination_closed":
@@ -4710,6 +4738,8 @@ export const ERROR_CATALOG = {
         "Nie można obliczyć opłaty za te tygodnie. Proszę odświeżyć stronę.",
       "parent_billing.letter_mail_block_unreadable":
         "Nie można teraz sprawdzić, czy ten adres jest zablokowany. Spróbuj ponownie później.",
+      "parent_billing.letterhead_missing":
+        "Brakuje nadawcy w nagłówku. Bez nazwy i adresu organizatora nie powstaną faktury ani decyzje. Dodaj te dane w sekcji „Nagłówek i szablony”.",
       "parent_billing.online_mandate_disabled":
         "Twój organ prowadzący nie przyjmuje teraz upoważnienia do polecenia zapłaty w aplikacji.",
       "parent_billing.parent_document_not_found":
@@ -4843,6 +4873,8 @@ export const ERROR_CATALOG = {
         "Bu sözleşme zaten imzalandı veya imza beklemiyor. Lütfen sayfayı yenileyin.",
       "care_contract.field_invalid":
         "Bazı bilgiler doğru değil. Girdiğiniz bilgileri kontrol edin.",
+      "care_contract.letterhead_missing":
+        "Antette gönderen bilgileri eksik. Kurumun adı ve adresi olmadan sözleşme gönderilmez. Bunları „Antet ve şablonlar” bölümüne ekleyin.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -4861,6 +4893,8 @@ export const ERROR_CATALOG = {
         "Bu seçim mümkün değil. Lütfen seçiminizi değiştirin.",
       "care_contract.signature_invalid":
         "İmza eksik veya boş. Lütfen tekrar imzalayın.",
+      "care_contract.signing_letterhead_missing":
+        "İmzanız henüz kaydedilmedi. Kurumun bazı bilgileri hâlâ eksik. Lütfen daha sonra tekrar deneyin veya kurumla iletişime geçin.",
       "care_contract.signing_link_invalid":
         "Bu bağlantı artık geçerli değil. Daha önce kullanıldı veya süresi doldu. Sözleşmeyi veli uygulamasında „Belgeler“ altında bulabilirsiniz. Ya da kurumdan yeni bir bağlantı isteyin.",
       "care_contract.special_termination_closed":
@@ -5341,6 +5375,8 @@ export const ERROR_CATALOG = {
         "Bu haftalar için ücret hesaplanamıyor. Lütfen sayfayı yeniden yükleyin.",
       "parent_billing.letter_mail_block_unreadable":
         "Bu adresin engelli olup olmadığı şu anda kontrol edilemiyor. Lütfen daha sonra tekrar deneyin.",
+      "parent_billing.letterhead_missing":
+        "Antette gönderen bilgisi eksik. Sağlayıcının adı ve adresi olmadan fatura veya bildirim oluşturulmaz. Bunları „Antet ve şablonlar“ bölümüne ekleyin.",
       "parent_billing.online_mandate_disabled":
         "Kurumunuz şu anda otomatik ödeme talimatını uygulamada kabul etmiyor.",
       "parent_billing.parent_document_not_found":
@@ -5476,6 +5512,8 @@ export const ERROR_CATALOG = {
         "Цей договір уже підписано або він не очікує підпису. Будь ласка, оновіть сторінку.",
       "care_contract.field_invalid":
         "Деякі дані вказано неправильно. Перевірте введені дані.",
+      "care_contract.letterhead_missing":
+        "У шапці бракує даних відправника. Договір не буде надіслано без назви й адреси організації. Додайте їх у розділі «Шапка та шаблони».",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -5494,6 +5532,8 @@ export const ERROR_CATALOG = {
         "Такий вибір неможливий. Змініть вибір.",
       "care_contract.signature_invalid":
         "Підпис відсутній або порожній. Будь ласка, підпишіть ще раз.",
+      "care_contract.signing_letterhead_missing":
+        "Ваш підпис ще не збережено. В організації ще бракує даних. Будь ласка, спробуйте пізніше або зверніться до організації.",
       "care_contract.signing_link_invalid":
         "Це посилання більше не дійсне. Його вже використано або термін дії минув. Договір є в застосунку для батьків у розділі «Документи». Або попросіть в організації нове посилання.",
       "care_contract.special_termination_closed":
@@ -5966,6 +6006,8 @@ export const ERROR_CATALOG = {
         "Не вдається розрахувати внесок за ці тижні. Будь ласка, оновіть сторінку.",
       "parent_billing.letter_mail_block_unreadable":
         "Зараз неможливо перевірити, чи заблоковано цю адресу. Спробуйте пізніше.",
+      "parent_billing.letterhead_missing":
+        "У бланку відсутні дані відправника. Без назви та адреси організатора рахунки й рішення не створюються. Додайте їх у розділі «Бланк та шаблони».",
       "parent_billing.online_mandate_disabled":
         "Ваш засновник зараз не приймає мандат на пряме дебетування в застосунку.",
       "parent_billing.parent_document_not_found":

@@ -52,11 +52,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/schoolcalendar/internal/application/TenantClosingDays.ClosingDayDates",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/schoolcalendar/internal/application/TenantHolidays.HolidayDates",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

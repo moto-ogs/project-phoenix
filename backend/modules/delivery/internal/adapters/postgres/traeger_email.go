@@ -18,7 +18,7 @@ import (
 // again while mails wait.
 const traegerEmailStatusesSQL = `SELECT id, tenant_id, organization_id, kind, idempotency_key, related_entity_type,
 		related_entity_id, status, attempts, next_retry_at, provider_result, last_error, sent_at, dead_letter_at,
-		cancelled_at, created_at, updated_at, delivery_state, delivery_state_at
+		cancelled_at, created_at, updated_at, delivery_state, delivery_state_at, delivery_state_recorded_at
 	FROM platform.email_outbox
 	WHERE tenant_id IS NULL AND organization_id = ? AND related_entity_type = ? AND related_entity_id = ?
 	ORDER BY created_at, id`
@@ -46,7 +46,7 @@ const traegerEmailCandidatesSQL = `SELECT candidate.id, candidate.tenant_id, can
  candidate.attempts, candidate.next_retry_at, candidate.provider_result,
  CASE WHEN candidate.status = 'pending' AND blocker.id IS NOT NULL THEN blocker.last_error ELSE candidate.last_error END AS last_error,
  candidate.sent_at, candidate.dead_letter_at, candidate.cancelled_at, candidate.created_at, candidate.updated_at,
- candidate.delivery_state, candidate.delivery_state_at
+ candidate.delivery_state, candidate.delivery_state_at, candidate.delivery_state_recorded_at
  FROM platform.email_outbox AS candidate
  LEFT JOIN LATERAL (
   SELECT predecessor.id, predecessor.last_error FROM platform.email_outbox AS predecessor
@@ -145,7 +145,7 @@ func (s *Store) RetryFailedTraegerEmails(ctx context.Context, organizationID int
 }
 
 const unresolvedHolidayClosureEmailsSQL = `SELECT id, organization_id, kind, idempotency_key, status, last_error,
- attempts, next_retry_at, sent_at, dead_letter_at, cancelled_at, created_at, updated_at, delivery_state, delivery_state_at
+ attempts, next_retry_at, sent_at, dead_letter_at, cancelled_at, created_at, updated_at, delivery_state, delivery_state_at, delivery_state_recorded_at
  FROM platform.email_outbox
  WHERE tenant_id IS NULL AND organization_id = ? AND kind = 'holiday_closure_notice' AND idempotency_key IS NOT NULL
   AND (status = 'dead_letter' OR (status = 'cancelled' AND last_error IN (?, ?)))

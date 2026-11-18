@@ -3,12 +3,14 @@ package api
 import (
 	"context"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	iotCore "github.com/moto-ogs/project-phoenix/api/iot"
 	iotCompose "github.com/moto-ogs/project-phoenix/api/iot/compose"
+	customMiddleware "github.com/moto-ogs/project-phoenix/middleware"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth"
 	devicesAPI "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
@@ -87,8 +89,20 @@ func NewIoTAdministration(administration devicefleet.Administration, now func() 
 }
 
 // NewIoTErrorReporter builds the same native report handler with its route logger.
-func NewIoTErrorReporter(relay iotCore.ErrorReportRelay) iotCompose.ErrorReports {
+func NewIoTErrorReporter(relay iotCore.ErrorReportRelay, quota iotCore.ErrorReportQuota) iotCompose.ErrorReports {
 	return func(logger *slog.Logger) iotCompose.ErrorReporter {
-		return iotCore.NewErrorReports(relay, iotErrorReportsRuntime(), logger)
+		return iotCore.NewErrorReports(relay, iotErrorReportsRuntime(), quota, logger)
 	}
+}
+
+func deviceErrorReportQuota(limits customMiddleware.RateLimitStore) iotCore.ErrorReportQuota {
+	return func(ctx context.Context, id int64) (bool, error) {
+		const perMinute = iotCore.ErrorReportsPerMinute
+		settle, err := limits.Admit(ctx, deviceErrorReportRateKey(id), perMinute, perMinute, false)
+		return settle != nil, err
+	}
+}
+
+func deviceErrorReportRateKey(id int64) string {
+	return "iot-error-report:" + strconv.FormatInt(id, 10)
 }

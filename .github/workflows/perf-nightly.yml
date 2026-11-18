@@ -120,7 +120,7 @@ jobs:
       # /api/internal/metrics on the frontend with it.
       METRICS_BEARER_TOKEN: ci-metrics-token
       # Seeder input for security.ogs_device_pin only; no runtime fallback.
-      OGS_DEVICE_PIN: "1234"
+      OGS_DEVICE_PIN: "4711"
       EMAIL_SMTP_HOST: localhost
       EMAIL_SMTP_PORT: 1025
       EMAIL_FROM_ADDRESS: noreply@localhost
@@ -187,7 +187,7 @@ jobs:
           "${RUNNER_TEMP}/devtools" seed \
             --email "${OPERATOR_EMAIL}" \
             --password "${OPERATOR_PASSWORD}" \
-            --pin 1234 \
+            --pin "${OGS_DEVICE_PIN}" \
             --url http://localhost:8080 \
             --tenant-slug vollbetrieb \
             --staff-password 'PerfNightly1234%' \

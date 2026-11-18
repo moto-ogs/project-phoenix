@@ -4841,6 +4841,7 @@ export const mealCatererTopic = function mealCatererTopic(): HelpTopic {
       "Den Link sieht nur der Caterer. Er gilt 14 Tage.",
       "Der Caterer sieht nur Zahlen: je Tag und, wenn Sie so bestellen, je Klasse. Namen sieht er nur, wenn Sie unter `Einstellungen` → `Datenschutz` `Namen der Kinder für den Caterer` einschalten.",
       "Der Caterer kann eine Bestellung nur bestätigen. Dann steht bei Ihnen `Vom Caterer bestätigt`.",
+      "Ändert sich das Essen eines Tages, an dem Kinder ein Essen gebucht haben, sieht Ihr Caterer einen Hinweis in seiner Glocke oben rechts. Das gilt auch für jeden neuen, geänderten oder gelöschten Schließtag. So plant er die Mengen. Die Schalter `Hinweis bei geändertem Speiseplan` und `Benachrichtigung bei Schließtagen` unter `Einstellungen` gelten auch für ihn.",
       "Beliefert der Caterer schon andere Schulen, bestätigt er mit seinem Passwort. Ihre Schule kommt dann zu seinen Schulen dazu.",
       "Sein Passwort ändert der Caterer selbst. Er öffnet oben rechts sein Menü und wählt `Konto`. Hat er es vergessen, wählt er bei der Anmeldung `Passwort vergessen?`.",
       "Im `Konto` kann der Caterer auch die `Zwei-Faktor-Anmeldung` einschalten. Das ist freiwillig. Dann gibt er bei der Anmeldung zusätzlich einen Code aus seiner E-Mail ein. Statt Passwort und Code kann er auch einen Passkey nutzen.",
@@ -4952,7 +4953,7 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
       "Auch beim Neuladen mit `Wiederholen` fragt moto bei offenen Änderungen nach.",
     ],
     troubleshootingDetails: [
-      "Bekommen Eltern keinen Hinweis zu Änderungen? Prüfen Sie unter `Einstellungen` den Schalter `Hinweis an Eltern bei geändertem Speiseplan`. Für vergangene Tage gibt es keinen Hinweis.",
+      "Bekommen Eltern keinen Hinweis zu Änderungen? Prüfen Sie unter `Einstellungen` den Schalter `Hinweis bei geändertem Speiseplan`. Für vergangene Tage gibt es keinen Hinweis.",
       "Fehlt `Speiseplan` in der Seitenleiste? Dann ist die Funktion für Ihre OGS ausgeschaltet, oder Ihrer Rolle fehlt das Recht `Mittagessen: Lesen`.",
     ],
     related: [
@@ -9732,6 +9733,7 @@ export const teacherAccessTopic = function teacherAccessTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Der Link funktioniert nicht mehr? Bitten Sie die OGS um eine neue Einladung.",
+      "Sie haben ein moto-Konto, aber noch keinen Zugang zu moto schule? Wählen Sie in der Einladung `Andere moto-Adresse wählen`. Wählen Sie dann Ihre bisherige Schule oder `Für Eltern`. Melden Sie sich dort an und nehmen Sie die Einladung an.",
     ],
     related: [
       HELP_TOPICS.teacherLogin,
@@ -11588,7 +11590,7 @@ export const traegerBriefkopfTopic =
             "Tragen Sie bei `Absender im Briefkopf` Name und Anschrift ein. Jede Zeile im Feld ist eine Zeile im Brief. Die erste Zeile steht fett und in Ihrer Farbe.",
             "Klicken Sie bei `Farbe für Briefe und Rechnungen` auf eine der Farben.",
             "Passt keine Farbe, wählen Sie `Eigene Farbe`. Klicken Sie dann auf den farbigen Kreis und wählen Sie Ihre Farbe. Steht im Logo-Entwurf ein Farbcode, tragen Sie ihn in das Feld daneben ein: eine Raute und sechs Zeichen.",
-            "Tragen Sie bei `Fußzeile` zum Beispiel Vorstand, Amtsgericht und Steuernummer ein, jede Angabe in eine eigene Zeile.",
+            "Tragen Sie bei `Fußzeile` zum Beispiel Vorstand, Amtsgericht und Steuernummer ein. Auch eine zweite Bankverbindung und Ihr Hinweis zur Umsatzsteuer können dort stehen. Schreiben Sie jede Angabe in eine eigene Zeile.",
             "moto speichert jedes Feld von selbst.",
           ],
         },
@@ -11650,7 +11652,8 @@ export const traegerBriefkopfTopic =
  * angenommenen Anmeldungen erstellen, prüfen und senden; die Unterschrift
  * der Eltern und den Papiervertrag erfassen; Versionen nach einer Änderung;
  * Kündigung und Widerruf (#4682); Änderungswünsche der Eltern freigeben (#5979);
- * Kinder und bestehende Verträge aus einer Datei importieren (#4723).
+ * Kinder und bestehende Verträge aus einer Datei importieren (#4723), auch
+ * ohne Mail-Adresse der Eltern (#7360).
  */
 export const traegerCareContractsTopic =
   function traegerCareContractsTopic(): HelpTopic {
@@ -11768,6 +11771,7 @@ export const traegerCareContractsTopic =
             "Prüfen Sie unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Pflicht sind Vorname und Nachname des Kindes.",
             "Hat Ihre Datei keine Spalte für die Schule, das Modul oder den Vertragsbeginn? Dann wählen Sie `Schule für alle Zeilen`, `Modul für alle Zeilen` und `Vertragsbeginn für alle Zeilen`.",
             "Nennt eine Zeile keine Eltern? moto übernimmt den Vertrag trotzdem. Er hat dann keinen Vertragspartner.",
+            "Steht eine Zeile auf `Bereit` und nennt die Eltern, aber keine Mail-Adresse? moto übernimmt den Vertrag trotzdem. Die Vorschau zählt diese Verträge. Unter `Ohne Mail` sehen Sie nur diese Zeilen. Die Familien bekommen keine Mail von moto und haben keinen Zugang zur Eltern-App. Rechnungen gibt es für sie nur auf Papier. Geschwister bleiben getrennte Familien. Haben Sie die Adressen? Dann tragen Sie sie in die Datei ein. Laden Sie die Datei danach noch einmal.",
             "Steht die `Debitorennummer` in der Datei? Ordnen Sie die Spalte zu. moto trägt die Nummer beim Zahler oder beim Kind ein, je nach Ihrer Einstellung. Fehlt die `E-Mail der Eltern`, gehört die Nummer zu diesem einen Vertrag. Geschwister erkennt moto nur über dieselbe E-Mail.",
             "Prüfen Sie die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. `Schon vorhanden` heißt: Das Kind hat an der Schule schon einen Vertrag. Bei `Fehlerhaft` steht der Grund in der Spalte `Hinweis`.",
             "Wählen Sie unten `übernehmen`. Die Verträge stehen danach in der Liste mit dem Status `Aktiv`.",
@@ -14663,7 +14667,7 @@ export const traegerSepaMandatesTopic =
       title: "Lastschrift und SEPA-Mandate",
       question: "Wie buche ich Beiträge per Lastschrift ab?",
       summary:
-        "Sie tragen Ihre Gläubiger-ID ein und erfassen das SEPA-Mandat jeder Familie. Die Rechnung kündigt die Abbuchung dann an: mit Betrag, Datum, Konto, Gläubiger-ID und Mandatsreferenz. moto bucht kein Geld ab.",
+        "Sie tragen Ihre Gläubiger-ID und die Mandate der Familien ein. Die Rechnung kündigt die Abbuchung an. moto bucht kein Geld ab.",
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "Repeat",
@@ -14746,7 +14750,7 @@ export const traegerSepaMandatesTopic =
         },
       ],
       result:
-        "Im nächsten Monatslauf steht auf jeder Rechnung mit Lastschrift die Vorabankündigung: Betrag, Tag der Abbuchung, Konto (verdeckt), Gläubiger-ID und Mandatsreferenz. Der Betrag ist das, was die Familie zahlt, also ohne den Anteil eines Kostenträgers.",
+        "Neue Lastschrift-Rechnungen nennen den Betrag, den Abbuchungstag und den Kontoinhaber. Dort stehen auch die verdeckte IBAN, die Gläubiger-ID und die Mandatsreferenz. Ist der Kontoinhaber jemand anderes? Dann bittet das Schreiben darum, es an diese Person weiterzugeben. Der Betrag enthält nur den Anteil der Familie.",
       notes: [
         "Die Mandate sehen Sie unter `Familien und Zahlung` im Reiter `Lastschrift`. Die Liste zeigt zuerst die gültigen; mit `Alle` sehen Sie auch die widerrufenen.",
         "Ein Mandat aus der Eltern-App hat die Herkunft `von den Eltern`. moto speichert dazu den bestätigten Text mit Prüfsumme, das Konto der Eltern und die Uhrzeit. Widerrufen die Eltern in der App, gilt das ab dem nächsten Monatslauf.",

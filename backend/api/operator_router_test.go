@@ -182,8 +182,8 @@ func TestRouter(t *testing.T) {
 	})
 
 	t.Run("demo presence history is mounted only in the demo behind operator auth", func(t *testing.T) {
-		assert.Nil(t, newDemoPresenceHistoryRoute(transactionruntime.Database{}, "production"), "no route outside APP_ENV=demo")
-		assert.Nil(t, newDemoPresenceHistoryRoute(transactionruntime.Database{}, "development"))
+		assert.Nil(t, newDemoPresenceHistoryRoute(transactionruntime.Database{}, "production", nil), "no route outside APP_ENV=demo")
+		assert.Nil(t, newDemoPresenceHistoryRoute(transactionruntime.Database{}, "development", nil))
 
 		reached := false
 		history := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -203,10 +203,12 @@ func TestRouter(t *testing.T) {
 			if handler == nil {
 				continue
 			}
-			anonymous := httptest.NewRecorder()
-			router.ServeHTTP(anonymous, httptest.NewRequest(http.MethodPost, "/schools/1/demo-presence-history", nil))
-			assert.Equal(t, http.StatusUnauthorized, anonymous.Code)
-			assert.False(t, reached, "the route sits behind the operator session")
+			for _, method := range []string{http.MethodGet, http.MethodPost} {
+				anonymous := httptest.NewRecorder()
+				router.ServeHTTP(anonymous, httptest.NewRequest(method, "/schools/1/demo-presence-history", nil))
+				assert.Equal(t, http.StatusUnauthorized, anonymous.Code, method)
+				assert.False(t, reached, "the route sits behind the operator session")
+			}
 		}
 	})
 }

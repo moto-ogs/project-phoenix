@@ -14,7 +14,7 @@ import (
 // in the list's form, which idx_email_outbox_school_kind_address serves.
 const emailOutcomeColumns = `outbox.id, outbox.kind, outbox.related_entity_type, outbox.related_entity_id,
 		outbox.status, outbox.delivery_state, COALESCE(outbox.delivery_state_at, outbox.sent_at) AS outcome_at,
-		outbox.delivery_state_at, outbox.attempts, outbox.last_error, LOWER(TRIM(outbox.recipient->>'address')) AS address,
+		COALESCE(outbox.delivery_state_recorded_at, outbox.delivery_state_at) AS state_age_from, outbox.attempts, outbox.last_error, LOWER(TRIM(outbox.recipient->>'address')) AS address,
 		suppression.reason AS address_mark,
 		EXISTS (SELECT 1 FROM platform.delivery_guardian_contacts AS contact
 			WHERE contact.tenant_id = outbox.tenant_id AND contact.address = LOWER(TRIM(outbox.recipient->>'address')) AND contact.emails_stopped_at IS NOT NULL)
@@ -33,7 +33,7 @@ type emailOutcomeRow struct {
 	Status        string     `bun:"status"`
 	DeliveryState *string    `bun:"delivery_state"`
 	OutcomeAt     *time.Time `bun:"outcome_at"`
-	StateAt       *time.Time `bun:"delivery_state_at"`
+	StateAgeFrom  *time.Time `bun:"state_age_from"`
 	Stopped       bool       `bun:"stopped"`
 	Attempts      int        `bun:"attempts"`
 	LastError     *string    `bun:"last_error"`
@@ -54,7 +54,7 @@ func (row emailOutcomeRow) report(now time.Time) deliveryContract.EmailOutcomeRe
 	if row.AddressMark != nil {
 		report.Mark = deliveryContract.EmailAddressMark(*row.AddressMark)
 	}
-	report.Outcome = deliveryContract.EmailOutcomeAt(deliveryContract.EmailOutcomeOf(row.Status, row.DeliveryState, row.LastError, report.Mark), row.StateAt, now)
+	report.Outcome = deliveryContract.EmailOutcomeAt(deliveryContract.EmailOutcomeOf(row.Status, row.DeliveryState, row.LastError, report.Mark), row.StateAgeFrom, now)
 	return report
 }
 

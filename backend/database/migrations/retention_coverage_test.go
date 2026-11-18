@@ -191,6 +191,7 @@ var tableRetentions = map[string]tableRetention{
 	"auth.passkey_credentials":                              parent("auth.accounts"),
 	"auth.passkey_sessions":                                 own("hourly token-cleanup, DeleteExpiredPasskeySessions (7 days after expires_at)"),
 	"auth.password_reset_rate_limits":                       own("hourly token-cleanup, DeleteStalePasswordResetWindows"),
+	"auth.request_rate_limits":                              own("bounded traffic-triggered sweep, auth.prune_request_rate_limits"),
 	"auth.password_reset_tokens":                            own("hourly token-cleanup, DeleteSpentPasswordResetTokens (expired or used)"),
 	"auth.permissions":                                      notPersonal("permission catalog"),
 	"auth.role_permissions":                                 notPersonal("role-permission mapping"),

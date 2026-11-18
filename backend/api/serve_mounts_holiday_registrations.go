@@ -65,7 +65,7 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 	}
 	accountLinks := owners.NewHolidayParentAccountLinks(setups, parentsURL)
 	publicLink := root
-	if limit := holidayRegistrationRateLimit(limiters.enabled(), demoLoopbackExempt()); limit != nil {
+	if limit := holidayRegistrationRateLimit(limiters.enabled(), demoLoopbackExempt(), limiters.newLimiter); limit != nil {
 		publicLink = root.With(limit)
 	}
 	publicLink.Mount(holidayRegistrationPath, NewHolidayRegistrationHTTP(organizations, delivery, keys, "", healthData, holidayCalendar, settings, accountLinks, viper.GetString("app_env"), logger, now).Router())

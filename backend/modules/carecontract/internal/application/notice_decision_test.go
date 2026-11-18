@@ -289,21 +289,30 @@ func TestDecidedEndTellsNoParentWhoseRightWasRevoked(t *testing.T) {
 	assert.Equal(t, "false", sent, "the trail records that the parents got no notice")
 }
 
-// Both missing-student and revoked-right outcomes survive a reload and retry.
+// Every unsent outcome survives a reload and retry.
 func TestEndNoticeRecordsWhyNoMailWentOut(t *testing.T) {
 	t.Parallel()
 	testpkg.SetupTestDB(t)
-	for _, missingStudent := range []bool{true, false} {
+	for _, scenario := range []struct {
+		name              string
+		missingStudent    bool
+		missingLetterhead bool
+		want              string
+	}{
+		{name: "missing student", missingStudent: true, want: carecontract.EndNoticeMissingStudent},
+		{name: "no permitted address", want: carecontract.EndNoticeNoPermittedAddress},
+		{name: "missing letterhead", missingLetterhead: true, want: carecontract.EndNoticeLetterheadMissing},
+	} {
 		for _, decision := range []string{carecontract.EndDecisionSet, carecontract.EndDecisionReinterpreted} {
-			t.Run(fmt.Sprintf("missing_student=%t/%s", missingStudent, decision), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s/%s", scenario.name, decision), func(t *testing.T) {
 				f := newNoticeFixture(t, "Träger Versandgrund", noticeToday)
 				_, err := f.parentDeclare(extraordinary)
 				require.NoError(t, err)
-				want := "no_permitted_address"
-				if missingStudent {
+				if scenario.missingStudent {
 					_, err = f.db.NewUpdate().Table("care_contract.contracts").Set("student_id = NULL").Where("id = ?", f.contract).Exec(f.ctx)
 					require.NoError(t, err)
-					want = "missing_student"
+				} else if scenario.missingLetterhead {
+					f.notices.sender = noticeSender{letterhead: "Träger e.V."}
 				} else {
 					f.addressees.set()
 				}
@@ -318,14 +327,14 @@ func TestEndNoticeRecordsWhyNoMailWentOut(t *testing.T) {
 				check := func(options carecontract.NoticeOptions) {
 					t.Helper()
 					require.NotNil(t, options.Notice)
-					assert.Equal(t, want, options.Notice.EndNoticeNotSentReason)
+					assert.Equal(t, scenario.want, options.Notice.EndNoticeNotSentReason)
 					assert.False(t, options.Notice.EndNoticeSent)
 					assert.Equal(t, decision, options.Notice.EndDecision)
 					assert.NotEmpty(t, options.Notice.EndNoticeText)
 				}
 				check(options)
 				// Later student assignment must not rewrite the historical reason.
-				if missingStudent {
+				if scenario.missingStudent {
 					_, err = f.db.NewUpdate().Table("care_contract.contracts").Set("student_id = ?", testpkg.UniqueTestTenantID(t)).Where("id = ?", f.contract).Exec(f.ctx)
 					require.NoError(t, err)
 				}

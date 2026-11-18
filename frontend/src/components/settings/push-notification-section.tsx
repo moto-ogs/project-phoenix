@@ -33,9 +33,9 @@ import {
   subscribePush,
   syncExistingPushSubscription,
   unsubscribePush,
-  verifyPushConfiguration,
   type PushPortal,
 } from "~/lib/push-api";
+import { usePushPublicKey } from "~/lib/hooks/use-push-public-key";
 import {
   canPromptInstall,
   isAndroidDevice,
@@ -85,6 +85,8 @@ export function PushNotificationSection({
   const accountId = useShellAuthSafe()?.user?.id;
   const t = useTranslations("pushNotifications");
   const setupT = useTranslations("parentNotificationSetup");
+  // Shared with the session sync and the guided setup: one read per page.
+  const pushKey = usePushPublicKey(portal);
   const [state, setState] = useState<PushState>("loading");
   const [busy, setBusy] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -96,6 +98,7 @@ export function PushNotificationSection({
   const latestEnableRef = useRef<() => void>(() => undefined);
   const latestDisableRef = useRef<() => void>(() => undefined);
   const latestTestRef = useRef<() => void>(() => undefined);
+  const latestRefreshRef = useRef<() => Promise<void>>(async () => undefined);
   const [installAccepted, setInstallAccepted] = useState(false);
   const [installed, setInstalled] = useState<boolean | null>(null);
   const [permission, setPermission] = useState<NotificationPermission | null>(
@@ -127,9 +130,11 @@ export function PushNotificationSection({
     setPermission(
       typeof Notification === "undefined" ? null : Notification.permission,
     );
+    // Every state below needs the server's answer about Web Push first.
+    if (pushKey.state === "loading") return;
     if (needsIosInstall) {
       try {
-        await verifyPushConfiguration(portal);
+        pushKey.require();
         setState("needs-install-ios");
       } catch (err) {
         // Without a working server configuration the card hides itself.
@@ -153,7 +158,7 @@ export function PushNotificationSection({
       !installAccepted
     ) {
       try {
-        await verifyPushConfiguration(portal);
+        pushKey.require();
         setState("needs-install-android");
       } catch (err) {
         // Without a working server configuration the card hides itself.
@@ -171,7 +176,10 @@ export function PushNotificationSection({
       return;
     }
     try {
-      const subscription = await syncExistingPushSubscription(portal);
+      const subscription = await syncExistingPushSubscription(
+        portal,
+        pushKey.require(),
+      );
       setState(subscription ? "subscribed" : "unsubscribed");
     } catch (err) {
       // Status check while the card opens: without a known subscription the
@@ -185,7 +193,7 @@ export function PushNotificationSection({
       });
       setState("unsubscribed");
     }
-  }, [installAccepted, installationCompleted, portal]);
+  }, [installAccepted, installationCompleted, portal, pushKey]);
 
   // oxlint-disable-next-line swr/no-effect-load -- reads this device's push subscription and Notification permission and syncs the subscription; per-device browser state, not a shared resource
   useEffect(() => {
@@ -197,7 +205,7 @@ export function PushNotificationSection({
   const enable = async () => {
     setBusy(true);
     try {
-      await subscribePush(portal);
+      await subscribePush(portal, pushKey.load);
     } catch (err) {
       logger.error("push_subscribe_failed", {
         error: err instanceof Error ? err.message : String(err),
@@ -216,13 +224,13 @@ export function PushNotificationSection({
           retry: () => latestEnableRef.current(),
         });
       }
-      await refresh();
+      await latestRefreshRef.current();
       setBusy(false);
       return;
     }
     setBusy(false);
     toast.success(t("enabledMessage"));
-    await refresh();
+    await latestRefreshRef.current();
   };
 
   const install = async () => {
@@ -260,7 +268,7 @@ export function PushNotificationSection({
     }
     setBusy(false);
     toast.success(t("disabledMessage"));
-    await refresh();
+    await latestRefreshRef.current();
   };
 
   const sendTest = async () => {
@@ -284,6 +292,8 @@ export function PushNotificationSection({
   };
 
   useLayoutEffect(() => {
+    // Enrollment can recover the key while its click handler is still running.
+    latestRefreshRef.current = refresh;
     latestEnableRef.current = () => void enable();
     latestDisableRef.current = () => void disable();
     latestTestRef.current = () => void sendTest();

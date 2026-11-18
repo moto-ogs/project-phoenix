@@ -75,16 +75,14 @@ const familyRoutes = (path) =>
   !path.startsWith("/__fixture/") &&
   path !== "/health";
 // One protected read per other portal, behind its real BFF route.
-const portalReads = new Set([
-  "/parent/me/calendar",
-  "/school/supervisions/",
-  "/operator/organizations",
-]);
+const portalReads = new Set(["/parent/me/calendar", "/operator/organizations"]);
 // Reads that reach the API through a portal's catalog proxy (#2352), not a
 // route file: the proxy checks each answer against the route's contract.
 const catalogReads = new Map([
   ["/caterer/schools", { caterer_name: "Fixture-Küche", schools: [] }],
   ["/school/staff-messages/unread-count", { unread_count: 2, internal: 1 }],
+  // The proxy builds the path from segments: no trailing slash.
+  ["/school/supervisions", { instances: [] }],
   [
     "/operator/billing/key-day",
     {

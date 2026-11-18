@@ -404,3 +404,76 @@ func TestStudentCareTimesFailsWithoutItsAuditEntry(t *testing.T) {
 		})
 	}
 }
+
+func TestDemoWeekdayReportsSkipWeekendSimulation(t *testing.T) {
+	t.Parallel()
+	cfg, from, to := careTimeWeek()
+	cfg.DemoHistory = true
+	ctx := calendar.WithWeekendPlan(t.Context(), func(context.Context) (bool, error) { return true, nil })
+	service := &service{cfg: cfg}
+	dates, _, err := service.careDays(ctx, from, to)
+	require.NoError(t, err)
+	assert.Len(t, dates, 5, "only weekdays, excluding the closing day")
+	assert.False(t, dates[from.AddDays(5)])
+	assert.False(t, dates[from.AddDays(6)])
+
+	result, err := service.StudentCareTimes(ctx, 7, from, to, careTimeActor)
+	require.NoError(t, err)
+	assert.Zero(t, result.Summary.UnbookedDays, "the weekend visit is for the live simulation")
+	assert.Equal(t, 30, result.Summary.ExtraMinutes)
+	for _, day := range result.Days {
+		assert.False(t, calendar.IsWeekend(day.Date))
+	}
+}
+
+type reportAttendanceDays []studentpresence.AttendanceDay
+
+func (days reportAttendanceDays) ListAttendanceDays(context.Context, string, string) ([]studentpresence.AttendanceDay, error) {
+	return days, nil
+}
+
+func TestDemoAttendanceReportLeavesUnbookedWeekdaysOut(t *testing.T) {
+	t.Parallel()
+	cfg, mon, _ := careTimeWeek()
+	thu, fri := mon.AddDays(3), mon.AddDays(4)
+	cfg.DemoHistory = true
+	cfg.ClosingDays = nil
+	cfg.PlannedCareDays = plannedStub{7: {thu: booked(wallClockAt(12, 30), wallClockAt(14, 0)), fri: {}}}
+	cfg.Attendance = reportAttendanceDays{{StudentID: 7, Date: thu.String()}}
+	filters := studentpresence.StatisticsFilters{From: thu, To: fri,
+		Sections: []studentpresence.StatisticsSection{studentpresence.StatisticsSectionAttendance}}
+
+	report, err := NewService(cfg).Report(t.Context(), filters, careTimeActor)
+	require.NoError(t, err)
+	require.Len(t, report.Students, 1)
+	assert.Equal(t, 2, report.CareDays, "the school was open on both days")
+	assert.Equal(t, 1, report.Students[0].CareDays, "the child was booked only on Thursday")
+	assert.Equal(t, 1, report.Students[0].PresentDays)
+	assert.Zero(t, report.Students[0].UnexplainedDays)
+	require.NotNil(t, report.Totals.AttendanceRate)
+	assert.Equal(t, 100.0, *report.Totals.AttendanceRate)
+
+	cfg.DemoHistory = false
+	standard, err := NewService(cfg).Report(t.Context(), filters, careTimeActor)
+	require.NoError(t, err)
+	require.Len(t, standard.Students, 1)
+	assert.Equal(t, 2, standard.Students[0].CareDays)
+	assert.Equal(t, 1, standard.Students[0].UnexplainedDays)
+}
+
+func TestDemoCareDaysReadsPastPlansInsideEnrollment(t *testing.T) {
+	t.Parallel()
+	cfg, mon, today := careTimeWeek()
+	tue := mon.AddDays(1)
+	cfg.Students = careTimeStudents{{ID: 7, EnrolledOn: func(day, _ calendar.Date) bool { return !day.Before(tue) }}}
+	planned := booked(wallClockAt(12, 30), wallClockAt(15, 0))
+	cfg.PlannedCareDays = plannedStub{7: {mon: planned, tue: planned}}
+	service := NewService(cfg)
+
+	days, err := service.DemoCareDays(t.Context(), mon, tue)
+	require.NoError(t, err)
+	assert.Equal(t, []studentpresence.DemoCareDay{{StudentID: 7, Date: tue, PlannedCareDay: planned}}, days)
+
+	_, err = service.DemoCareDays(t.Context(), mon, today)
+	assert.ErrorIs(t, err, studentpresence.ErrInvalidStatisticsRange)
+}

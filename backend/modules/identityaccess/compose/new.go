@@ -31,7 +31,7 @@ type Dependencies struct {
 	// Nil reports ErrAccountLifecycleUnavailable / ErrRoleAdministrationUnavailable.
 	Lifecycle *LifecycleDependencies
 	// Resets requires Sessions; nil reports ErrPasswordResetUnavailable.
-	Resets *PasswordResetDependencies
+	Resets *identityBindingPorts.PasswordResetDependencies
 	// Invitations composes the school invitation flows (#2722); they require
 	// Sessions and Lifecycle, else they report ErrSchoolInvitationUnavailable.
 	Invitations *identityBindingPorts.SchoolInvitationDependencies

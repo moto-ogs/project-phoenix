@@ -60,9 +60,11 @@
       "declaration": "TestFullProductionRouterGolden",
       "target": "api.WithRuntime",
       "lines": [
-        396
+        401
       ],
-      "tables": []
+      "tables": [
+        "auth.request_rate_limits"
+      ]
     },
     {
       "scope": "test",

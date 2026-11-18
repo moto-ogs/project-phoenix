@@ -31,6 +31,10 @@ type TraegerMemberships interface {
 	// mode until the caller's transaction ends, so a deactivation cannot
 	// commit under a mint or a refresh.
 	LiveTraegers(ctx context.Context, organizationIDs []int64, lockShared bool) ([]identityaccess.TraegerOrganization, error)
+	// TraegerMemberName returns the name the account carries at the Träger
+	// (#4693), empty without a name or a membership there: the name a
+	// Träger school session greets with (#7305).
+	TraegerMemberName(ctx context.Context, organizationID, accountID int64) (string, error)
 }
 
 // PortalModules answers whether a school booked the module of a portal

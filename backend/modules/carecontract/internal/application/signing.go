@@ -418,6 +418,13 @@ func (s *Signatures) confirm(ctx context.Context, organizationID int64, record C
 	if err != nil {
 		return err
 	}
+	letterhead, err := s.ports.Sender.TraegerLetterhead(ctx, organizationID)
+	if err != nil {
+		return fmt.Errorf("care contract: letterhead: %w", err)
+	}
+	if letterheadMissing(letterhead) {
+		return carecontract.ErrLetterheadMissing
+	}
 	signature := view.Signature
 	_, err = s.ports.Post.EnqueueContractMail(ctx, carecontract.ContractMail{
 		OrganizationID: organizationID, ContractID: record.Summary.ID, Recipient: address,

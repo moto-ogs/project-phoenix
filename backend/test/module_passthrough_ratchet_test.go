@@ -288,7 +288,7 @@ const modulePassthroughApplicationSegment = "/internal/application/"
 // Raised by ADR 0283: Student Presence's mark transfer of the class-list
 // conversion, which validates the moves before its store call (+1).
 // Raised by ADR 0289: the file seal of modules/workforce (+1).
-const modulePassthroughOwnerBudgetTotal = 1396
+const modulePassthroughOwnerBudgetTotal = 1395
 
 // modulePassthroughOwnerBudgets is the register: module directory →
 // pass-throughs measured in its application layer and its compositions
@@ -346,7 +346,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	"modules/requestreview":    15,
 	"modules/schedulerruntime": 4,
 	// Raised by ADR 0073: the feed cleanup keeps only the staff feed tombstones.
-	"modules/schoolcalendar":   14,
+	"modules/schoolcalendar":   13,
 	"modules/schoolmembership": 15,
 	"modules/schoolsetup":      1,
 	"modules/schoolstructure":  43,
