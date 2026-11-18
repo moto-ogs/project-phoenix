@@ -55,6 +55,7 @@ vi.mock("~/lib/tenant-context", () => ({
 }));
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: HOLIDAY_PERIOD.id, registrationId: "7" }),
+  usePathname: () => `/traeger/ferien/${HOLIDAY_PERIOD.id}/anmeldungen/7`,
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   // The registration keeps its tab in the address (#7410).
   useSearchParams: () => new URLSearchParams(),
