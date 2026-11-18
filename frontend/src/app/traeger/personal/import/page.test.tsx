@@ -177,7 +177,7 @@ describe("TraegerStaffImportPage", () => {
     );
     expect(
       screen.getByRole("link", { name: "Zu den Personalakten" }),
-    ).toHaveAttribute("href", "/traeger/personal?tab=vorschlaege");
+    ).toHaveAttribute("href", "/traeger/personal");
   });
 
   // #7377: Zurück führt auf den Reiter der Personalakten, von dem man kam.

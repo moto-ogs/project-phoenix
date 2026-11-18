@@ -247,10 +247,10 @@ function StaffImportContent() {
                 action={
                   <div className="flex flex-wrap justify-center gap-3">
                     <ButtonLink
-                      href={staffOverviewHref("vorschlaege")}
+                      href={staffOverviewHref(null)}
                       variant="primary"
                       size="md"
-                      tooltip="Öffnet die Personalakten mit den Vorschlägen zum Verknüpfen."
+                      tooltip="Öffnet die Personalakten."
                     >
                       Zu den Personalakten
                     </ButtonLink>

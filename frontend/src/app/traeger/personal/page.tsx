@@ -279,10 +279,11 @@ function StaffRecordsContent() {
     params.set("tab", next);
     router.replace(`?${params.toString()}`, { scroll: false });
   };
-  // Unterseiten merken sich nur einen Reiter, der in der Adresse steht. Den
-  // Standard-Reiter rechnet die Übersicht beim Zurückkommen neu aus.
+  // Unterseiten merken sich auch den aufgelösten Standard-Reiter. Ein Import
+  // kann Vorschläge erzeugen; der Rückweg bleibt trotzdem auf dem Reiter,
+  // von dem das Träger-Büro kam.
   const recordHref = (id: string) =>
-    staffSubpageHref(`/traeger/personal/${id}`, tab);
+    staffSubpageHref(`/traeger/personal/${id}`, active);
 
   return (
     <TenantPage
@@ -322,7 +323,7 @@ function StaffRecordsContent() {
               unavailable={overview.records.length === 0}
             />
             <ButtonLink
-              href={staffSubpageHref("/traeger/personal/import", tab)}
+              href={staffSubpageHref("/traeger/personal/import", active)}
               className="gap-2"
               variant="outline"
               size="md"
@@ -332,7 +333,7 @@ function StaffRecordsContent() {
               Personal importieren
             </ButtonLink>
             <ButtonLink
-              href={staffSubpageHref("/traeger/personal/einstellen", tab)}
+              href={staffSubpageHref("/traeger/personal/einstellen", active)}
               className="gap-2"
               variant="primary"
               size="md"

@@ -199,7 +199,7 @@ describe("TraegerStaffRecordsPage", () => {
       }),
     );
     await vi.waitFor(() =>
-      expect(mockPush).toHaveBeenCalledWith("/personal/5"),
+      expect(mockPush).toHaveBeenCalledWith("/personal/5?from=vorschlaege"),
     );
   });
 
@@ -236,6 +236,46 @@ describe("TraegerStaffRecordsPage", () => {
     ).toHaveAttribute("href", "/personal/import?from=ohne-akte");
   });
 
+  it("hands the default suggestions tab to its sub pages", async () => {
+    renderPage();
+    await screen.findByText("Vorschläge zum Verknüpfen");
+    expect(
+      screen.getByRole("link", { name: /Person einstellen/ }),
+    ).toHaveAttribute("href", "/personal/einstellen?from=vorschlaege");
+    expect(
+      screen.getByRole("link", { name: /Personal importieren/ }),
+    ).toHaveAttribute("href", "/personal/import?from=vorschlaege");
+  });
+
+  it("hands the default records tab to its sub pages", async () => {
+    api.fetchStaffOverview.mockResolvedValue({
+      ...OVERVIEW,
+      suggestions: [],
+      records: [
+        {
+          id: "5",
+          firstName: "Mira",
+          lastName: "Sommer",
+          birthday: "",
+          personnelNumber: null,
+          hasFinancial: false,
+          employments: [],
+        },
+      ],
+    });
+    renderPage();
+    const row = (await screen.findByText("Mira Sommer")).closest("tr");
+    expect(row).not.toBeNull();
+    expect(
+      screen.getByRole("link", { name: /Person einstellen/ }),
+    ).toHaveAttribute("href", "/personal/einstellen?from=akten");
+    expect(
+      screen.getByRole("link", { name: /Personal importieren/ }),
+    ).toHaveAttribute("href", "/personal/import?from=akten");
+    fireEvent.click(row!);
+    expect(mockPush).toHaveBeenCalledWith("/personal/5?from=akten");
+  });
+
   it("opens a record with the tab it came from", async () => {
     address.search = "tab=akten";
     api.fetchStaffOverview.mockResolvedValue({
@@ -259,7 +299,7 @@ describe("TraegerStaffRecordsPage", () => {
     expect(mockPush).toHaveBeenCalledWith("/personal/5?from=akten");
   });
 
-  it("ignores an unknown tab in the address and pins no default tab", async () => {
+  it("ignores an unknown tab in the address and uses the default tab", async () => {
     address.search = "tab=unbekannt";
     renderPage();
     expect(
@@ -267,7 +307,7 @@ describe("TraegerStaffRecordsPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Person einstellen/ }),
-    ).toHaveAttribute("href", "/personal/einstellen");
+    ).toHaveAttribute("href", "/personal/einstellen?from=vorschlaege");
   });
 });
 
