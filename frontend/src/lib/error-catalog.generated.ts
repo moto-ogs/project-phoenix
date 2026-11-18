@@ -88,6 +88,8 @@ export const ERROR_CATALOG = {
         "Diese Auswahl ist so nicht möglich. Bitte ändern Sie die Auswahl.",
       "care_contract.signature_invalid":
         "Die Unterschrift fehlt oder ist leer. Bitte unterschreiben Sie noch einmal.",
+      "care_contract.signing_letterhead_missing":
+        "Ihre Unterschrift ist noch nicht gespeichert. Dem Träger fehlen noch Angaben. Bitte versuchen Sie es später noch einmal oder melden Sie sich beim Träger.",
       "care_contract.signing_link_invalid":
         "Dieser Link gilt nicht mehr. Er war schon benutzt oder ist abgelaufen. Den Vertrag finden Sie in der Eltern-App unter „Dokumente“. Oder fragen Sie beim Träger nach einem neuen Link.",
       "care_contract.special_termination_closed":
@@ -2216,6 +2218,8 @@ export const ERROR_CATALOG = {
         "This selection is not possible. Please change your selection.",
       "care_contract.signature_invalid":
         "The signature is missing or empty. Please sign again.",
+      "care_contract.signing_letterhead_missing":
+        "Your signature has not been saved yet. The provider is still missing some details. Please try again later or contact the provider.",
       "care_contract.signing_link_invalid":
         "This link is no longer valid. It was already used or has expired. You can find the contract in the parent app under “Documents”, or ask the provider for a new link.",
       "care_contract.special_termination_closed":
@@ -2982,6 +2986,8 @@ export const ERROR_CATALOG = {
         "Такой выбор невозможен. Измените выбор.",
       "care_contract.signature_invalid":
         "Подпись отсутствует или пуста. Пожалуйста, подпишите ещё раз.",
+      "care_contract.signing_letterhead_missing":
+        "Ваша подпись ещё не сохранена. У организации ещё не хватает данных. Пожалуйста, попробуйте позже или свяжитесь с организацией.",
       "care_contract.signing_link_invalid":
         "Эта ссылка больше не действует. Она уже была использована или срок её действия истёк. Договор находится в приложении для родителей в разделе «Документы». Или попросите у организации новую ссылку.",
       "care_contract.special_termination_closed":
@@ -3610,6 +3616,8 @@ export const ERROR_CATALOG = {
         "Kjo zgjedhje nuk është e mundur. Ndryshoni zgjedhjen.",
       "care_contract.signature_invalid":
         "Nënshkrimi mungon ose është bosh. Ju lutemi nënshkruani përsëri.",
+      "care_contract.signing_letterhead_missing":
+        "Nënshkrimi juaj nuk është ruajtur ende. Ofruesit i mungojnë ende disa të dhëna. Ju lutemi provoni më vonë ose kontaktoni ofruesin.",
       "care_contract.signing_link_invalid":
         "Ky link nuk është më i vlefshëm. Është përdorur tashmë ose ka skaduar. Kontratën e gjeni në aplikacionin për prindër te „Dokumente“. Ose kërkoni një link të ri nga ofruesi.",
       "care_contract.special_termination_closed":
@@ -4254,6 +4262,8 @@ export const ERROR_CATALOG = {
         "Taki wybór nie jest możliwy. Zmień wybór.",
       "care_contract.signature_invalid":
         "Brak podpisu lub podpis jest pusty. Podpisz jeszcze raz.",
+      "care_contract.signing_letterhead_missing":
+        "Twój podpis nie został jeszcze zapisany. Organizatorowi brakuje jeszcze danych. Proszę spróbować później lub skontaktować się z organizatorem.",
       "care_contract.signing_link_invalid":
         "Ten link jest już nieważny. Został użyty lub wygasł. Umowę znajdziesz w aplikacji dla rodziców w zakładce „Dokumenty”. Możesz też poprosić organizatora o nowy link.",
       "care_contract.special_termination_closed":
@@ -4883,6 +4893,8 @@ export const ERROR_CATALOG = {
         "Bu seçim mümkün değil. Lütfen seçiminizi değiştirin.",
       "care_contract.signature_invalid":
         "İmza eksik veya boş. Lütfen tekrar imzalayın.",
+      "care_contract.signing_letterhead_missing":
+        "İmzanız henüz kaydedilmedi. Kurumun bazı bilgileri hâlâ eksik. Lütfen daha sonra tekrar deneyin veya kurumla iletişime geçin.",
       "care_contract.signing_link_invalid":
         "Bu bağlantı artık geçerli değil. Daha önce kullanıldı veya süresi doldu. Sözleşmeyi veli uygulamasında „Belgeler“ altında bulabilirsiniz. Ya da kurumdan yeni bir bağlantı isteyin.",
       "care_contract.special_termination_closed":
@@ -5520,6 +5532,8 @@ export const ERROR_CATALOG = {
         "Такий вибір неможливий. Змініть вибір.",
       "care_contract.signature_invalid":
         "Підпис відсутній або порожній. Будь ласка, підпишіть ще раз.",
+      "care_contract.signing_letterhead_missing":
+        "Ваш підпис ще не збережено. В організації ще бракує даних. Будь ласка, спробуйте пізніше або зверніться до організації.",
       "care_contract.signing_link_invalid":
         "Це посилання більше не дійсне. Його вже використано або термін дії минув. Договір є в застосунку для батьків у розділі «Документи». Або попросіть в організації нове посилання.",
       "care_contract.special_termination_closed":

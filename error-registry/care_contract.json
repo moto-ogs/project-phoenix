@@ -145,6 +145,12 @@
       "legacy": "care_contract.signature_invalid"
     },
     {
+      "code": "care_contract.signing_letterhead_missing",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "care_contract.signing_letterhead_missing"
+    },
+    {
       "code": "care_contract.signing_link_invalid",
       "class": "business_rejection",
       "parameters": [],

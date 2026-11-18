@@ -666,7 +666,8 @@ func TestCareContractSigningWithoutALetterheadIsNotSent(t *testing.T) {
 	rec := publicSigning(t, f.traeger, http.MethodPost, link+"/sign",
 		map[string]any{"method": "drawn", "image_png": signatureImage(t), "withdrawal_notice_acknowledged": true})
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
-	assert.Contains(t, rec.Body.String(), "care_contract.letterhead_missing")
+	assert.Contains(t, rec.Body.String(), "care_contract.signing_letterhead_missing",
+		"the parents read that the Träger has to act, not the office's settings page")
 	status, signatures := signingStatus(t, f, contract)
 	assert.Equal(t, "versendet", status)
 	assert.Zero(t, signatures)

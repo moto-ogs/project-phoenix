@@ -25,6 +25,7 @@ const CodeCareContractRecipientMissing = "care_contract.recipient_missing"
 const CodeCareContractSchoolOutsideTraeger = "care_contract.school_outside_traeger"
 const CodeCareContractSelectionInvalid = "care_contract.selection_invalid"
 const CodeCareContractSignatureInvalid = "care_contract.signature_invalid"
+const CodeCareContractSigningLetterheadMissing = "care_contract.signing_letterhead_missing"
 const CodeCareContractSigningLinkInvalid = "care_contract.signing_link_invalid"
 const CodeCareContractSpecialTerminationClosed = "care_contract.special_termination_closed"
 const CodeCareContractTemplateInvalid = "care_contract.template_invalid"
@@ -56,6 +57,7 @@ var errorCodeClassesCareContract = []errorCodeClass{
 	{CodeCareContractSchoolOutsideTraeger, "permission"},
 	{CodeCareContractSelectionInvalid, "input"},
 	{CodeCareContractSignatureInvalid, "input"},
+	{CodeCareContractSigningLetterheadMissing, "business_rejection"},
 	{CodeCareContractSigningLinkInvalid, "business_rejection"},
 	{CodeCareContractSpecialTerminationClosed, "business_rejection"},
 	{CodeCareContractTemplateInvalid, "input"},

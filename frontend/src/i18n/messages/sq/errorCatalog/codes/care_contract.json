@@ -19,6 +19,7 @@
   "school_outside_traeger": "This school does not belong to your provider.",
   "selection_invalid": "Kjo zgjedhje nuk është e mundur. Ndryshoni zgjedhjen.",
   "signature_invalid": "Nënshkrimi mungon ose është bosh. Ju lutemi nënshkruani përsëri.",
+  "signing_letterhead_missing": "Nënshkrimi juaj nuk është ruajtur ende. Ofruesit i mungojnë ende disa të dhëna. Ju lutemi provoni më vonë ose kontaktoni ofruesin.",
   "signing_link_invalid": "Ky link nuk është më i vlefshëm. Është përdorur tashmë ose ka skaduar. Kontratën e gjeni në aplikacionin për prindër te „Dokumente“. Ose kërkoni një link të ri nga ofruesi.",
   "special_termination_closed": "Kjo kontratë nuk parashikon ndërprerje të veçantë. Ju lutemi zgjidhni ndërprerjen e zakonshme.",
   "template_invalid": "Please check the marked fields.",

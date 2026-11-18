@@ -85,7 +85,7 @@ func renderContractSigningError(w http.ResponseWriter, r *http.Request, err erro
 	case errors.Is(err, parentService.ErrContractNotSignable):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeCareContractContractNotSignable))
 	case errors.Is(err, parentService.ErrContractLetterheadMissing):
-		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeCareContractLetterheadMissing))
+		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeCareContractSigningLetterheadMissing))
 	default:
 		renderBillingDocumentError(w, r, err)
 	}

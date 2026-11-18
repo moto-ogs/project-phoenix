@@ -14,7 +14,7 @@ import (
 )
 
 // A signature the Träger's missing letterhead holds back answers 409 with
-// its registered code, as on the public link, never a 500 (#7177).
+// the parents' code, as on the public link, never a 500 (#7177).
 func TestContractSigningWithoutALetterheadAnswersItsCode(t *testing.T) {
 	t.Parallel()
 	w := httptest.NewRecorder()
@@ -25,5 +25,5 @@ func TestContractSigningWithoutALetterheadAnswersItsCode(t *testing.T) {
 		Code string `json:"code"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
-	assert.Equal(t, "care_contract.letterhead_missing", body.Code)
+	assert.Equal(t, "care_contract.signing_letterhead_missing", body.Code)
 }
