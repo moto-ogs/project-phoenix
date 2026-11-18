@@ -28,7 +28,19 @@ describe("existing-account invitation acceptance", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(portalOfHost).mockReturnValue("tenant");
-    vi.mocked(listAllTenants).mockResolvedValue({ tenants: [], status: "ok" });
+    vi.mocked(listAllTenants).mockResolvedValue({
+      tenants: [
+        {
+          tenantId: 1,
+          organizationId: 1,
+          slug: "school",
+          name: "School",
+          subdomain: "school",
+          organizationName: "Org",
+        },
+      ],
+      status: "ok",
+    });
   });
 
   // #7369: no choice leads back to the page the person is already on, and
@@ -54,7 +66,9 @@ describe("existing-account invitation acceptance", () => {
       fireEvent.click(
         screen.getByRole("button", { name: "Andere moto-Adresse wählen" }),
       );
-      await screen.findByText(/Wählen Sie den Bereich/);
+      await screen.findByRole("combobox", {
+        name: "Für Betreuungskräfte: bisherige Schule",
+      });
       const choices = ["Für Eltern", "Für Lehrkräfte"].filter(
         (name) => screen.queryByRole("button", { name }) !== null,
       );

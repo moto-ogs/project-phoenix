@@ -323,9 +323,11 @@ func TestInvitationAsLehrkraftAcceptsWithSessionOfAnotherSchool(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, identityaccess.InvitationPortalSchool, preview.Portal)
 	require.True(t, preview.RequiresAccountLogin)
-	before, err := auth.HasSchoolPortalAccess(context.Background(), accountID, newSchool)
-	require.NoError(t, err)
-	require.False(t, before, "without the role the school portal cannot be the place to sign in first")
+	for _, school := range []int64{formerSchool, newSchool} {
+		before, accessErr := auth.HasSchoolPortalAccess(context.Background(), accountID, school)
+		require.NoError(t, accessErr)
+		require.False(t, before, "without the role the school portal cannot be the place to sign in first")
+	}
 
 	signer, err := sessiontoken.NewTokenAuthWithDurations(authTestFactoryConfig(false).JWTSecret, 15*time.Minute, 24*time.Hour)
 	require.NoError(t, err)
