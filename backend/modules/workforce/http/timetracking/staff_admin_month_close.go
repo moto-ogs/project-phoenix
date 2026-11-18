@@ -74,11 +74,11 @@ func (rs *StaffAdminResource) listTraegerMonthStaff(w http.ResponseWriter, r *ht
 		renderMonthCloseError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, traegerMonthStaff{Year: year, Month: month, StaffIDs: staffIDs}, "Traeger month staff retrieved")
+	common.Respond(w, r, http.StatusOK, TraegerMonthStaff{Year: year, Month: month, StaffIDs: staffIDs}, "Traeger month staff retrieved")
 }
 
-// traegerMonthStaff lists the staff members the Träger closes in a month.
-type traegerMonthStaff struct {
+// TraegerMonthStaff lists the staff members the Träger closes in a month.
+type TraegerMonthStaff struct {
 	Year     int     `json:"year"`
 	Month    int     `json:"month"`
 	StaffIDs []int64 `json:"staff_ids"`

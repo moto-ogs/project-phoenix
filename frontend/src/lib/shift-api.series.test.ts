@@ -45,7 +45,7 @@ describe("staffShiftSeriesService", () => {
       skippedNonWorkingDays: 0,
     });
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff/shifts/series", {
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff-shifts/series", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -133,7 +133,7 @@ describe("staffShiftSeriesService", () => {
     });
 
     expect(mockSessionFetch).toHaveBeenCalledWith(
-      "/api/staff/shifts/series/5/split",
+      "/api/staff-shifts/series/5/split",
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

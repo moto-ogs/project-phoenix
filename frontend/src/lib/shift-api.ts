@@ -1,8 +1,8 @@
 import { ApiError, enrichApiError, problemDetail } from "./api-error";
 // API clients for planned staff shifts (Dienstplan, #1376 core slice).
-// Admin CRUD goes through /api/staff/shifts (backend /api/staff-shifts,
-// time_tracking:manage); staff read their own shifts via
-// /api/time-tracking/shifts (time_tracking:own).
+// Admin CRUD goes through /api/staff-shifts (time_tracking:manage); the
+// series read and end keep their routes under /api/staff/shifts. Staff read
+// their own shifts via /api/time-tracking/shifts (time_tracking:own).
 
 import { sessionFetch } from "./session-cache";
 import {
@@ -302,7 +302,7 @@ async function readOverview(
 class StaffShiftService {
   async getShifts(from: string, to: string): Promise<StaffShift[]> {
     const response = await sessionFetch(
-      `/api/staff/shifts?from=${from}&to=${to}`,
+      `/api/staff-shifts?from=${from}&to=${to}`,
     );
     return readShiftList(response);
   }
@@ -315,20 +315,20 @@ class StaffShiftService {
     to: string,
   ): Promise<StaffShift[]> {
     const response = await sessionFetch(
-      `/api/staff/shifts?staff_id=${staffId}&from=${from}&to=${to}`,
+      `/api/staff-shifts?staff_id=${staffId}&from=${from}&to=${to}`,
     );
     return readShiftList(response);
   }
 
   async getOverview(from: string, to: string): Promise<StaffScheduleOverview> {
     const response = await sessionFetch(
-      `/api/staff/shifts/overview?from=${from}&to=${to}`,
+      `/api/staff-shifts/overview?from=${from}&to=${to}`,
     );
     return readOverview(response);
   }
 
   async createShift(payload: ShiftPayload): Promise<StaffShift> {
-    const response = await sessionFetch("/api/staff/shifts", {
+    const response = await sessionFetch("/api/staff-shifts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(toBackendBody(payload)),
@@ -340,7 +340,7 @@ class StaffShiftService {
     shiftId: string,
     payload: ShiftPayload,
   ): Promise<StaffShift> {
-    const response = await sessionFetch(`/api/staff/shifts/${shiftId}`, {
+    const response = await sessionFetch(`/api/staff-shifts/${shiftId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(toBackendBody(payload)),
@@ -353,7 +353,7 @@ class StaffShiftService {
     shiftId: string,
     payload: MoveShiftPayload,
   ): Promise<StaffShift> {
-    const response = await sessionFetch(`/api/staff/shifts/${shiftId}/move`, {
+    const response = await sessionFetch(`/api/staff-shifts/${shiftId}/move`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -374,7 +374,7 @@ class StaffShiftService {
   }
 
   async deleteShift(shiftId: string): Promise<void> {
-    const response = await sessionFetch(`/api/staff/shifts/${shiftId}`, {
+    const response = await sessionFetch(`/api/staff-shifts/${shiftId}`, {
       method: "DELETE",
     });
     if (!response.ok) {
@@ -391,7 +391,7 @@ class StaffShiftService {
     payload: CancellationPayload,
   ): Promise<void> {
     const response = await sessionFetch(
-      `/api/staff/shifts/${shiftId}/cancellation`,
+      `/api/staff-shifts/${shiftId}/cancellation`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -444,7 +444,7 @@ async function readSeriesResult(response: Response): Promise<SeriesResult> {
 
 class StaffShiftSeriesService {
   async createSeries(payload: SeriesPayload): Promise<SeriesResult> {
-    const response = await sessionFetch("/api/staff/shifts/series", {
+    const response = await sessionFetch("/api/staff-shifts/series", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -473,7 +473,7 @@ class StaffShiftSeriesService {
     payload: SeriesSplitPayload,
   ): Promise<SeriesResult> {
     const response = await sessionFetch(
-      `/api/staff/shifts/series/${seriesId}/split`,
+      `/api/staff-shifts/series/${seriesId}/split`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

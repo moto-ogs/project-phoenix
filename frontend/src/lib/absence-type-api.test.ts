@@ -70,7 +70,7 @@ describe("absenceTypeService allowances", () => {
       allowanceEnabled: true,
     });
     expect(global.fetch).toHaveBeenCalledWith(
-      "/api/staff/absence-types",
+      "/api/absence-types",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
@@ -103,7 +103,7 @@ describe("absenceTypeService allowances", () => {
       absenceTypeService.updateAbsenceType("12", { carryoverUntil: null }),
     ).resolves.toMatchObject({ carryoverUntil: "03-31" });
     expect(global.fetch).toHaveBeenCalledWith(
-      "/api/staff/absence-types/12",
+      "/api/absence-types/12",
       expect.objectContaining({
         method: "PUT",
         body: JSON.stringify({ carryover_until: "" }),
@@ -158,7 +158,7 @@ describe("absenceTypeService allowances", () => {
       blockedBy: "allowance",
     });
     expect(global.fetch).toHaveBeenCalledWith(
-      "/api/staff/absence-types/12/allowances/42/preview?date_start=2027-01-11&date_end=2027-01-12&half_day=false",
+      "/api/absence-types/12/allowances/42/preview?date_start=2027-01-11&date_end=2027-01-12&half_day=false",
       expect.anything(),
     );
   });

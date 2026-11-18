@@ -1,7 +1,7 @@
 import { apiErrorFromResponse, type ApiError } from "./api-error";
 // API client for tenant-defined shift types (Schichtarten, #1836).
-// Admin CRUD goes through /api/staff/shift-types (backend /api/shift-types,
-// time_tracking:manage).
+// Admin CRUD goes through /api/shift-types (time_tracking:manage); update
+// and delete keep their route under /api/staff/shift-types.
 
 import { sessionFetch } from "./session-cache";
 import {
@@ -77,12 +77,12 @@ class ShiftTypeService {
     if (options.includeArchived) query.set("include_archived", "true");
     if (options.withUsage) query.set("with_usage", "true");
     const suffix = query.size > 0 ? `?${query.toString()}` : "";
-    const response = await sessionFetch(`/api/staff/shift-types${suffix}`);
+    const response = await sessionFetch(`/api/shift-types${suffix}`);
     return readList(response);
   }
 
   async createShiftType(payload: ShiftTypePayload): Promise<ShiftType> {
-    const response = await sessionFetch("/api/staff/shift-types", {
+    const response = await sessionFetch("/api/shift-types", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(toBackendBody(payload)),
@@ -122,7 +122,7 @@ class ShiftTypeService {
 
   /** Seeds the example shift types (idempotent) and returns the full list. */
   async createDefaults(): Promise<ShiftType[]> {
-    const response = await sessionFetch("/api/staff/shift-types/defaults", {
+    const response = await sessionFetch("/api/shift-types/defaults", {
       method: "POST",
     });
     return readList(response);
