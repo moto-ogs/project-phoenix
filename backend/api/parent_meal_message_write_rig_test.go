@@ -1,5 +1,7 @@
 package api
 
+// Benchmark baseline for the PostgreSQL fixture comparison.
+
 import (
 	"context"
 	"database/sql"
