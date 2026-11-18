@@ -14,8 +14,8 @@ import (
 type CleanupRetentionStore struct{ database Database }
 
 // databaseClock is the package's one read of the database clock: the
-// functions guard their windows on it, so the cutoffs count back from it
-// (1.15.606, ADR 0281, Nachtrag).
+// functions guard their windows on it. It stamps completed cleanups and
+// removed files and supplies their cutoffs (1.15.606, ADR 0281).
 const databaseClock = `statement_timestamp()`
 
 // NewCleanupRetentionStore wires the retention of the cleanup intents.
