@@ -13,7 +13,7 @@ export function traegerBillingRunTopic(): HelpTopic {
     icon: "FileText",
     image: "/help/screens/traeger-naechste-rechnungsnummer.webp",
     imageAlt:
-      "Die Karte Rechnungsnummern der Ferien: Muster, nächste Nummer und letzte vergebene Nummer, darunter der Verlauf mit Zeitpunkt und Person.",
+      "Die Karte Rechnungsnummern der Ferien: Muster, nächste Nummer und letzte laufende Nummer, darunter der Verlauf mit Zeitpunkt und Person.",
     requirements: [
       "Ihre Rolle im Träger-Büro ist Abrechnung. Nur diese Rolle sieht in der Navigation die Bereiche unter `Finanzen`.",
       "Der Ferienzeitraum ist veröffentlicht, und die Anmeldungen sind bestätigt.",
