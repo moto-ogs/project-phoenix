@@ -33,7 +33,10 @@ const (
 	ReadSchoolSettingReveal          OperatorReadView = "school_setting_reveal"
 	ReadDemoPresenceHistory          OperatorReadView = "demo_presence_history"
 	ReadUnregisteredTagScans         OperatorReadView = "unregistered_tag_scans"
-	ReadTraegerMembers               OperatorReadView = "traeger_members"
+	// ReadDeviceHistory is the history of one device across its schools
+	// (#2321).
+	ReadDeviceHistory  OperatorReadView = "device_history"
+	ReadTraegerMembers OperatorReadView = "traeger_members"
 	// ReadTraegerSettings is the operator's view of the settings of a
 	// Träger (#5748).
 	ReadTraegerSettings OperatorReadView = "traeger_settings"
@@ -63,7 +66,9 @@ type OperatorReadAccess struct {
 	AnnouncementID int64
 	// TagScanID names the unregistered RFID scan an operator resolves.
 	TagScanID int64
-	ClientIP  net.IP
+	// DeviceID names the device whose history an operator reads.
+	DeviceID int64
+	ClientIP net.IP
 }
 
 type OperatorReadAudit interface {

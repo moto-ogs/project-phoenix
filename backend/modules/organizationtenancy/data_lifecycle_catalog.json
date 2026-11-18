@@ -45,6 +45,7 @@
     {"name": "audit.data_access_log", "scope": "tenant", "export": "include", "personKeys": {"actor_account_id": "auth.accounts.id", "student_id": "users.student_profiles.id"}},
     {"name": "audit.data_deletions", "scope": "tenant", "export": "include"},
     {"name": "audit.data_imports", "scope": "tenant", "export": "include", "personKeys": {"imported_by": "auth.accounts.id"}},
+    {"name": "audit.device_lifecycle_events", "scope": "tenant", "export": "include", "personKeys": {"actor_account_id": "auth.accounts.id"}},
     {"name": "audit.deviation_events", "scope": "tenant", "export": "include", "personKeys": {"subject_staff_id": "users.staff_school_memberships.id", "related_staff_id": "users.staff_school_memberships.id", "actor_account_id": "auth.accounts.id"}},
     {"name": "audit.enrollment_deletions", "scope": "tenant", "export": "include", "personKeys": {"actor_account_id": "auth.accounts.id"}},
     {"name": "audit.enrollment_offering_adjustments", "scope": "tenant", "export": "include", "personKeys": {"student_id": "users.student_profiles.id", "actor_account_id": "auth.accounts.id"}},

@@ -45,6 +45,7 @@ vi.mock("~/lib/swr", () => ({
   useSWRAuth: vi.fn(),
   mutate: vi.fn(),
   useTenantMutate: vi.fn(() => vi.fn()),
+  useInvalidateFamily: vi.fn(() => vi.fn()),
 }));
 
 const mockGetList = vi.fn();

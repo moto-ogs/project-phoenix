@@ -14,7 +14,7 @@ import (
 func TestRuntimeConstraintViolationUsesPostgresSQLState(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	classify := testRuntime().ConstraintViolation
+	classify := testRuntime(nil).ConstraintViolation
 	for _, tc := range []struct {
 		name, statement, state string
 		want                   bool

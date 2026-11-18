@@ -697,6 +697,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/operator/devices/{id}/history",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "deviceHistoryResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/parent/me/calendar",
       "portals": [
         "parent"
@@ -11106,6 +11120,79 @@
           "name": "deleted",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "deviceHistoryChange",
+      "go_type": "operator.deviceHistoryChange",
+      "fields": [
+        {
+          "name": "before",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "after",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "deviceHistoryResponse",
+      "go_type": "operator.deviceHistoryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "actor_kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "deviceHistoryChange"
+            }
+          }
+        },
+        {
+          "name": "occurred_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

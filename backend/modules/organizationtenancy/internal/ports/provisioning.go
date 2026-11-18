@@ -81,6 +81,13 @@ type ProvisioningDevices interface {
 	// UpdateDevice replaces every writable column of the device.
 	UpdateDevice(ctx context.Context, device domain.Device) error
 	DeleteDevice(ctx context.Context, id int64) error
+	// RecordDeviceLifecycle appends the change to the device's history in
+	// the caller's transaction (#2321).
+	RecordDeviceLifecycle(ctx context.Context, entry organizationtenancy.DeviceLifecycleEntry) error
+	// ListDeviceLifecycle reads the history of a device and of the devices
+	// it was transferred from, newest first; found=false for an unknown
+	// device. The entries name their school by ID.
+	ListDeviceLifecycle(ctx context.Context, id int64) ([]organizationtenancy.DeviceHistoryEntry, bool, error)
 }
 
 // ProvisioningPeople is the People Directory and School Membership part of

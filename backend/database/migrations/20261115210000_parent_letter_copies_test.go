@@ -41,6 +41,8 @@ func TestParentLetterCopiesGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.Equal(t, "db_done", result.Status)
 	assert.EqualValues(t, 1, result.RowCounts["users.parent_announcement_letter_copies"], "the one copy of the school")
 
+	// The device history (#2321) follows the letter copies at the head; it goes first.
+	require.NoError(t, deviceLifecycleEventsDown(ctx, db))
 	require.NoError(t, parentLetterCopiesDown(ctx, db))
 	assert.False(t, exists())
 	for _, entry := range readErasurePlan(t, db) {
@@ -52,6 +54,8 @@ func TestParentLetterCopiesGoWithTheSchoolAndRollBack(t *testing.T) {
 	assert.NotContains(t, demoErasure, "parent_announcement_letter_copies", "the demo visitor erasure deletes from no dropped table")
 
 	require.NoError(t, parentLetterCopiesUp(ctx, db))
+	// The current repeatable erasure also names the device history (#2321).
+	require.NoError(t, deviceLifecycleEventsUp(ctx, db))
 	require.NoError(t, applyRepeatableDefinitions(ctx, db))
 	assert.True(t, exists())
 	erases("the erasure works after the copies are back")

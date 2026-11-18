@@ -114,6 +114,8 @@ AS $function$
     UNION ALL
     SELECT 1 FROM audit.data_imports AS r WHERE r.tenant_id = p_school_id
     UNION ALL
+    SELECT 1 FROM audit.device_lifecycle_events AS r WHERE r.tenant_id = p_school_id
+    UNION ALL
     SELECT 1 FROM audit.deviation_events AS r WHERE r.tenant_id = p_school_id
     UNION ALL
     SELECT 1 FROM audit.enrollment_deletions AS r WHERE r.tenant_id = p_school_id

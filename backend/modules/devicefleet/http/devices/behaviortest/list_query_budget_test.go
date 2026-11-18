@@ -91,7 +91,7 @@ func TestDeviceListQueryBudgets(t *testing.T) {
 			// All list requests run under the real tenant role and RLS. This
 			// test-only metadata query uses an unmarked context on the SAME tx.
 			// No production SQL is removed from the captured request.
-			runtime := testRuntime()
+			runtime := testRuntime(fleet)
 			success := runtime.Success
 			runtime.Success = func(w http.ResponseWriter, r *http.Request, code int, data any, message string) {
 				raw, present := testpkg.TransactionFromContext(r.Context())

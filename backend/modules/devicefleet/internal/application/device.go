@@ -367,6 +367,11 @@ func (s *Service) ApplyDeviceEdit(ctx context.Context, edit devicefleet.DeviceEd
 		return devicefleet.Device{}, s.reject("update_device_columns", devicefleet.ErrInvalidDevice)
 	}
 	if _, err := s.deps.Tx.TenantID(ctx); err != nil {
+		// Only the school's edit records itself, and it always runs in its
+		// tenant unit; a recorded edit without one would lose its entry.
+		if edit.RecordedBy != nil {
+			return devicefleet.Device{}, s.reject("update_device_columns", devicefleet.ErrTenantRequired)
+		}
 		affected, err := s.UpdateDeviceColumns(ctx, input, columns)
 		if err != nil {
 			return devicefleet.Device{}, err
@@ -380,7 +385,9 @@ func (s *Service) ApplyDeviceEdit(ctx context.Context, edit devicefleet.DeviceEd
 	err := s.runWrite(ctx, "update_device_columns", func(txCtx context.Context, stats *domain.OperationStats) error {
 		var queryStats domain.OperationStats
 		var err error
-		updated, queryStats, err = s.deps.Devices.UpdateColumnsReturning(txCtx, s.storedDeviceUpdate(input), columns)
+		stored := s.storedDeviceUpdate(input)
+		stored.RecordedBy = s.lifecycleRecord(edit.RecordedBy)
+		updated, queryStats, err = s.deps.Devices.UpdateColumnsReturning(txCtx, stored, columns)
 		stats.Add(queryStats)
 		return err
 	})

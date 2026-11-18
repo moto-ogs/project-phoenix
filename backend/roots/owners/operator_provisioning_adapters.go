@@ -12,6 +12,7 @@ import (
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
+	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	organizationCompose "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/compose"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 
@@ -86,8 +87,12 @@ func NewOperatorProvisioningAdapters(
 		categories == nil || auditLog == nil || today == nil {
 		return OperatorProvisioningAdapters{}, errors.New("operator provisioning adapters: all dependencies are required")
 	}
+	history, ok := devices.(devicefleet.LifecycleHistory)
+	if !ok {
+		return OperatorProvisioningAdapters{}, errors.New("operator provisioning adapters: the device fleet carries no device history")
+	}
 	return OperatorProvisioningAdapters{
-		Devices: provisioningDevices{devices: devices},
+		Devices: provisioningDevices{devices: devices, history: history},
 		People: provisioningPeople{
 			persons: persons, membership: membership, childQuota: schoolMembershipCompose.NewChildQuotaCounts(today),
 			personRows: personRows,
@@ -100,7 +105,44 @@ func NewOperatorProvisioningAdapters(
 	}, nil
 }
 
-type provisioningDevices struct{ devices devicefleet.Capability }
+type provisioningDevices struct {
+	devices devicefleet.Capability
+	history devicefleet.LifecycleHistory
+}
+
+// RecordDeviceLifecycle translates the operator's change into an entry of
+// the device's history, named by the operator (#2321).
+func (d provisioningDevices) RecordDeviceLifecycle(ctx context.Context, entry organizationtenancy.DeviceLifecycleEntry) error {
+	return d.history.RecordLifecycleEvent(ctx, devicefleet.RecordLifecycleEvent{
+		DeviceRowID: entry.DeviceRowID, Action: devicefleet.LifecycleAction(entry.Action),
+		ActorKind: devicefleet.LifecycleActorOperator, ActorID: entry.OperatorID,
+		Changes: devicefleet.LifecycleChanges(entry.Changes),
+	})
+}
+
+// ListDeviceLifecycle reads the device's history across its schools in the
+// operator's administrative unit (#2321); staff stay unnamed.
+func (d provisioningDevices) ListDeviceLifecycle(ctx context.Context, id int64) ([]organizationtenancy.DeviceHistoryEntry, bool, error) {
+	events, err := d.history.ListLifecycleEvents(ctx, id)
+	if errors.Is(err, devicefleet.ErrDeviceNotFound) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	entries := make([]organizationtenancy.DeviceHistoryEntry, 0, len(events))
+	for _, event := range events {
+		changes := make(map[string]organizationtenancy.DeviceHistoryChange, len(event.Changes))
+		for field, change := range event.Changes {
+			changes[field] = organizationtenancy.DeviceHistoryChange{Before: change.Before, After: change.After}
+		}
+		entries = append(entries, organizationtenancy.DeviceHistoryEntry{
+			ID: event.ID, SchoolID: event.TenantID, Action: string(event.Action), ActorKind: string(event.ActorKind),
+			Changes: changes, OccurredAt: event.OccurredAt,
+		})
+	}
+	return entries, true, nil
+}
 
 func (d provisioningDevices) CountDevicesByTenant(ctx context.Context) (map[int64]int, error) {
 	return d.devices.CountDevicesByTenant(ctx)

@@ -1,4 +1,8 @@
 import { operatorFetch } from "./api-helpers";
+import {
+  mapDeviceHistoryEntry,
+  type DeviceHistoryEntry,
+} from "~/lib/device-history";
 import type {
   BackendOrganization,
   BackendOrganizationSummary,
@@ -378,6 +382,17 @@ class OperatorProvisioningService {
       `/api/operator/provisioning/devices/${encodeURIComponent(deviceId)}/transfer-status`,
     );
     return mapDeviceTransferStatus(result);
+  }
+
+  /**
+   * The history of one device across the schools it went through, newest
+   * first (#2321). Each entry names its school; staff stay unnamed.
+   */
+  async listDeviceHistory(deviceId: string): Promise<DeviceHistoryEntry[]> {
+    const result = await operatorFetch<
+      Parameters<typeof mapDeviceHistoryEntry>[0][] | null
+    >(`/api/operator/devices/${encodeURIComponent(deviceId)}/history`);
+    return (result ?? []).map(mapDeviceHistoryEntry);
   }
 
   /**

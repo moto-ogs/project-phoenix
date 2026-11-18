@@ -258,6 +258,14 @@ func TestProvisioningCreateDevice(t *testing.T) {
 		assert.Equal(t, map[string]any{
 			"device_id": "BURBACH-1", "device_type": "terminal", "school_id": float64(10), "api_key_mode": "auto",
 		}, auditChanges(t, entry))
+		require.Len(t, h.devices.lifecycle, 1)
+		created := h.devices.lifecycle[0]
+		assert.Equal(t, domain.DeviceLifecycleCreated, created.Action)
+		assert.Equal(t, device.ID, created.DeviceRowID)
+		assert.Equal(t, testOperatorID, created.OperatorID)
+		assert.Equal(t, "BURBACH-1", *created.Changes["device_id"][1])
+		assert.Equal(t, "Eingang", *created.Changes["name"][1])
+		assert.NotContains(t, created.Changes, "api_key", "no credential reaches the history")
 	})
 
 	t.Run("rejects custom keys before writing", func(t *testing.T) {
@@ -491,6 +499,8 @@ func TestProvisioningSetDeviceAPIKey(t *testing.T) {
 		assert.Equal(t, map[string]any{
 			"device_id": "BURBACH-1", "school_id": float64(10), "api_key_mode": "auto",
 		}, auditChanges(t, entry))
+		assert.Equal(t, []organizationtenancy.DeviceLifecycleEntry{{DeviceRowID: 1, Action: domain.DeviceLifecycleKeyRotated, OperatorID: testOperatorID}},
+			h.devices.lifecycle, "the history names the rotation, never the key")
 	})
 
 	t.Run("rejects custom keys before writing", func(t *testing.T) {
@@ -691,6 +701,7 @@ func TestProvisioningDeleteDevice(t *testing.T) {
 		assert.Equal(t, map[string]any{
 			"device_id": "BURBACH-1", "device_type": "terminal", "school_id": float64(10), "outcome": "removed",
 		}, auditChanges(t, entry))
+		assert.Equal(t, []organizationtenancy.DeviceLifecycleEntry{{DeviceRowID: 1, Action: domain.DeviceLifecycleRemoved, OperatorID: testOperatorID}}, h.devices.lifecycle)
 	})
 
 	t.Run("an open kiosk session blocks the removal", func(t *testing.T) {
@@ -818,6 +829,11 @@ func TestProvisioningSetDeviceBlocked(t *testing.T) {
 		assert.Equal(t, map[string]any{
 			"device_id": "BURBACH-1", "school_id": float64(10), "previous_status": "active",
 		}, auditChanges(t, entry))
+		active, inactive := domain.DeviceStatusActive, domain.DeviceStatusInactive
+		assert.Equal(t, []organizationtenancy.DeviceLifecycleEntry{{
+			DeviceRowID: 1, Action: domain.DeviceLifecycleBlocked, OperatorID: testOperatorID,
+			Changes: map[string][2]*string{"status": {&active, &inactive}},
+		}}, h.devices.lifecycle, "the block lands in the device's history (#2321)")
 	})
 
 	t.Run("unblocks a blocked device", func(t *testing.T) {
@@ -845,6 +861,19 @@ func TestProvisioningSetDeviceBlocked(t *testing.T) {
 
 		assert.Empty(t, h.devices.updated)
 		assert.Empty(t, h.audit.entries, "a repeated action is not audited again")
+		assert.Empty(t, h.devices.lifecycle, "a repeated action adds no history entry")
+	})
+
+	t.Run("a failed history entry fails the transaction", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		seed(h)
+		h.devices.fail = map[string]error{"RecordDeviceLifecycle": errBoom}
+
+		err := h.svc.SetDeviceBlocked(context.Background(), 1, true, testOperatorID, operatorIP)
+
+		require.ErrorIs(t, err, errBoom)
+		assert.ErrorIs(t, h.tx.lastErr, errBoom)
 	})
 
 	t.Run("audit failure fails the transaction", func(t *testing.T) {
@@ -1146,6 +1175,10 @@ func TestProvisioningTransferDevice(t *testing.T) {
 			"device_id": "BURBACH-2", "source_device_id": float64(200), "target_device_id": float64(501),
 			"source_school_id": float64(10), "target_school_id": float64(20),
 		}, auditChanges(t, entry))
+		assert.Equal(t, []organizationtenancy.DeviceLifecycleEntry{
+			{DeviceRowID: 200, Action: domain.DeviceLifecycleTransferredOut, OperatorID: testOperatorID},
+			{DeviceRowID: 501, Action: domain.DeviceLifecycleTransferredIn, OperatorID: testOperatorID},
+		}, h.devices.lifecycle, "both schools' histories name the move, neither names the other school (#2321)")
 		assert.Equal(t, []int64{10}, h.settings.tenants)
 		assert.False(t, h.settings.adminCalled)
 	})
@@ -1381,4 +1414,38 @@ func TestProvisioningTransferDevice(t *testing.T) {
 			assert.Empty(t, h.audit.entries)
 		})
 	}
+}
+
+func TestProvisioningDeviceHistory(t *testing.T) {
+	t.Parallel()
+
+	t.Run("names the school of every entry, so a transfer shows both", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		seedDeviceSchools(h)
+		h.devices.history = map[int64][]organizationtenancy.DeviceHistoryEntry{501: {
+			{ID: 3, SchoolID: 10, Action: "transferred_in", ActorKind: "operator"},
+			{ID: 2, SchoolID: 20, Action: "transferred_out", ActorKind: "operator"},
+			{ID: 1, SchoolID: 999, Action: "created", ActorKind: "school_staff"},
+		}}
+
+		entries, err := h.svc.DeviceHistory(context.Background(), 501)
+
+		require.NoError(t, err)
+		require.Len(t, entries, 3)
+		assert.Equal(t, "Burbach", entries[0].SchoolName)
+		assert.Equal(t, "Walbach", entries[1].SchoolName)
+		assert.Empty(t, entries[2].SchoolName, "a school the directory no longer lists stays unnamed")
+	})
+
+	t.Run("an unknown device is not found", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		seedDeviceSchools(h)
+
+		_, err := h.svc.DeviceHistory(context.Background(), 77)
+
+		var notFound *organizationtenancy.OperatorDeviceNotFoundError
+		require.ErrorAs(t, err, &notFound)
+	})
 }

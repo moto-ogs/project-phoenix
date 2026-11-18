@@ -147,6 +147,7 @@ var tableRetentions = map[string]tableRetention{
 	"audit.data_access_log":                                 own("nightly retention step data_access_log_retention, DeleteExpiredDataAccessLog -> SQL audit.delete_expired_data_access_log"),
 	"audit.data_deletions":                                  own("nightly retention step deletion_log_retention, DeleteExpiredDeletionLog -> SQL audit.delete_expired_data_deletions"),
 	"audit.data_imports":                                    parent("auth.accounts"),
+	"audit.device_lifecycle_events":                         notPersonal("device lifecycle history (acting account and operator FK SET NULL, no names stored, #2321)"),
 	"audit.deviation_events":                                own("nightly timetable-cleanup, DeleteDeviationEventsBefore -> SQL audit.delete_expired_deviation_events"),
 	"audit.enrollment_deletions":                            own("nightly retention step enrollment_deletion_log_retention, Command.DeleteExpiredProtocol -> SQL audit.delete_expired_protocol (3 years)"),
 	"audit.enrollment_offering_adjustments":                 parent("users.student_profiles"),
