@@ -335,22 +335,28 @@ func (s *ChangeRequests) createInTenant(ctx context.Context, token string, phase
 		Diff: snapshotDiff(baseSnapshot, proposedSnapshot), CareOfferingsEnabledAtCreation: capabilities.CareOfferingsEnabled,
 		CreatedByAccountID: input.CreatedByAccountID,
 	}
-	row.LegalEvidence, err = s.proposedLegalEvidence(ctx, prepared, baseSnapshot, submission.ConsentFlags, renewalRequest(children))
-	if err != nil {
+	if err := s.persistFamilyProposal(ctx, row, prepared, submission.ConsentFlags, renewalRequest(children)); err != nil {
 		return nil, err
-	}
-	if err := createChangeRequest(ctx, s.deps.Requests, row); err != nil {
-		return nil, err
-	}
-	if row.ParentNote != nil {
-		if err := s.deps.Requests.InsertChangeRequestMessage(ctx, &enrollmentNative.ChangeRequestMessage{
-			ChangeRequestID: row.ID, AuthorType: enrollmentNative.ChangeRequestMessageAuthorParent,
-			AuthorAccountID: input.CreatedByAccountID, Body: *row.ParentNote,
-		}); err != nil {
-			return nil, err
-		}
 	}
 	return row, nil
+}
+
+func (s *ChangeRequests) persistFamilyProposal(ctx context.Context, row *ChangeRequest, prepared *proposal, submittedFlags map[string]any, renewal bool) error {
+	evidence, err := s.proposedLegalEvidence(ctx, prepared, row.BaseSnapshot, submittedFlags, renewal)
+	if err != nil {
+		return err
+	}
+	row.LegalEvidence = evidence
+	if err := createChangeRequest(ctx, s.deps.Requests, row); err != nil {
+		return err
+	}
+	if row.ParentNote == nil {
+		return nil
+	}
+	return s.deps.Requests.InsertChangeRequestMessage(ctx, &enrollmentNative.ChangeRequestMessage{
+		ChangeRequestID: row.ID, AuthorType: enrollmentNative.ChangeRequestMessageAuthorParent,
+		AuthorAccountID: row.CreatedByAccountID, Body: *row.ParentNote,
+	})
 }
 
 func (s *ChangeRequests) listPublic(ctx context.Context, token string) ([]*changeRequestCase, error) {

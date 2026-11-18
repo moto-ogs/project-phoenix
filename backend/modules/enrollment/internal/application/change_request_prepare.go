@@ -207,33 +207,8 @@ func (s *ChangeRequests) validateProposal(ctx context.Context, req *enrollmentNa
 	editReq.ConsentFlags = filterConsentFlags(editReq.ConsentFlags, legalBlocks)
 	consentBlocks := legalBlocks
 	if renewalRequest(children) {
-		// A renewal's acceptance of the new phase comes only with its
-		// evidence (ConfirmRenewal, #6456), so a change request on it, such
-		// as the offerings adjustment whose form shows no consent, demands
-		// no tick. Its answers go over the stored ones and never drop an
-		// acceptance recorded in between.
 		consentBlocks = requiredFreeLegalBlocks(legalBlocks)
-		merged := formMap(req.ConsentFlags)
-		if merged == nil {
-			merged = map[string]any{}
-		}
-		incoming := editReq.ConsentFlags
-		for _, block := range legalBlocks {
-			if block.Required {
-				delete(incoming, block.Key)
-			}
-		}
-		// The phase may have published terms since this request's
-		// schema was pinned. Keep their recorded answers too.
-		if evidence, ok := enrollmentNative.LastSubmissionLegalSnapshot(req.LegalBlocksSnapshot); ok {
-			for _, block := range evidence.Blocks {
-				if block.Required {
-					delete(incoming, block.Key)
-				}
-			}
-		}
-		maps.Copy(merged, incoming)
-		editReq.ConsentFlags = merged
+		editReq.ConsentFlags = renewalProposalConsentFlags(req, editReq.ConsentFlags, legalBlocks)
 	}
 	if err := s.intake.validateSubmission(ctx, changeRequestValidationSubmission(*editReq, children, opts.lockTakenOverChildren), consentBlocks, capabilities); err != nil {
 		return err
@@ -254,6 +229,29 @@ func (s *ChangeRequests) validateProposal(ctx context.Context, req *enrollmentNa
 	}
 	mergeProposalAnswers(schema, editReq, formMap(req.CustomData), children, prepared.offerings, opts.lockTakenOverChildren)
 	return nil
+}
+
+// renewalProposalConsentFlags overlays optional answers while keeping all
+// confirmations, including terms published after the pinned proposal form.
+func renewalProposalConsentFlags(req *enrollmentNative.Request, incoming map[string]any, legalBlocks []enrollmentNative.LegalBlock) map[string]any {
+	merged := formMap(req.ConsentFlags)
+	if merged == nil {
+		merged = map[string]any{}
+	}
+	for _, block := range legalBlocks {
+		if block.Required {
+			delete(incoming, block.Key)
+		}
+	}
+	if evidence, ok := enrollmentNative.LastSubmissionLegalSnapshot(req.LegalBlocksSnapshot); ok {
+		for _, block := range evidence.Blocks {
+			if block.Required {
+				delete(incoming, block.Key)
+			}
+		}
+	}
+	maps.Copy(merged, incoming)
+	return merged
 }
 
 // validateProposalEligibility applies the eligible classes and grades — a

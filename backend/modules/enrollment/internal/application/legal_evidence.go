@@ -16,32 +16,43 @@ func (s *Intake) snapshotLegalEvidence(ctx context.Context, blocks []enrollment.
 	}
 	fingerprints := make(map[string]string)
 	for i, block := range blocks {
-		urls := make([]string, 0, len(block.Attachments)+1)
-		if block.PDFURL != "" {
-			urls = append(urls, block.PDFURL)
+		hashes, err := s.snapshotPDFHashes(ctx, block, fingerprints)
+		if err != nil {
+			return enrollment.LegalBlocksSnapshotEntry{}, fmt.Errorf("fingerprint enrollment legal PDF: %w", err)
 		}
-		for _, attachment := range block.Attachments {
-			urls = append(urls, attachment.DocumentURL)
-		}
-		for _, url := range urls {
-			hash, seen := fingerprints[url]
-			if !seen {
-				hash, err = s.deps.LegalPDFFingerprint(ctx, s.deps.Runtime.TenantID(ctx), url)
-				if err != nil {
-					return enrollment.LegalBlocksSnapshotEntry{}, fmt.Errorf("fingerprint enrollment legal PDF: %w", err)
-				}
-				fingerprints[url] = hash
-			}
-			if hash == "" {
-				continue
-			}
-			if entry.Blocks[i].PDFSHA256 == nil {
-				entry.Blocks[i].PDFSHA256 = make(map[string]string)
-			}
-			entry.Blocks[i].PDFSHA256[url] = hash
-		}
+		entry.Blocks[i].PDFSHA256 = hashes
 	}
 	return entry, nil
+}
+
+func (s *Intake) snapshotPDFHashes(ctx context.Context, block enrollment.LegalBlock, fingerprints map[string]string) (map[string]string, error) {
+	urls := make([]string, 0, len(block.Attachments)+1)
+	if block.PDFURL != "" {
+		urls = append(urls, block.PDFURL)
+	}
+	for _, attachment := range block.Attachments {
+		urls = append(urls, attachment.DocumentURL)
+	}
+	var hashes map[string]string
+	for _, url := range urls {
+		hash, seen := fingerprints[url]
+		if !seen {
+			var err error
+			hash, err = s.deps.LegalPDFFingerprint(ctx, s.deps.Runtime.TenantID(ctx), url)
+			if err != nil {
+				return nil, err
+			}
+			fingerprints[url] = hash
+		}
+		if hash == "" {
+			continue
+		}
+		if hashes == nil {
+			hashes = make(map[string]string)
+		}
+		hashes[url] = hash
+	}
+	return hashes, nil
 }
 
 // proposedLegalEvidence records changed answers from the family when it
