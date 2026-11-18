@@ -202,7 +202,9 @@ func assertBudgetSchema(t *testing.T, raw json.RawMessage, portal string) map[st
 		require.Equal(t, portal == "operator", items[records.KeyModuleNFCAnwesenheit].Writable, "operator-managed module switch")
 	}
 	if portal != "operator" && portal != "traeger" {
-		require.Equal(t, "••••••", items[records.KeyOGSDevicePIN].Value, "password default is masked too")
+		// No default PIN (#7175): an unset password has nothing to mask.
+		// TestDevicePINStatusAPI proves a stored PIN is masked.
+		require.Equal(t, "", items[records.KeyOGSDevicePIN].Value, "no default device PIN")
 		require.False(t, items[records.KeyModuleNFCAnwesenheit].Writable)
 	}
 	return items

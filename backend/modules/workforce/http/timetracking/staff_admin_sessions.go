@@ -188,7 +188,7 @@ func (rs *StaffAdminResource) approveAbsence(w http.ResponseWriter, r *http.Requ
 	}
 	decidedBy, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	claims := rs.identity(r.Context())
@@ -243,7 +243,7 @@ func (rs *StaffAdminResource) denyAbsence(w http.ResponseWriter, r *http.Request
 	}
 	decidedBy, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	claims := rs.identity(r.Context())
@@ -350,7 +350,7 @@ func (rs *StaffAdminResource) setStaffVacationQuota(w http.ResponseWriter, r *ht
 	}
 	changedBy, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	if err := rs.StaffAbsenceService.SetVacationQuota(r.Context(), workforce.VacationQuotaChange{
@@ -411,7 +411,7 @@ func (rs *StaffAdminResource) adminUpdateStaffSession(w http.ResponseWriter, r *
 
 	editorStaffID, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -458,7 +458,7 @@ func (rs *StaffAdminResource) adminCreateStaffSession(w http.ResponseWriter, r *
 
 	editorStaffID, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -646,7 +646,7 @@ func (rs *StaffAdminResource) adminCreateStaffAbsence(w http.ResponseWriter, r *
 	}
 	editorStaffID, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	claims := rs.identity(r.Context())
@@ -689,7 +689,7 @@ func (rs *StaffAdminResource) adminDeleteStaffAbsence(w http.ResponseWriter, r *
 	}
 	editorStaffID, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	claims := rs.identity(r.Context())

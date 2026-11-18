@@ -810,6 +810,38 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/notifications/feed/",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "limit",
+          "kind": "int"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "traegerFeedPageResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/notifications/feed/unread-count",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "feedCountResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/report-templates/",
       "portals": [
         "org"
@@ -1233,6 +1265,28 @@
       "response": {
         "kind": "ref",
         "ref": "TraegerDocumentTemplate"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/notifications/feed/read-all",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "feedCountResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/notifications/feed/{id}/read",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "feedCountResponse"
       }
     },
     {
@@ -3519,6 +3573,13 @@
           }
         },
         {
+          "name": "without_care_place",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "care_exit_recorded",
           "optional": true,
           "schema": {
@@ -3825,6 +3886,13 @@
               "kind": "ref",
               "ref": "PickupScheduleRequest"
             }
+          }
+        },
+        {
+          "name": "without_care_place",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -4239,6 +4307,13 @@
         },
         {
           "name": "care_ended",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "without_care_place",
           "optional": true,
           "schema": {
             "kind": "bool"
@@ -7022,6 +7097,103 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "traegerFeedEntryResponse",
+      "go_type": "notifications.traegerFeedEntryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "deep_link",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "read_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "traegerFeedPageResponse",
+      "go_type": "notifications.traegerFeedPageResponse",
+      "fields": [
+        {
+          "name": "entries",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "traegerFeedEntryResponse"
+            }
+          }
+        },
+        {
+          "name": "next_cursor",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "unread_count",
+          "schema": {
+            "kind": "int"
           }
         }
       ]

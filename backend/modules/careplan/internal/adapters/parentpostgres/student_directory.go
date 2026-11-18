@@ -20,6 +20,8 @@ type DirectoryStudent struct {
 	Status        string
 	EnrolledFrom  string
 	EnrolledUntil string
+	// WithoutCarePlace marks a child without an OGS place (#4803).
+	WithoutCarePlace bool
 }
 
 // StudentDirectory is bound by the composition root; it fails while

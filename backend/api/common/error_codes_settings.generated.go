@@ -5,6 +5,8 @@ const CodeSettingsAdminOnly = "settings.admin_only"
 const CodeSettingsAttendanceRetentionBelowVisible = "settings.attendance_retention_below_visible"
 const CodeSettingsAttendanceVisibleExceedsRetention = "settings.attendance_visible_exceeds_retention"
 const CodeSettingsBookingAuthorityBlocked = "settings.booking_authority_blocked"
+const CodeSettingsDevicePinTooSimple = "settings.device_pin_too_simple"
+const CodeSettingsEnrollmentPrivacyNoticeMissing = "settings.enrollment_privacy_notice_missing"
 const CodeSettingsInvalidValue = "settings.invalid_value"
 const CodeSettingsManagedByUpload = "settings.managed_by_upload"
 const CodeSettingsModuleRequiredBy = "settings.module_required_by"
@@ -17,6 +19,8 @@ var errorCodeClassesSettings = []errorCodeClass{
 	{CodeSettingsAttendanceRetentionBelowVisible, "input"},
 	{CodeSettingsAttendanceVisibleExceedsRetention, "input"},
 	{CodeSettingsBookingAuthorityBlocked, "business_rejection"},
+	{CodeSettingsDevicePinTooSimple, "input"},
+	{CodeSettingsEnrollmentPrivacyNoticeMissing, "input"},
 	{CodeSettingsInvalidValue, "input"},
 	{CodeSettingsManagedByUpload, "business_rejection"},
 	{CodeSettingsModuleRequiredBy, "input"},

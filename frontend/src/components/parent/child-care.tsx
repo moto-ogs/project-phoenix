@@ -325,7 +325,17 @@ export interface ChildCare {
   refresh(): void;
 }
 
-export function useChildCare(studentId: string): ChildCare {
+export function useChildCare(
+  studentId: string,
+  options: Readonly<{
+    /**
+     * Das Kind hat keinen OGS-Platz (#4803). Abholung und Wochenplan gibt es
+     * dann nicht; der Server lehnt sie ab, also werden sie nicht geladen.
+     */
+    withoutCarePlace?: boolean;
+  }> = {},
+): ChildCare {
+  const withoutCarePlace = options.withoutCarePlace === true;
   const tChild = useCareTermTranslations("parentChild");
   // Today's calendar day in the SCHOOL's timezone (Europe/Berlin): the axis
   // the backend resolves absences and overrides against. It advances at
@@ -351,12 +361,12 @@ export function useChildCare(studentId: string): ChildCare {
     PARENT_RESOURCE_OPTIONS,
   );
   const exceptions = useSWRAuth(
-    parentKeys.careExceptions(studentId, today),
+    withoutCarePlace ? null : parentKeys.careExceptions(studentId, today),
     () => listCareExceptions(studentId),
     PARENT_RESOURCE_OPTIONS,
   );
   const pickupRequests = useSWRAuth(
-    parentKeys.pickupChangeRequests(studentId, today),
+    withoutCarePlace ? null : parentKeys.pickupChangeRequests(studentId, today),
     () => listPickupChangeRequests(studentId),
     PARENT_RESOURCE_OPTIONS,
   );
@@ -364,7 +374,7 @@ export function useChildCare(studentId: string): ChildCare {
   // unavailable, and the care-schedule section shows its own load error with
   // retry. A third box would repeat the same outage.
   const schedule = useSWRAuth(
-    parentKeys.careSchedule(studentId, today),
+    withoutCarePlace ? null : parentKeys.careSchedule(studentId, today),
     () => getChildCareSchedule(studentId),
     PARENT_RESOURCE_OPTIONS,
   );
@@ -387,7 +397,11 @@ export function useChildCare(studentId: string): ChildCare {
   const careExceptionsLoaded = !!exceptions.data && !exceptions.error;
   const pickupChangeRequestsLoaded =
     !!pickupRequests.data && !pickupRequests.error;
-  const lists = [sick, excused, exceptions, pickupRequests];
+  // Ohne OGS-Platz (#4803) laden Abholung und Ausnahmen nicht; sie zählen
+  // dann weder als ladend noch als fehlgeschlagen.
+  const lists = withoutCarePlace
+    ? [sick, excused]
+    : [sick, excused, exceptions, pickupRequests];
   const listsLoading = lists.some(
     (list) => list.data === undefined && !list.error,
   );
@@ -572,7 +586,7 @@ export function useChildCare(studentId: string): ChildCare {
     features: featureState.features ?? DEFAULT_FEATURES,
     loading:
       listsLoading ||
-      (schedule.data === undefined && !schedule.error) ||
+      (!withoutCarePlace && schedule.data === undefined && !schedule.error) ||
       featureState.loading,
     loadError: featureFailure ?? listFailure ?? null,
     reportSick,
@@ -628,6 +642,7 @@ export function SickNoteModal({
   reasonRequired = true,
   careExceptions = NO_CARE_EXCEPTIONS,
   sickDays = NO_STATUS_DAYS,
+  withoutCarePlace = false,
 }: Readonly<{
   studentId?: string;
   onClose: () => void;
@@ -653,6 +668,11 @@ export function SickNoteModal({
    * (`source` nicht `parent`) ist ein Schuleintrag wie eine Teil-Abwesenheit.
    */
   sickDays?: readonly StatusDay[];
+  /**
+   * Das Kind hat keinen Platz in der OGS (#4803): die Meldung geht an die
+   * Schule, die Texte nennen darum keine OGS.
+   */
+  withoutCarePlace?: boolean;
 }>) {
   const t = useCareTermTranslations("parentChildCare");
   const locale = useLocale();
@@ -718,8 +738,12 @@ export function SickNoteModal({
   const kindHint =
     status === "sick"
       ? requiresApproval === false
-        ? "sick.kindHintSick"
-        : "sick.kindHintSickUnknown"
+        ? withoutCarePlace
+          ? "sick.kindHintSickWithoutCarePlace"
+          : "sick.kindHintSick"
+        : withoutCarePlace
+          ? "sick.kindHintSickUnknownWithoutCarePlace"
+          : "sick.kindHintSickUnknown"
       : requiresApproval === false
         ? "sick.kindHintExcused"
         : "sick.kindHintExcusedUnknown";
@@ -744,9 +768,10 @@ export function SickNoteModal({
       return;
     }
     if (reasonRequired && noteMissing) {
-      form.invalid(t("sick.reasonRequiredError"), {
-        [SICK_REASON_FIELD]: t("sick.reasonRequiredError"),
-      });
+      const message = withoutCarePlace
+        ? t("sick.reasonRequiredErrorWithoutCarePlace")
+        : t("sick.reasonRequiredError");
+      form.invalid(message, { [SICK_REASON_FIELD]: message });
       return;
     }
     setSubmitting(true);
@@ -822,23 +847,35 @@ export function SickNoteModal({
               onClick={() => void handleSubmit()}
               disabled={submitting || (!sickEnabled && !excusedEnabled)}
               tooltip={t(
-                requiresApproval === true
-                  ? "sick.submitRequestTooltip"
-                  : requiresApproval === false && schoolDays.length === 0
-                    ? "sick.submitDirectTooltip"
-                    : "sick.submitTooltip",
+                withoutCarePlace
+                  ? requiresApproval === true
+                    ? "sick.submitRequestTooltipWithoutCarePlace"
+                    : "sick.submitTooltipWithoutCarePlace"
+                  : requiresApproval === true
+                    ? "sick.submitRequestTooltip"
+                    : requiresApproval === false && schoolDays.length === 0
+                      ? "sick.submitDirectTooltip"
+                      : "sick.submitTooltip",
               )}
               disabledReason={
                 !sickEnabled && !excusedEnabled
-                  ? t("sick.submitBlocked")
+                  ? t(
+                      withoutCarePlace
+                        ? "sick.submitBlockedWithoutCarePlace"
+                        : "sick.submitBlocked",
+                    )
                   : undefined
               }
               isLoading={submitting}
               loadingText={t("sick.submitting")}
             >
-              {status === "sick"
-                ? t("sick.submitSick")
-                : t("sick.submitExcused")}
+              {withoutCarePlace
+                ? status === "sick"
+                  ? t("sick.submitSickWithoutCarePlace")
+                  : t("sick.submitExcusedWithoutCarePlace")
+                : status === "sick"
+                  ? t("sick.submitSick")
+                  : t("sick.submitExcused")}
             </Button>
           </>
         )
@@ -847,14 +884,28 @@ export function SickNoteModal({
       {submitted ? (
         <p role="status" className="text-sm leading-6 text-gray-700">
           {submitted === "partly_pending"
-            ? t("sick.requestSentPartlyBody")
+            ? t(
+                withoutCarePlace
+                  ? "sick.requestSentPartlyBodyWithoutCarePlace"
+                  : "sick.requestSentPartlyBody",
+              )
             : requiresApproval === false
-              ? t("sick.requestSentSchoolBody")
-              : t("sick.requestSentBody")}
+              ? t(
+                  withoutCarePlace
+                    ? "sick.requestSentSchoolBodyWithoutCarePlace"
+                    : "sick.requestSentSchoolBody",
+                )
+              : withoutCarePlace
+                ? t("sick.requestSentBodyWithoutCarePlace")
+                : t("sick.requestSentBody")}
         </p>
       ) : (
         <div className="space-y-4">
-          <p className="text-sm leading-6 text-gray-700">{t("sick.intro")}</p>
+          <p className="text-sm leading-6 text-gray-700">
+            {withoutCarePlace
+              ? t("sick.introWithoutCarePlace")
+              : t("sick.intro")}
+          </p>
           <CustomSelect
             label={t("sick.kindLabel")}
             value={status}
@@ -923,13 +974,18 @@ export function SickNoteModal({
                             ),
                             time: day.time,
                           })
-                        : t("sick.schoolSickDay", {
-                            date: formatCalendarDate(
-                              day.date,
-                              locale,
-                              SCHOOL_DAY_FORMAT,
-                            ),
-                          })}
+                        : t(
+                            withoutCarePlace
+                              ? "sick.schoolSickDayWithoutCarePlace"
+                              : "sick.schoolSickDay",
+                            {
+                              date: formatCalendarDate(
+                                day.date,
+                                locale,
+                                SCHOOL_DAY_FORMAT,
+                              ),
+                            },
+                          )}
                     </li>
                   ))}
                 </ul>
@@ -945,7 +1001,11 @@ export function SickNoteModal({
           )}
           {dayCopy && <p className="text-sm text-gray-600">{dayCopy}</p>}
           <Textarea
-            label={t("sick.reasonLabelRequired")}
+            label={
+              withoutCarePlace
+                ? t("sick.reasonLabelWithoutCarePlace")
+                : t("sick.reasonLabelRequired")
+            }
             value={reason}
             maxLength={MAX_NOTE_LEN}
             onChange={(event) => {

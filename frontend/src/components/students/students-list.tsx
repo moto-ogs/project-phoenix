@@ -25,6 +25,7 @@ import { SelectionBulkInviteModal } from "./selection-bulk-invite-modal";
 import { SelectionBulkPickupModal } from "./selection-bulk-pickup-modal";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { classTripConcept } from "~/lib/concepts/classTrip";
+import { parentsConcept } from "~/lib/concepts/parents";
 
 export type GroupingMode = "class" | "group" | "none";
 
@@ -99,6 +100,9 @@ export function StudentsList({
   canInviteGuardians = false,
 }: StudentsListProps) {
   const [inviteSelectionOpen, setInviteSelectionOpen] = useState(false);
+  // Sammeleinladung je Klasse (#4803): die Kinder der Klasse, deren Eltern
+  // die Schule auf einmal in die Eltern-App einlädt.
+  const [classInviteIds, setClassInviteIds] = useState<string[] | null>(null);
   const [bulkTarget, setBulkTarget] = useState<BulkArrivalTarget | null>(null);
   const [classTripTarget, setClassTripTarget] = useState<{
     label: string;
@@ -154,8 +158,11 @@ export function StudentsList({
       // tragen die Warnung für fehlende Ankünfte und die Sammelaktion.
       if (group.id === "__flat__") return {};
 
+      // Ein Kind ohne OGS-Platz (#4803) hat keine Ankunft in der OGS.
       const missing = group.items.filter(
-        (item) => !studentsWithArrival.has(keyForStudent(item)),
+        (item) =>
+          !item.without_care_place &&
+          !studentsWithArrival.has(keyForStudent(item)),
       );
       const variant = missing.length > 0 ? "warning" : "neutral";
       const countSuffix =
@@ -182,7 +189,33 @@ export function StudentsList({
           : grouping === "group" && groupID
             ? (bulkStudentsByFilter.byGroup.get(groupID) ?? [])
             : [];
+      const classInviteStudents =
+        canInviteGuardians &&
+        grouping === "class" &&
+        group.id !== UNKNOWN_CLASS_LABEL
+          ? (bulkStudentsByFilter.byClass.get(group.id) ?? [])
+          : [];
       const items = [
+        ...(classInviteStudents.length > 0
+          ? [
+              {
+                label: "Eltern einladen",
+                description:
+                  "Lädt die Eltern aller Kinder dieser Klasse in die Eltern-App ein, moto fragt vorher nach.",
+                icon: (
+                  <MotoDuotoneIcon
+                    icon={parentsConcept.icon}
+                    tone={parentsConcept.tone}
+                    size={18}
+                  />
+                ),
+                onClick: () =>
+                  setClassInviteIds(
+                    classInviteStudents.map((student) => String(student.id)),
+                  ),
+              },
+            ]
+          : []),
         ...(arrivalTarget
           ? [
               {
@@ -234,7 +267,7 @@ export function StudentsList({
         ) : null;
       return { variant, countSuffix, bulkAction };
     },
-    [bulkStudentsByFilter, grouping, studentsWithArrival],
+    [bulkStudentsByFilter, canInviteGuardians, grouping, studentsWithArrival],
   );
 
   const groupDefinitions = useGroupedItems(
@@ -279,6 +312,7 @@ export function StudentsList({
     const arrivalSummary = arrivalSummaryById.get(id);
 
     const subtitleParts: string[] = [];
+    if (student.without_care_place) subtitleParts.push("Ohne OGS-Platz");
     if (student.group_name) subtitleParts.push(student.group_name);
     // Ein eingetragener Austritt steht vorne: er ändert, was mit dem Kind noch
     // geplant werden kann (#2487). Das bloße Ende der Anmeldephase steht hier
@@ -288,15 +322,18 @@ export function StudentsList({
         `Betreuung endet am ${formatDate(student.care_ends_on)}`,
       );
     }
+    // Ein Kind ohne OGS-Platz (#4803) kommt nicht in die OGS, eine fehlende
+    // Ankunft ist dort keine Lücke.
+    const arrivalMissing = !hasArrival && !student.without_care_place;
     if (arrivalSummary) {
       subtitleParts.push(arrivalSummary);
-    } else if (!hasArrival) {
+    } else if (arrivalMissing) {
       subtitleParts.push("keine Ankunft");
     }
     // Kein Gedankenstrich als Platzhalter: eine Zeile, die nur „–" sagt,
     // sagt nichts. Gibt es nichts zu ergänzen, entfällt die Zeile.
     const subtitleText = subtitleParts.join(" · ");
-    const subtitle = !subtitleText ? undefined : !hasArrival ? (
+    const subtitle = !subtitleText ? undefined : arrivalMissing ? (
       <span className="text-moto-orange-strong font-medium">
         {subtitleText}
       </span>
@@ -311,7 +348,7 @@ export function StudentsList({
         isSelected={false}
         href={objectHref(student)}
         trailingAccessory={
-          !hasArrival ? (
+          arrivalMissing ? (
             <AlertCircle
               className="text-moto-orange h-4 w-4 shrink-0"
               aria-label="Ankunft fehlt"
@@ -406,6 +443,13 @@ export function StudentsList({
           isOpen
           onClose={() => setInviteSelectionOpen(false)}
           studentIds={selectedStudents.map((student) => String(student.id))}
+        />
+      ) : null}
+      {classInviteIds ? (
+        <SelectionBulkInviteModal
+          isOpen
+          onClose={() => setClassInviteIds(null)}
+          studentIds={classInviteIds}
         />
       ) : null}
     </>

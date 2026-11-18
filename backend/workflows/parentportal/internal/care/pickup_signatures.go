@@ -136,6 +136,9 @@ func (s *Service) PickupSignatureStatement(ctx context.Context, accountID, stude
 	if err != nil {
 		return "", err
 	}
+	if err := child.RequireCarePlace(); err != nil {
+		return "", err
+	}
 
 	switch input.Kind {
 	case PickupSignatureStatementPermission:

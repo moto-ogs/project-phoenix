@@ -15,5 +15,6 @@
   "answerTo": "Ответ на: {title}",
   "errorObjectThread": "групповое сообщение",
   "errorObjectAnswer": "ответ",
-  "errorObjectList": "групповые сообщения"
+  "errorObjectList": "групповые сообщения",
+  "closedNoteWithoutChat": "Это групповое сообщение закрыто."
 }

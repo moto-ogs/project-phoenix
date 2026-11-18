@@ -17,15 +17,19 @@ func (s *Service) MealPlanWeek(ctx context.Context, accountID, studentID int64, 
 	if err != nil {
 		return nil, err
 	}
+	// A child without an OGS place eats no OGS meal (#4803).
+	if err := child.RequireCarePlace(); err != nil {
+		return nil, err
+	}
 
 	monday := weekStart.StartOfISOWeek()
-	// Parents may only read the current and next work week. Staff can plan
-	// arbitrary future (and past) weeks on the staff page; those are drafts and
-	// must not be reachable through the parent proxy by supplying a crafted
-	// week_start. Compare on the normalized Monday so any day within an allowed
-	// week resolves the same.
+	// Parents may only read the current and following three work weeks. Staff
+	// can plan arbitrary future (and past) weeks on the staff page; those are
+	// drafts and must not be reachable through the parent proxy by supplying a
+	// crafted week_start. Compare on the normalized Monday so any day within an
+	// allowed week resolves the same.
 	currentMonday := s.todayDate().StartOfISOWeek()
-	if monday != currentMonday && monday != currentMonday.AddDays(7) {
+	if monday.Before(currentMonday) || monday.After(currentMonday.AddDays(21)) {
 		return nil, ErrMealPlanWeekOutOfRange
 	}
 
@@ -82,7 +86,10 @@ func (s *Service) mealRegistrationAvailableForTenant(ctx context.Context, tenant
 
 func (s *Service) MealParticipation(ctx context.Context, accountID, studentID int64, from, to calendar.Date) (MealParticipationPlan, error) {
 	var plan MealParticipationPlan
-	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess, func(*Child) error {
+	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess, func(child *Child) error {
+		if err := child.RequireCarePlace(); err != nil {
+			return err
+		}
 		currentMonday := s.todayDate().StartOfISOWeek()
 		if from.Before(currentMonday) || to.After(lastMealParticipationDay(currentMonday)) || to.Before(from) {
 			return ErrMealParticipationOutOfRange
@@ -119,7 +126,7 @@ func mealParticipationWriter(child *Child) error {
 	if !child.HasPermission(GuardianPermissionMealParticipationManage) {
 		return ErrMealParticipationManageDenied
 	}
-	return child.RequireCareRunning()
+	return child.RequireOGSCareRunning()
 }
 
 func (s *Service) ReplaceMealParticipationSchedule(ctx context.Context, accountID, studentID int64, weekdays []MealWeekday) (string, error) {

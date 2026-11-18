@@ -62,7 +62,7 @@ var moduleFileSizeAllowlist = map[string]int{
 	// ADR 0087.
 	"internal/architecture/semantic.go": 1435,
 	// ADR 0087.
-	"internal/devtools/seedapi/parent_enrollment.go": 1321,
+	"internal/devtools/seedapi/parent_enrollment.go": 1300,
 	// ADR 0087.
 	"internal/devtools/seedapi/stammdaten.go": 1465,
 	// ADR 0087.
@@ -70,7 +70,7 @@ var moduleFileSizeAllowlist = map[string]int{
 	// ADR 0087.
 	"observability/prometheus.go": 1662,
 	// ADR 0087.
-	"test/fixtures.go": 3031,
+	"test/fixtures.go": 3013,
 }
 
 func TestModuleFileSizeRatchet(t *testing.T) {

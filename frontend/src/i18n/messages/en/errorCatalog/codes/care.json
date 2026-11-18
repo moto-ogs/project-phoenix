@@ -15,6 +15,7 @@
   "care_request_field_disabled": "{object} is not available here at the moment. Please ask your contact person.",
   "child_care_ended": "Care for this child has ended. Changes are no longer possible. If you have questions, please contact the OGS.",
   "child_not_linked": "You cannot access {object}. Please contact the school.",
+  "child_without_care_place": "Your child does not have a place in the OGS. This function is therefore not available for your child.",
   "course_already_booked": "{object} could not be saved. Please check your entries.",
   "course_request_invalid": "{object} contains invalid details. Please check your entries.",
   "course_request_not_own": "{object} could not be saved. Please check your entries.",

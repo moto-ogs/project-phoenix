@@ -1,4 +1,5 @@
 {
   "occurrence_unavailable": "This date no longer exists. It may have been cancelled. Please reload the calendar.",
-  "federal_state_missing": "No federal state is set for the school yet, so the public holidays are missing. The school management can set it in the settings."
+  "federal_state_missing": "No federal state is set for the school yet, so the public holidays are missing. The school management can set it in the settings.",
+  "no_staff_profile": "You cannot access {object}. Please contact the school."
 }

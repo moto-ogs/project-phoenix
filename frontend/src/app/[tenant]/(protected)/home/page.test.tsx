@@ -93,6 +93,9 @@ vi.mock("~/lib/usercontext-context", () => ({
   ),
 }));
 
+vi.mock("~/components/devices/device-pin-warning", () => ({
+  DevicePinWarning: () => <div data-testid="device-pin-warning" />,
+}));
 vi.mock("~/components/enrollment/phase-expiry-warnings", () => ({
   PhaseExpiryWarnings: () => <div data-testid="phase-expiry-warnings" />,
 }));
@@ -453,6 +456,8 @@ describe("Startseite", () => {
     expect(
       await screen.findByTestId("phase-expiry-warnings"),
     ).toBeInTheDocument();
+    // Geräte-PIN (#7175): dasselbe Recht setzt die PIN.
+    expect(screen.getByTestId("device-pin-warning")).toBeInTheDocument();
   });
 
   it("lädt die Ablaufwarnungen der Anmeldephasen nur für die Leitung", async () => {
@@ -466,6 +471,7 @@ describe("Startseite", () => {
     expect(
       screen.queryByTestId("phase-expiry-warnings"),
     ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("device-pin-warning")).not.toBeInTheDocument();
   });
 
   it("behält die Zahlen, wenn eine spätere Abfrage fehlschlägt", async () => {

@@ -691,6 +691,87 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
+      "reason": "Read-only newly exposed target: school-membership reaches modules/settings.ChildrenWithoutCarePlaceOn (settings-platform) through api.classListEntriesWhileChildrenKept.AddClassListEntry. The root decorator reads the switch for children without an OGS place (#4803, ADR 0282) before it refuses a new class-list entry.",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ChildrenWithoutCarePlaceOn",
+      "target_owner": "settings-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
+      "classification": "platform",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
+      "reason": "Platform protocol participation (lock): school-membership reaches modules/settings.ClassListConversionLock.LockClassListConversionShared (settings-platform) through api.classListEntriesWhileChildrenKept.AddClassListEntry, the shared side of the lock both class-list conversion switches take (ADR 0283). The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ClassListConversionLock.LockClassListConversionShared",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
+      "reason": "Read-only newly exposed target: school-membership reaches modules/settings.DisplaySettingsSource.ResolveBool (settings-platform) through api.classListEntriesWhileChildrenKept.AddClassListEntry. The root decorator reads the switch for children without an OGS place (#4803, ADR 0282) before it refuses a new class-list entry.",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.DisplaySettingsSource.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
+      "reason": "Read-only newly exposed target: school-membership reaches modules/settings.Resolver.ResolveBool (settings-platform) through api.classListEntriesWhileChildrenKept.AddClassListEntry. The root decorator reads the switch for children without an OGS place (#4803, ADR 0282) before it refuses a new class-list entry.",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.Resolver.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
+      "reason": "Read-only newly exposed target: school-membership reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through api.classListEntriesWhileChildrenKept.AddClassListEntry. The root decorator reads the switch for children without an OGS place (#4803, ADR 0282) before it refuses a new class-list entry.",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
+      "reason": "Read-only newly exposed target: school-membership reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through api.classListEntriesWhileChildrenKept.AddClassListEntry. The root decorator reads the switch for children without an OGS place (#4803, ADR 0282) before it refuses a new class-list entry.",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
+      "reason": "Read-only newly exposed target: school-membership reaches modules/studentpresence/http.TenantSettings.ResolveBool (student-presence) through api.classListEntriesWhileChildrenKept.AddClassListEntry. The root decorator reads the switch for children without an OGS place (#4803, ADR 0282) before it refuses a new class-list entry.",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence/http.TenantSettings.ResolveBool",
+      "target_owner": "student-presence"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
+      "reason": "Read-only newly exposed target: school-membership reaches tenant.TenantFromContext (tenant-runtime) through api.classListEntriesWhileChildrenKept.AddClassListEntry (#4803, ADR 0282).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.AddClassListEntry",
       "classification": "query",
       "effect": "query",
@@ -706,6 +787,16 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
       "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership.Owner.AddClassListEntry. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.ListClassListEntriesInDisplayOrder",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.ListClassListEntriesInDisplayOrder",
+      "reason": "Read-only newly exposed target: school-membership reaches tenant.TenantFromContext (tenant-runtime) through api.classListEntriesWhileChildrenKept.ListClassListEntriesInDisplayOrder (#4803, ADR 0282).",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -731,6 +822,27 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.RemoveClassListEntry",
+      "classification": "platform",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.RemoveClassListEntry",
+      "reason": "Platform protocol participation (lock): school-membership reaches modules/settings.ClassListConversionLock.LockClassListConversionShared (settings-platform) through api.classListEntriesWhileChildrenKept.RemoveClassListEntry, the shared side of the lock both class-list conversion switches take (ADR 0283). The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ClassListConversionLock.LockClassListConversionShared",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.RemoveClassListEntry",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.RemoveClassListEntry",
+      "reason": "Read-only newly exposed target: school-membership reaches tenant.TenantFromContext (tenant-runtime) through api.classListEntriesWhileChildrenKept.RemoveClassListEntry (#4803, ADR 0282).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.RemoveClassListEntry",
       "classification": "query",
       "effect": "query",
@@ -751,6 +863,27 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.ResolveClassListEntry",
+      "classification": "platform",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.ResolveClassListEntry",
+      "reason": "Platform protocol participation (lock): school-membership reaches modules/settings.ClassListConversionLock.LockClassListConversionShared (settings-platform) through api.classListEntriesWhileChildrenKept.ResolveClassListEntry, the shared side of the lock both class-list conversion switches take (ADR 0283). The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ClassListConversionLock.LockClassListConversionShared",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.ResolveClassListEntry",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.ResolveClassListEntry",
+      "reason": "Read-only newly exposed target: school-membership reaches tenant.TenantFromContext (tenant-runtime) through api.classListEntriesWhileChildrenKept.ResolveClassListEntry (#4803, ADR 0282).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ResolveClassListEntry",
       "classification": "query",
       "effect": "query",
@@ -766,6 +899,27 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.ResolveClassListEntry",
       "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership.Owner.ResolveClassListEntry. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.ReviseClassListEntry",
+      "classification": "platform",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.ReviseClassListEntry",
+      "reason": "Platform protocol participation (lock): school-membership reaches modules/settings.ClassListConversionLock.LockClassListConversionShared (settings-platform) through api.classListEntriesWhileChildrenKept.ReviseClassListEntry, the shared side of the lock both class-list conversion switches take (ADR 0283). The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ClassListConversionLock.LockClassListConversionShared",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.ReviseClassListEntry",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.ReviseClassListEntry",
+      "reason": "Read-only newly exposed target: school-membership reaches tenant.TenantFromContext (tenant-runtime) through api.classListEntriesWhileChildrenKept.ReviseClassListEntry (#4803, ADR 0282).",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -806,6 +960,16 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntryBatches.MatchClassListEntries",
       "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through *modules/schoolmembership/internal/application.Service.MatchClassListEntries. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The batch form of ListClassListEntries (#5827) reaches the same read-only target.",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/application.Service.RemoveClassListEntries",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntryBatches.RemoveClassListEntries",
+      "reason": "Read-only newly exposed target: school-membership reaches tenant.TenantFromContext (tenant-runtime) through *modules/schoolmembership/internal/application.Service.RemoveClassListEntries (#4803, ADR 0282).",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -2115,6 +2279,16 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres.Store.DeleteClassListEntries",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/ports.Store.DeleteClassListEntries",
+      "reason": "Read-only newly exposed target: school-membership reaches tenant.TenantFromContext (tenant-runtime) through *modules/schoolmembership/internal/adapters/postgres.Store.DeleteClassListEntries (#4803, ADR 0282).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres.Store.DeleteClassListEntry",
       "classification": "query",
       "effect": "query",
@@ -2280,6 +2454,16 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/ports.Store.GraduateStudents",
       "reason": "Read-only newly exposed target: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership/internal/adapters/postgres.Store.GraduateStudents. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres.Store.KeepClassTimeOfJoinedChildren",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/ports.Store.KeepClassTimeOfJoinedChildren",
+      "reason": "Read-only newly exposed target: school-membership reaches tenant.TenantFromContext (tenant-runtime) through *modules/schoolmembership/internal/adapters/postgres.Store.KeepClassTimeOfJoinedChildren (#4803, ADR 0282).",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"

@@ -6682,7 +6682,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentPortalDirectory.ListParentPortalStudents",
-      "binding_digest": "cf4b1c3003c60b602ddab9e5ebbf2151",
+      "binding_digest": "8f3a39369beaf6d18246b78fb990bea5",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ParentPortalDirectory.ListParentPortalStudents",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsByID",
@@ -6690,7 +6690,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentPortalDirectory.ListParentPortalStudents",
-      "binding_digest": "9092bbf18a45727791d8d8dbf3498fc0",
+      "binding_digest": "9d021d488cb48e341286b063d4e5daba",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ParentPortalDirectory.ListParentPortalStudents",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsByID",
@@ -10174,6 +10174,14 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentDocumentFiles.Save",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Coordinator.Save",
+      "target_owner": "file-storage"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Coordinator.SaveSealed",
+      "binding_digest": "c2eb497fd44a39adbc75624a29464aa0",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentDocumentFiles.SaveSealed",
+      "source_owner": "care-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Coordinator.SaveSealed",
       "target_owner": "file-storage"
     },
     {

@@ -137,19 +137,23 @@ func TestMealPlanWeek_ReturnsCurrentWeekEntries(t *testing.T) {
 	assert.Empty(t, rows[1].Allergens)
 }
 
-func TestMealPlanWeek_AllowsNextWeek(t *testing.T) {
+func TestMealPlanWeek_AllowsFollowingThreeWeeks(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	currentMonday := calendar.NewDate(2026, 8, 24)
-	nextMonday := currentMonday.AddDays(7)
-
 	svc := buildMealPlanService(t, db, mealPlanSettings(true, nil))
-	rows, err := svc.MealPlanWeek(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, nextMonday)
-	require.NoError(t, err)
-	require.Len(t, rows, 2)
+	for _, monday := range []calendar.Date{
+		currentMonday.AddDays(7),
+		currentMonday.AddDays(14),
+		currentMonday.AddDays(21),
+	} {
+		rows, err := svc.MealPlanWeek(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, monday)
+		require.NoError(t, err)
+		require.Len(t, rows, 2)
+	}
 }
 
 func TestMealPlanWeek_DisabledReturnsSentinel(t *testing.T) {
@@ -288,9 +292,9 @@ func TestMealPlanWeek_FarFutureWeekOutOfRange(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	currentMonday := calendar.NewDate(2026, 8, 24)
-	weekAfterNext := currentMonday.AddDays(14)
+	weekAfterViewableRange := currentMonday.AddDays(28)
 	svc := buildMealPlanService(t, db, mealPlanSettings(true, nil))
-	_, err := svc.MealPlanWeek(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, weekAfterNext)
+	_, err := svc.MealPlanWeek(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, weekAfterViewableRange)
 	require.ErrorIs(t, err, parentService.ErrMealPlanWeekOutOfRange)
 }
 

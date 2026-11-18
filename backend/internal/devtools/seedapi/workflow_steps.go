@@ -224,7 +224,7 @@ func fullDemoWorkflow(seeder *Seeder) Workflow {
 	steps = append(steps,
 		seedParentEngagementStep{}, seedParentCancellationNoticeStep{}, seedRoomChangeNoticeStep{}, seedAnalyticsConsentStep{}, seedSchoolLifeStep{},
 		// After the parents: it orders lunch for the children they registered.
-		seedMealOrdersStep{seeder: seeder}, seedEmailStopStep{},
+		seedMealOrdersStep{seeder: seeder}, seedMealPlanChangeStep{}, seedEmailStopStep{},
 	)
 	if !seeder.options.DeferHistory {
 		// After the meal orders: books care and lunch for the children who eat.
@@ -264,7 +264,7 @@ func fullDemoWorkflow(seeder *Seeder) Workflow {
 	steps = append(append(steps, seedStaffPersonMergeStep{}, seedDemoNeighbourSchoolsStep{seeder: seeder}), traegerSteps(seeder)...)
 	if !seeder.options.DeferHistory {
 		// Erst jetzt sind alle Kinder der Schule angelegt (#5031).
-		steps = append(steps, seedPresenceHistoryStep{seeder: seeder}, seedFeedbackHistoryStep{seeder: seeder}, seedChildQuotaStep{}, seedBillingKeyDateCountsStep{})
+		steps = append(steps, seedPresenceHistoryStep{seeder: seeder}, seedFeedbackHistoryStep{seeder: seeder}, seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedBillingKeyDateCountsStep{})
 	}
 	if seeder.options.SeedWeekProtocols {
 		steps = append(steps, seedWeekProtocolStep{})
@@ -361,7 +361,7 @@ func deferredDemoSteps(seeder *Seeder) []Step {
 		seedPresenceHistoryStep{seeder: seeder},
 		// The feedback the children gave on those days (#5029).
 		seedFeedbackHistoryStep{seeder: seeder},
-		seedChildQuotaStep{}, seedBillingKeyDateCountsStep{})
+		seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedBillingKeyDateCountsStep{})
 }
 
 // fullDemoSetupSteps prepares the school before its history and parent flows.

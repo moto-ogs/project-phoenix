@@ -15,9 +15,9 @@ func (s *service) GetStaffAppointmentOverview(ctx context.Context, appointmentID
 	if appointmentID <= 0 {
 		return nil, fmt.Errorf("%w: appointment id is required", ErrInvalidRequest)
 	}
-	staff, err := s.cfg.UserContext.GetCurrentStaff(ctx)
+	staff, err := s.currentStaff(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%w: current staff required", ErrForbidden)
+		return nil, err
 	}
 	appointment, err := s.findAppointment(ctx, appointmentID)
 	if err != nil {

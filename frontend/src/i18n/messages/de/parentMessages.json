@@ -3,6 +3,7 @@
   "title": "Nachrichten",
   "description": "Lesen Sie Nachrichten und schreiben Sie direkt an die {careTerm}.",
   "noChildren": "Mit Ihrem Konto ist noch kein Kind verknüpft. Sobald ein Kind verknüpft ist, können Sie hier mit der {careTerm} schreiben.",
+  "withoutCarePlace": "Nachrichten an die {careTerm} gibt es nur für Kinder mit einem Platz in der {careTerm}.",
   "noMessagesYet": "Tippen Sie, um zu schreiben.",
   "previewFromOgs": "{careTerm}: {text}",
   "previewFromYou": "Sie: {text}",

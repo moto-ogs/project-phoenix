@@ -174,15 +174,8 @@ func (s *service) currentStaffFeedOwner(ctx context.Context) (staffFeedOwner, er
 	if account == nil || !account.IsActive() {
 		return staffFeedOwner{}, fmt.Errorf("%w: current account required", ErrForbidden)
 	}
-	staff, err := s.cfg.UserContext.GetCurrentStaff(ctx)
-	if err != nil {
-		if s.cfg.UserContext.MissingStaff(err) {
-			return staffFeedOwner{}, fmt.Errorf("%w: current staff required", ErrForbidden)
-		}
+	if _, err := s.currentStaff(ctx); err != nil {
 		return staffFeedOwner{}, err
-	}
-	if staff == nil {
-		return staffFeedOwner{}, fmt.Errorf("%w: current staff required", ErrForbidden)
 	}
 	tenantID := s.cfg.Runtime.TenantID(ctx)
 	if tenantID <= 0 {

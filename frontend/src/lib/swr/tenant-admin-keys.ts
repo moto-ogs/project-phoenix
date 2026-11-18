@@ -41,6 +41,8 @@ export const tenantAdminKeys = {
   emailCodeFactor: () => "email-code-factor-status",
   /** The school's login image and whether this account may change it. */
   loginImage: () => "settings-login-image",
+  /** The school's contact address, the proposal for enrollment recipients (#7176). */
+  schoolContactEmail: () => "settings-school-contact-email",
   /** Schools the signed-in account can switch to (`listAvailableTenants`). */
   availableTenants: () => "account-available-tenants",
   /** Every Schuljahreswechsel of the school (`listGradeTransitions`, #405). */

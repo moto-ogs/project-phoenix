@@ -140,7 +140,9 @@ const CodeEnrollmentPhaseNotEligible = "enrollment.phase_not_eligible"
 const CodeEnrollmentPhaseNotFound = "enrollment.phase_not_found"
 const CodeEnrollmentPhasePendingChildWindowConflict = "enrollment.phase_pending_child_window_conflict"
 const CodeEnrollmentPhaseSchoolClassesInvalid = "enrollment.phase_school_classes_invalid"
+const CodeEnrollmentPhaseServiceEndTooFar = "enrollment.phase_service_end_too_far"
 const CodeEnrollmentPhaseServicePeriodInvalid = "enrollment.phase_service_period_invalid"
+const CodeEnrollmentPhaseServicePeriodTooLong = "enrollment.phase_service_period_too_long"
 const CodeEnrollmentPhaseWindowInvalid = "enrollment.phase_window_invalid"
 const CodeEnrollmentPickupTimeNotAllowed = "enrollment.pickup_time_not_allowed"
 const CodeEnrollmentRenewalTermsChanged = "enrollment.renewal_terms_changed"
@@ -181,6 +183,7 @@ const CodeEnrollmentUploadRateLimited = "enrollment.upload_rate_limited"
 const CodeEnrollmentWaitlistDisabled = "enrollment.waitlist_disabled"
 const CodeEnrollmentWindowClosed = "enrollment.window_closed"
 const CodeEnrollmentWithdrawNotAllowed = "enrollment.withdraw_not_allowed"
+const CodeEnrollmentWithoutCarePlaceSchoolYearOnly = "enrollment.without_care_place_school_year_only"
 
 var errorCodeClassesEnrollment = []errorCodeClass{
 	{CodeEnrollmentApprovalCareOfferingDayConflict, "business_rejection"},
@@ -322,7 +325,9 @@ var errorCodeClassesEnrollment = []errorCodeClass{
 	{CodeEnrollmentPhaseNotFound, "business_rejection"},
 	{CodeEnrollmentPhasePendingChildWindowConflict, "business_rejection"},
 	{CodeEnrollmentPhaseSchoolClassesInvalid, "input"},
+	{CodeEnrollmentPhaseServiceEndTooFar, "input"},
 	{CodeEnrollmentPhaseServicePeriodInvalid, "input"},
+	{CodeEnrollmentPhaseServicePeriodTooLong, "input"},
 	{CodeEnrollmentPhaseWindowInvalid, "input"},
 	{CodeEnrollmentPickupTimeNotAllowed, "input"},
 	{CodeEnrollmentRenewalTermsChanged, "business_rejection"},
@@ -363,6 +368,7 @@ var errorCodeClassesEnrollment = []errorCodeClass{
 	{CodeEnrollmentWaitlistDisabled, "business_rejection"},
 	{CodeEnrollmentWindowClosed, "business_rejection"},
 	{CodeEnrollmentWithdrawNotAllowed, "permission"},
+	{CodeEnrollmentWithoutCarePlaceSchoolYearOnly, "business_rejection"},
 }
 
 func init() {

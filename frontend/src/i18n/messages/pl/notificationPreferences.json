@@ -33,6 +33,10 @@
       "label": "Decyzja w sprawie Państwa prośby",
       "description": "Gdy {careTerm} podejmie decyzję w sprawie jednej z Państwa próśb."
     },
+    "meal_plan_changed": {
+      "label": "Zmiana jadłospisu",
+      "description": "Gdy zmienia się posiłek w dniu, na który Państwa dziecko ma zamówiony obiad. Informacja w portalu dla rodziców pojawia się zawsze. Powiadomienie na telefon przychodzi tylko wtedy, gdy je Państwo włączą."
+    },
     "parent_care_cancelled": {
       "label": "Opieka odwołana",
       "description": "Gdy {careTerm} odwoła termin opieki Państwa dziecka."

@@ -18,7 +18,9 @@ import (
 // open with the customer too (#6197, SJR item 2); all four are on by
 // default. Whether the parents give the SEPA mandate in the parents portal
 // is the Träger's choice after it agreed it with its bank (#4696); off by
-// default. The values are
+// default. Whether the letters print the GiroCode is the Träger's choice
+// too (#5624); on by default, shown on the Briefkopf page beside the
+// layout of the letters. The values are
 // the constants of the Elternabrechnung, which refuses any other.
 func init() {
 	registerDefinitions(parentBillingDefinitions)
@@ -159,6 +161,19 @@ var parentBillingDefinitions = []config.Definition{
 		Tab:             "monatsbeitrag",
 		Category:        "monatsbeitrag-lastschrift",
 		SortOrder:       100,
+	},
+	{
+		Key:             config.KeyParentBillingPrintTransferQR,
+		Levels:          config.LevelTraeger,
+		Label:           "GiroCode drucken",
+		Description:     "Der GiroCode ist ein QR-Code zum Überweisen. Ist das an, steht er auf Rechnung, Gebührenbescheid und Bestätigungsschreiben. Die Familie scannt ihn mit der Banking-App. Bei Lastschrift und bei 0 € gibt es nie einen Code. Schreiben, die schon erstellt sind, bleiben, wie sie sind.",
+		Type:            config.FieldBoolean,
+		Default:         true,
+		ReadPermission:  "config:read",
+		WritePermission: "config:manage",
+		Tab:             "branding",
+		Category:        "qr-code",
+		SortOrder:       110,
 	},
 	careReviewSwitch(config.KeyParentBillingCareReviewAmount, 60, "Betrag einer Rechnung ändern",
 		"Ist das an, können Sie vor dem Ausstellen den Betrag einer einzelnen Rechnung ändern. Die Rechnung bekommt dann eine Korrektur-Zeile mit Ihrem Grund."),

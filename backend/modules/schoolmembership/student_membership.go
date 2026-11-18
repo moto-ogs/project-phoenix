@@ -13,6 +13,10 @@ type StudentEnrollment struct {
 	Status        string
 	EnrolledFrom  string
 	EnrolledUntil string
+	// WithoutCarePlace marks a child of the class without an OGS place
+	// (#4803, ADR 0282). Such a child has no group and counts for neither
+	// the Stichtagszahl nor the Kinderkontingent.
+	WithoutCarePlace bool
 }
 
 // PendingWindows moves the enrollment window of a child an approval left

@@ -143,6 +143,30 @@ describe("student-status-days-api", () => {
     });
   });
 
+  // A 409 without conflicting days is no overwrite question: the child
+  // quota refusal keeps its code instead of reading „nicht überschrieben“.
+  it("keeps the code of a 409 that names no conflicting days", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      Response.json(
+        {
+          detail: "child quota reached",
+          code: "students.child_quota_reached",
+        },
+        { status: 409 },
+      ),
+    );
+
+    const error = await createStudentStatusDays("42", "sick", [
+      "2026-05-26",
+    ]).catch((caught: unknown) => caught);
+
+    expect(error).not.toBeInstanceOf(StudentStatusDayConflictError);
+    expect(error).toMatchObject({
+      status: 409,
+      code: "students.child_quota_reached",
+    });
+  });
+
   it("deletes a planned status day", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")

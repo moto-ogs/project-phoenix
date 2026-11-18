@@ -94,10 +94,12 @@ export const OPERATOR_PORTAL_ERROR_CODES = [
   "settings.admin_only",
   "settings.managed_by_upload",
   "settings.invalid_value",
+  "settings.device_pin_too_simple",
   "settings.presence_mode_switch_blocked",
   "settings.booking_authority_blocked",
   "settings.attendance_visible_exceeds_retention",
   "settings.attendance_retention_below_visible",
+  "settings.enrollment_privacy_notice_missing",
   "settings.module_requires",
   "settings.module_required_by",
   // Announcements, unregistered RFID scans, billing.

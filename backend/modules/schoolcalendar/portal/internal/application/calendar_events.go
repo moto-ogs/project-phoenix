@@ -12,9 +12,9 @@ func (s *service) ListMyStaffEvents(ctx context.Context, from, to appointmentcap
 	if err := validateWindow(from, to); err != nil {
 		return nil, err
 	}
-	staff, err := s.cfg.UserContext.GetCurrentStaff(ctx)
+	staff, err := s.currentStaff(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%w: current staff required", ErrForbidden)
+		return nil, err
 	}
 
 	appointments, err := s.listAppointmentsVisibleToStaff(ctx, staff.ID, toCalendarDate(from), toCalendarDate(to))

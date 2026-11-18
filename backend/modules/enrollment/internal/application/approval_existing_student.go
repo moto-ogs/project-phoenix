@@ -115,6 +115,9 @@ func (d *Decisions) renewExistingStudent(ctx context.Context, child *enrollmentN
 	if existing == nil {
 		return nil, fmt.Errorf("decision: existing student %d not found", studentID)
 	}
+	if existing.WithoutCarePlace && phase.Kind != enrollmentNative.PhaseKindSchoolYear {
+		return nil, fmt.Errorf("decision: student %d: %w", studentID, enrollmentNative.ErrWithoutCarePlaceNeedsSchoolYear)
+	}
 	beforeStatus := existing.Status
 	plan := d.approvalActivationPlan(ctx, phase)
 	previousSchoolClass := existing.SchoolClass
@@ -136,14 +139,19 @@ func (d *Decisions) renewExistingStudent(ctx context.Context, child *enrollmentN
 	if existing.Status != studentStatusActive {
 		existing.Status = plan.StudentStatus
 	}
-	if err := d.deps.StudentEnrollment.RenewEnrollmentStudent(ctx, existing.ID, enrollmentStudentInput(existing)); err != nil {
+	input := enrollmentStudentInput(existing)
+	// A deferred renewal keeps a child without an OGS place (#4803) without
+	// one until its care starts: the planned class switch grants the place on
+	// that day, so nothing counts or lists the child for the OGS before.
+	input.PreserveCarePlaceStatus = deferred
+	if err := d.deps.StudentEnrollment.RenewEnrollmentStudent(ctx, existing.ID, input); err != nil {
 		return nil, fmt.Errorf("decision: update existing student: %w", err)
 	}
 	var planned *enrollmentNative.ClassSwitch
 	if deferred {
 		planned = &enrollmentNative.ClassSwitch{RequestChildID: child.ID, From: previousSchoolClass, To: targetSchoolClass, On: enrollmentNative.Date(switchOn.String())}
 	}
-	if err := d.planClassSwitch(ctx, child.ID, planned); err != nil {
+	if err := d.planClassSwitchKeepingPlace(ctx, child.ID, planned, existing.WithoutCarePlace); err != nil {
 		return nil, err
 	}
 	if err := d.auditRenewedStatus(ctx, existing, beforeStatus, reviewedBy); err != nil {

@@ -1022,6 +1022,23 @@ nicht, dass der Betreuungszeitraum gerade läuft; ein inaktives Kind bleibt
 angemeldet.
 _Vermeiden_: „angemeldet" für „im Betreuungszeitraum".
 
+Ein **Kind ohne OGS-Platz** ist ein Kind der Klasse mit eigenem Datensatz,
+aber ohne Platz in der OGS ([ADR 0282](docs/adr/0282-kind-ohne-ogs-platz-ist-ein-kind-der-klasse-mit-eigenem-datensatz.md), #4803).
+Seine Eltern nutzen die Eltern-App für Krankmeldung, Elternbriefe und
+Elternsprechtag. In OGS-Listen, Gruppen, Anwesenheit, Abholung, Essen,
+Stichtagszahl und Kinderkontingent kommt es nicht vor. Es entsteht nur in
+einer Schule, für die das moto-Team den Schalter eingeschaltet hat; mit dem
+Einschalten werden die Klassenlisteneinträge der Schule zu solchen Kindern.
+Eine angenommene Anmeldung für das Kind gibt ihm einen OGS-Platz.
+_Vermeiden_: „Klassenlisteneintrag" für ein Kind ohne OGS-Platz, „inaktives
+Kind".
+
+Ein **Klassenlisteneintrag** (#2382) ist ein Kind der Klasse, das nur mit
+Vor- und Nachname und Klasse auf der Klassenliste steht, ohne Datensatz und
+ohne Eltern. Es gibt ihn nur in Schulen ohne den Schalter für Kinder ohne
+OGS-Platz.
+_Vermeiden_: „Kind ohne OGS-Platz" für einen Eintrag ohne Datensatz.
+
 ## Stichtagszahl
 
 Die **Stichtagszahl** ist die Zahl, nach der moto einer Schule im Monat

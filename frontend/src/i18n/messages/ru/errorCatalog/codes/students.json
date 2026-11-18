@@ -93,5 +93,9 @@
   "guardian_email_block_needs_review": "Не удалось сохранить: {object}. Проверьте введённые данные.",
   "guardian_email_block_lift_failed": "Не удалось сохранить: {object}. Проверьте введённые данные.",
   "guardian_email_block_stays": "Не удалось сохранить: {object}. Проверьте введённые данные.",
-  "person_has_active_profile": "Не удалось изменить: {object}. Проверьте текущее состояние."
+  "person_has_active_profile": "Не удалось изменить: {object}. Проверьте текущее состояние.",
+  "without_care_place_off": "Не удалось изменить: {object}. Проверьте текущее состояние.",
+  "without_care_place_group": "Не удалось сохранить: {object}. Проверьте введённые данные.",
+  "class_list_entries_replaced": "Не удалось изменить: {object}. Проверьте текущее состояние.",
+  "without_care_place_care_data": "У ребёнка без места в OGS нет времени прихода и забора и нет пути домой, установленного OGS."
 }

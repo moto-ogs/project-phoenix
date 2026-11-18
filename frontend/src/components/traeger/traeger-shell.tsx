@@ -1,21 +1,35 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import { Header } from "~/components/dashboard/header";
+import { NotificationFeedBell } from "~/components/dashboard/header/reminders-bell";
 import { DemoBanner, useDemoBannerShown } from "~/components/demo/demo-banner";
 import { Z_LAYER } from "~/components/ui/overlay-styles";
 import { PortalShell } from "~/components/ui/portal-shell";
 import { TraegerBottomNav } from "./shell/traeger-bottom-nav";
+import { TraegerNotificationFeedProvider } from "./shell/traeger-notification-feed";
 import { TraegerReturnPathMemory } from "./shell/traeger-return-path";
 import { TraegerSidebar } from "./shell/traeger-sidebar";
 import { TraegerTestSystemNotice } from "./traeger-test-system-notice";
+
+// Das Vollbild-Blatt der Glocke auf dem Telefon (#7146) lädt erst beim
+// Öffnen seinen Inhalt; das Blatt selbst nur mit dieser Hülle.
+const NotificationsSheet = dynamic(
+  () =>
+    import("~/components/dashboard/header/notifications-panel").then(
+      (module) => module.NotificationsSheet,
+    ),
+  { ssr: false },
+);
 
 /**
  * Die Hülle des Träger-Portals ("moto träger", #4649).
  *
  * Gebaut wie die Hülle des Schul-Portals (#5145): den Rahmen liefert die
  * geteilte `PortalShell`, die Kopfzeile mit Seitentitel, Hilfe und
- * Profil-Menü („Abmelden") der geteilte `Header`, die Seiten stehen in der
+ * Profil-Menü („Abmelden") der geteilte `Header` mit der Glocke der Hinweise
+ * aller Schulen des Trägers (#7146), die Seiten stehen in der
  * Seitenleiste und auf dem Telefon in der unteren Leiste. Welche Seiten eine
  * Person sieht, entscheiden ihre Rechte (`traeger-nav-items.ts`).
  *
@@ -41,28 +55,31 @@ export function TraegerShell({
   // (h-12). Kopfzeile und Seitenleiste rücken um seine Höhe nach unten.
   const demoBannerShown = useDemoBannerShown();
   return (
-    <div className={demoBannerShown ? "pt-12" : undefined}>
-      <PortalShell
-        header={<Header />}
-        headerClassName={`sticky ${demoBannerShown ? "top-12" : "top-0"} ${Z_LAYER.header}`}
-        topLayer={
-          <>
-            {demoBannerShown ? <DemoBanner /> : null}
-            {testSystem ? <TraegerTestSystemNotice /> : null}
-          </>
-        }
-        sidebar={<TraegerSidebar federalStates={federalStates} />}
-        bottomNav={<TraegerBottomNav federalStates={federalStates} />}
-        // Eine Flex-Spalte bis zur Inhaltshülle, wie im Personal- und
-        // Schul-Portal: die letzte Fläche einer Seite reicht dann bis zur
-        // Unterkante (TENANT-PAGE-SPEC, Regel 6).
-        contentClassName="flex flex-1 flex-col"
-      >
-        <Suspense fallback={null}>
-          <TraegerReturnPathMemory />
-        </Suspense>
-        {children}
-      </PortalShell>
-    </div>
+    <TraegerNotificationFeedProvider>
+      <div className={demoBannerShown ? "pt-12" : undefined}>
+        <PortalShell
+          header={<Header notificationBell={<NotificationFeedBell />} />}
+          headerClassName={`sticky ${demoBannerShown ? "top-12" : "top-0"} ${Z_LAYER.header}`}
+          topLayer={
+            <>
+              {demoBannerShown ? <DemoBanner /> : null}
+              {testSystem ? <TraegerTestSystemNotice /> : null}
+            </>
+          }
+          sidebar={<TraegerSidebar federalStates={federalStates} />}
+          bottomNav={<TraegerBottomNav federalStates={federalStates} />}
+          // Eine Flex-Spalte bis zur Inhaltshülle, wie im Personal- und
+          // Schul-Portal: die letzte Fläche einer Seite reicht dann bis zur
+          // Unterkante (TENANT-PAGE-SPEC, Regel 6).
+          contentClassName="flex flex-1 flex-col"
+        >
+          <Suspense fallback={null}>
+            <TraegerReturnPathMemory />
+          </Suspense>
+          {children}
+        </PortalShell>
+      </div>
+      <NotificationsSheet feedOnly />
+    </TraegerNotificationFeedProvider>
   );
 }

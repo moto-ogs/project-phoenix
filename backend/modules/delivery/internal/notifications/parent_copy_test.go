@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/devices"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -104,6 +105,18 @@ func TestParentMessageCopyCoversEveryLocale(t *testing.T) {
 	assertDistinctPerLocale(t, bodies)
 }
 
+func TestParentMealPlanChangedFeedCopyCoversEveryLocale(t *testing.T) {
+	t.Parallel()
+
+	titles := map[string]string{}
+	bodies := map[string]string{}
+	for _, locale := range parentLocales {
+		titles[locale], bodies[locale] = (devices.ParentDeliveryPolicy{}).ParentMealPlanChangedFeedCopy(locale, calendar.NewDate(2030, 6, 10))
+	}
+	assertDistinctPerLocale(t, titles)
+	assertDistinctPerLocale(t, bodies)
+}
+
 func TestParentRequestDecisionCopyCoversEveryLocaleAndRequestType(t *testing.T) {
 	t.Parallel()
 
@@ -138,6 +151,12 @@ func TestParentCopyFallsBackToGerman(t *testing.T) {
 
 	deTitle, deBody := (devices.ParentDeliveryPolicy{}).ParentMessageCopy("de")
 	title, body := (devices.ParentDeliveryPolicy{}).ParentMessageCopy("fr")
+	assert.Equal(t, deTitle, title)
+	assert.Equal(t, deBody, body)
+
+	monday := calendar.NewDate(2030, 6, 10)
+	deTitle, deBody = (devices.ParentDeliveryPolicy{}).ParentMealPlanChangedFeedCopy("de", monday)
+	title, body = (devices.ParentDeliveryPolicy{}).ParentMealPlanChangedFeedCopy("fr", monday)
 	assert.Equal(t, deTitle, title)
 	assert.Equal(t, deBody, body)
 }

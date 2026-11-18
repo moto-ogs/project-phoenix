@@ -4,6 +4,7 @@ import {
   MY_GROUPS_SCOPE,
   activeChildScope,
   buildChildScopeTabs,
+  childScopeAnalyticsValue,
   roomIdFromScope,
   roomScope,
 } from "./child-scope-tabs";
@@ -87,6 +88,14 @@ describe("activeChildScope (#1321)", () => {
         ownGroupIds,
       }),
     ).toBe("");
+  });
+
+  it("names only the kind of tab for the usage analytics (#5046)", () => {
+    expect(childScopeAnalyticsValue(ALL_CHILDREN_SCOPE)).toBe("all");
+    expect(childScopeAnalyticsValue(MY_GROUPS_SCOPE)).toBe("groups");
+    expect(childScopeAnalyticsValue(roomScope("42"))).toBe("room");
+    expect(childScopeAnalyticsValue("")).toBeNull();
+    expect(childScopeAnalyticsValue("room:")).toBeNull();
   });
 
   it("reads the room id back from its tab value", () => {

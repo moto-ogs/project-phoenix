@@ -52,6 +52,7 @@ func operatorReadResource(view organizationtenancy.OperatorReadView) (string, er
 	switch view {
 	case organizationtenancy.ReadSchoolBookingAuthorityImpact, organizationtenancy.ReadSchools,
 		organizationtenancy.ReadSchool, organizationtenancy.ReadSchoolSummaries, organizationtenancy.ReadOrganizationSchools,
+		organizationtenancy.ReadSchoolRequiredDetails,
 		organizationtenancy.ReadSchoolSettingsSchema, organizationtenancy.ReadSchoolSettingReveal,
 		organizationtenancy.ReadDemoPresenceHistory:
 		resource = domain.AuditResourceSchool

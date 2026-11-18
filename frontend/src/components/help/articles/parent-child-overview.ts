@@ -34,6 +34,7 @@ export function parentChildOverviewTopic(): HelpTopic {
       "Ist Ihr Kind heute abgemeldet, steht dort `Heute abgemeldet, keine Abholung`.",
       "Wurde die Abholzeit für heute geändert, steht die Zeit mit dem Hinweis `geändert für heute`.",
       "Ist für heute nichts eingetragen, steht dort `Für heute ist keine Abholung eingetragen`.",
+      "Hat Ihr Kind keinen Platz in der OGS, steht unter `Betreuung` der Hinweis `Kein Platz in der OGS`. Abholung, Betreuungszeiten und Essen fehlen dann. Krankmeldung, Elternsprechtag und Angaben bleiben.",
     ],
     troubleshootingDetails: [
       "Sie sehen kein Kind? Dann hat die OGS Ihren Zugang noch nicht freigegeben.",

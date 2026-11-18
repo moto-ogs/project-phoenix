@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/erasureledger"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -271,6 +272,18 @@ func TestErasureCLIOrganizationNeedsItsDueOrderAndThenErasesTheRoot(t *testing.T
 	_, err = db.ExecContext(ctx, `INSERT INTO auth.mfa_trusted_devices (account_id, organization_id, token_hash, expires_at)
 		VALUES (?, ?, encode(sha256(gen_random_uuid()::text::bytea), 'hex'), NOW() + INTERVAL '30 days')`, member.ID, organizationID)
 	require.NoError(t, err)
+	// A contract keeps an income level with its evidence; both outlive the
+	// school erasure as Belege of the Träger. The root's cascade takes the
+	// evidence with its contract, although it names the level (#7248).
+	var rule, evidence int64
+	require.NoError(t, db.NewRaw(`INSERT INTO parent_billing.contribution_rules (organization_id, service, kind, name, valid_from,
+			school_ids, discount_basis_points)
+		VALUES (?, 'care', 'income_level', 'Stufe 1', DATE '2026-09-01', ARRAY[?]::bigint[], 2000) RETURNING id`, organizationID, a).Scan(ctx, &rule))
+	contract := testpkg.CreateTestCareContract(t, db, organizationID, a, 0, "versendet", calendar.NewDate(2026, 9, 1))
+	require.NoError(t, db.NewRaw(`INSERT INTO parent_billing.care_evidences (organization_id, care_contract_id, kind, rule_id,
+			valid_from, evidence, checked_on)
+		VALUES (?, ?, 'income_level', ?, DATE '2026-09-01', 'Einkommensteuerbescheid 2025', DATE '2026-10-01') RETURNING id`,
+		organizationID, contract, rule).Scan(ctx, &evidence))
 	uploads := t.TempDir()
 	service, err := tenancyCompose.NewErasure(db, objects.NewLocal(uploads), erasureledger.New(newTestErasureLedger(t), securityruntime.Fingerprint))
 	require.NoError(t, err)
@@ -345,6 +358,9 @@ func TestErasureCLIOrganizationNeedsItsDueOrderAndThenErasesTheRoot(t *testing.T
 	} {
 		require.Zero(t, count(query, organizationID), query)
 	}
+	require.Zero(t, count(`SELECT count(*) FROM parent_billing.care_evidences WHERE id = ?`, evidence), "the evidence goes with its contract")
+	require.Zero(t, count(`SELECT count(*) FROM care_contract.contracts WHERE id = ?`, contract))
+	require.Zero(t, count(`SELECT count(*) FROM parent_billing.contribution_rules WHERE id = ?`, rule))
 	require.Equal(t, 1, count(`SELECT count(*) FROM auth.accounts WHERE id = ?`, member.ID), "the global account is not erased with the Träger")
 	require.Equal(t, 1, count(`SELECT count(*) FROM platform.operator_audit_log
 		WHERE operator_id = ? AND action = 'erase' AND resource_type = 'organization' AND resource_id = ?`, operator.ID, organizationID), "the root deletion is in the operator audit")

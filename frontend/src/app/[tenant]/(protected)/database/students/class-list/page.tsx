@@ -55,6 +55,8 @@ import type { Student } from "~/lib/student-helpers";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
+import { useChildrenWithoutCarePlace } from "~/lib/tenant-context";
+import { Alert } from "~/components/ui/alert";
 import { fetchSchoolClasses } from "~/lib/student-api";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 
@@ -123,7 +125,7 @@ async function fetchRosterStudents(): Promise<RosterStudent[]> {
   let totalPages = 1;
   while (page <= totalPages) {
     const response = await transportFetch(
-      `/api/students?page=${page}&page_size=${ROSTER_PAGE_SIZE}`,
+      `/api/students?page=${page}&page_size=${ROSTER_PAGE_SIZE}&include_pending_withdrawals=true`,
       { credentials: "include", cache: "no-store" },
     );
     if (!response.ok) {
@@ -187,6 +189,9 @@ export default function ClassListEntriesPage() {
   // Zuordnen users:delete. Ohne das Recht gibt es keinen Einstieg in den
   // Dialog; der Backend-403 bleibt Defense-in-Depth, keine UX.
   const canCreate = hasPermission(session, "users:create");
+  // Führt die Schule Kinder ohne OGS-Platz als eigene Kinder (#4803), legt
+  // sie hier keine Einträge mehr an: ein Import wird sofort zu Kindern.
+  const childrenWithoutCarePlace = useChildrenWithoutCarePlace();
   const canUpdate = hasPermission(session, "users:update");
   const canDelete = hasPermission(session, "users:delete");
   const {
@@ -586,17 +591,21 @@ export default function ClassListEntriesPage() {
       actions={
         canCreate ? (
           <>
-            <DatabaseCreateAction
-              label="Eintrag"
-              ariaLabel="Klassenlisteneintrag anlegen"
-              onClick={openCreate}
-            />
+            {childrenWithoutCarePlace ? null : (
+              <DatabaseCreateAction
+                label="Eintrag"
+                ariaLabel="Klassenlisteneintrag anlegen"
+                onClick={openCreate}
+              />
+            )}
             <OverflowMenu
               ariaLabel="Weitere Aktionen"
               items={[
                 {
                   label: "Sammelimport",
-                  description: "Legt viele Einträge aus einer Datei an.",
+                  description: childrenWithoutCarePlace
+                    ? "Legt viele Kinder ohne OGS-Platz aus einer Datei an."
+                    : "Legt viele Einträge aus einer Datei an.",
                   icon: <Upload className="h-4 w-4" aria-hidden />,
                   href: tenantPath("/database/students/class-list/import"),
                   // Navigation only: OverflowMenu verlangt onClick auch bei href.
@@ -798,8 +807,16 @@ export default function ClassListEntriesPage() {
     >
       <SectionCard
         title="Kinder im Klassenverband"
-        description={`Reguläre Kinder werden in der Kinder-Datenbank gepflegt. Hier kommen nur Kinder ohne OGS-Betreuung dazu.${rosterSummary}`}
+        description={`${childrenWithoutCarePlace ? "Alle Kinder werden in den Kinderdaten gepflegt." : "Reguläre Kinder werden in der Kinder-Datenbank gepflegt. Hier kommen nur Kinder ohne OGS-Betreuung dazu."}${rosterSummary}`}
       >
+        {childrenWithoutCarePlace ? (
+          <Alert
+            type="info"
+            announce="off"
+            className="mb-4"
+            message="Ihre Schule führt Kinder ohne OGS-Platz als eigene Kinder. Sie stehen in den Kinderdaten. Ihre Eltern können die Eltern-App nutzen. Neue Kinder legen Sie in den Kinderdaten mit „Ohne OGS-Platz“ an."
+          />
+        ) : null}
         {/* Ohne die angelegten Kinder ist die Liste unvollständig: der Fehler
             steht über ihr, mit Wiederholen. */}
         <LoadErrorAlert error={studentsLoadError} className="mb-4" />

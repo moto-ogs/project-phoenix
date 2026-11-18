@@ -30,6 +30,7 @@ const CodeWorkforceMonthNotClosed = "workforce.month_not_closed"
 const CodeWorkforceNoActiveBreak = "workforce.no_active_break"
 const CodeWorkforceNoActiveSession = "workforce.no_active_session"
 const CodeWorkforceNoSessionForToday = "workforce.no_session_for_today"
+const CodeWorkforceNoStaffProfile = "workforce.no_staff_profile"
 const CodeWorkforceOpeningBalanceAlreadyExists = "workforce.opening_balance_already_exists"
 const CodeWorkforcePayrollConfigIncomplete = "workforce.payroll_config_incomplete"
 const CodeWorkforcePayrollDownloadUnavailable = "workforce.payroll_download_unavailable"
@@ -161,6 +162,7 @@ var errorCodeClassesWorkforce = []errorCodeClass{
 	{CodeWorkforceNoActiveBreak, "business_rejection"},
 	{CodeWorkforceNoActiveSession, "business_rejection"},
 	{CodeWorkforceNoSessionForToday, "business_rejection"},
+	{CodeWorkforceNoStaffProfile, "permission"},
 	{CodeWorkforceOpeningBalanceAlreadyExists, "business_rejection"},
 	{CodeWorkforcePayrollConfigIncomplete, "business_rejection"},
 	{CodeWorkforcePayrollDownloadUnavailable, "business_rejection"},

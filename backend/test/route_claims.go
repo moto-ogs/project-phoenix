@@ -123,6 +123,20 @@ func ParentTestClaims(accountID int) sessiontoken.AppClaims {
 	}
 }
 
+// TraegerTestClaims returns the claims of a Träger-Portal session (#4649):
+// scope org at the Träger, with the Träger roles and the rights they bundle,
+// as the Träger login mints them.
+func TraegerTestClaims(accountID int, organizationID int64, roles, rights []string) sessiontoken.AppClaims {
+	return sessiontoken.AppClaims{
+		ID:          accountID,
+		Sub:         "traeger@example.com",
+		Roles:       roles,
+		Scope:       tenant.ScopeOrg,
+		OrgID:       organizationID,
+		Permissions: rights,
+	}
+}
+
 // TestTokenAuth returns the signer of the seeded test configuration.
 func TestTokenAuth(tb testing.TB) *sessiontoken.TokenAuth {
 	tb.Helper()

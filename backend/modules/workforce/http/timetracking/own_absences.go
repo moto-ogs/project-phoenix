@@ -18,7 +18,7 @@ func (rs *Resource) listAbsences(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -58,7 +58,7 @@ func (rs *Resource) createAbsence(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -91,7 +91,7 @@ func (rs *Resource) updateAbsence(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -127,7 +127,7 @@ func (rs *Resource) deleteAbsence(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
