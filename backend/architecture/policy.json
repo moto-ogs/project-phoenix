@@ -1,6 +1,6 @@
 {
   "schema_version": 5,
-  "policy_epoch": 103,
+  "policy_epoch": 104,
   "module_path": "github.com/moto-ogs/project-phoenix",
   "shared_kernel_types": [
     "CorrelationID",
@@ -485,6 +485,14 @@
       "class": "standard"
     },
     {
+      "path": "github.com/minio/minio-go/v7/pkg/credentials",
+      "class": "delivery"
+    },
+    {
+      "path": "github.com/minio/minio-go/v7",
+      "class": "delivery"
+    },
+    {
       "path": "github.com/DATA-DOG/go-sqlmock",
       "class": "test"
     },
@@ -771,6 +779,10 @@
     {
       "path": "log/slog",
       "class": "observability"
+    },
+    {
+      "path": "iter",
+      "class": "standard"
     },
     {
       "path": "maps",

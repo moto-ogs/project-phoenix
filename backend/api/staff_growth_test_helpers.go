@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/tenant"
 
 	"github.com/go-chi/chi/v5"
+	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	facilitiesCompose "github.com/moto-ogs/project-phoenix/modules/facilities/compose"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
@@ -35,10 +36,10 @@ func StaffGrowthTestRouter(database transactionruntime.Database, unit tenant.Uni
 	}
 	schedules := owners.MustNewWorkforce(database)
 	capabilities := owners.NewWorkforceAdminCapabilities(svc.Users, work.StaffAdmin, work.TimeTracking)
-	admin := newStaffAdminResource(capabilities, work.SickReports, schedules, nil, nil, work.PayrollDispatch, nil, work.PayrollRules, svc.Users.StaffRows(), database, TestUploadFileKeys(), slog.Default())
+	admin := newStaffAdminResource(capabilities, work.SickReports, schedules, nil, nil, work.PayrollDispatch, nil, work.PayrollRules, svc.Users.StaffRows(), database, TestUploadFileKeys(), nativeUploads.UploadFiles{}, slog.Default())
 	resource, err := newStaffResource(membership, svc.PeopleDirectory, identity.Auth, "", func(hooks StaffMembershipHooks) StaffMembershipRuntime {
 		return svc.NewStaffMembershipRuntime(database, slog.Default(), hooks)
-	}, admin, slog.Default())
+	}, admin, slog.Default(), nativeUploads.UploadFiles{})
 	if err != nil {
 		return nil, err
 	}

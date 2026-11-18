@@ -114,7 +114,7 @@ func TestParentLettersNameEachChildAndStayWithTheirFamily(t *testing.T) {
 	settings, err := owners.NewSettingsTestModule(database, testpkg.TenantRuntime(t, db))
 	require.NoError(t, err)
 	require.NoError(t, settings.Settings.SetValue(ctx, "operations.parent_news_enabled", true, nil, nil))
-	uploads, err := objects.PrivateUploadsBackend()
+	uploads, err := objects.SealedPrivateUploadsBackend(objects.FileKeys{})
 	require.NoError(t, err)
 	files, _, err := api.NewFileStoreTestModule(database, testpkg.TenantRuntime(t, db), uploads)
 	require.NoError(t, err)
