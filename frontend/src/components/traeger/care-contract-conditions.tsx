@@ -33,7 +33,12 @@ import {
   useToast,
 } from "~/contexts/ToastContext";
 import { useClipboardCopy } from "~/lib/use-clipboard-copy";
-import { BELOW_MD, BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
+import {
+  BELOW_MD,
+  BELOW_SM,
+  useMediaQuery,
+  useResolvedMediaQuery,
+} from "~/lib/hooks/use-media-query";
 import { careContractsConcept } from "~/lib/concepts/careContracts";
 import { createLogger } from "~/lib/logger";
 import {
@@ -112,7 +117,9 @@ export function CareContractConditions({
   onSelect: (key: string | null) => void;
   onSaved: (offering: OfferingTemplate) => void;
 }>) {
-  const isMobile = useMediaQuery(BELOW_MD);
+  // `null` until the width is known: `useMediaQuery` reports `false` before
+  // its first effect, which would write the desktop default on a phone.
+  const isMobile = useResolvedMediaQuery(BELOW_MD);
   const firstOpen = useMemo(
     () =>
       offerings.find((offering) => offering.active && !offering.template) ??
@@ -124,7 +131,8 @@ export function CareContractConditions({
   // conditions open over it. The default goes into the address once: saving
   // it changes which offering lacks conditions, and a default computed on
   // every render would then move the form to the next one.
-  const defaultKey = isMobile || !firstOpen ? null : offeringKey(firstOpen);
+  const defaultKey =
+    isMobile !== false || !firstOpen ? null : offeringKey(firstOpen);
   const shownKey = selectedKey ?? defaultKey;
   useEffect(() => {
     if (selectedKey === null && defaultKey !== null) onSelect(defaultKey);

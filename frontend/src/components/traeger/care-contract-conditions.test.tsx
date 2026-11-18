@@ -8,6 +8,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { OfferingTemplate } from "~/lib/traeger-care-contracts-api";
+import { usePhoneViewport } from "~/test/helpers/viewport";
 
 const { api } = vi.hoisted(() => ({
   api: { saveContractTemplate: vi.fn() },
@@ -261,5 +262,24 @@ describe("CareContractConditions", () => {
     // which offering lacks conditions, cannot move the form elsewhere.
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(onSelect).toHaveBeenCalledWith("3-5");
+  });
+
+  describe("on a phone", () => {
+    usePhoneViewport();
+
+    it("chooses no offering itself, so no drawer opens unasked", () => {
+      const onSelect = vi.fn();
+      render(
+        <ToastProvider>
+          <CareContractConditions
+            offerings={[OPEN]}
+            selectedKey={null}
+            onSelect={onSelect}
+            onSaved={vi.fn()}
+          />
+        </ToastProvider>,
+      );
+      expect(onSelect).not.toHaveBeenCalled();
+    });
   });
 });
