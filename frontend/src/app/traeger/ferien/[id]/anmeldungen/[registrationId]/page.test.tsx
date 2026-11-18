@@ -44,9 +44,13 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/traeger/ferien/5/anmeldungen/7",
   useSearchParams: () => new URLSearchParams(searchQuery.current),
 }));
+const { mockPeriod, mockSchools } = vi.hoisted(() => ({
+  mockPeriod: vi.fn(),
+  mockSchools: vi.fn(),
+}));
 vi.mock("~/lib/traeger-api", () => ({
-  fetchHolidayPeriod: () => Promise.resolve(HOLIDAY_PERIOD),
-  fetchTraegerSchools: () => Promise.resolve(HOLIDAY_SCHOOLS),
+  fetchHolidayPeriod: () => mockPeriod(),
+  fetchTraegerSchools: () => mockSchools(),
 }));
 const {
   mockRegistration,
@@ -139,6 +143,8 @@ describe("TraegerHolidayRegistrationPage", () => {
     mockReplace.mockReset();
     mockKnown.mockReset();
     mockKnown.mockResolvedValue(new Map());
+    mockPeriod.mockReset().mockResolvedValue(HOLIDAY_PERIOD);
+    mockSchools.mockReset().mockResolvedValue(HOLIDAY_SCHOOLS);
     mockRegistration.mockReset().mockResolvedValue(HOLIDAY_REGISTRATION);
     mockConfirm.mockReset().mockResolvedValue(HOLIDAY_CONTRIBUTION);
     mockContribution.mockResolvedValue(HOLIDAY_CONTRIBUTION);
@@ -541,6 +547,35 @@ describe("TraegerHolidayRegistrationPage", () => {
       screen.getByRole("link", { name: /Zurück zu den Anmeldungen/ }),
     ).toHaveAttribute("href", "/traeger/ferien/5/anmeldungen");
   });
+
+  it("keeps the registration header while its period metadata is unavailable", async () => {
+    mockPeriod.mockRejectedValue(
+      new ApiError("unavailable", 503, { code: "general.unavailable" }),
+    );
+    render(
+      <ToastProvider>
+        <TraegerHolidayRegistrationPage />
+      </ToastProvider>,
+    );
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Übersicht des Ferienzeitraums"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Anmeldung von Eva Muster",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Nr. 7")).toBeInTheDocument();
+    expect(screen.getByText(/^Eingegangen am/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Bestätigen" })).toBeEnabled();
+    await openHeadMenu();
+    expect(screen.getByText("Herunterladen")).toBeInTheDocument();
+  });
+
   describe("tabs and head actions (#7410)", () => {
     function renderPage() {
       render(
@@ -1746,6 +1781,8 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
   beforeEach(() => {
     searchQuery.current = "";
     mockReplace.mockReset();
+    mockPeriod.mockReset().mockResolvedValue(HOLIDAY_PERIOD);
+    mockSchools.mockReset().mockResolvedValue(HOLIDAY_SCHOOLS);
     mockRegistration.mockResolvedValue(HOLIDAY_REGISTRATION);
     mockConfirmationSettings.mockResolvedValue({ debtorNumberRequired: false });
     mockEdit.mockReset();
@@ -1775,6 +1812,25 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
     });
     return within(heading.closest("section")!);
   }
+
+  it("keeps an unsaved editor draft when switching tabs", async () => {
+    const edit = await openParentsEdit();
+    fireEvent.change(edit.getByLabelText(/^E-Mail/), {
+      target: { value: "entwurf@example.org" },
+    });
+
+    await openTab("Kind");
+    expect(
+      await screen.findByRole("heading", {
+        name: "Notfallkontakte und Abholung",
+      }),
+    ).toBeVisible();
+
+    await openTab("Eltern");
+    expect(await screen.findByLabelText(/^E-Mail/)).toHaveValue(
+      "entwurf@example.org",
+    );
+  });
 
   it("changes the parents in place, shows a refused field at the field and the entry in the history", async () => {
     const edit = await openParentsEdit();

@@ -523,7 +523,7 @@ function HolidayRegistrationContent() {
     (registration ? null : (afterWrite.error ?? readersError)) ??
     metadataLoadError(
       periodError ?? schoolsError,
-      Boolean(registration && period && schools),
+      Boolean(registration),
       periodFailure,
       schoolsFailure,
     );
@@ -589,7 +589,7 @@ function HolidayRegistrationContent() {
 
   // Without the registration the page shows its loading or error state. With
   // it, a recoverable error stands above the content (`keepContent`).
-  if (!(registration && view && period && schools)) {
+  if (!(registration && view)) {
     return (
       <TenantPage
         {...head}
@@ -600,6 +600,9 @@ function HolidayRegistrationContent() {
     );
   }
 
+  // Metadata is needed for the cards, but the registration still owns its
+  // head while the period or schools are loading again.
+  const metadataReady = Boolean(period && schools);
   const tabContent: Record<
     Exclude<RegistrationTab, "uebersicht">,
     ReactNode
@@ -609,7 +612,7 @@ function HolidayRegistrationContent() {
         {view.children.map((child) => (
           <HolidayRegistrationChildCard
             key={child.id}
-            period={period}
+            period={period!}
             registration={view}
             child={child}
             health={health?.children.find(
@@ -635,7 +638,7 @@ function HolidayRegistrationContent() {
                       (entry) => entry.id === child.id,
                     ) ?? child
                   }
-                  schools={schools}
+                  schools={schools!}
                 />
               ) : undefined
             }
@@ -836,6 +839,10 @@ function HolidayRegistrationContent() {
       </>
     ),
   };
+  // Keep the active form mounted when its tab is not selected. Its draft is
+  // local state, so removing the tab would silently reset unsaved changes.
+  const editingTab =
+    editing === "guardians" ? "eltern" : editing ? "kind" : null;
 
   return (
     <HolidayRegistrationStatusScope
@@ -869,13 +876,14 @@ function HolidayRegistrationContent() {
             <TenantPageStats
               items={[
                 { label: `Nr. ${registration.id}` },
-                { label: period.name },
+                ...(period ? [{ label: period.name }] : []),
                 {
                   label: `Eingegangen am ${formatBerlinDate(registration.submittedAt)}`,
                 },
               ]}
             />
           }
+          loading={!metadataReady && !loadError}
           actions={
             <>
               {/* Der Status steht als Plakette neben der Kopfaktion, nicht in
@@ -941,7 +949,7 @@ function HolidayRegistrationContent() {
             parentsSectionId={PARENTS_SECTION_ID}
             revealParents={() => changeTab("eltern")}
           />
-          {tab === "uebersicht" ? (
+          {metadataReady && tab === "uebersicht" ? (
             <>
               {deletionNotice ? (
                 <Alert type="info" message={deletionNotice} />
@@ -1005,14 +1013,19 @@ function HolidayRegistrationContent() {
                 </SectionCard>
               ) : null}
               <HolidayRegistrationHistory
-                period={period}
+                period={period!}
                 names={names}
                 registration={registration}
               />
             </>
-          ) : (
-            tabContent[tab]
-          )}
+          ) : null}
+          {metadataReady && (tab === "kind" || editingTab === "kind") ? (
+            <div hidden={tab !== "kind"}>{tabContent.kind}</div>
+          ) : null}
+          {metadataReady && (tab === "eltern" || editingTab === "eltern") ? (
+            <div hidden={tab !== "eltern"}>{tabContent.eltern}</div>
+          ) : null}
+          {metadataReady && tab === "nachweise" ? tabContent.nachweise : null}
         </TenantPage>
       )}
     </HolidayRegistrationStatusScope>
