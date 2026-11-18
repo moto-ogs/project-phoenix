@@ -238,7 +238,7 @@ describe("BillingKeyDayOverrides", () => {
     const confirm = await screen.findByRole("dialog");
     expect(
       within(confirm).getByText(
-        /OGS Am Bach zählt dann wieder am Stichtag von Träger Nord\./,
+        "OGS Am Bach zählt dann wieder am 5., dem Tag von Träger Nord. Schon erfasste Monate bleiben, wie sie sind.",
       ),
     ).toBeInTheDocument();
     expect(mockReset).not.toHaveBeenCalled();
@@ -273,5 +273,35 @@ describe("BillingKeyDayOverrides", () => {
     expect(await within(dialog).findByRole("alert")).toBeInTheDocument();
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("ends a sentence once after a Träger name with a period", async () => {
+    const vereinsSchule = {
+      ...amBach,
+      organizationName: "Ganztag Nord e. V.",
+    };
+    mockReset.mockResolvedValue(keyDayWith([]));
+    renderOverrides([vereinsSchule]);
+    await screen.findByText("OGS Am Bach");
+
+    openMenuOf("OGS Am Bach");
+    fireEvent.click(
+      await screen.findByRole("menuitem", {
+        name: /Eigenen Stichtag aufheben/,
+      }),
+    );
+    const confirm = await screen.findByRole("dialog");
+    expect(
+      within(confirm).getByText(
+        "OGS Am Bach zählt dann wieder am 15., dem Standard. Schon erfasste Monate bleiben, wie sie sind.",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(within(confirm).getByRole("button", { name: "Aufheben" }));
+
+    await waitFor(() =>
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        "OGS Am Bach zählt wieder am Stichtag von Ganztag Nord e. V.",
+      ),
+    );
   });
 });

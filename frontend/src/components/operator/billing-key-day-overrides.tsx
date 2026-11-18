@@ -80,6 +80,43 @@ function overrideMeta(override: BillingKeyDayOverride): string {
     : "Träger, gilt für alle Schulen ohne eigenen Stichtag";
 }
 
+/** Ends a sentence once, also after a name like „Ganztag Nord e. V.“. */
+function sentence(text: string): string {
+  return text.endsWith(".") ? text : `${text}.`;
+}
+
+/**
+ * What applies after the own day is gone: a school falls back to its
+ * Träger's own day or the standard, a Träger to the standard.
+ */
+function fallbackSentence(
+  override: BillingKeyDayOverride,
+  overrides: readonly BillingKeyDayOverride[],
+  standardDay: number | undefined,
+): string {
+  if (override.scope === "organization") {
+    return standardDay
+      ? `${override.name} und seine Schulen ohne eigenen Stichtag zählen dann wieder am ${standardDay}., dem Standard.`
+      : `${override.name} und seine Schulen ohne eigenen Stichtag zählen dann wieder am Standard.`;
+  }
+  // The list names a school's Träger by name only; Träger names are unique
+  // enough to point at the right row here.
+  const traeger = overrides.find(
+    (other) =>
+      other.scope === "organization" &&
+      other.name === override.organizationName,
+  );
+  const day = traeger?.keyDay ?? standardDay;
+  const whose = traeger
+    ? `dem Tag von ${override.organizationName}`
+    : "dem Standard";
+  return day
+    ? sentence(`${override.name} zählt dann wieder am ${day}., ${whose}`)
+    : sentence(
+        `${override.name} zählt dann wieder am Tag von ${override.organizationName}`,
+      );
+}
+
 /**
  * Own key days of Träger and schools (#7301): a contract that names another
  * day than the standard gets it here. A school's day wins over its
@@ -114,8 +151,10 @@ export function BillingKeyDayOverrides({
       onChanged(updated);
       toastSuccess(
         override.scope === "school"
-          ? `${override.name} zählt wieder am Stichtag von ${override.organizationName}.`
-          : `${override.name} zählt wieder am Standard-Stichtag.`,
+          ? sentence(
+              `${override.name} zählt wieder am Stichtag von ${override.organizationName}`,
+            )
+          : sentence(`${override.name} zählt wieder am Standard-Stichtag`),
       );
     } catch (resetError) {
       logger.warn("billing_key_day_override_reset_failed", {
@@ -236,9 +275,9 @@ export function BillingKeyDayOverrides({
         isConfirmDisabled={resetting}
       >
         <p>
-          {removing?.scope === "school"
-            ? `${removing.name} zählt dann wieder am Stichtag von ${removing.organizationName}.`
-            : `${removing?.name ?? ""} und seine Schulen ohne eigenen Stichtag zählen dann wieder am Standard${standardDay ? `, dem ${standardDay}.` : "."}`}{" "}
+          {removing
+            ? fallbackSentence(removing, overrides ?? [], standardDay)
+            : ""}{" "}
           Schon erfasste Monate bleiben, wie sie sind.
         </p>
       </ConfirmationModal>
@@ -252,7 +291,7 @@ export function BillingKeyDayOverrides({
           onSaved={(updated, saved) => {
             onChanged(updated);
             toastSuccess(
-              `${saved.name} zählt ab jetzt am ${saved.keyDay}. Nächster Stichtag: ${formatDate(saved.nextKeyDate)}.`,
+              `${sentence(`${saved.name} zählt ab jetzt am ${saved.keyDay}`)} Nächster Stichtag: ${formatDate(saved.nextKeyDate)}.`,
             );
           }}
         />
@@ -411,6 +450,13 @@ function KeyDayOverrideModal({
             isLoading={save.pending}
             loadingText="Wird gespeichert…"
             disabled={!ready || save.pending}
+            disabledReason={
+              unchanged
+                ? "Wähle einen anderen Tag als den bisherigen."
+                : existing
+                  ? "Wähle zuerst den Tag im Monat."
+                  : "Wähle zuerst, für wen der Tag gilt, und den Tag im Monat."
+            }
           >
             Stichtag festlegen
           </Button>
