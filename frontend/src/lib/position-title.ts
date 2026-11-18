@@ -9,16 +9,18 @@
  * bleibt eine bewusst weibliche oder schon neutrale Eingabe stehen, nur die
  * männliche Form wird zu „Betreuer:in“.
  *
- * Geändert wird nur das letzte Wort („OGS-Betreuer“ → „OGS-Betreuerin“), und
- * nur, wenn es wie eine Personenbezeichnung endet (-er, -ant, -ent, -ist,
- * -oge). „Admin“, „Fachkraft“ oder „OGS-Leitung“ bleiben, wie sie sind.
+ * Geändert wird nur eine Position aus einem Wort, auch mit Bindestrich
+ * („OGS-Betreuer“ → „OGS-Betreuerin“), und nur, wenn sie wie eine
+ * Personenbezeichnung endet (-er, -ant, -ent, -ist, -oge). Mehrere Wörter
+ * („Pädagogischer Mitarbeiter“) bleiben, wie sie sind: das Beiwort müsste
+ * mitwandern. „Admin“, „Fachkraft“ oder „OGS-Leitung“ bleiben ebenso.
  */
 /** Die Form der Position, wie `role_form` sie liefert. */
 export type RoleForm = "feminine" | "masculine";
 
 const MASCULINE_ENDING = /(?:er|ant|ent|ist|oge)$/i;
 const INCLUSIVE_SUFFIX = /(?::|\*|_|\/-?)in(?:nen)?$|\(in\)$|(?<=[a-zäöüß])In$/;
-const LAST_WORD = /^(.*[\s-])?([^\s-]+)$/;
+const LAST_WORD = /^([^\s]*-)?([^\s-]+)$/;
 
 interface WordForms {
   readonly masculine: string;

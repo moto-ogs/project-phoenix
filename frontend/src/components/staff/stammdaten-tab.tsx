@@ -21,7 +21,7 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
 import { employmentTypeLabels } from "~/lib/staff-helpers";
 import { staffQualificationKeys, staffKeys } from "~/lib/swr/staff-keys";
-import { useSWRAuth } from "~/lib/swr";
+import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
 import { staffQualificationService } from "~/lib/staff-qualification-api";
 import {
   mergeQualificationEntries,
@@ -198,6 +198,13 @@ export function StammdatenTab({
   // keine Formularaktion und meldet als Toast (#2511).
   const editAreaRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(editAreaRef);
+  // Name und Geschlecht stehen auch im Kopf der Seite und in der
+  // Personalliste (Form der Position); sie laden nach dem Speichern neu.
+  const refreshStaffViews = useTenantMutateMatching([
+    staffKeys.family,
+    staffKeys.profileKey(staffId),
+    staffKeys.recordKey(staffId),
+  ]);
   const actionErrors = useApiErrorDisplay();
   // Stand je Abschnitt, der in diesem Bearbeiten-Vorgang schon gespeichert
   // ist: ein erneutes Speichern schickt ihn nicht noch einmal (sonst doppelte
@@ -522,6 +529,7 @@ export function StammdatenTab({
     setSaving(false);
 
     void mutateStammdaten();
+    void refreshStaffViews();
     void mutateQualificationEntries();
     void mutatePayroll();
     void mutateFinancial();

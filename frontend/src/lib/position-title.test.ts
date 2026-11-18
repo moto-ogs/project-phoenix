@@ -13,7 +13,7 @@ describe("positionForForm", () => {
     ["Betreuer*in", null, "Betreuer*in"],
     ["BetreuerIn", "masculine", "Betreuer"],
     ["OGS-Leiter", "feminine", "OGS-Leiterin"],
-    ["Pädagogische Mitarbeiter", "feminine", "Pädagogische Mitarbeiterin"],
+    ["Mitarbeiter", "feminine", "Mitarbeiterin"],
     ["Sozialpädagoge", "feminine", "Sozialpädagogin"],
     ["Sozialpädagogin", "masculine", "Sozialpädagoge"],
     ["Sozialpädagoge", null, "Sozialpädagog:in"],
@@ -29,6 +29,8 @@ describe("positionForForm", () => {
     "Pädagogische Fachkraft",
     "OGS-Leitung",
     "OGS-Büro",
+    "Pädagogischer Mitarbeiter",
+    "Pädagogische Mitarbeiterin",
     "",
   ])("leaves %j unchanged for every form", (position) => {
     for (const gender of ["feminine", "masculine", null] as const) {

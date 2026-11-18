@@ -452,7 +452,10 @@ func TestInvitationGenderWireContract(t *testing.T) {
 	gender := "female"
 	body, err := json.Marshal(toInvitationResponse(identityaccess.SchoolInvitation{Gender: &gender}))
 	require.NoError(t, err)
-	require.Contains(t, string(body), `"gender":"female"`)
+	// The pending list reaches every account with users:list; the gender is
+	// Stammdaten and stays off it.
+	require.Contains(t, string(body), `"id"`, "anchor: the invitation is serialized")
+	require.NotContains(t, string(body), "gender")
 
 	resource := NewResource(nil, &invitationsStub{}, nil, nil, nil, transactionFailures.IsConstraintViolation, unusedTenantSettings{})
 	req := httptest.NewRequest(http.MethodPost, "/auth/invitations", bytes.NewBufferString(`{"email":"invitee@example.com","role_id":"42","gender":"weiblich"}`))

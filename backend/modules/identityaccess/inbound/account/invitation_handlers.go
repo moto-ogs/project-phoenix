@@ -84,7 +84,6 @@ type InvitationResponse struct {
 	FirstName           *string                         `json:"first_name,omitempty"`
 	LastName            *string                         `json:"last_name,omitempty"`
 	Position            *string                         `json:"position,omitempty"`
-	Gender              *string                         `json:"gender,omitempty"`
 	CreatedBy           int64                           `json:"created_by"`
 	Creator             string                          `json:"creator,omitempty"`
 	DeliveryStatus      string                          `json:"delivery_status"`
@@ -232,7 +231,6 @@ func toInvitationResponse(invitation identityaccess.SchoolInvitation) Invitation
 		FirstName:       invitation.FirstName,
 		LastName:        invitation.LastName,
 		Position:        invitation.Position,
-		Gender:          invitation.Gender,
 		CreatedBy:       invitationCreatedByValue(invitation.CreatedBy),
 		Creator:         invitation.CreatorEmail,
 		DeliveryStatus:  deriveDeliveryStatus(invitation.Delivery.SentAt, invitation.Delivery.Error),
