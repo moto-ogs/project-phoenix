@@ -27,5 +27,5 @@
   "import_file_invalid": "Не удалось сохранить: {object}. Проверьте введённые данные.",
   "import_file_too_large": "Не удалось сохранить: {object}. Проверьте введённые данные.",
   "import_changed": "Не удалось изменить: {object}. Проверьте текущее состояние.",
-  "letterhead_missing": "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”."
+  "letterhead_missing": "В шапке отсутствуют данные отправителя. Договор не будет отправлен без названия и адреса организации. Добавьте их в разделе «Шапка и шаблоны»."
 }

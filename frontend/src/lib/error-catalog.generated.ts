@@ -2951,7 +2951,7 @@ export const ERROR_CATALOG = {
       "care_contract.field_invalid":
         "Некоторые данные указаны неверно. Проверьте введённые данные.",
       "care_contract.letterhead_missing":
-        "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”.",
+        "В шапке отсутствуют данные отправителя. Договор не будет отправлен без названия и адреса организации. Добавьте их в разделе «Шапка и шаблоны».",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -3579,7 +3579,7 @@ export const ERROR_CATALOG = {
       "care_contract.field_invalid":
         "Disa të dhëna nuk janë të sakta. Kontrolloni të dhënat.",
       "care_contract.letterhead_missing":
-        "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”.",
+        "Në kokën e letrës mungojnë të dhënat e dërguesit. Kontrata nuk dërgohet pa emrin dhe adresën e ofruesit. Shtojini te „Koka e letrës dhe shabllonet”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -4223,7 +4223,7 @@ export const ERROR_CATALOG = {
       "care_contract.field_invalid":
         "Niektóre dane są nieprawidłowe. Sprawdź wpisane dane.",
       "care_contract.letterhead_missing":
-        "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”.",
+        "Brakuje nadawcy w nagłówku. Umowa nie zostanie wysłana bez nazwy i adresu organizatora. Dodaj je w „Nagłówek i szablony”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -4852,7 +4852,7 @@ export const ERROR_CATALOG = {
       "care_contract.field_invalid":
         "Bazı bilgiler doğru değil. Girdiğiniz bilgileri kontrol edin.",
       "care_contract.letterhead_missing":
-        "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”.",
+        "Antette gönderen bilgileri eksik. Kurumun adı ve adresi olmadan sözleşme gönderilmez. Bunları „Antet ve şablonlar” bölümüne ekleyin.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -5489,7 +5489,7 @@ export const ERROR_CATALOG = {
       "care_contract.field_invalid":
         "Деякі дані вказано неправильно. Перевірте введені дані.",
       "care_contract.letterhead_missing":
-        "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”.",
+        "У шапці бракує даних відправника. Договір не буде надіслано без назви й адреси організації. Додайте їх у розділі «Шапка та шаблони».",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":

@@ -26,9 +26,12 @@ import (
 // noticeTemplates answers a fixed template per kind.
 type noticeTemplates struct{}
 
-type noticeSender struct{}
+type noticeSender struct{ letterhead string }
 
-func (noticeSender) TraegerLetterhead(context.Context, int64) (string, error) {
+func (s noticeSender) TraegerLetterhead(context.Context, int64) (string, error) {
+	if s.letterhead != "" {
+		return s.letterhead, nil
+	}
 	return "Träger e.V.\nMusterweg 1", nil
 }
 

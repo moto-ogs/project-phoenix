@@ -158,24 +158,35 @@ func (n *Notices) decideEnd(ctx context.Context, reviewer carecontract.Reviewer,
 // decision in the trail. The notice goes to the address of the
 // confirmation, else the contract's newest mailing or party address, but
 // only to one that still belongs to a guardian whose relationship to the
-// child grants the enrollment submission. Without such an address no mail
-// goes out; the decision stands and the office sees that the parents got
-// no notice (Notice.EndNoticeSent).
+// child grants the enrollment submission. Without a complete letterhead or
+// such an address no mail goes out; the decision stands and the office sees
+// that the parents got no notice (Notice.EndNoticeSent).
 func (n *Notices) tellEnd(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord, state ports.NoticeState,
 	decision endDecision, endsOn calendar.Date, traeger, text string) error {
 	org, notice := reviewer.OrganizationID, state.Notice
 	party, _ := recipient(record.Parties)
 	details := map[string]any{"ends_on": endsOn.String(), "termination_kind": notice.TerminationKind, "notice_id": state.NoticeID}
-	address, err := n.endAddress(ctx, org, record, notice.Recipient, party.Email, decision.permitted)
+	letterhead, err := n.sender.TraegerLetterhead(ctx, org)
 	if err != nil {
-		return err
+		return fmt.Errorf("care contract: letterhead: %w", err)
+	}
+	address, reason := "", ""
+	if letterheadMissing(letterhead) {
+		reason = carecontract.EndNoticeLetterheadMissing
+	} else {
+		address, err = n.endAddress(ctx, org, record, notice.Recipient, party.Email, decision.permitted)
+		if err != nil {
+			return err
+		}
+		if address == "" {
+			reason = carecontract.EndNoticeNoPermittedAddress
+			if state.StudentID == nil {
+				reason = carecontract.EndNoticeMissingStudent
+			}
+		}
 	}
 	details["notice_sent"] = address != ""
-	if address == "" {
-		reason := carecontract.EndNoticeNoPermittedAddress
-		if state.StudentID == nil {
-			reason = carecontract.EndNoticeMissingStudent
-		}
+	if reason != "" {
 		details["notice_not_sent_reason"] = reason
 	}
 	if address != "" {

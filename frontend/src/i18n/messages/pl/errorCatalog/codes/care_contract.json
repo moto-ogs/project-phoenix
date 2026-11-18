@@ -27,5 +27,5 @@
   "import_file_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "import_file_too_large": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "import_changed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
-  "letterhead_missing": "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”."
+  "letterhead_missing": "Brakuje nadawcy w nagłówku. Umowa nie zostanie wysłana bez nazwy i adresu organizatora. Dodaj je w „Nagłówek i szablony”."
 }
