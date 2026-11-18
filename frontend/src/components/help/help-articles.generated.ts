@@ -398,8 +398,6 @@ import type { traegerHolidayWishTopic as authored_traegerHolidayWishTopic } from
 
 import type { traegerInvitationTopic as authored_traegerInvitationTopic } from "./articles/traeger-invitation";
 
-import type { traegerKeyDateCountsTopic as authored_traegerKeyDateCountsTopic } from "./articles/traeger-key-date-counts";
-
 import type { traegerLoginTopic as authored_traegerLoginTopic } from "./articles/traeger-login";
 
 import type { traegerNotificationFeedTopic as authored_traegerNotificationFeedTopic } from "./articles/traeger-notification-feed";
@@ -14154,45 +14152,6 @@ export const traegerInvitationTopic =
     };
   } satisfies typeof authored_traegerInvitationTopic;
 
-/** `/traeger/stichtagszahlen` (#4673): die festgehaltenen Zahlen, nach denen moto jede Schule berechnet. */
-export const traegerKeyDateCountsTopic =
-  function traegerKeyDateCountsTopic(): HelpTopic {
-    return {
-      id: HELP_TOPICS.traegerKeyDateCounts,
-      title: "Stichtagszahlen der Schulen",
-      question: "Nach welchen Zahlen berechnet moto meine Schulen?",
-      summary:
-        "Die Stichtagszahlen zeigen je Monat die aktiven Kinder und Geräte jeder Schule am Stichtag.",
-      group: "einstieg",
-      audience: "traeger",
-      icon: "CalendarCheck",
-      steps: [
-        "Wähle in der Navigation `Stichtagszahlen`.",
-        "Wähle oben einen Monat. Zu Beginn siehst du den neuesten Monat.",
-        "Lies oben die Summe für alle Schulen.",
-        "Lies darunter die Zahlen jeder Schule.",
-        "Wähle unter `Alle Monate` einen Monat, um seine Zahlen zu sehen.",
-        "Wähle bei Bedarf oben eine Schule. Die Summe zeigt dann nur diese Schule.",
-        "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Monate, für alle Schulen oder die gewählte Schule.",
-      ],
-      result:
-        "Du siehst für jede Schule, wie viele aktive Kinder und aktive Geräte moto am Stichtag gezählt hat.",
-      notes: [
-        "Suche oben nach einer Schule oder einem Ort.",
-        "moto hält die Zahlen am Stichtag einmal fest. Danach ändern sie sich nicht mehr.",
-        "Das moto-Team sieht in seinem Bericht dieselben Zahlen.",
-        "Neben jeder Zahl steht, wie sie sich zum Monat davor verändert hat.",
-        "Du siehst nur Zahlen, keine Namen.",
-      ],
-      differences: [
-        "Bei unterschiedlichen Stichtagen stehen unter `Alle Monate` mehrere Daten. Das genaue Datum findest du bei jeder Schule unter `Stichtag`.",
-        "Steht bei einer Schule `Keine Zahlen zu diesem Stichtag`, gab es die Schule am Stichtag noch nicht in moto.",
-        "Steht bei einer Schule `Nachgeholt`, hat moto die Zahlen erst nach dem Stichtag festgehalten. Sie gelten trotzdem für den Stichtag.",
-      ],
-      related: [HELP_TOPICS.traegerDashboard, HELP_TOPICS.traegerSchoolView],
-    };
-  } satisfies typeof authored_traegerKeyDateCountsTopic;
-
 // Portal "moto schule" (#2207). Geruest nach der echten Navigation des
 // Schul-Portals (`SCHOOL_PRIMARY_NAV`): Klassenansicht, Meine Aufsichten,
 // Nachrichten, Tagesinformationen, Kalender.
@@ -14329,7 +14288,7 @@ export const traegerOccupancyTopic =
         "Du siehst für jede Schule, wie viele Kinder in welcher Gruppe sind und welches Betreuungsangebot sie heute gebucht haben. Du siehst auch, wo noch Plätze frei sind.",
       notes: [
         "Suche oben nach einer Schule oder einem Ort. Die Summe zählt dann nur diese Schulen.",
-        "Es zählen dieselben Kinder wie bei der Stichtagszahl, aber von heute.",
+        "Es zählen die Kinder, die die Schule heute aktiv führt. Im Bericht zählt moto dieselben Kinder an einem Stichtag, den du wählst.",
         "Eine Betreuungsform ist ein Betreuungsangebot, das als Betreuung zählt, zum Beispiel „OGS bis 16 Uhr“. Mittagessen zählt nicht.",
         "Unter `Betreuungsformen` steht jedes Angebot, das heute läuft. Auch eins, das noch niemand gebucht hat. Es hat dann 0 Kinder und alle Plätze frei.",
         "Unter `Betreuungsformen` stehen Angebote mit gleichem Namen an mehreren Schulen auch zusammengezählt.",
@@ -14341,7 +14300,7 @@ export const traegerOccupancyTopic =
         "Steht bei einem Angebot `Voll` oder `Überbelegt`, sind alle Plätze vergeben. Die Plätze legt die Schule fest.",
         "Steht bei einer Schule `Ohne Betreuungsform`, haben diese Kinder heute kein Betreuungsangebot gebucht. Das ist bei Schulen mit Wochenplan üblich.",
       ],
-      related: [HELP_TOPICS.traegerDashboard, HELP_TOPICS.traegerKeyDateCounts],
+      related: [HELP_TOPICS.traegerDashboard, HELP_TOPICS.traegerReports],
     };
   } satisfies typeof authored_traegerOccupancyTopic;
 
@@ -14499,7 +14458,7 @@ export const traegerReportsTopic = function traegerReportsTopic(): HelpTopic {
       },
     ],
     notes: [
-      "„Kinder“ zählt die Kinder, die die Schule am Stichtag aktiv führt. Das ist dieselbe Zählung wie bei den Stichtagszahlen.",
+      "„Kinder“ zählt die Kinder, die die Schule am Stichtag aktiv führt. Das ist dieselbe Zählung wie bei der Belegung, nur für den gewählten Tag.",
       "„Fehlzeiten“ zählt Tage vom 1. August bis zum Stichtag. Gezählt werden nur Montag bis Freitag und nur Tage, an denen die Schule Check-ins hat. Ferien und Feiertage zählen also nicht.",
       "„Offen“ und „Warteliste“ zeigen immer den Stand von heute, auch bei einem früheren Stichtag.",
       "„Nachfrage“ sind gebuchte Kinder, offene Anmeldungen und Warteliste zusammen.",
@@ -14513,11 +14472,7 @@ export const traegerReportsTopic = function traegerReportsTopic(): HelpTopic {
     image: "/help/screens/traeger-berichte.webp",
     imageAlt:
       "Die Seite Berichte: oben Stichtag und Vorlage, darunter Kennzahlen und die Tabelle der Kinder je Schule.",
-    related: [
-      HELP_TOPICS.traegerKeyDateCounts,
-      HELP_TOPICS.traegerOccupancy,
-      HELP_TOPICS.traegerUtilization,
-    ],
+    related: [HELP_TOPICS.traegerOccupancy, HELP_TOPICS.traegerUtilization],
   };
 } satisfies typeof authored_traegerReportsTopic;
 
@@ -14548,22 +14503,19 @@ export const traegerSchoolComparisonTopic =
         "„Ø“ ist der Durchschnitt je Tag. Bei „Kinder anwesend“ zählen nur Tage mit Check-ins.",
         "Unter jeder Zahl steht der Abstand zum Schnitt der Schulen, zum Beispiel „12 Punkte über Schnitt“.",
         "Unter den Schulen stehen zwei Zeilen: `Schnitt je Schule` und `Alle zusammen`.",
-        "„Aktive Kinder am Stichtag“ ist dieselbe Zahl wie unter `Stichtagszahlen`. moto nimmt den letzten Stichtag im Zeitraum.",
+        "„Aktive Kinder am letzten Tag“ zählt die Kinder, die die Schule am letzten Tag des Zeitraums aktiv führt.",
         "Die Datei enthält genau die gewählten Schulen und Spalten.",
         "Den Verlauf über die Zeit siehst du unter `Auslastung`.",
       ],
       differences: [
-        "Steht bei einer Schule „–“, fehlt ihr die Zahl im Zeitraum. Das ist so ohne Platzgrenze, ohne Check-in oder ohne Stichtag.",
+        "Steht bei einer Schule „–“, fehlt ihr die Zahl im Zeitraum. Das ist so ohne Platzgrenze oder ohne Check-in.",
         "Steht `Bei einer Schule gibt es Check-ins erst ab …`, zählt „Kinder anwesend“ dort nur die Tage danach.",
         "Bei `Alle zusammen` fehlt „Höchstens anwesend“. Die vollsten Tage der Schulen liegen an verschiedenen Tagen.",
       ],
       image: "/help/screens/traeger-standortvergleich.webp",
       imageAlt:
         "Die Seite Standortvergleich: oben Zeitraum und Schulen, darunter vier Kennzahlen, die Rangfolge als liegende Balken und die Tabelle je Schule.",
-      related: [
-        HELP_TOPICS.traegerUtilization,
-        HELP_TOPICS.traegerKeyDateCounts,
-      ],
+      related: [HELP_TOPICS.traegerUtilization, HELP_TOPICS.traegerReports],
     };
   } satisfies typeof authored_traegerSchoolComparisonTopic;
 
@@ -15653,7 +15605,6 @@ export const traegerUtilizationTopic =
         "Die Seite Auslastung: oben Zeitraum und Schule, darunter vier Kennzahlen und der Verlauf der belegten Plätze als Diagramm.",
       related: [
         HELP_TOPICS.traegerOccupancy,
-        HELP_TOPICS.traegerKeyDateCounts,
         HELP_TOPICS.traegerSchoolComparison,
       ],
     };

@@ -1047,8 +1047,10 @@ am **Stichtag**. Der Stichtag ist ein Tag im Monat (1. bis 28.), einer für alle
 Schulen; der Betreiber legt ihn fest. Die Zahl wird am Stichtag ab 6 Uhr
 einmal festgehalten und danach nie geändert, auch wenn sich Kinder oder Geräte
 später ändern. Lief die Erfassung am Stichtag nicht, holt sie sie im selben
-Monat nach und nennt den tatsächlichen Zeitpunkt. Der Betreiber sieht die Zahlen aller
-Schulen, das Träger-Büro dieselben festgehaltenen Zahlen seiner Schulen (#4673).
+Monat nach und nennt den tatsächlichen Zeitpunkt. Nur der Betreiber sieht die
+Zahlen; Träger-Büro und Schule sehen sie nicht (#7301). Die eigenen Stichtage
+des Trägers (Stichtagsbericht) zählen Kinder nach derselben Regel, sind aber
+keine Stichtagszahl.
 
 **Aktiv verwaltet** ist ein Kind mit dem Status „aktiv“ und einer nicht
 gelöschten Schulzugehörigkeit, deren Betreuungsende nicht vor dem Tag der
