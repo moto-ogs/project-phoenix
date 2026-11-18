@@ -82,7 +82,7 @@ describe("SchoolVacationsList (#5345)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Nur zur Information: die Schulferien in Nordrhein-Westfalen für „Schuljahr 2026/2027“. moto holt sie jeden Tag aus dem öffentlichen Ferienkalender OpenHolidays. Ob die OGS schließt, tragen Sie als Schließtag ein. Stimmt das Bundesland nicht, wenden Sie sich an das moto-Team.",
+        "Nur zur Information: die Schulferien in Nordrhein-Westfalen für „Schuljahr 2026/2027“. moto holt sie jeden Tag aus dem öffentlichen Ferienkalender OpenHolidays. Ob die OGS schließt, trägst du als Schließtag ein. Stimmt das Bundesland nicht, wende dich an das moto-Team.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("17.10.2026 bis 31.10.2026")).toBeInTheDocument();
@@ -99,7 +99,7 @@ describe("SchoolVacationsList (#5345)", () => {
     expect(screen.getByText("Noch keine Schulferien")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "moto hat die Ferien für Ihr Bundesland noch nicht geholt. Das passiert einmal am Tag. Schauen Sie später noch einmal nach.",
+        "moto hat die Ferien für dein Bundesland noch nicht geholt. Das passiert einmal am Tag. Schaue später noch einmal nach.",
       ),
     ).toBeInTheDocument();
   });

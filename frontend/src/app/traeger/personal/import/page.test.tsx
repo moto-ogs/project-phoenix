@@ -217,7 +217,7 @@ describe("TraegerStaffImportPage", () => {
     );
 
     expect(await screen.findByText("Ines Lindner")).toBeInTheDocument();
-    expect(screen.getByText("Ihnen")).toBeInTheDocument();
+    expect(screen.getByText("dir")).toBeInTheDocument();
   });
 
   it("explains the missing release instead of offering an import", async () => {

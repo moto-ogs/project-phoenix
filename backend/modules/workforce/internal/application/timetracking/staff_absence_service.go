@@ -25,7 +25,7 @@ var ErrAllowanceBookingOverlap error = allowanceBookingOverlapError{}
 type allowanceBookingOverlapError struct{}
 
 func (allowanceBookingOverlapError) Error() string {
-	return "Diese Buchung überschneidet sich. Bitte löschen Sie die alte Buchung. Tragen Sie alle Tage zusammen ein."
+	return "Diese Buchung überschneidet sich. Bitte lösche die alte Buchung. Trage alle Tage zusammen ein."
 }
 
 // ErrVacationQuotaInvalid marks invalid quota input supplied by a caller.

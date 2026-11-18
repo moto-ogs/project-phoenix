@@ -153,7 +153,7 @@ describe("CreateDeviceModal", () => {
     // Anker: Der Einmal-Hinweis und die Kopieraktion sind im Erfolgsdialog sichtbar.
     expect(
       screen.getByText(
-        "Kopieren Sie den API-Key jetzt. Er wird nur einmal angezeigt.",
+        "Kopiere den API-Key jetzt. Er wird nur einmal angezeigt.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -410,7 +410,7 @@ describe("CreateDeviceModal", () => {
     });
     expect(
       await screen.findByText(
-        "Der API-Key konnte nicht kopiert werden. Bitte markieren und kopieren Sie ihn selbst.",
+        "Der API-Key konnte nicht kopiert werden. Bitte markiere und kopiere ihn selbst.",
       ),
     ).toBeInTheDocument();
   });

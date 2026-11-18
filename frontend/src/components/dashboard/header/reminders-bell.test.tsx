@@ -817,7 +817,7 @@ describe("NotificationFeedBell — moto schule", () => {
     expect(
       await within(sheet).findByText("Termin abgesagt"),
     ).toBeInTheDocument();
-    expect(within(sheet).getByText("Hinweise für Sie.")).toBeInTheDocument();
+    expect(within(sheet).getByText("Hinweise für dich.")).toBeInTheDocument();
     expect(
       within(sheet).queryByRole("region", { name: "Erinnerungen" }),
     ).not.toBeInTheDocument();

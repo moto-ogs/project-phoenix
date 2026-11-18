@@ -458,7 +458,7 @@ describe("SonderarbeitszeitenSection", () => {
       "ring-moto-red",
     );
     expect(
-      screen.getByText("Bitte prüfen Sie die markierten Felder."),
+      screen.getByText("Bitte prüfe die markierten Felder."),
     ).toBeInTheDocument();
     expect(mocks.create).not.toHaveBeenCalled();
   });

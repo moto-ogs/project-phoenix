@@ -36,18 +36,18 @@ function writeSource(directory, relative, value) {
 test("nested domain fragments compose the original message shape without losing values", () =>
   fixture((directory) => {
     writeSource(directory, "errorCatalog/codes/care.json", {
-      child_required: "Bitte wählen Sie ein Kind.",
+      child_required: "Bitte wähle ein Kind.",
     });
     writeSource(directory, "errorCatalog/classes.json", {
-      input: "Bitte prüfen Sie {object}.",
+      input: "Bitte prüfe {object}.",
     });
     writeSource(directory, "parentChild.json", {
       consents: { title: "Einverständnisse", choices: ["Ja", "Nein"] },
     });
     assert.deepEqual(composeMessages(readMessageSources(directory)), {
       errorCatalog: {
-        classes: { input: "Bitte prüfen Sie {object}." },
-        codes: { care: { child_required: "Bitte wählen Sie ein Kind." } },
+        classes: { input: "Bitte prüfe {object}." },
+        codes: { care: { child_required: "Bitte wähle ein Kind." } },
       },
       parentChild: {
         consents: { title: "Einverständnisse", choices: ["Ja", "Nein"] },

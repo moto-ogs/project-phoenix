@@ -146,7 +146,7 @@ describe("lunch offer of a holiday week", () => {
     expect(validateHolidayPeriod(draftWithLunch("", false))).toEqual({});
     expect(validateHolidayPeriod(draftWithLunch(""))).toEqual({
       "weeks.0.lunch_price_cents":
-        "Bitte geben Sie den Preis für ein Essen in Euro ein, zum Beispiel 4,30.",
+        "Bitte gib den Preis für ein Essen in Euro ein, zum Beispiel 4,30.",
     });
     expect(
       Object.keys(validateHolidayPeriod(draftWithLunch("vier Euro"))),

@@ -1724,7 +1724,7 @@
     "status": 403,
     "body": {
       "code": "students.absence_read_required",
-      "detail": "Für Elternanfragen zu Abwesenheiten brauchen Sie zusätzlich das Recht „Kinder sehen“.",
+      "detail": "Für Elternanfragen zu Abwesenheiten brauchst du zusätzlich das Recht „Kinder sehen“.",
       "instance": "",
       "status": 403,
       "title": "Forbidden",
@@ -1737,7 +1737,7 @@
     "status": 403,
     "body": {
       "code": "students.absence_read_required",
-      "detail": "Für Elternanfragen zu Abwesenheiten brauchen Sie zusätzlich das Recht „Kinder sehen“.",
+      "detail": "Für Elternanfragen zu Abwesenheiten brauchst du zusätzlich das Recht „Kinder sehen“.",
       "instance": "",
       "status": 403,
       "title": "Forbidden",
@@ -1750,7 +1750,7 @@
     "status": 403,
     "body": {
       "code": "students.absence_read_required",
-      "detail": "Für Elternanfragen zu Abwesenheiten brauchen Sie zusätzlich das Recht „Kinder sehen“.",
+      "detail": "Für Elternanfragen zu Abwesenheiten brauchst du zusätzlich das Recht „Kinder sehen“.",
       "instance": "",
       "status": 403,
       "title": "Forbidden",

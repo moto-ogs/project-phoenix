@@ -23,7 +23,7 @@ function Spot({
       <CoachMark
         target={withTarget ? target : null}
         title="Gruppe anlegen"
-        text="Hier legen Sie die erste Gruppe Ihrer Schule an."
+        text="Hier legst du die erste Gruppe deiner Schule an."
         progress="Schritt 2 von 4"
         action={action}
         onNext={action ? undefined : () => {}}
@@ -49,5 +49,5 @@ export const WithoutTarget: Story = { args: { withTarget: false } };
 
 // The hand symbol carries the brand green.
 export const WithAction: Story = {
-  args: { withTarget: true, action: "Klicken Sie auf „Gruppe anlegen“." },
+  args: { withTarget: true, action: "Klicke auf „Gruppe anlegen“." },
 };

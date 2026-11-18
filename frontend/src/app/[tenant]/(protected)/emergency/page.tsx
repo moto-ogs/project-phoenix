@@ -86,7 +86,7 @@ export default function EmergencyPage() {
             disabled={isExporting}
             onClick={handleDownload}
             className="gap-3"
-            tooltip="Speichert die Liste der anwesenden Kinder als PDF auf Ihrem Gerät."
+            tooltip="Speichert die Liste der anwesenden Kinder als PDF auf deinem Gerät."
           >
             <Download className="h-5 w-5" aria-hidden />
             PDF herunterladen

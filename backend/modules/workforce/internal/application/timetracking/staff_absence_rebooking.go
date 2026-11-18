@@ -123,7 +123,7 @@ func (s *staffAbsenceService) resolveRebookingTarget(ctx context.Context, req Re
 		return nil, nil, "", &workforce.TimeTrackingError{Kind: workforce.ErrAbsenceInvalid, Cause: fmt.Errorf("invalid absence type")}
 	}
 	if baseType == AbsenceTypeSick {
-		return nil, nil, "", rebookingBlocked(workforce.RebookingIntoSickReportCode, workforce.RebookingValues{}, "In eine Krankmeldung lässt sich nicht umbuchen. Löschen Sie den Eintrag und tragen Sie die Krankmeldung neu ein.")
+		return nil, nil, "", rebookingBlocked(workforce.RebookingIntoSickReportCode, workforce.RebookingValues{}, "In eine Krankmeldung lässt sich nicht umbuchen. Lösche den Eintrag und trage die Krankmeldung neu ein.")
 	}
 	return selectedType, typeID, baseType, nil
 }
@@ -185,13 +185,13 @@ func validateRebookingRequest(req RebookAbsencesRequest, reason string) ([]int64
 		}
 	}
 	if len(ids) == 0 {
-		return nil, rebookingBlocked(workforce.RebookingNothingSelectedCode, workforce.RebookingValues{}, "Wählen Sie mindestens einen Eintrag aus.")
+		return nil, rebookingBlocked(workforce.RebookingNothingSelectedCode, workforce.RebookingValues{}, "Wähle mindestens einen Eintrag aus.")
 	}
 	if len(ids) > maxRebookedAbsences {
-		return nil, rebookingBlocked(workforce.RebookingTooManyCode, workforce.RebookingValues{Limit: maxRebookedAbsences}, "Buchen Sie höchstens %d Einträge auf einmal um.", maxRebookedAbsences)
+		return nil, rebookingBlocked(workforce.RebookingTooManyCode, workforce.RebookingValues{Limit: maxRebookedAbsences}, "Buche höchstens %d Einträge auf einmal um.", maxRebookedAbsences)
 	}
 	if !req.DryRun && reason == "" {
-		return nil, rebookingBlocked(workforce.RebookingReasonRequiredCode, workforce.RebookingValues{}, "Geben Sie einen Grund für die Umbuchung an.")
+		return nil, rebookingBlocked(workforce.RebookingReasonRequiredCode, workforce.RebookingValues{}, "Gib einen Grund für die Umbuchung an.")
 	}
 	return ids, nil
 }
@@ -223,13 +223,13 @@ func (s *staffAbsenceService) loadRebookedAbsences(ctx context.Context, staffID 
 		day := absence.DateStart.Format("02.01.2006")
 		switch {
 		case absence.AbsenceType == AbsenceTypeSick:
-			return nil, rebookingBlocked(workforce.RebookingSickReportCode, workforce.RebookingValues{Day: day}, "Die Krankmeldung vom %s lässt sich nicht umbuchen. Löschen Sie sie und tragen Sie die richtige Art neu ein.", day)
+			return nil, rebookingBlocked(workforce.RebookingSickReportCode, workforce.RebookingValues{Day: day}, "Die Krankmeldung vom %s lässt sich nicht umbuchen. Lösche sie und trage die richtige Art neu ein.", day)
 		case absence.Status != AbsenceStatusReported:
 			return nil, rebookingBlocked(workforce.RebookingRequestCode, workforce.RebookingValues{Day: day}, "Der Eintrag vom %s ist ein Antrag. Anträge lassen sich nicht umbuchen.", day)
 		case absence.AbsenceType == baseType && sameAbsenceTypeID(absence.AbsenceTypeID, typeID):
 			return nil, rebookingBlocked(workforce.RebookingSameTypeCode, workforce.RebookingValues{Day: day}, "Der Eintrag vom %s hat diese Art schon.", day)
 		case !absence.DateEnd.Before(s.today()):
-			return nil, rebookingBlocked(workforce.RebookingNotOverCode, workforce.RebookingValues{}, "Der Eintrag ist noch nicht vorbei. Sie können ihn danach ändern.")
+			return nil, rebookingBlocked(workforce.RebookingNotOverCode, workforce.RebookingValues{}, "Der Eintrag ist noch nicht vorbei. Du kannst ihn danach ändern.")
 		}
 		after := *absence
 		after.AbsenceType, after.AbsenceTypeID = baseType, typeID
@@ -267,7 +267,7 @@ func (s *staffAbsenceService) validateRebookedAbsence(ctx context.Context, entry
 	// Only vacation keeps half days at the edges of a longer range; every
 	// other type knows a half day on single-day entries only.
 	if after.AbsenceType != AbsenceTypeVacation && !after.HalfDay && (after.StartHalfDay || after.EndHalfDay) {
-		return rebookingBlocked(workforce.RebookingHalfDayEdgeCode, workforce.RebookingValues{Day: day}, "Der Urlaub ab %s hat einen halben Tag am Rand. Löschen Sie ihn und tragen Sie die Tage mit der richtigen Art neu ein.", day)
+		return rebookingBlocked(workforce.RebookingHalfDayEdgeCode, workforce.RebookingValues{Day: day}, "Der Urlaub ab %s hat einen halben Tag am Rand. Lösche ihn und trage die Tage mit der richtigen Art neu ein.", day)
 	}
 	switch after.AbsenceType {
 	case AbsenceTypeCompTime:
@@ -314,7 +314,7 @@ func validateRebookedAbsenceOverlaps(absences []*StaffAbsence, entries []rebooke
 				continue
 			}
 			if !absence.DateEnd.Before(entry.after.DateStart) && !entry.after.DateEnd.Before(absence.DateStart) {
-				return rebookingBlocked(workforce.RebookingOverlapCode, workforce.RebookingValues{}, "Der Eintrag überschneidet sich mit einer anderen Abwesenheit. Löschen Sie einen Eintrag und tragen Sie ihn neu ein.")
+				return rebookingBlocked(workforce.RebookingOverlapCode, workforce.RebookingValues{}, "Der Eintrag überschneidet sich mit einer anderen Abwesenheit. Lösche einen Eintrag und trage ihn neu ein.")
 			}
 		}
 	}
@@ -344,7 +344,7 @@ func rejectClosedMonths(snapshots []*MonthSnapshot, start, end calendar.Date) er
 				month := germanMonth(key)
 				return rebookingBlocked(
 					workforce.MonthClosedCode, workforce.RebookingValues{Month: month},
-					"Der %s ist abgeschlossen. Öffnen Sie den Monat zuerst wieder. Das geht im Reiter Zeiterfassung.",
+					"Der %s ist abgeschlossen. Öffne den Monat zuerst wieder. Das geht im Reiter Zeiterfassung.",
 					month,
 				)
 			}

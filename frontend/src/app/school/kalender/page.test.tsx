@@ -205,7 +205,7 @@ describe("SchoolCalendarPage", () => {
 
     // Ohne Klasse geht nichts raus; der Hinweis steht an der Auswahl.
     expect(
-      await screen.findByText("Bitte wählen Sie mindestens eine Klasse."),
+      await screen.findByText("Bitte wähle mindestens eine Klasse."),
     ).toBeInTheDocument();
     expect(mockCreateSchoolAppointment).not.toHaveBeenCalled();
 
@@ -247,7 +247,7 @@ describe("SchoolCalendarPage", () => {
 
     expect(screen.getByLabelText(/Eltern meiner Klassen/)).toBeDisabled();
     expect(
-      screen.getByText("Ihnen ist keine Klasse zugeordnet."),
+      screen.getByText("Dir ist keine Klasse zugeordnet."),
     ).toBeInTheDocument();
   });
 
@@ -290,7 +290,7 @@ describe("SchoolCalendarPage", () => {
       ),
     );
     expect(mockToastSuccess).toHaveBeenCalledWith(
-      "Ihre Zusage ist gespeichert.",
+      "Deine Zusage ist gespeichert.",
     );
   });
 });

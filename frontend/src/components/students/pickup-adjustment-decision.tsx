@@ -76,8 +76,8 @@ function DecisionNotice({
         Angebot oder dauerhafte Ausnahme wählen
       </h3>
       <p className="mt-1 text-sm leading-6 text-gray-600">
-        Wählen Sie ein passendes Angebot. Oder speichern Sie die Zeiten als
-        dauerhafte Ausnahme.
+        Wähle ein passendes Angebot. Oder speichere die Zeiten als dauerhafte
+        Ausnahme.
       </p>
       <div className="mt-3">
         <Alert type="warning" message={message} />
@@ -153,9 +153,7 @@ function OfferingButton(
         disabled={props.busy || isFull}
         tooltip="Zeigt die Folgen dieses Angebots, gespeichert wird noch nichts."
         disabledReason={
-          isFull
-            ? "Wählen Sie ein anderes Angebot, dieses ist voll."
-            : undefined
+          isFull ? "Wähle ein anderes Angebot, dieses ist voll." : undefined
         }
         onClick={() => props.onSelectOffering(props.offering.offering_id)}
       >
@@ -227,8 +225,8 @@ function PlanningConflicts({
         ))}
       </ul>
       <p className="text-sm text-gray-700">
-        Nach dem Speichern: Öffnen Sie den Betreuungsplan. Entfernen Sie das
-        Kind an diesen Tagen aus den Gruppen oder ändern Sie die Gruppentage.
+        Nach dem Speichern: Öffne den Betreuungsplan. Entferne das Kind an
+        diesen Tagen aus den Gruppen oder ändere die Gruppentage.
       </p>
     </div>
   );
@@ -312,7 +310,7 @@ function OfferingConfirmation(props: PickupAdjustmentDecisionProps) {
         disabledReason={
           props.confirmed
             ? undefined
-            : "Bestätigen Sie zuerst die Änderung mit dem Häkchen."
+            : "Bestätige zuerst die Änderung mit dem Häkchen."
         }
         onClick={props.onSaveOffering}
       >
@@ -368,7 +366,7 @@ function ExceptionAction({
       <p className="mt-2 text-xs leading-5 text-gray-500">
         {canSave
           ? "Das gebuchte Angebot bleibt unverändert. Weicht die Zeit von der Buchung ab, zeigt die Kinderkartei unter „Betreuungszeiten“ die gebuchte Zeit daneben."
-          : "Eine dauerhafte Ausnahme gilt ab heute. Bearbeiten Sie die aktuelle Woche."}
+          : "Eine dauerhafte Ausnahme gilt ab heute. Bearbeite die aktuelle Woche."}
       </p>
     </div>
   );

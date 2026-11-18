@@ -18,7 +18,7 @@ describe("childQuotaMessage", () => {
     });
 
     expect(childQuotaMessage(error)).toBe(
-      "Das Kinderkontingent Ihrer Schule ist voll. Die Kontingentzahl beträgt 50 von 50 Kindern. Für weitere Kinder melden Sie sich bitte beim moto-Team.",
+      "Das Kinderkontingent deiner Schule ist voll. Die Kontingentzahl beträgt 50 von 50 Kindern. Für weitere Kinder melde dich bitte beim moto-Team.",
     );
   });
 
@@ -39,7 +39,7 @@ describe("childQuotaMessage", () => {
 
   it("stays readable without numbers", () => {
     expect(childQuotaMessage(codedError(CHILD_QUOTA_REACHED_CODE))).toBe(
-      "Das Kinderkontingent Ihrer Schule ist voll. Für weitere Kinder melden Sie sich bitte beim moto-Team.",
+      "Das Kinderkontingent deiner Schule ist voll. Für weitere Kinder melde dich bitte beim moto-Team.",
     );
   });
 

@@ -41,7 +41,7 @@ describe("OfferingPreviewList", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Kinder fallen weg, wenn sie an diesem Tag in keinem gewählten Angebot angemeldet sind. Soll ein Kind trotzdem kommen, ändern Sie seine Angebote in der Anmeldung.",
+        "Kinder fallen weg, wenn sie an diesem Tag in keinem gewählten Angebot angemeldet sind. Soll ein Kind trotzdem kommen, ändere seine Angebote in der Anmeldung.",
       ),
     ).toBeInTheDocument();
 
@@ -82,7 +82,7 @@ describe("OfferingPreviewList", () => {
     expect(screen.getByText(/Fällt weg \(2\)/)).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Kinder fallen weg, wenn sie an diesem Tag in keinem gewählten Angebot angemeldet sind. Soll ein Kind trotzdem kommen, ändern Sie seine Angebote in der Anmeldung.",
+        "Kinder fallen weg, wenn sie an diesem Tag in keinem gewählten Angebot angemeldet sind. Soll ein Kind trotzdem kommen, ändere seine Angebote in der Anmeldung.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();

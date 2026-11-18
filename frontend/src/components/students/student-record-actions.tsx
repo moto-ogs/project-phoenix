@@ -127,7 +127,7 @@ export function StudentRecordActions({
       items.push({
         label: "Wieder aufnehmen",
         description:
-          "Öffnet die Wiederaufnahme, Gruppe, Angebote und Zeiten planen Sie neu.",
+          "Öffnet die Wiederaufnahme, Gruppe, Angebote und Zeiten planst du neu.",
         icon: <Undo2 className="size-4" aria-hidden />,
         onClick: () => setResumeOpen(true),
       });

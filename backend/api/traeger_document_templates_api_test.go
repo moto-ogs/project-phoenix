@@ -192,7 +192,7 @@ func TestTraegerDocumentTemplatePreviewFillsSampleData(t *testing.T) {
 	assert.NotEmpty(t, preview.Blocks[0].Rows)
 	assert.Equal(t, "Bitte zahlen Sie 92,50 € bis 16.11.2026.", preview.Blocks[1].Text)
 	assert.True(t, preview.Blocks[1].Bold)
-	assert.Equal(t, []string{"Freundliche Grüße", "Ihr Träger"}, preview.Closing)
+	assert.Equal(t, []string{"Freundliche Grüße", "Euer Träger"}, preview.Closing)
 
 	assert.Empty(t, templateDetailOf(t, router, office, "rechnung").Versions, "the preview stores nothing")
 }

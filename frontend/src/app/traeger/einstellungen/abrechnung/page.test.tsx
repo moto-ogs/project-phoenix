@@ -258,7 +258,7 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
 
     expect(
       screen.getAllByText(
-        "Die Regel gilt für alle Familien mit Leistungsbezug. Welche Familie befreit ist, wählen Sie beim Bestätigen der Anmeldung. Befreite Familien zahlen nichts.",
+        "Die Regel gilt für alle Familien mit Leistungsbezug. Welche Familie befreit ist, wählst du beim Bestätigen der Anmeldung. Befreite Familien zahlen nichts.",
       )[0],
     ).toBeInTheDocument();
     fireEvent.click(
@@ -271,7 +271,7 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Die Regel gilt für alle Familien mit Leistungsbezug. Welche Familie befreit ist, wählen Sie beim Bestätigen der Anmeldung.",
+        "Die Regel gilt für alle Familien mit Leistungsbezug. Welche Familie befreit ist, wählst du beim Bestätigen der Anmeldung.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -281,7 +281,7 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(
-      await screen.findByText("Bitte geben Sie den Vermerk an."),
+      await screen.findByText("Bitte gib den Vermerk an."),
     ).toBeInTheDocument();
     expect(api.createContributionRule).not.toHaveBeenCalled();
 
@@ -319,7 +319,7 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
     );
     fireEvent.click(await screen.findByRole("button", { name: "Speichern" }));
     expect(
-      await screen.findByText("Bitte geben Sie den Namen ein."),
+      await screen.findByText("Bitte gib den Namen ein."),
     ).toBeInTheDocument();
     expect(api.saveCostBearer).not.toHaveBeenCalled();
 
@@ -327,7 +327,7 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
       target: { value: YOUTH_OFFICE.name },
     });
     fireEvent.change(
-      screen.getByLabelText("Ihr Aktenzeichen beim Kostenträger (freiwillig)"),
+      screen.getByLabelText("Dein Aktenzeichen beim Kostenträger (freiwillig)"),
       { target: { value: "FJ 51-2027" } },
     );
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
@@ -421,7 +421,7 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
     fireEvent.change(name, { target: { value: " " } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(
-      await screen.findByText("Bitte geben Sie den Namen ein."),
+      await screen.findByText("Bitte gib den Namen ein."),
     ).toBeInTheDocument();
     expect(name).toHaveAttribute("aria-invalid", "true");
     expect(api.saveCostBearer).not.toHaveBeenCalled();
@@ -464,7 +464,7 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
       (await screen.findAllByText("Elternbeiträge"))[0],
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Die Bankverbindungen können Sie nur ansehen/),
+      screen.getByText(/Die Bankverbindungen kannst du nur ansehen/),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/pflegt die Rolle „Abrechnung“/),
@@ -728,7 +728,7 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
     renderPage();
 
     expect(
-      await screen.findByText(/Ohne Muster können Sie keinen Lauf freigeben/),
+      await screen.findByText(/Ohne Muster kannst du keinen Lauf freigeben/),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Muster festlegen" }));
     fireEvent.change(

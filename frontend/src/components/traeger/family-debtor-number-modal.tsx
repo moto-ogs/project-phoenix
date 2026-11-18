@@ -61,7 +61,7 @@ export function FamilyDebtorNumberModal({
     formErrors.clear();
     const formatError = debtorNumberFormatError(value, format);
     if (formatError) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", {
+      formErrors.invalid("Bitte prüfe deine Angaben.", {
         debtor_number: formatError,
       });
       return;

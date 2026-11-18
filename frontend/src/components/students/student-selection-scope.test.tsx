@@ -122,7 +122,7 @@ describe("StudentSelectionScope (#3834)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Alle auswählen" }));
 
     expect(
-      screen.getByText("Sie können höchstens 5.000 Kinder auswählen."),
+      screen.getByText("Du kannst höchstens 5.000 Kinder auswählen."),
     ).toBeInTheDocument();
   });
 

@@ -31,10 +31,10 @@ import {
 const logger = createLogger({ component: "ShiftMoveDialog" });
 const STAFF_SHIFT_MAX_BREAK_MINUTES = 300;
 const INACTIVE_TYPE_MOVE_MESSAGE =
-  "Diese Dienstart ist inaktiv. Bitte wählen Sie für die andere Person eine aktive Dienstart oder „Keine Dienstart“.";
+  "Diese Dienstart ist inaktiv. Bitte wähle für die andere Person eine aktive Dienstart oder „Keine Dienstart“.";
 // #6845: eine entfernte Dienstart behalten nur die schon geplanten Dienste.
 const ARCHIVED_TYPE_MOVE_MESSAGE =
-  "Diese Dienstart wurde entfernt. Bitte wählen Sie für die andere Person eine andere Dienstart oder „Keine Dienstart“.";
+  "Diese Dienstart wurde entfernt. Bitte wähle für die andere Person eine andere Dienstart oder „Keine Dienstart“.";
 
 // "Verschieben nach": move one
 // materialized shift to another person and/or day in one confirmed, atomic
@@ -151,15 +151,15 @@ export function ShiftMoveDialog({
   // Fachliche Sperre; das Nachladen der Schließtage zählt nicht als Grund.
   const submitBlockedReason =
     targetStaffId === ""
-      ? "Wählen Sie zuerst eine Person aus."
+      ? "Wähle zuerst eine Person aus."
       : targetDate === ""
-        ? "Wählen Sie zuerst einen Tag aus."
+        ? "Wähle zuerst einen Tag aus."
         : !timesValid
-          ? "Prüfen Sie zuerst Beginn und Ende."
+          ? "Prüfe zuerst Beginn und Ende."
           : !breakValid
-            ? "Prüfen Sie zuerst die Pause."
+            ? "Prüfe zuerst die Pause."
             : inactiveTypeBlocksMove
-              ? "Wählen Sie zuerst eine aktive Dienstart aus."
+              ? "Wähle zuerst eine aktive Dienstart aus."
               : undefined;
 
   // Schließtag am Zieltag (#2032): Hinweis im Formular und in der ohnehin
@@ -177,13 +177,13 @@ export function ShiftMoveDialog({
     formErrors.clear();
     if (closingDayLookupLoading) return;
     if (targetStaffId === "") {
-      formErrors.invalid("Bitte wählen Sie eine Person aus.", {
-        target_staff_id: "Bitte wählen Sie eine Person aus.",
+      formErrors.invalid("Bitte wähle eine Person aus.", {
+        target_staff_id: "Bitte wähle eine Person aus.",
       });
       return;
     }
     if (targetDate === "") {
-      formErrors.invalid("Bitte wählen Sie einen Tag aus.");
+      formErrors.invalid("Bitte wähle einen Tag aus.");
       return;
     }
     if (!timesValid) {

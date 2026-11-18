@@ -1,7 +1,7 @@
 {
   "eyebrow": "Elternportal",
   "title": "Willkommen im Eltern-Portal",
-  "subtitle": "Melden Sie sich an, um alles Wichtige zur Betreuung Ihres Kindes im Blick zu behalten.",
+  "subtitle": "Melde dich an, um alles Wichtige zur Betreuung deines Kindes im Blick zu behalten.",
   "emailLabel": "E-Mail-Adresse",
   "passwordLabel": "Passwort",
   "showPassword": "Passwort anzeigen",
@@ -10,14 +10,14 @@
   "submitting": "Anmeldung läuft...",
   "submit": "Anmelden",
   "forgotPassword": "Passwort vergessen?",
-  "fromStaffBanner": "Elternkonten melden sich hier an. Bitte geben Sie Ihr Passwort noch einmal ein.",
+  "fromStaffBanner": "Elternkonten melden sich hier an. Bitte gib dein Passwort noch einmal ein.",
   "staffLoginLink": "Zur Schul-Anmeldung",
   "errors": {
-    "rateLimited": "Zu viele Anmeldeversuche. Bitte versuchen Sie es später erneut.",
-    "notAGuardian": "Dieses Konto gehört zum Personal einer Schule. Bitte melden Sie sich über die Schul-Anmeldung an.",
-    "missingEmail": "Bitte geben Sie Ihre E-Mail-Adresse ein.",
-    "missingPassword": "Bitte geben Sie Ihr Passwort ein.",
-    "missingCredentials": "Bitte geben Sie E-Mail-Adresse und Passwort ein."
+    "rateLimited": "Zu viele Anmeldeversuche. Bitte versuche es später erneut.",
+    "notAGuardian": "Dieses Konto gehört zum Personal einer Schule. Bitte melde dich über die Schul-Anmeldung an.",
+    "missingEmail": "Bitte gib deine E-Mail-Adresse ein.",
+    "missingPassword": "Bitte gib dein Passwort ein.",
+    "missingCredentials": "Bitte gib E-Mail-Adresse und Passwort ein."
   },
   "errorObject": "die Anmeldung"
 }

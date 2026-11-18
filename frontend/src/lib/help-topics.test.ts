@@ -246,7 +246,7 @@ describe("getParentHelpTopicForPath", () => {
     });
     expect(caregiverTopics[2]?.instructionGroups).toHaveLength(2);
     expect(caregiverTopics[2]?.differences).toContain(
-      "`Unsichere App blockiert` erscheint? moto selbst ist nicht unsicher. Aktualisieren Sie im Play Store Chrome und Google Play. Starten Sie das Gerät neu. Versuchen Sie es danach erneut.",
+      "`Unsichere App blockiert` erscheint? moto selbst ist nicht unsicher. Aktualisiere im Play Store Chrome und Google Play. Starte das Gerät neu. Versuche es danach erneut.",
     );
     expect(caregiverTopics[3]).toMatchObject({
       id: HELP_TOPICS.appOverview,
@@ -286,7 +286,7 @@ describe("getParentHelpTopicForPath", () => {
       "Den Kalender abonnieren",
     ]);
     expect(caregiverTopics[6]?.instructionGroups?.[2]?.description).toBe(
-      "Nutzen Sie das Abo, wenn Sie hauptsächlich Ihren persönlichen Kalender verwenden. Neue und geänderte Einträge aus moto erscheinen dort automatisch.",
+      "Nutze das Abo, wenn du hauptsächlich deinen persönlichen Kalender verwendest. Neue und geänderte Einträge aus moto erscheinen dort automatisch.",
     );
     expect(caregiverTopics[6]?.result).toContain(
       "Das Kalender-Abo übernimmt neue, geänderte und abgesagte Einträge automatisch.",
@@ -297,12 +297,12 @@ describe("getParentHelpTopicForPath", () => {
     });
     expect(caregiverTopics[7]?.troubleshooting).toBeUndefined();
     expect(caregiverTopics[7]?.troubleshootingDetails).toEqual([
-      "Der Tab `Betreuungsplan` fehlt? Bitten Sie Ihre Leitung, Ihren Zugang zu prüfen.",
-      "Steht dort `Noch kein Planungszeitraum`? Dann hat Ihre Leitung den Zeitraum noch nicht angelegt.",
-      "Steht dort `Für diese Auswahl ist nichts geplant`? Stellen Sie die Filter wieder auf `Alle Gruppen`, `Alle Personen` und `Alle Räume`.",
+      "Der Tab `Betreuungsplan` fehlt? Bitte deine Leitung, deinen Zugang zu prüfen.",
+      "Steht dort `Noch kein Planungszeitraum`? Dann hat deine Leitung den Zeitraum noch nicht angelegt.",
+      "Steht dort `Für diese Auswahl ist nichts geplant`? Stelle die Filter wieder auf `Alle Gruppen`, `Alle Personen` und `Alle Räume`.",
     ]);
     expect(caregiverTopics[7]?.differences).toEqual([
-      "Steht oben rechts `Nur ansehen`? Dann dürfen Sie den Plan lesen, aber nicht ändern.",
+      "Steht oben rechts `Nur ansehen`? Dann darfst du den Plan lesen, aber nicht ändern.",
       SIMPLE_NAV_DIFFERENCE,
     ]);
     // Der Tagesplan steht in der App ganz oben im Tagesbetrieb und folgt in
@@ -320,7 +320,7 @@ describe("getParentHelpTopicForPath", () => {
       title: "Ein Anwesenheitsprotokoll herunterladen",
       steps: expect.arrayContaining([
         "Möglich sind nur die sichtbaren Tage bis heute.",
-        "Wählen Sie das Format und danach `Herunterladen`.",
+        "Wähle das Format und danach `Herunterladen`.",
       ]),
     });
     expect(caregiverTopics[9]?.troubleshooting).toBe(
@@ -385,16 +385,16 @@ describe("getParentHelpTopicForPath", () => {
     );
 
     expect(detailedArticle?.instructionGroups?.[1]?.steps).toContain(
-      "Prüfen Sie oben den Aufenthaltsort sowie die heutige Ankunft und Abholung.",
+      "Prüfe oben den Aufenthaltsort sowie die heutige Ankunft und Abholung.",
     );
     expect(binaryArticle?.instructionGroups?.[1]?.steps).toContain(
-      "Prüfen Sie oben die Anwesenheit sowie die heutige Ankunft und Abholung.",
+      "Prüfe oben die Anwesenheit sowie die heutige Ankunft und Abholung.",
     );
     expect(detailedArticle?.result).toBe(
-      "Sie sehen jetzt die Angaben des Kindes. Über dem Namen steht `Zurück zur Kinderübersicht`. Damit kommen Sie zur Liste zurück.",
+      "Du siehst jetzt die Angaben des Kindes. Über dem Namen steht `Zurück zur Kinderübersicht`. Damit kommst du zur Liste zurück.",
     );
     expect(binaryArticle?.differences).toContain(
-      "Bei einfacher Anwesenheit sehen Sie keinen Raum. Sie sehen nur, ob das Kind da ist.",
+      "Bei einfacher Anwesenheit siehst du keinen Raum. Du siehst nur, ob das Kind da ist.",
     );
   });
 
@@ -458,10 +458,10 @@ describe("getParentHelpTopicForPath", () => {
     expect(detailedAttendance?.result).toContain("Unterwegs");
     expect(binaryAttendance?.result).toContain("Anwesend");
     expect(detailedLocation?.steps).toContain(
-      "Wählen Sie unter `Zielraum` den neuen Raum.",
+      "Wähle unter `Zielraum` den neuen Raum.",
     );
     expect(detailedLocation?.requirements).toContain(
-      "Ihre OGS erfasst die Räume der Kinder.",
+      "Deine OGS erfasst die Räume der Kinder.",
     );
     expect(binaryLocation).toBeUndefined();
   });
@@ -540,17 +540,17 @@ describe("getParentHelpTopicForPath", () => {
       "Bei einfacher Anwesenheit zeigt die Liste `Anwesend` statt eines Raums.",
     );
     expect(article(detailedTopics, HELP_TOPICS.ownGroups)?.steps).toContain(
-      "Öffnen Sie `Gruppen` in der Seitenleiste.",
+      "Öffne `Gruppen` in der Seitenleiste.",
     );
     // #4351: die Auswahlseite markiert die eigene Gruppe.
     expect(article(detailedTopics, HELP_TOPICS.ownGroups)?.steps).toContain(
-      "Wählen Sie die gewünschte Gruppe. Ihre eigene Gruppe ist mit `Meine Gruppe` markiert.",
+      "Wähle die gewünschte Gruppe. Deine eigene Gruppe ist mit `Meine Gruppe` markiert.",
     );
     expect(
       getHelpTopics("unknown", "unknown", true).find(
         (topic) => topic.id === HELP_TOPICS.ownGroups,
       )?.steps,
-    ).toContain("Prüfen Sie, ob `Gruppen` in der Seitenleiste steht.");
+    ).toContain("Prüfe, ob `Gruppen` in der Seitenleiste steht.");
     expect(article(openCareTopics, HELP_TOPICS.ownGroups)).toBeUndefined();
     expect(article(openCareTopics, HELP_TOPICS.transferGroup)).toBeUndefined();
   });
@@ -943,7 +943,7 @@ describe("getParentHelpTopicForPath", () => {
     // Die Arbeitsweise ist bekannt, also steht die zutreffende Zeile als
     // Tatsache da und nicht als eine von mehreren Moeglichkeiten.
     expect(missingMenu?.differences?.join(" ")).toContain(
-      "Ihre OGS nutzt kein NFC",
+      "Deine OGS nutzt kein NFC",
     );
     expect(missingMenu?.differences?.join(" ")).not.toContain("Ohne NFC fehlt");
   });
@@ -952,7 +952,7 @@ describe("getParentHelpTopicForPath", () => {
     const topics = getHelpTopics("unknown", "unknown", null);
 
     expect(topics.find((topic) => topic.id === HELP_TOPICS.login)?.result).toBe(
-      "Nach der Anmeldung öffnet moto die für Sie vorgesehene Startseite.",
+      "Nach der Anmeldung öffnet moto die für dich vorgesehene Startseite.",
     );
     expect(
       topics.find((topic) => topic.id === HELP_TOPICS.rooms)?.summary,
@@ -962,7 +962,7 @@ describe("getParentHelpTopicForPath", () => {
     ).toContain("hängt von der Arbeitsweise");
     expect(
       topics.find((topic) => topic.id === HELP_TOPICS.nfcCheckIn)?.summary,
-    ).toBe("Ob dieser Ablauf verfügbar ist, hängt von Ihrer OGS ab.");
+    ).toBe("Ob dieser Ablauf verfügbar ist, hängt von deiner OGS ab.");
     expect(
       topics.find((topic) => topic.id === HELP_TOPICS.manageActivity)?.summary,
     ).toBe("Der Bereich erscheint nur bei NFC und detaillierter Anwesenheit.");

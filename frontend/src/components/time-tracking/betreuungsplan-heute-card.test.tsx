@@ -243,7 +243,7 @@ describe("BetreuungsplanHeuteCard", () => {
 
     rerender(<BetreuungsplanHeuteCard showEmpty />);
     expect(
-      screen.getByText("Heute ist für Sie nichts geplant"),
+      screen.getByText("Heute ist für dich nichts geplant"),
     ).toBeInTheDocument();
   });
 
@@ -257,7 +257,7 @@ describe("BetreuungsplanHeuteCard", () => {
 
     expect(
       await screen.findByText(
-        catalogText("general.server", "die Liste Ihrer Einsätze"),
+        catalogText("general.server", "die Liste deiner Einsätze"),
       ),
     ).toBeInTheDocument();
     expect(
@@ -266,7 +266,7 @@ describe("BetreuungsplanHeuteCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     expect(swr.mutate).toHaveBeenCalled();
     expect(
-      screen.queryByText("Heute ist für Sie nichts geplant"),
+      screen.queryByText("Heute ist für dich nichts geplant"),
     ).not.toBeInTheDocument();
   });
 });

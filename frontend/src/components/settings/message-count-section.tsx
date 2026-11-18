@@ -45,7 +45,7 @@ const OPTIONS: ReadonlyArray<{
 ];
 
 const NO_GROUP_HINT =
-  "Sie gehören zurzeit zu keiner Gruppe. Dann zeigt die Zahl nichts.";
+  "Du gehörst zurzeit zu keiner Gruppe. Dann zeigt die Zahl nichts.";
 
 /**
  * Personal count scope for parent messages (#3673): which conversations the
@@ -123,7 +123,7 @@ export function MessageCountSection() {
       icon={MessageCircle}
       headingLevel={3}
       title="Zahl bei Nachrichten"
-      description="Die Zahl bei „Nachrichten“ zeigt neue Nachrichten von Eltern. Die Einstellung gilt nur für Sie."
+      description="Die Zahl bei „Nachrichten“ zeigt neue Nachrichten von Eltern. Die Einstellung gilt nur für dich."
     >
       {/* Bis der Text eines Ladefehlers da ist, bleibt das Skelett stehen. */}
       {(setting === undefined && !failure) || (failure && !loadError) ? (

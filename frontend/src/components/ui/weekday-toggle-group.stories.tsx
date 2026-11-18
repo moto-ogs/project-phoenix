@@ -51,7 +51,7 @@ export const WithHintAndError: StoryObj = {
       value={[1]}
       onToggle={() => undefined}
       hint="Mittwoch ist ein Feiertag."
-      error="Bitte wählen Sie mindestens zwei Tage."
+      error="Bitte wähle mindestens zwei Tage."
       name="weekdays"
     />
   ),

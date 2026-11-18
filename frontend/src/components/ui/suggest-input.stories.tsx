@@ -66,7 +66,7 @@ export const WithHint: Story = {
 export const WithError: Story = {
   args: {
     required: true,
-    error: "Bitte geben Sie eine Position ein.",
+    error: "Bitte gib eine Position ein.",
   },
 };
 

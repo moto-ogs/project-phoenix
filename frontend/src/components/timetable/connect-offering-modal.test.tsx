@@ -247,7 +247,7 @@ describe("ConnectOfferingModal (#5103)", () => {
 
     expect(
       screen.getByText(
-        "Mehrere Angebote passen zur Kinderliste. Wählen Sie die Angebote, deren angemeldete Kinder kommen sollen.",
+        "Mehrere Angebote passen zur Kinderliste. Wähle die Angebote, deren angemeldete Kinder kommen sollen.",
       ),
     ).toBeInTheDocument();
     const select = screen.getByRole("combobox", { name: "Angebote" });

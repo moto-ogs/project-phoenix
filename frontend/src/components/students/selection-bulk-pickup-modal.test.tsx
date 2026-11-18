@@ -112,7 +112,7 @@ describe("SelectionBulkPickupModal", () => {
 
     expect(
       await screen.findByText(
-        "Die Gehzeit konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Gehzeit konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText("boom")).not.toBeInTheDocument();

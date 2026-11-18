@@ -52,7 +52,7 @@ export function OwnWeekAgenda({
     <SectionCard padding="none" testId="own-week-agenda">
       <div className="divide-y divide-gray-100">
         <p className="px-4 py-3 text-xs text-gray-500">
-          Nur zur Information. Ihre Schichten plant die Leitung im Dienstplan.
+          Nur zur Information. Deine Schichten plant die Leitung im Dienstplan.
         </p>
         {days.map((day) => {
           const closingReason = closingDays?.get(day.date);

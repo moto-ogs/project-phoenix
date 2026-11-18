@@ -95,14 +95,13 @@ export function StaffPersonMerge({
       const refreshes = await Promise.allSettled([mutate(), onMerged()]);
       if (refreshes.some((refresh) => refresh.status === "rejected")) {
         showRefreshFailure(
-          "Die Listen konnten nicht vollständig aktualisiert werden. Bitte laden Sie die Seite neu.",
+          "Die Listen konnten nicht vollständig aktualisiert werden. Bitte lade die Seite neu.",
         );
       }
     } catch (error) {
       await showFailure(error, {
         object: "die Personen",
-        messageSuffix:
-          "Laden Sie die Vorschläge neu und prüfen Sie die Personenliste.",
+        messageSuffix: "Lade die Vorschläge neu und prüfe die Personenliste.",
       });
       setSelected(new Set());
       setConfirmed(false);
@@ -113,7 +112,7 @@ export function StaffPersonMerge({
   return (
     <SectionCard
       title="Doppelte Personaleinträge prüfen"
-      description="Prüfen Sie mit der Schule, ob beide Einträge denselben Menschen meinen."
+      description="Prüfe mit der Schule, ob beide Einträge denselben Menschen meinen."
       className="mt-6"
       bodyClassName="mt-6 space-y-6"
       action={
@@ -147,7 +146,7 @@ export function StaffPersonMerge({
       {data && data.length > 0 && (
         <>
           <p className="text-sm leading-6">
-            Namensgleichheit ist kein Nachweis. Wählen Sie jeden Fall erst nach
+            Namensgleichheit ist kein Nachweis. Wähle jeden Fall erst nach
             Sichtprüfung aus. Unklare Fälle bleiben unverändert.
           </p>
           <ul className="space-y-8">

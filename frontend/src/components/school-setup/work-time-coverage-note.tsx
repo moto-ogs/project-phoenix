@@ -71,7 +71,7 @@ export function WorkTimeCoverageNote({
   if (total === 0) {
     return (
       <InsetPanel className="text-sm text-gray-700">
-        In den Zeitkonten steht noch niemand. Laden Sie zuerst Ihr Team ein.
+        In den Zeitkonten steht noch niemand. Lade zuerst dein Team ein.
       </InsetPanel>
     );
   }

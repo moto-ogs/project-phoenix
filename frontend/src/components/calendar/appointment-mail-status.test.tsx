@@ -90,7 +90,7 @@ describe("AppointmentMailStatus", () => {
     ]);
     expect(
       within(section).getByText(
-        "Nicht angekommen bei Bernd Beispiel. Bitte sagen Sie der Familie direkt Bescheid. Korrigieren Sie die Adresse beim Kind unter „Erziehungsberechtigte“.",
+        "Nicht angekommen bei Bernd Beispiel. Bitte sage der Familie direkt Bescheid. Korrigiere die Adresse beim Kind unter „Erziehungsberechtigte“.",
       ),
     ).toBeInTheDocument();
   });
@@ -147,7 +147,7 @@ describe("appointmentMailNote", () => {
         },
       }),
     ).toBe(
-      "Nicht angekommen bei Anna Muster und Özlem Yılmaz. Bitte sagen Sie den Familien direkt Bescheid. Korrigieren Sie die Adresse beim Kind unter „Erziehungsberechtigte“.",
+      "Nicht angekommen bei Anna Muster und Özlem Yılmaz. Bitte sage den Familien direkt Bescheid. Korrigiere die Adresse beim Kind unter „Erziehungsberechtigte“.",
     );
   });
 
@@ -160,7 +160,7 @@ describe("appointmentMailNote", () => {
         },
       }),
     ).toBe(
-      "3 Mails kamen nicht an. Welche Adresse betroffen ist, sehen Sie beim Kind unter „Erziehungsberechtigte“.",
+      "3 Mails kamen nicht an. Welche Adresse betroffen ist, siehst du beim Kind unter „Erziehungsberechtigte“.",
     );
   });
 
@@ -170,7 +170,7 @@ describe("appointmentMailNote", () => {
         kinds: { appointment_published: { complained: 1, delivered: 3 } },
       }),
     ).toBe(
-      "Eine Mail wurde als unerwünscht gemeldet. Sprechen Sie die Person direkt an.",
+      "Eine Mail wurde als unerwünscht gemeldet. Sprich die Person direkt an.",
     );
   });
 

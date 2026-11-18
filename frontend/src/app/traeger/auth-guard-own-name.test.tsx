@@ -71,7 +71,7 @@ function ReloadProfile() {
   const { reload } = useTraegerResource(
     traegerKeys.profile(),
     api.fetchTraegerProfile,
-    "Ihr Konto",
+    "Dein Konto",
   );
   return (
     <button type="button" onClick={reload}>
@@ -160,7 +160,7 @@ describe("Träger header name (#6870)", () => {
     });
     renderPortal(<TraegerAccountPage />);
 
-    const field = await screen.findByRole("textbox", { name: /Ihr Name/ });
+    const field = await screen.findByRole("textbox", { name: /Dein Name/ });
     expect(headerName()).toHaveTextContent("kasse@traeger.example");
     fireEvent.change(field, { target: { value: "Karl Kasse" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
@@ -194,7 +194,7 @@ describe("Träger header name (#6870)", () => {
       </>,
     );
 
-    const field = await screen.findByRole("textbox", { name: /Ihr Name/ });
+    const field = await screen.findByRole("textbox", { name: /Dein Name/ });
     await waitFor(() => expect(headerName()).toHaveTextContent("Karl Kasse"));
     fireEvent.click(screen.getByRole("button", { name: "Reload profile" }));
     await waitFor(() =>

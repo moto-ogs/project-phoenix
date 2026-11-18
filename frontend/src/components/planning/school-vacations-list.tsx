@@ -72,7 +72,7 @@ function vacationsDescription(
     ? `für „${schoolYearName}“`
     : "in den nächsten zwölf Monaten";
   const state = data ? ` in ${data.federalStateName}` : "";
-  return `Nur zur Information: die Schulferien${state} ${scope}. moto holt sie jeden Tag aus dem öffentlichen Ferienkalender OpenHolidays. Ob die OGS schließt, tragen Sie als Schließtag ein. Stimmt das Bundesland nicht, wenden Sie sich an das moto-Team.`;
+  return `Nur zur Information: die Schulferien${state} ${scope}. moto holt sie jeden Tag aus dem öffentlichen Ferienkalender OpenHolidays. Ob die OGS schließt, trägst du als Schließtag ein. Stimmt das Bundesland nicht, wende dich an das moto-Team.`;
 }
 
 function emptyState(data: SchoolVacations | undefined) {
@@ -80,7 +80,7 @@ function emptyState(data: SchoolVacations | undefined) {
     return (
       <EmptyState
         title="Noch keine Schulferien"
-        description="moto hat die Ferien für Ihr Bundesland noch nicht geholt. Das passiert einmal am Tag. Schauen Sie später noch einmal nach."
+        description="moto hat die Ferien für dein Bundesland noch nicht geholt. Das passiert einmal am Tag. Schaue später noch einmal nach."
       />
     );
   }

@@ -137,7 +137,7 @@ func GuardianInvitationMail(mail GuardianMail) (Mail, error) {
 	}
 	subject := "Einladung zum Eltern-Portal"
 	if mail.ExistingAccount {
-		subject = "Ihr Zugang zum Eltern-Portal"
+		subject = "Dein Zugang zum Eltern-Portal"
 	}
 	return Mail{
 		Subject:  schoolSubject(subject, mail.SchoolName),

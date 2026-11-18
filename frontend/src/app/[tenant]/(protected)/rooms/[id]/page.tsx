@@ -360,7 +360,7 @@ function RoomDetailPageContent() {
             label: exporting ? "Raumplan wird erstellt…" : "Raumplan als PDF",
             icon: <FileDown className="size-4" aria-hidden />,
             description:
-              "Speichert den Raumplan als PDF zum Aushängen auf Ihrem Gerät.",
+              "Speichert den Raumplan als PDF zum Aushängen auf deinem Gerät.",
             onClick: () => {
               if (!exporting) void exportRoomPlan();
             },

@@ -326,7 +326,7 @@ export const HOME_BLOCKS: readonly HomeBlockDefinition[] = [
     kind: "section",
     label: "Mein Tag",
     description:
-      "Ihr ganzer Betreuungstag: alle Blöcke, für die Sie eingeteilt sind, mit Raum, Kindern und dem Team. Starten geht direkt hier.",
+      "Dein ganzer Betreuungstag: alle Blöcke, für die du eingeteilt bist, mit Raum, Kindern und dem Team. Starten geht direkt hier.",
     concept: carePlanConcept,
     spans: SECTION_SPANS,
     // Der Tag braucht Platz: drei Zeilen hoch, damit ein Tag mit fünf
@@ -342,7 +342,7 @@ export const HOME_BLOCKS: readonly HomeBlockDefinition[] = [
     kind: "section",
     label: "Meine Gruppe heute",
     description:
-      "Wie viele Kinder Ihrer Gruppe da sind, wer heute fehlt und wann die nächste Abholung ist.",
+      "Wie viele Kinder deiner Gruppe da sind, wer heute fehlt und wann die nächste Abholung ist.",
     concept: groupsConcept,
     spans: SECTION_SPANS,
     // Dieselbe Quelle wie die Seite „Meine Gruppen": der Server wählt die
@@ -488,7 +488,7 @@ export const HOME_BLOCKS: readonly HomeBlockDefinition[] = [
     kind: "section",
     label: "Geburtstage",
     description:
-      "Wer in dieser Woche Geburtstag hat. Sie können bis zu vier Wochen vor- und zurückblättern.",
+      "Wer in dieser Woche Geburtstag hat. Du kannst bis zu vier Wochen vor- und zurückblättern.",
     concept: birthdaysConcept,
     spans: SECTION_SPANS,
     // Eine Woche mit Wochenleiste braucht drei Zeilen (#3777), sonst stünde

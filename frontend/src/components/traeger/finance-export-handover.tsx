@@ -253,8 +253,8 @@ export function useFinanceHandover(
           {repeat
             ? `${fileLabel(repeat)} ist schon bei ${recipientOfFormat(recipients, repeat.format)?.name ?? "diesem Empfänger"} angekommen, ist noch unterwegs oder ihr Ergebnis ist unklar.`
             : null}{" "}
-          Übergeben Sie sie nur noch einmal, wenn der Empfänger sie nicht hat.
-          Sonst bucht er sie vielleicht doppelt.
+          Übergib sie nur noch einmal, wenn der Empfänger sie nicht hat. Sonst
+          bucht er sie vielleicht doppelt.
         </p>
       </ConfirmationModal>
     ),
@@ -277,14 +277,14 @@ function HandoverNoticeAlert({
       <Alert
         type="warning"
         title={`Für die ${HANDOVER_FORMAT_LABELS[notice.attempt.format]} fehlt der Empfänger`}
-        message={`${label} wurde nicht erstellt. Ordnen Sie der Datei zuerst einen bereiten Empfänger zu.`}
+        message={`${label} wurde nicht erstellt. Ordne der Datei zuerst einen bereiten Empfänger zu.`}
         onDismiss={onDismiss}
         action={
           <ButtonLink
             href={traegerPath(EXPORT_RECIPIENT_PATH)}
             variant="ghost_tone"
             size="compact"
-            tooltip="Öffnet die Empfänger, dort ordnen Sie die Datei zu."
+            tooltip="Öffnet die Empfänger, dort ordnest du die Datei zu."
           >
             Empfänger zuordnen
           </ButtonLink>
@@ -393,7 +393,7 @@ export function HandoverMenu({
     const recipient = recipientOfFormat(recipients, format);
     return recipient
       ? `${recipient.name} (${destinationText(recipient.host, recipient.remoteDirectory)})`
-      : "dem Empfänger Ihres Trägers";
+      : "dem Empfänger deines Trägers";
   };
   const items: OverflowMenuItem[] = [
     ...ready.map((format) => ({

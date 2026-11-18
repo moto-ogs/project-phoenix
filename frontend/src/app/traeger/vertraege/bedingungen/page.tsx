@@ -31,7 +31,7 @@ export default function TraegerVertragsbedingungenPage() {
   return (
     <TenantPage
       title="Verträge"
-      info="Vertragsbedingungen legen fest, was in jedem Vertrag eines Angebots steht: Laufzeit, Kündigung, Sonderkündigung und Satzung. Den Brieftext ändern Sie unter „Einstellungen“ → „Briefkopf und Vorlagen“."
+      info="Vertragsbedingungen legen fest, was in jedem Vertrag eines Angebots steht: Laufzeit, Kündigung, Sonderkündigung und Satzung. Den Brieftext änderst du unter „Einstellungen“ → „Briefkopf und Vorlagen“."
       tabs={careContractTabs("bedingungen", missing)}
       stats={
         offerings && active.length > 0 ? (

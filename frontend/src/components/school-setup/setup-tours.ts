@@ -107,7 +107,7 @@ function viaSidebar(path: string, label: string): SetupTourStop[] {
     {
       target: '[data-setup-tour="nav-group-verwaltung"]',
       title: "Verwaltung öffnen",
-      text: "Die Daten Ihrer OGS finden Sie unter „Verwaltung“. Wählen Sie „Verwaltung“.",
+      text: "Die Daten deiner OGS findest du unter „Verwaltung“. Wähle „Verwaltung“.",
       advance: "click",
       nav: true,
       skipWhenVisible: database,
@@ -115,7 +115,7 @@ function viaSidebar(path: string, label: string): SetupTourStop[] {
     {
       target: database,
       title: "Datenverwaltung öffnen",
-      text: "Hier in der Seitenleiste legen Sie die Daten Ihrer OGS an. Wählen Sie „Datenverwaltung“.",
+      text: "Hier in der Seitenleiste legst du die Daten deiner OGS an. Wähle „Datenverwaltung“.",
       advance: "click",
       nav: true,
       skipWhenVisible: subItem,
@@ -123,7 +123,7 @@ function viaSidebar(path: string, label: string): SetupTourStop[] {
     {
       target: subItem,
       title: `${label} öffnen`,
-      text: `Wählen Sie „${label}“.`,
+      text: `Wähle „${label}“.`,
       advance: "click",
       nav: true,
     },
@@ -150,29 +150,29 @@ export const SETUP_TOUR_BRANCHES: Readonly<Record<SetupTourBranch, SetupTour>> =
         {
           target: "section:has(#format-select)",
           title: "Vorlage herunterladen",
-          text: "Wählen Sie ein Format und dann „Vorlage herunterladen“. Tragen Sie Ihre Kinder in die Datei ein und speichern Sie sie.",
+          text: "Wähle ein Format und dann „Vorlage herunterladen“. Trage deine Kinder in die Datei ein und speichere sie.",
           advance: "next",
         },
         {
           target: 'section:has([aria-label="Import-Modus"])',
           title: "Neue Kinder anlegen",
-          text: "Beim ersten Import lassen Sie „Nur neue anlegen“ gewählt.",
+          text: "Beim ersten Import lässt du „Nur neue anlegen“ gewählt.",
           advance: "next",
         },
         {
           target: IMPORT_UPLOAD,
           title: "Datei hochladen",
-          text: "Ziehen Sie die ausgefüllte Datei hierher oder wählen Sie „Datei auswählen“. Danach zeigt moto eine Vorschau.",
+          text: "Ziehe die ausgefüllte Datei hierher oder wähle „Datei auswählen“. Danach zeigt moto eine Vorschau.",
           advance: "next",
           advanceWhenVisible: IMPORT_SUBMIT,
         },
         {
           target: IMPORT_SUBMIT,
           title: "Prüfen und importieren",
-          text: "Prüfen Sie die Vorschau. Hat eine Zeile einen Fehler, korrigieren Sie die Datei und laden Sie sie neu hoch. Dann wählen Sie den grünen Knopf.",
+          text: "Prüfe die Vorschau. Hat eine Zeile einen Fehler, korrigiere die Datei und lade sie neu hoch. Dann wähle den grünen Knopf.",
           advance: "click",
           missingText:
-            "Noch keine Datei hochgeladen. Wählen Sie „Zurück“ und laden Sie Ihre Datei hoch.",
+            "Noch keine Datei hochgeladen. Wähle „Zurück“ und lade deine Datei hoch.",
         },
       ],
     },
@@ -188,7 +188,7 @@ export const SETUP_TOURS: Readonly<
       {
         target: create,
         title: "Personal einladen",
-        text: "Wählen Sie „+ Personal“.",
+        text: "Wähle „+ Personal“.",
         advance: "click",
       },
       {
@@ -198,11 +198,11 @@ export const SETUP_TOURS: Readonly<
         // der Tastatur gewählt, löst der Eintrag keinen Klick aus.
         target: '[data-setup-tour="invite-create"]',
         title: "Einladung wählen",
-        text: "Wählen Sie „Personal einladen“.",
+        text: "Wähle „Personal einladen“.",
         advance: "click",
         advanceWhenVisible: INVITE_FORM,
         skipOnBack: true,
-        missingText: "Wählen Sie „Zurück“ und dann noch einmal „+ Personal“.",
+        missingText: "Wähle „Zurück“ und dann noch einmal „+ Personal“.",
       },
       {
         // Die Karte „Neue Einladung“ (Kopf und Formular), erkannt an ihrem
@@ -210,13 +210,13 @@ export const SETUP_TOURS: Readonly<
         target: INVITE_FORM,
         endBefore: '[data-setup-tour="invite-submit"]',
         title: "Angaben eintragen",
-        text: "An die E-Mail-Adresse schickt moto die Einladung. Die Rolle bestimmt, was die Person sehen und ändern darf. Mit dem Namen erkennen Sie die Person in der Liste, auch bevor sie die Einladung annimmt. Die Position ist freiwillig.",
+        text: "An die E-Mail-Adresse schickt moto die Einladung. Die Rolle bestimmt, was die Person sehen und ändern darf. Mit dem Namen erkennst du die Person in der Liste, auch bevor sie die Einladung annimmt. Die Position ist freiwillig.",
         advance: "next",
       },
       {
         target: '[data-setup-tour="invite-submit"]',
         title: "Einladung senden",
-        text: "Wählen Sie „Einladung senden“. Die Person bekommt eine E-Mail.",
+        text: "Wähle „Einladung senden“. Die Person bekommt eine E-Mail.",
         advance: "click",
       },
     ],
@@ -228,7 +228,7 @@ export const SETUP_TOURS: Readonly<
       {
         target: create,
         title: "Raum anlegen",
-        text: "Wählen Sie „+ Raum“.",
+        text: "Wähle „+ Raum“.",
         advance: "click",
       },
       {
@@ -236,13 +236,13 @@ export const SETUP_TOURS: Readonly<
         target: DATA_FORM,
         endBefore: formSubmit,
         title: "Angaben eintragen",
-        text: "Geben Sie dem Raum einen Namen, zum Beispiel „Gruppenraum 1“. Die Kategorie hilft beim Finden, zum Beispiel Sport für die Turnhalle. Gebäude, Etage, maximale Belegung und Farbe können Sie später nachtragen.",
+        text: "Gib dem Raum einen Namen, zum Beispiel „Gruppenraum 1“. Die Kategorie hilft beim Finden, zum Beispiel Sport für die Turnhalle. Gebäude, Etage, maximale Belegung und Farbe kannst du später nachtragen.",
         advance: "next",
       },
       {
         target: formSubmit,
         title: "Speichern",
-        text: "Speichern Sie den Raum. Legen Sie danach die nächsten an.",
+        text: "Speichere den Raum. Lege danach die nächsten an.",
         advance: "click",
       },
     ],
@@ -254,7 +254,7 @@ export const SETUP_TOURS: Readonly<
       {
         target: create,
         title: "Gruppe anlegen",
-        text: "Wählen Sie „+ Gruppe“.",
+        text: "Wähle „+ Gruppe“.",
         advance: "click",
       },
       {
@@ -262,13 +262,13 @@ export const SETUP_TOURS: Readonly<
         target: DATA_FORM,
         endBefore: formSubmit,
         title: "Angaben eintragen",
-        text: "Geben Sie der Gruppe einen Namen. Gruppenraum und Gruppenleitung können Sie später nachtragen. Als Leitung stehen nur Personen zur Wahl, die ihre Einladung schon angenommen haben.",
+        text: "Gib der Gruppe einen Namen. Gruppenraum und Gruppenleitung kannst du später nachtragen. Als Leitung stehen nur Personen zur Wahl, die ihre Einladung schon angenommen haben.",
         advance: "next",
       },
       {
         target: formSubmit,
         title: "Speichern",
-        text: "Speichern Sie die Gruppe.",
+        text: "Speichere die Gruppe.",
         advance: "click",
       },
     ],
@@ -281,7 +281,7 @@ export const SETUP_TOURS: Readonly<
         // Am Handy gibt es den Import nicht: Beide Stationen entfallen dort.
         target: '[data-setup-tour="student-menu"]',
         title: "Viele Kinder auf einmal",
-        text: "Haben Sie eine Liste? Mit „Importieren“ übernehmen Sie alle Kinder in einem Schritt. Öffnen Sie dafür dieses Menü. Für ein einzelnes Kind wählen Sie „Weiter“.",
+        text: "Hast du eine Liste? Mit „Importieren“ übernimmst du alle Kinder in einem Schritt. Öffne dafür dieses Menü. Für ein einzelnes Kind wähle „Weiter“.",
         advance: "next",
         optional: true,
         skipCount: 2,
@@ -292,7 +292,7 @@ export const SETUP_TOURS: Readonly<
         // Station davor) oder geht es wieder zu, entfällt die Station sofort.
         target: '[data-setup-tour="student-import"]',
         title: "Importieren wählen",
-        text: "Wählen Sie „Importieren“, dann zeigt die Tour, wie es geht. Für ein einzelnes Kind wählen Sie „Weiter“.",
+        text: "Wähle „Importieren“, dann zeigt die Tour, wie es geht. Für ein einzelnes Kind wähle „Weiter“.",
         advance: "next",
         skipWhenVisible: 'body:not(:has([data-setup-tour="student-import"]))',
         skipOnBack: true,
@@ -302,7 +302,7 @@ export const SETUP_TOURS: Readonly<
       {
         target: create,
         title: "Ein Kind anlegen",
-        text: "Oder legen Sie ein Kind einzeln an. Wählen Sie „+ Kinder“.",
+        text: "Oder lege ein Kind einzeln an. Wähle „+ Kinder“.",
         advance: "click",
       },
       {
@@ -311,13 +311,13 @@ export const SETUP_TOURS: Readonly<
         target:
           'form:has([data-setup-tour="student-submit"]) > div:first-child',
         title: "Angaben eintragen",
-        text: "Tragen Sie Vorname, Nachname und Klasse ein. Betreuungszeiten können Sie gleich mit eintragen.",
+        text: "Trage Vorname, Nachname und Klasse ein. Betreuungszeiten kannst du gleich mit eintragen.",
         advance: "next",
       },
       {
         target: '[data-setup-tour="student-submit"]',
         title: "Erstellen",
-        text: "Wählen Sie „Erstellen“. Danach steht das Kind in der Liste.",
+        text: "Wähle „Erstellen“. Danach steht das Kind in der Liste.",
         advance: "click",
       },
     ],
@@ -330,21 +330,21 @@ export const SETUP_TOURS: Readonly<
         // Die Zeilen der Kinderliste verlinken auf die Kindakte mit ?from=.
         target: 'a[href*="/students/"][href*="?from="]',
         title: "Kind öffnen",
-        text: "Eltern laden Sie beim Kind ein. Wählen Sie ein Kind.",
+        text: "Eltern lädst du beim Kind ein. Wähle ein Kind.",
         advance: "click",
       },
       {
         target: '[role="tab"][data-tab-value="erziehungsberechtigte"]',
         pathPattern: CHILD_RECORD,
         title: "Erziehungsberechtigte",
-        text: "Hier stehen die Eltern des Kindes. Wählen Sie „Erziehungsberechtigte“.",
+        text: "Hier stehen die Eltern des Kindes. Wähle „Erziehungsberechtigte“.",
         advance: "click",
       },
       {
         target: '[data-setup-tour="guardian-add"]',
         pathPattern: CHILD_RECORD,
         title: "Eltern eintragen",
-        text: "Noch niemand eingetragen? Wählen Sie „Hinzufügen“.",
+        text: "Noch niemand eingetragen? Wähle „Hinzufügen“.",
         advance: "click",
         // Steht schon jemand mit E-Mail-Adresse da, entfällt das Eintragen.
         skipWhenVisible: GUARDIAN_MENU,
@@ -357,28 +357,28 @@ export const SETUP_TOURS: Readonly<
           'form:has([data-setup-tour="guardian-submit"]) > div:first-child',
         pathPattern: CHILD_RECORD,
         title: "Angaben eintragen",
-        text: "Tragen Sie Vor- und Nachnamen ein. Wichtig für die Einladung: Tragen Sie auch die E-Mail-Adresse ein. Ohne sie kann moto die Person nicht einladen.",
+        text: "Trage Vor- und Nachnamen ein. Wichtig für die Einladung: Trage auch die E-Mail-Adresse ein. Ohne sie kann moto die Person nicht einladen.",
         advance: "next",
       },
       {
         target: '[data-setup-tour="guardian-submit"]',
         pathPattern: CHILD_RECORD,
         title: "Speichern",
-        text: "Speichern Sie die Person. Danach steht sie beim Kind.",
+        text: "Speichere die Person. Danach steht sie beim Kind.",
         advance: "click",
       },
       {
         target: GUARDIAN_MENU,
         pathPattern: CHILD_RECORD,
         title: "Menü öffnen",
-        text: "Öffnen Sie das Menü neben dem Namen.",
+        text: "Öffne das Menü neben dem Namen.",
         advance: "click",
       },
       {
         target: '[role="menu"]',
         pathPattern: CHILD_RECORD,
         title: "Einladen",
-        text: "Wählen Sie „Einladen“. Die Person bekommt eine E-Mail mit einem Link zur Eltern-App.",
+        text: "Wähle „Einladen“. Die Person bekommt eine E-Mail mit einem Link zur Eltern-App.",
         advance: "click",
       },
     ],
@@ -401,14 +401,14 @@ function workTimeTour(): SetupTour {
         // der Personen. Öffnet die Tour die Seite, sind die Zeitkonten da.
         target: TIME_ACCOUNTS_TAB,
         title: "Zeitkonten öffnen",
-        text: "Unter „Zeitkonten“ sehen Sie, wer noch kein Soll hat. Wählen Sie „Zeitkonten“.",
+        text: "Unter „Zeitkonten“ siehst du, wer noch kein Soll hat. Wähle „Zeitkonten“.",
         advance: "click",
         skipWhenVisible: `${TIME_ACCOUNTS_TAB}[aria-selected="true"]`,
       },
       {
         target: '[data-setup-tour="time-accounts-without-target"]',
         title: "Personen ohne Soll",
-        text: "Bei diesen Personen fehlt das Soll. In der Tabelle steht bei ihnen „Kein Soll“. Tragen Sie nach der Tour bei jeder das Arbeitszeitmodell ein.",
+        text: "Bei diesen Personen fehlt das Soll. In der Tabelle steht bei ihnen „Kein Soll“. Trage nach der Tour bei jeder das Arbeitszeitmodell ein.",
         advance: "next",
         missingText:
           "Hier steht kein Hinweis. Dann haben in diesem Monat alle ein Soll.",

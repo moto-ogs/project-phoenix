@@ -295,7 +295,7 @@ describe("StammdatenTab Sektionen (#1423)", () => {
 
     expect(
       await screen.findByText(
-        "Die Änderung an „Person“ konnte nicht übernommen werden. Bitte prüfen Sie Ihre Angaben.",
+        "Die Änderung an „Person“ konnte nicht übernommen werden. Bitte prüfe deine Angaben.",
       ),
     ).toBeInTheDocument();
     const first = screen.getByLabelText("Vorname");
@@ -333,7 +333,7 @@ describe("StammdatenTab Sektionen (#1423)", () => {
     ).toHaveTextContent("Vorgangskennung: req-stamm-1");
     expect(
       screen.getByText(
-        "Die Änderung an „Person“ konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Änderung an „Person“ konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeInTheDocument();
   });
@@ -409,7 +409,7 @@ describe("StammdatenTab Sektionen (#1423)", () => {
 
     expect(
       await screen.findByText(
-        "Die Änderung an „Person“ ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Änderung an „Person“ ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     expect(staffPayrollNumberService.update).not.toHaveBeenCalled();
@@ -487,7 +487,7 @@ describe("StammdatenTab Sektionen (#1423)", () => {
 
     expect(
       await screen.findByRole("alert", {
-        name: "Fehler: Für die Anzeige der Bank- und Steuerdaten fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
+        name: "Fehler: Für die Anzeige der Bank- und Steuerdaten fehlt dir die Berechtigung. Bitte frage die Schule.",
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("•••• 3000")).toBeInTheDocument();

@@ -201,7 +201,7 @@ export function TraegerWithdrawalContactCard({
         {missing.length > 0 ? (
           <Alert
             type="warning"
-            message={`Die Widerrufsbelehrung braucht Telefon und E-Mail. Es fehlt: ${missing.join(" und ")}. Bitte tragen Sie sie hier oder bei der Ansprechperson ein.`}
+            message={`Die Widerrufsbelehrung braucht Telefon und E-Mail. Es fehlt: ${missing.join(" und ")}. Bitte trage sie hier oder bei der Ansprechperson ein.`}
             action={
               canEdit ? (
                 <JumpButton

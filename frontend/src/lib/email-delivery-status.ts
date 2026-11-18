@@ -47,7 +47,7 @@ const ADDRESS_COPY: Record<EmailAddressMark, MailStatusCopy> = {
     label: "Adresse prüfen",
     tone: "red",
     explanation:
-      "Diese Person hat eine Mail als unerwünscht gemeldet. Die Adresse ist deshalb gesperrt. Sprechen Sie die Person direkt an.",
+      "Diese Person hat eine Mail als unerwünscht gemeldet. Die Adresse ist deshalb gesperrt. Sprich die Person direkt an.",
   },
 };
 
@@ -59,7 +59,7 @@ export const GUARDIAN_STOPPED_COPY: MailStatusCopy = {
   label: "Versand gestoppt",
   tone: "gray",
   explanation:
-    "Ihre Schule hat die Mails an diese Person gestoppt. Anmeldecodes, Mails zum Passwort und Abrechnungsbriefe des Trägers kommen weiter an.",
+    "Deine Schule hat die Mails an diese Person gestoppt. Anmeldecodes, Mails zum Passwort und Abrechnungsbriefe des Trägers kommen weiter an.",
 };
 
 /** The current departure hold, separate from the outcome of an earlier mail. */
@@ -67,7 +67,7 @@ export const GUARDIAN_DEPARTED_COPY: MailStatusCopy = {
   label: "Kein Kind in Betreuung",
   tone: "gray",
   explanation:
-    "Kein Kind dieser Person wird noch an Ihrer Schule betreut. Elternbriefe, Nachrichten, Termine und Einladungen gehen deshalb nicht mehr an sie.",
+    "Kein Kind dieser Person wird noch an deiner Schule betreut. Elternbriefe, Nachrichten, Termine und Einladungen gehen deshalb nicht mehr an sie.",
 };
 
 /** Mails still go out to an address someone else holds without a stop. */
@@ -85,14 +85,14 @@ const PROVIDER_UNREADABLE_COPY: MailStatusCopy = {
   label: "Stand unklar",
   tone: "gray",
   explanation:
-    "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuchen Sie es später noch einmal.",
+    "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuche es später noch einmal.",
 };
 
 const PROVIDER_GONE_COPY: MailStatusCopy = {
   label: "Nicht gesendet",
   tone: "gray",
   explanation:
-    "Die Mail ging nicht raus. Die Sperre besteht nicht mehr. Sie können neu senden.",
+    "Die Mail ging nicht raus. Die Sperre besteht nicht mehr. Du kannst neu senden.",
 };
 
 const OUTCOME_COPY: Record<MailOutcome, MailStatusCopy> = {
@@ -108,7 +108,7 @@ const OUTCOME_COPY: Record<MailOutcome, MailStatusCopy> = {
     label: "Verzögert",
     tone: "warning",
     explanation:
-      "Die Mail kommt später an, es wird weiter versucht. Bitte senden Sie sie nicht noch einmal, sonst kommt sie doppelt an.",
+      "Die Mail kommt später an, es wird weiter versucht. Bitte sende sie nicht noch einmal, sonst kommt sie doppelt an.",
   },
   undeliverable: {
     label: "Nicht zustellbar",
@@ -119,7 +119,7 @@ const OUTCOME_COPY: Record<MailOutcome, MailStatusCopy> = {
     label: "Nicht gesendet",
     tone: "gray",
     explanation:
-      "Die Mail ging nicht raus, weil die Adresse gesperrt war. Sie können sie neu senden.",
+      "Die Mail ging nicht raus, weil die Adresse gesperrt war. Du kannst sie neu senden.",
   },
   provider_blocked: {
     label: "Nicht gesendet",
@@ -131,7 +131,7 @@ const OUTCOME_COPY: Record<MailOutcome, MailStatusCopy> = {
     label: "Nicht gesendet",
     tone: "gray",
     explanation:
-      "Die Mail ging nicht raus, weil die Mails an diese Person gestoppt waren. Sie können sie neu senden.",
+      "Die Mail ging nicht raus, weil die Mails an diese Person gestoppt waren. Du kannst sie neu senden.",
   },
   held_by_departure: {
     label: "Nicht gesendet",
@@ -143,13 +143,13 @@ const OUTCOME_COPY: Record<MailOutcome, MailStatusCopy> = {
     label: "Abgemeldet",
     tone: "gray",
     explanation:
-      "Diese Person hat sich von den Mails abgemeldet. Sprechen Sie sie direkt an.",
+      "Diese Person hat sich von den Mails abgemeldet. Sprich sie direkt an.",
   },
   overdue: {
     label: "Überfällig",
     tone: "warning",
     explanation:
-      "Die Mail ist seit Tagen verzögert. Sie können sie noch einmal senden.",
+      "Die Mail ist seit Tagen verzögert. Du kannst sie noch einmal senden.",
   },
   // The mail arrived; the person reported it afterwards (#6999). It never
   // reads like a mail that did not arrive.
@@ -161,7 +161,7 @@ const OUTCOME_COPY: Record<MailOutcome, MailStatusCopy> = {
   send_failed: {
     label: "Fehlgeschlagen",
     tone: "red",
-    explanation: "Das Senden hat nicht geklappt. Bitte senden Sie neu.",
+    explanation: "Das Senden hat nicht geklappt. Bitte sende neu.",
   },
   unknown: {
     label: "Ergebnis unbekannt",
@@ -229,19 +229,19 @@ export function correctedAddressCopy(
 export function guardianAddressNextStep(mark: EmailAddressMark): string {
   switch (mark) {
     case "failed":
-      return "Stimmt die Adresse nicht, ändern Sie sie unter „Bearbeiten“. Stimmt sie, wählen Sie „Sperre aufheben“.";
+      return "Stimmt die Adresse nicht, ändere sie unter „Bearbeiten“. Stimmt sie, wähle „Sperre aufheben“.";
     case "complained":
-      return "Sie können diese Sperre nicht aufheben. Eine andere Adresse tragen Sie unter „Bearbeiten“ ein.";
+      return "Du kannst diese Sperre nicht aufheben. Eine andere Adresse trägst du unter „Bearbeiten“ ein.";
   }
 }
 
 /** Where a school corrects an address it sees outside the guardian's card. */
 export const CHECK_ADDRESS_AT_GUARDIAN =
-  "Korrigieren Sie die Adresse beim Kind unter „Erziehungsberechtigte“.";
+  "Korrigiere die Adresse beim Kind unter „Erziehungsberechtigte“.";
 
 /** Whoever sees a letter without the OGS's access to the guardian's card. */
 export const TELL_THE_OGS_ABOUT_THE_ADDRESS =
-  "Sagen Sie der OGS Bescheid. Dort lässt sich die Adresse korrigieren.";
+  "Sage der OGS Bescheid. Dort lässt sich die Adresse korrigieren.";
 
 /** What Delivery knows about the mail of an invitation (#5934, #5960). */
 export interface InvitationMail {
@@ -423,7 +423,7 @@ export function undeliveredMailsNote(
   }
   const complained = counts?.complained ?? 0;
   if (complained > 0) {
-    return `${complained === 1 ? "Eine Mail wurde" : `${complained} Mails wurden`} als unerwünscht gemeldet. Sprechen Sie die Person direkt an.`;
+    return `${complained === 1 ? "Eine Mail wurde" : `${complained} Mails wurden`} als unerwünscht gemeldet. Sprich die Person direkt an.`;
   }
   const late = counts?.delayed ?? 0;
   if (late > 0) {

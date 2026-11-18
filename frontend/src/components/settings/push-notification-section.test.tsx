@@ -99,7 +99,7 @@ describe("PushNotificationSection", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/moto informiert Sie über wichtige Neuigkeiten/),
+      screen.getByText(/moto informiert dich über wichtige Neuigkeiten/),
     ).toHaveClass("text-sm", "leading-6");
   });
 
@@ -125,12 +125,12 @@ describe("PushNotificationSection", () => {
     renderWithToast(<PushNotificationSection />);
     expect(
       await screen.findByText(
-        "Öffnen Sie moto in Safari, Chrome, Edge oder Firefox und versuchen Sie es dort erneut.",
+        "Öffne moto in Safari, Chrome, Edge oder Firefox und versuche es dort erneut.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText("moto als App geöffnet")).not.toBeInTheDocument();
     expect(
-      screen.queryByText("moto darf Sie benachrichtigen"),
+      screen.queryByText("moto darf dich benachrichtigen"),
     ).not.toBeInTheDocument();
   });
 
@@ -179,7 +179,7 @@ describe("PushNotificationSection", () => {
     // Seit #2831 dieselben nummerierten Schritte wie auf iPhone und iPad
     // statt eines Fließtextes.
     expect(
-      await screen.findByText(/Tippen Sie oben rechts im Browser/),
+      await screen.findByText(/Tippe oben rechts im Browser/),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Zum Startbildschirm hinzufügen/),
@@ -277,7 +277,7 @@ describe("PushNotificationSection", () => {
     stubNotificationPermission("denied");
     renderWithToast(<PushNotificationSection />);
     expect(
-      await screen.findByText(/Öffnen Sie die Einstellungen Ihres Geräts/),
+      await screen.findByText(/Öffne die Einstellungen deines Geräts/),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Status erneut prüfen" }),
@@ -341,7 +341,7 @@ describe("PushNotificationSection", () => {
     );
     expect(
       await screen.findByText(
-        "Die Benachrichtigungen konnten nicht eingeschaltet werden. Bitte versuchen Sie es erneut.",
+        "Die Benachrichtigungen konnten nicht eingeschaltet werden. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
   });
@@ -535,7 +535,7 @@ describe("PushNotificationSection", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Nein")).toBeInTheDocument();
     expect(
-      screen.getByText("moto darf Sie benachrichtigen"),
+      screen.getByText("moto darf dich benachrichtigen"),
     ).toBeInTheDocument();
     expect(screen.getByText("Ja")).toBeInTheDocument();
   });

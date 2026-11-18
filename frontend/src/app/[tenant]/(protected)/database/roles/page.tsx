@@ -340,8 +340,8 @@ function RolesPageContent() {
                 ? "Keine Rollen gefunden"
                 : "Keine Rollen vorhanden",
               description: searchTerm
-                ? "Versuchen Sie einen anderen Suchbegriff."
-                : "Legen Sie die erste Rolle an, um Rechte zu vergeben.",
+                ? "Versuche einen anderen Suchbegriff."
+                : "Lege die erste Rolle an, um Rechte zu vergeben.",
               icon: (
                 <MotoDuotoneIcon
                   icon={rolesConcept.icon}
@@ -372,7 +372,7 @@ function RolesPageContent() {
               title="Rolle löschen?"
               description={
                 <>
-                  Möchten Sie die Rolle{" "}
+                  Möchtest du die Rolle{" "}
                   <span className="font-medium">
                     {getRoleDisplayName(selectedRole.name)}
                   </span>{" "}
@@ -434,7 +434,7 @@ function RolesPageContent() {
                 ? "Bei 1 Rolle fehlt „Gilt als“"
                 : `Bei ${unclassifiedCount} Rollen fehlt „Gilt als“`
             }
-            message="Mitteilungen kommen dort vielleicht nicht an. Öffnen Sie die Rolle, tippen Sie auf „Bearbeiten“ und wählen Sie bei „Gilt als“ einen Eintrag."
+            message="Mitteilungen kommen dort vielleicht nicht an. Öffne die Rolle, tippe auf „Bearbeiten“ und wähle bei „Gilt als“ einen Eintrag."
           />
         </div>
       )}

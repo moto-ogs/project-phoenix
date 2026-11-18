@@ -295,13 +295,13 @@ describe("SelectionBulkInviteModal", () => {
     renderModal();
 
     expect(
-      await screen.findByText("Tragen Sie die E-Mail-Adresse beim Kind ein."),
+      await screen.findByText("Trage die E-Mail-Adresse beim Kind ein."),
     ).toBeVisible();
     expect(
-      screen.getByText("Prüfen Sie die E-Mail-Adresse beim Kind."),
+      screen.getByText("Prüfe die E-Mail-Adresse beim Kind."),
     ).toBeVisible();
     expect(
-      screen.getByText("Prüfen Sie die E-Mail-Adressen bei den Eltern."),
+      screen.getByText("Prüfe die E-Mail-Adressen bei den Eltern."),
     ).toBeVisible();
   });
 
@@ -334,9 +334,7 @@ describe("SelectionBulkInviteModal", () => {
         /\(Mia Brenner\): E-Mail konnte gerade nicht verschickt werden/,
       ),
     ).toBeVisible();
-    expect(
-      screen.getByText("Versuchen Sie es später noch einmal."),
-    ).toBeVisible();
+    expect(screen.getByText("Versuche es später noch einmal.")).toBeVisible();
   });
 
   it("reports a failed run in the dialog and keeps it open", async () => {
@@ -358,7 +356,7 @@ describe("SelectionBulkInviteModal", () => {
 
     expect(
       await screen.findByText(
-        "Die Einladung konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Einladung konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeVisible();
     expect(
@@ -382,7 +380,7 @@ describe("SelectionBulkInviteModal", () => {
 
     expect(
       await screen.findByText(
-        "Die Vorschau ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Vorschau ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));

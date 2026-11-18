@@ -21,9 +21,9 @@ export function manageStudentTopic(): HelpTopic {
       {
         title: "Die Kindakte öffnen",
         steps: [
-          "Öffnen Sie `Alle Kinder` und suchen Sie das Kind.",
-          "Öffnen Sie die Karte des Kindes.",
-          "Wählen Sie oben den passenden Reiter.",
+          "Öffne `Alle Kinder` und suche das Kind.",
+          "Öffne die Karte des Kindes.",
+          "Wähle oben den passenden Reiter.",
         ],
       },
       {
@@ -44,22 +44,22 @@ export function manageStudentTopic(): HelpTopic {
       {
         title: "Stammdaten ändern",
         steps: [
-          "Wählen Sie den Reiter `Stammdaten`.",
-          "Wählen Sie `Bearbeiten`.",
-          "Ändern Sie die benötigten Angaben.",
-          "Wählen Sie `Speichern`.",
+          "Wähle den Reiter `Stammdaten`.",
+          "Wähle `Bearbeiten`.",
+          "Änder die benötigten Angaben.",
+          "Wähle `Speichern`.",
         ],
       },
     ],
     result: "Geänderte Angaben gelten sofort für alle im Team.",
     notes: ["Wer eine Angabe geändert hat, steht im `Änderungsprotokoll`."],
     differences: [
-      "Sie sehen weniger Reiter? Dann haben Sie nur eingeschränkten Zugriff auf dieses Kind.",
+      "Du siehst weniger Reiter? Dann hast du nur eingeschränkten Zugriff auf dieses Kind.",
       "Der Reiter `Anmeldungen` erscheint nur, wenn die Anmeldung über moto läuft.",
       "`Aus moto` fehlt unter `Dokumente`? Den Bereich sehen nur Personen mit Zugriff auf `Mitteilungen`. Die Schule muss außerdem die Eltern-App nutzen.",
     ],
     troubleshootingDetails: [
-      "Fehlt `Bearbeiten`? Dann fehlen Ihnen die Schreibrechte für dieses Kind.",
+      "Fehlt `Bearbeiten`? Dann fehlen dir die Schreibrechte für dieses Kind.",
     ],
     related: [
       HELP_TOPICS.studentSearch,

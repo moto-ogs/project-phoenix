@@ -111,9 +111,7 @@ describe("MFAChallengeForm", () => {
     const once = screen.getByRole("button", { name: ONCE });
     expect(remember).toBeDisabled();
     expect(once).toBeDisabled();
-    expect(
-      screen.getByText("Geben Sie zuerst den Code ein."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Gib zuerst den Code ein.")).toBeInTheDocument();
     fireEvent.click(remember);
     fireEvent.click(once);
 
@@ -201,7 +199,7 @@ describe("MFAChallengeForm", () => {
   it("says on each answer for whom it is meant", () => {
     render(<MFAChallengeForm {...defaultProps} onSuccess={vi.fn()} />);
     expect(screen.getByRole("button", { name: REMEMBER })).toHaveTextContent(
-      "Nur für Ihr eigenes Gerät.",
+      "Nur für dein eigenes Gerät.",
     );
     expect(screen.getByRole("button", { name: ONCE })).toHaveTextContent(
       "Für Geräte, die mehrere Personen nutzen.",
@@ -222,11 +220,11 @@ describe("MFAChallengeForm", () => {
   });
 
   it.each([
-    ["tenant", "in Ihrem Profil"],
+    ["tenant", "in deinem Profil"],
     ["school", "in den Einstellungen"],
     ["traeger", "unter „Konto“"],
     ["caterer", "unter „Konto“"],
-    ["operator", "in Ihrem Profil"],
+    ["operator", "in deinem Profil"],
   ] as const)(
     "tells a %s account where the remembered device can be removed",
     async (scope, place) => {
@@ -240,7 +238,7 @@ describe("MFAChallengeForm", () => {
       // The line appears with the choice, once the code is complete.
       await enterCode("123456");
       expect(
-        screen.getByText(`Gemerkte Geräte entfernen Sie ${place}.`),
+        screen.getByText(`Gemerkte Geräte entfernst du ${place}.`),
       ).toBeInTheDocument();
     },
   );
@@ -363,7 +361,7 @@ describe("MFAChallengeForm", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "Die E-Mail-Adresse oder das Passwort stimmt nicht. Bitte prüfen Sie Ihre Eingabe.",
+        "Die E-Mail-Adresse oder das Passwort stimmt nicht. Bitte prüfe deine Eingabe.",
       );
     });
     expect(assign).not.toHaveBeenCalled();

@@ -53,7 +53,7 @@ describe("SettingsField for a module switch", () => {
     expect(getByText("Nur Lesen")).toBeInTheDocument();
     expect(
       getByText(
-        "Welche Module Ihre Schule hat, steht im Vertrag mit moto. Für eine Änderung wenden Sie sich an das moto-Team.",
+        "Welche Module deine Schule hat, steht im Vertrag mit moto. Für eine Änderung wende dich an das moto-Team.",
       ),
     ).toBeInTheDocument();
     expect(queryByText(/Frist/)).not.toBeInTheDocument();

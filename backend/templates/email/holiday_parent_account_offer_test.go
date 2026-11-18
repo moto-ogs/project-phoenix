@@ -29,8 +29,8 @@ func TestHolidayParentAccountOfferTemplate_Renders(t *testing.T) {
 		"LoginURL":     "https://eltern.example.org/login",
 	}))
 	body := out.String()
-	for _, want := range []string{"Ihr Elternkonto für die Ferienbetreuung", "Eva Muster", "Winterferien 2027", "Elternkonto einrichten",
-		"Der Link gilt 30 Tage.", "Sie haben schon ein Elternkonto?", "melden Sie sich einfach an", "Träger Bissendorf"} {
+	for _, want := range []string{"Dein Elternkonto für die Ferienbetreuung", "Eva Muster", "Winterferien 2027", "Elternkonto einrichten",
+		"Der Link gilt 30 Tage.", "Du hast schon ein Elternkonto?", "melde dich einfach an", "Träger Bissendorf"} {
 		assert.Contains(t, body, template.HTMLEscapeString(want))
 	}
 	assert.Contains(t, body, `href="https://eltern.example.org/ferienkonto/setup-token"`)
@@ -54,7 +54,7 @@ func TestHolidayParentAccountOfferTemplate_SignInForAnExistingAccount(t *testing
 		"LoginURL": "https://eltern.example.org/login",
 	}))
 	body := out.String()
-	for _, want := range []string{"Sie haben schon ein Elternkonto.", "Nach der Anmeldung sehen Sie Ihre Ferienanmeldung", "In der Eltern-App anmelden"} {
+	for _, want := range []string{"Du hast schon ein Elternkonto.", "Nach der Anmeldung siehst du deine Ferienanmeldung", "In der Eltern-App anmelden"} {
 		assert.Contains(t, body, template.HTMLEscapeString(want))
 	}
 	assert.Contains(t, body, `href="https://eltern.example.org/login"`)

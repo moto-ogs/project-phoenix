@@ -193,7 +193,7 @@ describe("PastBlocksSection", () => {
     });
     expect(
       screen.getByText(
-        "Aus Versehen beendet? Sie können ihn bis 14:30 Uhr wieder öffnen.",
+        "Aus Versehen beendet? Du kannst ihn bis 14:30 Uhr wieder öffnen.",
       ),
     ).toBeInTheDocument();
     // Only the block the backend announces carries the action.

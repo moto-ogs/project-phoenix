@@ -16,10 +16,10 @@ function validateDataRetentionDays(
   retentionDays: number | null | undefined,
 ): string | undefined {
   if (retentionDays === null || retentionDays === undefined) {
-    return "Bitte geben Sie eine Zahl von 1 bis 31 ein.";
+    return "Bitte gib eine Zahl von 1 bis 31 ein.";
   }
   if (retentionDays < 1 || retentionDays > 31) {
-    return "Bitte geben Sie eine Zahl von 1 bis 31 ein.";
+    return "Bitte gib eine Zahl von 1 bis 31 ein.";
   }
   return undefined;
 }
@@ -56,13 +56,13 @@ export function validateStudentForm(
   const errors: Record<string, string> = {};
 
   if (requiredFields.firstName && !formData.first_name?.trim()) {
-    errors.first_name = "Bitte geben Sie den Vornamen ein.";
+    errors.first_name = "Bitte gib den Vornamen ein.";
   }
   if (requiredFields.lastName && !formData.second_name?.trim()) {
-    errors.last_name = "Bitte geben Sie den Nachnamen ein.";
+    errors.last_name = "Bitte gib den Nachnamen ein.";
   }
   if (requiredFields.schoolClass && !formData.school_class?.trim()) {
-    errors.school_class = "Bitte geben Sie die Klasse ein.";
+    errors.school_class = "Bitte gib die Klasse ein.";
   }
 
   // A form that leaves the consent pair out writes none, so there is
@@ -90,7 +90,7 @@ export function validateStudentForm(
     const covered = new Set(options.companionLinkDays ?? []);
     if (accompaniedDays.some((day) => !covered.has(day))) {
       errors.departure_companion_note =
-        "Bitte geben Sie an, mit wem das Kind nach Hause geht.";
+        "Bitte gib an, mit wem das Kind nach Hause geht.";
     }
   }
 

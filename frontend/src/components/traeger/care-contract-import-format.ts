@@ -165,7 +165,7 @@ const INVALID_TEXT: Partial<Record<ContractImportField, string>> = {
 };
 
 const UNKNOWN_TEXT: Partial<Record<ContractImportField, string>> = {
-  school: "Diese Schule gehört nicht zu Ihrem Träger.",
+  school: "Diese Schule gehört nicht zu deinem Träger.",
   module: "Dieses Modul gibt es an der Schule nicht.",
 };
 
@@ -244,7 +244,7 @@ export function contractImportDebtorText(
     case "rows_differ":
       return "Debitorennummer: In der Datei stehen verschiedene Nummern für denselben Zahler. moto übernimmt keine.";
     case "invalid":
-      return "Debitorennummer passt nicht zu Ihrem Nummernformat.";
+      return "Debitorennummer passt nicht zu deinem Nummernformat.";
     default:
       return null;
   }

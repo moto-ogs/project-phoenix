@@ -160,11 +160,11 @@ function DatevActions({
   else if (nothingNew) describedBy = datevStateId(run);
   let blockedReason: string | undefined;
   if (!ready) {
-    blockedReason = "Tragen Sie zuerst die fehlenden DATEV-Werte ein.";
+    blockedReason = "Trage zuerst die fehlenden DATEV-Werte ein.";
   } else if (nothingNew) {
     blockedReason =
       state.fiscalYears.length > 0 && run.lastDatev
-        ? "Es gibt keine neue Buchung; eine verlorene Datei holen Sie über das Menü."
+        ? "Es gibt keine neue Buchung; eine verlorene Datei holst du über das Menü."
         : "Dieser Lauf hat keine Rechnung mit Betrag, also keine Buchung.";
   }
   return (
@@ -325,7 +325,7 @@ export function ExportRunsTable({
       emptyState={
         <EmptyState
           title="Noch kein ausgestellter Lauf."
-          description="Läufe stehen hier, sobald Sie Rechnungen ausgestellt haben."
+          description="Läufe stehen hier, sobald du Rechnungen ausgestellt hast."
         />
       }
     />

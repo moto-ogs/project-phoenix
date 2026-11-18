@@ -65,11 +65,11 @@ func contractLetter(record ContractRecord, head carecontract.Letterhead) Letter 
 	blocks := letterBlocks(filled.Blocks)
 	blocks = append(blocks,
 		LetterBlock{Heading: "Vertragsangaben", Text: "Das gilt für diesen Vertrag:", Facts: termFacts(version, head)},
-		LetterBlock{Heading: "Gebuchte Betreuung", Text: "An diesen Tagen ist Ihr Kind in der Betreuung:", Facts: ServiceFacts(version.Services)},
+		LetterBlock{Heading: "Gebuchte Betreuung", Text: "An diesen Tagen ist euer Kind in der Betreuung:", Facts: ServiceFacts(version.Services)},
 	)
 	if concluded := record.Concluded; concluded != nil && concluded.Method == carecontract.MethodWithApplication {
 		blocks = append(blocks, LetterBlock{Heading: "Vertragsschluss", Text: "Dieser Vertrag ist mit der Annahme der Anmeldung am " +
-			germanDate(calendar.DateFromTime(concluded.At)) + " geschlossen. Sie müssen ihn nicht unterschreiben."})
+			germanDate(calendar.DateFromTime(concluded.At)) + " geschlossen. Ihr müsst ihn nicht unterschreiben."})
 	}
 	if version.Terms.SpecialTermination {
 		// The date and notice period first, then the cases of the terms
@@ -78,9 +78,9 @@ func contractLetter(record ContractRecord, head carecontract.Letterhead) Letter 
 			".\n\n" + strings.TrimSpace(version.Terms.SpecialTerminationNote)})
 	}
 	if version.Terms.StatuteRequired {
-		text := "Mit diesem Vertrag erkennen Sie die „" + strings.TrimSpace(version.Terms.StatuteTitle) + "“ an."
+		text := "Mit diesem Vertrag erkennt ihr die „" + strings.TrimSpace(version.Terms.StatuteTitle) + "“ an."
 		if url := strings.TrimSpace(version.Terms.StatuteURL); url != "" {
-			text += " Sie finden sie hier: " + url
+			text += " Ihr findet sie hier: " + url
 		}
 		blocks = append(blocks, LetterBlock{Heading: "Satzung", Text: text})
 	}
@@ -322,11 +322,11 @@ func questionText(head carecontract.Letterhead) string {
 	case name == "" && len(ways) == 0:
 		return ""
 	case name == "":
-		return "Bei Fragen erreichen Sie uns unter " + strings.Join(ways, " oder ") + "."
+		return "Bei Fragen erreicht ihr uns unter " + strings.Join(ways, " oder ") + "."
 	case len(ways) == 0:
-		return "Bei Fragen hilft Ihnen " + name + "."
+		return "Bei Fragen hilft euch " + name + "."
 	}
-	return "Bei Fragen erreichen Sie " + name + " unter " + strings.Join(ways, " oder ") + "."
+	return "Bei Fragen erreicht ihr " + name + " unter " + strings.Join(ways, " oder ") + "."
 }
 
 func formatEuro(cents int64) string {

@@ -108,7 +108,7 @@ describe("TraegerAbsenceTypesPage", () => {
     });
     fireEvent.click(within(dialog).getByRole("button", { name: "Anlegen" }));
     expect(
-      await within(dialog).findByText("Bitte geben Sie einen Namen ein."),
+      await within(dialog).findByText("Bitte gib einen Namen ein."),
     ).toBeInTheDocument();
     expect(api.createTraegerAbsenceType).not.toHaveBeenCalled();
 

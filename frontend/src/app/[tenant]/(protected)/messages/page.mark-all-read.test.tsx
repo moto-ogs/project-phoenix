@@ -143,7 +143,7 @@ describe("Alle als gelesen markieren", () => {
 
     await waitFor(() =>
       expect(mockToastSuccess).toHaveBeenCalledWith(
-        "Alle Nachrichten sind für Sie als gelesen markiert.",
+        "Alle Nachrichten sind für dich als gelesen markiert.",
       ),
     );
     expect(mockMarkAllMessagesRead).toHaveBeenCalledTimes(1);
@@ -288,7 +288,7 @@ describe("Alle als gelesen markieren", () => {
     fireEvent.click(screen.getByRole("button", { name: /Wiederholen/ }));
     await waitFor(() =>
       expect(mockToastSuccess).toHaveBeenCalledWith(
-        "Alle Nachrichten sind für Sie als gelesen markiert.",
+        "Alle Nachrichten sind für dich als gelesen markiert.",
       ),
     );
     expect(mockMarkAllMessagesRead).toHaveBeenCalledTimes(2);

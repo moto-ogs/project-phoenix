@@ -216,10 +216,7 @@ export function CareCostShareModal({
     }
     if (!draft.checkedOn) fieldErrors.checked_on = "Bitte ein Datum wählen.";
     if (Object.keys(fieldErrors).length > 0 || !draft.kind) {
-      formErrors.invalid(
-        "Bitte prüfen Sie die markierten Felder.",
-        fieldErrors,
-      );
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fieldErrors);
       return;
     }
     const kind = draft.kind;
@@ -402,7 +399,7 @@ export function CareCostShareModal({
             required
             maxLength={120}
             placeholder={draft.kind ? REFERENCE_PLACEHOLDER[draft.kind] : ""}
-            hint="Nur Aktenzeichen oder Datum. Den Bescheid behalten Sie, moto speichert nichts daraus."
+            hint="Nur Aktenzeichen oder Datum. Den Bescheid behältst du, moto speichert nichts daraus."
             value={draft.reference}
             error={formErrors.fieldError("reference")}
             onChange={(event) => set({ reference: event.target.value })}

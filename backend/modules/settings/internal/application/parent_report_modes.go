@@ -41,7 +41,7 @@ func (s *settingsService) setParentReportMode(ctx context.Context, key, mode str
 		return fmt.Errorf("no tenant context")
 	}
 	if mode != "off" && mode != "immediate" && mode != "approval" {
-		return &config.InvalidValueError{Key: key, Reason: "Bitte wählen Sie eine gültige Meldeart."}
+		return &config.InvalidValueError{Key: key, Reason: "Bitte wähle eine gültige Meldeart."}
 	}
 	if s.runtime == nil {
 		return config.ErrRuntimeUnavailable

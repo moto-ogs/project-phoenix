@@ -169,7 +169,7 @@ describe("StudentParentRecordsCard", () => {
 
     expect(
       await screen.findByText(
-        "Für den Nachweis fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
+        "Für den Nachweis fehlt dir die Berechtigung. Bitte frage die Schule.",
       ),
     ).toBeInTheDocument();
   });

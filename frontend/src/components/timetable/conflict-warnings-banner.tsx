@@ -130,7 +130,7 @@ function ConflictRow({
           size="compact"
           onClick={() => onUnhide(entry)}
           aria-label={`Konflikt für ${entry.personName} wieder anzeigen`}
-          tooltip="Zeigt Ihnen den Konflikt wieder als offen an."
+          tooltip="Zeigt dir den Konflikt wieder als offen an."
         >
           <Eye className="h-3.5 w-3.5" aria-hidden />
           Wieder anzeigen
@@ -142,7 +142,7 @@ function ConflictRow({
           size="compact"
           onClick={() => onHide(entry)}
           aria-label={`Konflikt für ${entry.personName} ausblenden`}
-          tooltip="Blendet den Konflikt nur für Sie aus, bis er sich ändert."
+          tooltip="Blendet den Konflikt nur für dich aus, bis er sich ändert."
         >
           <EyeOff className="h-3.5 w-3.5" aria-hidden />
           Ausblenden
@@ -241,7 +241,7 @@ export function ConflictWarningsBanner({
               size="compact"
               onClick={onHideAll}
               aria-label="Alle Konflikte ausblenden"
-              tooltip="Blendet alle offenen Konflikte nur für Sie aus."
+              tooltip="Blendet alle offenen Konflikte nur für dich aus."
             >
               <EyeOff className="h-3.5 w-3.5" aria-hidden />
               Alle ausblenden

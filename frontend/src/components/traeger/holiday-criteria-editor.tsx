@@ -62,7 +62,7 @@ function ParentPreview({ draft }: Readonly<{ draft: CriterionDraft }>) {
     <InsetPanel dashed padding="sm">
       <SectionLabel as="p">So sehen Eltern die Frage</SectionLabel>
       <p className="mt-1 text-sm font-medium text-gray-900">
-        {draft.question.trim() || "Hier steht Ihre Frage."}
+        {draft.question.trim() || "Hier steht deine Frage."}
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <StatusBadge tone="outline" size="xs" label="Ja" />
@@ -196,7 +196,7 @@ function CriterionRow({
           controlSize="compact"
           name={`criteria.${index}.name`}
           label="Name"
-          hint="Sehen nur Sie und Ihr Büro."
+          hint="Sehen nur du und dein Büro."
           required
           maxLength={MAX_CRITERION_NAME}
           value={draft.name}
@@ -279,7 +279,7 @@ export function HolidayCriteriaEditor({
   const save = async () => {
     const errors = validateCriteria(drafts);
     if (Object.keys(errors).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", errors);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", errors);
       return;
     }
     formErrors.clear();
@@ -333,13 +333,13 @@ export function HolidayCriteriaEditor({
           <FormErrorAlert message={formErrors.error} />
           <Alert
             type="info"
-            message="Fragen Sie nur, was Sie für die Vergabe wirklich brauchen. Fragen Sie nicht nach Gesundheit oder Förderbedarf. Eltern antworten mit Ja oder Nein. Das Büro kann nach einem Nachweis fragen."
+            message="Frage nur, was du für die Vergabe wirklich brauchst. Frage nicht nach Gesundheit oder Förderbedarf. Eltern antworten mit Ja oder Nein. Das Büro kann nach einem Nachweis fragen."
           />
           {drafts.length === 0 ? (
             <EmptyState
               variant="dashed"
               title="Noch kein Kriterium"
-              description="Wählen Sie unten eine Vorlage oder legen Sie ein eigenes Kriterium an."
+              description="Wähle unten eine Vorlage oder lege ein eigenes Kriterium an."
             />
           ) : (
             <ol className="space-y-3" aria-label="Kriterien nach Priorität">
@@ -403,7 +403,7 @@ export function HolidayCriteriaEditor({
                   size="compact"
                   className="gap-1.5"
                   disabled={saving}
-                  tooltip="Fügt ein leeres Kriterium an, das Sie selbst benennen."
+                  tooltip="Fügt ein leeres Kriterium an, das du selbst benennst."
                   onClick={() =>
                     setDrafts((current) => [...current, emptyCriterion()])
                   }

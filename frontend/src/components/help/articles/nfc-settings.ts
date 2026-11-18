@@ -15,8 +15,8 @@ export function nfcSettingsTopic(presenceMode: HelpPresenceMode): HelpTopic {
     title: "Einstellen, was das Tablet anzeigt",
     question: "Wo stelle ich die NFC-Tablets ein?",
     summary: tracksRooms
-      ? "Sie setzen die Geräte-PIN und legen fest, wohin Kinder auschecken dürfen."
-      : "Sie setzen die PIN, mit der sich Ihr Team am Tablet anmeldet.",
+      ? "Du setzt die Geräte-PIN und legst fest, wohin Kinder auschecken dürfen."
+      : "Du setzt die PIN, mit der sich dein Team am Tablet anmeldet.",
     group: "nfc",
     audience: "lead",
     icon: "SlidersHorizontal",
@@ -25,12 +25,12 @@ export function nfcSettingsTopic(presenceMode: HelpPresenceMode): HelpTopic {
       {
         title: "Die Geräte-PIN setzen",
         description:
-          "Ohne Geräte-PIN kann sich Ihr Team nicht am Tablet anmelden. Legen Sie die PIN vor dem ersten Betreuungstag fest.",
+          "Ohne Geräte-PIN kann sich dein Team nicht am Tablet anmelden. Lege die PIN vor dem ersten Betreuungstag fest.",
         steps: [
-          "Wählen Sie unten in der Seitenleiste `Einstellungen`.",
-          "Wählen Sie den Bereich `Geräte`.",
-          "Tragen Sie unter `Geräte-PIN` eine vierstellige Zahl ein. Leichte PINs wie 1234, 1111 oder 1212 nimmt moto nicht an.",
-          "Geben Sie die neue PIN an Ihr Team weiter.",
+          "Wähle unten in der Seitenleiste `Einstellungen`.",
+          "Wähle den Bereich `Geräte`.",
+          "Trage unter `Geräte-PIN` eine vierstellige Zahl ein. Leichte PINs wie 1234, 1111 oder 1212 nimmt moto nicht an.",
+          "Gib die neue PIN an dein Team weiter.",
         ],
       },
       ...(tracksRooms
@@ -40,9 +40,9 @@ export function nfcSettingsTopic(presenceMode: HelpPresenceMode): HelpTopic {
               description:
                 "Diese Schalter bestimmen, welche Knöpfe ein Kind am Tablet sieht, wenn es sein Armband ein zweites Mal auflegt.",
               steps: [
-                "Bleiben Sie im Bereich `Geräte`.",
-                "Schalten Sie `„Raumwechsel“ am Tablet anbieten` ein, wenn Kinder den Raum wechseln dürfen.",
-                "Schalten Sie `„Schulhof“ am Tablet anbieten` und `„Toilette“ am Tablet anbieten` nach Bedarf ein.",
+                "Bleibe im Bereich `Geräte`.",
+                "Schalte `„Raumwechsel“ am Tablet anbieten` ein, wenn Kinder den Raum wechseln dürfen.",
+                "Schalte `„Schulhof“ am Tablet anbieten` und `„Toilette“ am Tablet anbieten` nach Bedarf ein.",
               ],
               ordered: false,
             },
@@ -51,10 +51,10 @@ export function nfcSettingsTopic(presenceMode: HelpPresenceMode): HelpTopic {
               description:
                 "Alles dazu steht im Bereich `Geräte` unter `„Nach Hause“ am Tablet`.",
               steps: [
-                "Tragen Sie bei `„Nach Hause“ ab Uhrzeit` eine Uhrzeit ein. Bei `Jederzeit` geht `nach Hause` den ganzen Tag.",
-                "Soll die Abholzeit jedes Kindes zählen? Dann schalten Sie `Abholzeit jedes Kindes beachten` ein.",
-                "Tragen Sie bei `„Nach Hause“ vor der Abholzeit (Minuten)` ein, wie früh das Kind gehen darf. Bei 15 Minuten und Abholzeit 16:00 geht es ab 15:45.",
-                "Schalten Sie `„Nach Hause“ in jedem Raum anzeigen` aus, wenn Kinder nur aus dem Gruppenraum und vom Schulhof nach Hause dürfen.",
+                "Trage bei `„Nach Hause“ ab Uhrzeit` eine Uhrzeit ein. Bei `Jederzeit` geht `nach Hause` den ganzen Tag.",
+                "Soll die Abholzeit jedes Kindes zählen? Dann schalte `Abholzeit jedes Kindes beachten` ein.",
+                "Trage bei `„Nach Hause“ vor der Abholzeit (Minuten)` ein, wie früh das Kind gehen darf. Bei 15 Minuten und Abholzeit 16:00 geht es ab 15:45.",
+                "Schalte `„Nach Hause“ in jedem Raum anzeigen` aus, wenn Kinder nur aus dem Gruppenraum und vom Schulhof nach Hause dürfen.",
               ],
             },
           ]
@@ -63,7 +63,7 @@ export function nfcSettingsTopic(presenceMode: HelpPresenceMode): HelpTopic {
     result:
       "moto speichert jede Änderung sofort. Das Tablet übernimmt sie beim nächsten Start.",
     notes: [
-      "Finden Sie eine Einstellung nicht? Nutzen Sie oben `Einstellung suchen`.",
+      "Findest du eine Einstellung nicht? Nutze oben `Einstellung suchen`.",
       ...(tracksRooms
         ? [
             "`Schulhof` und `Toilette` legen jeweils einen passenden Raum mit an.",
@@ -76,16 +76,16 @@ export function nfcSettingsTopic(presenceMode: HelpPresenceMode): HelpTopic {
       // einstellen kann: das Tablet fragt kein Ziel ab.
       ...(presenceMode === "binary"
         ? [
-            "Ihre OGS hält nur fest, ob ein Kind da ist. Dann wirkt hier nur die `Geräte-PIN`.",
-            "Die Knöpfe zum Auschecken und die Einstellungen zu `nach Hause` ändern bei Ihnen nichts.",
+            "Deine OGS hält nur fest, ob ein Kind da ist. Dann wirkt hier nur die `Geräte-PIN`.",
+            "Die Knöpfe zum Auschecken und die Einstellungen zu `nach Hause` ändern bei dir nichts.",
           ]
         : []),
-      "Arbeitet Ihre OGS ohne NFC, gibt es den Bereich `Geräte` in den `Einstellungen` nicht.",
+      "Arbeitet deine OGS ohne NFC, gibt es den Bereich `Geräte` in den `Einstellungen` nicht.",
       "Die `Geräte-PIN` darf nur ändern, wer die OGS verwaltet.",
     ],
     troubleshootingDetails: [
-      "Die neue PIN klappt am Tablet nicht? Starten Sie das Tablet neu.",
-      "Sie finden den Bereich `Geräte` nicht? Dann arbeitet Ihre OGS ohne NFC.",
+      "Die neue PIN klappt am Tablet nicht? Starte das Tablet neu.",
+      "Du findest den Bereich `Geräte` nicht? Dann arbeitet deine OGS ohne NFC.",
     ],
     related: [
       HELP_TOPICS.nfcCheckIn,

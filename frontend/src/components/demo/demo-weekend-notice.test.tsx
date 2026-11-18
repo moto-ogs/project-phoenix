@@ -82,7 +82,7 @@ describe("DemoWeekendNotice", () => {
 
     expect(
       await screen.findByText(
-        "Deshalb ist Ihr Kind heute in der OGS.",
+        "Deshalb ist dein Kind heute in der OGS.",
         {},
         { timeout: 4000 },
       ),

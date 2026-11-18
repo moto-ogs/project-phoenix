@@ -122,7 +122,7 @@ export const Unread: Story = {
           overline="Für Aida Amini"
           meta="06.11.2026, 08:00"
           title="OGS-Team der OGS Sonnenhof"
-          subtitle="Sie: Krankmeldung: 09.11."
+          subtitle="Du: Krankmeldung: 09.11."
         />
       </li>
     </FramedList>

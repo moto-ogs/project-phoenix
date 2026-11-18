@@ -170,7 +170,7 @@ describe("parent start cache isolation", () => {
     // Anker: die neu bestätigte leere Kinderliste ersetzt die entzogene Karte.
     expect(
       await screen.findByText(
-        "Mit Ihrem Konto ist noch kein Kind verknüpft. Die OGS Ihrer Schule kann das einrichten.",
+        "Mit deinem Konto ist noch kein Kind verknüpft. Die OGS deiner Schule kann das einrichten.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText("Kind A Test")).not.toBeInTheDocument();
@@ -208,7 +208,7 @@ describe("parent start cache isolation", () => {
     // Anker: die neue Kinderliste bestätigt, dass diese Beziehung fehlt.
     expect(
       await screen.findByText(
-        "Mit Ihrem Konto ist noch kein Kind verknüpft. Die OGS Ihrer Schule kann das einrichten.",
+        "Mit deinem Konto ist noch kein Kind verknüpft. Die OGS deiner Schule kann das einrichten.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText("Kind A Test")).not.toBeInTheDocument();
@@ -229,7 +229,7 @@ describe("parent start cache isolation", () => {
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(
       commits.some((text) =>
-        text.includes("Mit Ihrem Konto ist noch kein Kind verknüpft"),
+        text.includes("Mit deinem Konto ist noch kein Kind verknüpft"),
       ),
     ).toBe(false);
   });

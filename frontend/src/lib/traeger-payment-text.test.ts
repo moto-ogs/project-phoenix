@@ -51,10 +51,10 @@ describe("paymentTextPreview", () => {
 
   it("shows the built-in sentence for an empty text, with the debtor number when the Träger asks for it", () => {
     expect(paymentTextPreview("  ", false)).toBe(
-      "Bitte überweisen Sie 124,00 € bis zum 15.12.2026 auf das Konto unten. Geben Sie als Verwendungszweck die Rechnungsnummer FE-2026-0007 an.",
+      "Bitte überweist 124,00 € bis zum 15.12.2026 auf das Konto unten. Gebt als Verwendungszweck die Rechnungsnummer FE-2026-0007 an.",
     );
     expect(paymentTextPreview("", true)).toBe(
-      "Bitte überweisen Sie 124,00 € bis zum 15.12.2026 auf das Konto unten. Geben Sie als Verwendungszweck Ihre Debitorennummer 10 4711 an.",
+      "Bitte überweist 124,00 € bis zum 15.12.2026 auf das Konto unten. Gebt als Verwendungszweck eure Debitorennummer 10 4711 an.",
     );
   });
 });

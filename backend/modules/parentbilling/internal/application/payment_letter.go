@@ -65,12 +65,12 @@ func paymentFacts(payment *parentbilling.InvoicePayment, letters calendar.Date) 
 // identifier and the mandate reference.
 func directDebitText(amountCents int64, due calendar.Date, reference string, mandate *parentbilling.InvoiceMandate) string {
 	if mandate == nil {
-		return fmt.Sprintf("Wir buchen %s am %s von Ihrem Konto ab. Verwendungszweck: %s. Sie müssen nichts überweisen.",
+		return fmt.Sprintf("Wir buchen %s am %s von eurem Konto ab. Verwendungszweck: %s. Ihr müsst nichts überweisen.",
 			formatEuro(amountCents), germanDate(due), reference)
 	}
-	return fmt.Sprintf("Wir buchen %s am %s per SEPA-Lastschrift von Ihrem Konto %s ab. "+
+	return fmt.Sprintf("Wir buchen %s am %s per SEPA-Lastschrift von eurem Konto %s ab. "+
 		"Gläubiger-ID: %s. Mandatsreferenz: %s. Verwendungszweck: %s. "+
-		"Sie müssen nichts überweisen. Bitte achten Sie darauf, dass das Konto an diesem Tag gedeckt ist.",
+		"Ihr müsst nichts überweisen. Bitte achtet darauf, dass das Konto an diesem Tag gedeckt ist.",
 		formatEuro(amountCents), germanDate(due), mandate.IBANMasked, mandate.CreditorID, mandate.Reference, reference)
 }
 
@@ -106,5 +106,5 @@ func billingSalutation(kind, firstName, lastName string) string {
 	if kind == parentbilling.RecipientPayer {
 		return "Guten Tag " + fullName(firstName, lastName) + ","
 	}
-	return "Sehr geehrte Familie " + strings.TrimSpace(lastName) + ","
+	return "Liebe Familie " + strings.TrimSpace(lastName) + ","
 }

@@ -93,7 +93,7 @@ export function guardianNoticeBlockedReason(
 ): string {
   return draft === null && reach === null
     ? "moto prüft noch, welche Familien die Nachricht erreicht."
-    : "Geben Sie zuerst Betreff und Text an die Eltern ein.";
+    : "Gib zuerst Betreff und Text an die Eltern ein.";
 }
 
 function familiesLabel(count: number): string {
@@ -184,7 +184,7 @@ export function GuardianNoticeFields({
       <div className="space-y-1">
         <LoadErrorAlert error={loadError} />
         <p className="text-xs text-gray-500">
-          Sie können trotzdem absagen. Die Eltern bekommen dann keine Nachricht.
+          Du kannst trotzdem absagen. Die Eltern bekommen dann keine Nachricht.
         </p>
       </div>
     );

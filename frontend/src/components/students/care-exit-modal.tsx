@@ -152,10 +152,10 @@ export function CareExitModal({
     Boolean(reason) &&
     (!noteRequired || note.trim().length > 0);
   const detailsMissingReason = !lastCareDay
-    ? "Wählen Sie zuerst den letzten Betreuungstag."
+    ? "Wähle zuerst den letzten Betreuungstag."
     : !reason
-      ? "Wählen Sie zuerst einen Grund."
-      : "Schreiben Sie zuerst eine kurze Erklärung zum Grund.";
+      ? "Wähle zuerst einen Grund."
+      : "Schreibe zuerst eine kurze Erklärung zum Grund.";
 
   // Lädt die Vorschau neu. Eine vorhandene Fehlermeldung wird NICHT gelöscht:
   // nach einer abgelehnten Bestätigung ist genau diese Meldung der Grund,
@@ -317,7 +317,7 @@ export function CareExitModal({
             !preview?.blocked
               ? undefined
               : onExcludeBlocked
-                ? "Nehmen Sie zuerst die genannten Kinder aus der Auswahl."
+                ? "Nimm zuerst die genannten Kinder aus der Auswahl."
                 : "Hier geht es gerade nicht, den Grund nennt die Liste oben."
           }
           onClick={() => void handleConfirm()}
@@ -442,8 +442,7 @@ function CareExitPreviewList({
             Die Betreuung wurde nicht beendet
           </p>
           <p className="mt-1 text-sm text-gray-600">
-            Bei diesen Kindern geht es nicht. Bitte nehmen Sie sie aus der
-            Auswahl.
+            Bei diesen Kindern geht es nicht. Bitte nimm sie aus der Auswahl.
           </p>
           <ul className="mt-3 space-y-2">
             {blocked.map((student) => (

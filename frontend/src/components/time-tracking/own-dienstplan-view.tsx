@@ -83,9 +83,9 @@ export function OwnDienstplanView() {
         testId="own-dienstplan-page"
         empty={{
           icon: STAFF_PLAN_ICON,
-          title: "Sie haben keinen Zugriff auf einen eigenen Dienstplan.",
+          title: "Du hast keinen Zugriff auf einen eigenen Dienstplan.",
           description:
-            "Fragen Sie Ihre Leitung, wenn Sie Ihre Schichten hier sehen möchten.",
+            "Frage deine Leitung, wenn du deine Schichten hier sehen möchtest.",
           action: (
             <ButtonLink
               href={tenantPath("/home")}
@@ -172,7 +172,7 @@ function OwnDienstplanContent() {
   ]);
   const shiftsLoadError = useSwrLoadError(
     noOwnStaff ? undefined : shiftsError,
-    "die Liste Ihrer Schichten",
+    "die Liste deiner Schichten",
     () => mutateShifts(),
   );
   const projectionLoadError = useSwrLoadError(
@@ -304,7 +304,7 @@ function OwnDienstplanContent() {
                     variant="primary"
                     size="md"
                     onClick={() => updateParams({ d: nextShiftDate })}
-                    tooltip="Springt zur Woche mit Ihrer nächsten Schicht."
+                    tooltip="Springt zur Woche mit deiner nächsten Schicht."
                   >
                     Zur nächsten Schicht
                   </Button>
@@ -371,13 +371,13 @@ function emptyWeekDescription(
   if (nextShiftDate !== null) {
     // Geschützte Leerzeichen: das Datum bricht nicht mitten in der Zeile um.
     const date = formatDate(nextShiftDate, true).replaceAll(" ", "\u00A0");
-    return `Ihre nächste Schicht nach dieser Woche ist am ${date}.`;
+    return `Deine nächste Schicht nach dieser Woche ist am ${date}.`;
   }
   if (aheadShifts?.length) {
-    return `In den ${LOOKAHEAD_WEEKS} Wochen danach sind nur ausgefallene Schichten eingetragen. Ihre Schichten plant die Leitung. Fragen Sie dort nach, wenn Sie eine Schicht erwarten.`;
+    return `In den ${LOOKAHEAD_WEEKS} Wochen danach sind nur ausgefallene Schichten eingetragen. Deine Schichten plant die Leitung. Frage dort nach, wenn du eine Schicht erwartest.`;
   }
   if (aheadShifts !== undefined) {
-    return `Auch in den ${LOOKAHEAD_WEEKS} Wochen danach ist keine Schicht eingetragen. Ihre Schichten plant die Leitung. Fragen Sie dort nach, wenn Sie eine Schicht erwarten.`;
+    return `Auch in den ${LOOKAHEAD_WEEKS} Wochen danach ist keine Schicht eingetragen. Deine Schichten plant die Leitung. Frage dort nach, wenn du eine Schicht erwartest.`;
   }
-  return "Ihre Schichten plant die Leitung im Dienstplan. Sobald welche eingetragen sind, sehen Sie sie hier.";
+  return "Deine Schichten plant die Leitung im Dienstplan. Sobald welche eingetragen sind, siehst du sie hier.";
 }

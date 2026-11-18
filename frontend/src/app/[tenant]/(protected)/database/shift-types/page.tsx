@@ -293,7 +293,7 @@ function ShiftTypesPageContent() {
         "Dienstarten benennen die Aufgabe eines geplanten Dienstes, zum Beispiel Betreuung, Vorbereitung oder Pause.",
       searchPlaceholder: "Dienstart suchen…",
       emptyDescription:
-        "Legen Sie eine Dienstart an oder fügen Sie die Beispiele hinzu, damit der Dienstplan Dienste benennen kann.",
+        "Lege eine Dienstart an oder füge die Beispiele hinzu, damit der Dienstplan Dienste benennen kann.",
       preserveDraftOnSectionsChange: true,
       stats: (types) => {
         const inactive = types.filter((type) => !type.isActive).length;

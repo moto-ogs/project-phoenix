@@ -10,23 +10,23 @@
     <p>Guten Tag,</p>
     {{end}}
     {{if .SchoolName}}
-    <p>schön, dass Sie dabei sind. <strong>{{.SchoolName}}</strong> nutzt moto für die Betreuung Ihres Kindes.</p>
+    <p>schön, dass du dabei bist. <strong>{{.SchoolName}}</strong> nutzt moto für die Betreuung deines Kindes.</p>
     {{else}}
-    <p>schön, dass Sie dabei sind. Ihre Schule nutzt moto für die Betreuung Ihres Kindes.</p>
+    <p>schön, dass du dabei bist. Deine Schule nutzt moto für die Betreuung deines Kindes.</p>
     {{end}}
-    <p>Ihren Zugang zum Eltern-Portal bekommen Sie in einer eigenen E-Mail. In der Hilfe steht Schritt für Schritt, wie es weitergeht.</p>
+    <p>Deinen Zugang zum Eltern-Portal bekommst du in einer eigenen E-Mail. In der Hilfe steht Schritt für Schritt, wie es weitergeht.</p>
 
     <div class="button-wrapper" style="text-align: center;">
         <a class="button" href="{{.HelpURL}}">Zur Hilfe</a>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:</p>
+    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopiere bitte diesen Link:</p>
     <div class="link-box">
         <a href="{{.HelpURL}}">{{.HelpURL}}</a>
     </div>
 
     {{if .ParentInfoURL}}
-    <p style="margin-top: 24px;">Die Elterninfo erklärt kurz, was Sie mit moto machen können.</p>
+    <p style="margin-top: 24px;">Die Elterninfo erklärt kurz, was du mit moto machen kannst.</p>
     <p><a href="{{.ParentInfoURL}}">Elterninfo öffnen (PDF)</a></p>
     {{end}}
 </div>

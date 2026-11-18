@@ -242,22 +242,22 @@ export function AbsenceRebookModal({
   const blockedReason = saving
     ? undefined
     : !selected
-      ? "Wählen Sie zuerst eine neue Art aus."
+      ? "Wähle zuerst eine neue Art aus."
       : loading
         ? "moto rechnet die Folgen der Änderung noch aus."
         : previewError
-          ? "Laden Sie zuerst die Vorschau oben neu."
+          ? "Lade zuerst die Vorschau oben neu."
           : exceeded
-            ? "Ändern Sie zuerst den Anspruch, die Tage reichen nicht."
+            ? "Ändere zuerst den Anspruch, die Tage reichen nicht."
             : undefined;
   // Warum „Art ändern“ gesperrt ist: steht im Fehlerfeld oben im Formular.
   const allowanceBlocker =
     [
       preview?.allowanceExceeded && selected
-        ? `Nicht genug Tage: ${selected.label} reicht für diese Einträge nicht. Erhöhen Sie zuerst den Anspruch oder wählen Sie weniger Einträge.`
+        ? `Nicht genug Tage: ${selected.label} reicht für diese Einträge nicht. Erhöhe zuerst den Anspruch oder wähle weniger Einträge.`
         : null,
       preview?.vacationExceeded
-        ? "Nicht genug Urlaub: Der Resturlaub reicht für diese Einträge nicht. Erhöhen Sie zuerst den Urlaubsanspruch."
+        ? "Nicht genug Urlaub: Der Resturlaub reicht für diese Einträge nicht. Erhöhe zuerst den Urlaubsanspruch."
         : null,
     ]
       .filter(Boolean)
@@ -266,7 +266,7 @@ export function AbsenceRebookModal({
   const save = async () => {
     if (disabled || !selected) return;
     if (reason.trim() === "") {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", {
+      formErrors.invalid("Bitte prüfe die markierten Felder.", {
         reason: "Bitte kurz sagen, warum sich die Art ändert.",
       });
       return;

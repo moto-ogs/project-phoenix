@@ -13,7 +13,7 @@ export function settingsGuideTopic(): HelpTopic {
     id: HELP_TOPICS.settingsGuide,
     title: "Die wichtigsten Einstellungen im Überblick",
     question: "Welche Einstellungen gibt es, und was bewirken sie?",
-    summary: "Was Sie in welchem Bereich der Einstellungen festlegen.",
+    summary: "Was du in welchem Bereich der Einstellungen festlegen.",
     group: "konfiguration",
     audience: "lead",
     icon: "SlidersHorizontal",
@@ -21,14 +21,14 @@ export function settingsGuideTopic(): HelpTopic {
     instructionGroups: [
       {
         title: "Betrieb",
-        description: "Wie Ihr Team im Alltag arbeitet.",
+        description: "Wie dein Team im Alltag arbeitet.",
         ordered: false,
         steps: [
           "`Arbeit mit festen Gruppen`: Ob Kinder festen Gruppen angehören oder alle mit allen Kindern arbeiten.",
           "`Welche Gruppen und Blöcke sieht das Team?`: Was das Team im Überblick sieht. Was das Team bearbeiten darf, ändert das nicht.",
           "`Wo darf das Team Kinder an- und abmelden?`: Nur bei den eigenen Gruppen und Blöcken oder überall.",
           "`Wer darf Kinder krank oder entschuldigt melden?`: Nur OGS-Admins oder das ganze Team.",
-          "`Übliche Ankunftszeit` und `Übliche Abholzeit`: Diese Zeiten tragen Sie im Wochenplan eines Kindes mit einem Klick ein.",
+          "`Übliche Ankunftszeit` und `Übliche Abholzeit`: Diese Zeiten trägst du im Wochenplan eines Kindes mit einem Klick ein.",
           "`Betreuungsplan nutzen`: Zeigt den Betreuungsplan im Menü.",
           "`Benachrichtigungen senden`: Hinweise in moto und auf dem Handy. Was ankommt, wählt jede Person selbst.",
           "`Team-Chat für Mitarbeitende`: Das Team schreibt sich Nachrichten. Eltern sehen davon nichts.",
@@ -59,39 +59,39 @@ export function settingsGuideTopic(): HelpTopic {
         steps: [
           "`Anstehende Abholung`: Erinnert, wenn die Abholzeit eines Kindes näher rückt.",
           "`Überfällige Abholung`: Erinnert, wenn ein Kind nach seiner Abholzeit noch da ist.",
-          "`AG dauert länger`: Erinnert, wenn eine gestartete Aktivität nach ihrem Ende noch läuft. Sie sehen den Raum und bei wie vielen Kindern die Abholzeit erreicht ist. Bei `Nachlauf in Minuten` legen Sie fest, wie lange moto wartet. Beendet moto Termine automatisch, wählen Sie dort weniger Minuten als den Puffer.",
+          "`AG dauert länger`: Erinnert, wenn eine gestartete Aktivität nach ihrem Ende noch läuft. Du siehst den Raum und bei wie vielen Kindern die Abholzeit erreicht ist. Bei `Nachlauf in Minuten` legst du fest, wie lange moto wartet. Beendet moto Termine automatisch, wähle dort weniger Minuten als den Puffer.",
           "Die Erinnerung verschwindet, sobald jemand die Aktivität beendet.",
-          "`Terminerinnerung für Eltern`: Eltern bekommen vor einem Termin eine E-Mail. Das gilt nur, wenn Sie beim Anlegen `Eltern per E-Mail benachrichtigen` wählen.",
+          "`Terminerinnerung für Eltern`: Eltern bekommen vor einem Termin eine E-Mail. Das gilt nur, wenn du beim Anlegen `Eltern per E-Mail benachrichtigen` wählst.",
         ],
       },
       {
         title: "Geräte",
-        description: "Nur wenn Ihre OGS NFC-Tablets nutzt.",
+        description: "Nur wenn deine OGS NFC-Tablets nutzt.",
         ordered: false,
         steps: [
-          "`Geräte-PIN`: Mit dieser PIN meldet sich Ihr Team am Tablet an.",
+          "`Geräte-PIN`: Mit dieser PIN meldet sich dein Team am Tablet an.",
           "`„Nach Hause“ ab Uhrzeit`: Ab dieser Uhrzeit können Kinder am Tablet „Nach Hause“ wählen.",
           "`„Toilette“ am Tablet anbieten`: Kinder können beim Auschecken „Toilette“ wählen. Für „Schulhof“ und „Raumwechsel“ gibt es eigene Schalter.",
         ],
       },
       {
         title: "Module",
-        description: "Welche Zusatzmodule Ihre OGS gebucht hat.",
+        description: "Welche Zusatzmodule deine OGS gebucht hat.",
         ordered: false,
         steps: [
-          "`Gebuchte Module`: Zeigt die Zusatzmodule Ihrer OGS.",
-          "Die Schalter sind nur zur Information. Sie können sie nicht ändern.",
-          "Die gebuchten Module stehen im Vertrag mit moto. Wenn Sie etwas ändern möchten, wenden Sie sich an das moto-Team.",
+          "`Gebuchte Module`: Zeigt die Zusatzmodule deiner OGS.",
+          "Die Schalter sind nur zur Information. Du kannst sie nicht ändern.",
+          "Die gebuchten Module stehen im Vertrag mit moto. Wenn du etwas ändern möchtest, wende dich an das moto-Team.",
           "Mehr dazu steht in der Anleitung „Welche Module hat meine Schule?“.",
         ],
       },
       {
         title: "Anmeldung",
-        description: "Wie Eltern ihr Kind bei Ihnen anmelden.",
+        description: "Wie Eltern ihr Kind bei dir anmelden.",
         ordered: false,
         steps: [
           "`Online-Anmeldung`: Eltern melden ihr Kind über ein Formular im Internet an. Einschalten lässt sie sich erst mit einer Datenschutzinformation unter `Rechtstexte`.",
-          "`Name der Betreuung in Texten für Eltern`: So heißt Ihre Betreuung in den festen Texten der Anmeldung, der Eltern-App und in den E-Mails dazu. Wählen Sie `OGS`, `GTS` oder `Eigener Name`. Ihre eigenen Texte im Formular ändern sich nicht.",
+          "`Name der Betreuung in Texten für Eltern`: So heißt deine Betreuung in den festen Texten der Anmeldung, der Eltern-App und in den E-Mails dazu. Wähle `OGS`, `GTS` oder `Eigener Name`. Deine eigenen Texte im Formular ändern sich nicht.",
           "`Empfänger für neue Anmeldungen`: Diese Adressen bekommen bei jeder neuen Anmeldung eine E-Mail.",
           "`Rechtstexte`: Was Eltern im Formular lesen und bestätigen, zum Beispiel die Datenschutzinformation.",
         ],
@@ -101,11 +101,11 @@ export function settingsGuideTopic(): HelpTopic {
         description: "Was moto speichert und wie lange.",
         ordered: false,
         steps: [
-          "`Anwesenheitsprotokoll`: Das Team sieht die Anwesenheit und frühere Räume. Ausgeschaltet bleiben frühere Raumbesuche nur für den heutigen Tag. Beim Ausschalten bestätigen Sie zuerst die endgültige Löschung. Geben Sie dafür `LÖSCHEN` ein. Das gilt auch bei `Zurücksetzen` auf den ausgeschalteten Standard. Abgeschlossene Raumbesuche vor heute werden sofort gelöscht. Das lässt sich nicht rückgängig machen. Erneutes Einschalten stellt nichts wieder her. Heutige Raumbesuche bleiben bis zum nächtlichen Löschen erhalten. Der aktuelle Raum und die Anwesenheitszeiten bleiben erhalten.",
+          "`Anwesenheitsprotokoll`: Das Team sieht die Anwesenheit und frühere Räume. Ausgeschaltet bleiben frühere Raumbesuche nur für den heutigen Tag. Beim Ausschalten bestätigst du zuerst die endgültige Löschung. Gib dafür `LÖSCHEN` ein. Das gilt auch bei `Zurücksetzen` auf den ausgeschalteten Standard. Abgeschlossene Raumbesuche vor heute werden sofort gelöscht. Das lässt sich nicht rückgängig machen. Erneutes Einschalten stellt nichts wieder her. Heutige Raumbesuche bleiben bis zum nächtlichen Löschen erhalten. Der aktuelle Raum und die Anwesenheitszeiten bleiben erhalten.",
           "Vor dem Einschalten prüft die Schule die Rechtsgrundlage. Sie ist für die Nutzung verantwortlich.",
-          "`Nutzungsanalyse`: moto erhält Nutzungsstatistiken Ihrer Schule, aber keine eingegebenen Inhalte.",
-          "Löschfristen wie `Anwesenheit aufbewahren (Tage)`: Wie lange moto Daten behält. Sie können sie nur lesen.",
-          "`Erziehungsberechtigte ohne Kind aufbewahren (Tage)`: Diese Frist stellen Sie selbst ein. Sie beginnt erst, wenn das letzte Kind der Person gelöscht ist.",
+          "`Nutzungsanalyse`: moto erhält Nutzungsstatistiken deiner Schule, aber keine eingegebenen Inhalte.",
+          "Löschfristen wie `Anwesenheit aufbewahren (Tage)`: Wie lange moto Daten behält. Du kannst sie nur lesen.",
+          "`Erziehungsberechtigte ohne Kind aufbewahren (Tage)`: Diese Frist stellst du selbst ein. Sie beginnt erst, wenn das letzte Kind der Person gelöscht ist.",
         ],
       },
       {
@@ -114,7 +114,7 @@ export function settingsGuideTopic(): HelpTopic {
         ordered: false,
         steps: [
           "`Kalenderzugang mit App-Passwort erlauben`: Das Team sieht seine Termine in einem Kalenderprogramm.",
-          "`Zeitkonten per SFTP übertragen`: Nach der vollständigen Einrichtung können Sie die Zeitkonten im Export-Dialog selbst übertragen. Auch der automatische Versand an das Lohnbüro nutzt diese Gegenstelle, wenn unter `Abrechnung` der `Versandweg` `SFTP` gewählt ist.",
+          "`Zeitkonten per SFTP übertragen`: Nach der vollständigen Einrichtung kannst du die Zeitkonten im Export-Dialog selbst übertragen. Auch der automatische Versand an das Lohnbüro nutzt diese Gegenstelle, wenn unter `Abrechnung` der `Versandweg` `SFTP` gewählt ist.",
         ],
       },
       {
@@ -132,17 +132,17 @@ export function settingsGuideTopic(): HelpTopic {
         ordered: false,
         steps: [
           "`Startseite für alle`: Welche Bereiche alle auf ihrer Startseite sehen.",
-          "`Personalisierung`: Ein eigenes Bild für die Login-Seite Ihrer OGS.",
+          "`Personalisierung`: Ein eigenes Bild für die Login-Seite deiner OGS.",
         ],
       },
     ],
     notes: [
       "Unter jeder Einstellung steht in moto ein Satz, der sagt, was sie bewirkt.",
-      "Sie suchen eine bestimmte Einstellung? Nutzen Sie oben das Feld `Einstellung suchen`. Es sucht in allen Bereichen.",
+      "Du suchst eine bestimmte Einstellung? Nutze oben das Feld `Einstellung suchen`. Es sucht in allen Bereichen.",
     ],
     differences: [
-      "Welche Bereiche und Einstellungen Sie sehen, hängt von Ihren Rechten und den Funktionen Ihrer OGS ab.",
-      "Manche Einstellungen erscheinen erst, wenn Sie eine andere einschalten.",
+      "Welche Bereiche und Einstellungen du siehst, hängt von deinen Rechten und den Funktionen deiner OGS ab.",
+      "Manche Einstellungen erscheinen erst, wenn du eine andere einschaltest.",
     ],
     related: [
       HELP_TOPICS.settings,

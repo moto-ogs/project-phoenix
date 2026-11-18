@@ -14,7 +14,7 @@ const RULES: readonly { readonly mark: string; readonly text: string }[] = [
   },
   {
     mark: "Reihenfolge:",
-    text: "Der Brief druckt Absätze und Tabellen in der Reihenfolge des Brieftexts. Verschieben Sie einen Absatz, steht er im Brief an der neuen Stelle.",
+    text: "Der Brief druckt Absätze und Tabellen in der Reihenfolge des Brieftexts. Verschiebst du einen Absatz, steht er im Brief an der neuen Stelle.",
   },
   {
     mark: "Leere Platzhalter:",
@@ -49,8 +49,8 @@ export function DocumentTemplatePlaceholdersCard({
       title="Platzhalter"
       description={
         onInsert
-          ? "Wählen Sie einen Platzhalter. moto setzt ihn im Brieftext dort ein, wo Sie gerade schreiben. Für jede Familie füllt moto ihn aus."
-          : "Schreiben Sie einen Platzhalter mit zwei geschweiften Klammern in den Text. moto füllt ihn für jede Familie aus. Andere Platzhalter nimmt moto nicht an."
+          ? "Wähle einen Platzhalter. moto setzt ihn im Brieftext dort ein, wo du gerade schreibst. Für jede Familie füllt moto ihn aus."
+          : "Schreibe einen Platzhalter mit zwei geschweiften Klammern in den Text. moto füllt ihn für jede Familie aus. Andere Platzhalter nimmt moto nicht an."
       }
     >
       {onInsert ? (
@@ -90,7 +90,7 @@ export function DocumentTemplatePlaceholdersCard({
         </DataGrid>
       )}
       <h3 className="mt-6 text-sm font-semibold text-gray-900">
-        So schreiben Sie den Brieftext
+        So schreibst du den Brieftext
       </h3>
       <ul className="mt-2 space-y-1 text-sm text-gray-600">
         {RULES.map((rule) => (

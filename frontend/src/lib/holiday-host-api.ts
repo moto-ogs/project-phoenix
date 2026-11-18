@@ -526,7 +526,7 @@ export function holidayGuestGroupHint(
       : ` Bis zum ${day}.${month}. steht die Gruppe nicht unter „Gruppen“.`;
   return {
     label,
-    message: `${arrival}${waiting} Raum und Gruppenleitung können Sie schon jetzt festlegen.`,
+    message: `${arrival}${waiting} Raum und Gruppenleitung kannst du schon jetzt festlegen.`,
   };
 }
 

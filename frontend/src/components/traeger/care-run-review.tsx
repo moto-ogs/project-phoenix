@@ -301,14 +301,14 @@ function DebitHintsCard({
       ? "Bei diesen Familien"
       : `Bei ${familiesLabel(count)}`;
   const description = creditorMissing
-    ? "Ohne Gläubiger-ID buchen Sie bei keiner Familie ab. Tragen Sie sie unter Einstellungen → Abrechnungsvorgaben ein."
+    ? "Ohne Gläubiger-ID buchst du bei keiner Familie ab. Trage sie unter Einstellungen → Abrechnungsvorgaben ein."
     : [
         // Short: each row names its own date and its earliest day.
         tooSoon > 0
-          ? `${subject(tooSoon)} ist die Abbuchung zu früh für Ihre Vorabankündigung. Legen Sie eine spätere Fälligkeit fest.`
+          ? `${subject(tooSoon)} ist die Abbuchung zu früh für deine Vorabankündigung. Lege eine spätere Fälligkeit fest.`
           : null,
         halted > 0
-          ? `${subject(halted)} fehlt ein gültiges Mandat. Klären Sie das vor der Freigabe.`
+          ? `${subject(halted)} fehlt ein gültiges Mandat. Kläre das vor der Freigabe.`
           : null,
         // A transfer needs nothing before the release: beside open points
         // its rows under „Zur Information“ say it already.
@@ -350,7 +350,7 @@ function DebitHintsCard({
             href={traegerPath(dueDatesHref)}
             variant="outline"
             size="md"
-            tooltip="Öffnet die Seite, auf der Sie die Abbuchungstage ändern."
+            tooltip="Öffnet die Seite, auf der du die Abbuchungstage änderst."
           >
             Fälligkeiten ändern
           </ButtonLink>
@@ -389,7 +389,7 @@ function DebitHintsCard({
                 aria-label={`${mandateAction(item)}: ${item.family}`}
                 tooltip={
                   item.payment?.debitGap === "mandate_missing"
-                    ? "Öffnet die Familie, dort erfassen Sie das Lastschrift-Mandat."
+                    ? "Öffnet die Familie, dort erfasst du das Lastschrift-Mandat."
                     : "Öffnet das Lastschrift-Mandat dieser Familie."
                 }
               >

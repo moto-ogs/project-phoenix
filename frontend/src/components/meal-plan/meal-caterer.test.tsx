@@ -124,7 +124,7 @@ describe("MealCaterer", () => {
     render(<MealCaterer canManageSupply />, { wrapper: ToastProvider });
 
     expect(
-      await screen.findByText(/Laden Sie Ihren Caterer per E-Mail ein/),
+      await screen.findByText(/Lade deinen Caterer per E-Mail ein/),
     ).toBeInTheDocument();
     expect(
       screen.queryByLabelText(/Name des Caterers/),
@@ -314,7 +314,7 @@ describe("MealCaterer", () => {
     // Desktop shows the note as a sub-row, the phone rows in the cell.
     expect(
       screen.getAllByText(
-        "Die Mail kam nicht an. Stimmt die Adresse nicht, widerrufen Sie die Einladung und laden Sie neu ein.",
+        "Die Mail kam nicht an. Stimmt die Adresse nicht, widerrufe die Einladung und lade neu ein.",
       ).length,
     ).toBeGreaterThan(0);
     expect(screen.getByText("Zugestellt")).toBeInTheDocument();
@@ -477,7 +477,7 @@ describe("reload after a write (#6652)", () => {
     await expectReloadOnly(
       mocks.inviteMealCaterer,
       "die Einladung",
-      /Laden Sie Ihren Caterer per E-Mail ein/,
+      /Lade deinen Caterer per E-Mail ein/,
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(await screen.findAllByText("Offene Einladungen")).not.toHaveLength(
@@ -532,7 +532,7 @@ describe("reload after a write (#6652)", () => {
       "Küche am Markt",
     );
     expect(
-      await screen.findByText(/Laden Sie Ihren Caterer per E-Mail ein/),
+      await screen.findByText(/Lade deinen Caterer per E-Mail ein/),
     ).toBeInTheDocument();
   });
 });

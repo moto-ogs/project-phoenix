@@ -18,7 +18,7 @@ import { useFreshTraegerResource } from "./use-traeger-resource";
 
 const OPEN_TAB_HINT = "Öffnet das Schreiben als PDF in einem neuen Tab.";
 const LOAD_FAILED_REASON =
-  "Das Schreiben ließ sich nicht laden. Bitte laden Sie es erneut.";
+  "Das Schreiben ließ sich nicht laden. Bitte lade es erneut.";
 
 export function LetterFileView({
   fileKey,
@@ -58,7 +58,7 @@ export function LetterFileView({
           disabled={!file}
           disabledReason={error ? LOAD_FAILED_REASON : undefined}
           aria-label={`${title} herunterladen`}
-          tooltip="Lädt das Schreiben als PDF auf Ihr Gerät."
+          tooltip="Lädt das Schreiben als PDF auf dein Gerät."
           onClick={() => {
             if (file) downloadBlob(file.blob, file.filename);
           }}

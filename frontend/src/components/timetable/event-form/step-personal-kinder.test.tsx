@@ -308,7 +308,7 @@ describe("StepPersonalKinder — Klassenfilter (#2482)", () => {
     });
     expect(
       screen.getByText(
-        "Das ändert sich gegenüber Ihrer bisherigen Kinderliste",
+        "Das ändert sich gegenüber deiner bisherigen Kinderliste",
       ),
     ).toBeInTheDocument();
     expect(
@@ -621,7 +621,7 @@ describe("StepPersonalKinder — Lade- und Prüfhinweise (#2516)", () => {
 
     expect(
       screen.getByText(
-        "Hinweis: Doppelte Einplanungen konnten nicht geprüft werden. Sie können trotzdem speichern.",
+        "Hinweis: Doppelte Einplanungen konnten nicht geprüft werden. Du kannst trotzdem speichern.",
       ),
     ).toBeInTheDocument();
   });
@@ -784,7 +784,7 @@ describe("StepPersonalKinder — Vorschlag „Angebot übernehmen“ (#5104)", (
     candidates: [{ id: "7", name: "Randstunde" }],
   };
   const suggestionLine =
-    "Sollen nur die für „Randstunde“ angemeldeten Kinder kommen? Dann verbinden Sie den Termin mit dem Angebot.";
+    "Sollen nur die für „Randstunde“ angemeldeten Kinder kommen? Dann verbindest du den Termin mit dem Angebot.";
 
   it("suggests the offering whose bookings match Klasse 1b on its weekdays", async () => {
     getOfferingSuggestion.mockReset().mockResolvedValue(randstunde);
@@ -928,7 +928,7 @@ describe("StepPersonalKinder — mehrere passende Angebote (#5138)", () => {
     ambiguous: false,
   };
   const choiceLine =
-    "Sollen nur Kinder kommen, die für ein Angebot angemeldet sind? Dazu passen mehrere Angebote. Wählen Sie eins.";
+    "Sollen nur Kinder kommen, die für ein Angebot angemeldet sind? Dazu passen mehrere Angebote. Wähle eins.";
 
   it.each([
     {
@@ -1014,7 +1014,7 @@ describe("StepPersonalKinder — mehrere passende Angebote (#5138)", () => {
 
       expect(
         await screen.findByText(
-          "Sollen nur die für „Randstunde“ angemeldeten Kinder kommen? Dann verbinden Sie den Termin mit dem Angebot.",
+          "Sollen nur die für „Randstunde“ angemeldeten Kinder kommen? Dann verbindest du den Termin mit dem Angebot.",
         ),
       ).toBeInTheDocument();
       expect(getOfferingSuggestion).toHaveBeenCalledWith({
@@ -1111,7 +1111,7 @@ describe("StepPersonalKinder — mehrere Angebote zusammen (#5139)", () => {
 
     expect(
       await screen.findByText(
-        "Sollen nur die für „Randstunde“ oder „Ganztag“ angemeldeten Kinder kommen? Dann verbinden Sie den Termin mit diesen Angeboten.",
+        "Sollen nur die für „Randstunde“ oder „Ganztag“ angemeldeten Kinder kommen? Dann verbindest du den Termin mit diesen Angeboten.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(

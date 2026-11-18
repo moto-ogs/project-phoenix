@@ -337,7 +337,7 @@ export default function TraegerAccessLogPage() {
   return (
     <TenantPage
       title="Zugriffsprotokoll"
-      info="Wer hat an Ihren Schulen Daten gelesen oder geändert? Hier steht jeder Zugriff mit Zeitpunkt, Person und Schule."
+      info="Wer hat an deinen Schulen Daten gelesen oder geändert? Hier steht jeder Zugriff mit Zeitpunkt, Person und Schule."
       actions={
         <>
           <DateRangePicker
@@ -404,7 +404,7 @@ export default function TraegerAccessLogPage() {
                 ? "Zu diesen Filtern gibt es keinen Eintrag."
                 : "In diesem Zeitraum gibt es keinen Eintrag."
             }
-            description="Wählen Sie einen anderen Zeitraum oder andere Filter."
+            description="Wähle einen anderen Zeitraum oder andere Filter."
           />
         }
       />

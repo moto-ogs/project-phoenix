@@ -7,7 +7,7 @@ export function appOverviewTopic(): HelpTopic {
     title: "Sich in moto zurechtfinden",
     question: "Wie ist moto aufgebaut?",
     summary:
-      "Über die Navigation öffnen Sie die Bereiche, die Sie für Ihren Arbeitstag brauchen.",
+      "Über die Navigation öffnest du die Bereiche, die du für deinen Arbeitstag brauchst.",
     group: "einstieg",
     audience: ["caregiver", "lead"],
     icon: "ListChecks",
@@ -16,9 +16,9 @@ export function appOverviewTopic(): HelpTopic {
       {
         title: "Am Computer",
         steps: [
-          "Nutzen Sie die Seitenleiste links, um einen Bereich zu öffnen.",
-          "Wählen Sie einen Eintrag mit Pfeil, um die zugehörigen Bereiche ein- oder auszublenden.",
-          "Öffnen Sie oben rechts Ihr Profil, um Ihre Angaben anzusehen oder sich abzumelden.",
+          "Nutze die Seitenleiste links, um einen Bereich zu öffnen.",
+          "Wähle einen Eintrag mit Pfeil, um die zugehörigen Bereiche ein- oder auszublenden.",
+          "Öffne oben rechts dein Profil, um deine Angaben anzusehen oder sich abzumelden.",
         ],
       },
       {
@@ -32,12 +32,12 @@ export function appOverviewTopic(): HelpTopic {
         ordered: false,
         steps: [
           "`Tagesbetrieb`: alles für den laufenden Betreuungstag. Diese Gruppe ist schon aufgeklappt.",
-          "`Eltern`: was Sie mit den Familien austauschen.",
-          "`Team`: Ihr Dienstplan, Ihr Kalender, Ihre Arbeitszeit, Ihre Kolleginnen und Kollegen und die gemeinsamen Dateien. Wer nicht plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
-          "`Planung`: die Pläne Ihrer OGS. Wer plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
+          "`Eltern`: was du mit den Familien austauschst.",
+          "`Team`: Dein Dienstplan, dein Kalender, deine Arbeitszeit, deine Kolleginnen und Kollegen und die gemeinsamen Dateien. Wer nicht plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
+          "`Planung`: die Pläne deiner OGS. Wer plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
           "`Verwaltung`: Stammdaten, Auswertungen und die Lohnabrechnung.",
           "In jeder Gruppe steht oben, was im Alltag am häufigsten gebraucht wird.",
-          "Sie sehen nur Gruppen, in denen etwas für Sie dabei ist.",
+          "Du siehst nur Gruppen, in denen etwas für dich dabei ist.",
           "Ganz unten stehen `Notfall` und `Hilfe`. Wer die OGS verwaltet, findet dort auch `Einstellungen`.",
         ],
       },
@@ -46,22 +46,22 @@ export function appOverviewTopic(): HelpTopic {
         // Liste: STAFF_NAV_SIMPLE_ENTRIES in lib/staff-navigation.ts.
         title: "Die einfache Seitenleiste",
         description:
-          "Ihre OGS kann für die Betreuung eine einfache Seitenleiste einschalten. Dann stehen dort nur die Seiten für den Betreuungsalltag, ohne Überschriften zum Aufklappen.",
+          "Deine OGS kann für die Betreuung eine einfache Seitenleiste einschalten. Dann stehen dort nur die Seiten für den Betreuungsalltag, ohne Überschriften zum Aufklappen.",
         ordered: false,
         steps: [
-          "Sie suchen eine Seite, die nicht dabei ist? Wählen Sie ganz unten `Alle Seiten anzeigen`. Auf dem Handy steht der Knopf unter `Mehr`.",
-          "Mit `Weniger Seiten anzeigen` kommen Sie zur einfachen Seitenleiste zurück.",
-          "moto merkt sich Ihre Wahl auf diesem Gerät.",
+          "Du suchst eine Seite, die nicht dabei ist? Wähle ganz unten `Alle Seiten anzeigen`. Auf dem Handy steht der Knopf unter `Mehr`.",
+          "Mit `Weniger Seiten anzeigen` kommst du zur einfachen Seitenleiste zurück.",
+          "moto merkt sich deine Wahl auf diesem Gerät.",
           "Wer die OGS leitet, sieht immer alle Seiten. Die Leitung schaltet die einfache Seitenleiste unter `Einstellungen` › `Betrieb` ein.",
         ],
       },
       {
         title: "Auf dem Handy oder Tablet",
         steps: [
-          "Nutzen Sie die Leiste unten, um häufige Bereiche zu öffnen.",
-          "Wählen Sie `Mehr`, um die übrigen Bereiche zu sehen.",
-          "Dort stehen dieselben Gruppen wie in der Seitenleiste. Tippen Sie auf eine Gruppe, um sie auf- oder zuzuklappen.",
-          "Öffnen Sie oben rechts Ihr Profil, um Ihre Angaben anzusehen oder sich abzumelden.",
+          "Nutze die Leiste unten, um häufige Bereiche zu öffnen.",
+          "Wähle `Mehr`, um die übrigen Bereiche zu sehen.",
+          "Dort stehen dieselben Gruppen wie in der Seitenleiste. Tippe auf eine Gruppe, um sie auf- oder zuzuklappen.",
+          "Öffne oben rechts dein Profil, um deine Angaben anzusehen oder sich abzumelden.",
         ],
       },
       {
@@ -69,39 +69,39 @@ export function appOverviewTopic(): HelpTopic {
         // home-board.tsx („Bausteine", „Standardansicht wiederherstellen").
         title: "Die Startseite anpassen",
         description:
-          "Die `Startseite` besteht aus Karten. Welche dort stehen, legen Sie selbst fest.",
+          "Die `Startseite` besteht aus Karten. Welche dort stehen, legst du selbst fest.",
         steps: [
-          "Wählen Sie auf der `Startseite` oben rechts das Symbol `Anpassen`.",
-          "Wählen Sie `Bausteine` und dann eine Karte, zum Beispiel `Kinder`.",
-          "Die Karte steht jetzt unten. Am Computer ziehen Sie sie an ihren Platz.",
-          "Wählen Sie `Fertig`.",
+          "Wähle auf der `Startseite` oben rechts das Symbol `Anpassen`.",
+          "Wähle `Bausteine` und dann eine Karte, zum Beispiel `Kinder`.",
+          "Die Karte steht jetzt unten. Am Computer ziehst du sie an ihren Platz.",
+          "Wähle `Fertig`.",
         ],
       },
       {
         title: "Hilfe öffnen",
         steps: [
-          "Sehen Sie oben rechts ein Fragezeichen? Es öffnet die passende Anleitung.",
+          "Siehst du oben rechts ein Fragezeichen? Es öffnet die passende Anleitung.",
           "Am Handy oder Tablet steht es rechts im Seitenkopf.",
-          "Oder wählen Sie `Hilfe`: am Computer unten in der Seitenleiste, auf dem Handy unter `Mehr`.",
+          "Oder wähle `Hilfe`: am Computer unten in der Seitenleiste, auf dem Handy unter `Mehr`.",
         ],
       },
     ],
     result:
-      "Sie wissen, wo Sie die wichtigsten Bereiche und die passende Hilfe finden.",
+      "Du weißt, wo du die wichtigsten Bereiche und die passende Hilfe findest.",
     differences: [
-      "Welche Bereiche Sie sehen, hängt von Ihrer Rolle und den Einstellungen Ihrer OGS ab.",
-      "Sie sehen keine Überschriften wie `Tagesbetrieb` oder `Team`? Dann hat Ihre OGS die einfache Seitenleiste eingeschaltet. Alle Seiten zeigt `Alle Seiten anzeigen` ganz unten.",
-      "Unter `Bausteine` fehlt eine Karte? Dann steht sie schon auf Ihrer Startseite. Oder Ihre Rolle oder Ihre OGS sieht sie nicht vor.",
+      "Welche Bereiche du siehst, hängt von deiner Rolle und den Einstellungen deiner OGS ab.",
+      "Du siehst keine Überschriften wie `Tagesbetrieb` oder `Team`? Dann hat deine OGS die einfache Seitenleiste eingeschaltet. Alle Seiten zeigt `Alle Seiten anzeigen` ganz unten.",
+      "Unter `Bausteine` fehlt eine Karte? Dann steht sie schon auf deiner Startseite. Oder deine Rolle oder deine OGS sieht sie nicht vor.",
       // Kopfzeile aus BrandTraegerLine (#4656): nur bei einem Träger mit
       // mehreren Schulen, und nur am Computer, wo auch der Schulname steht.
-      "Steht am Computer oben links unter dem Namen Ihrer Schule `Träger:` und ein Name? Das ist der Träger Ihrer Schule. Die Zeile gibt es nur, wenn Ihr Träger mehrere Schulen hat.",
+      "Steht am Computer oben links unter dem Namen deiner Schule `Träger:` und ein Name? Das ist der Träger deiner Schule. Die Zeile gibt es nur, wenn dein Träger mehrere Schulen hat.",
     ],
     troubleshootingDetails: [
-      "Das Anpassen der Startseite lädt nicht? Ihre Karten bleiben lesbar. Wählen Sie bei der Fehlermeldung `Wiederholen`.",
+      "Das Anpassen der Startseite lädt nicht? Deine Karten bleiben lesbar. Wähle bei der Fehlermeldung `Wiederholen`.",
     ],
     notes: [
       "Die Karte `Kinder` zählt die Kinder nach `Anwesend`, `Schule`, `Im Unterricht`, `Zuhause`, `Krank` und `Entschuldigt`. Ein Klick auf eine Zahl öffnet `Alle Kinder` mit diesem Filter. `Entschuldigt` zeigt auch Kinder auf Klassenfahrt. `Zuhause` zeigt auch Kinder, die heute nicht kommen. Ein Kind, das da ist, zählt immer bei `Anwesend`, auch mit Krankmeldung. Ein Kind, das zum Unterricht abgemeldet ist, zählt bei `Im Unterricht`, auch mit Krankmeldung.",
-      "Zu viel verändert? Wählen Sie in `Anpassen` den Knopf `Standardansicht wiederherstellen`.",
+      "Zu viel verändert? Wähle in `Anpassen` den Knopf `Standardansicht wiederherstellen`.",
     ],
     related: [
       HELP_TOPICS.login,

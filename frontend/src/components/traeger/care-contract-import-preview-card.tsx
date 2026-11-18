@@ -69,7 +69,7 @@ function footerText(result: ContractImportResult): string {
     return "Alle Kinder der Datei haben schon ihren Vertrag.";
   }
   if (left > 0) {
-    return `${left === 1 ? "1 Zeile bleibt" : `${left} Zeilen bleiben`} draußen. Korrigieren Sie die Datei und laden Sie sie noch einmal.`;
+    return `${left === 1 ? "1 Zeile bleibt" : `${left} Zeilen bleiben`} draußen. Korrigiere die Datei und lade sie noch einmal.`;
   }
   return "Die Verträge gelten sofort als abgeschlossen. Eltern bekommen keine Mail.";
 }
@@ -188,7 +188,7 @@ export function CareContractImportPreviewCard({
       description={
         disabled
           ? "Die Vorschau zeigt den letzten geprüften Stand. Übernehmen ist erst nach der Prüfung möglich."
-          : "So würde moto jede Zeile übernehmen. Gespeichert wird erst, wenn Sie übernehmen."
+          : "So würde moto jede Zeile übernehmen. Gespeichert wird erst, wenn du übernimmst."
       }
       footer={
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

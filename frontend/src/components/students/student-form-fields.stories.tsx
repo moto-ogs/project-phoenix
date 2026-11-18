@@ -44,7 +44,7 @@ export const PersonalInfoWithErrors: Story = {
       formData={{ first_name: "Max" }}
       onChange={noopFieldChange}
       fieldError={(name) =>
-        name === "last_name" ? "Bitte geben Sie den Nachnamen ein." : undefined
+        name === "last_name" ? "Bitte gib den Nachnamen ein." : undefined
       }
       groups={[{ value: "1", label: "Gruppe A" }]}
     />

@@ -61,12 +61,12 @@ function warningCopy(warning: PhaseExpiryWarning): {
     return warning.overdue
       ? {
           title: "Buchungen fehlen",
-          message: `Seit dem ${date} fehlen Buchungen für ${count}. Erstellen Sie jetzt eine Anschlussphase.`,
+          message: `Seit dem ${date} fehlen Buchungen für ${count}. Erstelle jetzt eine Anschlussphase.`,
           action: "Anschlussphase erstellen",
         }
       : {
           title: "Anschlussphase fehlt",
-          message: `Ab ${date} enden die Buchungen für ${count}. Erstellen Sie jetzt eine Anschlussphase.`,
+          message: `Ab ${date} enden die Buchungen für ${count}. Erstelle jetzt eine Anschlussphase.`,
           action: "Anschlussphase erstellen",
         };
   }
@@ -75,12 +75,12 @@ function warningCopy(warning: PhaseExpiryWarning): {
   return warning.overdue
     ? {
         title: "Übernahme nicht abgeschlossen",
-        message: `Seit dem ${date} fehlen Buchungen für ${count}. Schließen Sie jetzt die Übernahme ab.`,
+        message: `Seit dem ${date} fehlen Buchungen für ${count}. Schließe jetzt die Übernahme ab.`,
         action: "Anschlussphase öffnen",
       }
     : {
         title: "Übernahme noch offen",
-        message: `Ab ${date} fehlen noch Buchungen für ${count}. Schließen Sie jetzt die Übernahme ab.`,
+        message: `Ab ${date} fehlen noch Buchungen für ${count}. Schließe jetzt die Übernahme ab.`,
         action: "Anschlussphase öffnen",
       };
 }

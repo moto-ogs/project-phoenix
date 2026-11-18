@@ -156,24 +156,22 @@ describe("HolidayClosureNotices (ADR 0196)", () => {
     renderNotices();
 
     expect(screen.getByText("Wird gesendet")).toBeInTheDocument();
-    expect(screen.getByText("Bitte warten Sie.")).toBeInTheDocument();
+    expect(screen.getByText("Bitte warte.")).toBeInTheDocument();
     expect(button("„A“")).not.toBeInTheDocument();
 
     expect(screen.getByText("Nicht angekommen")).toBeInTheDocument();
-    expect(
-      screen.getByText("Bitte versuchen Sie es erneut."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Bitte versuche es erneut.")).toBeInTheDocument();
     expect(button("„B“")).toBeInTheDocument();
 
     expect(screen.getByText("Ergebnis unbekannt")).toBeInTheDocument();
     expect(
-      screen.getByText("Bitte lassen Sie den Versand vom moto-Team prüfen."),
+      screen.getByText("Bitte lass den Versand vom moto-Team prüfen."),
     ).toBeInTheDocument();
     expect(button("„C“")).not.toBeInTheDocument();
 
     expect(
       screen.getByText(
-        "Der Schließtag wurde geändert. Bitte prüfen Sie den Hinweis.",
+        "Der Schließtag wurde geändert. Bitte prüfe den Hinweis.",
       ),
     ).toBeInTheDocument();
     expect(button("„D“")).toBeInTheDocument();
@@ -221,16 +219,13 @@ describe("HolidayClosureNotices (ADR 0196)", () => {
       "no_mail",
       "Keine E-Mail nötig. Es gibt keine neuen Änderungen für die Eltern.",
     ],
-    [
-      "failed",
-      "Der Versand hat nicht geklappt. Bitte versuchen Sie es erneut.",
-    ],
+    ["failed", "Der Versand hat nicht geklappt. Bitte versuche es erneut."],
     ["sent", "Die E-Mails wurden gesendet."],
     [
       "unknown",
-      "Ergebnis unbekannt. Bitte lassen Sie den Versand vom moto-Team prüfen.",
+      "Ergebnis unbekannt. Bitte lass den Versand vom moto-Team prüfen.",
     ],
-    ["suggested", "Der Hinweis wurde geändert. Bitte prüfen Sie ihn erneut."],
+    ["suggested", "Der Hinweis wurde geändert. Bitte prüfe ihn erneut."],
   ] as const)("reports the returned %s outcome", async (status, message) => {
     mockNotify.mockResolvedValueOnce(notice({ status }));
     renderNotices();

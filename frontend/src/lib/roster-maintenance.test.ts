@@ -58,7 +58,7 @@ describe("describeRosterMaintenance", () => {
 
     expect(result.label).toBe("Manuell");
     expect(result.explanation).toBe(
-      "An- und Abmeldungen werden hier nicht übernommen. Kinder pflegen Sie selbst. Wechselt ein Kind Klasse oder Gruppe, passt moto die kommenden Termine an. Neue Kinder stehen erst in später geplanten Terminen.",
+      "An- und Abmeldungen werden hier nicht übernommen. Kinder pflegst du selbst. Wechselt ein Kind Klasse oder Gruppe, passt moto die kommenden Termine an. Neue Kinder stehen erst in später geplanten Terminen.",
     );
     expect(result.explanation).not.toContain("automatisch übernommen");
   });
@@ -74,7 +74,7 @@ describe("describeRosterMaintenance", () => {
 
     expect(result.label).toBe("Teils automatisch");
     expect(result.explanation).toBe(
-      "Neue Anmeldungen für das Betreuungsangebot „Mittagessen“ werden automatisch übernommen. Wechselt ein Kind Klasse oder Gruppe, passt moto die kommenden Termine an. Neue Kinder stehen erst in später geplanten Terminen. Weitere Kinder müssen Sie selbst ergänzen.",
+      "Neue Anmeldungen für das Betreuungsangebot „Mittagessen“ werden automatisch übernommen. Wechselt ein Kind Klasse oder Gruppe, passt moto die kommenden Termine an. Neue Kinder stehen erst in später geplanten Terminen. Weitere Kinder musst du selbst ergänzen.",
     );
   });
 
@@ -84,7 +84,7 @@ describe("describeRosterMaintenance", () => {
     );
 
     expect(result.explanation).toBe(
-      "An- und Abmeldungen werden hier nicht übernommen. Kinder pflegen Sie selbst. Das Betreuungsangebot „Musik“ ist ausgeschaltet.",
+      "An- und Abmeldungen werden hier nicht übernommen. Kinder pflegst du selbst. Das Betreuungsangebot „Musik“ ist ausgeschaltet.",
     );
   });
 
@@ -94,7 +94,7 @@ describe("describeRosterMaintenance", () => {
     );
 
     expect(result.explanation).toBe(
-      "An- und Abmeldungen werden hier nicht übernommen. Kinder pflegen Sie selbst. Das Betreuungsangebot „Musik“ passt nicht zu diesem Regeltermin.",
+      "An- und Abmeldungen werden hier nicht übernommen. Kinder pflegst du selbst. Das Betreuungsangebot „Musik“ passt nicht zu diesem Regeltermin.",
     );
   });
 
@@ -104,7 +104,7 @@ describe("describeRosterMaintenance", () => {
     );
 
     expect(result.explanation).toBe(
-      "An- und Abmeldungen werden hier nicht übernommen. Kinder pflegen Sie selbst. Betreuungsangebote sind an Ihrer Schule ausgeschaltet.",
+      "An- und Abmeldungen werden hier nicht übernommen. Kinder pflegst du selbst. Betreuungsangebote sind an deiner Schule ausgeschaltet.",
     );
   });
 });

@@ -198,7 +198,7 @@ export function PickupRequestDetailModal({
       {state.kind === "forbidden" && (
         <Alert
           type="info"
-          message="Für dieses Kind dürfen Sie keine Anfragen ansehen."
+          message="Für dieses Kind darfst du keine Anfragen ansehen."
         />
       )}
       {state.kind === "failed" && <LoadErrorAlert error={loadError.error} />}

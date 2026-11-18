@@ -399,7 +399,7 @@ export function LeaveRequestsCard() {
         {cancelTarget && (
           <div className="space-y-2 text-sm text-gray-700">
             <FormErrorAlert message={cancelErrors.error} />
-            <p>Möchten Sie diesen Urlaubsantrag wirklich stornieren?</p>
+            <p>Möchtest du diesen Urlaubsantrag wirklich stornieren?</p>
             <p className="text-xs text-gray-500">
               {formatRange(cancelTarget.dateStart, cancelTarget.dateEnd)}
               {cancelTarget.status === "approved" && " (bereits genehmigt)"}
@@ -506,8 +506,8 @@ function ResubmitAbsenceForm({
   const handleSubmit = async () => {
     formErrors.clear();
     if (note.trim().length < 3) {
-      formErrors.invalid("Bitte prüfen Sie das markierte Feld.", {
-        note: "Bitte geben Sie eine kurze Antwort ein.",
+      formErrors.invalid("Bitte prüfe das markierte Feld.", {
+        note: "Bitte gib eine kurze Antwort ein.",
       });
       return;
     }
@@ -526,7 +526,7 @@ function ResubmitAbsenceForm({
     } finally {
       setSubmitting(false);
     }
-    toast.success("Ihre Antwort ist gesendet.");
+    toast.success("Deine Antwort ist gesendet.");
     onResubmitted();
   };
   useLayoutEffect(() => {
@@ -539,7 +539,7 @@ function ResubmitAbsenceForm({
       <Textarea
         id={`resubmit-note-${absence.id}`}
         name="note"
-        label="Ihre Antwort"
+        label="Deine Antwort"
         value={note}
         onChange={(e) => setNote(e.target.value)}
         rows={2}
@@ -554,7 +554,7 @@ function ResubmitAbsenceForm({
           size="compact"
           onClick={handleSubmit}
           disabled={submitting}
-          tooltip="Sendet Ihre Antwort sofort an die Leitung zur Entscheidung."
+          tooltip="Sendet deine Antwort sofort an die Leitung zur Entscheidung."
         >
           {submitting ? "…" : "Antwort senden & erneut einreichen"}
         </Button>

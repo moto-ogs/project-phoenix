@@ -41,9 +41,7 @@ describe("GlobalError", () => {
     expect(
       screen.getByText("Ein unerwarteter Fehler ist aufgetreten"),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Bitte versuchen Sie es erneut/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Bitte versuche es erneut/)).toBeInTheDocument();
   });
 
   it("renders the retry button", () => {

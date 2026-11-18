@@ -252,7 +252,7 @@ func buildLegalBlocks(texts enrollmentNative.LegalTexts) []enrollmentNative.Lega
 	if texts.EmailContactEnabled && texts.EmailContact != "" {
 		blocks = append(blocks, enrollmentNative.LegalBlock{
 			Key: enrollmentNative.ConsentKeyEmailContact, Kind: "notice", Title: "E-Mail-Kontakt",
-			Label: "Die Schule nutzt Ihre E-Mail-Adresse für Rückfragen und Status-Benachrichtigungen zu dieser Anmeldung.",
+			Label: "Die Schule nutzt deine E-Mail-Adresse für Rückfragen und Status-Benachrichtigungen zu dieser Anmeldung.",
 			Text:  texts.EmailContact, Required: false, SortOrder: 40, Source: enrollmentNative.LegalBlockSourceStandard,
 		})
 	}

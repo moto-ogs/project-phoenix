@@ -100,7 +100,7 @@ func berlinLocation() *time.Location {
 func declarationProofReport(proof *parentService.DeclarationProof, now time.Time) ReportDocument {
 	integrity := "Text und Antworten sind seit der Veröffentlichung unverändert."
 	if !proof.IntegrityOK {
-		integrity = "Achtung: Ein gespeicherter Eintrag wurde nachträglich verändert. Bitte wenden Sie sich an die OGS."
+		integrity = "Achtung: Ein gespeicherter Eintrag wurde nachträglich verändert. Bitte wende dich an die OGS."
 	}
 	overview := ReportCard{Title: "Einverständnis", Fields: []ReportField{
 		{Label: "Kind", Value: proof.ChildName},
@@ -110,12 +110,12 @@ func declarationProofReport(proof *parentService.DeclarationProof, now time.Time
 		{Label: "Prüfung", Value: integrity},
 	}}
 	return ReportDocument{
-		Title: "Nachweis Ihrer Antwort", Subtitle: proof.Title, GeneratedAt: now,
+		Title: "Nachweis deiner Antwort", Subtitle: proof.Title, GeneratedAt: now,
 		Filters: []string{proof.ChildName, proof.SchoolName},
 		Footer:  "Vertraulich: enthält personenbezogene Daten",
 		Sections: []ReportSection{
 			{Title: "Überblick", Cards: []ReportCard{overview}},
-			{Title: "Ihr Verlauf", Cards: proofHistoryCards(proof)},
+			{Title: "Dein Verlauf", Cards: proofHistoryCards(proof)},
 			{Title: "Fassungen", Cards: proofVersionCards(proof)},
 		},
 	}

@@ -472,7 +472,7 @@ export default function MealPlanPage() {
         return next;
       });
       toast.success(
-        "Die Gerichte der Vorwoche sind übernommen. Bitte speichern Sie den Plan.",
+        "Die Gerichte der Vorwoche sind übernommen. Bitte speichere den Plan.",
       );
     } catch (err) {
       logger.error("meal_plan_copy_prev_failed", {
@@ -669,14 +669,14 @@ export default function MealPlanPage() {
             confirmVariant="danger"
             confirmTooltip={
               confirmReload
-                ? "Verwirft Ihre Änderungen sofort und holt die gespeicherte Woche."
-                : "Verwirft Ihre Änderungen sofort und wechselt die Woche."
+                ? "Verwirft deine Änderungen sofort und holt die gespeicherte Woche."
+                : "Verwirft deine Änderungen sofort und wechselt die Woche."
             }
           >
             <p className="text-sm text-gray-600">
               {confirmReload
-                ? "Sie haben Änderungen, die noch nicht gespeichert sind. Beim Neuladen gehen sie verloren."
-                : "Sie haben Änderungen in dieser Woche, die noch nicht gespeichert sind. Beim Wochenwechsel gehen sie verloren."}
+                ? "Du hast Änderungen, die noch nicht gespeichert sind. Beim Neuladen gehen sie verloren."
+                : "Du hast Änderungen in dieser Woche, die noch nicht gespeichert sind. Beim Wochenwechsel gehen sie verloren."}
             </p>
           </ConfirmationModal>
 
@@ -686,12 +686,12 @@ export default function MealPlanPage() {
             onConfirm={confirmNavigation}
             title="Ungespeicherte Änderungen"
             confirmText="Verwerfen & verlassen"
-            confirmTooltip="Verwirft Ihre Änderungen sofort und verlässt die Seite."
+            confirmTooltip="Verwirft deine Änderungen sofort und verlässt die Seite."
             cancelText="Hierbleiben"
             confirmVariant="danger"
           >
             <p className="text-sm text-gray-600">
-              Sie haben Änderungen, die noch nicht gespeichert sind. Beim
+              Du hast Änderungen, die noch nicht gespeichert sind. Beim
               Verlassen der Seite gehen sie verloren.
             </p>
           </ConfirmationModal>
@@ -754,7 +754,7 @@ export default function MealPlanPage() {
               }
               disabledReason={
                 hasLoadError && !loading
-                  ? "Die Woche ist nicht geladen, versuchen Sie es zuerst erneut."
+                  ? "Die Woche ist nicht geladen, versuche es zuerst erneut."
                   : undefined
               }
               isLoading={copyingPrev}

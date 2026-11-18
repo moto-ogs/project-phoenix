@@ -637,7 +637,7 @@ describe("ParentAnnouncementsPage: scheduled reminder (#3162)", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Weiter" }));
 
     expect(
-      await screen.findByText("Bitte geben Sie einen Titel ein."),
+      await screen.findByText("Bitte gib einen Titel ein."),
     ).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Titel" })).toHaveAttribute(
       "aria-invalid",
@@ -820,7 +820,7 @@ describe("ParentAnnouncementsPage: Einverständnisse (#3430)", () => {
     ).toBeInTheDocument();
 
     expect(
-      screen.getByText(/Dann schreiben Sie einen Elternbrief mit/),
+      screen.getByText(/Dann schreibe einen Elternbrief mit/),
     ).toBeInTheDocument();
     // Only one kind is left: no choice, no Kenntnisnahme anywhere.
     expect(screen.queryByText(/Kenntnis/)).not.toBeInTheDocument();
@@ -942,7 +942,7 @@ describe("ParentAnnouncementsPage: Einverständnisse (#3430)", () => {
 
     expect(
       await screen.findByText(
-        "Dieses Einverständnis war schon veröffentlicht. Die Dateien bleiben deshalb gleich. Für andere Dateien legen Sie ein neues Einverständnis an.",
+        "Dieses Einverständnis war schon veröffentlicht. Die Dateien bleiben deshalb gleich. Für andere Dateien lege ein neues Einverständnis an.",
       ),
     ).toBeInTheDocument();
     expect(

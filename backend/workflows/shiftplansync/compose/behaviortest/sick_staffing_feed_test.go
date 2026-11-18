@@ -73,7 +73,7 @@ func TestSickReportTellsThePersonAndTheGroupOnce(t *testing.T) {
 	assert.True(t, strings.HasPrefix(teacher[0].DeepLink, "/vertretung?d=2030-06-11&block="), teacher[0].DeepLink)
 	own := sickFeedEntries(t, router, sickAccount)
 	require.Len(t, own, 1)
-	assert.Equal(t, "Sie sind an 3 Tagen (11.–13.06.) als nicht da eingetragen.", own[0].Body)
+	assert.Equal(t, "Du bist an 3 Tagen (11.–13.06.) als nicht da eingetragen.", own[0].Body)
 	for _, entry := range append(teacher, own...) {
 		assert.NotContains(t, strings.ToLower(entry.Title+entry.Body), "krank", "the reason never reaches the text")
 	}
@@ -88,7 +88,7 @@ func TestSickReportTellsThePersonAndTheGroupOnce(t *testing.T) {
 	teacher = sickFeedEntries(t, router, lead)
 	require.Len(t, teacher, 2)
 	assert.Equal(t, "Anna Feed ist an 3 Tagen (11.–13.06.) doch da.", teacher[0].Body, "newest first")
-	assert.Equal(t, "Sie sind an 3 Tagen (11.–13.06.) wieder eingeplant.", sickFeedEntries(t, router, sickAccount)[0].Body)
+	assert.Equal(t, "Du bist an 3 Tagen (11.–13.06.) wieder eingeplant.", sickFeedEntries(t, router, sickAccount)[0].Body)
 	assert.Empty(t, sickFeedEntries(t, router, adminAccount))
 
 	// Dienstplan-Abgleich (#7021): an absence stored before every type
@@ -108,7 +108,7 @@ func TestSickReportTellsThePersonAndTheGroupOnce(t *testing.T) {
 	}))
 	synced := sickFeedEntries(t, router, vacationAccount)
 	require.Len(t, synced, 1)
-	assert.Equal(t, "Sie sind am Mo. 17.06. als nicht da eingetragen.", synced[0].Body)
+	assert.Equal(t, "Du bist am Mo. 17.06. als nicht da eingetragen.", synced[0].Body)
 	teacher = sickFeedEntries(t, router, lead)
 	require.Len(t, teacher, 3)
 	assert.Equal(t, "Ben Feed ist am Mo. 17.06. nicht da.", teacher[0].Body, "newest first")

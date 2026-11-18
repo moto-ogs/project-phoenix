@@ -293,7 +293,7 @@ describe("AdminEnrollmentDetail child that may already be enrolled", () => {
     render(<AdminEnrollmentDetail requestId="request-1" />);
     expect(
       await screen.findByText(
-        "Dieser Elternteil darf das Kind nicht mehr anmelden. Prüfen Sie bitte die Angaben.",
+        "Dieser Elternteil darf das Kind nicht mehr anmelden. Prüfe bitte die Angaben.",
       ),
     ).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
@@ -302,13 +302,11 @@ describe("AdminEnrollmentDetail child that may already be enrolled", () => {
     });
     expect(
       within(dialog).getByText(
-        "Zu diesen Angaben wurde kein angemeldetes Kind gefunden. Prüfen Sie Name und Geburtsdatum. Ist das Kind schon vorhanden, wählen Sie „Abbrechen“.",
+        "Zu diesen Angaben wurde kein angemeldetes Kind gefunden. Prüfe Name und Geburtsdatum. Ist das Kind schon vorhanden, wähle „Abbrechen“.",
       ),
     ).toBeVisible();
     expect(
-      within(dialog).getByText(
-        "Wählen Sie dies nur, wenn es ein anderes Kind ist.",
-      ),
+      within(dialog).getByText("Wähle dies nur, wenn es ein anderes Kind ist."),
     ).toBeVisible();
     fireEvent.click(
       within(dialog).getByRole("button", { name: /Als neues Kind anlegen/ }),
@@ -332,7 +330,7 @@ describe("AdminEnrollmentDetail child that may already be enrolled", () => {
     render(<AdminEnrollmentDetail requestId="request-1" />);
     expect(
       await screen.findByText(
-        "Dieser Elternteil darf das Kind nicht mehr anmelden. Prüfen Sie bitte die Angaben.",
+        "Dieser Elternteil darf das Kind nicht mehr anmelden. Prüfe bitte die Angaben.",
       ),
     ).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
@@ -369,7 +367,7 @@ describe("AdminEnrollmentDetail child that may already be enrolled", () => {
     });
     expect(
       within(dialog).getByText(
-        "Zu diesen Angaben wurde kein angemeldetes Kind gefunden. Diese Anmeldung ist nur für Kinder, die schon angemeldet sind. Prüfen Sie Name und Geburtsdatum. Sonst lehnen Sie die Anmeldung ab.",
+        "Zu diesen Angaben wurde kein angemeldetes Kind gefunden. Diese Anmeldung ist nur für Kinder, die schon angemeldet sind. Prüfe Name und Geburtsdatum. Sonst lehne die Anmeldung ab.",
       ),
     ).toBeVisible();
     expect(
@@ -391,7 +389,7 @@ describe("AdminEnrollmentDetail child that may already be enrolled", () => {
     ).toBeVisible();
     expect(
       screen.getByText(
-        "In moto gibt es schon ein Kind mit diesem Namen und Geburtsdatum. Beim Bestätigen wählen Sie, ob es dasselbe Kind ist.",
+        "In moto gibt es schon ein Kind mit diesem Namen und Geburtsdatum. Beim Bestätigen wählst du, ob es dasselbe Kind ist.",
       ),
     ).toBeVisible();
     expect(
@@ -571,7 +569,7 @@ describe("AdminEnrollmentDetail child that may already be enrolled", () => {
         "request-1",
         "child-1",
         "rejected",
-        "Ihr Kind ist schon über eine andere Anmeldung angemeldet.",
+        "Dein Kind ist schon über eine andere Anmeldung angemeldet.",
       );
     });
   });
@@ -599,7 +597,7 @@ describe("AdminEnrollmentDetail child that may already be enrolled", () => {
         "request-1",
         "child-1",
         "rejected",
-        "Ihr Kind ist schon über eine andere Anmeldung angemeldet.",
+        "Dein Kind ist schon über eine andere Anmeldung angemeldet.",
       );
     });
   });
@@ -750,7 +748,7 @@ describe("AdminEnrollmentDetail approval without an offering", () => {
     expect(mocks.decideAdminChild).not.toHaveBeenCalled();
     expect(
       screen.getByText(
-        "Ein Angebot hat sich nach der Anmeldung geändert. Beim Bestätigen gelten die neuen Angaben. Bitte informieren Sie die Familie.",
+        "Ein Angebot hat sich nach der Anmeldung geändert. Beim Bestätigen gelten die neuen Angaben. Bitte informiere die Familie.",
       ),
     ).toBeVisible();
 
@@ -904,7 +902,7 @@ describe("AdminEnrollmentDetail Kinderkontingent (#3570)", () => {
     // den Details.
     expect(
       await screen.findByText(
-        /Kinderkontingent Ihrer Schule ist voll \(50 von 50 Kindern\)/,
+        /Kinderkontingent deiner Schule ist voll \(50 von 50 Kindern\)/,
       ),
     ).toBeVisible();
   });
@@ -1400,7 +1398,7 @@ describe("AdminEnrollmentDetail future renewal (#6043)", () => {
 
     expect(
       await screen.findByText(
-        "Abholzeiten, Betreuungstage und Heimweg aus dieser Anmeldung sollten ab 03.02.2027 gelten. moto konnte sie noch nicht übernehmen. Darum gelten noch die bisherigen. moto versucht es jede Stunde neu. Bleibt dieser Hinweis, melden Sie sich bitte beim moto-Team.",
+        "Abholzeiten, Betreuungstage und Heimweg aus dieser Anmeldung sollten ab 03.02.2027 gelten. moto konnte sie noch nicht übernehmen. Darum gelten noch die bisherigen. moto versucht es jede Stunde neu. Bleibt dieser Hinweis, melde dich bitte beim moto-Team.",
       ),
     ).toBeVisible();
     expect(

@@ -124,7 +124,7 @@ describe("debitHints (#4695)", () => {
     );
     expect(hints.map((hint) => hint.text)).toEqual([
       "Kein gültiges Mandat. Geht als Überweisung, fällig am 02.01.2027.",
-      "Abbuchung schon am 04.01.2027. Das ist früher als Ihre Vorabankündigung erlaubt.",
+      "Abbuchung schon am 04.01.2027. Das ist früher als deine Vorabankündigung erlaubt.",
     ]);
   });
 });
@@ -163,7 +163,7 @@ describe("debitOpenPoints (#4695)", () => {
       ),
     );
     expect(points).toEqual([
-      "1 Familie: Abbuchung früher als Ihre Vorabankündigung erlaubt.",
+      "1 Familie: Abbuchung früher als deine Vorabankündigung erlaubt.",
       "1 Familie ohne gültiges Mandat: Die Freigabe ist angehalten.",
     ]);
   });
@@ -251,7 +251,7 @@ describe("due date hints (#4695)", () => {
       "Für 2 Familien ist der 04.01.2027 zu früh. Abbuchung frühestens 5\u00A0Tage nach dem Rechnungsdatum.",
     );
     expect(tooEarlyHint(hints, null)).toBe(
-      "Für 2 Familien ist der 04.01.2027 zu früh. Ihre Vorabankündigung braucht mehr Vorlauf.",
+      "Für 2 Familien ist der 04.01.2027 zu früh. Deine Vorabankündigung braucht mehr Vorlauf.",
     );
     expect(tooEarlyHint([], 5)).toBeUndefined();
   });

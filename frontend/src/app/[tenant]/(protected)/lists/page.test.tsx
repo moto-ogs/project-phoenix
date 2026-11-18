@@ -124,13 +124,13 @@ const preview: SlotListResult = {
 };
 
 const LIST_CHANGED_NOTICE =
-  "Die Liste hat sich seit dem Laden geändert. Bitte prüfen Sie die Liste und exportieren Sie erneut.";
+  "Die Liste hat sich seit dem Laden geändert. Bitte prüfe die Liste und exportiere erneut.";
 const SELECTION_CHANGED_NOTICE =
-  "Die Auswahl hat sich geändert. Bitte prüfen Sie die Liste und exportieren Sie erneut.";
+  "Die Auswahl hat sich geändert. Bitte prüfe die Liste und exportiere erneut.";
 const SLOTS_CHANGED_NOTICE =
-  "Die Angebote für diesen Tag haben sich geändert. Bitte prüfen Sie die Liste und exportieren Sie erneut.";
+  "Die Angebote für diesen Tag haben sich geändert. Bitte prüfe die Liste und exportiere erneut.";
 const PRINT_BLOCKED_NOTICE =
-  "Das Druckfenster konnte nicht geöffnet werden. Bitte laden Sie die Liste als PDF herunter.";
+  "Das Druckfenster konnte nicht geöffnet werden. Bitte lade die Liste als PDF herunter.";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

@@ -26,7 +26,7 @@ const SCHOOL_SWITCH_RIGHT = "traeger_school:switch";
  * Without the right the button is missing; this names the role that carries
  * it and the role that hands it out (#5473, #5471).
  */
-export const SCHOOL_SWITCH_MISSING_HINT = `Die Schul-App öffnen Sie nur mit der Rolle „${TRAEGER_ROLE_LABELS.school_access}“. Diese Rolle gibt Ihnen eine Person mit der Rolle „${TRAEGER_ROLE_LABELS.leadership}“.`;
+export const SCHOOL_SWITCH_MISSING_HINT = `Die Schul-App öffnest du nur mit der Rolle „${TRAEGER_ROLE_LABELS.school_access}“. Diese Rolle gibt dir eine Person mit der Rolle „${TRAEGER_ROLE_LABELS.leadership}“.`;
 
 /**
  * Opens the school in a new tab: the tab opens on the click, so the browser

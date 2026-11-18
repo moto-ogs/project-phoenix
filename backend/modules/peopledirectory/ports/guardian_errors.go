@@ -20,7 +20,7 @@ var (
 	// the payer mark changes who is charged for the child; that decision is
 	// owned by the financial permission, so users:update alone must not reach
 	// it through a plain unlink.
-	ErrPayerRemovalRequiresFinancial = errors.New("diese Person ist als Zahler für das Kind eingetragen. Zum Entfernen ist die Berechtigung für Bankverbindungen nötig. Bitte wenden Sie sich an die Schulleitung")
+	ErrPayerRemovalRequiresFinancial = errors.New("diese Person ist als Zahler für das Kind eingetragen. Zum Entfernen ist die Berechtigung für Bankverbindungen nötig. Bitte wende dich an die Schulleitung")
 )
 
 // GuardianStillLinkedError signals that a guardian delete was refused because the

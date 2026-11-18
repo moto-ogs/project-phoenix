@@ -26,9 +26,7 @@ it.each(["care", "holiday"] as const)(
     expect(screen.getByText("Kostenstelle fehlt: MB-2")).toBeInTheDocument();
     expect(
       screen.getByText(/Auch ein Storno übernimmt diese Werte/),
-    ).toHaveTextContent(
-      "Laden Sie dann die Sollstellung dieses Laufs herunter.",
-    );
+    ).toHaveTextContent("Lade dann die Sollstellung dieses Laufs herunter.");
     expect(screen.getByText(/manuell in DATEV buchen/)).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Konten und Kostenstellen" }),

@@ -37,15 +37,15 @@ export function nfcSupervisionTopic(
       // ohne Wirkung. Frueher stand hier, das Tablet sei unzuverlaessig und
       // man solle die App nehmen; das legte ein funktionierendes Geraet still.
       summary:
-        "Am Tablet wählen Sie zuerst Aktivität und Raum. Bei einfacher Anwesenheit ändert diese Auswahl nichts.",
+        "Am Tablet wählst du zuerst Aktivität und Raum. Bei einfacher Anwesenheit ändert diese Auswahl nichts.",
       group: "nfc",
       audience: ["caregiver", "lead"],
       icon: "TabletSmartphone",
       steps: [
-        "Melden Sie sich am Tablet mit Ihrer PIN an.",
-        "Wählen Sie eine Aktivität und einen Raum.",
-        "Starten Sie die Aufsicht. So kommen Sie zum Scannen.",
-        "Scannen Sie danach die Armbänder wie gewohnt.",
+        "Melde dich am Tablet mit deiner PIN an.",
+        "Wähle eine Aktivität und einen Raum.",
+        "Starte die Aufsicht. So kommst du zum Scannen.",
+        "Scanne danach die Armbänder wie gewohnt.",
       ],
       result:
         "Die Kinder sind am Tablet an- und abgemeldet. moto hält nur fest, ob ein Kind da ist.",
@@ -61,7 +61,7 @@ export function nfcSupervisionTopic(
     title: "Eine Aufsicht am Tablet starten und beenden",
     question: "Wie starte oder beende ich eine Aufsicht am Tablet?",
     summary:
-      "Wählen Sie Aktivität, Betreuungsteam und Raum. Starten Sie danach die Aufsicht.",
+      "Wähle Aktivität, Betreuungsteam und Raum. Starte danach die Aufsicht.",
     group: "nfc",
     audience: ["caregiver", "lead"],
     icon: "TabletSmartphone",
@@ -70,29 +70,29 @@ export function nfcSupervisionTopic(
       {
         title: "Eine Aufsicht starten",
         steps: [
-          "Melden Sie sich am Tablet an.",
-          "Wählen Sie im `Menü` `Aufsicht starten`.",
-          "Wählen Sie unter `Was machen wir?` die Aktivität und danach `Weiter`.",
-          "Wählen Sie unter `Wer ist dabei?` mindestens eine Betreuungskraft und danach `Weiter`.",
-          "Wählen Sie unter `Wo machen wir das?` den Raum und danach `Weiter`.",
-          "Prüfen Sie die Zusammenfassung und wählen Sie `Aufsicht starten`.",
+          "Melde dich am Tablet an.",
+          "Wähle im `Menü` `Aufsicht starten`.",
+          "Wähle unter `Was machen wir?` die Aktivität und danach `Weiter`.",
+          "Wähle unter `Wer ist dabei?` mindestens eine Betreuungskraft und danach `Weiter`.",
+          "Wähle unter `Wo machen wir das?` den Raum und danach `Weiter`.",
+          "Prüfe die Zusammenfassung und wähle `Aufsicht starten`.",
         ],
       },
       {
         title: "Eine Aufsicht beenden",
         steps: [
-          "Wählen Sie oben rechts `Anmelden` und geben Sie die Geräte-PIN ein.",
-          "Wählen Sie im `Menü` `Aufsicht beenden`.",
-          "Bestätigen Sie mit `Ja, beenden`.",
-          "Wählen Sie `Abmelden`, um das Menü wieder zu sperren.",
+          "Wähle oben rechts `Anmelden` und gib die Geräte-PIN ein.",
+          "Wähle im `Menü` `Aufsicht beenden`.",
+          "Bestätige mit `Ja, beenden`.",
+          "Wähle `Abmelden`, um das Menü wieder zu sperren.",
         ],
       },
     ],
     result:
       "Das Tablet zeigt Aktivität, Raum und Kinderzahl. Beim Beenden werden die Kinder abgemeldet.",
     notes: [
-      "Unter `Letzte Aufsichten` starten Sie eine frühere Aufsicht neu. Aktivität, Team und Raum werden übernommen.",
-      "Unter `Team anpassen` ändern Sie während der Aufsicht das Betreuungsteam.",
+      "Unter `Letzte Aufsichten` startest du eine frühere Aufsicht neu. Aktivität, Team und Raum werden übernommen.",
+      "Unter `Team anpassen` änderst du während der Aufsicht das Betreuungsteam.",
     ],
     troubleshooting: HELP_TOPICS.nfcProblem,
     related: [HELP_TOPICS.nfcCheckIn, HELP_TOPICS.activeSupervision],

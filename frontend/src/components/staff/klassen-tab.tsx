@@ -257,9 +257,7 @@ export function KlassenTab({
                   onClick={addClass}
                   disabled={saving || newClass.trim() === ""}
                   disabledReason={
-                    saving
-                      ? undefined
-                      : "Geben Sie zuerst einen Klassennamen ein."
+                    saving ? undefined : "Gib zuerst einen Klassennamen ein."
                   }
                   tooltip="Nimmt die Klasse auf, gespeichert wird erst mit „Speichern“."
                   className="gap-1.5"
@@ -273,7 +271,7 @@ export function KlassenTab({
                 onSave={() => void handleSave()}
                 saving={saving}
                 disabled={!dirty}
-                disabledReason="Sie haben noch nichts geändert."
+                disabledReason="Du hast noch nichts geändert."
                 saveTooltip="Speichert die Klassen, die Person sieht dann deren Kinder."
               />
             </>

@@ -108,7 +108,7 @@ function GroupSelectDemo() {
       onLoadError={(_error, retry) =>
         setLoadError({
           message:
-            "Die Liste der Gruppen ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+            "Die Liste der Gruppen ist gerade nicht erreichbar. Bitte versuche es erneut.",
           retry: {
             label: "Wiederholen",
             onClick: () => {

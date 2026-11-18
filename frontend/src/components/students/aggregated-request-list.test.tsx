@@ -472,7 +472,7 @@ describe("AggregatedRequestList", () => {
 
     expect(
       await screen.findByText(
-        "Die Liste der Anfragen ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Liste der Anfragen ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeVisible();
     await act(async () => {});
@@ -598,7 +598,7 @@ describe("AggregatedRequestList", () => {
       screen.getByRole("heading", { name: "Gemeinsam freigeben" }),
     ).toBeVisible();
     expect(
-      screen.getByText("Wählen Sie noch eine passende Anfrage aus."),
+      screen.getByText("Wähle noch eine passende Anfrage aus."),
     ).toBeVisible();
     fireEvent.click(selections[1]!);
     fireEvent.change(screen.getByLabelText("Gemeinsame Begründung"), {
@@ -1349,7 +1349,7 @@ describe("AggregatedRequestList", () => {
 
     expect(
       await screen.findByText(
-        "Die Liste der Anfragen ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Liste der Anfragen ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeVisible();
     await act(async () => {});
@@ -1522,7 +1522,7 @@ describe("AggregatedRequestList", () => {
 
     expect(
       await screen.findByText(
-        "Die Liste der Anfragen konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Liste der Anfragen konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -1603,7 +1603,7 @@ describe("AggregatedRequestList", () => {
 
     expect(
       await screen.findByText(
-        "Die Liste der Anfragen ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Liste der Anfragen ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeVisible();
     expect(screen.getByText("excused-item-4")).toBeInTheDocument();
@@ -1709,7 +1709,7 @@ describe("AggregatedRequestList", () => {
 
     expect(
       await screen.findByText(
-        /^Für die Liste der Anfragen brauchen Sie zusätzlich das Recht/,
+        /^Für die Liste der Anfragen brauchst du zusätzlich das Recht/,
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText("absence read required")).toBeNull();

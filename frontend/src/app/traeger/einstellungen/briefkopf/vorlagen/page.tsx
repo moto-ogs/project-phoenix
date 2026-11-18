@@ -99,7 +99,7 @@ export default function TraegerVorlagenPage() {
       back
       backHref={traegerPath("/traeger/einstellungen/briefkopf")}
       backLabel="Zurück zu Briefkopf und Vorlagen"
-      info="Hier legen Sie fest, was in den Briefen Ihres Trägers steht. Platzhalter wie {{familienname}} füllt moto für jede Familie aus. Logo, Absender und Fußzeile kommen aus dem Briefkopf."
+      info="Hier legst du fest, was in den Briefen deines Trägers steht. Platzhalter wie {{familienname}} füllt moto für jede Familie aus. Logo, Absender und Fußzeile kommen aus dem Briefkopf."
       stats={
         templates ? (
           <TenantPageStats

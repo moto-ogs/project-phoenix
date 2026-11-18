@@ -116,8 +116,8 @@ function NotesCell({ row }: Readonly<{ row: ImportRow }>) {
  */
 function withoutMandateText(count: number): string {
   return count === 1
-    ? "1 Zeile ohne Mandat: Sie hat keine IBAN und keine Mandatsreferenz. moto legt dafür kein Mandat an. Fehlende Debitorennummern werden übernommen, solange es keinen Konflikt gibt. Konflikte sehen Sie mit Zeilennummer unten."
-    : `${count} Zeilen ohne Mandat: Sie haben keine IBAN und keine Mandatsreferenz. moto legt dafür kein Mandat an. Fehlende Debitorennummern werden übernommen, solange es keinen Konflikt gibt. Konflikte sehen Sie mit Zeilennummer unten.`;
+    ? "1 Zeile ohne Mandat: Sie hat keine IBAN und keine Mandatsreferenz. moto legt dafür kein Mandat an. Fehlende Debitorennummern werden übernommen, solange es keinen Konflikt gibt. Konflikte siehst du mit Zeilennummer unten."
+    : `${count} Zeilen ohne Mandat: Sie haben keine IBAN und keine Mandatsreferenz. moto legt dafür kein Mandat an. Fehlende Debitorennummern werden übernommen, solange es keinen Konflikt gibt. Konflikte siehst du mit Zeilennummer unten.`;
 }
 
 export function SepaImportPreviewCard({
@@ -265,7 +265,7 @@ export function SepaImportPreviewCard({
       description={
         disabled
           ? "Die Vorschau zeigt den letzten geprüften Stand. Übernehmen ist erst nach der Prüfung möglich."
-          : "So würde moto jede Zeile übernehmen. Geändert wird erst, wenn Sie übernehmen."
+          : "So würde moto jede Zeile übernehmen. Geändert wird erst, wenn du übernimmst."
       }
       footer={
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

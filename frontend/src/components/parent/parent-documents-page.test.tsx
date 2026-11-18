@@ -390,7 +390,7 @@ describe("ParentDocumentsPage", () => {
     expect(screen.getByText("Ersetzt")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Diese Fassung gilt nicht mehr. Ab 01.03.2027 gilt eine neue Fassung. Sie enthält Ihre bestätigten Änderungen. Die neue Fassung bekommen Sie vom Träger.",
+        "Diese Fassung gilt nicht mehr. Ab 01.03.2027 gilt eine neue Fassung. Sie enthält deine bestätigten Änderungen. Die neue Fassung bekommst du vom Träger.",
       ),
     ).toBeInTheDocument();
     // The button only where the relationship may end the contract (#4682);
@@ -402,7 +402,7 @@ describe("ParentDocumentsPage", () => {
       screen.getByText(deMessages.parentDocuments.cancelNotPermitted),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Kinder in Ihrer Familie" }),
+      screen.getByRole("link", { name: "Kinder in deiner Familie" }),
     ).toHaveAttribute("href", "/documents/vertrag/4/75?family=1");
     // Only the replaced version carries the mark.
     expect(screen.getAllByText("Ersetzt")).toHaveLength(1);

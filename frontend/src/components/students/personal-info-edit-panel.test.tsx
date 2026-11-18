@@ -412,7 +412,7 @@ describe("PersonalInfoEditPanel", () => {
       fireEvent.click(screen.getByText("Speichern"));
 
       expect(await screen.findByRole("alert")).toHaveTextContent(
-        "Das Kind konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Das Kind konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       );
       expect(
         screen.getByText("Vorgangskennung: req-panel"),
@@ -758,11 +758,11 @@ describe("PersonalInfoEditPanel", () => {
       // empty list that would look like "no links exist".
       expect(
         await screen.findByText(
-          "Die Laufgemeinschaft konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+          "Die Laufgemeinschaft konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
         ),
       ).toBeInTheDocument();
       expect(
-        screen.getByText(/Andere Angaben können Sie trotzdem speichern/),
+        screen.getByText(/Andere Angaben kannst du trotzdem speichern/),
       ).toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: /Kind hinzufügen/ }),
@@ -784,7 +784,7 @@ describe("PersonalInfoEditPanel", () => {
       fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
       expect(await screen.findByRole("alert")).toHaveTextContent(
-        "Bitte prüfen Sie den Heimweg.",
+        "Bitte prüfe den Heimweg.",
       );
       const note = screen.getByRole("textbox", {
         name: "Oder mit welcher Person?",
@@ -944,7 +944,7 @@ describe("PersonalInfoEditPanel", () => {
       );
 
       await screen.findByText(
-        "Die Einwilligung konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Einwilligung konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       );
       expect(
         screen.getByText(

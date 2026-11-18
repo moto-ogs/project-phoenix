@@ -233,7 +233,7 @@ describe("Vertragsimport", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Ordnen Sie alle Pflichtfelder zu. Dann zeigt moto die Zeilen.",
+        "Ordne alle Pflichtfelder zu. Dann zeigt moto die Zeilen.",
       ),
     ).toBeInTheDocument();
     // Anker: the mapping is on screen, so the preview could show.

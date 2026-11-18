@@ -12,21 +12,21 @@ export function parentFeatureMissingTopic(): HelpTopic {
     audience: "parent",
     icon: "EyeSlash",
     steps: [
-      "Prüfen Sie, ob der Bereich hinter `Mehr` liegt.",
-      "Fehlt er auch dort, nutzt Ihre OGS ihn nicht.",
-      "Brauchen Sie ihn, schreiben Sie der OGS eine Nachricht.",
+      "Prüfe, ob der Bereich hinter `Mehr` liegt.",
+      "Fehlt er auch dort, nutzt deine OGS ihn nicht.",
+      "Brauchst du ihn, schreibe der OGS eine Nachricht.",
     ],
-    result: "Die OGS kann die Funktion für Ihre Schule einschalten.",
+    result: "Die OGS kann die Funktion für deine Schule einschalten.",
     notes: [
       "moto blendet einen Bereich aus, statt ihn zu sperren. Ein fehlender Eintrag ist kein Fehler.",
-      "`Elternbriefe` und `Mittagessen` gibt es nur, wenn Ihre Schule sie führt.",
+      "`Elternbriefe` und `Mittagessen` gibt es nur, wenn deine Schule sie führt.",
     ],
     differences: [
-      "Manche Dinge dürfen Sie nur ansehen, nicht ändern. Dann fehlt der Knopf, nicht der Bereich.",
-      "Hat Ihr Kind keinen Platz in der OGS, fehlen für dieses Kind Abholung, Betreuungszeiten, Essen und Nachrichten an die OGS. Krankmeldung, Elternbriefe und Elternsprechtag nutzen Sie wie gewohnt.",
+      "Manche Dinge darfst du nur ansehen, nicht ändern. Dann fehlt der Knopf, nicht der Bereich.",
+      "Hat dein Kind keinen Platz in der OGS, fehlen für dieses Kind Abholung, Betreuungszeiten, Essen und Nachrichten an die OGS. Krankmeldung, Elternbriefe und Elternsprechtag nutzt du wie gewohnt.",
     ],
     troubleshootingDetails: [
-      "Das Ändern von Angaben ist deaktiviert? Schreiben Sie der OGS, was geändert werden soll.",
+      "Das Ändern von Angaben ist deaktiviert? Schreibe der OGS, was geändert werden soll.",
     ],
     related: [
       HELP_TOPICS.parentMessages,

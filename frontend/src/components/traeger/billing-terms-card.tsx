@@ -100,7 +100,7 @@ function ServiceTermsModal({
     formErrors.clear();
     const dueDays = parseDueDays(days);
     if (dueDays === null) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", {
+      formErrors.invalid("Bitte prüfe deine Angaben.", {
         due_days: `Bitte eine ganze Zahl von 0 bis ${MAX_DUE_DAYS} eingeben.`,
       });
       return;
@@ -163,7 +163,7 @@ function ServiceTermsModal({
           />
           <p className="text-sm text-gray-600">
             {method === "direct_debit"
-              ? "Sie buchen den Betrag ab. Dafür braucht die Familie ein SEPA-Mandat bei Ihnen."
+              ? "Du buchst den Betrag ab. Dafür braucht die Familie ein SEPA-Mandat bei dir."
               : "Die Familie überweist den Betrag selbst."}
           </p>
         </div>

@@ -52,7 +52,7 @@ describe("TraegerAccountPage", () => {
     expect(
       await screen.findByText("kasse@traeger.example"),
     ).toBeInTheDocument();
-    const field = screen.getByRole("textbox", { name: /Ihr Name/ });
+    const field = screen.getByRole("textbox", { name: /Dein Name/ });
     // Anker: das Feld ist da; gespeichert wird erst nach einer Änderung.
     expect(field).toHaveValue("");
     expect(
@@ -66,9 +66,9 @@ describe("TraegerAccountPage", () => {
       expect(api.changeTraegerProfileName).toHaveBeenCalledWith("Karl Kasse"),
     );
     expect(
-      await screen.findByText("Ihr Name ist gespeichert."),
+      await screen.findByText("Dein Name ist gespeichert."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: /Ihr Name/ })).toHaveValue(
+    expect(screen.getByRole("textbox", { name: /Dein Name/ })).toHaveValue(
       "Karl Kasse",
     );
     expect(
@@ -80,13 +80,16 @@ describe("TraegerAccountPage", () => {
     api.fetchTraegerProfile.mockResolvedValue({ ...PROFILE, name: "Karl" });
     renderPage();
 
-    fireEvent.change(await screen.findByRole("textbox", { name: /Ihr Name/ }), {
-      target: { value: "   " },
-    });
+    fireEvent.change(
+      await screen.findByRole("textbox", { name: /Dein Name/ }),
+      {
+        target: { value: "   " },
+      },
+    );
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(
-      (await screen.findAllByText("Bitte geben Sie Ihren Namen ein."))[0],
+      (await screen.findAllByText("Bitte gib deinen Namen ein."))[0],
     ).toBeInTheDocument();
     expect(api.changeTraegerProfileName).not.toHaveBeenCalled();
   });
@@ -100,19 +103,21 @@ describe("TraegerAccountPage", () => {
     );
     renderPage();
 
-    fireEvent.change(await screen.findByRole("textbox", { name: /Ihr Name/ }), {
-      target: { value: "Karl\u0007" },
-    });
+    fireEvent.change(
+      await screen.findByRole("textbox", { name: /Dein Name/ }),
+      {
+        target: { value: "Karl\u0007" },
+      },
+    );
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(screen.getByRole("textbox", { name: /Ihr Name/ })).toHaveAttribute(
-        "aria-invalid",
-        "true",
-      ),
+      expect(
+        screen.getByRole("textbox", { name: /Dein Name/ }),
+      ).toHaveAttribute("aria-invalid", "true"),
     );
     // The draft stays for a correction.
-    expect(screen.getByRole("textbox", { name: /Ihr Name/ })).toHaveValue(
+    expect(screen.getByRole("textbox", { name: /Dein Name/ })).toHaveValue(
       "Karl\u0007",
     );
   });
@@ -125,7 +130,7 @@ describe("TraegerAccountPage", () => {
 
     expect((await screen.findAllByRole("alert"))[0]).toBeInTheDocument();
     expect(
-      screen.queryByRole("textbox", { name: /Ihr Name/ }),
+      screen.queryByRole("textbox", { name: /Dein Name/ }),
     ).not.toBeInTheDocument();
   });
 });

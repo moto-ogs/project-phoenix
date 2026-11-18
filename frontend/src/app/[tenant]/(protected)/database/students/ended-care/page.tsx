@@ -316,7 +316,7 @@ export default function EndedCarePage() {
                   }
                   description={
                     debouncedSearch
-                      ? "Versuchen Sie einen anderen Namen oder eine andere Klasse."
+                      ? "Versuche einen anderen Namen oder eine andere Klasse."
                       : "Hier stehen Kinder, deren Betreuung beendet wurde."
                   }
                 />

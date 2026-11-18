@@ -24,38 +24,37 @@ export const STAFF_ONBOARDING_STEP_CONTENT: Readonly<
 > = {
   groups: {
     title: "Meine Gruppe ansehen",
-    description:
-      "Sehen Sie, welche Kinder in Ihrer Gruppe sind und wer da ist.",
+    description: "Sieh, welche Kinder in deiner Gruppe sind und wer da ist.",
     hints: [],
     helpTopic: HELP_TOPICS.ownGroups,
   },
   students: {
     title: "Ein Kind finden und Angaben ansehen",
-    description: "Suchen Sie ein Kind und öffnen Sie seine Angaben.",
+    description: "Suche ein Kind und öffne seine Angaben.",
     hints: ["Dort stehen auch Abholberechtigte und Notfallkontakte."],
     helpTopic: HELP_TOPICS.studentSearch,
   },
   attendance: {
     title: "Ein Kind an- und abmelden",
-    description: "Tragen Sie ein, wann ein Kind kommt und geht.",
+    description: "Trage ein, wann ein Kind kommt und geht.",
     hints: [],
     helpTopic: HELP_TOPICS.webAttendance,
   },
   calendar: {
     title: "Meine Termine ansehen",
-    description: "Sehen Sie Ihre Termine und Einsätze im Kalender.",
+    description: "Sieh deine Termine und Einsätze im Kalender.",
     hints: [],
     helpTopic: HELP_TOPICS.mySchedule,
   },
   supervision: {
     title: "Eine Aufsicht starten",
-    description: "Übernehmen Sie einen Raum oder einen geplanten Termin.",
+    description: "Übernehme einen Raum oder einen geplanten Termin.",
     hints: [],
     helpTopic: HELP_TOPICS.activeSupervision,
   },
   work_time: {
     title: "Arbeitszeit erfassen",
-    description: "Stempeln Sie sich zu Arbeitsbeginn ein und am Ende aus.",
+    description: "Stemple dich zu Arbeitsbeginn ein und am Ende aus.",
     hints: [],
     helpTopic: HELP_TOPICS.trackWorkTime,
   },
@@ -167,7 +166,7 @@ function viaNavigation(
     {
       target: `[data-setup-tour="nav-group-${group.key}"]`,
       title: `${group.label} öffnen`,
-      text: `Wählen Sie in der Seitenleiste „${group.label}“.`,
+      text: `Wähle in der Seitenleiste „${group.label}“.`,
       advance: "click",
       nav: true,
       // Auf dem Handy gibt es keine Seitenleiste, aber die untere Leiste.
@@ -178,7 +177,7 @@ function viaNavigation(
     stops.push({
       target: MORE,
       title: "Mehr öffnen",
-      text: "Wählen Sie unten „Mehr“.",
+      text: "Wähle unten „Mehr“.",
       advance: "click",
       nav: true,
       // Am Computer steht der Eintrag schon in der Seitenleiste.
@@ -189,7 +188,7 @@ function viaNavigation(
       // offen oder läuft die Tour am Computer, ist der Eintrag zu sehen.
       target: `[data-setup-tour="mobile-nav-group-${group.key}"]`,
       title: `${group.label} öffnen`,
-      text: `Wählen Sie im Menü „${group.label}“.`,
+      text: `Wähle im Menü „${group.label}“.`,
       advance: "click",
       nav: true,
       skipWhenVisible: entry.target,
@@ -198,12 +197,12 @@ function viaNavigation(
   stops.push({
     target: entryTarget,
     title: `${entry.label} öffnen`,
-    text: `Wählen Sie „${entry.label}“.`,
+    text: `Wähle „${entry.label}“.`,
     ...(entry.mobile
       ? {
           textWhenVisible: {
             selector: entry.mobile.target,
-            text: `Wählen Sie unten „${entry.mobile.label}“.`,
+            text: `Wähle unten „${entry.mobile.label}“.`,
           },
         }
       : {}),
@@ -224,7 +223,7 @@ function childTab(value: string, label: string, text: string): SetupTourStop[] {
       target: `[role="tab"][data-tab-value="${value}"]`,
       pathPattern: STAFF_CHILD_RECORD,
       title: label,
-      text: `Wählen Sie „${label}“.`,
+      text: `Wähle „${label}“.`,
       advance: "click",
       optional: true,
       skipCount: 2,
@@ -276,7 +275,7 @@ export const STAFF_ONBOARDING_TOURS: Readonly<
         // sieht, landet direkt in ihr; dann entfällt diese Station.
         target: '[data-setup-tour="group-tile"]',
         title: "Gruppe öffnen",
-        text: "Wählen Sie Ihre Gruppe. Sie ist mit „Meine Gruppe“ markiert.",
+        text: "Wähle deine Gruppe. Sie ist mit „Meine Gruppe“ markiert.",
         advance: "click",
         pathPattern: /\/ogs-groups(\/overview)?$/,
         skipWhenVisible: '[data-setup-tour="student-card"]',
@@ -286,15 +285,15 @@ export const STAFF_ONBOARDING_TOURS: Readonly<
         // Eine Karte statt der ganzen Seite: Auf dem Handy wäre sonst fast
         // der ganze Bildschirm markiert.
         target: '[data-setup-tour="student-card"]',
-        title: "Ihre Gruppe",
-        text: "Hier sehen Sie die Kinder Ihrer Gruppe. Jede Karte zeigt, wo das Kind gerade ist und wann es kommt und geht.",
+        title: "Deine Gruppe",
+        text: "Hier siehst du die Kinder deiner Gruppe. Jede Karte zeigt, wo das Kind gerade ist und wann es kommt und geht.",
         advance: "next",
-        missingText: "In Ihrer Gruppe ist noch kein Kind. Wählen Sie „Weiter“.",
+        missingText: "In deiner Gruppe ist noch kein Kind. Wähle „Weiter“.",
       },
       {
         target: SEARCH,
         title: "Kind suchen",
-        text: "Viele Kinder? Geben Sie hier einen Namen ein.",
+        text: "Viele Kinder? Gib hier einen Namen ein.",
         advance: "next",
       },
     ],
@@ -306,22 +305,22 @@ export const STAFF_ONBOARDING_TOURS: Readonly<
       {
         target: SEARCH,
         title: "Kind suchen",
-        text: "Geben Sie einen Namen ein. Ein Teil des Namens reicht.",
+        text: "Gib einen Namen ein. Ein Teil des Namens reicht.",
         advance: "next",
       },
       {
         target: '[data-setup-tour="student-card"]',
         title: "Die Karte eines Kindes",
-        text: "Schon die Karte zeigt das Wichtigste: wo das Kind gerade ist, wann es kommt und geht und wie es nach Hause kommt. Wählen Sie eine Karte. Dann sehen Sie alle Angaben.",
+        text: "Schon die Karte zeigt das Wichtigste: wo das Kind gerade ist, wann es kommt und geht und wie es nach Hause kommt. Wähle eine Karte. Dann siehst du alle Angaben.",
         advance: "click",
         missingText:
-          "Hier steht noch kein Kind. Prüfen Sie die Suche oder die Filter.",
+          "Hier steht noch kein Kind. Prüfe die Suche oder die Filter.",
       },
       {
         target: '[role="tablist"]',
         pathPattern: STAFF_CHILD_RECORD,
         title: "Angaben des Kindes",
-        text: "Die Angaben sind nach Bereichen sortiert. Die Tour zeigt Ihnen die wichtigsten.",
+        text: "Die Angaben sind nach Bereichen sortiert. Die Tour zeigt dir die wichtigsten.",
         advance: "next",
       },
       ...childTab(
@@ -332,7 +331,7 @@ export const STAFF_ONBOARDING_TOURS: Readonly<
       ...childTab(
         "nachrichten",
         "Nachrichten",
-        "Hier schreiben Sie den Eltern dieses Kindes und lesen ihre Antworten.",
+        "Hier schreibst du den Eltern dieses Kindes und liest ihre Antworten.",
       ),
       ...childTab(
         "erziehungsberechtigte",
@@ -342,7 +341,7 @@ export const STAFF_ONBOARDING_TOURS: Readonly<
       ...childTab(
         "betreuungsplan",
         "Betreuungsplan",
-        "Hier sehen Sie, was für das Kind an einem Tag oder in einer Woche geplant ist.",
+        "Hier siehst du, was für das Kind an einem Tag oder in einer Woche geplant ist.",
       ),
       ...childTab(
         "betreuungszeiten",
@@ -360,10 +359,10 @@ export const STAFF_ONBOARDING_TOURS: Readonly<
         title: "An- und abmelden",
         // Der Knopf heißt am Computer „An- & Abmelden“, auf dem Handy
         // „Kinder an- und abmelden“: deshalb ohne Namen.
-        text: "Mit diesem Knopf melden Sie Kinder an und ab. Wählen Sie ihn.",
+        text: "Mit diesem Knopf meldest du Kinder an und ab. Wähle ihn.",
         advance: "click",
         missingText:
-          "Diesen Knopf gibt es nur für heute. Wählen Sie oben den heutigen Tag.",
+          "Diesen Knopf gibt es nur für heute. Wähle oben den heutigen Tag.",
       },
       {
         target: '[data-setup-tour="student-card"][data-checkin-mode]',
@@ -374,7 +373,7 @@ export const STAFF_ONBOARDING_TOURS: Readonly<
       {
         target: CHECKIN_BAR,
         title: "Fertig",
-        text: "Sind Sie fertig, wählen Sie hier „Fertig“. Dann öffnet ein Tipp auf die Karte wieder die Angaben des Kindes.",
+        text: "Bist du fertig, wähle hier „Fertig“. Dann öffnet ein Tipp auf die Karte wieder die Angaben des Kindes.",
         advance: "next",
       },
     ],
@@ -389,7 +388,7 @@ export const STAFF_ONBOARDING_TOURS: Readonly<
       {
         target: '[aria-label="Ansicht wählen"]',
         title: "Tag, Woche oder Monat",
-        text: "Wählen Sie, wie viel Sie auf einmal sehen.",
+        text: "Wähle, wie viel du auf einmal siehst.",
         advance: "next",
       },
       {
@@ -397,8 +396,8 @@ export const STAFF_ONBOARDING_TOURS: Readonly<
         // die Seite das Raster durch einen Hinweis, und die Tour fände keine
         // Stelle mehr.
         target: ".moto-tenant-body",
-        title: "Ihre Termine",
-        text: "Hier stehen Ihre Termine, Einsätze und Schichten. Wählen Sie einen Eintrag für mehr Angaben. Ist noch nichts eingetragen, bleibt die Fläche leer. Mit den Pfeilen oben sehen Sie andere Wochen.",
+        title: "Deine Termine",
+        text: "Hier stehen deine Termine, Einsätze und Schichten. Wähle einen Eintrag für mehr Angaben. Ist noch nichts eingetragen, bleibt die Fläche leer. Mit den Pfeilen oben siehst du andere Wochen.",
         advance: "next",
       },
     ],
@@ -420,12 +419,12 @@ export const STAFF_ONBOARDING_TOURS: Readonly<
         target:
           '[data-setup-tour="supervision-next"], [data-setup-tour="supervision-empty"]',
         title: "Aufsicht übernehmen",
-        text: "Unter „Als Nächstes“ starten Sie Ihren nächsten geplanten Termin. Steht dort nichts, sind Sie noch keinem Betreuungsangebot zugeteilt.",
+        text: "Unter „Als Nächstes“ startest du deinen nächsten geplanten Termin. Steht dort nichts, bist du noch keinem Betreuungsangebot zugeteilt.",
         // Ohne Aufsicht und geplanten Termin zeigt die Seite (#4372: auch mit
         // offenen Räumen) nur „Keine aktive Raum-Aufsicht“, ohne „Als Nächstes“.
         textWhenVisible: {
           selector: '[data-setup-tour="supervision-empty"]',
-          text: "Gerade beaufsichtigen Sie keinen Raum, und für Sie ist nichts geplant. Steht ein Termin an, erscheint er hier unter „Als Nächstes“. Dort starten Sie ihn. Erscheint hier nie etwas, sind Sie noch keinem Betreuungsangebot zugeteilt.",
+          text: "Gerade beaufsichtigst du keinen Raum, und für dich ist nichts geplant. Steht ein Termin an, erscheint er hier unter „Als Nächstes“. Dort startest du ihn. Erscheint hier nie etwas, bist du noch keinem Betreuungsangebot zugeteilt.",
         },
         advance: "next",
       },
@@ -441,11 +440,11 @@ export const STAFF_ONBOARDING_TOURS: Readonly<
       {
         target: '[data-setup-tour="time-clock"]',
         title: "Stempeluhr",
-        text: "Wählen Sie zu Arbeitsbeginn den Arbeitsort und dann „Einstempeln“. Pausen und Arbeitsende erfassen Sie hier genauso.",
+        text: "Wähle zu Arbeitsbeginn den Arbeitsort und dann „Einstempeln“. Pausen und Arbeitsende erfasst du hier genauso.",
         // Wer schon eingestempelt ist, sieht keinen Knopf „Einstempeln“.
         textWhenVisible: {
           selector: 'button[aria-label="Ausstempeln"]',
-          text: "Sie sind schon eingestempelt. Hier sehen Sie, wie lange Sie heute arbeiten. Mit „Pause starten“ erfassen Sie eine Pause, mit „Ausstempeln“ Ihr Arbeitsende.",
+          text: "Du bist schon eingestempelt. Hier siehst du, wie lange du heute arbeitest. Mit „Pause starten“ erfasst du eine Pause, mit „Ausstempeln“ dein Arbeitsende.",
         },
         advance: "next",
       },
@@ -472,21 +471,21 @@ const CHILD_SEARCH_ONLY_TOURS: Readonly<
       ...viaNavigation(TAGESBETRIEB, ALL_CHILDREN),
       {
         target: MY_GROUP_TAB,
-        title: "Ihre Gruppe",
-        text: "Wählen Sie diesen Reiter. Dann sehen Sie nur die Kinder Ihrer Gruppe.",
+        title: "Deine Gruppe",
+        text: "Wähle diesen Reiter. Dann siehst du nur die Kinder deiner Gruppe.",
         advance: "click",
       },
       {
         target: '[data-setup-tour="student-card"]',
-        title: "Ihre Gruppe",
-        text: "Hier sehen Sie die Kinder Ihrer Gruppe. Jede Karte zeigt, wo das Kind gerade ist und wann es kommt und geht.",
+        title: "Deine Gruppe",
+        text: "Hier siehst du die Kinder deiner Gruppe. Jede Karte zeigt, wo das Kind gerade ist und wann es kommt und geht.",
         advance: "next",
-        missingText: "In Ihrer Gruppe ist noch kein Kind. Wählen Sie „Weiter“.",
+        missingText: "In deiner Gruppe ist noch kein Kind. Wähle „Weiter“.",
       },
       {
         target: SEARCH,
         title: "Kind suchen",
-        text: "Viele Kinder? Geben Sie hier einen Namen ein.",
+        text: "Viele Kinder? Gib hier einen Namen ein.",
         advance: "next",
       },
     ],
@@ -498,14 +497,14 @@ const CHILD_SEARCH_ONLY_TOURS: Readonly<
       {
         target: ALL_CHILDREN_MENU,
         title: "Menü öffnen",
-        text: "Wählen Sie oben rechts das Menü mit den drei Punkten.",
+        text: "Wähle oben rechts das Menü mit den drei Punkten.",
         advance: "click",
         nav: true,
       },
       {
         target: 'a[role="menuitem"][href$="/active-supervisions"]',
         title: "Zur Aufsicht öffnen",
-        text: "Wählen Sie „Zur Aufsicht“.",
+        text: "Wähle „Zur Aufsicht“.",
         advance: "click",
         nav: true,
       },
@@ -530,22 +529,22 @@ export function staffOnboardingTours(
 export const STAFF_NEXT_TOPICS: readonly SchoolSetupNextTopic[] = [
   {
     title: "moto aufs Handy holen",
-    description: "So öffnen Sie moto mit einem Tipp wie eine App.",
+    description: "So öffnest du moto mit einem Tipp wie eine App.",
     link: { topic: HELP_TOPICS.installApp },
   },
   {
     title: "Ein Kind krank melden",
-    description: "Tragen Sie ein, wenn ein Kind heute fehlt.",
+    description: "Trage ein, wenn ein Kind heute fehlt.",
     link: { topic: HELP_TOPICS.absences },
   },
   {
     title: "Urlaub beantragen",
-    description: "Beantragen Sie Urlaub und sehen Sie, was noch übrig ist.",
+    description: "Beantrage Urlaub und sieh, was noch übrig ist.",
     link: { topic: HELP_TOPICS.vacation },
   },
   {
     title: "Den Team-Chat nutzen",
-    description: "Schreiben Sie Ihren Kolleginnen und Kollegen.",
+    description: "Schreibe deinen Kolleginnen und Kollegen.",
     link: { topic: HELP_TOPICS.teamChat },
   },
 ];

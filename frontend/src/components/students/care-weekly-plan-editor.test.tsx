@@ -299,7 +299,7 @@ describe("CareWeeklyPlanEditForm", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(
-      "Die Änderung am Wochenplan konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+      "Die Änderung am Wochenplan konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
     );
     expect(alert).not.toHaveTextContent("Backend kaputt");
     expect(alert).toHaveTextContent("req-weekly");

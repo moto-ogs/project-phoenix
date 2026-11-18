@@ -19,7 +19,7 @@ export function goLiveTopic(
     id: HELP_TOPICS.leadGoLive,
     title: "moto für den ersten Betreuungstag vorbereiten",
     question: "Was muss ich vor dem Start erledigen?",
-    summary: "Arbeiten Sie diese Liste einmal von oben nach unten ab.",
+    summary: "Arbeite diese Liste einmal von oben nach unten ab.",
     group: "einrichten",
     audience: "lead",
     icon: "ListChecks",
@@ -30,46 +30,44 @@ export function goLiveTopic(
         description:
           "Jeder Punkt hat eine eigene Anleitung. Die Reihenfolge zählt, weil ein Schritt den vorigen braucht.",
         steps: [
-          "Legen Sie die `Räume` an.",
-          "Legen Sie Ihr Team an und laden Sie es ein.",
+          "Lege die `Räume` an.",
+          "Lege dein Team an und lade es ein.",
           ...(usesGroups
             ? [
-                "Legen Sie die `Gruppen` an. Jede Gruppe bekommt einen Raum und eine Gruppenleitung.",
+                "Lege die `Gruppen` an. Jede Gruppe bekommt einen Raum und eine Gruppenleitung.",
               ]
             : []),
-          "Übernehmen Sie die Kinder aus einer Liste. Oder legen Sie sie einzeln an.",
-          "Tragen Sie die Betreuungszeiten der Kinder ein.",
-          "Tragen Sie unter `Schuljahr und Kalender` Schuljahr, Ferien und Schließtage ein.",
-          ...(usesNfc
-            ? ["Richten Sie die NFC-Geräte und die Armbänder ein."]
-            : []),
-          "Prüfen Sie zum Schluss die `Einstellungen` Ihrer OGS.",
+          "Übernehme die Kinder aus einer Liste. Oder lege sie einzeln an.",
+          "Trage die Betreuungszeiten der Kinder ein.",
+          "Trage unter `Schuljahr und Kalender` Schuljahr, Ferien und Schließtage ein.",
+          ...(usesNfc ? ["Richte die NFC-Geräte und die Armbänder ein."] : []),
+          "Prüfe zum Schluss die `Einstellungen` deiner OGS.",
         ],
       },
       {
         title: "Vor dem ersten Tag einmal durchspielen",
         steps: [
-          "Melden Sie sich mit einem Leitungskonto an.",
+          "Melde dich mit einem Leitungskonto an.",
           ...(usesGroups
-            ? ["Öffnen Sie eine Gruppe und prüfen Sie die zugeordneten Kinder."]
-            : ["Prüfen Sie unter `Alle Kinder` drei Kinder."]),
+            ? ["Öffne eine Gruppe und prüfe die zugeordneten Kinder."]
+            : ["Prüfe unter `Alle Kinder` drei Kinder."]),
           ...(tracksRooms
-            ? ["Starten Sie eine Aufsicht und beenden Sie sie wieder."]
-            : ["Melden Sie ein Kind an und wieder ab."]),
-          "Melden Sie ein Kind krank und heben Sie die Meldung wieder auf.",
-          "Weisen Sie Ihr Team kurz ein.",
+            ? ["Starte eine Aufsicht und beende sie wieder."]
+            : ["Melde ein Kind an und wieder ab."]),
+          "Melde ein Kind krank und hebe die Meldung wieder auf.",
+          "Weise dein Team kurz ein.",
         ],
         ordered: false,
       },
     ],
     result:
-      "Sind alle Punkte erledigt, kann Ihr Team am ersten Tag ohne Vorbereitung starten.",
+      "Sind alle Punkte erledigt, kann dein Team am ersten Tag ohne Vorbereitung starten.",
     notes: [
-      "Sie müssen nicht alles an einem Tag schaffen. Die Liste bleibt gültig.",
-      "Laden Sie Ihr Team früh ein. Als `Gruppenleitung` wählbar ist nur, wer die Einladung schon angenommen hat.",
+      "Du musst nicht alles an einem Tag schaffen. Die Liste bleibt gültig.",
+      "Lade dein Team früh ein. Als `Gruppenleitung` wählbar ist nur, wer die Einladung schon angenommen hat.",
     ],
     troubleshootingDetails: [
-      "Ein Punkt fehlt Ihnen in der Seitenleiste? Dann fehlen Ihnen die Leitungsrechte. Fragen Sie Ihre Leitung.",
+      "Ein Punkt fehlt dir in der Seitenleiste? Dann fehlen dir die Leitungsrechte. Frage deine Leitung.",
     ],
     related: [
       HELP_TOPICS.leadFirstSteps,

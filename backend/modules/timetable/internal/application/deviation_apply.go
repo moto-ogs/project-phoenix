@@ -32,7 +32,7 @@ const (
 	msgInstanceNotFound    = "der Termin wurde nicht gefunden"
 	msgInstanceInPast      = "dieser Termin liegt in der Vergangenheit"
 	msgInstanceNotEditable = "dieser Termin kann nicht mehr geändert werden"
-	msgInstanceMoved       = "der Termin wurde gleichzeitig geändert. Öffnen Sie ihn erneut"
+	msgInstanceMoved       = "der Termin wurde gleichzeitig geändert. Öffne ihn erneut"
 	msgSickScopeLocked     = "diese Abwesenheit kommt aus einer Krankmeldung und kann hier nicht geändert werden"
 )
 

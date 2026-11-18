@@ -83,7 +83,7 @@ export function BirthdayVisibilitySection() {
       icon={Cake}
       headingLevel={3}
       title="Geburtstag"
-      description="Ihr Name erscheint in der Geburtstagsübersicht auf der Startseite, ohne Geburtsjahr."
+      description="Dein Name erscheint in der Geburtstagsübersicht auf der Startseite, ohne Geburtsjahr."
     >
       {/* Bis der Text eines Ladefehlers da ist, bleibt das Skelett stehen:
           kein Schalter mit geratenem Stand. */}

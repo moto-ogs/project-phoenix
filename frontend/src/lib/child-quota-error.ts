@@ -20,5 +20,5 @@ export function childQuotaMessage(err: unknown): string | null {
     typeof booked === "number" && typeof occupied === "number"
       ? ` Die Kontingentzahl beträgt ${occupied} von ${booked} Kindern.`
       : "";
-  return `Das Kinderkontingent Ihrer Schule ist voll.${stand} Für weitere Kinder melden Sie sich bitte beim moto-Team.`;
+  return `Das Kinderkontingent deiner Schule ist voll.${stand} Für weitere Kinder melde dich bitte beim moto-Team.`;
 }

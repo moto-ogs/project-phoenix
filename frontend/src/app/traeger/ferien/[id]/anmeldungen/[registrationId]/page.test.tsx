@@ -268,7 +268,7 @@ describe("TraegerHolidayRegistrationPage", () => {
 
       expect(
         await screen.findByText(
-          "Für diese Anmeldung gibt es schon eine Rechnung. Geschwister können Sie jetzt nicht mehr ändern.",
+          "Für diese Anmeldung gibt es schon eine Rechnung. Geschwister kannst du jetzt nicht mehr ändern.",
         ),
       ).toBeInTheDocument();
     });
@@ -284,7 +284,7 @@ describe("TraegerHolidayRegistrationPage", () => {
 
       expect(
         await screen.findByText(
-          "Für eine dieser Anmeldungen gibt es schon eine Rechnung. Geschwister können Sie jetzt nicht mehr ändern.",
+          "Für eine dieser Anmeldungen gibt es schon eine Rechnung. Geschwister kannst du jetzt nicht mehr ändern.",
         ),
       ).toBeInTheDocument();
       expect(
@@ -469,7 +469,7 @@ describe("TraegerHolidayRegistrationPage", () => {
       expect(await screen.findByText("Rechnung prüfen")).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Der Beitrag hat sich geändert, zum Beispiel durch ein Storno bei den Geschwistern. Die Rechnung zeigt noch den alten Betrag. Stornieren Sie die Rechnung. Der nächste Abrechnungslauf stellt dann den neuen Betrag aus.",
+          "Der Beitrag hat sich geändert, zum Beispiel durch ein Storno bei den Geschwistern. Die Rechnung zeigt noch den alten Betrag. Storniere die Rechnung. Der nächste Abrechnungslauf stellt dann den neuen Betrag aus.",
         ),
       ).toBeInTheDocument();
     });
@@ -510,7 +510,7 @@ describe("TraegerHolidayRegistrationPage", () => {
 
     expect(
       await screen.findByText(
-        "Die Schule „OGS Süd“ führt ein Kind mit gleichem Namen und Geburtsdatum. Angemeldet ist Ben als Feriengast. Bitte prüfen Sie die Schule.",
+        "Die Schule „OGS Süd“ führt ein Kind mit gleichem Namen und Geburtsdatum. Angemeldet ist Ben als Feriengast. Bitte prüfe die Schule.",
       ),
     ).toBeInTheDocument();
     // Only this registration is compared, once.
@@ -694,7 +694,7 @@ describe("TraegerHolidayRegistrationPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Kein Nachweis. Bringt eine Familie mit Leistungsbezug den Nachweis auf Papier, laden Sie ihn hier hoch.",
+        "Kein Nachweis. Bringt eine Familie mit Leistungsbezug den Nachweis auf Papier, lade ihn hier hoch.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -738,7 +738,7 @@ describe("TraegerHolidayRegistrationPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Informieren Sie die Familie am besten per Telefon. Prüfen Sie die E-Mail-Adresse unter „Eltern“ und ändern Sie sie, wenn sie falsch ist.",
+        "Informiere die Familie am besten per Telefon. Prüfe die E-Mail-Adresse unter „Eltern“ und ändere sie, wenn sie falsch ist.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -843,9 +843,9 @@ describe("TraegerHolidayRegistrationPage", () => {
     // The next step stands once, in the notice above, not again under the
     // list (#6999).
     // Anker: the notice above carries the next step exactly once.
-    expect(screen.getAllByText(/Informieren Sie die Familie/)).toHaveLength(1);
+    expect(screen.getAllByText(/Informiere die Familie/)).toHaveLength(1);
     expect(
-      within(section!).queryByText(/Informieren Sie die Familie/),
+      within(section!).queryByText(/Informiere die Familie/),
     ).not.toBeInTheDocument();
     expect(
       screen.getByText(
@@ -949,10 +949,10 @@ describe("TraegerHolidayRegistrationPage", () => {
     // for a call and not for another address (#6999).
     // Anker: the notice names the call.
     expect(
-      screen.getByText("Informieren Sie die Familie am besten per Telefon."),
+      screen.getByText("Informiere die Familie am besten per Telefon."),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(/Prüfen Sie die E-Mail-Adresse/),
+      screen.queryByText(/Prüfe die E-Mail-Adresse/),
     ).not.toBeInTheDocument();
     const section = screen
       .getByRole("heading", { name: "Mails an die Eltern" })
@@ -990,11 +990,11 @@ describe("TraegerHolidayRegistrationPage", () => {
       // Anker: the notice is there and names the call.
       expect(
         await screen.findByText(
-          "Informieren Sie die Familie am besten per Telefon.",
+          "Informiere die Familie am besten per Telefon.",
         ),
       ).toBeInTheDocument();
       expect(
-        screen.queryByText(/Prüfen Sie die E-Mail-Adresse/),
+        screen.queryByText(/Prüfe die E-Mail-Adresse/),
       ).not.toBeInTheDocument();
     },
   );
@@ -1025,10 +1025,10 @@ describe("TraegerHolidayRegistrationPage", () => {
       await screen.findByText("Mail an die Eltern prüfen"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Informieren Sie die Familie am besten per Telefon."),
+      screen.getByText("Informiere die Familie am besten per Telefon."),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(/Prüfen Sie die E-Mail-Adresse/),
+      screen.queryByText(/Prüfe die E-Mail-Adresse/),
     ).not.toBeInTheDocument();
   });
 
@@ -1067,7 +1067,7 @@ describe("TraegerHolidayRegistrationPage", () => {
 
     expect(
       await screen.findByText(
-        "moto löscht diese Anmeldung am 09.01.2028. Laden Sie sie vorher herunter, wenn Sie sie länger brauchen. Gesundheitsangaben löscht moto schon am 11.04.2027.",
+        "moto löscht diese Anmeldung am 09.01.2028. Lade sie vorher herunter, wenn du sie länger brauchst. Gesundheitsangaben löscht moto schon am 11.04.2027.",
       ),
     ).toBeInTheDocument();
 

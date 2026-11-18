@@ -112,7 +112,7 @@ function SurveyDetailContent() {
     return (
       <ForbiddenPage
         title="Umfrage"
-        message="Umfragen anlegen und auswerten darf nur, wer dafür die Berechtigung hat. Bitte fragen Sie Ihre Leitung."
+        message="Umfragen anlegen und auswerten darf nur, wer dafür die Berechtigung hat. Bitte frage deine Leitung."
       />
     );
   }
@@ -388,7 +388,7 @@ function SurveyReadView({ survey }: Readonly<{ survey: Survey }>) {
         title="Angaben"
         description={
           survey.status === "draft"
-            ? "Entwurf: Noch sieht niemand die Umfrage. Ändern Sie sie über das Menü oben mit „Bearbeiten“."
+            ? "Entwurf: Noch sieht niemand die Umfrage. Ändere sie über das Menü oben mit „Bearbeiten“."
             : "Veröffentlicht: Die Angaben lassen sich nicht mehr ändern."
         }
       >

@@ -82,27 +82,24 @@ export function StaffProofModal({
     const fieldErrors: Record<string, string> = {};
     if (!draft.presentedOn) {
       fieldErrors.presented_on = police
-        ? "Bitte wählen Sie den Tag der Einsicht."
-        : "Bitte wählen Sie den Tag, an dem der Nachweis vorlag.";
+        ? "Bitte wähle den Tag der Einsicht."
+        : "Bitte wähle den Tag, an dem der Nachweis vorlag.";
     }
     if (police && !draft.issuedOn) {
-      fieldErrors.issued_on = "Bitte wählen Sie das Ausstellungsdatum.";
+      fieldErrors.issued_on = "Bitte wähle das Ausstellungsdatum.";
     } else if (police && draft.issuedOn > draft.presentedOn) {
       fieldErrors.issued_on =
         "Das Führungszeugnis kann nicht nach der Einsicht ausgestellt sein.";
     }
     if (police && !draft.noRelevantEntry) {
       fieldErrors.no_relevant_entry =
-        "Bitte bestätigen Sie, dass es keine einschlägige Eintragung gibt.";
+        "Bitte bestätige, dass es keine einschlägige Eintragung gibt.";
     }
     if (draft.expiresOn && draft.expiresOn < draft.presentedOn) {
       fieldErrors.expires_on = "Das Ablaufdatum liegt vor der Vorlage.";
     }
     if (Object.keys(fieldErrors).length > 0) {
-      formErrors.invalid(
-        "Bitte prüfen Sie die markierten Felder.",
-        fieldErrors,
-      );
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fieldErrors);
       return;
     }
     await save.run(async (op) => {
@@ -165,7 +162,7 @@ export function StaffProofModal({
             <Alert
               type="info"
               size="compact"
-              message="moto speichert nur Tag der Einsicht, Ausstellungsdatum und Ergebnis. Behalten Sie keine Kopie. Geben Sie das Zeugnis der Person zurück (§ 72a Abs. 5 SGB VIII)."
+              message="moto speichert nur Tag der Einsicht, Ausstellungsdatum und Ergebnis. Behalte keine Kopie. Gib das Zeugnis der Person zurück (§ 72a Abs. 5 SGB VIII)."
             />
           ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
@@ -214,7 +211,7 @@ export function StaffProofModal({
               checked={draft.noRelevantEntry}
               onChange={(checked) => set({ noRelevantEntry: checked })}
               label="Das Führungszeugnis hat keine einschlägige Eintragung."
-              description="Gemeint sind Straftaten, die eine Arbeit mit Kindern ausschließen. Hat das Zeugnis eine solche Eintragung, tragen Sie hier nichts ein."
+              description="Gemeint sind Straftaten, die eine Arbeit mit Kindern ausschließen. Hat das Zeugnis eine solche Eintragung, trage hier nichts ein."
               error={formErrors.fieldError("no_relevant_entry")}
             />
           ) : null}

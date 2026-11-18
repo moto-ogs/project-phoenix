@@ -599,7 +599,7 @@ describe("RejectReasonModal", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        `${explanation} Schicken Sie den Eltern die Mitteilung unten per Brief.`,
+        `${explanation} Schicke den Eltern die Mitteilung unten per Brief.`,
       ),
     ).toBeInTheDocument();
     expect(

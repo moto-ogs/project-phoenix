@@ -47,7 +47,7 @@ import { traegerPath } from "~/lib/traeger-url";
 type Tab = "vorschlaege" | "akten" | "ohne-akte";
 
 const INFO =
-  "Hier führen Sie jede Person, die Ihr Träger beschäftigt, mit einer Akte über alle Schulen. moto schlägt vor, welche Beschäftigungen an verschiedenen Schulen dieselbe Person sind. Sie prüfen jeden Vorschlag und verknüpfen ihn. Die Akte führt die Personalnummer des Trägers und die Bank- und Steuerdaten. Die Schulen arbeiten weiter mit ihrem Personal wie bisher. Lehrkräfte des Landes und Kräfte anderer Träger bekommen keine Akte.";
+  "Hier führst du jede Person, die dein Träger beschäftigt, mit einer Akte über alle Schulen. moto schlägt vor, welche Beschäftigungen an verschiedenen Schulen dieselbe Person sind. Du prüfst jeden Vorschlag und verknüpfst ihn. Die Akte führt die Personalnummer des Trägers und die Bank- und Steuerdaten. Die Schulen arbeiten weiter mit ihrem Personal wie bisher. Lehrkräfte des Landes und Kräfte anderer Träger bekommen keine Akte.";
 
 const RECORD_COLUMNS: DataTableColumn<StaffRecordSummary>[] = [
   {
@@ -357,7 +357,7 @@ export default function TraegerStaffRecordsPage() {
           <EmptyState
             icon={<LockKeyIcon className="h-12 w-12" aria-hidden="true" />}
             title="Personal beim Träger ist noch nicht freigeschaltet."
-            description="Das moto-Team schaltet es frei, sobald Ihr Träger bestätigt hat: Es gibt eine Vereinbarung mit Betriebsrat oder Mitarbeitervertretung, oder es gibt keine Vertretung. Bis dahin führt jede Schule ihr Personal selbst."
+            description="Das moto-Team schaltet es frei, sobald dein Träger bestätigt hat: Es gibt eine Vereinbarung mit Betriebsrat oder Mitarbeitervertretung, oder es gibt keine Vertretung. Bis dahin führt jede Schule ihr Personal selbst."
           />
         </SectionCard>
       ) : null}
@@ -372,7 +372,7 @@ export default function TraegerStaffRecordsPage() {
             />
           }
           title="Vorschläge zum Verknüpfen"
-          description="moto hat diese Beschäftigungen gefunden, die wohl dieselbe Person sind. Öffnen Sie einen Vorschlag, prüfen Sie die Werte und legen Sie die Akte an."
+          description="moto hat diese Beschäftigungen gefunden, die wohl dieselbe Person sind. Öffne einen Vorschlag, prüfe die Werte und lege die Akte an."
         >
           <DataTable
             columns={columns}
@@ -401,7 +401,7 @@ export default function TraegerStaffRecordsPage() {
         <SectionCard
           concept={staffConcept}
           title="Akten"
-          description="Jede Akte gilt für alle Schulen. Öffnen Sie eine Akte für Personalnummer, Bank und Steuer und den Verlauf."
+          description="Jede Akte gilt für alle Schulen. Öffne eine Akte für Personalnummer, Bank und Steuer und den Verlauf."
         >
           <DataTable
             columns={RECORD_COLUMNS}
@@ -420,7 +420,7 @@ export default function TraegerStaffRecordsPage() {
                   />
                 }
                 title="Noch keine Akte."
-                description="Stellen Sie oben mit „Person einstellen“ eine neue Person ein. Für Personal, das schon an einer Schule arbeitet: Verknüpfen Sie einen Vorschlag, legen Sie unter „Ohne Akte“ eine Akte an, oder nutzen Sie „Personal importieren“."
+                description="Stelle oben mit „Person einstellen“ eine neue Person ein. Für Personal, das schon an einer Schule arbeitet: Verknüpfe einen Vorschlag, lege unter „Ohne Akte“ eine Akte an, oder nutze „Personal importieren“."
               />
             }
           />
@@ -431,7 +431,7 @@ export default function TraegerStaffRecordsPage() {
         <SectionCard
           concept={peopleConcept}
           title="Personal ohne Akte"
-          description="Diese Personen arbeiten an einer Schule und haben noch keine Akte. Öffnen Sie eine Person, um ihre Akte anzulegen."
+          description="Diese Personen arbeiten an einer Schule und haben noch keine Akte. Öffne eine Person, um ihre Akte anzulegen."
         >
           <DataTable
             columns={CANDIDATE_COLUMNS}

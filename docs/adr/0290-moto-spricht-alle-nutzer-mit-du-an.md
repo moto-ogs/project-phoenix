@@ -34,6 +34,8 @@ fort. Begrüßungen nutzten schon vorher den Vornamen.
 - Texte, die Schulen oder Träger selbst gespeichert haben (eigene Vorlagen,
   Rechtstexte, Nachrichten), ändert moto nicht.
 - Zitierte Texte Dritter und gesetzlich vorgegebene Wortlaute bleiben wörtlich.
+- Versionierte Einwilligungs- und Erklärungstexte, denen Personen schon
+  zugestimmt haben, bleiben wörtlich. Eine Du-Fassung braucht eine neue Version.
 - Die übrigen Sprachen und PyrePortal folgen in eigenen Schnitten.
 
 ## Folgen

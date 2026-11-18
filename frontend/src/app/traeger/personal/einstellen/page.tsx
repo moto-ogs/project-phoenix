@@ -17,7 +17,7 @@ import { traegerPath } from "~/lib/traeger-url";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 
 const INFO =
-  "Hier stellen Sie eine Person ein, die noch an keiner Ihrer Schulen arbeitet. moto legt die Personalakte und den Arbeitsvertrag an. An jeder gewählten Schule entsteht die Person. Zugang, Transponder und Rolle richtet danach die Schule ein. Arbeitet die Person schon an einer Schule? Dann legen Sie ihre Akte bei den Personalakten unter „Ohne Akte“ an.";
+  "Hier stellst du eine Person ein, die noch an keiner deiner Schulen arbeitet. moto legt die Personalakte und den Arbeitsvertrag an. An jeder gewählten Schule entsteht die Person. Zugang, Transponder und Rolle richtet danach die Schule ein. Arbeitet die Person schon an einer Schule? Dann legst du ihre Akte bei den Personalakten unter „Ohne Akte“ an.";
 
 export default function TraegerStaffHirePage() {
   const today = useBerlinToday();
@@ -46,7 +46,7 @@ export default function TraegerStaffHirePage() {
           <EmptyState
             icon={<LockKeyIcon className="h-12 w-12" aria-hidden="true" />}
             title="Personal beim Träger ist noch nicht freigeschaltet."
-            description="Das moto-Team schaltet es frei, sobald Ihr Träger bestätigt hat: Es gibt eine Vereinbarung mit Betriebsrat oder Mitarbeitervertretung, oder es gibt keine Vertretung. Bis dahin legt jede Schule ihr Personal selbst an."
+            description="Das moto-Team schaltet es frei, sobald dein Träger bestätigt hat: Es gibt eine Vereinbarung mit Betriebsrat oder Mitarbeitervertretung, oder es gibt keine Vertretung. Bis dahin legt jede Schule ihr Personal selbst an."
           />
         </SectionCard>
       ) : null}
@@ -54,8 +54,8 @@ export default function TraegerStaffHirePage() {
         <SectionCard>
           <EmptyState
             icon={<BuildingsIcon className="h-12 w-12" aria-hidden="true" />}
-            title="Ihr Träger hat noch keine Schule."
-            description="Eine Person arbeitet immer an mindestens einer Schule. Sobald das moto-Team eine Schule für Sie angelegt hat, können Sie hier einstellen."
+            title="Dein Träger hat noch keine Schule."
+            description="Eine Person arbeitet immer an mindestens einer Schule. Sobald das moto-Team eine Schule für dich angelegt hat, kannst du hier einstellen."
           />
         </SectionCard>
       ) : null}

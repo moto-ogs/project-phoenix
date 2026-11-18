@@ -529,7 +529,7 @@ describe("PlannedStatusDaysModal", () => {
 
     expect(
       await screen.findByText(
-        "Die Teilentschuldigung konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Teilentschuldigung konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeInTheDocument();
     expect(onDeletePartialAbsence).toHaveBeenCalledWith("9");
@@ -747,7 +747,7 @@ describe("PlannedStatusDaysModal", () => {
 
     expect(
       await screen.findByText(
-        "Die geplante Abwesenheit konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die geplante Abwesenheit konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -1229,7 +1229,7 @@ describe("PlannedStatusDaysModal", () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Grund (optional)")).toHaveValue("Arzttermin");
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Die Krankmeldung ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+      "Die Krankmeldung ist gerade nicht erreichbar. Bitte versuche es erneut.",
     );
     // „Wiederholen“ sends the current draft again.
     onSubmit.mockResolvedValueOnce(undefined);
@@ -1454,7 +1454,7 @@ describe("PlannedStatusDaysModal", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "Die Prüfung der vorhandenen Einträge ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Prüfung der vorhandenen Einträge ist gerade nicht erreichbar. Bitte versuche es erneut.",
       );
     });
     expect(screen.getByRole("button", { name: "Krankmelden" })).toHaveAttribute(
@@ -1528,9 +1528,7 @@ describe("PlannedStatusDaysModal", () => {
     await clickEnabledButton("Krankmelden");
 
     expect(
-      screen.getByText(
-        "Bitte wählen Sie einen Zeitraum ohne bestehenden Status.",
-      ),
+      screen.getByText("Bitte wähle einen Zeitraum ohne bestehenden Status."),
     ).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
@@ -1751,7 +1749,7 @@ describe("PlannedStatusDaysModal", () => {
     // conflict, because the delete never landed.
     expect(
       await screen.findByText(
-        "Die geplante Abwesenheit konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die geplante Abwesenheit konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));

@@ -34,10 +34,10 @@ const PAYMENT_TEXT_PLACEHOLDERS = [
  * number (#5621).
  */
 export const BUILT_IN_PAYMENT_TEXT =
-  "Bitte überweisen Sie {Betrag} bis zum {Zahlungsfrist} auf das Konto unten. Geben Sie als Verwendungszweck die Rechnungsnummer {Rechnungsnummer} an.";
+  "Bitte überweist {Betrag} bis zum {Zahlungsfrist} auf das Konto unten. Gebt als Verwendungszweck die Rechnungsnummer {Rechnungsnummer} an.";
 
 const BUILT_IN_PAYMENT_TEXT_WITH_DEBTOR_NUMBER =
-  "Bitte überweisen Sie {Betrag} bis zum {Zahlungsfrist} auf das Konto unten. Geben Sie als Verwendungszweck Ihre Debitorennummer {Debitorennummer} an.";
+  "Bitte überweist {Betrag} bis zum {Zahlungsfrist} auf das Konto unten. Gebt als Verwendungszweck eure Debitorennummer {Debitorennummer} an.";
 
 /** The example values of the preview: invented, no real family. */
 const PAYMENT_TEXT_EXAMPLE: Readonly<

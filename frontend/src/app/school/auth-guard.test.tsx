@@ -64,7 +64,7 @@ describe("SchoolAuthGuard", () => {
     );
 
     expect(
-      screen.getByText(/Ihre Schule nutzt moto schule zurzeit nicht/),
+      screen.getByText(/Deine Schule nutzt moto schule zurzeit nicht/),
     ).toBeInTheDocument();
     expect(screen.queryByText("Klassenseite")).not.toBeInTheDocument();
   });
@@ -79,7 +79,7 @@ describe("SchoolAuthGuard", () => {
     );
 
     expect(
-      screen.getByText(/Ihre Schule nutzt moto schule zurzeit nicht/),
+      screen.getByText(/Deine Schule nutzt moto schule zurzeit nicht/),
     ).toBeInTheDocument();
     expect(screen.queryByText("Klassenseite")).not.toBeInTheDocument();
   });

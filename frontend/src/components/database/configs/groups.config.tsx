@@ -122,7 +122,7 @@ export const groupsConfig = defineEntityConfig<Group>({
             },
             placeholder: "Gruppenleitung auswählen…",
             helperText:
-              "Wählen Sie eine oder mehrere Gruppenleitungen für diese Gruppe aus",
+              "Wähle eine oder mehrere Gruppenleitungen für diese Gruppe aus",
           },
         ],
       },
@@ -269,6 +269,6 @@ export const groupsConfig = defineEntityConfig<Group>({
     createModalTitle: "Neue Gruppe",
     detailModalTitle: "Gruppendetails",
     deleteConfirmation:
-      "Sind Sie sicher, dass Sie diese Gruppe löschen möchten?",
+      "Bist du sicher, dass du diese Gruppe löschen möchtest?",
   },
 });

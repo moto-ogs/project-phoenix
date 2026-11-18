@@ -78,7 +78,7 @@ function noCareDaysNotice(
     ) {
       return {
         type: "warning",
-        message: `${head} Es bleibt kein Tag zum Buchen. Bitte wählen Sie andere Tage.`,
+        message: `${head} Es bleibt kein Tag zum Buchen. Bitte wähle andere Tage.`,
       };
     }
     return {
@@ -95,8 +95,8 @@ function noCareDaysNotice(
   return {
     type: "warning",
     message: booked
-      ? `${head} Bitte wählen Sie andere Tage.`
-      : `${head} So ist die Woche nicht buchbar. Wählen Sie bei „Buchung“ „Einzelne Tage“. Dann fällt nur dieser Tag weg.`,
+      ? `${head} Bitte wähle andere Tage.`
+      : `${head} So ist die Woche nicht buchbar. Wähle bei „Buchung“ „Einzelne Tage“. Dann fällt nur dieser Tag weg.`,
   };
 }
 
@@ -292,7 +292,7 @@ function WeekLunchFields({
         label="Mittagessen anbieten"
         description={
           booked
-            ? "Für diese Woche ist schon Mittagessen gebucht. Das Angebot bleibt deshalb. Den Preis können Sie ändern."
+            ? "Für diese Woche ist schon Mittagessen gebucht. Das Angebot bleibt deshalb. Den Preis kannst du ändern."
             : "Eltern wählen das Essen je Kind dazu. Es steht als eigener Betrag auf der Rechnung."
         }
         checked={offered}

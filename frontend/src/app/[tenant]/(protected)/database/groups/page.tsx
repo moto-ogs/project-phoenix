@@ -328,8 +328,8 @@ function GroupsPageContent() {
                   : "Keine Gruppen vorhanden",
               description:
                 searchTerm || roomFilter !== "all"
-                  ? "Versuchen Sie andere Suchkriterien oder Filter."
-                  : "Legen Sie die erste Gruppe an, um Kinder zuzuordnen.",
+                  ? "Versuche andere Suchkriterien oder Filter."
+                  : "Lege die erste Gruppe an, um Kinder zuzuordnen.",
               icon: (
                 <MotoDuotoneIcon
                   icon={groupsConcept.icon}
@@ -363,7 +363,7 @@ function GroupsPageContent() {
               title="Gruppe löschen?"
               description={
                 <>
-                  Möchten Sie die Gruppe{" "}
+                  Möchtest du die Gruppe{" "}
                   <span className="font-medium">{selectedGroup.name}</span>{" "}
                   wirklich löschen? Diese Aktion kann nicht rückgängig gemacht
                   werden.

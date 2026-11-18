@@ -34,7 +34,7 @@ it("asks for a name before it adds anything", async () => {
   renderPage();
   fireEvent.click(screen.getByRole("button", { name: "Empfänger anlegen" }));
   expect(
-    await screen.findByText("Bitte geben Sie dem Empfänger einen Namen."),
+    await screen.findByText("Bitte gib dem Empfänger einen Namen."),
   ).toBeInTheDocument();
   expect(api.createExportRecipient).not.toHaveBeenCalled();
 });

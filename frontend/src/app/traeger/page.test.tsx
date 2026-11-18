@@ -113,7 +113,7 @@ describe("TraegerSchoolsPage", () => {
     expect(
       screen.getByRole("dialog", { name: "Erklärung zu Schulen" }),
     ).toHaveTextContent(
-      "Alle Schulen Ihres Trägers. Neue Schulen ordnet das moto-Team zu.",
+      "Alle Schulen deines Trägers. Neue Schulen ordnet das moto-Team zu.",
     );
     expect(within(table).getByText("OGS Lindenweg")).toBeInTheDocument();
   });
@@ -136,12 +136,12 @@ describe("TraegerSchoolsPage", () => {
 
     // Table and phone layout share the empty state.
     const empty = await screen.findAllByText(
-      "Ihrem Träger sind noch keine Schulen zugeordnet.",
+      "Deinem Träger sind noch keine Schulen zugeordnet.",
     );
     expect(empty[0]).toBeInTheDocument();
     expect(
       screen.getAllByText(
-        "Das moto-Team ordnet die Schulen Ihrem Träger zu.",
+        "Das moto-Team ordnet die Schulen deinem Träger zu.",
       )[0],
     ).toBeInTheDocument();
   });
@@ -180,7 +180,7 @@ describe("TraegerSchoolsPage", () => {
     const table = await screen.findByRole("table");
     expect(
       screen.getByText(
-        "Die Schul-App öffnen Sie nur mit der Rolle „Schulzugang“. Diese Rolle gibt Ihnen eine Person mit der Rolle „Leitung“.",
+        "Die Schul-App öffnest du nur mit der Rolle „Schulzugang“. Diese Rolle gibt dir eine Person mit der Rolle „Leitung“.",
       ),
     ).toBeInTheDocument();
     expect(within(table).queryAllByRole("button", { name: /öffnen/ })).toEqual(

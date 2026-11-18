@@ -398,7 +398,7 @@ describe("StaffOnboardingWizard", () => {
         { name: "Erziehungsberechtigte" },
         { timeout: 4000 },
       ),
-    ).toHaveTextContent("Wählen Sie „Erziehungsberechtigte“.");
+    ).toHaveTextContent("Wähle „Erziehungsberechtigte“.");
     expect(screen.queryByText(/nicht zu sehen/)).toBeNull();
   });
 
@@ -454,7 +454,7 @@ describe("StaffOnboardingWizard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Zeig es mir" }));
 
     const bubble = await screen.findByRole("dialog", { name: "Stempeluhr" });
-    expect(bubble).toHaveTextContent("Sie sind schon eingestempelt.");
+    expect(bubble).toHaveTextContent("Du bist schon eingestempelt.");
     expect(bubble).not.toHaveTextContent("dann „Einstempeln“");
   });
 
@@ -474,7 +474,7 @@ describe("StaffOnboardingWizard", () => {
     const bubble = await screen.findByRole("dialog", {
       name: "Alle Kinder öffnen",
     });
-    expect(bubble).toHaveTextContent("Wählen Sie unten „Suchen“.");
+    expect(bubble).toHaveTextContent("Wähle unten „Suchen“.");
     expect(bubble).toHaveTextContent("Station 2 von");
   });
 
@@ -490,7 +490,7 @@ describe("StaffOnboardingWizard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Zeig es mir" }));
     expect(
       await screen.findByRole("dialog", { name: "Mehr öffnen" }),
-    ).toHaveTextContent("Wählen Sie unten „Mehr“.");
+    ).toHaveTextContent("Wähle unten „Mehr“.");
 
     // „Mehr“ öffnet das Menü mit „Mein Kalender“.
     const entry = document.createElement("a");
@@ -499,7 +499,7 @@ describe("StaffOnboardingWizard", () => {
     fireEvent.click(more);
     expect(
       await screen.findByRole("dialog", { name: "Mein Kalender öffnen" }),
-    ).toHaveTextContent("Wählen Sie „Mein Kalender“.");
+    ).toHaveTextContent("Wähle „Mein Kalender“.");
   });
 
   // Im Mehr-Menü klappen die Gruppen (#7048): Steht die Gruppe des Eintrags
@@ -523,7 +523,7 @@ describe("StaffOnboardingWizard", () => {
     fireEvent.click(more);
     expect(
       await screen.findByRole("dialog", { name: "Team öffnen" }),
-    ).toHaveTextContent("Wählen Sie im Menü „Team“.");
+    ).toHaveTextContent("Wähle im Menü „Team“.");
 
     // Aufgeklappt zeigt sie „Mein Kalender“.
     const entry = document.createElement("a");
@@ -532,7 +532,7 @@ describe("StaffOnboardingWizard", () => {
     fireEvent.click(group);
     expect(
       await screen.findByRole("dialog", { name: "Mein Kalender öffnen" }),
-    ).toHaveTextContent("Wählen Sie „Mein Kalender“.");
+    ).toHaveTextContent("Wähle „Mein Kalender“.");
   });
 
   it("updates the clock text once the page has loaded the clocked-in state", async () => {
@@ -559,7 +559,7 @@ describe("StaffOnboardingWizard", () => {
     await waitFor(() =>
       expect(
         screen.getByRole("dialog", { name: "Stempeluhr" }),
-      ).toHaveTextContent("Sie sind schon eingestempelt."),
+      ).toHaveTextContent("Du bist schon eingestempelt."),
     );
   });
 
@@ -579,7 +579,7 @@ describe("StaffOnboardingWizard", () => {
     const bubble = await screen.findByRole("dialog", {
       name: "Aufsicht übernehmen",
     });
-    expect(bubble).toHaveTextContent("Gerade beaufsichtigen Sie keinen Raum");
+    expect(bubble).toHaveTextContent("Gerade beaufsichtigst du keinen Raum");
     expect(bubble).not.toHaveTextContent("Beaufsichtigen");
   });
 
@@ -606,7 +606,7 @@ describe("StaffOnboardingWizard", () => {
     await screen.findByRole("dialog", { name: "Tag, Woche oder Monat" });
     fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
     expect(
-      await screen.findByRole("dialog", { name: "Ihre Termine" }),
+      await screen.findByRole("dialog", { name: "Deine Termine" }),
     ).toHaveTextContent("bleibt die Fläche leer");
     fireEvent.click(screen.getByRole("button", { name: "Fertig" }));
 

@@ -30,13 +30,13 @@ func TestCareLetterCarriesTheSEPAPrenotification(t *testing.T) {
 	for _, want := range []string{
 		"Zahlungsweg: Lastschrift", "Abbuchung am: 18.01.2027", "Konto: DE•• •••• •••• •••• ••30 00",
 		"Mandatsreferenz: SJR-2026-0042", "Gläubiger-ID: DE98ZZZ09999999999",
-		"Wir buchen 54,01 € am 18.01.2027 per SEPA-Lastschrift von Ihrem Konto DE•• •••• •••• •••• ••30 00 ab.",
+		"Wir buchen 54,01 € am 18.01.2027 per SEPA-Lastschrift von eurem Konto DE•• •••• •••• •••• ••30 00 ab.",
 		"Gläubiger-ID: DE98ZZZ09999999999. Mandatsreferenz: SJR-2026-0042. Verwendungszweck: Rechnungsnummer MB-2027-0001.",
 	} {
 		assert.Contains(t, text, want)
 	}
 	assert.NotContains(t, text, "DE89370400440532013000", "the letter never prints the full IBAN")
-	assert.NotContains(t, text, "Bitte überweisen Sie", "a direct debit asks for no transfer")
+	assert.NotContains(t, text, "Bitte überweise", "a direct debit asks for no transfer")
 }
 
 // The pre-notification announces what the family pays: the rest after the
@@ -59,7 +59,7 @@ func TestDirectDebitWithoutMandateKeepsTheShortSentence(t *testing.T) {
 	t.Parallel()
 	content := sepaInvoice()
 	content.invoice.Payment.Mandate = nil
-	assert.Equal(t, "Wir buchen 54,01 € am 18.01.2027 von Ihrem Konto ab. Verwendungszweck: Rechnungsnummer MB-2027-0001. Sie müssen nichts überweisen.",
+	assert.Equal(t, "Wir buchen 54,01 € am 18.01.2027 von eurem Konto ab. Verwendungszweck: Rechnungsnummer MB-2027-0001. Ihr müsst nichts überweisen.",
 		carePaymentText(content))
 }
 

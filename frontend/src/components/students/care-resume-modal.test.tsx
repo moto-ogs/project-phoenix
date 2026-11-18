@@ -57,7 +57,7 @@ describe("CareResumeModal", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          "Das Kinderkontingent Ihrer Schule ist voll (50 von 50 Kindern). Bitte melden Sie sich beim moto-Team.",
+          "Das Kinderkontingent deiner Schule ist voll (50 von 50 Kindern). Bitte melde dich beim moto-Team.",
         ),
       ).toBeInTheDocument(),
     );
@@ -114,7 +114,7 @@ describe("CareResumeModal", () => {
 
     expect(
       await screen.findByText(
-        "Die Wiederaufnahme konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Wiederaufnahme konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeInTheDocument();
     expect(

@@ -9,11 +9,11 @@ import { SectionCard } from "~/components/ui/section-card";
 import { formatBerlinDate, formatBerlinTime } from "~/lib/date-helpers";
 import type { StaffImportLogEntry } from "~/lib/traeger-staff-import-api";
 
-// Wer importiert hat: „Ihnen“ für die eigenen Importe, sonst der Name, den
+// Wer importiert hat: „dir“ für die eigenen Importe, sonst der Name, den
 // die Person beim Träger trägt. Die Personalverwaltung darf das Träger-Büro
 // nicht lesen; die Namen kommen deshalb mit dem Protokoll.
 function importedBy(entry: StaffImportLogEntry): string {
-  if (entry.byYou) return "Ihnen";
+  if (entry.byYou) return "dir";
   return entry.accountName.trim() || "Konto ohne Namen";
 }
 

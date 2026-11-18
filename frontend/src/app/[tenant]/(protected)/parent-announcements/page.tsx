@@ -214,7 +214,7 @@ const KIND_COPY: Record<
     ariaLabel: "Neue Elternmitteilung erstellen",
     createHint: "Öffnet das Formular für eine neue Mitteilung an Eltern.",
     emptyTitle: "Keine Mitteilungen",
-    emptyBody: "Erstellen Sie eine neue Mitteilung für die Eltern.",
+    emptyBody: "Erstelle eine neue Mitteilung für die Eltern.",
   },
   letter: {
     title: "Elternbriefe",
@@ -232,8 +232,8 @@ const KIND_COPY: Record<
     createHint: "Öffnet das Formular für eine neue Frage an Eltern.",
     emptyTitle: "Keine Umfragen",
     emptyBody:
-      "Stellen Sie den Eltern eine Frage, zum Beispiel ob ihr Kind zum Sommerfest kommt.",
-    info: "Hier stellen Sie den Eltern eine kurze Frage zu jedem Kind. Für mehrere Fragen, auch anonym oder an das Team, gibt es den Bereich Team › Umfragen.",
+      "Stelle den Eltern eine Frage, zum Beispiel ob ihr Kind zum Sommerfest kommt.",
+    info: "Hier stellst du den Eltern eine kurze Frage zu jedem Kind. Für mehrere Fragen, auch anonym oder an das Team, gibt es den Bereich Team › Umfragen.",
   },
   declaration: {
     title: "Einverständnisse",
@@ -242,7 +242,7 @@ const KIND_COPY: Record<
     createHint: "Öffnet das Formular für ein neues Einverständnis der Eltern.",
     emptyTitle: "Keine Einverständnisse",
     emptyBody:
-      "Hier bitten Sie Eltern um ihr Einverständnis, zum Beispiel für einen Ausflug. Eltern stimmen für jedes Kind zu oder lehnen ab.",
+      "Hier bittest du Eltern um ihr Einverständnis, zum Beispiel für einen Ausflug. Eltern stimmen für jedes Kind zu oder lehnen ab.",
   },
 };
 
@@ -898,12 +898,12 @@ const ACCEPTED_ATTACHMENT_TYPES = ".pdf,.docx,.xlsx,.pptx,.png,.jpg,.jpeg";
 // Anhangsbereich einer veröffentlichten Mitteilung als auch in der Meldung,
 // falls jemand die Schaltfläche doch noch erwischt.
 const ATTACHMENTS_LOCKED_HINT =
-  "Die Mitteilung ist veröffentlicht. Die Dateien stehen jetzt fest. Ziehen Sie die Mitteilung zurück, wenn Sie etwas ändern möchten.";
+  "Die Mitteilung ist veröffentlicht. Die Dateien stehen jetzt fest. Ziehe die Mitteilung zurück, wenn du etwas ändern möchtest.";
 // Ein Einverständnis (#3430) friert ihre Dateien beim ersten Veröffentlichen ein.
 // Auch nach dem Zurückziehen bleiben sie gleich, damit jede Antwort auf genau
 // diese Dateien verweist.
 const DECLARATION_ATTACHMENTS_LOCKED_HINT =
-  "Dieses Einverständnis war schon veröffentlicht. Die Dateien bleiben deshalb gleich. Für andere Dateien legen Sie ein neues Einverständnis an.";
+  "Dieses Einverständnis war schon veröffentlicht. Die Dateien bleiben deshalb gleich. Für andere Dateien lege ein neues Einverständnis an.";
 
 const DECLARATION_SIGNER_OPTIONS: ReadonlyArray<{
   value: DeclarationSigners;
@@ -1192,14 +1192,14 @@ function AnnouncementFormModal({
     const fields: Record<string, string> = {};
     if (!title.trim()) {
       fields.title = isPollForm
-        ? "Bitte geben Sie eine Frage ein."
-        : "Bitte geben Sie einen Titel ein.";
+        ? "Bitte gib eine Frage ein."
+        : "Bitte gib einen Titel ein.";
     }
-    if (!body.trim()) fields.body = "Bitte geben Sie einen Text ein.";
+    if (!body.trim()) fields.body = "Bitte gib einen Text ein.";
     const linkProblem = linkError(linkUrl);
     if (linkProblem) fields.link_url = linkProblem;
     if (Object.keys(fields).length > 0) {
-      setFormError("Bitte prüfen Sie die markierten Felder.", fields);
+      setFormError("Bitte prüfe die markierten Felder.", fields);
       return false;
     }
     if (isPollForm) {
@@ -1332,7 +1332,7 @@ function AnnouncementFormModal({
       return;
     }
     if (targets.length === 0) {
-      setFormError("Bitte fügen Sie mindestens eine Zielgruppe hinzu.");
+      setFormError("Bitte füge mindestens eine Zielgruppe hinzu.");
       return;
     }
 
@@ -1535,7 +1535,7 @@ function AnnouncementFormModal({
           size="md"
           onClick={() => setStep(0)}
           disabled={submitting !== null}
-          tooltip="Führt zurück zum Inhalt, Ihre Eingaben bleiben erhalten."
+          tooltip="Führt zurück zum Inhalt, deine Eingaben bleiben erhalten."
           className="grow sm:grow-0"
         >
           Zurück
@@ -1618,7 +1618,7 @@ function AnnouncementFormModal({
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder={
                       isPollForm
-                        ? "z. B. Kommt Ihr Kind zur Murmelparty?"
+                        ? "z. B. Kommt dein Kind zur Murmelparty?"
                         : "z. B. Sommerfest am Freitag"
                     }
                   />
@@ -1706,7 +1706,7 @@ function AnnouncementFormModal({
                         size="md"
                         onClick={addOption}
                         disabled={optionRows.length >= MAX_POLL_OPTIONS}
-                        disabledReason={`Mehr als ${MAX_POLL_OPTIONS} Antworten gehen nicht. Entfernen Sie zuerst eine.`}
+                        disabledReason={`Mehr als ${MAX_POLL_OPTIONS} Antworten gehen nicht. Entferne zuerst eine.`}
                         tooltip="Fügt ein leeres Feld für eine weitere Antwort hinzu."
                         className="mt-3 gap-2"
                       >
@@ -1752,7 +1752,7 @@ function AnnouncementFormModal({
                       </p>
                       <p className="mt-1 text-sm text-gray-600">
                         Soll nur bestätigt werden, dass Eltern etwas gelesen
-                        haben? Dann schreiben Sie einen Elternbrief mit
+                        haben? Dann schreibe einen Elternbrief mit
                         Lesebestätigung.
                       </p>
                     </div>
@@ -2034,8 +2034,8 @@ function AnnouncementFormModal({
                       />
                       <p className="mt-2 text-xs text-gray-500">
                         {emailAudience === "all_contacts"
-                          ? "Auch Bezugspersonen ohne Portal-Zugang bekommen die E-Mail. Sie können den Brief nicht in moto bestätigen. Geht es um Gesundheit oder andere sensible Angaben zu einem Kind? Dann wählen Sie die andere Option."
-                          : "Nur Bezugspersonen mit Portal-Zugang bekommen die E-Mail. Alle anderen sehen Sie danach in der Empfängerliste."}
+                          ? "Auch Bezugspersonen ohne Portal-Zugang bekommen die E-Mail. Sie können den Brief nicht in moto bestätigen. Geht es um Gesundheit oder andere sensible Angaben zu einem Kind? Dann wähle die andere Option."
+                          : "Nur Bezugspersonen mit Portal-Zugang bekommen die E-Mail. Alle anderen siehst du danach in der Empfängerliste."}
                       </p>
                     </div>
                   )}
@@ -2142,17 +2142,17 @@ function AnnouncementFormModal({
                         onClick={() => fileInputRef.current?.click()}
                         disabledReason={
                           attachmentCount >= MAX_ATTACHMENTS
-                            ? `Mehr als ${MAX_ATTACHMENTS} Dateien gehen nicht. Entfernen Sie zuerst eine.`
+                            ? `Mehr als ${MAX_ATTACHMENTS} Dateien gehen nicht. Entferne zuerst eine.`
                             : undefined
                         }
-                        tooltip="Öffnet Ihre Dateien, um einen Anhang auszuwählen."
+                        tooltip="Öffnet deine Dateien, um einen Anhang auszuwählen."
                       >
                         Datei auswählen
                       </Button>
                       {attachmentCount >= MAX_ATTACHMENTS && (
                         <p className="mt-2 text-xs text-gray-500">
-                          Die Höchstzahl ist erreicht. Entfernen Sie eine Datei,
-                          um eine andere anzuhängen.
+                          Die Höchstzahl ist erreicht. Entferne eine Datei, um
+                          eine andere anzuhängen.
                         </p>
                       )}
                     </div>

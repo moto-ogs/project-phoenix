@@ -86,7 +86,7 @@ export function StudentPermanentNotesCard({
   return (
     <SectionCard
       title="Dauerhafte Hinweise"
-      description="Was für dieses Kind immer gilt. Neue Hinweise schreiben Sie im Reiter Notizen."
+      description="Was für dieses Kind immer gilt. Neue Hinweise schreibst du im Reiter Notizen."
     >
       {isLoading ? (
         <div className="space-y-2">
@@ -102,7 +102,7 @@ export function StudentPermanentNotesCard({
           <EmptyState
             variant="compact"
             title="Keine dauerhaften Hinweise"
-            description="Im Reiter Notizen können Sie einen anlegen."
+            description="Im Reiter Notizen kannst du einen anlegen."
           />
         ) : (
           <ul className="space-y-4">

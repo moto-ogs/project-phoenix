@@ -275,8 +275,8 @@ function RoomsPageContent() {
                   : "Keine Räume vorhanden",
               description:
                 searchTerm || categoryFilter !== "all"
-                  ? "Versuchen Sie andere Suchkriterien oder Filter."
-                  : "Legen Sie den ersten Raum an, damit Gruppen einen Ort haben.",
+                  ? "Versuche andere Suchkriterien oder Filter."
+                  : "Lege den ersten Raum an, damit Gruppen einen Ort haben.",
               icon: (
                 <MotoDuotoneIcon
                   icon={roomsConcept.icon}

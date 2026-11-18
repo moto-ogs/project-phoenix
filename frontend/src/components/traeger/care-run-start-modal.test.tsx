@@ -87,7 +87,7 @@ describe("CareRunStartModal", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Vorschau öffnen" }));
     expect(
-      await screen.findByText("Bitte wählen Sie mindestens eine Schule."),
+      await screen.findByText("Bitte wähle mindestens eine Schule."),
     ).toBeInTheDocument();
     expect(onStart).not.toHaveBeenCalled();
   });

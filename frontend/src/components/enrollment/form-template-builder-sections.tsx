@@ -96,8 +96,8 @@ export function UnsavedChangesDialog({
           disabled={saving}
           tooltip={
             pendingNavigation === "new"
-              ? "Verwirft Ihre Änderungen sofort und beginnt eine leere neue Vorlage."
-              : "Verwirft Ihre Änderungen sofort und öffnet die Übersicht."
+              ? "Verwirft deine Änderungen sofort und beginnt eine leere neue Vorlage."
+              : "Verwirft deine Änderungen sofort und öffnet die Übersicht."
           }
           variant="outline"
           size="md"
@@ -146,7 +146,7 @@ export function UnsavedChangesDialog({
       <p className="text-sm leading-6 text-gray-600">
         {isPreview
           ? "Für die externe Vorschau muss die Vorlage zuerst gespeichert werden."
-          : "Sie haben Änderungen an dieser Vorlage. Speichern Sie sie, bevor Sie den Bereich verlassen, oder verwerfen Sie sie bewusst."}
+          : "Du hast Änderungen an dieser Vorlage. Speichere sie, bevor du den Bereich verlässt, oder verwerfe sie bewusst."}
       </p>
       {saveValidationMessage || pendingUploadMessage ? (
         <div className="mt-4 space-y-3">
@@ -169,9 +169,9 @@ export function FormBuilderIntro() {
         Formularvorlage bearbeiten
       </h2>
       <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">
-        Legen Sie fest, welche optionalen Basisfelder verpflichtend sind, und
-        ergänzen Sie bei Bedarf Zusatzfragen. Die Vorlage wird später in einer
-        Anmeldephase ausgewählt.
+        Lege fest, welche optionalen Basisfelder verpflichtend sind, und ergänze
+        bei Bedarf Zusatzfragen. Die Vorlage wird später in einer Anmeldephase
+        ausgewählt.
       </p>
     </header>
   );
@@ -209,7 +209,7 @@ export function BuilderTemplateSummary({
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-gray-600">
             {isCreating
-              ? "Geben Sie der Vorlage einen eindeutigen Namen. Danach können Sie Pflichtangaben und Zusatzfragen festlegen."
+              ? "Gib der Vorlage einen eindeutigen Namen. Danach kannst du Pflichtangaben und Zusatzfragen festlegen."
               : "Der Name lässt sich hier ändern und gilt für alle Versionen. Bestehende Anmeldungen bleiben nachvollziehbar."}
           </p>
         </div>
@@ -320,7 +320,7 @@ export function TargetSuggestions({
             Stammdaten-Vorschläge
           </h3>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-gray-600">
-            Diese Fragen sind mit vorhandenen Stammdaten verbunden. Sie können
+            Diese Fragen sind mit vorhandenen Stammdaten verbunden. Du kannst
             sie hinzufügen oder entfernen; Label und Typ sind fest vorgegeben.
           </p>
         </div>

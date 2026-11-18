@@ -232,7 +232,7 @@ describe("TraegerBriefkopfPage", () => {
 
     expect(
       await screen.findByText(
-        "Sie können die Angaben nur ansehen. Ändern kann, wer im Träger-Büro die Rolle „Verwaltung“ hat.",
+        "Du kannst die Angaben nur ansehen. Ändern kann, wer im Träger-Büro die Rolle „Verwaltung“ hat.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -272,9 +272,7 @@ describe("TraegerBriefkopfPage", () => {
     });
 
     expect(
-      await screen.findByText(
-        "Bitte wählen Sie ein Bild im Format PNG oder JPG.",
-      ),
+      await screen.findByText("Bitte wähle ein Bild im Format PNG oder JPG."),
     ).toBeInTheDocument();
     expect(api.uploadTraegerLogo).not.toHaveBeenCalled();
 

@@ -52,7 +52,7 @@ const logger = createLogger({ component: "TraegerStaffImportPage" });
 const STEPS = ["Datei wählen", "Spalten zuordnen", "Prüfen und übernehmen"];
 
 const INFO =
-  "Hier übernehmen Sie Ihr Personal aus dem Lohnprogramm oder einer Liste. moto erkennt jede Person an der Personalnummer. Eine neue Nummer wird eine neue Akte. Bei einer bekannten Nummer trägt moto nur fehlende Bank- und Steuerdaten ein. So entstehen keine doppelten Akten, auch wenn Sie die Datei noch einmal laden. Die Datei bewahrt moto nicht auf.";
+  "Hier übernimmst du dein Personal aus dem Lohnprogramm oder einer Liste. moto erkennt jede Person an der Personalnummer. Eine neue Nummer wird eine neue Akte. Bei einer bekannten Nummer trägt moto nur fehlende Bank- und Steuerdaten ein. So entstehen keine doppelten Akten, auch wenn du die Datei noch einmal lädst. Die Datei bewahrt moto nicht auf.";
 
 const PERSONAL = "/traeger/personal";
 
@@ -122,7 +122,7 @@ export default function TraegerStaffImportPage() {
 
   const choose = (chosen: File) => {
     if (!/\.(csv|txt)$/i.test(chosen.name)) {
-      showMessage("Bitte wählen Sie eine CSV-Datei.");
+      showMessage("Bitte wähle eine CSV-Datei.");
       return;
     }
     if (chosen.size > MAX_STAFF_IMPORT_FILE_BYTES) {
@@ -221,7 +221,7 @@ export default function TraegerStaffImportPage() {
           <EmptyState
             icon={<LockKeyIcon className="h-12 w-12" aria-hidden="true" />}
             title="Personal beim Träger ist noch nicht freigeschaltet."
-            description="Das moto-Team schaltet es frei, sobald Ihr Träger bestätigt hat: Es gibt eine Vereinbarung mit Betriebsrat oder Mitarbeitervertretung, oder es gibt keine Vertretung. Danach können Sie hier Personal importieren."
+            description="Das moto-Team schaltet es frei, sobald dein Träger bestätigt hat: Es gibt eine Vereinbarung mit Betriebsrat oder Mitarbeitervertretung, oder es gibt keine Vertretung. Danach kannst du hier Personal importieren."
           />
         </SectionCard>
       ) : (
@@ -321,7 +321,7 @@ export default function TraegerStaffImportPage() {
                   message={
                     reading
                       ? "Die Datei wird geprüft …"
-                      : "Die Datei ist noch nicht geprüft. Bitte prüfen Sie erneut."
+                      : "Die Datei ist noch nicht geprüft. Bitte prüfe erneut."
                   }
                   action={
                     reading ? undefined : (
@@ -349,7 +349,7 @@ export default function TraegerStaffImportPage() {
               {result && result.unmapped.length > 0 ? (
                 <Alert
                   type="info"
-                  message="Ordnen Sie Personalnummer, Vorname und Nachname einer Spalte zu. Dann zeigt moto die Zeilen."
+                  message="Ordne Personalnummer, Vorname und Nachname einer Spalte zu. Dann zeigt moto die Zeilen."
                 />
               ) : null}
             </>

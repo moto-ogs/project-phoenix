@@ -131,13 +131,13 @@ const CARE_OFFERING_TEMPLATE_UNLINKED_MESSAGE =
 const PLANNER_METADATA_UNAVAILABLE_MESSAGE =
   "Regeltermine und Planungsperioden konnten nicht geladen werden. Die Betreuungsangebote bleiben nutzbar; bestehende Verknüpfungen können beibehalten oder entfernt werden. Neue oder geänderte Verknüpfungen sind bis zum erneuten Laden gesperrt.";
 const UNVERIFIABLE_TEMPLATE_CHANGE_MESSAGE =
-  "Die neue Verknüpfung mit dem Regeltermin lässt sich gerade nicht prüfen. Bitte entfernen Sie die Verknüpfung oder laden Sie die Regeltermine erneut.";
+  "Die neue Verknüpfung mit dem Regeltermin lässt sich gerade nicht prüfen. Bitte entferne die Verknüpfung oder lade die Regeltermine erneut.";
 const INACTIVE_TEMPLATE_PERIOD_MESSAGE =
-  "Ein aktives Betreuungsangebot braucht einen aktiven Planungszeitraum. Bitte schalten Sie den Zeitraum ein, wählen Sie einen anderen Regeltermin oder schalten Sie das Angebot aus.";
+  "Ein aktives Betreuungsangebot braucht einen aktiven Planungszeitraum. Bitte schalte den Zeitraum ein, wähle einen anderen Regeltermin oder schalte das Angebot aus.";
 const CARE_OFFERING_TEMPLATE_PERIOD_MISMATCH_MESSAGE =
-  "Der Planungszeitraum des Regeltermins muss den ganzen Betreuungszeitraum der Anmeldephase abdecken. Bitte wählen Sie einen passenden Regeltermin oder entfernen Sie die Verknüpfung.";
+  "Der Planungszeitraum des Regeltermins muss den ganzen Betreuungszeitraum der Anmeldephase abdecken. Bitte wähle einen passenden Regeltermin oder entferne die Verknüpfung.";
 const CARE_OFFERING_DAYS_REQUIRED_MESSAGE =
-  "Bitte wählen Sie mindestens einen Wochentag für das Angebot aus.";
+  "Bitte wähle mindestens einen Wochentag für das Angebot aus.";
 
 function missingRequiredPickupDays(offering: {
   is_active: boolean;
@@ -153,7 +153,7 @@ function missingRequiredPickupDays(offering: {
 
 function missingPickupTimesMessage(days: string[]): string {
   const labels = days.map((day) => weekdayShortLabel(day)).join(", ");
-  return `Bitte tragen Sie für jeden Betreuungstag eine Gehzeit ein: ${labels}.`;
+  return `Bitte trage für jeden Betreuungstag eine Gehzeit ein: ${labels}.`;
 }
 
 type PlannerMetadataStatus = "loading" | "ready" | "unavailable";
@@ -329,7 +329,7 @@ function linkedTemplateWeekdayError(
   if (missingDays.length === 0) return null;
 
   const labels = missingDays.map((day) => weekdayShortLabel(day)).join(", ");
-  return `Der Regeltermin deckt die Angebotstage ${labels} nicht ab. Bitte entfernen Sie die Verknüpfung oder ergänzen Sie diese Tage im Regeltermin.`;
+  return `Der Regeltermin deckt die Angebotstage ${labels} nicht ab. Bitte entferne die Verknüpfung oder ergänze diese Tage im Regeltermin.`;
 }
 
 const GERMAN_WEEKDAY_NAME_PATTERNS: ReadonlyArray<[string, RegExp]> = [
@@ -1064,7 +1064,7 @@ export function CareOfferingsEditor({
           {autoAddRules.length > 0 ? (
             <SectionCard
               title="Mitbuchungs-Regeln"
-              description="Jede Regel wirkt nur in die genannte Richtung. Ändern können Sie sie beim jeweils mitgebuchten Angebot unter Bearbeiten."
+              description="Jede Regel wirkt nur in die genannte Richtung. Ändern kannst du sie beim jeweils mitgebuchten Angebot unter Bearbeiten."
               bodyClassName="mt-2"
             >
               <ul className="mt-2 space-y-1 text-sm text-gray-700">
@@ -1103,8 +1103,8 @@ export function CareOfferingsEditor({
         }
         warningSlot={
           <p className="text-sm text-gray-600">
-            Wird das Angebot bereits in Anmeldungen verwendet, deaktivieren Sie
-            es stattdessen über Bearbeiten.
+            Wird das Angebot bereits in Anmeldungen verwendet, deaktiviere es
+            stattdessen über Bearbeiten.
           </p>
         }
         gate={{ mode: "twoStep" }}
@@ -1209,7 +1209,7 @@ function CareOfferingToolbar({
               size="md"
               onClick={onCreate}
               disabled={!selectedPhaseId}
-              disabledReason="Wählen Sie zuerst eine Anmeldephase aus."
+              disabledReason="Wähle zuerst eine Anmeldephase aus."
               tooltip="Öffnet ein leeres Formular für ein Angebot dieser Phase."
               className="shrink-0 gap-2"
             >
@@ -1252,7 +1252,7 @@ function NoPhaseState() {
       <EmptyState
         icon={<ConceptIconTile concept={calendarPeriodsConcept} size="page" />}
         title="Erst eine Anmeldephase anlegen"
-        description="Betreuungsangebote gehören immer zu einer Anmeldephase. Legen Sie zuerst den Zeitraum an, danach können Sie die passenden Angebote ergänzen."
+        description="Betreuungsangebote gehören immer zu einer Anmeldephase. Lege zuerst den Zeitraum an, danach kannst du die passenden Angebote ergänzen."
         action={
           <ButtonLink
             href={tenantPath("/enrollment-phases")}
@@ -1279,7 +1279,7 @@ function EmptyCareOfferingState() {
       <EmptyState
         icon={<ConceptIconTile concept={carePlanConcept} size="page" />}
         title="Noch kein Betreuungsangebot angelegt"
-        description="Erstellen Sie das erste Angebot, das Eltern auswählen können. Typisch sind Regelbetreuung, Ferienbetreuung oder ein Angebot mit Mittagessen."
+        description="Erstelle das erste Angebot, das Eltern auswählen können. Typisch sind Regelbetreuung, Ferienbetreuung oder ein Angebot mit Mittagessen."
       />
     </SectionCard>
   );
@@ -2303,14 +2303,14 @@ function offeringSubmitBlockedReason({
   unverifiableTemplateChange: boolean;
   availabilityIncomplete: boolean;
 }>): string | undefined {
-  if (!phaseChosen) return "Wählen Sie zuerst eine Anmeldephase aus.";
-  if (!named) return "Geben Sie zuerst einen Namen für das Angebot ein.";
+  if (!phaseChosen) return "Wähle zuerst eine Anmeldephase aus.";
+  if (!named) return "Gib zuerst einen Namen für das Angebot ein.";
   if (templateMismatch)
-    return "Wählen Sie einen passenden Regeltermin oder entfernen Sie ihn.";
+    return "Wähle einen passenden Regeltermin oder entferne ihn.";
   if (unverifiableTemplateChange)
-    return "Laden Sie die Regeltermine neu oder entfernen Sie die Verknüpfung.";
+    return "Lade die Regeltermine neu oder entferne die Verknüpfung.";
   if (availabilityIncomplete)
-    return "Vervollständigen Sie zuerst die markierten Bedingungen.";
+    return "Vervollständige zuerst die markierten Bedingungen.";
   return undefined;
 }
 
@@ -2419,8 +2419,8 @@ function CareOfferingForm({
           Satz. */}
       <header className="border-b border-gray-100 pb-4">
         <p className="max-w-2xl text-sm text-gray-600">
-          Legen Sie fest, was Eltern auswählen können, welche Tage möglich sind
-          und ob Kapazität oder Zusatzleistungen angezeigt werden.
+          Lege fest, was Eltern auswählen können, welche Tage möglich sind und
+          ob Kapazität oder Zusatzleistungen angezeigt werden.
         </p>
       </header>
 
@@ -2494,7 +2494,7 @@ function CareOfferingForm({
       <FormFieldset legend="Pflichtauswahl">
         <p className="mt-1 mb-3 text-sm leading-6 text-gray-600">
           Angebote mit demselben Gruppennamen werden bei der Anmeldung gemeinsam
-          geprüft. Verwenden Sie für eine Gruppe überall dieselbe Regel.
+          geprüft. Verwende für eine Gruppe überall dieselbe Regel.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
@@ -2647,9 +2647,9 @@ function CloneOfferingForm({
     >
       <header className="border-b border-gray-100 pb-4">
         <p className="text-sm text-gray-600">
-          „{source.name}“ wird in eine andere Anmeldephase übernommen. Wählen
-          Sie die Zielphase. Danach entsteht dort ein eigenes Betreuungsangebot,
-          das Sie separat bearbeiten können.
+          „{source.name}“ wird in eine andere Anmeldephase übernommen. Wähle die
+          Zielphase. Danach entsteht dort ein eigenes Betreuungsangebot, das du
+          separat bearbeiten kannst.
         </p>
       </header>
 
@@ -2681,7 +2681,7 @@ function CloneOfferingForm({
           size="md"
           disabled={saving || !targetPhaseId}
           disabledReason={
-            targetPhaseId ? undefined : "Wählen Sie zuerst eine Zielphase aus."
+            targetPhaseId ? undefined : "Wähle zuerst eine Zielphase aus."
           }
           tooltip="Legt eine Kopie des Angebots in der Zielphase an."
         >

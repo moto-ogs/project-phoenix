@@ -268,7 +268,7 @@ describe("NewMessageModal", () => {
     expect(screen.getByRole("radio", { name: /Marie Beier/ })).toBeEnabled();
     expect(
       screen.getByText(
-        "Bei „Kein Eltern-Zugang“ kann niemand die Nachricht in der Eltern-App lesen. Den Zugang der Eltern legen Sie beim Kind fest.",
+        "Bei „Kein Eltern-Zugang“ kann niemand die Nachricht in der Eltern-App lesen. Den Zugang der Eltern legst du beim Kind fest.",
       ),
     ).toBeInTheDocument();
 

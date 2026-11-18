@@ -121,7 +121,7 @@ function RevenueRow({
     if (draft === null) return;
     const invalid = revenueAccountError(draft);
     if (invalid) {
-      errors.invalid("Bitte prüfen Sie das Erlöskonto.", { account: invalid });
+      errors.invalid("Bitte prüfe das Erlöskonto.", { account: invalid });
       return;
     }
     setSaving(true);
@@ -262,7 +262,7 @@ export function RevenueAccountsCard({
         <div className="mt-5 flex flex-col gap-3">
           <ListGroupHeader
             title="Angebote der Monatsbeiträge"
-            meta="Eigenes Konto nur, wenn Ihr Steuerbüro es so will"
+            meta="Eigenes Konto nur, wenn dein Steuerbüro es so will"
           />
           <ResponsiveActionList>
             {page.offerings.map((offering) => (
@@ -367,8 +367,8 @@ function CostCenterForm({
     event.preventDefault();
     const invalid = costCenterError(code);
     if (!validFrom || invalid) {
-      errors.invalid("Bitte prüfen Sie die markierten Felder.", {
-        ...(validFrom ? {} : { valid_from: "Bitte wählen Sie einen Tag." }),
+      errors.invalid("Bitte prüfe die markierten Felder.", {
+        ...(validFrom ? {} : { valid_from: "Bitte wähle einen Tag." }),
         ...(invalid ? { code: invalid } : {}),
       });
       return;
@@ -740,7 +740,7 @@ export function CostCentersCard({
       description={
         kind === "kost1"
           ? "Jede Schule kann eine Kostenstelle haben, für ihre Ferienbetreuung auch eine eigene. Eine Kostenstelle gilt ab ihrem Tag bis zur nächsten."
-          : "Nur, wenn Ihr Steuerbüro die Angebote getrennt auswerten will."
+          : "Nur, wenn dein Steuerbüro die Angebote getrennt auswerten will."
       }
     >
       {groups.length === 0 ? (

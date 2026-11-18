@@ -306,7 +306,7 @@ export function useTimetableActions(
     (err: unknown) => {
       void showActionError(err, {
         object: "die Anwesenheitsliste",
-        messageSuffix: "Ihre Änderung ist gespeichert.",
+        messageSuffix: "Deine Änderung ist gespeichert.",
         action: {
           label: "Liste neu laden",
           onClick: () => retryRef.current.rosterSync(),

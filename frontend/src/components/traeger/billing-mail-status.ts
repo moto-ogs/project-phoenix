@@ -77,16 +77,16 @@ export function mailBadge(mailing: LetterMailState): {
 // family still needs the letter, so a block points to the print.
 function heldBackNote(mailing: LetterMailState): string | null {
   if (mailing.providerBlock === "unreadable") {
-    return "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuchen Sie es später noch einmal.";
+    return "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuche es später noch einmal.";
   }
   if (mailing.providerBlock !== "active") return null;
   if (mailing.mailOutcome === "unsubscribed") {
-    return "Diese Person hat sich von den Mails abgemeldet. Bitte drucken Sie das Schreiben.";
+    return "Diese Person hat sich von den Mails abgemeldet. Bitte drucke das Schreiben.";
   }
   if (mailing.mailOutcome === "complained") {
-    return "Diese Person hat eine Mail als unerwünscht gemeldet. Bitte drucken Sie das Schreiben.";
+    return "Diese Person hat eine Mail als unerwünscht gemeldet. Bitte drucke das Schreiben.";
   }
-  return "Diese Adresse ist gesperrt. Bitte drucken Sie das Schreiben. Der moto-Support klärt die Sperre.";
+  return "Diese Adresse ist gesperrt. Bitte drucke das Schreiben. Der moto-Support klärt die Sperre.";
 }
 
 /** The line beside the short status: when, or what happens next. */

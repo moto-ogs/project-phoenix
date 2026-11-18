@@ -73,7 +73,7 @@ describe("hint on a known child (#6683)", () => {
 
     expect(
       screen.getByText(
-        "Die Schule „OGS Süd“ führt ein Kind mit gleichem Namen und Geburtsdatum. Angemeldet ist Ben als Feriengast. Bitte prüfen Sie die Schule.",
+        "Die Schule „OGS Süd“ führt ein Kind mit gleichem Namen und Geburtsdatum. Angemeldet ist Ben als Feriengast. Bitte prüfe die Schule.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(

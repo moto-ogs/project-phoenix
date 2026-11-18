@@ -1,16 +1,16 @@
 {
   "overviewKicker": "Kinder im Überblick",
-  "overviewDescription": "Wählen Sie ein Kind aus, um Betreuung, Daten und Kontakte zu sehen.",
+  "overviewDescription": "Wähle ein Kind aus, um Betreuung, Daten und Kontakte zu sehen.",
   "careEnded": {
     "title": "Betreuung beendet",
-    "body": "Ihr Kind wird in dieser {careTerm} nicht mehr betreut. Alles Bisherige können Sie weiter ansehen. Neue Meldungen sind nicht mehr möglich."
+    "body": "Dein Kind wird in dieser {careTerm} nicht mehr betreut. Alles Bisherige kannst du weiter ansehen. Neue Meldungen sind nicht mehr möglich."
   },
   "withoutCarePlace": {
     "title": "Kein Platz in der {careTerm}",
-    "body": "Ihr Kind hat keinen Platz in der {careTerm}. Abholung, Betreuungszeiten, Essen und Nachrichten an die {careTerm} gibt es deshalb hier nicht."
+    "body": "Dein Kind hat keinen Platz in der {careTerm}. Abholung, Betreuungszeiten, Essen und Nachrichten an die {careTerm} gibt es deshalb hier nicht."
   },
-  "notFound": "Zu dieser Adresse gibt es kein Kind in Ihrem Konto. Bitte wählen Sie Ihr Kind in der Übersicht.",
-  "noChildren": "Mit Ihrem Konto ist noch kein Kind verknüpft. Die {careTerm} Ihrer Schule kann das einrichten.",
+  "notFound": "Zu dieser Adresse gibt es kein Kind in deinem Konto. Bitte wähle dein Kind in der Übersicht.",
+  "noChildren": "Mit deinem Konto ist noch kein Kind verknüpft. Die {careTerm} deiner Schule kann das einrichten.",
   "sections": {
     "today": "Heute"
   },
@@ -49,10 +49,10 @@
   },
   "consents": {
     "title": "Einwilligungen und Bestätigungen",
-    "description": "Hier sehen Sie, was für Ihr Kind gespeichert ist.",
-    "staffDescription": "Eltern ändern die Foto-Einwilligung im Elternportal. Eltern ohne Elternportal sagen es Ihnen. Dann entfernen Sie unter „Bearbeiten“ beim Foto den Haken.",
-    "photoDescription": "Die Foto-Einwilligung können Sie hier ändern.",
-    "photoViaCareDescription": "Die Foto-Einwilligung widerrufen Sie bei der {careTerm}.",
+    "description": "Hier siehst du, was für dein Kind gespeichert ist.",
+    "staffDescription": "Eltern ändern die Foto-Einwilligung im Elternportal. Eltern ohne Elternportal sagen es dir. Dann entfernst du unter „Bearbeiten“ beim Foto den Haken.",
+    "photoDescription": "Die Foto-Einwilligung kannst du hier ändern.",
+    "photoViaCareDescription": "Die Foto-Einwilligung widerrufst du bei der {careTerm}.",
     "items": {
       "agb": "Allgemeine Geschäftsbedingungen (AGB)",
       "data_processing": "Datenschutz zur Kenntnis genommen",
@@ -90,6 +90,6 @@
     "withdrawTooltip": "Beendet die Foto-Einwilligung und löscht ein gespeichertes Foto. moto fragt vorher nach.",
     "grantTooltip": "Erlaubt der {careTerm} wieder ein Foto. moto fragt vorher nach."
   },
-  "errorObject": "die Liste Ihrer Kinder",
+  "errorObject": "die Liste deiner Kinder",
   "errorObjectCare": "die Übersicht zur Betreuung"
 }

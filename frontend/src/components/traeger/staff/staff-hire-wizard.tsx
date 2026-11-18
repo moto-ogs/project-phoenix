@@ -62,7 +62,7 @@ import {
 const logger = createLogger({ component: "TraegerStaffHireWizard" });
 
 const PERSONAL = "/traeger/personal";
-const CHECK_FIELDS = "Bitte prüfen Sie die markierten Felder.";
+const CHECK_FIELDS = "Bitte prüfe die markierten Felder.";
 
 interface School {
   readonly id: string;
@@ -130,7 +130,7 @@ function PersonStep({
           id="hire-personnel-number"
           name="personnel_number"
           label="Personalnummer"
-          hint="Aus Ihrem Lohnprogramm. Geht auch später."
+          hint="Aus deinem Lohnprogramm. Geht auch später."
           inputMode="numeric"
           autoComplete="off"
           maxLength={9}
@@ -178,7 +178,7 @@ function ContractStep({
   return (
     <SectionCard
       title="Arbeitsvertrag"
-      description="Art und Laufzeit. Die Stunden tragen Sie im nächsten Schritt je Schule ein."
+      description="Art und Laufzeit. Die Stunden trägst du im nächsten Schritt je Schule ein."
     >
       <div className="max-w-3xl space-y-5">
         <KindChoice
@@ -306,7 +306,7 @@ function ReviewStep({ draft }: Readonly<{ draft: HireDraft }>) {
   return (
     <SectionCard
       title="Prüfen"
-      description="Stimmt alles? Mit „Zurück“ ändern Sie eine Angabe."
+      description="Stimmt alles? Mit „Zurück“ änderst du eine Angabe."
     >
       <div className="max-w-3xl space-y-5">
         <DataGrid>
@@ -375,10 +375,10 @@ function DuplicateBody({
         )}
       </ul>
       <p>
-        Ist es dieselbe Person? Dann brechen Sie ab. Eine Person ohne Akte
-        finden Sie bei den Personalakten unter „Ohne Akte“.
+        Ist es dieselbe Person? Dann brich ab. Eine Person ohne Akte findest du
+        bei den Personalakten unter „Ohne Akte“.
       </p>
-      <p>Sind es zwei Personen? Dann stellen Sie die Person trotzdem ein.</p>
+      <p>Sind es zwei Personen? Dann stelle die Person trotzdem ein.</p>
     </div>
   );
 }
@@ -421,7 +421,7 @@ function HiredCard({
       {record.unsyncedSchools.length > 0 ? (
         <Alert
           type="warning"
-          message={`Das Soll ist bei ${record.unsyncedSchools.join(", ")} noch nicht angekommen. Speichern Sie später eine Änderung am Vertrag, dann holt moto es nach.`}
+          message={`Das Soll ist bei ${record.unsyncedSchools.join(", ")} noch nicht angekommen. Speichere später eine Änderung am Vertrag, dann holt moto es nach.`}
         />
       ) : null}
     </SectionCard>
@@ -439,8 +439,8 @@ function IncompleteCard({
 }: Readonly<{ name: string; incomplete: StaffHireIncomplete }>) {
   const schools = incomplete.schools.join(", ");
   const description = incomplete.recordId
-    ? `Die Akte und der Arbeitsvertrag sind gespeichert. moto konnte sie nur nicht noch einmal laden. Bitte öffnen Sie die Akte und prüfen Sie Vertrag und Schulen.`
-    : `Es gibt die Person jetzt an: ${schools}. Die Akte fehlt noch. Bitte legen Sie die Akte bei den Personalakten unter „Ohne Akte“ an und tragen Sie dort den Vertrag ein.`;
+    ? `Die Akte und der Arbeitsvertrag sind gespeichert. moto konnte sie nur nicht noch einmal laden. Bitte öffne die Akte und prüfe Vertrag und Schulen.`
+    : `Es gibt die Person jetzt an: ${schools}. Die Akte fehlt noch. Bitte lege die Akte bei den Personalakten unter „Ohne Akte“ an und trage dort den Vertrag ein.`;
   return (
     <SectionCard>
       <EmptyState
@@ -448,7 +448,7 @@ function IncompleteCard({
         titleAs="h2"
         icon={<WarningIcon aria-hidden className="size-6" />}
         title={`${name} ist nur zum Teil angelegt.`}
-        description={`${description} Bitte stellen Sie die Person nicht noch einmal ein.`}
+        description={`${description} Bitte stelle die Person nicht noch einmal ein.`}
         action={
           incomplete.recordId ? (
             <ButtonLink

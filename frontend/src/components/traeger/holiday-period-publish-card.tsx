@@ -26,7 +26,7 @@ function publishBlocker(
   unsavedChanges: boolean,
 ): string | null {
   if (unsavedChanges) {
-    return "Bitte speichern Sie zuerst Ihre Änderungen.";
+    return "Bitte speichere zuerst deine Änderungen.";
   }
   if (!holidayPeriodComplete(period)) {
     return "Zum Veröffentlichen braucht der Ferienzeitraum mindestens eine Woche. Jede Woche braucht mindestens ein Zeitmodell.";
@@ -125,8 +125,8 @@ export function HolidayPeriodPublishCard({
         onConfirm={() => void publish()}
       >
         <p className="text-sm text-gray-700">
-          Danach ist der Ferienzeitraum für die Anmeldung freigegeben. Sie
-          können ihn weiter ändern, aber nicht mehr zum Entwurf machen.
+          Danach ist der Ferienzeitraum für die Anmeldung freigegeben. Du kannst
+          ihn weiter ändern, aber nicht mehr zum Entwurf machen.
         </p>
       </ConfirmationModal>
     </SectionCard>
@@ -163,7 +163,7 @@ function HolidayRegistrationLink({
         copyLabel="Link kopieren"
         onCopyFailed={() =>
           showMessage(
-            "Der Link konnte nicht kopiert werden. Bitte markieren und kopieren Sie ihn selbst.",
+            "Der Link konnte nicht kopiert werden. Bitte markiere und kopiere ihn selbst.",
           )
         }
         action={

@@ -120,7 +120,7 @@ var resolveConflictErrorRenderer = common.RulesRenderer(parentRequestRules(
 	}},
 	common.ErrorRule{Target: parentrequests.ErrStaffValueUnsupported, Render: func(error) render.Renderer {
 		return common.ErrorInvalidRequestMessageWithCode(
-			"Für diese Anfragen können Sie keinen eigenen Wert eintragen.",
+			"Für diese Anfragen kannst du keinen eigenen Wert eintragen.",
 			common.CodeStudentsStaffValueUnsupported,
 		)
 	}},
@@ -129,7 +129,7 @@ var resolveConflictErrorRenderer = common.RulesRenderer(parentRequestRules(
 	}},
 	common.ErrorRule{Match: isConflictStaffValueInvalid, Render: func(error) render.Renderer {
 		return common.ErrorInvalidRequestMessageWithCode(
-			"Der eingetragene Wert passt nicht zu diesen Anfragen. Bitte prüfen Sie ihn.",
+			"Der eingetragene Wert passt nicht zu diesen Anfragen. Bitte prüfe ihn.",
 			common.CodeStudentsStaffValueInvalid,
 		)
 	}},

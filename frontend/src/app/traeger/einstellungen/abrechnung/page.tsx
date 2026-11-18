@@ -47,9 +47,9 @@ const BILLING_RIGHT = "traeger_billing:manage";
 const ONLINE_MANDATE_KEY = "parent_billing.online_mandate";
 const SETTINGS_RIGHT = "traeger_settings:manage";
 
-const INFO = "Hier stehen die Vorgaben für Ihre Abrechnung.";
+const INFO = "Hier stehen die Vorgaben für deine Abrechnung.";
 const CONTRIBUTION_INFO =
-  "So entsteht der Ferienbeitrag: Jede gebuchte Woche kostet den Preis ihres Zeitmodells. Den Preis legen Sie im Ferienzeitraum fest. Danach gelten die Regeln auf dieser Seite, in dieser Reihenfolge. Beim Bestätigen einer Anmeldung wird der Beitrag festgehalten. Spätere Änderungen gelten nur für neue Bestätigungen.";
+  "So entsteht der Ferienbeitrag: Jede gebuchte Woche kostet den Preis ihres Zeitmodells. Den Preis legst du im Ferienzeitraum fest. Danach gelten die Regeln auf dieser Seite, in dieser Reihenfolge. Beim Bestätigen einer Anmeldung wird der Beitrag festgehalten. Spätere Änderungen gelten nur für neue Bestätigungen.";
 
 interface BillingDefaults {
   readonly rules: ContributionRule[];
@@ -215,7 +215,7 @@ export default function TraegerAbrechnungsvorgabenPage() {
           {canEditBank ? null : (
             <Alert
               type="info"
-              message="Die Bankverbindungen können Sie nur ansehen. Ändern kann, wer im Träger-Büro die Rolle „Verwaltung“ hat."
+              message="Die Bankverbindungen kannst du nur ansehen. Ändern kann, wer im Träger-Büro die Rolle „Verwaltung“ hat."
             />
           )}
           {canBill ? null : (

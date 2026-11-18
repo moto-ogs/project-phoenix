@@ -63,7 +63,7 @@ export function HolidayOwnChildrenCard({
 
   return (
     <SectionCard
-      title="Kinder Ihrer OGS"
+      title="Kinder deiner OGS"
       description="Diese Kinder bleiben in ihrer Gruppe. Notfall, Abholung und Zeiten aus der Anmeldung stehen in der Kinderakte."
       action={
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -89,8 +89,8 @@ export function HolidayOwnChildrenCard({
           >
             <p className="mb-3 text-sm text-gray-600">
               moto findet ein Kind über Vorname, Nachname und Geburtsdatum. Für
-              diese Kinder ist nichts eingeplant. Ändern Sie die Kinderakte oder
-              bitten Sie den Träger, die Anmeldung zu ändern.
+              diese Kinder ist nichts eingeplant. Ändere die Kinderakte oder
+              bitte den Träger, die Anmeldung zu ändern.
             </p>
             <ResponsiveActionList>
               {open.map(({ assignment, child }) => {

@@ -112,10 +112,7 @@ export function CareEvidenceModal({
     }
     if (!draft.checkedOn) fieldErrors.checked_on = "Bitte ein Datum wählen.";
     if (Object.keys(fieldErrors).length > 0) {
-      formErrors.invalid(
-        "Bitte prüfen Sie die markierten Felder.",
-        fieldErrors,
-      );
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fieldErrors);
       return;
     }
     await save.run(async (op) => {
@@ -196,7 +193,7 @@ export function CareEvidenceModal({
           required
           maxLength={120}
           placeholder={target ? EVIDENCE_PLACEHOLDER[target.kind] : ""}
-          hint="Nur die Art des Nachweises. Das Dokument bleibt bei Ihnen."
+          hint="Nur die Art des Nachweises. Das Dokument bleibt bei dir."
           value={draft.evidence}
           error={formErrors.fieldError("evidence")}
           onChange={(event) => set({ evidence: event.target.value })}

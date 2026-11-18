@@ -10,11 +10,9 @@ describe("ForbiddenPage", () => {
     expect(
       screen.getByRole("heading", { name: "Kein Zugriff" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("Dir fehlt eine Berechtigung")).toBeInTheDocument();
     expect(
-      screen.getByText("Ihnen fehlt eine Berechtigung"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Bitte wenden Sie sich an Ihre Leitung."),
+      screen.getByText("Bitte wende dich an deine Leitung."),
     ).toBeInTheDocument();
   });
 
@@ -48,8 +46,6 @@ describe("ForbiddenPage", () => {
   it("laesst den Seitenkopf weg, wenn die Seite ihn schon hat", () => {
     render(<ForbiddenPage embedded />);
 
-    expect(
-      screen.getByText("Ihnen fehlt eine Berechtigung"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Dir fehlt eine Berechtigung")).toBeInTheDocument();
   });
 });

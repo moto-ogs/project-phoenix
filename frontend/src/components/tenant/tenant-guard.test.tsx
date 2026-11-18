@@ -358,7 +358,7 @@ describe("TenantGuard", () => {
       name: "Mit Code neu anmelden",
     });
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Diese Schule verlangt zum Öffnen einen Code aus Ihrer E-Mail.",
+      "Diese Schule verlangt zum Öffnen einen Code aus deiner E-Mail.",
     );
     expect(
       screen.queryByRole("button", { name: "Zur Schulanmeldung" }),
@@ -1063,7 +1063,7 @@ describe("TenantGuard", () => {
     });
 
     const CHECK_FAILED =
-      "moto kann gerade nicht prüfen, bei welcher Schule Sie angemeldet sind. Bitte versuchen Sie es gleich noch einmal.";
+      "moto kann gerade nicht prüfen, bei welcher Schule du angemeldet bist. Bitte versuche es gleich noch einmal.";
 
     beforeEach(() => {
       providerUpdate.mockReset();

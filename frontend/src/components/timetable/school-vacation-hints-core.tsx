@@ -49,7 +49,7 @@ import { useTenantAwarePath } from "~/lib/tenant-path";
 const logger = createLogger({ component: "SchoolVacationHints" });
 
 const DECISION_TEXT =
-  "Findet in dieser Zeit Betreuung statt? Wenn nicht, sagen Sie die Termine ab oder tragen Sie Schließtage ein.";
+  "Findet in dieser Zeit Betreuung statt? Wenn nicht, sage die Termine ab oder trage Schließtage ein.";
 
 /** „vom 23.12.2026 bis 06.01.2027“, ein einzelner Tag als „am 18.05.2027“. */
 function vacationRangeLabel(hint: SchoolVacationHint): string {

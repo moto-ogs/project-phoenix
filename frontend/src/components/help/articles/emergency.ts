@@ -7,36 +7,36 @@ export function emergencyTopic(presenceMode: HelpPresenceMode): HelpTopic {
       ? "Bei detaillierter Anwesenheit zeigt die Liste den aktuellen Ort oder Raum des Kindes."
       : presenceMode === "binary"
         ? "Bei einfacher Anwesenheit zeigt die Liste `Anwesend` statt eines Raums."
-        : "Je nach Arbeitsweise Ihrer OGS zeigt die Liste einen Raum oder nur `Anwesend`.";
+        : "Je nach Arbeitsweise deiner OGS zeigt die Liste einen Raum oder nur `Anwesend`.";
 
   return {
     id: HELP_TOPICS.emergency,
     title: "Eine Notfallliste drucken",
     question: "Wie drucke ich eine Notfallliste?",
     summary:
-      "Nutzen Sie die Liste zum Beispiel bei einem geplanten Feueralarm. Damit prüfen Sie am Sammelplatz, ob alle anwesenden Kinder da sind.",
+      "Nutze die Liste zum Beispiel bei einem geplanten Feueralarm. Damit prüfst du am Sammelplatz, ob alle anwesenden Kinder da sind.",
     group: "kinder",
     audience: ["caregiver", "lead"],
     icon: "ShieldAlert",
-    requirements: ["Ihr Konto hat das Recht `Benutzerinformationen ansehen`."],
+    requirements: ["Dein Konto hat das Recht `Benutzerinformationen ansehen`."],
     steps: [],
     instructionGroups: [
       {
         title: "Die Notfallliste drucken",
-        description: "Ihr Gerät ist mit einem Drucker verbunden.",
+        description: "Dein Gerät ist mit einem Drucker verbunden.",
         steps: [
-          "Öffnen Sie unten in der Seitenleiste `Notfall`.",
-          "Wählen Sie `Notfallliste drucken`.",
-          "Wählen Sie im Druckfenster den passenden Drucker.",
-          "Prüfen Sie die Einstellungen im Druckfenster.",
-          "Starten Sie den Druck.",
+          "Öffne unten in der Seitenleiste `Notfall`.",
+          "Wähle `Notfallliste drucken`.",
+          "Wähle im Druckfenster den passenden Drucker.",
+          "Prüfe die Einstellungen im Druckfenster.",
+          "Starte den Druck.",
         ],
       },
       {
         title: "Die Notfallliste als PDF speichern",
         steps: [
-          "Öffnen Sie unten in der Seitenleiste `Notfall`.",
-          "Wählen Sie `PDF herunterladen`.",
+          "Öffne unten in der Seitenleiste `Notfall`.",
+          "Wähle `PDF herunterladen`.",
         ],
       },
     ],
@@ -47,8 +47,8 @@ export function emergencyTopic(presenceMode: HelpPresenceMode): HelpTopic {
       "`Nicht hinterlegt` bedeutet: Es fehlen Gesundheitsinfos, eine Allergie ist trotzdem möglich.",
     ].join(" "),
     notes: [
-      "Erstellen Sie im Notfall eine neue Liste. Ein älterer Ausdruck kann veraltet sein.",
-      "Lassen Sie den Ausdruck nicht offen liegen.",
+      "Erstelle im Notfall eine neue Liste. Ein älterer Ausdruck kann veraltet sein.",
+      "Lasse den Ausdruck nicht offen liegen.",
     ],
     related: [
       HELP_TOPICS.studentSearch,

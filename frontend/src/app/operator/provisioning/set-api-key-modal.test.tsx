@@ -255,7 +255,7 @@ describe("SetApiKeyModal", () => {
     });
     expect(
       await screen.findByText(
-        "Der API-Key konnte nicht kopiert werden. Bitte markieren und kopieren Sie ihn selbst.",
+        "Der API-Key konnte nicht kopiert werden. Bitte markiere und kopiere ihn selbst.",
       ),
     ).toBeInTheDocument();
   });

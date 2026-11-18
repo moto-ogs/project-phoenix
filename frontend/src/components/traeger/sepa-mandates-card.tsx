@@ -129,7 +129,7 @@ function RevokeModal({
     >
       <div className="space-y-4">
         <p className="text-sm text-gray-700">
-          Ab dem nächsten Lauf buchen Sie bei dieser Familie nicht mehr ab. Sie
+          Ab dem nächsten Lauf buchst du bei dieser Familie nicht mehr ab. Sie
           bekommt dann eine Rechnung zum Überweisen, bis ein neues Mandat da
           ist. Ausgestellte Rechnungen bleiben, wie sie sind.
         </p>
@@ -319,8 +319,8 @@ function FamilyMandates({
                   </span>
                   {mandateExpired(inForce, today) ? (
                     <span className="text-moto-red-strong block">
-                      Verfallen: 36 Monate lang wurde nicht abgebucht.
-                      Widerrufen Sie dieses Mandat und erfassen Sie ein neues.
+                      Verfallen: 36 Monate lang wurde nicht abgebucht. Widerrufe
+                      dieses Mandat und erfasse ein neues.
                     </span>
                   ) : (
                     <span className="block text-gray-500">
@@ -333,8 +333,8 @@ function FamilyMandates({
                 <span className="font-mono">{inForce.creditorId}</span>
                 {inForce.creditorCurrent ? null : (
                   <span className="text-moto-red-strong block">
-                    Gilt nicht mehr: Ihre Gläubiger-ID hat sich geändert.
-                    Widerrufen Sie dieses Mandat und erfassen Sie das neue.
+                    Gilt nicht mehr: deine Gläubiger-ID hat sich geändert.
+                    Widerrufe dieses Mandat und erfasse das neue.
                   </span>
                 )}
               </DataField>
@@ -574,8 +574,8 @@ export function SepaMandatesCard({
       }
       description={
         forFamily
-          ? "Damit buchen Sie den Beitrag dieser Familie ab. Die IBAN sehen Sie nur verdeckt."
-          : `${scopeLabel} Mandate Ihrer Familien. Ein neues Mandat erfassen Sie beim Vertrag der Familie unter „Mandat erfassen“.`
+          ? "Damit buchst du den Beitrag dieser Familie ab. Die IBAN siehst du nur verdeckt."
+          : `${scopeLabel} Mandate deiner Familien. Ein neues Mandat erfasst du beim Vertrag der Familie unter „Mandat erfassen“.`
       }
       actions={createAction}
       loading={mandates === null && !own.error}
@@ -607,7 +607,7 @@ export function SepaMandatesCard({
           description={
             forFamily
               ? "Ohne Mandat bekommt die Familie eine Rechnung zum Überweisen."
-              : "Erfassen Sie ein Mandat beim Vertrag der Familie."
+              : "Erfasse ein Mandat beim Vertrag der Familie."
           }
         />
       ) : null}

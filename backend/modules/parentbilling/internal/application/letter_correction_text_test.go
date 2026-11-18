@@ -58,8 +58,8 @@ func TestCancellationLetterNamesItsInvoiceAndAsksForNoPayment(t *testing.T) {
 		"Storno-Nummer: FE-2026-0012", "Zur Rechnung: FE-2026-0007", "Datum: 20.12.2026",
 		"wir stornieren die Rechnung FE-2026-0007 vom 01.12.2026 für „Winterferien 2027“. Grund: Anschrift falsch, neue Rechnung folgt.",
 		"Lina: Woche 04.01. bis 08.01.2027, Vormittag: -50,00 €", "Ben: Ermäßigung für Geschwister: 32,50 €",
-		"Storno gesamt: -102,50 €", "Diese Rechnung gilt nicht mehr. Sie müssen sie nicht bezahlen.",
-		"Bei Fragen erreichen Sie Paula Kern",
+		"Storno gesamt: -102,50 €", "Diese Rechnung gilt nicht mehr. Ihr müsst sie nicht bezahlen.",
+		"Bei Fragen erreicht ihr Paula Kern",
 	} {
 		assert.Contains(t, text, want)
 	}
@@ -99,15 +99,15 @@ func TestCreditLetterNamesWhatTheInvoiceStillAsksFor(t *testing.T) {
 	assert.Equal(t, "Gutschrift FE-2026-0012 zur Rechnung FE-2026-0007", letter.Title)
 	for _, want := range []string{
 		"Gutschrift-Nummer: FE-2026-0012",
-		"zur Rechnung FE-2026-0007 vom 01.12.2026 für „Winterferien 2027“ schreiben wir Ihnen 20,00 € gut. Grund: Ausflug fiel aus.",
+		"zur Rechnung FE-2026-0007 vom 01.12.2026 für „Winterferien 2027“ schreiben wir euch 20,00 € gut. Grund: Ausflug fiel aus.",
 		"Ben: Gutschrift: -20,00 €", "Gutschrift gesamt: -20,00 €",
-		"Für die Rechnung FE-2026-0007 müssen Sie jetzt noch 72,50 € bezahlen.",
+		"Für die Rechnung FE-2026-0007 müsst ihr jetzt noch 72,50 € bezahlen.",
 	} {
 		assert.Contains(t, text, want)
 	}
 
 	content.leftCents = 0
-	assert.Contains(t, letterText(creditLetter(content)), "Für die Rechnung FE-2026-0007 müssen Sie nichts mehr bezahlen.")
+	assert.Contains(t, letterText(creditLetter(content)), "Für die Rechnung FE-2026-0007 müsst ihr nichts mehr bezahlen.")
 }
 
 // TestRunLetterContentFindsTheInvoiceOfACorrection counts what an invoice
@@ -155,8 +155,8 @@ func TestLetterMailOfACorrectionSaysWhatItIs(t *testing.T) {
 	for kind, want := range map[string]struct{ subject, template string }{
 		"":                                 {"Bestätigung und Rechnung: Winterferien 2027", "billing-letter.html"},
 		parentbilling.DocumentInvoice:      {"Bestätigung und Rechnung: Winterferien 2027", "billing-letter.html"},
-		parentbilling.DocumentCancellation: {"Storno Ihrer Rechnung: Winterferien 2027", "billing-correction-letter.html"},
-		parentbilling.DocumentCredit:       {"Gutschrift zu Ihrer Rechnung: Winterferien 2027", "billing-correction-letter.html"},
+		parentbilling.DocumentCancellation: {"Storno deiner Rechnung: Winterferien 2027", "billing-correction-letter.html"},
+		parentbilling.DocumentCredit:       {"Gutschrift zu deiner Rechnung: Winterferien 2027", "billing-correction-letter.html"},
 	} {
 		payload, err := json.Marshal(parentbilling.BillingLetterMail{
 			PeriodName: "Winterferien 2027", Number: "FE-0003", DocumentKind: kind, Filename: "storno-fe-0003.pdf", PDF: []byte("%PDF"),

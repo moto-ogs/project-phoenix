@@ -97,7 +97,7 @@ const config: CatalogConfig<ActivityCategory> = {
     "Terminkategorien ordnen Termine und Aktivitäten ein, zum Beispiel Essen, Lernzeit oder Freispiel.",
   searchPlaceholder: "Terminkategorie suchen…",
   emptyDescription:
-    "Legen Sie eine Terminkategorie an, damit Termine und Aktivitäten sich einordnen lassen.",
+    "Lege eine Terminkategorie an, damit Termine und Aktivitäten sich einordnen lassen.",
   stats: (items) => {
     const archived = items.filter((item) => item.archivedAt).length;
     const active = items.length - archived;
@@ -113,7 +113,7 @@ const config: CatalogConfig<ActivityCategory> = {
   }),
   isReadOnly: (item) => Boolean(item.archivedAt || item.isSystem),
   readOnlyHint:
-    "Diese Kategorie können Sie nicht ändern. Archivierte Kategorien können Sie wieder anbieten.",
+    "Diese Kategorie kannst du nicht ändern. Archivierte Kategorien kannst du wieder anbieten.",
   sections,
   toFormValues: (item) => ({
     name: item.name,

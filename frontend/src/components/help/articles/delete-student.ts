@@ -15,14 +15,14 @@ export function deleteStudentTopic(): HelpTopic {
     audience: "lead",
     icon: "Trash2",
     steps: [
-      "Öffnen Sie `Datenverwaltung` und danach `Kinderdaten`.",
-      "Wählen Sie das Kind aus der Liste.",
-      "Wählen Sie oben rechts `Löschen`.",
-      "Lesen Sie, welche Daten entfernt und welche gelöst werden.",
-      "Wählen Sie einen Grund für das Löschen.",
-      "Haken Sie die Bestätigung an.",
-      "Tippen Sie den Namen des Kindes in das Feld.",
-      "Wählen Sie `Kind endgültig löschen`.",
+      "Öffne `Datenverwaltung` und danach `Kinderdaten`.",
+      "Wähle das Kind aus der Liste.",
+      "Wähle oben rechts `Löschen`.",
+      "Lies, welche Daten entfernt und welche gelöst werden.",
+      "Wähle einen Grund für das Löschen.",
+      "Hake die Bestätigung an.",
+      "Tippe den Namen des Kindes in das Feld.",
+      "Wähle `Kind endgültig löschen`.",
     ],
     result:
       "Das Kind ist entfernt. Dieser Schritt lässt sich nicht zurücknehmen.",
@@ -35,7 +35,7 @@ export function deleteStudentTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "`Kind endgültig löschen` bleibt grau? Dann fehlt der Grund, das Häkchen oder der getippte Name.",
-      "Soll das Kind nur aufhören? Nutzen Sie `Betreuung beenden`. Dabei bleiben alle Daten erhalten.",
+      "Soll das Kind nur aufhören? Nutze `Betreuung beenden`. Dabei bleiben alle Daten erhalten.",
     ],
     related: [
       HELP_TOPICS.leadEndCare,

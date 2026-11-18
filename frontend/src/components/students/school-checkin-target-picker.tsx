@@ -46,7 +46,7 @@ export function SchoolCheckinTargetPicker({
     state.loadError,
     "die Räume für die Anmeldung",
     () => void state.refresh(),
-    "Bis dahin melden Sie Kinder ohne Raum an.",
+    "Bis dahin meldest du Kinder ohne Raum an.",
   );
   if (!state.available) return null;
 
@@ -123,7 +123,7 @@ export function SchoolCheckinTargetPicker({
           className="mt-2"
           announce="polite"
           onDismiss={state.dismissLost}
-          message={`In ${state.lostTargetName} läuft keine Aufsicht mehr oder der Raum ist nicht mehr freigegeben. Kinder werden jetzt ohne Raum angemeldet. Wählen Sie ein neues Ziel.`}
+          message={`In ${state.lostTargetName} läuft keine Aufsicht mehr oder der Raum ist nicht mehr freigegeben. Kinder werden jetzt ohne Raum angemeldet. Wähle ein neues Ziel.`}
         />
       ) : null}
       <LoadErrorAlert

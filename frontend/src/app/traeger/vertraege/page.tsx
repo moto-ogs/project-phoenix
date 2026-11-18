@@ -135,12 +135,12 @@ interface PageData {
 function conclusionDescription(modes: readonly SchoolConclusionMode[]): string {
   const onAcceptance = modes.filter((school) => school.mode === "bei_annahme");
   if (onAcceptance.length === 0) {
-    return "Sie erstellen jeden Vertrag hier und schicken ihn den Eltern.";
+    return "Du erstellst jeden Vertrag hier und schickst ihn den Eltern.";
   }
   if (onAcceptance.length === modes.length) {
-    return "Nimmt die Schule eine Anmeldung an, gilt der Vertrag. Die Eltern bekommen ihn per E-Mail und in der Eltern-App. Voraussetzung: Die Eltern haben im Anmeldeformular den Vertragsbedingungen zugestimmt, und Sie haben die Bedingungen seitdem nicht geändert.";
+    return "Nimmt die Schule eine Anmeldung an, gilt der Vertrag. Die Eltern bekommen ihn per E-Mail und in der Eltern-App. Voraussetzung: Die Eltern haben im Anmeldeformular den Vertragsbedingungen zugestimmt, und du hast die Bedingungen seitdem nicht geändert.";
   }
-  return "Steht eine Schule auf „Bei der Annahme“, entsteht der Vertrag von selbst, sobald die Schule die Anmeldung annimmt. Voraussetzung: Die Eltern haben im Anmeldeformular den Vertragsbedingungen zugestimmt. Die anderen Verträge erstellen und verschicken Sie hier.";
+  return "Steht eine Schule auf „Bei der Annahme“, entsteht der Vertrag von selbst, sobald die Schule die Anmeldung annimmt. Voraussetzung: Die Eltern haben im Anmeldeformular den Vertragsbedingungen zugestimmt. Die anderen Verträge erstellst und verschickst du hier.";
 }
 
 function contractHref(contract: CareContractSummary): string {
@@ -458,8 +458,8 @@ export default function TraegerVertraegePage() {
     if (result.created.length > 0) {
       success(
         result.created.length === 1
-          ? "1 Entwurf ist erstellt. Prüfen Sie ihn und senden Sie ihn dann."
-          : `${result.created.length} Entwürfe sind erstellt. Prüfen Sie sie und senden Sie sie dann.`,
+          ? "1 Entwurf ist erstellt. Prüfe ihn und sende ihn dann."
+          : `${result.created.length} Entwürfe sind erstellt. Prüfe sie und sende sie dann.`,
       );
     }
     if (result.skipped.length > 0) {
@@ -546,7 +546,7 @@ export default function TraegerVertraegePage() {
   return (
     <TenantPage
       title="Verträge"
-      info="Hier sehen Sie die Betreuungsverträge aus den angenommenen Anmeldungen Ihrer Schulen und die Verträge, die Sie aus einem anderen Programm importiert haben. moto übernimmt Kind, Eltern, Beginn und die gebuchten Module je Wochentag. Gilt der Vertrag bei der Annahme, entsteht er von selbst, wenn die Eltern im Anmeldeformular den Vertragsbedingungen zugestimmt haben. Sonst prüfen Sie den Entwurf und senden ihn per Mail und in die Eltern-App."
+      info="Hier siehst du die Betreuungsverträge aus den angenommenen Anmeldungen deiner Schulen und die Verträge, die du aus einem anderen Programm importiert hast. moto übernimmt Kind, Eltern, Beginn und die gebuchten Module je Wochentag. Gilt der Vertrag bei der Annahme, entsteht er von selbst, wenn die Eltern im Anmeldeformular den Vertragsbedingungen zugestimmt haben. Sonst prüfst du den Entwurf und sendest ihn per Mail und in die Eltern-App."
       tabs={careContractTabs("vertraege")}
       stats={
         total > 0 || candidates.length > 0 ? (
@@ -819,7 +819,7 @@ export default function TraegerVertraegePage() {
                 Senden gilt nur für Entwürfe.
                 <span className="max-sm:hidden">
                   {" "}
-                  Einen versendeten Vertrag senden Sie auf seiner Seite erneut.
+                  Einen versendeten Vertrag sendest du auf seiner Seite erneut.
                 </span>
               </>
             ) : (
@@ -861,7 +861,7 @@ function emptyText(
 ): { title: string; description?: string } {
   if (contracts > 0) {
     return {
-      title: "Kein Vertrag passt zu Ihrer Suche.",
+      title: "Kein Vertrag passt zu deiner Suche.",
       description: searchText || undefined,
     };
   }
@@ -875,13 +875,13 @@ function emptyText(
   if (candidates > 0) {
     return {
       title: "Noch kein Vertrag.",
-      description: `${candidates === 1 ? "1 angenommene Anmeldung wartet" : `${candidates} angenommene Anmeldungen warten`} auf einen Vertrag. Erstellen Sie die Entwürfe oben mit „Verträge erstellen“.`,
+      description: `${candidates === 1 ? "1 angenommene Anmeldung wartet" : `${candidates} angenommene Anmeldungen warten`} auf einen Vertrag. Erstelle die Entwürfe oben mit „Verträge erstellen“.`,
     };
   }
   return {
     title: "Noch kein Vertrag.",
     description:
-      "Sobald eine Schule eine Anmeldung annimmt, können Sie hier den Vertrag erstellen.",
+      "Sobald eine Schule eine Anmeldung annimmt, kannst du hier den Vertrag erstellen.",
   };
 }
 

@@ -95,7 +95,7 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 	{
 		Key:             config.KeyNotificationsOnDutyOnly,
 		Label:           "Nur im Dienst benachrichtigen",
-		Description:     "Persönliche Hinweise erreichen nur Personen, die gerade eingestempelt sind. Nutzen Sie das nur, wenn Ihr Team die Zeiterfassung verwendet.",
+		Description:     "Persönliche Hinweise erreichen nur Personen, die gerade eingestempelt sind. Nutze das nur, wenn dein Team die Zeiterfassung verwendet.",
 		Type:            config.FieldBoolean,
 		Default:         false,
 		ReadPermission:  "config:read",

@@ -60,9 +60,9 @@ describe("StaffPreviewBanner", () => {
 
     // Kurzfassung (mobil) und Langfassung (ab sm) tragen den Hinweis je einmal.
     const readOnlyHints = screen
-      .getAllByText(/Sie können nur lesen\./)
+      .getAllByText(/Du kannst nur lesen\./)
       .filter((element) => element.children.length === 0);
     expect(readOnlyHints.length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("Sie können nur lesen.")).toBeInTheDocument();
+    expect(screen.getByText("Du kannst nur lesen.")).toBeInTheDocument();
   });
 });

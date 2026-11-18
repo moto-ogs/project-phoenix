@@ -191,7 +191,7 @@ for (const { enrollment, deviceChoice } of childOrigin
           );
           return;
         case "/api/v1/message/current":
-          response.end(JSON.stringify({ Text: `Ihr Code: ${code}` }));
+          response.end(JSON.stringify({ Text: `Dein Code: ${code}` }));
           return;
         default:
           response.statusCode = 404;

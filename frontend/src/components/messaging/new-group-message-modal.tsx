@@ -176,12 +176,11 @@ export function NewGroupMessageModal({
   const submit = async () => {
     if (sending) return;
     const fields: Record<string, string> = {};
-    if (!selected)
-      fields.target = `Bitte wählen Sie eine ${TARGET_NOUN[type]}.`;
-    if (!title.trim()) fields.title = "Bitte geben Sie einen Titel ein.";
-    if (!body.trim()) fields.body = "Bitte schreiben Sie eine Nachricht.";
+    if (!selected) fields.target = `Bitte wähle eine ${TARGET_NOUN[type]}.`;
+    if (!title.trim()) fields.title = "Bitte gib einen Titel ein.";
+    if (!body.trim()) fields.body = "Bitte schreibe eine Nachricht.";
     if (Object.keys(fields).length > 0 || !selected) {
-      formError.invalid("Bitte füllen Sie alle Felder aus.", fields);
+      formError.invalid("Bitte fülle alle Felder aus.", fields);
       return;
     }
     const clientMessageId = attempt.begin(
@@ -248,7 +247,7 @@ export function NewGroupMessageModal({
       <div className="space-y-5">
         <p className="text-sm text-gray-600">
           Alle Eltern mit Zugang zu moto bekommen die Nachricht. Eltern
-          antworten nur Ihnen. Andere Eltern sehen die Antworten nicht.
+          antworten nur dir. Andere Eltern sehen die Antworten nicht.
         </p>
         <div className="space-y-2">
           <p

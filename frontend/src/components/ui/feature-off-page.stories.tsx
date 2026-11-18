@@ -7,7 +7,7 @@ const meta = {
   component: FeatureOffPage,
   args: {
     title: "NFC-Armbänder",
-    description: "Hier verwalten Sie die NFC-Armbänder der Kinder.",
+    description: "Hier verwaltst du die NFC-Armbänder der Kinder.",
   },
 } satisfies Meta<typeof FeatureOffPage>;
 

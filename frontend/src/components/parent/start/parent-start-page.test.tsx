@@ -632,7 +632,7 @@ describe("ParentStartPage", () => {
         "parent-holiday-registration-entries",
       );
       expect(
-        within(card).getByRole("heading", { name: "Ihre Ferienanmeldungen" }),
+        within(card).getByRole("heading", { name: "Deine Ferienanmeldungen" }),
       ).toBeInTheDocument();
       expect(
         within(card).getByText("Weihnachtsferien 2026/27"),
@@ -660,7 +660,9 @@ describe("ParentStartPage", () => {
       renderPage();
 
       expect(
-        await screen.findByText(/Mit Ihrem Konto ist noch kein Kind verknüpft/),
+        await screen.findByText(
+          /Mit deinem Konto ist noch kein Kind verknüpft/,
+        ),
       ).toBeInTheDocument();
       // Anker: the hint above stands; no registrations card shows.
       expect(

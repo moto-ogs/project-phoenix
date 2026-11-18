@@ -207,14 +207,14 @@ func (s *Service) render(subscription domain.Subscription, items []domain.Item) 
 		values = append(values, rssItem{
 			Title:       "Neue Anfrage: " + label,
 			Link:        itemURL.String(),
-			Description: fmt.Sprintf("Für %s ist eine neue Elternanfrage eingegangen. Öffnen Sie moto, um sie zu prüfen.", subscription.SchoolName),
+			Description: fmt.Sprintf("Für %s ist eine neue Elternanfrage eingegangen. Öffne moto, um sie zu prüfen.", subscription.SchoolName),
 			GUID:        rssGUID{IsPermaLink: false, Value: fmt.Sprintf("urn:moto:parent-request:%d:%s:%d", subscription.TenantID, item.Kind, item.ID)},
 			PubDate:     item.CreatedAt.UTC().Format(time.RFC1123Z),
 		})
 	}
 	document := rss{Version: "2.0", Channel: rssChannel{
 		Title: "Neue Elternanfragen – " + subscription.SchoolName,
-		Link:  link, Description: "Hinweise auf neue Elternanfragen. Bearbeiten Sie die Anfragen in moto.", Language: "de-de", Items: values,
+		Link:  link, Description: "Hinweise auf neue Elternanfragen. Bearbeite die Anfragen in moto.", Language: "de-de", Items: values,
 	}}
 	encoded, err := xml.Marshal(document)
 	if err != nil {

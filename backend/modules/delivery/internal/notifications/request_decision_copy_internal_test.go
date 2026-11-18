@@ -27,7 +27,7 @@ func TestRequestDecisionCopy(t *testing.T) {
 	t.Run("an unknown request type still reads as a sentence", func(t *testing.T) {
 		title, body := ParentRequestDecisionCopy("de", "something_new", "erledigt")
 		assert.Equal(t, "Anfrage genehmigt", title)
-		assert.Equal(t, "Ihre Anfrage wurde genehmigt.", body,
+		assert.Equal(t, "Deine Anfrage wurde genehmigt.", body,
 			"a future request type must degrade to generic copy, not to an empty push")
 	})
 

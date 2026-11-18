@@ -44,7 +44,7 @@ describe("existing-account invitation acceptance", () => {
       confirmPassword: "",
     });
     expect(
-      screen.getByText(/Ihre bisherigen Zugänge bleiben bestehen/),
+      screen.getByText(/Deine bisherigen Zugänge bleiben bestehen/),
     ).toBeInTheDocument();
   });
 

@@ -105,7 +105,7 @@ export function SepaMandateModal({
     }
     if (!ibanLooksValid(draft.iban)) {
       fields.iban =
-        "Diese IBAN stimmt nicht. Bitte prüfen Sie jedes Zeichen noch einmal.";
+        "Diese IBAN stimmt nicht. Bitte prüfe jedes Zeichen noch einmal.";
     }
     if (!draft.signedOn) {
       fields.signed_on = "Bitte das Datum der Unterschrift wählen.";
@@ -117,7 +117,7 @@ export function SepaMandateModal({
         "Bitte nur Buchstaben ohne Umlaute, Ziffern, Leerzeichen und + ? / - : ( ) . , ' verwenden.";
     }
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", fields);
+      formErrors.invalid("Bitte prüfe deine Angaben.", fields);
       return;
     }
     await save.run(async (op) => {
@@ -173,7 +173,7 @@ export function SepaMandateModal({
         }}
       >
         <p className="text-sm text-gray-600">
-          Übernehmen Sie die Angaben aus dem unterschriebenen Mandat.
+          Übernimm die Angaben aus dem unterschriebenen Mandat.
         </p>
         <Input
           controlSize="touch"

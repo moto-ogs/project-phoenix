@@ -90,7 +90,7 @@ function WeekProtocolsContent() {
           ? {
               title: "Noch kein Wochenprotokoll",
               description:
-                "moto legt das Protokoll am ersten Abend einer Woche an. Ab Freitagabend können Sie es ergänzen.",
+                "moto legt das Protokoll am ersten Abend einer Woche an. Ab Freitagabend kannst du es ergänzen.",
             }
           : null
       }

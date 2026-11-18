@@ -122,7 +122,7 @@ func releaseError(err error) error {
 	case errors.Is(err, studentpresence.ErrLastSupervisor):
 		return &OperationError{
 			Target: ErrConflict, Code: codeLastSupervisor,
-			Message: "Sie sind die einzige Aufsicht. Übergeben Sie die Aufsicht oder beenden Sie die Aktivität.", Cause: err,
+			Message: "Du bist die einzige Aufsicht. Übergib die Aufsicht oder beende die Aktivität.", Cause: err,
 		}
 	case errors.Is(err, studentpresence.ErrGroupSupervisorNotFound):
 		return ErrForbidden

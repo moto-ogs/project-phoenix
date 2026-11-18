@@ -8,8 +8,8 @@ export function moduleNotBookedExplanation(
 ): string {
   const label = MODULE_LABELS[module];
   return leadsSchool
-    ? `Diese Seite gehört zum Modul ${label}. Ihre Schule hat es nicht gebucht. Für eine Buchung wenden Sie sich an das moto-Team.`
-    : `Diese Seite gehört zum Modul ${label}. Ihre Schule nutzt es nicht. Wenn Sie es brauchen, sprechen Sie mit Ihrer Leitung.`;
+    ? `Diese Seite gehört zum Modul ${label}. Deine Schule hat es nicht gebucht. Für eine Buchung wende dich an das moto-Team.`
+    : `Diese Seite gehört zum Modul ${label}. Deine Schule nutzt es nicht. Wenn du es brauchst, sprich mit deiner Leitung.`;
 }
 
 /**

@@ -3,7 +3,7 @@ import { validateStudentForm } from "./student-form-validation";
 import type { Student } from "~/lib/student-helpers";
 
 describe("validateStudentForm retention days", () => {
-  const RETENTION_HINT = "Bitte geben Sie eine Zahl von 1 bis 31 ein.";
+  const RETENTION_HINT = "Bitte gib eine Zahl von 1 bis 31 ein.";
 
   it.each([null, undefined, 0, 32])("marks %s as outside 1 to 31", (days) => {
     expect(
@@ -51,7 +51,7 @@ describe("validateStudentForm", () => {
     });
 
     expect(errors.departure_companion_note).toBe(
-      "Bitte geben Sie an, mit wem das Kind nach Hause geht.",
+      "Bitte gib an, mit wem das Kind nach Hause geht.",
     );
   });
 
@@ -91,7 +91,7 @@ describe("validateStudentForm", () => {
     );
 
     expect(errors.departure_companion_note).toBe(
-      "Bitte geben Sie an, mit wem das Kind nach Hause geht.",
+      "Bitte gib an, mit wem das Kind nach Hause geht.",
     );
   });
 
@@ -127,7 +127,7 @@ describe("validateStudentForm", () => {
 
     const errors = validateStudentForm(formData, { firstName: true });
 
-    expect(errors.first_name).toBe("Bitte geben Sie den Vornamen ein.");
+    expect(errors.first_name).toBe("Bitte gib den Vornamen ein.");
   });
 
   it("validates last name when required", () => {
@@ -140,7 +140,7 @@ describe("validateStudentForm", () => {
 
     const errors = validateStudentForm(formData, { lastName: true });
 
-    expect(errors.last_name).toBe("Bitte geben Sie den Nachnamen ein.");
+    expect(errors.last_name).toBe("Bitte gib den Nachnamen ein.");
   });
 
   it("validates school class when required", () => {
@@ -153,7 +153,7 @@ describe("validateStudentForm", () => {
 
     const errors = validateStudentForm(formData, { schoolClass: true });
 
-    expect(errors.school_class).toBe("Bitte geben Sie die Klasse ein.");
+    expect(errors.school_class).toBe("Bitte gib die Klasse ein.");
   });
 
   it("validates trimmed values", () => {
@@ -170,9 +170,9 @@ describe("validateStudentForm", () => {
       schoolClass: true,
     });
 
-    expect(errors.first_name).toBe("Bitte geben Sie den Vornamen ein.");
-    expect(errors.last_name).toBe("Bitte geben Sie den Nachnamen ein.");
-    expect(errors.school_class).toBe("Bitte geben Sie die Klasse ein.");
+    expect(errors.first_name).toBe("Bitte gib den Vornamen ein.");
+    expect(errors.last_name).toBe("Bitte gib den Nachnamen ein.");
+    expect(errors.school_class).toBe("Bitte gib die Klasse ein.");
   });
 
   it("validates invalid data retention days", () => {
@@ -186,7 +186,7 @@ describe("validateStudentForm", () => {
     const errors = validateStudentForm(formData, {});
 
     expect(errors.data_retention_days).toBe(
-      "Bitte geben Sie eine Zahl von 1 bis 31 ein.",
+      "Bitte gib eine Zahl von 1 bis 31 ein.",
     );
   });
 
@@ -204,11 +204,11 @@ describe("validateStudentForm", () => {
       schoolClass: true,
     });
 
-    expect(errors.first_name).toBe("Bitte geben Sie den Vornamen ein.");
-    expect(errors.last_name).toBe("Bitte geben Sie den Nachnamen ein.");
-    expect(errors.school_class).toBe("Bitte geben Sie die Klasse ein.");
+    expect(errors.first_name).toBe("Bitte gib den Vornamen ein.");
+    expect(errors.last_name).toBe("Bitte gib den Nachnamen ein.");
+    expect(errors.school_class).toBe("Bitte gib die Klasse ein.");
     expect(errors.data_retention_days).toBe(
-      "Bitte geben Sie eine Zahl von 1 bis 31 ein.",
+      "Bitte gib eine Zahl von 1 bis 31 ein.",
     );
   });
 

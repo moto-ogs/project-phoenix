@@ -461,8 +461,8 @@ export default function TraegerArrivalPickupPage() {
       title="Ankunft und Abholung"
       info={
         <>
-          Hier sehen Sie, wann Kinder an Ihren Schulen ankommen und wann sie
-          gehen. So planen Sie Personal für die vollen Zeiten. Jede Zahl ist der
+          Hier siehst du, wann Kinder an deinen Schulen ankommen und wann sie
+          gehen. So planst du Personal für die vollen Zeiten. Jede Zahl ist der
           Durchschnitt eines Tages, zum Beispiel aller Montage im Zeitraum. Es
           zählen nur Tage, an denen die Schule Kinder eingecheckt hat. Heute
           zählt erst morgen mit. moto zeigt hier keine Namen von Kindern.
@@ -515,7 +515,7 @@ export default function TraegerArrivalPickupPage() {
           ? {
               title: "Noch keine Schulen",
               description:
-                "Sobald das moto-Team Ihrem Träger Schulen zuordnet, stehen hier ihre Zeiten.",
+                "Sobald das moto-Team deinem Träger Schulen zuordnet, stehen hier ihre Zeiten.",
               icon: <School className="h-12 w-12" aria-hidden="true" />,
             }
           : null
@@ -555,8 +555,8 @@ export default function TraegerArrivalPickupPage() {
             }
             description={
               selected
-                ? "Wählen Sie einen anderen Zeitraum oder alle Schulen."
-                : "Wählen Sie einen anderen Zeitraum."
+                ? "Wähle einen anderen Zeitraum oder alle Schulen."
+                : "Wähle einen anderen Zeitraum."
             }
           />
         </SectionCard>

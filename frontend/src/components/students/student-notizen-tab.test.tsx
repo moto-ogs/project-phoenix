@@ -461,7 +461,7 @@ describe("StudentNotizenTab", () => {
 
     expect(
       await screen.findByText(
-        "Die Liste der Notizen konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Liste der Notizen konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -487,7 +487,7 @@ describe("StudentNotizenTab", () => {
 
     expect(
       await screen.findByText(
-        "Die Notiz konnte nicht übernommen werden. Bitte prüfen Sie Ihre Angaben.",
+        "Die Notiz konnte nicht übernommen werden. Bitte prüfe deine Angaben.",
       ),
     ).toBeInTheDocument();
     await waitFor(() =>
@@ -523,7 +523,7 @@ describe("StudentNotizenTab", () => {
 
     expect(
       await screen.findByText(
-        "Für die Notiz fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
+        "Für die Notiz fehlt dir die Berechtigung. Bitte frage die Schule.",
       ),
     ).toBeInTheDocument();
   });
@@ -662,7 +662,7 @@ describe("StudentNotizenTab", () => {
       fireEvent.click(screen.getByRole("button", { name: "Neue Notiz" }));
       expect(
         screen.getByText(
-          "Die Angebote konnten nicht geladen werden. Sie können die Notiz trotzdem ohne Angebot speichern.",
+          "Die Angebote konnten nicht geladen werden. Du kannst die Notiz trotzdem ohne Angebot speichern.",
         ),
       ).toBeInTheDocument();
     });
@@ -793,7 +793,7 @@ describe("StudentNotizenTab", () => {
         { revalidate: false },
       );
       expect(
-        screen.getAllByText("Neu: Diese Notiz wurde mit Ihnen geteilt."),
+        screen.getAllByText("Neu: Diese Notiz wurde mit dir geteilt."),
       ).toHaveLength(1);
     });
 

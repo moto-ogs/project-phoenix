@@ -136,7 +136,7 @@ it("names who downloaded each file", () => {
       ]}
     />,
   );
-  expect(screen.getAllByText("von Ihnen").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("von dir").length).toBeGreaterThan(0);
   expect(screen.getAllByText("von Eva Müller").length).toBeGreaterThan(0);
   expect(
     screen.getAllByText("von einem Konto ohne Namen").length,

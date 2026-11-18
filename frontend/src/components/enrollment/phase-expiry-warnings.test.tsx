@@ -74,7 +74,7 @@ describe("PhaseExpiryWarnings", () => {
     expect(screen.getByText("Anschlussphase fehlt")).toBeVisible();
     expect(
       screen.getByText(
-        "Ab 1. Februar 2027 enden die Buchungen für 204 Kinder. Erstellen Sie jetzt eine Anschlussphase.",
+        "Ab 1. Februar 2027 enden die Buchungen für 204 Kinder. Erstelle jetzt eine Anschlussphase.",
       ),
     ).toBeVisible();
     const actions = screen.getAllByRole("link", {
@@ -118,7 +118,7 @@ describe("PhaseExpiryWarnings", () => {
     expect(screen.getByText("Übernahme nicht abgeschlossen")).toBeVisible();
     expect(
       screen.getByText(
-        "Seit dem 1. Februar 2027 fehlen Buchungen für 17 Kinder. Schließen Sie jetzt die Übernahme ab.",
+        "Seit dem 1. Februar 2027 fehlen Buchungen für 17 Kinder. Schließe jetzt die Übernahme ab.",
       ),
     ).toBeVisible();
     expect(
@@ -151,7 +151,7 @@ describe("PhaseExpiryWarnings", () => {
     expect(screen.getByText("Übernahme noch offen")).toBeVisible();
     expect(
       screen.getByText(
-        "Ab 1. Februar 2027 fehlen noch Buchungen für 17 Kinder. Schließen Sie jetzt die Übernahme ab.",
+        "Ab 1. Februar 2027 fehlen noch Buchungen für 17 Kinder. Schließe jetzt die Übernahme ab.",
       ),
     ).toBeVisible();
     expect(screen.getByRole("status")).toHaveClass("bg-moto-orange-soft");
@@ -179,7 +179,7 @@ describe("PhaseExpiryWarnings", () => {
     expect(screen.getByText("Buchungen fehlen")).toBeVisible();
     expect(
       screen.getByText(
-        "Seit dem 1. Februar 2027 fehlen Buchungen für 204 Kinder. Erstellen Sie jetzt eine Anschlussphase.",
+        "Seit dem 1. Februar 2027 fehlen Buchungen für 204 Kinder. Erstelle jetzt eine Anschlussphase.",
       ),
     ).toBeVisible();
     expect(screen.getByRole("alert")).toHaveClass("bg-moto-orange-soft");

@@ -156,7 +156,7 @@ func TestRenderModuleErrorHidesInternalCause(t *testing.T) {
 	response := renderErrorResponse(t, errors.New("postgres password leaked"))
 	require.Equal(t, 500, response.status)
 	require.Equal(t, "substitutions.internal", response.body.Code)
-	require.Equal(t, "Das hat leider nicht geklappt. Bitte versuchen Sie es noch einmal.", response.body.Detail)
+	require.Equal(t, "Das hat leider nicht geklappt. Bitte versuche es noch einmal.", response.body.Detail)
 	require.NotContains(t, response.rawBody, "postgres")
 }
 

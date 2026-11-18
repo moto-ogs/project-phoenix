@@ -128,7 +128,7 @@ export function SepaCollectionsCard({
   return (
     <SectionCard
       title="Abbuchungen"
-      description="Jede Rechnung und jede Rate eines Bescheids, die per Lastschrift abgebucht wird. Nur zur Information: Die Datei für die Bank laden Sie auf der Seite des Laufs."
+      description="Jede Rechnung und jede Rate eines Bescheids, die per Lastschrift abgebucht wird. Nur zur Information: Die Datei für die Bank lädst du auf der Seite des Laufs."
       loading={debits === null && !error}
     >
       {error ? (

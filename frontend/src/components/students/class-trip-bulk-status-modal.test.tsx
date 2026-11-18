@@ -188,7 +188,7 @@ describe("ClassTripBulkStatusModal", () => {
     await waitFor(() => {
       const alerts = screen.getAllByRole("alert");
       expect(alerts[0]).toHaveTextContent(
-        "Die Klassenfahrt konnte nicht geändert werden. Bitte prüfen Sie den aktuellen Stand.",
+        "Die Klassenfahrt konnte nicht geändert werden. Bitte prüfe den aktuellen Stand.",
       );
       expect(alerts[1]).toHaveTextContent("Kevin Anders: 26.05.2026 (krank)");
     });
@@ -264,7 +264,7 @@ describe("ClassTripBulkStatusModal", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "Die Klassenfahrt konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Klassenfahrt konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     );
     expect(screen.queryByText(/db down/)).not.toBeInTheDocument();

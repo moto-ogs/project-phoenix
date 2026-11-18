@@ -197,7 +197,7 @@ export function CaregiverCapabilityModal({
 
     if (needsNames && (!trimmedFirstName || !trimmedLastName)) {
       formErrors.invalid(
-        "Bitte geben Sie Vor- und Nachnamen an. Für dieses Konto gibt es noch keine Personaldaten.",
+        "Bitte gib Vor- und Nachnamen an. Für dieses Konto gibt es noch keine Personaldaten.",
         {
           ...(trimmedFirstName
             ? {}
@@ -379,7 +379,7 @@ export function CaregiverCapabilityModal({
                 disabled={saving || loading || state?.disableBlocked}
                 disabledReason={
                   !saving && !loading && state?.disableBlocked
-                    ? "Lösen Sie zuerst die offenen Zuordnungen auf."
+                    ? "Löse zuerst die offenen Zuordnungen auf."
                     : undefined
                 }
                 variant="outline_danger"
@@ -519,7 +519,7 @@ export function CaregiverCapabilityModal({
                   onClick={() => setStep("resolve")}
                   variant="warning"
                   size="md"
-                  tooltip="Zeigt die Zuordnungen, die Sie übertragen oder entfernen können."
+                  tooltip="Zeigt die Zuordnungen, die du übertragen oder entfernen kannst."
                 >
                   Zuordnungen auflösen
                 </Button>

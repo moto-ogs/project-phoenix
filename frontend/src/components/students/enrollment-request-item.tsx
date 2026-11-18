@@ -92,7 +92,7 @@ export function EnrollmentRequestItem({
           size="compact"
           tooltip={
             view === "open"
-              ? "Öffnet die Änderung, dort nehmen Sie sie an oder lehnen sie ab."
+              ? "Öffnet die Änderung, dort nimmst du sie an oder lehnen sie ab."
               : "Öffnet die entschiedene Änderung der Anmeldung."
           }
         >

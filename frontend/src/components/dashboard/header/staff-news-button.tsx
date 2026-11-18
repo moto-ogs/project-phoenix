@@ -1,4 +1,4 @@
-// Header-Hinweis „Neu für Sie“: Notizen, die das Team geteilt hat (#6854),
+// Header-Hinweis „Neu für dich“: Notizen, die das Team geteilt hat (#6854),
 // und geänderte Abholzeiten von Kindern, für die die Person zuständig ist
 // (#6855). Er erscheint nur, solange etwas ungelesen ist. Der rote Zähler
 // verschwindet, sobald die Person das Kind öffnet.
@@ -20,7 +20,7 @@ import type { PickupChangeNotice } from "~/lib/pickup-change-notices-api";
 import type { StudentNoteTeamNotice } from "~/lib/student-notes-api";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 
-export const STAFF_NEWS_TITLE = "Neu für Sie";
+export const STAFF_NEWS_TITLE = "Neu für dich";
 
 export type StaffNewsItem =
   | { readonly kind: "note"; readonly notice: StudentNoteTeamNotice }

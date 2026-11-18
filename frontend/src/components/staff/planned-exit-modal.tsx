@@ -115,7 +115,7 @@ export function PlannedExitModal({
         disabled={saving || day === "" || day < today}
         disabledReason={
           day === ""
-            ? "Wählen Sie zuerst den letzten Arbeitstag aus."
+            ? "Wähle zuerst den letzten Arbeitstag aus."
             : day < today
               ? "Der letzte Arbeitstag darf nicht in der Vergangenheit liegen."
               : undefined
@@ -158,8 +158,8 @@ export function PlannedExitModal({
         ) : null}
         <p className="text-gray-600">
           Anwesenheiten und Zeiterfassung bleiben bis zum Ende ihrer Frist
-          erhalten. Sie bekommen eine Woche vorher und am letzten Arbeitstag
-          eine Erinnerung. Bis dahin können Sie den Tag ändern oder den Austritt
+          erhalten. Du bekommst eine Woche vorher und am letzten Arbeitstag eine
+          Erinnerung. Bis dahin kannst du den Tag ändern oder den Austritt
           zurücknehmen.
         </p>
       </div>

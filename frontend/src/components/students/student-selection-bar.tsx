@@ -52,7 +52,7 @@ export function StudentSelectionBar({
             size="compact"
             onClick={onExport}
             disabled={isRunning}
-            tooltip="Lässt Sie wählen, welche Angaben der Kinder Sie herunterladen."
+            tooltip="Lässt dich wählen, welche Angaben der Kinder du herunterlädst."
           >
             <Download className="h-3.5 w-3.5" aria-hidden />
             Exportieren

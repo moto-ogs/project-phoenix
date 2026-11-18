@@ -94,9 +94,9 @@ function modeOf(target: BillingCorrectionTarget): {
         intro: `Der Storno nimmt ${formatEuro(target.invoice.totalCents)} für ${target.invoice.childFirstName} ${target.invoice.childLastName} zurück. Er bekommt eine eigene Nummer.`,
         effect:
           target.invoice.sends > 0
-            ? "Die Familie bekommt ein Storno-Schreiben. Senden Sie es danach."
+            ? "Die Familie bekommt ein Storno-Schreiben. Sende es danach."
             : target.invoice.printed
-              ? "Die Rechnung wurde zum Drucken heruntergeladen. Geben Sie der Familie das Storno-Schreiben auf Papier."
+              ? "Die Rechnung wurde zum Drucken heruntergeladen. Gib der Familie das Storno-Schreiben auf Papier."
               : "Die Familie hat die Rechnung noch nicht bekommen. Sie bekommt auch kein Storno.",
         nextStep:
           "Die neue Rechnung stellt ein neuer Monatslauf für denselben Monat aus.",
@@ -136,7 +136,7 @@ function modeOf(target: BillingCorrectionTarget): {
         title: `Korrektur für ${target.child.firstName} ändern`,
         saveLabel: "Ändern",
         object: "die Korrektur",
-        intro: `Jetzt: ${formatEuro(target.child.totalCents)}, mit ${formatEuro(target.carried.amountCents)} aus ${target.carried.sourceNumber}. Ihre Änderung ersetzt diese Korrektur.`,
+        intro: `Jetzt: ${formatEuro(target.child.totalCents)}, mit ${formatEuro(target.carried.amountCents)} aus ${target.carried.sourceNumber}. Deine Änderung ersetzt diese Korrektur.`,
         amount: {
           id: "billing-correction-amount",
           name: "total_cents",
@@ -176,19 +176,19 @@ function amountError(
     return null;
   if (target.kind === "credit") {
     if (cents === null || cents <= 0)
-      return "Bitte geben Sie einen Betrag wie 5,00 an.";
+      return "Bitte gib einen Betrag wie 5,00 an.";
     return cents > target.leftCents
       ? `Höchstens ${formatEuro(target.leftCents)}.`
       : null;
   }
-  if (cents === null) return "Bitte geben Sie einen Betrag wie 45,00 an.";
+  if (cents === null) return "Bitte gib einen Betrag wie 45,00 an.";
   if (target.kind === "carried") {
     return cents ===
       totalAfterRemovingCarriedCorrection(
         target.child,
         target.carried.positionId,
       )
-      ? "Das ist der Betrag ohne Korrektur. Wählen Sie dafür im Menü „Entfernen“."
+      ? "Das ist der Betrag ohne Korrektur. Wähle dafür im Menü „Entfernen“."
       : null;
   }
   return cents === target.child.totalCents
@@ -254,8 +254,8 @@ export function BillingCorrectionModal({
       success(
         storno?.hasLetter
           ? current.invoice.sends > 0
-            ? `${issued} Senden Sie das Storno-Schreiben an die Familie.`
-            : `${issued} Geben Sie der Familie das Storno-Schreiben auf Papier.`
+            ? `${issued} Sende das Storno-Schreiben an die Familie.`
+            : `${issued} Gib der Familie das Storno-Schreiben auf Papier.`
           : `${issued} Die Familie bekommt kein Schreiben.`,
       );
       if (op.isCurrent()) onCareCancelled?.(letters);
@@ -303,9 +303,9 @@ export function BillingCorrectionModal({
     const fields: Record<string, string> = {};
     const invalidAmount = amountError(target, cents);
     if (mode.amount && invalidAmount) fields[mode.amount.name] = invalidAmount;
-    if (!reason.trim()) fields.reason = "Bitte geben Sie eine Begründung an.";
+    if (!reason.trim()) fields.reason = "Bitte gib eine Begründung an.";
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", fields);
+      formErrors.invalid("Bitte prüfe deine Angaben.", fields);
       return;
     }
     await submission.run(async (op) => {

@@ -321,7 +321,7 @@ function PoolSwitch({
   return (
     <SwitchRow
       label="Vertretungspool"
-      description="Die Person springt an allen Ihren Schulen ein. Jede Schule sieht sie und kann sie blocken."
+      description="Die Person springt an allen deinen Schulen ein. Jede Schule sieht sie und kann sie blocken."
       checked={checked}
       onCheckedChange={onChange}
     />
@@ -363,14 +363,11 @@ export function CreateContractDialog({
         inputs === null
           ? HOURS_ERROR
           : inputs.length === 0
-            ? "Tragen Sie für mindestens eine Schule Stunden ein."
+            ? "Trage für mindestens eine Schule Stunden ein."
             : undefined,
     };
     if (inputs === null || fields.starts_on || fields.ends_on || fields.sites) {
-      errors.invalid(
-        "Bitte prüfen Sie die markierten Felder.",
-        fieldErrors(fields),
-      );
+      errors.invalid("Bitte prüfe die markierten Felder.", fieldErrors(fields));
       return;
     }
     void run(
@@ -501,14 +498,11 @@ export function ChangeSollDialog({
         inputs === null
           ? HOURS_ERROR
           : inputs.length === 0
-            ? "Ändern Sie die Stunden mindestens einer Schule."
+            ? "Ändere die Stunden mindestens einer Schule."
             : undefined,
     };
     if (inputs === null || fields.valid_from || fields.sites) {
-      errors.invalid(
-        "Bitte prüfen Sie die markierten Felder.",
-        fieldErrors(fields),
-      );
+      errors.invalid("Bitte prüfe die markierten Felder.", fieldErrors(fields));
       return;
     }
     void run(
@@ -599,10 +593,7 @@ export function HolidayWeeksDialog({
       weekday_minutes: minutes === null ? HOURS_ERROR : undefined,
     };
     if (!site || minutes === null || fields.from_week || fields.to_week) {
-      errors.invalid(
-        "Bitte prüfen Sie die markierten Felder.",
-        fieldErrors(fields),
-      );
+      errors.invalid("Bitte prüfe die markierten Felder.", fieldErrors(fields));
       return;
     }
     void run(
@@ -731,7 +722,7 @@ export function ContractTermsDialog({
 
   const submit = () => {
     if (endsOn && endsOn < contract.startsOn) {
-      errors.invalid("Bitte prüfen Sie die markierten Felder.", {
+      errors.invalid("Bitte prüfe die markierten Felder.", {
         ends_on: "Der letzte Tag liegt vor dem ersten Tag.",
       });
       return;

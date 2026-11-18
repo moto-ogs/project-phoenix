@@ -243,8 +243,8 @@ export function NewMessageModal({
           <SlideOverTitle>Neue Nachricht</SlideOverTitle>
           <SlideOverDescription>
             {student
-              ? "Wählen Sie die Eltern, die die Nachricht erhalten."
-              : "Wählen Sie zuerst das Kind, um das es geht."}
+              ? "Wähle die Eltern, die die Nachricht erhalten."
+              : "Wähle zuerst das Kind, um das es geht."}
           </SlideOverDescription>
         </SlideOverHeader>
         {/* STEP 1 — pick a child (skipped when a preset child is given) */}
@@ -271,7 +271,7 @@ export function NewMessageModal({
               {showsUnreachable ? (
                 <p className="text-sm text-gray-500">
                   Bei „{NO_PARENT_ACCESS}“ kann niemand die Nachricht in der
-                  Eltern-App lesen. Den Zugang der Eltern legen Sie beim Kind
+                  Eltern-App lesen. Den Zugang der Eltern legst du beim Kind
                   fest.
                 </p>
               ) : null}
@@ -282,8 +282,8 @@ export function NewMessageModal({
                 variant="success"
                 size="md"
                 disabled={!target}
-                disabledReason="Wählen Sie zuerst ein Kind aus."
-                tooltip="Zeigt, welchen Eltern dieses Kindes Sie schreiben können."
+                disabledReason="Wähle zuerst ein Kind aus."
+                tooltip="Zeigt, welchen Eltern dieses Kindes du schreiben kannst."
               >
                 Weiter
               </Button>
@@ -318,10 +318,10 @@ export function NewMessageModal({
               {leadershipChoice || audience === "leadership" ? (
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-gray-700">
-                    Wer liest auf Ihrer Seite mit?
+                    Wer liest auf deiner Seite mit?
                   </p>
                   <SegmentedControl<ThreadAudience>
-                    ariaLabel="Wer liest auf Ihrer Seite mit?"
+                    ariaLabel="Wer liest auf deiner Seite mit?"
                     value={audience}
                     onChange={(next) => {
                       openError.clear();

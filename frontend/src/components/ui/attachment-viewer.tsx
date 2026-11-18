@@ -62,13 +62,13 @@ const GERMAN_LABELS: AttachmentViewerLabels = {
   previous: "Vorheriger Anhang",
   next: "Nächster Anhang",
   download: "Herunterladen",
-  downloadHint: "Speichert die Datei auf Ihrem Gerät.",
+  downloadHint: "Speichert die Datei auf deinem Gerät.",
   openInNewTab: "In neuem Tab öffnen",
   openInNewTabHint: "Öffnet die Datei in einem neuen Tab.",
   notViewable:
-    "Diese Datei lässt sich hier nicht anzeigen. Laden Sie sie herunter, um sie zu öffnen.",
+    "Diese Datei lässt sich hier nicht anzeigen. Lade sie herunter, um sie zu öffnen.",
   notViewableOnDevice:
-    "Auf diesem Gerät lässt sich die Datei hier nicht anzeigen. Öffnen Sie sie in einem neuen Tab oder laden Sie sie herunter.",
+    "Auf diesem Gerät lässt sich die Datei hier nicht anzeigen. Öffne sie in einem neuen Tab oder lade sie herunter.",
   position: (current, total) => `${current} von ${total}`,
 };
 

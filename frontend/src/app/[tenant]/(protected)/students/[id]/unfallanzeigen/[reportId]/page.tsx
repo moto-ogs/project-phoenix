@@ -124,7 +124,7 @@ export default function AccidentReportPage() {
       error={
         load.error ??
         (data && !report
-          ? "Diese Unfallanzeige gibt es nicht mehr. Sie finden alle Unfallanzeigen im Kinderprofil unter Dokumente."
+          ? "Diese Unfallanzeige gibt es nicht mehr. Du findest alle Unfallanzeigen im Kinderprofil unter Dokumente."
           : null)
       }
       stats={
@@ -140,7 +140,7 @@ export default function AccidentReportPage() {
       actions={
         report ? (
           // A download, not a page: a plain anchor in the kit's button look.
-          <ActionHint text="Speichert die Unfallanzeige als PDF auf Ihrem Gerät.">
+          <ActionHint text="Speichert die Unfallanzeige als PDF auf deinem Gerät.">
             <a
               href={studentAccidentReportsService.pdfUrl(studentId, reportId)}
               // Kennzeichen der Kopfkarte für ihre Bedienhöhe (wie `ButtonLink`).
@@ -305,7 +305,7 @@ function EditReportSection({
   const save = async () => {
     const errors = accidentReportDraftErrors(draft);
     if (Object.keys(errors).length > 0) {
-      formError.invalid("Bitte füllen Sie die markierten Felder aus.", errors);
+      formError.invalid("Bitte fülle die markierten Felder aus.", errors);
       return;
     }
     setSaving(true);
@@ -421,7 +421,7 @@ function SignatureSection({
               : `Papierexemplar hochgeladen am ${stamp(report.signedAt)}.`}
           </span>
           {document.hasFile && (
-            <ActionHint text="Speichert das unterschriebene Papierexemplar auf Ihrem Gerät.">
+            <ActionHint text="Speichert das unterschriebene Papierexemplar auf deinem Gerät.">
               <a
                 href={studentDocumentsService.downloadUrl(studentId, reportId)}
                 className={buttonClassName({
@@ -436,8 +436,8 @@ function SignatureSection({
           )}
         </div>
         <p className="mt-3 text-sm text-gray-600">
-          Die Unfallanzeige lässt sich nicht mehr ändern. Bei einem Fehler legen
-          Sie eine Korrektur an.
+          Die Unfallanzeige lässt sich nicht mehr ändern. Bei einem Fehler legst
+          du eine Korrektur an.
         </p>
       </SectionCard>
     );
@@ -494,8 +494,8 @@ function SignatureSection({
             )}
             <div className="border-t border-gray-100 pt-4">
               <p className="text-sm text-gray-600">
-                Oder: Drucken Sie das PDF aus, lassen Sie es unterschreiben und
-                laden Sie es hier hoch.
+                Oder: Drucke das PDF aus, lass es unterschreiben und lade es
+                hier hoch.
               </p>
               <Button
                 type="button"

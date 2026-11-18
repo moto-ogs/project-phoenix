@@ -1176,7 +1176,7 @@ describe("TimeTrackingPage", () => {
 
       await waitFor(() => {
         expect(mockToast.success).toHaveBeenCalledWith(
-          "Sie sind eingestempelt.",
+          "Du bist eingestempelt.",
         );
       });
     });
@@ -1608,7 +1608,7 @@ describe("TimeTrackingPage", () => {
         // A failed reload is no API answer: the crash text names the screen.
         expect(
           await screen.findByText(
-            "Die Zeiterfassung konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+            "Die Zeiterfassung konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
           ),
         ).toBeInTheDocument();
         expect(logError).toHaveBeenCalledWith("end_break_failed", {
@@ -2731,7 +2731,7 @@ describe("TimeTrackingPage", () => {
 
       await waitFor(() => {
         expect(mockToast.success).toHaveBeenCalledWith(
-          "Sie sind ausgestempelt.",
+          "Du bist ausgestempelt.",
         );
       });
     });
@@ -2805,7 +2805,7 @@ describe("TimeTrackingPage", () => {
       render(<TimeTrackingPage />);
       expect(
         await screen.findByText(
-          catalogText("general.unavailable", "die Liste Ihrer Schichten"),
+          catalogText("general.unavailable", "die Liste deiner Schichten"),
         ),
       ).toBeInTheDocument();
       expect(
@@ -2836,7 +2836,7 @@ describe("TimeTrackingPage", () => {
 
       render(<TimeTrackingPage />);
       const tableError = await screen.findByText(
-        catalogText("general.server", "die Liste Ihrer Arbeitszeiten"),
+        catalogText("general.server", "die Liste deiner Arbeitszeiten"),
       );
       const tableErrorAlert = tableError.closest<HTMLElement>('[role="alert"]');
       expect(tableErrorAlert).not.toBeNull();
@@ -2906,7 +2906,7 @@ describe("TimeTrackingPage", () => {
 
       expect(
         await screen.findByText(
-          catalogText("general.unavailable", "die Liste Ihrer Abwesenheiten"),
+          catalogText("general.unavailable", "die Liste deiner Abwesenheiten"),
         ),
       ).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "In der OGS" })).toBeDisabled();
@@ -5638,7 +5638,7 @@ describe("deviation-reason gate (F9)", () => {
     });
     expect(screen.getByText(/30 Minuten/)).toBeInTheDocument();
     expect(
-      screen.getByText(/nach Ihrem geplanten Dienstende/),
+      screen.getByText(/nach deinem geplanten Dienstende/),
     ).toBeInTheDocument();
     // Confirm stays disabled until a reason is entered.
     expect(screen.getByText("Mit Begründung ausstempeln")).toHaveAttribute(
@@ -5699,7 +5699,7 @@ describe("deviation-reason gate (F9)", () => {
       expect(screen.getByText("Abweichung vom Dienstplan")).toBeInTheDocument();
     });
     expect(
-      screen.getByText(/vor Ihrem geplanten Dienstbeginn/),
+      screen.getByText(/vor deinem geplanten Dienstbeginn/),
     ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Grund"), {

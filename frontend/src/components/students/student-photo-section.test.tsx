@@ -337,7 +337,7 @@ describe("StudentPhotoSection (controlled)", () => {
     // festen Satz in seinem Fehlerkasten.
     await waitFor(() =>
       expect(onPhotoError).toHaveBeenCalledWith(
-        "Dieses Foto lässt sich nicht verwenden. Bitte wählen Sie ein anderes Foto.",
+        "Dieses Foto lässt sich nicht verwenden. Bitte wähle ein anderes Foto.",
       ),
     );
     expect(screen.queryByText(/canvas decode failed/)).not.toBeInTheDocument();

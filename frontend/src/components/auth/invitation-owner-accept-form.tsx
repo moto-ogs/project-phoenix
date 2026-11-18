@@ -115,7 +115,7 @@ export function InvitationOwnerAcceptForm({
         <Alert
           type="success"
           title="Einladung angenommen"
-          message="Sie haben jetzt Zugang zur neuen Schule. Ihr Passwort bleibt unverändert. Ihre bisherigen Zugänge bleiben bestehen."
+          message="Du hast jetzt Zugang zur neuen Schule. Dein Passwort bleibt unverändert. Deine bisherigen Zugänge bleiben bestehen."
         />
         {destination ? (
           <ButtonLink href={destination} size="md">
@@ -133,9 +133,9 @@ export function InvitationOwnerAcceptForm({
         Einladung für <strong>{invitation.email}</strong>.
       </p>
       <ol className="list-decimal space-y-2 pl-5 text-sm text-gray-700">
-        <li>Melden Sie sich mit dieser E-Mail-Adresse bei moto an.</li>
-        <li>Kehren Sie danach zu dieser Einladung zurück.</li>
-        <li>Prüfen Sie Ihren Namen und nehmen Sie die Einladung an.</li>
+        <li>Melde dich mit dieser E-Mail-Adresse bei moto an.</li>
+        <li>Kehre danach zu dieser Einladung zurück.</li>
+        <li>Prüfe deinen Namen und nimm die Einladung an.</li>
       </ol>
       <ButtonLink
         href={redirectToPath ?? "/"}
@@ -159,7 +159,7 @@ export function InvitationOwnerAcceptForm({
         {showAddresses ? (
           <div className="mt-3 space-y-3">
             <p className="text-sm text-gray-600">
-              Wählen Sie den Bereich, in dem Sie moto bisher nutzen.
+              Wähle den Bereich, in dem du moto bisher nutzt.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -192,7 +192,7 @@ export function InvitationOwnerAcceptForm({
               // listAllTenants gibt nur "error" zurück, kein Fehlerobjekt:
               // ein fester Satz, Wiederholen über den Knopf darunter.
               <div className="space-y-2">
-                <LoadErrorAlert error="Die Liste der Schulen ist gerade nicht erreichbar. Bitte versuchen Sie es erneut." />
+                <LoadErrorAlert error="Die Liste der Schulen ist gerade nicht erreichbar. Bitte versuche es erneut." />
                 <Button
                   type="button"
                   variant="outline"

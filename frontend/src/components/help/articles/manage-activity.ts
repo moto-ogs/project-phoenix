@@ -12,17 +12,17 @@ export function manageActivityTopic(
       question: "Wie lege ich eine Aktivität an oder ändere sie?",
       summary:
         nfcEnabled === false
-          ? "Der Bereich ist nicht verfügbar, weil Ihre OGS NFC nicht nutzt."
+          ? "Der Bereich ist nicht verfügbar, weil deine OGS NFC nicht nutzt."
           : "Bei einfacher Anwesenheit gibt es keine Aktivitäten mit eigener Kinderzuordnung.",
       group: "gruppen",
       audience: "caregiver",
       icon: "Sparkles",
       steps: [
-        "Nutzen Sie den `Betreuungsplan`, um geplante Angebote anzusehen.",
+        "Nutze den `Betreuungsplan`, um geplante Angebote anzusehen.",
         // Live geprueft: der Katalog `Aktivitäten` haengt an NFC, der
         // spontane Start in `Aktuelle Aufsicht` nicht.
-        "Für heute können Sie in `Aktuelle Aufsicht` eine `Spontane Aktivität starten`.",
-        "Fragen Sie Ihre Leitung, wenn ein Angebot dauerhaft geändert werden soll.",
+        "Für heute kannst du in `Aktuelle Aufsicht` eine `Spontane Aktivität starten`.",
+        "Frage deine Leitung, wenn ein Angebot dauerhaft geändert werden soll.",
       ],
       result:
         "Der Menüpunkt `Aktivitäten` wird in diesem Modus nicht angezeigt.",
@@ -40,9 +40,9 @@ export function manageActivityTopic(
       audience: "caregiver",
       icon: "Sparkles",
       steps: [
-        "Prüfen Sie, ob `Aktivitäten` in der Seitenleiste steht.",
-        "Ist der Bereich vorhanden? Wählen Sie `Aktivität erstellen`.",
-        "Fehlt der Bereich? Fragen Sie Ihre Leitung nach der Arbeitsweise Ihrer OGS.",
+        "Prüfe, ob `Aktivitäten` in der Seitenleiste steht.",
+        "Ist der Bereich vorhanden? Wähle `Aktivität erstellen`.",
+        "Fehlt der Bereich? Frage deine Leitung nach der Arbeitsweise deiner OGS.",
       ],
       result:
         "Nur verfügbare Aktivitäten können am NFC-Tablet ausgewählt werden.",
@@ -55,25 +55,25 @@ export function manageActivityTopic(
     title: "Eine Aktivität anlegen oder ändern",
     question: "Wie lege ich eine Aktivität an oder ändere sie?",
     summary:
-      "Legen Sie eine Aktivität für NFC-Tablets an oder ändern Sie eine eigene Aktivität.",
+      "Lege eine Aktivität für NFC-Tablets an oder änder eine eigene Aktivität.",
     group: "gruppen",
     audience: "caregiver",
     icon: "Sparkles",
     steps: [
-      "Öffnen Sie `Aktivitäten`.",
-      "Wählen Sie die Schaltfläche `Aktivität erstellen` mit dem Plus-Symbol.",
-      "Geben Sie einen kurzen Namen ein.",
-      "Wählen Sie eine Kategorie und bei Bedarf eine maximale Anzahl an Kindern.",
-      "Wählen Sie `Aktivität erstellen`.",
-      "Öffnen Sie eine eigene Aktivität und wählen Sie `Bearbeiten`, wenn Sie Angaben ändern möchten.",
+      "Öffne `Aktivitäten`.",
+      "Wähle die Schaltfläche `Aktivität erstellen` mit dem Plus-Symbol.",
+      "Gib einen kurzen Namen ein.",
+      "Wähle eine Kategorie und bei Bedarf eine maximale Anzahl an Kindern.",
+      "Wähle `Aktivität erstellen`.",
+      "Öffne eine eigene Aktivität und wähle `Bearbeiten`, wenn du Angaben ändern möchtest.",
     ],
     result:
       "Die Aktivität ist sofort am NFC-Tablet verfügbar. Suche und Filter helfen in der Liste.",
     differences: [
       "Eine Aktivität kann am Tablet mehrfach gewählt werden. Termine mit Uhrzeit stehen im Betreuungsplan.",
-      "Aktivitäten anderer Personen können Sie ansehen, aber nicht immer bearbeiten.",
+      "Aktivitäten anderer Personen kannst du ansehen, aber nicht immer bearbeiten.",
       // #4767: Plätze und Warteliste einer AG.
-      "Dürfen Sie Anfragen von Eltern entscheiden? Dann sehen Sie bei einer Aktivität `Plätze und Warteliste`. Dort steht, wer dabei ist und wer wartet.",
+      "Darfst du Anfragen von Eltern entscheiden? Dann siehst du bei einer Aktivität `Plätze und Warteliste`. Dort steht, wer dabei ist und wer wartet.",
     ],
     related: [HELP_TOPICS.activeSupervision, HELP_TOPICS.carePlan],
   };

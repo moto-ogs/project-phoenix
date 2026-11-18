@@ -64,7 +64,7 @@ const STEPS = [
 
 /** Why the file and its confirmation wait while the Träger has no account. */
 const ACCOUNT_MISSING_REASON =
-  "Legen Sie zuerst eine Bankverbindung des Trägers als Standard fest.";
+  "Lege zuerst eine Bankverbindung des Trägers als Standard fest.";
 
 /** The mandate page of a family. */
 function mandateHref(debit: SepaDebit): string {
@@ -279,7 +279,7 @@ export function SepaDebitCard({
         }
         description={
           pending
-            ? "Die Bank bucht die Beiträge ab, nicht moto. Laden Sie die Datei herunter und im Online-Banking hoch. Bestätigen Sie es danach hier."
+            ? "Die Bank bucht die Beiträge ab, nicht moto. Lade die Datei herunter und im Online-Banking hoch. Bestätige es danach hier."
             : run.submitted.length > 0
               ? `Die Datei ist eingereicht${run.submittedAt ? ` (${formatDate(run.submittedAt)})` : ""}. Die Bank bucht am Fälligkeitstag ab.`
               : "In diesem Lauf darf keine Lastschrift in die Datei. Die Gründe stehen unten."
@@ -296,7 +296,7 @@ export function SepaDebitCard({
                   fileBlocked
                     ? ACCOUNT_MISSING_REASON
                     : !downloadedId
-                      ? "Laden Sie zuerst die Datei herunter."
+                      ? "Lade zuerst die Datei herunter."
                       : undefined
                 }
                 tooltip="Vermerkt die Lastschriften als eingereicht. moto fragt vorher nach."
@@ -324,7 +324,7 @@ export function SepaDebitCard({
                 size="md"
                 disabled={fileBlocked}
                 disabledReason={ACCOUNT_MISSING_REASON}
-                tooltip="Lädt die Lastschriftdatei (SEPA) für Ihr Online-Banking herunter."
+                tooltip="Lädt die Lastschriftdatei (SEPA) für dein Online-Banking herunter."
                 className="gap-2"
                 isLoading={downloading}
                 loadingText="Wird erstellt …"
@@ -344,7 +344,7 @@ export function SepaDebitCard({
             <Alert
               type="warning"
               title="Konto des Trägers fehlt"
-              message="Die Datei braucht das Konto, auf das die Beiträge gehen. Legen Sie unter Einstellungen → Abrechnung eine Bankverbindung als Standard fest. Das darf, wer das Recht „Einstellungen“ hat."
+              message="Die Datei braucht das Konto, auf das die Beiträge gehen. Lege unter Einstellungen → Abrechnung eine Bankverbindung als Standard fest. Das darf, wer das Recht „Einstellungen“ hat."
               action={
                 <ButtonLink
                   href={traegerPath("/traeger/einstellungen/abrechnung")}
@@ -367,8 +367,8 @@ export function SepaDebitCard({
             <p className="text-sm text-gray-600">
               {recipientOfFormat(handover.recipients, "pain008")?.ready ||
               handover.recipientHidden
-                ? "Laden Sie zuerst die Datei herunter oder übergeben Sie sie. Danach können Sie das Einreichen bestätigen."
-                : "Laden Sie zuerst die Datei herunter. Danach können Sie das Einreichen bestätigen."}
+                ? "Lade zuerst die Datei herunter oder übergib sie. Danach kannst du das Einreichen bestätigen."
+                : "Lade zuerst die Datei herunter. Danach kannst du das Einreichen bestätigen."}
             </p>
           ) : null}
           {pending ? (
@@ -433,7 +433,7 @@ export function SepaDebitCard({
         onConfirm={() => void submit()}
       >
         <p className="text-sm text-gray-700">
-          Bestätigen Sie erst, wenn Ihre Bank die Datei angenommen hat. Danach
+          Bestätige erst, wenn deine Bank die Datei angenommen hat. Danach
           gelten {debitCountLabel(run.count)} über {formatEuro(run.totalCents)}{" "}
           als eingereicht. Bei einem neuen Mandat ist die nächste Lastschrift
           dann eine Folgelastschrift.
@@ -458,7 +458,7 @@ function SepaDebitsLeftCard({
           {debitCountLabel(left.length)}
         </span>
       }
-      description="Für diese Rechnungen darf die Bank nicht abbuchen. Die Familie zahlt anders, oder Sie klären das Mandat."
+      description="Für diese Rechnungen darf die Bank nicht abbuchen. Die Familie zahlt anders, oder du klärst das Mandat."
     >
       <ResponsiveActionList>
         {left.map((debit) => (
@@ -485,7 +485,7 @@ function SepaDebitsLeftCard({
                 variant="surface"
                 size="compact"
                 aria-label={`Mandat prüfen: ${debit.recipientName}`}
-                tooltip="Öffnet das Mandat dieser Familie, damit Sie es klären."
+                tooltip="Öffnet das Mandat dieser Familie, damit du es klärst."
               >
                 Mandat prüfen
               </ButtonLink>

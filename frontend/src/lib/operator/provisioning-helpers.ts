@@ -864,7 +864,7 @@ export function mapUnregisteredTagScan(
 
 /** Shown when the browser refuses to copy an API key (#2519). */
 export const API_KEY_COPY_FAILED_MESSAGE =
-  "Der API-Key konnte nicht kopiert werden. Bitte markieren und kopieren Sie ihn selbst.";
+  "Der API-Key konnte nicht kopiert werden. Bitte markiere und kopiere ihn selbst.";
 
 // --- Träger-Büro (#4649) ---
 

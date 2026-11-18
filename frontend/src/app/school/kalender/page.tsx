@@ -196,7 +196,7 @@ export default function SchoolCalendarPage() {
   const submit = async () => {
     const fields = schoolAppointmentFieldErrors(draft, !editingId);
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", fields);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fields);
       return;
     }
     formErrors.clear();
@@ -264,7 +264,7 @@ export default function SchoolCalendarPage() {
     } catch (err) {
       logFailure("school_calendar_response_failed", err);
       void showActionError(err, {
-        object: "das Speichern Ihrer Antwort",
+        object: "das Speichern deiner Antwort",
         retry: () =>
           latestRespondRef.current(recipientId, status, occurrenceDate),
       });
@@ -293,7 +293,7 @@ export default function SchoolCalendarPage() {
   return (
     <TenantPage
       title="Kalender"
-      info={<p>Termine der OGS, Schließtage, Ferien und Ihre Schultermine.</p>}
+      info={<p>Termine der OGS, Schließtage, Ferien und deine Schultermine.</p>}
       actions={
         <>
           {/* Der Elternsprechtag (#4801) hat keinen eigenen Platz in der
@@ -302,7 +302,7 @@ export default function SchoolCalendarPage() {
             href={schoolPath(SCHOOL_PARENT_CONFERENCES_ROUTE)}
             variant="outline"
             size="md"
-            tooltip="Öffnet die Elternsprechtage Ihrer Klasse."
+            tooltip="Öffnet die Elternsprechtage deiner Klasse."
           >
             Elternsprechtag
           </ButtonLink>
@@ -475,7 +475,7 @@ export default function SchoolCalendarPage() {
                         <p className="text-sm text-gray-600">
                           Die OGS und alle Lehrkräfte sehen ihn immer.
                           {creating
-                            ? " Wählen Sie, ob auch Eltern ihn sehen."
+                            ? " Wähle, ob auch Eltern ihn sehen."
                             : " Wer ihn sieht, bleibt beim Ändern gleich."}
                         </p>
                         {creating ? (
@@ -508,7 +508,7 @@ export default function SchoolCalendarPage() {
                                     {option.label}
                                     {noClasses ? (
                                       <span className="mt-0.5 block text-xs font-normal text-gray-500">
-                                        Ihnen ist keine Klasse zugeordnet.
+                                        Dir ist keine Klasse zugeordnet.
                                       </span>
                                     ) : null}
                                   </span>
@@ -618,7 +618,7 @@ export default function SchoolCalendarPage() {
         <SectionCard>
           <EmptyState
             title={calendarEmptyLabel(viewMode)}
-            description="Legen Sie einen Schultermin an oder wechseln Sie den Zeitraum."
+            description="Lege einen Schultermin an oder wechsle den Zeitraum."
           />
         </SectionCard>
       ) : (

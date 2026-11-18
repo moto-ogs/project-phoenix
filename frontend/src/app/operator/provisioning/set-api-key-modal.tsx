@@ -93,8 +93,8 @@ export function SetApiKeyModal({
                 onCopyFailed={handleCopyFailed}
               />
               <p className="text-xs text-gray-500">
-                Kopieren Sie den API-Key jetzt. Er wird nur einmal angezeigt.
-                Der alte Key ist ab sofort ungültig.
+                Kopiere den API-Key jetzt. Er wird nur einmal angezeigt. Der
+                alte Key ist ab sofort ungültig.
               </p>
             </div>
           )}

@@ -35,10 +35,10 @@ const NO_ATTACHMENTS: FormAttachment[] = [];
 function selectionError(files: File[]): string | undefined {
   const problems = new Set(files.map(enrollmentDocumentProblem));
   if (problems.has("not_pdf")) {
-    return "Bitte wählen Sie nur PDF-Dateien aus.";
+    return "Bitte wähle nur PDF-Dateien aus.";
   }
   if (problems.has("too_large")) {
-    return `Eine Datei ist größer als ${MAX_ENROLLMENT_DOCUMENT_SIZE_LABEL}. Bitte wählen Sie kleinere Dateien.`;
+    return `Eine Datei ist größer als ${MAX_ENROLLMENT_DOCUMENT_SIZE_LABEL}. Bitte wähle kleinere Dateien.`;
   }
   return undefined;
 }
@@ -243,7 +243,7 @@ export function AttachmentEditor({
         </Button>
         {sharedHints ? null : (
           <p className="text-sm text-gray-600">
-            Sie können mehrere PDFs gleichzeitig auswählen. Höchstens{" "}
+            Du kannst mehrere PDFs gleichzeitig auswählen. Höchstens{" "}
             {MAX_ENROLLMENT_DOCUMENT_SIZE_LABEL} pro Datei.
           </p>
         )}

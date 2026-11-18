@@ -6,39 +6,38 @@ export function missingChildOrGroupTopic(groupMode: HelpGroupMode): HelpTopic {
     id: HELP_TOPICS.missingChildOrGroup,
     title: "Ein Kind oder eine Gruppe fehlt",
     question: "Was kann ich tun, wenn ein Kind oder eine Gruppe fehlt?",
-    summary:
-      "Prüfen Sie Suche, Filter, gewählten Tag und Ihre Gruppenzuordnung.",
+    summary: "Prüfe Suche, Filter, gewählten Tag und deine Gruppenzuordnung.",
     group: "probleme",
     audience: "caregiver",
     icon: "Search",
     steps: [
-      "Löschen Sie den Text im Suchfeld.",
+      "Lösche den Text im Suchfeld.",
       // Jede Liste hat eigene Filter: ein Symbol, ein Umschalter oder eine
       // Auswahl. Einen Knopf namens `Filter` gibt es nirgends.
-      "Setzen Sie die Filter über der Liste zurück.",
-      "Prüfen Sie, ob oben der richtige Tag gewählt ist.",
-      "Suchen Sie das Kind unter `Alle Kinder`.",
+      "Setze die Filter über der Liste zurück.",
+      "Prüfe, ob oben der richtige Tag gewählt ist.",
+      "Suche das Kind unter `Alle Kinder`.",
       ...(groupMode === "fixed_groups"
         ? [
-            "Fehlt das Kind nur unter `Gruppen`? Prüfen Sie, ob Sie die richtige Gruppe geöffnet haben.",
-            "Bitten Sie Ihre Leitung, die Gruppe des Kindes und Ihre Gruppenzuordnung zu prüfen.",
+            "Fehlt das Kind nur unter `Gruppen`? Prüfe, ob du die richtige Gruppe geöffnet hast.",
+            "Bitte deine Leitung, die Gruppe des Kindes und deine Gruppenzuordnung zu prüfen.",
           ]
         : groupMode === "open_care"
           ? [
-              "Bei offener Betreuung gibt es keine festen eigenen Gruppen. Arbeiten Sie über `Alle Kinder`.",
+              "Bei offener Betreuung gibt es keine festen eigenen Gruppen. Arbeite über `Alle Kinder`.",
             ]
           : [
-              "Prüfen Sie, ob Ihre OGS mit festen Gruppen oder einer gemeinsamen Kinderliste arbeitet.",
+              "Prüfe, ob deine OGS mit festen Gruppen oder einer gemeinsamen Kinderliste arbeitet.",
             ]),
     ],
     result:
-      "Das Kind bleibt unsichtbar? Dann muss Ihre Leitung Daten und Zugriff prüfen.",
+      "Das Kind bleibt unsichtbar? Dann muss deine Leitung Daten und Zugriff prüfen.",
     differences: [
       "Ein Kind kann an einem anderen Tag anders eingeplant sein.",
       "Vorübergehend übernommene Gruppen gelten nur bis zum Ende des Tages.",
       "Gelöschte oder noch nicht übernommene Kinder erscheinen nicht in der normalen Kinderliste.",
       // #6041: ein Kind mit geplantem späterem Start zählt erst ab dem Start.
-      "Ist der Start eines Kindes für später geplant, steht es erst ab dem Start unter `Alle Kinder`. Vorher finden Sie es unter `Datenverwaltung` und danach `Kinderdaten`.",
+      "Ist der Start eines Kindes für später geplant, steht es erst ab dem Start unter `Alle Kinder`. Vorher findest du es unter `Datenverwaltung` und danach `Kinderdaten`.",
     ],
     related: [HELP_TOPICS.studentSearch, HELP_TOPICS.ownGroups],
   };

@@ -18,7 +18,7 @@ const (
 	maxSurveyOptionLen      = 120
 	maxSurveyTextAnswerLen  = 2000
 	maxSurveyOpenDuration   = 366 * 24 * time.Hour
-	surveyDefaultParentBody = "Die Schule bittet Sie, an einer kurzen Umfrage teilzunehmen."
+	surveyDefaultParentBody = "Die Schule bittet dich, an einer kurzen Umfrage teilzunehmen."
 )
 
 func surveyInvalid(reason string) error {

@@ -34,7 +34,7 @@ export function EnrollmentPrivacyNoticeWarning({
       title="Datenschutzinformation fehlt"
       message={
         canWriteNotice
-          ? "Die Online-Anmeldung ist eingeschaltet. Eltern sehen dort aber keine Datenschutzinformation. Schalten Sie unter „Rechtstexte“ die Datenschutzinformation ein und tragen Sie den Text ein."
+          ? "Die Online-Anmeldung ist eingeschaltet. Eltern sehen dort aber keine Datenschutzinformation. Schalte unter „Rechtstexte“ die Datenschutzinformation ein und trage den Text ein."
           : `Die Online-Anmeldung ist eingeschaltet. Eltern sehen dort aber keine Datenschutzinformation. ${ENROLLMENT_PRIVACY_NOTICE_WHO_ACTS}`
       }
       action={

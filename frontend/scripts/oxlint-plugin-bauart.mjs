@@ -1220,7 +1220,7 @@ const OWN_OBJECT_ENTRY_EXCEPTIONS = new Map(
   Object.entries({
     // Teilentschuldigungen genau dieses Kindes an genau diesen Tagen.
     "src/components/students/planned-status-days-modal.tsx": [
-      "Bearbeiten@1357",
+      "Bearbeiten@1356",
     ],
   }),
 );
@@ -1619,7 +1619,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Hinweis bearbeiten Neuer Hinweis@190",
     ],
     "src/components/timetable/calendar-period-modal.tsx": [
-      "Kalenderzeitraum bearbeiten Kalenderzeitraum anlegen@448",
+      "Kalenderzeitraum bearbeiten Kalenderzeitraum anlegen@447",
     ],
     // Kontoaktionen mit eigenem Ablauf (Begründung und Rückfrage bei der
     // Zwei-Faktor-Authentifizierung, Auflösen offener Zuordnungen bei der
