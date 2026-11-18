@@ -68,8 +68,12 @@ export const portalRoutes = {
     parentMe["POST /parent/me/calendar/recipients/{recipientId}/response"],
   ],
   platform: [
+    operatorBilling["DELETE /operator/billing/key-day-overrides/organizations/{organizationId}"],
+    operatorBilling["DELETE /operator/billing/key-day-overrides/schools/{schoolId}"],
     operatorBilling["GET /operator/billing/key-day"],
     operatorBilling["PUT /operator/billing/key-day"],
+    operatorBilling["PUT /operator/billing/key-day-overrides/organizations/{organizationId}"],
+    operatorBilling["PUT /operator/billing/key-day-overrides/schools/{schoolId}"],
     operatorDevices["GET /operator/devices/{id}/history"],
     operatorDevices["POST /operator/devices/{id}/block"],
     operatorDevices["POST /operator/devices/{id}/unblock"],
