@@ -415,7 +415,14 @@ function useTargets(
   }, [organizations.data, liveSchools, overrides, scope]);
 
   const loading = organizations.isLoading || schools.isLoading;
-  return { options, loading, loadError, schools: liveSchools };
+  // The school list is only trusted when both lists answered: a failed list
+  // must not read as "every school already has its figures".
+  const confirmed =
+    !organizations.error &&
+    !schools.error &&
+    organizations.data !== undefined &&
+    schools.data !== undefined;
+  return { options, loading, loadError, confirmed, schools: liveSchools };
 }
 
 /**
@@ -503,11 +510,7 @@ function KeyDayModal({
   // Unknown until the figures and the school list are loaded; then the
   // dialog names who misses the month instead of guessing.
   const missing =
-    passed &&
-    capturedThisMonth &&
-    !targets.loading &&
-    !targets.loadError &&
-    chosen
+    passed && capturedThisMonth && targets.confirmed && chosen
       ? schoolsMissingTheMonth(
           reach,
           targetId,

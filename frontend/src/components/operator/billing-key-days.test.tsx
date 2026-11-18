@@ -359,4 +359,27 @@ describe("BillingKeyDayOverrides", () => {
       ),
     ).toBeInTheDocument();
   });
+
+  it("warns generically when the school list fails, never says the month stays", async () => {
+    mockSchools.mockRejectedValue(new ApiError("boom", 503));
+    renderOverrides([traegerNord], new Set(["9"]));
+    await screen.findByText("Träger Nord");
+
+    openMenuOf("Träger Nord");
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /Tag ändern/ }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(
+      within(dialog).getByRole("combobox", { name: /Tag im Monat/ }),
+    );
+    fireEvent.click(await screen.findByRole("option", { name: "8." }));
+
+    expect(
+      await within(dialog).findByText(
+        "Der 8. ist im November 2026 schon vorbei. Schulen ohne Zahlen für diesen Monat bekommen für diesen Monat keine mehr. Nächster Stichtag: 08.12.2026.",
+      ),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByText(/stehen schon/)).toBeNull();
+  });
 });
