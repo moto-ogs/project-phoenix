@@ -141,10 +141,10 @@ Grenze der Owner-Uhr.
 Ohne Wache der Datenbank bleibt es bei Punkt 2: Der Owner stempelt und
 schneidet mit seiner Uhr ab.
 
-Noch offen: `audit.delete_expired_deviation_events` bewacht den Kalendertag
-der Abweichungen mit dem Tag der Datenbank, die Grenze kommt aber aus der
-Stundenplan-Aufbewahrung, die mit derselben Grenze die Stundenplanzeilen
-löscht. Sie folgt in einem eigenen Schnitt.
+Seit #7383 berechnet `audit.timetable_retention_cutoff` die Grenze für
+Stundenplanzeilen und Abweichungen auf dem Berliner Datenbanktag.
+Vorschau, Statistik und Löschung verwenden diese Grenze.
+`audit.delete_expired_deviation_events` prüft sie weiter in PostgreSQL.
 
 ## Nachtrag 2026-11-17: Der Änderungsverlauf der Elternanfragen liegt auf der Datenbankuhr
 

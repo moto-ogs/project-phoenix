@@ -54,6 +54,9 @@ var moduleSQLClockBudget = map[string]int{
 	// keep the time their producer sets, the date of the grant. The column defaults also stamp the ledgers without a school
 	// (operator ledger, Träger account ledger, Träger document downloads),
 	// whose cutoff the database computes.
+	// Timetable's calendar-day cutoff is read through the migration function
+	// audit.timetable_retention_cutoff (outside the literal count), because
+	// audit.delete_expired_deviation_events guards it on the same DB clock.
 	"modules/auditlog": 1,
 	// cleanupDatabaseClock (1): stamps completed student document cleanups
 	// and supplies the cutoff that the database function guards (1.15.606).

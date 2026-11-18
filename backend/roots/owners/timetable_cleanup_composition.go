@@ -32,6 +32,10 @@ func NewTimetableCleanup(owner timetable.Capability, deletions DataDeletionAppen
 	}
 	if deviations != nil {
 		deps.DeviationEvents = timetableDeviationRetention{events: deviations}
+		deps.DatabaseCutoff = func(ctx context.Context, days int) (timezone.Date, error) {
+			cutoff, err := deviations.TimetableRetentionCutoff(ctx, days)
+			return timezone.Date(cutoff), err
+		}
 	}
 	if settings != nil {
 		deps.Settings = timetableRetentionSettings{settings: settings, logger: logger}
@@ -83,5 +87,6 @@ func (r timetableDeviationRetention) DeleteDeviationEventsBefore(ctx context.Con
 // timetableDeviationSweep deletes the Änderungsprotokoll entries older than
 // the retention cutoff.
 type timetableDeviationSweep interface {
+	TimetableRetentionCutoff(context.Context, int) (auditModels.Date, error)
 	DeleteOlderThan(ctx context.Context, cutoff auditModels.Date) (int64, error)
 }
