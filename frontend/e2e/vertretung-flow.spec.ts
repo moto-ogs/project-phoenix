@@ -241,8 +241,8 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
       assertUrlVocabulary(page, "nach Filter-Umschalter (lokaler State)");
 
       await expect(row).toBeVisible({ timeout: 15000 });
-      await expect(row).toContainText("Soll 1");
-      await expect(row).toContainText("Abwesend 0");
+      // Besetzung als „da von geplant“: eine Person geplant, eine da.
+      await expect(row).toContainText("1/1");
 
       // --- Save 1: Person abwesend melden (Ereignis `absence`) ------------
       deviationPosts = 0;
@@ -274,9 +274,10 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
       expect(deviationPosts, "Save 1 = genau ein Speicher-POST").toBe(1);
 
       // Ohne Ersatz nennt die Liste die offene Vertretung ausdrücklich.
-      await expect(row).toContainText("Abwesend 1", DATA);
+      await expect(row).toContainText("0/1", DATA);
+      await expect(row).toContainText("1 Person fehlt", DATA);
       await expect(row).toContainText("Ersatzkräfte: keine", DATA);
-      await expect(otherRow).toContainText("Abwesend 0", DATA);
+      await expect(otherRow).toContainText("1/1", DATA);
 
       // --- Save 2: Ersatz wählen (Ereignis `substitution`) ----------------
       // Zwei Speichervorgänge, weil ein kombiniertes Abwesenheit+Ersatz-Save
@@ -312,10 +313,9 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
       await expect(dialog).toBeHidden({ timeout: 10000 });
       expect(deviationPosts, "Save 2 = genau ein Speicher-POST").toBe(1);
 
-      // Aktualisiertes Soll/Ist/Abwesend-Tripel plus gesetzter Ersatz.
-      await expect(row).toContainText("Soll 1", DATA);
-      await expect(row).toContainText("Ist 1", DATA);
-      await expect(row).toContainText("Abwesend 1", DATA);
+      // Wieder voll besetzt, die abwesende Person bleibt genannt.
+      await expect(row).toContainText("1/1", DATA);
+      await expect(row).toContainText("abwesend", DATA);
       await expect(row).toContainText(`Ersatzkräfte: ${substituteName}`, DATA);
 
       // --- Deep-Link-Roundtrip: Editor + Verlaufs-Reiter direkt anfahren --

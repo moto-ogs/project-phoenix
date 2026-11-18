@@ -67,7 +67,7 @@ export interface StaffTriple {
 }
 
 /** Der nächste andere Tag der Woche, an dem noch eine Lücke offen ist. */
-export interface VertretungNextOpenDay {
+interface VertretungNextOpenDay {
   /** Wie der Tag in der Wochenleiste heißt, z. B. "Do 19.11.". */
   readonly label: string;
   readonly count: number;
@@ -502,6 +502,7 @@ function VertretungDayListRow({
   // und verspricht kein „Besetzen“.
   const nobodyPlanned = isOpenGap && triple.planned === 0;
   const canFill = isOpenGap && !nobodyPlanned;
+  const missing = Math.max(triple.planned - triple.present, 1);
   const rowAction = !canManage
     ? "Details"
     : canFill
@@ -603,10 +604,14 @@ function VertretungDayListRow({
               coverageState === "acknowledged" ? "bewusst unbesetzt" : undefined
             }
           />
-          <span className="text-xs text-gray-500 tabular-nums">
-            Soll {triple.planned} · Ist {triple.present} · Abwesend{" "}
-            {triple.absent}
-          </span>
+          {/* Eine Zahl je Zeile (#7493): der Bruch sagt „da von geplant“,
+              die Worte daneben, was bei einer Lücke fehlt. Wer fehlt, steht
+              darunter mit Namen. */}
+          {isOpenGap && (
+            <span className="text-xs font-medium text-gray-700">
+              {missing === 1 ? "1 Person fehlt" : `${missing} Personen fehlen`}
+            </span>
+          )}
         </div>
       )}
 

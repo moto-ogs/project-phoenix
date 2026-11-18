@@ -189,7 +189,7 @@ describe("computeStaffTriple", () => {
 });
 
 describe("VertretungDayList", () => {
-  it("zeigt bei 'Nur Störungen' genau die vier gestörten Positionen", () => {
+  it("zeigt bei 'Lücken' genau die vier gestörten Positionen", () => {
     render(
       <VertretungDayList
         title="Termine am Mi 09.09."
@@ -209,6 +209,16 @@ describe("VertretungDayList", () => {
     expect(screen.getByText("Hausaufgabenzeit")).toBeInTheDocument();
     expect(screen.getByText("Fußball")).toBeInTheDocument();
     expect(screen.queryByText("Lesen")).not.toBeInTheDocument();
+    // Eine Zahl je Zeile: der Bruch, und nur bei der offenen Lücke in
+    // Worten, was fehlt.
+    const gapRow = screen.getByTestId("vertretung-day-list-row-10");
+    expect(within(gapRow).getByText("1 Person fehlt")).toBeInTheDocument();
+    expect(gapRow).not.toHaveTextContent("Soll");
+    expect(
+      within(screen.getByTestId("vertretung-day-list-row-20")).queryByText(
+        /fehl/,
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it("nennt je Zeile Raum, Gruppe und die eingeteilten Fachkräfte (#3817)", () => {

@@ -288,7 +288,7 @@ function AppointmentList(props: AppointmentListProps) {
 function ScopeChoices(props: PersonCardProps) {
   const { row, person, name, onChooseScope } = props;
   const allDescription = person.sickLocked
-    ? `Die Ersatzperson übernimmt alle offenen Termine. ${name} muss dort abwesend sein.`
+    ? `Die Ersatzperson übernimmt alle offenen Termine dieses Tages. ${name} muss dort abwesend sein.`
     : `Die Änderung gilt für diesen Tag. Alle offenen Termine von ${name} werden geändert.`;
   const selectedDescription = person.sickLocked
     ? "Die Ersatzperson übernimmt nur die ausgewählten Termine."

@@ -28,6 +28,8 @@ export function substitutionPlanTopic(): HelpTopic {
     differences: [
       "Mit `Woche` siehst du alle Tage untereinander. Tippe auf einen Tag, um ihn einzeln zu öffnen.",
       "Steht bei dir `Details` statt `Besetzen`? Dann darfst du den Plan ansehen, aber nicht ändern.",
+      "Am Telefon steht der Zeitplan eingeklappt unter der Liste. Tippe auf `Tag als Zeitplan`.",
+      "Steht bei einer Lücke `Niemand eingeteilt`? Dann teilst du das Personal im Betreuungsplan ein.",
       "`Übergaben` im `Tagesbetrieb` ist etwas anderes: dort übergibst du Gruppen für heute. Unter `Vertretungen heute` siehst du dort auch die Vertretungen des Tages.",
     ],
     troubleshootingDetails: [
