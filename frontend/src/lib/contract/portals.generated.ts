@@ -20,6 +20,7 @@ import { routes as traegerMasterData } from "./traeger-master-data.generated";
 import { routes as traegerNotifications } from "./traeger-notifications.generated";
 import { routes as traegerReportTemplates } from "./traeger-report-templates.generated";
 import { routes as traegerStaffRecords } from "./traeger-staff-records.generated";
+import { routes as workTimeModels } from "./work-time-models.generated";
 
 /** The registered routes of each portal, by the scope of its session token. */
 export const portalRoutes = {
@@ -192,5 +193,14 @@ export const portalRoutes = {
     students["GET /api/students/{id}"],
     students["POST /api/students/"],
     students["PUT /api/students/{id}"],
+    workTimeModels["DELETE /api/work-time-models/{id}"],
+    workTimeModels["GET /api/work-time-models/"],
+    workTimeModels["GET /api/work-time-models/staff-facts"],
+    workTimeModels["GET /api/work-time-models/{id}"],
+    workTimeModels["POST /api/work-time-models/"],
+    workTimeModels["POST /api/work-time-models/{id}/archive"],
+    workTimeModels["POST /api/work-time-models/{id}/assignments"],
+    workTimeModels["POST /api/work-time-models/{id}/restore"],
+    workTimeModels["PUT /api/work-time-models/{id}"],
   ],
 } as const;

@@ -888,7 +888,7 @@ export interface WorkTimeModel {
 }
 
 interface BackendWorkTimeModel {
-  id: number;
+  id: number | string;
   name: string;
   rotation_length: number;
   rotation_anchor_date: string;
@@ -956,8 +956,8 @@ export interface StaffWorkTimeFact {
 }
 
 interface BackendStaffWorkTimeFact {
-  staff_id: number;
-  work_time_model_id: number | null;
+  staff_id: number | string;
+  work_time_model_id: number | string | null;
   has_schedule: boolean;
   soll_kept_by_traeger: boolean;
   closed_through: string | null;
@@ -1098,8 +1098,8 @@ class WorkTimeModelService {
     }
     const json = (await response.json()) as {
       data: {
-        assigned_staff_ids: number[] | null;
-        unchanged_staff_ids: number[] | null;
+        assigned_staff_ids: (number | string)[] | null;
+        unchanged_staff_ids: (number | string)[] | null;
         valid_from: string;
       };
     };

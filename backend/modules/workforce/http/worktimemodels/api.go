@@ -280,7 +280,7 @@ func (rs *Resource) delete(w http.ResponseWriter, r *http.Request) {
 		rs.renderCapabilityError(w, r, err)
 		return
 	}
-	rs.runtime.Success(w, r, http.StatusOK, map[string]any{"id": id}, "Work time model deleted")
+	rs.runtime.Success(w, r, http.StatusOK, DeletedResponse{ID: id}, "Work time model deleted")
 }
 
 // renderCapabilityError maps a capability error to its HTTP response:

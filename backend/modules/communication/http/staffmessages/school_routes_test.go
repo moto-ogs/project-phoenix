@@ -43,7 +43,7 @@ func TestSchoolStaffMessagesCrossPortal(t *testing.T) {
 	db, serviceFactory, setSetting := setupStaffMessagingModule(t)
 	staffMessages := staffmessaging.NewResource(serviceFactory.StaffMessaging)
 	schoolRouter := chi.NewRouter()
-	schoolRouter.Mount("/staff-messages", staffMessages.SchoolRouter(rootAPI.ProtectedSchoolRoutes))
+	schoolRouter.Mount("/school/staff-messages", staffMessages.SchoolRouter(rootAPI.ProtectedSchoolRoutes))
 	tenantRouter := staffMessages.Router(rootAPI.ProtectedTenantRoutes)
 	tenantID, _ := testpkg.CreateTestTenant(t, db)
 
@@ -73,7 +73,7 @@ func TestSchoolStaffMessagesCrossPortal(t *testing.T) {
 
 	// 1. The Lehrkraft sees the OGS colleague in the recipient list, marked as
 	//    OGS staff.
-	req := httptest.NewRequest(http.MethodGet, "/staff-messages/recipients", nil)
+	req := httptest.NewRequest(http.MethodGet, "/school/staff-messages/recipients", nil)
 	rec := testutil.ExecuteWithAuth(t, schoolRouter, req, teacherClaims)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	recipients := decodeData[[]staffmessaging.RecipientResponse](t, rec.Body.Bytes())
@@ -87,7 +87,7 @@ func TestSchoolStaffMessagesCrossPortal(t *testing.T) {
 	assert.Equal(t, "staff", ogsRecipient.RoleKind)
 
 	// 2. The Lehrkraft opens the conversation and writes.
-	req = httptest.NewRequest(http.MethodPost, "/staff-messages/threads/open",
+	req = httptest.NewRequest(http.MethodPost, "/school/staff-messages/threads/open",
 		strings.NewReader(fmt.Sprintf(`{"account_id":%q}`, fmt.Sprint(ogsAccount.ID))))
 	req.Header.Set("Content-Type", "application/json")
 	rec = testutil.ExecuteWithAuth(t, schoolRouter, req, teacherClaims)
@@ -96,7 +96,7 @@ func TestSchoolStaffMessagesCrossPortal(t *testing.T) {
 	require.NotEmpty(t, opened.ThreadID)
 	assert.Equal(t, "staff", opened.CounterpartRoleKind)
 
-	req = httptest.NewRequest(http.MethodPost, "/staff-messages/threads/"+opened.ThreadID,
+	req = httptest.NewRequest(http.MethodPost, "/school/staff-messages/threads/"+opened.ThreadID,
 		strings.NewReader(`{"body":"Lena aus der 2a war heute sehr müde.","client_message_id":"5419-lost-response"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec = testutil.ExecuteWithAuth(t, schoolRouter, req, teacherClaims)
@@ -105,7 +105,7 @@ func TestSchoolStaffMessagesCrossPortal(t *testing.T) {
 	// The first response is lost. Retrying the identical attempt must return
 	// the persisted message rather than append another one.
 	first := decodeData[staffmessaging.MessageResponse](t, rec.Body.Bytes())
-	req = httptest.NewRequest(http.MethodPost, "/staff-messages/threads/"+opened.ThreadID,
+	req = httptest.NewRequest(http.MethodPost, "/school/staff-messages/threads/"+opened.ThreadID,
 		strings.NewReader(`{"body":"Lena aus der 2a war heute sehr müde.","client_message_id":"5419-lost-response"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec = testutil.ExecuteWithAuth(t, schoolRouter, req, teacherClaims)
@@ -132,21 +132,21 @@ func TestSchoolStaffMessagesCrossPortal(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	// ... and the Lehrkraft reads both messages through the school mount.
-	req = httptest.NewRequest(http.MethodGet, "/staff-messages/threads/"+opened.ThreadID, nil)
+	req = httptest.NewRequest(http.MethodGet, "/school/staff-messages/threads/"+opened.ThreadID, nil)
 	rec = testutil.ExecuteWithAuth(t, schoolRouter, req, teacherClaims)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeData[staffmessaging.ThreadDetailResponse](t, rec.Body.Bytes())
 	require.Len(t, detail.Messages, 2)
 	assert.Equal(t, fmt.Sprint(ogsAccount.ID), detail.Messages[1].SenderAccountID)
 
-	req = httptest.NewRequest(http.MethodGet, "/staff-messages/unread-count", nil)
+	req = httptest.NewRequest(http.MethodGet, "/school/staff-messages/unread-count", nil)
 	rec = testutil.ExecuteWithAuth(t, schoolRouter, req, teacherClaims)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, 0, decodeData[map[string]int](t, rec.Body.Bytes())["unread_count"], "reading the thread marks it read")
 
 	// 5. Scope isolation: the same account with a tenant token is refused on
 	//    the school mount, and the school token is refused on the tenant mount.
-	req = httptest.NewRequest(http.MethodGet, "/staff-messages/", nil)
+	req = httptest.NewRequest(http.MethodGet, "/school/staff-messages/", nil)
 	rec = testutil.ExecuteWithAuth(t, schoolRouter, req, sessiontoken.AppClaims{
 		ID: int(teacherAccount.ID), Sub: teacherAccount.Email, TenantID: tenantID, Scope: tenant.ScopeTenant,
 	})
@@ -161,7 +161,7 @@ func TestSchoolStaffMessagesDisabledSchool(t *testing.T) {
 	t.Parallel()
 	db, serviceFactory, setSetting := setupStaffMessagingModule(t)
 	schoolRouter := chi.NewRouter()
-	schoolRouter.Mount("/staff-messages", staffmessaging.NewResource(serviceFactory.StaffMessaging).SchoolRouter(rootAPI.ProtectedSchoolRoutes))
+	schoolRouter.Mount("/school/staff-messages", staffmessaging.NewResource(serviceFactory.StaffMessaging).SchoolRouter(rootAPI.ProtectedSchoolRoutes))
 	tenantID, _ := testpkg.CreateTestTenant(t, db)
 
 	_, teacherAccount := testpkg.CreateTestStaffWithAccountForTenant(t, db, tenantID, "Off", fmt.Sprintf("Lehrkraft-%d", time.Now().UnixNano()))
@@ -175,7 +175,7 @@ func TestSchoolStaffMessagesDisabledSchool(t *testing.T) {
 
 	// Without an override the registry default applies: the chat is on
 	// (opt-out since #3254).
-	req := httptest.NewRequest(http.MethodGet, "/staff-messages/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/school/staff-messages/", nil)
 	rec := testutil.ExecuteWithAuth(t, schoolRouter, req, claims)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
@@ -184,7 +184,7 @@ func TestSchoolStaffMessagesDisabledSchool(t *testing.T) {
 		testpkg.TenantContext(tenantID), settings.KeyStaffMessagingEnabled, false,
 	))
 
-	req = httptest.NewRequest(http.MethodGet, "/staff-messages/", nil)
+	req = httptest.NewRequest(http.MethodGet, "/school/staff-messages/", nil)
 	rec = testutil.ExecuteWithAuth(t, schoolRouter, req, claims)
 	// Same stable code as the tenant portal, so the school page can render the
 	// off-state instead of a technical error.

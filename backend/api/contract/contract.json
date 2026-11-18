@@ -35,6 +35,17 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/work-time-models/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "DeletedResponse"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/school/calendar/appointments/{appointmentId}",
       "portals": [
         "school"
@@ -583,6 +594,51 @@
       "response": {
         "kind": "ref",
         "ref": "StudentDetailResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/work-time-models/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "with_usage",
+          "kind": "bool"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ModelResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/work-time-models/staff-facts",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "StaffFactResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/work-time-models/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ModelResponse"
       }
     },
     {
@@ -1424,6 +1480,58 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/work-time-models/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ModelRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ModelResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/work-time-models/{id}/archive",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ModelResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/work-time-models/{id}/assignments",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "AssignRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AssignResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/work-time-models/{id}/restore",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ModelResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/caterer/notifications/feed/read-all",
       "portals": [
         "caterer"
@@ -1938,6 +2046,21 @@
       "response": {
         "kind": "ref",
         "ref": "StudentResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/work-time-models/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ModelRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ModelResponse"
       }
     },
     {
@@ -3040,6 +3163,63 @@
       ]
     },
     {
+      "name": "AssignRequest",
+      "go_type": "worktimemodels.AssignRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "staff_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "valid_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AssignResponse",
+      "go_type": "worktimemodels.AssignResponse",
+      "fields": [
+        {
+          "name": "assigned_staff_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "unchanged_staff_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "valid_from",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "AttachmentResponse",
       "go_type": "staffmessaging.AttachmentResponse",
       "fields": [
@@ -3960,6 +4140,18 @@
       ]
     },
     {
+      "name": "DeletedResponse",
+      "go_type": "worktimemodels.DeletedResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        }
+      ]
+    },
+    {
       "name": "EnrollablePhaseResponse",
       "go_type": "parent.EnrollablePhaseResponse",
       "fields": [
@@ -4053,6 +4245,73 @@
           "schema": {
             "kind": "enum",
             "ref": "EnrollmentPhaseAudience"
+          }
+        }
+      ]
+    },
+    {
+      "name": "EntryRequest",
+      "go_type": "worktimemodels.EntryRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "week_index",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "day_of_week",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "EntryResponse",
+      "go_type": "worktimemodels.EntryResponse",
+      "fields": [
+        {
+          "name": "week_index",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "day_of_week",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -4650,6 +4909,111 @@
               "kind": "ref",
               "ref": "AttachmentResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ModelRequest",
+      "go_type": "worktimemodels.ModelRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "rotation_length",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "rotation_anchor_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "entries",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "EntryRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ModelResponse",
+      "go_type": "worktimemodels.ModelResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "rotation_length",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "rotation_anchor_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "entries",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "EntryResponse"
+            }
+          }
+        },
+        {
+          "name": "weekly_totals",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "archived_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "assigned_staff_count",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -7519,6 +7883,44 @@
           "name": "has_full_access",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffFactResponse",
+      "go_type": "worktimemodels.StaffFactResponse",
+      "fields": [
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "work_time_model_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "has_schedule",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "soll_kept_by_traeger",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "closed_through",
+          "schema": {
+            "kind": "string",
+            "nullable": true
           }
         }
       ]
