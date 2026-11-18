@@ -59,6 +59,8 @@ export type BillingKeyDayScope = "organization" | "school";
 export interface BillingKeyDayOverride {
   scope: BillingKeyDayScope;
   id: string;
+  /** The Träger of a school, or the Träger itself. */
+  organizationId: string;
   name: string;
   /** The Träger of a school; empty for a Träger. */
   organizationName: string;
@@ -96,12 +98,13 @@ export function mapBillingKeyDateCount(
   };
 }
 
-export function mapBillingKeyDayOverride(
+function mapBillingKeyDayOverride(
   data: billingKeyDayOverrideResponse,
 ): BillingKeyDayOverride {
   return {
     scope: data.scope === "school" ? "school" : "organization",
     id: data.id,
+    organizationId: data.organization_id,
     name: data.name,
     organizationName: data.organization_name,
     keyDay: data.key_day,

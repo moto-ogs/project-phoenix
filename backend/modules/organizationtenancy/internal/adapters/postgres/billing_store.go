@@ -273,6 +273,7 @@ func (s *BillingStore) ListBillingKeyDateCounts(ctx context.Context) ([]domain.B
 // the names the operator recognises: a Träger by its name, a school by its
 // name and its Träger's. A deleted Träger or school is no longer listed.
 const selectBillingKeyDayOverridesSQL = `SELECT override.organization_id, override.school_id,
+  COALESCE(school.organization_id, organization.id) AS traeger_id,
   COALESCE(school.name, organization.name) AS name,
   COALESCE(school_organization.name, '') AS organization_name,
   override.key_day, override.updated_at, override.updated_by_operator_id
@@ -336,6 +337,7 @@ const selectLiveSchoolSQL = `SELECT EXISTS (SELECT 1 FROM platform.schools WHERE
 type billingKeyDayOverrideRow struct {
 	OrganizationID      *int64    `bun:"organization_id"`
 	SchoolID            *int64    `bun:"school_id"`
+	TraegerID           int64     `bun:"traeger_id"`
 	Name                string    `bun:"name"`
 	OrganizationName    string    `bun:"organization_name"`
 	KeyDay              *int      `bun:"key_day"`

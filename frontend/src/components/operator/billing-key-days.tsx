@@ -105,12 +105,9 @@ function fallbackSentence(
       ? `${override.name} und seine Schulen ohne eigenen Stichtag zählen dann wieder am ${standardDay}., dem Standard.`
       : `${override.name} und seine Schulen ohne eigenen Stichtag zählen dann wieder am Standard.`;
   }
-  // The list names a school's Träger by name only; Träger names are unique
-  // enough to point at the right row here.
   const traeger = overrides.find(
     (other) =>
-      other.scope === "organization" &&
-      other.name === override.organizationName,
+      other.scope === "organization" && other.id === override.organizationId,
   );
   const day = traeger?.keyDay ?? standardDay;
   const whose = traeger
@@ -225,7 +222,7 @@ export function BillingKeyDays({
   return (
     <SectionCard
       title="Stichtage"
-      description="Der Standard gilt für jede Schule ohne eigenen Stichtag. Nennt ein Vertrag einen anderen Tag, bekommt der Träger oder die Schule ihn hier. Der Tag einer Schule geht dem ihres Trägers vor."
+      description="Nennt ein Vertrag einen anderen Tag, bekommt der Träger oder die Schule ihn hier. Es gilt der Tag der Schule, sonst der ihres Trägers, sonst der Standard."
       action={
         <Button
           type="button"
@@ -251,7 +248,7 @@ export function BillingKeyDays({
             meta={
               keyDay.overrides.length === 0
                 ? "Für alle Schulen"
-                : "Für alle Schulen ohne eigenen Stichtag"
+                : "Wenn weder Schule noch Träger einen eigenen Stichtag haben"
             }
             keyDay={keyDay.keyDay}
             nextKeyDate={keyDay.nextKeyDate}
@@ -262,7 +259,7 @@ export function BillingKeyDays({
                   {
                     label: "Tag ändern",
                     description:
-                      "Legt den Tag für alle Schulen ohne eigenen Stichtag fest.",
+                      "Legt den Tag fest, wenn weder Schule noch Träger einen eigenen haben.",
                     onClick: () => setEditing({ mode: "standard" }),
                   },
                 ]}
@@ -506,7 +503,11 @@ function KeyDayModal({
   // Unknown until the figures and the school list are loaded; then the
   // dialog names who misses the month instead of guessing.
   const missing =
-    passed && capturedThisMonth && !targets.loading && chosen
+    passed &&
+    capturedThisMonth &&
+    !targets.loading &&
+    !targets.loadError &&
+    chosen
       ? schoolsMissingTheMonth(
           reach,
           targetId,
@@ -602,7 +603,8 @@ function KeyDayModal({
       <div className="space-y-5">
         {standard ? (
           <DataField label="Gilt für">
-            Alle Schulen ohne eigenen Stichtag
+            Alle Schulen, wenn weder die Schule noch ihr Träger einen eigenen
+            Stichtag hat
           </DataField>
         ) : existing ? (
           <DataField label="Gilt für">

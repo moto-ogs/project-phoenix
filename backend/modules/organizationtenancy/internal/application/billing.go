@@ -293,7 +293,7 @@ func (b *Billing) keyDayOverrides(overrides []domain.BillingKeyDayOverride) []or
 			continue
 		}
 		result = append(result, organizationtenancy.BillingKeyDayOverride{
-			OrganizationID: override.OrganizationID, SchoolID: override.SchoolID,
+			OrganizationID: override.OrganizationID, SchoolID: override.SchoolID, TraegerID: override.TraegerID,
 			Name: override.Name, OrganizationName: override.OrganizationName,
 			Day: *override.KeyDay, NextKeyDate: domain.NextBillingKeyDate(local, *override.KeyDay),
 			UpdatedAt: override.UpdatedAt,

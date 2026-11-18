@@ -148,11 +148,13 @@ const (
 )
 
 // billingKeyDayOverrideResponse is the own key day of one Träger or one
-// school (#7301). Scope is "organization" or "school"; OrganizationName is a
-// school's Träger and empty for a Träger.
+// school (#7301). Scope is "organization" or "school"; OrganizationID is the
+// Träger of a school or the Träger itself, OrganizationName a school's Träger
+// and empty for a Träger.
 type billingKeyDayOverrideResponse struct {
 	Scope            string    `json:"scope"`
 	ID               common.ID `json:"id"`
+	OrganizationID   common.ID `json:"organization_id"`
 	Name             string    `json:"name"`
 	OrganizationName string    `json:"organization_name"`
 	KeyDay           int       `json:"key_day"`
@@ -164,7 +166,8 @@ func toBillingKeyDayOverrideResponses(overrides []organizationtenancy.BillingKey
 	result := make([]billingKeyDayOverrideResponse, 0, len(overrides))
 	for _, override := range overrides {
 		response := billingKeyDayOverrideResponse{
-			Scope: BillingKeyDayScopeOrganization, Name: override.Name, OrganizationName: override.OrganizationName,
+			Scope: BillingKeyDayScopeOrganization, OrganizationID: common.ID(override.TraegerID),
+			Name: override.Name, OrganizationName: override.OrganizationName,
 			KeyDay: override.Day, NextKeyDate: override.NextKeyDate, UpdatedAt: override.UpdatedAt,
 		}
 		switch {

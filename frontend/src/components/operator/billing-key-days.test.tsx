@@ -70,6 +70,7 @@ import { BillingKeyDays } from "./billing-key-days";
 const traegerNord: BillingKeyDayOverride = {
   scope: "organization",
   id: "4",
+  organizationId: "4",
   name: "Träger Nord",
   organizationName: "",
   keyDay: 5,
@@ -80,6 +81,7 @@ const traegerNord: BillingKeyDayOverride = {
 const amBach: BillingKeyDayOverride = {
   scope: "school",
   id: "9",
+  organizationId: "4",
   name: "OGS Am Bach",
   organizationName: "Träger Nord",
   keyDay: 20,
@@ -335,6 +337,25 @@ describe("BillingKeyDayOverrides", () => {
     expect(
       await within(dialog).findByText(
         "Der 8. ist im November 2026 schon vorbei. Die Zahlen für November 2026 stehen schon und bleiben, wie sie sind. Nächster Stichtag: 08.12.2026.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("finds a school's Träger by ID, not by a name another Träger shares", async () => {
+    // A second Träger is also called „Träger Nord“; only ID 4 has its own day.
+    const namesake = { ...amBach, organizationId: "6" };
+    renderOverrides([traegerNord, namesake]);
+    await screen.findByText("OGS Am Bach");
+
+    openMenuOf("OGS Am Bach");
+    fireEvent.click(
+      await screen.findByRole("menuitem", {
+        name: /Eigenen Stichtag aufheben/,
+      }),
+    );
+    expect(
+      await within(await screen.findByRole("dialog")).findByText(
+        "OGS Am Bach zählt dann wieder am 15., dem Standard. Schon erfasste Monate bleiben, wie sie sind.",
       ),
     ).toBeInTheDocument();
   });

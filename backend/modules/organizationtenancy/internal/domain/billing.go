@@ -83,11 +83,13 @@ type BillingKeyDayTarget struct {
 
 // BillingKeyDayOverride is the own key day of one Träger or one school, as
 // the operator report lists it. Exactly one of OrganizationID and SchoolID
-// is set; OrganizationName is the Träger of a school. KeyDay is never nil in
+// is set; TraegerID and OrganizationName are the Träger of a school, or the
+// Träger itself. KeyDay is never nil in
 // a listed override: a reset row is not listed.
 type BillingKeyDayOverride struct {
 	OrganizationID      *int64
 	SchoolID            *int64
+	TraegerID           int64
 	Name                string
 	OrganizationName    string
 	KeyDay              *int

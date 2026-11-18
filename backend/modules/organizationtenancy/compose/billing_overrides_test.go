@@ -49,6 +49,8 @@ func TestBillingCaptureUsesTheOwnKeyDayOfASchoolAndItsTraeger(t *testing.T) {
 	require.NotNil(t, overrides[1].SchoolID)
 	assert.Equal(t, linden, *overrides[1].SchoolID)
 	assert.Equal(t, "Träger Nord", overrides[1].OrganizationName)
+	assert.Equal(t, nord.ID, overrides[1].TraegerID, "a school names its Träger by ID")
+	assert.Equal(t, nord.ID, overrides[0].TraegerID)
 	assert.Equal(t, 20, overrides[1].Day)
 
 	// The key day with its overrides is two reads, flat in the number of

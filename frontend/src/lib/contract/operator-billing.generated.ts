@@ -18,6 +18,7 @@ export type BillingKeyDayScope = (typeof BILLING_KEY_DAY_SCOPE_VALUES)[number];
 export interface billingKeyDayOverrideResponse {
   scope: OpenEnum<BillingKeyDayScope>;
   id: string;
+  organization_id: string;
   name: string;
   organization_name: string;
   key_day: number;
@@ -28,6 +29,7 @@ export interface billingKeyDayOverrideResponse {
 export const billingKeyDayOverrideResponseSchema: z.ZodType<billingKeyDayOverrideResponse, unknown> = z.object({
   scope: openEnum<BillingKeyDayScope>(),
   id: int64String,
+  organization_id: int64String,
   name: z.string(),
   organization_name: z.string(),
   key_day: safeInt,

@@ -85,12 +85,14 @@ type BillingKeyDayTarget struct {
 }
 
 // BillingKeyDayOverride is the own key day of one Träger or one school
-// (#7301). Exactly one of OrganizationID and SchoolID is set; for a school,
-// OrganizationName is its Träger. NextKeyDate (YYYY-MM-DD) is the next key
+// (#7301). Exactly one of OrganizationID and SchoolID is set; TraegerID and
+// OrganizationName name a school's Träger (for a Träger, TraegerID is its own
+// ID and OrganizationName is empty). NextKeyDate (YYYY-MM-DD) is the next key
 // date the day produces.
 type BillingKeyDayOverride struct {
 	OrganizationID   *int64
 	SchoolID         *int64
+	TraegerID        int64
 	Name             string
 	OrganizationName string
 	Day              int

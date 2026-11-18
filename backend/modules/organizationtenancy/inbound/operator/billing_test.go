@@ -240,8 +240,8 @@ func TestBillingKeyDayListsTheOwnDaysOfBothScopesWithStringIDs(t *testing.T) {
 	report := &fakeBillingReport{
 		setResult: organizationtenancy.BillingKeyDay{Day: 15, NextKeyDate: "2026-11-15"},
 		overrides: []organizationtenancy.BillingKeyDayOverride{
-			{OrganizationID: &organization, Name: "Träger Nord", Day: 5, NextKeyDate: "2026-12-05"},
-			{SchoolID: &school, Name: "OGS Am Bach", OrganizationName: "Träger Nord", Day: 20, NextKeyDate: "2026-11-20"},
+			{OrganizationID: &organization, TraegerID: organization, Name: "Träger Nord", Day: 5, NextKeyDate: "2026-12-05"},
+			{SchoolID: &school, TraegerID: organization, Name: "OGS Am Bach", OrganizationName: "Träger Nord", Day: 20, NextKeyDate: "2026-11-20"},
 		},
 	}
 	recorder := httptest.NewRecorder()
@@ -250,8 +250,8 @@ func TestBillingKeyDayListsTheOwnDaysOfBothScopesWithStringIDs(t *testing.T) {
 	require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
 	body := recorder.Body.String()
 	assert.Contains(t, body, `"key_day":15`)
-	assert.Contains(t, body, `{"scope":"organization","id":"4","name":"Träger Nord","organization_name":"","key_day":5,"next_key_date":"2026-12-05"`)
-	assert.Contains(t, body, `{"scope":"school","id":"9","name":"OGS Am Bach","organization_name":"Träger Nord","key_day":20,"next_key_date":"2026-11-20"`)
+	assert.Contains(t, body, `{"scope":"organization","id":"4","organization_id":"4","name":"Träger Nord","organization_name":"","key_day":5,"next_key_date":"2026-12-05"`)
+	assert.Contains(t, body, `{"scope":"school","id":"9","organization_id":"4","name":"OGS Am Bach","organization_name":"Träger Nord","key_day":20,"next_key_date":"2026-11-20"`)
 }
 
 func TestBillingKeyDayWithoutOwnDaysListsNone(t *testing.T) {

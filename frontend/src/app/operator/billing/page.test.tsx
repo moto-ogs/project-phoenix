@@ -165,6 +165,7 @@ describe("OperatorBillingPage", () => {
         {
           scope: "organization",
           id: "4",
+          organizationId: "4",
           name: "Träger Nord",
           organizationName: "",
           keyDay: 20,

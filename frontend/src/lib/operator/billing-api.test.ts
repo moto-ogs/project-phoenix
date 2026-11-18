@@ -89,6 +89,7 @@ describe("operator billing api", () => {
     const override = {
       scope: "school",
       id: "9007199254740993",
+      organization_id: "4",
       name: "OGS Am Bach",
       organization_name: "Träger Nord",
       key_day: 5,
@@ -112,6 +113,7 @@ describe("operator billing api", () => {
       {
         scope: "school",
         id: "9007199254740993",
+        organizationId: "4",
         name: "OGS Am Bach",
         organizationName: "Träger Nord",
         keyDay: 5,
