@@ -192,9 +192,24 @@ function ContactList({
 }
 
 export default function TraegerHolidayRegistrationPage() {
-  // `useSearchParams` braucht eine Suspense-Grenze.
+  const periodId = useParams<{ id: string }>()?.id ?? "";
+  // `useSearchParams` braucht eine Suspense-Grenze; bis dahin steht derselbe
+  // Kopf wie beim Laden.
   return (
-    <Suspense fallback={<TenantPage title="Anmeldung" loading />}>
+    <Suspense
+      fallback={
+        <TenantPage
+          title="Anmeldung"
+          leading={
+            <ConceptIconTile concept={holidayWeeksConcept} size="page" />
+          }
+          back
+          backHref={traegerPath(`/traeger/ferien/${periodId}/anmeldungen`)}
+          backLabel="Zurück zu den Anmeldungen"
+          loading
+        />
+      }
+    >
       <HolidayRegistrationContent />
     </Suspense>
   );
@@ -824,6 +839,7 @@ function HolidayRegistrationContent() {
       canManageBillingSettings={canManageBillingSettings}
       billingHref={billingHref}
       onReveal={() => changeTab("uebersicht")}
+      cardShown={tab === "uebersicht"}
       onRevealChildren={() => changeTab("kind")}
     >
       {(status) => (
@@ -869,7 +885,7 @@ function HolidayRegistrationContent() {
           ]}
           tabs={{
             value: tab,
-            onChange: (next) => changeTab(next as RegistrationTab),
+            onChange: (next) => changeTab(registrationTab(next)),
             label: "Bereiche der Anmeldung",
             inUrl: true,
             items: REGISTRATION_TABS,

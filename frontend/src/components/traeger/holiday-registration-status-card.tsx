@@ -483,6 +483,12 @@ export interface HolidayRegistrationStatusProps {
    * and the debtor number entries of the page menu work on the card (#7410).
    */
   readonly onReveal?: () => void;
+  /**
+   * Whether the card is on the screen. From another tab „Bestätigen“ only
+   * brings it into view: payer and debtor number stand there, and the
+   * confirmation mails the parents at once.
+   */
+  readonly cardShown?: boolean;
   /** Brings the children into view; the duplicate notice leads there. */
   readonly onRevealChildren?: () => void;
 }
@@ -528,6 +534,7 @@ export function useHolidayRegistrationStatus({
   canManageBillingSettings = false,
   billingHref = null,
   onReveal = NO_REVEAL,
+  cardShown = true,
   onRevealChildren,
 }: HolidayRegistrationStatusProps): HolidayRegistrationStatus {
   const [running, setRunning] = useState<
@@ -789,8 +796,9 @@ export function useHolidayRegistrationStatus({
         ]
       : [];
 
-  // The only visible action of the page head (#7410). It confirms from any
-  // tab and brings the card into view, where its fields and errors stand.
+  // The only visible action of the page head (#7410). From another tab the
+  // first click shows the card with payer and debtor number; it confirms
+  // only where the person sees what the confirmation freezes.
   const confirmAction =
     registration.status === "received" ? (
       <Button
@@ -800,9 +808,16 @@ export function useHolidayRegistrationStatus({
         isLoading={running === "confirm"}
         loadingText="Bestätigt …"
         disabled={confirmBlocked}
-        tooltip="Bestätigt die Anmeldung und schickt den Eltern sofort die Zusage per E-Mail."
+        tooltip={
+          cardShown
+            ? "Bestätigt die Anmeldung und schickt den Eltern sofort die Zusage per E-Mail."
+            : "Zeigt die Übersicht mit Beitrag und Debitorennummer zum Bestätigen."
+        }
         onClick={() => {
-          onReveal();
+          if (!cardShown) {
+            onReveal();
+            return;
+          }
           void confirm();
         }}
       >

@@ -352,8 +352,12 @@ describe("TraegerHolidayRegistrationPage", () => {
             new ApiError("refused", 403, { code: "general.permission" }),
           );
           if (action === "split") await confirmSplit();
-          else
+          else {
+            // From the tab „Kind“ the first click shows the status (#7410).
             fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+            await screen.findByRole("heading", { name: "Status" });
+            fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+          }
 
           // #6801: the page loads anew; its first load shows the refusal.
           await expectPageReloadedAfterRefusal();
@@ -635,7 +639,7 @@ describe("TraegerHolidayRegistrationPage", () => {
       expect(screen.getByText("Herunterladen")).toBeInTheDocument();
     });
 
-    it("confirms from another tab and shows the status", async () => {
+    it("shows the status first when „Bestätigen“ is chosen on another tab", async () => {
       onTab("kind");
       renderPage();
 
@@ -643,18 +647,21 @@ describe("TraegerHolidayRegistrationPage", () => {
         await screen.findByRole("button", { name: "Bestätigen" }),
       );
 
-      await waitFor(() => expect(mockConfirm).toHaveBeenCalledTimes(1));
+      // The first click only shows payer and debtor number; nothing is sent.
       expect(
         await screen.findByRole("heading", { name: "Status" }),
       ).toBeVisible();
       expect(mockReplace).toHaveBeenCalledWith("?", { scroll: false });
+      expect(mockConfirm).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+      await waitFor(() => expect(mockConfirm).toHaveBeenCalledTimes(1));
     });
 
-    it("leads to the missing debtor number when „Bestätigen“ runs from another tab", async () => {
+    it("leads to the missing debtor number at „Bestätigen“", async () => {
       mockConfirmationSettings.mockResolvedValue({
         debtorNumberRequired: true,
       });
-      onTab("eltern");
       renderPage();
 
       fireEvent.click(
@@ -664,8 +671,10 @@ describe("TraegerHolidayRegistrationPage", () => {
       const field = await screen.findByRole("textbox", {
         name: /^Debitorennummer/,
       });
-      expect(field).toHaveAccessibleDescription(
-        expect.stringContaining("Bitte gib die Debitorennummer ein."),
+      await waitFor(() =>
+        expect(field).toHaveAccessibleDescription(
+          expect.stringContaining("Bitte gib die Debitorennummer ein."),
+        ),
       );
       await waitFor(() => expect(field).toHaveFocus());
       expect(mockConfirm).not.toHaveBeenCalled();
