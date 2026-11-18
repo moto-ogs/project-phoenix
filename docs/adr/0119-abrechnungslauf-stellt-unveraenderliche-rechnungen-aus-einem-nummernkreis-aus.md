@@ -474,7 +474,7 @@ Rechnungsnummern fort (SJR Pforzheim, Anschluss an OGS Connect zum
 - **Nicht gebaut.** Eine gemeinsame Reihe für Monats- und Ferienrechnungen und
   ein eigener Nummernkreis für Gutschriften warten auf die Antwort des SJR
   (offene Fragen in #7358). Bis dahin trennt das Muster die Kreise.
-- **Register.** Migration `20261117222315` (Spalte `start_number`, Prüfung
+- **Register.** Migration `20261118071714` (Spalte `start_number`, Prüfung
   `last_number >= 0`, Verlaufstabelle); ein `data_object`
   (`parent_billing.number_range_starts`) für `parent-billing`;
   Datenlebenszyklus, Aufbewahrung und Rückgaberegister je ein Eintrag; die

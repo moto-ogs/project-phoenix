@@ -7,7 +7,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-const parentBillingNumberRangeStartsVersion = "20261117222315"
+const parentBillingNumberRangeStartsVersion = "20261118071714"
 
 func init() {
 	MigrationRegistry.Register(&Migration{
