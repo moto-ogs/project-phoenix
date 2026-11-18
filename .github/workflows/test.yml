@@ -1255,7 +1255,7 @@ jobs:
           hidden=$(psql "${DB_DSN}" -At -c "SELECT count(*) FROM platform.schools WHERE id IN (${school_list}) AND deleted_at IS NOT NULL")
           active=$(psql "${DB_DSN}" -At -c "SELECT count(*) FROM platform.organizations WHERE id IN (${traeger}) AND active")
           echo "schools hidden by the retirement: ${hidden}, Träger still active: ${active}"
-          test "${hidden}" = 9
+          test "${hidden}" = "$(echo ${schools} | wc -w)"
           test "${active}" = 0
           psql "${DB_DSN}" -v ON_ERROR_STOP=1 -c \
             "UPDATE platform.schools SET deleted_at = deleted_at - INTERVAL '2 hours' WHERE id IN (${school_list})"

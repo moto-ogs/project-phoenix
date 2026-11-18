@@ -193,28 +193,21 @@ func (o payrollMailOutbox) State(ctx context.Context, outboxID int64) (string, e
 	}
 }
 
-// payrollSchools reads the school of a tenant transaction. With hold, the
-// Nachweis reminders read it under a share lock and keep it to the end of
-// their transaction (#7478), as a sign-in does (#6305): the retirement of a
-// demo school hides it and erases its visitor in one transaction, and a
-// reminder could otherwise read the visitor's name before that commit and
-// queue its mail after the erasure deleted the school's mails. Now the
-// retirement waits for the reminders, or they read the school as retired.
+// payrollSchools reads the school of the Worker's mails to its people
+// (payroll notices, Nachweis reminders) under a share lock and keeps it to
+// the end of their tenant transaction (#7478), as a sign-in does (#6305):
+// the retirement of a demo school hides it and erases its visitor in one
+// transaction, and a job could otherwise read the visitor's name before that
+// commit and queue its mail after the erasure deleted the school's mails.
+// Now the retirement waits for the job, or the job reads the school as
+// retired. A school that no longer exists reads as retired too.
 type payrollSchools struct {
 	schools organizationtenancy.Query
-	hold    bool
 }
 
 func (s payrollSchools) School(ctx context.Context, tenantID int64) (workforce.PayrollSchool, error) {
-	find := s.schools.FindSchool
-	if s.hold {
-		find = s.schools.FindSchoolForShare
-	}
-	school, err := find(ctx, tenantID)
-	if errors.Is(err, organizationtenancy.ErrSchoolNotFound) {
-		return workforce.PayrollSchool{}, nil
-	}
-	return workforce.PayrollSchool{Name: school.Name, Subdomain: school.Subdomain, Retired: school.IsDeleted()}, err
+	school, found, err := lookupSchoolForShare(ctx, s.schools, tenantID)
+	return workforce.PayrollSchool{Name: school.Name, Subdomain: school.Subdomain, Retired: !found || school.IsDeleted()}, err
 }
 
 type payrollManagers struct {

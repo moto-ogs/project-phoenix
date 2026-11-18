@@ -13,16 +13,16 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-// The reminders read their school under a share lock (#7478): a retirement
+// The Worker's mails to a school's people read it under a share lock (#7478): a retirement
 // that would hide the school while they run waits for them, and a school
 // hidden before they ran reads as retired.
-func TestReminderSchoolsHoldTheSchoolAndReadARetiredOne(t *testing.T) {
+func TestPayrollSchoolsHoldTheSchoolAndReadARetiredOne(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	organizations, err := organizationCompose.New(organizationCompose.Dependencies{DB: db, Observe: func(organizationCompose.Observation) {}})
 	require.NoError(t, err)
-	schools := payrollSchools{schools: organizations, hold: true}
+	schools := payrollSchools{schools: organizations}
 	organization := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{Name: "Träger Erinnerungen", Slug: fmt.Sprintf("traeger-erinnerungen-%d", time.Now().UnixNano())})
 	live := testpkg.CreateTestSchoolInOrganization(t, db, organization.ID, "OGS Offen")
 	retired := testpkg.CreateTestSchoolInOrganization(t, db, organization.ID, "OGS Stillgelegt")

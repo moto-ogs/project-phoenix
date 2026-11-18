@@ -116,7 +116,7 @@ func BuildQualificationReminders(
 		Staff:       NewQualificationStaff(staff, false),
 		Notify:      qualificationNotifier(notifications, logger),
 		Mail:        qualificationMailOutbox{outbox: outbox, from: mailFrom, identity: mailIdentity, logger: logger},
-		Schools:     payrollSchools{schools: schools, hold: true},
+		Schools:     payrollSchools{schools: schools},
 		FrontendURL: frontendURL, Logger: logger,
 		Traeger: careContractTraeger{organizations: schools}.ActiveTraegerIDs, TraegerRuntime: CareContractRuntime{},
 	}, nil)

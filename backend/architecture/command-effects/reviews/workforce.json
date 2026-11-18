@@ -5752,43 +5752,23 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollSchools.School",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollSchools.School",
-      "reason": "Read or pure value helper reached by the payroll dispatch (#4805): workforce reaches modules/organizationtenancy.Capability.FindSchool (organization-tenancy) through roots/owners.payrollSchools.School. No persistent, lock or scope effect at this terminal; the reminders' hold reads through FindSchoolForShare (#7478).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchool",
-      "target_owner": "organization-tenancy"
-    },
-    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollSchools.School",
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollSchools.School",
-      "reason": "Owner-provided locking read/gate, never labelled query: with hold, the Nachweis reminders hold their school in its tenant transaction, as a sign-in does (#6305), so a demo retirement waits for their mails or they read the school as retired (#7478). Target modules/organizationtenancy.Capability.FindSchoolForShare; modules/organizationtenancy.Capability (supplied contract method).",
+      "reason": "Owner-provided locking read/gate, never labelled query: payroll notices and Nachweis reminders hold their school in its tenant transaction, as a sign-in does (#6305), so a demo retirement waits for their mails or they read the school as retired (#7478). Target modules/organizationtenancy.Capability.FindSchoolForShare; modules/organizationtenancy.Capability (supplied contract method).",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchoolForShare",
       "target_owner": "organization-tenancy"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollSchools.School",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollSchools.School",
-      "reason": "Read or pure value helper reached by the payroll dispatch (#4805): workforce reaches modules/organizationtenancy.Query.FindSchool (organization-tenancy) through roots/owners.payrollSchools.School. No persistent, lock or scope effect at this terminal; the reminders' hold reads through FindSchoolForShare (#7478).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchool",
-      "target_owner": "organization-tenancy"
-    },
-    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollSchools.School",
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollSchools.School",
-      "reason": "Owner-provided locking read/gate, never labelled query: with hold, the Nachweis reminders hold their school in its tenant transaction, as a sign-in does (#6305), so a demo retirement waits for their mails or they read the school as retired (#7478). Target modules/organizationtenancy.Query.FindSchoolForShare; modules/organizationtenancy.Query (supplied contract method).",
+      "reason": "Owner-provided locking read/gate, never labelled query: payroll notices and Nachweis reminders hold their school in its tenant transaction, as a sign-in does (#6305), so a demo retirement waits for their mails or they read the school as retired (#7478). Target modules/organizationtenancy.Query.FindSchoolForShare; modules/organizationtenancy.Query (supplied contract method).",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchoolForShare",
       "target_owner": "organization-tenancy"
@@ -5798,7 +5778,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollSchools.School",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted: a retired school gets no Nachweis reminder (#7478).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted: a retired school gets no payroll notice or Nachweis reminder (#7478).",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"

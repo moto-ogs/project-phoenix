@@ -74,14 +74,22 @@ func (s *PayrollDispatch) enqueueLink(ctx context.Context, link payrollLink) (in
 
 // notifyManagers mails everybody who manages time tracking. Nobody with an
 // address is no error: the reason stays visible on /payroll.
+//
+// A retired school's managers get no notice (#7478). The school is read
+// first and held to the end of the transaction, so a retirement either
+// waits for the notice, which its erasure then removes, or committed before
+// and the school reads as retired.
 func (s *PayrollDispatch) notifyManagers(ctx context.Context, problem payrollProblem) error {
-	managers, err := s.deps.Managers.TimeTrackingManagers(ctx)
-	if err != nil {
-		return fmt.Errorf("list the time-tracking managers: %w", err)
-	}
 	school, err := s.deps.Schools.School(ctx, problem.TenantID)
 	if err != nil {
 		return fmt.Errorf("read the school for the notice: %w", err)
+	}
+	if school.Retired {
+		return nil
+	}
+	managers, err := s.deps.Managers.TimeTrackingManagers(ctx)
+	if err != nil {
+		return fmt.Errorf("list the time-tracking managers: %w", err)
 	}
 	linkURL := s.frontendURL() + "/payroll"
 	if tenantURL, err := payrollTenantURL(s.frontendURL(), school.Subdomain, "/payroll"); err == nil {
