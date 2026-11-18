@@ -43,6 +43,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/api/parent-announcements", announcementAPI.RouteContracts(common.PortalTenant)},
 		{"/school/parent-letters", announcementAPI.RouteContracts(common.PortalSchool)},
 		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
+		{"/api/surveys", announcementAPI.SurveyRouteContracts()},
 		{"/api/work-time-models", worktimemodelsHTTP.RouteContracts()},
 		// Class Day owns the child sheet the supervision route answers with.
 		{"/school/calendar", calendarAPI.SchoolRouteContracts()},

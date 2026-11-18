@@ -14,6 +14,7 @@ import { routes as schoolStaffMessages } from "./school-staff-messages.generated
 import { routes as schoolSupervisions } from "./school-supervisions.generated";
 import { routes as staffMessages } from "./staff-messages.generated";
 import { routes as students } from "./students.generated";
+import { routes as surveys } from "./surveys.generated";
 import { routes as traegerBillingFamilies } from "./traeger-billing-families.generated";
 import { routes as traegerDocuments } from "./traeger-documents.generated";
 import { routes as traegerMasterData } from "./traeger-master-data.generated";
@@ -193,6 +194,19 @@ export const portalRoutes = {
     students["GET /api/students/{id}"],
     students["POST /api/students/"],
     students["PUT /api/students/{id}"],
+    surveys["DELETE /api/surveys/{surveyId}"],
+    surveys["GET /api/surveys/"],
+    surveys["GET /api/surveys/to-answer"],
+    surveys["GET /api/surveys/{surveyId}"],
+    surveys["GET /api/surveys/{surveyId}/form"],
+    surveys["GET /api/surveys/{surveyId}/respondents"],
+    surveys["GET /api/surveys/{surveyId}/results"],
+    surveys["POST /api/surveys/"],
+    surveys["POST /api/surveys/{surveyId}/answers"],
+    surveys["POST /api/surveys/{surveyId}/close"],
+    surveys["POST /api/surveys/{surveyId}/publish"],
+    surveys["POST /api/surveys/{surveyId}/remind"],
+    surveys["PUT /api/surveys/{surveyId}"],
     workTimeModels["DELETE /api/work-time-models/{id}"],
     workTimeModels["GET /api/work-time-models/"],
     workTimeModels["GET /api/work-time-models/staff-facts"],

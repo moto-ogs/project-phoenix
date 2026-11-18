@@ -35,6 +35,17 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/surveys/{surveyId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "deletedResponse"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/work-time-models/{id}",
       "portals": [
         "tenant"
@@ -594,6 +605,81 @@
       "response": {
         "kind": "ref",
         "ref": "StudentDetailResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/surveys/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "surveyResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/surveys/to-answer",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "surveyToAnswerResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/surveys/{surveyId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "surveyResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/surveys/{surveyId}/form",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "surveyFormResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/surveys/{surveyId}/respondents",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "surveyRespondentResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/surveys/{surveyId}/results",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "surveyResultsResponse"
       }
     },
     {
@@ -1480,6 +1566,69 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/surveys/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "surveyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "surveyResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/surveys/{surveyId}/answers",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "surveyAnswersRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "surveySubmittedResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/surveys/{surveyId}/close",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "surveyResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/surveys/{surveyId}/publish",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "surveyResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/surveys/{surveyId}/remind",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "surveyRemindedResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/work-time-models/",
       "portals": [
         "tenant"
@@ -2046,6 +2195,21 @@
       "response": {
         "kind": "ref",
         "ref": "StudentResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/surveys/{surveyId}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "surveyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "surveyResponse"
       }
     },
     {
@@ -12140,6 +12304,827 @@
               "kind": "ref",
               "ref": "studentDeclarationResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyAnswerRequest",
+      "go_type": "announcement.surveyAnswerRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "question_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "option_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "scale_value",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "text",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyAnswersRequest",
+      "go_type": "announcement.surveyAnswersRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "answers",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "surveyAnswerRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyFormResponse",
+      "go_type": "announcement.surveyFormResponse",
+      "fields": [
+        {
+          "name": "survey",
+          "schema": {
+            "kind": "ref",
+            "ref": "surveyFormSurvey"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "participated",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyFormSurvey",
+      "go_type": "announcement.surveyFormSurvey",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "intro",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "anonymous",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "closes_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "questions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "surveyQuestionResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyHighlightResponse",
+      "go_type": "announcement.surveyHighlightResponse",
+      "fields": [
+        {
+          "name": "question_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "prompt",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "average",
+          "schema": {
+            "kind": "number"
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyOptionCountResponse",
+      "go_type": "announcement.surveyOptionCountResponse",
+      "fields": [
+        {
+          "name": "option_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyOptionResponse",
+      "go_type": "announcement.surveyOptionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyQuestionRequest",
+      "go_type": "announcement.surveyQuestionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "prompt",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "options",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyQuestionResponse",
+      "go_type": "announcement.surveyQuestionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "prompt",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "required",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "options",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "surveyOptionResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyQuestionResultResponse",
+      "go_type": "announcement.surveyQuestionResultResponse",
+      "fields": [
+        {
+          "name": "question_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "prompt",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "answer_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "options",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "surveyOptionCountResponse"
+            }
+          }
+        },
+        {
+          "name": "scale_counts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "average",
+          "schema": {
+            "kind": "number",
+            "nullable": true
+          }
+        },
+        {
+          "name": "texts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "highest",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "lowest",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "withheld",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyRemindedResponse",
+      "go_type": "announcement.surveyRemindedResponse",
+      "fields": [
+        {
+          "name": "reminded",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyRequest",
+      "go_type": "announcement.surveyRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "intro",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "audience",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "anonymous",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "send_email",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "closes_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "targets",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "surveyTargetRequest"
+            }
+          }
+        },
+        {
+          "name": "questions",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "surveyQuestionRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyRespondentAnswerResponse",
+      "go_type": "announcement.surveyRespondentAnswerResponse",
+      "fields": [
+        {
+          "name": "question_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "options",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "scale_value",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "text",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyRespondentResponse",
+      "go_type": "announcement.surveyRespondentResponse",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "answers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "surveyRespondentAnswerResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyResponse",
+      "go_type": "announcement.surveyResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "intro",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "audience",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "anonymous",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "send_email",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closes_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "published_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "participant_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "targets",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "surveyTargetWire"
+            }
+          }
+        },
+        {
+          "name": "questions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "surveyQuestionResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyResultsResponse",
+      "go_type": "announcement.surveyResultsResponse",
+      "fields": [
+        {
+          "name": "survey_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "anonymous",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "response_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "min_responses",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "available",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "questions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "surveyQuestionResultResponse"
+            }
+          }
+        },
+        {
+          "name": "strengths",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "surveyHighlightResponse"
+            }
+          }
+        },
+        {
+          "name": "improvements",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "surveyHighlightResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveySubmittedResponse",
+      "go_type": "announcement.surveySubmittedResponse",
+      "fields": [
+        {
+          "name": "submitted",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyTargetRequest",
+      "go_type": "announcement.surveyTargetRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "target_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "ref_id",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ref_text",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyTargetWire",
+      "go_type": "announcement.surveyTargetWire",
+      "fields": [
+        {
+          "name": "target_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "ref_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "ref_text",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "surveyToAnswerResponse",
+      "go_type": "announcement.surveyToAnswerResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "intro",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "anonymous",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "closes_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "participated",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
