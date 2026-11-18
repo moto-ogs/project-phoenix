@@ -197,11 +197,11 @@ export interface BackendFormerStaff {
 /** Active group with supervisors and room info */
 interface ActiveGroupInfo {
   supervisors?: Array<{
-    staff_id?: number;
+    staff_id?: number | string;
     role?: string;
   }>;
   room?: {
-    id: number;
+    id: number | string;
     name: string;
   };
 }
@@ -214,14 +214,14 @@ interface SupervisedGroupEntry {
 
 /** Active group with ID for supervision mapping */
 interface ActiveGroupWithId extends ActiveGroupInfo {
-  id?: number;
+  id?: number | string;
 }
 
 /**
  * Supervised group entry with group ID
  */
 interface SupervisedGroupEntryWithId extends SupervisedGroupEntry {
-  groupId?: number;
+  groupId?: number | string;
 }
 
 /**

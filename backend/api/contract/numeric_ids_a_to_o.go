@@ -174,6 +174,8 @@ var legacyNumericIDsAToO = []string{
 	"httpadapter.RoomResponse.ID",
 	"mealplan.BillingMonthChild.StudentID",
 	"notifications.feedEntryResponse.ID",
+	"openroommovehttp.moveStudentsToOpenRoomRequest.StudentIDs",
+	"openroommovehttp.moveStudentsToOpenRoomRequest.TargetRoomID",
 	"operator.OperatorResponse.ID",
 	"operator.createDeviceRequest.SchoolID",
 	"operator.createSchoolRequest.OrganizationID",

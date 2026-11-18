@@ -34,30 +34,31 @@ interface ApiResponse<T> {
 }
 
 interface TransitAssignSkipped {
-  student_id: number;
+  student_id: number | string;
   reason: string;
 }
 
+// Identifiers arrive as decimal strings through the catalog proxy (#2352).
 interface TransitAssignResult {
-  assigned: number[];
+  assigned: (number | string)[];
   skipped: TransitAssignSkipped[];
-  active_group_id: number;
-  room_id: number;
+  active_group_id: number | string;
+  room_id: number | string;
 }
 
 interface StudentMoveSkipped {
-  student_id: number;
+  student_id: number | string;
   reason: string;
 }
 
 export interface StudentMoveResult {
-  moved: number[];
-  unchanged: number[];
+  moved: (number | string)[];
+  unchanged: (number | string)[];
   skipped: StudentMoveSkipped[];
-  active_group_id?: number | null;
-  room_id?: number | null;
+  active_group_id?: number | string | null;
+  room_id?: number | string | null;
   /** Children a check-in into the target opened today's attendance for (#6953). */
-  checked_in?: number[];
+  checked_in?: (number | string)[];
 }
 
 export interface StudentMoveSummary {
@@ -399,11 +400,12 @@ export const activeService = {
     );
   },
 
-  endSupervision: async (id: string): Promise<Supervisor> => {
-    return proxyPostNoBody<BackendSupervisor, Supervisor>(
+  /** The ended supervision; null when the backend could not read it back. */
+  endSupervision: async (id: string): Promise<Supervisor | null> => {
+    return proxyPostNoBody<BackendSupervisor | null, Supervisor | null>(
       `/api/active/supervisors/${id}/end`,
       `/active/supervisors/${id}/end`,
-      mapSupervisorResponse,
+      (data) => (data ? mapSupervisorResponse(data) : null),
       "End supervision",
     );
   },

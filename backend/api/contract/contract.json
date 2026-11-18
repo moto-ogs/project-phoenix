@@ -800,6 +800,107 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/active/groups/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "active",
+          "kind": "string"
+        },
+        {
+          "name": "is_active",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ActiveGroupResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/active/groups/{id}/supervisors",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "SupervisorResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/active/schulhof/status",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SchulhofStatusResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/active/supervisors/all",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ActiveGroupResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/active/supervisors/staff/{staffId}/active",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "SupervisorResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/active/visits/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "active",
+          "kind": "string"
+        },
+        {
+          "name": "active_group_ids",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "VisitResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/class-list-entries/",
       "portals": [
         "tenant"
@@ -7120,6 +7221,119 @@
       "response": {
         "kind": "ref",
         "ref": "AbsenceTypeResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/active/groups/{id}/claim",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "claimedSupervisionResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/active/supervisors/{id}/end",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "nullable": true,
+        "ref": "SupervisorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/active/tracking-indicators",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TrackingIndicatorsRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TrackingIndicatorsResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/active/visits/check-in-to-group",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "checkInStudentsToSessionRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StudentMoveResult"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/active/visits/check-in-to-room",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "checkInStudentsToOpenRoomRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StudentMoveResult"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/active/visits/move-to-group",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "moveStudentsToActiveGroupRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StudentMoveResult"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/active/visits/move-to-room",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "moveStudentsToOpenRoomRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StudentMoveResult"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/active/visits/transit/assign",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "assignTransitStudentsRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TransitAssignResult"
       }
     },
     {
@@ -14026,6 +14240,95 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ActiveGroupResponse",
+      "go_type": "presence.ActiveGroupResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "group_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "is_active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "visit_count",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "supervisor_count",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "supervisors",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "GroupSupervisorSimple"
+            }
+          }
+        },
+        {
+          "name": "room",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "RoomSimple"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
           }
         }
       ]
@@ -32849,6 +33152,25 @@
       ]
     },
     {
+      "name": "GroupSupervisorSimple",
+      "go_type": "presence.GroupSupervisorSimple",
+      "fields": [
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "role",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "GroupThreadChildResponse",
       "go_type": "parent.GroupThreadChildResponse",
       "fields": [
@@ -50283,6 +50605,31 @@
       ]
     },
     {
+      "name": "RoomSimple",
+      "go_type": "presence.RoomSimple",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "Row",
       "go_type": "templates.Row",
       "fields": [
@@ -53936,6 +54283,81 @@
             "elem": {
               "kind": "ref",
               "ref": "SchoolResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchulhofStatusResponse",
+      "go_type": "supervisiondashboardhttp.SchulhofStatusResponse",
+      "fields": [
+        {
+          "name": "exists",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "room_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "activity_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "active_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "is_user_supervising",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "supervision_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "supervisor_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "student_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "supervisors",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SupervisorInfoResponse"
             }
           }
         }
@@ -58236,6 +58658,85 @@
       ]
     },
     {
+      "name": "StudentMoveResult",
+      "go_type": "studentpresence.StudentMoveResult",
+      "fields": [
+        {
+          "name": "moved",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "unchanged",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "skipped",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StudentMoveSkipped"
+            }
+          }
+        },
+        {
+          "name": "active_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "checked_in",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "StudentMoveSkipped",
+      "go_type": "studentpresence.StudentMoveSkipped",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "StudentPayerRequest",
       "go_type": "users.StudentPayerRequest",
       "request": true,
@@ -59611,6 +60112,105 @@
       ]
     },
     {
+      "name": "SupervisorInfoResponse",
+      "go_type": "supervisiondashboardhttp.SupervisorInfoResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_current_user",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SupervisorResponse",
+      "go_type": "presence.SupervisorResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "active_group_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "is_active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "staff_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active_group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "SupplyEndedResponse",
       "go_type": "catererportalhttp.SupplyEndedResponse",
       "fields": [
@@ -60369,6 +60969,54 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TrackingIndicatorsRequest",
+      "go_type": "presence.TrackingIndicatorsRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "TrackingIndicatorsResponse",
+      "go_type": "presence.TrackingIndicatorsResponse",
+      "fields": [
+        {
+          "name": "labels",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "results",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "array",
+              "nullable": true,
+              "elem": {
+                "kind": "bool"
+              }
+            }
           }
         }
       ]
@@ -64655,6 +65303,63 @@
       ]
     },
     {
+      "name": "TransitAssignResult",
+      "go_type": "studentpresence.TransitAssignResult",
+      "fields": [
+        {
+          "name": "assigned",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "skipped",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TransitAssignSkipped"
+            }
+          }
+        },
+        {
+          "name": "active_group_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TransitAssignSkipped",
+      "go_type": "studentpresence.TransitAssignSkipped",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "TranslatedText",
       "go_type": "enrollment.TranslatedText",
       "fields": [
@@ -65542,6 +66247,75 @@
           "schema": {
             "kind": "json",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "VisitResponse",
+      "go_type": "presence.VisitResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "active_group_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "check_in_time",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "check_out_time",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "is_active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "student_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active_group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
           }
         }
       ]
@@ -66489,6 +67263,31 @@
           "name": "default_pickup_time",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "assignTransitStudentsRequest",
+      "go_type": "presence.assignTransitStudentsRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "active_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
           }
         }
       ]
@@ -68038,6 +68837,70 @@
       ]
     },
     {
+      "name": "checkInStudentsToOpenRoomRequest",
+      "go_type": "openroommovehttp.checkInStudentsToOpenRoomRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "target_room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "keep_present",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "checkInStudentsToSessionRequest",
+      "go_type": "presence.checkInStudentsToSessionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "target_active_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "keep_present",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "childGuardianResponse",
       "go_type": "parent.childGuardianResponse",
       "fields": [
@@ -68224,6 +69087,60 @@
           "optional": true,
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "claimedSupervisionResponse",
+      "go_type": "presence.claimedSupervisionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "group_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "role",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -72744,6 +73661,56 @@
           "schema": {
             "kind": "legacy_id",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "moveStudentsToActiveGroupRequest",
+      "go_type": "presence.moveStudentsToActiveGroupRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "target_active_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "moveStudentsToOpenRoomRequest",
+      "go_type": "openroommovehttp.moveStudentsToOpenRoomRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "target_room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
           }
         }
       ]

@@ -15,9 +15,9 @@ export interface TrackingIndicatorsResponse {
 // backend serializes `null` explicitly (no omitempty), so clients MUST
 // handle both shapes.
 export interface BackendActiveGroup {
-  id: number;
-  group_id: number | null;
-  room_id: number;
+  id: number | string;
+  group_id: number | string | null;
+  room_id: number | string;
   start_time: string;
   end_time?: string;
   is_active: boolean;
@@ -25,12 +25,12 @@ export interface BackendActiveGroup {
   visit_count?: number;
   supervisor_count?: number;
   room?: {
-    id: number;
+    id: number | string;
     name: string;
     category?: string;
   };
   actual_group?: {
-    id: number;
+    id: number | string;
     name: string;
   };
   created_at: string;
@@ -38,9 +38,9 @@ export interface BackendActiveGroup {
 }
 
 export interface BackendVisit {
-  id: number;
-  student_id: number;
-  active_group_id: number;
+  id: number | string;
+  student_id: number | string;
+  active_group_id: number | string;
   check_in_time: string;
   check_out_time?: string;
   actual_arrival_time?: string;
@@ -68,9 +68,9 @@ export interface BackendVisit {
 }
 
 export interface BackendSupervisor {
-  id: number;
-  staff_id: number;
-  active_group_id: number;
+  id: number | string;
+  staff_id: number | string;
+  active_group_id: number | string;
   start_time: string;
   end_time?: string;
   is_active: boolean;
@@ -95,12 +95,12 @@ export interface ActiveGroup {
   visitCount?: number;
   supervisorCount?: number;
   room?: {
-    id: number;
+    id: number | string;
     name: string;
     category?: string;
   };
   actualGroup?: {
-    id: number;
+    id: number | string;
     name: string;
   };
   createdAt: Date;
@@ -230,20 +230,20 @@ export function mapSupervisorResponse(
 // Schulhof (schoolyard) types for permanent tab functionality
 export interface BackendSchulhofStatus {
   exists: boolean;
-  room_id?: number;
+  room_id?: number | string;
   room_name: string;
-  activity_group_id?: number;
-  active_group_id?: number;
+  activity_group_id?: number | string;
+  active_group_id?: number | string;
   is_user_supervising: boolean;
-  supervision_id?: number;
+  supervision_id?: number | string;
   supervisor_count: number;
   student_count: number;
   supervisors: BackendSchulhofSupervisor[];
 }
 
 interface BackendSchulhofSupervisor {
-  id: number;
-  staff_id: number;
+  id: number | string;
+  staff_id: number | string;
   name: string;
   is_current_user: boolean;
 }

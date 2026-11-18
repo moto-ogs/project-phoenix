@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -22,7 +24,7 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 	t.Helper()
 	testpkg.OwnTenant(t)
 	db := testpkg.SetupTestDB(t)
-	testpkg.EnsureWebManualDevice(t, db)
+	device := testpkg.EnsureWebManualDevice(t, db)
 	_, account := testpkg.CreateTestStaffWithAccount(t, db, "Anmelden", "Team")
 	colleague := testpkg.CreateTestStaff(t, db, "Anmelden", "Aufsicht")
 	supervised := testpkg.CreateTestActiveGroup(t, db,
@@ -93,4 +95,38 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 	assert.Equal(t, gym.ID, stay.Data.RoomID)
 	assert.Equal(t, []int64{stay.Data.ActiveGroupID}, openVisitSessions(t, db, yardChild),
 		"a released room needs no supervision")
+
+	// The placed child moves on into the released room, ending its stay in
+	// the supervised room. An admin needs no source supervision.
+	admin := testpkg.MintLiveSessionJWT(t, db, testutil.AdminTestClaimsForTenant(int(account.ID), testpkg.Tenant(t)))
+	code, body = post("/api/active/visits/move-to-room",
+		fmt.Sprintf(`{"student_ids":[%d],"target_room_id":%d}`, child, gym.ID), admin)
+	require.Equal(t, http.StatusOK, code, body)
+	var moved struct {
+		Data struct {
+			Moved         []int64 `json:"moved"`
+			ActiveGroupID int64   `json:"active_group_id"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(body), &moved))
+	assert.Equal(t, []int64{child}, moved.Data.Moved)
+	assert.Equal(t, []int64{moved.Data.ActiveGroupID}, openVisitSessions(t, db, child))
+
+	// A child checked in to the school without a room is in transit until the
+	// assignment places it.
+	transitChild := testpkg.CreateTestStudent(t, db, "Ida", "Anmelden", "2a").ID
+	testpkg.CreateTestAttendance(t, db, transitChild, colleague.ID, device.ID, time.Now(), nil)
+	code, body = post("/api/active/visits/transit/assign",
+		fmt.Sprintf(`{"student_ids":[%d],"active_group_id":%d}`, transitChild, supervised.ID), admin)
+	require.Equal(t, http.StatusOK, code, body)
+	var assigned struct {
+		Data struct {
+			Assigned      []int64 `json:"assigned"`
+			ActiveGroupID int64   `json:"active_group_id"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(body), &assigned))
+	assert.Equal(t, []int64{transitChild}, assigned.Data.Assigned)
+	assert.Equal(t, supervised.ID, assigned.Data.ActiveGroupID)
+	assert.Equal(t, []int64{supervised.ID}, openVisitSessions(t, db, transitChild))
 }
