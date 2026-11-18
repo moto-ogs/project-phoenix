@@ -10426,6 +10426,16 @@
       "target_owner": "organization-tenancy"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolEmailQuery.FindSchoolEmailIdentities",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerSchoolEmails.FindSchoolEmailIdentities",
+      "reason": "Reviewed read: the check of a Träger hire reads which accounts and unused invitations of the school of the tenant transaction carry the hired person's address (#7378, ADR 0254 addendum of 18.11.2026); it writes nothing.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolEmailQuery.FindSchoolEmailIdentities",
+      "target_owner": "identity-access"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerSchoolEmployments.SchoolEmployments",
       "classification": "query",
       "effect": "query",

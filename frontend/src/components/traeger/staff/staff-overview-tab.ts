@@ -26,6 +26,36 @@ export function staffOverviewHref(tab: StaffOverviewTab | null): string {
 }
 
 /**
+ * Die Personalakten auf „Ohne Akte“ mit dem Dialog „Akte anlegen“ für eine
+ * Person einer Schule (#7378). Die Einstellung führt so direkt zu der
+ * Person, die es schon gibt.
+ */
+export function staffCreateRecordHref(
+  schoolId: string,
+  staffId: string,
+): string {
+  const params = new URLSearchParams({
+    tab: "ohne-akte",
+    schule: schoolId,
+    person: staffId,
+  });
+  return traegerPath(`${OVERVIEW}?${params.toString()}`);
+}
+
+/**
+ * Die Person aus `staffCreateRecordHref`, oder `null`. Nur positive ganze
+ * Zahlen gelten.
+ */
+export function parseStaffCreateRecord(
+  params: { get(name: string): string | null } | null | undefined,
+): { readonly schoolId: string; readonly staffId: string } | null {
+  const schoolId = params?.get("schule") ?? "";
+  const staffId = params?.get("person") ?? "";
+  const id = /^[1-9]\d{0,18}$/;
+  return id.test(schoolId) && id.test(staffId) ? { schoolId, staffId } : null;
+}
+
+/**
  * Eine Unterseite der Personalakten (`/traeger/personal/…`), die sich den
  * Reiter merkt, von dem man kam.
  */

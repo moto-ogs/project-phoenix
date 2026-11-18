@@ -392,4 +392,7 @@ type TraegerStaffPorts struct {
 	// of a hired person at a school (#7206); nil outside the records.
 	HirePersons     TraegerHirePersons
 	HireEmployments TraegerHireEmployments
+	// Emails finds a school's accounts and invitations of an address, for
+	// the check of a hire (#7378); nil outside the records.
+	Emails TraegerSchoolEmails
 }
