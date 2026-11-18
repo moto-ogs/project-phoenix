@@ -484,6 +484,14 @@ var notificationBudgetCatalogues = map[string]string{
     "available": false
   },
   {
+    "key": "meal_plan_changed",
+    "label": "Speiseplan geändert",
+    "description": "Wenn sich das Essen an einem Tag ändert, an dem Ihr Kind ein Essen gebucht hat. Der Hinweis im Elternportal kommt immer. Die Mitteilung aufs Handy kommt nur, wenn Sie sie einschalten.",
+    "group": "kinder",
+    "enabled": false,
+    "available": true
+  },
+  {
     "key": "parent_class_timetable_changed",
     "label": "Stundenplan der Klasse",
     "description": "Wenn sich der Unterrichtsschluss in der Klasse Ihres Kindes ändert. Der Hinweis in moto kommt immer. Schalten Sie das hier ein, kommt bei Änderungen in den nächsten 14 Tagen auch eine Mitteilung aufs Handy.",

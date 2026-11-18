@@ -228,7 +228,7 @@ func TestModulePersistsReplacesAndClearsOneTenant(t *testing.T) {
 	require.Len(t, entries, 1)
 	assert.Equal(t, "Auflauf", entries[0].Dish)
 
-	require.NoError(t, module.ClearDay(ctx, date))
+	require.NoError(t, module.ClearDay(ctx, mealplan.ClearDay{Date: date}))
 	entries, err = module.Week(ctx, date)
 	require.NoError(t, err)
 	assert.Empty(t, entries)
@@ -249,7 +249,7 @@ func TestModuleRLSHidesAnotherTenantsPlan(t *testing.T) {
 	assert.Empty(t, entries)
 
 	require.NoError(t, module.ReplaceDay(otherContext, mealplan.ReplaceDay{Date: date, Dishes: []mealplan.Dish{{Dish: "Tenant B"}}}))
-	require.NoError(t, module.ClearDay(testpkg.Ctx(t), date))
+	require.NoError(t, module.ClearDay(testpkg.Ctx(t), mealplan.ClearDay{Date: date}))
 	entries, err = module.Week(otherContext, date)
 	require.NoError(t, err)
 	require.Len(t, entries, 1)

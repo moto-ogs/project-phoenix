@@ -391,6 +391,20 @@ The first parent producer is Communication's cancellation notice
 to the families writes the feed next to its push and its news entry; there is
 no second message. The family's switch decides only the push.
 
+A changed meal plan (`meal_plan_changed`, #7145) reaches the guardians of the
+children with a meal booked on the changed day, as the daily list counts
+them after absences, who hold `parent_portal.access` for one of them, without
+the person who changed it. Meal Plan writes it in the unit that saves the
+menu, only when a day that already had a menu changes: a first menu for an
+empty day, an unchanged save and a past day tell nobody, and neither does a
+school without meal registration. The object is the week
+(`meal_plan_week`, its Monday as `YYYYMMDD`), so changes to one week within
+ten minutes update the unread entry without a second push. Feed and push
+within 14 days, feed only later. The push is off by default (`FilterOptedIn`),
+in the guardian's language and without child or dish; the entry names the
+week and links to `/meal-plan?week=<Monday>`. The school switch is
+`notifications.meal_plan_changed_enabled`.
+
 ### Web Push (#2003)
 
 - **Keys**: `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBSCRIBER`

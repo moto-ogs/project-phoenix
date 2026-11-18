@@ -84,7 +84,7 @@ func newChildReadRigOn(t *testing.T, db *bun.DB, with ...func(*portalCompose.Dep
 	require.NoError(t, err)
 	schoolCalendar, err := owners.BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings, nil)
 	require.NoError(t, err)
-	meals, err := owners.BuildServeMealPlan(database, mealSettings, owners.NewStudentRootReads(people.Student), directory, schoolCalendar)
+	meals, err := owners.BuildServeMealPlan(database, mealSettings, owners.NewStudentRootReads(people.Student), directory, schoolCalendar, nil)
 	require.NoError(t, err)
 	childCheckDelay := &atomic.Int64{}
 	// The portal's People Directory reads the photo feature from the school's
