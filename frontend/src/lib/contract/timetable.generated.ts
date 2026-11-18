@@ -309,6 +309,7 @@ export const emptyRosterReasonSchema: z.ZodType<emptyRosterReason, unknown> = z.
 
 /** Go: timetablehttp.enrichedInstance */
 export interface enrichedInstance {
+  enrich_warning?: string;
   id: string;
   date: string;
   start_time: string;
@@ -355,6 +356,7 @@ export interface enrichedInstance {
 }
 
 export const enrichedInstanceSchema: z.ZodType<enrichedInstance, unknown> = z.object({
+  enrich_warning: z.string().optional(),
   id: int64StringOrNumber,
   date: z.string(),
   start_time: z.string(),

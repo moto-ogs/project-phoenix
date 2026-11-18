@@ -31212,6 +31212,13 @@
       "go_type": "timetablehttp.enrichedInstance",
       "fields": [
         {
+          "name": "enrich_warning",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "id",
           "schema": {
             "kind": "legacy_id"
