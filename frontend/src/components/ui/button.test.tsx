@@ -76,7 +76,9 @@ describe("Button", () => {
     render(<Button variant="outline">Outline</Button>);
 
     const button = screen.getByRole("button");
-    expect(button.className).toContain("bg-transparent");
+    // Deckend, damit das Punktmuster des Seitengrunds nicht durchscheint (#7376).
+    expect(button.className).toContain("bg-white");
+    expect(button.className).not.toContain("bg-transparent");
   });
 
   it("applies outline_danger variant styles", () => {
