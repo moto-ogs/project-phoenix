@@ -1,5 +1,11 @@
 package locales
 
+import (
+	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+)
+
 // Existing stored copy-kind protocol values.
 const (
 	ParentAnnouncementReminder = "announcement_reminder"
@@ -194,5 +200,35 @@ func ParentMealPlanChangedCopy(locale string) (string, string) {
 		return "Меню змінено", "Меню змінилося. Будь ласка, перевірте замовлення харчування в батьківському порталі."
 	default:
 		return "Speiseplan geändert", "Der Speiseplan hat sich geändert. Bitte prüfen Sie die Essensbuchung im Elternportal."
+	}
+}
+
+// ParentMealPlanChangedFeedCopy is the notification feed entry for a changed
+// meal plan. Unlike the push, it names the affected week so parents can open
+// the matching plan after they sign in.
+func ParentMealPlanChangedFeedCopy(locale string, monday calendar.Date) (string, string) {
+	from, until := monday.Format("02.01."), monday.AddDays(4).Format("02.01.2006")
+	switch Normalize(locale) {
+	case "en":
+		return "Meal plan changed", fmt.Sprintf(
+			"The meal plan for the week from %s to %s has changed. Please check whether your child's meal booking is still correct.", from, until)
+	case "ru":
+		return "Меню изменено", fmt.Sprintf(
+			"Меню на неделю с %s по %s изменилось. Пожалуйста, проверьте, актуален ли заказ питания вашего ребёнка.", from, until)
+	case "sq":
+		return "Menyja ndryshoi", fmt.Sprintf(
+			"Menyja për javën nga %s deri më %s ka ndryshuar. Ju lutemi kontrolloni nëse rezervimi i ushqimit për fëmijën tuaj është ende i saktë.", from, until)
+	case "pl":
+		return "Zmiana jadłospisu", fmt.Sprintf(
+			"Jadłospis na tydzień od %s do %s zmienił się. Prosimy sprawdzić, czy zamówienie posiłków dla Państwa dziecka jest nadal aktualne.", from, until)
+	case "tr":
+		return "Yemek planı değişti", fmt.Sprintf(
+			"%s ile %s arasındaki haftanın yemek planı değişti. Lütfen çocuğunuzun yemek rezervasyonunun hâlâ uygun olup olmadığını kontrol edin.", from, until)
+	case "uk":
+		return "Меню змінено", fmt.Sprintf(
+			"Меню на тиждень з %s до %s змінилося. Будь ласка, перевірте, чи замовлення харчування вашої дитини ще актуальне.", from, until)
+	default:
+		return "Speiseplan geändert", fmt.Sprintf(
+			"Der Speiseplan für die Woche vom %s bis %s hat sich geändert. Bitte prüfen Sie, ob die Essensbuchung Ihres Kindes noch passt.", from, until)
 	}
 }

@@ -114,7 +114,7 @@ func (n mealPlanChangeNotices) NotifyMenuChanged(ctx context.Context, change mea
 	if err != nil {
 		return fmt.Errorf("meal plan change: week: %w", err)
 	}
-	title, body := mealPlanChangeCopy(week)
+	parentPolicy := deliveryPolicy.ParentDeliveryPolicy{}
 	locales := make([]string, 0, len(byLocale))
 	for locale := range byLocale {
 		locales = append(locales, locale)
@@ -125,7 +125,8 @@ func (n mealPlanChangeNotices) NotifyMenuChanged(ctx context.Context, change mea
 	moment := n.now().UnixNano()
 	for _, locale := range locales {
 		group := byLocale[locale]
-		pushTitle, pushBody := deliveryPolicy.ParentDeliveryPolicy{}.ParentMealPlanChangedCopy(locale)
+		pushTitle, pushBody := parentPolicy.ParentMealPlanChangedCopy(locale)
+		feedTitle, feedBody := parentPolicy.ParentMealPlanChangedFeedCopy(locale, week)
 		err := n.notifier.Notify(ctx, deliveryCompose.NotificationEvent{
 			Type:           deliveryContract.NotificationMealPlanChanged,
 			IdempotencyKey: fmt.Sprintf("meal_plan_changed:%s:%s:%d", change.Date, locale, moment),
@@ -137,7 +138,7 @@ func (n mealPlanChangeNotices) NotifyMenuChanged(ctx context.Context, change mea
 			},
 			Feed: &deliveryContract.NotificationFeedDelivery{
 				PushAccountIDs: slices.DeleteFunc(slices.Clone(group.accounts), func(id int64) bool { return !slices.Contains(push, id) }),
-				Title:          title, Body: body,
+				Title:          feedTitle, Body: feedBody,
 			},
 		})
 		if errors.Is(err, deliveryCompose.ErrNotificationsDisabled) {
@@ -157,15 +158,6 @@ func mealPlanWeekID(monday calendar.Date) int64 {
 		id = id*10 + int64(digit-'0')
 	}
 	return id
-}
-
-// mealPlanChangeCopy is the German text of the feed entry, read after login:
-// which week changed and what to do. It names no child and no dish; a
-// bundled entry stays true for every day of the week that changed.
-func mealPlanChangeCopy(monday calendar.Date) (title, body string) {
-	return "Speiseplan geändert", fmt.Sprintf(
-		"Der Speiseplan für die Woche vom %s bis %s hat sich geändert. Bitte prüfen Sie, ob die Essensbuchung Ihres Kindes noch passt.",
-		monday.Format("02.01."), monday.AddDays(4).Format("02.01.2006"))
 }
 
 func appendUnique(ids []int64, id int64) []int64 {

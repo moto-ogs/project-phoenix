@@ -186,10 +186,19 @@ func (f *menuChangeFixture) setAccess(t *testing.T, chain testpkg.ParentChain, p
 	require.NoError(t, err)
 }
 
+func (f *menuChangeFixture) setPortalLocale(t *testing.T, accountID int64, locale string) {
+	t.Helper()
+	_, err := f.db.ExecContext(context.Background(), `UPDATE users.guardian_profiles SET portal_locale = ?
+		WHERE tenant_id = ? AND account_id = ?`, locale, f.tenantID, accountID)
+	require.NoError(t, err)
+}
+
 func TestMenuChangeReachesGuardiansWithABookingAndRights(t *testing.T) {
 	t.Parallel()
 	f := newMenuChangeFixture(t)
 	booked, pushed := f.family(t, true), f.family(t, true)
+	english := f.family(t, true)
+	f.setPortalLocale(t, english.AccountID, "en")
 	unbooked, withoutRights := f.family(t, false), f.family(t, true)
 	f.setAccess(t, withoutRights, `{}`)
 	f.consent(pushed.AccountID)
@@ -219,6 +228,10 @@ func TestMenuChangeReachesGuardiansWithABookingAndRights(t *testing.T) {
 		assert.Equal(t, "/meal-plan?week=2030-06-10", entries[0].DeepLink)
 		assert.Nil(t, entries[0].ReadAt)
 	}
+	entries := f.entries(t, english.AccountID)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "Meal plan changed", entries[0].Title)
+	assert.Equal(t, "The meal plan for the week from 10.06. to 14.06.2030 has changed. Please check whether your child's meal booking is still correct.", entries[0].Body)
 	assert.Empty(t, f.entries(t, unbooked.AccountID), "a guardian without a booking gets nothing")
 	assert.Empty(t, f.entries(t, withoutRights.AccountID), "a guardian without parent_portal.access gets nothing")
 	assert.Empty(t, f.entries(t, otherSchool.AccountID), "another school sees nothing")
