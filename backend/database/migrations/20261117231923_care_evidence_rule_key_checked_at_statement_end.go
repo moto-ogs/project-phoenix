@@ -37,10 +37,15 @@ ALTER TABLE parent_billing.care_evidences ADD CONSTRAINT fk_care_evidences_rule 
 	DEFERRABLE INITIALLY IMMEDIATE;
 `
 
+// careEvidenceRuleKeyNoActionDownSQL restores RESTRICT, which PostgreSQL
+// never defers. The key stays DEFERRABLE: the erasure functions keep their
+// SET CONSTRAINTS (repeatables have no Down), which a key that cannot be
+// deferred would refuse for every Träger.
 const careEvidenceRuleKeyNoActionDownSQL = `
 ALTER TABLE parent_billing.care_evidences DROP CONSTRAINT IF EXISTS fk_care_evidences_rule;
 ALTER TABLE parent_billing.care_evidences ADD CONSTRAINT fk_care_evidences_rule FOREIGN KEY (organization_id, rule_id)
-	REFERENCES parent_billing.contribution_rules (organization_id, id) ON DELETE RESTRICT;
+	REFERENCES parent_billing.contribution_rules (organization_id, id) ON DELETE RESTRICT
+	DEFERRABLE INITIALLY IMMEDIATE;
 `
 
 func careEvidenceRuleKeyNoActionUp(ctx context.Context, db *bun.DB) error {
