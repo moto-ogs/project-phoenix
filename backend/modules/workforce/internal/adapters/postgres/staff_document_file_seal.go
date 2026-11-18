@@ -42,7 +42,7 @@ func (s *StaffDocumentFileSealStore) LockSealableStaffDocuments(ctx context.Cont
 	var rows []staffDocumentSealRow
 	if err := tx.NewRaw(`SELECT id, filename_stored, category FROM users.staff_documents
    WHERE tenant_id = ? AND id > ? AND category IN (?) AND deleted_at IS NULL AND file_deleted_at IS NULL
-   ORDER BY id LIMIT ? FOR UPDATE`, schoolID, afterID, bun.In(categories), limit).Scan(ctx, &rows); err != nil {
+   ORDER BY id LIMIT ? FOR UPDATE`, schoolID, afterID, bun.List(categories), limit).Scan(ctx, &rows); err != nil {
 		tenant.MarkRollback(ctx)
 		return workforce.StaffDocumentFileSealResult{}, errors.New("staff document file seal: batch could not be locked")
 	}
