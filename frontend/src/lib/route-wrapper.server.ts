@@ -7,6 +7,7 @@ import {
   type CatalogMethod,
   type CatalogRoute,
 } from "./contract/catalog-proxy.server";
+import { CATALOG_OUTSIDE_MOUNTS } from "./contract/catalog-outside-mounts";
 import { makePortalHandlers } from "./portal-handlers.server";
 
 export { isStringParam } from "./route-wrapper-utils.server";
@@ -51,4 +52,11 @@ export function createOptionalTenantJsonProxy(options: JsonProxyOptions) {
 export const catalogProxy = (
   routes: readonly CatalogRoute[],
   method: CatalogMethod,
-) => makeCatalogProxy(tenant, "/api", routes, method);
+) =>
+  makeCatalogProxy(
+    tenant,
+    "/api",
+    routes,
+    method,
+    CATALOG_OUTSIDE_MOUNTS.tenant,
+  );

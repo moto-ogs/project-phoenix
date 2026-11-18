@@ -313,6 +313,12 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 	if route.Deprecated {
 		out.WriteString("    deprecated: true,\n")
 	}
+	if route.NoRetryAfterRenewal != "" {
+		fmt.Fprintf(out, "    noRetryAfterRenewal: %q,\n", route.NoRetryAfterRenewal)
+	}
+	if route.MaxBodyBytes > 0 {
+		fmt.Fprintf(out, "    maxBodyBytes: %d,\n", route.MaxBodyBytes)
+	}
 	if len(route.Query) > 0 {
 		names := make([]string, len(route.Query))
 		for i, param := range route.Query {

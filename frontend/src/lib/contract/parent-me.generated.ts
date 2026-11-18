@@ -2145,6 +2145,47 @@ export const AnnouncementAcknowledgedResponseSchema: z.ZodType<AnnouncementAckno
   acknowledged: z.boolean(),
 });
 
+/** Go: parent.declarationRequest */
+export interface declarationRequest {
+  student_id?: string;
+  action?: string;
+  version_id?: string;
+  password?: string;
+  signature?: declarationSignatureRequest | null;
+}
+
+/** Go: parent.parentDeclarationSubmissionResponse */
+export interface parentDeclarationSubmissionResponse {
+  id: string;
+  action: string;
+  submitted_at: string;
+  version_no: number;
+  content_hash: string;
+  record_hash: string;
+  password_confirmed: boolean;
+}
+
+export const parentDeclarationSubmissionResponseSchema: z.ZodType<parentDeclarationSubmissionResponse, unknown> = object<parentDeclarationSubmissionResponse>({
+  id: z.string(),
+  action: z.string(),
+  submitted_at: instant,
+  version_no: safeInt,
+  content_hash: z.string(),
+  record_hash: z.string(),
+  password_confirmed: z.boolean(),
+});
+
+/** Go: parent.DeclarationRecordedResponse */
+export interface DeclarationRecordedResponse {
+  created: boolean;
+  submission: parentDeclarationSubmissionResponse;
+}
+
+export const DeclarationRecordedResponseSchema: z.ZodType<DeclarationRecordedResponse, unknown> = object<DeclarationRecordedResponse>({
+  created: z.boolean(),
+  submission: parentDeclarationSubmissionResponseSchema,
+});
+
 /** Go: parent.AnnouncementReadResponse */
 export interface AnnouncementReadResponse {
   read: boolean;
@@ -2651,6 +2692,14 @@ export const routes = {
     portals: ["parent"],
     request: requestBody<stampRequest>(),
     response: success(AnnouncementAcknowledgedResponseSchema),
+  },
+  "POST /parent/me/news/{announcementId}/declaration": {
+    method: "POST",
+    pattern: "/parent/me/news/{announcementId}/declaration",
+    portals: ["parent"],
+    noRetryAfterRenewal: "a renewed session would send the account password twice",
+    request: requestBody<declarationRequest>(),
+    response: success(DeclarationRecordedResponseSchema),
   },
   "POST /parent/me/news/{announcementId}/read": {
     method: "POST",

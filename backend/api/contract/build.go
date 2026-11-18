@@ -127,10 +127,16 @@ func (b *builder) enumName(enum EnumSpec) (string, error) {
 }
 
 func (b *builder) route(rc Registration, options Options) (Route, error) {
-	route := Route{Method: rc.Method, Pattern: rc.Pattern, Paginated: rc.Paginated, Deprecated: rc.Deprecated}
+	route := Route{
+		Method: rc.Method, Pattern: rc.Pattern, Paginated: rc.Paginated, Deprecated: rc.Deprecated,
+		NoRetryAfterRenewal: rc.NoRetryAfterRenewal, MaxBodyBytes: rc.MaxBodyBytes,
+	}
 	where := route.Key()
 	if rc.Method == "" || !strings.HasPrefix(rc.Pattern, "/") {
 		return route, fmt.Errorf("invalid route registration %q", where)
+	}
+	if rc.MaxBodyBytes < 0 || (rc.MaxBodyBytes > 0 && rc.Request == nil) {
+		return route, fmt.Errorf("%s: a body limit needs a positive size and a request body", where)
 	}
 	if len(rc.Portals) == 0 {
 		return route, fmt.Errorf("%s names no portal", where)

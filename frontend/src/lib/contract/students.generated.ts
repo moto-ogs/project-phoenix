@@ -2319,6 +2319,47 @@ export interface BulkPickupSchedulePatchRequest {
   confirmed_exception?: boolean;
 }
 
+/** Go: studentpresencehttp.schoolCheckinBatchRequest */
+export interface schoolCheckinBatchRequest {
+  action?: string;
+  student_ids?: string[] | null;
+  reason?: string;
+}
+
+/** Go: studentpresencehttp.schoolCheckinBatchResult */
+export interface schoolCheckinBatchResult {
+  student_id: string;
+  ok: boolean;
+  changed: boolean;
+  status?: string;
+  location?: string;
+  error?: string;
+}
+
+export const schoolCheckinBatchResultSchema: z.ZodType<schoolCheckinBatchResult, unknown> = object<schoolCheckinBatchResult>({
+  student_id: z.string(),
+  ok: z.boolean(),
+  changed: z.boolean(),
+  status: z.string().optional(),
+  location: z.string().optional(),
+  error: z.string().optional(),
+});
+
+/** Go: studentpresencehttp.schoolCheckinBatchResponse */
+export interface schoolCheckinBatchResponse {
+  action: string;
+  results: schoolCheckinBatchResult[] | null;
+  succeeded: number;
+  failed: number;
+}
+
+export const schoolCheckinBatchResponseSchema: z.ZodType<schoolCheckinBatchResponse, unknown> = object<schoolCheckinBatchResponse>({
+  action: z.string(),
+  results: z.array(schoolCheckinBatchResultSchema).nullable(),
+  succeeded: safeInt,
+  failed: safeInt,
+});
+
 /** Go: studentpresencehttp.BulkCreateStudentStatusDaysRequest */
 export interface BulkCreateStudentStatusDaysRequest {
   student_ids?: number[] | null;
@@ -3391,6 +3432,14 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<BulkPickupSchedulePatchRequest>(),
     response: success(BulkUpsertResultSchema),
+  },
+  "POST /api/students/school-checkin/batch": {
+    method: "POST",
+    pattern: "/api/students/school-checkin/batch",
+    portals: ["tenant"],
+    maxBodyBytes: 65536,
+    request: requestBody<schoolCheckinBatchRequest>(),
+    response: success(schoolCheckinBatchResponseSchema),
   },
   "POST /api/students/status-days/bulk": {
     method: "POST",

@@ -44,6 +44,18 @@ func (res *AnalyticsConsentResource) Router(configureSession func(chi.Router)) c
 	return router
 }
 
+// AnalyticsConsentRouteContracts registers the account's own consent
+// (ADR 0270), with patterns relative to /analytics-consent. The root mounts it
+// outside the portal routers; each portal's proxy reaches it under its own
+// BFF prefix.
+func AnalyticsConsentRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalTenant, common.PortalParent, common.PortalSchool}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: portals, Response: analyticsConsentResponse{}},
+		{Method: "PUT", Pattern: "/", Portals: portals, Request: analyticsConsentRequest{}, Response: analyticsConsentResponse{}},
+	}
+}
+
 // analyticsConsentResponse is the wire shape: granted is null while the
 // account has not decided.
 type analyticsConsentResponse struct {

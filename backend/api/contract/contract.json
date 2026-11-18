@@ -761,6 +761,31 @@
     },
     {
       "method": "GET",
+      "pattern": "/analytics-consent/",
+      "portals": [
+        "parent",
+        "school",
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "analyticsConsentResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/analytics-policy",
+      "portals": [
+        "parent",
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PolicyResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/absence-types/",
       "portals": [
         "tenant"
@@ -4414,6 +4439,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/parent-news-attachments/{announcementId}",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AnnouncementAttachmentListResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/parent/enrollments/{tenantSlug}/bootstrap/{phaseId}",
       "portals": [
         "parent"
@@ -8002,6 +8038,22 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/students/school-checkin/batch",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "schoolCheckinBatchRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "schoolCheckinBatchResponse"
+      },
+      "max_body_bytes": 65536
+    },
+    {
+      "method": "POST",
       "pattern": "/api/students/status-days/bulk",
       "portals": [
         "tenant"
@@ -9517,6 +9569,22 @@
     },
     {
       "method": "POST",
+      "pattern": "/parent/me/news/{announcementId}/declaration",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "declarationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "DeclarationRecordedResponse"
+      },
+      "no_retry_after_renewal": "a renewed session would send the account password twice"
+    },
+    {
+      "method": "POST",
       "pattern": "/parent/me/news/{announcementId}/read",
       "portals": [
         "parent"
@@ -9892,6 +9960,18 @@
         "kind": "ref",
         "ref": "TraegerInvitationResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/auth/mfa/step-up",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StepUpStartResponse"
+      },
+      "no_retry_after_renewal": "a renewed session would mail the code twice"
     },
     {
       "method": "POST",
@@ -11017,6 +11097,23 @@
       "response": {
         "kind": "ref",
         "ref": "TraegerTimeAccount"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/analytics-consent/",
+      "portals": [
+        "parent",
+        "school",
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "analyticsConsentRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "analyticsConsentResponse"
       }
     },
     {
@@ -14470,6 +14567,77 @@
           "name": "answered",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AnnouncementAttachmentListResponse",
+      "go_type": "files.AnnouncementAttachmentListResponse",
+      "fields": [
+        {
+          "name": "attachments",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AnnouncementAttachmentResponse"
+            }
+          }
+        },
+        {
+          "name": "max_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "editable",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AnnouncementAttachmentResponse",
+      "go_type": "files.AnnouncementAttachmentResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "filename",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "size_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "content_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "uploaded_at",
+          "schema": {
+            "kind": "instant"
           }
         }
       ]
@@ -30036,6 +30204,25 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeclarationRecordedResponse",
+      "go_type": "parent.DeclarationRecordedResponse",
+      "fields": [
+        {
+          "name": "created",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "submission",
+          "schema": {
+            "kind": "ref",
+            "ref": "parentDeclarationSubmissionResponse"
           }
         }
       ]
@@ -47745,6 +47932,18 @@
       ]
     },
     {
+      "name": "PolicyResponse",
+      "go_type": "analytics.PolicyResponse",
+      "fields": [
+        {
+          "name": "enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "PoolBlock",
       "go_type": "workforce.PoolBlock",
       "fields": [
@@ -57233,6 +57432,24 @@
       ]
     },
     {
+      "name": "StepUpStartResponse",
+      "go_type": "traegerportal.StepUpStartResponse",
+      "fields": [
+        {
+          "name": "challenge_token",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "masked_email",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "StudentArrivalExceptionRequest",
       "go_type": "careplanhttp.StudentArrivalExceptionRequest",
       "request": true,
@@ -65999,6 +66216,34 @@
       ]
     },
     {
+      "name": "analyticsConsentRequest",
+      "go_type": "me.analyticsConsentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "granted",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "analyticsConsentResponse",
+      "go_type": "me.analyticsConsentResponse",
+      "fields": [
+        {
+          "name": "granted",
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "announcementRequest",
       "go_type": "announcement.announcementRequest",
       "request": true,
@@ -69987,6 +70232,50 @@
       ]
     },
     {
+      "name": "declarationRequest",
+      "go_type": "parent.declarationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "action",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signature",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "declarationSignatureRequest"
+          }
+        }
+      ]
+    },
+    {
       "name": "declarationSignatureRequest",
       "go_type": "parent.declarationSignatureRequest",
       "request": true,
@@ -73732,6 +74021,54 @@
       ]
     },
     {
+      "name": "parentDeclarationSubmissionResponse",
+      "go_type": "parent.parentDeclarationSubmissionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "submitted_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "version_no",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "content_hash",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "record_hash",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password_confirmed",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "parentDeclarationVersionResponse",
       "go_type": "parent.parentDeclarationVersionResponse",
       "fields": [
@@ -76262,6 +76599,118 @@
         },
         {
           "name": "device_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "schoolCheckinBatchRequest",
+      "go_type": "studentpresencehttp.schoolCheckinBatchRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "action",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "schoolCheckinBatchResponse",
+      "go_type": "studentpresencehttp.schoolCheckinBatchResponse",
+      "fields": [
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "results",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "schoolCheckinBatchResult"
+            }
+          }
+        },
+        {
+          "name": "succeeded",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "failed",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "schoolCheckinBatchResult",
+      "go_type": "studentpresencehttp.schoolCheckinBatchResult",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "ok",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "changed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "location",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "error",
           "optional": true,
           "schema": {
             "kind": "string"

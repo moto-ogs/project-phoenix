@@ -39,3 +39,13 @@ func AnnouncementAttachmentRouteContracts() []common.RouteContract {
 		{Method: "DELETE", Pattern: "/{announcementId}/{attachmentId}", Portals: portals, Response: AttachmentRemovedResponse{}},
 	}
 }
+
+// ParentAnnouncementAttachmentRouteContracts registers the guardian's
+// attachment list, with patterns relative to /parent-news-attachments. The
+// download answers a file and keeps its route file.
+func ParentAnnouncementAttachmentRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalParent}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/{announcementId}", Portals: portals, Response: AnnouncementAttachmentListResponse{}},
+	}
+}
