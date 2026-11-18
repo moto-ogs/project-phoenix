@@ -39,6 +39,7 @@ import { useNFCEnabled } from "~/lib/tenant-context";
 import { useInvalidateFamily } from "~/lib/swr";
 import { useTenantMutate } from "~/lib/swr/hooks";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
+import { devicePinKeys } from "~/lib/swr/portal-keys";
 import { useSettingsSchema } from "~/lib/hooks/use-settings-schema";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 
@@ -304,6 +305,10 @@ function SettingsContent({ tabKey, highlightKey }: SettingsContentProps) {
   // settings are read the same way by the care plan forms.
   const revalidateReadersOf = useCallback(
     (key: string) => {
+      // The home notice has a status cache separate from the settings schema.
+      if (key === "security.ogs_device_pin") {
+        void tenantMutate(devicePinKeys.status());
+      }
       if (ARRIVAL_SETTING_PREFIXES.some((prefix) => key.startsWith(prefix))) {
         void invalidateFamily(tenantStudentKeys.arrivalSettings());
       }
