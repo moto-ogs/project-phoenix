@@ -355,6 +355,9 @@ export const NO_FEATURE_PAGES = Object.freeze({
 const NO_FEATURE_EVENTS = [
   'login_success', 'login_failed', 'tenant_switched', 'guardian_invite_accepted', 'pwa_installed', 'pwa_install_prompt_shown', 'page_viewed',
   'caterer_invite_accepted', 'meal_order_confirmed',
+  // Clicks inside a page the browser reports (tab, bell): the page view
+  // already counts the feature, a click is no action of its own.
+  'child_scope_tab_selected', 'notification_bell_opened', 'notification_feed_entry_clicked', 'notification_feed_all_read',
 ];
 
 /** Area unmatched pages and events fall into; growing means FEATURES lacks an entry. */
@@ -817,6 +820,25 @@ order by ${quoted('Tage mit Nutzung')} desc`),
           name: 'OGS-App: Wohin geht es von der Startseite?',
           description: 'Letzte 30 Tage. Welche Seite nach der Startseite (/home) als nächste geöffnet wird, als Anteil aller Wechsel von dort.',
           ...nextPages('production', 'ogs', '/home', pageNames),
+        },
+        {
+          name: 'OGS-App: Welcher Reiter auf „Alle Kinder“?',
+          description: 'Letzte 30 Tage. Wechsel auf einen Reiter von „Alle Kinder“ (Alle, Meine Gruppe, Meine Aufsicht), nur wenn die Schule Kinder nur dort finden lässt. Gezählt wird jeder Wechsel auf einen anderen Reiter, per Klick oder Pfeiltaste (mit der Pfeiltaste zählt auch ein Reiter, über den man nur hinweggeht), nicht aber der Reiter beim Öffnen der Seite (meist „Alle“). „Meine Gruppe“ umfasst „Meine Gruppen“, „Meine Aufsicht“ auch „Aufsicht <Raum>“ bei mehreren Räumen. Wie oft die Seite insgesamt geöffnet wurde, zeigt „OGS-App: Welche Seiten werden am meisten genutzt?“.',
+          ...hogql('production', (where) => `
+select
+  multiIf(properties.child_scope = 'all', 'Alle', properties.child_scope = 'groups', 'Meine Gruppe', properties.child_scope = 'room', 'Meine Aufsicht', 'unbekannt') as Reiter,
+  count() as Wechsel,
+  round(100 * count() / sum(count()) over (), 1) as ${quoted('Anteil in Prozent')},
+  uniq(toString(properties.school_id)) as Schulen,
+  uniq($session_id) as Sitzungen
+from events
+where ${where}
+  and event = 'child_scope_tab_selected'
+  and ${SCHOOL_EVENT}
+  and properties.surface = 'ogs'
+  and timestamp > now() - interval 30 day
+group by Reiter
+order by Wechsel desc`),
         },
         {
           name: 'Funktionen: Reichweite in Schulen (30 Tage)',
