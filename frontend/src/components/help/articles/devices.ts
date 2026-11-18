@@ -44,8 +44,8 @@ export function devicesTopic(): HelpTopic {
           "Zum Beispiel, wenn ein Tablet verschwunden ist oder nicht benutzt werden soll. Du kannst es jederzeit wieder entsperren.",
         steps: [
           "Wähle das Gerät aus der Liste.",
-          "Wähle oben rechts `Sperren`.",
-          "Zum Entsperren wähle beim selben Gerät `Entsperren`.",
+          "Wähle unter `Zugang` die Schaltfläche `Sperren`.",
+          "Zum Entsperren wähle im gelben Hinweis `Entsperren`.",
         ],
       },
       {

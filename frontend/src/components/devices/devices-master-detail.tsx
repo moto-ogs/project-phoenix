@@ -159,7 +159,6 @@ function DeviceDetailContent({
   onSetBlocked,
   blockPending,
 }: DeviceDetailContentProps) {
-  const blocked = isDeviceBlocked(device);
   const [activeTab, setActiveTab] = useState<string>("master-data");
   // Bearbeitet wird am Objekt, nicht in einem Modal daneben
   // (BAUARTEN-SPEC Bauart 2 Regel 3).
@@ -182,26 +181,6 @@ function DeviceDetailContent({
         <Pencil className="h-3.5 w-3.5" aria-hidden />
         Bearbeiten
       </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="compact"
-        onClick={() => onSetBlocked(!blocked)}
-        isLoading={blockPending}
-        loadingText={blocked ? "Wird entsperrt…" : "Wird gesperrt…"}
-        tooltip={
-          blocked
-            ? "Gibt dem Gerät sofort wieder Zugang zu moto."
-            : "Sperrt das Gerät sofort. Es kann sich dann nicht mehr anmelden."
-        }
-      >
-        {blocked ? (
-          <LockOpen className="h-3.5 w-3.5" aria-hidden />
-        ) : (
-          <Lock className="h-3.5 w-3.5" aria-hidden />
-        )}
-        {blocked ? "Entsperren" : "Sperren"}
-      </Button>
       <DetailDeleteButton
         onClick={onDeleteClick}
         label="Entfernen"
@@ -220,6 +199,8 @@ function DeviceDetailContent({
           editing={editing}
           onSaveDevice={handleSaveDevice}
           onCancelEdit={() => setEditing(false)}
+          onSetBlocked={onSetBlocked}
+          blockPending={blockPending}
         />
       ),
     },
@@ -253,11 +234,15 @@ function DeviceStammdatenTab({
   editing,
   onSaveDevice,
   onCancelEdit,
+  onSetBlocked,
+  blockPending,
 }: {
   device: Device;
   editing: boolean;
   onSaveDevice: (data: Partial<Device>) => Promise<void>;
   onCancelEdit: () => void;
+  onSetBlocked: (blocked: boolean) => void;
+  blockPending: boolean;
 }) {
   // Speicherfehler im Formular, eine vergebene Geräte-ID am Feld (#2517).
   const saveErrors = useApiFormError();
@@ -282,6 +267,20 @@ function DeviceStammdatenTab({
         <Alert
           type="warning"
           message="Dieses Gerät ist gesperrt. Es kann sich nicht anmelden, bis du es entsperrst. Raum und bisherige Anwesenheiten bleiben erhalten."
+          action={
+            <Button
+              type="button"
+              variant="ghost_tone"
+              size="compact"
+              onClick={() => onSetBlocked(false)}
+              isLoading={blockPending}
+              loadingText="Wird entsperrt…"
+              tooltip="Gibt dem Gerät sofort wieder Zugang zu moto."
+            >
+              <LockOpen className="h-3.5 w-3.5" aria-hidden />
+              Entsperren
+            </Button>
+          }
         />
       ) : null}
       <InfoSection
@@ -318,6 +317,38 @@ function DeviceStammdatenTab({
           </DataField>
         </DataGrid>
       </InfoSection>
+
+      {isDeviceBlocked(device) ? null : (
+        <InfoSection
+          title="Zugang"
+          icon={
+            <MotoDuotoneIcon
+              icon={permissionsConcept.icon}
+              tone={permissionsConcept.tone}
+              size={18}
+            />
+          }
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="min-w-48 flex-1 text-sm text-gray-600">
+              Das Gerät kann sich anmelden. Sperrst du es, wird es sofort
+              abgewiesen, bis du es wieder entsperrst.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="compact"
+              onClick={() => onSetBlocked(true)}
+              isLoading={blockPending}
+              loadingText="Wird gesperrt…"
+              tooltip="Sperrt das Gerät sofort. Es kann sich dann nicht mehr anmelden."
+            >
+              <Lock className="h-3.5 w-3.5" aria-hidden />
+              Sperren
+            </Button>
+          </div>
+        </InfoSection>
+      )}
 
       {device.api_key ? <ApiKeySection apiKey={device.api_key} /> : null}
     </div>
