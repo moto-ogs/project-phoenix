@@ -175,7 +175,7 @@ function OperatorBillingPageContent() {
   );
   const keyDayLoadError = useSwrLoadError(
     keyDayError,
-    "die Einstellung des Stichtags",
+    "die Liste der Stichtage",
     () => void mutateKeyDay(),
   );
   const {
