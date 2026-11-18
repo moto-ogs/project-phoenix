@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/modules/delivery/objects/exchange"
 )
 
 const (
@@ -177,25 +179,29 @@ func (l *Local) ObjectSize(_ context.Context, key string) (int64, error) {
 	return info.Size(), nil
 }
 
+// replacementPrefix names the temporary files ReplaceObject stages next to
+// an object. The tenant export skips them; RemoveStaleReplacements clears
+// those an interrupted replacement left behind.
+const replacementPrefix = ".replace-"
+
 // ReplaceObject writes content to a private temporary file next to the
-// existing object, syncs it and renames it over the object. A missing object
-// reports ErrNotFound, so a removed document is never re-created.
+// existing object, syncs it and exchanges it atomically with the object. The
+// exchange fails when the object is gone, so a document a concurrent cleanup
+// removed is never re-created: a missing object reports ErrNotFound. The
+// temporary file then holds the previous bytes and is removed.
 func (l *Local) ReplaceObject(ctx context.Context, key string, content []byte) error {
 	full, err := l.resolve(key)
 	if err != nil {
 		return err
 	}
-	if _, err := os.Stat(full); err != nil {
-		if os.IsNotExist(err) {
-			return ErrNotFound
-		}
-		return errors.New("storage: failed to stat object")
-	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(full), ".replace-*")
+	tmp, err := os.CreateTemp(filepath.Dir(full), replacementPrefix+"*")
 	if err != nil {
+		if os.IsNotExist(err) {
+			return ErrNotFound
+		}
 		return errors.New("storage: failed to create object")
 	}
 	tmpName := tmp.Name()
@@ -216,9 +222,43 @@ func (l *Local) ReplaceObject(ctx context.Context, key string, content []byte) e
 		_ = os.Remove(tmpName)
 		return errors.New("storage: failed to write object")
 	}
-	if err := os.Rename(tmpName, full); err != nil {
+	if err := exchange.Files(tmpName, full); err != nil {
 		_ = os.Remove(tmpName)
+		if errors.Is(err, os.ErrNotExist) {
+			return ErrNotFound
+		}
 		return errors.New("storage: failed to replace object")
 	}
+	if err := os.Remove(tmpName); err != nil {
+		return errors.New("storage: failed to remove the replaced bytes")
+	}
 	return nil
+}
+
+// RemoveStaleReplacements removes the temporary files an interrupted
+// ReplaceObject left in the directory of prefix and reports how many. Run it
+// only while no replacement in that directory is in flight.
+func (l *Local) RemoveStaleReplacements(_ context.Context, prefix string) (int, error) {
+	dir, err := l.resolve(prefix)
+	if err != nil {
+		return 0, err
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil
+		}
+		return 0, errors.New("storage: failed to list objects")
+	}
+	removed := 0
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasPrefix(entry.Name(), replacementPrefix) {
+			continue
+		}
+		if err := os.Remove(filepath.Join(dir, entry.Name())); err != nil && !os.IsNotExist(err) {
+			return removed, errors.New("storage: failed to remove a stale replacement")
+		}
+		removed++
+	}
+	return removed, nil
 }

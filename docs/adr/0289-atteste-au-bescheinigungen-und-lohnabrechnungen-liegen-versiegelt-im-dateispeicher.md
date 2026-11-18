@@ -71,9 +71,20 @@ angelegt. Je Zeile gilt:
 - Eine Datei auf dem aktiven Schlüssel bleibt bytegleich.
 - Eine fehlende Datei zählt als `missing`.
 
-Das Ersetzen ist atomar (Temp-Datei, `fsync`, `rename`, Rechte 0600). Die
-Ausgabe nennt nur Mengen je Quelle: `scanned`, `changed`, `missing` und die
-Summen. Ein zweiter vollständiger Lauf muss `changed_total=0` liefern.
+Das Ersetzen ist atomar: Die neue Datei entsteht als `.replace-*` daneben
+(Rechte 0600, `fsync`) und tauscht dann mit `renameat2(RENAME_EXCHANGE)` den
+Platz mit der alten Datei. Ist die Datei inzwischen gelöscht, schlägt der
+Tausch fehl. Auch eine Bereinigung ohne Zeilensperre, etwa beim Offboarding,
+bekommt ihre Datei also nie zurück. Danach wird die Tauschdatei mit den alten
+Bytes gelöscht. Was ein abgebrochener Lauf an `.replace-*` hinterlässt, entfernt
+der nächste Lauf vor seinen Batches (`stale_removed`); der Mandantenexport
+überspringt diese Dateien. Je Schule darf nur ein Lauf gleichzeitig aktiv
+sein. Außerhalb von Linux gibt es keinen atomaren Tausch; Produktion läuft auf
+Linux. Ein Dateisystem ohne `RENAME_EXCHANGE` lässt den Lauf mit einem Fehler
+`storage` abbrechen, ohne etwas zu ändern. Die
+Ausgabe nennt nur Mengen je Quelle: `stale_removed`, `scanned`, `changed`,
+`missing` und die Summen. Ein fehlgeschlagener Batch nennt nur die
+Fehlerklasse (Ring öffnet nicht, Speicher, Datenbank). Ein zweiter vollständiger Lauf muss `changed_total=0` liefern.
 Datenbankzeilen ändert der Befehl nicht.
 
 ### Ablauf je Umgebung (Staging, Demo, Produktion)
@@ -112,7 +123,11 @@ Verantwortlich: Betrieb. Keine Live-Zugriffe durch Implementierungsagenten.
 Abbruch mit SIGTERM verliert höchstens den laufenden Batch. Eine Wiederholung
 ab null ist sicher. Bei einer Rotation eines Rings (neuer Schlüssel vorne)
 gilt derselbe Block. Erst nach zwei vollständigen Läufen mit
-`changed_total=0` darf der alte Schlüssel aus dem Online-Ring.
+`changed_total=0` darf der alte Schlüssel aus dem Online-Ring. Der Lauf erfasst
+nur lebende Dokumente. Dateien gelöschter Dokumente, deren Entfernen noch
+aussteht, und verwaiste Uploads bleiben auf ihrem alten Schlüssel. Der alte
+Schlüssel muss daher auch so lange im Ring bleiben, bis die Bereinigung diese
+Dateien entfernt hat. Sonst bricht der Mandantenexport an ihnen ab.
 
 ## Grenzen
 
@@ -141,7 +156,7 @@ Migration, kein neuer Owner, keine neue Env-Var.
 `fieldcipher.Cipher.Rewrap` macht die Umschlüsselung des Gesundheitsrings
 idempotent wie `BankCipher.Rewrap` (ADR 0183). Die Methoden-Evidenz unter
 dieser ADR umfasst `Coordinator.SaveSealed`,
-`StaffDocumentFileSeal.Batch` und den geänderten `PrivateUploads.OpenPrivate`.
+`StaffDocumentFileSeal.Batch`, `PrivateUploads.RemoveStaleReplacements` und den geänderten `PrivateUploads.OpenPrivate`. Der atomare Tausch liegt im neuen Paket `modules/delivery/objects/exchange` (Rolle `contract` der Delivery Platform), das als einziges `golang.org/x/sys/unix` (Klasse `utility`) importiert.
 Die Konstruktoren der beiden Batches erhöhen die Compose-Fläche von Care Plan
 um 13 Zeilen (1703 → 1716) und von Workforce um 6 (937 → 943); die Summe steigt
 13647 → 13666 (nach ADR 0283). Das Pass-through-Budget von Workforce steigt um eins (137 → 138,

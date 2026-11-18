@@ -360,6 +360,13 @@ func (rs *StaffAdminResource) downloadStaffDocument(w http.ResponseWriter, r *ht
 
 	object, err := rs.documentObjects.OpenPrivate(r.Context(), workforce.StaffDocumentStorageKind, tenant.FromContext(r.Context()), doc.FilenameStored)
 	if err != nil {
+		// A sealed file that does not open points at the key rings, not at
+		// a missing file; the log names the document, never its content.
+		rs.logger.Error("staff document file unavailable",
+			"staff_id", id,
+			"document_id", docID,
+			"error", err,
+		)
 		common.RenderStatus(w, r, http.StatusNotFound, "")
 		return
 	}

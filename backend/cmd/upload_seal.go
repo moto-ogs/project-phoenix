@@ -99,21 +99,31 @@ func runUploadSealJob(ctx context.Context, staff workforce.StaffDocumentFileSeal
 }
 
 func runUploadSealSource(ctx context.Context, source, kind string, schoolID int64, store *objects.PrivateUploads, batch uploadSealBatch, output io.Writer) error {
+	// Leftovers of an interrupted run hold bytes the exchange replaced.
+	stale, err := store.RemoveStaleReplacements(ctx, kind, schoolID)
+	if err != nil {
+		return fmt.Errorf("upload seal: source %s: stale replacements could not be removed", source)
+	}
+	if _, err := fmt.Fprintf(output, "source=%s stale_removed=%d\n", source, stale); err != nil {
+		return err
+	}
 	var cursor int64
 	var scannedTotal, changedTotal, missingTotal int
 	for {
 		missing := 0
+		var cause error
 		reseal := func(ctx context.Context, storedName, ring string) (bool, error) {
 			changed, err := store.ResealPrivate(ctx, kind, schoolID, storedName, ring)
 			if errors.Is(err, objects.ErrNotFound) {
 				missing++
 				return false, nil
 			}
+			cause = err
 			return changed, err
 		}
 		scanned, changed, lastID, err := batch(ctx, cursor, reseal)
 		if err != nil {
-			return fmt.Errorf("upload seal: source %s failed after cursor %d", source, cursor)
+			return fmt.Errorf("upload seal: source %s failed after cursor %d (%s)", source, cursor, uploadSealFailure(cause))
 		}
 		if scanned == 0 {
 			break
@@ -126,6 +136,19 @@ func runUploadSealSource(ctx context.Context, source, kind string, schoolID int6
 		missingTotal += missing
 		cursor = lastID
 	}
-	_, err := fmt.Fprintf(output, "source=%s scanned_total=%d changed_total=%d missing_total=%d\n", source, scannedTotal, changedTotal, missingTotal)
+	_, err = fmt.Fprintf(output, "source=%s scanned_total=%d changed_total=%d missing_total=%d\n", source, scannedTotal, changedTotal, missingTotal)
 	return err
+}
+
+// uploadSealFailure names the class of a failed batch without names, keys or
+// content: a ring that does not open the file, or a storage or database error.
+func uploadSealFailure(cause error) string {
+	switch {
+	case cause == nil:
+		return "database"
+	case errors.Is(cause, objects.ErrSealedUnavailable):
+		return "sealed file does not open with the configured rings"
+	default:
+		return "storage"
+	}
 }

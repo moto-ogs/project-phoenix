@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"path"
 	"time"
 )
 
@@ -117,6 +118,17 @@ func (s *PrivateUploads) ResealPrivate(ctx context.Context, kind string, tenantI
 		return false, err
 	}
 	return true, nil
+}
+
+// RemoveStaleReplacements clears the temporary files an interrupted
+// ResealPrivate left in the directory of one kind and school. upload-seal runs
+// it before its batches; only one run per school may be active.
+func (s *PrivateUploads) RemoveStaleReplacements(ctx context.Context, kind string, tenantID int64) (int, error) {
+	key, err := TenantKey(kind, tenantID, "x")
+	if err != nil {
+		return 0, err
+	}
+	return s.backend.RemoveStaleReplacements(ctx, path.Dir(key))
 }
 
 func (s *PrivateUploads) RemovePrivate(ctx context.Context, kind string, tenantID int64, storedName string) error {

@@ -254,6 +254,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (s *PrivateUploads) RemoveStaleReplacements(ctx context.Context, kind string, tenantID int64) (int, error) {\n\tkey, err := TenantKey(kind, tenantID, \"x\")\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\treturn s.backend.RemoveStaleReplacements(ctx, path.Dir(key))\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/delivery/objects/PrivateUploads.RemoveStaleReplacements",
+      "owner": "modules/delivery"
+    },
+    {
+      "build": "production",
       "evidence": "func (w *Worker) Backlog(ctx context.Context) (int, error) {\n\treturn w.engine.Backlog(ctx)\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/delivery/runtime/Worker.Backlog",

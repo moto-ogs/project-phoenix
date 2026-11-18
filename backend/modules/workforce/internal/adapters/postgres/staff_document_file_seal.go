@@ -39,6 +39,11 @@ func (s *StaffDocumentFileSealStore) LockSealableStaffDocuments(ctx context.Cont
 	if err := tenant.OrderLock(ctx, tenant.LockLeaf, "users.staff_documents"); err != nil {
 		return workforce.StaffDocumentFileSealResult{}, err
 	}
+	// Fail fast behind a long-held document row; a rerun resumes from zero.
+	if _, err := tx.ExecContext(ctx, "SET LOCAL lock_timeout = '5s'"); err != nil {
+		tenant.MarkRollback(ctx)
+		return workforce.StaffDocumentFileSealResult{}, err
+	}
 	var rows []staffDocumentSealRow
 	if err := tx.NewRaw(`SELECT id, filename_stored, category FROM users.staff_documents
    WHERE tenant_id = ? AND id > ? AND category IN (?) AND deleted_at IS NULL AND file_deleted_at IS NULL
@@ -63,17 +68,17 @@ func (s *StaffDocumentFileSealStore) LockSealableStaffDocuments(ctx context.Cont
 }
 
 // schoolTransaction requires the school transaction of exactly this school.
-func schoolTransaction(ctx context.Context, schoolID int64) (bun.IDB, error) {
+func schoolTransaction(ctx context.Context, schoolID int64) (bun.Tx, error) {
 	if schoolID <= 0 || tenant.FromContext(ctx) != schoolID {
-		return nil, errors.New("workforce postgres: the school transaction of this school is required")
+		return bun.Tx{}, errors.New("workforce postgres: the school transaction of this school is required")
 	}
 	transaction, ok := tenant.TransactionFromContext(ctx)
 	if !ok {
-		return nil, errors.New("workforce postgres: transaction is required")
+		return bun.Tx{}, errors.New("workforce postgres: transaction is required")
 	}
 	tx, ok := transaction.(bun.Tx)
 	if !ok {
-		return nil, fmt.Errorf("workforce postgres: unsupported transaction %T", transaction)
+		return bun.Tx{}, fmt.Errorf("workforce postgres: unsupported transaction %T", transaction)
 	}
 	return tx, nil
 }

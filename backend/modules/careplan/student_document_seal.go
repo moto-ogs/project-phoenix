@@ -31,7 +31,7 @@ type StudentDocumentFileSealResult struct {
 // StudentDocumentFileSeal seals the stored files of child health documents
 // uploaded before #3840 and moves sealed ones onto the active key, one
 // bounded batch of one school at a time. Each batch locks its document rows,
-// so a concurrent delete waits and no removed file is re-created. The CLI
+// so a concurrent delete waits, and the atomic exchange never re-creates a file a cleanup removed. The CLI
 // root opens the school transaction per batch; never bind it to HTTP.
 // Resume by replaying from zero.
 type StudentDocumentFileSeal interface {

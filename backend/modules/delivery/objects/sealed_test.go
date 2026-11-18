@@ -241,3 +241,35 @@ func TestOpenStoredObjectOpensSealedAndStreamsOthers(t *testing.T) {
 		t.Fatalf("export opened another school's object: %v", err)
 	}
 }
+
+func TestReplaceObjectLeavesNoStagedBytesAndStaleOnesAreRemoved(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	ctx := context.Background()
+	store := NewPrivateUploads(NewLocal(root), FileKeys{Health: newTestRing(t, "h1")})
+	if _, err := store.SavePrivate(ctx, "student-documents", 5, "a.pdf", bytes.NewReader([]byte("%PDF-1.4 legacy"))); err != nil {
+		t.Fatal(err)
+	}
+	if changed, err := store.ResealPrivate(ctx, "student-documents", 5, "a.pdf", FileRingHealth); err != nil || !changed {
+		t.Fatalf("reseal: %v %v", changed, err)
+	}
+	dir := filepath.Join(root, "student-documents", "5")
+	entries, _ := os.ReadDir(dir)
+	if len(entries) != 1 || entries[0].Name() != "a.pdf" {
+		t.Fatalf("the replaced plaintext must not stay behind: %v", entries)
+	}
+	// An interrupted run leaves its staged file; the next run clears it.
+	if err := os.WriteFile(filepath.Join(dir, replacementPrefix+"123"), []byte("%PDF-1.4 legacy"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	removed, err := store.RemoveStaleReplacements(ctx, "student-documents", 5)
+	if err != nil || removed != 1 {
+		t.Fatalf("stale replacements: %d %v", removed, err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "a.pdf")); err != nil {
+		t.Fatal("the object itself must stay")
+	}
+	if removed, err := store.RemoveStaleReplacements(ctx, "student-documents", 9); err != nil || removed != 0 {
+		t.Fatalf("a missing directory has nothing to remove: %d %v", removed, err)
+	}
+}

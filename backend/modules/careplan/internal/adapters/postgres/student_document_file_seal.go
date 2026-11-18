@@ -46,6 +46,11 @@ func (s *StudentDocumentFileSealStore) LockSealableStudentDocuments(ctx context.
 	if err := tenant.OrderLock(ctx, tenant.LockLeaf, "users.student_documents"); err != nil {
 		return careplan.StudentDocumentFileSealResult{}, err
 	}
+	// Fail fast behind a long-held document row; a rerun resumes from zero.
+	if _, err := tx.ExecContext(ctx, "SET LOCAL lock_timeout = '5s'"); err != nil {
+		tenant.MarkRollback(ctx)
+		return careplan.StudentDocumentFileSealResult{}, err
+	}
 	var rows []studentDocumentSealRow
 	if err := tx.NewRaw(`SELECT id, filename_stored, category FROM users.student_documents
    WHERE tenant_id = ? AND id > ? AND category IN (?) AND deleted_at IS NULL AND file_deleted_at IS NULL
