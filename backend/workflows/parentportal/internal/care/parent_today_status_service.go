@@ -35,6 +35,11 @@ func (s *Service) GetChildTodayStatus(ctx context.Context, accountID, studentID 
 	if err != nil {
 		return nil, err
 	}
+	if child.WithoutCarePlace {
+		// A child without an OGS place (#4803) has no OGS day: no arrival,
+		// pickup or care day is read for it.
+		return &TodayStatus{State: DayStateNoCare}, nil
+	}
 
 	today := s.todayDate()
 	facts := todayStatusFacts{NowHHMM: berlinHHMM(s.now())}

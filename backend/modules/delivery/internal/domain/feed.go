@@ -62,10 +62,19 @@ type FeedView struct {
 
 // SchoolAudienceMember is one account of a school-wide notice (#7144): an
 // account with a role of the OGS portal (Staff), moto schule (School), or a
-// guardian with the children it holds parent_portal.access for.
+// guardian with the children it holds parent_portal.access for, or an active
+// member of the school's Träger (Traeger, #7146).
 type SchoolAudienceMember struct {
 	AccountID  int64
 	Staff      bool
 	School     bool
+	Traeger    bool
 	StudentIDs []int64
+}
+
+// TraegerFeedEntry is an entry of the Träger bell (#7146) with the school it
+// is about.
+type TraegerFeedEntry struct {
+	FeedEntry
+	SchoolName string
 }

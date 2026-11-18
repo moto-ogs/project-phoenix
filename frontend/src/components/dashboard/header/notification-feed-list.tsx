@@ -145,7 +145,7 @@ export function NotificationFeedList({
                 title={item.entry.title}
                 subtitle={item.entry.body}
                 wrapSubtitle
-                overline={item.unread ? copy.unread : undefined}
+                overline={feedEntryOverline(item, copy.unread)}
                 meta={formatChatTime(item.entry.updatedAt, locale)}
                 unread={item.unread}
                 chevron={isSafeAppRelativePath(item.entry.deepLink)}
@@ -172,4 +172,18 @@ export function NotificationFeedList({
       ) : null}
     </section>
   );
+}
+
+/**
+ * Die Zeile über dem Titel: „Neu“ für einen ungelesenen Eintrag und, wo die
+ * Glocke mehrere Schulen zeigt (Träger-Portal, #7146), die Schule.
+ */
+function feedEntryOverline(
+  item: NotificationFeedItem,
+  unread: string,
+): string | undefined {
+  const parts = [item.unread ? unread : null, item.entry.schoolName].filter(
+    (part): part is string => Boolean(part),
+  );
+  return parts.length > 0 ? parts.join(" · ") : undefined;
 }

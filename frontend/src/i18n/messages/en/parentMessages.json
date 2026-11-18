@@ -3,6 +3,7 @@
   "title": "Messages",
   "description": "Read messages and write directly to the {careTerm}.",
   "noChildren": "No child is linked to your account yet. Once a child is linked you can write to the {careTerm} here.",
+  "withoutCarePlace": "Messages to the {careTerm} are only available for children with a place in the {careTerm}.",
   "noMessagesYet": "Tap to write.",
   "previewFromOgs": "{careTerm}: {text}",
   "previewFromYou": "You: {text}",

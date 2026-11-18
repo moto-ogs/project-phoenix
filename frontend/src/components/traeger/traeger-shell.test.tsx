@@ -151,6 +151,18 @@ describe("TraegerShell", () => {
     expect(header.getByText("Träger-Büro")).toBeInTheDocument();
   });
 
+  // #7146: the bell of the Hinweise of every school of the Träger sits in
+  // the shared header.
+  it("shows the bell of the Hinweise in the header", () => {
+    sessionUser.permissions = ["traeger_overview:read"];
+    renderPortal({ organizationName: "Ganztag gGmbH" });
+
+    const header = within(screen.getByRole("banner"));
+    expect(
+      header.getByRole("button", { name: /Benachrichtigungen/ }),
+    ).toBeInTheDocument();
+  });
+
   // The header named „Anmeldephasen“, „Schließtage“ and „Länger als
   // gebucht“ „Home“: every page of the sidebar carries its own title.
   it("titles every page of the sidebar with its name", () => {

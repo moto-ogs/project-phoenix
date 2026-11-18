@@ -211,6 +211,43 @@ func EnsureTemplate(ctx context.Context, cfg *Config, opts ...TemplateOption) (*
 	return tcfg, nil
 }
 
+// EnsureResolvedTemplate makes sure a template name resolved by a wrapper is
+// still available. The wrapper normally prepares it once before package
+// binaries start. A local server can nevertheless have been recreated while
+// packages were compiling, which loses its databases but leaves the resolved
+// name in PHX_TEST_TEMPLATE. In that case rebuild the current migration
+// template instead of letting every package fail while cloning it.
+//
+// The caller must have ensured that the server is reachable. A name that does
+// not resolve to this config's current migration template is deliberately not
+// replaced: callers may use such a name for an explicitly pinned test source.
+func EnsureResolvedTemplate(ctx context.Context, cfg *Config, name string, opts ...TemplateOption) (*Config, error) {
+	if name == "" {
+		return nil, fmt.Errorf("resolved test template name is empty")
+	}
+
+	resolved := cfg.WithTemplate(name)
+	maint := openSQL(cfg.MaintenanceDSN())
+	defer func() { _ = maint.Close() }()
+
+	exists, _, err := templateState(ctx, maint, name)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return resolved, nil
+	}
+
+	current, err := EnsureTemplate(ctx, cfg, opts...)
+	if err != nil {
+		return nil, err
+	}
+	if current.TemplateName() != name {
+		return nil, fmt.Errorf("resolved test template %q is unavailable; current migrations resolve to %q", name, current.TemplateName())
+	}
+	return current, nil
+}
+
 func resolveTemplateOptions(opts []TemplateOption) (templateOptions, error) {
 	o := templateOptions{build: buildTemplate, verify: migrationsComplete, prepare: prepareTemplate}
 	for _, opt := range opts {

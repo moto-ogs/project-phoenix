@@ -17,6 +17,7 @@ const CodeCareCareRequestBookingsAuthoritative = "care.care_request_bookings_aut
 const CodeCareCareRequestFieldDisabled = "care.care_request_field_disabled"
 const CodeCareChildCareEnded = "care.child_care_ended"
 const CodeCareChildNotLinked = "care.child_not_linked"
+const CodeCareChildWithoutCarePlace = "care.child_without_care_place"
 const CodeCareCourseAlreadyBooked = "care.course_already_booked"
 const CodeCareCourseRequestInvalid = "care.course_request_invalid"
 const CodeCareCourseRequestNotOwn = "care.course_request_not_own"
@@ -101,6 +102,7 @@ var errorCodeClassesCare = []errorCodeClass{
 	{CodeCareCareRequestFieldDisabled, "permission"},
 	{CodeCareChildCareEnded, "permission"},
 	{CodeCareChildNotLinked, "permission"},
+	{CodeCareChildWithoutCarePlace, "permission"},
 	{CodeCareCourseAlreadyBooked, "input"},
 	{CodeCareCourseRequestInvalid, "input"},
 	{CodeCareCourseRequestNotOwn, "input"},

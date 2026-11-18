@@ -61,7 +61,11 @@ type ChildFeatureFlags struct {
 	// capability: when it is true every write flag below is false, and the
 	// portal shows a read-only profile with one sentence explaining why
 	// instead of buttons that would all fail the same way.
-	CareEnded          bool
+	CareEnded bool
+	// WithoutCarePlace says the child belongs to its class but has no OGS
+	// place (#4803, ADR 0282). It is STATE, not a capability: every OGS flag
+	// is false, the school's flags stay as the relationship grants them.
+	WithoutCarePlace   bool
 	SickNoteEnabled    bool
 	ExcusedNoteEnabled bool
 	// SickRequiresApproval is true when a Krankmeldung stays pending until the
@@ -92,8 +96,9 @@ type ChildFeatureFlags struct {
 	// PickupChangeCareDayEnded says the school's care day is over, so
 	// today's pickup is closed for guardians, also for a child still in
 	// class (#5710). Later days stay open.
-	PickupChangeCareDayEnded bool
-	PickupManageAllowed      bool
+	PickupChangeCareDayEnded      bool
+	PickupManageAllowed           bool
+	EmergencyContactManageAllowed bool
 	// GuardianContactManageAllowed is true when the caller may create and edit
 	// accountless contacts for this child.
 	GuardianContactManageAllowed bool

@@ -152,6 +152,19 @@ func (s *Service) resolveOwnedChild(ctx context.Context, accountID, studentID in
 	return s.resolvePermittedChild(ctx, accountID, studentID, care.GuardianPermissionPortalAccess)
 }
 
+// resolveChatChild is resolveOwnedChild for the conversation with the OGS:
+// a child without an OGS place has none (#4803).
+func (s *Service) resolveChatChild(ctx context.Context, accountID, studentID int64) (*Child, error) {
+	child, err := s.resolveOwnedChild(ctx, accountID, studentID)
+	if err != nil {
+		return nil, err
+	}
+	if err := child.RequireCarePlace(); err != nil {
+		return nil, err
+	}
+	return child, nil
+}
+
 func (s *Service) resolvePermittedChild(ctx context.Context, accountID, studentID int64, permission string) (*Child, error) {
 	return s.Children.ResolvePermittedChild(ctx, accountID, studentID, permission)
 }

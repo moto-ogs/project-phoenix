@@ -225,6 +225,7 @@ func (d ParentPortalDirectory) ListParentPortalStudents(ctx context.Context, ids
 			ID: student.ID, TenantID: student.TenantID, PersonID: student.PersonID,
 			SchoolClass: student.SchoolClass, Status: student.Status,
 			EnrolledFrom: calendar.Date(student.EnrolledFrom), EnrolledUntil: calendar.Date(student.EnrolledUntil),
+			WithoutCarePlace: student.WithoutCarePlace,
 		})
 	}
 	return result, nil
