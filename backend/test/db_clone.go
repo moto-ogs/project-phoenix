@@ -181,7 +181,7 @@ func resolvePackageTemplate(ctx context.Context, cfg *testdb.Config) (*testdb.Co
 		return nil, err
 	}
 	if name := os.Getenv(testdb.TemplateEnv); name != "" {
-		return cfg.WithTemplate(name), nil
+		return testdb.EnsureResolvedTemplate(ctx, cfg, name)
 	}
 	return testdb.EnsureTemplate(ctx, cfg)
 }

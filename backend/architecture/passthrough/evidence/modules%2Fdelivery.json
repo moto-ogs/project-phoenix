@@ -9,6 +9,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (rs *TraegerFeedResource) Router() chi.Router {\n\tr := chi.NewRouter()\n\tr.Use(render.SetContentType(render.ContentTypeJSON))\n\trs.Runtime.ProtectedTraeger(r, func(r chi.Router) {\n\t\tr.Route(\"/feed\", func(r chi.Router) {\n\t\t\tr.Get(\"/\", rs.list)\n\t\t\tr.Get(\"/unread-count\", rs.unreadCount)\n\t\t\tr.Post(\"/read-all\", rs.markAllRead)\n\t\t\tr.Post(\"/{id}/read\", rs.markRead)\n\t\t})\n\t})\n\treturn r\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/delivery/http/notifications/TraegerFeedResource.Router",
+      "owner": "modules/delivery"
+    },
+    {
+      "build": "production",
       "evidence": "func (e *databaseError) Error() string {\n\tif e.Err == nil {\n\t\treturn \"database error during \" + e.Op\n\t}\n\treturn \"database error during \" + e.Op + \": \" + e.Err.Error()\n}",
       "form": "unclassified-evidence",
       "id": "modules/delivery/internal/adapters/deliverypostgres/databaseError.Error",

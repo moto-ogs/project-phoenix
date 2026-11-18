@@ -12,6 +12,10 @@ const (
 	// TypeParentSchoolClosingDayChanged tells the families of the school the
 	// same. It follows the school switch of TypeSchoolClosingDayChanged.
 	TypeParentSchoolClosingDayChanged = contract.NotificationParentSchoolClosingDayChanged
+	// TypeTraegerSchoolClosingDayChanged tells the members of the school's
+	// Träger in the bell of the Träger-Portal (#7146). It follows the school
+	// switch of TypeSchoolClosingDayChanged and never pushes.
+	TypeTraegerSchoolClosingDayChanged = contract.NotificationTraegerSchoolClosingDayChanged
 )
 
 // registerSchoolClosingDayTypes registers the notices about a closing day
@@ -43,6 +47,16 @@ func registerSchoolClosingDayTypes() {
 		TenantGate:  settingSchoolClosingDayEnabled,
 		SortOrder:   4,
 		DefaultOn:   true,
+		Feed:        true,
+	})
+	RegisterType(TypeDefinition{
+		Key:         TypeTraegerSchoolClosingDayChanged,
+		Label:       "Schließtage",
+		Description: "Wenn eine Schule des Trägers einen Schließtag einträgt, ändert oder löscht.",
+		Group:       GroupAppointments,
+		Portal:      PortalTraeger,
+		TenantGate:  settingSchoolClosingDayEnabled,
+		SortOrder:   3,
 		Feed:        true,
 	})
 }
