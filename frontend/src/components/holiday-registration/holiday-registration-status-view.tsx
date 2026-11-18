@@ -67,7 +67,7 @@ export function HolidayRegistrationStatusView({
     }
   }, [clear, show, t, token]);
 
-  // oxlint-disable-next-line swr/no-effect-load -- status-link token page, open without a session; ~/lib/swr has no public reader
+  // oxlint-disable-next-line swr/no-effect-load -- status-link token page, open without a session; the shared cache reads only with a session, by design
   useEffect(() => {
     void load();
   }, [load]);
