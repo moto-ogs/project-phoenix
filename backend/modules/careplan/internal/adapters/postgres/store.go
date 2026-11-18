@@ -509,10 +509,12 @@ func (s *Store) CreateOfferingChange(ctx context.Context, value careplan.Offerin
 	}
 	row := offeringChangeFromDomain(value)
 	// The parent request feed filters and orders created_at with the
-	// requests of other kinds on the owner's clock (ADR 0281).
-	row.TenantID, row.UpdatedAt = tenantID, s.currentTime()
+	// requests of other kinds on the owner's clock (ADR 0281). updated_at is
+	// left to the column default: the change history orders it against the
+	// trigger-stamped decisions of the other request kinds.
+	row.TenantID, row.UpdatedAt = tenantID, time.Time{}
 	if row.CreatedAt.IsZero() {
-		row.CreatedAt = row.UpdatedAt
+		row.CreatedAt = s.currentTime()
 	}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
@@ -553,13 +555,18 @@ func (s *Store) updatePending(ctx context.Context, id int64, operation string, c
 	}
 	query := db.NewUpdate().Model((*offeringChangeRow)(nil)).
 		ModelTableExpr(`enrollment.offering_change_requests AS "offering_change_request"`).
-		Set("updated_at = ?", s.currentTime()).
+		Set(offeringChangeStamp).
 		Where(`"offering_change_request".id = ?`, id).
 		Where(`"offering_change_request".status = 'pending'`)
 	query = change(query)
 	query = withTenant(query, "offering_change_request", tenantID)
 	return execGuarded(ctx, query, operation, careplan.ErrOfferingChangeNotPending)
 }
+
+// offeringChangeStamp hands updated_at to the column default in every writer:
+// the change history orders it against trigger-stamped requests and default-
+// stamped corrections, so it shares their database clock (ADR 0281, point 4).
+const offeringChangeStamp = "updated_at = DEFAULT"
 
 func (s *Store) DecideOfferingChange(ctx context.Context, input careplan.DecideOfferingChange) (domain.OperationStats, error) {
 	db, tenantID, err := s.databaseForWrite(ctx, "decide an offering change request")
@@ -571,7 +578,7 @@ func (s *Store) DecideOfferingChange(ctx context.Context, input careplan.DecideO
 		ModelTableExpr(`enrollment.offering_change_requests AS "offering_change_request"`).
 		Set("status = ?", input.Status).
 		Set("decision_reason = ?", input.Reason).
-		Set("updated_at = ?", now).
+		Set(offeringChangeStamp).
 		Where(`"offering_change_request".id = ?`, input.ID).
 		Where(`"offering_change_request".status = 'pending'`)
 	if input.ReviewedBy != nil && *input.ReviewedBy > 0 {
@@ -592,7 +599,7 @@ func (s *Store) UpdateOfferingChangeSnapshot(ctx context.Context, id int64, snap
 	query := withTenant(db.NewUpdate().Model((*offeringChangeRow)(nil)).
 		ModelTableExpr(`enrollment.offering_change_requests AS "offering_change_request"`).
 		Set("decision_snapshot = ?", snapshot).
-		Set("updated_at = ?", s.currentTime()).
+		Set(offeringChangeStamp).
 		Where(`"offering_change_request".id = ?`, id), "offering_change_request", tenantID)
 	return execAny(ctx, query, "update offering change decision snapshot")
 }
@@ -608,7 +615,7 @@ func (s *Store) ClosePendingOfferingChanges(ctx context.Context, studentIDs []in
 		Set("decision_reason = ?", reason).
 		Set("reviewed_by = ?", reviewedBy).
 		Set("reviewed_at = ?", at).
-		Set("updated_at = ?", at).
+		Set(offeringChangeStamp).
 		Where(`"offering_change_request".student_id IN (?)`, bun.List(studentIDs)).
 		Where(`"offering_change_request".status = 'pending'`), "offering_change_request", tenantID)
 	return execAny(ctx, query, "close pending offering changes")

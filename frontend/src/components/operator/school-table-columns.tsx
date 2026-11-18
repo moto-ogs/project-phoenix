@@ -1,18 +1,40 @@
 import { DataTableStatusBadge } from "~/components/ui/data-table";
 import type { DataTableColumn } from "~/components/ui/data-table";
 import { formatCount } from "~/lib/format-utils";
-import type { SchoolSummary } from "~/lib/operator/provisioning-helpers";
+import type {
+  SchoolRequiredDetails,
+  SchoolSummary,
+} from "~/lib/operator/provisioning-helpers";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 
 interface BuildSchoolColumnsOptions {
   readonly showOrgColumn?: boolean;
+  /**
+   * What each school still lacks (#7174), by school id. Undefined hides the
+   * column; a school missing from a loaded map shows "–".
+   */
+  readonly requiredDetails?: ReadonlyMap<string, SchoolRequiredDetails>;
+}
+
+/** The required details a school lacks, as badge labels (#7174). */
+function missingRequiredDetails(
+  details: SchoolRequiredDetails | undefined,
+): string[] {
+  return details?.replyAddressMissing ? ["Antwortadresse fehlt"] : [];
+}
+
+/** Whether a school lacks any required detail (#7174). */
+export function lacksRequiredDetails(
+  details: SchoolRequiredDetails | undefined,
+): boolean {
+  return missingRequiredDetails(details).length > 0;
 }
 
 export function buildSchoolColumns(
   options: BuildSchoolColumnsOptions = {},
 ): DataTableColumn<SchoolSummary>[] {
-  const { showOrgColumn = false } = options;
+  const { showOrgColumn = false, requiredDetails } = options;
   const columns: DataTableColumn<SchoolSummary>[] = [
     {
       key: "name",
@@ -76,6 +98,35 @@ export function buildSchoolColumns(
       sortValue: (row) => (row.active ? 0 : 1),
     },
   );
+
+  if (requiredDetails) {
+    columns.push({
+      key: "pflichtangaben",
+      header: "Pflichtangaben",
+      render: (row) => {
+        const details = requiredDetails.get(row.id);
+        if (!details) return <span className="text-gray-500">–</span>;
+        const missing = missingRequiredDetails(details);
+        if (missing.length === 0) {
+          return <span className="text-gray-500">Vollständig</span>;
+        }
+        return (
+          <div className="flex flex-wrap gap-1">
+            {missing.map((label) => (
+              <StatusColorBadge
+                key={label}
+                label={label}
+                color={LOCATION_COLORS.WARNING}
+                compact
+              />
+            ))}
+          </div>
+        );
+      },
+      sortValue: (row) =>
+        -missingRequiredDetails(requiredDetails.get(row.id)).length,
+    });
+  }
 
   return columns;
 }

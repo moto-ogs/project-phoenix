@@ -23,6 +23,7 @@ import { InvoiceExportHistoryCard } from "~/components/traeger/invoice-export-hi
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
+import { useErrorFixLink } from "~/components/ui/error-fix-slot";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useToast } from "~/contexts/ToastContext";
@@ -67,6 +68,11 @@ function CareInvoiceAmendPage() {
   const [draft, setDraft] = useState<CareAmendmentDraft | null>(null);
   const { success } = useToast();
   const runHref = traegerPath(`/traeger/abrechnung/monatsbeitraege/${runId}`);
+  // The switches stand under „Monatsbeitrag“, not on the page
+  // Abrechnungsvorgaben; only with the settings right (#7092).
+  const amendmentSettingsLink = useErrorFixLink(
+    "parent_billing.care_amendment_disabled",
+  );
 
   const invoice = run ? invoiceOf(run, contractId, service) : null;
   const missing = useMemo(
@@ -228,17 +234,8 @@ function CareInvoiceAmendPage() {
           {allOff ? (
             <Alert
               type="info"
-              message="Ihr Träger hat das Ändern einzelner Rechnungen ausgeschaltet. Sie können es in den Einstellungen der Abrechnung einschalten."
-              action={
-                <ButtonLink
-                  href={traegerPath("/traeger/einstellungen/abrechnung")}
-                  variant="surface"
-                  size="compact"
-                  tooltip="Öffnet die Einstellungen der Abrechnung, dort schalten Sie das Ändern ein."
-                >
-                  Zu den Einstellungen
-                </ButtonLink>
-              }
+              message="Ihr Träger hat das Ändern einzelner Rechnungen ausgeschaltet. Es lässt sich in den Einstellungen unter „Monatsbeitrag“ einschalten. Das darf, wer das Recht „Einstellungen“ hat."
+              action={amendmentSettingsLink}
               actionLayout="responsive"
             />
           ) : null}

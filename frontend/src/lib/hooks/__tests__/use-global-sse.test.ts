@@ -77,7 +77,7 @@ import {
   MAX_FLUSH_WAIT_MS,
 } from "../use-global-sse";
 import { useSSE } from "~/lib/hooks/use-sse";
-import { mutate } from "swr";
+import { mutate } from "~/lib/swr/testing";
 import { useSession } from "next-auth/react";
 import {
   clearOwnAttendanceMutation,

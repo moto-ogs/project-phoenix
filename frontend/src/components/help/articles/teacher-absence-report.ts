@@ -32,7 +32,7 @@ export function teacherAbsenceReportTopic(): HelpTopic {
     ],
     differences: [
       "Kein `Meldung eintragen` neben dem Namen? Dann haben Sie nicht die Rolle `Schulverwaltung`, oder der Tag ist nicht heute.",
-      "Kinder mit `Keine Betreuung` stehen noch nicht in dieser Liste.",
+      "Kinder mit `Keine Betreuung` stehen nur in dieser Liste, wenn Ihre Schule Kinder ohne OGS-Platz als eigene Kinder führt. Einträge der Klassenliste stehen hier nicht.",
     ],
     troubleshootingDetails: [
       "moto sagt, für das Kind steht heute schon etwas? Dann hat die OGS zum Beispiel eine frühere Abholung eingetragen. Es wurde nichts gespeichert. Sprechen Sie mit der OGS.",

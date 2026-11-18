@@ -8,7 +8,8 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { releaseFakeTimers, testClockDay } from "~/test/clock";
-import useSWR, { useSWRConfig } from "swr";
+import { useSWRAuth } from "~/lib/swr";
+import { useSWRConfig } from "~/lib/swr/testing";
 
 // Vaul (SlideOver) rendert in jsdom nichts: das Detailpanel bliebe im Test
 // leer. Wie in components/ui/slide-over.test.tsx, plus ein Close-Knopf, der
@@ -80,6 +81,13 @@ vi.mock("vaul", async () => {
       >((props, ref) => <p ref={ref} {...props} />),
     },
   };
+});
+
+// Die Lesungen des Panels laufen über useSWRAuth; einzelne Tests geben eine
+// Antwort vor, sonst gilt der echte Hook über dem globalen SWR-Mock.
+vi.mock("~/lib/swr", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/swr")>();
+  return { ...actual, useSWRAuth: vi.fn(actual.useSWRAuth) };
 });
 
 vi.mock("next-auth/react", () => ({
@@ -353,12 +361,12 @@ describe("InstanceDetailModal", () => {
   });
 
   it("only renders students returned by the participant endpoint in read-only mode", () => {
-    vi.mocked(useSWR).mockReturnValue({
+    vi.mocked(useSWRAuth).mockReturnValue({
       data: {
         studentNames: new Map([["21", "Max Sichtbar"]]),
         staffNames: new Map(),
       },
-    } as ReturnType<typeof useSWR>);
+    } as ReturnType<typeof useSWRAuth>);
 
     render(
       <InstanceDetailModal
@@ -377,11 +385,11 @@ describe("InstanceDetailModal", () => {
   });
 
   it("shows a loading state while read-only participant names are loading", () => {
-    vi.mocked(useSWR).mockReturnValue({
+    vi.mocked(useSWRAuth).mockReturnValue({
       data: undefined,
       error: undefined,
       isLoading: true,
-    } as ReturnType<typeof useSWR>);
+    } as ReturnType<typeof useSWRAuth>);
 
     render(
       <InstanceDetailModal
@@ -400,14 +408,14 @@ describe("InstanceDetailModal", () => {
 
   it("shows an error instead of fallback participant data when loading fails", async () => {
     const mutate = vi.fn();
-    vi.mocked(useSWR).mockReturnValue({
+    vi.mocked(useSWRAuth).mockReturnValue({
       data: undefined,
       error: new ApiError("Failed to fetch", 503, {
         code: "general.unavailable",
       }),
       isLoading: false,
       mutate,
-    } as unknown as ReturnType<typeof useSWR>);
+    } as unknown as ReturnType<typeof useSWRAuth>);
 
     const config = useSWRConfig();
     await vi.mocked(useSWRConfig).withImplementation(

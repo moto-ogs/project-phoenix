@@ -45,6 +45,7 @@ import { useSidebarMemory } from "~/lib/sidebar-memory";
 import { useSWRAuth, useTenantMutate, useSWRSeedFrom } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import type { Student, SupervisorContact } from "~/lib/student-helpers";
 import {
@@ -120,7 +121,6 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useModuleBooked, useWeekendFollowsFriday } from "~/lib/tenant-context";
 import { careWithdrawalNotice } from "~/lib/care-withdrawal-notice";
 import { fetchStudentCareWithdrawal } from "~/lib/care-exit-api";
-import { fetchStudentCarePlanDay } from "~/lib/student-care-plan-api";
 import {
   deleteStudentPartialAbsence,
   fetchStudentPartialAbsences,
@@ -265,6 +265,7 @@ function studentTabs(
   canViewDocuments: boolean,
   canViewRequestLog: boolean,
   canReadParentData = true,
+  withoutCarePlace = false,
 ): StudentTabId[] {
   const base = hasStudentReadAccess
     ? canViewEnrollments
@@ -310,10 +311,21 @@ function studentTabs(
   // Notizen, Nachrichten and Erziehungsberechtigte read parent data and
   // notes, which stay on users:read. The role „Gast“ opens the child with
   // students:read only (ADR 0091); those tabs would only answer 403.
-  return canReadParentData
+  const withParentData = canReadParentData
     ? withRequestLog
     : withRequestLog.filter((tab) => !PARENT_DATA_TABS.has(tab));
+  // Ein Kind ohne OGS-Platz (#4803) hat keinen Betreuungsplan, keine
+  // Betreuungszeiten und keinen Chat der Eltern mit der OGS.
+  return withoutCarePlace
+    ? withParentData.filter((tab) => !OGS_ONLY_TABS.has(tab))
+    : withParentData;
 }
+
+const OGS_ONLY_TABS: ReadonlySet<StudentTabId> = new Set<StudentTabId>([
+  "betreuungsplan",
+  "betreuungszeiten",
+  "nachrichten",
+]);
 
 const PARENT_DATA_TABS: ReadonlySet<StudentTabId> = new Set<StudentTabId>([
   "notizen",
@@ -562,7 +574,7 @@ function StudentDetailPageContent() {
   // Zwischenspeicher teilen; ohne Schreibrecht wird gar nicht erst geladen.
   const { data: groupOptions = EMPTY_GROUP_OPTIONS } = useSWRAuth<
     ReadonlyArray<{ value: string; label: string }>
-  >(hasWriteAccess ? "database-groups-dropdown" : null, async () => {
+  >(hasWriteAccess ? tenantAdminKeys.groupOptions() : null, async () => {
     const groups = await groupService.getGroups();
     return groups
       .map((group) => ({ value: String(group.id), label: group.name }))
@@ -664,6 +676,7 @@ function StudentDetailPageContent() {
         canViewDocuments,
         canViewRequestLog,
         canReadParentData,
+        student?.without_care_place === true,
       ),
     [
       canViewEnrollments,
@@ -672,6 +685,7 @@ function StudentDetailPageContent() {
       canViewDocuments,
       canViewRequestLog,
       canReadParentData,
+      student?.without_care_place,
     ],
   );
   const tabResolutionTabs =
@@ -825,22 +839,6 @@ function StudentDetailPageContent() {
   const ensureStatusDayRange = useCallback((from: string, to: string) => {
     setStatusDayRange((current) => extendStatusDayRange(current, [from, to]));
   }, []);
-  const loadPlannedStatusExistingDays = useCallback(
-    (from: string, to: string) => {
-      ensureStatusDayRange(from, to);
-      return fetchStudentStatusDays(studentId, from, to);
-    },
-    [ensureStatusDayRange, studentId],
-  );
-  const loadPlannedPartialAbsences = useCallback(
-    (from: string, to: string) =>
-      fetchStudentPartialAbsences(studentId, from, to),
-    [studentId],
-  );
-  const loadPlannedCarePlanDay = useCallback(
-    (date: string) => fetchStudentCarePlanDay(studentId, date),
-    [studentId],
-  );
   // Reason attached to today's sick day (set by staff or by a parent via the
   // portal), shown next to the absence badge in the header.
   const currentSickReason = useMemo(() => {
@@ -1428,8 +1426,10 @@ function StudentDetailPageContent() {
   // "Schule" (#3260) and "Im Unterricht" (#5656) are not checked in either: the
   // child still needs a check-in.
   const isNotCheckedIn = isNotCheckedInLocation(student.current_location);
-  const showCheckout = canCheckin && !isNotCheckedIn;
-  const showCheckin = canCheckin && isNotCheckedIn;
+  // Ein Kind ohne OGS-Platz (#4803) checkt in der OGS nicht ein und aus.
+  const withoutCarePlace = student?.without_care_place === true;
+  const showCheckout = canCheckin && !withoutCarePlace && !isNotCheckedIn;
+  const showCheckin = canCheckin && !withoutCarePlace && isNotCheckedIn;
   const hasQuickActions =
     showCheckout ||
     showCheckin ||
@@ -1743,6 +1743,7 @@ function StudentDetailPageContent() {
                 : hasSickExcusedWriteAccess)
             }
             status={plannedStatusModal ?? "sick"}
+            studentId={studentId}
             studentName={student.name}
             isSubmitting={plannedStatusLoading}
             existingDays={statusDays}
@@ -1750,9 +1751,7 @@ function StudentDetailPageContent() {
             canPlanPartialExcusal={canPlanPartialExcusal}
             deletingStatusDayId={deletingPlannedStatusDayId}
             onClose={() => setPlannedStatusModal(null)}
-            loadExistingDays={loadPlannedStatusExistingDays}
-            loadPartialAbsences={loadPlannedPartialAbsences}
-            loadCarePlanDay={loadPlannedCarePlanDay}
+            onCheckRange={ensureStatusDayRange}
             onSubmit={handleCreatePlannedStatus}
             onDeleteStatusDay={handleDeletePlannedStatus}
             canDeleteStatusDay={canDeleteStatusDay}
@@ -1801,7 +1800,14 @@ function StudentDetailPageContent() {
         </div>
       ) : null}
 
-      {!isHolidayGuest && hasFullAccess ? (
+      {withoutCarePlace ? (
+        <Alert
+          type="info"
+          announce="off"
+          message="Dieses Kind hat keinen Platz in der OGS. Krankmeldung und Elternbriefe gelten wie für jedes Kind. Gruppe, Abholung und Betreuungszeiten gibt es nicht."
+        />
+      ) : null}
+      {!isHolidayGuest && !withoutCarePlace && hasFullAccess ? (
         <StudentPickupChanges
           studentId={studentId}
           exceptions={pickupData?.exceptions}
@@ -1814,7 +1820,7 @@ function StudentDetailPageContent() {
           canRead={sessionReadsChildDetails}
         />
       )}
-      {!isHolidayGuest && hasFullAccess && (
+      {!isHolidayGuest && !withoutCarePlace && hasFullAccess && (
         <HolidayStudentRegistrationSection
           studentId={studentId}
           schoolHealthInfo={student?.health_info ?? null}

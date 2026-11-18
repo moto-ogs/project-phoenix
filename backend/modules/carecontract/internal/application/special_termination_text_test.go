@@ -62,14 +62,14 @@ func TestConsentToTheEarlierSpecialTerminationWordingStaysValid(t *testing.T) {
 	matched, ok := acceptanceProof(draft(terms))
 	require.True(t, ok, "the earlier wording still proves consent")
 	assert.Equal(t, proof, matched)
-	assert.Empty(t, acceptanceIssue(draft(terms), submitted.Add(-time.Hour)))
+	assert.Empty(t, acceptanceIssue(draft(terms), legacyHistory(submitted.Add(-time.Hour))))
 
 	changed := terms
 	changed.SpecialTerminationNote = "Bei Umzug oder Schulwechsel"
-	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(changed), submitted.Add(-time.Hour)),
+	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(changed), legacyHistory(submitted.Add(-time.Hour))),
 		"the earlier wording binds only its own conditions")
 	changed = terms
 	changed.NoticeMonths = 1
-	assert.Equal(t, carecontract.SkipAcceptanceChanged, acceptanceIssue(draft(changed), submitted.Add(time.Minute)),
+	assert.Equal(t, carecontract.SkipAcceptanceChanged, acceptanceIssue(draft(changed), legacyHistory(submitted.Add(time.Minute))),
 		"conditions changed after the submission")
 }

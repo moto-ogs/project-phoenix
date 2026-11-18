@@ -112,7 +112,11 @@ var moduleSQLClockBudget = map[string]int{
 	// statement_timestamp(), so expiry, the open checks, preview,
 	// acceptance, accepted_at, revoked_at and their retention read that clock
 	// once per operation, the locked link after its lock wait, and the
-	// acceptance's writes check the expiry again at their own time.
+	// acceptance's writes check the expiry again at their own time. The same
+	// constant, without a new count, carries the staff and guardian
+	// invitations (ADR 0285, Nachtrag): auth.account_is_unused keeps an
+	// account for them against statement_timestamp(), so their expiry,
+	// redemption, revocation, approval, open lists and cleanup read it too.
 	"modules/identityaccess": 5,
 	// Named exceptions on the database clock (ADR 0281): deleted_at of
 	// platform.schools (4), which the demo retirement functions stamp with

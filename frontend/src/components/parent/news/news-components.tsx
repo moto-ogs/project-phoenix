@@ -1178,6 +1178,7 @@ export function NewsDetailModal({
   // An ended Einverständnis is no live message: the backend refuses a read
   // mark for it, which would wrongly report it as outdated.
   const ended = isEndedDeclaration(item);
+  // oxlint-disable-next-line swr/no-effect-load -- marks the opened announcement read: a one-shot write, not a read
   useEffect(() => {
     // published_at is the version the backend verifies; feed items always carry
     // it, so a missing value just means there is nothing to mark yet.

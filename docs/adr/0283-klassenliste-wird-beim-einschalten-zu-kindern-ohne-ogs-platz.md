@@ -1,0 +1,99 @@
+---
+status: accepted
+---
+
+# Die Klassenliste wird beim Einschalten zu Kindern ohne OGS-Platz
+
+Entscheidung vom 16.11.2026 für
+[#4803](https://github.com/moto-ogs/project-phoenix/issues/4803). Sie setzt
+[ADR 0282](0282-kind-ohne-ogs-platz-ist-ein-kind-der-klasse-mit-eigenem-datensatz.md)
+um: wie die Klassenlisteneinträge einer Schule zu Kindern ohne OGS-Platz
+werden und wie die Schule danach solche Kinder anlegt. Sie genehmigt zwei
+neue Leaf-Befehle und die Bindungen, die sie nach sich ziehen. Es gibt keinen
+neuen Owner und keine Policy-Regel.
+
+## Kontext
+
+Die Umwandlung schreibt in fünf Owner: People Directory (Person,
+Schülerprofil), School Membership (Mitgliedschaft mit dem Merkmal, Löschen
+der Einträge), Care Plan (Betreuungsprofil), Student Presence (Anwesenheit am
+Vormittag eines Eintrags) und die Audit-Plattform (Spur der Klassenliste).
+Nach ADR 0067 koordiniert ein solcher Vorgang ein Workflow. Data Import ist
+ein Workflow-Owner und legt Kinder schon heute in Stapeln über dieselben
+Owner an.
+
+## Entscheidung
+
+- **Workflow Data Import.** `ClassListConversion.ConvertClassListEntries`
+  (`modules/dataimport`) liest alle Einträge der Schule. Ein Eintrag, dessen
+  Namen ein nicht abgegangenes Kind seiner Klasse mit laufender Betreuung
+  schon trägt, wird diesem Kind zugeordnet. Ist die Betreuung des
+  gleichnamigen Kindes schon beendet, steht der Eintrag für die Zeit danach:
+  er wird ein eigenes Kind ohne OGS-Platz, damit seine Vormittags-Marken in
+  den Klassenansichten bleiben und das beendete Kind seine OGS-Geschichte
+  behält. Beginnt die Betreuung des zugeordneten Kindes erst später, behält
+  es die Zeit des Eintrags in der Klasse: School Membership setzt beim
+  Löschen der Einträge `class_member_from` auf den Tag, an dem der Eintrag
+  angelegt wurde. Für jeden anderen Eintrag legt die Stapelanlage des
+  Kinder-Imports (`StudentImportConfig.CreateChunk`) ein Kind ohne OGS-Platz
+  an. Danach liest ein zweiter Lesezugriff die neuen Kinder nach Name und
+  Klasse; beides ist mengenbasiert. Dann zieht die Anwesenheit am Vormittag
+  zum Kind, die Einträge gehen, und die Spur hält mit `assigned` fest,
+  welches Kind ein Eintrag wurde. Der Handelnde ist, wie im Audit der
+  Einstellungen, wer den Schalter umgelegt hat; beim moto-Team die
+  Operator-ID, kein Schulkonto.
+- **Zwei Leaf-Befehle außerhalb der Capabilities** (wie
+  `ClassListEntryBatches`, #5827):
+  - School Membership `RemoveClassListEntries`: alle oder keine, in einem
+    Statement.
+  - Student Presence `ClassListMarkTransfer.TransferClassListEntryMarks`:
+    Eine Vormittagsmarke eines Eintrags an einem Tag, für den das Kind schon
+    eine eigene hat, geht; alle anderen bekommen das Kind als Subjekt. Das
+    sind zwei Statements in der Einheit des Aufrufers. Die
+    Beobachtungs-Callback-Grenze von Student Presence (`Service.observe`)
+    gilt dafür wie für jeden anderen Befehl des Owners.
+- **Auslöser.** Ein Seiteneffekt der Einstellungen auf
+  `operations.children_without_care_place` und `module.unterricht_vormittag`
+  (`api/root_settings_writes.go`) wandelt um, sobald beide an sind. Er läuft
+  in der Transaktion des Schreibens; scheitert die Umwandlung, bleibt der
+  Schalter, wie er war. Beide Schalter nehmen vor jedem Setzen oder
+  Rücksetzen dieselbe exklusive Mandanten-Transaktionssperre. Der Hook liest
+  den jeweils anderen Wert direkt aus dieser Transaktion, ohne vorgeladenen
+  Snapshot oder Request-Cache. So wandelt auch gleichzeitiges Einschalten
+  beider Schalter die Einträge um. Ausschalten wandelt nichts zurück.
+- **Danach.** Ein Klassenlisten-Import bei eingeschaltetem Schalter wandelt
+  die importierten Einträge in der Mandanten-Transaktion jedes Import-Batches
+  gleich mit um. Einträge, Umwandlung und Checkpoint committen gemeinsam;
+  ein Fehler rollt nur den betroffenen Batch zurück. Bereits bestätigte
+  Batches sind auch bei einem späteren Importfehler vollständig umgewandelt.
+  Ein neuer Eintrag und jeder Import-Stapel nehmen vor dem Lesen der
+  Schalter die geteilte Seite der Sperre, die beide Schalter beim Schreiben
+  exklusiv nehmen (`settings.ClassListConversionLock`), und halten sie bis zum
+  Commit. So wartet ein gleichzeitiges Einschalten auf ihre Einträge oder
+  wird von ihnen gelesen; kein Eintrag bleibt unumgewandelt liegen.
+  Einen einzelnen neuen Eintrag lehnt ein Dekorator im Root ab
+  (`students.class_list_entries_replaced`); die Schule legt das Kind über
+  „Ohne OGS-Platz“ im Anlegen-Dialog an. Ein Kind ohne OGS-Platz bekommt
+  weder Gruppe noch Zeiten (`students.without_care_place_group`).
+
+- **Im Root, nicht in einem Owner.** Der Seiteneffekt, der Dekorator und die
+  Prüfung der Schalter im Klassenlisten-Import leben im Root
+  (`api/root_settings_writes.go`, `api/class_list_entries_composition.go`,
+  `api/import_composition.go`). Dort treffen sich Einstellungen, Data Import
+  und School Membership; keiner dieser Owner darf die Capability eines
+  anderen einbinden. Die Regel, wann beide Schalter an sind, steht einmal in
+  `settings.ChildrenWithoutCarePlaceOn`; der Root ruft sie auf.
+
+## Folgen
+
+- Die Anlage zählt nicht für das Kinderkontingent; eine spätere Verlängerung
+  der Anmeldung gibt dem Kind seinen Platz und zählt dann. Der Platz beginnt
+  frühestens am Tag der Zusage; beginnt die Anmeldung erst im nächsten
+  Schuljahr, gibt ihn der geplante Klassenwechsel an diesem Tag, auch wenn
+  die Klasse gleich bleibt oder die Schule sie vorher ändert. Ist das
+  Kinderkontingent an diesem Tag voll, wechselt das Kind trotzdem die
+  Klasse; nur der Platz wartet, und ein späterer Lauf gibt ihn, sobald einer
+  frei ist. Die übrigen Klassenwechsel der Schule laufen weiter.
+- Ein Rücksetzen des Vormittagsmoduls auf seine eingeschaltete
+  Voreinstellung führt denselben Seiteneffekt wie das Einschalten aus.
+  Scheitert die Umwandlung, bleibt das Modul ausgeschaltet.

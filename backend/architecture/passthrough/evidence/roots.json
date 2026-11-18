@@ -6211,13 +6211,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (r guardianInvitationReads) ListByProfile(ctx context.Context, guardianProfileID int64) ([]parentportal.GuardianInvitationRecord, error) {\n\tinvitations, err := r.reads.ListGuardianInvitations(ctx, guardianProfileID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]parentportal.GuardianInvitationRecord, 0, len(invitations))\n\tfor _, invitation := range invitations {\n\t\tresult = append(result, parentportal.GuardianInvitationRecord{ID: invitation.ID, GuardianProfileID: invitation.GuardianProfileID, StudentID: invitation.StudentID, ExpiresAt: invitation.ExpiresAt, AcceptedAt: invitation.AcceptedAt, Rejected: invitation.IsRejected()})\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/guardianInvitationReads.ListByProfile",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (r guardianInvitationReads) ListOpen(ctx context.Context, guardianProfileIDs []int64) ([]peoplePorts.GuardianInvitationRecord, error) {\n\tinvitations, err := r.reads.ListOpenGuardianInvitations(ctx, guardianProfileIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn guardianListRecords(invitations), nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/guardianInvitationReads.ListOpen",
@@ -7383,6 +7376,13 @@
       "evidence": "func (s provisioningSettings) DeviceOnlineWindowMinutes(ctx context.Context, tenantID int64) (int, error) {\n\treturn s.settings.ResolveIntForTenant(ctx, tenantID, configModels.KeyDeviceOnlineWindowMinutes)\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/provisioningSettings.DeviceOnlineWindowMinutes",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s provisioningSettings) ReplyToAddresses(ctx context.Context, schoolIDs []int64) (map[int64]string, error) {\n\tsnapshots, err := s.settings.ResolveManyForTenants(ctx, schoolIDs, []string{configModels.KeyEmailReplyToAddress})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]string, len(snapshots))\n\tfor schoolID, snapshot := range snapshots {\n\t\tif result[schoolID], err = snapshot.String(configModels.KeyEmailReplyToAddress); err != nil {\n\t\t\treturn nil, err\n\t\t}\n\t}\n\treturn result, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/provisioningSettings.ReplyToAddresses",
       "owner": "roots"
     },
     {

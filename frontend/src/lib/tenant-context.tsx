@@ -77,6 +77,7 @@ export function TenantProvider({
   const requestSeqRef = useRef(0);
   const needsInitialResolve = serverTenant === null;
 
+  // oxlint-disable-next-line swr/no-effect-load -- resolves the host's school before and without a session and gates analytics on each answer; timing-sensitive, ~/lib/swr has no public reader
   useEffect(() => {
     if (!tenantSlug) return undefined;
 
@@ -277,6 +278,17 @@ export function useDisplayEnabled(): boolean {
 export function useWeekendFollowsFriday(): boolean {
   const ctx = useContext(TenantContext);
   return ctx?.tenant?.weekendFollowsFriday === true;
+}
+
+/**
+ * Returns whether the school keeps children of a class without an OGS place
+ * as children of their own (#4803): its switch is on and Unterricht am
+ * Vormittag is booked. Defaults to false when tenant metadata is
+ * unavailable, which keeps the class list entries.
+ */
+export function useChildrenWithoutCarePlace(): boolean {
+  const ctx = useContext(TenantContext);
+  return ctx?.tenant?.childrenWithoutCarePlace === true;
 }
 
 /**

@@ -4437,11 +4437,6 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/guardianInvitationReads.ListByProfile",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "roots/owners/guardianInvitationReads.ListOpen",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -5273,6 +5268,11 @@
     {
       "decision": "0090",
       "id": "roots/owners/provisioningSettings.DeviceOnlineWindowMinutes",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0251",
+      "id": "roots/owners/provisioningSettings.ReplyToAddresses",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

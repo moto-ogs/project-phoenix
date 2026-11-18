@@ -7,6 +7,7 @@ import (
 	"slices"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -146,9 +147,9 @@ func TestContractNoticeNeedsTheRelationshipToTheContractsChild(t *testing.T) {
 	assert.Len(t, pushes.to(chain.AccountID), 1, "only the permitted child's contract pushed")
 
 	for _, status := range []string{"widerrufen", "gekuendigt", "beendet"} {
-		_, err := db.ExecContext(ctx, `UPDATE care_contract.contracts SET status = ?, concluded_at = COALESCE(concluded_at, NOW()),
+		_, err := db.ExecContext(ctx, `UPDATE care_contract.contracts SET status = ?, concluded_at = COALESCE(concluded_at, ?),
 			conclusion_method = COALESCE(conclusion_method, 'papier')
-			WHERE organization_id = ? AND id = ?`, status, organization, felix)
+			WHERE organization_id = ? AND id = ?`, status, time.Now(), organization, felix)
 		require.NoError(t, err)
 		require.NoError(t, notices.NotifyContractDocument(ctx, organization, felix, chain.Email))
 		assert.Len(t, pushes.to(chain.AccountID), 1, "a %s contract pushes nothing", status)

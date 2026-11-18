@@ -709,13 +709,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (r GuardianInvitationRecord) Open(now time.Time) bool {\n\treturn r.AcceptedAt == nil \u0026\u0026 r.ExpiresAt.After(now) \u0026\u0026 !r.Rejected\n}",
-      "form": "unclassified-evidence",
-      "id": "workflows/parentportal/internal/care/GuardianInvitationRecord.Open",
-      "owner": "workflows/parentportal"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *Service) ContractNoticeOptions(ctx context.Context, accountID, organizationID, contractID int64) (ContractNoticeOptions, error) {\n\treturn s.contractNotice(ctx, accountID, organizationID, contractID, func(txCtx context.Context, reader BillingDocumentReader, _ Traeger) (ContractNoticeOptions, error) {\n\t\treturn s.ContractNotices.ContractNoticeOptions(txCtx, organizationID, contractID, reader)\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "workflows/parentportal/internal/care/Service.ContractNoticeOptions",

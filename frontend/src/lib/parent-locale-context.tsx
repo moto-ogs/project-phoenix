@@ -118,6 +118,7 @@ export function ParentLocaleProvider({
     return savePromise;
   }, []);
 
+  // oxlint-disable-next-line swr/no-effect-load -- syncs the locale from the already cached profile and persists a first choice; a write, the read is useSWRAuth
   useEffect(() => {
     if (!authenticated) return;
     if (profileError) {

@@ -208,6 +208,12 @@ func TestTraegerCatalogRollsOutIntoEverySchoolAndKeepsTheSchoolsChanges(t *testi
 		require.NoError(t, db.NewRaw(`SELECT count(*) FROM care_contract.contract_templates WHERE school_id = ? AND care_offering_id = ?`, school, copyID).Scan(ctx, &templates))
 		assert.Equal(t, 2, tariffs, "school %d has a price per weekday", school)
 		assert.Equal(t, 1, templates, "school %d has its contract template", school)
+		var recorded int
+		require.NoError(t, db.NewRaw(`SELECT count(*) FROM care_contract.contract_events AS e
+  JOIN care_contract.contract_templates AS template ON template.id = (e.details->>'template_id')::bigint
+  WHERE template.school_id = ? AND template.care_offering_id = ? AND e.action = 'template'
+    AND jsonb_typeof(e.details->'acceptance_texts') = 'array'`, school, copyID).Scan(ctx, &recorded))
+		assert.Equal(t, 1, recorded, "school %d: the trail records the conditions texts of the saved version (#7295)", school)
 	}
 
 	// The first school deactivates its copy; the office raises the capacity

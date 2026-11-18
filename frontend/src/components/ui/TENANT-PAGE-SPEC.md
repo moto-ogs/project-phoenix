@@ -148,7 +148,13 @@ Gerenderte Reihenfolge, fest, nicht verhandelbar:
    ihre Fläche) — jede Hülle dazwischen muss selbst eine Flex-Spalte sein
    (`flex flex-col`, bei `hidden lg:block` also `hidden lg:flex
 lg:flex-col`), sonst wächst nur die Hülle und die Fläche bleibt kurz.
-   Gitter und Anklickbares (`TileCard`) wachsen nie. Eine Seite, deren
+   Gitter und Anklickbares (`TileCard`) wachsen nie. Eine Liste
+   gleichartiger Karten (eine je Schule, Woche oder Art) steht deshalb in
+   `<div className="compact:gap-4 grid gap-6 max-sm:gap-3">` wie auf der
+   Mensa-Seite: so bleibt auch die letzte Karte so hoch wie ihre
+   Geschwister (#7304). Ein Leerzustand daneben bleibt außerhalb des
+   Rasters. Ist der letzte Block keine solche Liste, wächst er weiter
+   (etwa die letzte Kategorie der Träger-Einstellungen). Eine Seite, deren
    letzter Block nicht wächst, verpackt ihn zu tief — nicht mit `min-h-*`
    nachhelfen, die Hülle abbauen.
    **Ausstieg:** Eine Fläche, deren Höhe eine Hülle festlegt und die innen
@@ -163,6 +169,11 @@ lg:flex-col`), sonst wächst nur die Hülle und die Fläche bleibt kurz.
    einen Wert. Auf dem Telefon bleibt das Band ein Band: es scrollt
    waagerecht und zeigt jeden Reiter. Keine Auswahlliste — die zeigte nur
    den aktiven Wert („Status", „Betrieb") und las sich als Filter.
+   Ab `sm` trägt das Band eine Grundlinie nur, wenn unter den Reitern noch
+   etwas folgt (Suchzeile, `searchSlot`); sie trennt Reiter und Suche. Sind
+   die Reiter die letzte Zeile des Kopfes, schließen sie die Karte ab: kein
+   unterer Innenrand, die Unterstreichung des aktiven Reiters sitzt auf der
+   Kartenkante, keine zweite Linie darüber (#7303).
 8. **Kopfkarte mobil**: keine seiteneigenen Umbruch-Wrapper um `actions`
    (kein `w-full flex-col sm:flex-row`). Ob die Aktionen neben dem Titel
    stehen oder rechtsbündig in eine eigene Zeile brechen, entscheidet die

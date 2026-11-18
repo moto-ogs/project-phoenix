@@ -11,9 +11,6 @@ import type {
 /** Die Adresse der Elternbriefe in moto schule. */
 export const SCHOOL_PARENT_LETTERS_ROUTE = "/school/elternbriefe";
 
-/** SWR-Schlüssel der eigenen Elternbriefe. */
-export const SCHOOL_PARENT_LETTERS_KEY = "school-parent-letters";
-
 /** Was die Eltern mit dem Brief tun. */
 type SchoolParentLetterKind = "info" | "letter" | "consent";
 

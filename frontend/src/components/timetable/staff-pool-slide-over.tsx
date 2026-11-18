@@ -49,6 +49,7 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
 import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableService } from "~/lib/timetable-api";
 import type {
   EnrichedInstance,
@@ -106,7 +107,7 @@ export function StaffPoolSlideOver({
     isLoading,
     mutate,
   } = useSWRAuth(
-    open && instanceId ? `timetable-staff-pool-${instanceId}` : null,
+    open && instanceId ? tenantDailyKeys.staffPool(instanceId) : null,
     () => timetableService.getStaffPool(instanceId ?? ""),
   );
 

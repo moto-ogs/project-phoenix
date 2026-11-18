@@ -24,8 +24,7 @@ vi.mock("~/lib/home-layout-api", () => ({
 }));
 
 import { useSession } from "next-auth/react";
-// eslint-disable-next-line no-restricted-imports -- test mock at module boundary
-import useSWR from "swr";
+import { useSWR } from "~/lib/swr/testing";
 import { useTenantSlugSafe } from "~/lib/tenant-context";
 import { useHomeLayout } from "./use-home-layout";
 

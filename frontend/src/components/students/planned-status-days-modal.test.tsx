@@ -1,15 +1,99 @@
 import { schoolDateCases, setSchoolDateClock } from "~/test/school-date-cases";
 import { afterEach as restoreZoneAfterEach, vi as zoneVi } from "vitest";
 restoreZoneAfterEach(() => zoneVi.unstubAllEnvs());
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ComponentProps, ReactElement, ReactNode } from "react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { PlannedStatusDaysModal } from "./planned-status-days-modal";
+import { PlannedStatusDaysModal as Panel } from "./planned-status-days-modal";
 import { ApiError } from "~/lib/api-error";
+import type { CarePlanDay } from "~/lib/student-care-plan-api";
 import type { StudentPartialAbsence } from "~/lib/student-partial-absences-api";
 import {
   StudentStatusDayConflictError,
   type StudentStatusDay,
 } from "~/lib/student-status-days-api";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// The panel reads through the shared cache; each test answers the reads
+// through the loaders it hands the wrapper below.
+const reads = vi.hoisted(() => ({
+  statusDays: vi.fn(),
+  partialAbsences: vi.fn(),
+  carePlanDay: vi.fn(),
+}));
+vi.mock("~/lib/student-status-days-api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  fetchStudentStatusDays: reads.statusDays,
+}));
+vi.mock("~/lib/student-partial-absences-api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  fetchStudentPartialAbsences: reads.partialAbsences,
+}));
+vi.mock("~/lib/student-care-plan-api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  fetchStudentCarePlanDay: reads.carePlanDay,
+}));
+
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: Providers });
+}
+
+const NO_CARE_PLAN = { instances: [] } as unknown as CarePlanDay;
+const loadNoPartialAbsences = () => Promise.resolve([]);
+const loadNoCarePlan = () => Promise.resolve(NO_CARE_PLAN);
+
+/** The panel for child 42, its reads answered by the given loaders. */
+function PlannedStatusDaysModal({
+  loadExistingDays,
+  loadPartialAbsences = loadNoPartialAbsences,
+  loadCarePlanDay = loadNoCarePlan,
+  ...props
+}: Omit<ComponentProps<typeof Panel>, "studentId"> & {
+  readonly loadExistingDays: (
+    from: string,
+    to: string,
+  ) => Promise<StudentStatusDay[]>;
+  readonly loadPartialAbsences?: (
+    from: string,
+    to: string,
+  ) => Promise<StudentPartialAbsence[]>;
+  readonly loadCarePlanDay?: (date: string) => Promise<CarePlanDay>;
+}) {
+  reads.statusDays.mockImplementation((_id: string, from: string, to: string) =>
+    loadExistingDays(from, to),
+  );
+  reads.partialAbsences.mockImplementation(
+    (_id: string, from: string, to: string) => loadPartialAbsences(from, to),
+  );
+  reads.carePlanDay.mockImplementation((_id: string, date: string) =>
+    loadCarePlanDay(date),
+  );
+  return <Panel studentId="42" {...props} />;
+}
 
 // Das Panel laeuft als SlideOver (Vaul). Vaul rendert in jsdom nicht, deshalb
 // steht hier dieselbe Struktur ohne Animationsschicht.
@@ -1278,6 +1362,72 @@ describe("PlannedStatusDaysModal", () => {
       ).toBeInTheDocument();
     });
     expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts a reopened panel from a fresh check, not from the earlier answer", async () => {
+    const sickDay: StudentStatusDay = {
+      ...existingDays[1]!,
+      id: "7",
+      date: "2026-05-27",
+    };
+    let answerReopened: (days: StudentStatusDay[]) => void = () => undefined;
+    const reopenedAnswer = new Promise<StudentStatusDay[]>((resolve) => {
+      answerReopened = resolve;
+    });
+    const loadExistingDays = vi
+      .fn()
+      .mockResolvedValueOnce([sickDay])
+      .mockReturnValue(reopenedAnswer);
+    const panel = (isOpen: boolean) => (
+      <PlannedStatusDaysModal
+        isOpen={isOpen}
+        status="excused"
+        studentName="Kevin Anders"
+        isSubmitting={false}
+        existingDays={[]}
+        onClose={vi.fn()}
+        loadExistingDays={loadExistingDays}
+        onSubmit={vi.fn()}
+      />
+    );
+    const { rerender } = render(panel(true));
+
+    fireEvent.click(screen.getByText("Einzeltag auswählen"));
+    expect(
+      await screen.findByText(/27\.05\.2026 \(krank\)/),
+    ).toBeInTheDocument();
+
+    // Closed and opened again: the day was cleared elsewhere meanwhile.
+    rerender(panel(false));
+    rerender(panel(true));
+    fireEvent.click(screen.getByText("Einzeltag auswählen"));
+
+    await waitFor(() =>
+      expect(loadExistingDays.mock.calls.length).toBeGreaterThan(1),
+    );
+    expect(loadExistingDays).toHaveBeenLastCalledWith(
+      "2026-05-27",
+      "2026-05-27",
+    );
+    expect(
+      screen.getByText("Vorhandene Status-Tage werden geprüft…"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/27\.05\.2026 \(krank\)/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Entschuldigen" }),
+    ).toBeDisabled();
+
+    answerReopened([]);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Entschuldigen" }),
+      ).toBeEnabled(),
+    );
+    expect(
+      screen.queryByText(/27\.05\.2026 \(krank\)/),
+    ).not.toBeInTheDocument();
   });
 
   it("fails closed when existing status days cannot be checked", async () => {

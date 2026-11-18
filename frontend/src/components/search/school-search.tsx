@@ -52,6 +52,7 @@ import {
 import { helpEntriesOf, loadHelpIndex } from "./school-search-help";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
+import { useDebounce } from "~/lib/use-debounce";
 
 const logger = createLogger({ component: "SchoolSearch" });
 
@@ -80,12 +81,6 @@ const EMPTY_RESULT: SchoolSearchResult = {
   scope: NO_SCOPE,
 };
 
-type SearchState =
-  | { readonly kind: "idle" }
-  | { readonly kind: "loading"; readonly term: string }
-  | { readonly kind: "ready"; readonly term: string }
-  | { readonly kind: "error"; readonly term: string };
-
 /**
  * Runs the search for the typed text, debounced. The last answer stays
  * visible while the next one loads, so the list never flashes empty. An
@@ -97,9 +92,6 @@ function useSchoolSearch(
   enabled: boolean,
   onScope?: (scope: SchoolSearchScope) => void,
 ) {
-  const [state, setState] = useState<SearchState>({ kind: "idle" });
-  const [lastResult, setLastResult] = useState<SchoolSearchResult | null>(null);
-  const [attempt, setAttempt] = useState(0);
   const {
     error,
     show: showLoadError,
@@ -107,48 +99,36 @@ function useSchoolSearch(
   } = useApiLoadError();
   const term = query.trim();
   const searchable = enabled && term.length >= SCHOOL_SEARCH_MIN_LENGTH;
+  const debounced = useDebounce(term, SEARCH_DEBOUNCE_MS);
+  // The text the person stopped typing at; only that one is asked for.
+  const asked = searchable && debounced === term;
+  const read = useSWRAuth(
+    asked ? tenantListKeys.schoolSearch(debounced) : null,
+    () => searchSchool(debounced),
+    { keepPreviousData: true },
+  );
+  const failure = asked ? read.error : undefined;
+  const answer = searchable && failure === undefined ? read.data : undefined;
+  const retry = read.mutate;
 
   useEffect(() => {
-    clearLoadError();
-    if (!searchable) {
-      setState((current) =>
-        current.kind === "idle" ? current : { kind: "idle" },
-      );
-      setLastResult(null);
+    if (answer) onScope?.(answer.scope);
+  }, [answer, onScope]);
+
+  useEffect(() => {
+    if (failure === undefined) {
+      clearLoadError();
       return;
     }
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      setState({ kind: "loading", term });
-      searchSchool(term, controller.signal)
-        .then((result) => {
-          if (controller.signal.aborted) return;
-          setState({ kind: "ready", term });
-          setLastResult(result);
-          onScope?.(result.scope);
-        })
-        .catch((failure: unknown) => {
-          // An aborted request was replaced by a newer text; it has no
-          // result to show.
-          if (controller.signal.aborted) return;
-          setState({ kind: "error", term });
-          setLastResult(null);
-          void showLoadError(failure, {
-            object: "die Suche",
-            retry: () => setAttempt((count) => count + 1),
-          });
-        });
-    }, SEARCH_DEBOUNCE_MS);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [searchable, term, attempt, showLoadError, clearLoadError, onScope]);
+    void showLoadError(failure, {
+      object: "die Suche",
+      retry: () => void retry(),
+    });
+  }, [failure, retry, showLoadError, clearLoadError]);
 
-  const settled =
-    (state.kind === "ready" || state.kind === "error") && state.term === term;
+  const settled = asked && (failure !== undefined || !read.isLoading);
   return {
-    result: searchable ? lastResult : null,
+    result: answer ?? null,
     busy: searchable && !settled,
     error: searchable ? error : null,
   };

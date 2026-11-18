@@ -81,7 +81,7 @@ func (in *Intake) saveTemplateBatch(ctx context.Context, reviewer carecontract.R
 	for _, row := range rows {
 		school := schoolID
 		events = append(events, ports.Event{SchoolID: &school, AccountID: reviewer.AccountID, Action: ports.ActionTemplate,
-			Details: map[string]any{"care_offering_id": row.OfferingID, "template_id": row.Template.ID}})
+			Details: versionDetails(row.OfferingID, row.Template.ID, row.Template.TemplateInput)})
 	}
 	return in.store.InsertEvents(ctx, reviewer.OrganizationID, events)
 }

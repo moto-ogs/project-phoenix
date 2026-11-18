@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { EmptyState } from "~/components/ui/empty-state";
 import type { FormErrorInput } from "~/components/ui/form-error";
@@ -12,6 +12,8 @@ import { useApiLoadError } from "~/contexts/ToastContext";
 import { errorStatus } from "~/lib/expected-failure";
 import { createLogger } from "~/lib/logger";
 import { fetchStudents } from "~/lib/student-api";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import type { Student } from "~/lib/student-helpers";
 import { cn } from "~/lib/utils";
 import { foldForSearch } from "~/lib/search-fold";
@@ -29,7 +31,7 @@ interface StudentChoice {
 // Alle Kinder der Schule in einem Rutsch und alphabetisch: die Liste steht
 // beim Öffnen und filtert ab dem ersten Zeichen ohne weitere Anfrage
 // (#4355, #4362).
-async function fetchStudentChoices(): Promise<StudentChoice[]> {
+export async function fetchStudentChoices(): Promise<StudentChoice[]> {
   const choices: StudentChoice[] = [];
   for (let page = 1; ; page += 1) {
     const result = await fetchStudents({ page, pageSize: STUDENT_PAGE_SIZE });
@@ -52,62 +54,54 @@ function toChoice(student: Student): StudentChoice {
   };
 }
 
-// Each result names the scope it was loaded for: after a scope switch (a
-// block in the supervision view) the old list must not stay selectable for
-// even one render.
 export type StudentChoicesLoad =
   | { readonly kind: "loading" }
-  | { readonly kind: "failed"; readonly scope: string }
+  | { readonly kind: "failed" }
   | {
       readonly kind: "loaded";
-      readonly scope: string;
       readonly choices: readonly StudentChoice[];
     };
 
 /**
- * Loads every child of the school while `enabled`. A changed `scope` loads
- * again and hides the previous result meanwhile.
+ * Every child of the school while `enabled`, through the shared cache of the
+ * signed-in school. Each `scope` (a block in the supervision view) has its
+ * own entry: after a scope switch the list loads again and the previous one
+ * is not selectable for even one render.
  */
 export function useStudentChoices(
   enabled: boolean,
   scope = "",
 ): { readonly load: StudentChoicesLoad; readonly error: FormErrorInput } {
-  const [result, setResult] = useState<StudentChoicesLoad>({
-    kind: "loading",
-  });
-  const load: StudentChoicesLoad =
-    result.kind !== "loading" && result.scope !== scope
-      ? { kind: "loading" }
-      : result;
-  const [reloadCount, setReloadCount] = useState(0);
   const { error, show: showError, clear: clearError } = useApiLoadError();
+  const read = useSWRAuth(
+    enabled ? tenantStudentKeys.studentChoices(scope) : null,
+    fetchStudentChoices,
+    { keepPreviousData: false },
+  );
+  const failure = enabled && read.data === undefined ? read.error : undefined;
+  const retry = read.mutate;
 
   useEffect(() => {
-    if (!enabled) return;
-    let cancelled = false;
-    setResult({ kind: "loading" });
-    clearError();
-    fetchStudentChoices()
-      .then((choices) => {
-        if (!cancelled) setResult({ kind: "loaded", scope, choices });
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.warn("student_choices_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-          status: errorStatus(err),
-        });
-        setResult({ kind: "failed", scope });
-        void showError(err, {
-          object: "die Kinder",
-          retry: () => setReloadCount((count) => count + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled, scope, reloadCount, clearError, showError]);
+    if (failure === undefined) {
+      clearError();
+      return;
+    }
+    logger.warn("student_choices_load_failed", {
+      error: failure instanceof Error ? failure.message : String(failure),
+      status: errorStatus(failure),
+    });
+    void showError(failure, {
+      object: "die Kinder",
+      retry: () => void retry(),
+    });
+  }, [failure, retry, clearError, showError]);
 
+  let load: StudentChoicesLoad = { kind: "loading" };
+  if (enabled && read.data !== undefined) {
+    load = { kind: "loaded", choices: read.data };
+  } else if (failure !== undefined) {
+    load = { kind: "failed" };
+  }
   return { load, error };
 }
 

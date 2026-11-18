@@ -19,6 +19,13 @@ type Input struct {
 	Status         string
 	EnrolledFrom   string
 	EnrolledUntil  string
+	// WithoutCarePlace creates a child of the class without an OGS place
+	// (#4803, ADR 0282). Only the creation honors it.
+	WithoutCarePlace bool
+	// PreserveCarePlaceStatus keeps the current OGS status on administrative
+	// renewal (for example an import changing the class). Otherwise renewal
+	// grants an OGS place, as an accepted enrollment does.
+	PreserveCarePlaceStatus bool
 }
 
 type CreatedStudent struct {

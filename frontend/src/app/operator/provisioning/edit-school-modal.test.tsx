@@ -193,7 +193,6 @@ describe("EditSchoolModal", () => {
     );
   });
 
-  // Replies from parents reach the school only through this address (#2872).
   // #6652: the portal cache reloads after the write and outside its catch: a
   // failed reload is no failed change and leaves no retry that saves again.
   it("closes a saved change even when the portal cache reload would fail", async () => {
@@ -223,7 +222,8 @@ describe("EditSchoolModal", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("cannot clear an existing contact email", () => {
+  it("clears an existing contact email", async () => {
+    mockUpdateSchool.mockResolvedValue(mockSchool);
     render(
       <EditSchoolModal
         isOpen={true}
@@ -235,16 +235,20 @@ describe("EditSchoolModal", () => {
     );
 
     const emailInput = screen.getByLabelText(/E-Mail/);
-    expect(emailInput).toBeRequired();
+    expect(emailInput).not.toBeRequired();
     fireEvent.change(emailInput, { target: { value: "" } });
-    expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    fireEvent.submit(emailInput.closest("form")!);
-    expect(mockUpdateSchool).not.toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(mockUpdateSchool).toHaveBeenCalledWith(
+        "10",
+        expect.objectContaining({ email: "" }),
+      );
+    });
   });
 
   it.each(["button", "form"])(
-    "saves other edits without an email for a legacy school via %s",
+    "saves other edits for a school without an email via %s",
     async (submitVia) => {
       mockUpdateSchool.mockResolvedValue(mockSchool);
 
@@ -283,6 +287,51 @@ describe("EditSchoolModal", () => {
       expect(onClose).toHaveBeenCalledOnce();
     },
   );
+
+  it("warns at the email field while the reply address is missing (#7174)", () => {
+    render(
+      <EditSchoolModal
+        isOpen={true}
+        onClose={onClose}
+        school={{ ...mockSchool, email: "" }}
+        organizations={[mockOrg]}
+        onUpdated={onUpdated}
+        requiredDetails={{ schoolId: "10", replyAddressMissing: true }}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Adresse fehlt. Antworten von Eltern kommen bei der Schule nicht an.",
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/E-Mail/), {
+      target: { value: "info@schule.example" },
+    });
+    expect(
+      screen.getByText("Antworten von Eltern gehen an diese Adresse."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Adresse fehlt/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the plain hint for a school whose replies arrive", () => {
+    render(
+      <EditSchoolModal
+        isOpen={true}
+        onClose={onClose}
+        school={mockSchool}
+        organizations={[mockOrg]}
+        onUpdated={onUpdated}
+        requiredDetails={{ schoolId: "10", replyAddressMissing: false }}
+      />,
+    );
+
+    expect(
+      screen.getByText("Antworten von Eltern gehen an diese Adresse."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Adresse fehlt/)).not.toBeInTheDocument();
+  });
 
   it("sends hidden=false when school is visible", async () => {
     mockUpdateSchool.mockResolvedValue(mockSchool);

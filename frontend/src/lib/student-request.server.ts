@@ -85,5 +85,8 @@ export function buildStudentCreateRequest(
     ...(body.pickup_schedules?.length && {
       pickup_schedules: body.pickup_schedules,
     }),
+    // A child of the class without an OGS place (#4803); the backend refuses
+    // it unless the school keeps such children.
+    ...(body.without_care_place === true && { without_care_place: true }),
   };
 }

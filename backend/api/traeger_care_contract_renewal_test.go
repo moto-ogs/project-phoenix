@@ -6,6 +6,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"maps"
 	"net/http"
@@ -73,6 +74,81 @@ func TestRenewalAcceptanceReachesTheContractIntake(t *testing.T) {
 	}
 }
 
+// TestRenewalAcceptanceComparesTheTickedTermsWithTheSavedVersions runs the
+// renewal acceptance with Enrollment's clock a month before and after the
+// database's (#7295, ADR 0281). The parents' tick carries Enrollment's
+// instant, the template row the database's; the intake compares the ticked
+// text with the saved versions of the template instead of ordering them. A
+// template saved before the versions were recorded keeps the earlier guard,
+// with its limit: Enrollment's clock ahead hides the change.
+func TestRenewalAcceptanceComparesTheTickedTermsWithTheSavedVersions(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name        string
+		foreignText bool
+		changeTerms bool
+		legacy      bool
+		wantIssue   map[time.Duration]string
+	}{
+		{name: "terms changed", changeTerms: true,
+			wantIssue: map[time.Duration]string{-31: carecontract.SkipAcceptanceChanged, 31: carecontract.SkipAcceptanceChanged}},
+		{name: "terms untouched", wantIssue: map[time.Duration]string{-31: "", 31: ""}},
+		{name: "never a version of the template", foreignText: true,
+			wantIssue: map[time.Duration]string{-31: carecontract.SkipAcceptanceMissing, 31: carecontract.SkipAcceptanceMissing}},
+		{name: "template saved before the versions were recorded", changeTerms: true, legacy: true,
+			wantIssue: map[time.Duration]string{-31: carecontract.SkipAcceptanceChanged, 31: carecontract.SkipAcceptanceMissing}},
+	}
+	for _, tc := range cases {
+		for _, days := range []time.Duration{-31, 31} {
+			t.Run(fmt.Sprintf("%s, Enrollment %+d days", tc.name, days), func(t *testing.T) {
+				t.Parallel()
+				f := newCareContractFixture(t, fmt.Sprintf("Träger Fassung %s %+d", tc.name, days))
+				// Enrollment's clock runs a month from the database's, whatever
+				// the Go clock of the run.
+				var databaseNow time.Time
+				require.NoError(t, f.db.NewRaw(`SELECT now()`).Scan(context.Background(), &databaseNow))
+				start := time.Now()
+				enrollmentNow := func() time.Time { return databaseNow.Add(days*24*time.Hour + time.Since(start)) }
+				traegerTemplateFor(t, f, f.offering, careContractTemplate)
+				text := careContractAcceptanceText(t, f)
+				if tc.foreignText {
+					text += "\n\nHinweis:\n  Fassung einer anderen Vorlage"
+				}
+				intake, rollovers, schemaID := newRenewalContractFlowAt(t, f, enrollmentNow, text)
+				request, child := rollRenewal(t, f, intake, rollovers, schemaID, enrollment.PhaseRolloverModeOptOut)
+				traegerTemplateFor(t, f, child.offering, careContractTemplate)
+				confirmed, err := confirmRenewalTerms(t, f, intake, schemaID, request.StatusToken)
+				require.NoError(t, err)
+				assert.Zero(t, confirmed, "the opt-out renewal needs no confirmation of the child")
+				if tc.changeTerms {
+					changed := maps.Clone(careContractTemplate)
+					changed["notice_months"] = 3
+					traegerTemplateFor(t, f, child.offering, changed)
+				}
+				if tc.legacy {
+					forgetTemplateVersions(t, f)
+				}
+				// Enrollment stamps reviewed_at on its clock, after the tick.
+				_, err = f.db.ExecContext(context.Background(), `UPDATE enrollment.request_children
+  SET status = 'approved', reviewed_at = ? WHERE id = ?`, enrollmentNow().Add(time.Minute), child.id)
+				require.NoError(t, err)
+
+				setTraegerConclusionMode(t, f, carecontract.ModeOnAcceptance)
+				assert.Equal(t, tc.wantIssue[days], renewalCandidateIssue(t, f, child.id))
+			})
+		}
+	}
+}
+
+// forgetTemplateVersions turns the template saves of the fixture's Träger
+// into entries written before the trail recorded the versions.
+func forgetTemplateVersions(t *testing.T, f careContractFixture) {
+	t.Helper()
+	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_events
+  SET details = details - 'acceptance_texts' WHERE organization_id = ? AND action = 'template'`, f.office.organization)
+	require.NoError(t, err)
+}
+
 // renewalIntake is the part of Enrollment's intake the parents' status page
 // uses.
 type renewalIntake interface {
@@ -90,6 +166,13 @@ type renewedChild struct {
 // fixture school, as the serving root binds them, with a form for the new
 // phase that asks for the contract conditions.
 func newRenewalContractFlow(t *testing.T, f careContractFixture) (renewalIntake, enrollment.Rollovers, int64) {
+	t.Helper()
+	return newRenewalContractFlowAt(t, f, time.Now, careContractAcceptanceText(t, f))
+}
+
+// newRenewalContractFlowAt composes the flow with Enrollment on clock now and
+// a form that asks for the conditions text.
+func newRenewalContractFlowAt(t *testing.T, f careContractFixture, now func() time.Time, text string) (renewalIntake, enrollment.Rollovers, int64) {
 	t.Helper()
 	database := testpkg.NewDatabase(t, f.db)
 	unit := testpkg.TenantRuntime(t, f.db)
@@ -114,9 +197,7 @@ func newRenewalContractFlow(t *testing.T, f careContractFixture) (renewalIntake,
 	_, err = f.db.ExecContext(ctx, `UPDATE enrollment.request_children SET target_grade_level = 1 WHERE id = ?`, f.child)
 	require.NoError(t, err)
 
-	// The new phase's form asks for the conditions of the contract, in the
-	// wording the Träger saved.
-	text := careContractAcceptanceText(t, f)
+	// The new phase's form asks for the conditions of the contract.
 	_, author := testpkg.CreateTestPersonWithAccount(t, f.db, "Renate", "Vertrag")
 	schemas := enrollmentCompose.NewFormSchemas(repos.Enrollment(), nil, slog.Default())
 	var schema *enrollment.FormSchema
@@ -130,13 +211,13 @@ func newRenewalContractFlow(t *testing.T, f careContractFixture) (renewalIntake,
 	}))
 
 	intake := owners.NewEnrollmentIntake(owners.EnrollmentIntakeSources{
-		Now:      time.Now,
+		Now:      now,
 		Requests: repos.Enrollment(), ParentChanges: repos.Enrollment(), Children: repos.Enrollment(), Guardians: repos.Enrollment(),
 		Catalog: repos.Enrollment(), Settings: settings.Settings, ParentsURL: "http://parents.localhost:3000", Logger: slog.Default(),
 	})
 	rollovers := owners.NewEnrollmentRollovers(owners.EnrollmentRolloverSources{
-		Now:      time.Now,
-		Bookings: NewEnrollmentCareBookingCommands(carePlanCompose.NewOfferingBookings(time.Now)),
+		Now:      now,
+		Bookings: NewEnrollmentCareBookingCommands(carePlanCompose.NewOfferingBookings(now)),
 		Phases:   repos.Enrollment(), Requests: repos.Enrollment(), Children: repos.Enrollment(),
 		Catalog: catalog.Catalog, Settings: settings.Settings, ParentsURL: "http://parents.localhost:3000", Logger: slog.Default(),
 	})

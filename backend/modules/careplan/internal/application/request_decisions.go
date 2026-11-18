@@ -126,12 +126,15 @@ func (s *RequestDecisions) decide(ctx context.Context, input carerequests.Decide
 func appliedLedgerPayload(payload map[string]any, applied carerequests.PickupApplied) {
 	if applied.PickupExceptionID > 0 {
 		payload["pickup_exception_id"] = applied.PickupExceptionID
+		payload["pickup_exception_version"] = applied.PickupExceptionVersion
 	}
 	if applied.DepartureExceptionID > 0 {
 		payload["departure_exception_id"] = applied.DepartureExceptionID
+		payload["departure_exception_version"] = applied.DepartureExceptionVersion
 	}
 	if applied.PickupNoteID > 0 {
 		payload["pickup_note_id"] = applied.PickupNoteID
+		payload["pickup_note_version"] = applied.PickupNoteVersion
 	}
 }
 

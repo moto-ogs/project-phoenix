@@ -255,6 +255,7 @@ function EnrollmentStatusViewContent({
   const invalidateRequest = useCallback(() => {
     latestRequest.current++;
   }, []);
+  // oxlint-disable-next-line swr/no-effect-load -- status-link token page, open without a session; ~/lib/swr has no public reader
   useEffect(() => {
     void load();
     return invalidateRequest;
@@ -1675,6 +1676,7 @@ function useLocalizedFormLabels(
   useLayoutEffect(() => {
     setLabels(null);
   }, [token, enabled]);
+  // oxlint-disable-next-line swr/no-effect-load -- form labels of a status-link token, read without a session; ~/lib/swr has no public reader
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;

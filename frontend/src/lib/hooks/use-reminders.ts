@@ -4,11 +4,8 @@ import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { hasPermission } from "~/lib/auth-utils";
 import { useScopedSWRKey, useSWRAuth } from "~/lib/swr/hooks";
-import {
-  fetchReminders,
-  REMINDERS_SWR_KEY,
-  type RemindersResult,
-} from "~/lib/reminders-api";
+import { shellResourceKeys } from "~/lib/swr/shell-keys";
+import { fetchReminders, type RemindersResult } from "~/lib/reminders-api";
 
 // 60s tick when the feature is on: time-based reminders ("in 10 min") cross
 // their threshold purely by time passing, with no backend event — so we
@@ -246,7 +243,7 @@ export function useReminders() {
   const { data: session } = useSession();
   const canRead = hasPermission(session, "users:read");
   const { data, error, isLoading, mutate } = useSWRAuth<RemindersResult>(
-    canRead ? REMINDERS_SWR_KEY : null,
+    canRead ? shellResourceKeys.reminders() : null,
     fetchReminders,
     {
       refreshInterval: (latest) =>
@@ -268,7 +265,7 @@ export function useReminders() {
 
   const enabled = data?.enabled ?? false;
   const nextChangeAt = data?.next_change_at;
-  const resource = useScopedSWRKey(REMINDERS_SWR_KEY);
+  const resource = useScopedSWRKey(shellResourceKeys.reminders());
 
   // Event-driven refresh. useGlobalSSE() does not own the tenant-prefixed
   // reminders SWR key, so it dispatches
