@@ -71,7 +71,7 @@ const STATUS_ORDER: readonly StaffProofStatus[] = [
 const NO_MAPPING = "";
 
 const INFO =
-  "Hier siehst du, welcher Nachweis fehlt, abgelaufen ist oder bald abläuft. Den Nachweis trägst du in der Personalakte ein. Vor dem Ablauf warnt moto die Leitung jedes Einsatzorts und die Person. Wie früh, legst du je Nachweisart fest. Vom Führungszeugnis speichert moto keine Kopie. Jedes Anzeigen dieser Liste steht im Zugriffsprotokoll der Schulen.";
+  "Hier siehst du, welcher Nachweis fehlt, abgelaufen ist oder bald abläuft. Den Nachweis trägst du in der Personalakte ein. Vor dem Ablauf warnt moto die Leitung jedes Einsatzorts und die Person. Wie früh, legst du je Nachweisart fest. Vom Führungszeugnis speichert moto keine Kopie. Eine Nachweisart öffnest du im Reiter „Nachweisarten“, um sie zu bearbeiten oder zu archivieren. Jedes Anzeigen und jeder Download dieser Liste steht im Zugriffsprotokoll der Schulen.";
 
 const errorMessage = (err: unknown) =>
   err instanceof Error ? err.message : String(err);
@@ -142,7 +142,7 @@ function useProofListView(loaded: StaffProofList | null) {
   // in the page menu under „Herunterladen“ (no visible text action).
   const exportItems = useTraegerListExportItems({
     download: downloadStaffProofList,
-    scope: "Alle Nachweise",
+    scope: "Alle Nachweise, der Download steht im Zugriffsprotokoll",
     fallbackName: `nachweise-${list.today || "heute"}`,
     errorObject: "die Ablaufliste",
     unavailable: list.entries.length === 0,
@@ -153,8 +153,7 @@ function useProofListView(loaded: StaffProofList | null) {
       key: "person",
       header: "Person",
       stacked: "title",
-      sortValue: (entry) =>
-        `${entry.lastName} ${entry.firstName}`.toLowerCase(),
+      sortValue: (entry) => staffTableName(entry).toLowerCase(),
       render: (entry) => (
         <span className="block min-w-0">
           <NavigationLink

@@ -210,7 +210,9 @@ export default function TraegerDocumentPage() {
         document
           ? [
               {
-                label: "Herunterladen",
+                // The menu closes on the click; the entry says the file is
+                // still coming when it is opened again.
+                label: downloading ? "Wird geladen …" : "Herunterladen",
                 description:
                   "Speichert das Dokument als Datei auf deinem Gerät.",
                 icon: (
