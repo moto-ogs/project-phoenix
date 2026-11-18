@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
@@ -21,8 +20,9 @@ import (
 // which the root mounts beside every portal (#2352): a school-portal session
 // reads its school's switch, a request without a session stays off, and the
 // answer is the shared success envelope the catalog proxy decodes.
-func checkAnalyticsPolicyFollowsTheSchoolSetting(t *testing.T, apiInstance *goldenRuntime, db *bun.DB) {
+func checkAnalyticsPolicyFollowsTheSchoolSetting(t *testing.T, apiInstance *goldenRuntime) {
 	t.Parallel()
+	db := testpkg.SetupTestDB(t)
 	ctx := context.Background()
 	school := func(enabled bool) int64 {
 		t.Helper()

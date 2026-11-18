@@ -25,6 +25,29 @@ var portalScopeMiddleware = map[common.PortalScope]string{
 	common.PortalOperator: "modules/identityaccess/inbound/operator.RequiresOperatorScope",
 }
 
+// sharedPortalRoutes are the routes the root mounts beside every portal
+// (#2352, decision 3): each serves several portals and has no portal's
+// scope middleware. Each names its portals and the middleware that bounds it
+// instead; the handler refuses the sessions the reason names.
+var sharedPortalRoutes = map[string]struct {
+	portals    []string
+	middleware string
+	reason     string
+}{
+	"GET /analytics-consent/": {
+		[]string{"parent", "school", "tenant"}, "modules/identityaccess/sessiontoken.Authenticator",
+		"the account's own consent; the resource refuses operator, Träger and preview sessions (me.ownAccount)",
+	},
+	"PUT /analytics-consent/": {
+		[]string{"parent", "school", "tenant"}, "modules/identityaccess/sessiontoken.Authenticator",
+		"the account's own consent; the resource refuses operator, Träger and preview sessions (me.ownAccount)",
+	},
+	"GET /analytics-policy": {
+		[]string{"parent", "school"}, "modules/identityaccess/sessiontoken.ParseVerified",
+		"only a boolean from the verified session; without a portal session it answers off",
+	},
+}
+
 // The middleware goldens are the reviewed chain of every route;
 // TestFullProductionRouterGolden holds them against the real router.
 func TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal(t *testing.T) {
@@ -49,9 +72,21 @@ func TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal(t *testing.T) {
 	doc, err := ContractDocument()
 	require.NoError(t, err)
 	require.NotEmpty(t, doc.Routes)
+	registered := map[string]bool{}
+	for _, route := range doc.Routes {
+		registered[route.Key()] = true
+	}
+	for key := range sharedPortalRoutes {
+		assert.Truef(t, registered[key], "sharedPortalRoutes names %s, which the contract no longer registers", key)
+	}
 	for _, route := range doc.Routes {
 		chain, known := chains[route.Key()]
 		require.Truef(t, known, "%s has no middleware golden", route.Key())
+		if shared, ok := sharedPortalRoutes[route.Key()]; ok {
+			assert.Equalf(t, shared.portals, route.Portals, "%s: the shared route's portals changed; review %q", route.Key(), shared.reason)
+			assert.Containsf(t, strings.Split(chain, " > "), shared.middleware, "%s no longer runs behind %s", route.Key(), shared.middleware)
+			continue
+		}
 		// One scope middleware admits one portal; a route for two portals
 		// needs a deliberate decision here first.
 		require.Lenf(t, route.Portals, 1, "%s names more than one portal", route.Key())

@@ -433,7 +433,7 @@ func TestFullProductionRouterGolden(t *testing.T) {
 			t.Run("IoT error code declarations", checkIoTErrorCodesGolden)
 			t.Run("IoT error reports relay", func(t *testing.T) { checkIoTErrorReportsRelay(t, api, sentryFake, newKiosk) })
 			t.Run("school scope matrix", func(t *testing.T) { checkSchoolScopeMatrix(t, api) })
-			t.Run("analytics policy", func(t *testing.T) { checkAnalyticsPolicyFollowsTheSchoolSetting(t, api, db) })
+			t.Run("analytics policy", func(t *testing.T) { checkAnalyticsPolicyFollowsTheSchoolSetting(t, api) })
 			t.Run("traeger scope matrix", func(t *testing.T) { checkTraegerScopeMatrix(t, api) })
 			t.Run("caregiver wiring", func(t *testing.T) { checkCaregiverWiring(t, api) })
 			t.Run("timetable conflict wiring", func(t *testing.T) { checkTimetableConflictWiring(t, api) })
