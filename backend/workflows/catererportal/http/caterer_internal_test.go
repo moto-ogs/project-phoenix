@@ -65,3 +65,33 @@ func TestAcceptInvitationPassesTheCallerForTheAudit(t *testing.T) {
 		})
 	}
 }
+
+// confirmingPortal records the confirmation the route hands on.
+type confirmingPortal struct {
+	catererportal.Portal
+	accountID, schoolID, orderID int64
+}
+
+func (p *confirmingPortal) ConfirmOrder(_ context.Context, accountID, schoolID, orderID int64) error {
+	p.accountID, p.schoolID, p.orderID = accountID, schoolID, orderID
+	return nil
+}
+
+// The caterer confirms one order of one school under /caterer: the route
+// hands the session's caterer account, the school and the order on and
+// answers no data.
+func TestConfirmOrderHandsTheCatererAndTheOrderOn(t *testing.T) {
+	t.Parallel()
+	portal := &confirmingPortal{}
+	router := chi.NewRouter()
+	router.Mount("/caterer", NewResource(portal, Runtime{
+		CurrentAccountID: func(context.Context) int64 { return 42 },
+		RenderList:       func(mealplan.ListExport, string) (ExportFile, error) { return ExportFile{}, nil },
+		Auth:             noAuthRoutes{},
+	}).CatererRouter(nil, func(chi.Router) {}))
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/caterer/schools/11/orders/7/confirm", nil))
+
+	require.Equal(t, http.StatusNoContent, recorder.Code, recorder.Body.String())
+	assert.Equal(t, [3]int64{42, 11, 7}, [3]int64{portal.accountID, portal.schoolID, portal.orderID})
+}

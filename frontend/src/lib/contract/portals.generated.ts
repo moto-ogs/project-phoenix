@@ -40,6 +40,8 @@ export const portalRoutes = {
     catererNotifications["POST /caterer/notifications/feed/read-all"],
     catererNotifications["POST /caterer/notifications/feed/{id}/read"],
     catererSchools["GET /caterer/schools"],
+    catererSchools["GET /caterer/schools/{schoolId}/orders"],
+    catererSchools["POST /caterer/schools/{schoolId}/orders/{orderId}/confirm"],
   ],
   org: [
     traegerBillingFamilies["GET /traeger/billing-families/debtor-number-format"],

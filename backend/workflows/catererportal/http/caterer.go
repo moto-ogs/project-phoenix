@@ -61,7 +61,7 @@ type ClassCountResponse struct {
 
 // DayResponse is one weekday of a school's orders.
 type DayResponse struct {
-	Date        string               `json:"date"`
+	Date        string               `json:"date" contract:"date"`
 	Closed      bool                 `json:"closed"`
 	Deadline    time.Time            `json:"deadline"`
 	Status      string               `json:"status"`

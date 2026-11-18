@@ -1169,6 +1169,27 @@
     },
     {
       "method": "GET",
+      "pattern": "/caterer/schools/{schoolId}/orders",
+      "portals": [
+        "caterer"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolOrdersResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/operator/billing/key-day",
       "portals": [
         "platform"
@@ -2286,6 +2307,14 @@
         "kind": "ref",
         "ref": "feedCountResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/schools/{schoolId}/orders/{orderId}/confirm",
+      "portals": [
+        "caterer"
+      ],
+      "no_data": true
     },
     {
       "method": "POST",
@@ -4345,6 +4374,82 @@
       ]
     },
     {
+      "name": "ChangeResponse",
+      "go_type": "catererportalhttp.ChangeResponse",
+      "fields": [
+        {
+          "name": "sequence",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "child",
+          "schema": {
+            "kind": "ref",
+            "ref": "ChildResponse"
+          }
+        },
+        {
+          "name": "delta",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "detected_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildResponse",
+      "go_type": "catererportalhttp.ChildResponse",
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassCountResponse",
+      "go_type": "catererportalhttp.ClassCountResponse",
+      "fields": [
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "ClassHandover",
       "go_type": "presenceprojectionhttp.ClassHandover",
       "fields": [
@@ -4954,6 +5059,89 @@
           "name": "can_report_absences",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DayResponse",
+      "go_type": "catererportalhttp.DayResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "closed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "deadline",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "order_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirmed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "total",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ClassCountResponse"
+            }
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ChildResponse"
+            }
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ChangeResponse"
+            }
           }
         }
       ]
@@ -10178,6 +10366,54 @@
           "name": "end_date",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolOrdersResponse",
+      "go_type": "catererportalhttp.SchoolOrdersResponse",
+      "fields": [
+        {
+          "name": "school",
+          "schema": {
+            "kind": "ref",
+            "ref": "SchoolResponse"
+          }
+        },
+        {
+          "name": "delivery_address",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "format_version",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "rhythm",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "detail",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "DayResponse"
+            }
           }
         }
       ]

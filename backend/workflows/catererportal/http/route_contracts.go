@@ -11,5 +11,16 @@ func RouteContracts() []common.RouteContract {
 			Portals:  []common.PortalScope{common.PortalCaterer},
 			Response: SchoolsResponse{},
 		},
+		{
+			Method: "GET", Pattern: "/schools/{schoolId}/orders",
+			Portals:  []common.PortalScope{common.PortalCaterer},
+			Query:    []common.QueryParam{{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate}},
+			Response: SchoolOrdersResponse{},
+		},
+		{
+			Method: "POST", Pattern: "/schools/{schoolId}/orders/{orderId}/confirm",
+			Portals: []common.PortalScope{common.PortalCaterer},
+			NoData:  true,
+		},
 	}
 }
