@@ -1549,6 +1549,43 @@ func CreateTestGradeTransitionMapping(tb testing.TB, db *bun.DB, transitionID in
 // Multi-Tenancy Isolation Test Fixtures (WP 3.19)
 // ============================================================================
 
+// EnsureTestTenant creates the platform.organizations and platform.schools
+// rows required by the FK constraint on tenant_id. Uses ON CONFLICT DO NOTHING
+// so it's safe to call multiple times with the same ID.
+func EnsureTestTenant(tb testing.TB, db *bun.DB, tenantID int64) {
+	tb.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	require.NoError(tb, ensureTestTenant(ctx, db, tenantID), "Failed to ensure test tenant")
+}
+
+// ensureTestTenant is the error-returning core of EnsureTestTenant, shared
+// with the process-once clone bootstrap in db_clone.go.
+func ensureTestTenant(ctx context.Context, db *bun.DB, tenantID int64) error {
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO platform.organizations (id, name, slug, active)
+		VALUES (?, ?, ?, true)
+		ON CONFLICT DO NOTHING`,
+		tenantID, fmt.Sprintf("Test Org %d", tenantID), fmt.Sprintf("test-org-%d", tenantID)); err != nil {
+		return fmt.Errorf("ensure test organization: %w", err)
+	}
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active)
+		VALUES (?, ?, ?, ?, ?, true)
+		ON CONFLICT DO NOTHING`,
+		tenantID, tenantID,
+		fmt.Sprintf("Test School %d", tenantID),
+		fmt.Sprintf("test-school-%d", tenantID),
+		fmt.Sprintf("t%d", tenantID)); err != nil {
+		return fmt.Errorf("ensure test school: %w", err)
+	}
+
+	return setTestSchoolFederalState(ctx, db, tenantID)
+}
+
 // CreateTestTenant creates an organization + school pair that nobody else
 // shares and returns the school id (= tenant id) plus its subdomain. Pair it
 // with cleanupTestTenant.
