@@ -1190,7 +1190,7 @@ describe("MobileBottomNav", () => {
       );
     });
 
-    it("highlights Dienstplan without also highlighting Mitarbeiter in the overflow menu", () => {
+    it("highlights Dienstplan without also highlighting Mitarbeitende in the overflow menu", () => {
       mockUsePathname.mockReturnValue("/dienstplan");
 
       render(<MobileBottomNav />);
@@ -1203,7 +1203,7 @@ describe("MobileBottomNav", () => {
       fireEvent.click(moreButton!);
 
       const dienstplanLink = screen.getByText("Dienstplan").closest("a");
-      const staffLink = screen.getByText("Mitarbeiter").closest("a");
+      const staffLink = screen.getByText("Mitarbeitende").closest("a");
       expect(dienstplanLink).toHaveClass("bg-gray-100");
       expect(staffLink).not.toHaveClass("bg-gray-100");
     });
@@ -1592,7 +1592,7 @@ describe("MobileBottomNav", () => {
       fireEvent.click(moreButton);
 
       // Click a navigation item
-      const staffLink = screen.getByText("Mitarbeiter");
+      const staffLink = screen.getByText("Mitarbeitende");
       fireEvent.click(staffLink);
 
       // The link should exist and be clickable
@@ -1767,7 +1767,7 @@ describe("MobileBottomNav", () => {
   describe("AG-Leitung und Gast", () => {
     const GATED_MENU_LABELS = [
       "Zeiterfassung",
-      "Mitarbeiter",
+      "Mitarbeitende",
       "Nachrichten",
       "Räume",
       "Aktivitäten",
@@ -1855,7 +1855,7 @@ describe("MobileBottomNav", () => {
       fireEvent.click(getMoreButton());
       // Anker: das Mehr-Menü ist offen.
       expect(screen.getByText("Dateien")).toBeInTheDocument();
-      for (const label of ["Nachrichten", "Notfall", "Mitarbeiter"]) {
+      for (const label of ["Nachrichten", "Notfall", "Mitarbeitende"]) {
         expect(screen.queryByText(label)).not.toBeInTheDocument();
       }
     });

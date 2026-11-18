@@ -1,5 +1,6 @@
 "use client";
 
+import { positionForForm } from "~/lib/position-title";
 import { createCrudService } from "~/lib/database/service-factory";
 import { teachersConfig } from "~/components/database/configs/teachers.config";
 import { staff as staffKeys } from "~/lib/swr/staff";
@@ -72,6 +73,7 @@ function matchesTeacherSearch(teacher: Teacher, searchLower: string): boolean {
     teacher.last_name,
     teacher.name,
     teacher.role,
+    teacher.role && positionForForm(teacher.role, teacher.role_form),
     teacher.account_role,
     teacher.specialization,
     teacher.email,

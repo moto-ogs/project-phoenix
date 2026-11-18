@@ -165,6 +165,15 @@ const PROFILE_SECTIONS: readonly { label: string; extra?: string }[] = [
   },
 ];
 
+/**
+ * Weitere Wörter, unter denen eine Seite gefunden wird. Die Seite der
+ * Mitarbeitenden hieß früher „Mitarbeiter“; wer das alte Wort tippt, landet
+ * trotzdem dort.
+ */
+const PAGE_SEARCH_WORDS: Readonly<Record<string, string>> = {
+  "/staff": "Mitarbeiter Personal",
+};
+
 const PROFILE_HREF = "/profile";
 const PROFILE_LABEL = "Mein Profil";
 
@@ -235,14 +244,17 @@ export function useSearchablePages(): readonly SearchEntry[] {
       if (page.locked || entries.has(page.href)) return;
       entries.set(
         page.href,
-        searchEntry({
-          id: `page-${page.href}`,
-          label: page.label,
-          context,
-          href: page.href,
-          concept: concept ?? settingsConcept,
-          ...options,
-        }),
+        searchEntry(
+          {
+            id: `page-${page.href}`,
+            label: page.label,
+            context,
+            href: page.href,
+            concept: concept ?? settingsConcept,
+            ...options,
+          },
+          PAGE_SEARCH_WORDS[page.href],
+        ),
       );
     };
 

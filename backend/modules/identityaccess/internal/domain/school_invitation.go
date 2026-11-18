@@ -47,19 +47,22 @@ const (
 
 // SchoolInvitation is one auth.invitation_tokens row.
 type SchoolInvitation struct {
-	ID                  int64
-	TenantID            int64
-	Email               string
-	Token               string
-	RoleID              int64
-	RoleName            string
-	ExpiresAt           time.Time
-	UsedAt              *time.Time
-	CreatedBy           *int64
-	CreatorEmail        string
-	FirstName           *string
-	LastName            *string
-	Position            *string
+	ID           int64
+	TenantID     int64
+	Email        string
+	Token        string
+	RoleID       int64
+	RoleName     string
+	ExpiresAt    time.Time
+	UsedAt       *time.Time
+	CreatedBy    *int64
+	CreatorEmail string
+	FirstName    *string
+	LastName     *string
+	Position     *string
+	// Gender is the Stammdaten gender the school entered; acceptance
+	// writes it into the personnel record.
+	Gender              *string
 	CaregiverEnabled    bool
 	EmploymentAction    EmploymentAction
 	ResetMasterData     bool
@@ -68,6 +71,16 @@ type SchoolInvitation struct {
 	PersonID            *int64
 	Delivery            TokenDelivery
 	CreatedAt           time.Time
+}
+
+// ValidInvitationGender reports whether gender is one of the Stammdaten
+// values female, male and diverse.
+func ValidInvitationGender(gender string) bool {
+	switch gender {
+	case "female", "male", "diverse":
+		return true
+	}
+	return false
 }
 
 // Redeemable reports whether the invitation can still be accepted at now.
@@ -89,6 +102,8 @@ func (i *SchoolInvitation) Validate(now time.Time) error {
 		return errors.New("token value is required")
 	case i.RoleID <= 0:
 		return errors.New("role id is required")
+	case i.Gender != nil && !ValidInvitationGender(*i.Gender):
+		return errors.New("unknown gender value")
 	case i.UsedAt != nil:
 		return ErrInvitationUsed
 	case !i.ExpiresAt.After(now):
@@ -109,7 +124,10 @@ type SchoolInvitationRequest struct {
 	FirstName           *string
 	LastName            *string
 	Position            *string
-	CaregiverEnabled    bool
+	// Gender is the Stammdaten gender the school entered; acceptance
+	// writes it into the personnel record.
+	Gender           *string
+	CaregiverEnabled bool
 	// PersonID is the existing, account-less person the invitee becomes on
 	// acceptance; the staff import sets it (#2600).
 	PersonID   *int64

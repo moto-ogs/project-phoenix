@@ -188,6 +188,16 @@ describe("SchoolSearchDialog", () => {
     expect(mockSearchSchool).not.toHaveBeenCalled();
   });
 
+  it("finds the Mitarbeitende page by its former name", async () => {
+    signIn(["users:read"]);
+    render(<SchoolSearchDialog isOpen onClose={vi.fn()} />);
+    await typeQuery("Mitarbeiter");
+    const pages = screen.getByRole("group", { name: "Seiten" });
+    expect(
+      within(pages).getByRole("option", { name: "Mitarbeitende" }),
+    ).toBeInTheDocument();
+  });
+
   it("offers no own time, shift plan or calendar without a staff profile (#7306)", () => {
     ownStaff.present = false;
     try {

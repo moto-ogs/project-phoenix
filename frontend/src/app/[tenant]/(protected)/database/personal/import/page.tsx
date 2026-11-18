@@ -257,7 +257,7 @@ export default function StaffImportPage() {
             status: "new",
             errors: [],
             notes: [],
-            first_name: `${importData.TotalRows} Mitarbeiter`,
+            first_name: `${importData.TotalRows} Mitarbeitende`,
             last_name: "bereit zum Import",
             email: "",
             role_name: "",
@@ -398,10 +398,10 @@ export default function StaffImportPage() {
   const importLabel = importInterrupted
     ? "Erneut versuchen"
     : mode === "create"
-      ? `${stats.new} Mitarbeiter anlegen`
+      ? `${stats.new} Mitarbeitende anlegen`
       : mode === "update"
-        ? `${importable} Mitarbeiter aktualisieren`
-        : `${importable} Mitarbeiter übernehmen`;
+        ? `${importable} Mitarbeitende aktualisieren`
+        : `${importable} Mitarbeitende übernehmen`;
   const savedCount = importResult ? importBatchSavedCount(importResult) : 0;
 
   // Statuszeile des Seitenkopfs: der Stand des Imports, nicht ein Erklärsatz.
@@ -435,7 +435,7 @@ export default function StaffImportPage() {
         backHref="/database/personal"
         backLabel="Zurück zum Personal"
       >
-        <SkeletonRegion label="Mitarbeiter-Import wird geladen…">
+        <SkeletonRegion label="Import wird geladen…">
           <FormSkeleton fields={2} />
         </SkeletonRegion>
       </TenantPage>
@@ -454,7 +454,7 @@ export default function StaffImportPage() {
       <SectionCard title="Import-Anleitung" icon={Info}>
         <ul className="list-inside list-disc space-y-1 text-sm text-gray-600">
           <li>Lade die Vorlage herunter (siehe unten)</li>
-          <li>Fülle die Datei mit deinen Mitarbeiterdaten aus</li>
+          <li>Fülle die Datei mit den Daten deiner Mitarbeitenden aus</li>
           <li>
             Die Spalte „Rolle“ muss exakt einer vorhandenen Rolle entsprechen
             {availableRoles.length > 0 && (
@@ -539,7 +539,7 @@ export default function StaffImportPage() {
           </>
         ) : (
           <p className="text-sm text-gray-600">
-            Mit deinen Berechtigungen legt der Import nur neue Mitarbeiter an.
+            Mit deinen Berechtigungen legt der Import nur neue Mitarbeitende an.
             Zeilen, die es schon gibt, werden als Fehler gemeldet. Bestehende
             Datensätze ändert die Leitung.
           </p>

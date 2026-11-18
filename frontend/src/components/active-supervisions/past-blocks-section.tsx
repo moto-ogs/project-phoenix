@@ -294,7 +294,9 @@ function PastBlockCard({
         <span>{block.roomName ?? `Raum ${block.roomId}`}</span>
         <span>
           {block.assignedStaffIds.length}{" "}
-          {block.assignedStaffIds.length === 1 ? "Betreuer" : "Betreuende"}
+          {block.assignedStaffIds.length === 1
+            ? "Betreuungskraft"
+            : "Betreuungskräfte"}
         </span>
       </div>
       {reopenUntil && onReopen ? (

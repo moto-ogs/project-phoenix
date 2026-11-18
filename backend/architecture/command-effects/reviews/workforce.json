@@ -5137,6 +5137,62 @@
     },
     {
       "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.EmploymentResetter.ApplyInvitedGender",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: workforce reaches *modules/peopledirectory/compose.Directory.SetPersonDetails (people-directory) through modules/workforce/internal/application.EmploymentResetter.ApplyInvitedGender. The Stammdaten person section rewrites the unchanged names and birthday it read; participates in the caller unit like EmploymentResetter.ResetEmployment.",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetPersonDetails",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.EmploymentResetter.ApplyInvitedGender",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: workforce reaches modules/peopledirectory.Capability.SetPersonDetails (people-directory) through modules/workforce/internal/application.EmploymentResetter.ApplyInvitedGender. The Stammdaten person section rewrites the unchanged names and birthday it read; participates in the caller unit like EmploymentResetter.ResetEmployment.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPersonDetails",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.EmploymentResetter.ApplyInvitedGender",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: workforce reaches modules/peopledirectory.Owner.SetPersonDetails (people-directory) through modules/workforce/internal/application.EmploymentResetter.ApplyInvitedGender. The Stammdaten person section rewrites the unchanged names and birthday it read; participates in the caller unit like EmploymentResetter.ResetEmployment.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPersonDetails",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.EmploymentResetter.ApplyInvitedGender",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "reason": "Platform protocol participation (scope): workforce reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/workforce/internal/application.EmploymentResetter.ApplyInvitedGender. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0297",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.EmploymentResetter.ApplyInvitedGender",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/workforce/internal/application.observe. Reached through modules/workforce/internal/application.EmploymentResetter.ApplyInvitedGender, the same Stammdaten observer EmploymentResetter.ResetEmployment reaches; approved by ADR 0297; a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
+      "target_owner": ""
+    },
+    {
+      "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.EmploymentResetter.ResetEmployment",
       "classification": "leaf",
       "effect": "mutation",

@@ -94,7 +94,7 @@ func (s *SchoolInvitation) CreateSchoolInvitation(ctx context.Context, request i
 	return runFlow(ctx, s.flow(), func(ctx context.Context) (identityaccess.SchoolInvitation, error) {
 		invitation, err := s.CreateInvitation(ctx, domain.SchoolInvitationRequest{
 			Email: request.Email, RoleID: request.RoleID, TenantID: request.TenantID, FirstName: request.FirstName,
-			LastName: request.LastName, Position: request.Position, CaregiverEnabled: request.CaregiverEnabled,
+			LastName: request.LastName, Position: request.Position, Gender: request.Gender, CaregiverEnabled: request.CaregiverEnabled,
 			EmploymentAction: domain.EmploymentAction(request.EmploymentAction),
 			ResetMasterData:  request.ResetMasterData, ResetQualifications: request.ResetQualifications, ResetWorkTime: request.ResetWorkTime,
 			PersonID: request.PersonID, CreatedBy: request.CreatedBy, SchoolName: request.SchoolName,
@@ -201,7 +201,7 @@ func PublicSchoolInvitation(invitation domain.SchoolInvitation) identityaccess.S
 		CreatedBy: invitation.CreatedBy, CreatorEmail: invitation.CreatorEmail, FirstName: invitation.FirstName, LastName: invitation.LastName,
 		EmploymentAction: identityaccess.EmploymentAction(invitation.EmploymentAction),
 		ResetMasterData:  invitation.ResetMasterData, ResetQualifications: invitation.ResetQualifications, ResetWorkTime: invitation.ResetWorkTime,
-		Position: invitation.Position, CaregiverEnabled: invitation.CaregiverEnabled, PersonID: invitation.PersonID,
+		Position: invitation.Position, Gender: invitation.Gender, CaregiverEnabled: invitation.CaregiverEnabled, PersonID: invitation.PersonID,
 		Delivery: identityaccess.TokenDelivery(invitation.Delivery), CreatedAt: invitation.CreatedAt,
 	}
 }

@@ -295,7 +295,7 @@ export const STAFF_FLAT_PAGES = {
   studentSearch: { href: "/students/search", label: "Alle Kinder" },
   activities: { href: "/activities", label: "Aktivitäten" },
   rooms: { href: "/rooms", label: "Räume" },
-  staff: { href: "/staff", label: "Mitarbeiter" },
+  staff: { href: "/staff", label: "Mitarbeitende" },
   // Anfragen-Modul (#2429): eingereichte Wünsche von Eltern und Mitarbeitenden
   // an einem Ort, mit Reitern nach Herkunft.
   anfragen: { href: "/anfragen", label: "Anfragen" },

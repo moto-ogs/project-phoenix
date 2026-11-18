@@ -33,6 +33,7 @@ const swrResult = vi.hoisted(() => ({
 
 vi.mock("~/lib/swr", () => ({
   useSWRAuth,
+  useTenantMutateMatching: () => () => Promise.resolve([]),
 }));
 
 vi.mock("~/lib/staff-api", () => ({

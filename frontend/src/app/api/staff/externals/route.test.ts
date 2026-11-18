@@ -67,6 +67,7 @@ describe("POST /api/staff/externals", () => {
         last_name: "Gast",
         email: "lea@example.test",
         organization: "Musikschule",
+        gender: "female",
         access: "supervise",
       }),
       context,
@@ -81,6 +82,7 @@ describe("POST /api/staff/externals", () => {
         last_name: "Gast",
         email: "lea@example.test",
         organization: "Musikschule",
+        gender: "female",
         access: "supervise",
       },
     );

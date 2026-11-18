@@ -17,6 +17,10 @@ type DemoStaffMember struct {
 	LastName  string
 	Position  string // MUST match frontend dropdown: "Pädagogische Fachkraft", "OGS-Büro", "Extern"
 	IsTeacher bool   // Whether to create a teacher record
+	// Gender goes into the Stammdaten ("female", "male"); it picks the form
+	// of the position on the staff list („Betreuerin“). Empty leaves it
+	// unstated, so the demo also shows the neutral „Betreuer:in“.
+	Gender string
 }
 
 // DemoStudent represents a student to be created via API
@@ -80,27 +84,27 @@ var DemoRooms = []DemoRoom{
 // All use email: demo{n}@mail.de and password: sdlXK26%
 var DemoStaff = []DemoStaffMember{
 	// 10 OGS-Büro accounts (admin role)
-	{FirstName: "Anna", LastName: "Müller", Position: "OGS-Büro", IsTeacher: true},
-	{FirstName: "Katarzyna", LastName: "Schmidt", Position: "OGS-Büro", IsTeacher: true},
-	{FirstName: "Sabine", LastName: "Weber", Position: "OGS-Büro", IsTeacher: true},
-	{FirstName: "Svenja", LastName: "Fischer", Position: "OGS-Büro", IsTeacher: true},
-	{FirstName: "Claudia", LastName: "Wagner", Position: "OGS-Büro", IsTeacher: true},
-	{FirstName: "Stefanie", LastName: "Becker", Position: "OGS-Büro", IsTeacher: true},
-	{FirstName: "Monika", LastName: "Hoffmann", Position: "OGS-Büro", IsTeacher: true},
-	{FirstName: "Natalia", LastName: "Schulz", Position: "OGS-Büro", IsTeacher: true},
-	{FirstName: "Petra", LastName: "Koch", Position: "OGS-Büro", IsTeacher: true},
-	{FirstName: "Irina", LastName: "Richter", Position: "OGS-Büro", IsTeacher: true},
+	{FirstName: "Anna", LastName: "Müller", Position: "OGS-Büro", IsTeacher: true, Gender: "female"},
+	{FirstName: "Katarzyna", LastName: "Schmidt", Position: "OGS-Büro", IsTeacher: true, Gender: "female"},
+	{FirstName: "Sabine", LastName: "Weber", Position: "OGS-Büro", IsTeacher: true, Gender: "female"},
+	{FirstName: "Svenja", LastName: "Fischer", Position: "OGS-Büro", IsTeacher: true, Gender: "female"},
+	{FirstName: "Claudia", LastName: "Wagner", Position: "OGS-Büro", IsTeacher: true, Gender: "female"},
+	{FirstName: "Stefanie", LastName: "Becker", Position: "OGS-Büro", IsTeacher: true, Gender: "female"},
+	{FirstName: "Monika", LastName: "Hoffmann", Position: "OGS-Büro", IsTeacher: true, Gender: "female"},
+	{FirstName: "Natalia", LastName: "Schulz", Position: "OGS-Büro", IsTeacher: true, Gender: "female"},
+	{FirstName: "Petra", LastName: "Koch", Position: "OGS-Büro", IsTeacher: true, Gender: "female"},
+	{FirstName: "Irina", LastName: "Richter", Position: "OGS-Büro", IsTeacher: true, Gender: "female"},
 	// 10 Pädagogische Fachkraft accounts (teacher/betreuer role)
-	{FirstName: "Julia", LastName: "Klein", Position: "Pädagogische Fachkraft", IsTeacher: true},
-	{FirstName: "Berken", LastName: "Hawleri", Position: "Pädagogische Fachkraft", IsTeacher: true},
-	{FirstName: "Elif", LastName: "Arslan", Position: "Pädagogische Fachkraft", IsTeacher: true},
-	{FirstName: "Christian", LastName: "Neumann", Position: "Pädagogische Fachkraft", IsTeacher: true},
-	{FirstName: "Amara", LastName: "Okafor", Position: "Pädagogische Fachkraft", IsTeacher: true},
-	{FirstName: "Tarek", LastName: "Haddad", Position: "Pädagogische Fachkraft", IsTeacher: true},
-	{FirstName: "Daria", LastName: "Nowak", Position: "Pädagogische Fachkraft", IsTeacher: true},
-	{FirstName: "Jana", LastName: "Krüger", Position: "Pädagogische Fachkraft", IsTeacher: true},
+	{FirstName: "Julia", LastName: "Klein", Position: "Pädagogische Fachkraft", IsTeacher: true, Gender: "female"},
+	{FirstName: "Berken", LastName: "Hawleri", Position: "Pädagogische Fachkraft", IsTeacher: true, Gender: "male"},
+	{FirstName: "Elif", LastName: "Arslan", Position: "Pädagogische Fachkraft", IsTeacher: true, Gender: "female"},
+	{FirstName: "Christian", LastName: "Neumann", Position: "Pädagogische Fachkraft", IsTeacher: true, Gender: "male"},
+	{FirstName: "Amara", LastName: "Okafor", Position: "Pädagogische Fachkraft", IsTeacher: true, Gender: "female"},
+	{FirstName: "Tarek", LastName: "Haddad", Position: "Pädagogische Fachkraft", IsTeacher: true, Gender: "male"},
+	{FirstName: "Daria", LastName: "Nowak", Position: "Pädagogische Fachkraft", IsTeacher: true, Gender: "female"},
+	{FirstName: "Jana", LastName: "Krüger", Position: "Pädagogische Fachkraft", IsTeacher: true, Gender: "female"},
 	{FirstName: "Mai", LastName: "Pham", Position: "Pädagogische Fachkraft", IsTeacher: true},
-	{FirstName: "Ana", LastName: "Silva", Position: "Extern", IsTeacher: false},
+	{FirstName: "Ana", LastName: "Silva", Position: "Extern", IsTeacher: false, Gender: "female"},
 }
 
 // DemoStudents defines the 100 students across 10 groups (10 each)

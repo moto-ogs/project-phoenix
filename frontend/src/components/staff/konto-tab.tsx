@@ -27,6 +27,7 @@ import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
 import { feedbackConcept } from "~/lib/concepts/feedback";
 import { messagesConcept } from "~/lib/concepts/messages";
 import { staffConcept } from "~/lib/concepts/staff";
+import { positionForForm } from "~/lib/position-title";
 
 const logger = createLogger({ component: "StaffKontoTab" });
 
@@ -274,7 +275,9 @@ export function KontoTab({ teacher, editing }: KontoTabProps) {
                 {displayRole ?? "Keine Rolle hinterlegt"}
               </DataField>
               <DataField label="Position">
-                {teacher.role?.trim() || "–"}
+                {teacher.role?.trim()
+                  ? positionForForm(teacher.role.trim(), teacher.role_form)
+                  : "–"}
               </DataField>
               {teacher.specialization?.trim() ? (
                 <DataField label="Fachrichtung">

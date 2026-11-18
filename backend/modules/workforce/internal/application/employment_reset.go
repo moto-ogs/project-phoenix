@@ -71,6 +71,26 @@ func (r EmploymentResetter) resetMasterData(ctx context.Context, in workforce.Em
 	return err
 }
 
+// ApplyInvitedGender joins acceptance's transaction like the reset. The
+// person section is written whole, so names and birthday are carried over
+// from the record; an unchanged gender writes no audit row.
+func (r EmploymentResetter) ApplyInvitedGender(ctx context.Context, in workforce.InvitedGender) error {
+	if in.StaffID <= 0 || in.InvitationID <= 0 {
+		return errors.New("invited gender requires staff and invitation")
+	}
+	if err := requireEmploymentResetTransaction(ctx); err != nil {
+		return err
+	}
+	data, err := r.Admin.StaffStammdaten(ctx, in.StaffID)
+	if err != nil {
+		return err
+	}
+	subject := data.Staff
+	gender := in.Gender
+	note := fmt.Sprintf("Angabe aus Einladung %d", in.InvitationID)
+	return r.Admin.UpdateStaffStammdatenPerson(ctx, in.StaffID, workforce.StammdatenPersonInput{FirstName: subject.FirstName, LastName: subject.LastName, Birthday: optionalString(subject.Birthday), Gender: &gender}, in.StaffID, note)
+}
+
 func optionalString(value string) *string {
 	if value == "" {
 		return nil

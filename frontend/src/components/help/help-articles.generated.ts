@@ -843,7 +843,7 @@ export const activitiesCatalogTopic =
             "Trage bei `Name` die Bezeichnung des Angebots ein.",
             "Wähle eine `Kategorie`.",
             "Trage bei Bedarf `Maximale Teilnehmer` ein.",
-            "Wähle bei Bedarf einen `Hauptbetreuer`.",
+            "Wähle bei Bedarf einen `Hauptbetreuung`.",
             "Wähle `Erstellen`.",
           ],
         },
@@ -3152,7 +3152,7 @@ export const findStaffTopic = function findStaffTopic(
     audience: ["caregiver", "lead"],
     icon: "UserRoundSearch",
     steps: [
-      "Klappe in der Seitenleiste `Team` auf und öffne `Mitarbeiter`.",
+      "Klappe in der Seitenleiste `Team` auf und öffne `Mitarbeitende`.",
       "Gib den Namen in das Suchfeld ein.",
       // Live geprueft: die Auswahl traegt ihren aktuellen Wert als
       // Beschriftung, anfangs `Alle`. Ein Knopf `Filter` existiert nicht.
@@ -4005,6 +4005,7 @@ export const inviteStaffTopic = function inviteStaffTopic(): HelpTopic {
           "Wähle eine `Rolle`.",
           "Trage bei Bedarf `Vorname (optional)` und `Nachname (optional)` ein.",
           "Trage bei Bedarf eine `Position (optional)` ein, zum Beispiel `Pädagogische Fachkraft`.",
+          "Wähle bei Bedarf das `Geschlecht (optional)`. Es kommt in die Stammdaten. Die Personalliste zeigt die Position dann passend, zum Beispiel `Betreuerin`.",
           "Wähle `Einladung senden`.",
         ],
       },
@@ -4017,6 +4018,7 @@ export const inviteStaffTopic = function inviteStaffTopic(): HelpTopic {
           "Öffne `Datenverwaltung` und danach `Personal`.",
           "Wähle oben rechts `+ Personal` und danach `Externe Person anlegen`.",
           "Trage `Vorname` und `Nachname` ein. Trage bei Bedarf die `Organisation (freiwillig)` ein.",
+          "Wähle bei Bedarf das `Geschlecht (freiwillig)`. Es kommt in die Stammdaten der Person.",
           "Wähle den `Zugang`. Was jede Stufe erlaubt, steht unten.",
           "Bei `Nur ansehen` und `Eigene Termine betreuen` trägst du die `E-Mail-Adresse` ein.",
           "Wähle `Anlegen`.",
@@ -4067,7 +4069,7 @@ export const inviteStaffTopic = function inviteStaffTopic(): HelpTopic {
       "Die `Rolle` bestimmt, was die Person später sehen und tun darf.",
       "Eine externe Person kannst du sofort einplanen, auch mit `Kein Zugang`. Bis sie eine Einladung annimmt, steht bei ihr `Einladung offen`.",
       "Steht bei einer externen Person `Einladung offen` und die E-Mail kam nicht an? Wähle im Menü `Einladung erneut senden`. Dort kannst du auch die Adresse korrigieren.",
-      "Nach der Annahme steht die Person unter `Mitarbeiter` und lässt sich einer Gruppe zuweisen.",
+      "Nach der Annahme steht die Person unter `Mitarbeitende` und lässt sich einer Gruppe zuweisen.",
       "Bei `Wiederaufnahme` wird die frühere Beschäftigung fortgeführt. Ausgewählte Bereiche bleiben unverändert. Zurückgesetzte Angaben bleiben als Historie erhalten.",
       "`Arbeitszeit` umfasst Stundenkonto, Urlaub und Arbeitszeitmodell gemeinsam. Nach dem Zurücksetzen startet der Urlaub mit dem vollen Jahresanspruch. Übertrag gibt es dann nicht. Den Jahresanspruch kannst du danach korrigieren.",
       "Ist eine übernommene Personalnummer inzwischen vergeben, bleibt sie leer.",
@@ -4538,7 +4540,7 @@ export const leadTeacherAccessTopic =
         "Trage die `E-Mail-Adresse` ein.",
         "Wähle bei `Rolle` die Rolle `Lehrkraft`.",
         "Wähle `Einladung senden`.",
-        "Öffne danach `Mitarbeiter` und die Person.",
+        "Öffne danach `Mitarbeitende` und die Person.",
         "Wähle den Reiter `Klassen`.",
         "Trage die Klassen ein, zum Beispiel `1a`.",
       ],
@@ -8042,7 +8044,7 @@ export const removeStaffTopic = function removeStaffTopic(): HelpTopic {
       },
     ],
     result:
-      "Der Zugang ist aus. Unter `Mitarbeiter` findest du die Person nur noch mit der Auswahl `Ehemalige`. Bei einem geplanten Austritt steht bis dahin `Austritt am …` bei der Person.",
+      "Der Zugang ist aus. Unter `Mitarbeitende` findest du die Person nur noch mit der Auswahl `Ehemalige`. Bei einem geplanten Austritt steht bis dahin `Austritt am …` bei der Person.",
     notes: [
       "Einen geplanten Austritt kannst du bis zum letzten Arbeitstag ändern oder zurücknehmen: oben rechts die drei Punkte und dann `Austritt ändern` oder `Austritt zurücknehmen`.",
       "Eine Woche vorher und am letzten Arbeitstag erinnert moto alle, die Personen löschen dürfen.",
@@ -8862,7 +8864,7 @@ export const staffPermissionsTopic =
         "`Wie Verwaltung` gibt fast alle Rechte der Verwaltung. Einiges kann nur die Rolle `Verwaltung` selbst, zum Beispiel Mitteilungen an Eltern schreiben.",
         "Eine Rolle aus `Wie Lehrkraft` arbeitet wie die Rolle `Lehrkraft` in moto schule. Wer sie hat, meldet sich dort an. Später lässt sie sich nicht gegen eine andere Rolle tauschen.",
         "Bei manchen Rechten steht ein Hinweis. Damit kann eine Person Rollen, Konten oder Einstellungen ändern. Gib diese Rechte nur der Leitung.",
-        "`Position` im Reiter `Konto` ist nur ein Text für die Personalliste. Sie ändert keine Rechte.",
+        "`Position` im Reiter `Konto` ist nur ein Text für die Personalliste. Sie ändert keine Rechte. Die Liste zeigt sie passend zum `Geschlecht` aus den Stammdaten, etwa `Betreuerin` statt `Betreuer`. Ohne Angabe steht `Betreuer:in`.",
         "Unter `Datenverwaltung` → `Berechtigungen` siehst du alle verfügbaren Rechte. Diese Übersicht kannst du nur ansehen. Die Rechte einer eigenen Rolle änderst du unter `Rollen`.",
         "Die Rolle entscheidet auch darüber, welche Menüpunkte jemand sieht.",
         // ADR 0091: die zwei Zugangsstufen externer Personen sind feste Rollen.
@@ -8973,7 +8975,7 @@ export const staffRecordTopic = function staffRecordTopic(): HelpTopic {
         title: "Die Akte öffnen",
         steps: [
           "Klappe in der Seitenleiste `Team` auf.",
-          "Öffne `Mitarbeiter`.",
+          "Öffne `Mitarbeitende`.",
           "Gib den Namen in das Feld `Name suchen` ein.",
           "Wähle die Karte der Person.",
         ],
@@ -9623,7 +9625,7 @@ export const targetOverrideTopic = function targetOverrideTopic(): HelpTopic {
     ],
     steps: [
       "Klappe in der Seitenleiste `Team` auf.",
-      "Öffne `Mitarbeiter`.",
+      "Öffne `Mitarbeitende`.",
       "Wähle die Person.",
       "Wähle oben `Arbeitszeitmodell`.",
       "Wähle `Sonderarbeitszeit anlegen`.",
@@ -15988,7 +15990,7 @@ export const workTimeReviewTopic = function workTimeReviewTopic(): HelpTopic {
     id: HELP_TOPICS.leadWorkTimeReview,
     title: "Arbeitszeiten des Teams prüfen",
     question: "Wie prüfe ich Arbeitszeiten, Urlaub und Korrekturen?",
-    summary: "Zeiten stehen bei `Mitarbeiter`, Anträge unter `Anfragen`.",
+    summary: "Zeiten stehen bei `Mitarbeitende`, Anträge unter `Anfragen`.",
     group: "personal",
     audience: "lead",
     icon: "Clock3",
@@ -15998,7 +16000,7 @@ export const workTimeReviewTopic = function workTimeReviewTopic(): HelpTopic {
         title: "Zeiten des Teams ansehen",
         steps: [
           "Klappe in der Seitenleiste `Team` auf.",
-          "Öffne `Mitarbeiter`.",
+          "Öffne `Mitarbeitende`.",
           "Wähle oben den Reiter `Zeitkonten`.",
           "Lies in der `Einrichtungs-Übersicht` die Zahlen für `Woche` oder `Monat`.",
           "Filtere die Liste bei Bedarf nach `Minusstunden`, `Plusstunden` oder `über +20 Std.`.",
@@ -16009,7 +16011,7 @@ export const workTimeReviewTopic = function workTimeReviewTopic(): HelpTopic {
       {
         title: "Eine einzelne Zeit korrigieren",
         steps: [
-          "Öffne `Mitarbeiter` und wähle die Person.",
+          "Öffne `Mitarbeitende` und wähle die Person.",
           "Wähle den Reiter `Zeiterfassung`.",
           "Öffne den Eintrag, den du ändern möchtest.",
           "Ändere die Zeiten. Unter `Pausen` änderst du jede Dauer einzeln.",
@@ -16103,7 +16105,7 @@ export const workTimeTemplatesTopic =
           title: "Eine Person in der Personalakte zuordnen",
           steps: [
             "Klappe in der Seitenleiste `Team` auf.",
-            "Öffne `Mitarbeiter` und wähle die Person.",
+            "Öffne `Mitarbeitende` und wähle die Person.",
             "Wähle oben `Arbeitszeitmodell` und rechts `Bearbeiten`.",
             "Wähle `Vorlage zuweisen` und die Vorlage.",
             "Wähle `Speichern`.",

@@ -67,9 +67,7 @@ function renderModal(mode: "edit" | "nachtragen") {
     />,
   );
   fireEvent.change(
-    screen.getByPlaceholderText(
-      "z. B. Mitarbeiter hatte vergessen einzustempeln",
-    ),
+    screen.getByPlaceholderText("z. B. Person hatte vergessen einzustempeln"),
     { target: { value: "Zeitkorrektur" } },
   );
 }

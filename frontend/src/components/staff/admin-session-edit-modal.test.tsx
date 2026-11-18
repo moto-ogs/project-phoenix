@@ -79,9 +79,7 @@ function renderBackfill() {
     />,
   );
   fireEvent.change(
-    screen.getByPlaceholderText(
-      "z. B. Mitarbeiter hatte vergessen einzustempeln",
-    ),
+    screen.getByPlaceholderText("z. B. Person hatte vergessen einzustempeln"),
     { target: { value: "Vergessen" } },
   );
   fireEvent.click(screen.getByRole("button", { name: "Eintrag anlegen" }));
@@ -150,9 +148,7 @@ describe("AdminSessionEditModal", () => {
       { target: { value: "30" } },
     );
     fireEvent.change(
-      screen.getByPlaceholderText(
-        "z. B. Mitarbeiter hatte vergessen einzustempeln",
-      ),
+      screen.getByPlaceholderText("z. B. Person hatte vergessen einzustempeln"),
       { target: { value: "Pause korrigiert" } },
     );
     const save = screen.getByRole("button", { name: "Änderungen speichern" });
@@ -210,7 +206,7 @@ describe("AdminSessionEditModal", () => {
       );
       fireEvent.change(
         screen.getByPlaceholderText(
-          "z. B. Mitarbeiter hatte vergessen einzustempeln",
+          "z. B. Person hatte vergessen einzustempeln",
         ),
         { target: { value: "Korrektur" } },
       );
@@ -253,7 +249,7 @@ describe("AdminSessionEditModal", () => {
       );
       fireEvent.change(
         screen.getByPlaceholderText(
-          "z. B. Mitarbeiter hatte vergessen einzustempeln",
+          "z. B. Person hatte vergessen einzustempeln",
         ),
         { target: { value: "Zeitkorrektur" } },
       );

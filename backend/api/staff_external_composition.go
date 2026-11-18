@@ -11,6 +11,8 @@ import (
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	schoolMembershipModule "github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	staffHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http"
+	workforceModule "github.com/moto-ogs/project-phoenix/modules/workforce"
+	timeTrackingHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
 	"github.com/moto-ogs/project-phoenix/observability"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/workflows/externalcaregiver"
@@ -26,13 +28,15 @@ type externalCaregiverBindings struct {
 }
 
 // newExternalCaregiverBindings builds the workflow as a local value of the
-// staff mount. The owners' public capabilities satisfy its ports; its
-// savepoint runs inside the request's tenant transaction. appEnv gates the
-// seed-only invitation token.
+// staff mount. The owners' public capabilities satisfy its ports, the
+// Workforce Stammdaten through the staff admin resource's personnel-record
+// service; its savepoint runs inside the request's tenant transaction.
+// appEnv gates the seed-only invitation token.
 func newExternalCaregiverBindings(
-	module schoolMembershipModule.Capability, people peopleModule.Capability, identity identityaccess.Owner, appEnv string,
+	module schoolMembershipModule.Capability, people peopleModule.Capability, identity identityaccess.Owner,
+	staffAdmin *timeTrackingHTTP.StaffAdminResource, appEnv string,
 ) (externalCaregiverBindings, error) {
-	externals, err := externalcaregiver.New(people, module, identity, tenant.WithSavepoint)
+	externals, err := externalcaregiver.New(people, module, identity, externalCaregiverStammdaten(staffAdmin.PersonService.UpdateStaffStammdatenPerson, staffAdmin.ResolveEditorStaffID), tenant.WithSavepoint)
 	if err != nil {
 		return externalCaregiverBindings{}, err
 	}
@@ -44,6 +48,27 @@ func newExternalCaregiverBindings(
 		},
 		pendingPersons: pendingInvitationPersons(identity),
 	}, nil
+}
+
+// externalCaregiverGenderNote marks the Stammdaten audit row of the gender
+// chosen when the external person was recorded.
+const externalCaregiverGenderNote = "Angabe beim Anlegen als externe Person"
+
+// externalCaregiverStammdaten writes the gender chosen on „Externe Person
+// anlegen“ through the audited person section of the Stammdaten, exactly
+// like an edit in the personnel record: attributed to the acting staff
+// member, names as just recorded, no birthday yet.
+func externalCaregiverStammdaten(
+	updatePerson func(context.Context, int64, workforceModule.StammdatenPersonInput, int64, string) error, editor func(context.Context) (int64, error),
+) externalcaregiver.Stammdaten {
+	return func(ctx context.Context, in externalcaregiver.StaffGender) error {
+		changedBy, err := editor(ctx)
+		if err != nil {
+			return err
+		}
+		gender := in.Gender
+		return updatePerson(ctx, in.StaffID, workforceModule.StammdatenPersonInput{FirstName: in.FirstName, LastName: in.LastName, Gender: &gender}, changedBy, externalCaregiverGenderNote)
+	}
 }
 
 // externalCaregiverErrorRules map the refusals of the external-caregiver
@@ -60,6 +85,11 @@ var externalCaregiverErrorRules = []apiCommon.ErrorRule{
 	{Target: externalcaregiver.ErrNotExternal, Render: externalConflictCode(apiCommon.CodeStaffNotExternal)},
 	{Target: externalcaregiver.ErrHasAccount, Render: externalConflictCode(apiCommon.CodeStaffExternalHasAccount)},
 	{Target: externalcaregiver.ErrStaffNotFound, Render: apiCommon.ErrorNotFound},
+	// Writing the gender attributes the Stammdaten change to the acting
+	// staff member, as the personnel record does.
+	{Target: workforceModule.ErrNoStaffProfile, Render: func(err error) chiRender.Renderer {
+		return apiCommon.ErrorForbiddenWithCode(err, apiCommon.CodeWorkforceNoStaffProfile)
+	}},
 }
 
 func externalFieldCode(render func(error, string, string) chiRender.Renderer, code, field string) func(error) chiRender.Renderer {
@@ -86,7 +116,7 @@ func renderExternalCaregiverFailure(w http.ResponseWriter, r *http.Request, err 
 func externalCaregiverCreate(workflow *externalcaregiver.Workflow) func(context.Context, staffHTTP.ExternalCaregiverInput) (staffHTTP.ExternalCaregiverResult, error) {
 	return func(ctx context.Context, input staffHTTP.ExternalCaregiverInput) (staffHTTP.ExternalCaregiverResult, error) {
 		result, err := workflow.Record(ctx, externalcaregiver.RecordInput{
-			FirstName: input.FirstName, LastName: input.LastName, Email: input.Email, Organization: input.Organization,
+			FirstName: input.FirstName, LastName: input.LastName, Email: input.Email, Organization: input.Organization, Gender: input.Gender,
 			Access: externalcaregiver.Access(input.Access),
 			Actor:  externalcaregiver.Actor{AccountID: input.ActorAccountID, Permissions: input.ActorPermissions},
 		})

@@ -5,8 +5,8 @@
 // account), view (an invitation into the system role guest „Gast“) or
 // supervise (an invitation into the system role ag-leitung „AG-Leitung“).
 // The writes span the People Directory (person), School Membership (staff,
-// caregiver profile and external caregiver record) and Identity & Access
-// (invitation).
+// caregiver profile and external caregiver record), Workforce (the optional
+// gender in the Stammdaten) and Identity & Access (invitation).
 //
 // The workflow owns no data and issues no SQL. It declares the owner
 // surfaces it coordinates as consumer-owned ports in the owners' public
@@ -102,15 +102,18 @@ type Actor struct {
 }
 
 // RecordInput records a new external caregiver. The names and the
-// organization arrive trimmed and length-checked. Email is required for
-// view and supervise and ignored for none.
+// organization arrive trimmed and length-checked, the gender checked. Email
+// is required for view and supervise and ignored for none.
 type RecordInput struct {
 	FirstName    string
 	LastName     string
 	Email        string
 	Organization string
-	Access       Access
-	Actor        Actor
+	// Gender is the Stammdaten gender (female, male or diverse); empty
+	// records none.
+	Gender string
+	Access Access
+	Actor  Actor
 }
 
 // InviteInput invites an existing external caregiver without an account;
@@ -163,6 +166,19 @@ type Invitations interface {
 	ListPendingSchoolInvitations(ctx context.Context) ([]identityaccess.SchoolInvitation, error)
 }
 
+// StaffGender is the gender a new external caregiver's Stammdaten get, with
+// the names just recorded for the person.
+type StaffGender struct {
+	StaffID   int64
+	FirstName string
+	LastName  string
+	Gender    string
+}
+
+// Stammdaten writes the gender into the personnel record of the new staff
+// member with the Stammdaten audit trail, in the caller's transaction.
+type Stammdaten func(ctx context.Context, in StaffGender) error
+
 // Savepoint runs fn inside a savepoint of the caller's transaction and
 // rolls it back when fn fails.
 type Savepoint func(ctx context.Context, fn func(context.Context) error) error
@@ -172,15 +188,16 @@ type Workflow struct {
 	people      People
 	membership  Membership
 	invitations Invitations
+	stammdaten  Stammdaten
 	savepoint   Savepoint
 }
 
 // New builds the workflow; every port is required.
-func New(people People, membership Membership, invitations Invitations, savepoint Savepoint) (*Workflow, error) {
-	if people == nil || membership == nil || invitations == nil || savepoint == nil {
+func New(people People, membership Membership, invitations Invitations, stammdaten Stammdaten, savepoint Savepoint) (*Workflow, error) {
+	if people == nil || membership == nil || invitations == nil || stammdaten == nil || savepoint == nil {
 		return nil, errors.New("external caregiver: all dependencies required")
 	}
-	return &Workflow{people: people, membership: membership, invitations: invitations, savepoint: savepoint}, nil
+	return &Workflow{people: people, membership: membership, invitations: invitations, stammdaten: stammdaten, savepoint: savepoint}, nil
 }
 
 // Record records person, staff member, caregiver profile and external
@@ -188,7 +205,8 @@ func New(people People, membership Membership, invitations Invitations, savepoin
 // the access level's system role. Everything runs in one savepoint: the
 // request transaction commits 4xx answers, so a refused invitation (address
 // already at the school, role grant denied) must not leave a half-created
-// person behind. An open invitation of the school for the address refuses
+// person behind. A chosen gender goes into the Stammdaten in the same
+// savepoint, for every access level. An open invitation of the school for the address refuses
 // before any write (ErrEmailInvited). A placeholder (none) needs no address
 // and gets no invitation; the caregiver profile keeps it plannable.
 func (w *Workflow) Record(ctx context.Context, in RecordInput) (Result, error) {
@@ -240,6 +258,11 @@ func (w *Workflow) createRecords(ctx context.Context, in RecordInput, email stri
 		StaffID: staff.ID, Organization: in.Organization, ActivityExpertise: Expertise,
 	}}); err != nil {
 		return Result{}, err
+	}
+	if in.Gender != "" {
+		if err := w.stammdaten(ctx, StaffGender{StaffID: staff.ID, FirstName: person.FirstName, LastName: person.LastName, Gender: in.Gender}); err != nil {
+			return Result{}, err
+		}
 	}
 	if roleID == 0 {
 		return Result{StaffID: staff.ID, PersonID: person.ID}, nil

@@ -47,7 +47,7 @@ export function removeStaffTopic(): HelpTopic {
       },
     ],
     result:
-      "Der Zugang ist aus. Unter `Mitarbeiter` findest du die Person nur noch mit der Auswahl `Ehemalige`. Bei einem geplanten Austritt steht bis dahin `Austritt am …` bei der Person.",
+      "Der Zugang ist aus. Unter `Mitarbeitende` findest du die Person nur noch mit der Auswahl `Ehemalige`. Bei einem geplanten Austritt steht bis dahin `Austritt am …` bei der Person.",
     notes: [
       "Einen geplanten Austritt kannst du bis zum letzten Arbeitstag ändern oder zurücknehmen: oben rechts die drei Punkte und dann `Austritt ändern` oder `Austritt zurücknehmen`.",
       "Eine Woche vorher und am letzten Arbeitstag erinnert moto alle, die Personen löschen dürfen.",
