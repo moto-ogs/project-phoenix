@@ -15,7 +15,11 @@ import type { NotificationFeedEntry } from "~/lib/notification-feed-helpers";
 import { useNotificationFeedPortal } from "~/lib/notification-feed-portal";
 import { onSWRScopeReset, useLiveRefreshInterval, useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
-import { notificationFeedKeys, schoolPortalKeys } from "~/lib/swr/portal-keys";
+import {
+  catererKeys,
+  notificationFeedKeys,
+  schoolPortalKeys,
+} from "~/lib/swr/portal-keys";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 
 /** Woher eine Glocke ihren Feed liest: das Portal und seine Aufrufe. */
@@ -97,7 +101,9 @@ export function useNotificationFeedUnread(
         ? schoolPortalKeys.notificationFeedUnread()
         : portal.keyScope === "traeger"
           ? traegerKeys.notificationFeedUnread()
-          : notificationFeedKeys.unreadCount();
+          : portal.keyScope === "caterer"
+            ? catererKeys.notificationFeedUnread()
+            : notificationFeedKeys.unreadCount();
   const { data, mutate } = useSWRAuth<number>(
     key,
     () =>
@@ -191,7 +197,9 @@ export function useNotificationFeed(
         ? schoolPortalKeys.notificationFeedFirstPage()
         : portal.keyScope === "traeger"
           ? traegerKeys.notificationFeedFirstPage()
-          : notificationFeedKeys.firstPage(),
+          : portal.keyScope === "caterer"
+            ? catererKeys.notificationFeedFirstPage()
+            : notificationFeedKeys.firstPage(),
     () => (source ? source.api.fetchPage() : fetchNotificationFeed(apiBase)),
     {
       refreshInterval,

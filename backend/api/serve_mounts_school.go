@@ -188,18 +188,20 @@ func mountSchoolPortalRoutes(
 	tenant.Mount("/staff-messages", staffMessaging.Router(ProtectedTenantRoutesWith(staffAttachments.Register)))
 	tenant.Mount("/staff-notices", staffNotices.Router(ProtectedTenantRoutes))
 	tenant.Mount("/timetable", timetableResource.Router(ProtectedTenantRoutesWith(classdayHTTP.NewSlotListResource(classDay.SlotLists).Register)))
-	mountNotificationRoutes(root, tenant, notificationRoutes, notifications.TraegerFeed)
+	mountNotificationRoutes(root, tenant, notificationRoutes, notifications.TraegerFeed, notifications.CatererFeed)
 	root.Mount("/school-staff-messages", schoolMessageAttachmentRouter(staffAttachments))
 	root.Mount("/school", school.RouterWithAuthRateLimiter(limiters.authMiddleware(), SchoolSessionChain, ProtectedSchoolRoutes))
 	return nil
 }
 
-// mountNotificationRoutes mounts the notification routes of the OGS portal
-// and the bell of the Träger-Portal (#7146), which reads the entries of every
-// school of the Träger across its schools.
-func mountNotificationRoutes(root, tenant chi.Router, staff *notificationsHTTP.Resource, traeger deliveryContract.TraegerNotificationFeed) {
+// mountNotificationRoutes mounts the notification routes of the OGS portal,
+// the bell of the Träger-Portal (#7146), which reads the entries of every
+// school of the Träger across its schools, and the bell of the caterer portal
+// (#7147), which reads the entries of every school the caterer supplies.
+func mountNotificationRoutes(root, tenant chi.Router, staff *notificationsHTTP.Resource, traeger deliveryContract.TraegerNotificationFeed, caterer deliveryContract.CatererNotificationFeed) {
 	tenant.Mount("/notifications", staff.Router())
 	root.Mount("/traeger/notifications", NewTraegerNotificationHTTP(traeger).Router())
+	root.Mount("/caterer/notifications", NewCatererNotificationHTTP(caterer).Router())
 }
 
 // newTimetableResource composes the timetable routes. Dateframes belong to

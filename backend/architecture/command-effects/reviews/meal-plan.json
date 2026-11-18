@@ -1559,7 +1559,28 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
-      "reason": "Read-only: meal-plan reaches modules/delivery/devices.ParentDeliveryPolicy.DefaultLocale (delivery-platform) through roots/owners.mealPlanChangeNotices.NotifyMenuChanged (#7145) to find the guardians with parent_portal.access to the booked children, their language and push consent. No persistent, lock or scope effect.",
+      "reason": "Reviewed caterer-audience read (#7147): the root asks Delivery, in the caller's tenant transaction of the school that saves the menu, for the active accounts of the caterer that currently supplies it. The target only SELECTs platform.delivery_caterer_feed_audience(), which reads the school's supply under RLS, with no row mutation or locking read.",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.CatererFeedNotifier.CatererAudience",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.mealPlanChangeNotices.NotifyMenuChanged",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
+      "reason": "Platform protocol participation (durable): meal-plan reaches modules/delivery/contract.CatererFeedNotifier.NotifyCaterer (delivery-platform) through roots/owners.mealPlanChangeNotices.NotifyMenuChanged (#7147). The feed entries of the caterer-portal bell join the unit that saves the menu, in the school's tenant transaction; no push and no after-commit signal follow, and transaction correctness stays with the platform behavior tests (ADR 0098).",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.CatererFeedNotifier.NotifyCaterer",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.mealPlanChangeNotices.NotifyMenuChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
+      "reason": "Read-only: meal-plan reaches modules/delivery/devices.ParentDeliveryPolicy.DefaultLocale (delivery-platform) through roots/owners.mealPlanChangeNotices.NotifyMenuChanged (#7145) to find the guardians with parent_portal.access to the booked children, their language and push consent. No persistent, lock or scope effect. Re-reviewed for #7147: the binding also writes the caterer bell through NotifyCaterer; this effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.ParentDeliveryPolicy.DefaultLocale",
       "target_owner": "delivery-platform"
@@ -1569,7 +1590,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
-      "reason": "Read-only: meal-plan reaches modules/delivery/devices.ParentDeliveryPolicy.NormalizeLocale (delivery-platform) through roots/owners.mealPlanChangeNotices.NotifyMenuChanged (#7145) to find the guardians with parent_portal.access to the booked children, their language and push consent. No persistent, lock or scope effect.",
+      "reason": "Read-only: meal-plan reaches modules/delivery/devices.ParentDeliveryPolicy.NormalizeLocale (delivery-platform) through roots/owners.mealPlanChangeNotices.NotifyMenuChanged (#7145) to find the guardians with parent_portal.access to the booked children, their language and push consent. No persistent, lock or scope effect. Re-reviewed for #7147: the binding also writes the caterer bell through NotifyCaterer; this effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.ParentDeliveryPolicy.NormalizeLocale",
       "target_owner": "delivery-platform"
@@ -1579,7 +1600,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
-      "reason": "Read-only: meal-plan reaches modules/delivery/devices.ParentDeliveryPolicy.ParentMealPlanChangedCopy (delivery-platform) through roots/owners.mealPlanChangeNotices.NotifyMenuChanged (#7145) to find the guardians with parent_portal.access to the booked children, their language and push consent. No persistent, lock or scope effect.",
+      "reason": "Read-only: meal-plan reaches modules/delivery/devices.ParentDeliveryPolicy.ParentMealPlanChangedCopy (delivery-platform) through roots/owners.mealPlanChangeNotices.NotifyMenuChanged (#7145) to find the guardians with parent_portal.access to the booked children, their language and push consent. No persistent, lock or scope effect. Re-reviewed for #7147: the binding also writes the caterer bell through NotifyCaterer; this effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.ParentDeliveryPolicy.ParentMealPlanChangedCopy",
       "target_owner": "delivery-platform"
@@ -1589,7 +1610,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
-      "reason": "Read-only: meal-plan reaches modules/delivery/devices.ParentDeliveryPolicy.ParentMealPlanChangedFeedCopy (delivery-platform) through roots/owners.mealPlanChangeNotices.NotifyMenuChanged (#7145) to build the localized, week-specific notification-feed copy. No persistent, lock or scope effect.",
+      "reason": "Read-only: meal-plan reaches modules/delivery/devices.ParentDeliveryPolicy.ParentMealPlanChangedFeedCopy (delivery-platform) through roots/owners.mealPlanChangeNotices.NotifyMenuChanged (#7145) to build the localized, week-specific notification-feed copy. No persistent, lock or scope effect. Re-reviewed for #7147: the binding also writes the caterer bell through NotifyCaterer; this effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.ParentDeliveryPolicy.ParentMealPlanChangedFeedCopy",
       "target_owner": "delivery-platform"
@@ -1600,7 +1621,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
-      "reason": "Platform protocol participation (durable): meal-plan reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.mealPlanChangeNotices.NotifyMenuChanged (#7145). The feed entries and push outbox entries of a changed menu join the unit that saved the menu, so they commit or roll back with it; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (durable): meal-plan reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.mealPlanChangeNotices.NotifyMenuChanged (#7145). The feed entries and push outbox entries of a changed menu join the unit that saved the menu, so they commit or roll back with it; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #7147: the binding also writes the caterer bell through NotifyCaterer; this effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
       "target_owner": "delivery-platform"
@@ -1610,7 +1631,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
-      "reason": "Read-only: meal-plan reaches modules/delivery/internal/notifications.PreferenceService.FilterOptedIn (delivery-platform) through roots/owners.mealPlanChangeNotices.NotifyMenuChanged (#7145) to find the guardians with parent_portal.access to the booked children, their language and push consent. No persistent, lock or scope effect.",
+      "reason": "Read-only: meal-plan reaches modules/delivery/internal/notifications.PreferenceService.FilterOptedIn (delivery-platform) through roots/owners.mealPlanChangeNotices.NotifyMenuChanged (#7145) to find the guardians with parent_portal.access to the booked children, their language and push consent. No persistent, lock or scope effect. Re-reviewed for #7147: the binding also writes the caterer bell through NotifyCaterer; this effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
       "target_owner": "delivery-platform"
@@ -1620,7 +1641,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
-      "reason": "Read-only: meal-plan reaches modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts (people-directory) through roots/owners.mealPlanChangeNotices.NotifyMenuChanged (#7145) to find the guardians with parent_portal.access to the booked children, their language and push consent. No persistent, lock or scope effect.",
+      "reason": "Read-only: meal-plan reaches modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts (people-directory) through roots/owners.mealPlanChangeNotices.NotifyMenuChanged (#7145) to find the guardians with parent_portal.access to the booked children, their language and push consent. No persistent, lock or scope effect. Re-reviewed for #7147: the binding also writes the caterer bell through NotifyCaterer; this effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts",
       "target_owner": "people-directory"

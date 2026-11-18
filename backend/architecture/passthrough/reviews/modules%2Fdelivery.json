@@ -2,6 +2,11 @@
   "sites": [
     {
       "decision": "0090",
+      "id": "modules/delivery/http/notifications/CatererFeedResource.Router",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0090",
       "id": "modules/delivery/http/notifications/Resource.SchoolRouter",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -114,6 +119,11 @@
       "decision": "0090",
       "id": "modules/delivery/internal/notifications/pushSubscriptionService.UnsubscribeSchool",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0075",
+      "id": "modules/delivery/internal/notifications/router.CatererAudience",
+      "reason": "ADR 0075 owner-edge translation (#7147): validates the school and the router's feed wiring before it reads the caterer audience of the school in the caller's tenant transaction, and wraps the store error; no decision beyond the contract."
     },
     {
       "decision": "0090",

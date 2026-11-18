@@ -24,6 +24,9 @@ type Runtime struct {
 	// right to read the overview of the Träger (#7146); it opens no
 	// transaction, the Träger bell opens its own.
 	ProtectedTraeger func(chi.Router, func(chi.Router))
+	// ProtectedCaterer registers routes behind the caterer session (#7147);
+	// it opens no transaction, the caterer bell opens its own.
+	ProtectedCaterer func(chi.Router, func(chi.Router))
 	// OrganizationID is the Träger of a Träger session.
 	OrganizationID  func(context.Context) int64
 	TenantOperation Middleware

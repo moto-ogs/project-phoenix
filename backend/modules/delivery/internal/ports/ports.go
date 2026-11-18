@@ -106,6 +106,7 @@ type FeedStore interface {
 	MarkAllFeedEntriesRead(ctx context.Context, tenantID, accountID int64, view domain.FeedView, now time.Time) (int, error)
 	GuardianFeedStore
 	TraegerFeedStore
+	CatererFeedStore
 	// SchoolAudience lists the active accounts of the school with a role of
 	// the OGS portal or of moto schule, and its active guardians with the
 	// children they hold parent_portal.access for (#7144), under the
@@ -136,12 +137,28 @@ type GuardianFeedStore interface {
 // that Träger while the account is an active member of it with an active
 // account.
 type TraegerFeedStore interface {
-	ListTraegerFeedEntries(ctx context.Context, organizationID, accountID int64, types []string, after *domain.FeedCursor, limit int) ([]domain.TraegerFeedEntry, error)
+	ListTraegerFeedEntries(ctx context.Context, organizationID, accountID int64, types []string, after *domain.FeedCursor, limit int) ([]domain.SchoolFeedEntry, error)
 	CountUnreadTraegerFeedEntries(ctx context.Context, organizationID, accountID int64, types []string) (int, error)
 	// MarkTraegerFeedEntryRead marks one readable entry of the account read;
 	// found is false for every other entry.
 	MarkTraegerFeedEntryRead(ctx context.Context, organizationID, accountID int64, types []string, entryID int64, now time.Time) (found bool, err error)
 	MarkAllTraegerFeedEntriesRead(ctx context.Context, organizationID, accountID int64, types []string, now time.Time) (int, error)
+}
+
+// CatererFeedStore reads the bell of a caterer account across the schools
+// its caterer currently supplies (#7147). Every statement runs on an
+// administrative transaction and keeps only the entries of the given types in
+// such a school while the account is active. CatererFeedAudience runs in the
+// tenant transaction of a school and names the active accounts of the
+// caterer that supplies it.
+type CatererFeedStore interface {
+	ListCatererFeedEntries(ctx context.Context, accountID int64, types []string, after *domain.FeedCursor, limit int) ([]domain.SchoolFeedEntry, error)
+	CountUnreadCatererFeedEntries(ctx context.Context, accountID int64, types []string) (int, error)
+	// MarkCatererFeedEntryRead marks one readable entry of the account read;
+	// found is false for every other entry.
+	MarkCatererFeedEntryRead(ctx context.Context, accountID int64, types []string, entryID int64, now time.Time) (found bool, err error)
+	MarkAllCatererFeedEntriesRead(ctx context.Context, accountID int64, types []string, now time.Time) (int, error)
+	CatererFeedAudience(ctx context.Context, tenantID int64) ([]int64, error)
 }
 
 // RealtimeNotificationStore keeps the in-app notifications other API

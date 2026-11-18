@@ -1,0 +1,4 @@
+GET /caterer/notifications/feed/
+GET /caterer/notifications/feed/unread-count
+POST /caterer/notifications/feed/read-all
+POST /caterer/notifications/feed/{id}/read

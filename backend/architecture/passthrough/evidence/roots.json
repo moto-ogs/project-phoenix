@@ -590,6 +590,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (f catererNotificationFeed) Page(ctx context.Context, accountID int64, cursor string, limit int) (notificationsHTTP.SchoolFeedPage, error) {\n\tpage, err := f.CatererNotificationFeed.Page(ctx, accountID, cursor, limit)\n\treturn schoolFeedPage(page), err\n}",
+      "form": "unclassified-evidence",
+      "id": "api/catererNotificationFeed.Page",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (r childQuotaStudentsReader) ChildQuotaUsage(ctx context.Context) (students.ChildQuotaUsage, bool, error) {\n\tusage, limited, err := r.usages.ChildQuotaUsage(ctx)\n\treturn students.ChildQuotaUsage{Booked: usage.Booked, Occupied: usage.Occupied}, limited, err\n}",
       "form": "unclassified-evidence",
       "id": "api/childQuotaStudentsReader.ChildQuotaUsage",
@@ -1815,7 +1822,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (f traegerNotificationFeed) Page(ctx context.Context, organizationID, accountID int64, cursor string, limit int) (notificationsHTTP.TraegerFeedPage, error) {\n\tpage, err := f.TraegerNotificationFeed.Page(ctx, organizationID, accountID, cursor, limit)\n\tif err != nil {\n\t\treturn notificationsHTTP.TraegerFeedPage{}, err\n\t}\n\tout := notificationsHTTP.TraegerFeedPage{NextCursor: page.NextCursor, UnreadCount: page.UnreadCount, Entries: make([]notificationsHTTP.TraegerFeedEntry, len(page.Entries))}\n\tfor i, entry := range page.Entries {\n\t\tout.Entries[i] = notificationsHTTP.TraegerFeedEntry{FeedEntry: notificationsHTTP.FeedEntry(entry.NotificationFeedEntry), SchoolID: entry.SchoolID, SchoolName: entry.SchoolName}\n\t}\n\treturn out, nil\n}",
+      "evidence": "func (f traegerNotificationFeed) Page(ctx context.Context, organizationID, accountID int64, cursor string, limit int) (notificationsHTTP.SchoolFeedPage, error) {\n\tpage, err := f.TraegerNotificationFeed.Page(ctx, organizationID, accountID, cursor, limit)\n\treturn schoolFeedPage(page), err\n}",
       "form": "unclassified-evidence",
       "id": "api/traegerNotificationFeed.Page",
       "owner": "roots"
