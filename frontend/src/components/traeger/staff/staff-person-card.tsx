@@ -167,9 +167,7 @@ export function StaffPersonCard({
         <form
           ref={formRef}
           noValidate
-          // SectionCard gives the body no bottom padding above its footer;
-          // the fields keep the card's 20 px (16 px on a phone) to it.
-          className="compact:pb-4 space-y-4 pb-5 max-sm:pb-4"
+          className="space-y-4"
           onSubmit={(event) => void save(event)}
         >
           <FormErrorAlert message={errors.error} />
