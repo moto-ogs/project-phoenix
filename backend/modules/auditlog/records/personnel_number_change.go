@@ -14,12 +14,13 @@ import (
 type PersonnelNumberChange struct {
 	ID int64 `bun:"id,pk,autoincrement" json:"id"`
 	TenantModel
-	StaffID    int64     `bun:"staff_id,notnull" json:"staff_id"`
-	ChangedBy  int64     `bun:"changed_by,notnull" json:"changed_by"`
-	OldValue   string    `bun:"old_value,notnull" json:"old_value"`
-	NewValue   string    `bun:"new_value,notnull" json:"new_value"`
-	Note       string    `bun:"note,notnull" json:"note"`
-	OccurredAt time.Time `bun:"occurred_at,nullzero,notnull" json:"occurred_at"`
+	StaffID         int64      `bun:"staff_id,notnull" json:"staff_id"`
+	ChangedBy       int64      `bun:"changed_by,notnull" json:"changed_by"`
+	OldValue        string     `bun:"old_value,notnull" json:"old_value"`
+	NewValue        string     `bun:"new_value,notnull" json:"new_value"`
+	Note            string     `bun:"note,notnull" json:"note"`
+	OccurredAt      time.Time  `bun:"occurred_at,nullzero,notnull" json:"occurred_at"`
+	AuditRecordedAt *time.Time `bun:"audit_recorded_at,scanonly" json:"-"`
 }
 
 func (c *PersonnelNumberChange) Validate() error {

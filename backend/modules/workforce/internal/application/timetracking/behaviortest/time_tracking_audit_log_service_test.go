@@ -31,14 +31,16 @@ const (
 )
 
 type auditLogFixture struct {
-	tenantID int64
-	staffA   int64
-	staffB   int64
-	admin    int64
-	repos    *api.RepositoryTestFactory
-	db       *testpkg.DB
-	ctx      context.Context
-	svc      timetracking.TimeTrackingAuditLogService
+	tenantID      int64
+	staffA        int64
+	staffB        int64
+	admin         int64
+	repos         *api.RepositoryTestFactory
+	db            *testpkg.DB
+	ctx           context.Context
+	svc           timetracking.TimeTrackingAuditLogService
+	auditStarted  time.Time
+	auditFinished time.Time
 }
 
 // newAuditLogFixture arranges one event per source:
@@ -68,6 +70,8 @@ func newAuditLogFixture(t *testing.T) *auditLogFixture {
 	reposAbsences := api.NewStaffAbsenceSuiteRepositories(testpkg.NewDatabase(t, db))
 	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
 	ctx := testpkg.TenantContext(tenantID)
+
+	auditStarted := testpkg.DatabaseNow(t, db)
 
 	// Session + two edit rows from one save action.
 	checkIn := time.Date(2025, time.August, 4, 8, 0, 0, 0, time.UTC)
@@ -165,6 +169,7 @@ func newAuditLogFixture(t *testing.T) *auditLogFixture {
 	return &auditLogFixture{
 		tenantID: tenantID, staffA: staffA.ID, staffB: staffB.ID, admin: admin.ID,
 		repos: repos, db: db, ctx: ctx,
+		auditStarted: auditStarted, auditFinished: testpkg.DatabaseNow(t, db),
 		svc: timetracking.NewTimeTrackingAuditLogService(owners.NewTimeTrackingAuditReader(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).TimeTrackingAuditLog), owners.StaffDisplayNames(reposPeople.Staff), workforceRetentionFixture{}, auditLogToday),
 	}
 }
@@ -208,6 +213,8 @@ func TestTimeTrackingAuditLog_MergedFeed(t *testing.T) {
 	}
 	for _, event := range page.Events {
 		assert.Positive(t, event.EntryID, "every API event must expose its unique source entry id")
+		assert.True(t, !event.OccurredAt.Before(f.auditStarted) && !event.OccurredAt.After(f.auditFinished),
+			"%s occurred at %s outside the database write interval [%s, %s]", event.Source, event.OccurredAt, f.auditStarted, f.auditFinished)
 	}
 
 	edit := bySource[sourceSessionEdit][0]
@@ -259,6 +266,48 @@ func TestTimeTrackingAuditLog_MergedFeed(t *testing.T) {
 	assert.Contains(t, string(deletionDetail.Payload), `"minutes_delta"`)
 }
 
+func TestTimeTrackingAuditLog_ReopeningLegacyClose(t *testing.T) {
+	t.Parallel()
+
+	f := newAuditLogFixture(t)
+	snapshots := timetracking.MonthSnapshotCapability(owners.MustNewWorkforce(testpkg.NewDatabase(t, f.db)))
+	closedAt := time.Date(2025, time.October, 1, 9, 0, 0, 0, time.UTC)
+	closed, err := snapshots.RecordClosedMonth(f.ctx, timetracking.MonthSnapshot{
+		StaffID: f.staffA, Year: 2025, Month: 9, ClosedAt: closedAt, ClosedBy: f.admin,
+		Source: "admin", CloseReason: "Altbestand",
+	})
+	require.NoError(t, err)
+
+	// A closing row already present when the migration runs has no stamp.
+	_, err = f.db.ExecContext(f.ctx, `UPDATE active.staff_month_balance_snapshots
+		SET audit_recorded_at = NULL WHERE tenant_id = ? AND id = ?`, f.tenantID, closed.ID)
+	require.NoError(t, err)
+	before := testpkg.DatabaseNow(t, f.db)
+	ownerReopenedAt := closedAt.Add(time.Hour)
+	require.NoError(t, testpkg.WithinTenantContext(t, f.ctx, f.db, f.tenantID, func(ctx context.Context) error {
+		affected, err := snapshots.ReopenMonthSnapshot(ctx, closed.ID, f.admin, ownerReopenedAt, "Korrektur")
+		require.NoError(t, err)
+		require.EqualValues(t, 1, affected)
+		return nil
+	}))
+	after := testpkg.DatabaseNow(t, f.db)
+
+	page, err := testpkg.TenantQuery1(t, f.ctx, f.db, f.svc.ListAuditLog, timetracking.AuditLogListRequest{
+		Sources: []string{sourceMonthClose, sourceMonthReopen},
+	})
+	require.NoError(t, err)
+	matching := map[string]time.Time{}
+	for _, event := range page.Events {
+		if event.EntryID == closed.ID {
+			matching[event.Source] = event.OccurredAt
+		}
+	}
+	require.Len(t, matching, 2)
+	assert.True(t, matching[sourceMonthClose].Equal(closedAt), "the legacy close retains its recorded time")
+	reopened := matching[sourceMonthReopen]
+	assert.True(t, !reopened.Before(before) && !reopened.After(after), "the reopen uses the database clock")
+}
+
 func TestTimeTrackingAuditLog_Filters(t *testing.T) {
 	t.Parallel()
 
@@ -294,27 +343,32 @@ func TestTimeTrackingAuditLog_Filters(t *testing.T) {
 	})
 
 	t.Run("date range", func(t *testing.T) {
-		from := calendar.NewDate(2025, time.September, 1)
-		to := calendar.NewDate(2025, time.September, 1)
+		// Seed the two feed timestamps on separate database days. The
+		// snapshot's month and the producer's close time stay fixed.
+		from := calendar.DateFromTime(testpkg.DatabaseNow(t, f.db)).AddDays(-2)
+		to := from
+		_, err := f.db.ExecContext(f.ctx, `UPDATE active.staff_month_balance_snapshots
+			SET audit_recorded_at = ?, audit_reopen_recorded_at = CASE WHEN reopened_at IS NOT NULL THEN ?::timestamptz END
+			WHERE tenant_id = ?`, from.BerlinMidnight(), from.AddDays(1).BerlinMidnight(), f.tenantID)
+		require.NoError(t, err)
 		page, err := testpkg.TenantQuery1(t, f.ctx, f.db, f.svc.ListAuditLog, timetracking.AuditLogListRequest{From: &from, To: &to})
 		require.NoError(t, err)
 		bySource := eventsBySource(page.Events)
 		assert.Len(t, bySource[sourceMonthClose], 1)
-		assert.Empty(t, bySource[sourceMonthReopen], "reopen happened on Sep 2")
+		assert.Empty(t, bySource[sourceMonthReopen], "the reopen was recorded on the next day")
 	})
 
 	t.Run("to date includes the final fractional second", func(t *testing.T) {
 		day := calendar.NewDate(2025, time.September, 3)
 		finalFraction := time.Date(2025, time.September, 3, 23, 59, 59, 500_000_000, calendar.Berlin)
 		nextMidnight := day.AddDays(1).BerlinMidnight()
-		// The column default stamps occurred_at (ADR 0281, Nachtrag), so the
-		// protocol rows of a past day are seeded with their time.
+		// Seed the database-stamped feed column at the two exact boundaries.
 		for sourceID, occurredAt := range map[int64]time.Time{
 			9001: finalFraction,
 			9002: nextMidnight,
 		} {
 			_, err := f.db.ExecContext(f.ctx, `INSERT INTO audit.time_tracking_deletions
-				(tenant_id, staff_id, source, source_id, deleted_by, payload, note, occurred_at)
+				(tenant_id, staff_id, source, source_id, deleted_by, payload, note, audit_recorded_at)
 				VALUES (?, ?, 'absence', ?, ?, '{"test":true}'::jsonb, 'Datumsgrenze', ?)`,
 				f.tenantID, f.staffA, sourceID, f.admin, occurredAt)
 			require.NoError(t, err)

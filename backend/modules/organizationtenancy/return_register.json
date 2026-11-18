@@ -1771,6 +1771,12 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -1862,6 +1868,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -2351,6 +2363,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -2524,6 +2542,18 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
+        },
+        {
+          "name": "audit_reopen_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -2641,6 +2671,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -2816,6 +2852,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -5434,6 +5476,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -6120,6 +6168,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -6439,6 +6493,12 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [

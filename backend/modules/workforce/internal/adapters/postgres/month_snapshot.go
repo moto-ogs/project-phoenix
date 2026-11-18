@@ -42,7 +42,9 @@ type monthSnapshotRow struct {
 	// PayrollRules is raw JSON: a []byte would reach the jsonb column as a
 	// base64 string, which chk_staff_month_balance_snapshots_payroll_rules
 	// refuses.
-	PayrollRules json.RawMessage `bun:"payroll_rules,type:jsonb,nullzero"`
+	PayrollRules          json.RawMessage `bun:"payroll_rules,type:jsonb,nullzero"`
+	AuditReopenRecordedAt *time.Time      `bun:"audit_reopen_recorded_at,scanonly"`
+	AuditRecordedAt       *time.Time      `bun:"audit_recorded_at,scanonly"`
 }
 
 func monthSnapshotToDomain(v monthSnapshotRow) domain.StaffMonthBalanceSnapshot {
