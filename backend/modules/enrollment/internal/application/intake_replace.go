@@ -371,7 +371,7 @@ func (s *Intake) replaceRequestPayload(ctx context.Context, editReq *SubmitReque
 	}
 	// Append-only evidence: the edit re-confirms the legal blocks in force
 	// now next to the earlier entries, which keep the pre-edit answers.
-	snapshotEntry, err := legalBlocksSnapshotEntry(plan.legalBlocks, editReq.ConsentFlags, formsOf(plan.schema, editReq.DisplayedFormSchemaID), s.now(), s.deps.Fingerprint)
+	snapshotEntry, err := s.snapshotLegalEvidence(ctx, plan.legalBlocks, editReq.ConsentFlags, formsOf(plan.schema, editReq.DisplayedFormSchemaID), s.now())
 	if err != nil {
 		return nil, err
 	}

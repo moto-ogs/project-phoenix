@@ -136,6 +136,7 @@ func (s buildStateStep) Run(ctx context.Context, rt *Runtime) error {
 
 	state := s.seeder.collectSeedState(rt.FixedSeeder, rt.StaffPIN, rt.Bootstrap)
 	state.DeferredSeedPending = rt.DeferredSeedPending
+	state.NeighbourAttendance = rt.neighbourAttendance
 	if virtual, ok := rt.Values["profile.virtual_device"].(SeedDevice); ok {
 		state.Devices[virtual.DeviceID] = virtual
 	}
@@ -293,7 +294,7 @@ func traegerSteps(seeder *Seeder) []Step {
 // traegerSetupSteps prepare the Träger: office, holidays, settings and
 // master data.
 func traegerSetupSteps(seeder *Seeder) []Step {
-	return traegerSerial(seedTraegerBueroStep{}, seedVisitorTraegerBueroStep{seeder: seeder}, seedTraegerHolidayPeriodStep{}, seedHolidayParentAccountStep{seeder: seeder}, seedTraegerClosingDayStep{}, seedTraegerHolidayDaysStep{}, seedTraegerHolidayCriteriaStep{}, seedTraegerHolidayHomeSchoolStep{}, seedHolidayLegalStep{}, seedTraegerSettingsStep{}, seedTraegerMasterDataStep{}, seedTraegerReportTemplatesStep{})
+	return traegerSerial(seedTraegerBueroStep{}, seedVisitorTraegerBueroStep{seeder: seeder}, seedTraegerHolidayPeriodStep{}, seedHolidayParentAccountStep{seeder: seeder}, seedTraegerClosingDayStep{}, seedTraegerHolidayDaysStep{}, seedTraegerHolidayCriteriaStep{}, seedTraegerHolidayHomeSchoolStep{}, seedHolidayLegalStep{}, seedTraegerSettingsStep{}, seedTraegerMasterDataStep{}, seedTraegerReportTemplatesStep{}, seedDemoNeighbourPlanningStep{retry: seeder.options.ReplaceAbandoned})
 }
 
 // traegerCareSteps conclude and bill the contracts of the school's accepted

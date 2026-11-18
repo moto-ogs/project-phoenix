@@ -30,6 +30,7 @@ import type {
 } from "~/components/messaging/team-chat-frame-parts";
 import { Button } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 import { formErrorMessage } from "~/components/ui/form-error";
 import {
   FormErrorAlert,
@@ -381,12 +382,20 @@ export function TeamChatThread({
   // Gruppen zusätzlich die Mitgliederzahl.
   // Gezählt wird, was angekommen ist, nicht die Blase auf dem Weg (#5011).
   const sentCount = confirmedThread?.messages.length ?? 0;
-  const messageCount = `${sentCount} ${
-    sentCount === 1 ? "Nachricht" : "Nachrichten"
-  }`;
-  const stats = group
-    ? `${messageCount} · ${members.length} ${members.length === 1 ? "Mitglied" : "Mitglieder"}`
-    : messageCount;
+  const messageLabel = sentCount === 1 ? "Nachricht" : "Nachrichten";
+  const stats = group ? (
+    <TenantPageStats
+      items={[
+        { value: sentCount, label: messageLabel },
+        {
+          value: members.length,
+          label: members.length === 1 ? "Mitglied" : "Mitglieder",
+        },
+      ]}
+    />
+  ) : (
+    `${sentCount} ${messageLabel}`
+  );
   const audience = group
     ? "Nur die Mitglieder sehen diese Nachrichten. Wer neu dazukommt, sieht sie ab dem Beitritt."
     : "Nur ihr beide seht diese Nachrichten.";

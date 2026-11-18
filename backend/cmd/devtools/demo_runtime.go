@@ -21,9 +21,10 @@ type DemoSchoolRecord struct {
 }
 
 type DemoVisit struct {
-	StudentID   int64
-	Active, Web bool
-	ChangedAt   time.Time
+	StudentID        int64
+	Active, Web      bool
+	ChangedAt        time.Time
+	OpenSchoolStayBy int64
 }
 
 // demoSchoolStore is the part of the owner's demo-state capability whose
@@ -139,7 +140,7 @@ func NewDemoRuntime(db transactionruntime.Database, now func() time.Time, seedAd
 			}
 			result := make([]DemoVisit, 0, len(rows))
 			for _, row := range rows {
-				result = append(result, DemoVisit{StudentID: row.StudentID, Active: row.Active, Web: row.Web, ChangedAt: row.ChangedAt})
+				result = append(result, DemoVisit{StudentID: row.StudentID, Active: row.Active, Web: row.Web, ChangedAt: row.ChangedAt, OpenSchoolStayBy: row.OpenSchoolStayBy})
 			}
 			return result, nil
 		},

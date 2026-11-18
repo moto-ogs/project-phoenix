@@ -9,7 +9,11 @@ import DatabaseExportsPage from "./page";
 
 vi.mock("next-auth/react", () => ({ useSession: vi.fn() }));
 
-vi.mock("~/components/ui/tenant-page", () => ({
+vi.mock("~/components/ui/tenant-page", async (importOriginal) => ({
+  // Die echten Paare der Statuszeile, damit Zahl und Wort zusammen prüfbar sind.
+  TenantPageStats: (
+    await importOriginal<typeof import("~/components/ui/tenant-page")>()
+  ).TenantPageStats,
   TenantPage: ({
     children,
     stats,
@@ -101,7 +105,9 @@ describe("DatabaseExportsPage", () => {
       screen.getByRole("link", { name: "Zu den Anmeldephasen" }),
     ).toBeVisible();
     expect(screen.getByRole("link", { name: "Zum Personal" })).toBeVisible();
-    expect(screen.getByText(/5 auf anderen Seiten/)).toBeVisible();
+    const links = screen.getByText("auf anderen Seiten");
+    expect(links).toBeVisible();
+    expect(links.parentElement).toHaveTextContent(/^5 auf anderen Seiten$/);
   });
 
   it("hides exports from modules the school did not book", () => {
@@ -120,6 +126,8 @@ describe("DatabaseExportsPage", () => {
     expect(
       screen.queryByRole("link", { name: "Zum Personal" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText(/3 auf anderen Seiten/)).toBeVisible();
+    const links = screen.getByText("auf anderen Seiten");
+    expect(links).toBeVisible();
+    expect(links.parentElement).toHaveTextContent(/^3 auf anderen Seiten$/);
   });
 });

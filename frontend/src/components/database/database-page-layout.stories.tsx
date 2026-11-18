@@ -3,6 +3,7 @@ import { fn } from "storybook/test";
 
 import { Button } from "~/components/ui/button";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 import { roomsConcept } from "~/lib/concepts/rooms";
 
 import { DatabasePageLayout } from "./database-page-layout";
@@ -58,7 +59,14 @@ export const WithSearch: Story = {
     sessionLoading: false,
     intro: {
       title: "Räume",
-      description: "24 Räume · 3 Kategorien",
+      description: (
+        <TenantPageStats
+          items={[
+            { value: 24, label: "Räume" },
+            { value: 3, label: "Kategorien" },
+          ]}
+        />
+      ),
       actions: (
         <Button type="button" size="md">
           Raum anlegen

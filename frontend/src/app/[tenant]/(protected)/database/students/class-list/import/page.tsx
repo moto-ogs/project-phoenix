@@ -16,7 +16,7 @@ import { StickyActionBar } from "~/components/ui/sticky-action-bar";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { SectionCard } from "~/components/ui/section-card";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { UploadSection } from "~/components/import/upload-section";
 import {
   DISCARD_UPLOAD_HINT,
@@ -336,19 +336,26 @@ export default function ClassListImportPage() {
 
   // Statuszeile des Seitenkopfs: der Stand des Imports.
   const savedCount = importResult ? importBatchSavedCount(importResult) : 0;
-  const statusLine = uploadedFile
-    ? [
-        uploadedFile.name,
+  const statusLine = uploadedFile ? (
+    <TenantPageStats
+      items={[
+        { label: uploadedFile.name },
         importComplete
-          ? "Import abgeschlossen"
+          ? { label: "Import abgeschlossen" }
           : importInterrupted
-            ? `${savedCount} gespeichert`
-            : `${stats.total} ${stats.total === 1 ? "Zeile" : "Zeilen"}`,
-        !importComplete && stats.errors > 0 ? `${stats.errors} Fehler` : null,
-      ]
-        .filter(Boolean)
-        .join(" · ")
-    : "Noch keine Datei gewählt";
+            ? { value: savedCount, label: "gespeichert" }
+            : {
+                value: stats.total,
+                label: stats.total === 1 ? "Zeile" : "Zeilen",
+              },
+        ...(!importComplete && stats.errors > 0
+          ? [{ value: stats.errors, label: "Fehler" }]
+          : []),
+      ]}
+    />
+  ) : (
+    "Noch keine Datei gewählt"
+  );
 
   if (status === "loading" || !isReady) {
     return (

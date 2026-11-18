@@ -461,6 +461,14 @@
   );
 }
 
+/* A split preview column clips like the base class, but without becoming a
+   scroll container: `overflow: hidden` would turn the column into the
+   scrolling ancestor of a `sticky` preview inside it, and the preview would
+   no longer stay in view while the editor beside it scrolls (#7412). */
+.moto-dotted-background--split {
+  overflow: clip;
+}
+
 .moto-dotted-background--split::before {
   mask-image: linear-gradient(
     to right,
@@ -541,9 +549,15 @@
 
 /* An open dropdown or popover lifts its surface above the next one. A card's
    own disclosure toggle (`SectionCollapseToggle`) opens no layer: it must not
-   lift the card above a sticky save bar. */
+   lift the card above a sticky save bar. A trigger whose layer is portaled to
+   `body` (`OverflowMenu`, `data-portaled-layer`) needs no lift either: lifted
+   to 60, the card would cover the top of its own menu at `Z_LAYER.dropdown`
+   (#7403). */
 .moto-content-surface:has(
-  [aria-expanded="true"]:not([data-section-collapse-toggle])
+  [aria-expanded="true"]:not(
+    [data-section-collapse-toggle],
+    [data-portaled-layer]
+  )
 ) {
   position: relative;
   z-index: 60;

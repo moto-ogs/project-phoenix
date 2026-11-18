@@ -1184,10 +1184,8 @@ describe("StudentSearchPage", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(
-            "1 Kind · 0 in der OGS · 0 in der Schule · 0 zuhause · 1 krank",
-          ),
-        ).toBeInTheDocument();
+          screen.getByText("in der OGS").parentElement?.parentElement,
+        ).toHaveTextContent(/^1 Kind, 0 in der OGS, 1 krank$/);
       });
     });
 
@@ -1220,10 +1218,8 @@ describe("StudentSearchPage", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(
-            "3 Kinder · 2 in der OGS · 0 in der Schule · 0 zuhause · 1 krank",
-          ),
-        ).toBeInTheDocument();
+          screen.getByText("in der OGS").parentElement?.parentElement,
+        ).toHaveTextContent(/^3 Kinder, 2 in der OGS, 1 krank$/);
       });
     });
 
@@ -1346,8 +1342,9 @@ describe("StudentSearchPage", () => {
     });
 
     // #4588: ein Kind ohne bekannten Ort oder mit „Kommt heute nicht“ zählt
-    // in der Statuszeile als zuhause; der Filter hinter der Kachel „Zuhause“
-    // muss genau diese Kinder zeigen und darf keins davon verlieren.
+    // als zuhause; der Filter hinter der Kachel „Zuhause“ muss genau diese
+    // Kinder zeigen und darf keins davon verlieren. Die Zahl „zuhause“ trägt
+    // die Statuszeile seit #7402 nicht mehr (höchstens drei Angaben).
     it("shows every child the summary counts as home under the 'Zuhause' filter", async () => {
       const swrModule = await import("~/lib/swr");
       mockUseSWRAuthWithStudents(swrModule, {
@@ -1369,10 +1366,8 @@ describe("StudentSearchPage", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(
-            "4 Kinder · 1 in der OGS · 0 in der Schule · 3 zuhause · 0 krank",
-          ),
-        ).toBeInTheDocument();
+          screen.getByText("in der OGS").parentElement?.parentElement,
+        ).toHaveTextContent(/^4 Kinder, 1 in der OGS, 0 krank$/);
       });
       expect(
         screen.getByText(new RegExp(`^${mockStudents[0]!.first_name}\\b`)),
@@ -2299,6 +2294,9 @@ describe("StudentSearchPage", () => {
       );
       expect(screen.queryByText(/0 Kinder/)).not.toBeInTheDocument();
       expect(screen.queryByText(/0 in der Schule/)).not.toBeInTheDocument();
+      // Mit Tageszahlen setzt die Statuszeile Zahl und Wort in eigene
+      // Elemente (#7402).
+      expect(screen.queryByText("in der OGS")).not.toBeInTheDocument();
     });
   });
 

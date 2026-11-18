@@ -29,7 +29,7 @@ import { BackAction } from "~/components/ui/back-link";
 import { Button } from "~/components/ui/button";
 import { SectionCard } from "~/components/ui/section-card";
 import { Skeleton } from "~/components/ui/skeleton";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import {
   TimetableRosterContent,
@@ -409,9 +409,18 @@ export function SchoolSupervisionsView() {
     <TenantPage
       title={introInstance?.title ?? "Meine Aufsichten"}
       stats={
-        introInstance
-          ? `${introInstance.roomName ?? `Raum ${introInstance.roomId}`} · ${introInstance.startTime} bis ${introInstance.endTime}`
-          : undefined
+        introInstance ? (
+          <TenantPageStats
+            items={[
+              {
+                label: introInstance.roomName ?? `Raum ${introInstance.roomId}`,
+              },
+              {
+                label: `${introInstance.startTime} bis ${introInstance.endTime}`,
+              },
+            ]}
+          />
+        ) : undefined
       }
       actions={
         introInstance?.status === "cancelled" ? (

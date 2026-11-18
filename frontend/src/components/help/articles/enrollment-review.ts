@@ -41,6 +41,7 @@ export function enrollmentReviewTopic(): HelpTopic {
       "Auf der Seite der Phase steht unter `Freie Plätze je Angebot`, wie viele Plätze noch frei sind. `Belegt` zählt die Kinder am vollsten Tag bis zum Ende der Phase.",
       "Hochgeladene Nachweise stehen bei `Zusatzfragen (Eltern)`. Mit `Öffnen` siehst du die Datei in einem neuen Tab.",
       "Hat die Vorlage `Unterschrift erforderlich`, steht die Unterschrift der Eltern im Abschnitt `Unterschrift`. Mit `Nachweis als PDF` lädst du den Anmeldenachweis mit der Unterschrift herunter.",
+      "Unter `Rechtstexte und Antworten` findest du die Texte und Antworten jeder Einreichung. Öffne einen Text, um den Wortlaut zu lesen.",
       "Mit `Statusseite öffnen` siehst du, was die Eltern sehen.",
       // #5102: Auswirkung nach einer Korrektur unter `Nachbearbeitung`.
       "Angebote eines bestätigten Kindes änderst du unter `Nachbearbeitung` mit `Bearbeiten`. Danach steht dort `Auswirkung auf den Betreuungsplan`.",

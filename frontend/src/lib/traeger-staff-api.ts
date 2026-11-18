@@ -8,6 +8,7 @@
  * und Steuerdaten. Personendaten werden nie zwischengespeichert; jede Anfrage
  * steht im Zugriffsprotokoll der Schulen. Backend-IDs werden hier zu Strings.
  */
+import type { PersonRequest } from "~/lib/contract/traeger-staff-records.generated";
 import {
   downloadTraegerList,
   type TraegerListFile,
@@ -527,6 +528,35 @@ export async function updateStaffPersonnelNumber(
   );
 }
 
+/** Name und Geburtstag der Akte, wie die Personalverwaltung sie korrigiert. */
+export interface StaffPersonInput {
+  readonly firstName: string;
+  readonly lastName: string;
+  /** Kalendertag `YYYY-MM-DD`; leer entfernt den Geburtstag. */
+  readonly birthday: string;
+}
+
+/**
+ * Korrigiert Vorname, Nachname und Geburtstag der Akte (#7379). Jeder
+ * geänderte Wert steht danach mit seinem alten Wert im Verlauf; die
+ * Angaben an den Schulen bleiben unverändert. Die Antwort trägt keine Akte:
+ * Wer sie zeigt, lädt sie neu.
+ */
+export async function updateStaffPerson(
+  id: string,
+  input: StaffPersonInput,
+): Promise<void> {
+  const body: PersonRequest = {
+    first_name: input.firstName,
+    last_name: input.lastName,
+    birthday: input.birthday === "" ? null : input.birthday,
+  };
+  await traegerRequest<unknown>(recordPath(id, "/person"), {
+    method: "PUT",
+    body,
+  });
+}
+
 export async function revealStaffFinancial(
   id: string,
 ): Promise<StaffFinancial> {
@@ -692,14 +722,91 @@ export interface StaffHireInput {
     readonly schoolId: string;
     readonly weekdayMinutes: readonly number[];
   }[];
-  /** Stellt ein, obwohl es eine Person mit Name und Geburtsdatum schon gibt. */
+  /** Stellt ein, obwohl es eine Person, die dieselbe sein könnte, schon gibt. */
   readonly confirmDuplicate: boolean;
 }
 
-/** Wo es eine Person mit demselben Namen und Geburtsdatum schon gibt. */
+/**
+ * Warum moto eine Person für dieselbe hält (#7378): gleicher Name und
+ * gleiches Geburtsdatum, gleicher Name einer Person ohne Geburtsdatum oder
+ * gleiche E-Mail-Adresse.
+ */
+export type StaffHireMatchReason = "name_birthday" | "name" | "email";
+
+const HIRE_MATCH_REASONS: readonly StaffHireMatchReason[] = [
+  "name_birthday",
+  "name",
+  "email",
+];
+
+interface StaffHireMatchCommon {
+  readonly firstName: string;
+  readonly lastName: string;
+  /** Mindestens ein Grund, in der Reihenfolge Name, dann E-Mail. */
+  readonly reasons: readonly StaffHireMatchReason[];
+}
+
+/**
+ * Eine Person, die vielleicht die ist, die gerade eingestellt wird: eine
+ * Akte des Trägers oder eine Person ohne Akte an einer Schule.
+ */
 export type StaffHireMatch =
-  | { readonly kind: "record"; readonly recordId: string }
-  | { readonly kind: "school"; readonly schoolName: string };
+  | (StaffHireMatchCommon & {
+      readonly kind: "record";
+      readonly recordId: string;
+    })
+  | (StaffHireMatchCommon & {
+      readonly kind: "school";
+      readonly schoolId: string;
+      readonly schoolName: string;
+      readonly staffId: string;
+    });
+
+interface BackendHireMatch {
+  kind?: unknown;
+  staff_record_id?: unknown;
+  school_id?: unknown;
+  school_name?: unknown;
+  staff_id?: unknown;
+  first_name?: unknown;
+  last_name?: unknown;
+  reasons?: unknown;
+}
+
+function hireMatchReasons(raw: unknown): StaffHireMatchReason[] {
+  if (!Array.isArray(raw)) return [];
+  return HIRE_MATCH_REASONS.filter((reason) => raw.includes(reason));
+}
+
+function hireMatch(match: BackendHireMatch): StaffHireMatch | null {
+  const common = {
+    firstName: typeof match.first_name === "string" ? match.first_name : "",
+    lastName: typeof match.last_name === "string" ? match.last_name : "",
+    reasons: hireMatchReasons(match.reasons),
+  };
+  if (match.kind === "record" && match.staff_record_id != null) {
+    return {
+      ...common,
+      kind: "record",
+      recordId: String(match.staff_record_id),
+    };
+  }
+  if (
+    match.kind === "school" &&
+    typeof match.school_name === "string" &&
+    match.school_id != null &&
+    match.staff_id != null
+  ) {
+    return {
+      ...common,
+      kind: "school",
+      schoolId: String(match.school_id),
+      schoolName: match.school_name,
+      staffId: String(match.staff_id),
+    };
+  }
+  return null;
+}
 
 /**
  * Die Treffer aus der Antwort auf eine angehaltene Einstellung
@@ -713,19 +820,8 @@ export function staffHireMatches(
   const matches: StaffHireMatch[] = [];
   for (const entry of raw as unknown[]) {
     if (typeof entry !== "object" || entry === null) continue;
-    const match = entry as {
-      kind?: unknown;
-      staff_record_id?: unknown;
-      school_name?: unknown;
-    };
-    if (match.kind === "record" && match.staff_record_id != null) {
-      matches.push({ kind: "record", recordId: String(match.staff_record_id) });
-    } else if (
-      match.kind === "school" &&
-      typeof match.school_name === "string"
-    ) {
-      matches.push({ kind: "school", schoolName: match.school_name });
-    }
+    const match = hireMatch(entry as BackendHireMatch);
+    if (match) matches.push(match);
   }
   return matches;
 }

@@ -33,7 +33,7 @@ import { Input } from "~/components/ui/input";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
 import { Skeleton } from "~/components/ui/skeleton";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { Textarea } from "~/components/ui/textarea";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import type {
@@ -118,22 +118,36 @@ export function classArrivalExceptionLine(
   return `${when} kommt die Klasse um ${exception.arrival_time} Uhr${reason}`;
 }
 
-/** Die Zahlen des Tages als eine Zeile unter dem Klassennamen. */
-function summaryLine(report: ClassDayReport): string {
-  const totals = report.totals;
-  if (!report.enrollment_known) {
-    return `${totals.students} Kinder im Klassenverband`;
-  }
-  const parts = [
-    `${totals.students} Kinder`,
-    `${totals.staying} bleiben`,
-    `${totals.leaving} gehen heim`,
+/**
+ * Die Statuszeile unter dem Klassennamen: Datum, Kinder der Klasse und wie
+ * viele heute anders als sonst gehen. Höchstens drei Angaben passen in die
+ * Zeile; Bleiben, Gehen, Abgemeldet und Keine Betreuung zählen die
+ * Abschnitte darunter selbst.
+ */
+function statusItems(
+  dateISO: string,
+  report: ClassDayReport,
+  changes: number,
+): { value?: number; label: string }[] {
+  const students = report.totals.students;
+  return [
+    { label: formatDate(dateISO) },
+    {
+      value: students,
+      label: report.enrollment_known ? "Kinder" : "Kinder im Klassenverband",
+    },
+    ...(changes > 0
+      ? [
+          {
+            value: changes,
+            label:
+              changes === 1
+                ? "Kind anders als sonst"
+                : "Kinder anders als sonst",
+          },
+        ]
+      : []),
   ];
-  if (totals.absent > 0) parts.push(`${totals.absent} abgemeldet`);
-  if (totals.list_entries > 0) {
-    parts.push(`${totals.list_entries} keine Betreuung`);
-  }
-  return parts.join(" · ");
 }
 
 export interface ClassDayClassProps {
@@ -686,13 +700,11 @@ export function ClassDayClass({
       backHref={schoolPath(schoolDayListPath(dateISO, openList))}
       backLabel="Alle Klassen"
       stats={
-        <>
-          {formatDate(dateISO)}
-          {report && !weekend ? ` · ${summaryLine(report)}` : ""}
-          {report && !weekend && changes > 0
-            ? ` · ${changes === 1 ? "1 Kind" : `${changes} Kinder`} anders als sonst`
-            : ""}
-        </>
+        report && !weekend ? (
+          <TenantPageStats items={statusItems(dateISO, report, changes)} />
+        ) : (
+          formatDate(dateISO)
+        )
       }
       overlays={
         <>

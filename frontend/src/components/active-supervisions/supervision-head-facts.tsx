@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { childrenConcept } from "~/lib/concepts/children";
 import { roomsConcept } from "~/lib/concepts/rooms";
@@ -14,8 +15,8 @@ export function SupervisionHeadFacts({
   roomName,
   supervisorNames,
 }: Readonly<{
-  /** „12 Kinder“, mit Grenze „12 / 10 Kinder · Überbucht“. */
-  childCount: string;
+  /** „12 Kinder“, mit Grenze „12 / 10 Kinder“ und daneben „Überbucht“. */
+  childCount: ReactNode;
   roomName: string | null;
   supervisorNames: readonly string[];
 }>) {

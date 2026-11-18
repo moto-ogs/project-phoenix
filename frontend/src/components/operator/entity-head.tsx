@@ -41,11 +41,11 @@ export function EntityStatusLine({
 }>) {
   return (
     <>
-      <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      {/* Abstand statt Trennpunkt, wie `TenantPageStats` (#7402). */}
+      <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {subdomain ? (
           <span className="font-mono text-gray-500">{subdomain}</span>
         ) : null}
-        {subdomain ? <span className="text-gray-300">·</span> : null}
         <DataTableStatusBadge
           active={active}
           activeLabel={activeLabel}

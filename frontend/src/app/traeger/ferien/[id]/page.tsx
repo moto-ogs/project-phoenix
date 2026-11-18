@@ -6,7 +6,8 @@
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import {
-  HolidayPeriodStatusLine,
+  HolidayPeriodStatusBadge,
+  holidayPeriodStats,
   holidayPeriodTabs,
 } from "~/components/traeger/holiday-period-head";
 import { HolidayPeriodForm } from "~/components/traeger/holiday-period-form";
@@ -22,7 +23,7 @@ import {
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { billingConcept } from "~/lib/concepts/billing";
 import { ButtonLink } from "~/components/ui/button";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import type { HolidayPeriod } from "~/lib/traeger-api";
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
 import { useTenantMutateMatching } from "~/lib/swr";
@@ -76,7 +77,9 @@ export default function TraegerHolidayPeriodPage() {
       back
       backHref={listHref}
       backLabel="Zurück zu den Ferien"
-      stats={period ? <HolidayPeriodStatusLine period={period} /> : null}
+      stats={
+        period ? <TenantPageStats items={holidayPeriodStats(period)} /> : null
+      }
       statsLoading={!period && !loadError}
       tabs={holidayPeriodTabs(
         id,
@@ -85,21 +88,24 @@ export default function TraegerHolidayPeriodPage() {
         period?.allocationMode,
       )}
       actions={
-        billingHref ? (
-          <ButtonLink
-            href={billingHref}
-            variant="outline"
-            size="md"
-            tooltip={HOLIDAY_BILLING_HINT}
-          >
-            <MotoConceptIcon
-              concept={billingConcept}
-              size={18}
-              className="mr-2"
-            />
-            Zur Abrechnung
-          </ButtonLink>
-        ) : null
+        <>
+          {period ? <HolidayPeriodStatusBadge period={period} /> : null}
+          {billingHref ? (
+            <ButtonLink
+              href={billingHref}
+              variant="outline"
+              size="md"
+              tooltip={HOLIDAY_BILLING_HINT}
+            >
+              <MotoConceptIcon
+                concept={billingConcept}
+                size={18}
+                className="mr-2"
+              />
+              Zur Abrechnung
+            </ButtonLink>
+          ) : null}
+        </>
       }
       error={shownError}
       loading={!loadError && !(period && schools)}

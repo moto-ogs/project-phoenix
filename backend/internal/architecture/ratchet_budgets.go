@@ -21,8 +21,7 @@ import (
 // edited to fit the code. The measurements, compared by declaration name
 // across all those files because they share one package:
 //
-//   - every top-level integer constant (a threshold or a register total; a
-//     raise loosens both);
+//   - every top-level integer constant (a threshold; a raise loosens it).
 //   - every value of a top-level map[string]int register (a budget or an
 //     allowed count), and the sum of the register, so a new key cannot add
 //     what an existing one may not;
@@ -43,10 +42,14 @@ import (
 // successors for one name, or one declaration naming two predecessors, fail. Moving
 // a measurement out of the ratchet files therefore fails as well.
 //
-// A raise is accepted only when a comment on the raised entry or its
-// declaration cites an ADR ("ADR 0123") with a number the base does not have
-// and the change adds as docs/adr/0123-*.md: a raised budget needs a new
-// decision, and renaming an existing ADR file is none. A measurement that
+// A raise is accepted only when a comment on the raised register entry, or
+// on the raised constant's declaration, cites an ADR ("ADR 0123") with a
+// number the base does not have and the change adds as docs/adr/0123-*.md: a
+// raised budget needs a new decision, and renaming an existing ADR file is
+// none. An exception register grows under a citation on its declaration, but
+// a citation on a budget register's declaration authorizes no entry: it would
+// free every entry at once, and every pull request touching the register
+// would edit that one shared comment (ADR 0296). A measurement that
 // disappears needs the same: a comment naming it that cites an ADR the change
 // adds.
 type ratchetBudgets struct {
@@ -485,13 +488,13 @@ func compareRatchetBudgets(base, candidate *ratchetBudgets, adrs map[string]bool
 		}
 		after := 0
 		for key, was := range register.entries {
-			if now, ok := current.entries[key]; ok && now.value > was.value && !justified(now.comment, current.comment) {
+			if now, ok := current.entries[key]; ok && now.value > was.value && !justified(now.comment) {
 				raises = append(raises, fmt.Sprintf("%s[%q]: %d -> %d at %s", name, key, was.value, now.value, now.location))
 			}
 		}
 		for key, now := range current.entries {
 			// An entry raised or added under an added ADR keeps its base share.
-			if justified(now.comment, current.comment) {
+			if justified(now.comment) {
 				now = register.entries[key]
 			}
 			after += now.value

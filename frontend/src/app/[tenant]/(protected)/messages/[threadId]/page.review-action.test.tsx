@@ -108,6 +108,8 @@ vi.mock("~/components/messaging/message-composer", () => ({
 }));
 
 vi.mock("~/components/ui/tenant-page", () => ({
+  // Die Attrappe zeigt keine Statuszeile; die Paare braucht hier niemand.
+  TenantPageStats: () => null,
   TenantPage: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }));
 

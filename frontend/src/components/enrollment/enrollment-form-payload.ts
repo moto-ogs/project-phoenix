@@ -50,7 +50,7 @@ export function buildEnrollmentPayload(
 ): SubmitEnrollmentPayload {
   const fields = rules.schema?.fields ?? [];
   const consentFlags: Record<string, unknown> = {};
-  for (const block of rules.legalBlocks) {
+  for (const block of rules.restrictToOfferings ? [] : rules.legalBlocks) {
     consentFlags[block.key] =
       block.kind === "notice" ? true : values.legalConsents[block.key] === true;
   }

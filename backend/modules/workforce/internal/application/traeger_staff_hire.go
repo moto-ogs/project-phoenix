@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
@@ -13,9 +14,10 @@ import (
 
 // „Person einstellen“ (#7206, ADR 0254). A hire checks everything first: the
 // release, the personnel number at the Träger and at each Einsatzort, and
-// whether the Träger or one of its schools keeps a person with this name and
-// birthday. Then each Einsatzort gets the person and the employment in its
-// own tenant transaction, and one Träger transaction saves the record, its
+// whether the Träger or one of its schools keeps a person who may be the
+// same: same name and birthday, same name without a birthday, or at a
+// school the same e-mail address (#7378). Then each Einsatzort gets the
+// person and the employment in its own tenant transaction, and one Träger transaction saves the record, its
 // Einsatzorte and the contract; no transaction carries both (ADR 0105). A
 // hire that fails between the two answers as incomplete and names what
 // exists: the people it created stand under „Ohne Akte“, where the
@@ -31,7 +33,7 @@ const noteHiredByTraeger = "Vom Träger eingestellt"
 
 // Hire creates the record, the contract and the employments of a new person.
 func (t *TraegerStaff) Hire(ctx context.Context, actor workforce.TraegerStaffActor, input workforce.TraegerStaffHireInput) (workforce.TraegerStaffRecordDetail, error) {
-	if t.ports.HirePersons == nil || t.ports.HireEmployments == nil {
+	if t.ports.HirePersons == nil || t.ports.HireEmployments == nil || t.ports.Emails == nil {
 		return workforce.TraegerStaffRecordDetail{}, errHiresUnbound
 	}
 	schools, err := t.ports.Schools.TraegerSchools(ctx, actor.OrganizationID)
@@ -148,7 +150,7 @@ func (t *TraegerStaff) checkHire(ctx context.Context, actor workforce.TraegerSta
 			return domain.StaffHire{}, &domain.StaffHireError{Field: "sites", Reason: "an Einsatzort is not one of the Träger's schools"}
 		}
 	}
-	matches, err := t.hireRecordMatches(ctx, actor, hire)
+	matches, records, err := t.hireRecordMatches(ctx, actor, hire)
 	if err != nil {
 		return domain.StaffHire{}, err
 	}
@@ -156,30 +158,50 @@ func (t *TraegerStaff) checkHire(ctx context.Context, actor workforce.TraegerSta
 	if err != nil {
 		return domain.StaffHire{}, err
 	}
+	matches = recordsReachedAt(matches, records, schoolMatches)
 	if len(matches)+len(schoolMatches) == 0 || input.ConfirmDuplicate {
 		return hire, nil
 	}
-	// The answer names people of these schools: each school's access log
-	// gets its entry before anything leaves (ADR 0084 section 7).
-	for _, match := range schoolMatches {
-		matches = append(matches, workforce.TraegerStaffHireMatch{Kind: workforce.TraegerStaffHireMatchSchool, SchoolID: match.school.ID, SchoolName: match.school.Name})
-		err := t.ports.Runtime.WithinSchool(ctx, match.school.ID, func(ctx context.Context) error {
-			return t.ports.Access.RecordTraegerStaffAccess(ctx, workforce.TraegerStaffAccess{
-				OrganizationID: actor.OrganizationID, AccountID: actor.AccountID, View: workforce.TraegerStaffViewHireCheck,
-				Rows: len(match.staffIDs), StaffIDs: match.staffIDs,
-			})
-		})
-		if err != nil {
-			return domain.StaffHire{}, err
-		}
+	matches, err = t.logSchoolMatches(ctx, actor, matches, schoolMatches)
+	if err != nil {
+		return domain.StaffHire{}, err
 	}
 	return domain.StaffHire{}, &workforce.TraegerStaffHireDuplicateError{Matches: matches}
 }
 
+// logSchoolMatches adds the people of the schools to the answer. The answer
+// names them, and a record's address reason comes from its Einsatzort: each
+// school's access log gets its entry for both before anything leaves (ADR
+// 0084 section 7).
+func (t *TraegerStaff) logSchoolMatches(ctx context.Context, actor workforce.TraegerStaffActor, matches []workforce.TraegerStaffHireMatch, schoolMatches []hireSchoolMatch) ([]workforce.TraegerStaffHireMatch, error) {
+	for _, match := range schoolMatches {
+		staffIDs := slices.Clone(match.reachedKept)
+		for _, person := range match.people {
+			staffIDs = append(staffIDs, person.member.StaffID)
+			matches = append(matches, workforce.TraegerStaffHireMatch{
+				Kind: workforce.TraegerStaffHireMatchSchool, SchoolID: match.school.ID, SchoolName: match.school.Name, StaffID: person.member.StaffID,
+				FirstName: person.member.FirstName, LastName: person.member.LastName, Reasons: person.reasons,
+			})
+		}
+		err := t.ports.Runtime.WithinSchool(ctx, match.school.ID, func(ctx context.Context) error {
+			return t.ports.Access.RecordTraegerStaffAccess(ctx, workforce.TraegerStaffAccess{
+				OrganizationID: actor.OrganizationID, AccountID: actor.AccountID, View: workforce.TraegerStaffViewHireCheck,
+				Rows: len(staffIDs), StaffIDs: staffIDs,
+			})
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return matches, nil
+}
+
 // hireRecordMatches reads the Träger's records after the release check: a
 // record with the hire's number refuses it, a record with its name and
-// birthday is a match.
-func (t *TraegerStaff) hireRecordMatches(ctx context.Context, actor workforce.TraegerStaffActor, hire domain.StaffHire) ([]workforce.TraegerStaffHireMatch, error) {
+// birthday, or with its name and no birthday, is a match. It returns the
+// records too: a record keeps no e-mail address (ADR 0254 section 8), its
+// Einsatzorte do, so recordsReachedAt adds the records a school reaches.
+func (t *TraegerStaff) hireRecordMatches(ctx context.Context, actor workforce.TraegerStaffActor, hire domain.StaffHire) ([]workforce.TraegerStaffHireMatch, []domain.TraegerStaffRecord, error) {
 	var records []domain.TraegerStaffRecord
 	err := t.released(ctx, actor, func(ctx context.Context) error {
 		var err error
@@ -187,32 +209,72 @@ func (t *TraegerStaff) hireRecordMatches(ctx context.Context, actor workforce.Tr
 		return err
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var matches []workforce.TraegerStaffHireMatch
 	for _, record := range records {
 		if hire.PersonnelNumber != nil && domain.Deref(record.PersonnelNumber) == *hire.PersonnelNumber {
-			return nil, workforce.ErrPersonnelNumberTaken
+			return nil, nil, workforce.ErrPersonnelNumberTaken
 		}
-		if hire.SamePerson(record.FirstName, record.LastName, record.Birthday) {
-			matches = append(matches, workforce.TraegerStaffHireMatch{Kind: workforce.TraegerStaffHireMatchRecord, RecordID: record.ID})
+		if reason := hire.NameMatch(record.FirstName, record.LastName, record.Birthday); reason != "" {
+			matches = append(matches, recordMatch(record, reason))
 		}
 	}
-	return matches, nil
+	return matches, records, nil
 }
 
-// hireSchoolMatch is one school with employments of the hire's name and
-// birthday that no record holds.
+func recordMatch(record domain.TraegerStaffRecord, reason string) workforce.TraegerStaffHireMatch {
+	return workforce.TraegerStaffHireMatch{
+		Kind: workforce.TraegerStaffHireMatchRecord, RecordID: record.ID, FirstName: record.FirstName, LastName: record.LastName,
+		Reasons: []string{reason},
+	}
+}
+
+// recordsReachedAt adds the address to the matches of the records whose
+// Einsatzort reaches the person at the hire's address: a record already
+// matched by name gets the reason, any other record becomes a match.
+func recordsReachedAt(matches []workforce.TraegerStaffHireMatch, records []domain.TraegerStaffRecord, schools []hireSchoolMatch) []workforce.TraegerStaffHireMatch {
+	reached := func(link domain.TraegerStaffLink) bool {
+		return slices.ContainsFunc(schools, func(school hireSchoolMatch) bool {
+			return school.school.ID == link.SchoolID && slices.Contains(school.reachedKept, link.StaffID)
+		})
+	}
+	for _, record := range records {
+		if !slices.ContainsFunc(record.Links, reached) {
+			continue
+		}
+		i := slices.IndexFunc(matches, func(match workforce.TraegerStaffHireMatch) bool { return match.RecordID == record.ID })
+		if i < 0 {
+			matches = append(matches, recordMatch(record, domain.HireMatchEmail))
+		} else {
+			matches[i].Reasons = append(matches[i].Reasons, domain.HireMatchEmail)
+		}
+	}
+	return matches
+}
+
+// hirePerson is one employment of a school that may be the hired person,
+// with the reasons in the order name, then address.
+type hirePerson struct {
+	member  workforce.TraegerSchoolStaffMember
+	reasons []string
+}
+
+// hireSchoolMatch is one school with employments that may be the hired
+// person: people no record holds, and the employments of records the hire's
+// address reaches (reachedKept), whose record is the match.
 type hireSchoolMatch struct {
-	school   workforce.TraegerStaffSchool
-	staffIDs []int64
+	school      workforce.TraegerStaffSchool
+	people      []hirePerson
+	reachedKept []int64
 }
 
 // hireSchoolMatches reads the live employments of every school of the
 // Träger, each in its own tenant transaction. An Einsatzort that holds the
-// hire's number refuses it. A school with a person of the hire's name and
-// birthday is a match. A person a record holds already is the record's
-// match, so those employments stay out.
+// hire's number refuses it. A school with a person of the hire's name, or
+// reached at its address, is a match (#7378). A person a record holds
+// already is the record's match, so those employments stay out; the ones the
+// address reaches stay as reachedKept for their records.
 func (t *TraegerStaff) hireSchoolMatches(ctx context.Context, hire domain.StaffHire, schools []workforce.TraegerStaffSchool) ([]hireSchoolMatch, error) {
 	sites := make(map[int64]bool, len(hire.Sites))
 	for _, site := range hire.Sites {
@@ -220,65 +282,125 @@ func (t *TraegerStaff) hireSchoolMatches(ctx context.Context, hire domain.StaffH
 	}
 	var matches []hireSchoolMatch
 	for _, school := range schools {
-		var same []int64
+		var people []hirePerson
+		var kept []int64
 		err := t.ports.Runtime.WithinSchool(ctx, school.ID, func(ctx context.Context) error {
 			members, err := t.schoolStaff(ctx, nil)
 			if err != nil {
 				return err
 			}
-			if same, err = samePeople(hire, members, sites[school.ID]); err != nil {
+			if err := numberTaken(hire, members, sites[school.ID]); err != nil {
 				return err
 			}
-			same, err = t.withoutRecord(ctx, same)
+			reached, err := t.reachedAt(ctx, hire)
+			if err != nil {
+				return err
+			}
+			people, kept, err = t.withoutRecord(ctx, samePeople(hire, members, reached))
 			return err
 		})
 		if err != nil {
 			return nil, err
 		}
-		if len(same) > 0 {
-			matches = append(matches, hireSchoolMatch{school: school, staffIDs: same})
+		if len(people)+len(kept) > 0 {
+			matches = append(matches, hireSchoolMatch{school: school, people: people, reachedKept: kept})
 		}
 	}
 	return matches, nil
 }
 
-// samePeople lists the employments of one school whose person shares the
-// hire's name and birthday. At an Einsatzort an employment that holds the
-// hire's personnel number refuses the hire.
-func samePeople(hire domain.StaffHire, members []workforce.TraegerSchoolStaffMember, einsatzort bool) ([]int64, error) {
-	var same []int64
+// numberTaken refuses a hire whose personnel number an employment of an
+// Einsatzort holds.
+func numberTaken(hire domain.StaffHire, members []workforce.TraegerSchoolStaffMember, einsatzort bool) error {
+	if !einsatzort || hire.PersonnelNumber == nil {
+		return nil
+	}
 	for _, member := range members {
-		if einsatzort && hire.PersonnelNumber != nil && domain.Deref(member.PersonnelNumber) == *hire.PersonnelNumber {
-			return nil, workforce.ErrPersonnelNumberTaken
-		}
-		if hire.SamePerson(member.FirstName, member.LastName, member.Birthday) {
-			same = append(same, member.StaffID)
+		if domain.Deref(member.PersonnelNumber) == *hire.PersonnelNumber {
+			return workforce.ErrPersonnelNumberTaken
 		}
 	}
-	return same, nil
+	return nil
 }
 
-// withoutRecord keeps the employments of the school of the tenant
-// transaction that no record of the Träger holds.
-func (t *TraegerStaff) withoutRecord(ctx context.Context, staffIDs []int64) ([]int64, error) {
-	if len(staffIDs) == 0 {
-		return nil, nil
+// schoolReach is who the school of the tenant transaction reaches at the
+// hire's address: employments by their master data, accounts by login,
+// persons by an unused invitation.
+type schoolReach struct {
+	staffIDs   []int64
+	accountID  int64
+	invitedIDs []int64
+}
+
+func (r schoolReach) reaches(member workforce.TraegerSchoolStaffMember) bool {
+	return slices.Contains(r.staffIDs, member.StaffID) ||
+		(r.accountID > 0 && member.AccountID != nil && *member.AccountID == r.accountID) ||
+		slices.Contains(r.invitedIDs, member.PersonID)
+}
+
+// reachedAt reads who the school reaches at the hire's address, in two
+// statements; a hire without an address reaches nobody.
+func (t *TraegerStaff) reachedAt(ctx context.Context, hire domain.StaffHire) (schoolReach, error) {
+	email := strings.ToLower(domain.Deref(hire.Email))
+	if email == "" {
+		return schoolReach{}, nil
+	}
+	staffIDs, err := t.store.SchoolStaffIDsByEmail(ctx, email)
+	if err != nil {
+		return schoolReach{}, err
+	}
+	accounts, invited, err := t.ports.Emails.FindSchoolEmailIdentities(ctx, []string{email})
+	if err != nil {
+		return schoolReach{}, err
+	}
+	return schoolReach{staffIDs: staffIDs, accountID: accounts[email], invitedIDs: invited[email]}, nil
+}
+
+// samePeople lists the employments of one school that may be the hired
+// person: by name, by address, or both.
+func samePeople(hire domain.StaffHire, members []workforce.TraegerSchoolStaffMember, reached schoolReach) []hirePerson {
+	var same []hirePerson
+	for _, member := range members {
+		var reasons []string
+		if reason := hire.NameMatch(member.FirstName, member.LastName, member.Birthday); reason != "" {
+			reasons = append(reasons, reason)
+		}
+		if reached.reaches(member) {
+			reasons = append(reasons, domain.HireMatchEmail)
+		}
+		if len(reasons) > 0 {
+			same = append(same, hirePerson{member: member, reasons: reasons})
+		}
+	}
+	return same
+}
+
+// withoutRecord keeps the people of the school of the tenant transaction
+// whose employment no record of the Träger holds. Of the others it returns
+// the employments the hire's address reaches: their record is the match.
+func (t *TraegerStaff) withoutRecord(ctx context.Context, people []hirePerson) ([]hirePerson, []int64, error) {
+	if len(people) == 0 {
+		return nil, nil, nil
+	}
+	staffIDs := make([]int64, 0, len(people))
+	for _, person := range people {
+		staffIDs = append(staffIDs, person.member.StaffID)
 	}
 	kept, err := t.store.KeptStaffIDs(ctx, staffIDs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	held := make(map[int64]bool, len(kept))
-	for _, staffID := range kept {
-		held[staffID] = true
-	}
-	free := make([]int64, 0, len(staffIDs))
-	for _, staffID := range staffIDs {
-		if !held[staffID] {
-			free = append(free, staffID)
+	free := make([]hirePerson, 0, len(people))
+	var reachedKept []int64
+	for _, person := range people {
+		switch {
+		case !slices.Contains(kept, person.member.StaffID):
+			free = append(free, person)
+		case slices.Contains(person.reasons, domain.HireMatchEmail):
+			reachedKept = append(reachedKept, person.member.StaffID)
 		}
 	}
-	return free, nil
+	return free, reachedKept, nil
 }
 
 // hireAtSchool creates the person and the employment in the school of the

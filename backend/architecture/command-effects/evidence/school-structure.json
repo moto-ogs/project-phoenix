@@ -226,7 +226,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.substitutionBoundary.Assign",
-      "binding_digest": "6c15097944a55375ff09049b8dd1da18",
+      "binding_digest": "02f93c177f48b144cc7c5ec9c8e28526",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract.SubstitutionModule.Assign",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/workforce.Capability.LockStaffBalanceWrites",
@@ -234,7 +234,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.substitutionBoundary.Assign",
-      "binding_digest": "914f4dba7218e787f835a9af707b0137",
+      "binding_digest": "e142644bd2e55c180757a991eb4d2f5d",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract.SubstitutionModule.Assign",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.LockStaffBalanceWrites",
@@ -274,7 +274,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.substitutionModule.Assign",
-      "binding_digest": "6c15097944a55375ff09049b8dd1da18",
+      "binding_digest": "02f93c177f48b144cc7c5ec9c8e28526",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract.SubstitutionModule.Assign",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/workforce.Capability.LockStaffBalanceWrites",
@@ -282,7 +282,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.substitutionModule.Assign",
-      "binding_digest": "914f4dba7218e787f835a9af707b0137",
+      "binding_digest": "e142644bd2e55c180757a991eb4d2f5d",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract.SubstitutionModule.Assign",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.LockStaffBalanceWrites",

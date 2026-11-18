@@ -12,7 +12,7 @@ Speicher erreichen, etwa über Routing an den Host mit dem Volume.
 ## Vorbereiten
 
 1. Für jede Umgebung Anbieter und Region der laufenden Server im
-   Betriebsinventar prüfen. Diese Zuordnung ist hier nicht bestätigt. Pro
+   Betriebsinventar prüfen. Für Staging und Produktion steht sie unten. Pro
    Umgebung einen neuen, privaten S3-Bucket beim selben Anbieter in der
    bestätigten Region anlegen. Versionierung und Object Lock ausgeschaltet
    lassen. Ein Bucket mit jemals
@@ -21,8 +21,20 @@ Speicher erreichen, etwa über Routing an den Host mit dem Volume.
    Objektberechtigungen vergeben. Der technische Zugang braucht für diesen
    Bucket `GetBucketVersioning`, `ListBucket`, `GetObject`, `PutObject` und
    `DeleteObject`. Vor dem Umzug mit Testobjekten prüfen, dass anonyme GETs
-   scheitern und ein PUT mit veraltetem `If-Match` fehlschlägt.
+   scheitern, ein PUT mit veraltetem `If-Match` fehlschlägt und ein PUT mit
+   dem aktuellen ETag ohne Anführungszeichen gelingt. Die App sendet den ETag
+   ohne Anführungszeichen, weil Hetzner die Form mit Anführungszeichen mit 412
+   ablehnt.
    [Beispiel für Anbietergrenzen bei Hetzner](https://docs.hetzner.com/storage/object-storage/supported-actions/)
+   Staging und Produktion haben seit 2026-11-18 je einen Bucket bei Hetzner
+   in Nürnberg (`nbg1`, Endpoint `https://nbg1.your-objectstorage.com`):
+   `moto-uploads-staging` und `moto-uploads-production`. Ein Hetzner-Schlüssel
+   gilt zunächst für alle Buckets des Projekts. Jeder Bucket trägt deshalb
+   eine Regel, die nur den Schlüssel seiner Umgebung zulässt. Beim
+   Schlüsselwechsel zuerst die Regel auf den neuen Schlüssel umstellen, dann
+   den alten löschen, sonst ist der Bucket gesperrt. Neue Schlüssel und Regeln
+   brauchen etwa zehn Minuten bis zu allen Hetzner-Servern: danach 15 Minuten
+   warten, bevor ein Prozess startet. Einrichtung und Messwerte: #7458.
 2. `UPLOADS_S3_ENDPOINT` (HTTPS), `UPLOADS_S3_REGION`, `UPLOADS_S3_BUCKET`,
    `UPLOADS_S3_ACCESS_KEY` und `UPLOADS_S3_SECRET_KEY` per SOPS hinterlegen.
    Zugangsdaten über die vorgesehenen SOPS-Dateien in die Prozesse geben.

@@ -410,3 +410,31 @@ describe("SectionCard style", () => {
     ).toBe("repeat(5, 1fr)");
   });
 });
+
+describe("SectionCard klebender Fuß", () => {
+  // Unter `lg` schwebt der Fuß als eigene Leiste über dem Inhalt (eigener
+  // Rand, Schatten, eingerückt), statt als Streifen der Karte mitten im
+  // Text abzuschneiden. Ab `lg` bleibt er der Kartenfuß.
+  it("schwebt unter lg als eigene Leiste und bleibt ab lg der Kartenfuß", () => {
+    render(
+      <SectionCard
+        stickyFooter
+        footer={<button type="button">Speichern</button>}
+      >
+        Inhalt
+      </SectionCard>,
+    );
+    const foot = screen.getByRole("button", {
+      name: "Speichern",
+    }).parentElement;
+    expect(foot).toHaveClass(
+      "sticky",
+      "max-lg:rounded-2xl",
+      "max-lg:border",
+      "max-lg:bg-white",
+      "max-lg:shadow-lg",
+      "lg:bottom-0",
+      "lg:rounded-b-2xl",
+    );
+  });
+});

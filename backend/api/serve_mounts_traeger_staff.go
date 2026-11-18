@@ -115,6 +115,13 @@ func traegerStaffCollaborators(months workforce.TraegerStaffMonths, organization
 	if collaborators.HirePersons, collaborators.HireEmployments, err = schoolHiresOf(persons, membership); err != nil {
 		return workforce.TraegerStaffPorts{}, err
 	}
+	// The check of a hire finds the school's accounts and invitations of
+	// the hired person's address (#7378).
+	emails, ok := identity.(identityaccess.SchoolEmailQuery)
+	if !ok {
+		return workforce.TraegerStaffPorts{}, errors.New("traeger staff records: the identity owner finds no school addresses")
+	}
+	collaborators.Emails = emails
 	return collaborators, nil
 }
 

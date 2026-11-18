@@ -1185,7 +1185,7 @@ allowlists in Go declarations. PR mode reads them at the base commit and
 rejects a raise (ADR 0057 point 5). The measurements, compared by name across
 the files of the package:
 
-- every top-level integer constant (a threshold or a register total);
+- every top-level integer constant (a threshold);
 - every value of a top-level `map[string]int` register and its sum, so a new
   key cannot add what an existing one may not;
 - the entry count of a top-level `map[string]string` exception register.
@@ -1205,8 +1205,14 @@ starts a measurement; other literals (selector sets, scanned directories) are
 not compared.
 
 A raise passes only under an ADR the change adds: the comment on the raised
-entry or its declaration cites `ADR 0123`, and the base has no ADR with that
-number. Renaming or copying an existing ADR file authorizes nothing. A
+register entry, or on a raised constant's declaration, cites `ADR 0123`, and
+the base has no ADR with that number; a grown exception register cites it on
+its declaration. A citation on a budget register's declaration authorizes no
+entry. Registers keep no hand-written total; every entry is
+exact, so the register sum is the total
+([ADR 0296](../../docs/adr/0296-ratchet-summen-werden-abgeleitet-statt-gepflegt.md)).
+Parallel pull requests that change different entries therefore do not edit
+one shared line. Renaming or copying an existing ADR file authorizes nothing. A
 measurement that disappears needs the same: a comment naming it that cites an
 ADR the change adds. An empty `map[string]int` register may disappear
 without one.

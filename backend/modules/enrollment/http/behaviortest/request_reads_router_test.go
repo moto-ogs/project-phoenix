@@ -401,3 +401,37 @@ func TestAdminRequestsList_QueryBudget(t *testing.T) {
 	require.Len(t, large.Statements, 1, "one read-state statement for four enrollments")
 	querybudgets.AssertQueryBudget(t, "api.enrollment.admin_requests.read_state", large)
 }
+
+func TestAdminRequestDetailCarriesLegalEvidence(t *testing.T) {
+	t.Parallel()
+	env := setupUnreadTest(t)
+	submitted := env.submit(t, 1)
+	staff := env.reader(t, env.tenantID, managePermissions...)
+	path := idPath(submitted.Request.ID, "/")
+
+	detail := env.do(t, http.MethodGet, path, staff, "")
+	require.Equal(t, http.StatusOK, detail.Code, detail.Body.String())
+	var body struct {
+		Data struct {
+			Evidence []struct {
+				At     time.Time       `json:"snapshot_at"`
+				Blocks json.RawMessage `json:"blocks"`
+				Flags  json.RawMessage `json:"consent_flags"`
+			} `json:"legal_blocks_snapshot"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(detail.Body.Bytes(), &body))
+	require.Len(t, body.Data.Evidence, 1)
+	require.True(t, submitted.Request.LegalBlocksSnapshot[0].SnapshotAt.Equal(body.Data.Evidence[0].At))
+	require.NotEmpty(t, body.Data.Evidence[0].Blocks)
+	require.NotEmpty(t, body.Data.Evidence[0].Flags)
+
+	list := env.do(t, http.MethodGet, "/admin/requests/?phase_id="+strconv.FormatInt(env.phaseID, 10), staff, "")
+	require.Equal(t, http.StatusOK, list.Code, list.Body.String())
+	require.Contains(t, list.Body.String(), strconv.FormatInt(submitted.Request.ID, 10))
+	require.NotContains(t, list.Body.String(), "legal_blocks_snapshot")
+
+	public := env.do(t, http.MethodGet, "/requests/"+submitted.Request.StatusToken, "", "")
+	require.Equal(t, http.StatusOK, public.Code, public.Body.String())
+	require.NotContains(t, public.Body.String(), "legal_blocks_snapshot")
+}

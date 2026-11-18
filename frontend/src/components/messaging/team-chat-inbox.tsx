@@ -14,6 +14,7 @@ import { MessagesSquare, UsersRound } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { formErrorMessage } from "~/components/ui/form-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 import { TileCard } from "~/components/ui/tile-card";
 import { renderInboxFrame } from "~/components/messaging/team-chat-frames";
 import type {
@@ -157,11 +158,19 @@ export function TeamChatInbox({
   ).length;
   // Ohne geladene Liste steht keine "0 Unterhaltungen" neben dem Ladefehler
   // (#2517).
-  const stats = !chatEnabled
-    ? "Ausgeschaltet"
-    : threads === undefined
-      ? null
-      : `${threadList.length} ${threadList.length === 1 ? "Unterhaltung" : "Unterhaltungen"} · ${unreadThreads} ungelesen`;
+  const stats = !chatEnabled ? (
+    "Ausgeschaltet"
+  ) : threads === undefined ? null : (
+    <TenantPageStats
+      items={[
+        {
+          value: threadList.length,
+          label: threadList.length === 1 ? "Unterhaltung" : "Unterhaltungen",
+        },
+        { value: unreadThreads, label: "ungelesen" },
+      ]}
+    />
+  );
 
   const composeButton = chatEnabled ? (
     <>

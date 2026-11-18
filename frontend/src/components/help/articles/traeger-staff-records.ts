@@ -3,7 +3,8 @@ import { HELP_TOPICS } from "~/lib/help-topics";
 
 /**
  * `/traeger/personal` (#4705, ADR 0089): eine Personalakte über alle
- * Schulen. Vorschläge prüfen und verknüpfen, Personalnummer und Bank- und
+ * Schulen. Vorschläge prüfen und verknüpfen, Name und Geburtstag
+ * korrigieren (#7379), Personalnummer und Bank- und
  * Steuerdaten pflegen, Personal aus einer Datei importieren (#4724), eine
  * neue Person einstellen (#7206), eine Akte auflösen. Nur mit der Rolle Personal und
  * nach der Freigabe „Personal beim Träger“.
@@ -80,6 +81,17 @@ export function traegerStaffRecordsTopic(): HelpTopic {
         ],
       },
       {
+        title: "Name oder Geburtstag korrigieren",
+        description:
+          "Zum Beispiel, wenn der Geburtstag fehlt oder ein Name falsch geschrieben ist. Die Angaben an den Schulen ändern sich dadurch nicht.",
+        steps: [
+          "Öffne die Akte im Reiter `Akten`.",
+          "Wähle bei `Person` den Knopf `Ändern`.",
+          "Korrigiere Vorname, Nachname oder Geburtstag. Den Geburtstag tippst du als TT.MM.JJJJ, auf dem Handy auch ohne Punkte.",
+          "Wähle `Speichern`.",
+        ],
+      },
+      {
         title: "Personalnummer eintragen",
         steps: [
           "Öffne die Akte im Reiter `Akten`.",
@@ -115,6 +127,7 @@ export function traegerStaffRecordsTopic(): HelpTopic {
       "Der Import verknüpft keine Akte von selbst mit einer Schule. Das bestätigst du unter `Vorschläge`.",
       "moto bewahrt die Datei nicht auf. Im `Verlauf` jeder Akte stehen Dateiname und Zeile. `Bisherige Importe` zeigt, wer wann welche Datei übernommen hat.",
       "Ein Wert, den du beim Verknüpfen nicht wählst, bleibt mit seiner Schule im `Verlauf` der Akte.",
+      "Korrigierst du Name oder Geburtstag, steht der alte Wert im `Verlauf` der Akte. Deine Listen, Exporte, die `Vorschläge` und die Prüfung beim Einstellen nutzen danach die neuen Werte. Die Schulen pflegen ihre eigenen Angaben weiter selbst.",
       "Jede Schule sieht weiter nur ihr eigenes Personal. Sie sieht keine Akte und keine anderen Schulen.",
       "Jedes Anzeigen der Bank- und Steuerdaten steht im Zugriffsprotokoll jeder Schule der Person.",
       "Jeder Download der Liste steht im Zugriffsprotokoll jeder Schule.",
@@ -131,7 +144,7 @@ export function traegerStaffRecordsTopic(): HelpTopic {
       "„Seit der Vorschau hat sich etwas an den Personalakten geändert“: Jemand hat gerade eine Akte geändert. Prüfe die Vorschau und übernimm noch einmal.",
       "„Diese Personalnummer ist schon vergeben“: Eine andere Akte oder eine andere Person an einer der Schulen hat die Nummer. Ändere zuerst die andere Nummer.",
       "Nach dem Einstellen steht da „ist nur zum Teil angelegt“: Stelle die Person nicht noch einmal ein. Öffne `Personalakten` und den Reiter `Ohne Akte`. Lege dort die Akte an und trage in der Akte den Vertrag ein.",
-      "Beim Einstellen fragt moto `Gibt es diese Person schon?`: Es gibt eine Akte oder eine Person an einer Schule mit demselben Namen und Geburtsdatum. Ist es dieselbe Person, brich ab und lege die Akte unter `Ohne Akte` an. Sind es zwei Personen, wähle `Trotzdem einstellen`.",
+      "Beim Einstellen fragt moto `Gibt es diese Person schon?`. Das passiert bei gleichem Namen und Geburtsdatum und bei gleichem Namen ohne Geburtsdatum. Es passiert auch, wenn eine Schule die Person unter derselben E-Mail-Adresse kennt. moto zeigt für jede Person den Grund. Ist es dieselbe Person, wähle bei ihr `Akte anlegen` oder `Akte öffnen`. Sind es zwei Personen, wähle `Trotzdem einstellen`.",
       "„Eine dieser Personen hat schon eine Personalakte“: Lade die Seite neu. Vielleicht hat jemand den Vorschlag gerade verknüpft.",
     ],
     related: [

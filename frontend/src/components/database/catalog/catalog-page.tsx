@@ -118,8 +118,11 @@ export interface CatalogConfig<T extends CatalogItem> {
   readonly searchPlaceholder: string;
   /** Leerzustand der Sammlung, wenn noch nichts angelegt ist. */
   readonly emptyDescription: string;
-  /** Statuszeile der Kopfkarte aus den bereits geladenen Einträgen. */
-  readonly stats: (items: readonly T[]) => string;
+  /**
+   * Statuszeile der Kopfkarte aus den bereits geladenen Einträgen: ein Satz
+   * oder mehrere Angaben als `TenantPageStats`.
+   */
+  readonly stats: (items: readonly T[]) => React.ReactNode;
   readonly toRow: (item: T) => CatalogRow;
   /** Felder des Formulars. `null` = Anlegen-Dialog. */
   readonly sections: (item: T | null) => SectionConfig[];

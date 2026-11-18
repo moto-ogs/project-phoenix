@@ -28,6 +28,7 @@ import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { activitiesConcept } from "~/lib/concepts/activities";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 const CACHE_KEY = tenantAdminKeys.categories();
 const DEFAULT_COLOR: string = LOCATION_COLORS.GROUP_ROOM;
@@ -102,9 +103,16 @@ const config: CatalogConfig<ActivityCategory> = {
   stats: (items) => {
     const archived = items.filter((item) => item.archivedAt).length;
     const active = items.length - archived;
-    return archived > 0
-      ? `${formatCount(active)} in der Auswahl · ${formatCount(archived)} archiviert`
-      : `${formatCount(active)} ${active === 1 ? "Terminkategorie" : "Terminkategorien"}`;
+    return archived > 0 ? (
+      <TenantPageStats
+        items={[
+          { value: formatCount(active), label: "in der Auswahl" },
+          { value: formatCount(archived), label: "archiviert" },
+        ]}
+      />
+    ) : (
+      `${formatCount(active)} ${active === 1 ? "Terminkategorie" : "Terminkategorien"}`
+    );
   },
   toRow: (item) => ({
     name: item.name,

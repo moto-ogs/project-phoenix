@@ -40,7 +40,7 @@ import { PlanningContextBar } from "~/components/ui/planning/planning-context-ba
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { DesktopFilters } from "~/components/ui/page-header/DesktopFilters";
 import { ActiveFilterChips } from "~/components/ui/page-header/ActiveFilterChips";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import type {
   ActiveFilter,
@@ -1889,9 +1889,14 @@ export default function SlotListsPage() {
       // Statuszeile: der gewählte Tag und die geplanten Kinder aus den
       // Zählern der geladenen Liste.
       stats={
-        result
-          ? `${formatStatusDate(dateISO)} · ${result.counters.planned} Kinder geplant`
-          : null
+        result ? (
+          <TenantPageStats
+            items={[
+              { label: formatStatusDate(dateISO) },
+              { value: result.counters.planned, label: "Kinder geplant" },
+            ]}
+          />
+        ) : null
       }
       statsLoading={
         isLoading ||

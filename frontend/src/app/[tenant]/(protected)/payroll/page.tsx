@@ -30,7 +30,7 @@ import {
   StatusBadge,
   type StatusBadgeTone,
 } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { formatChatDateTime } from "~/lib/date-helpers";
@@ -377,11 +377,25 @@ export default function PayrollPage() {
   const duplicates = status ? duplicateLohnartNumbers(status) : [];
 
   // Statuszeile: die Zahlen, die die Seite ohnehin laedt.
-  const statusLine = status
-    ? `${status.configuredCategories} von ${status.totalCategories} Lohnarten zugeordnet · DATEV-Mandant ${
-        status.lodasHeaderComplete ? "vollständig" : "unvollständig"
-      } · ${status.staffWithoutPersonnelNumber} von ${status.staffTotal} ohne Personalnummer`
-    : null;
+  const statusLine = status ? (
+    <TenantPageStats
+      items={[
+        {
+          value: `${status.configuredCategories} von ${status.totalCategories}`,
+          label: "Lohnarten zugeordnet",
+        },
+        {
+          label: `DATEV-Mandant ${
+            status.lodasHeaderComplete ? "vollständig" : "unvollständig"
+          }`,
+        },
+        {
+          value: `${status.staffWithoutPersonnelNumber} von ${status.staffTotal}`,
+          label: "ohne Personalnummer",
+        },
+      ]}
+    />
+  ) : null;
 
   return (
     <TenantPage

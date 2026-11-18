@@ -25,7 +25,7 @@ func NewEnrollmentIntake(src EnrollmentIntakeSources) *enrollmentCompose.Intake 
 		GuardianHold: src.GuardianHold, Outbox: src.OutboxEnqueuer,
 		Settings: intakeSettings(src.Settings), AdminSubscribers: src.AdminSubscribers, ManualDecider: src.ManualDecider,
 		ParentChanges: src.ParentChanges, Uploads: src.Uploads, Signatures: EnrollmentSignatures{Ledger: SignatureLedger()},
-		Random: securityruntime.FillRandom, Fingerprint: securityruntime.Fingerprint,
+		Random: securityruntime.FillRandom, Fingerprint: securityruntime.Fingerprint, LegalPDFFingerprint: src.LegalPDFFingerprint,
 		FrontendURL: src.FrontendURL, ParentsURL: src.ParentsURL, Logger: src.Logger, FamilyChildrenPurpose: src.FamilyChildrenPurpose,
 		LockTemplateRecurrence: src.LockTemplateRecurrence, Now: src.Now,
 	})
@@ -64,6 +64,7 @@ func NewEnrollmentChangeRequests(src EnrollmentChangeRequestSources) enrollmentO
 		CompanionLockBusy: peopledirectory.TranslateStudentWriteError(peopledirectory.ErrCompanionLockBusy), People: people,
 		GuardianInvitations: src.GuardianInvitations,
 		Settings:            intakeSettings(src.Settings), Outbox: src.OutboxEnqueuer,
+		Fingerprint: securityruntime.Fingerprint, LegalPDFFingerprint: src.LegalPDFFingerprint,
 		FrontendURL: src.FrontendURL, ParentsURL: src.ParentsURL, Logger: src.Logger,
 		LockTemplateRecurrence: src.LockTemplateRecurrence, Now: src.Now,
 	}
@@ -159,7 +160,8 @@ type EnrollmentIntakeSources struct {
 	// ParentChanges makes a request unread again after a parent edit (#3778).
 	ParentChanges enrollmentCompose.RequestParentChanges
 	// Uploads stores the files parents attach (#4783); nil refuses uploads.
-	Uploads enrollmentOwner.RequestUploadRecords
+	Uploads             enrollmentOwner.RequestUploadRecords
+	LegalPDFFingerprint func(context.Context, int64, string) (string, error)
 	// FrontendURL is the base of the staff links, ParentsURL of the
 	// parent-facing ones; it falls back to FrontendURL.
 	FrontendURL string
@@ -201,6 +203,7 @@ type EnrollmentChangeRequestSources struct {
 	Decisions            enrollmentOwner.ApprovedChildChanges
 	BookingGates         enrollmentCompose.CareBookingGates
 	CompanionGraphLocker enrollmentCompose.CompanionGraphCoordinator
+	LegalPDFFingerprint  func(context.Context, int64, string) (string, error)
 	Settings             EnrollmentIntakeSettings
 	OutboxEnqueuer       enrollmentCompose.MailOutbox
 	FrontendURL          string

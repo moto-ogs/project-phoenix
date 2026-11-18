@@ -9,8 +9,10 @@
 import { CheckCircleIcon, WarningIcon } from "@phosphor-icons/react";
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Alert } from "~/components/ui/alert";
+import { Avatar } from "~/components/ui/avatar";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { CheckboxCard } from "~/components/ui/checkbox-card";
+import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { useInvalidateFamily } from "~/lib/swr";
@@ -20,13 +22,20 @@ import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { FormFieldset } from "~/components/ui/form-fieldset";
 import { Input } from "~/components/ui/input";
+import { InsetPanel } from "~/components/ui/inset-panel";
 import { ConfirmationModal } from "~/components/ui/modal";
+import {
+  ResponsiveActionList,
+  ResponsiveActionRow,
+} from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
+import { StatusBadge } from "~/components/ui/status-badge";
 import { useStepFocus } from "~/components/ui/use-step-focus";
 import { WizardStepper } from "~/components/ui/wizard-stepper";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
+import { staffConcept } from "~/lib/concepts/staff";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import {
@@ -35,9 +44,11 @@ import {
   staffHireMatches,
   type StaffHireIncomplete,
   type StaffHireMatch,
+  type StaffHireMatchReason,
   type StaffRecordDetail,
 } from "~/lib/traeger-staff-api";
 import {
+  staffCreateRecordHref,
   staffOverviewHref,
   staffSubpageHref,
   type StaffOverviewTab,
@@ -352,43 +363,148 @@ function ReviewStep({ draft }: Readonly<{ draft: HireDraft }>) {
   );
 }
 
+const MATCH_REASON_LABELS: Record<StaffHireMatchReason, string> = {
+  name_birthday: "Gleicher Name und Geburtsdatum",
+  name: "Gleicher Name, Geburtsdatum fehlt",
+  email: "Gleiche E-Mail-Adresse",
+};
+
+function matchName(match: StaffHireMatch, fallback: string): string {
+  return `${match.firstName} ${match.lastName}`.trim() || fallback;
+}
+
+/** Eine Person, die es vielleicht schon gibt, mit Grund und nächstem Schritt. */
+function DuplicateRow({
+  match,
+  name,
+  from,
+}: Readonly<{
+  match: StaffHireMatch;
+  name: string;
+  from: StaffOverviewTab | null;
+}>) {
+  const shown = matchName(match, name);
+  return (
+    <ResponsiveActionRow className="gap-3">
+      <div className="flex min-w-0 items-start gap-3">
+        <Avatar name={shown} tone="neutral" decorative />
+        <div className="min-w-0 space-y-1.5">
+          <p className="leading-tight">
+            <span className="block truncate font-medium text-gray-900">
+              {shown}
+            </span>
+            <span className="block text-sm text-gray-600">
+              {match.kind === "record"
+                ? "Hat schon eine Personalakte"
+                : `${match.schoolName} · noch ohne Akte`}
+            </span>
+          </p>
+          <ul
+            className="flex flex-wrap gap-1.5"
+            aria-label={`Warum moto ${shown} gefunden hat`}
+          >
+            {match.reasons.map((reason) => (
+              <li key={reason}>
+                <StatusBadge
+                  tone="gray"
+                  compact
+                  label={MATCH_REASON_LABELS[reason]}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      {/* Unter `sm` steht die Aktion in voller Breite unter dem Text. */}
+      <div className="flex sm:justify-end">
+        {match.kind === "record" ? (
+          <ButtonLink
+            href={staffSubpageHref(`${PERSONAL}/${match.recordId}`, from)}
+            variant="surface"
+            size="compact"
+            className="w-full sm:w-auto"
+            newTab
+            aria-label={`Akte von ${shown} öffnen`}
+            tooltip="Öffnet die vorhandene Akte in einem neuen Tab."
+          >
+            Akte öffnen
+          </ButtonLink>
+        ) : (
+          <ButtonLink
+            href={staffCreateRecordHref(match.schoolId, match.staffId)}
+            variant="surface"
+            size="compact"
+            className="w-full sm:w-auto"
+            aria-label={`Akte für ${shown} anlegen`}
+            tooltip="Bricht das Einstellen ab und öffnet die Person unter „Ohne Akte“."
+          >
+            Akte anlegen
+          </ButtonLink>
+        )}
+      </div>
+    </ResponsiveActionRow>
+  );
+}
+
+/**
+ * Die Rückfrage vor einer Dublette (#7378): Wer es vielleicht schon gibt,
+ * warum moto die Person gefunden hat, und der richtige Weg. Eine Person
+ * einer Schule bekommt ihre Akte unter „Ohne Akte“, nicht ein zweites Mal
+ * über das Einstellen.
+ */
 function DuplicateBody({
   matches,
+  name,
   from,
 }: Readonly<{
   matches: readonly StaffHireMatch[];
+  name: string;
   from: StaffOverviewTab | null;
 }>) {
+  const intro =
+    matches.length === 1
+      ? `moto hat eine Person gefunden, die ${name} sein könnte:`
+      : `moto hat ${matches.length} Personen gefunden, die ${name} sein könnten:`;
+  const atSchool = matches.some((match) => match.kind === "school");
+  const withRecord = matches.some((match) => match.kind === "record");
+  let same =
+    "Dann stell sie nicht neu ein. Öffne ihre Akte und trage dort Vertrag und Schulen ein.";
+  if (atSchool && withRecord) {
+    same =
+      "Dann stell sie nicht neu ein. Wähle bei ihr „Akte anlegen“ oder „Akte öffnen“.";
+  } else if (atSchool) {
+    same =
+      "Dann stell sie nicht neu ein. Leg mit „Akte anlegen“ ihre Akte an. Die Person gibt es an der Schule schon.";
+  }
   return (
-    <div className="space-y-3 text-sm text-gray-700">
-      <p>moto kennt schon eine Person mit diesem Namen und Geburtsdatum:</p>
-      <ul className="list-disc space-y-2 pl-5">
-        {matches.map((match) =>
-          match.kind === "record" ? (
-            <li key={`record-${match.recordId}`}>
-              Es gibt schon eine Personalakte.{" "}
-              <ButtonLink
-                href={staffSubpageHref(`${PERSONAL}/${match.recordId}`, from)}
-                variant="link"
-                newTab
-                tooltip="Öffnet die vorhandene Akte in einem neuen Tab."
-              >
-                Akte öffnen
-              </ButtonLink>
-            </li>
-          ) : (
-            <li key={`school-${match.schoolName}`}>
-              An der Schule {match.schoolName} arbeitet die Person schon, noch
-              ohne Akte.
-            </li>
-          ),
-        )}
-      </ul>
-      <p>
-        Ist es dieselbe Person? Dann brich ab. Eine Person ohne Akte findest du
-        bei den Personalakten unter „Ohne Akte“.
-      </p>
-      <p>Sind es zwei Personen? Dann stelle die Person trotzdem ein.</p>
+    <div className="space-y-4 text-sm text-gray-700">
+      <p>{intro}</p>
+      <InsetPanel tone="white" framed padding="compact">
+        <ResponsiveActionList>
+          {matches.map((match) => (
+            <DuplicateRow
+              key={
+                match.kind === "record"
+                  ? `record-${match.recordId}`
+                  : `school-${match.schoolId}-${match.staffId}`
+              }
+              match={match}
+              name={name}
+              from={from}
+            />
+          ))}
+        </ResponsiveActionList>
+      </InsetPanel>
+      <div className="space-y-2">
+        <p>
+          <span className="font-medium text-gray-900">Dieselbe Person?</span>{" "}
+          {same}
+        </p>
+        <p>
+          <span className="font-medium text-gray-900">Zwei Personen?</span> Dann
+          wähle „Trotzdem einstellen“.
+        </p>
+      </div>
     </div>
   );
 }
@@ -752,6 +868,7 @@ export function StaffHireWizard({
         onClose={() => setMatches(null)}
         onConfirm={() => void send(true)}
         title="Gibt es diese Person schon?"
+        icon={<ConceptIconTile concept={staffConcept} size="sm" />}
         confirmText="Trotzdem einstellen"
         confirmVariant="warning"
         confirmTooltip="Stellt die Person als neue, zweite Person ein."
@@ -759,7 +876,11 @@ export function StaffHireWizard({
         loadingText="Stellt ein…"
         isBackdropDismissDisabled
       >
-        <DuplicateBody matches={matches ?? []} from={from} />
+        <DuplicateBody
+          matches={matches ?? []}
+          name={`${draft.firstName.trim()} ${draft.lastName.trim()}`}
+          from={from}
+        />
       </ConfirmationModal>
     </>
   );

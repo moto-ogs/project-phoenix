@@ -57,6 +57,9 @@ func demoAttendanceAttribution(visit studentpresence.DemoVisit, row studentprese
 	visit.StudentID = row.StudentID
 	visit.ChangedAt = row.CheckInTime
 	visit.Web = row.DeviceID == webDeviceID
+	if row.IsOpen() {
+		visit.OpenSchoolStayBy = row.CheckedInBy
+	}
 	if row.CheckOutTime != nil {
 		visit.Active = false
 		if row.CheckedOutDeviceID != nil {

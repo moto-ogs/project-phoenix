@@ -1,0 +1,17 @@
+[
+  {
+    "snapshot_at": "2026-11-18T09:30:00Z",
+    "blocks": [
+      {
+        "key": "photo",
+        "kind": "consent",
+        "title": "Fotos",
+        "label": "Ich bin einverstanden.",
+        "text": "Fotos beim Sportfest.",
+        "required": false
+      }
+    ],
+    "consent_flags": { "photo": true },
+    "change_request": true
+  }
+]

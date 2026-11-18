@@ -86,3 +86,25 @@ func assertEnrollmentContractGolden(t *testing.T, name string, actual []byte) {
 	require.NoError(t, err)
 	require.JSONEq(t, string(expected), string(actual))
 }
+
+func TestAdminLegalEvidenceJSON(t *testing.T) {
+	t.Parallel()
+	request := &capability.Request{
+		LegalBlocksSnapshot: []capability.LegalBlocksSnapshotEntry{{
+			SnapshotAt:    time.Date(2026, 11, 18, 9, 30, 0, 0, time.UTC),
+			ChangeRequest: true,
+			Blocks: []capability.LegalBlockSnapshot{{
+				Key: "photo", Kind: capability.LegalBlockKindConsent, Title: "Fotos",
+				Label: "Ich bin einverstanden.", Text: "Fotos beim Sportfest.",
+			}},
+			ConsentFlags: json.RawMessage(`{"photo":true}`),
+		}},
+	}
+	actual, err := json.Marshal(adminLegalEvidence(request))
+	require.NoError(t, err)
+	assertEnrollmentContractGolden(t, "admin_legal_evidence", actual)
+
+	empty, err := json.Marshal(adminLegalEvidence(&capability.Request{}))
+	require.NoError(t, err)
+	require.JSONEq(t, `[]`, string(empty))
+}

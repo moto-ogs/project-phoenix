@@ -5243,6 +5243,7 @@ describe("EnrollmentForm restrictToOfferings (#2251)", () => {
 
     await waitFor(() => expect(submitter).toHaveBeenCalledTimes(1));
     const payload = submitter.mock.calls[0]?.[0] as {
+      consent_flags: Record<string, unknown>;
       guardian_first_name: string;
       guardian_email: string;
       children: {
@@ -5254,6 +5255,7 @@ describe("EnrollmentForm restrictToOfferings (#2251)", () => {
       custom_data: Record<string, unknown>;
     };
     // Hidden master data travels unchanged from the draft.
+    expect(payload.consent_flags).toEqual({});
     expect(payload.guardian_first_name).toBe("Mara");
     expect(payload.guardian_email).toBe("mara@example.test");
     expect(payload.children[0]?.first_name).toBe("Anton");
