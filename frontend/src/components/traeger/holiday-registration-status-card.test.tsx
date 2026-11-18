@@ -223,12 +223,6 @@ describe("HolidayRegistrationStatusCard", () => {
       renderPerChild(HOLIDAY_REGISTRATION);
 
       expect(screen.getByLabelText(/^Mia Muster/)).toHaveValue("60101");
-      expect(screen.getByLabelText(/^Mia Muster/)).toHaveClass(
-        "pointer-coarse:h-11",
-      );
-      expect(screen.getByLabelText(/^Noah Muster/)).toHaveClass(
-        "pointer-coarse:h-11",
-      );
       expect(
         screen.queryByRole("textbox", { name: /^Debitorennummer/ }),
       ).not.toBeInTheDocument();
@@ -999,7 +993,6 @@ describe("HolidayRegistrationStatusCard", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       const field = screen.getByRole("textbox", { name: /Debitorennummer/ });
       expect(field).toHaveFocus();
-      expect(field).toHaveClass("pointer-coarse:h-11");
       expect(field).toBeRequired();
       expect(field).toHaveAttribute("maxLength", "35");
       expect(field).toHaveAccessibleDescription(
@@ -1126,7 +1119,6 @@ describe("HolidayRegistrationStatusCard", () => {
 
       const field = screen.getByRole("textbox", { name: /^Debitorennummer/ });
       expect(field).toHaveAttribute("inputmode", "numeric");
-      expect(field).toHaveClass("pointer-coarse:h-11");
       expect(field).toHaveAccessibleDescription(
         "Die Nummer hat 5 Ziffern, zum Beispiel 20815. Die Nummer der Familie bei der Kasse der Gemeinde. Die Familie gibt sie bei der Überweisung an.",
       );

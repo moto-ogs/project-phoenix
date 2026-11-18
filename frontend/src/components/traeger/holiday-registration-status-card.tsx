@@ -268,7 +268,7 @@ function DebtorNumberField({
             name="debtor_number"
             label="Debitorennummer"
             autoComplete="off"
-            controlSize="touch"
+            controlSize="compact"
             inputMode={format.digitsOnly ? "numeric" : undefined}
             maxLength={DEBTOR_NUMBER_MAX_LENGTH}
             value={value}
@@ -927,7 +927,7 @@ function useHolidayRegistrationStatus({
                   name="debtor_number"
                   label="Debitorennummer"
                   autoComplete="off"
-                  controlSize="touch"
+                  controlSize="compact"
                   inputMode={
                     debtorNumberFormat.digitsOnly ? "numeric" : undefined
                   }
