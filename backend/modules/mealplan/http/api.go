@@ -103,7 +103,7 @@ type DailyParticipantResponse struct {
 }
 
 type DailyListResponse struct {
-	Date         string                     `json:"date"`
+	Date         string                     `json:"date" contract:"date"`
 	CutoffTime   string                     `json:"cutoff_time"`
 	Deadline     time.Time                  `json:"deadline"`
 	Closed       bool                       `json:"closed"`
@@ -111,13 +111,13 @@ type DailyListResponse struct {
 	Others       []DailyParticipantResponse `json:"others,omitempty"`
 }
 type WeeklyDayResponse struct {
-	Date         string                     `json:"date"`
+	Date         string                     `json:"date" contract:"date"`
 	Deadline     time.Time                  `json:"deadline"`
 	Closed       bool                       `json:"closed"`
 	Participants []DailyParticipantResponse `json:"participants"`
 }
 type WeeklyListResponse struct {
-	WeekStart string              `json:"week_start"`
+	WeekStart string              `json:"week_start" contract:"date"`
 	Days      []WeeklyDayResponse `json:"days"`
 }
 

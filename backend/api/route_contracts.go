@@ -18,6 +18,8 @@ import (
 	enrollmentHTTP "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	roomsHTTP "github.com/moto-ogs/project-phoenix/modules/facilities/http"
 	filestoreAPI "github.com/moto-ogs/project-phoenix/modules/filestorage/http/files"
+	"github.com/moto-ogs/project-phoenix/modules/mealplan"
+	mealplanHTTP "github.com/moto-ogs/project-phoenix/modules/mealplan/http"
 	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
 	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
 	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
@@ -65,6 +67,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/api/class-list-entries", classListEntryRouteContracts()},
 		{"/api", schoolSetupRouteContracts()},
 		{"/api/staff-pool", workforceTraegerStaff.SchoolPoolRouteContracts()},
+		{"/api", mealPlanRouteContracts()},
 		// The platform announcements' http role may not import the contract
 		// types; the root names their answer.
 		{"/api/platform", []common.RouteContract{
@@ -131,8 +134,8 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[careStudentsHTTP.UpdateStudentRequest](): contract.ReadsFields,
 		reflect.TypeFor[careStudentsHTTP.CompanionEntry]():       contract.ReadsLaxIDs,
 	}
-	// Appointments keeps its own day type.
-	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date]()}
+	// Appointments and the meal plan keep their own day types.
+	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date](), reflect.TypeFor[mealplan.Date]()}
 	return contract.Build(registrations, options)
 }
 
@@ -231,6 +234,29 @@ func schoolSetupRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/staff-onboarding/", Portals: portals, Response: schoolsetup.StaffStatus{}},
 		{Method: "PUT", Pattern: "/staff-onboarding/steps/{step}", Portals: portals, Request: types.StepState, Response: schoolsetup.StaffStatus{}},
 		{Method: "PUT", Pattern: "/staff-onboarding/dismissal", Portals: portals, Request: types.Dismissal, Response: schoolsetup.StaffStatus{}},
+	}
+}
+
+// mealPlanRouteContracts registers the meal plan reads and registrations of
+// the staff portal and the Mensa months (#2352), with patterns relative to
+// /api. The meal plan's http role may not import the contract types.
+func mealPlanRouteContracts() []common.RouteContract {
+	types := mealplanHTTP.RouteContractTypes()
+	portals := []common.PortalScope{common.PortalTenant}
+	window := []common.QueryParam{{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate}}
+	daily := []common.QueryParam{{Name: "date", Kind: common.QueryDate}, {Name: "include", Kind: common.QueryString}}
+	week := []common.QueryParam{{Name: "week_start", Kind: common.QueryDate}}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/meal-plan/orders", Portals: portals, Query: window, Response: types.Orders},
+		{Method: "GET", Pattern: "/meal-plan/participants", Portals: portals, Query: daily, Response: types.DailyList},
+		{Method: "GET", Pattern: "/meal-plan/participants/week", Portals: portals, Query: week, Response: types.WeeklyList},
+		{Method: "GET", Pattern: "/meal-plan/participation/{studentId}", Portals: portals, Query: window, Response: types.ChildParticipation},
+		{Method: "PUT", Pattern: "/meal-plan/participation/{studentId}/days/{date}", Portals: portals, Request: types.ChildDay, NoData: true},
+		{Method: "DELETE", Pattern: "/meal-plan/participation/{studentId}/days/{date}", Portals: portals, NoData: true},
+		{Method: "PUT", Pattern: "/meal-plan/participation/{studentId}/schedule", Portals: portals, Request: types.ChildSchedule, Response: types.ScheduleChanged},
+		{Method: "GET", Pattern: "/meal-billing-months/", Portals: portals, Response: types.BillingMonths},
+		{Method: "GET", Pattern: "/meal-billing-months/{month}", Portals: portals, Response: types.BillingMonth},
+		{Method: "POST", Pattern: "/meal-billing-months/{month}/release", Portals: portals, Request: types.BillingMonthRelease, Response: types.BillingMonth},
 	}
 }
 

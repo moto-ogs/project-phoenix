@@ -12,7 +12,7 @@ import (
 
 // ChildDayResponse is one meal day of a child as the school sees it.
 type ChildDayResponse struct {
-	Date          string    `json:"date"`
+	Date          string    `json:"date" contract:"date"`
 	Participating bool      `json:"participating"`
 	Regular       bool      `json:"regular_participating"`
 	Source        string    `json:"source"`
@@ -23,7 +23,7 @@ type ChildDayResponse struct {
 // regular days and the days of the window.
 type ChildParticipationResponse struct {
 	Weekdays      []int              `json:"weekdays"`
-	EffectiveFrom string             `json:"effective_from,omitempty"`
+	EffectiveFrom string             `json:"effective_from,omitempty" contract:"date"`
 	Days          []ChildDayResponse `json:"days"`
 }
 
@@ -42,7 +42,7 @@ func (request *ChildDayRequest) Bind(*http.Request) error {
 // ChildScheduleRequest sets the regular days from a day on.
 type ChildScheduleRequest struct {
 	Weekdays      []int  `json:"weekdays"`
-	EffectiveFrom string `json:"effective_from"`
+	EffectiveFrom string `json:"effective_from" contract:"date"`
 }
 
 func (request *ChildScheduleRequest) Bind(*http.Request) error {
@@ -134,7 +134,7 @@ func (rs *Resource) replaceChildSchedule(w http.ResponseWriter, r *http.Request)
 		rs.runtime.ModuleFailure(w, r, err, "failed to change the regular meal days")
 		return
 	}
-	rs.runtime.Success(w, r, http.StatusOK, map[string]string{"effective_from": string(effectiveFrom)}, "Regular meal days changed")
+	rs.runtime.Success(w, r, http.StatusOK, ScheduleChangedResponse{EffectiveFrom: string(effectiveFrom)}, "Regular meal days changed")
 }
 
 func (rs *Resource) schoolChange(w http.ResponseWriter, r *http.Request) (mealplanModule.SchoolChange, bool) {

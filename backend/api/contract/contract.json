@@ -94,6 +94,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/meal-plan/participation/{studentId}/days/{date}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/notifications/preferences/",
       "portals": [
         "tenant"
@@ -477,6 +485,31 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/meal-billing-months/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "BillingMonthSummary"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/meal-billing-months/{month}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "BillingMonth"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/meal-caterer/",
       "portals": [
         "tenant"
@@ -484,6 +517,86 @@
       "response": {
         "kind": "ref",
         "ref": "SchoolCatererResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/meal-plan/orders",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OrdersResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/meal-plan/participants",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        },
+        {
+          "name": "include",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "DailyListResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/meal-plan/participants/week",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "week_start",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "WeeklyListResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/meal-plan/participation/{studentId}",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ChildParticipationResponse"
       }
     },
     {
@@ -2043,6 +2156,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/meal-billing-months/{month}/release",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "BillingMonthReleaseRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "BillingMonth"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/meal-caterer/invitations",
       "portals": [
         "tenant"
@@ -2989,6 +3117,33 @@
       "response": {
         "kind": "ref",
         "ref": "PhoneNumberResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/meal-plan/participation/{studentId}/days/{date}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ChildDayRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/meal-plan/participation/{studentId}/schedule",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ChildScheduleRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ScheduleChangedResponse"
       }
     },
     {
@@ -4569,6 +4724,264 @@
       ]
     },
     {
+      "name": "BillingMonth",
+      "go_type": "mealplan.BillingMonth",
+      "fields": [
+        {
+          "name": "month",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "released_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "child_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "meal_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "absence_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BillingMonthChild"
+            }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "releases",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BillingMonthReleaseEntry"
+            }
+          }
+        },
+        {
+          "name": "current",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "BillingMonth"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BillingMonthChild",
+      "go_type": "mealplan.BillingMonthChild",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "registered_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "meal_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "absent_dates",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "date",
+              "nullable": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "BillingMonthReleaseEntry",
+      "go_type": "mealplan.BillingMonthReleaseEntry",
+      "fields": [
+        {
+          "name": "version",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "released_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "meal_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BillingMonthReleaseRequest",
+      "go_type": "mealplan.BillingMonthReleaseRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "child_count",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "meal_count",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BillingMonthSummary",
+      "go_type": "mealplan.BillingMonthSummary",
+      "fields": [
+        {
+          "name": "month",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "released_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "child_count",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "meal_count",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "Block",
       "go_type": "templates.Block",
       "fields": [
@@ -4665,6 +5078,91 @@
       ]
     },
     {
+      "name": "ChildDayRequest",
+      "go_type": "mealplan.ChildDayRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "participating",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildDayResponse",
+      "go_type": "mealplan.ChildDayResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "participating",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "regular_participating",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "source",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cancel_until",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildParticipationResponse",
+      "go_type": "mealplan.ChildParticipationResponse",
+      "fields": [
+        {
+          "name": "weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ChildDayResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "ChildResponse",
       "go_type": "catererportalhttp.ChildResponse",
       "fields": [
@@ -4687,6 +5185,31 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildScheduleRequest",
+      "go_type": "mealplan.ChildScheduleRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "date"
           }
         }
       ]
@@ -5115,6 +5638,88 @@
               "kind": "ref",
               "ref": "NewStudentGuardian"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "DailyListResponse",
+      "go_type": "mealplan.DailyListResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "cutoff_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "deadline",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "closed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "participants",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "DailyParticipantResponse"
+            }
+          }
+        },
+        {
+          "name": "others",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "DailyParticipantResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "DailyParticipantResponse",
+      "go_type": "mealplan.DailyParticipantResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -8813,6 +9418,161 @@
       ]
     },
     {
+      "name": "OrderChangeResponse",
+      "go_type": "mealplan.OrderChangeResponse",
+      "fields": [
+        {
+          "name": "sequence",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delta",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "detected_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OrderClassCountResponse",
+      "go_type": "mealplan.OrderClassCountResponse",
+      "fields": [
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OrderDayResponse",
+      "go_type": "mealplan.OrderDayResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "closed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "deadline",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "order_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirmed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "total",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OrderClassCountResponse"
+            }
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OrderChangeResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OrdersResponse",
+      "go_type": "mealplan.OrdersResponse",
+      "fields": [
+        {
+          "name": "format_version",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "rhythm",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "detail",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OrderDayResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "ParentAnnouncementLetterSummary",
       "go_type": "communication.ParentAnnouncementLetterSummary",
       "fields": [
@@ -10362,6 +11122,18 @@
               "kind": "ref",
               "ref": "Block"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ScheduleChangedResponse",
+      "go_type": "mealplan.ScheduleChangedResponse",
+      "fields": [
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "date"
           }
         }
       ]
@@ -14210,6 +14982,64 @@
             "elem": {
               "kind": "ref",
               "ref": "CompanionEntry"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "WeeklyDayResponse",
+      "go_type": "mealplan.WeeklyDayResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "deadline",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "closed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "participants",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "DailyParticipantResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "WeeklyListResponse",
+      "go_type": "mealplan.WeeklyListResponse",
+      "fields": [
+        {
+          "name": "week_start",
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "WeeklyDayResponse"
             }
           }
         }
