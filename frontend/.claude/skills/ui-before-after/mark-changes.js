@@ -1,6 +1,8 @@
 // Outlines changed regions on the rendered page for a marked screenshot.
 // Usage: SKILL.md, "Mark what changed". The caller appends the call
 // `markChanges([[number, selector], ...])` and pipes both to the browser.
+// A selector is one CSS selector (its first match is outlined) or a list of
+// selectors (one outline around all their first matches).
 // Sizes are chosen to stay legible after the pair composite halves the image.
 globalThis.markChanges = (marks) => {
   // Pure red on purpose: a tool mark must not pass for the product's own red.
@@ -9,13 +11,37 @@ globalThis.markChanges = (marks) => {
   const BADGE = 36;
   document.querySelectorAll("[data-change-mark]").forEach((n) => n.remove());
   const pageWidth = document.documentElement.scrollWidth;
-  for (const [number, selector] of marks) {
-    const el = document.querySelector(selector);
-    if (!el)
-      throw new Error(`change mark ${number}: no element matches ${selector}`);
-    const r = el.getBoundingClientRect();
-    if (r.width === 0 || r.height === 0) {
-      throw new Error(`change mark ${number}: ${selector} is not visible`);
+  const outside = [];
+  for (const [number, target] of marks) {
+    // One region may consist of neighbours without a common parent of their
+    // own (two counters in a row): the outline then spans all of them.
+    const rects = [target].flat().map((selector) => {
+      const el = document.querySelector(selector);
+      if (!el)
+        throw new Error(
+          `change mark ${number}: no element matches ${selector}`,
+        );
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        throw new Error(`change mark ${number}: ${selector} is not visible`);
+      }
+      return rect;
+    });
+    const r = {
+      left: Math.min(...rects.map((rect) => rect.left)),
+      top: Math.min(...rects.map((rect) => rect.top)),
+      right: Math.max(...rects.map((rect) => rect.right)),
+      bottom: Math.max(...rects.map((rect) => rect.bottom)),
+    };
+    // A viewport screenshot shows only what the window shows: a region
+    // beside, above or below it carries a mark nobody sees.
+    if (
+      r.top >= window.innerHeight ||
+      r.bottom <= 0 ||
+      r.left >= window.innerWidth ||
+      r.right <= 0
+    ) {
+      outside.push(number);
     }
     const left = Math.max(r.left + window.scrollX - PAD, 2);
     const top = Math.max(r.top + window.scrollY - PAD, 2);
@@ -38,5 +64,8 @@ globalThis.markChanges = (marks) => {
     box.append(badge);
     document.documentElement.append(box);
   }
-  return `${marks.length} change marks drawn`;
+  const drawn = `${marks.length} change marks drawn`;
+  return outside.length === 0
+    ? drawn
+    : `${drawn}; outside the window, scroll there or take a --full screenshot: ${outside.join(", ")}`;
 };

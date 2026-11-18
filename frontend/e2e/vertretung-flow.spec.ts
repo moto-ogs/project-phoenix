@@ -241,8 +241,8 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
       assertUrlVocabulary(page, "nach Filter-Umschalter (lokaler State)");
 
       await expect(row).toBeVisible({ timeout: 15000 });
-      // Besetzung als „da von geplant“: eine Person geplant, eine da.
-      await expect(row).toContainText("1/1");
+      // Besetzung in Worten: eine Person geplant, eine da.
+      await expect(row).toContainText("1 von 1 da");
 
       // --- Save 1: Person abwesend melden (Ereignis `absence`) ------------
       deviationPosts = 0;
@@ -274,10 +274,10 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
       expect(deviationPosts, "Save 1 = genau ein Speicher-POST").toBe(1);
 
       // Ohne Ersatz nennt die Liste die offene Vertretung ausdrücklich.
-      await expect(row).toContainText("0/1", DATA);
+      await expect(row).toContainText("0 von 1 da", DATA);
       await expect(row).toContainText("1 Person fehlt", DATA);
       await expect(row).toContainText("Ersatzkräfte: keine", DATA);
-      await expect(otherRow).toContainText("1/1", DATA);
+      await expect(otherRow).toContainText("1 von 1 da", DATA);
 
       // --- Save 2: Ersatz wählen (Ereignis `substitution`) ----------------
       // Zwei Speichervorgänge, weil ein kombiniertes Abwesenheit+Ersatz-Save
@@ -314,7 +314,7 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
       expect(deviationPosts, "Save 2 = genau ein Speicher-POST").toBe(1);
 
       // Wieder voll besetzt, die abwesende Person bleibt genannt.
-      await expect(row).toContainText("1/1", DATA);
+      await expect(row).toContainText("1 von 1 da", DATA);
       await expect(row).toContainText("abwesend", DATA);
       await expect(row).toContainText(`Ersatzkräfte: ${substituteName}`, DATA);
 

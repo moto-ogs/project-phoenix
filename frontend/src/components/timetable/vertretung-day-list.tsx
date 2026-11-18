@@ -546,14 +546,15 @@ function VertretungDayListRow({
             nur Lese-Inhalte.
             Mit Verwaltungsrechten nennt die Zeile einer offenen Lücke das
             Ergebnis des Klicks: „Besetzen“ (#7493). Was schon geregelt ist,
-            heißt „Bearbeiten“. Beide tragen die weiße Kit-Fläche mit Rahmen
+            heißt „Bearbeiten“, ohne die Rechte oder bei einem vergangenen
+            Termin „Details“. Alle tragen die weiße Kit-Fläche mit Rahmen
             (#2029): gleichrangige Zeilenaktionen sehen gleich aus, und eine
-            Liste mit sieben Lücken hat nicht sieben Primärknöpfe. Ohne die Rechte bleibt „Details“
-            die ruhigere Ghost-Variante, damit ein reiner Lesezugriff nicht
-            wie eine Aufforderung zum Ändern wirkt. */}
+            Liste mit sieben Lücken hat nicht sieben Primärknöpfe. „Details“
+            war eine Ghost-Variante ohne Rahmen und las sich als Beschriftung
+            statt als Knopf; dass hier nichts zu ändern ist, sagt das Wort. */}
         <Button
           type="button"
-          variant={canManage ? "outline" : "ghost"}
+          variant="outline"
           size="compact"
           tooltip={
             canManage
@@ -590,10 +591,11 @@ function VertretungDayListRow({
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-3">
+          {/* In Worten statt als nackter Bruch: „3 von 4 da“. */}
           <CoverageIndicator
             state={coverageState}
-            current={triple.present}
-            total={triple.planned}
+            label={`${triple.present} von ${triple.planned} da`}
+            title={`${triple.present} von ${triple.planned} Personen da`}
             note={
               coverageState === "acknowledged" ? "bewusst unbesetzt" : undefined
             }
