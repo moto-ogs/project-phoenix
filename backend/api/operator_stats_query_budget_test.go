@@ -50,7 +50,9 @@ func TestOperatorStatsPositiveGrowthQueryBudget(t *testing.T) {
 				TraegerCount: baseline.TraegerCount + n,
 				SchulenCount: baseline.SchulenCount + n,
 				KontenCount:  baseline.KontenCount,
-				GeraeteCount: baseline.GeraeteCount + n,
+				// The manual web check-in device every new school gets
+				// occupies no Geräteplatz and is no Gerät (#2312).
+				GeraeteCount: baseline.GeraeteCount,
 			}, stats)
 			t.Logf("MEASURE operator.stats N%d statements=%d", n, len(statements.Statements))
 			querybudgets.AssertQueryBudget(t, "operator.stats", statements)

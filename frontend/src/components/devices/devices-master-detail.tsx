@@ -52,6 +52,11 @@ interface DevicesMasterDetailProps {
   onSetBlocked: (blocked: boolean) => void;
   /** Läuft gerade ein Sperren oder Entsperren. */
   blockPending: boolean;
+  /**
+   * Darf die Person Geräte verwalten (devices:manage, #2312)? Ohne das
+   * Recht zeigt der Detailbereich die Angaben nur an.
+   */
+  canManage: boolean;
 }
 
 function keyForDevice(device: Device): string {
@@ -77,6 +82,7 @@ export function DevicesMasterDetail({
   onDeleteClick,
   onSetBlocked,
   blockPending,
+  canManage,
 }: DevicesMasterDetailProps) {
   const renderItem = (device: Device) => (
     <DatabaseListItem
@@ -107,6 +113,7 @@ export function DevicesMasterDetail({
       onDeleteClick={onDeleteClick}
       onSetBlocked={onSetBlocked}
       blockPending={blockPending}
+      canManage={canManage}
     />
   ) : (
     <EmptyState
@@ -152,6 +159,7 @@ interface DeviceDetailContentProps {
   onDeleteClick: () => void;
   onSetBlocked: (blocked: boolean) => void;
   blockPending: boolean;
+  canManage: boolean;
 }
 
 function DeviceDetailContent({
@@ -160,6 +168,7 @@ function DeviceDetailContent({
   onDeleteClick,
   onSetBlocked,
   blockPending,
+  canManage,
 }: DeviceDetailContentProps) {
   const [activeTab, setActiveTab] = useState<string>("master-data");
   // Bearbeitet wird am Objekt, nicht in einem Modal daneben
@@ -171,25 +180,26 @@ function DeviceDetailContent({
     setEditing(false);
   };
 
-  const headerActions = editing ? null : (
-    <>
-      <Button
-        type="button"
-        variant="outline"
-        size="compact"
-        onClick={() => setEditing(true)}
-        tooltip="Öffnet die Angaben des Geräts zum Ändern."
-      >
-        <Pencil className="h-3.5 w-3.5" aria-hidden />
-        Bearbeiten
-      </Button>
-      <DetailDeleteButton
-        onClick={onDeleteClick}
-        label="Entfernen"
-        tooltip="Entfernt das Gerät aus moto, moto fragt vorher nach."
-      />
-    </>
-  );
+  const headerActions =
+    editing || !canManage ? null : (
+      <>
+        <Button
+          type="button"
+          variant="outline"
+          size="compact"
+          onClick={() => setEditing(true)}
+          tooltip="Öffnet die Angaben des Geräts zum Ändern."
+        >
+          <Pencil className="h-3.5 w-3.5" aria-hidden />
+          Bearbeiten
+        </Button>
+        <DetailDeleteButton
+          onClick={onDeleteClick}
+          label="Entfernen"
+          tooltip="Entfernt das Gerät aus moto, moto fragt vorher nach."
+        />
+      </>
+    );
 
   const tabs: DetailTab[] = [
     {
@@ -203,6 +213,7 @@ function DeviceDetailContent({
           onCancelEdit={() => setEditing(false)}
           onSetBlocked={onSetBlocked}
           blockPending={blockPending}
+          canManage={canManage}
         />
       ),
     },
@@ -243,6 +254,7 @@ function DeviceStammdatenTab({
   onCancelEdit,
   onSetBlocked,
   blockPending,
+  canManage,
 }: {
   device: Device;
   editing: boolean;
@@ -250,6 +262,7 @@ function DeviceStammdatenTab({
   onCancelEdit: () => void;
   onSetBlocked: (blocked: boolean) => void;
   blockPending: boolean;
+  canManage: boolean;
 }) {
   // Speicherfehler im Formular, eine vergebene Geräte-ID am Feld (#2517).
   const saveErrors = useApiFormError();
@@ -270,7 +283,13 @@ function DeviceStammdatenTab({
 
   return (
     <div className="space-y-4">
-      {isDeviceBlocked(device) ? (
+      {isDeviceBlocked(device) && !canManage ? (
+        <Alert
+          type="warning"
+          message="Dieses Gerät ist gesperrt. Es kann sich nicht anmelden, bis es jemand mit dem Recht „Geräte verwalten“ entsperrt."
+        />
+      ) : null}
+      {isDeviceBlocked(device) && canManage ? (
         <Alert
           type="warning"
           message="Dieses Gerät ist gesperrt. Es kann sich nicht anmelden, bis du es entsperrst. Raum und bisherige Anwesenheiten bleiben erhalten."
@@ -330,7 +349,7 @@ function DeviceStammdatenTab({
         </div>
       </InfoSection>
 
-      {isDeviceBlocked(device) ? null : (
+      {isDeviceBlocked(device) || !canManage ? null : (
         <InfoSection
           title="Zugang"
           icon={

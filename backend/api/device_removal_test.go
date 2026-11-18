@@ -59,7 +59,7 @@ func (f deviceRemovalFixture) remove(t *testing.T, id int64) *httptest.ResponseR
 	t.Helper()
 	req := testutil.NewAuthenticatedRequest(t, http.MethodDelete, fmt.Sprintf("/devices/%d", id), nil,
 		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("iot:manage"),
+		testutil.WithPermissions("devices:manage"),
 	)
 	return testutil.ExecuteRequest(f.router, req)
 }

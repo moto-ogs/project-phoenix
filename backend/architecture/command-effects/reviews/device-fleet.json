@@ -483,6 +483,27 @@
       "target_owner": "timetable-activities"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DeviceSlotLimits.DeviceSlotLimit",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet/internal/ports.DeviceSlotLimits.DeviceSlotLimit",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.DeviceSlotLimits.DeviceSlotLimit; modules/organizationtenancy/device_slots.go:35. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "device-fleet",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DeviceSlotLimits.DeviceSlotLimit",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DeviceSlotLimits.LockDeviceSlotLimit",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet/internal/ports.DeviceSlotLimits.LockDeviceSlotLimit",
+      "reason": "Owner-provided locking read (#2312): calls platform.lock_school_device_slots on the caller's tenant or administrative transaction, which takes the per-school Geräteplatz advisory transaction lock and then reads platform.schools.device_slots with a fresh snapshot; no row mutation. The operator's limit change holds the same lock, so a registration commits against the limit it checked. Target modules/organizationtenancy.DeviceSlotLimits.LockDeviceSlotLimit; modules/organizationtenancy/device_slots.go:34; modules/organizationtenancy/internal/adapters/postgres/school_device_slots.go:74. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "device-fleet",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DeviceSlotLimits.LockDeviceSlotLimit",
+      "target_owner": "organization-tenancy"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.displayTenantFacts.DisplayEnabled",
       "classification": "query",
       "effect": "query",

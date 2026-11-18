@@ -26,6 +26,8 @@
   "device_active_session": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "device_other_organization": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
   "device_same_school": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "device_slots_full": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "device_slots_below_occupied": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "person_not_found": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "person_has_supervisions": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "caregiver_capability_blocked": "{object} değiştirilemedi. Güncel durumu kontrol edin.",

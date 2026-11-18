@@ -62,6 +62,8 @@ import { createLogger } from "~/lib/logger";
 import { PlusIcon } from "~/app/operator/provisioning/provisioning-shared";
 import { EditSchoolModal } from "~/app/operator/provisioning/edit-school-modal";
 import { ChildQuotaModal } from "~/app/operator/provisioning/child-quota-modal";
+import { DeviceSlotsModal } from "~/app/operator/provisioning/device-slots-modal";
+import { DeviceSlotsCard } from "~/components/operator/device-slots-card";
 import { childQuotaLimit } from "~/lib/operator/child-quota";
 import { InviteAdminModal } from "~/app/operator/provisioning/invite-admin-modal";
 import { CreateAccountModal } from "~/app/operator/provisioning/create-account-modal";
@@ -125,6 +127,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
   } | null>(null);
   const [editSchoolOpen, setEditSchoolOpen] = useState(false);
   const [childQuotaOpen, setChildQuotaOpen] = useState(false);
+  const [deviceSlotsOpen, setDeviceSlotsOpen] = useState(false);
   const { show: showToggleError } = useApiErrorDisplay();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [createAccountOpen, setCreateAccountOpen] = useState(false);
@@ -560,6 +563,19 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
     return [
       { label: "Konten", value: formatCount(school.kontenCount) },
       { label: "Geräte", value: formatCount(school.geraeteCount) },
+      {
+        // Geräteplätze (#2312): belegt von gekauft, orange wenn voll.
+        label: "Geräteplätze",
+        value:
+          school.deviceSlots === null
+            ? "Keine Grenze"
+            : `${formatCount(school.geraeteCount)} von ${formatCount(school.deviceSlots)}`,
+        tone:
+          school.deviceSlots !== null &&
+          school.geraeteCount >= school.deviceSlots
+            ? ("orange" as const)
+            : ("neutral" as const),
+      },
       { label: "Personen", value: formatCount(school.personenCount) },
       {
         label: "Kinderkontingent",
@@ -704,6 +720,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
     if (headRefused) {
       setEditSchoolOpen(false);
       setChildQuotaOpen(false);
+      setDeviceSlotsOpen(false);
       setSchoolDeleteTarget(null);
       setSchoolRestoreTarget(null);
     }
@@ -890,6 +907,13 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
             onUpdated={refreshSchoolDetail}
           />
 
+          <DeviceSlotsModal
+            isOpen={deviceSlotsOpen}
+            onClose={() => setDeviceSlotsOpen(false)}
+            school={school}
+            onUpdated={refreshSchoolDetail}
+          />
+
           <EditSchoolModal
             isOpen={editSchoolOpen}
             onClose={() => setEditSchoolOpen(false)}
@@ -995,6 +1019,11 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
         <>
           <LoadErrorAlert error={devicesLoadError} className="mb-4" />
           <LoadErrorAlert error={devicesAfterWrite.error} className="mb-4" />
+          <DeviceSlotsCard
+            deviceSlots={school.deviceSlots}
+            occupied={school.geraeteCount}
+            onEdit={() => setDeviceSlotsOpen(true)}
+          />
           {(schoolDevices === undefined && !devicesLoading) ||
           (devicesError && !schoolDevices?.length) ? null : !devicesError &&
             !devicesLoading &&

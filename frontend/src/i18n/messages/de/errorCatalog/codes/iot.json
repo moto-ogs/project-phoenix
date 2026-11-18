@@ -8,6 +8,7 @@
   "device_inactive": "Für {object} fehlt dir die Berechtigung. Bitte frage die Schule.",
   "device_pin_invalid": "Für {object} fehlt dir die Berechtigung. Bitte frage die Schule.",
   "device_pin_required": "Für {object} fehlt dir die Berechtigung. Bitte frage die Schule.",
+  "device_slots_full": "Alle Geräteplätze deiner Schule sind belegt. Entferne ein Gerät, das du nicht mehr brauchst, oder melde dich beim moto-Team für weitere Plätze.",
   "invalid_rfid_tag": "{object} konnte nicht übernommen werden. Bitte prüfe deine Angaben.",
   "invalid_staff_clock_request": "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
   "invalid_staff_clock_state": "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",

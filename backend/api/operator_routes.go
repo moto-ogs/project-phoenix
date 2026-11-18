@@ -410,6 +410,7 @@ func mountOperatorSchoolRoutes(
 			r.Put("/override", mfaAdmin.SetSchoolAccountMFAOverride)
 		})
 		r.Get("/{id}/devices", provisioning.ListSchoolDevices)
+		r.Put("/{id}/device-slots", provisioning.SetSchoolDeviceSlots)
 		r.Get("/{id}/persons", provisioning.AuditReadAccess(organizationtenancy.ReadSchoolPersons, provisioning.ListSchoolPersons))
 		r.Get("/{id}/pwa-usage", provisioning.GetSchoolPWAUsage)
 		if demoPresenceHistory != nil {

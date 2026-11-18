@@ -26,6 +26,8 @@
   "device_active_session": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "device_other_organization": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "device_same_school": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "device_slots_full": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "device_slots_below_occupied": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "person_not_found": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "person_has_supervisions": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "caregiver_capability_blocked": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",

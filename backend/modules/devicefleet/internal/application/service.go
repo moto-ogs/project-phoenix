@@ -24,12 +24,15 @@ type Dependencies struct {
 	Presence  ports.PresenceReader
 	Dashboard ports.DashboardSources
 	Tenants   ports.TenantFacts
-	Tx        ports.Transaction
-	Tokens    ports.TokenMinter
-	APIKeys   ports.APIKeyMinter
-	Now       ports.Clock
-	Window    ports.WindowResolver
-	Observe   ports.Observer
+	// Slots reads the school's Geräteplätze (#2312). Graphs that register
+	// no device leave it unset; a registration then fails loudly.
+	Slots   ports.DeviceSlotLimits
+	Tx      ports.Transaction
+	Tokens  ports.TokenMinter
+	APIKeys ports.APIKeyMinter
+	Now     ports.Clock
+	Window  ports.WindowResolver
+	Observe ports.Observer
 }
 
 // Service is the Device Fleet application service.

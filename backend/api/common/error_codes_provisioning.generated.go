@@ -11,6 +11,8 @@ const CodeProvisioningDeviceOnline = "provisioning.device_online"
 const CodeProvisioningDeviceOtherOrganization = "provisioning.device_other_organization"
 const CodeProvisioningDeviceProtected = "provisioning.device_protected"
 const CodeProvisioningDeviceSameSchool = "provisioning.device_same_school"
+const CodeProvisioningDeviceSlotsBelowOccupied = "provisioning.device_slots_below_occupied"
+const CodeProvisioningDeviceSlotsFull = "provisioning.device_slots_full"
 const CodeProvisioningDeviceTransferProtected = "provisioning.device_transfer_protected"
 const CodeProvisioningOrganizationAlreadyDeleted = "provisioning.organization_already_deleted"
 const CodeProvisioningOrganizationDeleted = "provisioning.organization_deleted"
@@ -44,6 +46,8 @@ var errorCodeClassesProvisioning = []errorCodeClass{
 	{CodeProvisioningDeviceOtherOrganization, "permission"},
 	{CodeProvisioningDeviceProtected, "permission"},
 	{CodeProvisioningDeviceSameSchool, "business_rejection"},
+	{CodeProvisioningDeviceSlotsBelowOccupied, "business_rejection"},
+	{CodeProvisioningDeviceSlotsFull, "business_rejection"},
 	{CodeProvisioningDeviceTransferProtected, "permission"},
 	{CodeProvisioningOrganizationAlreadyDeleted, "business_rejection"},
 	{CodeProvisioningOrganizationDeleted, "business_rejection"},

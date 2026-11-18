@@ -26,6 +26,8 @@
   "device_active_session": "{object} could not be changed. Please check its current status.",
   "device_other_organization": "You cannot access {object}. Please contact the school.",
   "device_same_school": "{object} could not be changed. Please check its current status.",
+  "device_slots_full": "{object} could not be changed. Please check its current status.",
+  "device_slots_below_occupied": "{object} could not be changed. Please check its current status.",
   "person_not_found": "{object} could not be changed. Please check its current status.",
   "person_has_supervisions": "{object} could not be changed. Please check its current status.",
   "caregiver_capability_blocked": "{object} could not be changed. Please check its current status.",

@@ -2,6 +2,7 @@ DELETE /api/iot/*/{id}
 DELETE /api/iot/staff/{staffId}/rfid
 GET /api/iot/*/
 GET /api/iot/*/active
+GET /api/iot/*/device-slots
 GET /api/iot/*/device/{deviceId}
 GET /api/iot/*/maintenance
 GET /api/iot/*/offline

@@ -21,7 +21,7 @@ export const resourceLabels: Record<string, string> = {
   schedules: "Zeitpläne",
   config: "Einstellungen",
   feedback: "Feedback",
-  iot: "Geräte",
+  devices: "Geräte",
   system: "System",
   admin: "Administration",
   time_tracking: "Zeiterfassung",
@@ -213,10 +213,9 @@ const permissionDescriptions: Record<string, string> = {
   "meals:orders": "Essenslisten mit Namen sehen",
   "meals:register": "Anmeldung eines Kindes ändern, auch nach der Frist",
 
-  // IoT
-  "iot:read": "Tablets und Geräte ansehen",
-  "iot:update": "Tablets und Geräte bearbeiten",
-  "iot:manage": "Tablets und Geräte anlegen und entfernen",
+  // Geräte (#2312)
+  "devices:read": "Geräte und Geräteplätze der Schule ansehen",
+  "devices:manage": "Geräte registrieren, bearbeiten, sperren und entfernen",
 
   // Auth
   "auth:manage": "Zahlen zu Rollen und Berechtigungen in der Übersicht sehen",
