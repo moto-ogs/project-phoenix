@@ -7,7 +7,7 @@
 // ersten Lastschrift eines Mandats eine Folgelastschrift. Lastschriften, die
 // nicht in die Datei dürfen, stehen mit Grund darunter.
 
-import { DownloadIcon, LandmarkIcon } from "lucide-react";
+import { CheckCircle2, DownloadIcon, LandmarkIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import {
@@ -28,6 +28,7 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ConfirmationModal } from "~/components/ui/modal";
+import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
@@ -66,6 +67,13 @@ const STEPS = [
 /** Why the file and its confirmation wait while the Träger has no account. */
 const ACCOUNT_MISSING_REASON =
   "Lege zuerst eine Bankverbindung des Trägers als Standard fest.";
+
+/** What „Bei der Bank eingereicht“ does, or what comes first. */
+function submitHint(downloadedId: string | null, downloading: boolean) {
+  if (downloading) return "Die Datei wird gerade erstellt.";
+  if (!downloadedId) return "Lade zuerst die Datei herunter.";
+  return "Vermerkt die Lastschriften als eingereicht. moto fragt vorher nach.";
+}
 
 /** The mandate page of a family. */
 function mandateHref(debit: SepaDebit): string {
@@ -287,28 +295,10 @@ export function SepaDebitCard({
         }
         actions={
           pending ? (
-            <div className="flex w-full max-w-full flex-col flex-wrap gap-2 min-[480px]:w-auto min-[480px]:flex-row">
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                disabled={fileBlocked || !downloadedId || downloading}
-                disabledReason={
-                  fileBlocked
-                    ? ACCOUNT_MISSING_REASON
-                    : !downloadedId
-                      ? "Lade zuerst die Datei herunter."
-                      : undefined
-                }
-                tooltip="Vermerkt die Lastschriften als eingereicht. moto fragt vorher nach."
-                onClick={() => setConfirming(true)}
-              >
-                Bei der Bank eingereicht
-              </Button>
+            <>
               {fileBlocked ? null : (
                 <HandoverMenu
                   run={handoverRun}
-                  size="md"
                   recipients={handover.recipients}
                   recipientHidden={handover.recipientHidden}
                   formats={["pain008"]}
@@ -334,7 +324,23 @@ export function SepaDebitCard({
                 <DownloadIcon aria-hidden className="size-4" />
                 Datei herunterladen
               </Button>
-            </div>
+              {fileBlocked ? null : (
+                // „Bei der Bank eingereicht“ is a step after the file, not an
+                // action of every visit (#7407): it waits in the card menu.
+                <OverflowMenu
+                  ariaLabel="Weitere Aktionen zur Lastschriftdatei"
+                  items={[
+                    {
+                      label: "Bei der Bank eingereicht",
+                      description: submitHint(downloadedId, downloading),
+                      icon: <CheckCircle2 className="h-4 w-4" aria-hidden />,
+                      disabled: !downloadedId || downloading,
+                      onClick: () => setConfirming(true),
+                    },
+                  ]}
+                />
+              )}
+            </>
           ) : undefined
         }
       >

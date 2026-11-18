@@ -11,6 +11,15 @@ wrong for this repo. Check it before acting on a skill's colour, surface, or
 copy recommendation, and do not restate its rules here. One authority is the
 whole point.
 
+## Design pass and screenshot pairs
+
+- **`ui-design-pass`**: type `/ui-design-pass new` at the end of a task that
+  creates UI, or `/ui-design-pass rework <screen>: <what bothers you>` for an
+  existing screen. It runs only when asked by name; in Codex, name it in the
+  prompt.
+- **`ui-before-after`**: before/after pairs for a PR, with the changed regions
+  outlined and numbered. `ui-design-pass` calls it for a rework.
+
 ## Layout
 
 Real files live in `frontend/.claude/skills/`; `frontend/.agents/skills/`

@@ -35,6 +35,11 @@ CREATE ROLE phoenix_data_return NOLOGIN NOINHERIT;
 CREATE ROLE "return synthetic" LOGIN NOINHERIT;
 GRANT phoenix_data_return TO "return synthetic";
 CREATE ROLE tenant_scope;
+CREATE ROLE dev_reader LOGIN;
+GRANT pg_read_all_data TO dev_reader;
+ALTER ROLE dev_reader SET default_transaction_read_only = on;
+CREATE ROLE postgres_exporter LOGIN;
+GRANT pg_monitor TO postgres_exporter;
 CREATE SCHEMA platform;
 CREATE TABLE platform.schools(id bigserial PRIMARY KEY);
 INSERT INTO platform.schools VALUES (41), (42);
@@ -140,6 +145,10 @@ exec '${realDocker}' "$@"
   assert.match(result.stdout, /restore_school_erasure_disabled=1/);
   assert.match(result.stdout, /restore_billing_retention_disabled=1/);
   assert.match(result.stdout, /restore_data_return_disabled=1/);
+  // Personal read logins and the metrics exporter come back disabled.
+  assert.match(result.stdout, /restore_external_logins_disabled=2/);
+  assert.equal(sql("SELECT string_agg(rolname || '=' || rolcanlogin, ',' ORDER BY rolname) FROM pg_roles WHERE rolname IN ('dev_reader', 'postgres_exporter');"), 'dev_reader=false,postgres_exporter=false');
+  assert.equal(sql("SELECT pg_has_role('dev_reader', 'pg_read_all_data', 'MEMBER');"), 't');
   // ADR 0203: a restore revives no retrieval token; the purged grant stays as it was.
   assert.match(result.stdout, /restore_data_return_revoked=1/);
   assert.equal(sql('SELECT count(*) FROM platform.data_return_grants WHERE wrapped_key IS NOT NULL OR (purged_at IS NULL AND revoked_at IS NULL);'), '0');

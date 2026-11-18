@@ -57,10 +57,11 @@ func (seedEnrollmentSignatureStep) Run(_ context.Context, rt *Runtime) error {
 
 // seedSignedEnrollmentFormFields asks for allergies per child (#5027): the
 // submission answers it for Ama, and an answer to a question asked once per
-// enrollment would be dropped on submit.
+// enrollment would be dropped on submit. The question writes the child's
+// health information, so the form shows the health consent (#2787).
 func seedSignedEnrollmentFormFields() []map[string]any {
 	return []map[string]any{
-		{"key": "allergies", "label": "Allergien und Unverträglichkeiten", "type": "textarea", "sort_order": 10, "applies_to_child": true},
+		{"key": "allergies", "label": "Allergien und Unverträglichkeiten", "type": "textarea", "sort_order": 10, "applies_to_child": true, "target": "student.health_info"},
 	}
 }
 
@@ -72,7 +73,7 @@ func seedSignedEnrollmentSubmission(phaseID int64, signature string) map[string]
 		"guardian_last_name":  "Mensah",
 		"guardian_email":      "abena.mensah@example.test",
 		"guardian_phone":      "+49 221 555 734",
-		"consent_flags":       map[string]any{"data_processing": true},
+		"consent_flags":       map[string]any{"data_processing": true, "health_data": true},
 		"children": []map[string]any{{
 			"first_name": "Ama", "last_name": "Mensah", "date_of_birth": "2018-03-21", "target_grade_level": 2,
 			"custom_data": map[string]any{"allergies": "Nüsse"},

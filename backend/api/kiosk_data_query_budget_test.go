@@ -77,7 +77,7 @@ func newKioskDataBudgetFixture(t *testing.T) (*bun.DB, http.Handler, activityCon
 	auth := testutil.NewDeviceAuthenticators(devices.IoT.Fleet(), schools, settings)
 	resource := iotcompose.NewResource(iotcompose.ServiceDependencies{
 		Runtime: NewIoTHTTPRuntime(time.Now), ErrorReports: NewIoTErrorReporter(nil, nil),
-		Administration: NewIoTAdministration(devicefleet.NewAdministration(devices.IoT.Fleet(), time.Now), routerRemovalSessions{}, slog.Default(), time.Now),
+		Administration: NewIoTAdministration(devicefleet.NewAdministration(devices.IoT.Fleet(), time.Now), mustDeviceHistory(t, devices.IoT.Fleet()), routerDeviceActors{}, routerRemovalSessions{}, slog.Default(), time.Now),
 		Directory:      data.Directory, Rooms: data.RoomAvailability, Configuration: data.Configuration,
 		FeedbackService: feedback.Feedback, FeedbackStudents: identity.FeedbackStudents,
 		FeedbackResponseObserver: func(int, string) {},

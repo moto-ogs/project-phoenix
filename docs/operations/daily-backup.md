@@ -15,7 +15,8 @@ Restore der Datenbank belebt widerrufene Tokens wieder und setzt
 Downloadzähler zurück; der Restore widerruft deshalb alle Tokens mit Archiv
 selbst, neue stellt der Operator aus (Schritt „Datenrückgabe nach Restore“ in
 der Wiederherstellung).
-Ein täglicher systemd-Timer arbeitet unabhängig von Deployments. Jeder
+Je Umgebung arbeitet eine eigene systemd-Instanz (`production`, `staging`)
+täglich und unabhängig von Deployments. Jeder
 Teilfehler liefert einen Fehlerstatus; erst nach Prüfung und Bereinigung
 erscheint `backup_result=ok step=complete`. Eigene Grafana/Loki-Regeln erkennen
 fehlenden Erfolg seit 26 Stunden und Fehler der letzten 30 Minuten. Fehlerausgaben von Werkzeugen
@@ -62,7 +63,7 @@ liest sie `UPLOADS_BACKEND` und `UPLOADS_S3_*` aus der Umgebung des bestehenden
 `server`-Containers, nachdem sie `.release-operation.lock` erworben hat.
 Noch nicht ausgerollte Änderungen in `.env` bestimmen die Sicherung nicht.
 Fehlt der Container oder lässt sich seine Umgebung nicht lesen, bricht der
-Lauf ab. Der Bucket-Schlüssel bleibt bei der App; `backup.env` darf keine
+Lauf ab. Der Bucket-Schlüssel bleibt bei der App; die Instanzdatei `/etc/moto-backup/<instanz>.env` darf keine
 `UPLOADS_*`-Werte enthalten, sonst bricht der Lauf mit `step=configuration` ab.
 
 - **Sicherung:** Bei `UPLOADS_BACKEND=s3` kopiert rclone den ganzen Bucket in
@@ -122,8 +123,10 @@ installiert oder aktiviert nichts. Der Mensch führt die Befehle aus.
    [Vorlage](daily-backup.env.example) in ein eigenes, vom Betreiber verwaltetes
    SOPS-Dokument außerhalb dieses Repos übernehmen. Nicht `environments/*.sops.env`
    ändern. Dies ist ein eigener Hostdienst, keine neue App-Variable und keine
-   Änderung der Compose-Allowlist. Der Mensch materialisiert daraus
-   `/etc/moto-backup/backup.env` (root, 0600) mit SOPS. Kein Klartext in Git,
+   Änderung der Compose-Allowlist. Je Umgebung ein eigenes Dokument mit eigenem
+   Compose-Projekt, Volume, Ziel-Präfix und Zugang. Der Mensch materialisiert
+   daraus `/etc/moto-backup/<instanz>.env`, also `production.env` und
+   `staging.env` (root, 0600), mit SOPS. Kein Klartext in Git,
    Shell-History, Chat oder Journal. Die privaten age-Backupidentitäten gehören
    auch nicht in dieses Dokument. Rclone erhält ausschließlich die aufgeführten
    `RCLONE_CONFIG_MOTO_*`-Werte aus der Umgebung, keine Konfigurationsdatei.
@@ -140,11 +143,12 @@ installiert oder aktiviert nichts. Der Mensch führt die Befehle aus.
    Provider, HTTPS-Endpunkt, Region und beide Zugangswerte sind Pflicht.
    `BACKUP_RETENTION_DAYS` ist eine ganze Zahl 1 bis 90, ohne impliziten Default.
    `BACKUP_WORK_DIR` ist der konfigurierbare Klartext-Arbeitsbereich, bei S3
-   zwingend tmpfs (z. B. `/run/moto-backup`); kein Klartext-Swap, keine Core-Dumps.
-   `BACKUP_CIPHER_DIR` ist ein eigener privater Pfad auf einem Disk-Dateisystem
-   (z. B. `/var/lib/moto-backup-cipher`), nicht unterhalb des Klartextpfads.
-   Der Dienst legt beide Standardpfade mit 0700 an. Bei anderen Pfaden muss der
-   Betreiber Verzeichnis, Rechte und tmpfs-Mount selbst vorbereiten.
+   zwingend tmpfs (Standard `/run/moto-backup-<instanz>`); kein Klartext-Swap,
+   keine Core-Dumps. `BACKUP_CIPHER_DIR` ist ein eigener privater Pfad auf einem
+   Disk-Dateisystem (Standard `/var/lib/moto-backup-cipher-<instanz>`), nicht
+   unterhalb des Klartextpfads. Die Unit legt beide Standardpfade je Instanz mit
+   0700 an; keine Instanz darf die Pfade einer anderen nutzen. Bei anderen
+   Pfaden muss der Betreiber Verzeichnis, Rechte und tmpfs-Mount selbst vorbereiten.
    Das äußere Tar wird direkt nach age gestreamt: beim Backup verbleiben nur
    Dump, Rollen und Upload-Archiv im Klartextbereich. Chiffrat und vollständiger
    Prüfrückdownload liegen auf Disk. Beim Restore liegen dort nur das Chiffrat,
@@ -168,27 +172,37 @@ installiert oder aktiviert nichts. Der Mensch führt die Befehle aus.
    Wachstum kann trotzdem abbrechen und muss wie jeder Teilfehler bearbeitet
    werden. tmpfs-Limit und verfügbarer RAM müssen zur Reservierung passen;
    andernfalls einen ausreichend großen geschützten tmpfs bereitstellen,
-   nicht einfach einen kleinen `/run`-Mount verwenden.
+   nicht einfach einen kleinen `/run`-Mount verwenden. Die Instanzen eines Hosts
+   laufen nie gleichzeitig: Die Unit wartet über `flock` auf den hostweiten
+   Lock `/run/moto-daily-backup.lock`. RAM und tmpfs müssen deshalb für die
+   größte Instanz reichen, nicht für die Summe.
 
    Private Arbeitsverzeichnisse werden bei Erfolg, Fehler und SIGTERM entfernt.
    Das ist Entfernen von Dateien, kein garantierter physischer Overwrite auf SSDs;
    Klartext bleibt deshalb auf tmpfs ohne unverschlüsselten Swap.
    Nach Stromausfall/SIGKILL auf Reste beider Pfade und `.release-operation.lock`
    prüfen. Nur verwaiste Dateien entfernen, keinen Lock eines laufenden
-   Backups/Deployments. Alle Betriebswerkzeuge serialisieren über denselben
-   Release-Lock. Ein Konflikt ist ein Fehler, kein übersprungener Erfolg.
+   Backups/Deployments. Alle Betriebswerkzeuge einer Umgebung serialisieren
+   über deren Release-Lock im Deployment-Verzeichnis (`/root/production`,
+   `/root/staging`). Ein Konflikt ist ein Fehler, kein übersprungener Erfolg.
 5. **Timer installieren:** `daily-backup.sh`, `daily_backup.py` und für die
    getrennte Listenpflege `compact-erasure-ledger.py` zusammen
    unter `/usr/local/lib/moto-backup/` installieren (root, nicht durch
-   App-Nutzer schreibbar). Units aus `scripts/systemd/` nach
-   `/etc/systemd/system/` kopieren. `systemd-analyze verify` über alle drei
-   Units ausführen, `systemctl daemon-reload`, dann zunächst
-   `systemctl start moto-daily-backup.service`. Ergebnis im Journal und
+   App-Nutzer schreibbar). Die Vorlagen `moto-daily-backup@.service`,
+   `moto-daily-backup@.timer`, `moto-backup-failure@.service` und das
+   Verzeichnis `moto-daily-backup@staging.timer.d/` aus `scripts/systemd/`
+   nach `/etc/systemd/system/` kopieren. Je Instanz (`production`, `staging`):
+   `systemd-analyze verify moto-daily-backup@<instanz>.service moto-daily-backup@<instanz>.timer`,
+   `systemctl daemon-reload`, dann zunächst
+   `systemctl start moto-daily-backup@<instanz>.service`. Ergebnis im Journal und
    verschlüsseltes Objekt am Ziel prüfen. Erst nach erfolgreichem Restore-Test
-   `systemctl enable --now moto-daily-backup.timer` ausführen.
-   `systemctl list-timers moto-daily-backup.timer` kontrollieren: täglich
-   02:15 UTC plus höchstens fünf Minuten Zufallsversatz, verpasster Lauf wird
-   nachgeholt. Bis zur nachgewiesenen Alarmzustellung muss ein benannter Mensch
+   `systemctl enable --now moto-daily-backup@production.timer moto-daily-backup@staging.timer`
+   ausführen. `systemctl list-timers 'moto-daily-backup@*'` kontrollieren:
+   Produktion täglich 02:15 UTC, Staging 03:45 UTC, je plus höchstens fünf
+   Minuten Zufallsversatz; ein verpasster Lauf wird nachgeholt. Läuft die
+   andere Instanz noch, wartet ein Lauf höchstens zwei Stunden auf den
+   Host-Lock und scheitert dann mit Alarm.
+   Bis zur nachgewiesenen Alarmzustellung muss ein benannter Mensch
    täglich Ergebnis und Frische prüfen, Fehler bearbeiten und dies dokumentieren.
    Die folgenden Alarmregeln ersetzen diesen Übergangsschritt erst nach Abnahme.
 
@@ -206,8 +220,12 @@ Tool-Verträge: [age](https://github.com/FiloSottile/age),
 
 **Im Repo vorbereitet, nicht produktiv nachgewiesen:**
 `monitoring/grafana/provisioning/alerting/daily-backup.yml` ergänzt die alten
-cron-Regeln unverändert. Der eigene Stream `{env="prod",service="daily-backup"}`
-verhindert, dass ein alter DB-Dump einen fehlenden neuen Sicherungslauf verdeckt.
+cron-Regeln unverändert. Je Instanz ein eigener Stream,
+`{env="prod",service="daily-backup"}` für `production` und
+`{env="staging",service="daily-backup"}` für `staging`. Er verhindert, dass ein
+alter DB-Dump oder ein Erfolg der anderen Umgebung einen fehlenden
+Sicherungslauf verdeckt. Staging-Regeln alarmieren mit `severity: warning`,
+Produktion mit `critical` (fehlt) bzw. `high` (fehlgeschlagen).
 `absent_over_time` meldet auch einen noch nie angelegten Stream als fehlend.
 Ein leerer, gesunder Abfragevektor ist deshalb `OK`; Abfragefehler sind `Alerting`.
 Die zweite Regel zählt Fehler seit 30 Minuten, auch wenn später ein Erfolg folgt.
@@ -236,23 +254,39 @@ Empfänger oder Notification Policies werden provisioniert.
          - /etc/machine-id:/etc/machine-id:ro
    ```
 
-   Der Dienst und der Failure-Hook verwenden `SYSLOG_IDENTIFIER=moto-daily-backup`.
+   Dienst und Failure-Hook einer Instanz verwenden
+   `SYSLOG_IDENTIFIER=moto-daily-backup-<instanz>`, also
+   `moto-daily-backup-production` bzw. `moto-daily-backup-staging`.
    Zusätzlich muss `_UID=0` übereinstimmen: Dieses vertrauenswürdige Journalfeld
    beschränkt die Quelle auf Root-Prozesse. Der Bezeichner allein ist fälschbar;
    ein lokaler Nicht-Root-Prozess könnte sonst einen Sicherungserfolg vortäuschen.
    Der explizite `logger --tag` ist nötig, weil der Failure-Hook unter einer
    instanziierten anderen Unit läuft. Nicht nur `_SYSTEMD_UNIT` des Hauptdiensts
-   filtern. Nach Installation der geänderten Units `systemd-analyze verify`
-   und `systemctl daemon-reload` ausführen.
+   filtern. Die Bezeichner folgen bewusst nicht der Host-Konvention
+   `<env>-<dienst>` für `container_tag`. Prüfen, dass die vorhandene Ableitung
+   aus `container_tag` nie `service="daily-backup"` erzeugt (etwa aus einem
+   Bezeichner `prod-daily-backup`): Sonst könnte ein Nicht-Root-Prozess ohne
+   `_UID=0`-Prüfung einen Erfolg vortäuschen. Nach Installation der geänderten
+   Units `systemd-analyze verify` und `systemctl daemon-reload` ausführen.
 2. **Alloy ergänzen:** Diesen Ausschnitt in die bestehende Konfiguration
    übernehmen. Keine Journal-Metadaten oder freien Werkzeugausgaben nach Loki
    weitergeben. Die enge Zeilenprüfung lässt nur den festen Ergebnisvertrag zu.
 
+   Eine Journalquelle je Instanz, weil `matches` nur UND-Bedingungen kennt.
+   Die Instanz `production` erhält wie die übrigen Produktionsstreams `env="prod"`.
+
    ```alloy
-   loki.source.journal "moto_daily_backup" {
-     matches = "SYSLOG_IDENTIFIER=moto-daily-backup _UID=0"
+   loki.source.journal "moto_daily_backup_production" {
+     matches = "SYSLOG_IDENTIFIER=moto-daily-backup-production _UID=0"
      max_age = "27h"
      labels = { env = "prod", service = "daily-backup" }
+     forward_to = [loki.process.moto_daily_backup.receiver]
+   }
+
+   loki.source.journal "moto_daily_backup_staging" {
+     matches = "SYSLOG_IDENTIFIER=moto-daily-backup-staging _UID=0"
+     max_age = "27h"
+     labels = { env = "staging", service = "daily-backup" }
      forward_to = [loki.process.moto_daily_backup.receiver]
    }
 
@@ -292,7 +326,7 @@ Empfänger oder Notification Policies werden provisioniert.
    Bestehende Contact Points und die Standard-Policy samt etwaiger Label-Routen
    durch den Betreiber prüfen, nicht ersetzen. Grafana-Provisionierungsfehler
    ausschließen. Auf einer isolierten Testinstallation mit synthetischen Logs
-   die beiden Regeln und die bestehende Zustellung Ende-zu-Ende prüfen:
+   die Regeln beider Instanzen und die bestehende Zustellung Ende-zu-Ende prüfen:
    fehlender/über 26 Stunden alter Erfolg, Skriptfehler, Failure-Hook sowie
    Wiederanlauf von Alloy/Grafana. Ein fehlendes EnvironmentFile oder ein
    nicht startbares Skript muss über `OnFailure` erkannt werden. Ein komplett
@@ -504,6 +538,15 @@ weder den Produktionshost noch den Monitoring-Host dafür gelesen.
    `restore_school_erasure_disabled=<Anzahl>`,
    `restore_billing_retention_disabled=<Anzahl>` bzw.
    `restore_data_return_disabled=<Anzahl>` gemeldet, keine Login-Namen.
+   Persönliche Lesezugänge und der Metrik-Exporter (etwa `dev_*` mit
+   `pg_read_all_data`, `postgres_exporter` mit `pg_monitor`) werden ebenfalls
+   auf **NOLOGIN** gesetzt und als `restore_external_logins_disabled=<Anzahl>`
+   gemeldet. Zulässig ist das nur, wenn alle Mitgliedschaften eingebaute
+   Leserollen sind (`pg_read_all_data`, `pg_monitor`, `pg_read_all_stats`,
+   `pg_read_all_settings`, `pg_stat_scan_tables`, ohne ADMIN-Option), der
+   Login keine erhöhten Attribute, keine Mitglieder und nach dem Datenimport
+   keine direkten Rechte oder Objekte hat. Den Exporter und benötigte
+   Lesezugänge danach mit neuem Passwort einzeln freischalten.
    Alle anderen unbekannten LOGIN-Rollen werden weiterhin abgewiesen.
    Vor Wiederholung deren Zweck/Mapping klären und das Verfahren gezielt erweitern.
    Persönliche Diagnosezugänge nach Restore **bewusst einzeln neu freischalten**:

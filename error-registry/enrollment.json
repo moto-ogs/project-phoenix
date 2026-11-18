@@ -339,6 +339,12 @@
       "legacy": "enrollment.consent_required"
     },
     {
+      "code": "enrollment.health_consent_required",
+      "class": "input",
+      "parameters": [],
+      "legacy": "enrollment.health_consent_required"
+    },
+    {
       "code": "enrollment.renewal_terms_changed",
       "class": "business_rejection",
       "parameters": [],

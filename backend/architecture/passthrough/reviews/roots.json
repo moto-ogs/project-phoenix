@@ -5227,6 +5227,11 @@
     },
     {
       "decision": "0090",
+      "id": "roots/owners/provisioningDevices.RecordDeviceLifecycle",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0090",
       "id": "roots/owners/provisioningDevices.UpdateDevice",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

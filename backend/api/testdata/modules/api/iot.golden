@@ -10,6 +10,7 @@ GET /api/iot/*/statistics -> nfc_anwesenheit
 GET /api/iot/*/status/{status} -> nfc_anwesenheit
 GET /api/iot/*/type/{type} -> nfc_anwesenheit
 GET /api/iot/*/{id} -> nfc_anwesenheit
+GET /api/iot/*/{id}/history -> nfc_anwesenheit
 GET /api/iot/activities -> nfc_anwesenheit
 GET /api/iot/attendance/status/{rfid} -> nfc_anwesenheit
 GET /api/iot/config -> nfc_anwesenheit

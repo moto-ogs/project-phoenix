@@ -49,7 +49,7 @@ import { BELOW_MD, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useDeleteConfirmation } from "~/hooks/useDeleteConfirmation";
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { ModuleRouteGuard } from "~/components/tenant/module-route-guard";
 import { devicesConcept } from "~/lib/concepts/devices";
@@ -131,6 +131,14 @@ function DevicesPageContent() {
 
   const service = useMemo(() => createCrudService(devicesConfig), []);
   const tenantMutate = useTenantMutate();
+  const invalidateFamily = useInvalidateFamily();
+  // A write changes the device and adds to its history (#2321).
+  const refreshDevices = useCallback(async () => {
+    await Promise.all([
+      tenantMutate(tenantAdminKeys.devices()),
+      invalidateFamily(tenantAdminKeys.deviceHistoryFamily),
+    ]);
+  }, [tenantMutate, invalidateFamily]);
 
   const {
     data: devicesData,
@@ -309,9 +317,9 @@ function DevicesPageContent() {
       toastSuccess(
         `Das Gerät „${updatedDevice.name ?? updatedDevice.device_id}“ ist gespeichert.`,
       );
-      await tenantMutate(tenantAdminKeys.devices());
+      await refreshDevices();
     },
-    [selectedDevice, service, tenantMutate, toastSuccess],
+    [selectedDevice, service, refreshDevices, toastSuccess],
   );
 
   // Gerätesperre (#2317): sofort wirksam und sofort umkehrbar, darum ohne
@@ -358,9 +366,9 @@ function DevicesPageContent() {
           `Das Gerät „${title}“ ist entsperrt und kann sich wieder anmelden.`,
         );
       }
-      await tenantMutate(tenantAdminKeys.devices());
+      await refreshDevices();
     },
-    [showActionError, tenantMutate, toastSuccess],
+    [showActionError, refreshDevices, toastSuccess],
   );
 
   const handleDeleteDevice = useCallback(async () => {

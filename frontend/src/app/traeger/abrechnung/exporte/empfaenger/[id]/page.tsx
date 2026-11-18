@@ -44,7 +44,7 @@ function RecipientStateNotice({
   const assign = (
     <ButtonLink
       href={traegerPath(EXPORT_RECIPIENT_PATH)}
-      variant="ghost_tone"
+      variant="surface"
       size="compact"
       tooltip="Öffnet die Empfänger, dort ordnest du die Dateien zu."
     >

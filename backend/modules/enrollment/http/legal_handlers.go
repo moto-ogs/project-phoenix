@@ -30,6 +30,10 @@ type PublicLegalTextsResponse struct {
 	EmailContactEnabled bool         `json:"email_contact_enabled"`
 	PhotoEnabled        bool         `json:"photo_enabled"`
 	Blocks              []LegalBlock `json:"blocks"`
+	// HealthConsent is the consent moto adds to a form that asks for health
+	// information (#2787). Only the tenant-wide read carries it, for the
+	// template preview; a form's own blocks already contain it.
+	HealthConsent *LegalBlock `json:"health_consent,omitempty"`
 }
 
 // publicLegalTexts serves the tenant's AGB + Datenschutz Markdown for
@@ -149,5 +153,6 @@ func legalTextsToResponse(texts LegalTexts) PublicLegalTextsResponse {
 		EmailContactEnabled: texts.EmailContactEnabled,
 		PhotoEnabled:        texts.PhotoEnabled,
 		Blocks:              texts.Blocks,
+		HealthConsent:       new(capability.HealthConsentBlock()),
 	}
 }

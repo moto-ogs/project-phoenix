@@ -201,8 +201,11 @@ response and the staging delivery check:
 ## Encrypted daily backup
 
 `alerting/daily-backup.yml` is prepared, not deployed or delivery-verified.
-It monitors the separate `{env="prod",service="daily-backup"}` journal stream:
-no verified success in 26 hours, or a failure in 30 minutes. Legacy cron backup
+It monitors one journal stream per systemd instance,
+`{env="prod",service="daily-backup"}` for `moto-daily-backup@production` and
+`{env="staging",service="daily-backup"}` for `moto-daily-backup@staging`:
+no verified success in 26 hours, or a failure in 30 minutes. Staging rules use
+severity `warning`. Legacy cron backup
 rules in `infrastructure.yml` remain unchanged during the cutover. The operator
 must add the Alloy journal source, verify delivery via the existing default
 policy and complete a restore before retiring cron. No contact points or

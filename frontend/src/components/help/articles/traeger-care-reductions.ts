@@ -64,7 +64,7 @@ export function traegerCareReductionsTopic(): HelpTopic {
           "Du führst die Kinderzahl schon in einem anderen Programm, zum Beispiel OGS Connect? Dann trägst du viele Zahlen auf einmal aus einer CSV-Datei nach. Jede Zahl gilt als von dir bestätigt. moto bewahrt die Datei nicht auf.",
         steps: [
           "Speichere die Liste als CSV-Datei. Jede Zeile nennt ein Kind mit Vertrag: Vorname, Nachname und die Zahl der Kinder in der Familie.",
-          "Wähle `Familien und Zahlung`, den Reiter `Kinderzahl` und oben `Aus Datei nachtragen`.",
+          "Wähle `Familien und Zahlung` und den Reiter `Kinderzahl`. Wähle oben rechts das Menü mit den drei Punkten und dann `Aus Datei nachtragen`.",
           "Du kennst den Aufbau noch nicht? Wähle `Beispieldatei`.",
           "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
           "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Hat die Datei keine Spalte für die Schule, wähle `Schule für alle Zeilen`.",
@@ -103,7 +103,7 @@ export function traegerCareReductionsTopic(): HelpTopic {
         title: "Kinderzahl und Nachweise herunterladen",
         steps: [
           "Wähle `Familien und Zahlung` und dann den Reiter `Kinderzahl` oder `Nachweise`.",
-          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält die ganze Liste, ohne Suche.",
+          "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält die ganze Liste, ohne Suche.",
           "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
         ],
       },

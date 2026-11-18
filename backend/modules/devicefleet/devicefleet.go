@@ -110,6 +110,9 @@ type CreateDevice struct {
 	LastSeen       *time.Time
 	RegisteredByID *int64
 	RoomID         *int64
+	// RecordedBy records the creation in the device's history in the same
+	// statement; nil records nothing.
+	RecordedBy *LifecycleActorRef
 }
 
 // UpdateDevice replaces every writable column of one device.
@@ -355,4 +358,7 @@ type DeviceEdit struct {
 	Name           *string
 	RegisteredByID *int64
 	Status         *DeviceStatus
+	// RecordedBy records the material changes of the edit in the device's
+	// history in the same statement; nil records nothing.
+	RecordedBy *LifecycleActorRef
 }

@@ -2,6 +2,7 @@
 // passed validateEnrollmentForm. Pure: no checks, only mapping.
 
 import { visibleAnswerData } from "~/lib/enrollment-field-visibility";
+import { legalBlockHasCheckbox } from "~/lib/enrollment-legal-blocks";
 import {
   holidayCareWishAsked,
   type PublicFormSchema,
@@ -51,8 +52,10 @@ export function buildEnrollmentPayload(
   const fields = rules.schema?.fields ?? [];
   const consentFlags: Record<string, unknown> = {};
   for (const block of rules.restrictToOfferings ? [] : rules.legalBlocks) {
-    consentFlags[block.key] =
-      block.kind === "notice" ? true : values.legalConsents[block.key] === true;
+    // A notice records that the form showed it; the parent ticks nothing.
+    consentFlags[block.key] = legalBlockHasCheckbox(block.kind)
+      ? values.legalConsents[block.key] === true
+      : true;
   }
   // Validation guarantees both names on every co-guardian card that is not
   // empty; empty cards are dropped.
