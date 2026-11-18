@@ -107,7 +107,8 @@
     "weekdayRequired": "Ju lutemi zgjidhni të paktën një ditë të javës.",
     "weekdayModeConfirm": "Ju lutemi konfirmoni rregullimin e largimit.",
     "weekdayMultiModeRequired": "Ju lutemi zgjidhni të paktën një mënyrë kthimi për çdo ditë kujdesi.",
-    "file": "Ngarkoni të paktën një skedar."
+    "file": "Ngarkoni të paktën një skedar.",
+    "healthConsent": "Keni shënuar të dhëna shëndetësore. Shënoni pëlqimin për të dhënat shëndetësore ose lërini këto fusha bosh."
   },
   "care": {
     "requiredTitle": "Oferta të detyrueshme",
@@ -304,5 +305,9 @@
     "removeContact": "Heq menjëherë këtë kontakt nga formulari.",
     "chooseFile": "Hap zgjedhjen e skedarëve në pajisjen tuaj.",
     "details": "Hap tekstin e plotë për ta lexuar."
+  },
+  "legal": {
+    "guardianAgreement": "Veproj në marrëveshje me të gjithë personat e tjerë që kanë kujdestarinë prindërore të fëmijës tim.",
+    "healthFieldHint": "Vullnetare. Nëse shënoni diçka, shënoni më poshtë kutinë për të dhënat shëndetësore (Gesundheitsangaben)."
   }
 }

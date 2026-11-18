@@ -195,6 +195,12 @@ func (f *FormField) Validate() error {
 	if err := f.validateType(); err != nil {
 		return err
 	}
+	// Health information is voluntary: the form may not make it, and with
+	// it the health consent, a condition of the enrollment (Art. 7 Abs. 4
+	// DSGVO, #2787).
+	if f.Target == TargetStudentHealthInfo {
+		f.Required = false
+	}
 
 	f.Label = strings.TrimSpace(f.Label)
 	f.Content = strings.TrimSpace(f.Content)
@@ -557,6 +563,7 @@ func (b *FormLegalBlock) Validate() error {
 	b.Source = strings.TrimSpace(b.Source)
 	b.DisplayMode = strings.TrimSpace(b.DisplayMode)
 	b.DocumentURL = strings.TrimSpace(b.DocumentURL)
+	b.normalizeDecidedRules()
 
 	validators := []func() error{
 		b.validateKey,
@@ -607,6 +614,9 @@ func (b *FormLegalBlock) validateSource() error {
 	}
 	if b.Source == LegalBlockSourceStandard && !standardLegalBlockKeys[b.Key] {
 		return fmt.Errorf("standard legal block key %q is not recognized", b.Key)
+	}
+	if b.Key == ConsentKeyHealthData {
+		return invalidInputf(CodeLegalBlockKeyInvalid, "key", "legal block key %q is reserved for the health consent", b.Key)
 	}
 	if b.Source == LegalBlockSourceCustom && standardLegalBlockKeys[b.Key] {
 		return invalidInputf(CodeLegalBlockKeyInvalid, "key", "custom legal block key %q is reserved for a standard block", b.Key)

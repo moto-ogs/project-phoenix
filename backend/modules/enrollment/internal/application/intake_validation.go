@@ -247,6 +247,7 @@ func legalBlocksSnapshotEntry(blocks []enrollment.LegalBlock, flags map[string]a
 			TextSHA256:  checksum,
 			Attachments: append([]enrollment.FormAttachment(nil), block.Attachments...),
 			Required:    block.Required, Source: block.Source, Translations: block.Translations.Texts(),
+			GuardianAgreementLabel: guardianAgreementLabel(block),
 		})
 	}
 	if flags == nil {
@@ -293,4 +294,13 @@ func normalizeSubmissionForCapabilities(req *SubmitRequest, capabilities enrollm
 		}
 	}
 	return nil
+}
+
+// guardianAgreementLabel is the custodian sentence a block's checkbox
+// carries, for the evidence.
+func guardianAgreementLabel(block enrollment.LegalBlock) string {
+	if !block.GuardianAgreement {
+		return ""
+	}
+	return enrollment.GuardianAgreementLabel
 }

@@ -291,7 +291,7 @@ describe("EnrollmentFormEditor", () => {
     );
     expect(
       screen.getByText(
-        "Für Fragen zum Kind, etwa zu Allergien oder zum Schwimmen. Die Frage erscheint dann für jedes angemeldete Kind.",
+        "Für Fragen zum Kind, etwa zum Schwimmen oder zum Mittagessen. Die Frage erscheint dann für jedes angemeldete Kind.",
       ),
     ).toBeInTheDocument();
 

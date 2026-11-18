@@ -359,6 +359,9 @@ export interface AdminLegalEvidenceBlock {
   text: string;
   attachments?: FormAttachment[];
   source?: string;
+  required?: boolean;
+  /** The custodian sentence the ticked checkbox carried (#2787). */
+  guardian_agreement_label?: string;
   translations?: Record<
     string,
     { title?: string; label?: string; text?: string }

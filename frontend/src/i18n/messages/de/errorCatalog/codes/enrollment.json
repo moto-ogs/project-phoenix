@@ -53,6 +53,7 @@
   "companion_note_required": "Bitte gib an, mit wem das Kind nach Hause geht.",
   "complete_withdrawal_confirmation_required": "{object} kann noch nicht abgemeldet werden. Bitte bestätige mit {confirmation}.",
   "consent_required": "Bitte bestätige alle Pflicht-Zustimmungen.",
+  "health_consent_required": "Du hast Gesundheitsangaben eingetragen. Setze dafür das Häkchen bei der Einwilligung für Gesundheitsangaben oder lass die Felder leer.",
   "renewal_terms_required": "Bitte stimme den Bedingungen für den neuen Zeitraum zu.",
   "renewal_terms_changed": "Die Bedingungen wurden gerade geändert. Bitte lies sie noch einmal und stimme dann zu.",
   "correction_reason_required": "Bitte gib einen Grund für die Korrektur ein.",

@@ -85,7 +85,8 @@
     "weekdayRequired": "Proszę wybrać co najmniej jeden dzień tygodnia.",
     "weekdayModeConfirm": "Proszę potwierdzić zasady powrotu do domu i odbioru.",
     "weekdayMultiModeRequired": "Proszę wybrać dla każdego dnia opieki co najmniej jeden sposób powrotu do domu.",
-    "file": "Prześlij co najmniej jeden plik."
+    "file": "Prześlij co najmniej jeden plik.",
+    "healthConsent": "Podano informacje o zdrowiu. Zaznacz zgodę na informacje o zdrowiu albo pozostaw te pola puste."
   },
   "actions": {
     "addChild": "Kolejne dziecko",
@@ -304,5 +305,9 @@
     "removeContact": "Od razu usuwa ten kontakt z formularza.",
     "chooseFile": "Otwiera wybór plików na Państwa urządzeniu.",
     "details": "Otwiera pełny tekst do przeczytania."
+  },
+  "legal": {
+    "guardianAgreement": "Działam w porozumieniu ze wszystkimi pozostałymi osobami sprawującymi władzę rodzicielską nad moim dzieckiem.",
+    "healthFieldHint": "Dobrowolne. Jeśli coś wpiszesz, zaznacz poniżej pole przy informacjach o zdrowiu (Gesundheitsangaben)."
   }
 }

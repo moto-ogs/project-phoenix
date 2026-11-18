@@ -75,7 +75,7 @@ var consentLabelsDE = []struct {
 	Label string
 }{
 	{enrollmentCapability.ConsentKeyAGB, "AGB"},
-	{enrollmentCapability.ConsentKeyDataProcessing, "Datenverarbeitung"},
+	{enrollmentCapability.ConsentKeyDataProcessing, "Datenschutzinformation erhalten"},
 	{enrollmentCapability.ConsentKeyEmailContact, "E-Mail-Kontakt"},
 	{enrollmentCapability.ConsentKeyPhoto, "Foto"},
 }

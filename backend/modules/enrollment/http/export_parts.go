@@ -167,7 +167,7 @@ var enrollmentColumnLabels = map[lists.ColumnID]string{
 	"submitted_at":            "Eingereicht am",
 	"withdrawn_at":            "Zurückgezogen am",
 	"consent_agb":             "Zustimmung AGB",
-	"consent_data_processing": "Zustimmung Datenverarbeitung",
+	"consent_data_processing": "Datenschutzinformation erhalten",
 	"consent_email_contact":   "Zustimmung E-Mail-Kontakt",
 	"consent_photo":           "Zustimmung Foto",
 	"additional_guardians":    "Weitere Erziehungsberechtigte",
