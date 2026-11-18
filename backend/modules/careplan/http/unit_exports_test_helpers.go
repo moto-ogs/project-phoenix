@@ -58,6 +58,7 @@ var TenantSettingKeysForTest = struct {
 	ParentRequestReasonPolicy, SessionEndTime, StudentAbsenceEditScope, PresenceMode                string
 	StudentPhotosEnabled, ClassArrivalExceptionEditors, FeedbackEnabled                             string
 	StudentAbsenceEditScopeAllStaff, ClassArrivalExceptionEditorsAllStaff                           string
+	ModuleUnterrichtVormittag, ChildrenWithoutCarePlace                                             string
 	SchoolPeriodCount                                                                               int
 	SchoolPeriodEnd                                                                                 func(int) string
 }{
@@ -70,6 +71,7 @@ var TenantSettingKeysForTest = struct {
 	StudentPhotosEnabled: settingStudentPhotosEnabled, ClassArrivalExceptionEditors: settingClassArrivalExceptionEditors,
 	FeedbackEnabled:                 settingFeedbackEnabled,
 	StudentAbsenceEditScopeAllStaff: studentAbsenceEditScopeAllStaff, ClassArrivalExceptionEditorsAllStaff: classArrivalExceptionEditorsAllStaff,
+	ModuleUnterrichtVormittag: settingModuleUnterrichtVormittag, ChildrenWithoutCarePlace: settingChildrenWithoutCarePlace,
 	SchoolPeriodCount: schoolPeriodCount, SchoolPeriodEnd: schoolPeriodEndSetting,
 }
 

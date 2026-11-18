@@ -141,6 +141,8 @@ func studentRouteRecord(student *peopleModule.StudentState) peopleModule.Student
 		PersonID: student.PersonID, SchoolClass: student.SchoolClass,
 		GroupID: student.GroupID, Status: string(student.Status),
 
+		WithoutCarePlace: student.WithoutCarePlace,
+
 		EnrolledFrom:  peopleModule.RenderCalendarDate(student.EnrolledFrom),
 		EnrolledUntil: peopleModule.RenderCalendarDate(student.EnrolledUntil),
 

@@ -143,6 +143,10 @@ export interface Student {
   // also kein bloßes Ende der Anmeldephase. Nur ein solcher Austritt
   // lässt sich ändern oder stornieren (#2487).
   care_exit_recorded?: boolean;
+  // Kind der Klasse ohne OGS-Platz (#4803): eigener Eintrag für Eltern-App,
+  // Krankmeldung und Elternbriefe, aber keine Gruppe, keine Abholung und
+  // keine Betreuungszeiten.
+  without_care_place?: boolean;
   // Parent's note for a still-pending "entschuldigt" request covering today.
   // Informational only — the child stays "expected" (day_planning_status
   // unchanged) until an office/admin confirms the request.

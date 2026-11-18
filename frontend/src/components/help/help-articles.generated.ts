@@ -1673,6 +1673,7 @@ export const classListEntriesTopic =
         "Schreiben Sie die Klasse genau wie bei den regulären Kindern.",
       ],
       differences: [
+        "Oben steht, dass Ihre Schule Kinder ohne OGS-Platz als eigene Kinder führt, und `+ Eintrag` fehlt? Dann hat das moto-Team das eingeschaltet. Die Einträge sind dabei zu Kindern geworden. Neue Kinder legen Sie in den `Kinderdaten` mit `Ohne OGS-Platz` an. Ein `Sammelimport` legt sie ebenfalls als Kinder an.",
         "Ein Eintrag trägt `Mögliche Dublette`? Dann gibt es ein reguläres Kind mit demselben Namen in derselben Klasse.",
         "Ein Eintrag trägt `In moto angelegt`? Dann ist es ein reguläres Kind. Gepflegt wird es unter `Kinderdaten`.",
       ],
@@ -1799,6 +1800,7 @@ export const createStudentTopic = function createStudentTopic(): HelpTopic {
     differences: [
       "`Vorname`, `Nachname` und `Klasse` tragen einen roten Stern. Sie sind Pflicht.",
       "Oben im Fenster können Sie auf `Nur Klassenliste` wechseln. Das ist für Kinder ohne OGS-Betreuung.",
+      "Statt `Nur Klassenliste` steht dort `Ohne OGS-Platz`? Dann hat das moto-Team für Ihre Schule Kinder ohne OGS-Platz eingeschaltet. Das Kind bekommt einen eigenen Eintrag. Seine Eltern können Sie in die Eltern-App einladen.",
       "Auf dem Handy steht statt `+ Kinder` ein rundes Plus unten rechts. `Importieren` fehlt dort ganz.",
     ],
     troubleshootingDetails: [
@@ -3862,6 +3864,18 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
           "Lassen Sie `Portalrolle` auf `Erziehungsberechtigte/r`.",
           "Wählen Sie unten `Hinzufügen`.",
           "Wählen Sie danach bei der Person `Einladen`.",
+        ],
+      },
+      {
+        title: "Alle Eltern einer Klasse einladen",
+        description:
+          "So laden Sie die Eltern aller Kinder einer Klasse auf einmal ein, auch von Kindern ohne OGS-Platz.",
+        steps: [
+          "Öffnen Sie `Datenverwaltung` und danach `Kinderdaten`.",
+          "Ordnen Sie die Liste nach `Klasse`.",
+          "Öffnen Sie bei der Klasse das Menü mit den drei Punkten.",
+          "Wählen Sie `Eltern einladen`.",
+          "Prüfen Sie die Übersicht und bestätigen Sie.",
         ],
       },
       {
@@ -9649,7 +9663,7 @@ export const teacherAbsenceReportTopic =
       ],
       differences: [
         "Kein `Meldung eintragen` neben dem Namen? Dann haben Sie nicht die Rolle `Schulverwaltung`, oder der Tag ist nicht heute.",
-        "Kinder mit `Keine Betreuung` stehen noch nicht in dieser Liste.",
+        "Kinder mit `Keine Betreuung` stehen nur in dieser Liste, wenn Ihre Schule Kinder ohne OGS-Platz als eigene Kinder führt. Einträge der Klassenliste stehen hier nicht.",
       ],
       troubleshootingDetails: [
         "moto sagt, für das Kind steht heute schon etwas? Dann hat die OGS zum Beispiel eine frühere Abholung eingetragen. Es wurde nichts gespeichert. Sprechen Sie mit der OGS.",

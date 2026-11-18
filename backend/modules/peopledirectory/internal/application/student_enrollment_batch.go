@@ -46,7 +46,8 @@ func enrollmentRecord(student peopledirectory.Student, input domain.EnrollmentSt
 	if status == "" {
 		status = "active"
 	}
-	record := domain.StudentRecord{ID: student.ID, PersonID: student.PersonID, SchoolClass: input.SchoolClass, Status: status, EnrolledFrom: student.EnrolledFrom, EnrolledUntil: student.EnrolledUntil}
+	record := domain.StudentRecord{ID: student.ID, PersonID: student.PersonID, SchoolClass: input.SchoolClass, Status: status, EnrolledFrom: student.EnrolledFrom, EnrolledUntil: student.EnrolledUntil,
+		WithoutCarePlace: input.WithoutCarePlace}
 	if input.InitialProfile != nil {
 		domain.ApplyEnrollmentPatch(&record, *input.InitialProfile)
 	}

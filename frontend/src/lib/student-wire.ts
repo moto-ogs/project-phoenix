@@ -154,6 +154,7 @@ export function mapStudentResponse(row: FullRow): Student {
     care_ends_on: row.care_ends_on,
     care_ended: row.care_ended ?? false,
     care_exit_recorded: row.care_exit_recorded ?? false,
+    without_care_place: row.without_care_place === true,
     address_street: row.address_street,
     address_city: row.address_city,
     address_postal_code: row.address_postal_code,

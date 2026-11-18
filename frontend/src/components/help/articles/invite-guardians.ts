@@ -59,6 +59,18 @@ export function inviteGuardiansTopic(): HelpTopic {
         ],
       },
       {
+        title: "Alle Eltern einer Klasse einladen",
+        description:
+          "So laden Sie die Eltern aller Kinder einer Klasse auf einmal ein, auch von Kindern ohne OGS-Platz.",
+        steps: [
+          "Öffnen Sie `Datenverwaltung` und danach `Kinderdaten`.",
+          "Ordnen Sie die Liste nach `Klasse`.",
+          "Öffnen Sie bei der Klasse das Menü mit den drei Punkten.",
+          "Wählen Sie `Eltern einladen`.",
+          "Prüfen Sie die Übersicht und bestätigen Sie.",
+        ],
+      },
+      {
         title: "Eine Anfrage von Eltern freigeben",
         description:
           "Eltern können weitere Bezugspersonen einladen, zum Beispiel eine Großmutter. Je nach Einstellung landet das erst bei Ihnen.",

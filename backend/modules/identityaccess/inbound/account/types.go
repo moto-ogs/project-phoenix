@@ -154,6 +154,10 @@ type TenantResolveResponse struct {
 	// are care days on Friday's plan. Shell metadata so day pickers and day
 	// views stop skipping the weekend. A lookup error fails the shell request.
 	WeekendFollowsFriday bool `json:"weekend_follows_friday"`
+	// ChildrenWithoutCarePlace reports that the school keeps children of a
+	// class without an OGS place as student records (#4803): its switch is on
+	// and Unterricht am Vormittag is booked.
+	ChildrenWithoutCarePlace bool `json:"children_without_care_place"`
 	// ChildSearchOnlyNavigation is the tenant's resolved
 	// operations.child_search_only_navigation setting (#1321): staff find
 	// children through the child search alone, and "Meine Gruppe" and
@@ -205,6 +209,7 @@ type tenantShellSettings struct {
 	earlyCheckoutNote         bool
 	earlyCheckoutTolerance    int
 	weekendFollowsFriday      bool
+	childrenWithoutCarePlace  bool
 	childSearchOnlyNavigation bool
 	simpleStaffNavigation     bool
 	careFacilityTerm          string

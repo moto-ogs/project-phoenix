@@ -115,3 +115,23 @@ func BookedModules(readBool func(key string) (bool, error)) ([]ModuleKey, error)
 	}
 	return booked, nil
 }
+
+// KeyChildrenWithoutCarePlace is the school's switch for children without an
+// OGS place (#4803, ADR 0282).
+const KeyChildrenWithoutCarePlace = configModel.KeyChildrenWithoutCarePlace
+
+// ChildrenWithoutCarePlaceOn reports whether the school keeps children of a
+// class without an OGS place as student records: its switch is on and the
+// module Unterricht am Vormittag is booked. A read error stays an error.
+func ChildrenWithoutCarePlaceOn(readBool func(key string) (bool, error)) (bool, error) {
+	for _, key := range []string{configModel.KeyModuleUnterrichtVormittag, configModel.KeyChildrenWithoutCarePlace} {
+		on, err := readBool(key)
+		if err != nil {
+			return false, fmt.Errorf("resolve %s: %w", key, err)
+		}
+		if !on {
+			return false, nil
+		}
+	}
+	return true, nil
+}

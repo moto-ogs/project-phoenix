@@ -94,6 +94,7 @@ export const categoryLabels: Record<string, string> = {
   kalender: "Kalender",
   kapazität: "Volle Räume und Aktivitäten",
   kinder: "Kinderkarte und Fotos",
+  "kinder-ohne-ogs-platz": "Kinder ohne OGS-Platz",
   lockout: "Sperre nach Fehlversuchen",
   lohnarten: "Lohnarten",
   mfa: "Zwei-Faktor-Authentifizierung",

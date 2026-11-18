@@ -27,6 +27,9 @@ export const TENANT_RESOLVE_AFFECTING_KEYS: ReadonlySet<string> = new Set([
   // booked_modules, so every staff member's navigation follows a booking
   // without config:read. The moto team switches them in the operator portal.
   ...MODULE_SETTING_KEYS,
+  // children_without_care_place rides on /auth/tenant/resolve (#4803): the
+  // create panel and the class list follow it at once.
+  "operations.children_without_care_place",
   // parent_notes_enabled rides on /auth/tenant/resolve too (as
   // parent_messaging_enabled) so non-admin staff can hide the "Neue Nachricht"
   // compose entry points without config:read. Without revalidation, toggling it

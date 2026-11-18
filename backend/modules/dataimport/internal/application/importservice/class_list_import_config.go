@@ -166,7 +166,7 @@ func (c *ClassListImportConfig) createEntry(ctx context.Context, row importModel
 		return 0, fmt.Errorf("create class list entry: %w", err)
 	}
 	if c.deps.Audit != nil {
-		display := strings.TrimSpace(entry.FirstName) + " " + strings.TrimSpace(entry.LastName) + " (" + strings.TrimSpace(entry.SchoolClass) + ")"
+		display := classListEntryDisplay(entry.FirstName, entry.LastName, entry.SchoolClass)
 		if err := c.deps.Audit.Append(ctx, &auditModels.ClassListEntryChange{
 			EntryID: entry.ID, Action: auditModels.ClassListEntryActionCreated, OldValue: "", NewValue: display, ChangedBy: changedBy,
 		}); err != nil {
