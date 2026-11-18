@@ -213,9 +213,9 @@ type AccountSessionStore interface {
 	CountExpiredAccountSessions(ctx context.Context, now time.Time) (int, domain.OperationStats, error)
 	ListInactiveAccountIDsWithLiveSessions(ctx context.Context, now time.Time) ([]int64, domain.OperationStats, error)
 	HasLiveAccountSessionsCreatedAfter(ctx context.Context, accountID int64, since, now time.Time) (bool, domain.OperationStats, error)
-	// LivePushSubscriptionLinks answers for every link, keyed by its
-	// SubscriptionID, whether an un-rotated session alive at now backs it.
-	LivePushSubscriptionLinks(ctx context.Context, links []domain.PushSubscriptionLink, now time.Time) (map[int64]bool, domain.OperationStats, error)
+	// ProtectedPushSubscriptionLinks answers for every link, keyed by its
+	// SubscriptionID, whether a live session or a concurrent write keeps it.
+	ProtectedPushSubscriptionLinks(ctx context.Context, links []domain.PushSubscriptionLink, now time.Time) (map[int64]bool, domain.OperationStats, error)
 
 	// InsertAccountSession stores a validated session and returns the row
 	// with its identity and timestamps.

@@ -3383,7 +3383,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p PushSubscriptionCleanup) ListLinks(ctx context.Context) ([]identityaccess.PushSubscriptionLink, error) {\n\tif p.Subscriptions == nil {\n\t\treturn nil, nil\n\t}\n\tlinks, err := p.Subscriptions.ListSessionLinks(ctx)\n\tresult := make([]identityaccess.PushSubscriptionLink, len(links))\n\tfor i, link := range links {\n\t\tresult[i] = identityaccess.PushSubscriptionLink(link)\n\t}\n\treturn result, err\n}",
+      "evidence": "func (p PushSubscriptionCleanup) ListLinks(ctx context.Context, afterID int64, limit int) ([]identityaccess.PushSubscriptionLink, error) {\n\tif p.Subscriptions == nil {\n\t\treturn nil, nil\n\t}\n\tlinks, err := p.Subscriptions.ListSessionLinks(ctx, afterID, limit)\n\tresult := make([]identityaccess.PushSubscriptionLink, len(links))\n\tfor i, link := range links {\n\t\tresult[i] = identityaccess.PushSubscriptionLink(link)\n\t}\n\treturn result, err\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/PushSubscriptionCleanup.ListLinks",
       "owner": "roots"
