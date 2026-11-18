@@ -600,7 +600,7 @@ describe("TenantPage", () => {
     }
   });
 
-  it("trennt die Wert-Label-Paare der Statuszeile mit Abstand, ohne Trennpunkt (#5684)", () => {
+  it("trennt die Wert-Label-Paare sichtbar mit Abstand und unsichtbar mit Komma (#5684)", () => {
     const { container } = render(
       <TenantPageStats
         items={[
@@ -612,7 +612,12 @@ describe("TenantPage", () => {
 
     expect(screen.getByText("116")).toBeInTheDocument();
     expect(screen.getByText("krank")).toBeInTheDocument();
-    expect(container.textContent).toBe("116Kinder9krank");
+    expect(container.textContent).toBe("116 Kinder, 9 krank");
+    expect(
+      [...container.querySelectorAll(".sr-only")].map(
+        (separator) => separator.textContent,
+      ),
+    ).toEqual([" ", ", ", " "]);
     expect(container.firstElementChild).toHaveClass("gap-x-3");
   });
 

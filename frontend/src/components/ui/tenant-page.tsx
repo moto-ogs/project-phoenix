@@ -365,6 +365,9 @@ export function TenantPageStats({
                 {item.value}
               </span>
             )}
+            {item.value !== undefined && item.label ? (
+              <span className="sr-only"> </span>
+            ) : null}
             {item.label ? <span>{item.label}</span> : null}
           </>
         );
@@ -375,6 +378,7 @@ export function TenantPageStats({
             key={`${index}-${item.label}`}
             className="inline-flex items-center gap-1.5"
           >
+            {index > 0 ? <span className="sr-only">, </span> : null}
             {item.onSelect ? (
               <Button
                 type="button"
