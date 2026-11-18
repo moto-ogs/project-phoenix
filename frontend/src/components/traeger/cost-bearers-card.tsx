@@ -8,10 +8,8 @@
 //
 // Anlegen und Bearbeiten laufen im selben Dialog (#7407): eine
 // Bearbeitungsart je Karte. Ein Kostenträger ist ein kleiner Listeneintrag
-// mit drei Feldern und ohne eigene Adresse; eine eigene Objektseite brächte
-// nur einen Seitenwechsel für drei Felder. Der Dialog heißt deshalb
-// „… ändern“ und ist keine Objektbearbeitung im Sinne von
-// `bauart/no-edit-overlay`.
+// mit drei Feldern und ohne eigene Seite; eine Objektseite brächte nur einen
+// Seitenwechsel für drei Felder. Das Issue erlaubt solche Einträge im Dialog.
 
 import { Building2, Pencil, Plus, Trash2 } from "lucide-react";
 import { type RefObject, useEffect, useRef, useState } from "react";

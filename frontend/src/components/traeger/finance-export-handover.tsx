@@ -437,12 +437,9 @@ export function HandoverMenu({
   run,
   busy,
   running,
-  size = "compact",
   ...entries
 }: Readonly<
   HandoverEntriesArgs & {
-    /** The size of the actions beside it: compact in a table row, md in a card head. */
-    size?: "compact" | "md";
     run: HandoverRun;
     busy: boolean;
     running: boolean;
@@ -455,14 +452,10 @@ export function HandoverMenu({
       ariaLabel={`Dateien von ${run.label} an die Empfänger übergeben`}
       disabled={busy}
       items={items}
-      triggerButton={{ variant: size === "md" ? "outline" : "surface", size }}
+      triggerButton={{ variant: "outline", size: "md" }}
       // In a card head it stands beside full-width actions on a phone.
-      wrapperClassName={size === "md" ? "w-full min-[480px]:w-auto" : undefined}
-      triggerClassName={
-        size === "md"
-          ? "w-full justify-center gap-1.5 whitespace-nowrap"
-          : "gap-1.5 whitespace-nowrap"
-      }
+      wrapperClassName="w-full min-[480px]:w-auto"
+      triggerClassName="w-full justify-center gap-1.5 whitespace-nowrap"
       triggerContent={
         <>
           <Send className="h-4 w-4" aria-hidden />

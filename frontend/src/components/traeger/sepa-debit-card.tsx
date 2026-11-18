@@ -67,6 +67,13 @@ const STEPS = [
 const ACCOUNT_MISSING_REASON =
   "Lege zuerst eine Bankverbindung des Trägers als Standard fest.";
 
+/** What „Bei der Bank eingereicht“ does, or what comes first. */
+function submitHint(downloadedId: string | null, downloading: boolean) {
+  if (downloading) return "Die Datei wird gerade erstellt.";
+  if (!downloadedId) return "Lade zuerst die Datei herunter.";
+  return "Vermerkt die Lastschriften als eingereicht. moto fragt vorher nach.";
+}
+
 /** The mandate page of a family. */
 function mandateHref(debit: SepaDebit): string {
   return traegerPath(`/traeger/abrechnung/lastschrift/${debit.contractId}`);
@@ -291,7 +298,6 @@ export function SepaDebitCard({
               {fileBlocked ? null : (
                 <HandoverMenu
                   run={handoverRun}
-                  size="md"
                   recipients={handover.recipients}
                   recipientHidden={handover.recipientHidden}
                   formats={["pain008"]}
@@ -325,9 +331,7 @@ export function SepaDebitCard({
                   items={[
                     {
                       label: "Bei der Bank eingereicht",
-                      description: downloadedId
-                        ? "Vermerkt die Lastschriften als eingereicht. moto fragt vorher nach."
-                        : "Lade zuerst die Datei herunter.",
+                      description: submitHint(downloadedId, downloading),
                       icon: <CheckCircle2 className="h-4 w-4" aria-hidden />,
                       disabled: !downloadedId || downloading,
                       onClick: () => setConfirming(true),

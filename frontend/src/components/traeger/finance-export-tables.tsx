@@ -16,6 +16,7 @@ import {
 } from "~/components/traeger/finance-export-format";
 import { Button } from "~/components/ui/button";
 import { SpinnerIcon } from "~/components/ui/icons";
+import { ScreenReaderStatus } from "~/components/ui/screen-reader-status";
 import {
   OverflowMenu,
   type OverflowMenuEntry,
@@ -138,11 +139,6 @@ function DatevState({
   );
 }
 
-/** The label of a download entry, or that its file is being made. */
-function downloadLabel(busy: boolean, label: string): string {
-  return busy ? "Wird erstellt …" : label;
-}
-
 /**
  * The download entries of a run under „Herunterladen“: the Sollstellung, the
  * DATEV file while it has new bookings and „Alle Buchungen erneut“ for a lost
@@ -153,14 +149,11 @@ function downloadItems(
   run: ExportRun,
   state: DatevRunState | undefined,
   ready: boolean,
-  { downloading, onDownload, onRepeat }: RunTableActions,
+  { onDownload, onRepeat }: RunTableActions,
 ): OverflowMenuItem[] {
   const items: OverflowMenuItem[] = [
     {
-      label: downloadLabel(
-        downloading === runFileKey("sollstellung", run),
-        "Sollstellung",
-      ),
+      label: "Sollstellung",
       description:
         "Lädt alle Rechnungen des Laufs als CSV-Datei mit neuer Dateinummer herunter.",
       icon: <Download className="h-4 w-4" aria-hidden />,
@@ -169,10 +162,7 @@ function downloadItems(
   ];
   if (ready && state?.newBookings !== 0) {
     items.push({
-      label: downloadLabel(
-        downloading === runFileKey("datev", run),
-        "DATEV-Datei",
-      ),
+      label: "DATEV-Datei",
       description: state
         ? `Lädt ${bookingsLabel(state.newBookings)} als DATEV-Datei (CSV) mit neuer Dateinummer herunter.`
         : "Lädt die neuen Buchungen als DATEV-Datei (CSV) mit neuer Dateinummer herunter.",
@@ -220,21 +210,28 @@ function RunActions({
     actions.downloading === runFileKey("sollstellung", run) ||
     actions.downloading === runFileKey("datev", run);
   const handingOver = actions.handingOver?.(run) ?? false;
+  let progress = "";
+  if (making) progress = "Wird erstellt …";
+  else if (handingOver) progress = "Wird übergeben …";
   return (
     <span className="flex items-center justify-end gap-2 whitespace-nowrap max-sm:justify-start">
-      {making || handingOver ? (
+      {/* Mounted in every row, so the change of its text is announced. */}
+      <ScreenReaderStatus
+        message={progress ? `${run.label}: ${progress}` : ""}
+      />
+      {progress ? (
         <span
-          role="status"
+          aria-hidden="true"
           className="flex items-center gap-1.5 text-sm text-gray-600"
         >
           <SpinnerIcon />
-          {making ? "Wird erstellt …" : "Wird übergeben …"}
+          {progress}
         </span>
       ) : null}
       <OverflowMenu
         ariaLabel={`Dateien von ${run.label} herunterladen oder übergeben`}
         disabled={actions.busy}
-        disabledReason="Eine Datei wird gerade erstellt. Warte, bis sie fertig ist."
+        disabledReason="Gerade wird eine Datei erstellt oder übergeben. Warte, bis das fertig ist."
         items={items}
       />
     </span>

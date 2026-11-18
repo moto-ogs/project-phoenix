@@ -276,7 +276,7 @@ export function BillingTermsCard({
           ariaLabel={`Aktionen für ${BILLING_SERVICE_LABELS[row.terms.service]}`}
           items={[
             {
-              label: "Ändern",
+              label: "Bearbeiten",
               description:
                 "Öffnet Zahlung und Rechnung dieser Leistung zum Ändern.",
               onClick: () => setEditing(row),

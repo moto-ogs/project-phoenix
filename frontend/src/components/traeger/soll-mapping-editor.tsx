@@ -383,7 +383,7 @@ export function SollMappingEditor({
     <form
       ref={formRef}
       noValidate
-      className="flex flex-col gap-6"
+      className="compact:gap-4 flex flex-col gap-6 max-sm:gap-3"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
