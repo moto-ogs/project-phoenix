@@ -45,7 +45,7 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { EmptyState } from "~/components/ui/empty-state";
-import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
@@ -57,6 +57,7 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { childrenConcept } from "~/lib/concepts/children";
+import { sickConcept } from "~/lib/concepts/sick";
 import { staffConcept } from "~/lib/concepts/staff";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 import { formatDate, parseISODate } from "~/lib/date-helpers";
@@ -166,7 +167,7 @@ function Figures({ report }: Readonly<{ report: KeyDateReport }>) {
             ? "Kein Personal am Stichtag"
             : `${formatRatio(total.childrenPerStaff)} Kinder je Person`
         }
-        tone="orange"
+        tone="neutral"
         icon={<MotoConceptIcon concept={staffConcept} />}
       />
     ) : null,
@@ -177,6 +178,7 @@ function Figures({ report }: Readonly<{ report: KeyDateReport }>) {
         value={formatPercent(total.absenceRate)}
         hint={`${formatCount(total.sickDays)} krank · ${formatCount(total.excusedDays)} entschuldigt`}
         tone="neutral"
+        icon={<MotoConceptIcon concept={sickConcept} />}
       />
     ) : null,
   ].filter((card) => card !== null);
@@ -317,7 +319,7 @@ function TemplatesBody({
           <span className="block font-medium text-gray-900">
             {template.name}
           </span>
-          <span className="block text-xs text-gray-500">
+          <span className="block text-sm text-gray-500">
             {templateSummary(template)}
           </span>
         </div>
@@ -369,8 +371,8 @@ function TemplatesBody({
               ? [
                   {
                     icon: <Pencil className="size-4" aria-hidden />,
-                    label: "Ändern",
-                    description: "Öffnet die Vorlage zum Ändern.",
+                    label: "Bearbeiten",
+                    description: "Öffnet die Vorlage zum Bearbeiten.",
                     onClick: () => router.push(editHref(template)),
                   },
                   {
@@ -539,6 +541,14 @@ function TraegerReportsContent() {
   ];
 
   const onReportTab = tab === "bericht";
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadKeyDateReport(shownKeyDate, reportTemplate, format),
+    scope: "Alle Schulen",
+    fallbackName: `bericht-stichtag-${shownKeyDate}`,
+    errorObject: "den Bericht",
+    unavailable: !report || schoolCount === 0,
+  });
 
   return (
     <TenantPage
@@ -553,19 +563,9 @@ function TraegerReportsContent() {
           keine Namen.
         </>
       }
+      overflowMenu={onReportTab ? exportItems : undefined}
       actions={
-        onReportTab ? (
-          <TraegerListExportMenu
-            download={(format) =>
-              downloadKeyDateReport(shownKeyDate, reportTemplate, format)
-            }
-            scope="Alle Schulen"
-            ariaLabel="Bericht herunterladen"
-            fallbackName={`bericht-stichtag-${shownKeyDate}`}
-            errorObject="den Bericht"
-            unavailable={!report || schoolCount === 0}
-          />
-        ) : canManage ? (
+        !onReportTab && canManage ? (
           <ButtonLink
             href={traegerPath("/traeger/berichte/vorlagen/neu")}
             variant="primary"

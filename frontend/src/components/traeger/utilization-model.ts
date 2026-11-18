@@ -94,6 +94,28 @@ export function windowLength(window: UtilizationWindow): number {
   return daysBetween(window.from, window.to) + 1;
 }
 
+/**
+ * Das Fenster um seine eigene Länge davor (`-1`) oder danach (`1`), für die
+ * Pfeile eines Zeitraums. Es hält seine Länge und bleibt zwischen `min` und
+ * `max`; `null`, wenn es dort schon anstößt.
+ */
+export function shiftWindow(
+  window: UtilizationWindow,
+  direction: -1 | 1,
+  bounds: Readonly<{ min?: string; max: string }>,
+): UtilizationWindow | null {
+  let delta = direction * windowLength(window);
+  delta = Math.min(delta, daysBetween(window.to, bounds.max));
+  if (bounds.min !== undefined) {
+    delta = Math.max(delta, daysBetween(window.from, bounds.min));
+  }
+  if (delta === 0 || Math.sign(delta) !== direction) return null;
+  return {
+    from: shiftDays(window.from, delta),
+    to: shiftDays(window.to, delta),
+  };
+}
+
 export interface UtilizationBucket {
   readonly key: string;
   /** Kurz, für die Achse: „Mo 07.09.“, „KW 37“, „Sep.“ */

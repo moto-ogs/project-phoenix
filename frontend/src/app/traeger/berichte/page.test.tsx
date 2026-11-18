@@ -335,10 +335,8 @@ describe("TraegerReportsPage", () => {
     renderPage();
     await screen.findByText("Kinder am Stichtag");
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Bericht herunterladen" }),
-    );
-    fireEvent.click(await screen.findByRole("menuitem", { name: "PDF" }));
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: /^PDF/ }));
     await waitFor(() =>
       expect(mockDownloadBlob).toHaveBeenCalledWith(
         blob,
