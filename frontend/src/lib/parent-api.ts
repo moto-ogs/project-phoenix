@@ -23,6 +23,7 @@ import {
  */
 
 import type { AppLocale } from "~/i18n/locales";
+import type { Salutation } from "~/lib/salutation";
 import type { ConsentRecord, ConsentState } from "~/lib/consent-types";
 import type { SurveyAnswersRequest, SurveyForm } from "~/lib/survey-form";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
@@ -461,6 +462,8 @@ export interface ChildGuardian {
   readonly student_guardian_id: string;
   readonly first_name: string;
   readonly last_name: string;
+  // Die selbst gewählte Anrede; nur am eigenen Profil gesetzt (#7362).
+  readonly salutation?: Salutation;
   readonly email?: string;
   readonly phones: GuardianPhone[];
   readonly address_street?: string;
@@ -488,6 +491,8 @@ export interface ChildGuardian {
 export interface GuardianContactPayload {
   readonly first_name: string;
   readonly last_name: string;
+  // Nur am eigenen Profil: "" löscht die Anrede, ohne Feld bleibt sie.
+  readonly salutation?: Salutation | "";
   readonly email?: string | null;
   readonly address_street?: string | null;
   readonly address_city?: string | null;

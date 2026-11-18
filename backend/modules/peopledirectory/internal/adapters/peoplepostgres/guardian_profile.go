@@ -526,7 +526,7 @@ func (r *guardianProfileRepository) Update(ctx context.Context, profile *users.G
 	result, err := ambientDB12.NewUpdate().
 		Model(profile).
 		ModelTableExpr(`users.guardian_profiles AS "guardian_profile"`).
-		ExcludeColumn("emails_stopped_at"). // only SetEmailsStopped writes the school's stop
+		ExcludeColumn("emails_stopped_at", "salutation"). // each has its own writer: SetEmailsStopped, the person's contact write (#7362)
 		Where(`"guardian_profile".id = ?`, profile.ID).
 		Exec(ctx)
 

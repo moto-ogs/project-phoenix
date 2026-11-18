@@ -86,6 +86,7 @@ func NativeGuardianProfile(row *users.GuardianProfile) *directory.GuardianProfil
 	}
 	out := &directory.GuardianProfileSnapshot{ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, FirstName: row.FirstName, LastName: row.LastName, Email: row.Email, AddressStreet: row.AddressStreet, AddressCity: row.AddressCity, AddressPostalCode: row.AddressPostalCode, AccountID: row.AccountID, HasAccount: row.HasAccount, PreferredContactMethod: row.PreferredContactMethod, LanguagePreference: row.LanguagePreference, PortalLocale: row.PortalLocale, Notes: row.Notes}
 	out.EmailsStoppedAt = row.EmailsStoppedAt
+	out.Salutation = row.Salutation
 	if row.PhoneNumbers != nil {
 		out.PhoneNumbers = make([]*directory.GuardianProfilePhoneSnapshot, len(row.PhoneNumbers))
 		for i, p := range row.PhoneNumbers {
@@ -104,6 +105,7 @@ func GuardianProfileRow(value *directory.GuardianProfileSnapshot) *users.Guardia
 	row.UpdatedAt = value.UpdatedAt
 	row.FirstName = value.FirstName
 	row.LastName = value.LastName
+	row.Salutation = value.Salutation
 	row.Email = value.Email
 	row.AddressStreet = value.AddressStreet
 	row.AddressCity = value.AddressCity

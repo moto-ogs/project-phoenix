@@ -1813,6 +1813,13 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			})
 			return
 		}
+		if strings.HasPrefix(r.URL.Path, "/parent/me/children/") && strings.HasSuffix(r.URL.Path, "/guardians") && r.Method == seedHTTPMethodGet {
+			// The parent's own profile, whose form of address the seed sets (#7362).
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success", "data": []map[string]any{{"guardian_profile_id": "1", "first_name": "Karin", "last_name": "Klein", "is_self": true}},
+			})
+			return
+		}
 		if strings.HasPrefix(r.URL.Path, "/parent/me/children/") && strings.HasSuffix(r.URL.Path, "/guardians") && r.Method == seedHTTPMethodPost {
 			lastGuardianID = idCounter
 			_ = json.NewEncoder(w).Encode(map[string]any{

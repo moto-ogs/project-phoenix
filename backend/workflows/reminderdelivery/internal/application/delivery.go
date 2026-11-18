@@ -325,7 +325,7 @@ func (s *preparation) enqueueReminderEmail(
 		location = *reminder.effective.Location
 	}
 	payload := map[string]any{
-		apptPayloadRecipient: *profile.Email, apptPayloadFirstName: profile.FirstName, apptPayloadLastName: profile.LastName,
+		apptPayloadRecipient: *profile.Email, apptPayloadFirstName: profile.FirstName, apptPayloadLastName: profile.LastName, apptPayloadSalutation: profile.Salutation,
 		apptPayloadTitle: reminder.effective.Title, apptPayloadWhen: s.deps.WhenText(reminder.effective), apptPayloadLocation: location,
 		apptPayloadSchoolName: brand.schoolName, apptPayloadPortalURL: s.deps.ParentsURL, apptPayloadLogoURL: brand.logoURL, apptPayloadMotoLogoURL: brand.motoLogoURL,
 	}
@@ -501,6 +501,7 @@ const (
 	apptPayloadRecipient         = "recipient_email"
 	apptPayloadFirstName         = "first_name"
 	apptPayloadLastName          = "last_name"
+	apptPayloadSalutation        = "salutation"
 	apptPayloadTitle             = "title"
 	apptPayloadWhen              = "when_text"
 	apptPayloadLocation          = "location"
