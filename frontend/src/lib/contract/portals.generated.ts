@@ -749,6 +749,7 @@ export const portalRoutes = {
     shiftTypes["POST /api/shift-types/defaults"],
     staff["DELETE /api/staff/time-tracking/payroll-rules/surcharge-rules/{ruleId}"],
     staff["DELETE /api/staff/time-tracking/payroll-rules/wage-types/{wageTypeId}"],
+    staff["DELETE /api/staff/{id}/absences/{absenceId}"],
     staff["DELETE /api/staff/{id}/documents/{documentId}"],
     staff["DELETE /api/staff/{id}/planned-exit"],
     staff["GET /api/staff/absences/mails"],

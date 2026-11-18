@@ -196,6 +196,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/staff/{id}/absences/{absenceId}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/staff/{id}/documents/{documentId}",
       "portals": [
         "tenant"
