@@ -106,9 +106,16 @@ A read that an effect starts and stores with `useState` is gone at the next
 page switch, shares nothing and repeats its own stale-answer and retry code.
 `swr/no-effect-load` fails every one; `scripts/swr-effect-load-baseline.json`
 is empty and takes no new entry. Read through `useSWRAuth` with a factory key
-instead. An effect that is no cacheable read (a page without a session, a
-session guard, a one-shot write, browser work) keeps its effect under
-`oxlint-disable-next-line swr/no-effect-load -- <reason>`. Träger pages and cards use `useTraegerResource`
+instead. The rule fires when the answer of asynchronous work reaches state
+(`setRows(await load())`, `.then(setRows)`, a value derived from it). An
+effect that only notes that something finished (a one-shot write, a session
+guard, a sign-out) or loads a code chunk with `import()` keeps no answer and
+needs no exception. Two kinds of effect keep an answer and stay under
+`oxlint-disable-next-line swr/no-effect-load -- <reason>`: a page without a
+session (the shared cache reads only with a session, by design: every entry
+belongs to a portal, school and account) and browser work (a decoded image,
+a push subscription). `oxlint-plugin-swr.test.ts` fails an exception line
+the rule does not need. Träger pages and cards use `useTraegerResource`
 (`components/traeger/use-traeger-resource.ts`): Träger session gate, refusal
 rules and load error in one return shape. A read the access log records on a
 person's explicit click (`utilization-children.tsx`) stays a click handler.
