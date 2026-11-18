@@ -95,10 +95,12 @@ type CreateStaffResult struct {
 // level (#4573, ADR 0091): the bound body plus the acting account. Access is
 // passed on as sent; the workflow validates it.
 type ExternalCaregiverInput struct {
-	FirstName        string
-	LastName         string
-	Email            string
-	Organization     string
+	FirstName    string
+	LastName     string
+	Email        string
+	Organization string
+	// Gender is the checked Stammdaten gender; empty records none.
+	Gender           string
 	Access           string
 	ActorAccountID   int64
 	ActorPermissions []string

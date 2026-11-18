@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeOwners plays the three owners. It records every call in order and
+// fakeOwners plays the four owners. It records every call in order and
 // fails the step named in failAt.
 type fakeOwners struct {
 	calls      []string
@@ -30,6 +30,7 @@ type fakeOwners struct {
 	invited    []identityaccess.SchoolInvitationRequest
 	revoked    []int64
 	record     schoolmembership.ExternalCaregiverRecordFields
+	genders    []externalcaregiver.StaffGender
 	expires    time.Time
 }
 
@@ -110,6 +111,11 @@ func (f *fakeOwners) ListPendingSchoolInvitations(context.Context) ([]identityac
 	return f.pending, f.step("pending_invitations")
 }
 
+func (f *fakeOwners) setGender(_ context.Context, in externalcaregiver.StaffGender) error {
+	f.genders = append(f.genders, in)
+	return f.step("stammdaten_gender")
+}
+
 // fakeSavepoint records the callback's outcome, which a savepoint rolls back
 // on.
 type fakeSavepoint struct {
@@ -127,7 +133,7 @@ func (s *fakeSavepoint) run(ctx context.Context, fn func(context.Context) error)
 func newWorkflow(t *testing.T, owners *fakeOwners) (*externalcaregiver.Workflow, *fakeSavepoint) {
 	t.Helper()
 	savepoint := &fakeSavepoint{}
-	workflow, err := externalcaregiver.New(owners, owners, owners, savepoint.run)
+	workflow, err := externalcaregiver.New(owners, owners, owners, owners.setGender, savepoint.run)
 	require.NoError(t, err)
 	return workflow, savepoint
 }
@@ -146,8 +152,50 @@ func stringPtr(value string) *string { return &value }
 func TestNewRequiresEveryPort(t *testing.T) {
 	t.Parallel()
 	owners := &fakeOwners{}
-	_, err := externalcaregiver.New(owners, owners, owners, nil)
+	_, err := externalcaregiver.New(owners, owners, owners, owners.setGender, nil)
 	require.Error(t, err)
+	_, err = externalcaregiver.New(owners, owners, owners, nil, (&fakeSavepoint{}).run)
+	require.Error(t, err, "the Stammdaten port is required")
+}
+
+// TestRecordWritesTheGenderIntoTheStammdaten: a chosen gender reaches the
+// Stammdaten with the new staff member and the recorded names, inside the
+// savepoint and before any invitation, for every access level; without a
+// choice the port is not called.
+func TestRecordWritesTheGenderIntoTheStammdaten(t *testing.T) {
+	t.Parallel()
+	cases := map[string]struct {
+		access externalcaregiver.Access
+		calls  []string
+	}{
+		"none":      {externalcaregiver.AccessNone, []string{"create_person", "create_staff", "find_teacher", "create_teacher", "create_external_caregiver_record", "stammdaten_gender"}},
+		"supervise": {externalcaregiver.AccessSupervise, []string{"system_role", "pending_invitations", "create_person", "create_staff", "find_teacher", "create_teacher", "create_external_caregiver_record", "stammdaten_gender", "invite"}},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			owners := &fakeOwners{roleID: 31}
+			workflow, savepoint := newWorkflow(t, owners)
+			input := createInput()
+			input.Access = tc.access
+			input.Gender = "female"
+
+			_, err := workflow.Record(context.Background(), input)
+			require.NoError(t, err)
+			assert.Equal(t, tc.calls, owners.calls)
+			assert.Equal(t, 1, savepoint.opened)
+			assert.Equal(t, []externalcaregiver.StaffGender{{StaffID: 601, FirstName: "Jonas", LastName: "Becker", Gender: "female"}}, owners.genders)
+		})
+	}
+	t.Run("no choice", func(t *testing.T) {
+		t.Parallel()
+		owners := &fakeOwners{roleID: 31}
+		workflow, _ := newWorkflow(t, owners)
+		_, err := workflow.Record(context.Background(), createInput())
+		require.NoError(t, err)
+		assert.Empty(t, owners.genders)
+		assert.NotContains(t, owners.calls, "stammdaten_gender")
+	})
 }
 
 func TestRecordWritesInOrderInsideOneSavepoint(t *testing.T) {
@@ -212,13 +260,15 @@ func TestRecordNoneIsAPlaceholderWithoutInvitation(t *testing.T) {
 
 func TestRecordRollsTheSavepointBackWhenAStepFails(t *testing.T) {
 	t.Parallel()
-	for _, step := range []string{"create_person", "create_staff", "find_teacher", "create_teacher", "create_external_caregiver_record", "invite"} {
+	for _, step := range []string{"create_person", "create_staff", "find_teacher", "create_teacher", "create_external_caregiver_record", "stammdaten_gender", "invite"} {
 		t.Run(step, func(t *testing.T) {
 			t.Parallel()
 			owners := &fakeOwners{roleID: 31, failAt: step}
 			workflow, savepoint := newWorkflow(t, owners)
+			input := createInput()
+			input.Gender = "diverse"
 
-			_, err := workflow.Record(context.Background(), createInput())
+			_, err := workflow.Record(context.Background(), input)
 			require.ErrorIs(t, err, errStep)
 			assert.ErrorIs(t, savepoint.rolledBack, errStep, "the savepoint saw the failure and rolls back")
 			assert.Equal(t, step, owners.calls[len(owners.calls)-1], "nothing runs after the failed step")

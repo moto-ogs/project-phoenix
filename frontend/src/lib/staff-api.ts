@@ -162,6 +162,8 @@ interface ExternalStaffInput {
   access: ExternalAccess;
   email?: string;
   organization?: string;
+  /** Stammdaten gender; left out when nobody chose one. */
+  gender?: StammdatenGender;
 }
 
 export interface StaffFilters {
@@ -590,6 +592,7 @@ class StaffService {
         last_name: input.lastName.trim(),
         organization: input.organization?.trim() ?? "",
         access: input.access,
+        ...(input.gender ? { gender: input.gender } : {}),
         ...(input.access === "none"
           ? {}
           : { email: input.email?.trim() ?? "" }),

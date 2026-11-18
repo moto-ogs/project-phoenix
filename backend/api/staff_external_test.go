@@ -348,6 +348,58 @@ func TestExternalCaregiverWithoutAccess(t *testing.T) {
 	}
 }
 
+// TestExternalCaregiverGenderGoesIntoTheStammdaten: a gender chosen on
+// „Externe Person anlegen“ lands in the Stammdaten with exactly one audit
+// row of the section person, attributed to the acting staff member, for the
+// placeholder and for an invited person. An unknown value refuses on field
+// gender before any write; an actor without a staff profile cannot sign the
+// audit row, and the whole creation rolls back.
+func TestExternalCaregiverGenderGoesIntoTheStammdaten(t *testing.T) {
+	t.Parallel()
+
+	e := setupExternalCaregiverRoute(t, "")
+	var actorStaff int64
+	require.NoError(t, e.db.NewRaw(`SELECT s.id FROM users.staff_school_memberships s JOIN users.persons p ON p.id = s.person_id
+		WHERE p.account_id = ? AND s.deleted_at IS NULL`, e.actor).Scan(context.Background(), &actorStaff))
+	for lastName, body := range map[string]map[string]any{
+		"Platzhalterin": {"first_name": "Mia", "last_name": "Platzhalterin", "gender": " female ", "access": "none"},
+		"Eingeladener":  {"first_name": "Tom", "last_name": "Eingeladener", "email": uniqueAddress(t, "tom"), "gender": "male", "access": "supervise"},
+	} {
+		status, raw := e.post(t, "/staff/externals", body, e.betreuer(t))
+		require.Equal(t, http.StatusCreated, status, string(raw))
+		created := decodeExternal(t, raw)
+		want := strings.TrimSpace(body["gender"].(string))
+		assert.Equal(t, 1, e.count(t, `SELECT count(*) FROM users.staff_master_data WHERE staff_id = ? AND gender = ?`, created.ID, want), lastName)
+		assert.Equal(t, 1, e.count(t, `SELECT count(*) FROM audit.staff_master_data_changes WHERE staff_id = ?`, created.ID), "exactly one audit row: %s", lastName)
+		assert.Equal(t, 1, e.count(t, `SELECT count(*) FROM audit.staff_master_data_changes
+			WHERE staff_id = ? AND section = 'person' AND field_name = 'gender' AND new_value = ? AND changed_by = ?`, created.ID, want, actorStaff), lastName)
+		assert.Equal(t, 1, e.personsNamed(t, lastName), "the names stay as recorded")
+	}
+
+	status, raw := e.post(t, "/staff/externals", map[string]any{"first_name": "Ohne", "last_name": "Angabe", "access": "none"}, e.betreuer(t))
+	require.Equal(t, http.StatusCreated, status, string(raw))
+	plain := decodeExternal(t, raw)
+	assert.Zero(t, e.count(t, `SELECT count(*) FROM audit.staff_master_data_changes WHERE staff_id = ?`, plain.ID), "no choice writes no Stammdaten")
+
+	status, raw = e.post(t, "/staff/externals", map[string]any{"first_name": "Falsch", "last_name": "Geschlecht", "gender": "weiblich", "access": "none"}, e.betreuer(t))
+	require.Equal(t, http.StatusBadRequest, status, string(raw))
+	wire := decodeError(t, raw)
+	assert.Equal(t, "general.input", wire.Code)
+	require.Len(t, wire.Errors, 1)
+	assert.Equal(t, "gender", wire.Errors[0].Field)
+	assert.Zero(t, e.personsNamed(t, "Geschlecht"))
+
+	unmapped := testpkg.CreateTestAccount(t, e.db, "ohne-personal")
+	claims := testutil.DefaultTestClaims()
+	claims.ID = int(unmapped.ID)
+	claims.Permissions = append(append([]string{}, betreuerPermissions...), "schedules:read")
+	status, raw = e.post(t, "/staff/externals", map[string]any{"first_name": "Nicht", "last_name": "Gespeichert", "gender": "diverse", "access": "none"},
+		testutil.WithJWTBearer(testutil.MintTestJWT(t, claims)))
+	require.Equal(t, http.StatusForbidden, status, string(raw))
+	assert.Equal(t, "workforce.no_staff_profile", decodeError(t, raw).Code)
+	assert.Zero(t, e.personsNamed(t, "Gespeichert"), "the savepoint undoes person, staff member and records")
+}
+
 // TestExternalCaregiverAccessErrorsNameTheField: a missing or unknown
 // access, and none on „Konto einladen“, refuse on the field access before
 // any write.

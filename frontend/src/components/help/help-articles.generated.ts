@@ -4020,6 +4020,7 @@ export const inviteStaffTopic = function inviteStaffTopic(): HelpTopic {
           "Öffne `Datenverwaltung` und danach `Personal`.",
           "Wähle oben rechts `+ Personal` und danach `Externe Person anlegen`.",
           "Trage `Vorname` und `Nachname` ein. Trage bei Bedarf die `Organisation (freiwillig)` ein.",
+          "Wähle bei Bedarf das `Geschlecht (freiwillig)`. Es kommt in die Stammdaten der Person.",
           "Wähle den `Zugang`. Was jede Stufe erlaubt, steht unten.",
           "Bei `Nur ansehen` und `Eigene Termine betreuen` trägst du die `E-Mail-Adresse` ein.",
           "Wähle `Anlegen`.",

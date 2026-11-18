@@ -85,7 +85,9 @@ Migration 20261118175055 ergänzt `auth.invitation_tokens.gender`: das
 Geschlecht, das die Schule beim Einladen von Personal freiwillig einträgt
 (`female`, `male`, `diverse`, leer = keine Angabe). Die Annahme schreibt es mit
 Prüfvermerk in `users.staff_master_data.gender`; danach gilt nur die
-Stammdatenangabe. Die Personalliste zeigt daraus die Form der Position
+Stammdatenangabe. Beim Anlegen einer externen Person (`POST
+/api/staff/externals`) geht die freiwillige Angabe ohne Zwischenspeicher direkt
+mit Prüfvermerk in die Stammdaten. Die Personalliste zeigt daraus die Form der Position
 („Betreuerin“/„Betreuer“, sonst „Betreuer:in“); an alle Kolleginnen und
 Kollegen geht nur diese Form (`role_form`), nicht das Geschlecht selbst, und
 „divers“ bleibt in der Liste von „keine Angabe“ nicht unterscheidbar. Die

@@ -151,7 +151,7 @@ func newStaffResource(
 	module schoolMembershipModule.Capability, people peopleModule.Capability, identity identityaccess.Owner, appEnv string,
 	buildRuntime func(StaffMembershipHooks) StaffMembershipRuntime, staffAdmin *timeTrackingHTTP.StaffAdminResource, logger *slog.Logger, uploads nativeUploads.UploadFiles,
 ) (*staffHTTP.Resource, error) {
-	externals, err := newExternalCaregiverBindings(module, people, identity, appEnv)
+	externals, err := newExternalCaregiverBindings(module, people, identity, staffAdmin, appEnv)
 	if err != nil {
 		return nil, err
 	}

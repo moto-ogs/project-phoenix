@@ -29,7 +29,7 @@ func (rs *Resource) createExternalStaff(w http.ResponseWriter, r *http.Request) 
 	}
 	ctx := r.Context()
 	result, err := rs.runtime.CreateExternalCaregiver(ctx, ExternalCaregiverInput{
-		FirstName: req.FirstName, LastName: req.LastName, Email: req.Email, Organization: req.Organization, Access: req.Access,
+		FirstName: req.FirstName, LastName: req.LastName, Email: req.Email, Organization: req.Organization, Gender: req.Gender, Access: req.Access,
 		ActorAccountID: rs.runtime.CurrentAccountID(ctx), ActorPermissions: rs.runtime.Permissions(ctx),
 	})
 	if err != nil {

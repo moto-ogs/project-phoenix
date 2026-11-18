@@ -7,6 +7,7 @@ import { useId, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { ChoiceTile } from "~/components/ui/choice-tile";
+import { CustomSelect } from "~/components/ui/custom-select";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
@@ -14,7 +15,13 @@ import { Radio } from "~/components/ui/radio";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { looksLikeEmail } from "~/lib/email-format";
 import { createLogger } from "~/lib/logger";
-import { staffService, type ExternalAccess, type Staff } from "~/lib/staff-api";
+import {
+  staffService,
+  type ExternalAccess,
+  type Staff,
+  type StammdatenGender,
+} from "~/lib/staff-api";
+import { isStaffGender, STAFF_GENDER_OPTIONS } from "~/lib/staff-gender";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
 const logger = createLogger({ component: "ExternalCaregiverEntry" });
@@ -25,6 +32,7 @@ export const EXTERNAL_FIELDS = {
   lastName: "last_name",
   email: "email",
   organization: "organization",
+  gender: "gender",
   access: "access",
 } as const;
 
@@ -147,6 +155,7 @@ export function useExternalCaregiverForm({
   const [email, setEmail] = useState("");
   const [organization, setOrganization] = useState("");
   const [access, setAccess] = useState<ExternalAccess>("none");
+  const [gender, setGender] = useState<"" | StammdatenGender>("");
   // The pending contract of the dialog that shows the fields (#6533).
   const pending = useFormModalPending(isOpen);
   const isSaving = pending.pending;
@@ -158,6 +167,7 @@ export function useExternalCaregiverForm({
     setEmail("");
     setOrganization("");
     setAccess("none");
+    setGender("");
     formErrors.clear();
   }
 
@@ -177,6 +187,7 @@ export function useExternalCaregiverForm({
           lastName: lastName.trim(),
           organization,
           access,
+          ...(gender === "" ? {} : { gender }),
           ...(access === "none" ? {} : { email }),
         });
         onAdded(staff);
@@ -201,13 +212,14 @@ export function useExternalCaregiverForm({
   }
 
   return {
-    values: { firstName, lastName, email, organization, access },
+    values: { firstName, lastName, email, organization, access, gender },
     accessOptions: grantableExternalAccess(canGrantView),
     setFirstName,
     setLastName,
     setEmail,
     setOrganization,
     setAccess,
+    setGender,
     isSaving,
     pending,
     error: formErrors.error,
@@ -293,17 +305,25 @@ export function ExternalAccessChoice<T extends ExternalAccess>({
 }
 
 /**
- * Vorname, Nachname, Organisation, the access choice and, for an access
- * that invites, the E-Mail-Adresse with the invitation hint.
+ * Vorname, Nachname, Organisation, optionally the Stammdaten gender, the
+ * access choice and, for an access that invites, the E-Mail-Adresse with the
+ * invitation hint.
  */
 export function ExternalCaregiverFields({
   form,
   onKeyDown,
   autoFocus = false,
+  withGender = false,
 }: {
   readonly form: ExternalCaregiverForm;
   readonly onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
   readonly autoFocus?: boolean;
+  /**
+   * „Geschlecht (freiwillig)“ for the Stammdaten, as when inviting staff. The
+   * dialog of the Personalverwaltung shows it; the quick entry in the
+   * planning does not.
+   */
+  readonly withGender?: boolean;
 }) {
   // Two entries can be mounted at once (dialog over a page), so the ids are
   // unique while the names stay the wire field names.
@@ -351,6 +371,21 @@ export function ExternalCaregiverFields({
         autoComplete="off"
         maxLength={150}
       />
+      {withGender ? (
+        <CustomSelect
+          id={`${uid}-gender`}
+          name={EXTERNAL_FIELDS.gender}
+          label="Geschlecht (freiwillig)"
+          hint="Steht danach in den Stammdaten der Person."
+          value={form.values.gender}
+          options={STAFF_GENDER_OPTIONS}
+          onChange={(value) =>
+            form.setGender(isStaffGender(value) ? value : "")
+          }
+          disabled={form.isSaving}
+          error={form.fieldError(EXTERNAL_FIELDS.gender)}
+        />
+      ) : null}
       <ExternalAccessChoice
         options={form.accessOptions}
         value={form.values.access}
