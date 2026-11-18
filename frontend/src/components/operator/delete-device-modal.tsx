@@ -78,13 +78,16 @@ export function DeleteDeviceModal({
     onClose();
   }, [onClose, clearError]);
 
-  // Opened from a stale list: the device is gone, so the removal is done.
+  // Opened from a stale list: the device left this list meanwhile, removed
+  // or moved to another school. Close and reload instead of a load error.
   useEffect(() => {
     if (!device || !alreadyRemoved) return;
-    toastSuccess(`${device.name || device.deviceId} war schon entfernt.`);
-    onClose();
+    toastSuccess(
+      `${device.name || device.deviceId} steht nicht mehr in der Liste. Die Liste ist neu geladen.`,
+    );
+    handleClose();
     void onDeleted();
-  }, [alreadyRemoved, device, onClose, onDeleted, toastSuccess]);
+  }, [alreadyRemoved, device, handleClose, onDeleted, toastSuccess]);
 
   const handleDelete = useCallback(async () => {
     if (!device) return;
@@ -105,7 +108,9 @@ export function DeleteDeviceModal({
         await refresh();
         return;
       }
-      toastSuccess(`${title} war schon entfernt.`);
+      toastSuccess(
+        `${title} steht nicht mehr in der Liste. Die Liste ist neu geladen.`,
+      );
     }
     setLoading(false);
     onClose();

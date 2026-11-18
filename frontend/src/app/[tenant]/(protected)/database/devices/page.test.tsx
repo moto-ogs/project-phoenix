@@ -690,7 +690,7 @@ describe("DevicesPage", () => {
     });
   });
 
-  it("treats a device that is already removed as done", async () => {
+  it("reloads the list when the device is already gone", async () => {
     setSelectedDevice("1");
     mockRemove.mockRejectedValueOnce(
       new ApiError("gone", 404, { code: "general.not_found" }),
@@ -710,7 +710,7 @@ describe("DevicesPage", () => {
       });
     });
     expect(mockToastSuccess).toHaveBeenCalledWith(
-      "Das Gerät „Eingang Kiosk“ ist schon entfernt.",
+      "Das Gerät „Eingang Kiosk“ ist nicht mehr in der Liste. Die Liste ist neu geladen.",
     );
   });
 

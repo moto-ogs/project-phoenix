@@ -227,6 +227,8 @@ func TestSessionStartWaitsForARemovalAndFindsNoLiveDevice(t *testing.T) {
 	defer func() { _ = removal.Rollback() }()
 	_, err = removal.ExecContext(ctx, `SELECT id FROM iot.devices WHERE id = ? FOR UPDATE`, device.ID)
 	require.NoError(t, err)
+	var removalPID int
+	require.NoError(t, removal.QueryRowContext(ctx, `SELECT pg_backend_pid()`).Scan(&removalPID))
 	_, err = removal.ExecContext(ctx, `UPDATE iot.devices SET archived_at = now(), api_key_hash = NULL WHERE id = ?`, device.ID)
 	require.NoError(t, err)
 
@@ -242,7 +244,7 @@ func TestSessionStartWaitsForARemovalAndFindsNoLiveDevice(t *testing.T) {
 	require.Eventually(t, func() bool {
 		var waiting int
 		err := f.db.NewRaw(`SELECT count(*) FROM pg_stat_activity
-			WHERE datname = current_database() AND wait_event_type = 'Lock' AND query ILIKE '%iot.devices%FOR UPDATE%'`).Scan(ctx, &waiting)
+			WHERE ? = ANY(pg_blocking_pids(pid)) AND query ILIKE '%iot.devices%FOR UPDATE%'`, removalPID).Scan(ctx, &waiting)
 		return err == nil && waiting > 0
 	}, 10*time.Second, 20*time.Millisecond, "the session start waits for the removal's lock")
 	select {

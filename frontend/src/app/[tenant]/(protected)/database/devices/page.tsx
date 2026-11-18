@@ -322,8 +322,11 @@ function DevicesPageContent() {
         });
         return;
       }
-      // Jemand hat das Gerät eben schon entfernt: dasselbe Ergebnis.
-      toastSuccess(`Das Gerät „${title}“ ist schon entfernt.`);
+      // Das Gerät ist eben schon gegangen (entfernt oder an eine andere
+      // Schule übertragen): die Liste lädt neu.
+      toastSuccess(
+        `Das Gerät „${title}“ ist nicht mehr in der Liste. Die Liste ist neu geladen.`,
+      );
     } finally {
       setDeletePending(false);
     }
