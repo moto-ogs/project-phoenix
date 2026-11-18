@@ -53,7 +53,9 @@ vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({ data: mockSession, status: "authenticated" })),
 }));
 
-vi.mock("~/lib/auth-utils", () => ({
+vi.mock("~/lib/auth-utils", async (importOriginal) => ({
+  getGreetingName: (await importOriginal<typeof import("~/lib/auth-utils")>())
+    .getGreetingName,
   isAdmin: vi.fn(() => true),
   hasEffectiveAdminScope: vi.fn(() => true),
   hasPermission: vi.fn(() => true),

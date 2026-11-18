@@ -66,7 +66,9 @@ vi.mock("next-auth/react", () => ({
 
 vi.mock("~/lib/school-url", () => ({ schoolPortalLoginUrl }));
 
-vi.mock("~/lib/auth-utils", () => ({
+vi.mock("~/lib/auth-utils", async (importOriginal) => ({
+  getGreetingName: (await importOriginal<typeof import("~/lib/auth-utils")>())
+    .getGreetingName,
   isAdmin: vi.fn((session) => session?.user?.isAdmin ?? false),
   hasEffectiveAdminScope: vi.fn((session) => session?.user?.isAdmin ?? false),
   hasPermission: vi.fn((session) => session?.user?.isAdmin ?? false),
@@ -322,6 +324,25 @@ describe("Startseite", () => {
     await waitFor(() =>
       expect(screen.getByText(/Guten .*, Anna/)).toBeInTheDocument(),
     );
+  });
+
+  // Ein Konto ohne Personendaten trägt im Sitzungsnamen seine Adresse
+  // (#7305): Die Startseite grüßt dann ohne Anrede.
+  it("grüßt nie mit einer E-Mail-Adresse", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: {
+        ...mockSession,
+        user: { ...mockSession.user, name: "x@traeger.de", firstName: "" },
+      },
+      status: "authenticated",
+      update: vi.fn(),
+    } as unknown as ReturnType<typeof useSession>);
+
+    render(<HomePage />);
+
+    const heading = await screen.findByRole("heading", { level: 1 });
+    expect(heading).toHaveTextContent(/^Guten (Morgen|Tag|Abend)$/);
+    expect(heading).not.toHaveTextContent("@");
   });
 
   it("zeigt der Leitung ihre Standardansicht", async () => {

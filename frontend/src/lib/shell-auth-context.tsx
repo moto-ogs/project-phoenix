@@ -20,7 +20,7 @@ import { createLogger } from "~/lib/logger";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
 import { unsubscribePushSilently } from "~/lib/push-api";
-import { hasPermission } from "~/lib/auth-utils";
+import { getSessionPersonName, hasPermission } from "~/lib/auth-utils";
 import { getSmartRedirectPath } from "~/lib/redirect-utils";
 import { recordStaffPreviewEnd } from "~/lib/staff-preview-api";
 import { runTenantSessionEnd } from "~/lib/tenant-session-end";
@@ -217,7 +217,8 @@ export function TeacherShellProvider({
     const user: ShellUser | null = session?.user
       ? {
           ...(session.user.id ? { id: session.user.id } : {}),
-          name: session.user.name?.trim() || "Benutzer",
+          // Die Adresse steht nur im Profil-Menü, nie als Name (#7305).
+          name: getSessionPersonName(session) || "Benutzer",
           email: session.user.email ?? "",
           roles: session.user.roles ?? [],
           ...(session.user.roleIsSystem
@@ -331,18 +332,19 @@ export function OperatorShellProvider({
   const { show: showLogoutError } = useApiErrorDisplay();
 
   const value = useMemo<ShellAuthContextType>(() => {
+    // Die Adresse steht nur im Profil-Menü, nie als Name (#7305).
+    const displayName = getSessionPersonName(session);
     const user: ShellUser | null = session?.user
       ? {
           ...(session.user.id ? { id: session.user.id } : {}),
-          name: session.user.name?.trim() || "Operator",
+          name: displayName || "Operator",
           email: session.user.email ?? "",
           roles: session.user.roles ?? ["operator"],
         }
       : null;
 
-    const displayName = session?.user?.name ?? "";
-    const nameParts = displayName.split(" ");
-    const shellProfile: ShellProfile | null = session?.user
+    const nameParts = displayName.split(/\s+/);
+    const shellProfile: ShellProfile | null = displayName
       ? {
           firstName: nameParts[0],
           lastName: nameParts.slice(1).join(" ") || undefined,
@@ -401,18 +403,19 @@ export function SchoolShellProvider({
   const { show: showLogoutError } = useApiErrorDisplay();
 
   const value = useMemo<ShellAuthContextType>(() => {
+    // Wie im Eltern-Portal: Die Adresse ist kein Name (#7305).
+    const displayName = getSessionPersonName(session);
     const user: ShellUser | null = session?.user
       ? {
           ...(session.user.id ? { id: session.user.id } : {}),
-          name: session.user.name?.trim() || "Lehrkraft",
+          name: displayName || "Lehrkraft",
           email: session.user.email ?? "",
           roles: session.user.roles ?? ["lehrkraft"],
         }
       : null;
 
-    const displayName = session?.user?.name ?? "";
-    const nameParts = displayName.split(" ");
-    const shellProfile: ShellProfile | null = session?.user
+    const nameParts = displayName.split(/\s+/);
+    const shellProfile: ShellProfile | null = displayName
       ? {
           firstName: nameParts[0],
           lastName: nameParts.slice(1).join(" ") || undefined,
@@ -486,7 +489,8 @@ export function CatererShellProvider({
     const user: ShellUser | null = session?.user
       ? {
           ...(session.user.id ? { id: session.user.id } : {}),
-          name: session.user.name?.trim() || "Caterer",
+          // Die Adresse steht nur im Profil-Menü, nie als Name (#7305).
+          name: getSessionPersonName(session) || "Caterer",
           email: session.user.email ?? "",
           roles: session.user.roles ?? ["caterer"],
         }
@@ -590,7 +594,7 @@ export function TraegerShellProvider({
       ? {
           ...(session.user.id ? { id: session.user.id } : {}),
           name:
-            memberName?.trim() || session.user.name?.trim() || "Träger-Büro",
+            memberName?.trim() || getSessionPersonName(session) || "Träger-Büro",
           email: session.user.email ?? "",
           roles: session.user.roles ?? [],
         }
@@ -658,12 +662,12 @@ export function ParentShellProvider({
     // karin.klein@email.de" liest sich wie ein Datenbankauswurf. Ohne
     // brauchbaren Namen bleibt das Profil leer, und die Oberflaeche gruesst
     // ohne Anrede.
-    const sessionName = session?.user?.name?.trim() ?? "";
+    const sessionName = getSessionPersonName(session);
     const nameParts = profileFirstName
       ? [profileFirstName, profileLastName].filter(Boolean)
-      : sessionName.includes("@")
-        ? []
-        : sessionName.split(" ");
+      : sessionName
+        ? sessionName.split(/\s+/)
+        : [];
     const displayName = nameParts.join(" ");
 
     const user: ShellUser | null = session?.user
