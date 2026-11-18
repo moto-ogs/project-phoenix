@@ -53,3 +53,42 @@ func TestPayrollSchoolsHoldTheSchoolAndReadARetiredOne(t *testing.T) {
 		return nil
 	}))
 }
+
+// The Worker's parent reminders hold their school the same way (#7478): a
+// hidden or switched-off school is not live, and the hold keeps a
+// retirement from hiding a school while a reminder runs.
+func TestSchedulerTenantDirectoryHoldsALiveSchool(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
+	organizations, err := organizationCompose.New(organizationCompose.Dependencies{DB: db, Observe: func(organizationCompose.Observation) {}})
+	require.NoError(t, err)
+	directory := schedulerTenantDirectory{schools: organizations}
+	organization := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{Name: "Träger Elternerinnerungen", Slug: fmt.Sprintf("traeger-elternerinnerungen-%d", time.Now().UnixNano())})
+	live := testpkg.CreateTestSchoolInOrganization(t, db, organization.ID, "OGS Offen")
+	hidden := testpkg.CreateTestSchoolInOrganization(t, db, organization.ID, "OGS Ausgeblendet")
+	inactive := testpkg.CreateTestSchoolInOrganization(t, db, organization.ID, "OGS Abgeschaltet")
+	_, err = db.ExecContext(ctx, `UPDATE platform.schools SET deleted_at = NOW() WHERE id = ?`, hidden)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `UPDATE platform.schools SET active = FALSE WHERE id = ?`, inactive)
+	require.NoError(t, err)
+
+	for school, want := range map[int64]bool{live: true, hidden: false, inactive: false} {
+		require.NoError(t, testpkg.WithinCurrentTenant(testpkg.ContextForTenant(ctx, school), func(txCtx context.Context) error {
+			got, err := directory.HoldLiveSchool(txCtx, school)
+			require.NoError(t, err)
+			assert.Equalf(t, want, got, "school %d", school)
+			if !want {
+				return nil
+			}
+			tx, err := db.BeginTx(context.Background(), nil)
+			require.NoError(t, err)
+			defer func() { _ = tx.Rollback() }()
+			_, err = tx.ExecContext(context.Background(), `SET LOCAL lock_timeout = '100ms'`)
+			require.NoError(t, err)
+			_, err = tx.ExecContext(context.Background(), `UPDATE platform.schools SET deleted_at = NOW() WHERE id = ?`, school)
+			require.ErrorContains(t, err, "lock timeout", "the reminder holds its school until it commits")
+			return nil
+		}))
+	}
+}
