@@ -77,7 +77,9 @@ type presenceHistoryInput struct {
 	students []presenceHistoryStudent
 	deviceID int64
 	// sessions are the activities with their rooms, one per room.
-	sessions []presenceHistorySession
+	sessions         []presenceHistorySession
+	bookings         map[calendar.Date]map[int64]demoPresenceBooking
+	unbookedExamples int
 }
 
 // presenceHistorySession is an activity in its room; capacity bounds how many
@@ -113,8 +115,20 @@ func (s seedPresenceHistoryStep) Run(ctx context.Context, rt *Runtime) error {
 	if err != nil {
 		return err
 	}
+	if s.seeder.options.PresenceHistoryRoute {
+		if err := loadDemoPresenceBookings(rt, &input); err != nil {
+			return err
+		}
+		input.unbookedExamples = 2
+	}
 	plan := planPresenceHistory(input)
-	return seedPresenceHistoryPlan(ctx, rt, rt.Bootstrap.SchoolID, write, plan)
+	if err := seedPresenceHistoryPlan(ctx, rt, rt.Bootstrap.SchoolID, write, plan); err != nil {
+		return err
+	}
+	if s.seeder.options.PresenceHistoryRoute {
+		rt.demoPresenceDays = plan.days
+	}
+	return nil
 }
 
 // seedPresenceHistoryPlan writes the two independently committed parts of a
@@ -549,11 +563,12 @@ func planPresenceHistory(input presenceHistoryInput) presenceHistoryPlan {
 	if from.IsZero() {
 		from = input.today.AddDays(-presenceHistoryDays)
 	}
+	examples := selectUnbookedDemoDays(input, from)
 	for day := from; day.Before(input.today); day = day.AddDays(1) {
-		if !input.careDays(day) {
+		if !input.careDays(day) || (input.bookings != nil && calendar.IsWeekend(day)) {
 			continue
 		}
-		days, unexplained := planPresenceHistoryDay(input, berlin, day, statuses)
+		days, unexplained := planPresenceHistoryDay(input, berlin, day, statuses, examples[day])
 		plan.days = append(plan.days, days...)
 		plan.unexplained += unexplained
 	}
@@ -563,12 +578,16 @@ func planPresenceHistory(input presenceHistoryInput) presenceHistoryPlan {
 
 // planPresenceHistoryDay decides the past of every child on one care day. A
 // separate occupancy map keeps a room within capacity for this day only.
-func planPresenceHistoryDay(input presenceHistoryInput, berlin *time.Location, day calendar.Date, statuses map[int64]map[string][]calendar.Date) ([]PastPresenceDay, int) {
+func planPresenceHistoryDay(input presenceHistoryInput, berlin *time.Location, day calendar.Date, statuses map[int64]map[string][]calendar.Date, unbookedExample int64) ([]PastPresenceDay, int) {
 	occupancy := map[int64]int{}
 	days := make([]PastPresenceDay, 0, len(input.students))
 	unexplained := 0
 	for index, student := range input.students {
 		if student.lastDay != nil && day.After(*student.lastDay) {
+			continue
+		}
+		arrival, pickup, expected := historyPresenceTimes(input, index, student.id, day)
+		if !expected {
 			continue
 		}
 		absent, status := plannedAbsence(index, day)
@@ -580,11 +599,15 @@ func planPresenceHistoryDay(input presenceHistoryInput, berlin *time.Location, d
 			}
 			continue
 		}
-		session, ok := weightedAvailableSession(input.sessions, occupancy, presenceRoll(index, day, "room"))
-		if ok {
+		session, _ := weightedAvailableSession(input.sessions, occupancy, presenceRoll(index, day, "room"))
+		past := pastPresenceDay(input, berlin, student.id, day, arrival, pickup, session)
+		if past.Visit != nil {
 			occupancy[session.roomID]++
 		}
-		days = append(days, pastPresenceDay(input, berlin, index, student.id, day, session, ok))
+		days = append(days, past)
+	}
+	if unbookedExample != 0 {
+		days = append(days, pastPresenceDay(input, berlin, unbookedExample, day, 13*60, 14*60+15, presenceHistorySession{}))
 	}
 	return days, unexplained
 }
@@ -619,29 +642,32 @@ func absenceStatus(roll uint32) string {
 }
 
 // pastPresenceDay places a child at the OGS and lets it go home at the
-// times presenceTimes plans. A child visits a room only when it has a free
-// place; every visit is inside a session from 12:00 to 16:45.
-func pastPresenceDay(input presenceHistoryInput, berlin *time.Location, index int, studentID int64, day calendar.Date, session presenceHistorySession, hasSession bool) PastPresenceDay {
+// times the planner chose. The room visit fits the afternoon session and
+// the attendance, even for children who booked only morning care.
+func pastPresenceDay(input presenceHistoryInput, berlin *time.Location, studentID int64, day calendar.Date, arrival, pickup int, session presenceHistorySession) PastPresenceDay {
 	at := func(minute int) time.Time {
 		return time.Date(day.Year(), day.Month(), day.Day(), minute/60, minute%60, 0, 0, berlin)
 	}
-	arrival, pickup := presenceTimes(index, day)
 	checkIn, checkOut := at(arrival), at(pickup)
 	sessionStart, sessionEnd := at(12*60), at(16*60+45)
 	entry := checkIn.Add(5 * time.Minute)
 	if entry.Before(sessionStart) {
 		entry = sessionStart
 	}
+	exit := checkOut.Add(-5 * time.Minute)
+	if exit.After(sessionEnd) {
+		exit = sessionEnd
+	}
 	past := PastPresenceDay{
 		StudentID: studentID, Date: day, DeviceID: input.deviceID, CheckIn: checkIn, CheckOut: checkOut,
 	}
-	if !hasSession {
+	if session.roomID == 0 || !entry.Before(exit) {
 		return past
 	}
 	past.Visit = &PastVisit{
 		ActivityGroupID: session.activityID, RoomID: session.roomID,
 		SessionStart: sessionStart, SessionEnd: sessionEnd,
-		Entry: entry, Exit: checkOut.Add(-5 * time.Minute),
+		Entry: entry, Exit: exit,
 	}
 	return past
 }

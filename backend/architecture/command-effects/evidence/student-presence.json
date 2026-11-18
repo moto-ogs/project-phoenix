@@ -7665,6 +7665,14 @@
       "target_owner": ""
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StatisticsReports.DemoCareDays",
+      "binding_digest": "b0fa57fc80df16aacc665df9e9c1533a",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.DemoCareDays.DemoCareDays",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.EnrolledOn",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RequireAbsentMorningAttendance",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.MorningAbsenceGuard.RequireAbsentMorningAttendance",
@@ -11647,6 +11655,14 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.service.DemoCareDays",
+      "binding_digest": "b0fa57fc80df16aacc665df9e9c1533a",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StatisticsReports.DemoCareDays",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.EnrolledOn",
+      "target_owner": "people-directory"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.service.Report",

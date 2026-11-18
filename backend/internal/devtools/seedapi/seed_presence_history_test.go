@@ -480,3 +480,66 @@ func TestPresenceTimesGiveTheSchoolDayAShape(t *testing.T) {
 	}
 	assert.Equal(t, 12*5, early, "every fifth child comes to the early care")
 }
+
+func TestPresenceHistoryUsesDemoBookings(t *testing.T) {
+	t.Parallel()
+	input, _ := presenceHistoryFixture()
+	input.from = input.today.AddDays(-10)
+	input.careDays = func(calendar.Date) bool { return true }
+	input.unbookedExamples = 2
+	input.bookings = map[calendar.Date]map[int64]demoPresenceBooking{}
+	morning, morningEnd, afternoon, afternoonEnd := 7*60, 9*60, 12*60+30, 15*60
+	for day := input.from; day.Before(input.today); day = day.AddDays(1) {
+		bookings := map[int64]demoPresenceBooking{}
+		input.bookings[day] = bookings
+		for i, student := range input.students {
+			switch {
+			case i < 5:
+				bookings[student.id] = demoPresenceBooking{Expected: true, Arrival: &morning, Pickup: &morningEnd}
+			case i < 80:
+				bookings[student.id] = demoPresenceBooking{Expected: true, Arrival: &afternoon, Pickup: &afternoonEnd}
+			case i < 85:
+				bookings[student.id] = demoPresenceBooking{NoPlan: true}
+			case i < 90:
+				bookings[student.id] = demoPresenceBooking{Cancelled: true}
+			default:
+				bookings[student.id] = demoPresenceBooking{}
+			}
+		}
+	}
+
+	plan := planPresenceHistory(input)
+	unbooked, overruns, mornings := 0, 0, 0
+	for _, visit := range plan.days {
+		assert.False(t, calendar.IsWeekend(visit.Date))
+		booking := input.bookings[visit.Date][visit.StudentID]
+		assert.False(t, booking.Cancelled || booking.NoPlan)
+		if !booking.Expected {
+			unbooked++
+			assert.Equal(t, 75*time.Minute, visit.CheckOut.Sub(visit.CheckIn))
+			continue
+		}
+		arrival := visit.CheckIn.Hour()*60 + visit.CheckIn.Minute()
+		pickup := visit.CheckOut.Hour()*60 + visit.CheckOut.Minute()
+		extra := max(*booking.Arrival-arrival, pickup-*booking.Pickup)
+		if extra > 15 {
+			overruns++
+			assert.GreaterOrEqual(t, extra, 20)
+			assert.LessOrEqual(t, extra, 45)
+		}
+		if *booking.Arrival == morning {
+			mornings++
+			assert.Nil(t, visit.Visit, "morning care ends before the room session opens")
+		}
+	}
+	assert.Equal(t, 2, unbooked)
+	assert.Positive(t, mornings)
+	assert.Positive(t, overruns)
+	assert.Less(t, overruns*20, len(plan.days), "fewer than 5 percent of visits exceed booked times")
+	for _, status := range plan.statuses {
+		for _, day := range status.dates {
+			assert.False(t, calendar.IsWeekend(day))
+			assert.True(t, input.bookings[day][status.studentID].Expected)
+		}
+	}
+}

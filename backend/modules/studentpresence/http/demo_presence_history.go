@@ -1,6 +1,7 @@
 package studentpresencehttp
 
 import (
+	"context"
 	json "encoding/json"
 	errors "errors"
 	fmt "fmt"
@@ -86,6 +87,62 @@ func DemoPresenceHistoryHandler(history studentpresence.PresenceHistory) http.Ha
 		}
 		common.Respond(w, r, http.StatusOK, DemoPresenceHistoryResponse{Written: written}, "Anwesenheitsverlauf gespeichert")
 	}
+}
+
+// DemoCareDaysHandler supplies the effective planned times used to generate
+// synthetic attendance. It shares the operator audit of the history writer.
+func DemoCareDaysHandler(read func(context.Context, int64, calendar.Date, calendar.Date) ([]studentpresence.DemoCareDay, error)) http.HandlerFunc {
+	if read == nil {
+		panic("student presence http: the demo presence history needs the care plan reader")
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		schoolID, ok := common.ParsePositiveInt64IDWithError(w, r, "id", "invalid school ID")
+		if !ok {
+			return
+		}
+		from, fromErr := calendar.ParseDate(r.URL.Query().Get("from"))
+		to, toErr := calendar.ParseDate(r.URL.Query().Get("to"))
+		if err := errors.Join(fromErr, toErr); err != nil {
+			renderError(w, r, common.OperatorInvalidRequest(err))
+			return
+		}
+		days, err := read(r.Context(), schoolID, from, to)
+		if errors.Is(err, studentpresence.ErrInvalidStatisticsRange) {
+			renderError(w, r, common.OperatorInvalidRequest(err))
+			return
+		}
+		if err != nil {
+			renderError(w, r, common.ErrorInternalServerWrap("read demo care days", err))
+			return
+		}
+		result := make([]demoCareDayResponse, 0, len(days))
+		for _, day := range days {
+			result = append(result, demoCareDayResponse{
+				StudentID: day.StudentID, Date: day.Date,
+				Expected: day.Expected, NoPlan: day.NoPlan, Cancelled: day.Cancelled,
+				Arrival: demoClockMinutes(day.Arrival), Pickup: demoClockMinutes(day.Pickup),
+			})
+		}
+		common.Respond(w, r, http.StatusOK, result, "Demo care days loaded")
+	}
+}
+
+type demoCareDayResponse struct {
+	StudentID int64         `json:"student_id"`
+	Date      calendar.Date `json:"date"`
+	Expected  bool          `json:"expected"`
+	NoPlan    bool          `json:"no_plan"`
+	Cancelled bool          `json:"cancelled"`
+	Arrival   *int          `json:"arrival_minute"`
+	Pickup    *int          `json:"pickup_minute"`
+}
+
+func demoClockMinutes(clock *calendar.WallClock) *int {
+	if clock == nil {
+		return nil
+	}
+	minutes := clock.Hour()*60 + clock.Minute()
+	return &minutes
 }
 
 func decodeDemoPresenceHistory(w http.ResponseWriter, r *http.Request) ([]studentpresence.PastPresenceDay, error) {

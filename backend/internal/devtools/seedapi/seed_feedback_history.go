@@ -39,10 +39,6 @@ func (s seedFeedbackHistoryStep) Run(_ context.Context, rt *Runtime) error {
 	if !from.Before(today) {
 		return nil
 	}
-	input, err := pastCareInputFrom(rt, s.seeder.definition, today, from)
-	if err != nil {
-		return err
-	}
 	var existing struct {
 		Data []struct {
 			ID int64 `json:"id"`
@@ -56,7 +52,11 @@ func (s seedFeedbackHistoryStep) Run(_ context.Context, rt *Runtime) error {
 		fmt.Printf("  %d vergangene Feedbacks sind schon angelegt\n", len(existing.Data))
 		return nil
 	}
-	entries := planFeedbackHistory(planPresenceHistory(input).days, from)
+	days, err := s.presenceDays(rt, from, today)
+	if err != nil {
+		return err
+	}
+	entries := planFeedbackHistory(days, from)
 	if len(entries) == 0 {
 		return nil
 	}
@@ -83,6 +83,17 @@ func (s seedFeedbackHistoryStep) Run(_ context.Context, rt *Runtime) error {
 	}
 	fmt.Printf("  %d vergangene Feedbacks, davon %d zum Mittagessen\n", len(entries), mensa)
 	return nil
+}
+
+func (s seedFeedbackHistoryStep) presenceDays(rt *Runtime, from, today calendar.Date) ([]PastPresenceDay, error) {
+	if s.seeder.options.PresenceHistoryRoute {
+		return rt.demoPresenceDays, nil
+	}
+	input, err := pastCareInputFrom(rt, s.seeder.definition, today, from)
+	if err != nil {
+		return nil, err
+	}
+	return planPresenceHistory(input).days, nil
 }
 
 // feedbackHistoryRange covers every past day in the current calendar month,

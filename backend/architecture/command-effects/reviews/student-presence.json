@@ -10276,6 +10276,16 @@
       "target_owner": ""
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StatisticsReports.DemoCareDays",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.DemoCareDays.DemoCareDays",
+      "reason": "Demo presence history reuses the existing enrollment date predicate in the school transaction. EnrolledOn evaluates dates from the loaded roster and takes no locks or writes.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.EnrolledOn",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RequireAbsentMorningAttendance",
       "classification": "query",
       "effect": "query",
@@ -15736,6 +15746,16 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.service.DemoCareDays",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StatisticsReports.DemoCareDays",
+      "reason": "Demo presence history reuses the existing enrollment date predicate in the school transaction. EnrolledOn evaluates dates from the loaded roster and takes no locks or writes.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.EnrolledOn",
+      "target_owner": "people-directory"
     },
     {
       "adr": "0098",
