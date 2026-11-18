@@ -87,6 +87,7 @@ const CodeEnrollmentGuardianAccountMismatch = "enrollment.guardian_account_misma
 const CodeEnrollmentGuardianEmailRequired = "enrollment.guardian_email_required"
 const CodeEnrollmentGuardianNameRequired = "enrollment.guardian_name_required"
 const CodeEnrollmentGuardianPhoneRequired = "enrollment.guardian_phone_required"
+const CodeEnrollmentHealthConsentRequired = "enrollment.health_consent_required"
 const CodeEnrollmentHolidayAllocationChanged = "enrollment.holiday_allocation_changed"
 const CodeEnrollmentHolidayAllocationFull = "enrollment.holiday_allocation_full"
 const CodeEnrollmentHolidayAllocationModeLocked = "enrollment.holiday_allocation_mode_locked"
@@ -272,6 +273,7 @@ var errorCodeClassesEnrollment = []errorCodeClass{
 	{CodeEnrollmentGuardianEmailRequired, "input"},
 	{CodeEnrollmentGuardianNameRequired, "input"},
 	{CodeEnrollmentGuardianPhoneRequired, "input"},
+	{CodeEnrollmentHealthConsentRequired, "input"},
 	{CodeEnrollmentHolidayAllocationChanged, "business_rejection"},
 	{CodeEnrollmentHolidayAllocationFull, "business_rejection"},
 	{CodeEnrollmentHolidayAllocationModeLocked, "business_rejection"},

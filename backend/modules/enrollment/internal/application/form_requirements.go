@@ -55,7 +55,9 @@ func validateRequiredChildFields(schema *enrollmentNative.FormSchema, guardianAn
 	childCtx := childVisibilityContext(guardianAnswers, child, openByID, byKey)
 	for i := range schema.Fields {
 		f := &schema.Fields[i]
-		if !f.AppliesToCh || f.Type == enrollmentNative.FormFieldInfo || !f.Required || !fieldVisible(f, childCtx) {
+		// Health information stays voluntary also in forms saved as required
+		// before #2787.
+		if !f.AppliesToCh || f.Type == enrollmentNative.FormFieldInfo || !f.Required || f.Target == enrollmentNative.TargetStudentHealthInfo || !fieldVisible(f, childCtx) {
 			continue
 		}
 		if !childAnswerSatisfiesRequired(*f, child, openByID) {
@@ -445,4 +447,36 @@ func customDataField(childIdx int, key string) string {
 		return "custom_data." + key
 	}
 	return fmt.Sprintf("children.%d.custom_data.%s", childIdx, key)
+}
+
+// validateHealthConsent refuses health answers without the health consent
+// (Art. 9 Abs. 2 lit. a DSGVO, #2787). Without health answers the consent
+// is not needed: the enrollment never depends on it.
+func validateHealthConsent(schema *enrollmentNative.FormSchema, req SubmitRequest) error {
+	if !schema.AsksForHealthInformation() {
+		return nil
+	}
+	if given, ok := req.ConsentFlags[enrollmentNative.ConsentKeyHealthData].(bool); ok && given {
+		return nil
+	}
+	for idx, child := range req.Children {
+		if childHasHealthAnswer(schema, child) {
+			return enrollmentNative.InvalidInput(enrollmentNative.CodeHealthConsentRequired, "consent_flags."+enrollmentNative.ConsentKeyHealthData,
+				fmt.Errorf("%w: child %d has health information without the health consent", enrollmentNative.ErrInvalidSubmission, idx))
+		}
+	}
+	return nil
+}
+
+func childHasHealthAnswer(schema *enrollmentNative.FormSchema, child SubmitChild) bool {
+	for i := range schema.Fields {
+		f := &schema.Fields[i]
+		if f.Target != enrollmentNative.TargetStudentHealthInfo {
+			continue
+		}
+		if answer, ok := child.CustomData[f.Key].(string); ok && strings.TrimSpace(answer) != "" {
+			return true
+		}
+	}
+	return false
 }

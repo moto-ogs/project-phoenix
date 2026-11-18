@@ -33,6 +33,10 @@ import { SectionCard } from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
 import { Input } from "~/components/ui/input";
 import { useTenant } from "~/lib/tenant-context";
+import {
+  legalBlockHasCheckbox,
+  withDecidedLegalRules,
+} from "~/lib/enrollment-legal-blocks";
 import germanEnrollmentFormMessages from "~/i18n/messages/de/enrollmentForm.json";
 import { DEFAULT_LOCALE } from "~/i18n/locales";
 import {
@@ -390,7 +394,11 @@ export function EnrollmentForm({
     [config.offerings, contentLocale],
   );
   const legalBlocks = useMemo(
-    () => localizeLegalBlocks(config.legalTexts?.blocks ?? [], contentLocale),
+    () =>
+      localizeLegalBlocks(
+        (config.legalTexts?.blocks ?? []).map(withDecidedLegalRules),
+        contentLocale,
+      ),
     [config.legalTexts, contentLocale],
   );
   // The holiday care question is a fixed field of the form (#4703), not a
@@ -1790,7 +1798,7 @@ export function EnrollmentForm({
             ) : null}
             {legalBlocks.map((block) => (
               <div key={block.key}>
-                {block.kind === "notice" ? (
+                {!legalBlockHasCheckbox(block.kind) ? (
                   <EmailContactNotice
                     key={block.key}
                     block={block}
@@ -1812,6 +1820,7 @@ export function EnrollmentForm({
                       }))
                     }
                     required={block.required}
+                    guardianAgreement={block.guardian_agreement === true}
                     error={fieldError(formFieldName.consent(block.key))}
                     legalText={block.text}
                     legalTitle={block.title}

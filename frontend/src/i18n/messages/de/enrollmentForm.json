@@ -85,7 +85,8 @@
     "weekdayRequired": "Bitte mindestens einen Wochentag auswählen.",
     "weekdayModeConfirm": "Bitte die Geh- und Abholregelung bestätigen.",
     "weekdayMultiModeRequired": "Bitte für jeden Betreuungstag mindestens einen Heimweg auswählen.",
-    "file": "Bitte lade mindestens eine Datei hoch."
+    "file": "Bitte lade mindestens eine Datei hoch.",
+    "healthConsent": "Du hast Gesundheitsangaben eingetragen. Setze dafür das Häkchen bei der Einwilligung für Gesundheitsangaben oder lass die Felder leer."
   },
   "actions": {
     "addChild": "Weiteres Kind",
@@ -304,5 +305,8 @@
     "removeContact": "Entfernt diesen Kontakt sofort aus dem Formular.",
     "chooseFile": "Öffnet die Dateiauswahl deines Geräts.",
     "details": "Öffnet den ganzen Text zum Lesen."
+  },
+  "legal": {
+    "guardianAgreement": "Ich handle dabei im Einvernehmen mit allen anderen sorgeberechtigten Personen meines Kindes."
   }
 }

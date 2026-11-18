@@ -241,10 +241,9 @@ function legalTexts(
       key: "data_processing",
       kind: "privacy_notice",
       title: "Datenschutzinformation",
-      label:
-        "Ich habe die Datenschutzinformation der Schule zur Kenntnis genommen.",
+      label: "Hier findest du die Datenschutzinformation der Schule.",
       text: "Datenschutz Text",
-      required: true,
+      required: false,
     },
     {
       key: "photo",
@@ -459,12 +458,6 @@ async function fillRequiredFields() {
   const agb = screen.queryByText(/AGB|Ganztag Info-Brief/);
   if (agb) {
     fireEvent.click(agb);
-  }
-  const privacy = screen.queryByText(
-    /Datenschutzinformation der Schule zur Kenntnis/,
-  );
-  if (privacy) {
-    fireEvent.click(privacy);
   }
 }
 
@@ -5583,5 +5576,162 @@ describe("EnrollmentForm signature (#4786)", () => {
     expect(
       screen.queryByRole("img", { name: "Feld zum Unterschreiben" }),
     ).not.toBeInTheDocument();
+  });
+
+  describe("legal decisions of #2787", () => {
+    const healthField = {
+      key: "health",
+      label: "Gesundheitsangaben",
+      type: "textarea" as const,
+      required: false,
+      applies_to_child: true,
+      sort_order: 9,
+      target: "student.health_info" as const,
+    };
+    const healthConsent = {
+      key: "health_data",
+      kind: "consent" as const,
+      title: "Gesundheitsangaben",
+      label: "Ich bin einverstanden mit den Gesundheitsangaben.",
+      text: "Gesundheit Text",
+      required: false,
+      sort_order: 45,
+    };
+
+    async function submittedPayload() {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Anmeldung absenden" }),
+      );
+      await waitFor(() => {
+        expect(mockSubmitEnrollment).toHaveBeenCalledTimes(1);
+      });
+      return (
+        mockSubmitEnrollment.mock.calls[0] as [string, SubmitEnrollmentPayload]
+      )[1];
+    }
+
+    it("shows the Datenschutzinformation without a checkbox and records it as shown", async () => {
+      phaseSchemaFixture.mockResolvedValue(schema());
+      await renderForm();
+      await waitForLoaded();
+
+      expect(
+        screen.getByText(
+          "Hier findest du die Datenschutzinformation der Schule.",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("checkbox", { name: /Datenschutzinformation/ }),
+      ).not.toBeInTheDocument();
+      await fillRequiredFields();
+      const payload = await submittedPayload();
+      expect(payload.consent_flags).toMatchObject({ data_processing: true });
+    });
+
+    it("renders a privacy notice saved with a checkbox before #2787 without one", async () => {
+      phaseSchemaFixture.mockResolvedValue(schema());
+      mockFetchPublicLegalTexts.mockResolvedValue(
+        legalTexts([
+          {
+            key: "data_processing",
+            kind: "privacy_notice",
+            title: "Datenschutzinformation",
+            label:
+              "Ich habe die Datenschutzinformation der Schule zur Kenntnis genommen.",
+            text: "Datenschutz Text",
+            required: true,
+          },
+        ]),
+      );
+      await renderForm();
+      await waitForLoaded();
+
+      expect(
+        screen.queryByRole("checkbox", { name: /Datenschutzinformation/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Hier findest du die Datenschutzinformation der Schule.",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it("asks the custodians' agreement with the consent that carries it", async () => {
+      phaseSchemaFixture.mockResolvedValue(schema());
+      mockFetchPublicLegalTexts.mockResolvedValue(
+        legalTexts([
+          {
+            key: "internet_photos",
+            kind: "consent",
+            title: "Fotos im Internet",
+            label: "Fotos meines Kindes dürfen auf die Website.",
+            text: "",
+            required: false,
+            guardian_agreement: true,
+          },
+        ]),
+      );
+      await renderForm();
+      await waitForLoaded();
+
+      expect(
+        screen.getByRole("checkbox", {
+          name: "Fotos meines Kindes dürfen auf die Website. Ich handle dabei im Einvernehmen mit allen anderen sorgeberechtigten Personen meines Kindes.",
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it("sends health answers only with the health consent and the form without both", async () => {
+      phaseSchemaFixture.mockResolvedValue({
+        ...schema(),
+        fields: [...schema().fields, healthField],
+      });
+      mockFetchPublicLegalTexts.mockResolvedValue(
+        legalTexts([...legalTexts().blocks, healthConsent]),
+      );
+      await renderForm();
+      await waitForLoaded();
+      await fillRequiredFields();
+      fireEvent.change(screen.getByLabelText("Gesundheitsangaben"), {
+        target: { value: "Nussallergie" },
+      });
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Anmeldung absenden" }),
+      );
+      expect(
+        await screen.findAllByText(
+          "Du hast Gesundheitsangaben eingetragen. Setze dafür das Häkchen bei der Einwilligung für Gesundheitsangaben oder lass die Felder leer.",
+        ),
+      ).not.toHaveLength(0);
+      expect(mockSubmitEnrollment).not.toHaveBeenCalled();
+
+      fireEvent.click(
+        screen.getByRole("checkbox", {
+          name: "Ich bin einverstanden mit den Gesundheitsangaben.",
+        }),
+      );
+      const payload = await submittedPayload();
+      expect(payload.consent_flags).toMatchObject({ health_data: true });
+      expect(payload.children[0]?.custom_data).toMatchObject({
+        health: "Nussallergie",
+      });
+    });
+
+    it("submits without the health consent when no health answer is given", async () => {
+      phaseSchemaFixture.mockResolvedValue({
+        ...schema(),
+        fields: [...schema().fields, { ...healthField, required: true }],
+      });
+      mockFetchPublicLegalTexts.mockResolvedValue(
+        legalTexts([...legalTexts().blocks, healthConsent]),
+      );
+      await renderForm();
+      await waitForLoaded();
+      await fillRequiredFields();
+
+      const payload = await submittedPayload();
+      expect(payload.consent_flags).toMatchObject({ health_data: false });
+    });
   });
 });

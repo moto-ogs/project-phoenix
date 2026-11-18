@@ -52,6 +52,7 @@ import {
   type LegalBlockDisplayMode,
 } from "~/lib/enrollment-form-schema-api";
 import {
+  GUARDIAN_AGREEMENT_LABEL,
   LEGAL_BLOCK_DISPLAY_MODE_PDF,
   LEGAL_BLOCK_DISPLAY_MODE_TEXT,
   checkboxLegalBlockKindFor,
@@ -384,42 +385,71 @@ export function LegalBlocksSection({
             disabled={disabled}
           />
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <LegalBlockModeControl
-            checkboxLabel={customOnly ? "Mit Häkchen" : "Mit Checkbox"}
-            isNotice={block.kind === "notice"}
-            disabled={disabled}
-            onModeChange={(isNotice) =>
-              updateBlock(index, {
-                kind: isNotice ? "notice" : checkboxLegalBlockKindFor(block),
-                required: isNotice ? false : block.required,
-              })
-            }
-          />
-          {block.kind !== "notice" &&
-          !(block.kind === "consent" && isStandard(block)) ? (
-            <InlineCheckbox
-              checked={block.required}
+        {block.kind === "privacy_notice" || block.key === "data_processing" ? (
+          <p className="mt-3 text-sm text-gray-600">
+            Ohne Häkchen: Eltern sehen die Datenschutzinformation und können sie
+            öffnen. moto speichert bei jeder Anmeldung, welche Fassung das
+            Formular gezeigt hat.
+          </p>
+        ) : (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <LegalBlockModeControl
+              checkboxLabel={customOnly ? "Mit Häkchen" : "Mit Checkbox"}
+              isNotice={block.kind === "notice"}
               disabled={disabled}
-              muted
-              onCheckedChange={(checked) =>
-                updateBlock(
-                  index,
-                  isStandard(block)
-                    ? { required: checked }
-                    : { required: checked, kind: customCheckboxKind(checked) },
-                )
+              onModeChange={(isNotice) =>
+                updateBlock(index, {
+                  kind: isNotice ? "notice" : checkboxLegalBlockKindFor(block),
+                  required: isNotice ? false : block.required,
+                })
               }
-            >
-              Muss bestätigt werden
-            </InlineCheckbox>
-          ) : null}
-        </div>
+            />
+            {block.kind !== "notice" &&
+            !(block.kind === "consent" && isStandard(block)) ? (
+              <InlineCheckbox
+                checked={block.required}
+                disabled={disabled}
+                muted
+                onCheckedChange={(checked) =>
+                  updateBlock(
+                    index,
+                    isStandard(block)
+                      ? { required: checked }
+                      : {
+                          required: checked,
+                          kind: customCheckboxKind(checked),
+                        },
+                  )
+                }
+              >
+                Muss bestätigt werden
+              </InlineCheckbox>
+            ) : null}
+          </div>
+        )}
         {block.kind === "consent" ? (
           <p className="mt-2 text-sm text-gray-600">
             Freiwillige Einwilligung: Eltern können das Formular auch ohne
             Häkchen abschicken.
           </p>
+        ) : null}
+        {block.kind === "consent" && !customOnly ? (
+          <div className="mt-3 space-y-1">
+            <InlineCheckbox
+              checked={block.guardian_agreement === true}
+              disabled={disabled}
+              muted
+              onCheckedChange={(checked) =>
+                updateBlock(index, { guardian_agreement: checked })
+              }
+            >
+              Einvernehmen aller Sorgeberechtigten abfragen
+            </InlineCheckbox>
+            <p className="text-sm text-gray-600">
+              Für Fotos im Internet. Mit dem Häkchen bestätigen Eltern dann
+              auch: „{GUARDIAN_AGREEMENT_LABEL}“
+            </p>
+          </div>
         ) : null}
         {block.kind === "terms" && !isStandard(block) ? (
           <p className="mt-2 text-sm text-gray-600">

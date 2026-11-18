@@ -83,7 +83,8 @@
     "weekdayRequired": "Please select at least one weekday.",
     "weekdayModeConfirm": "Please confirm the departure arrangement.",
     "weekdayMultiModeRequired": "Please choose at least one way home for each care day.",
-    "file": "Please upload at least one file."
+    "file": "Please upload at least one file.",
+    "healthConsent": "You entered health information. Tick the consent for health information or leave these fields empty."
   },
   "actions": {
     "addChild": "Add another child",
@@ -304,5 +305,8 @@
     "removeContact": "Removes this contact from the form immediately.",
     "chooseFile": "Opens the file selection on your device.",
     "details": "Opens the full text to read."
+  },
+  "legal": {
+    "guardianAgreement": "I am acting in agreement with all other persons who have parental custody of my child."
   }
 }

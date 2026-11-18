@@ -190,6 +190,9 @@ func validateSubmittedFields(schema *enrollmentNative.FormSchema, req SubmitRequ
 	if err := validateAccompaniedCompanionNote(schema, req, openByID); err != nil {
 		return err
 	}
+	if err := validateHealthConsent(schema, req); err != nil {
+		return err
+	}
 	return validateConstrainedSchedules(schema, req, openByID, existingChildren)
 }
 

@@ -828,13 +828,25 @@ export function FieldEditorRow({
                   ) : null}
 
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <CheckboxCard
-                      checked={Boolean(field.required)}
-                      onChange={(checked) => onChange({ required: checked })}
-                      label="Pflichtfrage"
-                      hint={getRequiredHint(field)}
-                      disabled={disabled}
-                    />
+                    {field.target === "student.health_info" ? (
+                      // Health information is voluntary (Art. 7 Abs. 4
+                      // DSGVO); the backend saves it as optional (#2787).
+                      <CheckboxCard
+                        checked={false}
+                        onChange={() => undefined}
+                        label="Pflichtfrage"
+                        hint="Gesundheitsangaben sind immer freiwillig. Wer etwas einträgt, setzt dazu das Häkchen bei der Einwilligung für Gesundheitsangaben. moto zeigt sie im Formular automatisch an."
+                        disabled
+                      />
+                    ) : (
+                      <CheckboxCard
+                        checked={Boolean(field.required)}
+                        onChange={(checked) => onChange({ required: checked })}
+                        label="Pflichtfrage"
+                        hint={getRequiredHint(field)}
+                        disabled={disabled}
+                      />
+                    )}
                     <CheckboxCard
                       checked={Boolean(field.applies_to_child)}
                       onChange={(checked) =>
@@ -843,7 +855,7 @@ export function FieldEditorRow({
                       label="Pro Kind abfragen"
                       hint={
                         canAskPerChild(field)
-                          ? "Für Fragen zum Kind, etwa zu Allergien oder zum Schwimmen. Die Frage erscheint dann für jedes angemeldete Kind."
+                          ? "Für Fragen zum Kind, etwa zum Schwimmen oder zum Mittagessen. Die Frage erscheint dann für jedes angemeldete Kind."
                           : "Dateien gelten immer für die ganze Anmeldung."
                       }
                       disabled={
