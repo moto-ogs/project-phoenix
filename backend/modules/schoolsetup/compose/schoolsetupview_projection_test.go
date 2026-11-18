@@ -54,7 +54,7 @@ func TestProgressReportsTheSchoolsOwnData(t *testing.T) {
 
 	admin := testpkg.CreateTestAccount(t, db, "setup-admin")
 	role := testpkg.CreateTestRole(t, db, "setup-staff")
-	testpkg.CreateTestInvitationToken(t, db, "setup-staff", role.ID, admin.ID, time.Now().Add(48*time.Hour))
+	testpkg.CreateTestInvitationToken(t, db, "setup-staff", role.ID, admin.ID, testpkg.DatabaseNow(t, db).Add(48*time.Hour))
 	testpkg.CreateTestRoom(t, db, "Setup Raum")
 	testpkg.CreateTestEducationGroup(t, db, "Setup Gruppe")
 	testpkg.CreateTestStudent(t, db, "Setup", "Kind", "1a")
@@ -83,7 +83,7 @@ func TestProgressIgnoresRowsTheSchoolDidNotCreate(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 
 	role := testpkg.CreateTestRole(t, db, "setup-first-admin")
-	testpkg.CreateTestInvitationToken(t, db, "setup-first-admin", role.ID, 0, time.Now().Add(48*time.Hour))
+	testpkg.CreateTestInvitationToken(t, db, "setup-first-admin", role.ID, 0, testpkg.DatabaseNow(t, db).Add(48*time.Hour))
 	room := testpkg.CreateTestRoom(t, db, "Schulhof")
 	_, err := db.NewUpdate().
 		TableExpr("facilities.rooms").
