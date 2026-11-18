@@ -534,6 +534,11 @@ export function OverflowMenu({
                       <p className="text-xs font-semibold tracking-wider text-gray-500 uppercase">
                         {entry.label}
                       </p>
+                      {entry.description ? (
+                        <p className="mt-0.5 text-xs text-gray-500">
+                          {entry.description}
+                        </p>
+                      ) : null}
                     </div>
                   );
                 }
