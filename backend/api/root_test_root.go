@@ -136,7 +136,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return
 		},
 		func() (err error) {
-			objects, err = nativeUploads.PrivateUploadsBackend()
+			objects, err = nativeUploads.SealedPrivateUploadsBackend(nativeUploads.FileKeys{})
 			return owners.StepError("resolve uploads backend", err)
 		},
 		func() (err error) { audit, err = owners.BuildAuditOwner(db, env); return },

@@ -86,7 +86,7 @@ func newLocalePushFixtureFor(t *testing.T, locales []string, perLocale int, sche
 	require.NoError(t, err)
 	notifier, err := api.NewDeliveryTestPushNotifier(database, unit, settings.Settings, delivery)
 	require.NoError(t, err)
-	uploads, err := objects.PrivateUploadsBackend()
+	uploads, err := objects.SealedPrivateUploadsBackend(objects.FileKeys{})
 	require.NoError(t, err)
 	files, _, err := api.NewFileStoreTestModule(database, unit, uploads)
 	require.NoError(t, err)
