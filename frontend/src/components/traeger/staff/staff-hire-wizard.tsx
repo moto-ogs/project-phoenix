@@ -80,6 +80,14 @@ const logger = createLogger({ component: "TraegerStaffHireWizard" });
 const PERSONAL = "/traeger/personal";
 const CHECK_FIELDS = "Bitte prüfe die markierten Felder.";
 
+/** Ein Satz je Schritt, unter dem Stepper der Schritt-Karte. */
+const HIRE_STEP_DESCRIPTIONS = [
+  "Diese Angaben stehen danach in der Personalakte.",
+  "Art und Laufzeit. Die Stunden trägst du im nächsten Schritt je Schule ein.",
+  "An jeder gewählten Schule legt moto die Person an. Dort kann die Schule sie danach planen.",
+  "Stimmt alles? Mit „Zurück“ änderst du eine Angabe.",
+] as const;
+
 interface School {
   readonly id: string;
   readonly name: string;
@@ -100,12 +108,10 @@ function PersonStep({
   onChange: Change;
 }>) {
   return (
-    <SectionCard
-      title="Person"
-      description="Diese Angaben stehen danach in der Personalakte."
-    >
+    <>
       <div className="grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
         <Input
+          controlSize="compact"
           id="hire-first-name"
           name="first_name"
           label="Vorname"
@@ -117,6 +123,7 @@ function PersonStep({
           onChange={(event) => onChange({ firstName: event.target.value })}
         />
         <Input
+          controlSize="compact"
           id="hire-last-name"
           name="last_name"
           label="Nachname"
@@ -139,10 +146,11 @@ function PersonStep({
           defaultMonth="1990-01-01"
           monthYearNavigation
           calendarLayout="popover"
-          controlSize="large"
+          controlSize="compact"
           onChange={(birthday) => onChange({ birthday })}
         />
         <Input
+          controlSize="compact"
           id="hire-personnel-number"
           name="personnel_number"
           label="Personalnummer"
@@ -157,6 +165,7 @@ function PersonStep({
           }
         />
         <Input
+          controlSize="compact"
           id="hire-email"
           name="email"
           type="email"
@@ -168,6 +177,7 @@ function PersonStep({
           onChange={(event) => onChange({ email: event.target.value })}
         />
         <Input
+          controlSize="compact"
           id="hire-phone"
           name="phone"
           type="tel"
@@ -178,7 +188,7 @@ function PersonStep({
           onChange={(event) => onChange({ phone: event.target.value })}
         />
       </div>
-    </SectionCard>
+    </>
   );
 }
 
@@ -192,10 +202,7 @@ function ContractStep({
   onChange: Change;
 }>) {
   return (
-    <SectionCard
-      title="Arbeitsvertrag"
-      description="Art und Laufzeit. Die Stunden trägst du im nächsten Schritt je Schule ein."
-    >
+    <>
       <div className="max-w-3xl space-y-5">
         <KindChoice
           value={draft.kind}
@@ -211,7 +218,7 @@ function ContractStep({
             error={fieldError("starts_on")}
             value={draft.startsOn}
             calendarLayout="popover"
-            controlSize="large"
+            controlSize="compact"
             onChange={(startsOn) => onChange({ startsOn })}
           />
           <ISODatePicker
@@ -225,12 +232,12 @@ function ContractStep({
             min={draft.startsOn || undefined}
             defaultMonth={draft.startsOn || undefined}
             calendarLayout="popover"
-            controlSize="large"
+            controlSize="compact"
             onChange={(endsOn) => onChange({ endsOn })}
           />
         </div>
       </div>
-    </SectionCard>
+    </>
   );
 }
 
@@ -257,10 +264,7 @@ function SitesStep({
     });
   const total = hireWeekMinutes(draft);
   return (
-    <SectionCard
-      title="Einsatzorte"
-      description="An jeder gewählten Schule legt moto die Person an. Dort kann die Schule sie danach planen."
-    >
+    <>
       <div className="max-w-3xl space-y-5">
         <FormFieldset legend="An welchen Schulen arbeitet die Person?" required>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -313,7 +317,7 @@ function SitesStep({
         ) : null}
         <FieldErrorHint id="hire-sites-error" message={error} />
       </div>
-    </SectionCard>
+    </>
   );
 }
 
@@ -322,10 +326,7 @@ function ReviewStep({ draft }: Readonly<{ draft: HireDraft }>) {
     ? `${formatDate(draft.startsOn)} bis ${formatDate(draft.endsOn)}`
     : `ab ${formatDate(draft.startsOn)}, unbefristet`;
   return (
-    <SectionCard
-      title="Prüfen"
-      description="Stimmt alles? Mit „Zurück“ änderst du eine Angabe."
-    >
+    <>
       <div className="max-w-3xl space-y-5">
         <DataGrid>
           <DataField label="Name">
@@ -360,7 +361,7 @@ function ReviewStep({ draft }: Readonly<{ draft: HireDraft }>) {
           message="moto legt die Akte und den Arbeitsvertrag an. An jeder Schule entsteht die Person. Zugang, Transponder und Rolle richtet danach die Schule ein."
         />
       </div>
-    </SectionCard>
+    </>
   );
 }
 
@@ -798,7 +799,7 @@ export function StaffHireWizard({
 
   if (incomplete) {
     return (
-      <div ref={stepRef} className="flex flex-col gap-6">
+      <div ref={stepRef} className="flex flex-col">
         <IncompleteCard
           name={`${draft.firstName.trim()} ${draft.lastName.trim()}`}
           incomplete={incomplete}
@@ -810,7 +811,7 @@ export function StaffHireWizard({
 
   if (hired) {
     return (
-      <div ref={stepRef} className="flex flex-col gap-6">
+      <div ref={stepRef} className="flex flex-col">
         <HiredCard record={hired} onRestart={restart} from={from} />
       </div>
     );
@@ -822,44 +823,56 @@ export function StaffHireWizard({
         ref={formRef}
         noValidate
         onSubmit={submit}
-        className="flex flex-col gap-6"
+        className="flex flex-col"
       >
-        <SectionCard>
-          <WizardStepper steps={HIRE_STEPS} current={step} labeled />
+        {/* Eine Karte je Schritt: oben der Stepper, unten Zurück und
+            Weiter (#7415). Der Name des Schritts steht im Stepper; die
+            unsichtbare Überschrift nimmt beim Wechsel den Fokus. */}
+        <SectionCard
+          footer={
+            <StepActions
+              step={step}
+              saving={saving}
+              onBack={back}
+              cancelHref={staffOverviewHref(from)}
+            />
+          }
+        >
+          <div ref={stepRef} className="space-y-5">
+            <div className="space-y-4">
+              <WizardStepper steps={HIRE_STEPS} current={step} labeled />
+              <h2 className="sr-only">{HIRE_STEPS[step]}</h2>
+              <p className="text-sm text-gray-600">
+                {HIRE_STEP_DESCRIPTIONS[step]}
+              </p>
+            </div>
+            <FormErrorAlert message={errors.error} />
+            {step === 0 ? (
+              <PersonStep
+                draft={draft}
+                today={today}
+                fieldError={errors.fieldError}
+                onChange={change}
+              />
+            ) : null}
+            {step === 1 ? (
+              <ContractStep
+                draft={draft}
+                fieldError={errors.fieldError}
+                onChange={change}
+              />
+            ) : null}
+            {step === 2 ? (
+              <SitesStep
+                draft={draft}
+                schools={schools}
+                error={errors.fieldError("sites")}
+                onChange={change}
+              />
+            ) : null}
+            {step === HIRE_REVIEW_STEP ? <ReviewStep draft={draft} /> : null}
+          </div>
         </SectionCard>
-        <FormErrorAlert message={errors.error} />
-        <div ref={stepRef} className="flex flex-col gap-6">
-          {step === 0 ? (
-            <PersonStep
-              draft={draft}
-              today={today}
-              fieldError={errors.fieldError}
-              onChange={change}
-            />
-          ) : null}
-          {step === 1 ? (
-            <ContractStep
-              draft={draft}
-              fieldError={errors.fieldError}
-              onChange={change}
-            />
-          ) : null}
-          {step === 2 ? (
-            <SitesStep
-              draft={draft}
-              schools={schools}
-              error={errors.fieldError("sites")}
-              onChange={change}
-            />
-          ) : null}
-          {step === HIRE_REVIEW_STEP ? <ReviewStep draft={draft} /> : null}
-        </div>
-        <StepActions
-          step={step}
-          saving={saving}
-          onBack={back}
-          cancelHref={staffOverviewHref(from)}
-        />
       </form>
       <ConfirmationModal
         isOpen={matches !== null}

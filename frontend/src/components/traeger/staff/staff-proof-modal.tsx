@@ -167,6 +167,7 @@ export function StaffProofModal({
           ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <ISODatePicker
+              controlSize="compact"
               id="presented_on"
               monthYearNavigation
               name="presented_on"
@@ -179,6 +180,7 @@ export function StaffProofModal({
             />
             {police ? (
               <ISODatePicker
+                controlSize="compact"
                 id="issued_on"
                 monthYearNavigation
                 name="issued_on"
@@ -192,6 +194,7 @@ export function StaffProofModal({
               />
             ) : null}
             <ISODatePicker
+              controlSize="compact"
               id="expires_on"
               monthYearNavigation
               name="expires_on"

@@ -7,7 +7,6 @@
 // deshalb, wie jede Schule sie führt.
 
 import {
-  LockKeyIcon,
   PencilSimpleIcon,
   PlusIcon,
   ProhibitIcon,
@@ -25,10 +24,10 @@ import {
   absenceTypeSummary,
   schoolDeviationBadge,
 } from "~/components/traeger/staff/absence-type-format";
+import { StaffNotReleasedPage } from "~/components/traeger/staff/staff-not-released-page";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Button } from "~/components/ui/button";
 import { EditActions } from "~/components/ui/edit-actions";
-import { EmptyState } from "~/components/ui/empty-state";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { FormModal } from "~/components/ui/form-modal";
 import { FramedList } from "~/components/ui/framed-list";
@@ -226,14 +225,14 @@ function AbsenceTypeCard({
               type="button"
               variant="outline"
               className="gap-2"
-              tooltip="Öffnet die Felder dieser Art zum Ändern."
+              tooltip="Öffnet die Felder dieser Art zum Bearbeiten."
               onClick={() => {
                 errors.clear();
                 setDraft(draftOf(type));
               }}
             >
               <PencilSimpleIcon className="h-4 w-4" aria-hidden="true" />
-              Ändern
+              Bearbeiten
             </Button>
             <OverflowMenu
               ariaLabel={`Weitere Aktionen zu ${type.name}`}
@@ -320,8 +319,8 @@ function AbsenceTypeCard({
           </FramedList>
           {carried < type.schools.length ? (
             <p className="mt-2 text-sm text-gray-600">
-              Wähle „Ändern“ und „Speichern“. Dann trägt moto die Art auch in
-              die übrigen Schulen.
+              Wähle „Bearbeiten“ und „Speichern“. Dann trägt moto die Art auch
+              in die übrigen Schulen.
             </p>
           ) : null}
         </div>
@@ -375,12 +374,21 @@ export default function TraegerAbsenceTypesPage() {
   );
   const released = list?.released ?? false;
 
+  if (list && !released) {
+    return (
+      <StaffNotReleasedPage
+        title="Abwesenheitsarten"
+        description="Bis zur Freischaltung legt jede Schule ihre Abwesenheitsarten selbst an."
+      />
+    );
+  }
+
   return (
     <TenantPage
       title="Abwesenheitsarten"
       info={INFO}
       stats={
-        list && released ? (
+        list ? (
           <TenantPageStats
             items={[
               {
@@ -400,7 +408,7 @@ export default function TraegerAbsenceTypesPage() {
       error={error}
       loading={loading}
       actions={
-        released ? (
+        list ? (
           <Button
             type="button"
             size="md"
@@ -410,9 +418,18 @@ export default function TraegerAbsenceTypesPage() {
             onClick={() => setCreating(true)}
           >
             <PlusIcon className="h-4 w-4" aria-hidden="true" />
-            Abwesenheitsart
+            Abwesenheitsart anlegen
           </Button>
         ) : undefined
+      }
+      empty={
+        list && list.types.length === 0
+          ? {
+              title: "Noch keine eigene Abwesenheitsart.",
+              description:
+                "Lege oben eine Art an, zum Beispiel Regenerationstag. Hat eine Schule schon eine eigene Art mit demselben Namen, wird sie Teil deiner Art, mit allen Buchungen.",
+            }
+          : undefined
       }
       overlays={
         <CreateAbsenceTypeModal
@@ -428,28 +445,9 @@ export default function TraegerAbsenceTypesPage() {
         />
       }
     >
-      {list && !released ? (
-        <SectionCard>
-          <EmptyState
-            icon={<LockKeyIcon className="h-12 w-12" aria-hidden="true" />}
-            title="Personal beim Träger ist noch nicht freigeschaltet."
-            description="Das moto-Team schaltet es frei. Bis dahin legt jede Schule ihre Abwesenheitsarten selbst an."
-          />
-        </SectionCard>
-      ) : null}
-
-      {list && released && list.types.length === 0 ? (
-        <SectionCard>
-          <EmptyState
-            title="Noch keine eigene Abwesenheitsart."
-            description="Lege oben eine Art an, zum Beispiel Regenerationstag. Hat eine Schule schon eine eigene Art mit demselben Namen, wird sie Teil deiner Art, mit allen Buchungen."
-          />
-        </SectionCard>
-      ) : null}
-
       {/* Equal absence type cards in a grid: grids do not grow (TenantPage
           body rule), so the last type keeps its height like its siblings. */}
-      {list && released && list.types.length > 0 ? (
+      {list && list.types.length > 0 ? (
         <div className="compact:gap-4 grid gap-6 max-sm:gap-3">
           {list.types.map((type) => (
             <AbsenceTypeCard

@@ -26,7 +26,23 @@ vi.mock("~/components/ui/date-picker", async () =>
   (await import("~/test/mocks/date-picker")).datePickerModuleMock(),
 );
 vi.mock("~/components/ui/tenant-page", () => ({
-  TenantPage: ({ children }: { children: ReactNode }) => <>{children}</>,
+  TenantPage: ({
+    children,
+    empty,
+  }: {
+    children: ReactNode;
+    empty?: { title: string; description: string };
+  }) => (
+    <>
+      {empty ? (
+        <>
+          <p>{empty.title}</p>
+          <p>{empty.description}</p>
+        </>
+      ) : null}
+      {children}
+    </>
+  ),
 }));
 
 const OVERVIEW: StaffOverview = {
@@ -95,9 +111,13 @@ describe("TraegerStaffHirePage", () => {
   it("explains the release where the Träger is not released yet", async () => {
     api.fetchStaffOverview.mockResolvedValue({ ...OVERVIEW, release: null });
     renderPage();
+    // #7415: die Bauart „Funktion nicht eingeschaltet“ mit dem Satz der Seite.
     expect(
-      await screen.findByText(
-        "Personal beim Träger ist noch nicht freigeschaltet.",
+      await screen.findByText("Diese Funktion ist nicht eingeschaltet"),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        /Bis zur Freischaltung legt jede Schule ihr Personal selbst an\. Das moto-Team schaltet/,
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Weiter" })).toBeNull();

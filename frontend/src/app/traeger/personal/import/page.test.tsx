@@ -31,14 +31,22 @@ vi.mock("~/components/ui/tenant-page", () => ({
     actions,
     backHref,
     backLabel,
+    empty,
   }: {
     children: ReactNode;
     actions?: ReactNode;
     backHref?: string;
     backLabel?: string;
+    empty?: { title: string; description: string };
   }) => (
     <>
       <a href={backHref}>{backLabel}</a>
+      {empty ? (
+        <>
+          <p>{empty.title}</p>
+          <p>{empty.description}</p>
+        </>
+      ) : null}
       {actions}
       {children}
     </>
@@ -277,9 +285,17 @@ describe("TraegerStaffImportPage", () => {
       </TraegerResourceTestProvider>,
     );
 
-    await screen.findByText(
-      "Personal beim Träger ist noch nicht freigeschaltet.",
-    );
+    // #7415: die Bauart „Funktion nicht eingeschaltet“ mit dem Satz der Seite.
+
+    expect(
+      await screen.findByText("Diese Funktion ist nicht eingeschaltet"),
+    ).toBeVisible();
+
+    expect(
+      screen.getByText(
+        /Bis zur Freischaltung legt jede Schule ihr Personal selbst an\. Das moto-Team schaltet/,
+      ),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Beispieldatei" }),
     ).not.toBeInTheDocument();

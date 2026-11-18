@@ -62,7 +62,7 @@ export function traegerPayrollExportTopic(): HelpTopic {
     ],
     differences: [
       "Statt der Zahlen steht `In diesem Monat gilt kein Arbeitsvertrag des Trägers`: Für den Monat gibt es keine Lohndatei des Trägers.",
-      "`Personal beim Träger ist noch nicht freigeschaltet`: Das moto-Team schaltet es frei. Bis dahin rechnet jede Schule selbst ab.",
+      "Die Seite zeigt `Diese Funktion ist nicht eingeschaltet`: Personal beim Träger ist noch nicht freigeschaltet. Das moto-Team schaltet es frei. Bis dahin rechnet jede Schule selbst ab.",
     ],
     troubleshootingDetails: [
       "`Herunterladen` ist grau: Unter `Das fehlt noch` steht, was zuerst erledigt sein muss.",

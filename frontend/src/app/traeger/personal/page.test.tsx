@@ -1,4 +1,11 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { ApiError } from "~/lib/api-error";
@@ -119,6 +126,14 @@ function renderPage() {
   );
 }
 
+/** „Personal importieren“ steht im Drei-Punkte-Menü des Kopfes (#7415). */
+function importEntry() {
+  // Die Suchzeile trägt das Menü je Breite einmal; das erste genügt.
+  const [menu] = screen.getAllByRole("button", { name: "Weitere Aktionen" });
+  fireEvent.click(menu!);
+  return screen.getByRole("menuitem", { name: /Personal importieren/ });
+}
+
 describe("TraegerStaffRecordsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -138,12 +153,20 @@ describe("TraegerStaffRecordsPage", () => {
       suggestions: [],
     });
     renderPage();
+    // #7415: die Bauart „Funktion nicht eingeschaltet“ mit dem Satz der
+    // Seite und der Bedingung für die Freischaltung.
     expect(
-      await screen.findByText(
-        "Personal beim Träger ist noch nicht freigeschaltet.",
+      await screen.findByText("Diese Funktion ist nicht eingeschaltet"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Bis zur Freischaltung führt jede Schule ihr Personal selbst\. Das moto-Team schaltet Personal beim Träger frei/,
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: /Vorschläge/ })).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: /Person einstellen/ }),
+    ).toBeNull();
   });
 
   it("opens a proposal, asks for the differing value and links the record", async () => {
@@ -153,7 +176,10 @@ describe("TraegerStaffRecordsPage", () => {
       {},
       { timeout: 3000 },
     );
-    expect(screen.getByText("Vorschläge zum Verknüpfen")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Vorschläge/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     const row = proposal.closest("tr");
     expect(row).not.toBeNull();
     fireEvent.click(row!);
@@ -231,9 +257,10 @@ describe("TraegerStaffRecordsPage", () => {
     expect(
       screen.getByRole("link", { name: /Person einstellen/ }),
     ).toHaveAttribute("href", "/personal/einstellen?from=ohne-akte");
-    expect(
-      screen.getByRole("link", { name: /Personal importieren/ }),
-    ).toHaveAttribute("href", "/personal/import?from=ohne-akte");
+    expect(importEntry()).toHaveAttribute(
+      "href",
+      "/personal/import?from=ohne-akte",
+    );
   });
 
   // #7378: „Akte anlegen“ in der Rückfrage beim Einstellen öffnet den
@@ -313,13 +340,18 @@ describe("TraegerStaffRecordsPage", () => {
 
   it("hands the default suggestions tab to its sub pages", async () => {
     renderPage();
-    await screen.findByText("Vorschläge zum Verknüpfen");
+    await screen.findByText("Gleiches Konto");
+    expect(screen.getByRole("tab", { name: /Vorschläge/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     expect(
       screen.getByRole("link", { name: /Person einstellen/ }),
     ).toHaveAttribute("href", "/personal/einstellen?from=vorschlaege");
-    expect(
-      screen.getByRole("link", { name: /Personal importieren/ }),
-    ).toHaveAttribute("href", "/personal/import?from=vorschlaege");
+    expect(importEntry()).toHaveAttribute(
+      "href",
+      "/personal/import?from=vorschlaege",
+    );
   });
 
   it("hands the default records tab to its sub pages", async () => {
@@ -344,11 +376,52 @@ describe("TraegerStaffRecordsPage", () => {
     expect(
       screen.getByRole("link", { name: /Person einstellen/ }),
     ).toHaveAttribute("href", "/personal/einstellen?from=akten");
-    expect(
-      screen.getByRole("link", { name: /Personal importieren/ }),
-    ).toHaveAttribute("href", "/personal/import?from=akten");
+    expect(importEntry()).toHaveAttribute(
+      "href",
+      "/personal/import?from=akten",
+    );
     fireEvent.click(row!);
     expect(mockPush).toHaveBeenCalledWith("/personal/5?from=akten");
+  });
+
+  // #7415: Suche nach Name oder Personalnummer, wie die Personalliste der
+  // Schule; ohne Treffer setzt der Leerzustand die Suche zurück.
+  it("finds a record by name or personnel number and resets the search", async () => {
+    address.search = "tab=akten";
+    const record = (id: string, firstName: string, lastName: string) => ({
+      id,
+      firstName,
+      lastName,
+      birthday: "",
+      personnelNumber: `7000${id}`,
+      hasFinancial: false,
+      employments: [],
+    });
+    api.fetchStaffOverview.mockResolvedValue({
+      ...OVERVIEW,
+      records: [record("5", "Mira", "Sommer"), record("6", "Lena", "Brändt")],
+    });
+    renderPage();
+    expect(await screen.findByText("Mira Sommer")).toBeInTheDocument();
+    const [search] = screen.getAllByPlaceholderText(
+      "Name oder Personalnummer suchen…",
+    );
+
+    fireEvent.change(search!, { target: { value: "brandt" } });
+    await waitFor(() => expect(screen.queryByText("Mira Sommer")).toBeNull());
+    expect(screen.getByText("Lena Brändt")).toBeInTheDocument();
+
+    fireEvent.change(search!, { target: { value: "70005" } });
+    expect(await screen.findByText("Mira Sommer")).toBeInTheDocument();
+    expect(screen.queryByText("Lena Brändt")).toBeNull();
+
+    fireEvent.change(search!, { target: { value: "xyznichts" } });
+    expect(await screen.findByText("Kein Treffer.")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Filter zurücksetzen" }),
+    );
+    expect(await screen.findByText("Mira Sommer")).toBeInTheDocument();
+    expect(screen.getByText("Lena Brändt")).toBeInTheDocument();
   });
 
   it("opens a record with the tab it came from", async () => {
@@ -377,9 +450,11 @@ describe("TraegerStaffRecordsPage", () => {
   it("ignores an unknown tab in the address and uses the default tab", async () => {
     address.search = "tab=unbekannt";
     renderPage();
-    expect(
-      await screen.findByText("Vorschläge zum Verknüpfen"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Gleiches Konto")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Vorschläge/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     expect(
       screen.getByRole("link", { name: /Person einstellen/ }),
     ).toHaveAttribute("href", "/personal/einstellen?from=vorschlaege");

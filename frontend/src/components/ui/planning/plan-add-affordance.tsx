@@ -76,3 +76,27 @@ export function PlanAddAffordance({
     </span>
   );
 }
+
+interface PlanAddButtonProps {
+  /** Vorlesbarer Name: was angelegt wird, für wen und wann. */
+  readonly label: string;
+  readonly onClick: () => void;
+}
+
+/**
+ * Die Anlege-Geste als eigener Knopf, unter den Einträgen einer gefüllten
+ * Zelle oder in der Tagesliste am Handy (`ResourceDayList`). Einsatzplanung
+ * und Vertretungspool teilen ihn (#7415).
+ */
+export function PlanAddButton({ label, onClick }: PlanAddButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className="group flex w-full rounded-md focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none"
+    >
+      <PlanAddAffordance size="inline" />
+    </button>
+  );
+}

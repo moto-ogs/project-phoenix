@@ -18,6 +18,7 @@ import {
 } from "~/components/ui/responsive-action-list";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import type { TimeReport } from "~/lib/traeger-staff-exports-api";
+import { traegerPath } from "~/lib/traeger-url";
 
 /** Die Spalten der Datei, in ihrer Reihenfolge. */
 const TIME_EXPORT_COLUMNS: readonly {
@@ -128,7 +129,9 @@ export function TimeExportPanel({
                   </p>
                   <ResponsiveRowActions>
                     <ButtonLink
-                      href={`/traeger/personal/${encodeURIComponent(person.recordId)}`}
+                      href={traegerPath(
+                        `/traeger/personal/${encodeURIComponent(person.recordId)}`,
+                      )}
                       variant="surface"
                       size="compact"
                       aria-label={`Personalakte von ${name} öffnen`}

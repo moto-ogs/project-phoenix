@@ -308,6 +308,7 @@ export function PlanShiftModal({
             />
           )}
           <ISODatePicker
+            controlSize="compact"
             label="Tag"
             value={draft.date}
             onChange={(date) => set({ date })}

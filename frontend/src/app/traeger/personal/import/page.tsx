@@ -7,11 +7,7 @@
 // Steuerdaten. Darum lässt sich dieselbe Datei wieder laden, ohne doppelte
 // Akten. Die Datei bewahrt moto nicht auf; Bankdaten erscheinen nur verdeckt.
 
-import {
-  CheckCircleIcon,
-  DownloadSimpleIcon,
-  LockKeyIcon,
-} from "@phosphor-icons/react";
+import { CheckCircleIcon, DownloadSimpleIcon } from "@phosphor-icons/react";
 import { Suspense, useCallback, useRef, useState } from "react";
 import { StaffImportLogCard } from "~/components/traeger/staff/staff-import-log-card";
 import { StaffImportMappingCard } from "~/components/traeger/staff/staff-import-mapping-card";
@@ -22,6 +18,7 @@ import {
   staffImportDoneTitle,
 } from "~/components/traeger/staff/staff-import-format";
 import { StaffImportPreviewCard } from "~/components/traeger/staff/staff-import-preview-card";
+import { StaffNotReleasedPage } from "~/components/traeger/staff/staff-not-released-page";
 import {
   staffOverviewHref,
   useStaffOverviewReturn,
@@ -33,6 +30,7 @@ import { Dropzone } from "~/components/ui/dropzone";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
+import { SectionLabel } from "~/components/ui/section-label";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { WizardStepper } from "~/components/ui/wizard-stepper";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
@@ -202,6 +200,15 @@ function StaffImportContent() {
   const error = locked ? null : loadError;
   const loading = !error && !locked && log === null;
 
+  if (locked) {
+    return (
+      <StaffNotReleasedPage
+        title="Personal importieren"
+        description="Bis zur Freischaltung legt jede Schule ihr Personal selbst an."
+      />
+    );
+  }
+
   return (
     <TenantPage
       title="Personal importieren"
@@ -212,80 +219,71 @@ function StaffImportContent() {
       error={log ? null : error}
       loading={loading}
       actions={
-        locked ? undefined : (
-          <Button
-            type="button"
-            variant="outline"
-            size="md"
-            onClick={downloadTemplate}
-            className="gap-2"
-            tooltip="Eine leere CSV-Datei mit den passenden Überschriften herunterladen."
-          >
-            <DownloadSimpleIcon className="h-4 w-4" aria-hidden="true" />
-            Beispieldatei
-          </Button>
-        )
+        <Button
+          type="button"
+          variant="outline"
+          size="md"
+          onClick={downloadTemplate}
+          className="gap-2"
+          tooltip="Eine leere CSV-Datei mit den passenden Überschriften herunterladen."
+        >
+          <DownloadSimpleIcon className="h-4 w-4" aria-hidden="true" />
+          Beispieldatei
+        </Button>
       }
     >
-      {locked ? (
-        <SectionCard>
-          <EmptyState
-            icon={<LockKeyIcon className="h-12 w-12" aria-hidden="true" />}
-            title="Personal beim Träger ist noch nicht freigeschaltet."
-            description="Das moto-Team schaltet es frei, sobald dein Träger bestätigt hat: Es gibt eine Vereinbarung mit Betriebsrat oder Mitarbeitervertretung, oder es gibt keine Vertretung. Danach kannst du hier Personal importieren."
-          />
-        </SectionCard>
-      ) : (
-        <div className="flex flex-col gap-6">
-          {done ? (
+      <>
+        {done ? (
+          <SectionCard>
+            <EmptyState
+              tone="success"
+              icon={<CheckCircleIcon aria-hidden className="size-6" />}
+              title={`Übernommen: ${staffImportDoneTitle(done.rows)}`}
+              description={staffImportDoneDescription(done.counts)}
+              action={
+                <div className="flex flex-wrap justify-center gap-3">
+                  <ButtonLink
+                    href={staffOverviewHref(from)}
+                    variant="primary"
+                    size="md"
+                    tooltip="Öffnet die Personalakten."
+                  >
+                    Zu den Personalakten
+                  </ButtonLink>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="md"
+                    onClick={restart}
+                    disabled={applying}
+                    tooltip="Startet einen neuen Import mit einer anderen Datei."
+                  >
+                    Weitere Datei laden
+                  </Button>
+                </div>
+              }
+            />
+          </SectionCard>
+        ) : (
+          <>
+            {/* Der Stepper steht oben in der Karte der Datei, die über
+                  alle Schritte stehen bleibt (#7415): keine eigene Karte für
+                  den Fortschritt. */}
             <SectionCard>
-              <EmptyState
-                tone="success"
-                icon={<CheckCircleIcon aria-hidden className="size-6" />}
-                title={`Übernommen: ${staffImportDoneTitle(done.rows)}`}
-                description={staffImportDoneDescription(done.counts)}
-                action={
-                  <div className="flex flex-wrap justify-center gap-3">
-                    <ButtonLink
-                      href={staffOverviewHref(from)}
-                      variant="primary"
-                      size="md"
-                      tooltip="Öffnet die Personalakten."
-                    >
-                      Zu den Personalakten
-                    </ButtonLink>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="md"
-                      onClick={restart}
-                      disabled={applying}
-                      tooltip="Startet einen neuen Import mit einer anderen Datei."
-                    >
-                      Weitere Datei laden
-                    </Button>
-                  </div>
-                }
-              />
-            </SectionCard>
-          ) : (
-            <>
-              <SectionCard>
+              <div className="space-y-4">
                 <WizardStepper steps={STEPS} current={step} />
-              </SectionCard>
-              {file ? (
-                <SectionCard
-                  title="Datei"
-                  description={
-                    // A long file name without spaces breaks anywhere
-                    // instead of running past the card on a phone.
-                    <span className="wrap-anywhere">
-                      {result
-                        ? `${file.name} · ${formatLabel(result)} · ${result.headers.length} Spalten${result.rows.length > 0 ? ` · ${result.rows.length} Zeilen` : ""}`
-                        : file.name}
-                    </span>
-                  }
-                  action={
+                {file ? (
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <SectionLabel as="h2">Datei</SectionLabel>
+                      {/* A long file name without spaces breaks anywhere
+                            instead of running past the card on a phone. */}
+                      <p className="mt-1 text-sm wrap-anywhere text-gray-600">
+                        {result
+                          ? `${file.name} · ${formatLabel(result)} · ${result.headers.length} Spalten${result.rows.length > 0 ? ` · ${result.rows.length} Zeilen` : ""}`
+                          : file.name}
+                      </p>
+                    </div>
                     <Button
                       type="button"
                       variant="outline"
@@ -296,82 +294,87 @@ function StaffImportContent() {
                     >
                       Andere Datei
                     </Button>
-                  }
-                />
-              ) : (
-                <SectionCard
-                  title="Datei wählen"
-                  description="Eine CSV-Datei mit einer Zeile je Person und Überschriften in der ersten Zeile. Pflicht sind Personalnummer, Vorname und Nachname."
-                >
-                  <Dropzone
-                    accept=".csv,.txt,text/csv,text/plain"
-                    legend="CSV-Datei mit Personal"
-                    label="CSV-Datei hierher ziehen"
-                    dragLabel="Datei hier loslassen"
-                    buttonLabel="Datei wählen"
-                    hint="Bis 2 MB und 5.000 Zeilen. Getrennt mit Semikolon oder Komma, zum Beispiel aus Excel oder DATEV."
-                    loading={reading}
-                    loadingLabel="Datei wird gelesen …"
-                    disabled={loading}
-                    onFile={choose}
-                  />
-                </SectionCard>
-              )}
-              {result ? (
-                <StaffImportMappingCard
-                  headers={result.headers}
-                  mapping={result.mapping}
-                  unmapped={result.unmapped}
-                  disabled={applying}
-                  onChange={remap}
-                />
-              ) : null}
-              {file && !verified ? (
-                <Alert
-                  type="info"
-                  message={
-                    reading
-                      ? "Die Datei wird geprüft …"
-                      : "Die Datei ist noch nicht geprüft. Bitte prüfe erneut."
-                  }
-                  action={
-                    reading ? undefined : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="compact"
-                        tooltip="Liest die Datei noch einmal und prüft jede Zeile."
-                        onClick={() => void read(file, result?.mapping ?? null)}
-                      >
-                        Erneut prüfen
-                      </Button>
-                    )
-                  }
-                />
-              ) : null}
-              {result && result.unmapped.length === 0 ? (
-                <StaffImportPreviewCard
-                  result={result}
-                  applying={applying}
-                  disabled={!verified}
-                  onApply={() => void apply()}
-                />
-              ) : null}
-              {result && result.unmapped.length > 0 ? (
-                <Alert
-                  type="info"
-                  message="Ordne Personalnummer, Vorname und Nachname einer Spalte zu. Dann zeigt moto die Zeilen."
-                />
-              ) : null}
-            </>
-          )}
-          {log && error ? (
-            <LoadErrorAlert error={error} />
-          ) : log ? (
-            <StaffImportLogCard entries={log} />
-          ) : null}
-        </div>
-      )}
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <SectionLabel as="h2">Datei wählen</SectionLabel>
+                      <p className="mt-1 text-sm text-gray-600">
+                        Eine CSV-Datei mit einer Zeile je Person und
+                        Überschriften in der ersten Zeile. Pflicht sind
+                        Personalnummer, Vorname und Nachname.
+                      </p>
+                    </div>
+                    <Dropzone
+                      accept=".csv,.txt,text/csv,text/plain"
+                      legend="CSV-Datei mit Personal"
+                      label="CSV-Datei hierher ziehen"
+                      dragLabel="Datei hier loslassen"
+                      buttonLabel="Datei wählen"
+                      hint="Bis 2 MB und 5.000 Zeilen. Getrennt mit Semikolon oder Komma, zum Beispiel aus Excel oder DATEV."
+                      loading={reading}
+                      loadingLabel="Datei wird gelesen …"
+                      disabled={loading}
+                      onFile={choose}
+                    />
+                  </>
+                )}
+              </div>
+            </SectionCard>
+            {result ? (
+              <StaffImportMappingCard
+                headers={result.headers}
+                mapping={result.mapping}
+                unmapped={result.unmapped}
+                disabled={applying}
+                onChange={remap}
+              />
+            ) : null}
+            {file && !verified ? (
+              <Alert
+                type="info"
+                message={
+                  reading
+                    ? "Die Datei wird geprüft …"
+                    : "Die Datei ist noch nicht geprüft. Bitte prüfe erneut."
+                }
+                action={
+                  reading ? undefined : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="compact"
+                      tooltip="Liest die Datei noch einmal und prüft jede Zeile."
+                      onClick={() => void read(file, result?.mapping ?? null)}
+                    >
+                      Erneut prüfen
+                    </Button>
+                  )
+                }
+              />
+            ) : null}
+            {result && result.unmapped.length === 0 ? (
+              <StaffImportPreviewCard
+                result={result}
+                applying={applying}
+                disabled={!verified}
+                onApply={() => void apply()}
+              />
+            ) : null}
+            {result && result.unmapped.length > 0 ? (
+              <Alert
+                type="info"
+                message="Ordne Personalnummer, Vorname und Nachname einer Spalte zu. Dann zeigt moto die Zeilen."
+              />
+            ) : null}
+          </>
+        )}
+        {log && error ? (
+          <LoadErrorAlert error={error} />
+        ) : log ? (
+          <StaffImportLogCard entries={log} />
+        ) : null}
+      </>
     </TenantPage>
   );
 }
