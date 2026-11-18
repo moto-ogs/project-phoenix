@@ -285,29 +285,26 @@ func (p *Provisioning) DeleteDevice(ctx context.Context, id int64, operatorID in
 			return err
 		}
 		if device.DeviceID == domain.WebManualDeviceID {
+			p.logRemovalRejection(device, operatorID, "rejected_protected", nil)
 			return &organizationtenancy.DeviceProtectedError{DeviceID: id, Reason: webManualDeviceReason}
 		}
 		if err := p.ensureNoActiveDeviceSession(adminCtx, device, operatorID); err != nil {
 			return err
 		}
 		if err := p.devices.DeleteDevice(adminCtx, id); err != nil {
-			if errors.Is(err, domain.ErrDeviceReferenced) {
-				return &organizationtenancy.DeviceInUseError{DeviceID: id}
-			}
 			return fmt.Errorf("DeleteDevice: %w", err)
 		}
 		return p.recordAction(adminCtx, operatorID, domain.AuditActionDelete, domain.AuditResourceDevice, &id, clientIP, map[string]any{
 			"device_id":   device.DeviceID,
 			"device_type": device.DeviceType,
 			"school_id":   device.TenantID,
-			"outcome":     "archived",
+			"outcome":     "removed",
 		})
 	})
 }
 
 // ensureNoActiveDeviceSession rejects removing a device that runs an open
-// kiosk session. The rejection rolls the administrative transaction back,
-// so it is audited in the structured log instead of the operator audit log.
+// kiosk session.
 func (p *Provisioning) ensureNoActiveDeviceSession(ctx context.Context, device domain.Device, operatorID int64) error {
 	session, err := p.presence.ActiveDeviceSession(ctx, device.TenantID, device.ID)
 	if err != nil {
@@ -316,19 +313,30 @@ func (p *Provisioning) ensureNoActiveDeviceSession(ctx context.Context, device d
 	if session == nil {
 		return nil
 	}
-	p.logger.Info("device removal",
-		slog.String("audit", "device_removal"),
-		slog.String("outcome", "rejected_active_session"),
-		slog.Int64("operator_id", operatorID),
-		slog.Int64("tenant_id", device.TenantID),
-		slog.Int64("device_row_id", device.ID),
-		slog.String("device_id", device.DeviceID),
-		slog.Int64("session_id", session.ID),
-	)
+	p.logRemovalRejection(device, operatorID, "rejected_active_session", &session.ID)
 	return &organizationtenancy.DeviceRemovalBlockedError{
 		DeviceID: device.ID, SessionID: session.ID, StartedAt: session.StartedAt,
 		ActivityName: session.ActivityName, RoomName: session.RoomName,
 	}
+}
+
+// logRemovalRejection audits a refused removal. The refusal rolls the
+// administrative transaction back, so the entry goes to the structured log,
+// where the school portal's removal outcomes also go, not to the operator
+// audit log. It carries no credential.
+func (p *Provisioning) logRemovalRejection(device domain.Device, operatorID int64, outcome string, sessionID *int64) {
+	attrs := []any{
+		slog.String("audit", "device_removal"),
+		slog.String("outcome", outcome),
+		slog.Int64("operator_id", operatorID),
+		slog.Int64("tenant_id", device.TenantID),
+		slog.Int64("device_row_id", device.ID),
+		slog.String("device_id", device.DeviceID),
+	}
+	if sessionID != nil {
+		attrs = append(attrs, slog.Int64("session_id", *sessionID))
+	}
+	p.logger.Info("device removal", attrs...)
 }
 
 // GetDeviceTransferStatus reports the transfer blockers without changing the

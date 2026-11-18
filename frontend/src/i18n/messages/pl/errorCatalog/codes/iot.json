@@ -33,5 +33,6 @@
   "student_already_active": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "student_not_present": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "wc_needs_staff": "Nie udało się przetworzyć: {object}. Spróbuj ponownie później.",
-  "wc_not_configured": "Nie udało się przetworzyć: {object}. Spróbuj ponownie później."
+  "wc_not_configured": "Nie udało się przetworzyć: {object}. Spróbuj ponownie później.",
+  "device_in_active_session": "Nie udało się zmienić: {object}. Sprawdź aktualny stan."
 }

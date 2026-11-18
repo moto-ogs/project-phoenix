@@ -1,5 +1,4 @@
 {
   "tag_scan_not_found": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
-  "tag_scan_already_resolved": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
-  "device_in_active_session": "Nie udało się zmienić: {object}. Sprawdź aktualny stan."
+  "tag_scan_already_resolved": "Nie udało się zmienić: {object}. Sprawdź aktualny stan."
 }

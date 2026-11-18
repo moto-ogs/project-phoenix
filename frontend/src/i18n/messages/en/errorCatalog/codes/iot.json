@@ -33,5 +33,6 @@
   "student_already_active": "{object} could not be changed. Please check its current status.",
   "student_not_present": "{object} could not be changed. Please check its current status.",
   "wc_needs_staff": "{object} could not be processed. Please try again later.",
-  "wc_not_configured": "{object} could not be processed. Please try again later."
+  "wc_not_configured": "{object} could not be processed. Please try again later.",
+  "device_in_active_session": "{object} could not be changed. Please check its current status."
 }

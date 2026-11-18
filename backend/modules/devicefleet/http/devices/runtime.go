@@ -40,8 +40,8 @@ type Runtime struct {
 const codeDeviceIDTaken = "iot.device_id_taken"
 
 // codeDeviceInActiveSession is the registered code of a removal an open
-// kiosk session blocks (error-registry/devices.json).
-const codeDeviceInActiveSession = "devices.device_in_active_session"
+// kiosk session blocks (error-registry/iot.json).
+const codeDeviceInActiveSession = "iot.device_in_active_session"
 
 // RemovalSession is the open kiosk session that protects a device from
 // removal: ending it first keeps the session and its visits consistent.
@@ -55,6 +55,7 @@ type RemovalSession struct {
 const (
 	RemovalOutcomeRemoved       = "removed"
 	RemovalOutcomeActiveSession = "rejected_active_session"
+	RemovalOutcomeProtected     = "rejected_protected"
 )
 
 // RemovalAudit is one removal outcome. It names the device row, never its

@@ -194,6 +194,26 @@ describe("DeleteDeviceModal", () => {
     ).toBeDisabled();
   });
 
+  it("closes as done when the device is gone before the confirmation", async () => {
+    mockGetStatus.mockRejectedValue(
+      new ApiError("not found", 404, { code: "provisioning.device_not_found" }),
+    );
+    const onClose = vi.fn();
+    const onDeleted = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <DeleteDeviceModal
+        device={makeDevice()}
+        onClose={onClose}
+        onDeleted={onDeleted}
+      />,
+    );
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(onDeleted).toHaveBeenCalledTimes(1);
+    expect(mockDeleteDevice).not.toHaveBeenCalled();
+  });
+
   it("treats a device someone already removed as done", async () => {
     mockDeleteDevice.mockRejectedValue(
       new ApiError("not found", 404, { code: "provisioning.device_not_found" }),

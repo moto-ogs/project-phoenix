@@ -213,6 +213,9 @@ func (rs *Resource) deleteDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	device, session, err := rs.removalPreflight(r, id)
+	if errors.Is(err, devicefleet.ErrAdministrationDeviceProtected) {
+		rs.runtime.AuditRemoval(r, RemovalAudit{DeviceRowID: device.ID, DeviceID: device.DeviceID, Outcome: RemovalOutcomeProtected})
+	}
 	if err != nil {
 		rs.renderError(w, r, err)
 		return
@@ -235,10 +238,10 @@ func (rs *Resource) deleteDevice(w http.ResponseWriter, r *http.Request) {
 }
 
 // removalPreflight locks the live device row and reads its open kiosk
-// session. The lock comes first: a kiosk that opens a session meanwhile
-// references the row and waits until this removal commits or rolls back.
-// An already removed device is not found, so a repeated removal changes
-// nothing and releases no second Geräteplatz.
+// session. The lock comes first: a session start locks the same row
+// (devicescanbinding lifecycleStore.Start), so a start and a removal never
+// interleave. An already removed device is not found, so a repeated removal
+// changes nothing and releases no second Geräteplatz.
 func (rs *Resource) removalPreflight(r *http.Request, id int64) (devicefleet.Device, *RemovalSession, error) {
 	device, err := rs.IoTService.Fleet().FindDeviceForUpdate(r.Context(), id)
 	if errors.Is(err, devicefleet.ErrDeviceNotFound) {
@@ -248,7 +251,7 @@ func (rs *Resource) removalPreflight(r *http.Request, id int64) (devicefleet.Dev
 		return devicefleet.Device{}, nil, err
 	}
 	if device.DeviceID == devicefleet.WebManualDeviceID {
-		return devicefleet.Device{}, nil, &devicefleet.AdministrationError{Op: "DeleteDevice", Err: devicefleet.ErrAdministrationDeviceProtected}
+		return device, nil, &devicefleet.AdministrationError{Op: "DeleteDevice", Err: devicefleet.ErrAdministrationDeviceProtected}
 	}
 	session, err := rs.runtime.ActiveSession(r.Context(), device.ID)
 	return device, session, err

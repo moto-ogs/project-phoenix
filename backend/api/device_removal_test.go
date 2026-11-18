@@ -126,7 +126,7 @@ func TestDeviceRemovalRejectsActiveSessionAndLeavesItUntouched(t *testing.T) {
 
 	require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
 	body := testutil.ParseJSONResponse(t, rr.Body.Bytes())
-	assert.Equal(t, "devices.device_in_active_session", body["code"])
+	assert.Equal(t, "iot.device_in_active_session", body["code"])
 	details, ok := body["details"].(map[string]any)
 	require.True(t, ok, rr.Body.String())
 	assert.Equal(t, fmt.Sprint(sessionID), details["session_id"])
@@ -210,4 +210,61 @@ func TestDeviceRemovalCannotReachAnotherSchool(t *testing.T) {
 
 	testutil.AssertNotFound(t, f.remove(t, foreign.ID))
 	assert.Nil(t, f.stored(t, foreign.ID).ArchivedAt, "another school's device stays live")
+}
+
+// TestSessionStartWaitsForARemovalAndFindsNoLiveDevice holds a removal's row
+// lock while a session start reads the device the way devicescanbinding's
+// lifecycle store does: the start waits for the removal and then finds no
+// live device, so no session can open on an archived device.
+func TestSessionStartWaitsForARemovalAndFindsNoLiveDevice(t *testing.T) {
+	t.Parallel()
+	f := newDeviceRemovalFixture(t)
+	device := testpkg.CreateTestDevice(t, f.db, "removal-race")
+	ctx := context.Background()
+
+	removal, err := f.db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	defer func() { _ = removal.Rollback() }()
+	_, err = removal.ExecContext(ctx, `SELECT id FROM iot.devices WHERE id = ? FOR UPDATE`, device.ID)
+	require.NoError(t, err)
+	_, err = removal.ExecContext(ctx, `UPDATE iot.devices SET archived_at = now(), api_key_hash = NULL WHERE id = ?`, device.ID)
+	require.NoError(t, err)
+
+	started := make(chan error, 1)
+	go func() {
+		tenantCtx := testpkg.TenantContext(device.TenantID)
+		started <- testpkg.WithinTenantContext(t, tenantCtx, f.db, device.TenantID, func(ctx context.Context) error {
+			_, err := f.fleet.FindDeviceForUpdate(ctx, device.ID)
+			return err
+		})
+	}()
+
+	require.Eventually(t, func() bool {
+		var waiting int
+		err := f.db.NewRaw(`SELECT count(*) FROM pg_stat_activity
+			WHERE datname = current_database() AND wait_event_type = 'Lock' AND query ILIKE '%iot.devices%FOR UPDATE%'`).Scan(ctx, &waiting)
+		return err == nil && waiting > 0
+	}, 10*time.Second, 20*time.Millisecond, "the session start waits for the removal's lock")
+	select {
+	case err := <-started:
+		t.Fatalf("the session start did not wait for the removal: %v", err)
+	default:
+	}
+
+	require.NoError(t, removal.Commit())
+	assert.ErrorIs(t, <-started, devicefleet.ErrDeviceNotFound, "after the removal the start finds no live device")
+}
+
+func TestDeviceRemovalRefusesTheSystemDeviceAndAuditsIt(t *testing.T) {
+	t.Parallel()
+	f := newDeviceRemovalFixture(t)
+	manual := testpkg.EnsureWebManualDevice(t, f.db)
+
+	rr := f.remove(t, manual.ID)
+
+	require.Equal(t, http.StatusForbidden, rr.Code, rr.Body.String())
+	assert.Nil(t, f.stored(t, manual.ID).ArchivedAt)
+	entries := auditEntries(t, f.audit)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "rejected_protected", entries[0]["outcome"])
 }

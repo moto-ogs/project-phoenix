@@ -689,7 +689,7 @@ func TestProvisioningDeleteDevice(t *testing.T) {
 		assert.Equal(t, [][2]int64{{10, 1}}, h.presence.sessionLookups, "the session is read at the device's school")
 		entry := h.onlyAudit(t, domain.AuditActionDelete, domain.AuditResourceDevice, 1)
 		assert.Equal(t, map[string]any{
-			"device_id": "BURBACH-1", "device_type": "terminal", "school_id": float64(10), "outcome": "archived",
+			"device_id": "BURBACH-1", "device_type": "terminal", "school_id": float64(10), "outcome": "removed",
 		}, auditChanges(t, entry))
 	})
 
@@ -755,15 +755,6 @@ func TestProvisioningDeleteDevice(t *testing.T) {
 				require.ErrorAs(t, err, &protected)
 				assert.Equal(t, int64(2), protected.DeviceID)
 				assert.Equal(t, "system device required for manual web check-ins", protected.Reason)
-			},
-		},
-		"referenced device is in use": {
-			seed: func(h *provisioningHarness) { h.devices.fail["DeleteDevice"] = domain.ErrDeviceReferenced },
-			id:   1,
-			check: func(t *testing.T, err error) {
-				var inUse *organizationtenancy.DeviceInUseError
-				require.ErrorAs(t, err, &inUse)
-				assert.Equal(t, int64(1), inUse.DeviceID)
 			},
 		},
 		"session lookup failure": {

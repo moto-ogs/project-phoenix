@@ -33,5 +33,6 @@
   "student_already_active": "{object} ist bereits im Raum {room_name}. Bitte prüfe den aktuellen Aufenthalt.",
   "student_not_present": "{object} konnte nicht geändert werden. Bitte prüfe den aktuellen Stand.",
   "wc_needs_staff": "{object} konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
-  "wc_not_configured": "{object} konnte nicht bearbeitet werden. Bitte versuche es später erneut."
+  "wc_not_configured": "{object} konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
+  "device_in_active_session": "Auf diesem Gerät läuft gerade eine Sitzung. Beende sie zuerst am Gerät, dann kannst du es entfernen."
 }

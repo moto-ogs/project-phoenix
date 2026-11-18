@@ -333,8 +333,6 @@ export const ERROR_CATALOG = {
         "Diese Umfrage ist schon veröffentlicht. Sie lässt sich nicht mehr ändern.",
       "communication.survey_not_open":
         "Diese Umfrage nimmt keine Antworten mehr an.",
-      "devices.device_in_active_session":
-        "Auf diesem Gerät läuft gerade eine Sitzung. Beende sie zuerst am Gerät, dann kannst du es entfernen.",
       "devices.tag_scan_already_resolved":
         "Dieser Scan ist schon erledigt. Bitte lade die Seite neu.",
       "devices.tag_scan_not_found":
@@ -864,6 +862,8 @@ export const ERROR_CATALOG = {
         "{object} weicht vom Plan ab. Bitte gib einen Grund an.",
       "iot.device_id_taken":
         "Diese Geräte-ID ist schon vergeben. Bitte gib eine andere ein.",
+      "iot.device_in_active_session":
+        "Auf diesem Gerät läuft gerade eine Sitzung. Beende sie zuerst am Gerät, dann kannst du es entfernen.",
       "iot.invalid_staff_clock_request":
         "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
       "iot.invalid_staff_clock_state":

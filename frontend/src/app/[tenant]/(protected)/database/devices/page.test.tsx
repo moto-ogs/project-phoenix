@@ -669,7 +669,7 @@ describe("DevicesPage", () => {
     setSelectedDevice("1");
     mockRemove.mockRejectedValueOnce(
       new ApiError("active session", 409, {
-        code: "devices.device_in_active_session",
+        code: "iot.device_in_active_session",
       }),
     );
 

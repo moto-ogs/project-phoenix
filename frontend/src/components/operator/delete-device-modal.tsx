@@ -1,11 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import type {
-  DeviceTransferStatus,
-  OperatorDevice,
-} from "~/lib/operator/provisioning-helpers";
+import type { OperatorDevice } from "~/lib/operator/provisioning-helpers";
+import { formatDeviceSessionMessage } from "~/lib/operator/device-session-message";
 import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
@@ -31,21 +29,6 @@ interface DeleteDeviceModalProps {
   onDeleted: RefreshAfterWrite;
 }
 
-function formatTimestamp(value: string): string {
-  return new Intl.DateTimeFormat("de-DE", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
-function formatSessionMessage(
-  session: NonNullable<DeviceTransferStatus["activeSession"]>,
-): string {
-  const activity = session.activityName ? ` · ${session.activityName}` : "";
-  const room = session.roomName ? ` · ${session.roomName}` : "";
-  return `Offene Sitzung seit ${formatTimestamp(session.startedAt)}${activity}${room}. Beende die Sitzung, bevor du das Gerät entfernst.`;
-}
-
 /**
  * The removal preflight reuses the transfer status: it already names the
  * open session and the protected system device, the two states that block a
@@ -66,10 +49,14 @@ function useDeviceRemovalStatus(device: OperatorDevice | null) {
   const refresh = useCallback(async () => {
     await mutate();
   }, [mutate]);
+  // A device someone removed meanwhile answers the preflight with 404:
+  // that is the finished removal, not a load failure.
+  const alreadyRemoved = isDeviceAlreadyRemoved(error);
   return {
     status: error ? null : (data ?? null),
     statusLoading: isValidating,
-    statusError,
+    statusError: alreadyRemoved ? null : statusError,
+    alreadyRemoved,
     refresh,
   };
 }
@@ -83,13 +70,21 @@ export function DeleteDeviceModal({
   const { success: toastSuccess } = useToast();
   const deleteErrors = useApiFormError();
   const { show: showError, clear: clearError } = deleteErrors;
-  const { status, statusLoading, statusError, refresh } =
+  const { status, statusLoading, statusError, alreadyRemoved, refresh } =
     useDeviceRemovalStatus(device);
 
   const handleClose = useCallback(() => {
     clearError();
     onClose();
   }, [onClose, clearError]);
+
+  // Opened from a stale list: the device is gone, so the removal is done.
+  useEffect(() => {
+    if (!device || !alreadyRemoved) return;
+    toastSuccess(`${device.name || device.deviceId} war schon entfernt.`);
+    onClose();
+    void onDeleted();
+  }, [alreadyRemoved, device, onClose, onDeleted, toastSuccess]);
 
   const handleDelete = useCallback(async () => {
     if (!device) return;
@@ -134,7 +129,10 @@ export function DeleteDeviceModal({
       {blockingSession ? (
         <Alert
           type="warning"
-          message={formatSessionMessage(blockingSession)}
+          message={formatDeviceSessionMessage(
+            blockingSession,
+            "Beende die Sitzung, bevor du das Gerät entfernst.",
+          )}
           action={
             <Button
               type="button"
@@ -174,7 +172,7 @@ export function DeleteDeviceModal({
       gate={{ mode: "twoStep", firstStepLabel: "Ja, entfernen" }}
       confirmDisabled={statusLoading || blocked}
       confirmLabel="Gerät entfernen"
-      confirmTooltip="Entfernt das Gerät sofort; Historie und Audit bleiben."
+      confirmTooltip="Entfernt das Gerät sofort. Bisherige Anwesenheiten bleiben."
       loadingLabel="Wird entfernt…"
       onConfirm={handleDelete}
       onClose={handleClose}
