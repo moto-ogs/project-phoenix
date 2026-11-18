@@ -92,4 +92,4 @@ const (
 // payment text of a document the family pays by transfer. On by default;
 // letters already stored keep what they print. Only the Träger sets it
 // (LevelTraeger).
-const KeyParentBillingPrintTransferQR = "parent_billing.transfer_code"
+const KeyParentBillingPrintTransferQR = "parent_billing.print_transfer_qr"

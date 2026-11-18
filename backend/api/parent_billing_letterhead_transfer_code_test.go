@@ -1,5 +1,5 @@
 // Tests of the letterhead's GiroCode switch (#5624): the letterhead
-// reads parent_billing.transfer_code of the Träger and leaves the code off
+// reads parent_billing.print_transfer_qr of the Träger and leaves the code off
 // when it is false; a failed read refuses the letterhead instead of
 // printing either way.
 package api
@@ -127,6 +127,11 @@ func TestTransferCodeSwitchResolvesPerTraeger(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, map[string]any{"value": false})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.False(t, read(f.office.organization), "the office switched the code off")
+	var logged []bool
+	require.NoError(t, f.db.NewRaw(`SELECT (new_value)::boolean FROM config.traeger_setting_audit
+		WHERE organization_id = ? AND setting_key = ? AND action = 'set' ORDER BY id`,
+		f.office.organization, configModels.KeyParentBillingPrintTransferQR).Scan(context.Background(), &logged))
+	assert.Equal(t, []bool{false}, logged, "the switch stands once in the change log of the Träger")
 	assert.True(t, read(foreign.organization), "another Träger keeps printing it")
 
 	_, _, err = settings.TraegerTextsAndBools(ctx, f.office.organization, nil, []string{configModels.KeyBrandingFooterText})

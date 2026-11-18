@@ -40,7 +40,7 @@ export function traegerBriefkopfTopic(): HelpTopic {
           "Der QR-Code steht auf Rechnung, Gebührenbescheid und Bestätigungsschreiben, wenn die Familie überweist. Er ist von Anfang an eingeschaltet.",
         steps: [
           "Wählen Sie in den Einstellungen `Briefkopf und Vorlagen`.",
-          "Schalten Sie bei `QR-Code zum Überweisen drucken` den Schalter aus oder ein.",
+          "Schalten Sie bei `GiroCode drucken` den Schalter aus oder ein. Der GiroCode ist der QR-Code zum Überweisen.",
           "moto speichert die Änderung sofort. Sie gilt für alle Schreiben, die Sie danach erstellen.",
         ],
       },
