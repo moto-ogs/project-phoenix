@@ -33,6 +33,27 @@ var routesNoRouterTestAnswers = map[string]string{
 	"POST /school/parent-letters/letter-preview":                     "no test answers the route",
 	"POST /school/supervisions/{id}/complete":                        "only the staff portal's route is tested",
 	"POST /school/supervisions/{id}/students/{student_id}/check-out": "only the staff portal's route is tested",
+	"DELETE /api/notifications/preferences/":                         "only a relative test router answers it; the staff and school portals share the pattern",
+	"DELETE /api/parent-announcements/{announcementId}":              "only a relative test router answers it; the staff and school portals share the pattern",
+	"DELETE /school/notifications/preferences/":                      "only a relative test router answers it; the staff and school portals share the pattern",
+	"DELETE /school/parent-letters/{announcementId}":                 "only a relative test router answers it; the staff and school portals share the pattern",
+	"GET /api/parent-announcements/{announcementId}/stats":           "only a relative test router answers it; the staff and school portals share the pattern",
+	"GET /api/staff-messages/unread-count":                           "only a relative test router answers it; the staff and school portals share the pattern",
+	"GET /school/parent-letters/":                                    "only the staff portal's route is tested",
+	"GET /school/parent-letters/{announcementId}/stats":              "only a relative test router answers it; the staff and school portals share the pattern",
+	"GET /school/staff-messages/unread-count":                        "only a relative test router answers it; the staff and school portals share the pattern",
+	"POST /api/notifications/test":                                   "only a relative test router answers it; the staff and school portals share the pattern",
+	"POST /api/parent-announcements/{announcementId}/resend-failed":  "only a relative test router answers it; the staff and school portals share the pattern",
+	"POST /api/staff-messages/threads/{threadID}/leave":              "only a relative test router answers it; the staff and school portals share the pattern",
+	"POST /school/notifications/test":                                "only a relative test router answers it; the staff and school portals share the pattern",
+	"POST /school/parent-letters/":                                   "only the staff portal's route is tested",
+	"POST /school/parent-letters/{announcementId}/publish":           "only the staff portal's route is tested",
+	"POST /school/parent-letters/{announcementId}/remind":            "only the staff portal's route is tested",
+	"POST /school/parent-letters/{announcementId}/resend-failed":     "only a relative test router answers it; the staff and school portals share the pattern",
+	"POST /school/parent-letters/{announcementId}/unpublish":         "only the staff portal's route is tested",
+	"POST /school/staff-messages/threads/{threadID}/leave":           "only a relative test router answers it; the staff and school portals share the pattern",
+	"PUT /api/notifications/preferences/{type}":                      "only a relative test router answers it; the staff and school portals share the pattern",
+	"PUT /school/notifications/preferences/{type}":                   "only a relative test router answers it; the staff and school portals share the pattern",
 }
 
 // The answer check writes the key of every registered route a test identified
@@ -41,7 +62,7 @@ var routesNoRouterTestAnswers = map[string]string{
 // file against the register above:
 //
 //	cd backend && rm -f /tmp/answers.txt
-//	CONTRACT_ANSWERS_FILE=/tmp/answers.txt ../scripts/run-go-toolchain.sh ../scripts/test-backend.sh -count=1
+//	CONTRACT_ANSWERS_FILE=/tmp/answers.txt ../scripts/run-go-toolchain.sh ../scripts/test-backend.sh -count=1 ./...
 //	CONTRACT_ANSWERS_CHECK=1 CONTRACT_ANSWERS_FILE=/tmp/answers.txt ../scripts/run-go-toolchain.sh go test -tags=testhooks ./api -run TestEveryRegisteredRouteIsAnsweredInATest -count=1
 //
 // Collection never reads the file while other packages may still write it.
