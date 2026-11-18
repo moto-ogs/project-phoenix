@@ -15,6 +15,7 @@ import {
   useMemo,
   useCallback,
   useRef,
+  type ReactNode,
 } from "react";
 import { useSession } from "next-auth/react";
 import { hasSessionAccess } from "~/lib/session-access";
@@ -27,7 +28,7 @@ import { CollectionGrid } from "~/components/ui/collection-grid";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { OGS_GROUPS_LABEL } from "~/lib/ogs-groups-navigation";
 import {
   OverflowMenu,
@@ -1392,12 +1393,24 @@ function OGSGroupPageContent() {
 
   // Statuszeile aus den bereits geladenen Gruppendaten. Der Gruppenname
   // steht im Titel und wiederholt sich hier nicht.
-  let groupStats: string | null = "Keine Gruppe zugeordnet";
+  let groupStats: ReactNode = "Keine Gruppe zugeordnet";
   if (currentGroup) {
     groupStats =
-      currentGroup.student_count === undefined
-        ? null
-        : `${currentGroup.present_count ?? 0} von ${currentGroup.student_count} da · ${groupAbsenceOverview.sickCount} krank · ${groupAbsenceOverview.excusedCount} entschuldigt`;
+      currentGroup.student_count === undefined ? null : (
+        <TenantPageStats
+          items={[
+            {
+              value: `${currentGroup.present_count ?? 0} von ${currentGroup.student_count}`,
+              label: "da",
+            },
+            { value: groupAbsenceOverview.sickCount, label: "krank" },
+            {
+              value: groupAbsenceOverview.excusedCount,
+              label: "entschuldigt",
+            },
+          ]}
+        />
+      );
   }
 
   return (

@@ -12,6 +12,7 @@ import type {
   ReactNode,
   RefObject,
 } from "react";
+import { Fragment } from "react";
 import {
   useCallback,
   useEffect,
@@ -90,8 +91,9 @@ export interface TenantPageProps extends TenantPageSearchRowProps {
   readonly title: string;
   /**
    * Statuszeile unter dem Titel: echte Zahlen der Seite, die sie ohnehin lädt
-   * („116 Kinder · 107 zuhause · 9 krank"). Kein Erklärsatz. Während des
-   * Ladens rendert das Gerüst an dieser Stelle ein Skelett.
+   * („116 Kinder", „9 krank"), mehrere Angaben über `TenantPageStats`, ohne
+   * Trennpunkt (#5684). Kein Erklärsatz. Während des Ladens rendert das
+   * Gerüst an dieser Stelle ein Skelett.
    */
   readonly stats?: ReactNode;
   /** Zeigt statt der Statuszeile ein Skelett. */
@@ -322,7 +324,10 @@ function TenantPageInfo({
 }
 
 /**
- * Ein Wert-Label-Paar der Statuszeile. Trennzeichen setzt `TenantPageStats`.
+ * Ein Wert-Label-Paar der Statuszeile. Die Paare stehen mit Abstand
+ * nebeneinander, ohne Trennpunkt: Punkte dazwischen wirken unruhig (#5684).
+ * Eine Angabe ohne Zahl („Eingegangen am 01.09.2026“) lässt `value` weg und
+ * steht dann als schlichter Text in der Zeile.
  *
  * Höchstens DREI Paare: die Statuszeile ist eine Orientierung, keine
  * Kennzahlenleiste. Sechs Paare (gemessen auf /staff) liest niemand mehr als
@@ -336,7 +341,8 @@ export function TenantPageStats({
   items,
 }: Readonly<{
   items: readonly {
-    readonly value: ReactNode;
+    /** Die Zahl oder der Wert, hervorgehoben. Ohne Wert zählt nur `label`. */
+    readonly value?: ReactNode;
     readonly label: string;
     /**
      * Filtert die Seite auf genau diese Zahl („0 ohne Debitorennummer“).
@@ -351,51 +357,49 @@ export function TenantPageStats({
   const kitDefault = useKitDefault();
   const shown = items.slice(0, MAX_STATS_ITEMS);
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1">
+    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
       {shown.map((item, index) => {
         const pair = (
           <>
-            <span className="font-medium text-gray-900 tabular-nums">
-              {item.value}
-            </span>
-            <span>{item.label}</span>
+            {item.value === undefined ? null : (
+              <span className="font-medium text-gray-900 tabular-nums">
+                {item.value}
+              </span>
+            )}
+            {item.value !== undefined && item.label ? (
+              <span className="sr-only"> </span>
+            ) : null}
+            {item.label ? <span>{item.label}</span> : null}
           </>
         );
         return (
-          // Paare ohne Label (nur ein Wert) teilen sich das leere Label; erst
-          // die Position macht den Schlüssel eindeutig.
-          <span
-            key={`${index}-${item.label}`}
-            className="inline-flex items-center gap-1.5"
-          >
-            {item.onSelect ? (
-              <Button
-                type="button"
-                variant="link"
-                size="md"
-                // Unterstrichen auch ohne Maus: sonst liest sich der Knopf
-                // wie die übrigen Zahlen der Zeile, die nur Anzeige sind.
-                className="gap-1.5 underline decoration-gray-300 underline-offset-4"
-                aria-label={item.selectLabel}
-                // Filtert nur die Ansicht; die Daten bleiben unverändert.
-                tooltip={kitDefault(
-                  "Filtert die Liste auf genau diese Einträge.",
-                )}
-                onClick={item.onSelect}
-              >
-                {pair}
-              </Button>
-            ) : (
-              pair
-            )}
-            {/* Der Punkt hängt am Paar davor: bricht die Zeile um, endet sie
-                mit dem Punkt, statt die nächste damit zu beginnen. */}
-            {index < shown.length - 1 && (
-              <span aria-hidden="true" className="text-gray-300">
-                ·
-              </span>
-            )}
-          </span>
+          <Fragment key={`${index}-${item.label}`}>
+            {index > 0 ? <span className="sr-only">, </span> : null}
+            {/* Paare ohne Label (nur ein Wert) teilen sich das leere Label;
+                erst die Position macht den Schlüssel eindeutig. */}
+            <span className="inline-flex items-center gap-1.5">
+              {item.onSelect ? (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="md"
+                  // Unterstrichen auch ohne Maus: sonst liest sich der Knopf
+                  // wie die übrigen Zahlen der Zeile, die nur Anzeige sind.
+                  className="gap-1.5 underline decoration-gray-300 underline-offset-4"
+                  aria-label={item.selectLabel}
+                  // Filtert nur die Ansicht; die Daten bleiben unverändert.
+                  tooltip={kitDefault(
+                    "Filtert die Liste auf genau diese Einträge.",
+                  )}
+                  onClick={item.onSelect}
+                >
+                  {pair}
+                </Button>
+              ) : (
+                pair
+              )}
+            </span>
+          </Fragment>
         );
       })}
     </span>

@@ -22,7 +22,6 @@ import {
   rateCountLabel,
 } from "~/components/traeger/care-notice-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
-import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
 import {
   TraegerListExportMenu,
   traegerExportScope,
@@ -37,7 +36,7 @@ import { ConfirmationModal } from "~/components/ui/modal";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
@@ -236,7 +235,36 @@ export default function TraegerCareNoticeRunPage() {
       backLabel="Zurück zu den Jahresbescheiden"
       stats={
         run ? (
-          <HolidayHeadFacts>
+          <TenantPageStats
+            items={[
+              { label: noticePeriod(run.periodFrom, run.periodUntil) },
+              ...(discarded
+                ? [
+                    {
+                      label: `Verworfen am ${run.discardedAt ? formatDate(run.discardedAt) : "–"}`,
+                    },
+                  ]
+                : run.issuedOn
+                  ? [
+                      {
+                        label: `${run.previewCount === 0 ? "Abgeschlossen" : "Ausgestellt"} am ${formatDate(run.issuedOn)}`,
+                      },
+                    ]
+                  : run.noticeDate
+                    ? [
+                        {
+                          label: `Bescheiddatum ${formatDate(run.noticeDate)}`,
+                        },
+                      ]
+                    : []),
+            ]}
+          />
+        ) : null
+      }
+      statsLoading={loading}
+      actions={
+        <>
+          {run ? (
             <StatusBadge
               label={
                 run.status === "released" && run.previewCount === 0
@@ -245,28 +273,7 @@ export default function TraegerCareNoticeRunPage() {
               }
               tone={NOTICE_RUN_STATUS_TONES[run.status]}
             />
-            <span className="tabular-nums">
-              {noticePeriod(run.periodFrom, run.periodUntil)}
-            </span>
-            {discarded ? (
-              <span>
-                Verworfen am{" "}
-                {run.discardedAt ? formatDate(run.discardedAt) : "–"}
-              </span>
-            ) : run.issuedOn ? (
-              <span>
-                {run.previewCount === 0 ? "Abgeschlossen" : "Ausgestellt"} am{" "}
-                {formatDate(run.issuedOn)}
-              </span>
-            ) : run.noticeDate ? (
-              <span>Bescheiddatum {formatDate(run.noticeDate)}</span>
-            ) : null}
-          </HolidayHeadFacts>
-        ) : null
-      }
-      statsLoading={loading}
-      actions={
-        <>
+          ) : null}
           {run ? (
             <TraegerListExportMenu
               download={(format) =>

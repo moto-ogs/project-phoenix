@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { EnrollmentFormEditor } from "~/components/enrollment/enrollment-form-editor";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { DesktopOnlyNotice } from "~/components/ui/desktop-only-notice";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
 
@@ -21,9 +21,17 @@ export default function EnrollmentFormPage() {
     [],
   );
   const statusLine =
-    templateCount === null
-      ? null
-      : `1 Basisformular · ${templateCount} ${templateCount === 1 ? "Vorlage" : "Vorlagen"}`;
+    templateCount === null ? null : (
+      <TenantPageStats
+        items={[
+          { value: 1, label: "Basisformular" },
+          {
+            value: templateCount,
+            label: templateCount === 1 ? "Vorlage" : "Vorlagen",
+          },
+        ]}
+      />
+    );
 
   return (
     <TenantPage

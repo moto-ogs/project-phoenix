@@ -16,6 +16,8 @@ describe("EntityStatusLine", () => {
     expect(screen.getByText("test-school")).toBeInTheDocument();
     // DataTableStatusBadge defaults to "Aktiv" / "Inaktiv".
     expect(screen.getByText("Aktiv")).toBeInTheDocument();
+    // Abstand statt Trennpunkt zwischen Adresse und Status (#7402).
+    expect(screen.queryByText("·")).not.toBeInTheDocument();
   });
 
   it("renders the inactive label when active is false", () => {

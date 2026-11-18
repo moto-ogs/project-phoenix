@@ -12,7 +12,7 @@ import type { DateRange } from "react-day-picker";
 import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DateRangePicker } from "~/components/ui/date-range-picker";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import type { FilterConfig } from "~/components/ui/page-header/types";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
@@ -277,11 +277,21 @@ export default function AbsencesPage() {
 
   // Statuszeile unter dem Titel: gezählte Einträge der aktuellen Seite und der
   // gewählte Zeitraum. Der Ladezustand gehört separat in die Kopfkarte.
-  const statusLine = entries
-    ? `${entries.length} ${entries.length === 1 ? "Eintrag" : "Einträge"}${
-        displayedPage > 1 || hasMore ? ` auf Seite ${displayedPage}` : ""
-      } · ${formatDate(effectiveFromIso!)} bis ${formatDate(effectiveToIso!)}`
-    : null;
+  const statusLine = entries ? (
+    <TenantPageStats
+      items={[
+        {
+          value: entries.length,
+          label: `${entries.length === 1 ? "Eintrag" : "Einträge"}${
+            displayedPage > 1 || hasMore ? ` auf Seite ${displayedPage}` : ""
+          }`,
+        },
+        {
+          label: `${formatDate(effectiveFromIso!)} bis ${formatDate(effectiveToIso!)}`,
+        },
+      ]}
+    />
+  ) : null;
 
   const isEmpty =
     !swrError &&

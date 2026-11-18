@@ -93,8 +93,10 @@ describe("Tagesinformationen: Statuszeile bei Ladefehler (#2517)", () => {
         catalogText("general.unavailable", "die Liste aller Hinweise"),
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/0 heute/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/0 insgesamt/)).not.toBeInTheDocument();
+    // Mit zwei Zahlen setzt die Statuszeile Zahl und Wort in eigene
+    // Elemente (#7402); beide Formen dürfen fehlen.
+    expect(screen.queryByText(/^(\d+ )?heute$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^(\d+ )?insgesamt$/)).not.toBeInTheDocument();
   });
 
   it("keeps the count of the list that did load", async () => {

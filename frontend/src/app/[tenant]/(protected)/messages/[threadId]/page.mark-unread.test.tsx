@@ -104,6 +104,8 @@ vi.mock("~/components/messaging/message-composer", () => ({
 // The page scaffold is replaced by its contract: the title-row actions and the
 // page content. The real overflow menu stays.
 vi.mock("~/components/ui/tenant-page", () => ({
+  // Die Attrappe zeigt keine Statuszeile; die Paare braucht hier niemand.
+  TenantPageStats: () => null,
   TenantPage: ({
     actions,
     children,

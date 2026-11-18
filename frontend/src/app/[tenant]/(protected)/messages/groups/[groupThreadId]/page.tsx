@@ -26,7 +26,7 @@ import {
 import { formErrorMessage } from "~/components/ui/form-error";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { ChatBubble } from "~/components/messaging/chat-bubble";
 import { MessageComposer } from "~/components/messaging/message-composer";
 import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
@@ -273,13 +273,15 @@ function GroupMessageContent() {
   const closed = Boolean(thread?.closed_at);
   const children = data?.children ?? [];
   const stats =
-    data && thread
-      ? [
-          thread.target_label,
-          familyReadLabel(data.read_count, data.family_count),
-          ...(closed ? ["Geschlossen"] : []),
-        ].join(" · ")
-      : null;
+    data && thread ? (
+      <TenantPageStats
+        items={[
+          { label: thread.target_label },
+          { label: familyReadLabel(data.read_count, data.family_count) },
+          ...(closed ? [{ label: "Geschlossen" }] : []),
+        ]}
+      />
+    ) : null;
 
   return (
     <TenantPage

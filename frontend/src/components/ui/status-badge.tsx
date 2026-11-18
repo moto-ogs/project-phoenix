@@ -159,6 +159,9 @@ export function StatusPillBase({
   const iconNode = renderIcon(icon);
   return (
     <span
+      // Kennzeichen für das Seitengerüst: unter sm behält eine Plakette in
+      // den Kopfaktionen ihr Maß, statt wie ein Knopf eine Zeile zu füllen.
+      data-status-pill=""
       aria-hidden={ariaHidden}
       title={title ?? (truncate ? label : undefined)}
       className={`inline-flex items-center rounded-full text-xs font-medium ${

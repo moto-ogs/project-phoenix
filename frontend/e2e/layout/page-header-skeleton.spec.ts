@@ -88,7 +88,7 @@ const CASES: readonly {
   {
     name: "title and status line",
     skeleton: { stats: true },
-    page: { stats: "116 Kinder · 107 zuhause" },
+    page: { stats: "116 Kinder" },
   },
   { name: "title only", skeleton: { stats: false }, page: {} },
   {

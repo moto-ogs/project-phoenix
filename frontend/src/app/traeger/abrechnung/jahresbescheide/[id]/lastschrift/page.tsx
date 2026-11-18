@@ -37,11 +37,9 @@ export default function TraegerNoticeDebitsPage() {
       backHref={traegerPath(`/traeger/abrechnung/jahresbescheide/${runId}`)}
       backLabel="Zurück zum Jahreslauf"
       stats={
-        run ? (
-          <span className="text-sm text-gray-600 tabular-nums">
-            {formatDate(run.periodFrom)} bis {formatDate(run.periodUntil)}
-          </span>
-        ) : null
+        run
+          ? `${formatDate(run.periodFrom)} bis ${formatDate(run.periodUntil)}`
+          : null
       }
       statsLoading={loading}
       error={error}

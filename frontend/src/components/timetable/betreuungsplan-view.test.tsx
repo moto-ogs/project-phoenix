@@ -2441,7 +2441,8 @@ describe("BetreuungsplanView", () => {
     // Kein leerer Plan, der aussieht, als sei nichts geplant, und keine
     // Zahl in der Statuszeile, die nie geladen wurde.
     expect(screen.queryByText("week-grid")).not.toBeInTheDocument();
-    expect(screen.queryByText("0 Termine")).not.toBeInTheDocument();
+    // Wert und Wort der Statuszeile stehen in eigenen Elementen.
+    expect(document.body).not.toHaveTextContent(/0\s*Termine/);
     expect(mockToastError).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));

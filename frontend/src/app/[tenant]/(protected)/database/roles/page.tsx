@@ -42,6 +42,7 @@ import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { rolesConcept } from "~/lib/concepts/roles";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 const NO_ROLES: Role[] = [];
 
@@ -155,13 +156,16 @@ function RolesPageContent() {
   // Statuszeile des Seitenkopfs aus der bereits geladenen Rollenliste.
   const statusLine = useMemo(() => {
     const systemRoles = roles.filter((r) => r.isSystem).length;
-    const parts = [
-      `${formatCount(roles.length)} ${roles.length === 1 ? "Rolle" : "Rollen"}`,
-    ];
-    if (systemRoles > 0) {
-      parts.push(`${formatCount(systemRoles)} vom System`);
-    }
-    return parts.join(" · ");
+    const label = roles.length === 1 ? "Rolle" : "Rollen";
+    if (systemRoles === 0) return `${formatCount(roles.length)} ${label}`;
+    return (
+      <TenantPageStats
+        items={[
+          { value: formatCount(roles.length), label },
+          { value: formatCount(systemRoles), label: "vom System" },
+        ]}
+      />
+    );
   }, [roles]);
 
   const unclassifiedCount = useMemo(

@@ -25,7 +25,7 @@ import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
 import { useErrorFixLink } from "~/components/ui/error-fix-slot";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
@@ -161,13 +161,15 @@ function CareInvoiceAmendPage() {
       backLabel="Zurück zum Monatslauf"
       stats={
         run && invoice ? (
-          <span>
-            {service === "meal" ? "Mensa" : "Monatsbeitrag"}{" "}
-            {formatMonth(run.billingMonth)} · {invoice.schoolName} ·{" "}
-            <span className="tabular-nums">
-              {formatEuro(invoice.totalCents)}
-            </span>
-          </span>
+          <TenantPageStats
+            items={[
+              {
+                label: `${service === "meal" ? "Mensa" : "Monatsbeitrag"} ${formatMonth(run.billingMonth)}`,
+              },
+              { label: invoice.schoolName },
+              { value: formatEuro(invoice.totalCents), label: "" },
+            ]}
+          />
         ) : null
       }
       statsLoading={!run && !loadError}

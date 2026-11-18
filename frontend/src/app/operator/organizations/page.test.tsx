@@ -225,7 +225,7 @@ describe("OperatorOrganizationsPage", () => {
     render(<OperatorOrganizationsPage />);
 
     const head = screen.getByRole("banner");
-    expect(head).toHaveTextContent("1Träger");
+    expect(head).toHaveTextContent("1 Träger");
   });
 
   it("passes null SWR key when not authenticated", () => {

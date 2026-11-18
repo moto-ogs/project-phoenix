@@ -906,7 +906,7 @@ describe("MeinRaumPage additional scenarios", () => {
   // Grenze dazu „Überbucht“ und der Hinweis über den Kindern, genau an der
   // Grenze keines von beiden.
   it.each([
-    { limit: 1, line: "2 / 1 Kinder · Überbucht", warned: true },
+    { limit: 1, line: "2 / 1 Kinder", warned: true },
     { limit: 2, line: "2 / 2 Kinder", warned: false },
   ])(
     "shows the session's limit in the status line (limit $limit)",
@@ -958,6 +958,13 @@ describe("MeinRaumPage additional scenarios", () => {
       await waitFor(() => {
         expect(within(pageHead()).getByText(line)).toBeVisible();
       });
+      // „Überbucht“ steht ohne Trennpunkt als eigene Angabe daneben.
+      const overbooked = within(pageHead()).queryByText("Überbucht");
+      if (warned) {
+        expect(overbooked).toBeVisible();
+      } else {
+        expect(overbooked).not.toBeInTheDocument();
+      }
       const hint = screen.queryByText(
         /^Mehr Kinder als erlaubt \(höchstens 1\)\./,
       );

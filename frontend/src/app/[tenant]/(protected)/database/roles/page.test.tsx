@@ -442,7 +442,7 @@ describe("RolesPage", () => {
     expect(screen.getByTestId("role-row-2")).toBeInTheDocument();
     expect(screen.queryByTestId("role-row-3")).not.toBeInTheDocument();
     expect(screen.getByTestId("page-intro")).toHaveTextContent(
-      "2 Rollen · 1 vom System",
+      "2 Rollen, 1 vom System",
     );
   });
 

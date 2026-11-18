@@ -6,7 +6,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import {
   AnnouncementDetail,
   logPollResultsError,
@@ -241,7 +241,10 @@ function AnnouncementDetailPageContent() {
     onReminder: () => setAction("reminder"),
   });
 
-  const statusLine = [
+  // Höchstens drei Angaben zeigt die Statuszeile; bei einem Klassenbrief
+  // mit Frist entfällt dort die Erinnerung. Außer bei Umfragen nennt sie der
+  // Abschnitt „Zielgruppen und Zustellung“ weiter unten.
+  const statusItems = [
     classLetterReadOnlyNote(announcement) ?? null,
     announcement.published_at
       ? `Veröffentlicht ${formatDate(announcement.published_at)}`
@@ -253,8 +256,9 @@ function AnnouncementDetailPageContent() {
         : null,
     describeReminder(announcement),
   ]
-    .filter(Boolean)
-    .join(" · ");
+    .filter((part): part is string => Boolean(part))
+    .map((label) => ({ label }));
+  const statusLine = <TenantPageStats items={statusItems} />;
 
   const concept =
     kind === "poll"

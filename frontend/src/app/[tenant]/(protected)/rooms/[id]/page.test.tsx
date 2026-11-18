@@ -280,10 +280,19 @@ describe("RoomDetailPage", () => {
     expect(
       screen.getByRole("heading", { name: "Gruppenraum Sonne" }),
     ).toBeInTheDocument();
+    // Statuszeile ohne Trennpunkt und mit höchstens drei Angaben (#7402):
+    // die Etage entfällt, sie steht unter „Rauminformationen“.
     expect(
-      screen.getByText("Hauptgebäude · Etage 1 · Gruppenraum · 20 Plätze"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Belegt")).toBeInTheDocument();
+      screen.getByText("Hauptgebäude").parentElement?.parentElement,
+    ).toHaveTextContent(/^Hauptgebäude, Gruppenraum, 20 Plätze$/);
+    expect(screen.queryByText("Etage 1")).not.toBeInTheDocument();
+    const statusPill = screen.getByText("Belegt").closest("[data-status-pill]");
+    expect(statusPill).toBeInTheDocument();
+    // Die Plakette ist direktes Kind der Kopfaktionen; nur dann nimmt die
+    // Ausnahme für Status-Plaketten ihr auf dem Telefon nicht die eigene Größe.
+    expect(statusPill?.parentElement).toHaveClass(
+      "max-sm:[&>*:not([data-icon-only]):not([data-status-pill])]:basis-full",
+    );
     expect(screen.getByTestId("room-overview")).toBeInTheDocument();
     // Ohne rooms:update gibt es keinen Stammdaten-Reiter und keine
     // Reiterleiste; ohne rooms:delete kein Kebab.

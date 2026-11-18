@@ -19,7 +19,11 @@ import { BinaryModeGuard } from "~/components/tenant/binary-mode-guard";
 import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import { Alert } from "~/components/ui/alert";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { TenantPage, TenantPageListSearch } from "~/components/ui/tenant-page";
+import {
+  TenantPage,
+  TenantPageListSearch,
+  TenantPageStats,
+} from "~/components/ui/tenant-page";
 import {
   OverflowMenu,
   type OverflowMenuEntry,
@@ -417,10 +421,23 @@ function MeinRaumPageContent() {
   );
   const supervisionSummary = supervisionName ? (
     <SupervisionHeadFacts
-      childCount={[
-        formatChildCount(supervisionCount, supervisionOccupancy.limit),
-        ...(supervisionOverbookedHint ? [OVERBOOKED_LABEL] : []),
-      ].join(" · ")}
+      childCount={
+        supervisionOverbookedHint ? (
+          <TenantPageStats
+            items={[
+              {
+                label: formatChildCount(
+                  supervisionCount,
+                  supervisionOccupancy.limit,
+                ),
+              },
+              { label: OVERBOOKED_LABEL },
+            ]}
+          />
+        ) : (
+          formatChildCount(supervisionCount, supervisionOccupancy.limit)
+        )
+      }
       roomName={headFacts.roomName}
       supervisorNames={headFacts.supervisorNames}
     />

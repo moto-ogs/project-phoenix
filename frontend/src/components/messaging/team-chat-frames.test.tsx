@@ -9,7 +9,7 @@ function inboxParts(
 ): TeamChatInboxParts {
   return {
     title: "Team-Chat",
-    stats: "2 Unterhaltungen · 0 ungelesen",
+    stats: "2 Unterhaltungen",
     statsLoading: false,
     chatEnabled: true,
     count: 2,
@@ -37,7 +37,7 @@ function threadParts(
   return {
     title: "Gruppenchat",
     roleLabel: null,
-    stats: "2 Nachrichten · 3 Mitglieder",
+    stats: "2 Nachrichten",
     audience:
       "Nur die Mitglieder sehen diese Nachrichten. Wer neu dazukommt, sieht sie ab dem Beitritt.",
     actions: null,

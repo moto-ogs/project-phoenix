@@ -9,7 +9,7 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import NavigationLink from "~/components/ui/navigation-link";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import {
@@ -86,10 +86,6 @@ const HOME_SCHOOL_TAB = "andere-ogs";
 /** „06.07. bis 10.07.2099“ */
 function weekLabel(week: HostedHolidayWeek): string {
   return `${formatDate(week.startsOn).slice(0, 6)} bis ${formatDate(week.endsOn)}`;
-}
-
-function childCount(count: number): string {
-  return count === 1 ? "1 Kind" : `${count} Kinder`;
 }
 
 /** Die zweite sorgeberechtigte Person mit anrufbarer Nummer. */
@@ -404,14 +400,35 @@ export default function FerienwochenPage() {
         .size;
       const weekCount = new Set(homeSchool.data.map((child) => child.weekId))
         .size;
-      return `${childCount(children)} bei anderen OGS · ${
-        weekCount === 1 ? "1 Ferienwoche" : `${weekCount} Ferienwochen`
-      }`;
+      return (
+        <TenantPageStats
+          items={[
+            {
+              value: children,
+              label: `${children === 1 ? "Kind" : "Kinder"} bei anderen OGS`,
+            },
+            {
+              value: weekCount,
+              label: weekCount === 1 ? "Ferienwoche" : "Ferienwochen",
+            },
+          ]}
+        />
+      );
     }
     if (!selectedWeek) return null;
-    return `${selectedWeek.periodName} · ${weekLabel(selectedWeek)} · ${childCount(
-      list?.participants.length ?? selectedWeek.participants,
-    )}`;
+    const participants = list?.participants.length ?? selectedWeek.participants;
+    return (
+      <TenantPageStats
+        items={[
+          { label: selectedWeek.periodName },
+          { label: weekLabel(selectedWeek) },
+          {
+            value: participants,
+            label: participants === 1 ? "Kind" : "Kinder",
+          },
+        ]}
+      />
+    );
   }, [showHomeSchool, homeSchool.data, selectedWeek, list]);
 
   return (

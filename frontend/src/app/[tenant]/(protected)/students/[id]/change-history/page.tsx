@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import {
   resolveStudentReferrer,
   studentHistoryBack,
@@ -174,14 +174,26 @@ function StudentChangeHistoryPageContent() {
   // Ohne geladene Einträge steht keine "0 Einträge" neben dem Ladefehler
   // (#2517).
   const entryCount = entries?.length ?? 0;
-  const entryLine = entries
-    ? `${entryCount} ${entryCount === 1 ? "Eintrag" : "Einträge"}`
+  const entryStat = entries
+    ? { value: entryCount, label: entryCount === 1 ? "Eintrag" : "Einträge" }
     : null;
-  const studentMeta = student
-    ? [student.school_class, student.group_name, entryLine]
-        .filter(Boolean)
-        .join(" · ")
-    : "";
+  const entryLine = entryStat ? `${entryStat.value} ${entryStat.label}` : null;
+  const studentFacts = student
+    ? [student.school_class, student.group_name].filter(
+        (part): part is string => Boolean(part),
+      )
+    : [];
+  const studentMeta =
+    studentFacts.length + (entryStat ? 1 : 0) > 1 ? (
+      <TenantPageStats
+        items={[
+          ...studentFacts.map((label) => ({ label })),
+          ...(entryStat ? [entryStat] : []),
+        ]}
+      />
+    ) : (
+      (studentFacts[0] ?? null)
+    );
   const failed = notFound || historyLoad.failure !== undefined;
   const back = studentHistoryBack(studentId, referrer, failed);
 
@@ -193,7 +205,7 @@ function StudentChangeHistoryPageContent() {
         {...back}
         leading={<ConceptIconTile concept={changeHistoryConcept} size="page" />}
         title={displayName || "Änderungsverlauf"}
-        stats={studentMeta || entryLine}
+        stats={studentMeta ?? entryLine}
         statsLoading={loading}
         loading={loading}
         error={notFound ? "Kind nicht gefunden." : historyLoad.error}

@@ -9,10 +9,17 @@
  * Beides greift auf denselben Zustand zu, ohne ihn zweimal zu laden.
  */
 
-import { useCallback, useMemo, useState } from "react";
+import {
+  createElement,
+  type ReactNode,
+  useCallback,
+  useMemo,
+  useState,
+} from "react";
 
 import type { LinkablePhase } from "~/components/timetable/calendar-period-modal";
 import type { FormErrorInput } from "~/components/ui/form-error";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 import { useToast } from "~/contexts/ToastContext";
 import { calendarPeriodService } from "~/lib/calendar-period-api";
 import type { CalendarPeriod } from "~/lib/calendar-period-helpers";
@@ -59,7 +66,7 @@ export interface CalendarPeriodsState {
    *  `error` angekommen ist, damit kein Leerzustand aufblitzt. */
   readonly loadFailed: boolean;
   /** Statuszeile der Kopfkarte: laufender Zeitraum, Anzahl, davon aktiv. */
-  readonly statusLine: string;
+  readonly statusLine: ReactNode;
   readonly modalOpen: boolean;
   readonly editing: CalendarPeriod | null;
   readonly createDefaults: Partial<SemesterDefaults> | undefined;
@@ -241,11 +248,19 @@ export function useCalendarPeriods(): CalendarPeriodsState {
   const statusLine =
     loadFailed && periods.length === 0
       ? ""
-      : `${currentPeriod ? `${currentPeriod.name} · ` : ""}${
-          periods.length
-        } ${periods.length === 1 ? "Zeitraum" : "Zeiträume"} · ${
-          periods.filter((period) => period.isActive).length
-        } aktiv`;
+      : createElement(TenantPageStats, {
+          items: [
+            ...(currentPeriod ? [{ label: currentPeriod.name }] : []),
+            {
+              value: periods.length,
+              label: periods.length === 1 ? "Zeitraum" : "Zeiträume",
+            },
+            {
+              value: periods.filter((period) => period.isActive).length,
+              label: "aktiv",
+            },
+          ],
+        });
 
   return {
     periods,

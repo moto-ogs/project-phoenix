@@ -10,15 +10,12 @@ import {
   formatWeeks,
   holidayStatusLabel,
 } from "~/components/traeger/holiday-period-format";
-import {
-  HOLIDAY_CRITERIA_HINT,
-  HolidayHeadFacts,
-} from "~/components/traeger/holiday-period-head";
+import { HOLIDAY_CRITERIA_HINT } from "~/components/traeger/holiday-period-head";
 import { ButtonLink } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import {
   TraegerListExportMenu,
   traegerExportScope,
@@ -89,14 +86,16 @@ export default function TraegerHolidayPeriodsPage() {
       info="Hier planst du die Ferienbetreuung für die Schulen deines Trägers. Ein neuer Ferienzeitraum ist zuerst ein Entwurf. Eltern melden ihre Kinder erst an, wenn du ihn veröffentlicht hast."
       stats={
         periods.length > 0 ? (
-          <HolidayHeadFacts>
-            <span>
-              {periods.length === 1
-                ? "1 Ferienzeitraum"
-                : `${periods.length} Ferienzeiträume`}
-            </span>
-            <StatusBadge label={`${published} veröffentlicht`} tone="green" />
-          </HolidayHeadFacts>
+          <TenantPageStats
+            items={[
+              {
+                value: periods.length,
+                label:
+                  periods.length === 1 ? "Ferienzeitraum" : "Ferienzeiträume",
+              },
+              { value: published, label: "veröffentlicht" },
+            ]}
+          />
         ) : null
       }
       statsLoading={loading}

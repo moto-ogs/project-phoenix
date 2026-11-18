@@ -36,7 +36,7 @@ import { DataField } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { enrollmentsConcept } from "~/lib/concepts/enrollments";
 import { FormFieldset } from "~/components/ui/form-fieldset";
@@ -223,14 +223,20 @@ export function RolloverForm({
 
   // Statuszeile des Seitenkopfs: Quelle und die Vorschau, die das Formular
   // ohnehin lädt.
-  const statusLine = [
-    `Quelle: ${source.name}`,
-    // Ohne Vorschau keine Zahlen: ein Ladefehler ist keine „0“.
-    preview ? `${preview.carried_count} werden übernommen` : null,
-    preview ? `${preview.review_count} zu prüfen` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const statusLine = (
+    <TenantPageStats
+      items={[
+        { label: `Quelle: ${source.name}` },
+        // Ohne Vorschau keine Zahlen: ein Ladefehler ist keine „0“.
+        ...(preview
+          ? [
+              { value: preview.carried_count, label: "werden übernommen" },
+              { value: preview.review_count, label: "zu prüfen" },
+            ]
+          : []),
+      ]}
+    />
+  );
 
   const form = (
     <SectionCard>

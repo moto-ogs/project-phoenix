@@ -26,7 +26,7 @@ import { IconTile } from "~/components/ui/icon-tile";
 import { SectionLabel } from "~/components/ui/section-label";
 import { CalendarClock } from "lucide-react";
 import { CatalogColorField } from "~/components/database/catalog-color-field";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import type { ActivityCategory } from "~/lib/activity-helpers";
 import { categoryService } from "~/lib/category-api";
@@ -132,6 +132,22 @@ function describeDeletion(type: ShiftType, linkedCategories: number) {
       {linkedCategories > 1 &&
         ` ${formatCount(linkedCategories)} Kategorien des Betreuungsplans verlieren diese Zuordnung.`}
     </p>
+  );
+}
+
+/** Statuszeile der Kopfkarte aus den bereits geladenen Dienstarten. */
+function shiftTypeStats(types: readonly ShiftType[]) {
+  const inactive = types.filter((type) => !type.isActive).length;
+  const active = types.length - inactive;
+  return inactive > 0 ? (
+    <TenantPageStats
+      items={[
+        { value: formatCount(active), label: "in der Auswahl" },
+        { value: formatCount(inactive), label: "ausgeschaltet" },
+      ]}
+    />
+  ) : (
+    `${formatCount(active)} ${active === 1 ? "Dienstart" : "Dienstarten"}`
   );
 }
 
@@ -295,13 +311,7 @@ function ShiftTypesPageContent() {
       emptyDescription:
         "Lege eine Dienstart an oder füge die Beispiele hinzu, damit der Dienstplan Dienste benennen kann.",
       preserveDraftOnSectionsChange: true,
-      stats: (types) => {
-        const inactive = types.filter((type) => !type.isActive).length;
-        const active = types.length - inactive;
-        return inactive > 0
-          ? `${formatCount(active)} in der Auswahl · ${formatCount(inactive)} ausgeschaltet`
-          : `${formatCount(active)} ${active === 1 ? "Dienstart" : "Dienstarten"}`;
-      },
+      stats: shiftTypeStats,
       toRow: (type) => ({
         name: type.name,
         subtitle: type.description,
