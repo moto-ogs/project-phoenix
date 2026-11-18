@@ -163,21 +163,26 @@ func familyChildWriteError(err error) error {
 	return fmt.Errorf("store family child count: %w", err)
 }
 
-// DeleteFamilyChildren removes the number of a family and answers it.
-func (s *Store) DeleteFamilyChildren(ctx context.Context, organizationID int64, family string) (parentbilling.FamilyChildCount, error) {
+// DeleteFamilyChildren removes the family's own and brought numbers in one
+// statement and answers the contracts to record in their trail.
+func (s *Store) DeleteFamilyChildren(ctx context.Context, organizationID int64, families []string) ([]parentbilling.FamilyChildTarget, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
-		return parentbilling.FamilyChildCount{}, err
+		return nil, err
 	}
 	var rows []familyChildCountRow
-	if err := db.NewDelete().Model(&rows).Where("organization_id = ?", organizationID).Where("family_email = ?", family).
-		Returning(familyChildCountColumns).Scan(ctx); err != nil {
-		return parentbilling.FamilyChildCount{}, fmt.Errorf("delete family child count: %w", err)
+	if err := db.NewDelete().Model(&rows).Where("organization_id = ?", organizationID).Where("family_email IN (?)", bun.List(families)).
+		Returning("care_contract_id").Scan(ctx); err != nil {
+		return nil, fmt.Errorf("delete family child count: %w", err)
 	}
 	if len(rows) == 0 {
-		return parentbilling.FamilyChildCount{}, parentbilling.ErrFamilyChildrenNotFound
+		return nil, parentbilling.ErrFamilyChildrenNotFound
 	}
-	return rows[0].count(), nil
+	targets := make([]parentbilling.FamilyChildTarget, len(rows))
+	for i, row := range rows {
+		targets[i] = parentbilling.FamilyChildTarget{ContractID: row.ContractID}
+	}
+	return targets, nil
 }
 
 // InsertFamilyChildEvents records one action per target in one statement:

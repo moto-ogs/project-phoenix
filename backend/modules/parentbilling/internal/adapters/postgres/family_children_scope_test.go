@@ -84,10 +84,17 @@ func TestFamilyChildrenFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		_, err = tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT foreign_contract")
 		require.NoError(t, err)
 
-		removed, err := store.DeleteFamilyChildren(ctx, own.organization, family)
+		brought := parentbilling.ContractFamilyKey("", contracts[own.organization])
+		_, _, err = store.StateFamilyChildren(ctx, own.organization, 0, brought, contracts[own.organization], 3, nil)
 		require.NoError(t, err)
-		assert.Equal(t, contracts[own.organization], removed.ContractID, "DeleteFamilyChildren removes the own family")
-		_, err = store.DeleteFamilyChildren(ctx, own.organization, family)
+		counter := testpkg.CaptureQueriesForContext(t, db)
+		removed, err := store.DeleteFamilyChildren(counter.Context(ctx), own.organization, []string{family, brought, "missing@example.org"})
+		require.NoError(t, err)
+		assert.Len(t, counter.Operation("DELETE"), 1, "own and brought numbers are removed in one statement")
+		counter.Stop()
+		assert.Equal(t, []parentbilling.FamilyChildTarget{{ContractID: contracts[own.organization]}, {ContractID: contracts[own.organization]}},
+			removed, "DeleteFamilyChildren returns every removed target of the own family")
+		_, err = store.DeleteFamilyChildren(ctx, own.organization, []string{family, brought})
 		assert.ErrorIs(t, err, parentbilling.ErrFamilyChildrenNotFound, "the other Träger's family is not the own")
 
 		_, _, err = store.StateFamilyChildren(ctx, own.organization, 0, family, contracts[own.organization], 2, nil)

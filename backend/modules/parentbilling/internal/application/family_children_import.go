@@ -117,13 +117,13 @@ func (c *CareReductions) familyImportCandidates(ctx context.Context, reviewer pa
 	for i, contract := range contracts {
 		ids[i] = contract.id
 	}
-	recipients, err := c.contracts.Recipients(ctx, organizationID, ids)
-	if err != nil {
-		return nil, fmt.Errorf("parent billing: read the contract parties: %w", err)
-	}
 	counts, err := c.FamilyNumbers.store.FamilyChildCounts(ctx, organizationID)
 	if err != nil {
 		return nil, err
+	}
+	recipients, err := c.contracts.Recipients(ctx, organizationID, familyRecipientContracts(ids, counts))
+	if err != nil {
+		return nil, fmt.Errorf("parent billing: read the contract parties: %w", err)
 	}
 	check := familyImportCheck{index: index, schools: schools, contracts: contracts, recipients: recipients}
 	candidates := make([]familyImportCandidate, len(table.rows))

@@ -26,7 +26,7 @@ type FamilyChildrenStore interface {
 	StateFamilyChildren(ctx context.Context, organizationID, accountID int64, family string, contractID int64, children int,
 		statedAt *time.Time) (id int64, applied bool, err error)
 	ConfirmFamilyChildren(ctx context.Context, organizationID, accountID int64, family string, input parentbilling.FamilyChildrenInput) (int64, error)
-	DeleteFamilyChildren(ctx context.Context, organizationID int64, family string) (parentbilling.FamilyChildCount, error)
+	DeleteFamilyChildren(ctx context.Context, organizationID int64, families []string) ([]parentbilling.FamilyChildTarget, error)
 	InsertFamilyChildEvents(ctx context.Context, organizationID int64, event parentbilling.FamilyChildEvent, targets []parentbilling.FamilyChildTarget) error
 	// ConfirmImportedFamilyChildren stores the numbers a file names as
 	// confirmed, each family once, and records each in its trail (#7356).
@@ -101,16 +101,11 @@ func (f *FamilyNumbers) FamilyChildren(ctx context.Context, reviewer parentbilli
 	// hangs on: a family that stated its number on a contract not yet in
 	// force still needs the check of the Abrechnung.
 	contracts := evidenceContracts(versions)
-	ids := make([]int64, 0, len(contracts)+len(counts))
+	ids := make([]int64, 0, len(contracts))
 	for _, contract := range contracts {
 		ids = append(ids, contract.ContractID)
 	}
-	for _, count := range counts {
-		if !slices.Contains(ids, count.ContractID) {
-			ids = append(ids, count.ContractID)
-		}
-	}
-	recipients, err := f.contracts.Recipients(ctx, reviewer.OrganizationID, ids)
+	recipients, err := f.contracts.Recipients(ctx, reviewer.OrganizationID, familyRecipientContracts(ids, counts))
 	if err != nil {
 		return parentbilling.FamilyChildrenSet{}, fmt.Errorf("parent billing: read the contract parties: %w", err)
 	}
@@ -384,11 +379,7 @@ func (f *FamilyNumbers) removeFamilyNumbers(ctx context.Context, organizationID 
 	if err != nil {
 		return nil, err
 	}
-	ids := make([]int64, 0, len(counts)+1)
-	for _, count := range counts {
-		ids = append(ids, count.ContractID)
-	}
-	recipients, err := f.contracts.Recipients(ctx, organizationID, append(ids, contractID))
+	recipients, err := f.contracts.Recipients(ctx, organizationID, familyRecipientContracts([]int64{contractID}, counts))
 	if err != nil {
 		return nil, fmt.Errorf("parent billing: read the contract parties: %w", err)
 	}
@@ -397,15 +388,12 @@ func (f *FamilyNumbers) removeFamilyNumbers(ctx context.Context, organizationID 
 	if !ok {
 		return nil, parentbilling.ErrFamilyChildrenNotFound
 	}
-	var removed []parentbilling.FamilyChildTarget
-	for _, count := range found.all() {
-		deleted, err := f.store.DeleteFamilyChildren(ctx, organizationID, count.FamilyEmail)
-		if err != nil {
-			return nil, err
-		}
-		removed = append(removed, parentbilling.FamilyChildTarget{ContractID: deleted.ContractID})
+	all := found.all()
+	keys := make([]string, len(all))
+	for i, count := range all {
+		keys[i] = count.FamilyEmail
 	}
-	return removed, nil
+	return f.store.DeleteFamilyChildren(ctx, organizationID, keys)
 }
 
 // familyOfContract is the family of a contract of the Träger: the address

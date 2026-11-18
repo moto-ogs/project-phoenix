@@ -1,9 +1,32 @@
 package application
 
 import (
+	"slices"
+
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
+
+// familyRecipientContracts includes contracts outside the billing or import
+// window whose stored numbers still belong to a family in that window.
+func familyRecipientContracts(ids []int64, counts []parentbilling.FamilyChildCount) []int64 {
+	ids = slices.Clone(ids)
+	seen := make(map[int64]bool, len(ids)+len(counts))
+	for _, id := range ids {
+		seen[id] = true
+	}
+	for _, count := range counts {
+		id := count.ContractID
+		if contractID, ok := parentbilling.ContractOfFamily(count.FamilyEmail); ok {
+			id = contractID
+		}
+		if !seen[id] {
+			ids = append(ids, id)
+			seen[id] = true
+		}
+	}
+	return ids
+}
 
 // The family a number belongs to today (#7356). A number is stored under
 // the key its family had when it was stated or confirmed: the mail address
@@ -103,6 +126,11 @@ func (n *familyNumbers) count() (count *parentbilling.FamilyChildCount, differin
 		if !sameConfirmation(first, other) {
 			return n.own, true
 		}
+		// Equal numbers remain confirmed while any source still holds.
+		// After all expire, renewal must also follow the last expiry.
+		if first.ValidUntil != nil && (other.ValidUntil == nil || other.ValidUntil.After(*first.ValidUntil)) {
+			first = other
+		}
 	}
 	return first, false
 }
@@ -122,19 +150,30 @@ func equalPtr[T comparable](a, b *T) bool {
 }
 
 // confirmedIn is the number that counts for the family in the month that
-// starts on first: its own confirmation, else what its contracts brought
-// along when every one valid in the month says the same. The family's own
-// number decides from its first day on; the months before keep what the
-// contracts brought, so a number confirmed for February leaves January's.
+// starts on first: the first day's number, else the first valid number
+// within the month, resolving both sources on each day before choosing.
 func (n *familyNumbers) confirmedIn(first calendar.Date) (int, bool) {
+	for day, end := first, monthEnd(first); !day.After(end); day = day.AddDays(1) {
+		if number, ok := n.confirmedOn(day); ok {
+			return number, true
+		}
+	}
+	return 0, false
+}
+
+// confirmedOn resolves the family's own and brought confirmations on one
+// day. Once an own confirmation starts it supersedes the brought ones,
+// including after its expiry.
+func (n *familyNumbers) confirmedOn(day calendar.Date) (int, bool) {
 	if n.decided() {
-		if number, ok := n.own.ConfirmedIn(first); ok || !monthEnd(first).Before(firstConfirmedDay(n.own)) {
-			return number, ok
+		if confirmation, started := n.own.InForceOn(day); started {
+			return validFamilyConfirmation(confirmation, day)
 		}
 	}
 	number, found := 0, false
 	for _, count := range n.brought {
-		brought, ok := count.ConfirmedIn(first)
+		confirmation, _ := count.InForceOn(day)
+		brought, ok := validFamilyConfirmation(confirmation, day)
 		switch {
 		case !ok:
 		case found && brought != number:
@@ -146,22 +185,17 @@ func (n *familyNumbers) confirmedIn(first calendar.Date) (int, bool) {
 	return number, found
 }
 
+func validFamilyConfirmation(confirmation parentbilling.FamilyChildConfirmation, day calendar.Date) (int, bool) {
+	if confirmation.Children == nil || (confirmation.ValidUntil != nil && confirmation.ValidUntil.Before(day)) {
+		return 0, false
+	}
+	return *confirmation.Children, true
+}
+
 // confirmations are the confirmations of a number, the current one first.
 func confirmations(count *parentbilling.FamilyChildCount) []parentbilling.FamilyChildConfirmation {
 	return append([]parentbilling.FamilyChildConfirmation{{Children: count.ConfirmedChildren, ValidFrom: count.ValidFrom, ValidUntil: count.ValidUntil}},
 		count.Confirmations...)
-}
-
-// firstConfirmedDay is the earliest day a confirmation of the number
-// starts on.
-func firstConfirmedDay(count *parentbilling.FamilyChildCount) calendar.Date {
-	var first calendar.Date
-	for _, confirmation := range confirmations(count) {
-		if confirmation.ValidFrom != nil && (first.IsZero() || confirmation.ValidFrom.Before(first)) {
-			first = *confirmation.ValidFrom
-		}
-	}
-	return first
 }
 
 // endedBefore tells whether a confirmation of the family, a retained one

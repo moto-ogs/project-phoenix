@@ -575,7 +575,10 @@ func (c *CareBilling) careMonthInput(ctx context.Context, organizationID int64, 
 	if in.invoiced, err = c.store.InvoicedContracts(ctx, organizationID, run.BillingMonth); err != nil {
 		return in, err
 	}
-	if in.recipients, err = c.contracts.Recipients(ctx, organizationID, contracts); err != nil {
+	if in.familyCounts, err = c.store.FamilyChildCounts(ctx, organizationID); err != nil {
+		return in, err
+	}
+	if in.recipients, err = c.contracts.Recipients(ctx, organizationID, familyRecipientContracts(contracts, in.familyCounts)); err != nil {
 		return in, fmt.Errorf("parent billing: read the contract parties: %w", err)
 	}
 	if in.rules, err = c.store.ListContributionRules(ctx, organizationID, parentbilling.ServiceCare); err != nil {
@@ -587,8 +590,7 @@ func (c *CareBilling) careMonthInput(ctx context.Context, organizationID int64, 
 	if in.costShares, err = c.store.CareCostShares(ctx, organizationID, contracts); err != nil {
 		return in, err
 	}
-	in.familyCounts, err = c.store.FamilyChildCounts(ctx, organizationID)
-	return in, err
+	return in, nil
 }
 
 // detail is the run with its preview or its issued invoices and the number
