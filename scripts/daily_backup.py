@@ -30,6 +30,11 @@ QUARANTINE_GROUPS = {'phoenix_diagnostics': 'diagnostics',
                      'phoenix_school_erasure': 'school_erasure',
                      'phoenix_billing_retention': 'billing_retention',
                      'phoenix_data_return': 'data_return'}
+# Built-in read-only roles that personal and monitoring logins hold in the
+# deployed clusters (dev_* with pg_read_all_data, postgres_exporter with
+# pg_monitor). Such logins are restored but disabled.
+EXTERNAL_LOGIN_GROUPS = ('pg_read_all_data', 'pg_monitor', 'pg_read_all_stats',
+                         'pg_read_all_settings', 'pg_stat_scan_tables')
 BUNDLE_NAME = r'daily-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{16}\.tar\.age'
 # The app's upload storage contract (objects/upload_config.go).
 UPLOADS_S3 = ('ENDPOINT', 'REGION', 'BUCKET', 'ACCESS_KEY', 'SECRET_KEY')
@@ -371,6 +376,40 @@ class Recovery:
                 timestamp = dt.datetime.strptime(obj['Path'][6:22], '%Y%m%dT%H%M%SZ').replace(tzinfo=dt.timezone.utc)
                 require(timestamp > cutoff)
 
+    def quarantine_external_logins(self):
+        # Personal read logins and the metrics exporter: a login whose every
+        # membership is a built-in read-only role and that has no attribute
+        # beyond LOGIN/INHERIT. It is disabled, never mapped to a password;
+        # the operator re-enables it with a new password. Anything else still
+        # fails as an unmapped login. Ownership and ACLs are checked after
+        # pg_restore with the internal logins.
+        groups = ','.join("'" + group + "'" for group in EXTERNAL_LOGIN_GROUPS)
+        return json.loads(self.sql(f"""
+            WITH external AS (
+                SELECT r.oid, r.rolname FROM pg_roles r
+                WHERE r.rolcanlogin AND r.rolname NOT IN ('postgres', 'phoenix_auth', 'phoenix_demo')
+                    AND NOT (r.rolsuper OR r.rolcreatedb OR r.rolcreaterole
+                        OR r.rolreplication OR r.rolbypassrls)
+                    AND EXISTS (SELECT FROM pg_auth_members m WHERE m.member = r.oid)
+                    AND NOT EXISTS (SELECT FROM pg_auth_members m JOIN pg_roles g ON g.oid = m.roleid
+                        WHERE m.member = r.oid AND (m.admin_option OR g.rolname NOT IN ({groups})))
+                    AND NOT EXISTS (SELECT FROM pg_auth_members WHERE roleid = r.oid)
+            )
+            SELECT COALESCE(json_agg(oid), '[]') FROM external;
+        """))
+
+    def disable_logins(self, oids):
+        if not oids:
+            return
+        listed = ','.join(str(int(oid)) for oid in oids)
+        self.sql(f"""
+            DO $$ DECLARE r record; BEGIN
+                FOR r IN SELECT rolname FROM pg_roles WHERE oid = ANY(ARRAY[{listed}]::oid[]) LOOP
+                    EXECUTE format('ALTER ROLE %I NOLOGIN', r.rolname);
+                END LOOP;
+            END $$;
+        """)
+
     def quarantine_internal_logins(self):
         # One narrow shape for diagnostics and internal erasure/retention
         # logins. Names stay inside SQL; only OIDs cross into the verifier.
@@ -430,7 +469,7 @@ class Recovery:
         require(re.fullmatch(r'[0-9]+', revoked))
         print(f'restore_data_return_revoked={int(revoked)}', flush=True)
 
-    def verify_quarantined_logins(self, quarantined):
+    def verify_quarantined_logins(self, quarantined, external=()):
         global step
         if not quarantined:
             return
@@ -453,6 +492,8 @@ class Recovery:
         for group, label in QUARANTINE_GROUPS.items():
             if counts.get(group, 0):
                 print(f'restore_{label}_disabled={int(counts[group])}', flush=True)
+        if external:
+            print(f'restore_external_logins_disabled={len(external)}', flush=True)
 
     def restore(self, work, cipher, name, ledger):
         global step
@@ -510,7 +551,9 @@ class Recovery:
         self.dc('exec', '-T', 'postgres', 'psql', '-X', '-U', 'postgres', '-d', 'postgres',
                 '-v', 'ON_ERROR_STOP=1', data=roles.encode())
         step = 'role_passwords'
-        quarantined = self.quarantine_internal_logins()
+        external = self.quarantine_external_logins()
+        self.disable_logins(external)
+        quarantined = self.quarantine_internal_logins() + external
         logins = self.sql('SELECT rolname FROM pg_roles WHERE rolcanlogin ORDER BY rolname;').splitlines()
         require(set(logins) <= set(LOGIN_PASSWORDS))  # Unknown LOGIN roles need an explicit operator mapping.
         for role in logins:
@@ -524,7 +567,7 @@ class Recovery:
         with (work / 'database.dump').open('rb') as file:
             self.dc('exec', '-T', 'postgres', 'pg_restore', '-U', 'postgres', '-d', 'postgres',
                     '--exit-on-error', stdin=file)
-        self.verify_quarantined_logins(quarantined)
+        self.verify_quarantined_logins(quarantined, external)
         self.revoke_data_return()
         step = 'uploads_restore'
         if self.uploads == 'local':
