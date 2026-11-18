@@ -10,6 +10,10 @@ const api = vi.hoisted(() => ({
   fetchStaffOverview: vi.fn(),
   hireStaff: vi.fn(),
 }));
+const address = vi.hoisted(() => ({ search: "" }));
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(address.search),
+}));
 // The page reads through the shared cache.
 vi.unmock("swr");
 
@@ -83,6 +87,7 @@ async function fillToReview() {
 describe("TraegerStaffHirePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    address.search = "";
     api.fetchStaffOverview.mockResolvedValue(OVERVIEW);
     api.hireStaff.mockResolvedValue(HIRED);
   });
@@ -253,9 +258,30 @@ describe("TraegerStaffHirePage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Zu den Personalakten/ }),
-    ).toHaveAttribute("href", "/traeger/personal");
+    ).toHaveAttribute("href", "/traeger/personal?tab=ohne-akte");
     expect(
       screen.queryByRole("button", { name: /Person einstellen/ }),
     ).toBeNull();
+  });
+
+  // #7377: Abbrechen führt auf den Reiter der Personalakten zurück, von dem
+  // man kam; ohne Angabe auf die Personalakten selbst.
+  it("cancels back to the tab of the Personalakten it came from", async () => {
+    address.search = "from=ohne-akte";
+    const view = renderPage();
+    await screen.findByRole("heading", { name: "Person" });
+    expect(screen.getByRole("link", { name: "Abbrechen" })).toHaveAttribute(
+      "href",
+      "/traeger/personal?tab=ohne-akte",
+    );
+
+    view.unmount();
+    address.search = "from=/fremd";
+    renderPage();
+    await screen.findByRole("heading", { name: "Person" });
+    expect(screen.getByRole("link", { name: "Abbrechen" })).toHaveAttribute(
+      "href",
+      "/traeger/personal",
+    );
   });
 });

@@ -38,6 +38,7 @@ import {
   type StaffRecordDetail,
 } from "~/lib/traeger-staff-api";
 import { traegerPath } from "~/lib/traeger-url";
+import { staffOverviewHref } from "./staff-overview-tab";
 import { KindChoice, WeekHoursRow } from "./staff-contract-dialogs";
 import {
   CONTRACT_KIND_LABELS,
@@ -461,7 +462,7 @@ function IncompleteCard({
             </ButtonLink>
           ) : (
             <ButtonLink
-              href={traegerPath(PERSONAL)}
+              href={staffOverviewHref("ohne-akte")}
               variant="primary"
               size="md"
               tooltip="Öffnet die Personalakten. Die Person steht dort unter „Ohne Akte“."
@@ -479,12 +480,18 @@ function StepActions({
   step,
   saving,
   onBack,
-}: Readonly<{ step: number; saving: boolean; onBack: () => void }>) {
+  cancelHref,
+}: Readonly<{
+  step: number;
+  saving: boolean;
+  onBack: () => void;
+  cancelHref: string;
+}>) {
   let back: ReactNode;
   if (step === 0) {
     back = (
       <ButtonLink
-        href={traegerPath(PERSONAL)}
+        href={cancelHref}
         variant="outline"
         size="md"
         noTooltip="Abbrechen führt zurück zu den Personalakten, ohne etwas anzulegen."
@@ -547,7 +554,13 @@ function stepOfRefusal(err: unknown): number {
 export function StaffHireWizard({
   schools,
   today,
-}: Readonly<{ schools: readonly School[]; today: string }>) {
+  cancelHref,
+}: Readonly<{
+  schools: readonly School[];
+  today: string;
+  /** Ziel von Abbrechen: der Reiter der Personalakten, von dem man kam. */
+  cancelHref: string;
+}>) {
   const [draft, setDraft] = useState(() => emptyHireDraft(schools));
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -701,7 +714,12 @@ export function StaffHireWizard({
           ) : null}
           {step === HIRE_REVIEW_STEP ? <ReviewStep draft={draft} /> : null}
         </div>
-        <StepActions step={step} saving={saving} onBack={back} />
+        <StepActions
+          step={step}
+          saving={saving}
+          onBack={back}
+          cancelHref={cancelHref}
+        />
       </form>
       <ConfirmationModal
         isOpen={matches !== null}

@@ -14,13 +14,15 @@ import { DESKTOP_WIDTH, setViewportWidth } from "~/test/helpers/viewport";
 
 vi.unmock("swr");
 
-const { api, mockPush } = vi.hoisted(() => ({
+const { api, mockPush, mockReplace, address } = vi.hoisted(() => ({
   api: {
     fetchStaffOverview: vi.fn(),
     previewStaffLink: vi.fn(),
     linkStaff: vi.fn(),
   },
   mockPush: vi.fn(),
+  mockReplace: vi.fn(),
+  address: { search: "" },
 }));
 
 vi.mock("~/lib/traeger-staff-api", async (original) => ({
@@ -31,9 +33,9 @@ vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush, replace: vi.fn() }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
   usePathname: () => "/personal",
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(address.search),
 }));
 
 import TraegerStaffRecordsPage from "./page";
@@ -120,6 +122,10 @@ function renderPage() {
 describe("TraegerStaffRecordsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    address.search = "";
+    mockReplace.mockImplementation((url: string) => {
+      address.search = url.replace(/^\?/, "");
+    });
     api.fetchStaffOverview.mockResolvedValue(OVERVIEW);
     api.previewStaffLink.mockResolvedValue(PREVIEW);
     api.linkStaff.mockResolvedValue(RECORD);
@@ -193,14 +199,75 @@ describe("TraegerStaffRecordsPage", () => {
       }),
     );
     await vi.waitFor(() =>
-      expect(mockPush).toHaveBeenCalledWith("/personal/5"),
+      expect(mockPush).toHaveBeenCalledWith("/personal/5?from=vorschlaege"),
     );
   });
 
-  it("lists the people without a record", async () => {
-    renderPage();
+  it("lists the people without a record and keeps the tab in the address", async () => {
+    const view = renderPage();
     fireEvent.click(await screen.findByRole("tab", { name: /Ohne Akte/ }));
+    expect(mockReplace).toHaveBeenCalledWith("?tab=ohne-akte", {
+      scroll: false,
+    });
+    // Der Router rendert nach `replace` mit der neuen Adresse neu.
+    view.rerender(
+      <TraegerResourceTestProvider>
+        <TraegerStaffRecordsPage />
+      </TraegerResourceTestProvider>,
+    );
     expect(await screen.findByText("Jonas Keller")).toBeInTheDocument();
+  });
+
+  // #7377: Abbrechen und Zurück einer Unterseite führen auf den Reiter
+  // zurück, von dem man kam.
+  it("opens the tab from the address and hands it to its sub pages", async () => {
+    address.search = "tab=ohne-akte";
+    renderPage();
+    expect(await screen.findByText("Jonas Keller")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Ohne Akte/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      screen.getByRole("link", { name: /Person einstellen/ }),
+    ).toHaveAttribute("href", "/personal/einstellen?from=ohne-akte");
+    expect(
+      screen.getByRole("link", { name: /Personal importieren/ }),
+    ).toHaveAttribute("href", "/personal/import?from=ohne-akte");
+  });
+
+  it("opens a record with the tab it came from", async () => {
+    address.search = "tab=akten";
+    api.fetchStaffOverview.mockResolvedValue({
+      ...OVERVIEW,
+      records: [
+        {
+          id: "5",
+          firstName: "Mira",
+          lastName: "Sommer",
+          birthday: "",
+          personnelNumber: null,
+          hasFinancial: false,
+          employments: [],
+        },
+      ],
+    });
+    renderPage();
+    const row = (await screen.findByText("Mira Sommer")).closest("tr");
+    expect(row).not.toBeNull();
+    fireEvent.click(row!);
+    expect(mockPush).toHaveBeenCalledWith("/personal/5?from=akten");
+  });
+
+  it("ignores an unknown tab in the address", async () => {
+    address.search = "tab=unbekannt";
+    renderPage();
+    expect(
+      await screen.findByText("Vorschläge zum Verknüpfen"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Person einstellen/ }),
+    ).toHaveAttribute("href", "/personal/einstellen?from=vorschlaege");
   });
 });
 
