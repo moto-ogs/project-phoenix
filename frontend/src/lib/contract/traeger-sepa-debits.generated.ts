@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -21,7 +22,7 @@ export interface SEPADebitGroup {
   total_cents: number;
 }
 
-export const SEPADebitGroupSchema: z.ZodType<SEPADebitGroup, unknown> = z.object({
+export const SEPADebitGroupSchema: z.ZodType<SEPADebitGroup, unknown> = object<SEPADebitGroup>({
   sequence_type: z.string(),
   collect_on: calendarDate.nullable(),
   count: safeInt,
@@ -47,7 +48,7 @@ export interface SEPADebitRun {
   submitted_at: string | null;
 }
 
-export const SEPADebitRunSchema: z.ZodType<SEPADebitRun, unknown> = z.object({
+export const SEPADebitRunSchema: z.ZodType<SEPADebitRun, unknown> = object<SEPADebitRun>({
   run_kind: z.string(),
   run_id: int64StringOrNumber,
   creditor_id: z.string(),

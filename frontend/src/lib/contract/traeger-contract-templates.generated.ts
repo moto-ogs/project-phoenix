@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -24,7 +25,7 @@ export interface ContractTemplate {
   updated_at: string;
 }
 
-export const ContractTemplateSchema: z.ZodType<ContractTemplate, unknown> = z.object({
+export const ContractTemplateSchema: z.ZodType<ContractTemplate, unknown> = object<ContractTemplate>({
   id: int64StringOrNumber,
   term_kind: z.string(),
   term_months: safeInt.nullable(),
@@ -56,7 +57,7 @@ export interface OfferingTemplate {
   notice_text: string;
 }
 
-export const OfferingTemplateSchema: z.ZodType<OfferingTemplate, unknown> = z.object({
+export const OfferingTemplateSchema: z.ZodType<OfferingTemplate, unknown> = object<OfferingTemplate>({
   school_id: int64StringOrNumber,
   school_name: z.string(),
   offering_id: int64StringOrNumber,

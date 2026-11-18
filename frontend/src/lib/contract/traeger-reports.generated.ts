@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   safeInt,
   success,
 } from "./runtime";
@@ -14,7 +15,7 @@ export interface KeyDateReportTemplate {
   name: string;
 }
 
-export const KeyDateReportTemplateSchema: z.ZodType<KeyDateReportTemplate, unknown> = z.object({
+export const KeyDateReportTemplateSchema: z.ZodType<KeyDateReportTemplate, unknown> = object<KeyDateReportTemplate>({
   id: int64StringOrNumber,
   name: z.string(),
 });
@@ -25,7 +26,7 @@ export interface ReportWindow {
   to: string | null;
 }
 
-export const ReportWindowSchema: z.ZodType<ReportWindow, unknown> = z.object({
+export const ReportWindowSchema: z.ZodType<ReportWindow, unknown> = object<ReportWindow>({
   from: calendarDate.nullable(),
   to: calendarDate.nullable(),
 });
@@ -49,7 +50,7 @@ export interface KeyDateFigures {
   demand: number;
 }
 
-export const KeyDateFiguresSchema: z.ZodType<KeyDateFigures, unknown> = z.object({
+export const KeyDateFiguresSchema: z.ZodType<KeyDateFigures, unknown> = object<KeyDateFigures>({
   children: safeInt,
   without_care_form: safeInt,
   staff: safeInt,
@@ -75,7 +76,7 @@ export interface KeyDateCareForm {
   active: boolean;
 }
 
-export const KeyDateCareFormSchema: z.ZodType<KeyDateCareForm, unknown> = z.object({
+export const KeyDateCareFormSchema: z.ZodType<KeyDateCareForm, unknown> = object<KeyDateCareForm>({
   name: z.string(),
   children: safeInt,
   capacity: safeInt.nullable(),
@@ -93,7 +94,7 @@ export interface KeyDateSchool {
   care_forms: KeyDateCareForm[] | null;
 }
 
-export const KeyDateSchoolSchema: z.ZodType<KeyDateSchool, unknown> = z.object({
+export const KeyDateSchoolSchema: z.ZodType<KeyDateSchool, unknown> = object<KeyDateSchool>({
   id: int64StringOrNumber,
   name: z.string(),
   city: z.string(),
@@ -112,7 +113,7 @@ export interface KeyDateDistrict {
   care_forms: KeyDateCareForm[] | null;
 }
 
-export const KeyDateDistrictSchema: z.ZodType<KeyDateDistrict, unknown> = z.object({
+export const KeyDateDistrictSchema: z.ZodType<KeyDateDistrict, unknown> = object<KeyDateDistrict>({
   name: z.string(),
   unmapped: z.boolean(),
   schools: safeInt,
@@ -127,7 +128,7 @@ export interface KeyDateTotal {
   care_forms: KeyDateCareForm[] | null;
 }
 
-export const KeyDateTotalSchema: z.ZodType<KeyDateTotal, unknown> = z.object({
+export const KeyDateTotalSchema: z.ZodType<KeyDateTotal, unknown> = object<KeyDateTotal>({
   schools: safeInt,
   figures: KeyDateFiguresSchema,
   care_forms: z.array(KeyDateCareFormSchema).nullable(),
@@ -145,7 +146,7 @@ export interface KeyDateReport {
   total: KeyDateTotal;
 }
 
-export const KeyDateReportSchema: z.ZodType<KeyDateReport, unknown> = z.object({
+export const KeyDateReportSchema: z.ZodType<KeyDateReport, unknown> = object<KeyDateReport>({
   key_date: calendarDate.nullable(),
   as_of: instant,
   template: KeyDateReportTemplateSchema.nullable(),

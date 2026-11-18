@@ -5,6 +5,7 @@ import {
   instant,
   int64StringOrNumber,
   noData,
+  object,
   requestBody,
   safeInt,
   success,
@@ -26,7 +27,7 @@ export interface withdrawnReleaseResponse {
   organization_id: string;
 }
 
-export const withdrawnReleaseResponseSchema: z.ZodType<withdrawnReleaseResponse, unknown> = z.object({
+export const withdrawnReleaseResponseSchema: z.ZodType<withdrawnReleaseResponse, unknown> = object<withdrawnReleaseResponse>({
   organization_id: int64StringOrNumber,
 });
 
@@ -47,7 +48,7 @@ export interface OrganizationSummary {
   personen_count: number;
 }
 
-export const OrganizationSummarySchema: z.ZodType<OrganizationSummary, unknown> = z.object({
+export const OrganizationSummarySchema: z.ZodType<OrganizationSummary, unknown> = object<OrganizationSummary>({
   id: int64StringOrNumber,
   name: z.string(),
   slug: z.string(),
@@ -81,7 +82,7 @@ export interface RetentionInstruction {
   recorded_at: string;
 }
 
-export const RetentionInstructionSchema: z.ZodType<RetentionInstruction, unknown> = z.object({
+export const RetentionInstructionSchema: z.ZodType<RetentionInstruction, unknown> = object<RetentionInstruction>({
   id: int64StringOrNumber,
   organization_id: int64StringOrNumber,
   beleg_type: z.string(),
@@ -111,7 +112,7 @@ export interface RetentionSuspension {
   created_at: string;
 }
 
-export const RetentionSuspensionSchema: z.ZodType<RetentionSuspension, unknown> = z.object({
+export const RetentionSuspensionSchema: z.ZodType<RetentionSuspension, unknown> = object<RetentionSuspension>({
   id: int64StringOrNumber,
   organization_id: int64StringOrNumber,
   beleg_type: z.string(),
@@ -133,7 +134,7 @@ export interface BelegRetentionSummary {
   next_end?: string;
 }
 
-export const BelegRetentionSummarySchema: z.ZodType<BelegRetentionSummary, unknown> = z.object({
+export const BelegRetentionSummarySchema: z.ZodType<BelegRetentionSummary, unknown> = object<BelegRetentionSummary>({
   beleg_type: z.string(),
   scheduled: safeInt,
   running: safeInt,
@@ -155,7 +156,7 @@ export interface BelegClarificationReview {
   reviewed_at: string;
 }
 
-export const BelegClarificationReviewSchema: z.ZodType<BelegClarificationReview, unknown> = z.object({
+export const BelegClarificationReviewSchema: z.ZodType<BelegClarificationReview, unknown> = object<BelegClarificationReview>({
   id: int64StringOrNumber,
   beleg_type: z.string(),
   reason: z.string(),
@@ -179,7 +180,7 @@ export interface BelegClarification {
   last_review?: BelegClarificationReview;
 }
 
-export const BelegClarificationSchema: z.ZodType<BelegClarification, unknown> = z.object({
+export const BelegClarificationSchema: z.ZodType<BelegClarification, unknown> = object<BelegClarification>({
   beleg_type: z.string(),
   reason: z.string(),
   count: safeInt,
@@ -197,7 +198,7 @@ export interface BelegDeletion {
   count: number;
 }
 
-export const BelegDeletionSchema: z.ZodType<BelegDeletion, unknown> = z.object({
+export const BelegDeletionSchema: z.ZodType<BelegDeletion, unknown> = object<BelegDeletion>({
   beleg_type: z.string(),
   deleted_on: calendarDate.nullable(),
   count: safeInt,
@@ -213,7 +214,7 @@ export interface BelegRetentionOverview {
   evaluated_on?: string;
 }
 
-export const BelegRetentionOverviewSchema: z.ZodType<BelegRetentionOverview, unknown> = z.object({
+export const BelegRetentionOverviewSchema: z.ZodType<BelegRetentionOverview, unknown> = object<BelegRetentionOverview>({
   instructions: z.array(RetentionInstructionSchema).nullable(),
   suspensions: z.array(RetentionSuspensionSchema).nullable(),
   summary: z.array(BelegRetentionSummarySchema).nullable(),
@@ -238,7 +239,7 @@ export interface TraegerErasureOrder {
   records_export_sha256?: string;
 }
 
-export const TraegerErasureOrderSchema: z.ZodType<TraegerErasureOrder, unknown> = z.object({
+export const TraegerErasureOrderSchema: z.ZodType<TraegerErasureOrder, unknown> = object<TraegerErasureOrder>({
   id: int64StringOrNumber,
   organization_id: int64StringOrNumber,
   order_reference: z.string(),
@@ -270,7 +271,7 @@ export interface OperatorPerson {
   created_at: string;
 }
 
-export const OperatorPersonSchema: z.ZodType<OperatorPerson, unknown> = z.object({
+export const OperatorPersonSchema: z.ZodType<OperatorPerson, unknown> = object<OperatorPerson>({
   id: int64StringOrNumber,
   first_name: z.string(),
   last_name: z.string(),
@@ -292,7 +293,7 @@ export interface TraegerStaffReleaseState {
   records: number;
 }
 
-export const TraegerStaffReleaseStateSchema: z.ZodType<TraegerStaffReleaseState, unknown> = z.object({
+export const TraegerStaffReleaseStateSchema: z.ZodType<TraegerStaffReleaseState, unknown> = object<TraegerStaffReleaseState>({
   release: TraegerStaffReleaseSchema.nullable(),
   records: safeInt,
 });
@@ -306,7 +307,7 @@ export interface TraegerMember {
   activated_at: string | null;
 }
 
-export const TraegerMemberSchema: z.ZodType<TraegerMember, unknown> = z.object({
+export const TraegerMemberSchema: z.ZodType<TraegerMember, unknown> = object<TraegerMember>({
   account_id: int64StringOrNumber,
   email: z.string(),
   status: z.string(),
@@ -323,7 +324,7 @@ export interface TraegerInvitation {
   expired: boolean;
 }
 
-export const TraegerInvitationSchema: z.ZodType<TraegerInvitation, unknown> = z.object({
+export const TraegerInvitationSchema: z.ZodType<TraegerInvitation, unknown> = object<TraegerInvitation>({
   id: int64StringOrNumber,
   email: z.string(),
   roles: z.array(z.string()).nullable(),
@@ -352,7 +353,7 @@ export interface TestTraeger {
   schools: School[] | null;
 }
 
-export const TestTraegerSchema: z.ZodType<TestTraeger, unknown> = z.object({
+export const TestTraegerSchema: z.ZodType<TestTraeger, unknown> = object<TestTraeger>({
   organization: OrganizationSchema,
   schools: z.array(SchoolSchema).nullable(),
 });
@@ -410,7 +411,7 @@ export interface SampleSchoolResult {
   failed_count: number;
 }
 
-export const SampleSchoolResultSchema: z.ZodType<SampleSchoolResult, unknown> = z.object({
+export const SampleSchoolResultSchema: z.ZodType<SampleSchoolResult, unknown> = object<SampleSchoolResult>({
   school_id: int64StringOrNumber,
   created_count: safeInt,
   skipped_count: safeInt,
@@ -423,7 +424,7 @@ export interface SampleChildrenResult {
   created_count: number;
 }
 
-export const SampleChildrenResultSchema: z.ZodType<SampleChildrenResult, unknown> = z.object({
+export const SampleChildrenResultSchema: z.ZodType<SampleChildrenResult, unknown> = object<SampleChildrenResult>({
   schools: z.array(SampleSchoolResultSchema).nullable(),
   created_count: safeInt,
 });

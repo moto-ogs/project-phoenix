@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   int64String,
+  object,
   success,
 } from "./runtime";
 
@@ -12,7 +13,7 @@ export interface SystemRole {
   is_system: boolean;
 }
 
-export const SystemRoleSchema: z.ZodType<SystemRole, unknown> = z.object({
+export const SystemRoleSchema: z.ZodType<SystemRole, unknown> = object<SystemRole>({
   id: int64String,
   name: z.string(),
   is_system: z.boolean(),

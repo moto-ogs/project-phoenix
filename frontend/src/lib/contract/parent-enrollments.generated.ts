@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   instant,
+  object,
   requestBody,
   safeInt,
   success,
@@ -37,7 +38,7 @@ export interface PublicPhase {
   translations?: Record<string, Record<string, TranslatedText> | null>;
 }
 
-export const PublicPhaseSchema: z.ZodType<PublicPhase, unknown> = z.object({
+export const PublicPhaseSchema: z.ZodType<PublicPhase, unknown> = object<PublicPhase>({
   id: z.string(),
   name: z.string(),
   kind: z.string(),
@@ -73,7 +74,7 @@ export interface FormField {
   translations?: Record<string, Record<string, TranslatedText> | null>;
 }
 
-export const FormFieldSchema: z.ZodType<FormField, unknown> = z.object({
+export const FormFieldSchema: z.ZodType<FormField, unknown> = object<FormField>({
   attachments: z.array(FormAttachmentSchema).optional(),
   key: z.string(),
   label: z.string(),
@@ -101,7 +102,7 @@ export interface PublicFormSchemaResponse {
   core_requirements: Record<string, boolean> | null;
 }
 
-export const PublicFormSchemaResponseSchema: z.ZodType<PublicFormSchemaResponse, unknown> = z.object({
+export const PublicFormSchemaResponseSchema: z.ZodType<PublicFormSchemaResponse, unknown> = object<PublicFormSchemaResponse>({
   id: z.string(),
   version: safeInt,
   fields: z.array(FormFieldSchema).nullable(),
@@ -115,7 +116,7 @@ export interface CareOfferingAvailabilityCondition {
   value: number[] | null;
 }
 
-export const CareOfferingAvailabilityConditionSchema: z.ZodType<CareOfferingAvailabilityCondition, unknown> = z.object({
+export const CareOfferingAvailabilityConditionSchema: z.ZodType<CareOfferingAvailabilityCondition, unknown> = object<CareOfferingAvailabilityCondition>({
   source: z.string(),
   operator: z.string(),
   value: z.array(safeInt).nullable(),
@@ -127,7 +128,7 @@ export interface CareOfferingAvailabilityRule {
   conditions: CareOfferingAvailabilityCondition[] | null;
 }
 
-export const CareOfferingAvailabilityRuleSchema: z.ZodType<CareOfferingAvailabilityRule, unknown> = z.object({
+export const CareOfferingAvailabilityRuleSchema: z.ZodType<CareOfferingAvailabilityRule, unknown> = object<CareOfferingAvailabilityRule>({
   match: z.string(),
   conditions: z.array(CareOfferingAvailabilityConditionSchema).nullable(),
 });
@@ -160,7 +161,7 @@ export interface CareOfferingResponse {
   updated_at: string;
 }
 
-export const CareOfferingResponseSchema: z.ZodType<CareOfferingResponse, unknown> = z.object({
+export const CareOfferingResponseSchema: z.ZodType<CareOfferingResponse, unknown> = object<CareOfferingResponse>({
   id: z.string(),
   phase_id: z.string(),
   activity_group_id: z.string().optional(),
@@ -195,7 +196,7 @@ export interface PublicSchoolClassConfig {
   collect_grade_1: boolean;
 }
 
-export const PublicSchoolClassConfigSchema: z.ZodType<PublicSchoolClassConfig, unknown> = z.object({
+export const PublicSchoolClassConfigSchema: z.ZodType<PublicSchoolClassConfig, unknown> = object<PublicSchoolClassConfig>({
   collect: z.boolean(),
   available_classes: z.array(z.string()).nullable(),
   require: z.boolean(),
@@ -208,7 +209,7 @@ export interface PublicCaptchaConfigResponse {
   site_key: string;
 }
 
-export const PublicCaptchaConfigResponseSchema: z.ZodType<PublicCaptchaConfigResponse, unknown> = z.object({
+export const PublicCaptchaConfigResponseSchema: z.ZodType<PublicCaptchaConfigResponse, unknown> = object<PublicCaptchaConfigResponse>({
   enabled: z.boolean(),
   site_key: z.string(),
 });
@@ -228,7 +229,7 @@ export interface LegalBlock {
   guardian_agreement?: boolean;
 }
 
-export const LegalBlockSchema: z.ZodType<LegalBlock, unknown> = z.object({
+export const LegalBlockSchema: z.ZodType<LegalBlock, unknown> = object<LegalBlock>({
   attachments: z.array(FormAttachmentSchema).optional(),
   key: z.string(),
   kind: z.string(),
@@ -258,7 +259,7 @@ export interface PublicLegalTextsResponse {
   health_consent?: LegalBlock;
 }
 
-export const PublicLegalTextsResponseSchema: z.ZodType<PublicLegalTextsResponse, unknown> = z.object({
+export const PublicLegalTextsResponseSchema: z.ZodType<PublicLegalTextsResponse, unknown> = object<PublicLegalTextsResponse>({
   agb: z.string(),
   agb_document_url: z.string(),
   agb_display_mode: z.string(),
@@ -280,7 +281,7 @@ export interface PublicLateInvitePrefill {
   guardian_last_name?: string;
 }
 
-export const PublicLateInvitePrefillSchema: z.ZodType<PublicLateInvitePrefill, unknown> = z.object({
+export const PublicLateInvitePrefillSchema: z.ZodType<PublicLateInvitePrefill, unknown> = object<PublicLateInvitePrefill>({
   guardian_email: z.string(),
   guardian_first_name: z.string().optional(),
   guardian_last_name: z.string().optional(),
@@ -301,7 +302,7 @@ export interface PublicEnrollmentFormBootstrapResponse {
   late_invite?: PublicLateInvitePrefill;
 }
 
-export const PublicEnrollmentFormBootstrapResponseSchema: z.ZodType<PublicEnrollmentFormBootstrapResponse, unknown> = z.object({
+export const PublicEnrollmentFormBootstrapResponseSchema: z.ZodType<PublicEnrollmentFormBootstrapResponse, unknown> = object<PublicEnrollmentFormBootstrapResponse>({
   phase: PublicPhaseSchema,
   schema: PublicFormSchemaResponseSchema.nullable(),
   offerings: z.array(CareOfferingResponseSchema).nullable(),
@@ -323,7 +324,7 @@ export interface GuardianProfileGuardian {
   phone?: string;
 }
 
-export const GuardianProfileGuardianSchema: z.ZodType<GuardianProfileGuardian, unknown> = z.object({
+export const GuardianProfileGuardianSchema: z.ZodType<GuardianProfileGuardian, unknown> = object<GuardianProfileGuardian>({
   first_name: z.string(),
   last_name: z.string(),
   email: z.string(),
@@ -341,7 +342,7 @@ export interface GuardianProfileChild {
   status: string;
 }
 
-export const GuardianProfileChildSchema: z.ZodType<GuardianProfileChild, unknown> = z.object({
+export const GuardianProfileChildSchema: z.ZodType<GuardianProfileChild, unknown> = object<GuardianProfileChild>({
   id: z.string(),
   first_name: z.string(),
   last_name: z.string(),
@@ -357,7 +358,7 @@ export interface GuardianProfileResponse {
   children: GuardianProfileChild[] | null;
 }
 
-export const GuardianProfileResponseSchema: z.ZodType<GuardianProfileResponse, unknown> = z.object({
+export const GuardianProfileResponseSchema: z.ZodType<GuardianProfileResponse, unknown> = object<GuardianProfileResponse>({
   guardian: GuardianProfileGuardianSchema,
   children: z.array(GuardianProfileChildSchema).nullable(),
 });
@@ -419,7 +420,7 @@ export interface SubmissionWarning {
   code: string;
 }
 
-export const SubmissionWarningSchema: z.ZodType<SubmissionWarning, unknown> = z.object({
+export const SubmissionWarningSchema: z.ZodType<SubmissionWarning, unknown> = object<SubmissionWarning>({
   code: z.string(),
 });
 
@@ -430,7 +431,7 @@ export interface SubmitEnrollmentResponse {
   warnings?: SubmissionWarning[];
 }
 
-export const SubmitEnrollmentResponseSchema: z.ZodType<SubmitEnrollmentResponse, unknown> = z.object({
+export const SubmitEnrollmentResponseSchema: z.ZodType<SubmitEnrollmentResponse, unknown> = object<SubmitEnrollmentResponse>({
   request_id: z.string(),
   status_url: z.string(),
   warnings: z.array(SubmissionWarningSchema).optional(),

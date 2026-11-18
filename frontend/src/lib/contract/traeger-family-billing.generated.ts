@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -35,7 +36,7 @@ export interface FamilyBilling {
   updated_at: string;
 }
 
-export const FamilyBillingSchema: z.ZodType<FamilyBilling, unknown> = z.object({
+export const FamilyBillingSchema: z.ZodType<FamilyBilling, unknown> = object<FamilyBilling>({
   id: int64StringOrNumber,
   family_email: z.string(),
   contract_id: int64StringOrNumber,
@@ -75,7 +76,7 @@ export interface FamilyBillingResponse {
   family: FamilyBilling | null;
 }
 
-export const FamilyBillingResponseSchema: z.ZodType<FamilyBillingResponse, unknown> = z.object({
+export const FamilyBillingResponseSchema: z.ZodType<FamilyBillingResponse, unknown> = object<FamilyBillingResponse>({
   family: FamilyBillingSchema.nullable(),
 });
 

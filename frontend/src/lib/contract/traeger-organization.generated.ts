@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   int64StringOrNumber,
+  object,
   success,
 } from "./runtime";
 
@@ -13,7 +14,7 @@ export interface TraegerFrame {
   federal_states: string[] | null;
 }
 
-export const TraegerFrameSchema: z.ZodType<TraegerFrame, unknown> = z.object({
+export const TraegerFrameSchema: z.ZodType<TraegerFrame, unknown> = object<TraegerFrame>({
   id: int64StringOrNumber,
   name: z.string(),
   test_system: z.boolean(),

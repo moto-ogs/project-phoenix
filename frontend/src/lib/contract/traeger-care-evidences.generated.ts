@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   success,
 } from "./runtime";
@@ -25,7 +26,7 @@ export interface CareEvidence {
   updated_at: string;
 }
 
-export const CareEvidenceSchema: z.ZodType<CareEvidence, unknown> = z.object({
+export const CareEvidenceSchema: z.ZodType<CareEvidence, unknown> = object<CareEvidence>({
   id: int64StringOrNumber,
   contract_id: int64StringOrNumber,
   kind: z.string(),
@@ -47,7 +48,7 @@ export interface CareEvidenceContract {
   evidences: CareEvidence[] | null;
 }
 
-export const CareEvidenceContractSchema: z.ZodType<CareEvidenceContract, unknown> = z.object({
+export const CareEvidenceContractSchema: z.ZodType<CareEvidenceContract, unknown> = object<CareEvidenceContract>({
   contract_id: int64StringOrNumber,
   school_id: int64StringOrNumber,
   school_name: z.string(),
@@ -62,7 +63,7 @@ export interface CareEvidenceSet {
   levels: ContributionRule[] | null;
 }
 
-export const CareEvidenceSetSchema: z.ZodType<CareEvidenceSet, unknown> = z.object({
+export const CareEvidenceSetSchema: z.ZodType<CareEvidenceSet, unknown> = object<CareEvidenceSet>({
   contracts: z.array(CareEvidenceContractSchema).nullable(),
   levels: z.array(ContributionRuleSchema).nullable(),
 });

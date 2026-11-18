@@ -4,6 +4,7 @@ import {
   instant,
   int64StringOrNumber,
   noData,
+  object,
   requestBody,
   success,
 } from "./runtime";
@@ -20,7 +21,7 @@ export interface TraegerMemberResponse {
   activated_at: string | null;
 }
 
-export const TraegerMemberResponseSchema: z.ZodType<TraegerMemberResponse, unknown> = z.object({
+export const TraegerMemberResponseSchema: z.ZodType<TraegerMemberResponse, unknown> = object<TraegerMemberResponse>({
   account_id: int64StringOrNumber,
   email: z.string(),
   name: z.string(),
@@ -37,7 +38,7 @@ export interface TraegerInvitationResponse {
   created_at: string;
 }
 
-export const TraegerInvitationResponseSchema: z.ZodType<TraegerInvitationResponse, unknown> = z.object({
+export const TraegerInvitationResponseSchema: z.ZodType<TraegerInvitationResponse, unknown> = object<TraegerInvitationResponse>({
   id: int64StringOrNumber,
   email: z.string(),
   roles: z.array(z.string()).nullable(),
@@ -51,7 +52,7 @@ export interface TraegerAccountsResponse {
   invitations: TraegerInvitationResponse[] | null;
 }
 
-export const TraegerAccountsResponseSchema: z.ZodType<TraegerAccountsResponse, unknown> = z.object({
+export const TraegerAccountsResponseSchema: z.ZodType<TraegerAccountsResponse, unknown> = object<TraegerAccountsResponse>({
   members: z.array(TraegerMemberResponseSchema).nullable(),
   invitations: z.array(TraegerInvitationResponseSchema).nullable(),
 });
@@ -68,7 +69,7 @@ export interface TraegerHistoryEntryResponse {
   roles_after: string[] | null;
 }
 
-export const TraegerHistoryEntryResponseSchema: z.ZodType<TraegerHistoryEntryResponse, unknown> = z.object({
+export const TraegerHistoryEntryResponseSchema: z.ZodType<TraegerHistoryEntryResponse, unknown> = object<TraegerHistoryEntryResponse>({
   id: int64StringOrNumber,
   occurred_at: instant,
   action: z.string(),
@@ -85,7 +86,7 @@ export interface TraegerHistoryResponse {
   has_more: boolean;
 }
 
-export const TraegerHistoryResponseSchema: z.ZodType<TraegerHistoryResponse, unknown> = z.object({
+export const TraegerHistoryResponseSchema: z.ZodType<TraegerHistoryResponse, unknown> = object<TraegerHistoryResponse>({
   entries: z.array(TraegerHistoryEntryResponseSchema).nullable(),
   has_more: z.boolean(),
 });

@@ -4,6 +4,7 @@ import {
   calendarDate,
   int64StringOrNumber,
   noData,
+  object,
   success,
 } from "./runtime";
 
@@ -14,7 +15,7 @@ export interface PoolProofStatus {
   expires_on?: string;
 }
 
-export const PoolProofStatusSchema: z.ZodType<PoolProofStatus, unknown> = z.object({
+export const PoolProofStatusSchema: z.ZodType<PoolProofStatus, unknown> = object<PoolProofStatus>({
   type_name: z.string(),
   status: z.string(),
   expires_on: calendarDate.optional(),
@@ -32,7 +33,7 @@ export interface PoolBlock {
   lifted: boolean;
 }
 
-export const PoolBlockSchema: z.ZodType<PoolBlock, unknown> = z.object({
+export const PoolBlockSchema: z.ZodType<PoolBlock, unknown> = object<PoolBlock>({
   id: int64StringOrNumber.optional(),
   school_id: int64StringOrNumber,
   school_name: z.string(),
@@ -54,7 +55,7 @@ export interface PoolSpringer {
   blocks: PoolBlock[] | null;
 }
 
-export const PoolSpringerSchema: z.ZodType<PoolSpringer, unknown> = z.object({
+export const PoolSpringerSchema: z.ZodType<PoolSpringer, unknown> = object<PoolSpringer>({
   staff_record_id: int64StringOrNumber,
   first_name: z.string(),
   last_name: z.string(),
@@ -72,7 +73,7 @@ export interface PoolWeek {
   springers: PoolSpringer[] | null;
 }
 
-export const PoolWeekSchema: z.ZodType<PoolWeek, unknown> = z.object({
+export const PoolWeekSchema: z.ZodType<PoolWeek, unknown> = object<PoolWeek>({
   week_start: calendarDate.nullable(),
   today: calendarDate.nullable(),
   available: z.boolean(),

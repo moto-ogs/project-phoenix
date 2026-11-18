@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   calendarDate,
+  object,
   success,
 } from "./runtime";
 
@@ -12,7 +13,7 @@ export interface HolidayRegistrationAddressResponse {
   city: string;
 }
 
-export const HolidayRegistrationAddressResponseSchema: z.ZodType<HolidayRegistrationAddressResponse, unknown> = z.object({
+export const HolidayRegistrationAddressResponseSchema: z.ZodType<HolidayRegistrationAddressResponse, unknown> = object<HolidayRegistrationAddressResponse>({
   street: z.string(),
   postal_code: z.string(),
   city: z.string(),
@@ -27,7 +28,7 @@ export interface HolidayRegistrationGuardianResponse {
   address?: HolidayRegistrationAddressResponse;
 }
 
-export const HolidayRegistrationGuardianResponseSchema: z.ZodType<HolidayRegistrationGuardianResponse, unknown> = z.object({
+export const HolidayRegistrationGuardianResponseSchema: z.ZodType<HolidayRegistrationGuardianResponse, unknown> = object<HolidayRegistrationGuardianResponse>({
   first_name: z.string(),
   last_name: z.string(),
   email: z.string(),
@@ -48,7 +49,7 @@ export interface HolidayRegistrationContactResponse {
   pickup: boolean;
 }
 
-export const HolidayRegistrationContactResponseSchema: z.ZodType<HolidayRegistrationContactResponse, unknown> = z.object({
+export const HolidayRegistrationContactResponseSchema: z.ZodType<HolidayRegistrationContactResponse, unknown> = object<HolidayRegistrationContactResponse>({
   guardian_profile_id: z.string(),
   first_name: z.string(),
   last_name: z.string(),
@@ -72,7 +73,7 @@ export interface HolidayRegistrationChildResponse {
   contacts: HolidayRegistrationContactResponse[] | null;
 }
 
-export const HolidayRegistrationChildResponseSchema: z.ZodType<HolidayRegistrationChildResponse, unknown> = z.object({
+export const HolidayRegistrationChildResponseSchema: z.ZodType<HolidayRegistrationChildResponse, unknown> = object<HolidayRegistrationChildResponse>({
   student_id: z.string(),
   school_id: z.string(),
   first_name: z.string(),
@@ -90,7 +91,7 @@ export interface HolidayRegistrationFamilyResponse {
   account_proof: string;
 }
 
-export const HolidayRegistrationFamilyResponseSchema: z.ZodType<HolidayRegistrationFamilyResponse, unknown> = z.object({
+export const HolidayRegistrationFamilyResponseSchema: z.ZodType<HolidayRegistrationFamilyResponse, unknown> = object<HolidayRegistrationFamilyResponse>({
   guardian: HolidayRegistrationGuardianResponseSchema,
   children: z.array(HolidayRegistrationChildResponseSchema).nullable(),
   account_proof: z.string(),

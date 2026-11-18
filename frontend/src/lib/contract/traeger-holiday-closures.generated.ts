@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -15,7 +16,7 @@ export interface HolidayClosedDay {
   reason: string;
 }
 
-export const HolidayClosedDaySchema: z.ZodType<HolidayClosedDay, unknown> = z.object({
+export const HolidayClosedDaySchema: z.ZodType<HolidayClosedDay, unknown> = object<HolidayClosedDay>({
   date: calendarDate.nullable(),
   reason: z.string(),
 });
@@ -35,7 +36,7 @@ export interface HolidayClosureWeek {
   families: number;
 }
 
-export const HolidayClosureWeekSchema: z.ZodType<HolidayClosureWeek, unknown> = z.object({
+export const HolidayClosureWeekSchema: z.ZodType<HolidayClosureWeek, unknown> = object<HolidayClosureWeek>({
   week_id: int64StringOrNumber,
   period_id: int64StringOrNumber,
   period_name: z.string(),
@@ -55,7 +56,7 @@ export interface Range {
   end_date: string | null;
 }
 
-export const RangeSchema: z.ZodType<Range, unknown> = z.object({
+export const RangeSchema: z.ZodType<Range, unknown> = object<Range>({
   start_date: calendarDate.nullable(),
   end_date: calendarDate.nullable(),
 });
@@ -81,7 +82,7 @@ export interface TraegerNotice {
   children: number;
 }
 
-export const TraegerNoticeSchema: z.ZodType<TraegerNotice, unknown> = z.object({
+export const TraegerNoticeSchema: z.ZodType<TraegerNotice, unknown> = object<TraegerNotice>({
   token: z.string(),
   id: int64StringOrNumber,
   school_id: int64StringOrNumber,
@@ -113,7 +114,7 @@ export interface Pending {
   unknown_mails: number;
 }
 
-export const PendingSchema: z.ZodType<Pending, unknown> = z.object({
+export const PendingSchema: z.ZodType<Pending, unknown> = object<Pending>({
   weeks: z.array(HolidayClosureWeekSchema).nullable(),
   children: safeInt,
   families: safeInt,
@@ -136,7 +137,7 @@ export interface NotifiedPending {
   families: number;
 }
 
-export const NotifiedPendingSchema: z.ZodType<NotifiedPending, unknown> = z.object({
+export const NotifiedPendingSchema: z.ZodType<NotifiedPending, unknown> = object<NotifiedPending>({
   retried_mails: safeInt,
   notices: safeInt,
   families: safeInt,
@@ -167,7 +168,7 @@ export interface ClosureNotice {
   updated_at: string;
 }
 
-export const ClosureNoticeSchema: z.ZodType<ClosureNotice, unknown> = z.object({
+export const ClosureNoticeSchema: z.ZodType<ClosureNotice, unknown> = object<ClosureNotice>({
   token: z.string(),
   id: int64StringOrNumber,
   school_id: int64StringOrNumber,
@@ -212,7 +213,7 @@ export interface HolidayClosureImpact {
   keeps_contribution: boolean;
 }
 
-export const HolidayClosureImpactSchema: z.ZodType<HolidayClosureImpact, unknown> = z.object({
+export const HolidayClosureImpactSchema: z.ZodType<HolidayClosureImpact, unknown> = object<HolidayClosureImpact>({
   weeks: z.array(HolidayClosureWeekSchema).nullable(),
   children: safeInt,
   families: safeInt,

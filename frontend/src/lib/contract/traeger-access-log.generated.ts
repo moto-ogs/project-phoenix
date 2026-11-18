@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   instant,
   int64StringOrNumber,
+  object,
   success,
 } from "./runtime";
 
@@ -19,7 +20,7 @@ export interface AccessLogEntry {
   data_label: string;
 }
 
-export const AccessLogEntrySchema: z.ZodType<AccessLogEntry, unknown> = z.object({
+export const AccessLogEntrySchema: z.ZodType<AccessLogEntry, unknown> = object<AccessLogEntry>({
   id: z.string(),
   occurred_at: instant,
   school_id: int64StringOrNumber,
@@ -38,7 +39,7 @@ export interface AccessLogPage {
   as_of: string;
 }
 
-export const AccessLogPageSchema: z.ZodType<AccessLogPage, unknown> = z.object({
+export const AccessLogPageSchema: z.ZodType<AccessLogPage, unknown> = object<AccessLogPage>({
   entries: z.array(AccessLogEntrySchema).nullable(),
   has_more: z.boolean(),
   as_of: instant,
@@ -50,7 +51,7 @@ export interface AccessLogPerson {
   name: string;
 }
 
-export const AccessLogPersonSchema: z.ZodType<AccessLogPerson, unknown> = z.object({
+export const AccessLogPersonSchema: z.ZodType<AccessLogPerson, unknown> = object<AccessLogPerson>({
   account_id: int64StringOrNumber,
   name: z.string(),
 });

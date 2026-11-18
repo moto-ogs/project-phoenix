@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   int64String,
   int64StringOrNumber,
+  object,
   safeInt,
   success,
 } from "./runtime";
@@ -16,7 +17,7 @@ export interface ShiftDeletedResponse {
   id: string;
 }
 
-export const ShiftDeletedResponseSchema: z.ZodType<ShiftDeletedResponse, unknown> = z.object({
+export const ShiftDeletedResponseSchema: z.ZodType<ShiftDeletedResponse, unknown> = object<ShiftDeletedResponse>({
   id: int64StringOrNumber,
 });
 
@@ -27,7 +28,7 @@ export interface OverviewStaffResponse {
   last_name: string;
 }
 
-export const OverviewStaffResponseSchema: z.ZodType<OverviewStaffResponse, unknown> = z.object({
+export const OverviewStaffResponseSchema: z.ZodType<OverviewStaffResponse, unknown> = object<OverviewStaffResponse>({
   id: int64StringOrNumber,
   first_name: z.string(),
   last_name: z.string(),
@@ -39,7 +40,7 @@ export interface CoverageIntervalResponse {
   end_time: string;
 }
 
-export const CoverageIntervalResponseSchema: z.ZodType<CoverageIntervalResponse, unknown> = z.object({
+export const CoverageIntervalResponseSchema: z.ZodType<CoverageIntervalResponse, unknown> = object<CoverageIntervalResponse>({
   start_time: z.string(),
   end_time: z.string(),
 });
@@ -63,7 +64,7 @@ export interface AssignmentResponse {
   uncovered_intervals: CoverageIntervalResponse[] | null;
 }
 
-export const AssignmentResponseSchema: z.ZodType<AssignmentResponse, unknown> = z.object({
+export const AssignmentResponseSchema: z.ZodType<AssignmentResponse, unknown> = object<AssignmentResponse>({
   instance_id: int64StringOrNumber,
   staff_id: int64StringOrNumber,
   date: z.string(),
@@ -87,7 +88,7 @@ export interface ShiftTypeMinutesResponse {
   planned_minutes: number;
 }
 
-export const ShiftTypeMinutesResponseSchema: z.ZodType<ShiftTypeMinutesResponse, unknown> = z.object({
+export const ShiftTypeMinutesResponseSchema: z.ZodType<ShiftTypeMinutesResponse, unknown> = object<ShiftTypeMinutesResponse>({
   shift_type_id: int64String.nullable(),
   planned_minutes: safeInt,
 });
@@ -102,7 +103,7 @@ export interface WeeklySummaryResponse {
   planned_by_shift_type: ShiftTypeMinutesResponse[] | null;
 }
 
-export const WeeklySummaryResponseSchema: z.ZodType<WeeklySummaryResponse, unknown> = z.object({
+export const WeeklySummaryResponseSchema: z.ZodType<WeeklySummaryResponse, unknown> = object<WeeklySummaryResponse>({
   staff_id: int64StringOrNumber,
   week_start: z.string(),
   planned_minutes: safeInt,
@@ -123,7 +124,7 @@ export interface OverviewResponse {
   weekly_summaries: WeeklySummaryResponse[] | null;
 }
 
-export const OverviewResponseSchema: z.ZodType<OverviewResponse, unknown> = z.object({
+export const OverviewResponseSchema: z.ZodType<OverviewResponse, unknown> = object<OverviewResponse>({
   from: z.string(),
   to: z.string(),
   dienstplan_in_use: z.boolean(),
@@ -144,7 +145,7 @@ export interface SeriesResponse {
   skipped_non_working_days: number;
 }
 
-export const SeriesResponseSchema: z.ZodType<SeriesResponse, unknown> = z.object({
+export const SeriesResponseSchema: z.ZodType<SeriesResponse, unknown> = object<SeriesResponse>({
   series_id: int64String,
   old_series_id: int64String.optional(),
   created: safeInt,
@@ -159,7 +160,7 @@ export interface CancellationResponse {
   replacements: ShiftResponse[] | null;
 }
 
-export const CancellationResponseSchema: z.ZodType<CancellationResponse, unknown> = z.object({
+export const CancellationResponseSchema: z.ZodType<CancellationResponse, unknown> = object<CancellationResponse>({
   shift: ShiftResponseSchema,
   replacements: z.array(ShiftResponseSchema).nullable(),
 });

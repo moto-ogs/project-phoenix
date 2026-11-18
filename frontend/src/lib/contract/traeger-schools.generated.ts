@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   safeInt,
   success,
 } from "./runtime";
@@ -17,7 +18,7 @@ export interface TraegerSchool {
   city: string;
 }
 
-export const TraegerSchoolSchema: z.ZodType<TraegerSchool, unknown> = z.object({
+export const TraegerSchoolSchema: z.ZodType<TraegerSchool, unknown> = object<TraegerSchool>({
   id: int64StringOrNumber,
   name: z.string(),
   slug: z.string(),
@@ -32,7 +33,7 @@ export interface AlertThresholds {
   open_enrollments: number;
 }
 
-export const AlertThresholdsSchema: z.ZodType<AlertThresholds, unknown> = z.object({
+export const AlertThresholdsSchema: z.ZodType<AlertThresholds, unknown> = object<AlertThresholds>({
   children_per_staff: safeInt,
   sick_percent: safeInt,
   open_enrollments: safeInt,
@@ -49,7 +50,7 @@ export interface SchoolFigures {
   as_of: string;
 }
 
-export const SchoolFiguresSchema: z.ZodType<SchoolFigures, unknown> = z.object({
+export const SchoolFiguresSchema: z.ZodType<SchoolFigures, unknown> = object<SchoolFigures>({
   children_total: safeInt,
   children_present: safeInt,
   children_sick: safeInt,
@@ -71,7 +72,7 @@ export interface SchoolAlerts {
   alerts: string[] | null;
 }
 
-export const SchoolAlertsSchema: z.ZodType<SchoolAlerts, unknown> = z.object({
+export const SchoolAlertsSchema: z.ZodType<SchoolAlerts, unknown> = object<SchoolAlerts>({
   id: int64StringOrNumber,
   name: z.string(),
   slug: z.string(),
@@ -89,7 +90,7 @@ export interface SchoolsAlerts {
   as_of: string;
 }
 
-export const SchoolsAlertsSchema: z.ZodType<SchoolsAlerts, unknown> = z.object({
+export const SchoolsAlertsSchema: z.ZodType<SchoolsAlerts, unknown> = object<SchoolsAlerts>({
   thresholds: AlertThresholdsSchema,
   schools: z.array(SchoolAlertsSchema).nullable(),
   as_of: instant,
@@ -102,7 +103,7 @@ export interface ArrivalPickupCell {
   pickups: number;
 }
 
-export const ArrivalPickupCellSchema: z.ZodType<ArrivalPickupCell, unknown> = z.object({
+export const ArrivalPickupCellSchema: z.ZodType<ArrivalPickupCell, unknown> = object<ArrivalPickupCell>({
   start_minute: safeInt,
   arrivals: z.number(),
   pickups: z.number(),
@@ -115,7 +116,7 @@ export interface ArrivalPickupWeekday {
   slots: ArrivalPickupCell[] | null;
 }
 
-export const ArrivalPickupWeekdaySchema: z.ZodType<ArrivalPickupWeekday, unknown> = z.object({
+export const ArrivalPickupWeekdaySchema: z.ZodType<ArrivalPickupWeekday, unknown> = object<ArrivalPickupWeekday>({
   weekday: safeInt,
   days: safeInt,
   slots: z.array(ArrivalPickupCellSchema).nullable(),
@@ -126,7 +127,7 @@ export interface ArrivalPickupHeatmap {
   weekdays: ArrivalPickupWeekday[] | null;
 }
 
-export const ArrivalPickupHeatmapSchema: z.ZodType<ArrivalPickupHeatmap, unknown> = z.object({
+export const ArrivalPickupHeatmapSchema: z.ZodType<ArrivalPickupHeatmap, unknown> = object<ArrivalPickupHeatmap>({
   weekdays: z.array(ArrivalPickupWeekdaySchema).nullable(),
 });
 
@@ -141,7 +142,7 @@ export interface SchoolArrivalPickupTimes {
   first_day: string | null;
 }
 
-export const SchoolArrivalPickupTimesSchema: z.ZodType<SchoolArrivalPickupTimes, unknown> = z.object({
+export const SchoolArrivalPickupTimesSchema: z.ZodType<SchoolArrivalPickupTimes, unknown> = object<SchoolArrivalPickupTimes>({
   id: int64StringOrNumber,
   name: z.string(),
   slug: z.string(),
@@ -162,7 +163,7 @@ export interface ArrivalPickupTimes {
   schools: SchoolArrivalPickupTimes[] | null;
 }
 
-export const ArrivalPickupTimesSchema: z.ZodType<ArrivalPickupTimes, unknown> = z.object({
+export const ArrivalPickupTimesSchema: z.ZodType<ArrivalPickupTimes, unknown> = object<ArrivalPickupTimes>({
   from: calendarDate.nullable(),
   to: calendarDate.nullable(),
   slot_minutes: safeInt,
@@ -183,7 +184,7 @@ export interface ComparedSchool {
   key_date: string | null;
 }
 
-export const ComparedSchoolSchema: z.ZodType<ComparedSchool, unknown> = z.object({
+export const ComparedSchoolSchema: z.ZodType<ComparedSchool, unknown> = object<ComparedSchool>({
   id: int64StringOrNumber,
   name: z.string(),
   slug: z.string(),
@@ -205,7 +206,7 @@ export interface SchoolComparison {
   together: Record<string, number> | null;
 }
 
-export const SchoolComparisonSchema: z.ZodType<SchoolComparison, unknown> = z.object({
+export const SchoolComparisonSchema: z.ZodType<SchoolComparison, unknown> = object<SchoolComparison>({
   from: calendarDate.nullable(),
   to: calendarDate.nullable(),
   days: safeInt,
@@ -231,7 +232,7 @@ export interface DailyAttendanceSummary {
   present_per_day: number;
 }
 
-export const DailyAttendanceSummarySchema: z.ZodType<DailyAttendanceSummary, unknown> = z.object({
+export const DailyAttendanceSummarySchema: z.ZodType<DailyAttendanceSummary, unknown> = object<DailyAttendanceSummary>({
   present: safeInt,
   sick: safeInt,
   excused: safeInt,
@@ -259,7 +260,7 @@ export interface DailyAttendanceDay {
   longest_minutes: number | null;
 }
 
-export const DailyAttendanceDaySchema: z.ZodType<DailyAttendanceDay, unknown> = z.object({
+export const DailyAttendanceDaySchema: z.ZodType<DailyAttendanceDay, unknown> = object<DailyAttendanceDay>({
   date: calendarDate.nullable(),
   present: safeInt,
   sick: safeInt,
@@ -283,7 +284,7 @@ export interface SchoolDailyAttendance {
   days: DailyAttendanceDay[] | null;
 }
 
-export const SchoolDailyAttendanceSchema: z.ZodType<SchoolDailyAttendance, unknown> = z.object({
+export const SchoolDailyAttendanceSchema: z.ZodType<SchoolDailyAttendance, unknown> = object<SchoolDailyAttendance>({
   id: int64StringOrNumber,
   name: z.string(),
   slug: z.string(),
@@ -304,7 +305,7 @@ export interface DailyAttendance {
   schools: SchoolDailyAttendance[] | null;
 }
 
-export const DailyAttendanceSchema: z.ZodType<DailyAttendance, unknown> = z.object({
+export const DailyAttendanceSchema: z.ZodType<DailyAttendance, unknown> = object<DailyAttendance>({
   from: calendarDate.nullable(),
   to: calendarDate.nullable(),
   federal_state: z.string(),
@@ -323,7 +324,7 @@ export interface KeyDateCount {
   recorded_at: string;
 }
 
-export const KeyDateCountSchema: z.ZodType<KeyDateCount, unknown> = z.object({
+export const KeyDateCountSchema: z.ZodType<KeyDateCount, unknown> = object<KeyDateCount>({
   period: calendarDate.nullable(),
   key_date: calendarDate.nullable(),
   active_students: safeInt,
@@ -341,7 +342,7 @@ export interface SchoolKeyDateCounts {
   counts: KeyDateCount[] | null;
 }
 
-export const SchoolKeyDateCountsSchema: z.ZodType<SchoolKeyDateCounts, unknown> = z.object({
+export const SchoolKeyDateCountsSchema: z.ZodType<SchoolKeyDateCounts, unknown> = object<SchoolKeyDateCounts>({
   id: int64StringOrNumber,
   name: z.string(),
   slug: z.string(),
@@ -359,7 +360,7 @@ export interface KeyDateMonth {
   schools: number;
 }
 
-export const KeyDateMonthSchema: z.ZodType<KeyDateMonth, unknown> = z.object({
+export const KeyDateMonthSchema: z.ZodType<KeyDateMonth, unknown> = object<KeyDateMonth>({
   period: calendarDate.nullable(),
   key_date: calendarDate.nullable(),
   active_students: safeInt,
@@ -373,7 +374,7 @@ export interface KeyDateCounts {
   months: KeyDateMonth[] | null;
 }
 
-export const KeyDateCountsSchema: z.ZodType<KeyDateCounts, unknown> = z.object({
+export const KeyDateCountsSchema: z.ZodType<KeyDateCounts, unknown> = object<KeyDateCounts>({
   schools: z.array(SchoolKeyDateCountsSchema).nullable(),
   months: z.array(KeyDateMonthSchema).nullable(),
 });
@@ -385,7 +386,7 @@ export interface OccupancyGroup {
   children: number;
 }
 
-export const OccupancyGroupSchema: z.ZodType<OccupancyGroup, unknown> = z.object({
+export const OccupancyGroupSchema: z.ZodType<OccupancyGroup, unknown> = object<OccupancyGroup>({
   id: int64StringOrNumber,
   name: z.string(),
   children: safeInt,
@@ -400,7 +401,7 @@ export interface OccupancyCareForm {
   active: boolean;
 }
 
-export const OccupancyCareFormSchema: z.ZodType<OccupancyCareForm, unknown> = z.object({
+export const OccupancyCareFormSchema: z.ZodType<OccupancyCareForm, unknown> = object<OccupancyCareForm>({
   id: int64StringOrNumber,
   name: z.string(),
   children: safeInt,
@@ -422,7 +423,7 @@ export interface SchoolOccupancy {
   care_forms: OccupancyCareForm[] | null;
 }
 
-export const SchoolOccupancySchema: z.ZodType<SchoolOccupancy, unknown> = z.object({
+export const SchoolOccupancySchema: z.ZodType<SchoolOccupancy, unknown> = object<SchoolOccupancy>({
   id: int64StringOrNumber,
   name: z.string(),
   slug: z.string(),
@@ -442,7 +443,7 @@ export interface Occupancy {
   schools: SchoolOccupancy[] | null;
 }
 
-export const OccupancySchema: z.ZodType<Occupancy, unknown> = z.object({
+export const OccupancySchema: z.ZodType<Occupancy, unknown> = object<Occupancy>({
   day: calendarDate.nullable(),
   as_of: instant,
   schools: z.array(SchoolOccupancySchema).nullable(),
@@ -457,7 +458,7 @@ export interface UtilizationOffering {
   booked: number[] | null;
 }
 
-export const UtilizationOfferingSchema: z.ZodType<UtilizationOffering, unknown> = z.object({
+export const UtilizationOfferingSchema: z.ZodType<UtilizationOffering, unknown> = object<UtilizationOffering>({
   id: int64StringOrNumber,
   name: z.string(),
   capacity: safeInt.nullable(),
@@ -474,7 +475,7 @@ export interface UtilizationRoom {
   peak: (number | null)[] | null;
 }
 
-export const UtilizationRoomSchema: z.ZodType<UtilizationRoom, unknown> = z.object({
+export const UtilizationRoomSchema: z.ZodType<UtilizationRoom, unknown> = object<UtilizationRoom>({
   id: int64StringOrNumber,
   name: z.string(),
   capacity: safeInt.nullable(),
@@ -499,7 +500,7 @@ export interface SchoolUtilization {
   rooms: UtilizationRoom[] | null;
 }
 
-export const SchoolUtilizationSchema: z.ZodType<SchoolUtilization, unknown> = z.object({
+export const SchoolUtilizationSchema: z.ZodType<SchoolUtilization, unknown> = object<SchoolUtilization>({
   id: int64StringOrNumber,
   name: z.string(),
   slug: z.string(),
@@ -524,7 +525,7 @@ export interface Utilization {
   schools: SchoolUtilization[] | null;
 }
 
-export const UtilizationSchema: z.ZodType<Utilization, unknown> = z.object({
+export const UtilizationSchema: z.ZodType<Utilization, unknown> = object<Utilization>({
   from: calendarDate.nullable(),
   to: calendarDate.nullable(),
   days: z.array(calendarDate.nullable()).nullable(),
@@ -546,7 +547,7 @@ export interface SchoolView {
   figures: SchoolFigures;
 }
 
-export const SchoolViewSchema: z.ZodType<SchoolView, unknown> = z.object({
+export const SchoolViewSchema: z.ZodType<SchoolView, unknown> = object<SchoolView>({
   id: int64StringOrNumber,
   name: z.string(),
   slug: z.string(),
@@ -574,7 +575,7 @@ export interface ChildAttendance {
   attendance_rate: number | null;
 }
 
-export const ChildAttendanceSchema: z.ZodType<ChildAttendance, unknown> = z.object({
+export const ChildAttendanceSchema: z.ZodType<ChildAttendance, unknown> = object<ChildAttendance>({
   student_id: int64StringOrNumber,
   first_name: z.string(),
   last_name: z.string(),
@@ -596,7 +597,7 @@ export interface UtilizationChildren {
   children: ChildAttendance[] | null;
 }
 
-export const UtilizationChildrenSchema: z.ZodType<UtilizationChildren, unknown> = z.object({
+export const UtilizationChildrenSchema: z.ZodType<UtilizationChildren, unknown> = object<UtilizationChildren>({
   school: TraegerSchoolSchema,
   from: calendarDate.nullable(),
   to: calendarDate.nullable(),

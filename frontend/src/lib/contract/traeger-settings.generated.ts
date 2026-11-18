@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   instant,
+  object,
   safeInt,
   success,
 } from "./runtime";
@@ -16,7 +17,7 @@ export interface ValidationRules {
   max_length?: number;
 }
 
-export const ValidationRulesSchema: z.ZodType<ValidationRules, unknown> = z.object({
+export const ValidationRulesSchema: z.ZodType<ValidationRules, unknown> = object<ValidationRules>({
   required: z.boolean().optional(),
   allow_empty: z.boolean().optional(),
   min: z.number().optional(),
@@ -32,7 +33,7 @@ export interface Dependency {
   value: unknown | null;
 }
 
-export const DependencySchema: z.ZodType<Dependency, unknown> = z.object({
+export const DependencySchema: z.ZodType<Dependency, unknown> = object<Dependency>({
   key: z.string(),
   condition: z.string(),
   value: z.unknown().nullable(),
@@ -44,7 +45,7 @@ export interface SelectOption {
   value: unknown | null;
 }
 
-export const SelectOptionSchema: z.ZodType<SelectOption, unknown> = z.object({
+export const SelectOptionSchema: z.ZodType<SelectOption, unknown> = object<SelectOption>({
   label: z.string(),
   value: z.unknown().nullable(),
 });
@@ -54,7 +55,7 @@ export interface SelectOptions {
   static?: SelectOption[];
 }
 
-export const SelectOptionsSchema: z.ZodType<SelectOptions, unknown> = z.object({
+export const SelectOptionsSchema: z.ZodType<SelectOptions, unknown> = object<SelectOptions>({
   static: z.array(SelectOptionSchema).optional(),
 });
 
@@ -80,7 +81,7 @@ export interface ResolvedSetting {
   options?: SelectOptions;
 }
 
-export const ResolvedSettingSchema: z.ZodType<ResolvedSetting, unknown> = z.object({
+export const ResolvedSettingSchema: z.ZodType<ResolvedSetting, unknown> = object<ResolvedSetting>({
   key: z.string(),
   label: z.string(),
   description: z.string(),
@@ -108,7 +109,7 @@ export interface SchemaCategory {
   items: (ResolvedSetting | null)[] | null;
 }
 
-export const SchemaCategorySchema: z.ZodType<SchemaCategory, unknown> = z.object({
+export const SchemaCategorySchema: z.ZodType<SchemaCategory, unknown> = object<SchemaCategory>({
   key: z.string(),
   label: z.string(),
   items: z.array(ResolvedSettingSchema.nullable()).nullable(),
@@ -121,7 +122,7 @@ export interface SchemaTab {
   categories: (SchemaCategory | null)[] | null;
 }
 
-export const SchemaTabSchema: z.ZodType<SchemaTab, unknown> = z.object({
+export const SchemaTabSchema: z.ZodType<SchemaTab, unknown> = object<SchemaTab>({
   key: z.string(),
   label: z.string(),
   categories: z.array(SchemaCategorySchema.nullable()).nullable(),
@@ -132,7 +133,7 @@ export interface SettingsSchema {
   tabs: (SchemaTab | null)[] | null;
 }
 
-export const SettingsSchemaSchema: z.ZodType<SettingsSchema, unknown> = z.object({
+export const SettingsSchemaSchema: z.ZodType<SettingsSchema, unknown> = object<SettingsSchema>({
   tabs: z.array(SchemaTabSchema.nullable()).nullable(),
 });
 

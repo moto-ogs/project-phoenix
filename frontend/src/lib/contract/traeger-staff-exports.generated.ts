@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   int64String,
+  object,
   safeInt,
   success,
 } from "./runtime";
@@ -13,7 +14,7 @@ export interface TraegerPayrollKindCount {
   lines: number;
 }
 
-export const TraegerPayrollKindCountSchema: z.ZodType<TraegerPayrollKindCount, unknown> = z.object({
+export const TraegerPayrollKindCountSchema: z.ZodType<TraegerPayrollKindCount, unknown> = object<TraegerPayrollKindCount>({
   kind: z.string(),
   contracts: safeInt,
   lines: safeInt,
@@ -26,7 +27,7 @@ export interface TraegerExportPerson {
   last_name: string;
 }
 
-export const TraegerExportPersonSchema: z.ZodType<TraegerExportPerson, unknown> = z.object({
+export const TraegerExportPersonSchema: z.ZodType<TraegerExportPerson, unknown> = object<TraegerExportPerson>({
   record_id: int64String,
   first_name: z.string(),
   last_name: z.string(),
@@ -38,7 +39,7 @@ export interface TraegerPayrollGap {
   kind: string;
 }
 
-export const TraegerPayrollGapSchema: z.ZodType<TraegerPayrollGap, unknown> = z.object({
+export const TraegerPayrollGapSchema: z.ZodType<TraegerPayrollGap, unknown> = object<TraegerPayrollGap>({
   category: z.string(),
   kind: z.string(),
 });
@@ -62,7 +63,7 @@ export interface TraegerPayrollReport {
   ready: boolean;
 }
 
-export const TraegerPayrollReportSchema: z.ZodType<TraegerPayrollReport, unknown> = z.object({
+export const TraegerPayrollReportSchema: z.ZodType<TraegerPayrollReport, unknown> = object<TraegerPayrollReport>({
   year: safeInt,
   month: safeInt,
   format: z.string(),
@@ -90,7 +91,7 @@ export interface TraegerTimeReport {
   without_number: TraegerExportPerson[] | null;
 }
 
-export const TraegerTimeReportSchema: z.ZodType<TraegerTimeReport, unknown> = z.object({
+export const TraegerTimeReportSchema: z.ZodType<TraegerTimeReport, unknown> = object<TraegerTimeReport>({
   year: safeInt,
   month: safeInt,
   people: safeInt,

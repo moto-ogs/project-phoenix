@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   int64StringOrNumber,
   noData,
+  object,
   safeInt,
   success,
 } from "./runtime";
@@ -15,7 +16,7 @@ export interface AnnouncementStats {
   dismissed_count: number;
 }
 
-export const AnnouncementStatsSchema: z.ZodType<AnnouncementStats, unknown> = z.object({
+export const AnnouncementStatsSchema: z.ZodType<AnnouncementStats, unknown> = object<AnnouncementStats>({
   announcement_id: int64StringOrNumber,
   target_count: safeInt,
   seen_count: safeInt,
@@ -30,7 +31,7 @@ export interface AnnouncementViewDetailResponse {
   dismissed: boolean;
 }
 
-export const AnnouncementViewDetailResponseSchema: z.ZodType<AnnouncementViewDetailResponse, unknown> = z.object({
+export const AnnouncementViewDetailResponseSchema: z.ZodType<AnnouncementViewDetailResponse, unknown> = object<AnnouncementViewDetailResponse>({
   user_id: int64StringOrNumber,
   user_name: z.string(),
   seen_at: z.string(),

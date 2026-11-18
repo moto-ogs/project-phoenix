@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -18,7 +19,7 @@ export interface ChangeLine {
   after_days: string[] | null;
 }
 
-export const ChangeLineSchema: z.ZodType<ChangeLine, unknown> = z.object({
+export const ChangeLineSchema: z.ZodType<ChangeLine, unknown> = object<ChangeLine>({
   care_offering_id: int64StringOrNumber,
   module_name: z.string(),
   state: z.string(),
@@ -37,7 +38,7 @@ export interface ChangeRequest {
   lines: ChangeLine[] | null;
 }
 
-export const ChangeRequestSchema: z.ZodType<ChangeRequest, unknown> = z.object({
+export const ChangeRequestSchema: z.ZodType<ChangeRequest, unknown> = object<ChangeRequest>({
   id: int64StringOrNumber,
   version: z.string(),
   submitted_at: instant,
@@ -55,7 +56,7 @@ export interface ChangeOutcome {
   reason: string;
 }
 
-export const ChangeOutcomeSchema: z.ZodType<ChangeOutcome, unknown> = z.object({
+export const ChangeOutcomeSchema: z.ZodType<ChangeOutcome, unknown> = object<ChangeOutcome>({
   approved: z.boolean(),
   decided_at: instant,
   effective_from: calendarDate.nullable(),
@@ -70,7 +71,7 @@ export interface ChangeAdjustedTemplate {
   added_weekdays: number[] | null;
 }
 
-export const ChangeAdjustedTemplateSchema: z.ZodType<ChangeAdjustedTemplate, unknown> = z.object({
+export const ChangeAdjustedTemplateSchema: z.ZodType<ChangeAdjustedTemplate, unknown> = object<ChangeAdjustedTemplate>({
   template_id: z.string(),
   name: z.string(),
   removed_weekdays: z.array(safeInt).nullable(),
@@ -86,7 +87,7 @@ export interface ChangeManualTemplate {
   until: string | null;
 }
 
-export const ChangeManualTemplateSchema: z.ZodType<ChangeManualTemplate, unknown> = z.object({
+export const ChangeManualTemplateSchema: z.ZodType<ChangeManualTemplate, unknown> = object<ChangeManualTemplate>({
   template_id: z.string(),
   name: z.string(),
   weekdays: z.array(safeInt).nullable(),
@@ -103,7 +104,7 @@ export interface ChangePickupOverride {
   reset_now: boolean;
 }
 
-export const ChangePickupOverrideSchema: z.ZodType<ChangePickupOverride, unknown> = z.object({
+export const ChangePickupOverrideSchema: z.ZodType<ChangePickupOverride, unknown> = object<ChangePickupOverride>({
   weekday: safeInt,
   date: calendarDate.nullable(),
   stored_time: z.string(),
@@ -119,7 +120,7 @@ export interface ChangeImpact {
   pickup_overrides: ChangePickupOverride[] | null;
 }
 
-export const ChangeImpactSchema: z.ZodType<ChangeImpact, unknown> = z.object({
+export const ChangeImpactSchema: z.ZodType<ChangeImpact, unknown> = object<ChangeImpact>({
   effective_from: calendarDate.nullable(),
   adjusted: z.array(ChangeAdjustedTemplateSchema).nullable(),
   not_adjusted: z.array(ChangeManualTemplateSchema).nullable(),
@@ -135,7 +136,7 @@ export interface ContractChanges {
   roster_impact?: ChangeImpact;
 }
 
-export const ContractChangesSchema: z.ZodType<ContractChanges, unknown> = z.object({
+export const ContractChangesSchema: z.ZodType<ContractChanges, unknown> = object<ContractChanges>({
   decidable: z.boolean(),
   pending: z.array(ChangeRequestSchema).nullable(),
   last_decision: ChangeOutcomeSchema.nullable(),

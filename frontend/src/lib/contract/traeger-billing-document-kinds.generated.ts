@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   instant,
+  object,
   requestBody,
   safeInt,
   success,
@@ -15,7 +16,7 @@ export interface ServiceDocumentKind {
   updated_at: string | null;
 }
 
-export const ServiceDocumentKindSchema: z.ZodType<ServiceDocumentKind, unknown> = z.object({
+export const ServiceDocumentKindSchema: z.ZodType<ServiceDocumentKind, unknown> = object<ServiceDocumentKind>({
   service: z.string(),
   document_kind: z.string(),
   choices: z.array(z.string()).nullable(),
@@ -29,7 +30,7 @@ export interface DocumentKindOverview {
   fee_notice_template_version: number;
 }
 
-export const DocumentKindOverviewSchema: z.ZodType<DocumentKindOverview, unknown> = z.object({
+export const DocumentKindOverviewSchema: z.ZodType<DocumentKindOverview, unknown> = object<DocumentKindOverview>({
   services: z.array(ServiceDocumentKindSchema).nullable(),
   legal_remedy_set: z.boolean(),
   fee_notice_template_version: safeInt,

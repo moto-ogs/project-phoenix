@@ -5,6 +5,7 @@ import {
   instant,
   int64StringOrNumber,
   noData,
+  object,
   requestBody,
   safeInt,
   success,
@@ -20,7 +21,7 @@ export interface DebtorNumberFormat {
   max_digits: number;
 }
 
-export const DebtorNumberFormatSchema: z.ZodType<DebtorNumberFormat, unknown> = z.object({
+export const DebtorNumberFormatSchema: z.ZodType<DebtorNumberFormat, unknown> = object<DebtorNumberFormat>({
   digits_only: z.boolean(),
   min_digits: safeInt,
   max_digits: safeInt,
@@ -32,7 +33,7 @@ export interface CostBearerChoice {
   name: string;
 }
 
-export const CostBearerChoiceSchema: z.ZodType<CostBearerChoice, unknown> = z.object({
+export const CostBearerChoiceSchema: z.ZodType<CostBearerChoice, unknown> = object<CostBearerChoice>({
   id: int64StringOrNumber,
   name: z.string(),
 });
@@ -44,7 +45,7 @@ export interface HolidayConfirmationSettings {
   cost_bearers: CostBearerChoice[] | null;
 }
 
-export const HolidayConfirmationSettingsSchema: z.ZodType<HolidayConfirmationSettings, unknown> = z.object({
+export const HolidayConfirmationSettingsSchema: z.ZodType<HolidayConfirmationSettings, unknown> = object<HolidayConfirmationSettings>({
   debtor_number_required: z.boolean(),
   debtor_number_format: DebtorNumberFormatSchema,
   cost_bearers: z.array(CostBearerChoiceSchema).nullable(),
@@ -66,7 +67,7 @@ export interface HolidayContributionLineResponse {
   booked_days: number | null;
 }
 
-export const HolidayContributionLineResponseSchema: z.ZodType<HolidayContributionLineResponse, unknown> = z.object({
+export const HolidayContributionLineResponseSchema: z.ZodType<HolidayContributionLineResponse, unknown> = object<HolidayContributionLineResponse>({
   kind: z.string(),
   amount_cents: safeInt,
   week_starts_on: calendarDate.nullable(),
@@ -89,7 +90,7 @@ export interface HolidayChildContributionResponse {
   total_cents: number;
 }
 
-export const HolidayChildContributionResponseSchema: z.ZodType<HolidayChildContributionResponse, unknown> = z.object({
+export const HolidayChildContributionResponseSchema: z.ZodType<HolidayChildContributionResponse, unknown> = object<HolidayChildContributionResponse>({
   child_id: int64StringOrNumber,
   position: safeInt,
   lines: z.array(HolidayContributionLineResponseSchema).nullable(),
@@ -103,7 +104,7 @@ export interface HolidaySiblingChild {
   last_name: string;
 }
 
-export const HolidaySiblingChildSchema: z.ZodType<HolidaySiblingChild, unknown> = z.object({
+export const HolidaySiblingChildSchema: z.ZodType<HolidaySiblingChild, unknown> = object<HolidaySiblingChild>({
   id: int64StringOrNumber,
   first_name: z.string(),
   last_name: z.string(),
@@ -116,7 +117,7 @@ export interface HolidaySibling {
   children: HolidaySiblingChild[] | null;
 }
 
-export const HolidaySiblingSchema: z.ZodType<HolidaySibling, unknown> = z.object({
+export const HolidaySiblingSchema: z.ZodType<HolidaySibling, unknown> = object<HolidaySibling>({
   registration_id: int64StringOrNumber,
   status: z.string(),
   children: z.array(HolidaySiblingChildSchema).nullable(),
@@ -139,7 +140,7 @@ export interface HolidayContributionResponse {
   correction_needed?: boolean;
 }
 
-export const HolidayContributionResponseSchema: z.ZodType<HolidayContributionResponse, unknown> = z.object({
+export const HolidayContributionResponseSchema: z.ZodType<HolidayContributionResponse, unknown> = object<HolidayContributionResponse>({
   children: z.array(HolidayChildContributionResponseSchema).nullable(),
   total_cents: safeInt,
   exemption_available: z.boolean(),
@@ -163,7 +164,7 @@ export interface HolidayChildDebtorNumber {
   debtor_number: string;
 }
 
-export const HolidayChildDebtorNumberSchema: z.ZodType<HolidayChildDebtorNumber, unknown> = z.object({
+export const HolidayChildDebtorNumberSchema: z.ZodType<HolidayChildDebtorNumber, unknown> = object<HolidayChildDebtorNumber>({
   child_id: int64StringOrNumber,
   first_name: z.string(),
   last_name: z.string(),
@@ -176,7 +177,7 @@ export interface HolidayFamilyDebtorNumber {
   children?: HolidayChildDebtorNumber[];
 }
 
-export const HolidayFamilyDebtorNumberSchema: z.ZodType<HolidayFamilyDebtorNumber, unknown> = z.object({
+export const HolidayFamilyDebtorNumberSchema: z.ZodType<HolidayFamilyDebtorNumber, unknown> = object<HolidayFamilyDebtorNumber>({
   debtor_number: z.string(),
   children: z.array(HolidayChildDebtorNumberSchema).optional(),
 });
@@ -187,7 +188,7 @@ export interface HolidaySiblingGroup {
   registration_ids: string[] | null;
 }
 
-export const HolidaySiblingGroupSchema: z.ZodType<HolidaySiblingGroup, unknown> = z.object({
+export const HolidaySiblingGroupSchema: z.ZodType<HolidaySiblingGroup, unknown> = object<HolidaySiblingGroup>({
   id: int64StringOrNumber,
   registration_ids: z.array(int64StringOrNumber).nullable(),
 });
@@ -199,7 +200,7 @@ export interface HolidayCancellation {
   moved_up: string[] | null;
 }
 
-export const HolidayCancellationSchema: z.ZodType<HolidayCancellation, unknown> = z.object({
+export const HolidayCancellationSchema: z.ZodType<HolidayCancellation, unknown> = object<HolidayCancellation>({
   id: int64StringOrNumber,
   status: z.string(),
   moved_up: z.array(int64StringOrNumber).nullable(),
@@ -227,7 +228,7 @@ export interface HolidayConfirmationResponse {
   contribution: HolidayContributionResponse;
 }
 
-export const HolidayConfirmationResponseSchema: z.ZodType<HolidayConfirmationResponse, unknown> = z.object({
+export const HolidayConfirmationResponseSchema: z.ZodType<HolidayConfirmationResponse, unknown> = object<HolidayConfirmationResponse>({
   id: int64StringOrNumber,
   status: z.string(),
   contribution: HolidayContributionResponseSchema,
@@ -268,7 +269,7 @@ export interface HolidayDebtorNumber {
   debtor_number: string;
 }
 
-export const HolidayDebtorNumberSchema: z.ZodType<HolidayDebtorNumber, unknown> = z.object({
+export const HolidayDebtorNumberSchema: z.ZodType<HolidayDebtorNumber, unknown> = object<HolidayDebtorNumber>({
   id: int64StringOrNumber,
   debtor_number: z.string(),
 });
@@ -286,7 +287,7 @@ export interface HolidayPlaceChange {
   moved_up: string[] | null;
 }
 
-export const HolidayPlaceChangeSchema: z.ZodType<HolidayPlaceChange, unknown> = z.object({
+export const HolidayPlaceChangeSchema: z.ZodType<HolidayPlaceChange, unknown> = object<HolidayPlaceChange>({
   registration_id: int64StringOrNumber.optional(),
   week_id: int64StringOrNumber.optional(),
   capacity: safeInt.nullable(),

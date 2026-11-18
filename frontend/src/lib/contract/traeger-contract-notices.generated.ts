@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   success,
 } from "./runtime";
@@ -27,7 +28,7 @@ export interface Notice {
   end_notice_not_sent_reason?: string;
 }
 
-export const NoticeSchema: z.ZodType<Notice, unknown> = z.object({
+export const NoticeSchema: z.ZodType<Notice, unknown> = object<Notice>({
   dispatched_on: calendarDate.optional(),
   kind: z.string(),
   termination_kind: z.string().optional(),
@@ -61,7 +62,7 @@ export interface NoticeOptions {
   notice: Notice | null;
 }
 
-export const NoticeOptionsSchema: z.ZodType<NoticeOptions, unknown> = z.object({
+export const NoticeOptionsSchema: z.ZodType<NoticeOptions, unknown> = object<NoticeOptions>({
   contract_id: int64StringOrNumber,
   status: z.string(),
   child_name: z.string(),

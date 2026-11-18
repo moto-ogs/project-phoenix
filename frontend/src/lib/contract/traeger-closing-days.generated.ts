@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -24,7 +25,7 @@ export interface ClosingDay {
   notified_families: number;
 }
 
-export const ClosingDaySchema: z.ZodType<ClosingDay, unknown> = z.object({
+export const ClosingDaySchema: z.ZodType<ClosingDay, unknown> = object<ClosingDay>({
   id: int64StringOrNumber,
   start_date: calendarDate.nullable(),
   end_date: calendarDate.nullable(),
@@ -40,7 +41,7 @@ export interface HolidayRegion {
   name: string;
 }
 
-export const HolidayRegionSchema: z.ZodType<HolidayRegion, unknown> = z.object({
+export const HolidayRegionSchema: z.ZodType<HolidayRegion, unknown> = object<HolidayRegion>({
   code: z.string(),
   name: z.string(),
 });
@@ -52,7 +53,7 @@ export interface CalendarSchool {
   federal_state: HolidayRegion;
 }
 
-export const CalendarSchoolSchema: z.ZodType<CalendarSchool, unknown> = z.object({
+export const CalendarSchoolSchema: z.ZodType<CalendarSchool, unknown> = object<CalendarSchool>({
   id: int64StringOrNumber,
   name: z.string(),
   federal_state: HolidayRegionSchema,
@@ -64,7 +65,7 @@ export interface Holidays {
   holidays: Holiday[] | null;
 }
 
-export const HolidaysSchema: z.ZodType<Holidays, unknown> = z.object({
+export const HolidaysSchema: z.ZodType<Holidays, unknown> = object<Holidays>({
   region: HolidayRegionSchema,
   holidays: z.array(HolidaySchema).nullable(),
 });
@@ -76,7 +77,7 @@ export interface Calendar {
   holidays: Holidays[] | null;
 }
 
-export const CalendarSchema: z.ZodType<Calendar, unknown> = z.object({
+export const CalendarSchema: z.ZodType<Calendar, unknown> = object<Calendar>({
   closing_days: z.array(ClosingDaySchema).nullable(),
   schools: z.array(CalendarSchoolSchema).nullable(),
   holidays: z.array(HolidaysSchema).nullable(),

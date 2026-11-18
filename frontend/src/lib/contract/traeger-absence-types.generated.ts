@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   success,
 } from "./runtime";
@@ -22,7 +23,7 @@ export interface TraegerAbsenceTypeSchool {
   school_limit_days: number | null;
 }
 
-export const TraegerAbsenceTypeSchoolSchema: z.ZodType<TraegerAbsenceTypeSchool, unknown> = z.object({
+export const TraegerAbsenceTypeSchoolSchema: z.ZodType<TraegerAbsenceTypeSchool, unknown> = object<TraegerAbsenceTypeSchool>({
   school_id: int64StringOrNumber,
   school_name: z.string(),
   carried: z.boolean(),
@@ -43,7 +44,7 @@ export interface TraegerAbsenceType {
   created_at: string;
 }
 
-export const TraegerAbsenceTypeSchema: z.ZodType<TraegerAbsenceType, unknown> = z.object({
+export const TraegerAbsenceTypeSchema: z.ZodType<TraegerAbsenceType, unknown> = object<TraegerAbsenceType>({
   id: int64StringOrNumber,
   name: z.string(),
   allowance_enabled: z.boolean(),
@@ -62,7 +63,7 @@ export interface TraegerAbsenceTypeList {
   types: TraegerAbsenceType[] | null;
 }
 
-export const TraegerAbsenceTypeListSchema: z.ZodType<TraegerAbsenceTypeList, unknown> = z.object({
+export const TraegerAbsenceTypeListSchema: z.ZodType<TraegerAbsenceTypeList, unknown> = object<TraegerAbsenceTypeList>({
   release: TraegerStaffReleaseSchema.nullable(),
   schools: z.array(TraegerStaffSchoolSchema).nullable(),
   types: z.array(TraegerAbsenceTypeSchema).nullable(),

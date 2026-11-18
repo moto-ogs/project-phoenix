@@ -4,6 +4,7 @@ import {
   instant,
   int64StringOrNumber,
   noData,
+  object,
   requestBody,
   success,
 } from "./runtime";
@@ -17,7 +18,7 @@ export interface deviceHistoryChange {
   after: string | null;
 }
 
-export const deviceHistoryChangeSchema: z.ZodType<deviceHistoryChange, unknown> = z.object({
+export const deviceHistoryChangeSchema: z.ZodType<deviceHistoryChange, unknown> = object<deviceHistoryChange>({
   before: z.string().nullable(),
   after: z.string().nullable(),
 });
@@ -33,7 +34,7 @@ export interface deviceHistoryResponse {
   school_name: string;
 }
 
-export const deviceHistoryResponseSchema: z.ZodType<deviceHistoryResponse, unknown> = z.object({
+export const deviceHistoryResponseSchema: z.ZodType<deviceHistoryResponse, unknown> = object<deviceHistoryResponse>({
   id: z.string(),
   action: z.string(),
   actor_kind: z.string(),
@@ -51,7 +52,7 @@ export interface DeviceTransferSession {
   room_name?: string;
 }
 
-export const DeviceTransferSessionSchema: z.ZodType<DeviceTransferSession, unknown> = z.object({
+export const DeviceTransferSessionSchema: z.ZodType<DeviceTransferSession, unknown> = object<DeviceTransferSession>({
   id: int64StringOrNumber,
   started_at: instant,
   activity_name: z.string().optional(),
@@ -67,7 +68,7 @@ export interface DeviceTransferStatus {
   active_session?: DeviceTransferSession;
 }
 
-export const DeviceTransferStatusSchema: z.ZodType<DeviceTransferStatus, unknown> = z.object({
+export const DeviceTransferStatusSchema: z.ZodType<DeviceTransferStatus, unknown> = object<DeviceTransferStatus>({
   can_transfer: z.boolean(),
   is_online: z.boolean(),
   is_protected: z.boolean(),

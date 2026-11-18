@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   instant,
   int64StringOrNumber,
+  object,
   success,
 } from "./runtime";
 
@@ -26,7 +27,7 @@ export interface scanResponse {
   device_name?: string;
 }
 
-export const scanResponseSchema: z.ZodType<scanResponse, unknown> = z.object({
+export const scanResponseSchema: z.ZodType<scanResponse, unknown> = object<scanResponse>({
   id: int64StringOrNumber,
   created_at: instant,
   updated_at: instant,

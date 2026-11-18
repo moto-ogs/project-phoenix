@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -23,7 +24,7 @@ export interface TraegerPhaseFields {
   care_offering_selection_mode: string;
 }
 
-export const TraegerPhaseFieldsSchema: z.ZodType<TraegerPhaseFields, unknown> = z.object({
+export const TraegerPhaseFieldsSchema: z.ZodType<TraegerPhaseFields, unknown> = object<TraegerPhaseFields>({
   is_active: z.boolean().optional(),
   name: z.string(),
   kind: z.string(),
@@ -46,7 +47,7 @@ export interface TraegerCatalogSchool {
   recorded_at?: string;
 }
 
-export const TraegerCatalogSchoolSchema: z.ZodType<TraegerCatalogSchool, unknown> = z.object({
+export const TraegerCatalogSchoolSchema: z.ZodType<TraegerCatalogSchool, unknown> = object<TraegerCatalogSchool>({
   school_id: int64StringOrNumber,
   selected: z.boolean(),
   applied_version: safeInt.optional(),
@@ -68,7 +69,7 @@ export interface TraegerPhase {
   updated_at: string;
 }
 
-export const TraegerPhaseSchema: z.ZodType<TraegerPhase, unknown> = z.object({
+export const TraegerPhaseSchema: z.ZodType<TraegerPhase, unknown> = object<TraegerPhase>({
   id: int64StringOrNumber,
   organization_id: int64StringOrNumber,
   draft: TraegerPhaseFieldsSchema,
@@ -99,7 +100,7 @@ export interface TraegerOfferingFields {
   pickup_times: Record<string, string> | null;
 }
 
-export const TraegerOfferingFieldsSchema: z.ZodType<TraegerOfferingFields, unknown> = z.object({
+export const TraegerOfferingFieldsSchema: z.ZodType<TraegerOfferingFields, unknown> = object<TraegerOfferingFields>({
   is_active: z.boolean().optional(),
   name: z.string(),
   description: z.string().nullable(),
@@ -126,7 +127,7 @@ export interface TraegerCarePrice {
   meal_extra: boolean;
 }
 
-export const TraegerCarePriceSchema: z.ZodType<TraegerCarePrice, unknown> = z.object({
+export const TraegerCarePriceSchema: z.ZodType<TraegerCarePrice, unknown> = object<TraegerCarePrice>({
   weekday: z.string().optional(),
   days_per_week: safeInt.optional(),
   monthly_cents: safeInt,
@@ -148,7 +149,7 @@ export interface TraegerContractTemplate {
   contract_partner: string;
 }
 
-export const TraegerContractTemplateSchema: z.ZodType<TraegerContractTemplate, unknown> = z.object({
+export const TraegerContractTemplateSchema: z.ZodType<TraegerContractTemplate, unknown> = object<TraegerContractTemplate>({
   term_kind: z.string(),
   term_months: safeInt.optional(),
   notice_months: safeInt,
@@ -168,7 +169,7 @@ export interface TraegerOfferingDraft {
   contract_template?: TraegerContractTemplate;
 }
 
-export const TraegerOfferingDraftSchema: z.ZodType<TraegerOfferingDraft, unknown> = z.object({
+export const TraegerOfferingDraftSchema: z.ZodType<TraegerOfferingDraft, unknown> = object<TraegerOfferingDraft>({
   fields: TraegerOfferingFieldsSchema,
   prices: z.array(TraegerCarePriceSchema).nullable(),
   contract_template: TraegerContractTemplateSchema.optional(),
@@ -183,7 +184,7 @@ export interface TraegerOfferingSchool {
   recorded_at?: string;
 }
 
-export const TraegerOfferingSchoolSchema: z.ZodType<TraegerOfferingSchool, unknown> = z.object({
+export const TraegerOfferingSchoolSchema: z.ZodType<TraegerOfferingSchool, unknown> = object<TraegerOfferingSchool>({
   school_id: int64StringOrNumber,
   applied_version: safeInt.optional(),
   outcome: z.string().optional(),
@@ -204,7 +205,7 @@ export interface TraegerOffering {
   updated_at: string;
 }
 
-export const TraegerOfferingSchema: z.ZodType<TraegerOffering, unknown> = z.object({
+export const TraegerOfferingSchema: z.ZodType<TraegerOffering, unknown> = object<TraegerOffering>({
   id: int64StringOrNumber,
   organization_id: int64StringOrNumber,
   traeger_phase_id: int64StringOrNumber,
@@ -230,7 +231,7 @@ export interface PhaseDetail {
   offerings: TraegerOffering[] | null;
 }
 
-export const PhaseDetailSchema: z.ZodType<PhaseDetail, unknown> = z.object({
+export const PhaseDetailSchema: z.ZodType<PhaseDetail, unknown> = object<PhaseDetail>({
   id: int64StringOrNumber,
   organization_id: int64StringOrNumber,
   draft: TraegerPhaseFieldsSchema,
@@ -316,7 +317,7 @@ export interface TraegerFieldChange {
   school: unknown | null;
 }
 
-export const TraegerFieldChangeSchema: z.ZodType<TraegerFieldChange, unknown> = z.object({
+export const TraegerFieldChangeSchema: z.ZodType<TraegerFieldChange, unknown> = object<TraegerFieldChange>({
   field: z.string(),
   state: z.string(),
   traeger: z.unknown().nullable(),
@@ -331,7 +332,7 @@ export interface TraegerOfferingFieldChange {
   school: unknown | null;
 }
 
-export const TraegerOfferingFieldChangeSchema: z.ZodType<TraegerOfferingFieldChange, unknown> = z.object({
+export const TraegerOfferingFieldChangeSchema: z.ZodType<TraegerOfferingFieldChange, unknown> = object<TraegerOfferingFieldChange>({
   field: z.string(),
   state: z.string(),
   traeger: z.unknown().nullable(),
@@ -348,7 +349,7 @@ export interface OfferingPlan {
   contract_template: boolean;
 }
 
-export const OfferingPlanSchema: z.ZodType<OfferingPlan, unknown> = z.object({
+export const OfferingPlanSchema: z.ZodType<OfferingPlan, unknown> = object<OfferingPlan>({
   traeger_offering_id: int64StringOrNumber,
   name: z.string(),
   action: z.string(),
@@ -368,7 +369,7 @@ export interface SchoolPlan {
   care_beyond_end: number;
 }
 
-export const SchoolPlanSchema: z.ZodType<SchoolPlan, unknown> = z.object({
+export const SchoolPlanSchema: z.ZodType<SchoolPlan, unknown> = object<SchoolPlan>({
   school_id: int64StringOrNumber,
   action: z.string(),
   outcome: z.string(),
@@ -386,7 +387,7 @@ export interface Preview {
   schools: SchoolPlan[] | null;
 }
 
-export const PreviewSchema: z.ZodType<Preview, unknown> = z.object({
+export const PreviewSchema: z.ZodType<Preview, unknown> = object<Preview>({
   traeger_phase_id: int64StringOrNumber,
   version: safeInt,
   fingerprint: z.string(),
@@ -406,7 +407,7 @@ export interface SchoolResult {
   care_beyond_end: number;
 }
 
-export const SchoolResultSchema: z.ZodType<SchoolResult, unknown> = z.object({
+export const SchoolResultSchema: z.ZodType<SchoolResult, unknown> = object<SchoolResult>({
   school_id: int64StringOrNumber,
   outcome: z.string(),
   error_code: z.string().optional(),
@@ -420,7 +421,7 @@ export interface Rollout {
   schools: SchoolResult[] | null;
 }
 
-export const RolloutSchema: z.ZodType<Rollout, unknown> = z.object({
+export const RolloutSchema: z.ZodType<Rollout, unknown> = object<Rollout>({
   traeger_phase_id: int64StringOrNumber,
   version: safeInt,
   schools: z.array(SchoolResultSchema).nullable(),

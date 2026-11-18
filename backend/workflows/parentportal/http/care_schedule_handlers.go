@@ -51,10 +51,10 @@ type CareScheduleWeekdayResponse struct {
 // PendingCareRequestResponse is the child's open change request on the read
 // view, with the same "current → requested" diff staff see.
 type PendingCareRequestResponse struct {
-	ID              string                    `json:"id"`
-	CreatedAt       string                    `json:"created_at"`
+	ID              string                          `json:"id"`
+	CreatedAt       string                          `json:"created_at"`
 	Diff            []ParentCareRequestDiffResponse `json:"diff"`
-	SubmittedBySelf bool                      `json:"submitted_by_self"`
+	SubmittedBySelf bool                            `json:"submitted_by_self"`
 }
 
 // ParentCareRequestDiffResponse mirrors the messaging diff wire shape so the

@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   int64StringOrNumber,
+  object,
   requestBody,
   success,
 } from "./runtime";
@@ -16,7 +17,7 @@ export interface TraegerProfileResponse {
   name: string;
 }
 
-export const TraegerProfileResponseSchema: z.ZodType<TraegerProfileResponse, unknown> = z.object({
+export const TraegerProfileResponseSchema: z.ZodType<TraegerProfileResponse, unknown> = object<TraegerProfileResponse>({
   account_id: int64StringOrNumber,
   email: z.string(),
   name: z.string(),

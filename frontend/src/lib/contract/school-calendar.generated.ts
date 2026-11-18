@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -21,7 +22,7 @@ export interface CalendarStatusResponse {
   status: string;
 }
 
-export const CalendarStatusResponseSchema: z.ZodType<CalendarStatusResponse, unknown> = z.object({
+export const CalendarStatusResponseSchema: z.ZodType<CalendarStatusResponse, unknown> = object<CalendarStatusResponse>({
   status: z.string(),
 });
 
@@ -31,7 +32,7 @@ export interface CalendarFeedResponse {
   webcal_url: string;
 }
 
-export const CalendarFeedResponseSchema: z.ZodType<CalendarFeedResponse, unknown> = z.object({
+export const CalendarFeedResponseSchema: z.ZodType<CalendarFeedResponse, unknown> = object<CalendarFeedResponse>({
   url: z.string(),
   webcal_url: z.string(),
 });
@@ -44,7 +45,7 @@ export interface SchoolDays {
   end_date: string;
 }
 
-export const SchoolDaysSchema: z.ZodType<SchoolDays, unknown> = z.object({
+export const SchoolDaysSchema: z.ZodType<SchoolDays, unknown> = object<SchoolDays>({
   id: z.string(),
   name: z.string(),
   start_date: z.string(),
@@ -61,7 +62,7 @@ export interface SchoolCalendarResponse {
   classes: string[] | null;
 }
 
-export const SchoolCalendarResponseSchema: z.ZodType<SchoolCalendarResponse, unknown> = z.object({
+export const SchoolCalendarResponseSchema: z.ZodType<SchoolCalendarResponse, unknown> = object<SchoolCalendarResponse>({
   from: calendarDate.nullable(),
   to: calendarDate.nullable(),
   events: z.array(EventSchema).nullable(),
@@ -79,7 +80,7 @@ export interface ParentConferenceSlot {
   student_name?: string;
 }
 
-export const ParentConferenceSlotSchema: z.ZodType<ParentConferenceSlot, unknown> = z.object({
+export const ParentConferenceSlotSchema: z.ZodType<ParentConferenceSlot, unknown> = object<ParentConferenceSlot>({
   start_time: z.string(),
   end_time: z.string(),
   booked: z.boolean(),
@@ -101,7 +102,7 @@ export interface ParentConferenceView {
   slots: ParentConferenceSlot[] | null;
 }
 
-export const ParentConferenceViewSchema: z.ZodType<ParentConferenceView, unknown> = z.object({
+export const ParentConferenceViewSchema: z.ZodType<ParentConferenceView, unknown> = object<ParentConferenceView>({
   id: z.string(),
   school_class: z.string(),
   date: calendarDate.nullable(),
@@ -120,7 +121,7 @@ export interface SchoolParentConferenceList {
   classes: string[] | null;
 }
 
-export const SchoolParentConferenceListSchema: z.ZodType<SchoolParentConferenceList, unknown> = z.object({
+export const SchoolParentConferenceListSchema: z.ZodType<SchoolParentConferenceList, unknown> = object<SchoolParentConferenceList>({
   conferences: z.array(ParentConferenceViewSchema).nullable(),
   classes: z.array(z.string()).nullable(),
 });
@@ -164,7 +165,7 @@ export interface Appointment {
   revision: number;
 }
 
-export const AppointmentSchema: z.ZodType<Appointment, unknown> = z.object({
+export const AppointmentSchema: z.ZodType<Appointment, unknown> = object<Appointment>({
   id: int64StringOrNumber,
   tenant_id: int64StringOrNumber,
   created_at: instant,
@@ -202,7 +203,7 @@ export interface RecurrenceRule {
   occurrence_count?: number;
 }
 
-export const RecurrenceRuleSchema: z.ZodType<RecurrenceRule, unknown> = z.object({
+export const RecurrenceRuleSchema: z.ZodType<RecurrenceRule, unknown> = object<RecurrenceRule>({
   id: int64StringOrNumber,
   tenant_id: int64StringOrNumber,
   created_at: instant,
@@ -231,7 +232,7 @@ export interface AppointmentRecipient {
   occurrence_responses?: Record<string, string>;
 }
 
-export const AppointmentRecipientSchema: z.ZodType<AppointmentRecipient, unknown> = z.object({
+export const AppointmentRecipientSchema: z.ZodType<AppointmentRecipient, unknown> = object<AppointmentRecipient>({
   id: int64StringOrNumber,
   tenant_id: int64StringOrNumber,
   created_at: instant,
@@ -257,7 +258,7 @@ export interface AppointmentTarget {
   target_value?: string;
 }
 
-export const AppointmentTargetSchema: z.ZodType<AppointmentTarget, unknown> = z.object({
+export const AppointmentTargetSchema: z.ZodType<AppointmentTarget, unknown> = object<AppointmentTarget>({
   id: int64StringOrNumber,
   tenant_id: int64StringOrNumber,
   created_at: instant,
@@ -276,7 +277,7 @@ export interface AppointmentDetail {
   targets: (AppointmentTarget | null)[] | null;
 }
 
-export const AppointmentDetailSchema: z.ZodType<AppointmentDetail, unknown> = z.object({
+export const AppointmentDetailSchema: z.ZodType<AppointmentDetail, unknown> = object<AppointmentDetail>({
   appointment: AppointmentSchema.nullable(),
   recurrence: RecurrenceRuleSchema.optional(),
   recipients: z.array(AppointmentRecipientSchema.nullable()).nullable(),

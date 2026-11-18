@@ -5,6 +5,7 @@ import {
   instant,
   int64StringOrNumber,
   noData,
+  object,
   requestBody,
   safeInt,
   success,
@@ -21,7 +22,7 @@ export interface IDResponse {
   id: string;
 }
 
-export const IDResponseSchema: z.ZodType<IDResponse, unknown> = z.object({
+export const IDResponseSchema: z.ZodType<IDResponse, unknown> = object<IDResponse>({
   id: int64StringOrNumber,
 });
 
@@ -34,7 +35,7 @@ export interface TraegerStaffEmployment {
   via_pool: boolean;
 }
 
-export const TraegerStaffEmploymentSchema: z.ZodType<TraegerStaffEmployment, unknown> = z.object({
+export const TraegerStaffEmploymentSchema: z.ZodType<TraegerStaffEmployment, unknown> = object<TraegerStaffEmployment>({
   school_id: int64StringOrNumber,
   school_name: z.string(),
   staff_id: int64StringOrNumber,
@@ -49,7 +50,7 @@ export interface TraegerStaffFinancial {
   social_security_number: string | null;
 }
 
-export const TraegerStaffFinancialSchema: z.ZodType<TraegerStaffFinancial, unknown> = z.object({
+export const TraegerStaffFinancialSchema: z.ZodType<TraegerStaffFinancial, unknown> = object<TraegerStaffFinancial>({
   iban: z.string().nullable(),
   tax_id: z.string().nullable(),
   social_security_number: z.string().nullable(),
@@ -65,7 +66,7 @@ export interface TraegerStaffChange {
   occurred_at: string;
 }
 
-export const TraegerStaffChangeSchema: z.ZodType<TraegerStaffChange, unknown> = z.object({
+export const TraegerStaffChangeSchema: z.ZodType<TraegerStaffChange, unknown> = object<TraegerStaffChange>({
   kind: z.string(),
   field: z.string(),
   value: z.string(),
@@ -88,7 +89,7 @@ export interface TraegerStaffProof {
   expires_on?: string;
 }
 
-export const TraegerStaffProofSchema: z.ZodType<TraegerStaffProof, unknown> = z.object({
+export const TraegerStaffProofSchema: z.ZodType<TraegerStaffProof, unknown> = object<TraegerStaffProof>({
   type_id: int64StringOrNumber,
   type_name: z.string(),
   mandatory: z.boolean(),
@@ -107,7 +108,7 @@ export interface TraegerContractSoll {
   weekday_minutes: number[] | null;
 }
 
-export const TraegerContractSollSchema: z.ZodType<TraegerContractSoll, unknown> = z.object({
+export const TraegerContractSollSchema: z.ZodType<TraegerContractSoll, unknown> = object<TraegerContractSoll>({
   valid_from: calendarDate.nullable(),
   weekday_minutes: z.array(safeInt).nullable(),
 });
@@ -121,7 +122,7 @@ export interface TraegerContractSiteDetail {
   changeable_from: string | null;
 }
 
-export const TraegerContractSiteDetailSchema: z.ZodType<TraegerContractSiteDetail, unknown> = z.object({
+export const TraegerContractSiteDetailSchema: z.ZodType<TraegerContractSiteDetail, unknown> = object<TraegerContractSiteDetail>({
   school_id: int64StringOrNumber,
   staff_id: int64StringOrNumber,
   school_name: z.string(),
@@ -138,7 +139,7 @@ export interface TraegerContractHolidayWeek {
   weekday_minutes: number[] | null;
 }
 
-export const TraegerContractHolidayWeekSchema: z.ZodType<TraegerContractHolidayWeek, unknown> = z.object({
+export const TraegerContractHolidayWeekSchema: z.ZodType<TraegerContractHolidayWeek, unknown> = object<TraegerContractHolidayWeek>({
   school_id: int64StringOrNumber,
   staff_id: int64StringOrNumber,
   school_name: z.string(),
@@ -157,7 +158,7 @@ export interface TraegerStaffContract {
   holiday_weeks: TraegerContractHolidayWeek[] | null;
 }
 
-export const TraegerStaffContractSchema: z.ZodType<TraegerStaffContract, unknown> = z.object({
+export const TraegerStaffContractSchema: z.ZodType<TraegerStaffContract, unknown> = object<TraegerStaffContract>({
   id: int64StringOrNumber,
   kind: z.string(),
   starts_on: calendarDate.nullable(),
@@ -183,7 +184,7 @@ export interface TraegerStaffRecordDetail {
   unsynced_schools?: string[];
 }
 
-export const TraegerStaffRecordDetailSchema: z.ZodType<TraegerStaffRecordDetail, unknown> = z.object({
+export const TraegerStaffRecordDetailSchema: z.ZodType<TraegerStaffRecordDetail, unknown> = object<TraegerStaffRecordDetail>({
   id: int64StringOrNumber,
   first_name: z.string(),
   last_name: z.string(),
@@ -209,7 +210,7 @@ export interface TraegerStaffRecordSummary {
   employments: TraegerStaffEmployment[] | null;
 }
 
-export const TraegerStaffRecordSummarySchema: z.ZodType<TraegerStaffRecordSummary, unknown> = z.object({
+export const TraegerStaffRecordSummarySchema: z.ZodType<TraegerStaffRecordSummary, unknown> = object<TraegerStaffRecordSummary>({
   id: int64StringOrNumber,
   first_name: z.string(),
   last_name: z.string(),
@@ -231,7 +232,7 @@ export interface TraegerStaffCandidate {
   has_account: boolean;
 }
 
-export const TraegerStaffCandidateSchema: z.ZodType<TraegerStaffCandidate, unknown> = z.object({
+export const TraegerStaffCandidateSchema: z.ZodType<TraegerStaffCandidate, unknown> = object<TraegerStaffCandidate>({
   school_id: int64StringOrNumber,
   school_name: z.string(),
   staff_id: int64StringOrNumber,
@@ -249,7 +250,7 @@ export interface TraegerStaffSuggestion {
   members: TraegerStaffCandidate[] | null;
 }
 
-export const TraegerStaffSuggestionSchema: z.ZodType<TraegerStaffSuggestion, unknown> = z.object({
+export const TraegerStaffSuggestionSchema: z.ZodType<TraegerStaffSuggestion, unknown> = object<TraegerStaffSuggestion>({
   reason: z.string(),
   staff_record_id: int64StringOrNumber.optional(),
   members: z.array(TraegerStaffCandidateSchema).nullable(),
@@ -263,7 +264,7 @@ export interface TraegerStaffOverview {
   suggestions: TraegerStaffSuggestion[] | null;
 }
 
-export const TraegerStaffOverviewSchema: z.ZodType<TraegerStaffOverview, unknown> = z.object({
+export const TraegerStaffOverviewSchema: z.ZodType<TraegerStaffOverview, unknown> = object<TraegerStaffOverview>({
   release: TraegerStaffReleaseSchema.nullable(),
   schools: z.array(TraegerStaffSchoolSchema).nullable(),
   records: z.array(TraegerStaffRecordSummarySchema).nullable(),
@@ -278,7 +279,7 @@ export interface TraegerAbsenceCarry {
   expires_on: string;
 }
 
-export const TraegerAbsenceCarrySchema: z.ZodType<TraegerAbsenceCarry, unknown> = z.object({
+export const TraegerAbsenceCarrySchema: z.ZodType<TraegerAbsenceCarry, unknown> = object<TraegerAbsenceCarry>({
   year: safeInt,
   remaining_days: z.number(),
   expired_days: z.number(),
@@ -295,7 +296,7 @@ export interface TraegerAbsenceSchoolUse {
   offered: boolean;
 }
 
-export const TraegerAbsenceSchoolUseSchema: z.ZodType<TraegerAbsenceSchoolUse, unknown> = z.object({
+export const TraegerAbsenceSchoolUseSchema: z.ZodType<TraegerAbsenceSchoolUse, unknown> = object<TraegerAbsenceSchoolUse>({
   school_id: int64StringOrNumber,
   school_name: z.string(),
   taken_days: z.number(),
@@ -321,7 +322,7 @@ export interface TraegerAbsenceAccount {
   schools: TraegerAbsenceSchoolUse[] | null;
 }
 
-export const TraegerAbsenceAccountSchema: z.ZodType<TraegerAbsenceAccount, unknown> = z.object({
+export const TraegerAbsenceAccountSchema: z.ZodType<TraegerAbsenceAccount, unknown> = object<TraegerAbsenceAccount>({
   absence_type_id: int64StringOrNumber,
   absence_type_name: z.string(),
   year: safeInt,
@@ -343,7 +344,7 @@ export interface TraegerAbsenceAccounts {
   accounts: TraegerAbsenceAccount[] | null;
 }
 
-export const TraegerAbsenceAccountsSchema: z.ZodType<TraegerAbsenceAccounts, unknown> = z.object({
+export const TraegerAbsenceAccountsSchema: z.ZodType<TraegerAbsenceAccounts, unknown> = object<TraegerAbsenceAccounts>({
   year: safeInt,
   accounts: z.array(TraegerAbsenceAccountSchema).nullable(),
 });
@@ -369,7 +370,7 @@ export interface TraegerTimeAccountSchool {
   later_closed?: string;
 }
 
-export const TraegerTimeAccountSchoolSchema: z.ZodType<TraegerTimeAccountSchool, unknown> = z.object({
+export const TraegerTimeAccountSchoolSchema: z.ZodType<TraegerTimeAccountSchool, unknown> = object<TraegerTimeAccountSchool>({
   school_id: int64StringOrNumber,
   school_name: z.string(),
   target_minutes: safeInt,
@@ -405,7 +406,7 @@ export interface TraegerTimeAccount {
   schools: TraegerTimeAccountSchool[] | null;
 }
 
-export const TraegerTimeAccountSchema: z.ZodType<TraegerTimeAccount, unknown> = z.object({
+export const TraegerTimeAccountSchema: z.ZodType<TraegerTimeAccount, unknown> = object<TraegerTimeAccount>({
   year: safeInt,
   month: safeInt,
   target_minutes: safeInt,
@@ -466,7 +467,7 @@ export interface TraegerStaffFieldOption {
   value: string;
 }
 
-export const TraegerStaffFieldOptionSchema: z.ZodType<TraegerStaffFieldOption, unknown> = z.object({
+export const TraegerStaffFieldOptionSchema: z.ZodType<TraegerStaffFieldOption, unknown> = object<TraegerStaffFieldOption>({
   source: z.string(),
   school_name: z.string().optional(),
   value: z.string(),
@@ -479,7 +480,7 @@ export interface TraegerStaffFieldPreview {
   conflict: boolean;
 }
 
-export const TraegerStaffFieldPreviewSchema: z.ZodType<TraegerStaffFieldPreview, unknown> = z.object({
+export const TraegerStaffFieldPreviewSchema: z.ZodType<TraegerStaffFieldPreview, unknown> = object<TraegerStaffFieldPreview>({
   field: z.string(),
   options: z.array(TraegerStaffFieldOptionSchema).nullable(),
   conflict: z.boolean(),
@@ -492,7 +493,7 @@ export interface TraegerStaffLinkPreview {
   fields: TraegerStaffFieldPreview[] | null;
 }
 
-export const TraegerStaffLinkPreviewSchema: z.ZodType<TraegerStaffLinkPreview, unknown> = z.object({
+export const TraegerStaffLinkPreviewSchema: z.ZodType<TraegerStaffLinkPreview, unknown> = object<TraegerStaffLinkPreview>({
   record: TraegerStaffRecordSummarySchema.optional(),
   members: z.array(TraegerStaffCandidateSchema).nullable(),
   fields: z.array(TraegerStaffFieldPreviewSchema).nullable(),

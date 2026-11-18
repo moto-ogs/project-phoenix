@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   calendarDate,
   instant,
+  object,
   requestBody,
   safeInt,
   success,
@@ -20,7 +21,7 @@ export interface billingKeyDateCountResponse {
   recorded_at: string;
 }
 
-export const billingKeyDateCountResponseSchema: z.ZodType<billingKeyDateCountResponse, unknown> = z.object({
+export const billingKeyDateCountResponseSchema: z.ZodType<billingKeyDateCountResponse, unknown> = object<billingKeyDateCountResponse>({
   school_id: z.string(),
   school_name: z.string(),
   organization_name: z.string(),
@@ -38,7 +39,7 @@ export interface billingKeyDayResponse {
   updated_at: string;
 }
 
-export const billingKeyDayResponseSchema: z.ZodType<billingKeyDayResponse, unknown> = z.object({
+export const billingKeyDayResponseSchema: z.ZodType<billingKeyDayResponse, unknown> = object<billingKeyDayResponse>({
   key_day: safeInt,
   next_key_date: calendarDate,
   updated_at: instant,

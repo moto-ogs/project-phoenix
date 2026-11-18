@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   int64StringOrNumber,
+  object,
   requestBody,
   success,
 } from "./runtime";
@@ -13,7 +14,7 @@ export interface OperatorResponse {
   display_name: string;
 }
 
-export const OperatorResponseSchema: z.ZodType<OperatorResponse, unknown> = z.object({
+export const OperatorResponseSchema: z.ZodType<OperatorResponse, unknown> = object<OperatorResponse>({
   id: int64StringOrNumber,
   email: z.string(),
   display_name: z.string(),

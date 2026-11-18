@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -31,7 +32,7 @@ export interface HolidayTimeModel {
   protected: boolean;
 }
 
-export const HolidayTimeModelSchema: z.ZodType<HolidayTimeModel, unknown> = z.object({
+export const HolidayTimeModelSchema: z.ZodType<HolidayTimeModel, unknown> = object<HolidayTimeModel>({
   id: int64StringOrNumber,
   name: z.string(),
   starts_at: z.string(),
@@ -48,7 +49,7 @@ export interface HolidayNoCareDay {
   name: string;
 }
 
-export const HolidayNoCareDaySchema: z.ZodType<HolidayNoCareDay, unknown> = z.object({
+export const HolidayNoCareDaySchema: z.ZodType<HolidayNoCareDay, unknown> = object<HolidayNoCareDay>({
   date: calendarDate.nullable(),
   kind: z.string(),
   name: z.string(),
@@ -68,7 +69,7 @@ export interface HolidayWeek {
   lunch_booked: boolean;
 }
 
-export const HolidayWeekSchema: z.ZodType<HolidayWeek, unknown> = z.object({
+export const HolidayWeekSchema: z.ZodType<HolidayWeek, unknown> = object<HolidayWeek>({
   id: int64StringOrNumber,
   starts_on: calendarDate.nullable(),
   ends_on: calendarDate.nullable(),
@@ -102,7 +103,7 @@ export interface HolidayPeriod {
   weeks: HolidayWeek[] | null;
 }
 
-export const HolidayPeriodSchema: z.ZodType<HolidayPeriod, unknown> = z.object({
+export const HolidayPeriodSchema: z.ZodType<HolidayPeriod, unknown> = object<HolidayPeriod>({
   id: int64StringOrNumber,
   name: z.string(),
   registration_opens_on: calendarDate.nullable(),
@@ -133,7 +134,7 @@ export interface HolidayCriterion {
   answered: boolean;
 }
 
-export const HolidayCriterionSchema: z.ZodType<HolidayCriterion, unknown> = z.object({
+export const HolidayCriterionSchema: z.ZodType<HolidayCriterion, unknown> = object<HolidayCriterion>({
   id: int64StringOrNumber,
   name: z.string(),
   question: z.string(),
@@ -149,7 +150,7 @@ export interface HolidayCriterionPeriod {
   name: string;
 }
 
-export const HolidayCriterionPeriodSchema: z.ZodType<HolidayCriterionPeriod, unknown> = z.object({
+export const HolidayCriterionPeriodSchema: z.ZodType<HolidayCriterionPeriod, unknown> = object<HolidayCriterionPeriod>({
   id: int64StringOrNumber,
   name: z.string(),
 });
@@ -160,7 +161,7 @@ export interface HolidayCriteriaCatalog {
   periods: HolidayCriterionPeriod[] | null;
 }
 
-export const HolidayCriteriaCatalogSchema: z.ZodType<HolidayCriteriaCatalog, unknown> = z.object({
+export const HolidayCriteriaCatalogSchema: z.ZodType<HolidayCriteriaCatalog, unknown> = object<HolidayCriteriaCatalog>({
   criteria: z.array(HolidayCriterionSchema).nullable(),
   periods: z.array(HolidayCriterionPeriodSchema).nullable(),
 });
@@ -173,7 +174,7 @@ export interface HolidayCriterionRef {
   position: number;
 }
 
-export const HolidayCriterionRefSchema: z.ZodType<HolidayCriterionRef, unknown> = z.object({
+export const HolidayCriterionRefSchema: z.ZodType<HolidayCriterionRef, unknown> = object<HolidayCriterionRef>({
   id: int64StringOrNumber,
   name: z.string(),
   scope: z.string(),
@@ -187,7 +188,7 @@ export interface HolidayCriterionValue {
   source: string;
 }
 
-export const HolidayCriterionValueSchema: z.ZodType<HolidayCriterionValue, unknown> = z.object({
+export const HolidayCriterionValueSchema: z.ZodType<HolidayCriterionValue, unknown> = object<HolidayCriterionValue>({
   criterion_id: int64StringOrNumber,
   value: z.string(),
   source: z.string(),
@@ -208,7 +209,7 @@ export interface HolidayAllocationCandidate {
   proposal: string;
 }
 
-export const HolidayAllocationCandidateSchema: z.ZodType<HolidayAllocationCandidate, unknown> = z.object({
+export const HolidayAllocationCandidateSchema: z.ZodType<HolidayAllocationCandidate, unknown> = object<HolidayAllocationCandidate>({
   booking_id: int64StringOrNumber,
   rank: safeInt,
   registration_id: int64StringOrNumber,
@@ -235,7 +236,7 @@ export interface HolidayAllocationWeek {
   pending: HolidayAllocationCandidate[] | null;
 }
 
-export const HolidayAllocationWeekSchema: z.ZodType<HolidayAllocationWeek, unknown> = z.object({
+export const HolidayAllocationWeekSchema: z.ZodType<HolidayAllocationWeek, unknown> = object<HolidayAllocationWeek>({
   week_id: int64StringOrNumber,
   starts_on: calendarDate.nullable(),
   ends_on: calendarDate.nullable(),
@@ -266,7 +267,7 @@ export interface HolidayAllocationDecision {
   decided_by_account_id: string | null;
 }
 
-export const HolidayAllocationDecisionSchema: z.ZodType<HolidayAllocationDecision, unknown> = z.object({
+export const HolidayAllocationDecisionSchema: z.ZodType<HolidayAllocationDecision, unknown> = object<HolidayAllocationDecision>({
   id: int64StringOrNumber,
   week_id: int64StringOrNumber,
   week_starts_on: calendarDate.nullable(),
@@ -292,7 +293,7 @@ export interface HolidayAllocationBoard {
   decisions: HolidayAllocationDecision[] | null;
 }
 
-export const HolidayAllocationBoardSchema: z.ZodType<HolidayAllocationBoard, unknown> = z.object({
+export const HolidayAllocationBoardSchema: z.ZodType<HolidayAllocationBoard, unknown> = object<HolidayAllocationBoard>({
   allocation_mode: z.string(),
   criteria: z.array(HolidayCriterionRefSchema).nullable(),
   weeks: z.array(HolidayAllocationWeekSchema).nullable(),
@@ -310,7 +311,7 @@ export interface HolidayFormEditor {
   template: HolidayFormField[] | null;
 }
 
-export const HolidayFormEditorSchema: z.ZodType<HolidayFormEditor, unknown> = z.object({
+export const HolidayFormEditorSchema: z.ZodType<HolidayFormEditor, unknown> = object<HolidayFormEditor>({
   legal_blocks: z.array(FormLegalBlockSchema).nullable(),
   version: safeInt,
   fields: z.array(HolidayFormFieldSchema).nullable(),
@@ -334,7 +335,7 @@ export interface HolidayWaitlistEntry {
   days?: (string | null)[];
 }
 
-export const HolidayWaitlistEntrySchema: z.ZodType<HolidayWaitlistEntry, unknown> = z.object({
+export const HolidayWaitlistEntrySchema: z.ZodType<HolidayWaitlistEntry, unknown> = object<HolidayWaitlistEntry>({
   position: safeInt,
   registration_id: int64StringOrNumber,
   registration_status: z.string(),
@@ -353,7 +354,7 @@ export interface HolidayDayPlaces {
   placed: number;
 }
 
-export const HolidayDayPlacesSchema: z.ZodType<HolidayDayPlaces, unknown> = z.object({
+export const HolidayDayPlacesSchema: z.ZodType<HolidayDayPlaces, unknown> = object<HolidayDayPlaces>({
   date: calendarDate.nullable(),
   placed: safeInt,
 });
@@ -372,7 +373,7 @@ export interface HolidayWeekPlaces {
   days: HolidayDayPlaces[] | null;
 }
 
-export const HolidayWeekPlacesSchema: z.ZodType<HolidayWeekPlaces, unknown> = z.object({
+export const HolidayWeekPlacesSchema: z.ZodType<HolidayWeekPlaces, unknown> = object<HolidayWeekPlaces>({
   week_id: int64StringOrNumber,
   starts_on: calendarDate.nullable(),
   ends_on: calendarDate.nullable(),
@@ -404,7 +405,7 @@ export interface HolidayRegistrationSummary {
   mail_problems?: HolidayRegistrationMailProblem[];
 }
 
-export const HolidayRegistrationSummarySchema: z.ZodType<HolidayRegistrationSummary, unknown> = z.object({
+export const HolidayRegistrationSummarySchema: z.ZodType<HolidayRegistrationSummary, unknown> = object<HolidayRegistrationSummary>({
   id: int64StringOrNumber,
   status: z.string(),
   frozen: z.boolean(),
@@ -429,7 +430,7 @@ export interface HolidayRegistrationList {
   status_counts: Record<string, number> | null;
 }
 
-export const HolidayRegistrationListSchema: z.ZodType<HolidayRegistrationList, unknown> = z.object({
+export const HolidayRegistrationListSchema: z.ZodType<HolidayRegistrationList, unknown> = object<HolidayRegistrationList>({
   registrations: z.array(HolidayRegistrationSummarySchema).nullable(),
   total: safeInt,
   status_counts: z.record(z.string(), safeInt).nullable(),
@@ -442,7 +443,7 @@ export interface HolidayKnownChild {
   school_id: string;
 }
 
-export const HolidayKnownChildSchema: z.ZodType<HolidayKnownChild, unknown> = z.object({
+export const HolidayKnownChildSchema: z.ZodType<HolidayKnownChild, unknown> = object<HolidayKnownChild>({
   registration_id: int64StringOrNumber,
   child_id: int64StringOrNumber,
   school_id: int64StringOrNumber,
@@ -453,7 +454,7 @@ export interface HolidayKnownChildrenResponse {
   children: HolidayKnownChild[] | null;
 }
 
-export const HolidayKnownChildrenResponseSchema: z.ZodType<HolidayKnownChildrenResponse, unknown> = z.object({
+export const HolidayKnownChildrenResponseSchema: z.ZodType<HolidayKnownChildrenResponse, unknown> = object<HolidayKnownChildrenResponse>({
   children: z.array(HolidayKnownChildSchema).nullable(),
 });
 
@@ -463,7 +464,7 @@ export interface HolidayRegistrationMails {
   mail_problems: HolidayRegistrationMailProblem[] | null;
 }
 
-export const HolidayRegistrationMailsSchema: z.ZodType<HolidayRegistrationMails, unknown> = z.object({
+export const HolidayRegistrationMailsSchema: z.ZodType<HolidayRegistrationMails, unknown> = object<HolidayRegistrationMails>({
   registration_id: int64StringOrNumber,
   mail_problems: z.array(HolidayRegistrationMailProblemSchema).nullable(),
 });
@@ -473,7 +474,7 @@ export interface HolidayMailProblemsResponse {
   registrations: HolidayRegistrationMails[] | null;
 }
 
-export const HolidayMailProblemsResponseSchema: z.ZodType<HolidayMailProblemsResponse, unknown> = z.object({
+export const HolidayMailProblemsResponseSchema: z.ZodType<HolidayMailProblemsResponse, unknown> = object<HolidayMailProblemsResponse>({
   registrations: z.array(HolidayRegistrationMailsSchema).nullable(),
 });
 
@@ -486,7 +487,7 @@ export interface HolidayRegistrationHealth {
   custom_data: Record<string, unknown | null> | null;
 }
 
-export const HolidayRegistrationHealthSchema: z.ZodType<HolidayRegistrationHealth, unknown> = z.object({
+export const HolidayRegistrationHealthSchema: z.ZodType<HolidayRegistrationHealth, unknown> = object<HolidayRegistrationHealth>({
   child_id: int64StringOrNumber,
   allergies: z.string(),
   medication: z.string(),
@@ -500,7 +501,7 @@ export interface HolidayRegistrationHealthDetail {
   children: HolidayRegistrationHealth[] | null;
 }
 
-export const HolidayRegistrationHealthDetailSchema: z.ZodType<HolidayRegistrationHealthDetail, unknown> = z.object({
+export const HolidayRegistrationHealthDetailSchema: z.ZodType<HolidayRegistrationHealthDetail, unknown> = object<HolidayRegistrationHealthDetail>({
   custom_data: z.record(z.string(), z.unknown().nullable()).nullable(),
   children: z.array(HolidayRegistrationHealthSchema).nullable(),
 });

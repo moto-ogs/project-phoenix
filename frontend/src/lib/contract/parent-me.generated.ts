@@ -6,6 +6,7 @@ import {
   int64String,
   int64StringOrNumber,
   noData,
+  object,
   openEnum,
   requestBody,
   safeInt,
@@ -33,7 +34,7 @@ export interface ParentCalendarResponse {
   events: Event[] | null;
 }
 
-export const ParentCalendarResponseSchema: z.ZodType<ParentCalendarResponse, unknown> = z.object({
+export const ParentCalendarResponseSchema: z.ZodType<ParentCalendarResponse, unknown> = object<ParentCalendarResponse>({
   from: calendarDate.nullable(),
   to: calendarDate.nullable(),
   events: z.array(EventSchema).nullable(),
@@ -46,7 +47,7 @@ export interface AppointmentResponseCounts {
   pending: number;
 }
 
-export const AppointmentResponseCountsSchema: z.ZodType<AppointmentResponseCounts, unknown> = z.object({
+export const AppointmentResponseCountsSchema: z.ZodType<AppointmentResponseCounts, unknown> = object<AppointmentResponseCounts>({
   accepted: safeInt,
   declined: safeInt,
   pending: safeInt,
@@ -61,7 +62,7 @@ export interface AppointmentAttendee {
   responded_at?: string;
 }
 
-export const AppointmentAttendeeSchema: z.ZodType<AppointmentAttendee, unknown> = z.object({
+export const AppointmentAttendeeSchema: z.ZodType<AppointmentAttendee, unknown> = object<AppointmentAttendee>({
   recipient_id: z.string(),
   recipient_type: z.string(),
   name: z.string(),
@@ -79,7 +80,7 @@ export interface AppointmentOverview {
   attendees: AppointmentAttendee[] | null;
 }
 
-export const AppointmentOverviewSchema: z.ZodType<AppointmentOverview, unknown> = z.object({
+export const AppointmentOverviewSchema: z.ZodType<AppointmentOverview, unknown> = object<AppointmentOverview>({
   appointment_id: z.string(),
   occurrence_date: calendarDate.optional(),
   delivery_mode: z.string(),
@@ -94,7 +95,7 @@ export interface ParentCalendarFeedResponse {
   webcal_url: string;
 }
 
-export const ParentCalendarFeedResponseSchema: z.ZodType<ParentCalendarFeedResponse, unknown> = z.object({
+export const ParentCalendarFeedResponseSchema: z.ZodType<ParentCalendarFeedResponse, unknown> = object<ParentCalendarFeedResponse>({
   url: z.string(),
   webcal_url: z.string(),
 });
@@ -115,7 +116,7 @@ export interface ChildResponse {
   without_care_place?: boolean;
 }
 
-export const ChildResponseSchema: z.ZodType<ChildResponse, unknown> = z.object({
+export const ChildResponseSchema: z.ZodType<ChildResponse, unknown> = object<ChildResponse>({
   student_id: z.string(),
   tenant_id: z.string(),
   first_name: z.string(),
@@ -144,7 +145,7 @@ export interface CareOfferingItemResponse {
   starts_later: boolean;
 }
 
-export const CareOfferingItemResponseSchema: z.ZodType<CareOfferingItemResponse, unknown> = z.object({
+export const CareOfferingItemResponseSchema: z.ZodType<CareOfferingItemResponse, unknown> = object<CareOfferingItemResponse>({
   id: z.string(),
   name: z.string(),
   description: z.string().optional(),
@@ -170,7 +171,7 @@ export interface OfferingDiffResponse {
   is_course?: boolean;
 }
 
-export const OfferingDiffResponseSchema: z.ZodType<OfferingDiffResponse, unknown> = z.object({
+export const OfferingDiffResponseSchema: z.ZodType<OfferingDiffResponse, unknown> = object<OfferingDiffResponse>({
   label: z.string(),
   old_state: z.string(),
   old_days: z.array(z.string()).nullable(),
@@ -192,7 +193,7 @@ export interface PendingOfferingChangeResponse {
   submitted_by_self: boolean;
 }
 
-export const PendingOfferingChangeResponseSchema: z.ZodType<PendingOfferingChangeResponse, unknown> = z.object({
+export const PendingOfferingChangeResponseSchema: z.ZodType<PendingOfferingChangeResponse, unknown> = object<PendingOfferingChangeResponse>({
   id: z.string(),
   created_at: z.string(),
   effective_from: z.string(),
@@ -208,7 +209,7 @@ export interface OfferingRequestedItemResponse {
   weekdays: number[] | null;
 }
 
-export const OfferingRequestedItemResponseSchema: z.ZodType<OfferingRequestedItemResponse, unknown> = z.object({
+export const OfferingRequestedItemResponseSchema: z.ZodType<OfferingRequestedItemResponse, unknown> = object<OfferingRequestedItemResponse>({
   id: z.string(),
   name: z.string(),
   weekdays: z.array(safeInt).nullable(),
@@ -228,7 +229,7 @@ export interface OfferingDecisionResponse {
   submitted_by_self: boolean;
 }
 
-export const OfferingDecisionResponseSchema: z.ZodType<OfferingDecisionResponse, unknown> = z.object({
+export const OfferingDecisionResponseSchema: z.ZodType<OfferingDecisionResponse, unknown> = object<OfferingDecisionResponse>({
   id: z.string(),
   status: z.string(),
   decided_at: z.string(),
@@ -254,7 +255,7 @@ export interface CareOfferingsResponse {
   changes_disabled_reason?: string;
 }
 
-export const CareOfferingsResponseSchema: z.ZodType<CareOfferingsResponse, unknown> = z.object({
+export const CareOfferingsResponseSchema: z.ZodType<CareOfferingsResponse, unknown> = object<CareOfferingsResponse>({
   period_name: z.string().optional(),
   period_start: z.string().optional(),
   period_end: z.string().optional(),
@@ -287,7 +288,7 @@ export interface OfferingCatalogItemResponse {
   free_slots?: number;
 }
 
-export const OfferingCatalogItemResponseSchema: z.ZodType<OfferingCatalogItemResponse, unknown> = z.object({
+export const OfferingCatalogItemResponseSchema: z.ZodType<OfferingCatalogItemResponse, unknown> = object<OfferingCatalogItemResponse>({
   id: z.string(),
   name: z.string(),
   description: z.string().optional(),
@@ -316,7 +317,7 @@ export interface OfferingCatalogResponse {
   items: OfferingCatalogItemResponse[] | null;
 }
 
-export const OfferingCatalogResponseSchema: z.ZodType<OfferingCatalogResponse, unknown> = z.object({
+export const OfferingCatalogResponseSchema: z.ZodType<OfferingCatalogResponse, unknown> = object<OfferingCatalogResponse>({
   phase_name: z.string(),
   selection_mode: z.string(),
   earliest_effective_from: z.string(),
@@ -333,7 +334,7 @@ export interface CareScheduleWeekdayResponse {
   modes: string[] | null;
 }
 
-export const CareScheduleWeekdayResponseSchema: z.ZodType<CareScheduleWeekdayResponse, unknown> = z.object({
+export const CareScheduleWeekdayResponseSchema: z.ZodType<CareScheduleWeekdayResponse, unknown> = object<CareScheduleWeekdayResponse>({
   weekday: safeInt,
   status: z.string(),
   arrival: z.string().optional(),
@@ -352,7 +353,7 @@ export interface ParentCareRequestDiffResponse {
   new_mode?: string;
 }
 
-export const ParentCareRequestDiffResponseSchema: z.ZodType<ParentCareRequestDiffResponse, unknown> = z.object({
+export const ParentCareRequestDiffResponseSchema: z.ZodType<ParentCareRequestDiffResponse, unknown> = object<ParentCareRequestDiffResponse>({
   label: z.string(),
   old: z.string(),
   new: z.string(),
@@ -370,7 +371,7 @@ export interface PendingCareRequestResponse {
   submitted_by_self: boolean;
 }
 
-export const PendingCareRequestResponseSchema: z.ZodType<PendingCareRequestResponse, unknown> = z.object({
+export const PendingCareRequestResponseSchema: z.ZodType<PendingCareRequestResponse, unknown> = object<PendingCareRequestResponse>({
   id: z.string(),
   created_at: z.string(),
   diff: z.array(ParentCareRequestDiffResponseSchema).nullable(),
@@ -384,7 +385,7 @@ export interface CareScheduleRequestCapabilitiesResponse {
   departure_mode: boolean;
 }
 
-export const CareScheduleRequestCapabilitiesResponseSchema: z.ZodType<CareScheduleRequestCapabilitiesResponse, unknown> = z.object({
+export const CareScheduleRequestCapabilitiesResponseSchema: z.ZodType<CareScheduleRequestCapabilitiesResponse, unknown> = object<CareScheduleRequestCapabilitiesResponse>({
   arrival: z.boolean(),
   pickup: z.boolean(),
   departure_mode: z.boolean(),
@@ -400,7 +401,7 @@ export interface CareScheduleResponse {
   today_date?: string;
 }
 
-export const CareScheduleResponseSchema: z.ZodType<CareScheduleResponse, unknown> = z.object({
+export const CareScheduleResponseSchema: z.ZodType<CareScheduleResponse, unknown> = object<CareScheduleResponse>({
   weekdays: z.array(CareScheduleWeekdayResponseSchema).nullable(),
   pending_request: PendingCareRequestResponseSchema.optional(),
   can_request: z.boolean(),
@@ -418,7 +419,7 @@ export interface ChildConsentResponse {
   can_grant: boolean;
 }
 
-export const ChildConsentResponseSchema: z.ZodType<ChildConsentResponse, unknown> = z.object({
+export const ChildConsentResponseSchema: z.ZodType<ChildConsentResponse, unknown> = object<ChildConsentResponse>({
   key: z.string(),
   state: z.string(),
   changed_at: z.string().optional(),
@@ -441,7 +442,7 @@ export interface CourseItemResponse {
   waitlist_position?: number;
 }
 
-export const CourseItemResponseSchema: z.ZodType<CourseItemResponse, unknown> = z.object({
+export const CourseItemResponseSchema: z.ZodType<CourseItemResponse, unknown> = object<CourseItemResponse>({
   id: z.string(),
   activity_group_id: z.string(),
   name: z.string(),
@@ -469,7 +470,7 @@ export interface CoursesResponse {
   items: CourseItemResponse[] | null;
 }
 
-export const CoursesResponseSchema: z.ZodType<CoursesResponse, unknown> = z.object({
+export const CoursesResponseSchema: z.ZodType<CoursesResponse, unknown> = object<CoursesResponse>({
   enabled: z.boolean(),
   can_request: z.boolean(),
   reason_required: z.boolean(),
@@ -496,7 +497,7 @@ export interface ParentExcusedRequestResponse {
   is_self: boolean;
 }
 
-export const ParentExcusedRequestResponseSchema: z.ZodType<ParentExcusedRequestResponse, unknown> = z.object({
+export const ParentExcusedRequestResponseSchema: z.ZodType<ParentExcusedRequestResponse, unknown> = object<ParentExcusedRequestResponse>({
   id: z.string(),
   student_id: z.string(),
   absence_status: z.string(),
@@ -542,7 +543,7 @@ export interface ChildFeaturesResponse {
   care_facility_term: string;
 }
 
-export const ChildFeaturesResponseSchema: z.ZodType<ChildFeaturesResponse, unknown> = z.object({
+export const ChildFeaturesResponseSchema: z.ZodType<ChildFeaturesResponse, unknown> = object<ChildFeaturesResponse>({
   conference_book_allowed: z.boolean(),
   care_ended: z.boolean(),
   without_care_place: z.boolean().optional(),
@@ -582,7 +583,7 @@ export interface guardianPhoneResponse {
   is_primary: boolean;
 }
 
-export const guardianPhoneResponseSchema: z.ZodType<guardianPhoneResponse, unknown> = z.object({
+export const guardianPhoneResponseSchema: z.ZodType<guardianPhoneResponse, unknown> = object<guardianPhoneResponse>({
   phone_number: z.string(),
   phone_type: z.string(),
   label: z.string().optional(),
@@ -617,7 +618,7 @@ export interface childGuardianResponse {
   contact_locked_full_guardian: boolean;
 }
 
-export const childGuardianResponseSchema: z.ZodType<childGuardianResponse, unknown> = z.object({
+export const childGuardianResponseSchema: z.ZodType<childGuardianResponse, unknown> = object<childGuardianResponse>({
   guardian_profile_id: z.string(),
   student_guardian_id: z.string(),
   first_name: z.string(),
@@ -656,7 +657,7 @@ export interface MasterDataChangeResponse {
   is_self: boolean;
 }
 
-export const MasterDataChangeResponseSchema: z.ZodType<MasterDataChangeResponse, unknown> = z.object({
+export const MasterDataChangeResponseSchema: z.ZodType<MasterDataChangeResponse, unknown> = object<MasterDataChangeResponse>({
   id: z.string(),
   target: z.string(),
   field_key: z.string(),
@@ -691,7 +692,7 @@ export interface MasterDataResponse {
   pending_changes: MasterDataChangeResponse[] | null;
 }
 
-export const MasterDataResponseSchema: z.ZodType<MasterDataResponse, unknown> = z.object({
+export const MasterDataResponseSchema: z.ZodType<MasterDataResponse, unknown> = object<MasterDataResponse>({
   student_id: z.string(),
   first_name: z.string(),
   last_name: z.string(),
@@ -723,7 +724,7 @@ export interface MealPlanEntryResponse {
   allergens: string[] | null;
 }
 
-export const MealPlanEntryResponseSchema: z.ZodType<MealPlanEntryResponse, unknown> = z.object({
+export const MealPlanEntryResponseSchema: z.ZodType<MealPlanEntryResponse, unknown> = object<MealPlanEntryResponse>({
   date: z.string(),
   position: safeInt,
   dish: z.string(),
@@ -743,7 +744,7 @@ export interface ParentConferenceOffer {
   can_change: boolean;
 }
 
-export const ParentConferenceOfferSchema: z.ZodType<ParentConferenceOffer, unknown> = z.object({
+export const ParentConferenceOfferSchema: z.ZodType<ParentConferenceOffer, unknown> = object<ParentConferenceOffer>({
   id: z.string(),
   school_class: z.string(),
   teacher_name: z.string(),
@@ -773,7 +774,7 @@ export interface PickupChangeRequestResponse {
   signed: boolean;
 }
 
-export const PickupChangeRequestResponseSchema: z.ZodType<PickupChangeRequestResponse, unknown> = z.object({
+export const PickupChangeRequestResponseSchema: z.ZodType<PickupChangeRequestResponse, unknown> = object<PickupChangeRequestResponse>({
   id: z.string(),
   date: z.string(),
   pickup_time: z.string().nullable(),
@@ -805,7 +806,7 @@ export interface pickupPermissionRequestResponse {
   signed: boolean;
 }
 
-export const pickupPermissionRequestResponseSchema: z.ZodType<pickupPermissionRequestResponse, unknown> = z.object({
+export const pickupPermissionRequestResponseSchema: z.ZodType<pickupPermissionRequestResponse, unknown> = object<pickupPermissionRequestResponse>({
   id: z.string(),
   guardian_profile_id: z.string(),
   person_name: z.string(),
@@ -831,7 +832,7 @@ export interface relatedAccountResponse {
   is_self: boolean;
 }
 
-export const relatedAccountResponseSchema: z.ZodType<relatedAccountResponse, unknown> = z.object({
+export const relatedAccountResponseSchema: z.ZodType<relatedAccountResponse, unknown> = object<relatedAccountResponse>({
   guardian_profile_id: z.string(),
   first_name: z.string(),
   last_name: z.string(),
@@ -851,7 +852,7 @@ export interface requestSharingRecipientResponse {
   selected: boolean;
 }
 
-export const requestSharingRecipientResponseSchema: z.ZodType<requestSharingRecipientResponse, unknown> = z.object({
+export const requestSharingRecipientResponseSchema: z.ZodType<requestSharingRecipientResponse, unknown> = object<requestSharingRecipientResponse>({
   guardian_profile_id: z.string(),
   first_name: z.string(),
   last_name: z.string(),
@@ -864,7 +865,7 @@ export interface requestSharingResponse {
   recipients: requestSharingRecipientResponse[] | null;
 }
 
-export const requestSharingResponseSchema: z.ZodType<requestSharingResponse, unknown> = z.object({
+export const requestSharingResponseSchema: z.ZodType<requestSharingResponse, unknown> = object<requestSharingResponse>({
   family_protected: z.boolean(),
   recipients: z.array(requestSharingRecipientResponseSchema).nullable(),
 });
@@ -876,7 +877,7 @@ export interface ParentRequestEventResponse {
   version: string;
 }
 
-export const ParentRequestEventResponseSchema: z.ZodType<ParentRequestEventResponse, unknown> = z.object({
+export const ParentRequestEventResponseSchema: z.ZodType<ParentRequestEventResponse, unknown> = object<ParentRequestEventResponse>({
   event_type: z.string(),
   created_at: z.string(),
   version: z.string(),
@@ -892,7 +893,7 @@ export interface TodayStatusResponse {
   pickup_time?: string;
 }
 
-export const TodayStatusResponseSchema: z.ZodType<TodayStatusResponse, unknown> = z.object({
+export const TodayStatusResponseSchema: z.ZodType<TodayStatusResponse, unknown> = object<TodayStatusResponse>({
   at_ogs: z.boolean().nullable(),
   state: z.string(),
   since: z.string().optional(),
@@ -907,7 +908,7 @@ export interface SEPAMandateStatus {
   collection_eligible: boolean;
 }
 
-export const SEPAMandateStatusSchema: z.ZodType<SEPAMandateStatus, unknown> = z.object({
+export const SEPAMandateStatusSchema: z.ZodType<SEPAMandateStatus, unknown> = object<SEPAMandateStatus>({
   enabled: z.boolean(),
   collection_eligible: z.boolean(),
 });
@@ -936,7 +937,7 @@ export interface BillingDocumentResponse {
   sepa_mandate?: SEPAMandateStatus;
 }
 
-export const BillingDocumentResponseSchema: z.ZodType<BillingDocumentResponse, unknown> = z.object({
+export const BillingDocumentResponseSchema: z.ZodType<BillingDocumentResponse, unknown> = object<BillingDocumentResponse>({
   id: z.string(),
   organization_id: z.string(),
   traeger_name: z.string(),
@@ -971,7 +972,7 @@ export interface SharedDocumentResponse {
   released_at: string;
 }
 
-export const SharedDocumentResponseSchema: z.ZodType<SharedDocumentResponse, unknown> = z.object({
+export const SharedDocumentResponseSchema: z.ZodType<SharedDocumentResponse, unknown> = object<SharedDocumentResponse>({
   id: z.string(),
   organization_id: z.string(),
   traeger_name: z.string(),
@@ -990,7 +991,7 @@ export interface SigningService {
   last_day: string | null;
 }
 
-export const SigningServiceSchema: z.ZodType<SigningService, unknown> = z.object({
+export const SigningServiceSchema: z.ZodType<SigningService, unknown> = object<SigningService>({
   weekday: z.string(),
   module_name: z.string(),
   ends_at: z.string(),
@@ -1009,7 +1010,7 @@ export interface SigningContract {
   services: SigningService[] | null;
 }
 
-export const SigningContractSchema: z.ZodType<SigningContract, unknown> = z.object({
+export const SigningContractSchema: z.ZodType<SigningContract, unknown> = object<SigningContract>({
   child_first_name: z.string(),
   child_last_name: z.string(),
   school_name: z.string(),
@@ -1029,7 +1030,7 @@ export interface SigningSignature {
   withdrawal_ends_on: string | null;
 }
 
-export const SigningSignatureSchema: z.ZodType<SigningSignature, unknown> = z.object({
+export const SigningSignatureSchema: z.ZodType<SigningSignature, unknown> = object<SigningSignature>({
   method: z.string(),
   signer_name: z.string(),
   signed_at: instant,
@@ -1050,7 +1051,7 @@ export interface SigningView {
   signature: SigningSignature | null;
 }
 
-export const SigningViewSchema: z.ZodType<SigningView, unknown> = z.object({
+export const SigningViewSchema: z.ZodType<SigningView, unknown> = object<SigningView>({
   contract_id: int64StringOrNumber,
   organization_id: int64StringOrNumber,
   status: z.string(),
@@ -1080,7 +1081,7 @@ export interface EnrollablePhaseResponse {
   audience: OpenEnum<EnrollmentPhaseAudience>;
 }
 
-export const EnrollablePhaseResponseSchema: z.ZodType<EnrollablePhaseResponse, unknown> = z.object({
+export const EnrollablePhaseResponseSchema: z.ZodType<EnrollablePhaseResponse, unknown> = object<EnrollablePhaseResponse>({
   school_id: int64String,
   school_name: z.string(),
   school_slug: z.string(),
@@ -1106,7 +1107,7 @@ export interface HolidayRegistrationEntryWeekResponse {
   lunch: boolean;
 }
 
-export const HolidayRegistrationEntryWeekResponseSchema: z.ZodType<HolidayRegistrationEntryWeekResponse, unknown> = z.object({
+export const HolidayRegistrationEntryWeekResponseSchema: z.ZodType<HolidayRegistrationEntryWeekResponse, unknown> = object<HolidayRegistrationEntryWeekResponse>({
   first_day: calendarDate.nullable(),
   last_day: calendarDate.nullable(),
   time_model_name: z.string(),
@@ -1120,7 +1121,7 @@ export interface HolidayRegistrationEntryChildResponse {
   weeks: HolidayRegistrationEntryWeekResponse[] | null;
 }
 
-export const HolidayRegistrationEntryChildResponseSchema: z.ZodType<HolidayRegistrationEntryChildResponse, unknown> = z.object({
+export const HolidayRegistrationEntryChildResponseSchema: z.ZodType<HolidayRegistrationEntryChildResponse, unknown> = object<HolidayRegistrationEntryChildResponse>({
   first_name: z.string(),
   weeks: z.array(HolidayRegistrationEntryWeekResponseSchema).nullable(),
 });
@@ -1137,7 +1138,7 @@ export interface HolidayRegistrationEntryResponse {
   children: HolidayRegistrationEntryChildResponse[] | null;
 }
 
-export const HolidayRegistrationEntryResponseSchema: z.ZodType<HolidayRegistrationEntryResponse, unknown> = z.object({
+export const HolidayRegistrationEntryResponseSchema: z.ZodType<HolidayRegistrationEntryResponse, unknown> = object<HolidayRegistrationEntryResponse>({
   id: int64StringOrNumber,
   traeger_name: z.string(),
   period_name: z.string(),
@@ -1153,7 +1154,7 @@ export interface HolidayRegistrationEntriesResponse {
   registrations: HolidayRegistrationEntryResponse[] | null;
 }
 
-export const HolidayRegistrationEntriesResponseSchema: z.ZodType<HolidayRegistrationEntriesResponse, unknown> = z.object({
+export const HolidayRegistrationEntriesResponseSchema: z.ZodType<HolidayRegistrationEntriesResponse, unknown> = object<HolidayRegistrationEntriesResponse>({
   registrations: z.array(HolidayRegistrationEntryResponseSchema).nullable(),
 });
 
@@ -1163,7 +1164,7 @@ export interface HolidayRegistrationOfferChildResponse {
   first_name: string;
 }
 
-export const HolidayRegistrationOfferChildResponseSchema: z.ZodType<HolidayRegistrationOfferChildResponse, unknown> = z.object({
+export const HolidayRegistrationOfferChildResponseSchema: z.ZodType<HolidayRegistrationOfferChildResponse, unknown> = object<HolidayRegistrationOfferChildResponse>({
   student_id: z.string(),
   first_name: z.string(),
 });
@@ -1181,7 +1182,7 @@ export interface HolidayRegistrationOfferResponse {
   children: HolidayRegistrationOfferChildResponse[] | null;
 }
 
-export const HolidayRegistrationOfferResponseSchema: z.ZodType<HolidayRegistrationOfferResponse, unknown> = z.object({
+export const HolidayRegistrationOfferResponseSchema: z.ZodType<HolidayRegistrationOfferResponse, unknown> = object<HolidayRegistrationOfferResponse>({
   token: z.string(),
   name: z.string(),
   traeger_name: z.string(),
@@ -1198,7 +1199,7 @@ export interface ParentGuardianReaderResponse {
   name: string;
 }
 
-export const ParentGuardianReaderResponseSchema: z.ZodType<ParentGuardianReaderResponse, unknown> = z.object({
+export const ParentGuardianReaderResponseSchema: z.ZodType<ParentGuardianReaderResponse, unknown> = object<ParentGuardianReaderResponse>({
   name: z.string(),
 });
 
@@ -1209,7 +1210,7 @@ export interface ParentSchoolReadersResponse {
   unnamed_count: number;
 }
 
-export const ParentSchoolReadersResponseSchema: z.ZodType<ParentSchoolReadersResponse, unknown> = z.object({
+export const ParentSchoolReadersResponseSchema: z.ZodType<ParentSchoolReadersResponse, unknown> = object<ParentSchoolReadersResponse>({
   kind: z.string(),
   names: z.array(z.string()).nullable(),
   unnamed_count: safeInt,
@@ -1221,7 +1222,7 @@ export interface ParentReadersResponse {
   school: ParentSchoolReadersResponse;
 }
 
-export const ParentReadersResponseSchema: z.ZodType<ParentReadersResponse, unknown> = z.object({
+export const ParentReadersResponseSchema: z.ZodType<ParentReadersResponse, unknown> = object<ParentReadersResponse>({
   guardian: ParentGuardianReaderResponseSchema.optional(),
   school: ParentSchoolReadersResponseSchema,
 });
@@ -1247,7 +1248,7 @@ export interface ThreadSummaryResponse {
   readers: ParentReadersResponse;
 }
 
-export const ThreadSummaryResponseSchema: z.ZodType<ThreadSummaryResponse, unknown> = z.object({
+export const ThreadSummaryResponseSchema: z.ZodType<ThreadSummaryResponse, unknown> = object<ThreadSummaryResponse>({
   thread_id: z.string(),
   student_id: z.string(),
   student_name: z.string(),
@@ -1274,7 +1275,7 @@ export interface LeadershipOptionResponse {
   unnamed_count: number;
 }
 
-export const LeadershipOptionResponseSchema: z.ZodType<LeadershipOptionResponse, unknown> = z.object({
+export const LeadershipOptionResponseSchema: z.ZodType<LeadershipOptionResponse, unknown> = object<LeadershipOptionResponse>({
   available: z.boolean(),
   names: z.array(z.string()).nullable(),
   unnamed_count: safeInt,
@@ -1303,7 +1304,7 @@ export interface ParentMessageResponse {
   attachments?: unknown | null;
 }
 
-export const ParentMessageResponseSchema: z.ZodType<ParentMessageResponse, unknown> = z.object({
+export const ParentMessageResponseSchema: z.ZodType<ParentMessageResponse, unknown> = object<ParentMessageResponse>({
   client_message_id: z.string().optional(),
   id: z.string(),
   sender_kind: z.string(),
@@ -1338,7 +1339,7 @@ export interface ThreadViewResponse {
   messages: ParentMessageResponse[] | null;
 }
 
-export const ThreadViewResponseSchema: z.ZodType<ThreadViewResponse, unknown> = z.object({
+export const ThreadViewResponseSchema: z.ZodType<ThreadViewResponse, unknown> = object<ThreadViewResponse>({
   thread_id: z.string(),
   student_id: z.string(),
   student_name: z.string(),
@@ -1357,7 +1358,7 @@ export interface GroupThreadChildResponse {
   last_name: string;
 }
 
-export const GroupThreadChildResponseSchema: z.ZodType<GroupThreadChildResponse, unknown> = z.object({
+export const GroupThreadChildResponseSchema: z.ZodType<GroupThreadChildResponse, unknown> = object<GroupThreadChildResponse>({
   student_id: z.string(),
   first_name: z.string(),
   last_name: z.string(),
@@ -1378,7 +1379,7 @@ export interface GroupThreadSummaryResponse {
   readers: ParentReadersResponse;
 }
 
-export const GroupThreadSummaryResponseSchema: z.ZodType<GroupThreadSummaryResponse, unknown> = z.object({
+export const GroupThreadSummaryResponseSchema: z.ZodType<GroupThreadSummaryResponse, unknown> = object<GroupThreadSummaryResponse>({
   id: z.string(),
   title: z.string(),
   target_label: z.string(),
@@ -1400,7 +1401,7 @@ export interface GroupMessageResponse {
   attachments?: unknown | null;
 }
 
-export const GroupMessageResponseSchema: z.ZodType<GroupMessageResponse, unknown> = z.object({
+export const GroupMessageResponseSchema: z.ZodType<GroupMessageResponse, unknown> = object<GroupMessageResponse>({
   id: z.string(),
   body: z.string(),
   created_at: instant,
@@ -1423,7 +1424,7 @@ export interface GroupThreadViewResponse {
   messages: GroupMessageResponse[] | null;
 }
 
-export const GroupThreadViewResponseSchema: z.ZodType<GroupThreadViewResponse, unknown> = z.object({
+export const GroupThreadViewResponseSchema: z.ZodType<GroupThreadViewResponse, unknown> = object<GroupThreadViewResponse>({
   id: z.string(),
   title: z.string(),
   target_label: z.string(),
@@ -1443,7 +1444,7 @@ export interface UnreadCountResponse {
   unread_count: number;
 }
 
-export const UnreadCountResponseSchema: z.ZodType<UnreadCountResponse, unknown> = z.object({
+export const UnreadCountResponseSchema: z.ZodType<UnreadCountResponse, unknown> = object<UnreadCountResponse>({
   unread_count: safeInt,
 });
 
@@ -1453,7 +1454,7 @@ export interface AnnouncementOption {
   label: string;
 }
 
-export const AnnouncementOptionSchema: z.ZodType<AnnouncementOption, unknown> = z.object({
+export const AnnouncementOptionSchema: z.ZodType<AnnouncementOption, unknown> = object<AnnouncementOption>({
   id: z.string(),
   label: z.string(),
 });
@@ -1466,7 +1467,7 @@ export interface AnnouncementPollChild {
   selected_options: string[] | null;
 }
 
-export const AnnouncementPollChildSchema: z.ZodType<AnnouncementPollChild, unknown> = z.object({
+export const AnnouncementPollChildSchema: z.ZodType<AnnouncementPollChild, unknown> = object<AnnouncementPollChild>({
   student_id: z.string(),
   first_name: z.string(),
   last_name: z.string(),
@@ -1480,7 +1481,7 @@ export interface parentDeclarationVersionResponse {
   content_hash: string;
 }
 
-export const parentDeclarationVersionResponseSchema: z.ZodType<parentDeclarationVersionResponse, unknown> = z.object({
+export const parentDeclarationVersionResponseSchema: z.ZodType<parentDeclarationVersionResponse, unknown> = object<parentDeclarationVersionResponse>({
   id: z.string(),
   version_no: safeInt,
   content_hash: z.string(),
@@ -1494,7 +1495,7 @@ export interface declarationSignerStateResponse {
   submitted_at: string | null;
 }
 
-export const declarationSignerStateResponseSchema: z.ZodType<declarationSignerStateResponse, unknown> = z.object({
+export const declarationSignerStateResponseSchema: z.ZodType<declarationSignerStateResponse, unknown> = object<declarationSignerStateResponse>({
   first_name: z.string(),
   last_name: z.string(),
   action: z.string().nullable(),
@@ -1510,7 +1511,7 @@ export interface declarationEarlierVersionResponse {
   body: string;
 }
 
-export const declarationEarlierVersionResponseSchema: z.ZodType<declarationEarlierVersionResponse, unknown> = z.object({
+export const declarationEarlierVersionResponseSchema: z.ZodType<declarationEarlierVersionResponse, unknown> = object<declarationEarlierVersionResponse>({
   id: z.string(),
   version_no: safeInt,
   content_hash: z.string(),
@@ -1525,7 +1526,7 @@ export interface declarationEarlierConsentResponse {
   allowed_actions: string[] | null;
 }
 
-export const declarationEarlierConsentResponseSchema: z.ZodType<declarationEarlierConsentResponse, unknown> = z.object({
+export const declarationEarlierConsentResponseSchema: z.ZodType<declarationEarlierConsentResponse, unknown> = object<declarationEarlierConsentResponse>({
   version: declarationEarlierVersionResponseSchema,
   submitted_at: instant,
   allowed_actions: z.array(z.string()).nullable(),
@@ -1545,7 +1546,7 @@ export interface parentDeclarationChildResponse {
   earlier_consent: declarationEarlierConsentResponse | null;
 }
 
-export const parentDeclarationChildResponseSchema: z.ZodType<parentDeclarationChildResponse, unknown> = z.object({
+export const parentDeclarationChildResponseSchema: z.ZodType<parentDeclarationChildResponse, unknown> = object<parentDeclarationChildResponse>({
   student_id: z.string(),
   first_name: z.string(),
   last_name: z.string(),
@@ -1571,7 +1572,7 @@ export interface AnnouncementDeclarationResponse {
   children: parentDeclarationChildResponse[] | null;
 }
 
-export const AnnouncementDeclarationResponseSchema: z.ZodType<AnnouncementDeclarationResponse, unknown> = z.object({
+export const AnnouncementDeclarationResponseSchema: z.ZodType<AnnouncementDeclarationResponse, unknown> = object<AnnouncementDeclarationResponse>({
   kind: z.string(),
   signers: z.string(),
   requires_password: z.boolean(),
@@ -1591,7 +1592,7 @@ export interface AnnouncementSurveyResponse {
   participated: boolean;
 }
 
-export const AnnouncementSurveyResponseSchema: z.ZodType<AnnouncementSurveyResponse, unknown> = z.object({
+export const AnnouncementSurveyResponseSchema: z.ZodType<AnnouncementSurveyResponse, unknown> = object<AnnouncementSurveyResponse>({
   survey_id: z.string(),
   anonymous: z.boolean(),
   closes_at: instant,
@@ -1606,7 +1607,7 @@ export interface AnnouncementLetterResponse {
   body: string;
 }
 
-export const AnnouncementLetterResponseSchema: z.ZodType<AnnouncementLetterResponse, unknown> = z.object({
+export const AnnouncementLetterResponseSchema: z.ZodType<AnnouncementLetterResponse, unknown> = object<AnnouncementLetterResponse>({
   student_id: z.string(),
   first_name: z.string(),
   last_name: z.string(),
@@ -1641,7 +1642,7 @@ export interface AnnouncementResponse {
   letters?: AnnouncementLetterResponse[];
 }
 
-export const AnnouncementResponseSchema: z.ZodType<AnnouncementResponse, unknown> = z.object({
+export const AnnouncementResponseSchema: z.ZodType<AnnouncementResponse, unknown> = object<AnnouncementResponse>({
   id: z.string(),
   title: z.string(),
   body: z.string(),
@@ -1677,7 +1678,7 @@ export interface proofAttachmentResponse {
   sha256: string;
 }
 
-export const proofAttachmentResponseSchema: z.ZodType<proofAttachmentResponse, unknown> = z.object({
+export const proofAttachmentResponseSchema: z.ZodType<proofAttachmentResponse, unknown> = object<proofAttachmentResponse>({
   id: z.string(),
   filename: z.string(),
   content_type: z.string(),
@@ -1696,7 +1697,7 @@ export interface proofVersionResponse {
   attachments: proofAttachmentResponse[] | null;
 }
 
-export const proofVersionResponseSchema: z.ZodType<proofVersionResponse, unknown> = z.object({
+export const proofVersionResponseSchema: z.ZodType<proofVersionResponse, unknown> = object<proofVersionResponse>({
   id: z.string(),
   version_no: safeInt,
   title: z.string(),
@@ -1715,7 +1716,7 @@ export interface proofSignatureResponse {
   signed_at: string;
 }
 
-export const proofSignatureResponseSchema: z.ZodType<proofSignatureResponse, unknown> = z.object({
+export const proofSignatureResponseSchema: z.ZodType<proofSignatureResponse, unknown> = object<proofSignatureResponse>({
   method: z.string(),
   typed_name: z.string().nullable(),
   image_data_url: z.string(),
@@ -1738,7 +1739,7 @@ export interface proofSubmissionResponse {
   signature: proofSignatureResponse | null;
 }
 
-export const proofSubmissionResponseSchema: z.ZodType<proofSubmissionResponse, unknown> = z.object({
+export const proofSubmissionResponseSchema: z.ZodType<proofSubmissionResponse, unknown> = object<proofSubmissionResponse>({
   id: z.string(),
   action: z.string(),
   submitted_at: instant,
@@ -1765,7 +1766,7 @@ export interface declarationProofResponse {
   integrity_ok: boolean;
 }
 
-export const declarationProofResponseSchema: z.ZodType<declarationProofResponse, unknown> = z.object({
+export const declarationProofResponseSchema: z.ZodType<declarationProofResponse, unknown> = object<declarationProofResponse>({
   title: z.string(),
   school_name: z.string(),
   child_name: z.string(),
@@ -1789,7 +1790,7 @@ export interface notificationFeedEntryResponse {
   read_at: string | null;
 }
 
-export const notificationFeedEntryResponseSchema: z.ZodType<notificationFeedEntryResponse, unknown> = z.object({
+export const notificationFeedEntryResponseSchema: z.ZodType<notificationFeedEntryResponse, unknown> = object<notificationFeedEntryResponse>({
   id: int64StringOrNumber,
   type: z.string(),
   title: z.string(),
@@ -1807,7 +1808,7 @@ export interface notificationFeedPageResponse {
   unread_count: number;
 }
 
-export const notificationFeedPageResponseSchema: z.ZodType<notificationFeedPageResponse, unknown> = z.object({
+export const notificationFeedPageResponseSchema: z.ZodType<notificationFeedPageResponse, unknown> = object<notificationFeedPageResponse>({
   entries: z.array(notificationFeedEntryResponseSchema).nullable(),
   next_cursor: z.string().nullable(),
   unread_count: safeInt,
@@ -1818,7 +1819,7 @@ export interface notificationFeedCountResponse {
   unread_count: number;
 }
 
-export const notificationFeedCountResponseSchema: z.ZodType<notificationFeedCountResponse, unknown> = z.object({
+export const notificationFeedCountResponseSchema: z.ZodType<notificationFeedCountResponse, unknown> = object<notificationFeedCountResponse>({
   unread_count: safeInt,
 });
 
@@ -1829,7 +1830,7 @@ export interface ParentProfileResponse {
   portal_locale: string | null;
 }
 
-export const ParentProfileResponseSchema: z.ZodType<ParentProfileResponse, unknown> = z.object({
+export const ParentProfileResponseSchema: z.ZodType<ParentProfileResponse, unknown> = object<ParentProfileResponse>({
   first_name: z.string(),
   last_name: z.string(),
   portal_locale: z.string().nullable(),
@@ -1840,7 +1841,7 @@ export interface PushPublicKeyResponse {
   public_key: string;
 }
 
-export const PushPublicKeyResponseSchema: z.ZodType<PushPublicKeyResponse, unknown> = z.object({
+export const PushPublicKeyResponseSchema: z.ZodType<PushPublicKeyResponse, unknown> = object<PushPublicKeyResponse>({
   public_key: z.string(),
 });
 
@@ -1854,7 +1855,7 @@ export interface ParentInvitationStatusResponse {
   status: string;
 }
 
-export const ParentInvitationStatusResponseSchema: z.ZodType<ParentInvitationStatusResponse, unknown> = z.object({
+export const ParentInvitationStatusResponseSchema: z.ZodType<ParentInvitationStatusResponse, unknown> = object<ParentInvitationStatusResponse>({
   status: z.string(),
 });
 
@@ -1961,7 +1962,7 @@ export interface pickupSignatureStatementResponse {
   statement: string;
 }
 
-export const pickupSignatureStatementResponseSchema: z.ZodType<pickupSignatureStatementResponse, unknown> = z.object({
+export const pickupSignatureStatementResponseSchema: z.ZodType<pickupSignatureStatementResponse, unknown> = object<pickupSignatureStatementResponse>({
   statement: z.string(),
 });
 
@@ -1980,7 +1981,7 @@ export interface inviteRelatedAccountResponse {
   existing_role?: string;
 }
 
-export const inviteRelatedAccountResponseSchema: z.ZodType<inviteRelatedAccountResponse, unknown> = z.object({
+export const inviteRelatedAccountResponseSchema: z.ZodType<inviteRelatedAccountResponse, unknown> = object<inviteRelatedAccountResponse>({
   outcome: z.string(),
   guardian_profile_id: z.string(),
   existing_role: z.string().optional(),
@@ -2009,7 +2010,7 @@ export interface SEPAMandateText {
   account_token: string;
 }
 
-export const SEPAMandateTextSchema: z.ZodType<SEPAMandateText, unknown> = z.object({
+export const SEPAMandateTextSchema: z.ZodType<SEPAMandateText, unknown> = object<SEPAMandateText>({
   version: z.string(),
   reference: z.string(),
   text: z.string(),
@@ -2024,7 +2025,7 @@ export interface SEPAMandateCreditor {
   creditor_id: string;
 }
 
-export const SEPAMandateCreditorSchema: z.ZodType<SEPAMandateCreditor, unknown> = z.object({
+export const SEPAMandateCreditorSchema: z.ZodType<SEPAMandateCreditor, unknown> = object<SEPAMandateCreditor>({
   name: z.string(),
   address: z.string(),
   creditor_id: z.string(),
@@ -2039,7 +2040,7 @@ export interface SEPAMandateProof {
   confirmed_at: string;
 }
 
-export const SEPAMandateProofSchema: z.ZodType<SEPAMandateProof, unknown> = z.object({
+export const SEPAMandateProofSchema: z.ZodType<SEPAMandateProof, unknown> = object<SEPAMandateProof>({
   channel: z.string(),
   version: z.string(),
   text_sha256: z.string(),
@@ -2063,7 +2064,7 @@ export interface SEPAMandateSummary {
   proof: SEPAMandateProof | null;
 }
 
-export const SEPAMandateSummarySchema: z.ZodType<SEPAMandateSummary, unknown> = z.object({
+export const SEPAMandateSummarySchema: z.ZodType<SEPAMandateSummary, unknown> = object<SEPAMandateSummary>({
   collection_eligible: z.boolean(),
   id: int64String,
   reference: z.string(),
@@ -2086,7 +2087,7 @@ export interface SEPAMandatePrefill {
   city: string;
 }
 
-export const SEPAMandatePrefillSchema: z.ZodType<SEPAMandatePrefill, unknown> = z.object({
+export const SEPAMandatePrefillSchema: z.ZodType<SEPAMandatePrefill, unknown> = object<SEPAMandatePrefill>({
   account_holder: z.string(),
   street: z.string(),
   postal_code: z.string(),
@@ -2103,7 +2104,7 @@ export interface SEPAMandateView {
   prefill: SEPAMandatePrefill | null;
 }
 
-export const SEPAMandateViewSchema: z.ZodType<SEPAMandateView, unknown> = z.object({
+export const SEPAMandateViewSchema: z.ZodType<SEPAMandateView, unknown> = object<SEPAMandateView>({
   enabled: z.boolean(),
   can_manage: z.boolean(),
   creditor_missing: z.boolean(),
@@ -2140,7 +2141,7 @@ export interface AnnouncementAcknowledgedResponse {
   acknowledged: boolean;
 }
 
-export const AnnouncementAcknowledgedResponseSchema: z.ZodType<AnnouncementAcknowledgedResponse, unknown> = z.object({
+export const AnnouncementAcknowledgedResponseSchema: z.ZodType<AnnouncementAcknowledgedResponse, unknown> = object<AnnouncementAcknowledgedResponse>({
   acknowledged: z.boolean(),
 });
 
@@ -2149,7 +2150,7 @@ export interface AnnouncementReadResponse {
   read: boolean;
 }
 
-export const AnnouncementReadResponseSchema: z.ZodType<AnnouncementReadResponse, unknown> = z.object({
+export const AnnouncementReadResponseSchema: z.ZodType<AnnouncementReadResponse, unknown> = object<AnnouncementReadResponse>({
   read: z.boolean(),
 });
 
@@ -2165,7 +2166,7 @@ export interface AnnouncementAnsweredResponse {
   answered: boolean;
 }
 
-export const AnnouncementAnsweredResponseSchema: z.ZodType<AnnouncementAnsweredResponse, unknown> = z.object({
+export const AnnouncementAnsweredResponseSchema: z.ZodType<AnnouncementAnsweredResponse, unknown> = object<AnnouncementAnsweredResponse>({
   answered: z.boolean(),
 });
 

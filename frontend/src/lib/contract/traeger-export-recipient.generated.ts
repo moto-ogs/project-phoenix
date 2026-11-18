@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -23,7 +24,7 @@ export interface TraegerTransferEntry {
   reason?: string;
 }
 
-export const TraegerTransferEntrySchema: z.ZodType<TraegerTransferEntry, unknown> = z.object({
+export const TraegerTransferEntrySchema: z.ZodType<TraegerTransferEntry, unknown> = object<TraegerTransferEntry>({
   id: int64StringOrNumber,
   created_at: instant,
   format: z.string(),
@@ -55,7 +56,7 @@ export interface TraegerRecipient {
   updated_at: string;
 }
 
-export const TraegerRecipientSchema: z.ZodType<TraegerRecipient, unknown> = z.object({
+export const TraegerRecipientSchema: z.ZodType<TraegerRecipient, unknown> = object<TraegerRecipient>({
   id: int64StringOrNumber,
   name: z.string(),
   enabled: z.boolean(),
@@ -78,7 +79,7 @@ export interface TraegerAssignment {
   recipient_id: string | null;
 }
 
-export const TraegerAssignmentSchema: z.ZodType<TraegerAssignment, unknown> = z.object({
+export const TraegerAssignmentSchema: z.ZodType<TraegerAssignment, unknown> = object<TraegerAssignment>({
   format: z.string(),
   recipient_id: int64StringOrNumber.nullable(),
 });
@@ -90,7 +91,7 @@ export interface TraegerRecipientsPage {
   handovers: TraegerTransferEntry[] | null;
 }
 
-export const TraegerRecipientsPageSchema: z.ZodType<TraegerRecipientsPage, unknown> = z.object({
+export const TraegerRecipientsPageSchema: z.ZodType<TraegerRecipientsPage, unknown> = object<TraegerRecipientsPage>({
   recipients: z.array(TraegerRecipientSchema).nullable(),
   assignments: z.array(TraegerAssignmentSchema).nullable(),
   handovers: z.array(TraegerTransferEntrySchema).nullable(),
@@ -102,7 +103,7 @@ export interface TraegerRecipientPage {
   handovers: TraegerTransferEntry[] | null;
 }
 
-export const TraegerRecipientPageSchema: z.ZodType<TraegerRecipientPage, unknown> = z.object({
+export const TraegerRecipientPageSchema: z.ZodType<TraegerRecipientPage, unknown> = object<TraegerRecipientPage>({
   recipient: TraegerRecipientSchema,
   handovers: z.array(TraegerTransferEntrySchema).nullable(),
 });

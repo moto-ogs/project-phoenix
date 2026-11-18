@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -19,7 +20,7 @@ export interface TraegerStaffProofType {
   police_certificate: boolean;
 }
 
-export const TraegerStaffProofTypeSchema: z.ZodType<TraegerStaffProofType, unknown> = z.object({
+export const TraegerStaffProofTypeSchema: z.ZodType<TraegerStaffProofType, unknown> = object<TraegerStaffProofType>({
   id: int64StringOrNumber,
   standard_key: z.string().optional(),
   name: z.string(),
@@ -44,7 +45,7 @@ export interface TraegerStaffProofEntry {
   expires_on?: string;
 }
 
-export const TraegerStaffProofEntrySchema: z.ZodType<TraegerStaffProofEntry, unknown> = z.object({
+export const TraegerStaffProofEntrySchema: z.ZodType<TraegerStaffProofEntry, unknown> = object<TraegerStaffProofEntry>({
   staff_record_id: int64StringOrNumber,
   first_name: z.string(),
   last_name: z.string(),
@@ -65,7 +66,7 @@ export interface TraegerStaffProofCounts {
   valid: number;
 }
 
-export const TraegerStaffProofCountsSchema: z.ZodType<TraegerStaffProofCounts, unknown> = z.object({
+export const TraegerStaffProofCountsSchema: z.ZodType<TraegerStaffProofCounts, unknown> = object<TraegerStaffProofCounts>({
   expired: safeInt,
   expiring_soon: safeInt,
   missing: safeInt,
@@ -80,7 +81,7 @@ export interface TraegerStaffProofList {
   counts: TraegerStaffProofCounts;
 }
 
-export const TraegerStaffProofListSchema: z.ZodType<TraegerStaffProofList, unknown> = z.object({
+export const TraegerStaffProofListSchema: z.ZodType<TraegerStaffProofList, unknown> = object<TraegerStaffProofList>({
   today: z.string(),
   types: z.array(TraegerStaffProofTypeSchema).nullable(),
   entries: z.array(TraegerStaffProofEntrySchema).nullable(),
@@ -94,7 +95,7 @@ export interface TraegerSchoolProofKind {
   proof_type_id: string | null;
 }
 
-export const TraegerSchoolProofKindSchema: z.ZodType<TraegerSchoolProofKind, unknown> = z.object({
+export const TraegerSchoolProofKindSchema: z.ZodType<TraegerSchoolProofKind, unknown> = object<TraegerSchoolProofKind>({
   school_type_id: int64StringOrNumber,
   name: z.string(),
   proof_type_id: int64StringOrNumber.nullable(),
@@ -107,7 +108,7 @@ export interface TraegerSchoolProofKinds {
   kinds: TraegerSchoolProofKind[] | null;
 }
 
-export const TraegerSchoolProofKindsSchema: z.ZodType<TraegerSchoolProofKinds, unknown> = z.object({
+export const TraegerSchoolProofKindsSchema: z.ZodType<TraegerSchoolProofKinds, unknown> = object<TraegerSchoolProofKinds>({
   school_id: int64StringOrNumber,
   school_name: z.string(),
   kinds: z.array(TraegerSchoolProofKindSchema).nullable(),

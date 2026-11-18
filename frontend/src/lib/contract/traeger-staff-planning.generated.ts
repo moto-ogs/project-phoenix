@@ -4,6 +4,7 @@ import {
   calendarDate,
   int64StringOrNumber,
   noData,
+  object,
   requestBody,
   safeInt,
   success,
@@ -21,7 +22,7 @@ export interface TraegerPlanningRules {
   check_breaks: boolean;
 }
 
-export const TraegerPlanningRulesSchema: z.ZodType<TraegerPlanningRules, unknown> = z.object({
+export const TraegerPlanningRulesSchema: z.ZodType<TraegerPlanningRules, unknown> = object<TraegerPlanningRules>({
   enabled: z.boolean(),
   max_daily_minutes: safeInt,
   min_rest_minutes: safeInt,
@@ -35,7 +36,7 @@ export interface TraegerPlanningSite {
   staff_id: string;
 }
 
-export const TraegerPlanningSiteSchema: z.ZodType<TraegerPlanningSite, unknown> = z.object({
+export const TraegerPlanningSiteSchema: z.ZodType<TraegerPlanningSite, unknown> = object<TraegerPlanningSite>({
   school_id: int64StringOrNumber,
   school_name: z.string(),
   staff_id: int64StringOrNumber,
@@ -59,7 +60,7 @@ export interface TraegerPlanningShift {
   from_series: boolean;
 }
 
-export const TraegerPlanningShiftSchema: z.ZodType<TraegerPlanningShift, unknown> = z.object({
+export const TraegerPlanningShiftSchema: z.ZodType<TraegerPlanningShift, unknown> = object<TraegerPlanningShift>({
   id: int64StringOrNumber,
   school_id: int64StringOrNumber,
   school_name: z.string(),
@@ -83,7 +84,7 @@ export interface TraegerPlanningSollDay {
   minutes: number;
 }
 
-export const TraegerPlanningSollDaySchema: z.ZodType<TraegerPlanningSollDay, unknown> = z.object({
+export const TraegerPlanningSollDaySchema: z.ZodType<TraegerPlanningSollDay, unknown> = object<TraegerPlanningSollDay>({
   school_id: int64StringOrNumber,
   date: calendarDate.nullable(),
   minutes: safeInt,
@@ -95,7 +96,7 @@ export interface TraegerPlanningAbsentDay {
   date: string | null;
 }
 
-export const TraegerPlanningAbsentDaySchema: z.ZodType<TraegerPlanningAbsentDay, unknown> = z.object({
+export const TraegerPlanningAbsentDaySchema: z.ZodType<TraegerPlanningAbsentDay, unknown> = object<TraegerPlanningAbsentDay>({
   school_id: int64StringOrNumber,
   date: calendarDate.nullable(),
 });
@@ -109,7 +110,7 @@ export interface ShiftWorkingTimeWarning {
   needs_reason: boolean;
 }
 
-export const ShiftWorkingTimeWarningSchema: z.ZodType<ShiftWorkingTimeWarning, unknown> = z.object({
+export const ShiftWorkingTimeWarningSchema: z.ZodType<ShiftWorkingTimeWarning, unknown> = object<ShiftWorkingTimeWarning>({
   kind: z.string(),
   date: calendarDate.nullable(),
   minutes: safeInt,
@@ -131,7 +132,7 @@ export interface TraegerPlanningPerson {
   warnings: ShiftWorkingTimeWarning[] | null;
 }
 
-export const TraegerPlanningPersonSchema: z.ZodType<TraegerPlanningPerson, unknown> = z.object({
+export const TraegerPlanningPersonSchema: z.ZodType<TraegerPlanningPerson, unknown> = object<TraegerPlanningPerson>({
   staff_record_id: int64StringOrNumber,
   first_name: z.string(),
   last_name: z.string(),
@@ -153,7 +154,7 @@ export interface TraegerPlanningWeek {
   unreached: TraegerStaffSchool[] | null;
 }
 
-export const TraegerPlanningWeekSchema: z.ZodType<TraegerPlanningWeek, unknown> = z.object({
+export const TraegerPlanningWeekSchema: z.ZodType<TraegerPlanningWeek, unknown> = object<TraegerPlanningWeek>({
   week_start: calendarDate.nullable(),
   rules: TraegerPlanningRulesSchema,
   schools: z.array(TraegerStaffSchoolSchema).nullable(),
@@ -168,7 +169,7 @@ export interface TraegerFutureShifts {
   shifts: number;
 }
 
-export const TraegerFutureShiftsSchema: z.ZodType<TraegerFutureShifts, unknown> = z.object({
+export const TraegerFutureShiftsSchema: z.ZodType<TraegerFutureShifts, unknown> = object<TraegerFutureShifts>({
   school_id: int64StringOrNumber,
   school_name: z.string(),
   shifts: safeInt,

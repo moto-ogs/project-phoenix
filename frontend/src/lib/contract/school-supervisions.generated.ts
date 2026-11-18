@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   calendarDate,
   int64StringOrNumber,
+  object,
   requestBody,
   success,
 } from "./runtime";
@@ -22,7 +23,7 @@ export interface SchoolSupervisionsResponse {
   instances: OperationPlannedInstance[] | null;
 }
 
-export const SchoolSupervisionsResponseSchema: z.ZodType<SchoolSupervisionsResponse, unknown> = z.object({
+export const SchoolSupervisionsResponseSchema: z.ZodType<SchoolSupervisionsResponse, unknown> = object<SchoolSupervisionsResponse>({
   instances: z.array(OperationPlannedInstanceSchema).nullable(),
 });
 
@@ -34,7 +35,7 @@ export interface SupervisionContact {
   note?: string;
 }
 
-export const SupervisionContactSchema: z.ZodType<SupervisionContact, unknown> = z.object({
+export const SupervisionContactSchema: z.ZodType<SupervisionContact, unknown> = object<SupervisionContact>({
   name: z.string(),
   relationship: z.string().optional(),
   phones: z.array(z.string()).nullable(),
@@ -56,7 +57,7 @@ export interface SupervisionStudentSheet {
   emergency_contacts: SupervisionContact[] | null;
 }
 
-export const SupervisionStudentSheetSchema: z.ZodType<SupervisionStudentSheet, unknown> = z.object({
+export const SupervisionStudentSheetSchema: z.ZodType<SupervisionStudentSheet, unknown> = object<SupervisionStudentSheet>({
   student_id: int64StringOrNumber,
   first_name: z.string(),
   last_name: z.string(),

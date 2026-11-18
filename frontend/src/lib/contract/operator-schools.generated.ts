@@ -5,6 +5,7 @@ import {
   instant,
   int64StringOrNumber,
   noData,
+  object,
   requestBody,
   safeInt,
   success,
@@ -21,7 +22,7 @@ export interface SchoolRequiredDetails {
   reply_address_missing: boolean;
 }
 
-export const SchoolRequiredDetailsSchema: z.ZodType<SchoolRequiredDetails, unknown> = z.object({
+export const SchoolRequiredDetailsSchema: z.ZodType<SchoolRequiredDetails, unknown> = object<SchoolRequiredDetails>({
   school_id: int64StringOrNumber,
   reply_address_missing: z.boolean(),
 });
@@ -42,7 +43,7 @@ export interface SchoolAccount {
   is_active_caregiver: boolean;
 }
 
-export const SchoolAccountSchema: z.ZodType<SchoolAccount, unknown> = z.object({
+export const SchoolAccountSchema: z.ZodType<SchoolAccount, unknown> = object<SchoolAccount>({
   account_id: int64StringOrNumber,
   email: z.string(),
   active: z.boolean(),
@@ -66,7 +67,7 @@ export interface BookingAuthorityImpactChild {
   first_bookingless_day?: string;
 }
 
-export const BookingAuthorityImpactChildSchema: z.ZodType<BookingAuthorityImpactChild, unknown> = z.object({
+export const BookingAuthorityImpactChildSchema: z.ZodType<BookingAuthorityImpactChild, unknown> = object<BookingAuthorityImpactChild>({
   student_id: z.string(),
   first_name: z.string(),
   last_name: z.string(),
@@ -81,7 +82,7 @@ export interface BookingAuthorityImpact {
   planned_completions: BookingAuthorityImpactChild[] | null;
 }
 
-export const BookingAuthorityImpactSchema: z.ZodType<BookingAuthorityImpact, unknown> = z.object({
+export const BookingAuthorityImpactSchema: z.ZodType<BookingAuthorityImpact, unknown> = object<BookingAuthorityImpact>({
   reference_date: calendarDate.nullable(),
   blocking_children: z.array(BookingAuthorityImpactChildSchema).nullable(),
   planned_completions: z.array(BookingAuthorityImpactChildSchema).nullable(),
@@ -127,7 +128,7 @@ export interface CreatedAccount {
   last_login?: string;
 }
 
-export const CreatedAccountSchema: z.ZodType<CreatedAccount, unknown> = z.object({
+export const CreatedAccountSchema: z.ZodType<CreatedAccount, unknown> = object<CreatedAccount>({
   id: int64StringOrNumber,
   created_at: instant,
   updated_at: instant,
@@ -168,7 +169,7 @@ export interface operatorInvitationResponse {
   email_retry_count: number;
 }
 
-export const operatorInvitationResponseSchema: z.ZodType<operatorInvitationResponse, unknown> = z.object({
+export const operatorInvitationResponseSchema: z.ZodType<operatorInvitationResponse, unknown> = object<operatorInvitationResponse>({
   id: int64StringOrNumber,
   email: z.string(),
   role_id: int64StringOrNumber,
