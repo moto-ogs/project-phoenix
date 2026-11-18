@@ -110,11 +110,15 @@ func workerRetentionOf(
 		return workerRetention{}, err
 	}
 	steps = append(steps, surveyRetentionSteps(settings, surveys)...)
-	attendance, err := presenceCompose.New(presenceCompose.Dependencies{DB: db.Pool(), Observe: presenceCompose.FailureLogger()})
+	attendance, err := presenceCompose.New(presenceCompose.Dependencies{DB: db.Pool(), Observe: presenceCompose.FailureLogger(), Now: now})
 	if err != nil {
 		return workerRetention{}, fmt.Errorf("compose worker attendance retention: %w", err)
 	}
-	return newWorkerRetention(audit, settings, students, staff, steps, attendance, newGuardianRetention(db, identity))
+	guardians, err := newGuardianRetention(db, identity, now)
+	if err != nil {
+		return workerRetention{}, err
+	}
+	return newWorkerRetention(audit, settings, students, staff, steps, attendance, guardians)
 }
 
 // workerDocumentSweeps build the Worker's recovery passes over the staff and

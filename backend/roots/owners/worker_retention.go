@@ -93,11 +93,17 @@ type guardianRetention struct {
 	invitations peopleModule.OpenGuardianInvitations
 }
 
-func newGuardianRetention(db transactionruntime.Database, invitations identityaccess.GuardianInvitationReads) guardianRetention {
-	return guardianRetention{
-		people:      peopleCompose.MustNewReads(db.Pool(), StudentDirectoryReader()),
-		invitations: openGuardianInvitations(invitations),
+func newGuardianRetention(db transactionruntime.Database, invitations identityaccess.GuardianInvitationReads, now func() time.Time) (guardianRetention, error) {
+	people, err := peopleCompose.New(peopleCompose.Dependencies{
+		DB: db.Pool(), StudentDirectory: StudentDirectoryReader(), Observe: func(peopleCompose.Observation) {}, Now: now,
+	}, nil)
+	if err != nil {
+		return guardianRetention{}, fmt.Errorf("compose worker guardian retention: %w", err)
 	}
+	return guardianRetention{
+		people:      people,
+		invitations: openGuardianInvitations(invitations),
+	}, nil
 }
 
 func openGuardianInvitations(identity interface {

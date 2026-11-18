@@ -82,11 +82,13 @@ func composeRetentionSuite(t *testing.T, now, staffClock func() time.Time) reten
 	require.NoError(t, err)
 	staff, err := newStaffRetention(db, audit, settings, staffClock, nil)
 	require.NoError(t, err)
-	attendance, err := presenceCompose.New(presenceCompose.Dependencies{DB: admin, Observe: func(presenceCompose.Observation) {}})
+	attendance, err := presenceCompose.New(presenceCompose.Dependencies{DB: admin, Observe: func(presenceCompose.Observation) {}, Now: now})
 	require.NoError(t, err)
 	invitations, err := identityaccessCompose.NewGuardianInvitationReads(admin, nil)
 	require.NoError(t, err)
-	retention, err := newWorkerRetention(audit, settings, students, staff, steps, attendance, newGuardianRetention(db, invitations))
+	guardians, err := newGuardianRetention(db, invitations, now)
+	require.NoError(t, err)
+	retention, err := newWorkerRetention(audit, settings, students, staff, steps, attendance, guardians)
 	require.NoError(t, err)
 	return retentionSuite{admin: admin, serve: serve, retention: retention, now: now()}
 }
@@ -98,20 +100,12 @@ func (s retentionSuite) run(t *testing.T, tenantID int64) {
 	}))
 }
 
-// rootNow is the token a fixture writes for the suite clock: a column the
-// owner stamps and cuts off on is dated from it, a column the database
-// stamps from CURRENT_TIMESTAMP. wallNow is the wall clock, for the two
-// steps the Worker still composes on it (newGuardianRetention, the
-// attendance retention in workerRetentionOf).
-const (
-	rootNow = "ROOT_NOW"
-	wallNow = "WALL_NOW"
-)
+// rootNow dates fixtures on the suite clock. Database-stamped columns use
+// the database clock where the fixture writes them.
+const rootNow = "ROOT_NOW"
 
-// onRootClock replaces rootNow in query with the suite clock and wallNow
-// with the wall clock.
 func (s retentionSuite) onRootClock(query string) string {
-	return strings.ReplaceAll(onClock(s.now, query), wallNow, sqlInstant(time.Now()))
+	return onClock(s.now, query)
 }
 
 // onClock replaces rootNow in query with the instant now.
@@ -272,13 +266,12 @@ func TestNightlyRetentionFollowsTheSchoolsRecordedStatusDayWindow(t *testing.T) 
 }
 
 // insertAttendance stores a closed attendance daysAgo Berlin calendar days
-// back, checked in on the device. The Worker composes Student Presence on
-// the wall clock, so the attendance is dated there.
+// back, checked in on the device, on the Student Presence clock.
 func (s retentionSuite) insertAttendance(t *testing.T, tenantID, studentID, deviceID int64, daysAgo int) int64 {
 	t.Helper()
 	return s.insertID(t, `INSERT INTO active.attendance (tenant_id, student_id, date, check_in_time, check_out_time, device_id)
-		VALUES (?, ?, (WALL_NOW AT TIME ZONE 'Europe/Berlin')::date - ?,
-			WALL_NOW - make_interval(days => ?, hours => 2), WALL_NOW - make_interval(days => ?), ?)
+		VALUES (?, ?, (ROOT_NOW AT TIME ZONE 'Europe/Berlin')::date - ?,
+			ROOT_NOW - make_interval(days => ?, hours => 2), ROOT_NOW - make_interval(days => ?), ?)
 		RETURNING id`, tenantID, studentID, daysAgo, daysAgo, daysAgo, deviceID)
 }
 
@@ -330,11 +323,11 @@ func TestNightlyRetentionFollowsTheSchoolsRecordedAttendanceWindow(t *testing.T)
 }
 
 // insertMorningAttendance stores a morning mark daysAgo Berlin calendar days
-// back (#4790), on the wall clock like the attendance.
+// back (#4790), on the Student Presence clock.
 func (s retentionSuite) insertMorningAttendance(t *testing.T, tenantID, studentID int64, daysAgo int) int64 {
 	t.Helper()
 	return s.insertID(t, `INSERT INTO active.morning_attendance (tenant_id, student_id, date, status)
-		VALUES (?, ?, (WALL_NOW AT TIME ZONE 'Europe/Berlin')::date - ?, 'present')
+		VALUES (?, ?, (ROOT_NOW AT TIME ZONE 'Europe/Berlin')::date - ?, 'present')
 		RETURNING id`, tenantID, studentID, daysAgo)
 }
 
