@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	carePlanCompose "github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	deliveryModule "github.com/moto-ogs/project-phoenix/modules/delivery/runtime"
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
@@ -165,10 +166,11 @@ func BuildEnrollmentFlows(
 	consent communication.NotificationConsentCapability, identity identityaccess.Owner, people PeopleRows,
 	structure StructureRows, carePlan careplan.Capability, carePlanRows CarePlanRows, schedules CarePlanSchedules,
 	membership schoolmembership.Capability, organizations organizationtenancy.Query, audit AuditOwner,
-	settings settingsCompose.BatchSettingsService, outbox MailOutbox,
+	settings settingsCompose.BatchSettingsService, outbox MailOutbox, uploads objects.UploadFiles,
 ) EnrollmentFlows {
 	records, links := enrollment.Bookings, env.Links
 	capacity := NewEnrollmentOfferingCapacity(notices.CareOfferings, records, settings, env.Today)
+	legalPDFFingerprint := NewEnrollmentLegalPDFFingerprint(uploads)
 	return EnrollmentFlows{
 		Capacity: capacity,
 		Intake: NewEnrollmentIntake(EnrollmentIntakeSources{
@@ -178,7 +180,8 @@ func BuildEnrollmentFlows(
 			Notifications: notices.Notifications, StudentRepo: people.Students,
 			GuardianHold:  NewEnrollmentGuardianHold(db, people.StudentGuardians, people.Students, people.GuardianProfiles, nil),
 			RateLimitRepo: records, Uploads: records, OutboxEnqueuer: intakeMailOutbox(outbox), Settings: settings,
-			AdminSubscribers: NewEnrollmentAdminSubscribers(consent, identity), ManualDecider: decisions,
+			LegalPDFFingerprint: legalPDFFingerprint,
+			AdminSubscribers:    NewEnrollmentAdminSubscribers(consent, identity), ManualDecider: decisions,
 			FrontendURL: links.FrontendURL, ParentsURL: links.ParentsURL, Logger: env.Logger.With("service", "enrollment-request"),
 			FamilyChildrenPurpose:  NewEnrollmentFamilyChildrenPurpose(organizations),
 			LockTemplateRecurrence: owner.RecurrenceLock.LockRecurrenceWrites, Now: env.Now,
@@ -199,6 +202,7 @@ func BuildEnrollmentFlows(
 			GuardianHold: NewEnrollmentGuardianHold(db, people.StudentGuardians, people.Students, people.GuardianProfiles, carePlanRows.Companions),
 			Decisions:    decisions, BookingGates: offerings.Bookings,
 			CompanionGraphLocker: companionGraphCoordinator{CompanionLocks: carePlanRows.Companions, strandings: people.Students},
+			LegalPDFFingerprint:  legalPDFFingerprint,
 			Settings:             settings, OutboxEnqueuer: intakeMailOutbox(outbox), FrontendURL: links.FrontendURL, ParentsURL: links.ParentsURL,
 			Logger:                 env.Logger.With("service", "enrollment-change-request"),
 			LockTemplateRecurrence: owner.RecurrenceLock.LockRecurrenceWrites, Now: env.Now,

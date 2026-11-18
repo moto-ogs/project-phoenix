@@ -4,9 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 )
+
+// legalEvidenceKey is internal metadata in the stored proposal. It is removed
+// before comparison and never sent in a change-request response.
+const legalEvidenceKey = "_legal_evidence"
 
 // The owner stores a change request's snapshots as JSON; the review decodes
 // them into maps and encodes them back for the public contract.
@@ -37,6 +42,16 @@ func changeRequestFromOwner(value *enrollment.ChangeRequest) (*ChangeRequest, er
 		if err := json.Unmarshal(snapshot.raw, snapshot.into); err != nil {
 			return nil, fmt.Errorf("decode change request %s: %w", snapshot.name, err)
 		}
+	}
+	if _, found := row.ProposedSnapshot[legalEvidenceKey]; found {
+		var stored struct {
+			Evidence *enrollment.LegalBlocksSnapshotEntry `json:"_legal_evidence"`
+		}
+		if err := json.Unmarshal(value.ProposedSnapshot, &stored); err != nil {
+			return nil, fmt.Errorf("decode change request legal evidence: %w", err)
+		}
+		row.LegalEvidence = stored.Evidence
+		delete(row.ProposedSnapshot, legalEvidenceKey)
 	}
 	return row, nil
 }
@@ -93,6 +108,14 @@ func createChangeRequest(ctx context.Context, owner interface {
 	value, err := changeRequestToOwner(row)
 	if err != nil {
 		return fmt.Errorf("failed to create enrollment change request: %w", err)
+	}
+	if row.LegalEvidence != nil {
+		proposal := maps.Clone(row.ProposedSnapshot)
+		proposal[legalEvidenceKey] = row.LegalEvidence
+		value.ProposedSnapshot, err = json.Marshal(proposal)
+		if err != nil {
+			return fmt.Errorf("encode change request legal evidence: %w", err)
+		}
 	}
 	if err := owner.InsertChangeRequest(ctx, value); err != nil {
 		return err

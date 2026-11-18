@@ -51,6 +51,7 @@ import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { Textarea } from "~/components/ui/textarea";
+import { AdminLegalEvidence } from "~/components/enrollment/admin-legal-evidence";
 import { AdminEnrollmentSignature } from "~/components/enrollment/admin-enrollment-signature";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { berlinTodayISO } from "~/lib/date-helpers";
@@ -709,6 +710,8 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
             <EnrollmentSummary data={data} submittedAt={submittedAt} />
 
             <RequestExtraSection request={data} />
+
+            <AdminLegalEvidence entries={data.legal_blocks_snapshot} />
 
             {data.signature ? (
               <AdminEnrollmentSignature

@@ -94,6 +94,8 @@ type ChangeRequestDependencies struct {
 	// takes before it reads the phase (#6657). The root always binds it.
 	LockTemplateRecurrence func(context.Context) error
 	Settings               IntakeSettings
+	Fingerprint            Fingerprint
+	LegalPDFFingerprint    func(context.Context, int64, string) (string, error)
 	Outbox                 MailOutbox
 	FrontendURL            string
 	ParentsURL             string
@@ -138,7 +140,7 @@ func NewChangeRequests(deps ChangeRequestDependencies) *ChangeRequests {
 	intake := NewIntake(IntakeDependencies{
 		Requests: deps.Requests, Children: deps.Children, Catalog: deps.Catalog, Offerings: deps.Offerings,
 		Capacity: deps.Capacity, Students: deps.Students, GuardianHold: deps.GuardianHold,
-		Settings: deps.Settings, Runtime: deps.Runtime, Logger: deps.Logger, LockTemplateRecurrence: deps.LockTemplateRecurrence, Now: deps.Now,
+		Settings: deps.Settings, Fingerprint: deps.Fingerprint, LegalPDFFingerprint: deps.LegalPDFFingerprint, Runtime: deps.Runtime, Logger: deps.Logger, LockTemplateRecurrence: deps.LockTemplateRecurrence, Now: deps.Now,
 	})
 	return &ChangeRequests{deps: deps, intake: intake}
 }
@@ -159,6 +161,7 @@ type ChangeRequest struct {
 	AdminDecisionNote              *string
 	BaseSnapshot                   map[string]any
 	ProposedSnapshot               map[string]any
+	LegalEvidence                  *enrollmentNative.LegalBlocksSnapshotEntry
 	Diff                           map[string]any
 	CareOfferingsEnabledAtCreation bool
 	CreatedByAccountID             *int64
@@ -332,18 +335,28 @@ func (s *ChangeRequests) createInTenant(ctx context.Context, token string, phase
 		Diff: snapshotDiff(baseSnapshot, proposedSnapshot), CareOfferingsEnabledAtCreation: capabilities.CareOfferingsEnabled,
 		CreatedByAccountID: input.CreatedByAccountID,
 	}
-	if err := createChangeRequest(ctx, s.deps.Requests, row); err != nil {
+	if err := s.persistFamilyProposal(ctx, row, prepared, submission.ConsentFlags, renewalRequest(children)); err != nil {
 		return nil, err
 	}
-	if row.ParentNote != nil {
-		if err := s.deps.Requests.InsertChangeRequestMessage(ctx, &enrollmentNative.ChangeRequestMessage{
-			ChangeRequestID: row.ID, AuthorType: enrollmentNative.ChangeRequestMessageAuthorParent,
-			AuthorAccountID: input.CreatedByAccountID, Body: *row.ParentNote,
-		}); err != nil {
-			return nil, err
-		}
-	}
 	return row, nil
+}
+
+func (s *ChangeRequests) persistFamilyProposal(ctx context.Context, row *ChangeRequest, prepared *proposal, submittedFlags map[string]any, renewal bool) error {
+	evidence, err := s.proposedLegalEvidence(ctx, prepared, row.BaseSnapshot, submittedFlags, renewal)
+	if err != nil {
+		return err
+	}
+	row.LegalEvidence = evidence
+	if err := createChangeRequest(ctx, s.deps.Requests, row); err != nil {
+		return err
+	}
+	if row.ParentNote == nil {
+		return nil
+	}
+	return s.deps.Requests.InsertChangeRequestMessage(ctx, &enrollmentNative.ChangeRequestMessage{
+		ChangeRequestID: row.ID, AuthorType: enrollmentNative.ChangeRequestMessageAuthorParent,
+		AuthorAccountID: row.CreatedByAccountID, Body: *row.ParentNote,
+	})
 }
 
 func (s *ChangeRequests) listPublic(ctx context.Context, token string) ([]*changeRequestCase, error) {

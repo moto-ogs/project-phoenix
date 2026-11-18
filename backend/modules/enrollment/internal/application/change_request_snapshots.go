@@ -33,7 +33,7 @@ func reconcileRenewalConsent(row *ChangeRequest, req *enrollment.Request, childr
 	flags := maps.Clone(mapFromAny(base["consent_flags"]))
 	accepted := map[string]any{}
 	for _, entry := range req.LegalBlocksSnapshot {
-		if !entry.SnapshotAt.After(row.CreatedAt) || entry.FormSchemaID != entry.DisplayedFormSchemaID {
+		if entry.ChangeRequest || !entry.SnapshotAt.After(row.CreatedAt) || entry.FormSchemaID != entry.DisplayedFormSchemaID {
 			continue
 		}
 		var ticks map[string]any

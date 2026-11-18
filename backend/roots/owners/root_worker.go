@@ -490,7 +490,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		},
 		func() error {
 			flows = BuildEnrollmentFlows(db, env, enrollment, notices, decisions, phases, offerings, timetableRows, consent, identity, people, structure,
-				carePlan, carePlanRows, schedules, membership, organizations, audit, settings.Service, delivery.Enqueuer())
+				carePlan, carePlanRows, schedules, membership, organizations, audit, settings.Service, delivery.Enqueuer(), appUploads)
 			reviewPolicy = NewParentRequestReviewPolicy(caller.Caller().ParentRequestReviews)
 			return nil
 		},
