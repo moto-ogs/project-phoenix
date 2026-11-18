@@ -91,6 +91,41 @@ func TestDemoPresenceHistoryWritesTheDaysInTheSchoolOfThePath(t *testing.T) {
 	assert.True(t, day.Visit.Entry.Equal(checkIn.Add(time.Hour)) && day.Visit.Exit.Equal(checkIn.Add(90*time.Minute)))
 }
 
+func TestDemoCareDaysReadsTheSchoolAndReturnsWallClockMinutes(t *testing.T) {
+	t.Parallel()
+	day := calendar.NewDate(2026, time.October, 20)
+	today := day.AddDays(1)
+	arrival, err := calendar.NewWallClock(12, 30, 0, 0)
+	require.NoError(t, err)
+	pickup, err := calendar.NewWallClock(15, 0, 0, 0)
+	require.NoError(t, err)
+	router := chi.NewRouter()
+	router.Get("/schools/{id}/demo-presence-history", studentpresencehttp.DemoCareDaysHandler(func(_ context.Context, schoolID int64, from, to calendar.Date) ([]studentpresence.DemoCareDay, error) {
+		assert.Equal(t, int64(42), schoolID)
+		assert.Equal(t, day, from)
+		if to == today {
+			return nil, studentpresence.ErrInvalidStatisticsRange
+		}
+		assert.Equal(t, day, to)
+		return []studentpresence.DemoCareDay{
+			{StudentID: 7, Date: day, PlannedCareDay: studentpresence.PlannedCareDay{Expected: true, Arrival: &arrival, Pickup: &pickup}},
+			{StudentID: 8, Date: day, PlannedCareDay: studentpresence.PlannedCareDay{Cancelled: true}},
+		}, nil
+	}))
+	path := "/schools/42/demo-presence-history?from=" + day.String() + "&to="
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, path+day.String(), nil))
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	assert.JSONEq(t, `[
+		{"student_id":7,"date":"2026-10-20","expected":true,"no_plan":false,"cancelled":false,"arrival_minute":750,"pickup_minute":900},
+		{"student_id":8,"date":"2026-10-20","expected":false,"no_plan":false,"cancelled":true,"arrival_minute":null,"pickup_minute":null}
+	]`, string(mustData(t, rr)))
+
+	invalid := httptest.NewRecorder()
+	router.ServeHTTP(invalid, httptest.NewRequest(http.MethodGet, path+today.String(), nil))
+	routetest.AssertErrorResponse(t, invalid, http.StatusBadRequest)
+}
+
 // A day the owner rejects is the caller's mistake, not a server failure, and
 // malformed bodies never reach the owner.
 func TestDemoPresenceHistoryRejectsInvalidInput(t *testing.T) {

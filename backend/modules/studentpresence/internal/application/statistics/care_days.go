@@ -32,7 +32,7 @@ func (s *service) careCalendar(ctx context.Context, from, to calendar.Date) (car
 	}
 	care, vacationOnly = map[calendar.Date]bool{}, map[calendar.Date]bool{}
 	for d := from; !d.After(to); d = d.AddDays(1) {
-		if s.cfg.WeekdaysOnly && calendar.IsWeekend(d) {
+		if s.cfg.DemoHistory && calendar.IsWeekend(d) {
 			continue
 		}
 		// A weekend counts only where it follows Friday's plan (#3921).

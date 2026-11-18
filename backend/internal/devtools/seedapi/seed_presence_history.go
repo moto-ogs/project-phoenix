@@ -99,8 +99,8 @@ type presenceHistoryStudent struct {
 // seedPresenceHistoryStep fills the Statistik, the room history of a child
 // and of a room with a plausible past (#5031): on most care days a child
 // comes, visits one room and goes home; sometimes it is sick or excused,
-// rarely it stays away without a word. The days follow the Statistik's own
-// care days, so the absences are its only missing days.
+// rarely it stays away without a word. In the public demo the history
+// follows each child's effective booking on the school's weekdays.
 type seedPresenceHistoryStep struct{ seeder *Seeder }
 
 func (seedPresenceHistoryStep) Name() string { return "Anwesenheits- und Raumverlauf wird angelegt" }

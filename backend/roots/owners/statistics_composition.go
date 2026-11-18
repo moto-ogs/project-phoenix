@@ -53,7 +53,7 @@ func newStatisticsReports(db transactionruntime.Database, carePlan careplan.Stud
 			PlannedCareDays:  StatisticsPlannedCareDays{careDays},
 			ContractCareDays: StatisticsContractCareDays{careContractCompose.NewBookedCare()},
 			HolidayCareDays:  StatisticsHolidayCareDays{enrollmentCompose.NewHolidayGuestBookedCare(StatisticsHolidayStudents{birthdays})},
-			WeekdaysOnly:     email.IsDemoEnvironment(env.Config.AppEnv),
+			DemoHistory:      email.IsDemoEnvironment(env.Config.AppEnv),
 			Logger:           env.Logger.With("service", "statistics"),
 			Now:              env.Now,
 		})

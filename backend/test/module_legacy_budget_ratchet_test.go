@@ -354,7 +354,7 @@ var moduleLegacyFileBudgets = map[string]int{
 
 // ADR 0289: the maintenance seal constructors of the sealed document files in
 // modules/careplan/compose (+13) and modules/workforce/compose (+6).
-const moduleComposeBudgetTotal = 13666
+const moduleComposeBudgetTotal = 13663
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -547,7 +547,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0151: the school figure constructor (+13).
 	// ADR 0156: the contract Soll port (+4).
 	// ADR 0241: the presence series of the utilization (+7).
-	"modules/studentpresence/compose":                 273,
+	"modules/studentpresence/compose":                 270,
 	"modules/studentpresence/compose/presenceservice": 110,
 	"modules/supervisiondashboard/compose":            11,
 	// Raised by ADR 0128: the student template days constructor (+5), by

@@ -42,7 +42,7 @@ type StatisticsDependencies struct {
 	// The contract (#4683), then the holiday booking (#5994) replace the Soll on the days they cover; nil keeps it.
 	ContractCareDays ports.ContractCareDays
 	HolidayCareDays  ports.HolidayCareDays
-	WeekdaysOnly     bool
+	DemoHistory      bool
 	Logger           *slog.Logger
 	Now              func() time.Time // injectable for tests; nil means time.Now
 }
@@ -68,7 +68,7 @@ func NewStatistics(deps StatisticsDependencies) (studentpresence.StatisticsRepor
 		PrivacyConsents:     presence,
 		PlannedCareDays:     statistics.WithHolidayCareDays(statistics.WithContractCareDays(deps.PlannedCareDays, deps.ContractCareDays), deps.HolidayCareDays),
 		AttendanceIntervals: postgres.New(databaseRuntime(deps.DB), now),
-		WeekdaysOnly:        deps.WeekdaysOnly,
+		DemoHistory:         deps.DemoHistory,
 		Logger:              deps.Logger,
 		Now:                 now,
 	}), nil

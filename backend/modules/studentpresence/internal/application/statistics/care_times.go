@@ -304,7 +304,7 @@ func (s *service) loadCareTimeInputs(ctx context.Context, students []*ports.Stat
 	for _, student := range students {
 		ids = append(ids, student.ID)
 	}
-	inputs := careTimeInputs{weekdaysOnly: s.cfg.WeekdaysOnly}
+	inputs := careTimeInputs{weekdaysOnly: s.cfg.DemoHistory}
 	var err error
 	if inputs.careDays, inputs.vacationOnly, _, err = s.careCalendar(ctx, from, to); err != nil {
 		return careTimeInputs{}, err
