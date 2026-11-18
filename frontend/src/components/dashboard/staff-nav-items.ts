@@ -8,6 +8,7 @@ import {
   isCaregiver,
 } from "~/lib/auth-utils";
 import { useChangeRequestAccess } from "~/lib/hooks/use-change-request-access";
+import { useHasOwnStaff } from "~/lib/hooks/use-user-context";
 import {
   useModuleNavigation,
   type ModuleNavigation,
@@ -106,6 +107,12 @@ export interface StaffNavItem {
   readonly binaryHidden?: boolean;
   /** Ziele außerhalb der App (die Hilfe) öffnen in einem neuen Tab. */
   readonly newTab?: boolean;
+  /**
+   * Die Seite zeigt die eigenen Zeiten oder Termine und braucht ein
+   * Personalprofil in dieser Schule. Ohne Profil fehlt der Eintrag, auch für
+   * Admins und Personen des Trägers (#7306).
+   */
+  readonly requiresOwnStaff?: boolean;
 }
 
 export const STAFF_NAV_ITEMS: readonly StaffNavItem[] = [
@@ -166,6 +173,7 @@ export const STAFF_NAV_ITEMS: readonly StaffNavItem[] = [
     ...STAFF_FLAT_PAGES.calendar,
     concept: calendarConcept,
     requiresPermission: "calendar:own",
+    requiresOwnStaff: true,
   },
   {
     // Gemeinsame Übersicht für Gruppenübergaben, Terminvertretungen und
@@ -188,12 +196,14 @@ export const STAFF_NAV_ITEMS: readonly StaffNavItem[] = [
     ...STAFF_FLAT_PAGES.timeTracking,
     concept: timeTrackingConcept,
     requiresPermission: "time_tracking:own",
+    requiresOwnStaff: true,
   },
   {
     // Eigener Dienstplan (#3821): die Route liest nur über time_tracking:own.
     ...STAFF_FLAT_PAGES.ownShiftPlan,
     concept: staffPlanConcept,
     requiresPermission: "time_tracking:own",
+    requiresOwnStaff: true,
   },
   {
     // Tagesauswertung (#1456): rückwirkender Tagesstatus pro Gruppe. Opt-in
@@ -278,6 +288,11 @@ export interface StaffNavViewer {
   readonly isCaregiver: boolean;
   /** Offene Betreuung: keine festen Gruppen (#1544, #4769). */
   readonly openCareGroupMode: boolean;
+  /**
+   * Die Person hat in dieser Schule ein Personalprofil. Nur `false`, wenn der
+   * Kontext vollständig geladen ist und keines nennt (`useHasOwnStaff`).
+   */
+  readonly hasOwnStaff: boolean;
 }
 
 /** Ein Einstieg der Betreuungskräfte, den eine Admin-Rolle nicht sieht. */
@@ -299,6 +314,9 @@ export function staffNavItemPermitted(
 ): boolean {
   if (staffNavHiddenForAdmin(item, viewer)) return false;
   if (item.alwaysShow) return true;
+  // Vor der Admin-Abkürzung: auch Admins haben ohne Personalprofil keine
+  // eigenen Zeiten und Termine (#7306).
+  if (item.requiresOwnStaff && !viewer.hasOwnStaff) return false;
   if (viewer.isAdmin) return true;
   if (item.requiresAdmin) return false;
   if (
@@ -502,6 +520,7 @@ export function useStaffNavPages(
   );
   const mealPlanEnabled = useMealPlanEnabled();
   const { canOpenRequestsPage } = useChangeRequestAccess();
+  const hasOwnStaff = useHasOwnStaff();
   const isAdmin = hasRole(session, "admin");
   const effectiveAdminScope = hasEffectiveAdminScope(session);
   const viewer: StaffNavViewer = {
@@ -509,6 +528,7 @@ export function useStaffNavPages(
     isAdmin,
     isCaregiver: isCaregiver(session),
     openCareGroupMode,
+    hasOwnStaff,
   };
   // Stabil, solange sich nichts ändert: die Seitenleiste merkt sich ihre
   // Kataloglisten an diesem Objekt.

@@ -11,6 +11,12 @@
       "class": "business_rejection",
       "parameters": [],
       "legacy": "calendar.federal_state_missing"
+    },
+    {
+      "code": "calendar.no_staff_profile",
+      "class": "permission",
+      "parameters": [],
+      "legacy": "calendar.no_staff_profile"
     }
   ]
 }

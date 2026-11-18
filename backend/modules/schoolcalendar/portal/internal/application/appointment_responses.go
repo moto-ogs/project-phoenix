@@ -8,9 +8,9 @@ import (
 )
 
 func (s *service) RespondToStaffInvitation(ctx context.Context, recipientID int64, answer InvitationAnswer) error {
-	staff, err := s.cfg.UserContext.GetCurrentStaff(ctx)
+	staff, err := s.currentStaff(ctx)
 	if err != nil {
-		return fmt.Errorf("%w: current staff required", ErrForbidden)
+		return err
 	}
 	if err := validateAnswerStatus(answer.Status); err != nil {
 		return err

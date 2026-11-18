@@ -150,3 +150,11 @@ export function parentAnnouncementSteps(
  */
 export const SIMPLE_NAV_DIFFERENCE =
   "Sie sehen in der Seitenleiste keine Überschriften wie `Team` oder `Tagesbetrieb`? Dann nutzt Ihre OGS die einfache Seitenleiste. Die Seite steht dort direkt. Fehlt sie, wählen Sie ganz unten `Alle Seiten anzeigen`.";
+
+/**
+ * Die eigenen Seiten `Zeiterfassung`, `Mein Dienstplan` und `Mein Kalender`
+ * brauchen ein Personalprofil in dieser Schule (#7306). Ohne Profil, etwa
+ * über den Träger, fehlen sie in der Navigation.
+ */
+export const OWN_STAFF_PROFILE_TROUBLESHOOTING =
+  "Die Seite fehlt? Sie zeigt Ihre eigenen Zeiten und Termine. Dafür brauchen Sie in dieser Schule ein eigenes Personalprofil. Die Leitung kann es anlegen.";

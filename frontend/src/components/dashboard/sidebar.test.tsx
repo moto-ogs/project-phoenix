@@ -34,6 +34,15 @@ vi.mock("next-auth/react", () => ({
 vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: vi.fn(),
 }));
+// Personalprofil in dieser Schule (#7306); Standard: vorhanden.
+const ownStaff = vi.hoisted(() => ({ present: true }));
+vi.mock("~/lib/hooks/use-user-context", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/hooks/use-user-context")>()),
+  useHasOwnStaff: () => ownStaff.present,
+}));
+afterEach(() => {
+  ownStaff.present = true;
+});
 
 vi.mock("~/lib/auth-utils", () => {
   const isAdminFn = vi.fn();
@@ -469,6 +478,18 @@ describe("Sidebar", () => {
       expect(screen.getByText("Dienstplan")).toBeInTheDocument();
       expect(screen.getByText("Vertretungsplan")).toBeInTheDocument();
       expect(screen.getByText("Schuljahr und Kalender")).toBeInTheDocument();
+    });
+
+    it("hides the own time, shift plan and calendar without a staff profile (#7306)", () => {
+      // Admin über den Träger oder Schul-Admin ohne Personalprofil.
+      ownStaff.present = false;
+      render(<Sidebar />);
+
+      // Anker: die übrige Navigation der Admin-Leiste bleibt.
+      expect(screen.getByText("Dienstplan")).toBeInTheDocument();
+      expect(screen.queryByText("Mein Kalender")).not.toBeInTheDocument();
+      expect(screen.queryByText("Mein Dienstplan")).not.toBeInTheDocument();
+      expect(screen.queryByText("Zeiterfassung")).not.toBeInTheDocument();
     });
 
     it("labels the personal calendar entry 'Mein Kalender'", () => {

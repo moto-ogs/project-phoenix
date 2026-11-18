@@ -3,6 +3,7 @@ package portal
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
@@ -33,6 +34,10 @@ const (
 var (
 	ErrInvalidRequest = errors.New("invalid calendar request")
 	ErrForbidden      = errors.New("calendar access forbidden")
+	// ErrNoStaffProfile refuses a staff-only calendar read or write to a
+	// signed-in account without a staff profile in this school, such as a
+	// Träger person or a school admin (#7306). It wraps ErrForbidden.
+	ErrNoStaffProfile = fmt.Errorf("%w: no staff profile in this school", ErrForbidden)
 	ErrNotFound       = errors.New("calendar item not found")
 	// ErrConflict signals that a concurrent lifecycle transition (cancel/delete)
 	// raced the current operation — e.g. an edit that began before the appointment

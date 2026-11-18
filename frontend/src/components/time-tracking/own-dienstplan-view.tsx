@@ -5,6 +5,7 @@ import { useCallback, useMemo } from "react";
 import { DienstplanPersonWeekGrid } from "~/components/staff/dienstplan-person-week-grid";
 import { DienstplanGridSkeleton } from "~/components/staff/dienstplan-skeleton";
 import { OwnWeekAgenda } from "~/components/time-tracking/own-week-agenda";
+import { useNoOwnStaffProfileEmpty } from "~/components/time-tracking/no-own-staff-profile";
 import { OwnWeekHoursCard } from "~/components/time-tracking/own-week-hours-card";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { errorAlertActions } from "~/components/ui/form-error-alert";
@@ -60,6 +61,10 @@ const ALLOWED_URL_PARAMS = ["d"] as const;
 
 const EMPTY_SHIFTS: readonly StaffShift[] = [];
 
+const STAFF_PLAN_ICON = (
+  <MotoConceptIcon concept={staffPlanConcept} size={48} />
+);
+
 export function OwnDienstplanView() {
   // Kein stilles Umleiten: ein Hinweis der Glocke (#7148) führt hierher, und
   // wer ohne eigenen Dienstplan auf der Startseite landete, wüsste nicht,
@@ -68,6 +73,8 @@ export function OwnDienstplanView() {
     redirectWhenDenied: false,
   });
   const tenantPath = useTenantAwarePath();
+  // Ohne Personalprofil gibt es keinen eigenen Dienstplan (#7306).
+  const noOwnStaff = useNoOwnStaffProfileEmpty(STAFF_PLAN_ICON, isReady);
 
   if (isDenied) {
     return (
@@ -75,7 +82,7 @@ export function OwnDienstplanView() {
         title="Mein Dienstplan"
         testId="own-dienstplan-page"
         empty={{
-          icon: <MotoConceptIcon concept={staffPlanConcept} size={48} />,
+          icon: STAFF_PLAN_ICON,
           title: "Sie haben keinen Zugriff auf einen eigenen Dienstplan.",
           description:
             "Fragen Sie Ihre Leitung, wenn Sie Ihre Schichten hier sehen möchten.",
@@ -90,6 +97,16 @@ export function OwnDienstplanView() {
             </ButtonLink>
           ),
         }}
+      />
+    );
+  }
+
+  if (noOwnStaff) {
+    return (
+      <TenantPage
+        title="Mein Dienstplan"
+        testId="own-dienstplan-page"
+        empty={noOwnStaff}
       />
     );
   }
@@ -147,6 +164,22 @@ function OwnDienstplanContent() {
   );
 
   const { closingDays } = useClosingDaysState(weekFrom, weekTo);
+  // Ladefehler über den gemeinsamen Fehlerpfad (Katalogtext, Wiederholen).
+  // Die Ablehnung ohne Personalprofil zeigt stattdessen den Leerzustand.
+  const noOwnStaff = useNoOwnStaffProfileEmpty(STAFF_PLAN_ICON, true, [
+    shiftsError,
+    projectionError,
+  ]);
+  const shiftsLoadError = useSwrLoadError(
+    noOwnStaff ? undefined : shiftsError,
+    "die Liste Ihrer Schichten",
+    () => mutateShifts(),
+  );
+  const projectionLoadError = useSwrLoadError(
+    noOwnStaff ? undefined : projectionError,
+    "das Soll dieser Woche",
+    () => mutateProjection(),
+  );
 
   const weekShifts = shifts ?? EMPTY_SHIFTS;
   const shiftsByDate = useMemo(() => {
@@ -236,37 +269,15 @@ function OwnDienstplanContent() {
       statsLoading={loading}
       loading={loading ? <DienstplanGridSkeleton /> : false}
       error={
-        shiftsError
+        shiftsLoadError
           ? {
-              message:
-                "Ihr Dienstplan konnte nicht geladen werden. Bitte versuchen Sie es noch einmal.",
-              action: (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="md"
-                  onClick={() => void mutateShifts()}
-                  tooltip="Lädt Ihre Schichten dieser Woche noch einmal."
-                >
-                  Erneut laden
-                </Button>
-              ),
+              message: shiftsLoadError.message,
+              action: errorAlertActions(shiftsLoadError),
             }
-          : projectionError
+          : projectionLoadError
             ? {
-                message:
-                  "Ihr Soll für diese Woche konnte nicht geladen werden. Bitte versuchen Sie es noch einmal.",
-                action: (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="md"
-                    onClick={() => void mutateProjection()}
-                    tooltip="Lädt Ihr Soll für diese Woche noch einmal."
-                  >
-                    Erneut laden
-                  </Button>
-                ),
+                message: projectionLoadError.message,
+                action: errorAlertActions(projectionLoadError),
                 keepContent: true,
               }
             : aheadLoadError
@@ -280,9 +291,10 @@ function OwnDienstplanContent() {
               : null
       }
       empty={
-        weekIsEmpty && !shiftsError
+        noOwnStaff ??
+        (weekIsEmpty && !shiftsError
           ? {
-              icon: <MotoConceptIcon concept={staffPlanConcept} size={48} />,
+              icon: STAFF_PLAN_ICON,
               title: "Keine Schichten in dieser Woche",
               description: emptyWeekDescription(aheadShifts, nextShiftDate),
               action:
@@ -298,7 +310,7 @@ function OwnDienstplanContent() {
                   </Button>
                 ),
             }
-          : undefined
+          : undefined)
       }
       searchSlot={
         <PlanningContextBar

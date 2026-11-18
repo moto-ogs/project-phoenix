@@ -1,6 +1,9 @@
 import type { HelpTopic } from "../help-types";
 import { HELP_TOPICS } from "~/lib/help-topics";
-import { SIMPLE_NAV_DIFFERENCE } from "../help-article-shared";
+import {
+  OWN_STAFF_PROFILE_TROUBLESHOOTING,
+  SIMPLE_NAV_DIFFERENCE,
+} from "../help-article-shared";
 
 export function trackWorkTimeTopic(): HelpTopic {
   return {
@@ -58,6 +61,7 @@ export function trackWorkTimeTopic(): HelpTopic {
       "Steht unten `Kein Soll hinterlegt`? Dann zählen Krankheit und Urlaub 0 Stunden. Die Monatskarte zeigt diese Tage mit `ohne Soll`. Das Soll trägt die Leitung ein.",
       SIMPLE_NAV_DIFFERENCE,
     ],
+    troubleshootingDetails: [OWN_STAFF_PROFILE_TROUBLESHOOTING],
     related: [HELP_TOPICS.correctWorkTime, HELP_TOPICS.nfcWorkTime],
   };
 }

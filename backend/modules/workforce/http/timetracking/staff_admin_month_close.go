@@ -90,7 +90,7 @@ type traegerMonthStaff struct {
 func (rs *StaffAdminResource) closeMonth(w http.ResponseWriter, r *http.Request) {
 	closedBy, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	var req monthCloseRequest
@@ -123,7 +123,7 @@ func (rs *StaffAdminResource) reopenMonth(w http.ResponseWriter, r *http.Request
 	}
 	reopenedBy, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	var req monthCloseRequest

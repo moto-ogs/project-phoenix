@@ -48,6 +48,9 @@ import {
 } from "~/components/ui/slide-over";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
+import { useNoOwnStaffProfileEmpty } from "~/components/time-tracking/no-own-staff-profile";
+import { calendarConcept } from "~/lib/concepts/calendar";
+import { useHasOwnStaff } from "~/lib/hooks/use-user-context";
 import { ListSkeleton, SkeletonRegion } from "~/components/ui/page-skeletons";
 import { DataTableSkeleton as TableSkeleton } from "~/components/ui/data-table";
 import { TenantPage } from "~/components/ui/tenant-page";
@@ -517,11 +520,20 @@ function StaffCalendarPageInner() {
     () => calendarFetchRange(referenceDate, viewMode),
     [referenceDate, viewMode],
   );
-  const calendarKey = tenantDailyKeys.staffCalendar(
-    viewMode,
-    toISODate(range.from),
-    toISODate(range.to),
-  );
+  // Ohne Personalprofil in dieser Schule gibt es keine eigenen Termine
+  // (#7306): dann fragt die Seite sie gar nicht erst ab.
+  const hasOwnStaff = useHasOwnStaff();
+  const canSeeOwnCalendar = hasPermission(session, "calendar:own");
+  // Ohne Kalenderrecht muss der Server die bisherige Zugriffsablehnung
+  // liefern. Nur berechtigte Personen ohne Profil überspringen den Abruf.
+  const calendarKey =
+    hasOwnStaff || !canSeeOwnCalendar
+      ? tenantDailyKeys.staffCalendar(
+          viewMode,
+          toISODate(range.from),
+          toISODate(range.to),
+        )
+      : null;
   const {
     data,
     error: calendarError,
@@ -529,6 +541,13 @@ function StaffCalendarPageInner() {
     mutate,
   } = useSWRAuth<CalendarResponse>(calendarKey, () =>
     getStaffCalendar(range.from, range.to),
+  );
+  // Der Hinweis ohne Personalprofil, vor dem Abruf aus dem Nutzerkontext,
+  // danach aus der Ablehnung des Servers.
+  const noOwnStaff = useNoOwnStaffProfileEmpty(
+    <MotoConceptIcon concept={calendarConcept} size={48} />,
+    canSeeOwnCalendar,
+    [calendarError],
   );
 
   // Gesetzliche Feiertage des Bundeslands (#4775) als eigene Einträge neben
@@ -964,7 +983,7 @@ function StaffCalendarPageInner() {
     viewMode,
   ).length;
   const statusLine =
-    isLoading || calendarError
+    isLoading || calendarError || noOwnStaff
       ? undefined
       : `${eventCount} ${eventCount === 1 ? "Termin" : "Termine"}`;
 
@@ -974,13 +993,13 @@ function StaffCalendarPageInner() {
   const onCalendarTab = activeTab === "meine";
   // Ladefehler mit Katalogtext, Wiederholen und Vorgangskennung (#2517).
   const calendarLoadError = useSwrLoadError(
-    calendarError,
+    noOwnStaff ? undefined : calendarError,
     "die Liste der Termine",
     () => mutate(),
   );
   // Bei einem Ladefehler steht nie ein leeres Raster unter dem Datum (siehe
   // `calendarError` unten); der Abo-Bereich bleibt erreichbar.
-  const calendarLoading = onCalendarTab && isLoading;
+  const calendarLoading = onCalendarTab && isLoading && !noOwnStaff;
   const calendarErrorState =
     onCalendarTab && calendarError && calendarLoadError
       ? calendarLoadError
@@ -1026,6 +1045,7 @@ function StaffCalendarPageInner() {
       stats={onCalendarTab ? statusLine : undefined}
       statsLoading={calendarLoading}
       loading={calendarLoading}
+      empty={onCalendarTab ? noOwnStaff : null}
       error={
         calendarErrorState
           ? {
@@ -1036,7 +1056,7 @@ function StaffCalendarPageInner() {
           : null
       }
       actions={
-        canManageCalendar && onCalendarTab ? (
+        canManageCalendar && onCalendarTab && !noOwnStaff ? (
           <Button
             type="button"
             variant="primary"
@@ -1051,7 +1071,7 @@ function StaffCalendarPageInner() {
         ) : undefined
       }
       searchSlot={
-        onCalendarTab ? (
+        onCalendarTab && !noOwnStaff ? (
           <PersonalCalendarChrome
             events={calendarEvents}
             referenceDate={referenceDate}

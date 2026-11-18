@@ -3,6 +3,7 @@ package staffcalendarhttp
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -235,6 +236,40 @@ func TestListMyRejectsMissingRange(t *testing.T) {
 	rs.listMy(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestStaffOnlyCalendarRoutesAnswerMissingStaffProfileWithItsCode(t *testing.T) {
+	t.Parallel()
+
+	missing := fmt.Errorf("lookup: %w", calendarSvc.ErrNoStaffProfile)
+	cases := map[string]func(*Resource, http.ResponseWriter, *http.Request){
+		"listMy":             (*Resource).listMy,
+		"calendarFeedURL":    (*Resource).calendarFeedURL,
+		"rotateCalendarFeed": (*Resource).rotateCalendarFeed,
+	}
+	for name, handler := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			rs := &Resource{service: &fakeCalendarService{listStaffErr: missing, staffFeedErr: missing}}
+			w := httptest.NewRecorder()
+
+			handler(rs, w, httptest.NewRequest(http.MethodGet, "/my?from=2026-01-05&to=2026-01-11", nil))
+
+			assert.Equal(t, http.StatusForbidden, w.Code)
+			assert.Contains(t, w.Body.String(), `"code":"calendar.no_staff_profile"`)
+		})
+	}
+}
+
+func TestListMyAnswersLookupFailureAsServerError(t *testing.T) {
+	t.Parallel()
+
+	rs := &Resource{service: &fakeCalendarService{listStaffErr: errors.New("resolve current staff: connection reset")}}
+	w := httptest.NewRecorder()
+
+	rs.listMy(w, httptest.NewRequest(http.MethodGet, "/my?from=2026-01-05&to=2026-01-11", nil))
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
 func TestCalendarFeedURLReturnsSubscriptionLinks(t *testing.T) {

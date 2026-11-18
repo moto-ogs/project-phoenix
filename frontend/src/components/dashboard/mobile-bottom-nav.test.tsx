@@ -51,6 +51,15 @@ vi.mock("next-auth/react", () => ({
 vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: vi.fn(),
 }));
+// Personalprofil in dieser Schule (#7306); Standard: vorhanden.
+const ownStaff = vi.hoisted(() => ({ present: true }));
+vi.mock("~/lib/hooks/use-user-context", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/hooks/use-user-context")>()),
+  useHasOwnStaff: () => ownStaff.present,
+}));
+afterEach(() => {
+  ownStaff.present = true;
+});
 
 vi.mock("~/lib/auth-utils", () => {
   const isAdminFn = vi.fn();
@@ -1080,6 +1089,18 @@ describe("MobileBottomNav", () => {
       expect(screen.getByText("Planung").closest("a")).toBeNull();
       expect(screen.getByText("Übergaben")).toBeInTheDocument();
       expect(screen.getByText("Datenverwaltung")).toBeInTheDocument();
+    });
+
+    it("leaves the own pages out of the overflow menu without a staff profile (#7306)", () => {
+      ownStaff.present = false;
+      render(<MobileBottomNav />);
+      fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
+
+      // Anker: das geöffnete Mehr-Menü.
+      expect(screen.getByText("Datenverwaltung")).toBeInTheDocument();
+      expect(screen.queryByText("Mein Kalender")).not.toBeInTheDocument();
+      expect(screen.queryByText("Mein Dienstplan")).not.toBeInTheDocument();
+      expect(screen.queryByText("Zeiterfassung")).not.toBeInTheDocument();
     });
 
     it("labels the staff calendar entry 'Mein Kalender' in the overflow menu", () => {

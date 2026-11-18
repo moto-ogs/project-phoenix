@@ -2,6 +2,7 @@ package owners
 
 import (
 	"context"
+	"fmt"
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 
@@ -86,7 +87,7 @@ func newStaffDirectoryCapability(people peoplePorts.PersonDirectory, admin workf
 func (c staffDirectoryCapability) PersonByAccountID(ctx context.Context, accountID int64) (*workforceModule.Person, error) {
 	person, err := c.people.FindByAccountID(ctx, accountID)
 	if err != nil {
-		return nil, err
+		return nil, markNoStaffProfile(err)
 	}
 	return publicPerson(person), nil
 }
@@ -94,7 +95,7 @@ func (c staffDirectoryCapability) PersonByAccountID(ctx context.Context, account
 func (c staffDirectoryCapability) StaffByPersonID(ctx context.Context, personID int64) (*workforceModule.StaffProfile, error) {
 	staff, err := c.people.StaffRows().FindMembershipByPersonID(ctx, personID)
 	if err != nil {
-		return nil, err
+		return nil, markNoStaffProfile(err)
 	}
 	return publicStaffProfile(staff), nil
 }
@@ -114,7 +115,21 @@ func (c staffDirectoryCapability) StaffByID(ctx context.Context, staffID int64, 
 }
 
 func (c staffDirectoryCapability) ResolveStaffIDByAccountID(ctx context.Context, accountID int64) (int64, error) {
-	return c.people.ResolveStaffIDByAccountID(ctx, accountID)
+	staffID, err := c.people.ResolveStaffIDByAccountID(ctx, accountID)
+	return staffID, markNoStaffProfile(err)
+}
+
+// markNoStaffProfile adds workforce.ErrNoStaffProfile to a missing person or
+// staff row of the caller's account, so Workforce refuses the request instead
+// of answering 401 or 500 (#7306). Other failures pass through unchanged.
+func markNoStaffProfile(err error) error {
+	if err == nil {
+		return nil
+	}
+	if peoplePorts.IsPersonNotFound(err) || peoplePorts.IsRepositoryNoRows(err) {
+		return fmt.Errorf("%w: %w", workforceModule.ErrNoStaffProfile, err)
+	}
+	return err
 }
 
 func publicPerson(entity *peopleValues.DirectoryPersonSnapshot) *workforceModule.Person {

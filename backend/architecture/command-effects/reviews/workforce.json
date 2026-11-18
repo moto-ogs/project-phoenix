@@ -8234,7 +8234,27 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.PersonByAccountID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.FindByAccountID; modules/peopledirectory/ports/person_directory_port.go:23. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.IsPersonNotFound; modules/peopledirectory/ports/person_directory.go:46. Pure error classifier for #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.IsPersonNotFound",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffDirectoryCapability.PersonByAccountID",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.PersonByAccountID",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.IsRepositoryNoRows; modules/peopledirectory/ports/repository_vocabulary.go:347. Pure error classifier for #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.IsRepositoryNoRows",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffDirectoryCapability.PersonByAccountID",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.PersonByAccountID",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.FindByAccountID; modules/peopledirectory/ports/person_directory_port.go:23. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.FindByAccountID",
       "target_owner": "people-directory"
@@ -8267,7 +8287,27 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.ResolveStaffIDByAccountID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.ResolveStaffIDByAccountID; modules/peopledirectory/ports/person_directory_port.go:37. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.IsPersonNotFound; modules/peopledirectory/ports/person_directory.go:46. Pure error classifier for #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.IsPersonNotFound",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffDirectoryCapability.ResolveStaffIDByAccountID",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.ResolveStaffIDByAccountID",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.IsRepositoryNoRows; modules/peopledirectory/ports/repository_vocabulary.go:347. Pure error classifier for #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.IsRepositoryNoRows",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffDirectoryCapability.ResolveStaffIDByAccountID",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.ResolveStaffIDByAccountID",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.ResolveStaffIDByAccountID; modules/peopledirectory/ports/person_directory_port.go:37. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.ResolveStaffIDByAccountID",
       "target_owner": "people-directory"
@@ -8380,7 +8420,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
-      "reason": "E1 #5892: SetTenantID decorates only the returned membership DTO (peopledirectory/record_metadata.go). It neither writes a row nor changes transaction scope; the narrow subject/name lookup remains read-only.",
+      "reason": "E1 #5892: SetTenantID decorates only the returned membership DTO (peopledirectory/record_metadata.go). It neither writes a row nor changes transaction scope; the narrow subject/name lookup remains read-only. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -8390,7 +8430,27 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.IsPersonNotFound; modules/peopledirectory/ports/person_directory.go:46. Pure error classifier for #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.IsPersonNotFound",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffDirectoryCapability.StaffByPersonID",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.IsRepositoryNoRows; modules/peopledirectory/ports/repository_vocabulary.go:347. Pure error classifier for #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.IsRepositoryNoRows",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffDirectoryCapability.StaffByPersonID",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.StaffRows",
       "target_owner": "people-directory"
@@ -8400,7 +8460,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindMembershipByPersonID",
       "target_owner": "people-directory"
@@ -8410,7 +8470,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaffByPerson",
       "target_owner": "school-membership"
@@ -8420,7 +8480,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -8430,7 +8490,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaffByPerson",
       "target_owner": "school-membership"
@@ -8440,7 +8500,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"
