@@ -1226,7 +1226,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.mealPlanChangeNotices.NotifyMenuChanged",
-      "binding_digest": "585ef64952b3d990b3ab43abb82ff209",
+      "binding_digest": "cf1ca3b1f628c7127e9b0a24c0cc4831",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.ParentDeliveryPolicy.DefaultLocale",
@@ -1234,7 +1234,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.mealPlanChangeNotices.NotifyMenuChanged",
-      "binding_digest": "198ecd6566e6458c0171892d1bf44c09",
+      "binding_digest": "b7411ff4954e43b3b9a017efb8efb631",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.ParentDeliveryPolicy.NormalizeLocale",
@@ -1242,7 +1242,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.mealPlanChangeNotices.NotifyMenuChanged",
-      "binding_digest": "4e49e06f83f812c708af80887fc1ba48",
+      "binding_digest": "8d603d5021b81c439c41acb820188a52",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.ParentDeliveryPolicy.ParentMealPlanChangedCopy",
@@ -1250,7 +1250,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.mealPlanChangeNotices.NotifyMenuChanged",
-      "binding_digest": "8ee89ccc4b1dd46694da70a3c43f782c",
+      "binding_digest": "1b8648e9045595452a52fc1631d9b2d2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.ParentDeliveryPolicy.ParentMealPlanChangedFeedCopy",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.mealPlanChangeNotices.NotifyMenuChanged",
+      "binding_digest": "6b3bae4e48929bde3a065efbdaf29e16",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
@@ -1258,7 +1266,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.mealPlanChangeNotices.NotifyMenuChanged",
-      "binding_digest": "346546b1cfb72e039ad7bbca17cb21f8",
+      "binding_digest": "3a7e8eec38b6286442d083ab86b60802",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
@@ -1266,7 +1274,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.mealPlanChangeNotices.NotifyMenuChanged",
-      "binding_digest": "0f6a1de7e4d1038003b7d2929f21f6a2",
+      "binding_digest": "8f39946dfa30d8d5b8244d63f9271a14",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts",

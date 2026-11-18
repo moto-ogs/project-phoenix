@@ -1585,6 +1585,16 @@
       "target_owner": "delivery-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.mealPlanChangeNotices.NotifyMenuChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChangeNotices.NotifyMenuChanged",
+      "reason": "Read-only: meal-plan reaches modules/delivery/devices.ParentDeliveryPolicy.ParentMealPlanChangedFeedCopy (delivery-platform) through roots/owners.mealPlanChangeNotices.NotifyMenuChanged (#7145) to build the localized, week-specific notification-feed copy. No persistent, lock or scope effect.",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.ParentDeliveryPolicy.ParentMealPlanChangedFeedCopy",
+      "target_owner": "delivery-platform"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.mealPlanChangeNotices.NotifyMenuChanged",
       "classification": "platform",
