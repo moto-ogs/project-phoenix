@@ -85,8 +85,8 @@ func TestNormalizeStaffHireRefusesANameTheSchoolCannotTake(t *testing.T) {
 	assert.Equal(t, StaffFieldFirstName, refused.Field)
 }
 
-func TestSamePersonComparesNamesInNFC(t *testing.T) {
+func TestNameMatchComparesNamesInNFC(t *testing.T) {
 	t.Parallel()
 	hire := StaffHire{FirstName: "Jonas", LastName: "Müller", Birthday: "1990-04-12"}
-	assert.True(t, hire.SamePerson("jonas", "Mu\u0308ller", "1990-04-12"))
+	assert.Equal(t, HireMatchNameBirthday, hire.NameMatch("jonas", "Mu\u0308ller", "1990-04-12"))
 }

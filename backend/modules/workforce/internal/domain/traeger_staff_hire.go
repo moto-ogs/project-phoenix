@@ -127,7 +127,8 @@ const (
 // already keeps: HireMatchNameBirthday for the same name and birthday,
 // HireMatchName for the same name of a person without a birthday, and ""
 // otherwise. A different birthday tells two people apart. Names compare
-// without case and surrounding or repeated spaces.
+// in NFC, without case and surrounding or repeated spaces, so a decomposed
+// „Müller“ a school stored matches the typed one.
 func (h StaffHire) NameMatch(firstName, lastName, birthday string) string {
 	if !sameName(h.FirstName, firstName) || !sameName(h.LastName, lastName) {
 		return ""
@@ -143,6 +144,6 @@ func (h StaffHire) NameMatch(firstName, lastName, birthday string) string {
 }
 
 func sameName(a, b string) bool {
-	a, b = strings.Join(strings.Fields(a), " "), strings.Join(strings.Fields(b), " ")
+	a, b = strings.Join(strings.Fields(textnorm.Name(a)), " "), strings.Join(strings.Fields(textnorm.Name(b)), " ")
 	return a != "" && strings.EqualFold(a, b)
 }
