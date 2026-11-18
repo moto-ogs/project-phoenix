@@ -65,7 +65,7 @@ func (rs *Resource) acknowledgeConflict(w http.ResponseWriter, r *http.Request) 
 		renderConflictAckError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"fingerprint": fingerprint},
+	common.Respond(w, r, http.StatusOK, ConflictAckResponse{Fingerprint: fingerprint},
 		"Conflict acknowledged")
 }
 
@@ -85,7 +85,7 @@ func (rs *Resource) unacknowledgeConflict(w http.ResponseWriter, r *http.Request
 		renderConflictAckError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"fingerprint": fingerprint},
+	common.Respond(w, r, http.StatusOK, ConflictAckResponse{Fingerprint: fingerprint},
 		"Conflict acknowledgement removed")
 }
 

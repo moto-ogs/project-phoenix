@@ -12,7 +12,7 @@ import { formatDate, toISODate } from "~/lib/date-helpers";
 
 /** Backend wire shape (snake_case, int64 IDs). */
 export interface BackendClosingDay {
-  id: number;
+  id: number | string;
   start_date: string; // YYYY-MM-DD
   end_date: string; // YYYY-MM-DD
   reason: string;

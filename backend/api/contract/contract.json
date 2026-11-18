@@ -43,6 +43,63 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/timetable/closing-days/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/timetable/conflict-acks/{fingerprint}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ConflictAckResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/timetable/instances/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/timetable/periods/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/timetable/planning-tracks/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PlanningTrack"
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/timetable/templates/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TemplateArchivedResponse"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/work-time-models/{id}",
       "portals": [
         "tenant"
@@ -895,6 +952,686 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/timetable/closing-days/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ClosingDayResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/conflict-acks/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "conflictAcksResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/conflicts",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        },
+        {
+          "name": "end_time",
+          "kind": "string"
+        },
+        {
+          "name": "exclude_activity_group_id",
+          "kind": "id"
+        },
+        {
+          "name": "exclude_instance_id",
+          "kind": "id"
+        },
+        {
+          "name": "room_id",
+          "kind": "id"
+        },
+        {
+          "name": "staff_ids",
+          "kind": "string"
+        },
+        {
+          "name": "start_time",
+          "kind": "string"
+        },
+        {
+          "name": "student_ids",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PlannedConflictsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/deviations/history",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "activity_group_id",
+          "kind": "id"
+        },
+        {
+          "name": "date",
+          "kind": "date"
+        },
+        {
+          "name": "date_to",
+          "kind": "date"
+        },
+        {
+          "name": "start_time",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "DeviationHistoryResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/gaps",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        },
+        {
+          "name": "date_to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "GapsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/holidays",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidaysResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/instances/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "group_id",
+          "kind": "id"
+        },
+        {
+          "name": "room_id",
+          "kind": "id"
+        },
+        {
+          "name": "staff_id",
+          "kind": "id"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        },
+        {
+          "name": "view",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "weeklyInstancesResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/instances/edited-in-window",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "activity_group_id",
+          "kind": "id"
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "include_deletions",
+          "kind": "bool"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "editedInWindowResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/instances/{id}/guardian-notice",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "GuardianNoticeReachResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/instances/{id}/participants",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "InstanceParticipantsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/instances/{id}/staff-pool",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StaffPoolResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/instances/{instance_id}/students/{student_id}/corrections",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "attendanceCorrectionsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/offering-gaps",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "period_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "offeringGapsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/offering-sources",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "calendar_period_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "offeringSourcesResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/offering-sources/combined-counts",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "calendar_period_id",
+          "kind": "id"
+        },
+        {
+          "name": "ids",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "combinedOfferingCountsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/offering-sources/preview",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "grade_levels",
+          "kind": "string"
+        },
+        {
+          "name": "list_kind",
+          "kind": "string"
+        },
+        {
+          "name": "offering_ids",
+          "kind": "string"
+        },
+        {
+          "name": "period_id",
+          "kind": "id"
+        },
+        {
+          "name": "roster",
+          "kind": "string",
+          "repeated": true
+        },
+        {
+          "name": "school_classes",
+          "kind": "string"
+        },
+        {
+          "name": "type",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "offeringPreviewResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/offering-sources/suggestion",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "end_time",
+          "kind": "string"
+        },
+        {
+          "name": "grade_levels",
+          "kind": "string"
+        },
+        {
+          "name": "list_kind",
+          "kind": "string"
+        },
+        {
+          "name": "period_id",
+          "kind": "id"
+        },
+        {
+          "name": "roster",
+          "kind": "string",
+          "repeated": true
+        },
+        {
+          "name": "school_classes",
+          "kind": "string"
+        },
+        {
+          "name": "type",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "offeringSuggestionEnvelope"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/operations/active-groups/{id}/roster",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OperationRoster"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/operations/instances/{id}/roster",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OperationRoster"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/operations/planned-now",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        },
+        {
+          "name": "horizon_minutes",
+          "kind": "int"
+        },
+        {
+          "name": "include_roster",
+          "kind": "bool"
+        },
+        {
+          "name": "limit",
+          "kind": "int"
+        },
+        {
+          "name": "scope",
+          "kind": "string",
+          "values": [
+            "day",
+            "past"
+          ]
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PlannedNowResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/periods/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "CalendarPeriodResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/periods/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CalendarPeriodResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/pickup-extensions/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "student_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "pickupExtensionsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/planning-tracks/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "PlanningTrack"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/school-vacation-hints",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolVacationHintsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/school-vacations",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolVacationsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/student/{id}/day",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StudentDayResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/student/{id}/week",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StudentWeekResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/templates",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "period_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "listTemplatesResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/templates/booking-leftovers",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "period_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "bookingLeftoversResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/templates/roster-deviations",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "period_id",
+          "kind": "id"
+        },
+        {
+          "name": "template_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "rosterDeviationsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/templates/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "period_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "templateResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/timetable/templates/{id}/offering-preview",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "grade_levels",
+          "kind": "string"
+        },
+        {
+          "name": "offering_ids",
+          "kind": "string"
+        },
+        {
+          "name": "school_classes",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "offeringPreviewResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/work-time-models/",
       "portals": [
         "tenant"
@@ -1577,6 +2314,36 @@
       }
     },
     {
+      "method": "PATCH",
+      "pattern": "/api/timetable/instances/{instance_id}/students/{student_id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PatchAttendanceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AttendanceResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "pattern": "/api/timetable/operations/instances/{id}/students/{student_id}/attendance",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PatchAttendanceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OperationRosterRow"
+      }
+    },
+    {
       "method": "POST",
       "pattern": "/api/notifications/feed/read-all",
       "portals": [
@@ -1844,6 +2611,476 @@
       "response": {
         "kind": "ref",
         "ref": "StaffAbsenceResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/closing-days/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ClosingDayRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ClosingDayResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/instances/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "createInstanceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "enrichedInstance"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/instances/bulk-cancel",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "bulkCancelRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "BulkCancelResult"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/instances/re-plan-week",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "replanWeekRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "replanWeekResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/instances/{id}/cancel",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CancelInstanceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "InstanceStatusResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/instances/{id}/complete",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "InstanceStatusResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/instances/{id}/convert-to-series",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "convertInstanceToSeriesRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "convertInstanceToSeriesResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/instances/{id}/deviations",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "applyDeviationsRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ApplyDeviationsResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/instances/{id}/move-staff",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "moveStaffRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MoveStaffResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/instances/{id}/reinstate",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "InstanceStatusResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/instances/{id}/reopen",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StartInstanceResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/instances/{id}/start",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StartInstanceResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/instances/{instance_id}/students/{student_id}/correction",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CorrectAttendanceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AttendanceResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/materialize",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "materializeRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "materializeResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/operations/instances/{id}/complete",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CompleteOperationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ScheduledInstance"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/operations/instances/{id}/reopen",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "startOperationResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/operations/instances/{id}/start",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "startOperationResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/operations/instances/{id}/students/check-in",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "bulkCheckInRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OperationRoster"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/operations/instances/{id}/students/{student_id}/check-in",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OperationRoster"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/operations/instances/{id}/students/{student_id}/check-out",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OperationRoster"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/operations/spontaneous/start",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "spontaneousStartRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "startOperationResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/periods/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CalendarPeriodRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "CalendarPeriodResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/periods/bootstrap",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "bootstrapPeriodsResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/pickup-extensions/{id}/resolve",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "resolvePickupExtensionRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "resolvePickupExtensionResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/planning-tracks/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "planningTrackRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PlanningTrack"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/planning-tracks/{id}/restore",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PlanningTrack"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/school-vacation-hints/acknowledgements",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "schoolVacationAcknowledgementRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolVacationAcknowledgedResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/shift-coverage",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ShiftCoverageRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ShiftCoverageResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/substitutions/bulk",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "bulkSubstitutionRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "BulkSubstitutionResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/templates",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "createTemplateRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "createTemplateResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/templates/{id}/end",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "endTemplateRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "endTemplateResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/templates/{id}/offering-connection",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "offeringConnectionRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "offeringConnectionResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/templates/{id}/split",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "splitTemplateRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "splitTemplateResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/templates/{id}/students/{studentId}/remove-days",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "removeStudentTemplateDaysRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "removeStudentTemplateDaysResponse"
       }
     },
     {
@@ -2444,6 +3681,170 @@
       "response": {
         "kind": "ref",
         "ref": "SessionResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/timetable/closing-days/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ClosingDayRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ClosingDayResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/timetable/conflict-acks/{fingerprint}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ConflictAckResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/timetable/instances/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "updateInstanceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "enrichedInstance"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/timetable/offering-gaps/{offeringId}/acknowledgement",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "offeringGapAckRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "offeringGapAckResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/timetable/operations/instances/{id}/students/{student_id}/homework-feedback",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HomeworkFeedbackRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "HomeworkFeedbackResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/timetable/periods/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CalendarPeriodRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "CalendarPeriodResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/timetable/planning-tracks/order",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "planningTrackOrderRequest"
+      },
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "PlanningTrack"
+        }
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/timetable/planning-tracks/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "planningTrackRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PlanningTrack"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/timetable/templates/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "updateTemplateRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "templateResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/timetable/templates/{id}/manual-roster",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "manualRosterRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "manualRosterResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/timetable/templates/{id}/students/{studentId}/kept-days",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "keptStudentTemplateDaysRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "keptStudentTemplateDaysResponse"
       }
     },
     {
@@ -3058,6 +4459,36 @@
       ]
     },
     {
+      "name": "AffectedInstance",
+      "go_type": "timetablehttp.AffectedInstance",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "AllowanceCarryResponse",
       "go_type": "absencetypes.AllowanceCarryResponse",
       "fields": [
@@ -3083,6 +4514,60 @@
           "name": "expires_on",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ApplyDeviationsResponse",
+      "go_type": "timetablehttp.ApplyDeviationsResponse",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "cancelled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "understaffed_ack",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "affected_instances",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AffectedInstance"
+            }
+          }
+        },
+        {
+          "name": "warnings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SubstituteTimeConflict"
+            }
+          }
+        },
+        {
+          "name": "guardian_notice",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "GuardianNoticeResponse"
           }
         }
       ]
@@ -3780,6 +5265,103 @@
       ]
     },
     {
+      "name": "AttendanceDayResponse",
+      "go_type": "timetablehttp.AttendanceDayResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "substatus",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "note",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "checked_in_at",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "checked_out_at",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "is_unplanned",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AttendanceResponse",
+      "go_type": "timetablehttp.AttendanceResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "substatus",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "note",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "checked_in_at",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "BankAccountRequest",
       "go_type": "traeger.BankAccountRequest",
       "request": true,
@@ -3885,6 +5467,157 @@
       ]
     },
     {
+      "name": "BulkCancelDay",
+      "go_type": "timetable.BulkCancelDay",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BulkCancelKeptSeries",
+      "go_type": "timetable.BulkCancelKeptSeries",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BulkCancelResult",
+      "go_type": "timetable.BulkCancelResult",
+      "fields": [
+        {
+          "name": "from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "dry_run",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BulkCancelDay"
+            }
+          }
+        },
+        {
+          "name": "kept",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "kept_series",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BulkCancelKeptSeries"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "BulkSubstitutionDayResponse",
+      "go_type": "timetablehttp.BulkSubstitutionDayResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "affected_instances",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AffectedInstance"
+            }
+          }
+        },
+        {
+          "name": "warnings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SubstituteTimeConflict"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "BulkSubstitutionResponse",
+      "go_type": "timetablehttp.BulkSubstitutionResponse",
+      "fields": [
+        {
+          "name": "days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BulkSubstitutionDayResponse"
+            }
+          }
+        },
+        {
+          "name": "total_affected",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "CalendarFeedResponse",
       "go_type": "staffcalendarhttp.CalendarFeedResponse",
       "fields": [
@@ -3903,6 +5636,183 @@
       ]
     },
     {
+      "name": "CalendarPeriodRequest",
+      "go_type": "timetablehttp.CalendarPeriodRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "period_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "week_cycle_length",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "week_cycle_anchor",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "is_active",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CalendarPeriodResponse",
+      "go_type": "timetablehttp.CalendarPeriodResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "period_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "week_cycle_length",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "week_cycle_anchor",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "warnings",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "PeriodWarning"
+            }
+          }
+        },
+        {
+          "name": "enrollment_phase_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "activity_group_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "schedule_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "student_enrollment_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "supervisor_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "activity_instance_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "staff_shift_series_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "CalendarStatusResponse",
       "go_type": "staffcalendarhttp.CalendarStatusResponse",
       "fields": [
@@ -3910,6 +5820,30 @@
           "name": "status",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CancelInstanceRequest",
+      "go_type": "timetablehttp.CancelInstanceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "guardian_notice",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "GuardianNoticeRequest"
           }
         }
       ]
@@ -4108,6 +6042,82 @@
       ]
     },
     {
+      "name": "ClosingDayRequest",
+      "go_type": "timetablehttp.ClosingDayRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClosingDayResponse",
+      "go_type": "timetablehttp.ClosingDayResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "traeger",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "CompanionEntry",
       "go_type": "careplanhttp.CompanionEntry",
       "request": true,
@@ -4163,6 +6173,18 @@
       ]
     },
     {
+      "name": "ConflictAckResponse",
+      "go_type": "timetablehttp.ConflictAckResponse",
+      "fields": [
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ContactRequest",
       "go_type": "traeger.ContactRequest",
       "request": true,
@@ -4183,6 +6205,44 @@
         },
         {
           "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CorrectAttendanceRequest",
+      "go_type": "timetablehttp.CorrectAttendanceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "substatus",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "reason",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -4795,6 +6855,161 @@
       ]
     },
     {
+      "name": "DeviationHistoryEvent",
+      "go_type": "timetablehttp.DeviationHistoryEvent",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "activity_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "occurrence_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "instance_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "event_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subject_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "subject_staff_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "related_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "related_staff_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "actor_account_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "actor_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "old_value",
+          "optional": true,
+          "schema": {
+            "kind": "json"
+          }
+        },
+        {
+          "name": "new_value",
+          "optional": true,
+          "schema": {
+            "kind": "json"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "occurred_at",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeviationHistoryResponse",
+      "go_type": "timetablehttp.DeviationHistoryResponse",
+      "fields": [
+        {
+          "name": "events",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "DeviationHistoryEvent"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeviationPresence",
+      "go_type": "timetablehttp.DeviationPresence",
+      "request": true,
+      "fields": [
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "instance_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "EnrollablePhaseResponse",
       "go_type": "parent.EnrollablePhaseResponse",
       "fields": [
@@ -5163,6 +7378,188 @@
       ]
     },
     {
+      "name": "GapInstance",
+      "go_type": "timetablehttp.GapInstance",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "assigned_staff_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "absent_staff_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "present_staff_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "planned_staff_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "understaffed_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GapsResponse",
+      "go_type": "timetablehttp.GapsResponse",
+      "fields": [
+        {
+          "name": "from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "gaps",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "GapInstance"
+            }
+          }
+        },
+        {
+          "name": "acknowledged",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "GapInstance"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianNoticeReachResponse",
+      "go_type": "timetablehttp.GuardianNoticeReachResponse",
+      "fields": [
+        {
+          "name": "child_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "family_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianNoticeRequest",
+      "go_type": "timetablehttp.GuardianNoticeRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "message",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianNoticeResponse",
+      "go_type": "timetablehttp.GuardianNoticeResponse",
+      "fields": [
+        {
+          "name": "announcement_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "child_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "family_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "HistoryResponse",
       "go_type": "timetracking.HistoryResponse",
       "fields": [
@@ -5350,6 +7747,53 @@
           "name": "rounding_minutes",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Holiday",
+      "go_type": "schoolcalendar.Holiday",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidaysResponse",
+      "go_type": "timetablehttp.HolidaysResponse",
+      "fields": [
+        {
+          "name": "federal_state",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "federal_state_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "holidays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Holiday"
+            }
           }
         }
       ]
@@ -5579,6 +8023,172 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InstanceDayResponse",
+      "go_type": "timetablehttp.InstanceDayResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active_group_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "attendance",
+          "schema": {
+            "kind": "ref",
+            "ref": "AttendanceDayResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InstanceParticipantResponse",
+      "go_type": "timetablehttp.InstanceParticipantResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "display_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InstanceParticipantsResponse",
+      "go_type": "timetablehttp.InstanceParticipantsResponse",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "participants",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "InstanceParticipantResponse"
+            }
+          }
+        },
+        {
+          "name": "staff",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "InstanceStaffNameResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "InstanceStaffNameResponse",
+      "go_type": "timetablehttp.InstanceStaffNameResponse",
+      "fields": [
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "display_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InstanceStatusResponse",
+      "go_type": "timetablehttp.InstanceStatusResponse",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "completed_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reopen_until",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_notice",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "GuardianNoticeResponse"
           }
         }
       ]
@@ -6110,6 +8720,53 @@
             "elem": {
               "kind": "ref",
               "ref": "MorningAttendanceMarkRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MoveStaffResponse",
+      "go_type": "timetablehttp.MoveStaffResponse",
+      "fields": [
+        {
+          "name": "target_instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "source_instance_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "time_conflicts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SubstituteTimeConflict"
+            }
+          }
+        },
+        {
+          "name": "coverage_warnings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ShiftCoverageWarning"
             }
           }
         }
@@ -7550,6 +10207,75 @@
       ]
     },
     {
+      "name": "PatchAttendanceRequest",
+      "go_type": "timetablehttp.PatchAttendanceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "substatus",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "PeriodWarning",
+      "go_type": "timetablehttp.PeriodWarning",
+      "fields": [
+        {
+          "name": "code",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "message",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "overlapping_period_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "overlapping_period_names",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "PersonRequest",
       "go_type": "traegerstaff.PersonRequest",
       "request": true,
@@ -7627,6 +10353,149 @@
           "name": "table",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PlannedConflictWarning",
+      "go_type": "timetable.PlannedConflictWarning",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "resource_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "message",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "conflicting_instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "conflicting_title",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PlannedConflictsResponse",
+      "go_type": "timetablehttp.PlannedConflictsResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "warnings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PlannedConflictWarning"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PlannedNowResponse",
+      "go_type": "timetablehttp.PlannedNowResponse",
+      "fields": [
+        {
+          "name": "instances",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OperationPlannedInstance"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PlanningTrack",
+      "go_type": "timetable.PlanningTrack",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "color",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sort_order",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "archived_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
           }
         }
       ]
@@ -8743,6 +11612,137 @@
       ]
     },
     {
+      "name": "SchoolVacation",
+      "go_type": "schoolcalendar.SchoolVacation",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "acknowledged",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolVacationAcknowledgedResponse",
+      "go_type": "timetablehttp.SchoolVacationAcknowledgedResponse",
+      "fields": [
+        {
+          "name": "acknowledged",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolVacationHint",
+      "go_type": "timetable.SchoolVacationHint",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cancel_from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolVacationHintsResponse",
+      "go_type": "timetablehttp.SchoolVacationHintsResponse",
+      "fields": [
+        {
+          "name": "hints",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolVacationHint"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolVacationsResponse",
+      "go_type": "timetablehttp.SchoolVacationsResponse",
+      "fields": [
+        {
+          "name": "federal_state",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "federal_state_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "synced_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "vacations",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolVacation"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolsResponse",
       "go_type": "catererportalhttp.SchoolsResponse",
       "fields": [
@@ -8990,6 +11990,166 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ShiftCoverageRequest",
+      "go_type": "timetablehttp.ShiftCoverageRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "dates",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "exclude_instance_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "concrete_instance_date",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "replan_activity_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "week_pattern",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "ShiftCoverageResponse",
+      "go_type": "timetablehttp.ShiftCoverageResponse",
+      "fields": [
+        {
+          "name": "coverage_warnings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ShiftCoverageWarning"
+            }
+          }
+        },
+        {
+          "name": "coverage_warning_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ShiftCoverageWarning",
+      "go_type": "timetable.ShiftCoverageWarning",
+      "fields": [
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "staff_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "uncovered_start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "uncovered_end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "message",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -9375,6 +12535,32 @@
       ]
     },
     {
+      "name": "SlotResponse",
+      "go_type": "timetablehttp.SlotResponse",
+      "fields": [
+        {
+          "name": "expected_time",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "source",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "StaffAbsenceResponse",
       "go_type": "workforce.StaffAbsenceResponse",
       "fields": [
@@ -9565,6 +12751,159 @@
       ]
     },
     {
+      "name": "StaffPoolAssignmentResponse",
+      "go_type": "timetablehttp.StaffPoolAssignmentResponse",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_substitute",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffPoolEntryResponse",
+      "go_type": "timetablehttp.StaffPoolEntryResponse",
+      "fields": [
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "display_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "on_shift",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "covers_window",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "shift_windows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "absence_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "assignments",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StaffPoolAssignmentResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffPoolResponse",
+      "go_type": "timetablehttp.StaffPoolResponse",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "dienstplan_in_use",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "entries",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StaffPoolEntryResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "StaffVacationOpening",
       "go_type": "workforce.StaffVacationOpening",
       "fields": [
@@ -9658,6 +12997,47 @@
       ]
     },
     {
+      "name": "StartInstanceResponse",
+      "go_type": "timetablehttp.StartInstanceResponse",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active_group_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "started_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "warnings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "InstanceConflictWarning"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "StudentConsentResponse",
       "go_type": "presenceprojectionhttp.StudentConsentResponse",
       "fields": [
@@ -9680,6 +13060,55 @@
           "optional": true,
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StudentDayResponse",
+      "go_type": "timetablehttp.StudentDayResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "arrival",
+          "schema": {
+            "kind": "ref",
+            "ref": "SlotResponse"
+          }
+        },
+        {
+          "name": "instances",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "InstanceDayResponse"
+            }
+          }
+        },
+        {
+          "name": "pickup",
+          "schema": {
+            "kind": "ref",
+            "ref": "SlotResponse"
           }
         }
       ]
@@ -10923,6 +14352,71 @@
       ]
     },
     {
+      "name": "StudentWeekResponse",
+      "go_type": "timetablehttp.StudentWeekResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StudentDayResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SubstituteTimeConflict",
+      "go_type": "timetable.SubstituteTimeConflict",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "other_instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "message",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "SupervisionContact",
       "go_type": "classday.SupervisionContact",
       "fields": [
@@ -11148,6 +14642,18 @@
           "name": "legal_remedy",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TemplateArchivedResponse",
+      "go_type": "timetablehttp.TemplateArchivedResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
           }
         }
       ]
@@ -12763,6 +16269,101 @@
       ]
     },
     {
+      "name": "applyDeviationsRequest",
+      "go_type": "timetablehttp.applyDeviationsRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "cancel",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "cancel_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "understaffed_ack",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "understaffed_note",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "absences",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "deviationAbsence"
+            }
+          }
+        },
+        {
+          "name": "substitutions",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "deviationSubstitution"
+            }
+          }
+        },
+        {
+          "name": "substitution_removals",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "deviationSubstitutionRemoval"
+            }
+          }
+        },
+        {
+          "name": "presences",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "DeviationPresence"
+            }
+          }
+        },
+        {
+          "name": "guardian_notice",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "GuardianNoticeRequest"
+          }
+        }
+      ]
+    },
+    {
       "name": "assignmentResponse",
       "go_type": "timetracking.assignmentResponse",
       "fields": [
@@ -12869,6 +16470,68 @@
       ]
     },
     {
+      "name": "attendanceCorrectionResponse",
+      "go_type": "timetablehttp.attendanceCorrectionResponse",
+      "fields": [
+        {
+          "name": "field_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "old_value",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "new_value",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "actor_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "corrected_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "attendanceCorrectionsResponse",
+      "go_type": "timetablehttp.attendanceCorrectionsResponse",
+      "fields": [
+        {
+          "name": "corrections",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "attendanceCorrectionResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "billingKeyDayResponse",
       "go_type": "operator.billingKeyDayResponse",
       "fields": [
@@ -12893,6 +16556,205 @@
       ]
     },
     {
+      "name": "bookingLeftoverResponse",
+      "go_type": "timetablehttp.bookingLeftoverResponse",
+      "fields": [
+        {
+          "name": "template_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "template_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "student_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "booking_ended_on",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "until",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "kept",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "bookingLeftoversResponse",
+      "go_type": "timetablehttp.bookingLeftoversResponse",
+      "fields": [
+        {
+          "name": "leftovers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "bookingLeftoverResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "bootstrapPeriodsResponse",
+      "go_type": "timetablehttp.bootstrapPeriodsResponse",
+      "fields": [
+        {
+          "name": "periods",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CalendarPeriodResponse"
+            }
+          }
+        },
+        {
+          "name": "created",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "bulkCancelRequest",
+      "go_type": "timetablehttp.bulkCancelRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "dry_run",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "include_closing_day_series",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "bulkCheckInRequest",
+      "go_type": "timetablehttp.bulkCheckInRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "lax_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "bulkSubstitutionRequest",
+      "go_type": "timetablehttp.bulkSubstitutionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "absent_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "substitute_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "dates",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "closingDayRangeResponse",
       "go_type": "timetracking.closingDayRangeResponse",
       "fields": [
@@ -12910,6 +16772,815 @@
         },
         {
           "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "combinedOfferingCountsResponse",
+      "go_type": "timetablehttp.combinedOfferingCountsResponse",
+      "fields": [
+        {
+          "name": "total_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "grade_counts",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "students",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "combinedOfferingStudentResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "combinedOfferingStudentResponse",
+      "go_type": "timetablehttp.combinedOfferingStudentResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "conflictAcksResponse",
+      "go_type": "timetablehttp.conflictAcksResponse",
+      "fields": [
+        {
+          "name": "fingerprints",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "convertInstanceToSeriesRequest",
+      "go_type": "timetablehttp.convertInstanceToSeriesRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "category_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "planning_track_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "max_participants",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "required_staff",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "week_pattern",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "education_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "target_group_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "target_school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "targets",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "templateTargetRequest"
+            }
+          }
+        },
+        {
+          "name": "source_care_offering_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "source_grade_levels",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "source_school_classes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "list_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "include_closing_days",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "materialize_from",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "materialize_to",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "staff_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "primary_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "weekday_assignments",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "weekdayAssignmentRequest"
+            }
+          }
+        },
+        {
+          "name": "instance_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "convertInstanceToSeriesResponse",
+      "go_type": "timetablehttp.convertInstanceToSeriesResponse",
+      "fields": [
+        {
+          "name": "template_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "timeframe_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "schedule_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "linked_instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "createInstanceRequest",
+      "go_type": "timetablehttp.createInstanceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "activity_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "list_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "staff_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "required_staff",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "createTemplateRequest",
+      "go_type": "timetablehttp.createTemplateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "category_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "planning_track_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "max_participants",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "required_staff",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "week_pattern",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "education_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "target_group_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "target_school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "targets",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "templateTargetRequest"
+            }
+          }
+        },
+        {
+          "name": "source_care_offering_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "source_grade_levels",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "source_school_classes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "list_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "include_closing_days",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "materialize_from",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "materialize_to",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "staff_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "primary_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "weekday_assignments",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "weekdayAssignmentRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "createTemplateResponse",
+      "go_type": "timetablehttp.createTemplateResponse",
+      "fields": [
+        {
+          "name": "template_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "timeframe_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "schedule_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "instances_created",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "materialized_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "materialized_to",
+          "optional": true,
           "schema": {
             "kind": "string"
           }
@@ -13357,6 +18028,167 @@
       ]
     },
     {
+      "name": "deviationAbsence",
+      "go_type": "timetablehttp.deviationAbsence",
+      "request": true,
+      "fields": [
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "instance_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "deviationSubstitution",
+      "go_type": "timetablehttp.deviationSubstitution",
+      "request": true,
+      "fields": [
+        {
+          "name": "absent_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "substitute_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "instance_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "deviationSubstitutionRemoval",
+      "go_type": "timetablehttp.deviationSubstitutionRemoval",
+      "request": true,
+      "fields": [
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "instance_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "editedInWindowResponse",
+      "go_type": "timetablehttp.editedInWindowResponse",
+      "fields": [
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "occurrences",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "editedOccurrenceItem"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "editedOccurrenceItem",
+      "go_type": "timetablehttp.editedOccurrenceItem",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "emailSubscriptionResponse",
       "go_type": "notifications.emailSubscriptionResponse",
       "fields": [
@@ -13364,6 +18196,372 @@
           "name": "enabled",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "emptyRosterReason",
+      "go_type": "timetablehttp.emptyRosterReason",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phase_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "service_start_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "endTemplateRequest",
+      "go_type": "timetablehttp.endTemplateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "effective_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "endTemplateResponse",
+      "go_type": "timetablehttp.endTemplateResponse",
+      "fields": [
+        {
+          "name": "template_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "effective_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "deleted_instances",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "enrichedInstance",
+      "go_type": "timetablehttp.enrichedInstance",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "series_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_spontaneous",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_live",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "activity_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "list_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "activity_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "planning_track_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "planning_track_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "planning_track_color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "planning_track_sort_order",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "room_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "instanceStaffSummary"
+            }
+          }
+        },
+        {
+          "name": "student_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "students",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "instanceStudentSummary"
+            }
+          }
+        },
+        {
+          "name": "staff_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "absent_staff_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "understaffed_ack",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "understaffed_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cancel_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_students_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "present_students_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "current_students_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "occupancy",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "instanceOccupancy"
+          }
+        },
+        {
+          "name": "empty_roster_reason",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "emptyRosterReason"
+          }
+        },
+        {
+          "name": "not_scheduled_students_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "required_staff_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "assigned_staff_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "required_staff_override",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "conflict_warnings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "InstanceConflictWarning"
+            }
+          }
+        },
+        {
+          "name": "can_reopen",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_complete",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "complete_available_at",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -13486,6 +18684,170 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "instanceOccupancy",
+      "go_type": "timetablehttp.instanceOccupancy",
+      "fields": [
+        {
+          "name": "participant_limit",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "current_students_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "instanceStaffSummary",
+      "go_type": "timetablehttp.instanceStaffSummary",
+      "fields": [
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "is_primary",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_absent",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_substitute",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_sick_absence",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "absence_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "instanceStudentSummary",
+      "go_type": "timetablehttp.instanceStudentSummary",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "substatus",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "checked_in_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_day_status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "early_pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "keptStudentTemplateDaysRequest",
+      "go_type": "timetablehttp.keptStudentTemplateDaysRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "booking_ended_on",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "kept",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "keptStudentTemplateDaysResponse",
+      "go_type": "timetablehttp.keptStudentTemplateDaysResponse",
+      "fields": [
+        {
+          "name": "kept",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "roster_rows",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -13776,6 +19138,836 @@
       ]
     },
     {
+      "name": "listTemplatesResponse",
+      "go_type": "timetablehttp.listTemplatesResponse",
+      "fields": [
+        {
+          "name": "templates",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "templateResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "manualRosterRequest",
+      "go_type": "timetablehttp.manualRosterRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "confirmed",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "manualRosterResponse",
+      "go_type": "timetablehttp.manualRosterResponse",
+      "fields": [
+        {
+          "name": "manual_roster_confirmed",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "materializeRequest",
+      "go_type": "timetablehttp.materializeRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "from_date",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "to_date",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "materializeResponse",
+      "go_type": "timetablehttp.materializeResponse",
+      "fields": [
+        {
+          "name": "from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "instances_created",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "candidates_skipped_existing",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "candidates_skipped_exception",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "candidates_skipped_ab_week",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "candidates_skipped_no_period",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "candidates_skipped_incomplete",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "skipped_ended",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "skipped_not_started",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "skipped_holidays",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "skipped_closing_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "candidates_raced",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "instance_students_created",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "instance_staff_created",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "warnings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "materializeWarning"
+            }
+          }
+        },
+        {
+          "name": "duration_ms",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "materializeWarning",
+      "go_type": "timetablehttp.materializeWarning",
+      "fields": [
+        {
+          "name": "code",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "message",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "moveStaffRequest",
+      "go_type": "timetablehttp.moveStaffRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "source_instance_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringConnectionRequest",
+      "go_type": "timetablehttp.offeringConnectionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "offering_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "grade_levels",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "school_classes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "effective_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringConnectionResponse",
+      "go_type": "timetablehttp.offeringConnectionResponse",
+      "fields": [
+        {
+          "name": "template_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "effective_date",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringGapAckRequest",
+      "go_type": "timetablehttp.offeringGapAckRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "period_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "acknowledged",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringGapAckResponse",
+      "go_type": "timetablehttp.offeringGapAckResponse",
+      "fields": [
+        {
+          "name": "acknowledged",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "acknowledged_classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringGapResponse",
+      "go_type": "timetablehttp.offeringGapResponse",
+      "fields": [
+        {
+          "name": "offering",
+          "schema": {
+            "kind": "ref",
+            "ref": "templateRosterMaintenanceOfferingResponse"
+          }
+        },
+        {
+          "name": "student_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "school_classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "acknowledged",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "acknowledged_classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "new_series_classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "new_series_plans_covered",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringGapsResponse",
+      "go_type": "timetablehttp.offeringGapsResponse",
+      "fields": [
+        {
+          "name": "gaps",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "offeringGapResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringPreviewAlternativeResponse",
+      "go_type": "timetablehttp.offeringPreviewAlternativeResponse",
+      "fields": [
+        {
+          "name": "offering_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringPreviewDroppedResponse",
+      "go_type": "timetablehttp.offeringPreviewDroppedResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "booked_weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "excluded_by",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringPreviewResponse",
+      "go_type": "timetablehttp.offeringPreviewResponse",
+      "fields": [
+        {
+          "name": "from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "offeringPreviewWeekdayResponse"
+            }
+          }
+        },
+        {
+          "name": "segments",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "offeringPreviewSegmentResponse"
+            }
+          }
+        },
+        {
+          "name": "other_offerings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "offeringPreviewAlternativeResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringPreviewSegmentResponse",
+      "go_type": "timetablehttp.offeringPreviewSegmentResponse",
+      "fields": [
+        {
+          "name": "template_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "valid_from",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "valid_until",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringPreviewStudentResponse",
+      "go_type": "timetablehttp.offeringPreviewStudentResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringPreviewWeekdayResponse",
+      "go_type": "timetablehttp.offeringPreviewWeekdayResponse",
+      "fields": [
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "added",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "offeringPreviewStudentResponse"
+            }
+          }
+        },
+        {
+          "name": "removed",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "offeringPreviewDroppedResponse"
+            }
+          }
+        },
+        {
+          "name": "kept_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringSourceOptionResponse",
+      "go_type": "timetablehttp.offeringSourceOptionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phase_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "phase_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phase_service_start",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "total_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "grade_counts",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "sourced_templates",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "offeringSourcedTemplateResponse"
+            }
+          }
+        },
+        {
+          "name": "legacy_linked_template_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringSourcedTemplateResponse",
+      "go_type": "timetablehttp.offeringSourcedTemplateResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "grade_levels",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "school_classes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringSourcesResponse",
+      "go_type": "timetablehttp.offeringSourcesResponse",
+      "fields": [
+        {
+          "name": "offerings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "offeringSourceOptionResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringSuggestionEnvelope",
+      "go_type": "timetablehttp.offeringSuggestionEnvelope",
+      "fields": [
+        {
+          "name": "suggestion",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "offeringSuggestionResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "offeringSuggestionResponse",
+      "go_type": "timetablehttp.offeringSuggestionResponse",
+      "fields": [
+        {
+          "name": "offerings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "templateRosterMaintenanceOfferingResponse"
+            }
+          }
+        },
+        {
+          "name": "grade_levels",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "school_classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "unbooked_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "missing_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "candidates",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "templateRosterMaintenanceOfferingResponse"
+            }
+          }
+        },
+        {
+          "name": "combinations",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "array",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "templateRosterMaintenanceOfferingResponse"
+              }
+            }
+          }
+        },
+        {
+          "name": "ambiguous",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "openThreadRequest",
       "go_type": "staffmessaging.openThreadRequest",
       "request": true,
@@ -13803,6 +19995,173 @@
           "name": "label",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "pickupExtensionBlockResponse",
+      "go_type": "timetablehttp.pickupExtensionBlockResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "pickupExtensionResponse",
+      "go_type": "timetablehttp.pickupExtensionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "student_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekday",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "previous_pickup_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "blocks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "pickupExtensionBlockResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "pickupExtensionsResponse",
+      "go_type": "timetablehttp.pickupExtensionsResponse",
+      "fields": [
+        {
+          "name": "tasks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "pickupExtensionResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "planningTrackOrderRequest",
+      "go_type": "timetablehttp.planningTrackOrderRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "planningTrackRequest",
+      "go_type": "timetablehttp.planningTrackRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sort_order",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -14078,6 +20437,56 @@
       ]
     },
     {
+      "name": "removeStudentTemplateDaysRequest",
+      "go_type": "timetablehttp.removeStudentTemplateDaysRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "effective_until",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "removeStudentTemplateDaysResponse",
+      "go_type": "timetablehttp.removeStudentTemplateDaysResponse",
+      "fields": [
+        {
+          "name": "roster_rows",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "occurrences",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "renameGroupRequest",
       "go_type": "staffmessaging.renameGroupRequest",
       "request": true,
@@ -14092,6 +20501,91 @@
       ]
     },
     {
+      "name": "replanWeekRequest",
+      "go_type": "timetablehttp.replanWeekRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "from_date",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "to_date",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "activity_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "replanWeekResponse",
+      "go_type": "timetablehttp.replanWeekResponse",
+      "fields": [
+        {
+          "name": "from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "deleted_instances",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "instances_created",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "candidates_skipped_existing",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "instance_staff_created",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "instance_students_created",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "duration_ms",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "resentResponse",
       "go_type": "announcement.resentResponse",
       "fields": [
@@ -14099,6 +20593,213 @@
           "name": "resent_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "resolvePickupExtensionRequest",
+      "go_type": "timetablehttp.resolvePickupExtensionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "block_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "resolvePickupExtensionResponse",
+      "go_type": "timetablehttp.resolvePickupExtensionResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "assigned_blocks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "pickupExtensionBlockResponse"
+            }
+          }
+        },
+        {
+          "name": "instance_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "rosterDeviationChildResponse",
+      "go_type": "timetablehttp.rosterDeviationChildResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "rosterDeviationResponse",
+      "go_type": "timetablehttp.rosterDeviationResponse",
+      "fields": [
+        {
+          "name": "template_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "offerings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "templateRosterMaintenanceOfferingResponse"
+            }
+          }
+        },
+        {
+          "name": "grade_levels",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "school_classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "unbooked_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "missing_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "unbooked",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "rosterDeviationChildResponse"
+            }
+          }
+        },
+        {
+          "name": "missing",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "rosterDeviationChildResponse"
+            }
+          }
+        },
+        {
+          "name": "candidates",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "templateRosterMaintenanceOfferingResponse"
+            }
+          }
+        },
+        {
+          "name": "combinations",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "array",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "templateRosterMaintenanceOfferingResponse"
+              }
+            }
+          }
+        },
+        {
+          "name": "ambiguous",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "rosterDeviationsResponse",
+      "go_type": "timetablehttp.rosterDeviationsResponse",
+      "fields": [
+        {
+          "name": "deviations",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "rosterDeviationResponse"
+            }
           }
         }
       ]
@@ -14196,6 +20897,477 @@
           "name": "unread_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "schoolVacationAcknowledgementRequest",
+      "go_type": "timetablehttp.schoolVacationAcknowledgementRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "splitTemplateRequest",
+      "go_type": "timetablehttp.splitTemplateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "category_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "planning_track_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "max_participants",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "week_pattern",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "education_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "target_group_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "target_school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "targets",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "templateTargetRequest"
+            }
+          }
+        },
+        {
+          "name": "source_care_offering_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "source_grade_levels",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "source_school_classes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "include_closing_days",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "staff_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "primary_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "weekday_assignments",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "weekdayAssignmentRequest"
+            }
+          }
+        },
+        {
+          "name": "series_roster_from",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "series_roster_scope_student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "series_roster_scope_staff_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "series_roster_scope_weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "series_roster_primary_changed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "propagate_notes_to_predecessors",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "replan_future",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "required_staff",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "list_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "effective_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "materialize_from",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "materialize_to",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "splitTemplateResponse",
+      "go_type": "timetablehttp.splitTemplateResponse",
+      "fields": [
+        {
+          "name": "old_template_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "new_template_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "schedule_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "deleted_instances",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "instances_created",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "spontaneousStartRequest",
+      "go_type": "timetablehttp.spontaneousStartRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "activity_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "staff_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "lax_id"
+            }
+          }
+        },
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
           }
         }
       ]
@@ -14447,6 +21619,623 @@
       ]
     },
     {
+      "name": "templateProtectedStudentAssignmentResponse",
+      "go_type": "timetablehttp.templateProtectedStudentAssignmentResponse",
+      "fields": [
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "student_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "templateResponse",
+      "go_type": "timetablehttp.templateResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "resolved_from_template_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "category_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "planning_track_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "planning_track_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "planning_track_color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "planning_track_sort_order",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "education_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "education_group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_open",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "max_participants",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "target_group_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "targets",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "templateTargetResponse"
+            }
+          }
+        },
+        {
+          "name": "source_care_offering_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "source_grade_levels",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "source_school_classes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "list_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "include_closing_days",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "shift_type_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "shift_type_color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "enrollment_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "supervisor_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "required_staff_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "assigned_staff_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "required_staff_override",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "student_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "staff_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "primary_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "schedules",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "templateScheduleResponse"
+            }
+          }
+        },
+        {
+          "name": "weekday_assignments",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "templateWeekdayAssignmentResponse"
+            }
+          }
+        },
+        {
+          "name": "protected_student_assignments",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "templateProtectedStudentAssignmentResponse"
+            }
+          }
+        },
+        {
+          "name": "roster_maintenance",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "templateRosterMaintenanceResponse"
+          }
+        },
+        {
+          "name": "manual_roster_confirmed",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "templateRosterMaintenanceOfferingResponse",
+      "go_type": "timetablehttp.templateRosterMaintenanceOfferingResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "templateRosterMaintenanceResponse",
+      "go_type": "timetablehttp.templateRosterMaintenanceResponse",
+      "fields": [
+        {
+          "name": "mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "offerings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "templateRosterMaintenanceOfferingResponse"
+            }
+          }
+        },
+        {
+          "name": "grade_levels",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "school_classes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "inactive_offerings",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "templateRosterMaintenanceOfferingResponse"
+            }
+          }
+        },
+        {
+          "name": "invalid_offerings",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "templateRosterMaintenanceOfferingResponse"
+            }
+          }
+        },
+        {
+          "name": "dynamic_targets",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "care_offerings_disabled",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "templateScheduleResponse",
+      "go_type": "timetablehttp.templateScheduleResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "week_pattern",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "valid_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "valid_until",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "templateTargetRequest",
+      "go_type": "timetablehttp.templateTargetRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "education_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "templateTargetResponse",
+      "go_type": "timetablehttp.templateTargetResponse",
+      "fields": [
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "education_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "education_group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "templateWeekdayAssignmentResponse",
+      "go_type": "timetablehttp.templateWeekdayAssignmentResponse",
+      "fields": [
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "staff_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "student_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "primary_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        }
+      ]
+    },
+    {
       "name": "unreadCountResponse",
       "go_type": "staffmessaging.unreadCountResponse",
       "fields": [
@@ -14469,6 +22258,503 @@
           "schema": {
             "kind": "int",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "updateInstanceRequest",
+      "go_type": "timetablehttp.updateInstanceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "activity_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "list_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "staff_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "required_staff",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "updateTemplateRequest",
+      "go_type": "timetablehttp.updateTemplateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "category_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "planning_track_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "max_participants",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "required_staff",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "week_pattern",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "education_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "target_group_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "target_school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "targets",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "templateTargetRequest"
+            }
+          }
+        },
+        {
+          "name": "source_care_offering_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "source_grade_levels",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "source_school_classes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "list_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "include_closing_days",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "staff_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "primary_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "weekday_assignments",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "weekdayAssignmentRequest"
+            }
+          }
+        },
+        {
+          "name": "series_roster_from",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "series_roster_scope_student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "series_roster_scope_staff_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "series_roster_scope_weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "series_roster_primary_changed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "propagate_notes_to_predecessors",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "replan_future",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "weekdayAssignmentRequest",
+      "go_type": "timetablehttp.weekdayAssignmentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "weekday",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "staff_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "primary_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "weeklyInstancesResponse",
+      "go_type": "timetablehttp.weeklyInstancesResponse",
+      "fields": [
+        {
+          "name": "from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "instances",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "enrichedInstance"
+            }
           }
         }
       ]

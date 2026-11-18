@@ -17,6 +17,7 @@ var (
 	marshalerType   = reflect.TypeFor[json.Marshaler]()
 	unmarshalerType = reflect.TypeFor[json.Unmarshaler]()
 	timeType        = reflect.TypeFor[time.Time]()
+	rawJSONType     = reflect.TypeFor[json.RawMessage]()
 	dateType        = reflect.TypeFor[calendar.Date]()
 )
 
@@ -287,6 +288,11 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 // instants, days, identifiers and enums. It also stops at a type that writes
 // or reads itself without an entry.
 func (b *builder) named(t reflect.Type, where string, request bool) (Schema, bool, error) {
+	if t == rawJSONType {
+		// A raw value is any JSON the owner stores and hands on; nil is null
+		// or, with omitempty, no key.
+		return Schema{Kind: KindJSON, Nullable: true}, true, nil
+	}
 	if t == timeType {
 		return Schema{Kind: KindInstant}, true, nil
 	}
@@ -303,6 +309,11 @@ func (b *builder) named(t reflect.Type, where string, request bool) (Schema, boo
 	if name, ok := b.enumByType[t]; ok {
 		return Schema{Kind: KindEnum, Ref: name}, true, nil
 	}
+	if request && b.readers[t] == ReadsValue {
+		b.used["reader:"+t.String()] = true
+		s, err := b.wrapped(t, where)
+		return s, true, err
+	}
 	if t.Implements(marshalerType) || reflect.PointerTo(t).Implements(marshalerType) {
 		return Schema{}, false, fmt.Errorf("%s: %s has its own MarshalJSON and no entry in the contract generator", where, t)
 	}
@@ -315,6 +326,21 @@ func (b *builder) named(t reflect.Type, where string, request bool) (Schema, boo
 		b.used["reader:"+t.String()] = true
 	}
 	return Schema{}, false, nil
+}
+
+// wrapped is the request value a ReadsValue wrapper reads into its field
+// Value. The wrapper itself tells an absent key from null.
+func (b *builder) wrapped(t reflect.Type, where string) (Schema, error) {
+	sf, ok := t.FieldByName("Value")
+	if !ok || t.Kind() != reflect.Struct {
+		return Schema{}, fmt.Errorf("%s: %s reads a value but has no field Value", where, t)
+	}
+	at := where + "." + t.Name() + ".Value"
+	s, err := b.schema(sf.Type, at, true)
+	if errors.Is(err, errBareInt64) {
+		err = b.numericID(&s, t, sf.Name, false, at)
+	}
+	return s, err
 }
 
 func (b *builder) object(t reflect.Type, where string, request bool) (string, error) {
