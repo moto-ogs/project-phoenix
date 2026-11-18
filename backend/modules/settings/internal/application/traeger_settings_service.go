@@ -148,6 +148,33 @@ func (t *TraegerSettings) TraegerBools(ctx context.Context, organizationID int64
 	return values, nil
 }
 
+// TraegerTextsAndBools reads Träger-level texts and switches of a Träger in
+// one read: its own values or the registry defaults. The letterhead of the
+// Elternabrechnung takes its texts and the switch of the GiroCode (#5624)
+// together, so its letters cost no second statement. It joins the caller's
+// Träger transaction; a key without a Träger level, or a value of another
+// type, is an error.
+func (t *TraegerSettings) TraegerTextsAndBools(ctx context.Context, organizationID int64, textKeys, boolKeys []string) (map[string]string, map[string]bool, error) {
+	keys := append(append(make([]string, 0, len(textKeys)+len(boolKeys)), textKeys...), boolKeys...)
+	snapshot, err := t.traegerSnapshot(ctx, organizationID, keys, "traeger_texts_and_bools")
+	if err != nil {
+		return nil, nil, err
+	}
+	texts := make(map[string]string, len(textKeys))
+	for _, key := range textKeys {
+		if texts[key], err = snapshot.String(key); err != nil {
+			return nil, nil, err
+		}
+	}
+	switches := make(map[string]bool, len(boolKeys))
+	for _, key := range boolKeys {
+		if switches[key], err = snapshot.Bool(key); err != nil {
+			return nil, nil, err
+		}
+	}
+	return texts, switches, nil
+}
+
 // TraegerInts reads the effective values of Träger-level whole numbers of a
 // Träger: its own value or the registry default. The Träger dashboard reads
 // the thresholds of its hints (#4675), the Betreuungsvertrag after how many

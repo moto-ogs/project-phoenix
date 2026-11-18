@@ -128,7 +128,12 @@ export function ParentMessagesPage() {
   const t = useCareTermTranslations("parentMessages");
   const tGroupThreads = useCareTermTranslations("parentGroupThreads");
   const childResource = useParentChildren();
-  const children = childResource.data ?? EMPTY_CHILDREN;
+  const linkedChildren = childResource.data ?? EMPTY_CHILDREN;
+  // Ein Kind ohne OGS-Platz hat keine Unterhaltung mit der OGS (#4803).
+  const children = useMemo(
+    () => linkedChildren.filter((child) => child.without_care_place !== true),
+    [linkedChildren],
+  );
   const threads = useSWRAuth(
     children.length > 1 ? parentKeys.messages() : null,
     listMessageThreads,
@@ -172,7 +177,7 @@ export function ParentMessagesPage() {
     </div>
   );
 
-  if (loading || failure || children.length === 0) {
+  if (loading || failure || linkedChildren.length === 0) {
     return (
       <ParentPage
         header={header}
@@ -180,6 +185,20 @@ export function ParentMessagesPage() {
         error={failure ? error : null}
         empty={{ title: t("noChildren") }}
       />
+    );
+  }
+
+  // Nur Kinder ohne OGS-Platz: keine Unterhaltung, aber die
+  // Gruppennachrichten bleiben.
+  if (children.length === 0) {
+    const noGroupThreads = groupThreads.length === 0 && !groupThreadsError;
+    return (
+      <ParentPage
+        header={header}
+        empty={noGroupThreads ? { title: t("withoutCarePlace") } : undefined}
+      >
+        <GroupThreadsSection threads={groupThreads} error={groupThreadsError} />
+      </ParentPage>
     );
   }
 

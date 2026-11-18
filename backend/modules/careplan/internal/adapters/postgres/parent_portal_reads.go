@@ -63,6 +63,7 @@ func (q parentChildQueries) child(row *parentModels.ChildSummary) *careplan.Pare
 		SchoolSlug:          row.SchoolSlug,
 		GuardianPermissions: permissions,
 		GuardianProfileID:   row.GuardianProfileID,
+		WithoutCarePlace:    row.WithoutCarePlace,
 	}
 }
 func parentPortalDatePointer(value *careplan.Date) *calendar.Date {

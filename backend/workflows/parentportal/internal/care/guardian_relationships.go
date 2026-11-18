@@ -8,6 +8,24 @@ import (
 	"strings"
 )
 
+// relationshipEditAllowed refuses a contact change for a child whose care has
+// ended: it keeps read access, but nothing new is submitted (#2487). Who picks
+// the child up from the OGS is an OGS function (#4803), so granting a pickup
+// right or writing a pickup note also needs an OGS place; revoking one and
+// clearing a note stay possible, and the emergency contact stays with the
+// school.
+func relationshipEditAllowed(child *Child, input GuardianRelationshipInput) error {
+	if err := child.RequireCareRunning(); err != nil {
+		return err
+	}
+	grantsPickup := input.CanPickup != nil && *input.CanPickup
+	writesNote := input.PickupNotes != nil && strings.TrimSpace(*input.PickupNotes) != ""
+	if grantsPickup || writesNote {
+		return child.RequireCarePlace()
+	}
+	return nil
+}
+
 // UpdateGuardianRelationship edits the per-child pickup/relationship fields of a
 // guardian. The CanPickup and IsEmergencyContact flags require
 // parent_portal.pickup.manage (safety-relevant authority); PickupNotes requires
@@ -39,9 +57,7 @@ func (s *Service) UpdateGuardianRelationship(ctx context.Context, accountID, stu
 	if err != nil {
 		return nil, err
 	}
-	// A child whose care at this school has ended keeps read access to what
-	// happened, but nothing new can be submitted for them (#2487).
-	if err := child.RequireCareRunning(); err != nil {
+	if err := relationshipEditAllowed(child, input); err != nil {
 		return nil, err
 	}
 	if err := s.requireGuardianManagementEnabled(ctx, child.TenantID); err != nil {

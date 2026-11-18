@@ -5,6 +5,10 @@
     "title": "Care has ended",
     "body": "Your child is no longer in care at this {careTerm}. You can still view everything from before. New reports are no longer possible."
   },
+  "withoutCarePlace": {
+    "title": "No place in the {careTerm}",
+    "body": "Your child does not have a place in the {careTerm}. Pickup, care times, meals and messages to the {careTerm} are therefore not available here."
+  },
   "notFound": "There is no child at this address in your account. Please choose your child from the overview.",
   "noChildren": "No child is linked to your account yet. Your school's {careTerm} can set this up.",
   "sections": {

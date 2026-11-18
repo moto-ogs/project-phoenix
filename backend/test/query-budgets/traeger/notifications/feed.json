@@ -1,0 +1,7 @@
+{
+  "scenario": "traeger.notifications.feed",
+  "max": 5,
+  "exact": true,
+  "description": "Träger-scope GET /traeger/notifications/feed/ through real Delivery (#7146). N=0/3/8 entries of the Träger member across two schools of its Träger and one entry of another member; one page read and one unread count, each joined with the active Träger membership and the schools of the session's Träger, in Delivery's own administrative transaction. Includes BEGIN/COMMIT; excludes outer live-session verification.",
+  "route": "GET /traeger/notifications/feed/"
+}

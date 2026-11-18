@@ -199,4 +199,8 @@ export const traegerKeys = {
     const name = previewText(row?.name);
     return name ? { id, name } : undefined;
   },
+  // Die Glocke des Träger-Portals (#7146): Zähler und erste Seite der
+  // Hinweise aller Schulen des Trägers.
+  notificationFeedFirstPage: () => "traeger-notification-feed-first-page",
+  notificationFeedUnread: () => "traeger-notification-feed-unread",
 } as const;

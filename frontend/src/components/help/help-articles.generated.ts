@@ -402,6 +402,8 @@ import type { traegerKeyDateCountsTopic as authored_traegerKeyDateCountsTopic } 
 
 import type { traegerLoginTopic as authored_traegerLoginTopic } from "./articles/traeger-login";
 
+import type { traegerNotificationFeedTopic as authored_traegerNotificationFeedTopic } from "./articles/traeger-notification-feed";
+
 import type { traegerOccupancyTopic as authored_traegerOccupancyTopic } from "./articles/traeger-occupancy";
 
 import type { traegerPayrollExportTopic as authored_traegerPayrollExportTopic } from "./articles/traeger-payroll-export";
@@ -6106,6 +6108,7 @@ export const parentChildOverviewTopic =
         "Ist Ihr Kind heute abgemeldet, steht dort `Heute abgemeldet, keine Abholung`.",
         "Wurde die Abholzeit für heute geändert, steht die Zeit mit dem Hinweis `geändert für heute`.",
         "Ist für heute nichts eingetragen, steht dort `Für heute ist keine Abholung eingetragen`.",
+        "Hat Ihr Kind keinen Platz in der OGS, steht unter `Betreuung` der Hinweis `Kein Platz in der OGS`. Abholung, Betreuungszeiten und Essen fehlen dann. Krankmeldung, Elternsprechtag und Angaben bleiben.",
       ],
       troubleshootingDetails: [
         "Sie sehen kein Kind? Dann hat die OGS Ihren Zugang noch nicht freigegeben.",
@@ -6531,6 +6534,7 @@ export const parentFeatureMissingTopic =
       ],
       differences: [
         "Manche Dinge dürfen Sie nur ansehen, nicht ändern. Dann fehlt der Knopf, nicht der Bereich.",
+        "Hat Ihr Kind keinen Platz in der OGS, fehlen für dieses Kind Abholung, Betreuungszeiten, Essen und Nachrichten an die OGS. Krankmeldung, Elternbriefe und Elternsprechtag nutzen Sie wie gewohnt.",
       ],
       troubleshootingDetails: [
         "Das Ändern von Angaben ist deaktiviert? Schreiben Sie der OGS, was geändert werden soll.",
@@ -6761,6 +6765,7 @@ export const parentGuardiansTopic = function parentGuardiansTopic(): HelpTopic {
       "Eine E-Mail beim Kontakt lädt niemanden ein. Der App-Zugang ist ein eigener Schritt.",
     ],
     differences: [
+      "Ihr Kind hat keinen OGS-Platz? Notfallkontakte bleiben möglich. Abholrechte und Hinweise zur Abholung fehlen dann. Bei bestehenden Kontakten öffnen Sie dafür `Notfallkontakt`.",
       "Unter `Verbundene Konten` sehen Sie, wer die Eltern-App für Ihr Kind nutzt.",
     ],
     troubleshootingDetails: [
@@ -7550,6 +7555,8 @@ export const parentReportAbsenceTopic =
         "Manche OGS bestätigen jede Meldung erst. Dann steht `Freigabe ausstehend`, und Ihr Kind gilt bis dahin als erwartet.",
         "Am Kind steht danach `Krank` oder `Entschuldigt` mit den Tagen.",
         "Wurde eine Anfrage abgelehnt, steht dort `Abgelehnt`.",
+        // #4803: die Meldung für ein Kind ohne OGS-Platz geht an die Schule.
+        "Ihr Kind hat keinen Platz in der OGS? Dann heißen das Feld `Grund / Hinweis` und der Knopf `Krankmeldung senden` oder `Entschuldigung senden`. Die Schule sieht die Meldung.",
         // #5698: Schuleinträge überschreibt keine Elternmeldung.
         "Hat die OGS einen Tag schon eingetragen, etwa ab einer Uhrzeit entschuldigt? Dann geht für diesen Tag eine Anfrage an die OGS. Sie entscheidet. Bis dahin gilt ihr Eintrag. Die anderen Tage meldet moto direkt.",
       ],
@@ -11484,6 +11491,7 @@ export const traegerBillingTermsTopic =
         "Die Ferienbetreuung hat immer eine eigene Rechnung. Sie steht nie auf der Rechnung der Betreuung.",
         "Bei `Lastschrift` buchen Sie den Betrag selbst ab. Dafür braucht die Familie ein SEPA-Mandat bei Ihnen, und Sie brauchen eine Gläubiger-ID. Ohne Mandat geht die Rechnung als Überweisung. moto bucht kein Geld ab.",
         "Bei `Überweisung` steht auf jedem Schreiben eines Abrechnungslaufs ein QR-Code: auf Rechnung, Gebührenbescheid und Bestätigungsschreiben. Die Familie scannt ihn mit der Banking-App. Empfänger, IBAN, Betrag und Verwendungszweck sind dann schon ausgefüllt.",
+        "Den QR-Code schalten Sie unter `Briefkopf und Vorlagen` bei `GiroCode drucken` aus. Dann steht er auf keinem neuen Schreiben.",
         "Der Verwendungszweck im QR-Code ist die Nummer der Rechnung. Hat die Familie eine Debitorennummer, steht sie dahinter. Bei einem Bescheid heißt sie Buchungszeichen.",
         "Keinen QR-Code haben: Schreiben mit `Lastschrift`, Schreiben mit 0 €, Storno, Gutschrift und Jahresbescheide. Ein Jahresbescheid wird in Raten bezahlt.",
         "Unter `Familien und Zahlung` sehen Sie bei jeder Familie den Zahlungsweg ihrer Rechnungen.",
@@ -11503,11 +11511,12 @@ export const traegerBillingTermsTopic =
         HELP_TOPICS.traegerSepaMandates,
         HELP_TOPICS.traegerCareMonths,
         HELP_TOPICS.traegerBillingRun,
+        HELP_TOPICS.traegerBriefkopf,
       ],
     };
   } satisfies typeof authored_traegerBillingTermsTopic;
 
-/** `/traeger/einstellungen/briefkopf` (#4653, #5685): Logo, Absender und Fußzeile; dazu Ansprechperson und Bankverbindungen. */
+/** `/traeger/einstellungen/briefkopf` (#4653, #5685, #5624): Logo, Absender, Fußzeile und QR-Code zum Überweisen; dazu Ansprechperson und Bankverbindungen. */
 export const traegerBriefkopfTopic =
   function traegerBriefkopfTopic(): HelpTopic {
     return {
@@ -11542,6 +11551,16 @@ export const traegerBriefkopfTopic =
           ],
         },
         {
+          title: "QR-Code zum Überweisen ein- oder ausschalten",
+          description:
+            "Der QR-Code steht auf Rechnung, Gebührenbescheid und Bestätigungsschreiben, wenn die Familie überweist. Er ist von Anfang an eingeschaltet.",
+          steps: [
+            "Wählen Sie in den Einstellungen `Briefkopf und Vorlagen`.",
+            "Schalten Sie bei `GiroCode drucken` den Schalter aus oder ein. Der GiroCode ist der QR-Code zum Überweisen.",
+            "moto speichert die Änderung sofort. Sie gilt für alle Schreiben, die Sie danach erstellen.",
+          ],
+        },
+        {
           title: "Ansprechperson eintragen",
           steps: [
             "Wählen Sie in den Einstellungen `Allgemein` und dann den Bereich `Kontakt`.",
@@ -11568,6 +11587,7 @@ export const traegerBriefkopfTopic =
         "Eine Bankverbindung ist der `Standard`. Sie steht auf allen Briefen und Rechnungen. Auch der QR-Code zum Überweisen nimmt diese Bankverbindung.",
         "Eine andere Bankverbindung machen Sie im Menü der Zeile mit `Als Standard festlegen` zum Standard.",
         "Löschen Sie den Standard, wird die älteste andere Bankverbindung der Standard.",
+        "Schreiben, die schon erstellt sind, ändern sich nicht. Sie behalten ihren QR-Code oder bleiben ohne.",
         "Jedes Ansehen und jede Änderung von Ansprechperson und Bankverbindungen steht im Protokoll des Trägers.",
       ],
       differences: [
@@ -14124,6 +14144,47 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
     related: [HELP_TOPICS.errorMessages],
   };
 } satisfies typeof authored_traegerLoginTopic;
+
+/**
+ * Die Glocke oben rechts im Träger-Portal (#7146): die Hinweise aller Schulen
+ * des Trägers, jeweils mit dem Namen der Schule. Erster Typ ist der
+ * Schließtag einer Schule.
+ */
+export const traegerNotificationFeedTopic =
+  function traegerNotificationFeedTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.traegerNotificationFeed,
+      title: "Hinweise in der Glocke",
+      question: "Wo sehe ich, was sich an meinen Schulen geändert hat?",
+      summary:
+        "Die Glocke oben rechts zeigt Hinweise aus allen Schulen Ihres Trägers, zum Beispiel einen neuen Schließtag.",
+      group: "einstieg",
+      audience: "traeger",
+      icon: "Bell",
+      steps: [
+        "Wählen Sie oben rechts die Glocke. Die Zahl daran zählt neue Hinweise. Ab 10 steht dort `9+`.",
+        "Neue Hinweise sind mit `Neu` markiert. Daneben steht die Schule.",
+        "Wählen Sie einen Hinweis. moto öffnet die Seite dieser Schule.",
+        "Mit `Alle als gelesen markieren` sind alle Hinweise auf einmal gelesen.",
+      ],
+      result:
+        "Erst Ihr Klick macht einen Hinweis zu „gelesen“. Das Öffnen der Glocke allein ändert nichts.",
+      notes: [
+        "Trägt eine Schule einen Schließtag ein, ändert oder löscht ihn, sehen Sie es hier.",
+        "Die Zahl an der Glocke prüft moto bei jedem Seitenwechsel und jede Minute neu.",
+        "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
+        "Im Träger-Portal gibt es keine Mitteilung aufs Handy. Die Hinweise stehen nur in der Glocke.",
+      ],
+      differences: [
+        "Auf dem Handy öffnen sich die Hinweise über den ganzen Bildschirm. Mit dem X schließen Sie sie wieder.",
+      ],
+      troubleshootingDetails: [
+        "Es kommt kein Hinweis zu einem Schließtag? Die Schule kann `Benachrichtigung bei Schließtagen` ausschalten. Fragen Sie dort nach.",
+        "Wer den Schließtag selbst einträgt, bekommt keinen Hinweis dazu.",
+      ],
+      related: [HELP_TOPICS.traegerSchoolView, HELP_TOPICS.traegerClosingDays],
+    };
+  } satisfies typeof authored_traegerNotificationFeedTopic;
 
 /** `/traeger/belegung` (#4676): die Kinder von heute je Schule, Gruppe und Betreuungsform. */
 export const traegerOccupancyTopic =
