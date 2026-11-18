@@ -514,10 +514,13 @@ func (c *webPushChannel) sendOneSynchronously(ctx context.Context, event Event, 
 }
 
 func (c *webPushChannel) deleteExpiredSubscription(ctx context.Context, sub *deliveryModels.PushSubscription) (bool, error) {
-	// Unit tests use repository fakes without a database. Production always
-	// opens a short tenant transaction so RLS applies to the cleanup.
+	// Unit tests use repository fakes without a database. Staff cleanup stays
+	// in its school; an account-level parent device needs an admin transaction.
 	if c.db == nil {
 		return c.repo.DeleteExpiredIfUnchanged(ctx, sub)
+	}
+	if sub.Portal == deliveryModels.PushPortalParent {
+		return deleteExpiredParentDevice(ctx, c.repo, sub)
 	}
 	var deleted bool
 	err := tenant.WithTenantTx(ctx, c.db, sub.TenantID, func(txCtx context.Context, _ bun.Tx) error {

@@ -117,7 +117,7 @@ function UnbilledGroup({
           type="button"
           variant="ghost"
           size="md"
-          className="mt-1 self-start"
+          className="mt-1 gap-1.5 self-start"
           aria-expanded={expanded}
           aria-controls={listId}
           tooltip={
