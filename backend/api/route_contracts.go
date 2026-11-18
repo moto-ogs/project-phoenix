@@ -19,7 +19,6 @@ import (
 	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
 	tagScanOperatorAPI "github.com/moto-ogs/project-phoenix/modules/devicefleet/inbound/operator"
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
-	enrollmentAPI "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	enrollmentHTTP "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	exportTransferHTTP "github.com/moto-ogs/project-phoenix/modules/exporttransfer/http"
 	identityOperatorAPI "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator"
@@ -351,9 +350,9 @@ func traegerContractMounts() []contractMount {
 // (NewParentContractDocuments), so their types are named here.
 func parentPortalRouteContracts() []common.RouteContract {
 	return parentAPI.PortalRouteContracts(parentAPI.ForeignContractTypes{
-		EnrollmentBootstrap:     enrollmentAPI.PublicEnrollmentFormBootstrapResponse{},
-		EnrollmentSubmitRequest: enrollmentAPI.SubmitEnrollmentRequest{},
-		EnrollmentSubmit:        enrollmentAPI.SubmitEnrollmentResponse{},
+		EnrollmentBootstrap:     enrollmentHTTP.PublicEnrollmentFormBootstrapResponse{},
+		EnrollmentSubmitRequest: enrollmentHTTP.SubmitEnrollmentRequest{},
+		EnrollmentSubmit:        enrollmentHTTP.SubmitEnrollmentResponse{},
 		ContractSigning:         carecontract.SigningView{},
 	})
 }
