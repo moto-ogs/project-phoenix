@@ -8,5 +8,6 @@
   "attendance_visible_exceeds_retention": "Не удалось сохранить: {object}. Проверьте введённые данные.",
   "attendance_retention_below_visible": "Не удалось сохранить: {object}. Проверьте введённые данные.",
   "module_requires": "Не удалось сохранить: {object}. Проверьте введённые данные.",
-  "module_required_by": "Не удалось сохранить: {object}. Проверьте введённые данные."
+  "module_required_by": "Не удалось сохранить: {object}. Проверьте введённые данные.",
+  "enrollment_privacy_notice_missing": "Не удалось сохранить: {object}. Проверьте введённые данные."
 }

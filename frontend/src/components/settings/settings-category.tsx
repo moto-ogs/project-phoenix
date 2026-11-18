@@ -21,6 +21,8 @@ interface SettingsCategoryProps {
   readonly onReset: (key: string) => Promise<void>;
   readonly onSchemaRefresh?: () => void;
   readonly onBookingAuthorityEnable?: () => Promise<void>;
+  /** See `SettingsField` `onEnrollmentEnable`. */
+  readonly onEnrollmentEnable?: () => void;
   // audience identifies who is viewing the settings page. Controls the
   // "auch von {other side} änderbar" hint on shared settings. Defaults
   // to "admin" for the tenant settings page; the operator page passes
@@ -83,6 +85,7 @@ export function SettingsCategory({
   onReset,
   onSchemaRefresh,
   onBookingAuthorityEnable,
+  onEnrollmentEnable,
   audience = "admin",
   revealFn,
   collapsible = false,
@@ -167,6 +170,7 @@ export function SettingsCategory({
               onReset={onReset}
               onSchemaRefresh={onSchemaRefresh}
               onBookingAuthorityEnable={onBookingAuthorityEnable}
+              onEnrollmentEnable={onEnrollmentEnable}
               audience={audience}
               revealFn={revealFn}
               labelLevel={headingLevel === 2 ? 3 : 4}

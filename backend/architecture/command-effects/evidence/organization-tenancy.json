@@ -153,6 +153,14 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.FileKeys.OpenStoredObject",
+      "binding_digest": "cc637724a0aebb4ce08094ef14824e66",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TenantExportObjects.OpenStoredObject",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.FileKeys.OpenStoredObject",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/settings.ExportFields.ProjectExportField",
       "binding_digest": "2f24d90b925e18958a9fcf9c89d3d6af",
       "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TenantExportProjectedFields.ProjectExportField",

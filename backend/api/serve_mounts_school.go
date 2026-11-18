@@ -3,6 +3,7 @@ package api
 import (
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
+	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"time"
@@ -78,9 +79,9 @@ func mountStaffRoutes(
 	users peoplePorts.PersonDirectory, staffAdmin *workforceModule.StaffAdmin,
 	workforce owners.WorkforcePlanning, shifts *workforceCompose.ShiftPlanning, education schoolstructure.GroupManagement,
 	substitution SubstitutionOperations, persons peopledirectory.Capability, settings settingsCompose.SettingsService,
-	hub *realtime.Hub, identity identityaccess.Owner, caller *owners.CallerRows, calendar schoolcalendar.Calendar, now func() time.Time,
+	hub *realtime.Hub, identity identityaccess.Owner, caller *owners.CallerRows, calendar schoolcalendar.Calendar, files nativeUploads.FileKeys, now func() time.Time,
 ) error {
-	staff, _, err := newStaffComposition(membership, workTime, users, staffAdmin, workforce.TimeTracking, workforce.PayrollDispatch, workforce.SickReports, education, persons, settings, hub, identity, viper.GetString("app_env"), db, logger.With("handler", "staff"), now)
+	staff, _, err := newStaffComposition(membership, workTime, users, staffAdmin, workforce.TimeTracking, workforce.PayrollDispatch, workforce.SickReports, education, persons, settings, hub, identity, viper.GetString("app_env"), db, logger.With("handler", "staff"), files, now)
 	if err != nil {
 		return err
 	}
@@ -268,7 +269,7 @@ func mountSchoolRoutes(
 	settings settingsCompose.SettingsService, caller *owners.CallerRows, active studentpresence.Presence, users peoplePorts.PersonDirectory,
 	education schoolstructure.GroupManagement, renderer *lists.RendererService, activities activityContract.ActivityService,
 	timetableOwner timetableModule.Capability, iot devicefleetCompose.IoTService, settingsWrites SettingsWrites,
-	holidaySchools HolidayHostSchools, holidayStudents owners.HolidayOwnChildStudents, holidayCare owners.HolidayGuestCarePlan, holidayAccessLog owners.DataAccessAppender,
+	schools HolidayHostSchools, holidayStudents owners.HolidayOwnChildStudents, holidayCare owners.HolidayGuestCarePlan, holidayAccessLog owners.DataAccessAppender,
 	membership schoolMembershipModule.Capability, classListEntries schoolMembershipModule.ClassListEntries, databaseStats DatabaseStatsReader,
 	dataImports imports, persons peopledirectory.Capability, gradeTransition *gradetransition.Workflow, enrollment *enrollmentAPI.Resource,
 	appEnv string, weekProtocolSeed schedulerPorts.WeekProtocolEvenings, healthData enrollmentOwner.HolidayHealthCipher, holidayNoCare enrollmentOwner.HolidayHostCalendar,
@@ -288,7 +289,7 @@ func mountSchoolRoutes(
 	tenant.Mount(enrollmentMount, enrollment.Router(TenantSessionChain))
 	// The hosting school's holiday participant lists (#4665) and holiday
 	// guests (#4666), on the root clock the enrollment routes carry.
-	mountHolidayHostRoutes(tenant, holidaySchools, persons, holidayStudents, holidayCare, holidayAccessLog, healthData, holidayNoCare, enrollment.Now)
+	mountHolidayHostRoutes(tenant, schools, persons, holidayStudents, holidayCare, holidayAccessLog, healthData, holidayNoCare, enrollment.Now)
 	// Info-point displays (#1325). One Device Fleet owner serves every entry
 	// point: the root composes it and the IoT service hands it back here
 	// (#2676).
@@ -297,7 +298,7 @@ func mountSchoolRoutes(
 	tenant.Mount("/schedules", timetableHTTPAdapter.NewSchedulesResource(timetableOwner).Router(ProtectedTenantRoutes))
 	// The schema-driven settings system.
 	homeLayouts := requireHomeLayoutOperations(settings)
-	tenant.Mount("/settings", newSettingsResource(db, settingsWrites.Tenant, homeLayouts, owners.NewEnrollmentBookings(enrollment.Now).SchemaReferencesLegalDocument, enrollment.Now).SettingsRouter())
+	tenant.Mount("/settings", newSettingsResource(db, settingsWrites.Tenant, homeLayouts, owners.NewEnrollmentBookings(enrollment.Now).SchemaReferencesLegalDocument, enrollment.Now, schools).SettingsRouter())
 	// Class-list-only entries (#2382).
 	tenant.Mount("/class-list-entries", newClassListEntriesResource(
 		classListEntriesWhileChildrenKept{ClassListEntries: classListEntries, settings: settings, lock: classListConversionLockOf(settings)},

@@ -269,6 +269,7 @@ func renderOperatorSettingsError(w http.ResponseWriter, r *http.Request, err err
 	var defNotFound *settings.DefinitionNotFoundError
 	var invalidValue *settings.InvalidValueError
 	var attendanceWindow *settings.AttendanceWindowError
+	var privacyNotice *settings.EnrollmentPrivacyNoticeError
 	var moduleDependency *settings.ModuleDependencyError
 	var permDenied *settings.PermissionDeniedError
 
@@ -280,6 +281,8 @@ func renderOperatorSettingsError(w http.ResponseWriter, r *http.Request, err err
 	case errors.As(inner, &attendanceWindow):
 		code, details := attendanceWindowRejection(attendanceWindow)
 		common.RenderError(w, r, common.OperatorRejectionWithDetails(http.StatusBadRequest, code, err.Error(), details))
+	case errors.As(inner, &privacyNotice):
+		common.RenderError(w, r, common.OperatorRejection(http.StatusBadRequest, common.CodeSettingsEnrollmentPrivacyNoticeMissing, err.Error()))
 	case errors.As(inner, &moduleDependency):
 		code, details := moduleDependencyRejection(moduleDependency)
 		common.RenderError(w, r, common.OperatorRejectionWithDetails(http.StatusBadRequest, code, err.Error(), details))

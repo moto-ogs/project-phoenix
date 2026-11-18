@@ -18,7 +18,9 @@
                 "target_grade_level": 2
               }
             ],
-            "consent_flags": {},
+            "consent_flags": {
+              "data_processing": true
+            },
             "custom_data": {},
             "guardian_email": "contract-public@example.test",
             "guardian_first_name": "Contract",
@@ -63,7 +65,9 @@
                 "target_grade_level": 2
               }
             ],
-            "consent_flags": {},
+            "consent_flags": {
+              "data_processing": true
+            },
             "custom_data": {},
             "guardian_email": "contract-public@example.test",
             "guardian_first_name": "Contract",

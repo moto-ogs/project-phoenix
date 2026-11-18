@@ -10177,6 +10177,14 @@
       "target_owner": "file-storage"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Coordinator.SaveSealed",
+      "binding_digest": "c2eb497fd44a39adbc75624a29464aa0",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentDocumentFiles.SaveSealed",
+      "source_owner": "care-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Coordinator.SaveSealed",
+      "target_owner": "file-storage"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Coordinator.Serve",
       "binding_digest": "bca85daf2597ce53955388eb88d06b5a",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentDocumentFiles.Serve",
