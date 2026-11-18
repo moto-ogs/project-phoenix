@@ -188,6 +188,7 @@ function ContractStep({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <ISODatePicker
             id="hire-starts-on"
+            monthYearNavigation
             name="starts_on"
             label="Erster Tag"
             required
@@ -199,6 +200,7 @@ function ContractStep({
           />
           <ISODatePicker
             id="hire-ends-on"
+            monthYearNavigation
             name="ends_on"
             label="Letzter Tag"
             hint="Leer lassen, wenn der Vertrag unbefristet ist."
