@@ -63,7 +63,7 @@ func TypeScript(doc Document) (map[string]string, error) {
 // resource as a user of each.
 func (w *tsWriter) visitRoutes(routes []Route, users map[string]int) {
 	for _, route := range routes {
-		for _, schema := range route.schemas() {
+		for _, schema := range routeSchemas(route) {
 			w.visit(schema)
 		}
 	}
@@ -136,7 +136,7 @@ func resourceAlias(resource string) string {
 	return strings.Join(parts, "")
 }
 
-func (r Route) schemas() []Schema {
+func routeSchemas(r Route) []Schema {
 	var schemas []Schema
 	if r.Request != nil {
 		schemas = append(schemas, *r.Request)
