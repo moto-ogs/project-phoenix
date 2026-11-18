@@ -769,7 +769,6 @@ export function useSupervisionDashboard(
   // target it returns. A "none" target keeps the current selection — the
   // resolver never switches between parallel sessions in the same room
   // just because a refresh re-resolved a room-keyed URL (#2265).
-  // oxlint-disable-next-line swr/no-effect-load -- applies the URL/sidebar selection; the async part is switchToRoom revalidating the shared useSWRAuth dashboard reader, no read of its own
   useEffect(() => {
     const savedSessionId = memory.read("supervision-last-session");
     // A saved released room without an own supervision stays unopened: that

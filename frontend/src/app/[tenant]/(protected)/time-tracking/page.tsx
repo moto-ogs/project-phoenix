@@ -712,7 +712,6 @@ function ClockInCard({
   })();
 
   // Auto-end break when countdown reaches 0
-  // oxlint-disable-next-line swr/no-effect-load -- one-shot write: ends the running break once its countdown expires; it reads nothing into state
   useEffect(() => {
     if (
       shouldAutoEndBreak(countdownRemainingSecs, isOnBreak, actionLoading) &&
