@@ -58,8 +58,9 @@ func iotDevicesRuntime(sessions DeviceRemovalSessions, logger *slog.Logger, now 
 		ConflictWithDetails: func(w http.ResponseWriter, r *http.Request, err error, code string, details map[string]any) {
 			common.RenderError(w, r, common.ErrorConflictWithDetails(err, code, details))
 		},
-		ActiveSession: deviceRemovalSession(sessions),
-		AuditRemoval:  deviceRemovalAudit(logger),
+		ActiveSession:     deviceRemovalSession(sessions),
+		AuditRemoval:      deviceRemovalAudit(logger),
+		AuditStatusChange: deviceStatusAudit(logger),
 	}
 }
 
@@ -98,6 +99,24 @@ func deviceRemovalAudit(logger *slog.Logger) func(*http.Request, devicesAPI.Remo
 			attrs = append(attrs, "session_id", *entry.SessionID)
 		}
 		logger.InfoContext(r.Context(), "device removal", attrs...)
+	}
+}
+
+// deviceStatusAudit writes an effective status change to the structured
+// audit log (#2317): who blocked, unblocked or otherwise changed which
+// device of which school. The entry carries no credential.
+func deviceStatusAudit(logger *slog.Logger) func(*http.Request, devicesAPI.StatusAudit) {
+	return func(r *http.Request, entry devicesAPI.StatusAudit) {
+		logger.InfoContext(r.Context(), "device status change",
+			"audit", "device_status",
+			"outcome", entry.Outcome(),
+			"tenant_id", tenant.FromContext(r.Context()),
+			"account_id", sessiontoken.ClaimsFromCtx(r.Context()).ID,
+			"device_row_id", entry.DeviceRowID,
+			"device_id", entry.DeviceID,
+			"from_status", string(entry.From),
+			"to_status", string(entry.To),
+		)
 	}
 }
 

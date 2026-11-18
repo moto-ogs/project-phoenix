@@ -34,6 +34,7 @@ const {
   mockListOrganizationDevices,
   mockListAllDevices,
   mockDeleteDevice,
+  mockSetDeviceBlocked,
   mockSearchParamsGet,
   mockReplace,
 } = vi.hoisted(() => ({
@@ -47,6 +48,7 @@ const {
   mockListOrganizationDevices: vi.fn(),
   mockListAllDevices: vi.fn(),
   mockDeleteDevice: vi.fn(),
+  mockSetDeviceBlocked: vi.fn(),
   mockSearchParamsGet: vi.fn((_key: string): string | null => null),
   mockReplace: vi.fn(),
 }));
@@ -92,6 +94,7 @@ vi.mock("~/lib/operator/provisioning-api", async () => {
       listOrganizationDevices: mockListOrganizationDevices,
       listAllDevices: mockListAllDevices,
       deleteDevice: mockDeleteDevice,
+      setDeviceBlocked: mockSetDeviceBlocked,
     },
   };
 });
@@ -100,6 +103,7 @@ vi.mock("~/lib/iot-helpers", () => ({
   getDeviceTypeDisplayName: (type: string) => `type:${type}`,
   getDeviceStatusDisplayName: (status: string) => `status:${status}`,
   formatLastSeen: (lastSeen: string) => `formatted:${lastSeen}`,
+  isDeviceBlocked: (device: { status: string }) => device.status === "inactive",
   DEVICE_TYPE_OPTIONS: { terminal: "Terminal", info_point: "Info-Point" },
 }));
 
@@ -530,6 +534,49 @@ describe("OperatorDevicesPage", () => {
         screen.getByText("Das passiert beim Entfernen"),
       ).toBeInTheDocument();
     });
+  });
+
+  // --- Block (#2317) ---
+
+  it("blocks a device from its menu and offers to undo it", async () => {
+    withDefaultSWR({ allDevices: [mockDevice] });
+    mockSetDeviceBlocked.mockResolvedValue({
+      ...mockDevice,
+      status: "inactive",
+    });
+
+    render(<OperatorDevicesPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Aktionen für/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /^Sperren/ }));
+
+    expect(
+      await screen.findByText(/ist gesperrt\. Der Kiosk wird abgewiesen/),
+    ).toBeInTheDocument();
+    expect(mockSetDeviceBlocked).toHaveBeenCalledWith(mockDevice.id, true);
+
+    fireEvent.click(screen.getByRole("button", { name: /Rückgängig/ }));
+
+    await waitFor(() => {
+      expect(mockSetDeviceBlocked).toHaveBeenLastCalledWith(
+        mockDevice.id,
+        false,
+      );
+    });
+  });
+
+  it("shows a blocked device as blocked even while it was online", () => {
+    withDefaultSWR({
+      allDevices: [{ ...mockDevice, status: "inactive", isOnline: true }],
+    });
+
+    render(<OperatorDevicesPage />);
+
+    expect(screen.getByText("Gesperrt")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Aktionen für/ }));
+    expect(
+      screen.getByRole("menuitem", { name: /^Entsperren/ }),
+    ).toBeInTheDocument();
   });
 
   // --- Columns and headers ---

@@ -2108,6 +2108,16 @@ export const devicesTopic = function devicesTopic(): HelpTopic {
         ],
       },
       {
+        title: "Ein Gerät sperren",
+        description:
+          "Zum Beispiel, wenn ein Tablet verschwunden ist oder nicht benutzt werden soll. Du kannst es jederzeit wieder entsperren.",
+        steps: [
+          "Wähle das Gerät aus der Liste.",
+          "Wähle oben rechts `Sperren`.",
+          "Zum Entsperren wähle beim selben Gerät `Entsperren`.",
+        ],
+      },
+      {
         title: "Ein Gerät entfernen",
         description:
           "Zum Beispiel, wenn ein Tablet kaputt ist oder nicht mehr gebraucht wird.",
@@ -2125,6 +2135,7 @@ export const devicesTopic = function devicesTopic(): HelpTopic {
       "Steht bei `Letzter Standort` `Noch nicht verwendet`, wurde am Gerät noch nichts gescannt.",
       "Nach dem Anlegen zeigt moto einmalig einen Zugangscode. Nur das Gerät braucht ihn.",
       "Gib diesen Code nicht weiter. Er ist danach nicht mehr zu sehen.",
+      "Ein gesperrtes Gerät kann sich sofort nicht mehr anmelden. Es bleibt mit Raum und bisherigen Anwesenheiten in der Liste und zeigt `Gesperrt`.",
       "Ein entferntes Gerät kann sich nicht mehr anmelden. Bisherige Anwesenheiten bleiben erhalten.",
     ],
     differences: [
@@ -2133,6 +2144,7 @@ export const devicesTopic = function devicesTopic(): HelpTopic {
     troubleshootingDetails: [
       "Ein Gerät meldet sich nicht? Prüfe `Verbindung` und `Status` in der Liste.",
       "`Offline` und der Strom stimmt? Prüfe das WLAN am Standort des Geräts.",
+      "Ein Gerät meldet „gesperrt“ oder „nicht aktiv“? Prüfe, ob in der Liste `Gesperrt` steht, und wähle `Entsperren`.",
       "Entfernen klappt nicht, weil eine Sitzung läuft? Beende die Sitzung am Gerät und versuche es noch einmal.",
     ],
     related: [

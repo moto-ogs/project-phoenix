@@ -3106,3 +3106,76 @@ func (m *mockProvisioningService) RecordOperatorRead(context.Context, organizati
 func (m *mockProvisioningService) RecordTraegerSettingChange(context.Context, organizationtenancy.TraegerSettingChange) error {
 	return nil
 }
+
+type deviceBlockingFn func(ctx context.Context, id int64, blocked bool, operatorID int64, clientIP net.IP) (*organizationtenancy.OperatorDevice, error)
+
+func (fn deviceBlockingFn) SetDeviceBlocked(ctx context.Context, id int64, blocked bool, operatorID int64, clientIP net.IP) (*organizationtenancy.OperatorDevice, error) {
+	return fn(ctx, id, blocked, operatorID, clientIP)
+}
+
+func TestProvisioningResource_BlockAndUnblockDevice(t *testing.T) {
+	t.Parallel()
+
+	request := func(id string) *http.Request {
+		req := httptest.NewRequest(http.MethodPost, "/operator/devices/"+id+"/block", nil)
+		req.RemoteAddr = "203.0.113.50:4242"
+		req = withOperatorClaims(req, 42)
+		routeCtx := chi.NewRouteContext()
+		routeCtx.URLParams.Add("id", id)
+		return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
+	}
+
+	for name, blocked := range map[string]bool{"block": true, "unblock": false} {
+		t.Run(name+" passes the target state and answers without data", func(t *testing.T) {
+			t.Parallel()
+			resource := NewProvisioningResource(ProvisioningConfig{DeviceBlocking: deviceBlockingFn(
+				func(_ context.Context, id int64, gotBlocked bool, operatorID int64, clientIP net.IP) (*organizationtenancy.OperatorDevice, error) {
+					assert.Equal(t, int64(55), id)
+					assert.Equal(t, blocked, gotBlocked)
+					assert.Equal(t, int64(42), operatorID)
+					assert.Equal(t, "203.0.113.50", clientIP.String())
+					return &organizationtenancy.OperatorDevice{ID: 55, Status: "inactive"}, nil
+				})})
+			rr := httptest.NewRecorder()
+
+			if blocked {
+				resource.BlockDevice(rr, request("55"))
+			} else {
+				resource.UnblockDevice(rr, request("55"))
+			}
+
+			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+			assert.NotContains(t, rr.Body.String(), `"data"`)
+		})
+	}
+
+	t.Run("rejects an invalid device id", func(t *testing.T) {
+		t.Parallel()
+		resource := NewProvisioningResource(ProvisioningConfig{DeviceBlocking: deviceBlockingFn(
+			func(context.Context, int64, bool, int64, net.IP) (*organizationtenancy.OperatorDevice, error) {
+				t.Fatal("an invalid id reached the service")
+				return nil, nil
+			})})
+		rr := httptest.NewRecorder()
+		resource.BlockDevice(rr, request("nope"))
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+	})
+
+	t.Run("renders the protected system device", func(t *testing.T) {
+		t.Parallel()
+		resource := NewProvisioningResource(ProvisioningConfig{DeviceBlocking: deviceBlockingFn(
+			func(context.Context, int64, bool, int64, net.IP) (*organizationtenancy.OperatorDevice, error) {
+				return nil, &organizationtenancy.DeviceProtectedError{DeviceID: 55, Reason: "system device"}
+			})})
+		rr := httptest.NewRecorder()
+		resource.BlockDevice(rr, request("55"))
+		assert.Equal(t, http.StatusForbidden, rr.Code, rr.Body.String())
+	})
+
+	t.Run("answers 500 without the capability", func(t *testing.T) {
+		t.Parallel()
+		rr := httptest.NewRecorder()
+		NewProvisioningResource(ProvisioningConfig{}).UnblockDevice(rr, request("55"))
+		assert.Equal(t, http.StatusInternalServerError, rr.Code)
+	})
+}

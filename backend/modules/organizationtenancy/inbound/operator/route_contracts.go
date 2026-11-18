@@ -11,3 +11,13 @@ func BillingRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: "/key-day", Portals: operator, Request: updateBillingKeyDayRequest{}, Response: billingKeyDayResponse{}},
 	}
 }
+
+// DeviceRouteContracts types the operator's device block routes
+// (Gerätesperre, #2317). They answer without data; the table reloads.
+func DeviceRouteContracts() []common.RouteContract {
+	operator := []common.PortalScope{common.PortalOperator}
+	return []common.RouteContract{
+		{Method: "POST", Pattern: "/{id}/block", Portals: operator, NoData: true},
+		{Method: "POST", Pattern: "/{id}/unblock", Portals: operator, NoData: true},
+	}
+}

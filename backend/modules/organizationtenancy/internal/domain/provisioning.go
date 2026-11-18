@@ -15,6 +15,8 @@ const (
 	AuditActionDelete       = "delete"
 	AuditActionRotateAPIKey = "rotate_api_key"
 	AuditActionTransfer     = "transfer"
+	AuditActionBlock        = "block"
+	AuditActionUnblock      = "unblock"
 	AuditActionSoftDelete   = "soft_delete"
 	AuditActionRestore      = "restore"
 	AuditActionGrant        = "grant"

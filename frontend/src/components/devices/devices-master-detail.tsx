@@ -1,7 +1,7 @@
 "use client";
 
 import { EmptyState } from "~/components/ui/empty-state";
-import { Pencil, MousePointer2 } from "lucide-react";
+import { Lock, LockOpen, Pencil, MousePointer2 } from "lucide-react";
 import { useState } from "react";
 import { DatabaseDetailHeader } from "~/components/database/database-detail-header";
 import { DatabaseListItem } from "~/components/database/database-list-item";
@@ -31,6 +31,7 @@ import {
   getDeviceStatusColor,
   getDeviceStatusDisplayName,
   getDeviceTypeDisplayName,
+  isDeviceBlocked,
   type Device,
 } from "@/lib/iot-helpers";
 import { useClipboardCopy } from "~/lib/use-clipboard-copy";
@@ -45,6 +46,10 @@ interface DevicesMasterDetailProps {
   /** Speichert die im Detailbereich bearbeiteten Stammdaten. */
   onSaveDevice: (data: Partial<Device>) => Promise<void>;
   onDeleteClick: () => void;
+  /** Sperrt (true) oder entsperrt (false) das gewählte Gerät (#2317). */
+  onSetBlocked: (blocked: boolean) => void;
+  /** Läuft gerade ein Sperren oder Entsperren. */
+  blockPending: boolean;
 }
 
 function keyForDevice(device: Device): string {
@@ -68,6 +73,8 @@ export function DevicesMasterDetail({
   onSelect,
   onSaveDevice,
   onDeleteClick,
+  onSetBlocked,
+  blockPending,
 }: DevicesMasterDetailProps) {
   const renderItem = (device: Device) => (
     <DatabaseListItem
@@ -75,13 +82,7 @@ export function DevicesMasterDetail({
       subtitle={buildDeviceSubtitle(device)}
       isSelected={selectedId === device.id}
       onSelect={() => onSelect(device.id)}
-      trailingAccessory={
-        <StatusBadge
-          size="xs"
-          tone={device.is_online ? "green" : "gray"}
-          label={device.is_online ? "Online" : "Offline"}
-        />
-      }
+      trailingAccessory={<DeviceListBadge device={device} />}
     />
   );
 
@@ -102,6 +103,8 @@ export function DevicesMasterDetail({
       device={selectedDevice}
       onSaveDevice={onSaveDevice}
       onDeleteClick={onDeleteClick}
+      onSetBlocked={onSetBlocked}
+      blockPending={blockPending}
     />
   ) : (
     <EmptyState
@@ -127,17 +130,36 @@ export function DevicesMasterDetail({
   );
 }
 
+/** A blocked device shows that first: its connection no longer matters. */
+function DeviceListBadge({ device }: Readonly<{ device: Device }>) {
+  if (isDeviceBlocked(device)) {
+    return <StatusBadge size="xs" tone="red" label="Gesperrt" />;
+  }
+  return (
+    <StatusBadge
+      size="xs"
+      tone={device.is_online ? "green" : "gray"}
+      label={device.is_online ? "Online" : "Offline"}
+    />
+  );
+}
+
 interface DeviceDetailContentProps {
   device: Device;
   onSaveDevice: (data: Partial<Device>) => Promise<void>;
   onDeleteClick: () => void;
+  onSetBlocked: (blocked: boolean) => void;
+  blockPending: boolean;
 }
 
 function DeviceDetailContent({
   device,
   onSaveDevice,
   onDeleteClick,
+  onSetBlocked,
+  blockPending,
 }: DeviceDetailContentProps) {
+  const blocked = isDeviceBlocked(device);
   const [activeTab, setActiveTab] = useState<string>("master-data");
   // Bearbeitet wird am Objekt, nicht in einem Modal daneben
   // (BAUARTEN-SPEC Bauart 2 Regel 3).
@@ -159,6 +181,26 @@ function DeviceDetailContent({
       >
         <Pencil className="h-3.5 w-3.5" aria-hidden />
         Bearbeiten
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="compact"
+        onClick={() => onSetBlocked(!blocked)}
+        isLoading={blockPending}
+        loadingText={blocked ? "Wird entsperrt…" : "Wird gesperrt…"}
+        tooltip={
+          blocked
+            ? "Gibt dem Gerät sofort wieder Zugang zu moto."
+            : "Sperrt das Gerät sofort. Es kann sich dann nicht mehr anmelden."
+        }
+      >
+        {blocked ? (
+          <LockOpen className="h-3.5 w-3.5" aria-hidden />
+        ) : (
+          <Lock className="h-3.5 w-3.5" aria-hidden />
+        )}
+        {blocked ? "Entsperren" : "Sperren"}
       </Button>
       <DetailDeleteButton
         onClick={onDeleteClick}
@@ -236,6 +278,12 @@ function DeviceStammdatenTab({
 
   return (
     <div className="space-y-4">
+      {isDeviceBlocked(device) ? (
+        <Alert
+          type="warning"
+          message="Dieses Gerät ist gesperrt. Es kann sich nicht anmelden, bis du es entsperrst. Raum und bisherige Anwesenheiten bleiben erhalten."
+        />
+      ) : null}
       <InfoSection
         title="Gerätedetails"
         icon={

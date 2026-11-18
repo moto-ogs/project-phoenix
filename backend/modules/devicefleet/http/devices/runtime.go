@@ -29,6 +29,9 @@ type Runtime struct {
 	ActiveSession func(ctx context.Context, deviceRowID int64) (*RemovalSession, error)
 	// AuditRemoval records one removal outcome with the acting account.
 	AuditRemoval func(r *http.Request, entry RemovalAudit)
+	// AuditStatusChange records one effective status change with the acting
+	// account: a block, an unblock or another status (#2317).
+	AuditStatusChange func(r *http.Request, entry StatusAudit)
 	// Now is the root's clock the statistics and scan answers are stamped
 	// with.
 	Now func() time.Time
@@ -65,6 +68,35 @@ type RemovalAudit struct {
 	DeviceID    string
 	Outcome     string
 	SessionID   *int64
+}
+
+// StatusAudit is one effective status change of a device. It names the
+// device row, never its credential. "inactive" blocks the device and
+// "active" unblocks it (Gerätesperre, #2317).
+type StatusAudit struct {
+	DeviceRowID int64
+	DeviceID    string
+	From        devicefleet.DeviceStatus
+	To          devicefleet.DeviceStatus
+}
+
+// The outcomes of a status change the audit trail distinguishes.
+const (
+	StatusOutcomeBlocked   = "blocked"
+	StatusOutcomeUnblocked = "unblocked"
+	StatusOutcomeChanged   = "status_changed"
+)
+
+// Outcome names the change: a block, an unblock or another status.
+func (e StatusAudit) Outcome() string {
+	switch e.To {
+	case devicefleet.DeviceStatusInactive:
+		return StatusOutcomeBlocked
+	case devicefleet.DeviceStatusActive:
+		return StatusOutcomeUnblocked
+	default:
+		return StatusOutcomeChanged
+	}
 }
 
 func (rs *Resource) renderError(w http.ResponseWriter, r *http.Request, err error) {

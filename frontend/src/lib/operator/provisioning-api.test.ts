@@ -674,6 +674,26 @@ describe("OperatorProvisioningService", () => {
     });
   });
 
+  describe("setDeviceBlocked", () => {
+    it("blocks and unblocks through the encoded device routes", async () => {
+      mockOperatorFetch.mockResolvedValue(null);
+
+      await operatorProvisioningService.setDeviceBlocked("1/unsafe", true);
+      await operatorProvisioningService.setDeviceBlocked("1", false);
+
+      expect(mockOperatorFetch).toHaveBeenNthCalledWith(
+        1,
+        "/api/operator/devices/1%2Funsafe/block",
+        { method: "POST" },
+      );
+      expect(mockOperatorFetch).toHaveBeenNthCalledWith(
+        2,
+        "/api/operator/devices/1/unblock",
+        { method: "POST" },
+      );
+    });
+  });
+
   describe("device transfer", () => {
     it("loads and maps transfer blockers", async () => {
       mockOperatorFetch.mockResolvedValue({

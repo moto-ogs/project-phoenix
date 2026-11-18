@@ -67,12 +67,20 @@ vi.mock("@/lib/database/service-factory", () => {
 
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
+const mockShowActionError = vi.fn();
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: vi.fn(() => ({
     success: mockToastSuccess,
     error: mockToastError,
   })),
+  useApiErrorDisplay: vi.fn(() => ({ show: mockShowActionError })),
+}));
+
+const mockSetDeviceBlocked = vi.fn();
+vi.mock("~/lib/device-blocking-api", () => ({
+  setDeviceBlocked: (...args: unknown[]) =>
+    mockSetDeviceBlocked(...args) as Promise<void>,
 }));
 
 vi.mock("~/components/ui/confirm-delete-modal", () => ({
@@ -253,6 +261,7 @@ vi.mock("@/components/devices/devices-master-detail", () => ({
     onSelect,
     onSaveDevice,
     onDeleteClick,
+    onSetBlocked,
   }: {
     groupDefinitions: Array<{
       id: string;
@@ -272,6 +281,7 @@ vi.mock("@/components/devices/devices-master-detail", () => ({
       device_id?: string;
     }) => Promise<void>;
     onDeleteClick: () => void;
+    onSetBlocked: (blocked: boolean) => void;
   }) => {
     const [editing, setEditing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -325,6 +335,13 @@ vi.mock("@/components/devices/devices-master-detail", () => ({
               onClick={onDeleteClick}
             >
               Delete
+            </button>
+            <button
+              type="button"
+              data-testid="trigger-block"
+              onClick={() => onSetBlocked(true)}
+            >
+              Block
             </button>
             <button
               type="button"
@@ -638,6 +655,63 @@ describe("DevicesPage", () => {
         scroll: false,
       });
     });
+  });
+
+  it("blocks the selected device and offers to undo it (#2317)", async () => {
+    setSelectedDevice("1");
+    mockSetDeviceBlocked.mockResolvedValue(undefined);
+
+    render(<DevicesPage />);
+    fireEvent.click(await screen.findByTestId("trigger-block"));
+
+    await waitFor(() => {
+      expect(mockSetDeviceBlocked).toHaveBeenCalledWith("kiosk-001", true);
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        "Das Gerät „Eingang Kiosk“ ist gesperrt. Es kann sich erst wieder anmelden, wenn du es entsperrst.",
+        expect.objectContaining({
+          action: expect.objectContaining({ label: "Rückgängig" }),
+        }),
+      );
+    });
+
+    const options = mockToastSuccess.mock.calls[0]![1] as {
+      action: { onClick: () => void };
+    };
+    options.action.onClick();
+
+    await waitFor(() => {
+      expect(mockSetDeviceBlocked).toHaveBeenLastCalledWith("kiosk-001", false);
+      expect(mockToastSuccess).toHaveBeenLastCalledWith(
+        "Das Gerät „Eingang Kiosk“ ist entsperrt und kann sich wieder anmelden.",
+      );
+    });
+  });
+
+  it("shows a failed block as an action error without a success toast", async () => {
+    setSelectedDevice("1");
+    const failure = new ApiError("forbidden", 403, {
+      code: "general.permission",
+    });
+    mockSetDeviceBlocked.mockRejectedValueOnce(failure);
+
+    render(<DevicesPage />);
+    fireEvent.click(await screen.findByTestId("trigger-block"));
+
+    await waitFor(() => {
+      expect(mockShowActionError).toHaveBeenCalledWith(
+        failure,
+        expect.objectContaining({ object: "das Sperren des Geräts" }),
+      );
+    });
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+  });
+
+  it("counts blocked devices in the status line, not as online", async () => {
+    setSwrData([{ ...mockDevices[0]!, status: "inactive" }, mockDevices[1]!]);
+
+    render(<DevicesPage />);
+
+    expect(await screen.findByText("gesperrt")).toBeInTheDocument();
   });
 
   it("keeps a delete error in the confirmation dialog", async () => {

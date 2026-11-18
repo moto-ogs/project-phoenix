@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -1176,4 +1177,71 @@ func TestOperatorProvisioningIntegration_KeysAreIssuedOnceAndCustomKeysRefused(t
 		require.True(t, device.APIKey == nil, "global operator reads must not disclose credentials")
 		require.NotEqual(t, "weak-terminal", device.DeviceID)
 	}
+}
+
+// TestOperatorProvisioningIntegration_BlockDevice_KeepsKeyRoomAndHistory
+// blocks and unblocks through the production composition (#2317): the row
+// stays live with its room and credential hash, and only effective changes
+// are audited.
+func TestOperatorProvisioningIntegration_BlockDevice_KeepsKeyRoomAndHistory(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	graph := buildOperatorProvisioning(t, db)
+	operatorID := testpkg.CreateTestOperator(t, db).ID
+	ctx := provisioningContext(t, db)
+	dbCtx := testpkg.Ctx(t)
+	_, schoolID := provisionTestSchool(t, db, graph, operatorID, "block")
+
+	var roomID int64
+	require.NoError(t, db.NewRaw(
+		`INSERT INTO facilities.rooms (tenant_id, name, building, capacity) VALUES (?, ?, ?, ?) RETURNING id`,
+		schoolID, fmt.Sprintf("Sperrraum %d", schoolID), "Haupthaus", 20,
+	).Scan(dbCtx, &roomID))
+	created, err := graph.CreateDevice(ctx, schoolID, fmt.Sprintf("block-device-%d", schoolID), "rfid_terminal", nil, nil, operatorID, provisioningTestClientIP)
+	require.NoError(t, err)
+	_, err = db.ExecContext(dbCtx, `UPDATE iot.devices SET room_id = ? WHERE id = ?`, roomID, created.ID)
+	require.NoError(t, err)
+	var originalHash string
+	require.NoError(t, db.NewRaw(`SELECT api_key_hash FROM iot.devices WHERE id = ?`, created.ID).Scan(dbCtx, &originalHash))
+
+	type storedRow struct {
+		ArchivedAt *string `bun:"archived_at"`
+		APIKeyHash *string `bun:"api_key_hash"`
+		Status     string  `bun:"status"`
+		RoomID     *int64  `bun:"room_id"`
+	}
+	stored := func() storedRow {
+		var row storedRow
+		require.NoError(t, db.NewSelect().TableExpr("iot.devices").
+			Column("archived_at", "api_key_hash", "status", "room_id").
+			Where("id = ?", created.ID).Scan(dbCtx, &row))
+		return row
+	}
+
+	blocked, err := graph.DeviceBlocking.SetDeviceBlocked(ctx, created.ID, true, operatorID, provisioningTestClientIP)
+	require.NoError(t, err)
+	assert.Equal(t, "inactive", blocked.Status)
+	assert.Nil(t, blocked.APIKey, "the answer carries no credential")
+	row := stored()
+	assert.Nil(t, row.ArchivedAt, "a blocked device stays live")
+	require.NotNil(t, row.APIKeyHash)
+	assert.Equal(t, originalHash, *row.APIKeyHash, "blocking keeps the credential")
+	require.NotNil(t, row.RoomID)
+	assert.Equal(t, roomID, *row.RoomID)
+	listed, err := graph.ListSchoolDevices(ctx, schoolID)
+	require.NoError(t, err)
+	assert.True(t, slices.ContainsFunc(listed, func(d organizationtenancy.OperatorDevice) bool {
+		return d.ID == created.ID && d.Status == "inactive"
+	}), "the blocked device stays listed and occupies its Geräteplatz")
+
+	_, err = graph.DeviceBlocking.SetDeviceBlocked(ctx, created.ID, true, operatorID, provisioningTestClientIP)
+	require.NoError(t, err)
+	unblocked, err := graph.DeviceBlocking.SetDeviceBlocked(ctx, created.ID, false, operatorID, provisioningTestClientIP)
+	require.NoError(t, err)
+	assert.Equal(t, "active", unblocked.Status)
+	require.NotNil(t, stored().APIKeyHash)
+	assert.Equal(t, originalHash, *stored().APIKeyHash, "the unblocked kiosk keeps its key")
+
+	assert.Equal(t, 1, countOperatorAudit(t, db, "block", "device", created.ID), "a repeated block is not audited again")
+	assert.Equal(t, 1, countOperatorAudit(t, db, "unblock", "device", created.ID))
 }

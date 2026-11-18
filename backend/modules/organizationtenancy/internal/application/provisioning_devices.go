@@ -303,6 +303,47 @@ func (p *Provisioning) DeleteDevice(ctx context.Context, id int64, operatorID in
 	})
 }
 
+// SetDeviceBlocked blocks or unblocks a device (Gerätesperre, #2317). A
+// blocked device keeps its row, room, history, credential and Geräteplatz;
+// device authentication refuses its kiosk with iot.device_inactive until it
+// is unblocked with the same credential. The row stays locked from the read
+// to the write. Setting the state the device already has changes nothing
+// and records no second audit entry. The virtual manual web check-in device
+// cannot be blocked.
+func (p *Provisioning) SetDeviceBlocked(ctx context.Context, id int64, blocked bool, operatorID int64, clientIP net.IP) (*organizationtenancy.OperatorDevice, error) {
+	if id <= 0 {
+		return nil, invalidData("device id is required")
+	}
+	return adminValue(ctx, p, func(adminCtx context.Context) (*organizationtenancy.OperatorDevice, error) {
+		device, err := p.findDevice(adminCtx, id)
+		if err != nil {
+			return nil, err
+		}
+		if device.DeviceID == domain.WebManualDeviceID {
+			return nil, &organizationtenancy.DeviceProtectedError{DeviceID: id, Reason: webManualDeviceReason}
+		}
+		status, action := domain.DeviceStatusActive, domain.AuditActionUnblock
+		if blocked {
+			status, action = domain.DeviceStatusInactive, domain.AuditActionBlock
+		}
+		if device.Status != status {
+			previous := device.Status
+			device.Status = status
+			if err := p.devices.UpdateDevice(adminCtx, device); err != nil {
+				return nil, fmt.Errorf("SetDeviceBlocked: %w", err)
+			}
+			if err := p.recordAction(adminCtx, operatorID, action, domain.AuditResourceDevice, &id, clientIP, map[string]any{
+				"device_id":       device.DeviceID,
+				"school_id":       device.TenantID,
+				"previous_status": previous,
+			}); err != nil {
+				return nil, err
+			}
+		}
+		return p.listedDevice(adminCtx, "SetDeviceBlocked", id)
+	})
+}
+
 // ensureNoActiveDeviceSession rejects removing a device that runs an open
 // kiosk session.
 func (p *Provisioning) ensureNoActiveDeviceSession(ctx context.Context, device domain.Device, operatorID int64) error {
