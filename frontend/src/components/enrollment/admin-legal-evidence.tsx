@@ -1,13 +1,18 @@
 import { ChevronDown } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import { DocumentAttachmentList } from "~/components/enrollment/attachment-list";
+import {
+  DocumentAttachmentList,
+  type AttachmentLabels,
+} from "~/components/enrollment/attachment-list";
 import { formatDateTime } from "~/components/enrollment/enrollment-request-display";
 import { Alert } from "~/components/ui/alert";
+import { FramedList } from "~/components/ui/framed-list";
 import { EmptyState } from "~/components/ui/empty-state";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
+import { SUPPORTED_LOCALES } from "~/i18n/locales";
 import { documentsConcept } from "~/lib/concepts/documents";
 import type {
   AdminLegalEvidenceBlock,
@@ -21,6 +26,18 @@ const LegalMarkdown = dynamic(() =>
 );
 
 const LEGAL_EVIDENCE_TITLE = "Rechtstexte und Antworten";
+const LANGUAGE_NAMES = new Intl.DisplayNames("de", { type: "language" });
+
+const ATTACHMENT_LABELS: AttachmentLabels = {
+  open: "Öffnen",
+  download: "Herunterladen",
+  openLabel: (label) => `${label} öffnen`,
+  downloadLabel: (label) => `${label} herunterladen`,
+  openHint: "Öffnet die Datei in einem neuen Tab.",
+  downloadHint: "Lädt die Datei herunter.",
+  popupBlocked: "Der neue Tab konnte nicht geöffnet werden.",
+  errorObject: "Dokument",
+};
 
 const DATE_TIME: Intl.DateTimeFormatOptions = {
   dateStyle: "medium",
@@ -30,8 +47,16 @@ const DATE_TIME: Intl.DateTimeFormatOptions = {
 function LegalAnswer({
   kind,
   answer,
-}: Readonly<{ kind: string; answer: unknown }>) {
+  versionUncertain,
+}: Readonly<{ kind: string; answer: unknown; versionUncertain: boolean }>) {
   if (kind === "notice") return <StatusBadge tone="gray" label="Hinweis" />;
+  if (versionUncertain && typeof answer === "boolean")
+    return (
+      <StatusBadge
+        tone="gray"
+        label={answer ? "Ja gespeichert" : "Nein gespeichert"}
+      />
+    );
   if (answer === true)
     return (
       <StatusBadge
@@ -49,24 +74,36 @@ function LegalAnswer({
 function LegalEvidenceBlock({
   block,
   answer,
-  versionMismatch,
+  versionUncertain,
 }: Readonly<{
   block: AdminLegalEvidenceBlock;
   answer: unknown;
-  versionMismatch?: boolean;
+  versionUncertain: boolean;
 }>) {
   const [isOpen, setIsOpen] = useState(false);
+  const translations = block.translations;
+  const storedLocales = translations
+    ? SUPPORTED_LOCALES.filter(({ code }) => translations[code])
+    : [];
+  const textFromSettings = block.source === "standard";
   const heading = (
     <>
-      <span className="min-w-0 flex-1 font-medium break-words text-gray-900">
+      <span className="min-w-0 flex-1 basis-32 font-medium break-words text-gray-900">
         {block.title}
       </span>
-      {versionMismatch ? null : (
-        <LegalAnswer kind={block.kind} answer={answer} />
-      )}
+      <LegalAnswer
+        kind={block.kind}
+        answer={answer}
+        versionUncertain={versionUncertain || textFromSettings}
+      />
     </>
   );
-  if (!block.label && !block.text && !block.attachments?.length) {
+  if (
+    !block.label &&
+    !block.text &&
+    !block.attachments?.length &&
+    storedLocales.length === 0
+  ) {
     return (
       <div className="flex flex-wrap items-center gap-2 px-3 py-2.5">
         {heading}
@@ -91,7 +128,43 @@ function LegalEvidenceBlock({
             <p className="font-medium text-gray-900">{block.label}</p>
           )}
           {block.text && <LegalMarkdown text={block.text} />}
-          <DocumentAttachmentList attachments={block.attachments} />
+          <DocumentAttachmentList
+            attachments={block.attachments}
+            labels={ATTACHMENT_LABELS}
+          />
+          {storedLocales.length ? (
+            <details>
+              <summary className="cursor-pointer py-2 font-medium text-gray-900">
+                Gespeicherte Übersetzungen
+              </summary>
+              <ul className="space-y-3">
+                {storedLocales.map(({ code, label }) => {
+                  const translated = translations?.[code];
+                  return (
+                    <li
+                      key={code}
+                      lang={code}
+                      className="border-t border-gray-100 pt-3"
+                    >
+                      <p
+                        lang="de"
+                        className="text-xs font-medium text-gray-600"
+                      >
+                        {LANGUAGE_NAMES.of(code) ?? label}
+                      </p>
+                      <p className="font-semibold text-gray-900">
+                        {translated?.title}
+                      </p>
+                      {translated?.label && <p>{translated.label}</p>}
+                      {translated?.text && (
+                        <LegalMarkdown lang={code} text={translated.text} />
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </details>
+          ) : null}
         </div>
       ) : null}
     </details>
@@ -104,6 +177,11 @@ function LegalEvidenceEntry({
   let source = "Eingereicht";
   if (entry.staff_recorded) source = "Von der Schule erfasst";
   if (entry.change_request) source = "Änderung eingereicht";
+  const versionUncertain =
+    entry.version_mismatch === true || entry.version_unknown === true;
+  const usesStandardTexts = entry.blocks?.some(
+    ({ source }) => source === "standard",
+  );
   return (
     <li className="space-y-2.5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -112,30 +190,29 @@ function LegalEvidenceEntry({
           {formatDateTime(entry.snapshot_at, DATE_TIME)} Uhr
         </time>
       </div>
-      {entry.version_mismatch ? (
+      {versionUncertain ? (
         <Alert
           type="warning"
           announce="off"
-          message="Das Formular hatte eine andere Fassung. Die Antworten lassen sich den gespeicherten Texten nicht sicher zuordnen."
+          message="Die angezeigte Fassung fehlt oder weicht ab. Sie sehen die beim Eingang gespeicherten Texte und Antworten."
         />
+      ) : usesStandardTexts ? (
+        <p className="text-gray-600">
+          Bei Standardtexten ist die Fassung beim Eingang gespeichert.
+        </p>
       ) : null}
       {entry.blocks?.length ? (
-        <InsetPanel
-          as="ul"
-          framed
-          className="divide-y divide-gray-200 overflow-hidden"
-          padding="tight"
-        >
+        <FramedList>
           {entry.blocks.map((block) => (
             <li key={block.key}>
               <LegalEvidenceBlock
                 block={block}
                 answer={entry.consent_flags?.[block.key]}
-                versionMismatch={entry.version_mismatch}
+                versionUncertain={versionUncertain}
               />
             </li>
           ))}
-        </InsetPanel>
+        </FramedList>
       ) : (
         <p className="text-gray-600">
           Zu dieser Einreichung wurden keine Texte gespeichert.

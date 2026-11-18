@@ -358,6 +358,11 @@ export interface AdminLegalEvidenceBlock {
   label: string;
   text: string;
   attachments?: FormAttachment[];
+  source?: string;
+  translations?: Record<
+    string,
+    { title?: string; label?: string; text?: string }
+  >;
 }
 
 export interface AdminLegalEvidenceEntry {
@@ -365,6 +370,7 @@ export interface AdminLegalEvidenceEntry {
   blocks: AdminLegalEvidenceBlock[] | null;
   consent_flags: Record<string, unknown> | null;
   version_mismatch?: boolean;
+  version_unknown?: boolean;
   change_request?: boolean;
   staff_recorded?: boolean;
 }

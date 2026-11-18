@@ -216,7 +216,13 @@ func (s *ChangeRequests) validateProposal(ctx context.Context, req *enrollmentNa
 		if merged == nil {
 			merged = map[string]any{}
 		}
-		maps.Copy(merged, editReq.ConsentFlags)
+		incoming := maps.Clone(editReq.ConsentFlags)
+		for _, block := range legalBlocks {
+			if block.Required {
+				delete(incoming, block.Key)
+			}
+		}
+		maps.Copy(merged, incoming)
 		editReq.ConsentFlags = merged
 	}
 	if err := s.intake.validateSubmission(ctx, changeRequestValidationSubmission(*editReq, children, opts.lockTakenOverChildren), consentBlocks, capabilities); err != nil {

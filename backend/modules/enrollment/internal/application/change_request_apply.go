@@ -172,13 +172,17 @@ func (s *ChangeRequests) loadApprovalContext(ctx context.Context, run *approval)
 // co-guardians, carrying their stamped guardian profiles over.
 func (s *ChangeRequests) writeApprovedRequest(ctx context.Context, run *approval) error {
 	req, prepared := run.req, run.prepared.request
+	evidence, err := approvalLegalEvidence(run)
+	if err != nil {
+		return err
+	}
 	req.GuardianFirstName = textnorm.Name(prepared.GuardianFirstName)
 	req.GuardianLastName = textnorm.Name(prepared.GuardianLastName)
 	req.GuardianEmail = guardianEmailKey(prepared.GuardianEmail)
 	req.GuardianPhone = prepared.GuardianPhone
 	req.ConsentFlags = formValues(prepared.ConsentFlags)
-	if run.row.LegalEvidence != nil {
-		req.LegalBlocksSnapshot = append(req.LegalBlocksSnapshot, *run.row.LegalEvidence)
+	if evidence != nil {
+		req.LegalBlocksSnapshot = append(req.LegalBlocksSnapshot, *evidence)
 	}
 	req.CustomData = formValues(prepared.CustomData)
 	if err := s.deps.Requests.UpdateRequestGuardian(ctx, req, true); err != nil {

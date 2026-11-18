@@ -5254,6 +5254,7 @@ describe("EnrollmentForm restrictToOfferings (#2251)", () => {
       custom_data: Record<string, unknown>;
     };
     // Hidden master data travels unchanged from the draft.
+    expect(payload.consent_flags).toEqual({});
     expect(payload.guardian_first_name).toBe("Mara");
     expect(payload.guardian_email).toBe("mara@example.test");
     expect(payload.children[0]?.first_name).toBe("Anton");

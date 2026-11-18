@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -71,5 +72,41 @@ func (s *ChangeRequests) proposedLegalEvidence(ctx context.Context, prepared *pr
 		return nil, err
 	}
 	entry.ChangeRequest = true
+	return &entry, nil
+}
+
+// approvalLegalEvidence carries over the parts of the proposal that were
+// applied. A school may remove a block while a proposal waits for review.
+func approvalLegalEvidence(run *approval) (*enrollment.LegalBlocksSnapshotEntry, error) {
+	if run.row.LegalEvidence == nil {
+		return nil, nil
+	}
+	entry := *run.row.LegalEvidence
+	var submitted map[string]any
+	if err := json.Unmarshal(entry.ConsentFlags, &submitted); err != nil {
+		return nil, fmt.Errorf("decode submitted consent evidence: %w", err)
+	}
+	before := formMap(run.req.ConsentFlags)
+	proposed := mapFromAny(run.row.ProposedSnapshot["consent_flags"])
+	applied := run.prepared.request.ConsentFlags
+	blocks := make([]enrollment.LegalBlockSnapshot, 0, len(entry.Blocks))
+	flags := make(map[string]any)
+	for _, block := range entry.Blocks {
+		if jsonEqual(before[block.Key], applied[block.Key]) || !jsonEqual(proposed[block.Key], applied[block.Key]) {
+			continue
+		}
+		blocks = append(blocks, block)
+		if answer, present := submitted[block.Key]; present {
+			flags[block.Key] = answer
+		}
+	}
+	if len(blocks) == 0 {
+		return nil, nil
+	}
+	frozen, err := json.Marshal(flags)
+	if err != nil {
+		return nil, fmt.Errorf("encode approved consent evidence: %w", err)
+	}
+	entry.Blocks, entry.ConsentFlags = blocks, frozen
 	return &entry, nil
 }
