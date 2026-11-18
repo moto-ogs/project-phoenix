@@ -172,7 +172,8 @@ type comparedStudent struct {
 // careTimeInputs are the facts one comparison reads, each once for the
 // whole population.
 type careTimeInputs struct {
-	careDays map[calendar.Date]bool
+	careDays     map[calendar.Date]bool
+	weekdaysOnly bool
 	// vacationOnly are care weekdays only a holiday period excludes; on them
 	// a holiday booking keeps the day a care day (#5994).
 	vacationOnly map[calendar.Date]bool
@@ -219,11 +220,46 @@ func (s *service) compareCareTimes(ctx context.Context, students []*ports.Statis
 	return result, dataFrom, nil
 }
 
+func (s *service) DemoCareDays(ctx context.Context, from, to calendar.Date) ([]studentpresence.DemoCareDay, error) {
+	today := calendar.DateFromTime(s.cfg.Now())
+	if err := s.validate(studentpresence.StatisticsFilters{From: from, To: to}, today); err != nil {
+		return nil, err
+	}
+	if !to.Before(today) {
+		return nil, fmt.Errorf("%w: demo history must end before today", studentpresence.ErrInvalidStatisticsRange)
+	}
+	students, err := s.cfg.Students.FindOverlappingWithGroups(ctx, from, to, today)
+	if err != nil {
+		return nil, fmt.Errorf("load demo history students: %w", err)
+	}
+	students = enrolledStudents(students)
+	if len(students) == 0 {
+		return []studentpresence.DemoCareDay{}, nil
+	}
+	ids := make([]int64, 0, len(students))
+	for _, student := range students {
+		ids = append(ids, student.ID)
+	}
+	planned, err := s.cfg.PlannedCareDays.PlannedCareDays(ctx, ids, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("load demo history bookings: %w", err)
+	}
+	days := make([]studentpresence.DemoCareDay, 0, len(students)*(from.DaysUntil(to)+1))
+	for _, student := range students {
+		for day := from; !day.After(to); day = day.AddDays(1) {
+			if plan, ok := planned[student.ID][day]; ok && student.EnrolledOn(day, today) {
+				days = append(days, studentpresence.DemoCareDay{StudentID: student.ID, Date: day, PlannedCareDay: plan})
+			}
+		}
+	}
+	return days, nil
+}
+
 // compareStudentDays classifies the days of one child its enrollment covers.
 func compareStudentDays(student *ports.StatisticsStudent, inputs careTimeInputs, from, to, today calendar.Date) comparedStudent {
 	var compared comparedStudent
 	for date := from; !date.After(to); date = date.AddDays(1) {
-		if !student.EnrolledOn(date, today) {
+		if (inputs.weekdaysOnly && calendar.IsWeekend(date)) || !student.EnrolledOn(date, today) {
 			continue
 		}
 		key := dayKey{student.ID, date}
@@ -268,7 +304,7 @@ func (s *service) loadCareTimeInputs(ctx context.Context, students []*ports.Stat
 	for _, student := range students {
 		ids = append(ids, student.ID)
 	}
-	var inputs careTimeInputs
+	inputs := careTimeInputs{weekdaysOnly: s.cfg.DemoHistory}
 	var err error
 	if inputs.careDays, inputs.vacationOnly, _, err = s.careCalendar(ctx, from, to); err != nil {
 		return careTimeInputs{}, err

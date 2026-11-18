@@ -410,7 +410,9 @@ func mountOperatorSchoolRoutes(
 		r.Get("/{id}/persons", provisioning.AuditReadAccess(organizationtenancy.ReadSchoolPersons, provisioning.ListSchoolPersons))
 		r.Get("/{id}/pwa-usage", provisioning.GetSchoolPWAUsage)
 		if demoPresenceHistory != nil {
-			r.Post("/{id}/demo-presence-history", provisioning.AuditReadAccess(organizationtenancy.ReadDemoPresenceHistory, demoPresenceHistory))
+			history := provisioning.AuditReadAccess(organizationtenancy.ReadDemoPresenceHistory, demoPresenceHistory)
+			r.Get("/{id}/demo-presence-history", history)
+			r.Post("/{id}/demo-presence-history", history)
 		}
 		if schoolSettings != nil {
 			values := schoolSettings.values

@@ -2597,11 +2597,6 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/StatisticsReportPeriods.StatisticsHolidayPeriods",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "roots/owners/StatisticsReportRooms.StatisticsRooms",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

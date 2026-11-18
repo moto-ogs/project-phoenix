@@ -3,12 +3,12 @@ package owners
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
 
 	careContractCompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	email "github.com/moto-ogs/project-phoenix/modules/delivery/mail"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
@@ -37,16 +37,14 @@ type StatisticsSettings interface {
 
 // newStatisticsReports binds the Statistik report to the owners it reads;
 // the service graph calls the result with its access log and retention
-// settings. now fixes the report clock; nil is the Berlin clock.
-func newStatisticsReports(db transactionruntime.Database, carePlan careplan.StudentStatusDaysQuery, careDays careplan.CareDayQuery, calendar schoolcalendar.Days, students statisticsStudentRows, birthdays statisticsBirthdays, rooms facilities.Query, logger *slog.Logger, now func() time.Time) func(AccessLogLedger, StatisticsSettings) studentpresence.StatisticsReports {
+// settings. The demo shows a weekday history alongside its live simulation.
+func newStatisticsReports(db transactionruntime.Database, carePlan careplan.StudentStatusDaysQuery, careDays careplan.CareDayQuery, calendar schoolcalendar.Days, students statisticsStudentRows, birthdays statisticsBirthdays, rooms facilities.Query, env RootEnvironment) func(AccessLogLedger, StatisticsSettings) studentpresence.StatisticsReports {
 	return func(accessLog AccessLogLedger, settings StatisticsSettings) studentpresence.StatisticsReports {
-		return NewStatistics(logger, presenceCompose.StatisticsDependencies{
+		return NewStatistics(env.Logger, presenceCompose.StatisticsDependencies{
 			DB:               db.Pool(),
 			StatusDays:       StatisticsStatusDays{carePlan},
 			Courses:          NewCourseStatistics(db),
 			Holidays:         schoolCalendarCompose.NewTenantHolidays(calendar),
-			ClosingDays:      schoolCalendarCompose.NewTenantClosingDays(calendar),
-			Periods:          StatisticsReportPeriods{calendar},
 			CalendarDays:     calendar,
 			Students:         StatisticsReportStudents{students},
 			Rooms:            StatisticsReportRooms{rooms},
@@ -55,8 +53,9 @@ func newStatisticsReports(db transactionruntime.Database, carePlan careplan.Stud
 			PlannedCareDays:  StatisticsPlannedCareDays{careDays},
 			ContractCareDays: StatisticsContractCareDays{careContractCompose.NewBookedCare()},
 			HolidayCareDays:  StatisticsHolidayCareDays{enrollmentCompose.NewHolidayGuestBookedCare(StatisticsHolidayStudents{birthdays})},
-			Logger:           logger.With("service", "statistics"),
-			Now:              now,
+			DemoHistory:      email.IsDemoEnvironment(env.Config.AppEnv),
+			Logger:           env.Logger.With("service", "statistics"),
+			Now:              env.Now,
 		})
 	}
 }

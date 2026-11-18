@@ -6,17 +6,25 @@ import (
 	"fmt"
 )
 
-// A demo order's school gets a Träger of its own (#6193, ADR 0271): the
-// visitor enters its Träger-Büro, and two neighbour schools make the
-// Träger's comparisons and lists worth looking at. The neighbour schools are
-// small: two groups, twelve children with contacts and weekly times, and
-// today's attendance through the web (the manual profile's contents).
-var demoNeighbourSchools = []struct {
-	key  string
-	name string
-}{
-	{"n1", "OGS Am Lindenhof"},
-	{"n2", "OGS Rheinblick"},
+// The neighbouring schools make the visitor's Träger reports comparable.
+var demoNeighbourSchools = []demoNeighbourSchool{
+	{
+		key: "n1", name: "OGS Am Lindenhof",
+		firstNames: []string{"Alma", "Lio", "Tilda", "Rafael"},
+		surnames:   []string{"Bergmann", "Kappel", "Mertens", "Wiegand"},
+		families:   []string{"Marina", "Robert", "Karla", "Deniz"},
+		offerings:  []seedCareOffering{neighbourOffering("Betreuung bis 15 Uhr", 20, "15:00", demoWeekdays)},
+	},
+	{
+		key: "n2", name: "OGS Rheinblick",
+		firstNames: []string{"Aylin", "Hugo", "Nora", "Levi", "Mina", "Elias"},
+		surnames:   []string{"Aydin", "Dreyer", "Hagedorn", "Schiller"},
+		families:   []string{"Aida", "Fabian", "Inga", "Leonie"},
+		offerings: []seedCareOffering{
+			neighbourOffering("Ganztag bis 16:30 Uhr", 24, "16:30", demoWeekdays),
+			neighbourOffering("Kurzbetreuung bis 14 Uhr", 10, "14:00", demoWeekdays[:4]),
+		},
+	},
 }
 
 // demoNeighbourAdminPosition is the position of a neighbour school's admin.
@@ -98,20 +106,20 @@ func (s seedDemoNeighbourSchoolsStep) Run(ctx context.Context, rt *Runtime) erro
 		rt.SetTenantAuth(primaryAuth)
 	}()
 	for _, neighbour := range demoNeighbourSchools {
-		if err := s.seedNeighbour(ctx, rt, primary, neighbour.key, neighbour.name); err != nil {
+		if err := s.seedNeighbour(ctx, rt, primary, neighbour); err != nil {
 			return fmt.Errorf("neighbour school %s: %w", neighbour.name, err)
 		}
 	}
 	return nil
 }
 
-func (s seedDemoNeighbourSchoolsStep) seedNeighbour(ctx context.Context, rt *Runtime, primary *bootstrapSeedState, key, name string) error {
+func (s seedDemoNeighbourSchoolsStep) seedNeighbour(ctx context.Context, rt *Runtime, primary *bootstrapSeedState, neighbour demoNeighbourSchool) error {
 	rt.Client.BindAuth(rt.OperatorAuth)
-	slug := truncateSeedSubdomain(primary.SchoolSlug + "-" + key)
-	schoolID, tenantSlug, err := s.seeder.createSeedSchool(primary.OrganizationID, name, slug, slug)
+	slug := truncateSeedSubdomain(primary.SchoolSlug + "-" + neighbour.key)
+	schoolID, tenantSlug, err := s.seeder.createSeedSchool(primary.OrganizationID, neighbour.name, slug, slug)
 	if err != nil && s.seeder.options.ReplaceAbandoned && isConflictError(err) {
 		if err = s.seeder.retireAbandonedSchool(slug); err == nil {
-			schoolID, tenantSlug, err = s.seeder.createSeedSchool(primary.OrganizationID, name, slug, slug)
+			schoolID, tenantSlug, err = s.seeder.createSeedSchool(primary.OrganizationID, neighbour.name, slug, slug)
 		}
 	}
 	if err != nil {
@@ -122,8 +130,8 @@ func (s seedDemoNeighbourSchoolsStep) seedNeighbour(ctx context.Context, rt *Run
 			return err
 		}
 	}
-	definition := manualProfileDefinition()
-	definition.SchoolAdminEmail = fmt.Sprintf("nachbarschule-%s-admin@example.test", key)
+	definition := neighbour.profile()
+	definition.SchoolAdminEmail = fmt.Sprintf("nachbarschule-%s-admin@example.test", neighbour.key)
 	email, password, err := s.seeder.profileAdminCredentialsFor(definition)
 	if err != nil {
 		return err
@@ -137,17 +145,16 @@ func (s seedDemoNeighbourSchoolsStep) seedNeighbour(ctx context.Context, rt *Run
 	}
 	rt.Bootstrap = &bootstrapSeedState{
 		OrganizationID: primary.OrganizationID, OrganizationName: primary.OrganizationName,
-		OrganizationSlug: primary.OrganizationSlug, SchoolID: schoolID, SchoolName: name,
+		OrganizationSlug: primary.OrganizationSlug, SchoolID: schoolID, SchoolName: neighbour.name,
 		SchoolSlug: slug, TenantSlug: tenantSlug, AdminEmail: email, AdminPassword: password,
 		AdminName: seedAdminFirstName + " " + seedAdminLastName, AdminPosition: demoNeighbourAdminPosition,
 	}
 	rt.SetTenantAuth(auth)
+	if err := seedEnrollmentPrivacyNoticeSettings(rt, auth); err != nil {
+		return err
+	}
 	if err := (configureProfileStep{definition: definition}).Run(ctx, rt); err != nil {
 		return err
 	}
-	if _, err := seedManualProfileData(rt); err != nil {
-		return err
-	}
-	fmt.Printf("  Träger: neighbour school %s with two groups and twelve children\n", name)
-	return nil
+	return neighbour.seedCare(ctx, rt, s.seeder.options, definition)
 }
