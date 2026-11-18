@@ -114,3 +114,17 @@ func splitSealedField(sealed []byte) (string, []byte, error) {
 	}
 	return string(sealed[2 : 2+idLength]), sealed[2+idLength:], nil
 }
+
+// Rewrap moves a value onto the active key (#3840): a value already on it
+// stays byte-identical, so repeated passes converge; a value on an older key
+// of the ring is opened and sealed with a fresh nonce.
+func (c *Cipher) Rewrap(sealed, context []byte) ([]byte, error) {
+	plaintext, err := c.Open(sealed, context)
+	if err != nil {
+		return nil, ErrOpen
+	}
+	if id, _, _ := splitSealedField(sealed); id == c.activeID {
+		return sealed, nil
+	}
+	return c.Seal(plaintext, context)
+}

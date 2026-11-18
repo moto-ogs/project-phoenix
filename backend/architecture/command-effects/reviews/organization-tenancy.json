@@ -204,6 +204,16 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.FileKeys.OpenStoredObject",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TenantExportObjects.OpenStoredObject",
+      "reason": "Read-only newly exposed target: organization-tenancy reaches modules/delivery/objects.FileKeys.OpenStoredObject (delivery-platform) through modules/organizationtenancy.TenantExportObjects.OpenStoredObject. No persistent, lock or scope effect; opens sealed objects of #3840 (ADR 0098).",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.FileKeys.OpenStoredObject",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/settings.ExportFields.ProjectExportField",
       "classification": "query",
       "effect": "query",

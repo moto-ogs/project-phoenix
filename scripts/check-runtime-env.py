@@ -69,7 +69,7 @@ def check(path, target, expected):
         if any(".env" in str(volume.get("source", "")) for volume in service.get("volumes", [])):
             raise ValueError(name + ": dotenv mounts are forbidden")
         for key, value in service["environment"].items():
-            if key in ("DB_DSN", "DEMO_DB_DSN", "API_URL", "PORT", "HOSTNAME") and name not in ("migrate", "bank-data-rekey"):
+            if key in ("DB_DSN", "DEMO_DB_DSN", "API_URL", "PORT", "HOSTNAME") and name not in ("migrate", "bank-data-rekey", "upload-seal"):
                 continue
             operator = "?" if key in OPTIONAL_VALUES else ":?"
             expected_binding = "${" + key + "-}" if key in PENDING_SOPS_VALUES else "${" + key + operator + key + " is required}"
@@ -89,6 +89,7 @@ def check(path, target, expected):
     if services["migrate"]["image"] != services["server"]["image"]:
         raise ValueError("migrate: must use the serving backend image")
     check_bank_rekey_service(services)
+    check_upload_seal_service(services)
 
 
 def check_bank_rekey_service(services):
@@ -104,6 +105,22 @@ def check_bank_rekey_service(services):
     if job.get("volumes") or job.get("ports"):
         raise ValueError("bank-data-rekey: no filesystem or listener authority")
 
+
+def check_upload_seal_service(services):
+    job = services["upload-seal"]
+    if job.get("profiles") != ["maintenance"]:
+        raise ValueError("upload-seal: must be an explicit maintenance job")
+    if job.get("command") != ["./main", "upload-seal", "--uploads", "/app/public/uploads"]:
+        raise ValueError("upload-seal: unexpected command")
+    if job["image"] != services["server"]["image"]:
+        raise ValueError("upload-seal: must use the serving backend image")
+    if job["environment"]["DB_DSN"] != "${DB_DSN:?DB_DSN is required}":
+        raise ValueError("upload-seal: privileged maintenance DSN required")
+    if job.get("ports"):
+        raise ValueError("upload-seal: no listener authority")
+    uploads = [volume for volume in services["server"].get("volumes", []) if volume.get("target") == "/app/public/uploads"]
+    if job.get("volumes") != uploads:
+        raise ValueError("upload-seal: exactly the server's uploads volume is required")
 
 
 def check_missing_config(path, directory):

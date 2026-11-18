@@ -287,7 +287,8 @@ const modulePassthroughApplicationSegment = "/internal/application/"
 // mail instead of forwarding (-1).
 // Raised by ADR 0283: Student Presence's mark transfer of the class-list
 // conversion, which validates the moves before its store call (+1).
-const modulePassthroughOwnerBudgetTotal = 1395
+// Raised by ADR 0289: the file seal of modules/workforce (+1).
+const modulePassthroughOwnerBudgetTotal = 1396
 
 // modulePassthroughOwnerBudgets is the register: module directory →
 // pass-throughs measured in its application layer and its compositions
@@ -366,7 +367,9 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Lowered by #7058: the payroll dispatch overview reads its mails too (-1).
 	// Raised by ADR 0243: the month close of the Träger maps its close, its
 	// reopen and the staff the school leaves out onto the public failures (+3).
-	"modules/workforce":      137,
+	// Raised by ADR 0289: the maintenance seal of the sick note and payslip
+	// files (+1).
+	"modules/workforce":      138,
 	"workflows/openroommove": 1,
 	// Raised by ADR 0078: the week change of the meal plan adapter.
 	"workflows/parentportal": 18,

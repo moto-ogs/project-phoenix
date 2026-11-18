@@ -13585,6 +13585,18 @@
       "target_owner": "file-storage"
     },
     {
+      "adr": "0067",
+      "approval_adr": "0083",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Coordinator.SaveSealed",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentDocumentFiles.SaveSealed",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/filestorage/internal/adapters/documents.Coordinator.SaveSealed; sealed write of #3840 beside Coordinator.Save. ",
+      "source_owner": "care-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Coordinator.SaveSealed",
+      "target_owner": "file-storage"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Coordinator.Serve",
       "classification": "query",
       "effect": "query",

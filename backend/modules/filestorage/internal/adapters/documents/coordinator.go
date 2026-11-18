@@ -53,6 +53,10 @@ type Object = interface {
 // supplies the shared uploads backend.
 type Objects interface {
 	SavePrivate(ctx context.Context, kind string, tenantID int64, storedName string, source io.Reader) (int64, error)
+	// SaveSealed writes the object sealed with ring; "" writes it unsealed.
+	// It returns the plaintext size (#3840).
+	SaveSealed(ctx context.Context, kind string, tenantID int64, storedName string, source io.Reader, ring string) (int64, error)
+	// OpenPrivate opens sealed objects with the binding's rings.
 	OpenPrivate(ctx context.Context, kind string, tenantID int64, storedName string) (Object, error)
 	RemovePrivate(ctx context.Context, kind string, tenantID int64, storedName string) error
 }
@@ -90,6 +94,12 @@ func NewStoredName(extension string) (string, error) {
 // Save writes the uploaded object privately and returns the stored size.
 func (c *Coordinator) Save(ctx context.Context, tenantID int64, storedName string, source io.Reader) (int64, error) {
 	return c.Backend.SavePrivate(ctx, c.Kind, tenantID, storedName, source)
+}
+
+// SaveSealed writes the uploaded object privately, sealed with the key ring
+// the owner chose for its category (#3840), and returns the plaintext size.
+func (c *Coordinator) SaveSealed(ctx context.Context, tenantID int64, storedName string, source io.Reader, ring string) (int64, error) {
+	return c.Backend.SaveSealed(ctx, c.Kind, tenantID, storedName, source, ring)
 }
 
 // Serve streams the object as a download named displayName. It returns false

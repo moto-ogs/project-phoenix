@@ -171,9 +171,9 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
-      "decision": "0090",
+      "decision": "0289",
       "id": "modules/delivery/objects/PrivateUploads.OpenPrivate",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; sealed objects of #3840 (ADR 0289)."
     },
     {
       "decision": "0090",
@@ -181,9 +181,9 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
-      "decision": "0090",
-      "id": "modules/delivery/objects/PrivateUploads.SavePrivate",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+      "decision": "0289",
+      "id": "modules/delivery/objects/PrivateUploads.RemoveStaleReplacements",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; sealed objects of #3840 (ADR 0289)."
     },
     {
       "decision": "0090",

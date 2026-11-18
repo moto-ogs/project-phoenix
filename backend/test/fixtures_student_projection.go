@@ -185,6 +185,19 @@ func mustTestHealthDataCipher() userpasstest.FieldCipher {
 	return cipher
 }
 
+// TestBankDataCipher is the field cipher over TestBankDataKeys, the ring the
+// test configuration serves as BANK_DATA_KEYS; sealed payslip files open
+// with it (#3840).
+var TestBankDataCipher = mustTestBankDataCipher()
+
+func mustTestBankDataCipher() userpasstest.FieldCipher {
+	cipher, err := userpasstest.ParseFieldCipher(TestBankDataKeys)
+	if err != nil {
+		panic("build test bank data cipher: " + err.Error())
+	}
+	return cipher
+}
+
 // studentHealthContext is the context the student directory projection binds
 // a child's sealed health field to (studentdirectoryview.StudentHealthContext,
 // #5472); test support may not reach the projection.

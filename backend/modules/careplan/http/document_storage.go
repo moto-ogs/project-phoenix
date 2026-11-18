@@ -20,6 +20,9 @@ type StudentDocumentFileStore interface {
 type StudentDocumentFiles interface {
 	NewStoredName(string) (string, error)
 	Save(context.Context, int64, string, io.Reader) (int64, error)
+	// SaveSealed writes the object sealed with the ring the category names
+	// (careplan.StudentDocumentKeyRing, #3840); "" writes it unsealed.
+	SaveSealed(ctx context.Context, tenantID int64, storedName string, source io.Reader, ring string) (int64, error)
 	Serve(http.ResponseWriter, *http.Request, int64, string, string, string) bool
 	Remove(context.Context, int64, string) error
 	CleanupDocument(context.Context, int64, int64, int64, string, string)

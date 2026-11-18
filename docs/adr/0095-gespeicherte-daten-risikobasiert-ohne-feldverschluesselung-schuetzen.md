@@ -39,9 +39,15 @@ status: accepted
 >   mit einem eigenen Zufallsschlüssel je Paket (AES-256-GCM); die Datenbank
 >   hält diesen Schlüssel nur in Abruf-Tokens eingewickelt:
 >   [ADR 0203](0203-mandantenrueckgabe-wird-per-https-mit-kurzlebigem-token-abgerufen.md).
+> - Hochgeladene Atteste, Impfnachweise und Medikamentenpläne der Kinder und
+>   AU-Bescheinigungen des Personals liegen mit `HEALTH_DATA_KEYS` versiegelt
+>   im Dateispeicher, Lohnabrechnungen mit `BANK_DATA_KEYS`; der Bestand wird
+>   mit `upload-seal` nachverschlüsselt (#3840):
+>   [ADR 0289](0289-atteste-au-bescheinigungen-und-lohnabrechnungen-liegen-versiegelt-im-dateispeicher.md).
 >
-> ADR 0171, 0183, 0187, 0188 und 0203 tragen noch `status: proposed`; ihr Code liegt auf
-> `development`. Weiter gilt diese Entscheidung für Datei-Uploads, für
+> ADR 0171, 0183, 0187, 0188, 0203 und 0289 tragen noch `status: proposed`. Der
+> Code von 0171 bis 0203 liegt auf `development`. Weiter gilt diese
+> Entscheidung für die übrigen Datei-Uploads, für
 > Dateien in Datenbankzeilen (Uploads und erzeugte Dokumente), für
 > Gesundheitsantworten in Anmeldeanträgen
 > (`enrollment.request_children.custom_data` und die Snapshots in
