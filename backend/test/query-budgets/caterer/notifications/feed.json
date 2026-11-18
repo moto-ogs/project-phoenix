@@ -1,0 +1,7 @@
+{
+  "scenario": "caterer.notifications.feed",
+  "max": 5,
+  "exact": true,
+  "description": "Caterer-scope GET /caterer/notifications/feed/ through real Delivery (#7147). N=0/3/8 entries of the caterer account across two schools its caterer supplies and one entry of another account of the same caterer; one page read and one unread count, each joined with the running supplies of the account's caterer, in Delivery's own administrative transaction. Includes BEGIN/COMMIT; excludes outer live-session verification.",
+  "route": "GET /caterer/notifications/feed/"
+}

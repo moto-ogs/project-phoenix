@@ -61,6 +61,11 @@ type DeliveryNotifications struct {
 	// TraegerFeed serves that bell across the schools of a Träger (#7146).
 	TraegerNotices deliveryContract.TraegerFeedNotifier
 	TraegerFeed    deliveryContract.TraegerNotificationFeed
+	// CatererNotices writes a notice into the bell of the caterer portal, and
+	// CatererFeed serves that bell across the schools a caterer supplies
+	// (#7147).
+	CatererNotices deliveryContract.CatererFeedNotifier
+	CatererFeed    deliveryContract.CatererNotificationFeed
 }
 
 // BuildDeliveryNotifications binds the notification router over the realtime
@@ -130,6 +135,8 @@ func BuildDeliveryNotifications(
 		SchoolAudience:   schoolAudience,
 		TraegerNotices:   feeds.traegerNotices,
 		TraegerFeed:      feeds.traeger,
+		CatererNotices:   feeds.catererNotices,
+		CatererFeed:      feeds.caterer,
 	}, nil
 }
 
@@ -237,12 +244,14 @@ func deliveryCapabilities(absences, recipients any, notifier deliveryCompose.Not
 // deliveryFeedSides are the sides of the router's notification feed: the
 // feed of a staff account in its school (#7148), the feed of a guardian
 // across the family's schools (#7140), and the write and read side of the
-// bell of the Träger-Portal (#7146).
+// bell of the Träger-Portal (#7146) and of the caterer portal (#7147).
 type deliveryFeedSides struct {
 	staff          deliveryContract.NotificationFeed
 	guardian       deliveryContract.GuardianNotificationFeed
 	traegerNotices deliveryContract.TraegerFeedNotifier
 	traeger        deliveryContract.TraegerNotificationFeed
+	catererNotices deliveryContract.CatererFeedNotifier
+	caterer        deliveryContract.CatererNotificationFeed
 }
 
 func deliveryFeeds(notifier deliveryCompose.Notifier) (deliveryFeedSides, error) {
@@ -260,5 +269,15 @@ func deliveryFeeds(notifier deliveryCompose.Notifier) (deliveryFeedSides, error)
 	if !writes || !reads || traeger.TraegerFeed() == nil {
 		return deliveryFeedSides{}, fmt.Errorf("notification router does not serve the Träger bell")
 	}
-	return deliveryFeedSides{staff: feed, guardian: guardians.GuardianFeed(), traegerNotices: notices, traeger: traeger.TraegerFeed()}, nil
+	catererNotices, catererWrites := notifier.(deliveryContract.CatererFeedNotifier)
+	caterer, catererReads := notifier.(interface {
+		CatererFeed() deliveryContract.CatererNotificationFeed
+	})
+	if !catererWrites || !catererReads || caterer.CatererFeed() == nil {
+		return deliveryFeedSides{}, fmt.Errorf("notification router does not serve the caterer bell")
+	}
+	return deliveryFeedSides{
+		staff: feed, guardian: guardians.GuardianFeed(), traegerNotices: notices, traeger: traeger.TraegerFeed(),
+		catererNotices: catererNotices, caterer: caterer.CatererFeed(),
+	}, nil
 }

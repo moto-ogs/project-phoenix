@@ -678,6 +678,10 @@ var coreActions = map[RouteKey]CoreAction{
 	// The caterer's second factor (#4497): a redeemed code or passkey
 	// starts the session like the login; switching the factor on or off and
 	// managing devices and passkeys are account settings.
+	// The bell of the caterer portal (#7147): marking an entry read is no
+	// core action, like the Träger bell's.
+	{http.MethodPost, "/caterer/notifications/feed/read-all"}:                 notCaptured,
+	{http.MethodPost, "/caterer/notifications/feed/{id}/read"}:                notCaptured,
 	{http.MethodPost, "/caterer/account/mfa/confirm"}:                         notCaptured,
 	{http.MethodPost, "/caterer/account/mfa/disable"}:                         notCaptured,
 	{http.MethodPost, "/caterer/account/mfa/start"}:                           notCaptured,
