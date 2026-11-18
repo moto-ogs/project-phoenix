@@ -35,11 +35,11 @@ import { formatPlannedHours } from "~/lib/shift-helpers";
 import { describeWorkingTimeWarning } from "~/lib/working-time";
 
 import {
-  contractSuggestions,
   plannedOfSoll,
   sollTone,
   warningsOfDay,
   type ContractSuggestion,
+  weekSuggestions,
   type PlanningDay,
 } from "./planning-format";
 
@@ -170,6 +170,21 @@ export function PlanningWeekGrid({
     return result;
   }, [people]);
 
+  // Die Vorschläge rechnen die Woche einer Person einmal von vorn durch,
+  // damit sie zusammen nie über das Soll der Woche führen.
+  const suggestionsByPerson = useMemo(
+    () =>
+      new Map(
+        canPlan
+          ? people.map((person) => [
+              person.recordId,
+              weekSuggestions(person, todayIso),
+            ])
+          : [],
+      ),
+    [canPlan, people, todayIso],
+  );
+
   const usedSchools = useMemo(() => {
     const used = new Set(
       people.flatMap((person) => person.sites.map((site) => site.schoolId)),
@@ -298,9 +313,8 @@ export function PlanningWeekGrid({
   ): ReactNode => {
     const shifts =
       shiftsByPersonDay.get(`${person.recordId}|${column.key}`) ?? [];
-    const suggestions = canPlan
-      ? contractSuggestions(person, column.key, todayIso)
-      : [];
+    const suggestions =
+      suggestionsByPerson.get(person.recordId)?.get(column.key) ?? [];
     if (shifts.length === 0 && suggestions.length === 0) return null;
     const warned = warningsOfDay(person.warnings, column.key).length > 0;
     return (

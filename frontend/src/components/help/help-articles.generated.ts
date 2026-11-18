@@ -15117,15 +15117,15 @@ export const traegerStaffPlanningTopic =
         "moto zählt alle Schulen der Person zusammen: die Stunden am Tag, die Ruhezeit, die Pausen und das Soll der Woche.",
         "Dieselbe Prüfung läuft, wenn eine Schule selbst eine Schicht plant.",
         "Das Soll kommt aus dem Arbeitsvertrag. Feiertage und Schließtage zählen nicht.",
-        "Der Vertrag kennt nur Stunden. Den Beginn nimmt moto von der Uhrzeit, zu der die Person in dieser Woche an der Schule meistens anfängt, sonst 8:00 Uhr. Arbeitet sie an dem Tag schon woanders, beginnt der Vorschlag 30 Minuten danach. Die Pause rechnet moto nach dem Gesetz für den ganzen Tag dazu.",
-        "Ein Vorschlag führt nie über das Soll der Woche. Ist es fast erreicht, schlägt moto nur noch den Rest vor.",
+        "Der Vertrag kennt nur Stunden. Den Beginn nimmt moto von der Uhrzeit, zu der die Person in dieser Woche an der Schule meistens anfängt, sonst 8:00 Uhr. Arbeitet sie an dem Tag schon an einer anderen Schule, liegt der Vorschlag mit 30 Minuten Abstand davor oder danach. Die Pause rechnet moto nach dem Gesetz für den ganzen Tag dazu.",
+        "Alle Vorschläge zusammen führen nie über das Soll der Woche. Ist es fast erreicht, schlägt moto nur noch den Rest vor.",
         "Jedes Anzeigen und jeder Download der Woche steht im Zugriffsprotokoll jeder Schule.",
         "moto prüft die Regeln als Hilfe. Ob eine Planung erlaubt ist, entscheidest du.",
       ],
       differences: [
         "Oben steht `Einsatzplanung in moto ist aus`: dein Träger plant außerhalb von moto. Neue Schichten sind dann überall gesperrt. Geplante Schichten bleiben.",
         "Eine Schule fehlt in der Woche: moto konnte sie gerade nicht lesen. Lade die Seite später neu.",
-        "Kein `Vorschlag` zu sehen: Der Tag ist vorbei, an der Schule steht schon eine Schicht, das Soll der Woche ist schon geplant, die Person ist abwesend, der Vertrag hat für den Tag kein Soll, oder der Tag ist ein Feiertag oder Schließtag der Schule.",
+        "Kein `Vorschlag` zu sehen: Der Tag ist vorbei, an der Schule steht schon eine Schicht (auch eine abgesagte), das Soll der Woche ist schon geplant, die Person ist abwesend, der Vertrag hat für den Tag kein Soll, oder der Tag ist ein Feiertag oder Schließtag der Schule.",
       ],
       troubleshootingDetails: [
         "„Die Person arbeitet … schon an einem anderen Einsatzort“: Zur selben Zeit hat die Person eine Schicht an einer anderen Schule. Wähle eine andere Zeit.",

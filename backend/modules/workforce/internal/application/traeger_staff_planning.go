@@ -145,16 +145,29 @@ func (t *TraegerStaff) readPlanningSchool(ctx context.Context, actor workforce.T
 		person := people[live[shift.StaffID]]
 		person.shifts = append(person.shifts, planningShift(shift, school))
 	}
-	for _, day := range view.AbsentDays {
-		person := people[live[day.StaffID]]
-		person.absentDays = append(person.absentDays, workforce.TraegerPlanningAbsentDay{SchoolID: school.ID, Date: day.Date})
+	type recordDay struct {
+		recordID int64
+		date     calendar.Date
 	}
+	sollDays := map[recordDay]bool{}
 	for _, day := range view.Soll {
 		person := people[day.StaffRecordID]
 		person.soll[day.Date.StartOfISOWeek().String()] += day.Minutes
 		if day.Minutes > 0 {
 			person.sollDays = append(person.sollDays, workforce.TraegerPlanningSollDay{SchoolID: school.ID, Date: day.Date, Minutes: day.Minutes})
+			sollDays[recordDay{day.StaffRecordID, day.Date}] = true
 		}
+	}
+	// Only the absence days that change a suggestion leave the school: a day
+	// with Soll there, today or later. The kind of absence never does.
+	today := calendar.Date(t.clock.Today())
+	for _, day := range view.AbsentDays {
+		recordID := live[day.StaffID]
+		if day.Date.Before(today) || !sollDays[recordDay{recordID, day.Date}] {
+			continue
+		}
+		person := people[recordID]
+		person.absentDays = append(person.absentDays, workforce.TraegerPlanningAbsentDay{SchoolID: school.ID, Date: day.Date})
 	}
 	return nil
 }

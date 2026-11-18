@@ -222,10 +222,11 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 	})
 
 	t.Run("the week shows every Einsatzort with Soll and warnings", func(t *testing.T) {
-		// A vacation day at north: the contract suggests no shift there (#7381).
+		// Vacation at north on Thursday and Friday: the contract suggests no
+		// shift there (#7381); Friday has no Soll at north and stays private.
 		_, err := db.ExecContext(context.Background(), `INSERT INTO active.staff_absences
 			(tenant_id, staff_id, absence_type, date_start, date_end, status, created_by, requested_at)
-			VALUES (?, ?, ?, '2026-11-26', '2026-11-26', 'approved', ?, NOW())`, north, miraNorth.ID, workforce.AbsenceTypeVacation, miraNorth.ID)
+			VALUES (?, ?, ?, '2026-11-26', '2026-11-27', 'approved', ?, NOW())`, north, miraNorth.ID, workforce.AbsenceTypeVacation, miraNorth.ID)
 		require.NoError(t, err)
 		rec := traegerJSON(t, router, office.token, http.MethodGet, "/traeger/staff-planning/?week=2026-11-25", nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -250,7 +251,7 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 		assert.Equal(t, south, mira.SollDays[4].SchoolID)
 		assert.Equal(t, "2026-11-27", mira.SollDays[4].Date)
 		assert.Equal(t, 240, mira.SollDays[4].Minutes)
-		require.Len(t, mira.AbsentDays, 1, "a full absence day of the school, without its kind")
+		require.Len(t, mira.AbsentDays, 1, "only a full absence day with Soll at the school, without its kind")
 		assert.Equal(t, north, mira.AbsentDays[0].SchoolID)
 		assert.Equal(t, "2026-11-26", mira.AbsentDays[0].Date)
 		require.Len(t, mira.Warnings, 1)
