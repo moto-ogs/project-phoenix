@@ -594,7 +594,7 @@ export function TraegerShellProvider({
       ? {
           ...(session.user.id ? { id: session.user.id } : {}),
           name:
-            memberName?.trim() || session.user.name?.trim() || "Träger-Büro",
+            memberName?.trim() || getSessionPersonName(session) || "Träger-Büro",
           email: session.user.email ?? "",
           roles: session.user.roles ?? [],
         }
