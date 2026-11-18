@@ -30,8 +30,8 @@ import (
 func init() { answerObserver = observeAnswerContract }
 
 // answersFileEnv names a file that collects the key of every registered
-// route a test answered, one per line, to measure which routes no test
-// reaches.
+// route a test unambiguously identified and answered, one per line, to
+// measure which routes no test reaches.
 const answersFileEnv = "CONTRACT_ANSWERS_FILE"
 
 type answerContract struct {
@@ -70,7 +70,10 @@ var loadAnswerContract = sync.OnceValue(func() *answerContract {
 })
 
 func observeAnswerContract(r *http.Request, status int, data any, envelope any) error {
-	loaded := loadAnswerContract()
+	return loadAnswerContract().observe(r, status, data, envelope, recordAnswered)
+}
+
+func (loaded *answerContract) observe(r *http.Request, status int, data any, envelope any, record func(string)) error {
 	routeContext := chi.RouteContext(r.Context())
 	if len(loaded.byKey) == 0 || routeContext == nil || status >= http.StatusMultipleChoices {
 		return nil
@@ -91,13 +94,16 @@ func observeAnswerContract(r *http.Request, status int, data any, envelope any) 
 	for _, route := range routes {
 		violations := loaded.doc.Violations(route, contractmodel.Answer{Status: status, Body: body, Variant: variantOf(r, route)})
 		if len(violations) == 0 {
-			recordAnswered(route.Key())
 			continue
 		}
 		reports = append(reports, route.Key()+":\n  "+strings.Join(violations, "\n  "))
 	}
 	// Two portals mount the same handlers; the answer belongs to one of them.
 	if len(reports) < len(routes) {
+		// A matching schema alone cannot identify which handler ran.
+		if len(routes) == 1 {
+			record(routes[0].Key())
+		}
 		return nil
 	}
 	scope := "a route-sized router"
