@@ -27,6 +27,7 @@ import (
 	workforceTraegerStaff "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	worktimemodelsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/worktimemodels"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
+	holidayClosureNoticeHTTP "github.com/moto-ogs/project-phoenix/workflows/holidayclosurenotification/http"
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
 )
 
@@ -53,6 +54,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/api/guardians", guardianRouteContracts()},
 		{"/api/files", filestoreAPI.RouteContracts()},
 		{"/api/enrollment/phases", enrollmentHTTP.PhaseRouteContracts()},
+		{"/api/holiday-closure-notices", holidayClosureNoticeHTTP.SchoolRouteContracts()},
 		// The platform announcements' http role may not import the contract
 		// types; the root names their answer.
 		{"/api/platform", []common.RouteContract{

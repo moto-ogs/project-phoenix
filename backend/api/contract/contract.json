@@ -414,6 +414,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/holiday-closure-notices/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "NoticeResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/messages/group-threads",
       "portals": [
         "tenant"
@@ -1818,6 +1832,21 @@
       "response": {
         "kind": "ref",
         "ref": "PhoneNumberResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/holiday-closure-notices/{id}/notify",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "NotifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "NoticeResponse"
       }
     },
     {
@@ -7237,6 +7266,129 @@
       ]
     },
     {
+      "name": "NoticeResponse",
+      "go_type": "http.NoticeResponse",
+      "fields": [
+        {
+          "name": "token",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "school_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closing_day_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "previous",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "Range"
+          }
+        },
+        {
+          "name": "current",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "Range"
+          }
+        },
+        {
+          "name": "revision",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "changed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_notify",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "families",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "confirmed_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "NotifyRequest",
+      "go_type": "http.NotifyRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "revision",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "OperationHomeworkFeedback",
       "go_type": "timetable.OperationHomeworkFeedback",
       "fields": [
@@ -8813,6 +8965,26 @@
           "name": "available",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Range",
+      "go_type": "holidayclosurenotification.Range",
+      "fields": [
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
           }
         }
       ]

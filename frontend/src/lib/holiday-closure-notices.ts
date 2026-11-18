@@ -50,10 +50,10 @@ interface BackendRange {
 }
 
 export interface BackendHolidayClosureNotice {
-  id: number;
-  school_id: number;
+  id: number | string;
+  school_id: number | string;
   school_name?: string;
-  closing_day_id: number;
+  closing_day_id: number | string;
   reason: string;
   previous?: BackendRange | null;
   current?: BackendRange | null;

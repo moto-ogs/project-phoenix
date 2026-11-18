@@ -70,7 +70,6 @@ type EnumSpec struct {
 // legacyNumericIDs names the fields that still travel as numbers on the
 // wire, as "package.Type.GoField".
 var legacyNumericIDs = []string{
-	"platformannouncements.AnnouncementResponse.ID",
 	"appointments.Appointment.ID",
 	"appointments.Appointment.OrganizerStaffID",
 	"appointments.Appointment.TenantID",
@@ -95,6 +94,9 @@ var legacyNumericIDs = []string{
 	"classdayhttp.ClassHandoverRequest.PresentStudentIDs",
 	"classdayhttp.ClassTripRequest.StudentIDs",
 	"classdayhttp.MorningAttendanceMarkRequest.StudentID",
+	"http.NoticeResponse.ClosingDayID",
+	"http.NoticeResponse.ID",
+	"http.NoticeResponse.SchoolID",
 	"notifications.feedEntryResponse.ID",
 	"organizationtenancy.TraegerBankAccount.ID",
 	"organizationtenancy.TraegerDocumentGroup.ID",
@@ -107,6 +109,7 @@ var legacyNumericIDs = []string{
 	"organizationtenancy.TraegerReportDistrict.SchoolID",
 	"organizationtenancy.TraegerReportTemplate.ID",
 	"peopledirectory.NewStudentGuardian.GuardianProfileID",
+	"platformannouncements.AnnouncementResponse.ID",
 	"presenceprojectionhttp.NameStudentResponse.ID",
 	"presenceprojectionhttp.SlimStudentResponse.CompanionStudentIDs",
 	"presenceprojectionhttp.SlimStudentResponse.GroupID",
