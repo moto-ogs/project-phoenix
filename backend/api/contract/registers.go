@@ -72,6 +72,12 @@ func Legacy(identifiers map[reflect.Type]string) Options {
 		NumericIDs: []string{
 			"careplanhttp.StudentRequest.GroupID",
 			"careplanhttp.UpdateStudentRequest.GroupID",
+			"classday.AbsenceListChild.StudentID",
+			"classday.DayRow.StudentID",
+			"classdayhttp.ClassHandoverRequest.AbsentStudentIDs",
+			"classdayhttp.ClassHandoverRequest.PresentStudentIDs",
+			"classdayhttp.ClassTripRequest.StudentIDs",
+			"classdayhttp.MorningAttendanceMarkRequest.StudentID",
 			"notifications.feedEntryResponse.ID",
 			"organizationtenancy.TraegerBankAccount.ID",
 			"organizationtenancy.TraegerDocumentGroup.ID",
@@ -83,7 +89,6 @@ func Legacy(identifiers map[reflect.Type]string) Options {
 			"organizationtenancy.TraegerDocumentSchool.ID",
 			"organizationtenancy.TraegerReportDistrict.SchoolID",
 			"organizationtenancy.TraegerReportTemplate.ID",
-			"traeger.ReportDistrictRequest.SchoolID",
 			"peopledirectory.NewStudentGuardian.GuardianProfileID",
 			"presenceprojectionhttp.NameStudentResponse.ID",
 			"presenceprojectionhttp.SlimStudentResponse.CompanionStudentIDs",
@@ -95,6 +100,7 @@ func Legacy(identifiers map[reflect.Type]string) Options {
 			"presenceprojectionhttp.StudentResponse.PersonID",
 			"presenceprojectionhttp.StudentResponse.PhotoConsentGivenBy",
 			"presenceprojectionhttp.SupervisorContact.ID",
+			"traeger.ReportDistrictRequest.SchoolID",
 		},
 		QueryVariants: []string{"GET /api/students/"},
 	}
