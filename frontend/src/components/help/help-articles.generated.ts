@@ -4841,7 +4841,7 @@ export const mealCatererTopic = function mealCatererTopic(): HelpTopic {
       "Den Link sieht nur der Caterer. Er gilt 14 Tage.",
       "Der Caterer sieht nur Zahlen: je Tag und, wenn Sie so bestellen, je Klasse. Namen sieht er nur, wenn Sie unter `Einstellungen` → `Datenschutz` `Namen der Kinder für den Caterer` einschalten.",
       "Der Caterer kann eine Bestellung nur bestätigen. Dann steht bei Ihnen `Vom Caterer bestätigt`.",
-      "Ändern Sie das Essen eines Tages oder einen Schließtag, sieht Ihr Caterer einen Hinweis in seiner Glocke oben rechts. So plant er die Mengen. Die Schalter `Hinweis an Eltern bei geändertem Speiseplan` und `Benachrichtigung bei Schließtagen` unter `Einstellungen` gelten auch für ihn.",
+      "Ändert sich das Essen eines Tages, an dem Kinder ein Essen gebucht haben, sieht Ihr Caterer einen Hinweis in seiner Glocke oben rechts. Das gilt auch für jeden neuen, geänderten oder gelöschten Schließtag. So plant er die Mengen. Die Schalter `Hinweis bei geändertem Speiseplan` und `Benachrichtigung bei Schließtagen` unter `Einstellungen` gelten auch für ihn.",
       "Beliefert der Caterer schon andere Schulen, bestätigt er mit seinem Passwort. Ihre Schule kommt dann zu seinen Schulen dazu.",
       "Sein Passwort ändert der Caterer selbst. Er öffnet oben rechts sein Menü und wählt `Konto`. Hat er es vergessen, wählt er bei der Anmeldung `Passwort vergessen?`.",
       "Im `Konto` kann der Caterer auch die `Zwei-Faktor-Anmeldung` einschalten. Das ist freiwillig. Dann gibt er bei der Anmeldung zusätzlich einen Code aus seiner E-Mail ein. Statt Passwort und Code kann er auch einen Passkey nutzen.",
@@ -4953,7 +4953,7 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
       "Auch beim Neuladen mit `Wiederholen` fragt moto bei offenen Änderungen nach.",
     ],
     troubleshootingDetails: [
-      "Bekommen Eltern keinen Hinweis zu Änderungen? Prüfen Sie unter `Einstellungen` den Schalter `Hinweis an Eltern bei geändertem Speiseplan`. Für vergangene Tage gibt es keinen Hinweis.",
+      "Bekommen Eltern keinen Hinweis zu Änderungen? Prüfen Sie unter `Einstellungen` den Schalter `Hinweis bei geändertem Speiseplan`. Für vergangene Tage gibt es keinen Hinweis.",
       "Fehlt `Speiseplan` in der Seitenleiste? Dann ist die Funktion für Ihre OGS ausgeschaltet, oder Ihrer Rolle fehlt das Recht `Mittagessen: Lesen`.",
     ],
     related: [

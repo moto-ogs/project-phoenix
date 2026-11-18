@@ -122,7 +122,7 @@ func BuildDeliveryNotifications(
 	if err != nil {
 		return DeliveryNotifications{}, err
 	}
-	return DeliveryNotifications{
+	return feeds.bind(DeliveryNotifications{
 		UnreportedAbsences: unreported,
 		Notifier:           notifier,
 		Preferences:        preferences,
@@ -130,14 +130,8 @@ func BuildDeliveryNotifications(
 			messaging.ParentMessageThread, BindParentMessageLeadership(people.Staff, identity), db.Pool(), logger.With("producer", "staff_parent_message_notifications")),
 		AbsenceNotifier:  absences,
 		ResponsibleStaff: responsible,
-		Feed:             feeds.staff,
-		GuardianFeed:     feeds.guardian,
 		SchoolAudience:   schoolAudience,
-		TraegerNotices:   feeds.traegerNotices,
-		TraegerFeed:      feeds.traeger,
-		CatererNotices:   feeds.catererNotices,
-		CatererFeed:      feeds.caterer,
-	}, nil
+	}), nil
 }
 
 // BuildDeliveryWorker composes the Worker that drains Delivery's outboxes:
@@ -252,6 +246,14 @@ type deliveryFeedSides struct {
 	traeger        deliveryContract.TraegerNotificationFeed
 	catererNotices deliveryContract.CatererFeedNotifier
 	caterer        deliveryContract.CatererNotificationFeed
+}
+
+// bind hands the feed sides to the notifications the root wires.
+func (f deliveryFeedSides) bind(notifications DeliveryNotifications) DeliveryNotifications {
+	notifications.Feed, notifications.GuardianFeed = f.staff, f.guardian
+	notifications.TraegerNotices, notifications.TraegerFeed = f.traegerNotices, f.traeger
+	notifications.CatererNotices, notifications.CatererFeed = f.catererNotices, f.caterer
+	return notifications
 }
 
 func deliveryFeeds(notifier deliveryCompose.Notifier) (deliveryFeedSides, error) {

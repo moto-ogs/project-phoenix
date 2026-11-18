@@ -153,17 +153,24 @@ func NewDeliveryTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return DeliveryTestModule{}, err
 	}
-	guardianFeed := service.(interface {
+	return withDeliveryTestFeeds(DeliveryTestModule{Runtime: delivery, EmailOutbox: deliveryCompose.NewEmailOutbox(deliveryCompose.NewDurableEmails(delivery.Module)),
+		Notifications: service, PushSubscriptions: push, NotificationPreferences: preferences, Feed: feed, Hub: hub}), nil
+}
+
+// withDeliveryTestFeeds adds the bells the router serves across schools: the
+// parents portal's (#7140), the Träger-Portal's (#7146) and the caterer
+// portal's (#7147).
+func withDeliveryTestFeeds(module DeliveryTestModule) DeliveryTestModule {
+	module.GuardianFeed = module.Notifications.(interface {
 		GuardianFeed() deliveryContract.GuardianNotificationFeed
 	}).GuardianFeed()
-	traegerFeed := service.(interface {
+	module.TraegerFeed = module.Notifications.(interface {
 		TraegerFeed() deliveryContract.TraegerNotificationFeed
 	}).TraegerFeed()
-	catererFeed := service.(interface {
+	module.CatererFeed = module.Notifications.(interface {
 		CatererFeed() deliveryContract.CatererNotificationFeed
 	}).CatererFeed()
-	return DeliveryTestModule{Runtime: delivery, EmailOutbox: deliveryCompose.NewEmailOutbox(deliveryCompose.NewDurableEmails(delivery.Module)),
-		Notifications: service, PushSubscriptions: push, NotificationPreferences: preferences, Feed: feed, Hub: hub, GuardianFeed: guardianFeed, TraegerFeed: traegerFeed, CatererFeed: catererFeed}, nil
+	return module
 }
 
 // newDeliveryTestRouter builds the notification router over the SSE, Web Push

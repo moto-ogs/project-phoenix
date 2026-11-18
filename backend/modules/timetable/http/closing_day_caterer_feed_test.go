@@ -110,8 +110,10 @@ func TestClosingDayReachesTheBellOfTheSchoolsCatererOnly(t *testing.T) {
 
 	leitung := f.staff(t, "Leitung")
 	kitchen := testpkg.CreateTestAccount(t, db, "caterer-kitchen")
+	// A second account of the same caterer, deactivated later.
+	deputy := testpkg.CreateTestAccount(t, db, "caterer-deputy")
 	stranger := testpkg.CreateTestAccount(t, db, "caterer-stranger")
-	own := newTestCaterer(t, db, "Küche Sonnenschein", kitchen.ID)
+	own := newTestCaterer(t, db, "Küche Sonnenschein", kitchen.ID, deputy.ID)
 	foreign := newTestCaterer(t, db, "Andere Küche", stranger.ID)
 	supply(t, db, own, school)
 	supply(t, db, own, sister)
@@ -144,6 +146,13 @@ func TestClosingDayReachesTheBellOfTheSchoolsCatererOnly(t *testing.T) {
 	assert.Zero(t, f.pushes(t, kitchen.ID), "the caterer portal has no push")
 	strangerEntries, _ := f.catererFeed(t, stranger.ID)
 	assert.Empty(t, strangerEntries, "another caterer sees nothing of this school")
+	deputyEntries, _ := f.catererFeed(t, deputy.ID)
+	require.Len(t, deputyEntries, 1, "every active account of the caterer gets the entry")
+	// A deactivated account reads nothing more; its entry stays stored.
+	_, err := db.ExecContext(context.Background(), `UPDATE auth.accounts SET active = false WHERE id = ?`, deputy.ID)
+	require.NoError(t, err)
+	deputyEntries, _ = f.catererFeed(t, deputy.ID)
+	assert.Empty(t, deputyEntries, "a deactivated caterer account reads nothing")
 	assert.Empty(t, f.entries(t, kitchen.ID, school, "staff"), "the caterer entry stays out of the staff portal")
 
 	// The read state works as in the staff portal; another caterer cannot
@@ -167,21 +176,30 @@ func TestClosingDayReachesTheBellOfTheSchoolsCatererOnly(t *testing.T) {
 	entries, _ = f.catererFeed(t, kitchen.ID)
 	assert.Len(t, entries, 2)
 	testpkg.SetTestTenantSetting(t, db, school, "notifications.school_closing_day_enabled", "true")
+	third := f.save(t, leitung, http.MethodPost, 0, closingDayBody("2030-06-25", "2030-06-25", "Sommerfest"))
+	entries, _ = f.catererFeed(t, kitchen.ID)
+	assert.Len(t, entries, 3)
+	var deputyStored int
+	require.NoError(t, db.NewRaw(`SELECT count(*) FROM platform.notification_feed_entries WHERE account_id = ?`, deputy.ID).Scan(context.Background(), &deputyStored))
+	assert.Equal(t, 1, deputyStored, "a deactivated account gets no new entry and keeps its old one")
 
 	// An ended supply hides the school's entries on the next read and
 	// writes no new one; nothing is deleted.
 	endSupply(t, db, sister)
 	entries, _ = f.catererFeed(t, kitchen.ID)
-	require.Len(t, entries, 1)
-	assert.Equal(t, "Grundschule Am Bach", entries[0].SchoolName)
+	require.Len(t, entries, 2)
+	for _, entry := range entries {
+		assert.Equal(t, "Grundschule Am Bach", entry.SchoolName)
+	}
 	endSupply(t, db, school)
 	f.save(t, leitung, http.MethodDelete, first, "")
 	f.save(t, leitung, http.MethodDelete, second, "")
+	f.save(t, leitung, http.MethodDelete, third, "")
 	entries, _ = f.catererFeed(t, kitchen.ID)
 	assert.Empty(t, entries)
 	var stored int
 	require.NoError(t, db.NewRaw(`SELECT count(*) FROM platform.notification_feed_entries WHERE account_id = ?`, kitchen.ID).Scan(context.Background(), &stored))
-	assert.Equal(t, 3, stored, "the entries before the end stay until their retention")
+	assert.Equal(t, 4, stored, "the entries before the end stay until their retention")
 }
 
 // N is the number of entries of a caterer account across the schools its

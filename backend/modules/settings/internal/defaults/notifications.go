@@ -179,7 +179,7 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 	},
 	{
 		Key:             config.KeyNotificationsMealPlanChangedEnabled,
-		Label:           "Hinweis an Eltern bei geändertem Speiseplan",
+		Label:           "Hinweis bei geändertem Speiseplan",
 		Description:     "Ändert sich der Speiseplan für einen Tag, bekommen die Eltern einen Hinweis im Elternportal, wenn ihr Kind an dem Tag ein Essen gebucht hat. Ihr Caterer sieht den Hinweis auch. Eine Mitteilung aufs Handy bekommt nur, wer sie selbst einschaltet.",
 		Type:            config.FieldBoolean,
 		Default:         true,
