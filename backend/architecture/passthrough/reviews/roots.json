@@ -2418,7 +2418,7 @@
     {
       "decision": "0090",
       "id": "roots/owners/PushSubscriptionCleanup.ListLinks",
-      "reason": "Root translation of Delivery's ListSessionLinks onto Identity \u0026 Access's push cleanup port (#7295): maps Delivery's link values onto Identity \u0026 Access's, which decides session liveness on its own clock instead of a Delivery view on the database clock. No forwarding without translation."
+      "reason": "Root translation of Delivery's bounded ListSessionLinks page onto the Identity \u0026 Access push cleanup port (#7383). It maps the returned link values into the Identity \u0026 Access types. Session liveness uses the Identity \u0026 Access clock."
     },
     {
       "decision": "0090",

@@ -20,13 +20,14 @@ const (
 type TimeTrackingDeletion struct {
 	ID int64 `bun:"id,pk,autoincrement" json:"id"`
 	TenantModel
-	StaffID    int64           `bun:"staff_id,notnull" json:"staff_id"`
-	Source     string          `bun:"source,notnull" json:"source"`
-	SourceID   int64           `bun:"source_id,notnull" json:"source_id"`
-	DeletedBy  int64           `bun:"deleted_by,notnull" json:"deleted_by"`
-	Payload    json.RawMessage `bun:"payload,type:jsonb,notnull" json:"payload"`
-	Note       string          `bun:"note,notnull" json:"note"`
-	OccurredAt time.Time       `bun:"occurred_at,nullzero,notnull" json:"occurred_at"`
+	StaffID         int64           `bun:"staff_id,notnull" json:"staff_id"`
+	Source          string          `bun:"source,notnull" json:"source"`
+	SourceID        int64           `bun:"source_id,notnull" json:"source_id"`
+	DeletedBy       int64           `bun:"deleted_by,notnull" json:"deleted_by"`
+	Payload         json.RawMessage `bun:"payload,type:jsonb,notnull" json:"payload"`
+	Note            string          `bun:"note,notnull" json:"note"`
+	OccurredAt      time.Time       `bun:"occurred_at,nullzero,notnull" json:"occurred_at"`
+	AuditRecordedAt *time.Time      `bun:"audit_recorded_at,scanonly" json:"-"`
 }
 
 func (d *TimeTrackingDeletion) Validate() error {

@@ -198,7 +198,8 @@ var moduleSQLClockBudget = map[string]int{
 	// (databaseDayCutoff, ADR 0281 point 3): the trigger stamps its
 	// updated_at.
 	"modules/timetable": 1,
-	// Store.DatabaseTime (1), the cutoffs of the staff document retentions:
+	// staffDocumentRetentionClock (1, ADR 0281) stamps cleanup completion
+	// and supplies the staff document retention cutoffs:
 	// users.delete_expired_staff_sick_notes (1.15.453) and
 	// users.delete_finished_staff_document_file_cleanups (1.15.449, 1.15.606)
 	// guard their cutoff with the database clock, and the column default

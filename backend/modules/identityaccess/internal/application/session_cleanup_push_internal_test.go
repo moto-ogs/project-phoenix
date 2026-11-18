@@ -35,7 +35,7 @@ func TestOrphanPushSweepDeletesOnlyLinksAnsweredDead(t *testing.T) {
 			f.push.links = links
 			f.store.pushLiveness, f.store.pushLivenessErr = tc.liveness, tc.err
 
-			err := f.auth.deleteOrphanedPush(context.Background())
+			_, err := f.auth.deleteOrphanedPush(context.Background(), 0)
 
 			if tc.wantErr {
 				require.Error(t, err)
@@ -45,4 +45,19 @@ func TestOrphanPushSweepDeletesOnlyLinksAnsweredDead(t *testing.T) {
 			require.Equal(t, tc.want, f.push.calls)
 		})
 	}
+}
+
+func TestOrphanPushSweepReachesTheNextBatch(t *testing.T) {
+	t.Parallel()
+	f := newAuthFixture(t)
+	f.store.pushLiveness = map[int64]bool{}
+	for id := int64(1); id <= 251; id++ {
+		f.push.links = append(f.push.links, identityaccess.PushSubscriptionLink{
+			SubscriptionID: id, AccountID: 7, TenantID: 3, Portal: "staff",
+		})
+		f.store.pushLiveness[id] = id != 251
+	}
+
+	require.NoError(t, f.auth.reconcileRevokedSessions(context.Background()))
+	require.Equal(t, []string{"link:251"}, f.push.calls)
 }

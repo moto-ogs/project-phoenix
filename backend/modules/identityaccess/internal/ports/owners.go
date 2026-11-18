@@ -46,9 +46,9 @@ type PushSubscriptionCleanup interface {
 	DeleteParentByAccount(ctx context.Context, accountID int64) error
 	DeleteByTokenFamily(ctx context.Context, accountID int64, familyID string) error
 	DeleteUnboundByAccount(ctx context.Context, accountID, tenantID int64, portal string) error
-	// ListLinks names every subscription with its session facts, across
+	// ListLinks pages through subscriptions by ID with their session facts, across
 	// schools; DeleteLinks removes the named ones that still carry them.
-	ListLinks(ctx context.Context) ([]identityaccess.PushSubscriptionLink, error)
+	ListLinks(ctx context.Context, afterID int64, limit int) ([]identityaccess.PushSubscriptionLink, error)
 	DeleteLinks(ctx context.Context, links []identityaccess.PushSubscriptionLink) error
 }
 
