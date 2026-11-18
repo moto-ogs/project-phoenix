@@ -73,6 +73,7 @@ export function traegerHolidayContributionTopic(): HelpTopic {
           "Wähle bei `Kostenträger` den Knopf `Kostenträger hinzufügen`.",
           "Trage den `Name` ein. `Anschrift` und `Dein Aktenzeichen beim Kostenträger` sind freiwillig.",
           "Wähle `Speichern`.",
+          "Angaben eines Kostenträgers änderst du im Menü der Zeile mit `Bearbeiten`.",
           "Gibt es den Kostenträger nicht mehr, wähle im Menü der Zeile `Ausschalten`. Beim Bestätigen steht er dann nicht mehr zur Wahl.",
         ],
       },

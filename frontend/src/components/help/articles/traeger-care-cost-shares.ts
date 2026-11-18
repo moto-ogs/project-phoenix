@@ -58,7 +58,7 @@ export function traegerCareCostSharesTopic(): HelpTopic {
         title: "Alle Anteile herunterladen",
         steps: [
           "Wähle `Familien und Zahlung` und dann den Reiter `Kostenübernahmen`.",
-          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Kinder, ohne Suche und Filter.",
+          "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Kinder, ohne Suche und Filter.",
           "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
         ],
       },

@@ -16,7 +16,7 @@ import {
   EVIDENCE_KIND_LABELS,
   type EvidenceTarget,
 } from "~/components/traeger/care-evidence-modal";
-import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
 import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -253,6 +253,14 @@ export default function TraegerNachweisePage() {
     },
   ];
 
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/care-evidences/export", format),
+    scope: "Alle Nachweise, ohne Suche. Jeder Download wird protokolliert.",
+    fallbackName: "nachweise-ermaessigung",
+    errorObject: "die Nachweise",
+    unavailable: !data || data.contracts.length === 0,
+  });
   return (
     <TenantPage
       title={billingAreaTitle("nachweise")}
@@ -272,19 +280,7 @@ export default function TraegerNachweisePage() {
         ) : null
       }
       statsLoading={loading}
-      actions={
-        <TraegerListExportMenu
-          download={(format) =>
-            downloadTraegerList("/api/traeger/care-evidences/export", format)
-          }
-          scope="Alle Nachweise, ohne Suche"
-          ariaLabel="Nachweise herunterladen"
-          tooltip="Zeigt die Formate für alle Verträge, ohne Suche. Jeder Download wird protokolliert."
-          fallbackName="nachweise-ermaessigung"
-          errorObject="die Nachweise"
-          unavailable={!data || data.contracts.length === 0}
-        />
-      }
+      overflowMenu={exportItems}
       search={{
         value: search,
         onChange: setSearch,

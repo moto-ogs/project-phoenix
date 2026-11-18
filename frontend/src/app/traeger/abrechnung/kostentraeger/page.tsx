@@ -22,7 +22,7 @@ import {
   billingTabs,
 } from "~/components/traeger/billing-family-format";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
-import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -279,6 +279,15 @@ export default function TraegerKostentraegerPage() {
     },
   ];
 
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/care-cost-shares/export", format),
+    scope:
+      "Alle Anteile, ohne Suche und Filter. Jeder Download wird protokolliert.",
+    fallbackName: "kostentraeger-anteile",
+    errorObject: "die Anteile der Kostenträger",
+    unavailable: !data || data.contracts.length === 0,
+  });
   return (
     <TenantPage
       title={billingAreaTitle("kostentraeger")}
@@ -301,19 +310,7 @@ export default function TraegerKostentraegerPage() {
         ) : null
       }
       statsLoading={loading}
-      actions={
-        <TraegerListExportMenu
-          download={(format) =>
-            downloadTraegerList("/api/traeger/care-cost-shares/export", format)
-          }
-          scope="Alle Anteile, ohne Suche und Filter"
-          ariaLabel="Anteile der Kostenträger herunterladen"
-          tooltip="Zeigt die Formate für alle Kinder, ohne Suche und Filter. Jeder Download wird protokolliert."
-          fallbackName="kostentraeger-anteile"
-          errorObject="die Anteile der Kostenträger"
-          unavailable={!data || data.contracts.length === 0}
-        />
-      }
+      overflowMenu={exportItems}
       search={{
         value: search,
         onChange: setSearch,

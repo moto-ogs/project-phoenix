@@ -383,7 +383,7 @@ export function SollMappingEditor({
     <form
       ref={formRef}
       noValidate
-      className="flex flex-col gap-6"
+      className="compact:gap-4 flex flex-col gap-6 max-sm:gap-3"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
@@ -455,7 +455,7 @@ export function SollMappingEditor({
             action={
               <ButtonLink
                 href={traegerPath(BOOKING_ACCOUNTS_PATH)}
-                variant="ghost_tone"
+                variant="surface"
                 size="compact"
                 tooltip={BOOKING_ACCOUNTS_HINT}
               >

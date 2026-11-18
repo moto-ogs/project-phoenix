@@ -30,7 +30,7 @@ import {
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { formatDateRange } from "~/components/traeger/holiday-period-format";
 import {
-  TraegerListExportMenu,
+  useTraegerListExportItems,
   traegerExportScope,
 } from "~/components/traeger/traeger-list-export-menu";
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -297,6 +297,18 @@ function BillingRunsPage() {
       ]
     : [];
 
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/billing-runs/export", format, {
+        holiday_period_id: periodFilter,
+      }),
+    scope: periodFilter
+      ? `Nur ${filterName ?? "der gewählte Ferienzeitraum"}`
+      : traegerExportScope(),
+    fallbackName: "abrechnungslaeufe",
+    errorObject: "die Abrechnungsläufe",
+    unavailable: shownRuns.length === 0,
+  });
   return (
     <TenantPage
       title={billingAreaTitle("laeufe")}
@@ -322,24 +334,9 @@ function BillingRunsPage() {
       filters={filters}
       activeFilters={activeFilters}
       onClearAllFilters={() => setPeriodFilter("")}
+      overflowMenu={exportItems}
       actions={
         <>
-          <TraegerListExportMenu
-            download={(format) =>
-              downloadTraegerList("/api/traeger/billing-runs/export", format, {
-                holiday_period_id: periodFilter,
-              })
-            }
-            scope={
-              periodFilter
-                ? `Nur ${filterName ?? "der gewählte Ferienzeitraum"}`
-                : traegerExportScope()
-            }
-            ariaLabel="Abrechnungsläufe herunterladen"
-            fallbackName="abrechnungslaeufe"
-            errorObject="die Abrechnungsläufe"
-            unavailable={shownRuns.length === 0}
-          />
           <Button
             type="button"
             variant="primary"

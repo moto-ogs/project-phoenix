@@ -62,7 +62,7 @@ export function traegerSepaMandatesTopic(): HelpTopic {
         steps: [
           "Speichere die Mandate im anderen Programm als CSV-Datei. Die erste Zeile enthält die Überschriften.",
           "Aus OGS Connect nimm den Export der Stammdaten. Er hat eine Zeile je Kind. moto schlägt dort die Spalte `Debitor-Nr.` als Zahler vor. Dafür muss moto die Debitorennummern schon kennen, zum Beispiel aus `Verträge importieren` oder aus dem Reiter `Familien`.",
-          "Öffne unter `Abrechnung` den Reiter `Lastschrift` und wähle `Mandate importieren`.",
+          "Öffne unter `Abrechnung` den Reiter `Lastschrift`. Wähle oben rechts das Menü mit den drei Punkten und dann `Mandate importieren`.",
           "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
           "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. moto schlägt passende Spalten vor.",
           "Wähle bei `Die Spalte „Zahler“ enthält`, ob dort die E-Mail der Familie, die Vertragsnummer oder die Debitorennummer steht. Bei `Debitorennummer` sucht moto die Nummer des Kindes oder des Zahlers, je nach deiner Einstellung.",
@@ -84,7 +84,7 @@ export function traegerSepaMandatesTopic(): HelpTopic {
         title: "Mandate herunterladen",
         steps: [
           "Wähle `Familien und Zahlung` und dann den Reiter `Lastschrift`.",
-          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Mandate, auch die widerrufenen.",
+          "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Mandate, auch die widerrufenen.",
           "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
         ],
       },

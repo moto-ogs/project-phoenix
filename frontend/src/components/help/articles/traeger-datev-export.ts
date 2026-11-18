@@ -25,7 +25,7 @@ export function traegerDatevExportTopic(): HelpTopic {
           "Das machst du nur einmal. Frage dein Steuerbüro nach den Werten.",
         steps: [
           "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
-          "Wähle oben rechts `DATEV-Werte`. Die Einstellungen öffnen sich im Bereich `DATEV`.",
+          "Wähle oben rechts das Menü mit den drei Punkten und dann `DATEV-Werte`. Die Einstellungen öffnen sich im Bereich `DATEV`.",
           "Trage `Beraternummer` und `Mandantennummer` ein.",
           "Wähle die `Länge der Sachkonten`, den `Kontenrahmen` und den `Beginn des Wirtschaftsjahres`.",
           "Trage das `Standard-Erlöskonto` ein. Darauf bucht moto alles ohne eigenes Konto.",
@@ -37,7 +37,7 @@ export function traegerDatevExportTopic(): HelpTopic {
           "Nur nötig, wenn dein Steuerbüro Leistungen, Schulen oder Angebote getrennt bucht.",
         steps: [
           "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
-          "Wähle oben rechts `Konten und Kostenstellen`.",
+          "Wähle oben rechts das Menü mit den drei Punkten und dann `Konten und Kostenstellen`.",
           "Unter `Erlöskonten` wählst du bei `Monatsbeiträge`, `Mensa`, `Ferienbetreuung` oder `Mittagessen in den Ferien` `Ändern`. Trage das Konto ein und wähle `Speichern`. Ein Angebot kann ein eigenes Konto haben.",
           "Ohne eigenes Konto bucht `Mittagessen in den Ferien` auf das Konto der `Ferienbetreuung`. Daneben steht dann `wie Ferienbetreuung`.",
           "Unter `Kostenstellen (KOST1)` steht jede Schule mit zwei Zeilen. Wähle bei `Monatsbeiträge und Mensa` `Neue Kostenstelle`. Wähle den Tag bei `Gilt ab` und trage die `Kostenstelle` ein.",
@@ -52,7 +52,7 @@ export function traegerDatevExportTopic(): HelpTopic {
           "Die Spalte `DATEV-Datei` zeigt, wie viele neue Buchungen ein Lauf hat.",
         steps: [
           "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
-          "Wähle beim Lauf `DATEV`. Die Datei wird heruntergeladen. Sie enthält nur die neuen Buchungen.",
+          "Wähle beim Lauf das Menü mit den drei Punkten und unter `Herunterladen` `DATEV-Datei`. Die Datei wird heruntergeladen. Sie enthält nur die neuen Buchungen.",
           "Gib die Datei an dein Steuerbüro.",
         ],
       },
@@ -61,7 +61,7 @@ export function traegerDatevExportTopic(): HelpTopic {
         description:
           "Nur wenn dein Steuerbüro eine frühere Datei nicht hat oder nicht einlesen konnte.",
         steps: [
-          "Wähle beim Lauf das Menü mit den drei Punkten neben `DATEV`.",
+          "Wähle beim Lauf das Menü mit den drei Punkten.",
           "Wähle `Alle Buchungen erneut`.",
           "Lies den Hinweis. Hat der Lauf Buchungen in mehreren Wirtschaftsjahren, wähle das `Wirtschaftsjahr`.",
           "Wähle `Erneut herunterladen`.",
@@ -73,8 +73,8 @@ export function traegerDatevExportTopic(): HelpTopic {
     notes: [
       "Bei Monatsbeiträgen trägst du die Debitorennummer bei `Empfänger und Zahlung` der Familie ein. Bei Ferienbeiträgen gilt die Nummer der Ferienanmeldung. Hat die Anmeldung keine, gilt die Nummer der Familie. DATEV nimmt nur Ziffern an, eine mehr als bei den Sachkonten. Bei 4 Stellen ist das zum Beispiel `10001`.",
       "Jede Buchung kommt nur einmal in eine DATEV-Datei. Stornierst du später eine Rechnung, steht das Storno in der nächsten Datei des Laufs. Die Rechnung selbst steht dort nicht noch einmal.",
-      "Eine DATEV-Datei gilt für ein Wirtschaftsjahr. Liegt ein Storno im neuen Jahr, kommt es in eine eigene Datei. Lade dafür noch einmal `DATEV` herunter.",
-      "Hat ein Lauf keine neuen Buchungen, lässt sich `DATEV` nicht wählen. Dann entsteht keine Datei und keine Nummer.",
+      "Eine DATEV-Datei gilt für ein Wirtschaftsjahr. Liegt ein Storno im neuen Jahr, kommt es in eine eigene Datei. Lade dafür noch einmal die `DATEV-Datei` herunter.",
+      "Hat ein Lauf keine neuen Buchungen, fehlt `DATEV-Datei` im Menü des Laufs. Dann entsteht keine Datei und keine Nummer.",
       "Die DATEV-Datei und die Sollstellung zählen in derselben Reihe von Dateinummern.",
       "Eine Rechnung über 0 € steht nicht in der DATEV-Datei. Sie bewegt kein Geld.",
       "Eine Rechnung hält Erlöskonto und Kostenstellen beim Ausstellen fest. Änderst du später ein Konto, gilt das nur für neue Rechnungen. Ein Storno bucht auf dieselben Konten wie seine Rechnung.",
@@ -82,7 +82,7 @@ export function traegerDatevExportTopic(): HelpTopic {
       "Eine Kostenstelle gilt ab ihrem Tag bis zur nächsten. Maßgeblich ist der erste Tag der Leistung, also der Monat oder die Ferienwoche.",
     ],
     differences: [
-      "Über der Liste steht `Die DATEV-Datei fehlt noch`? Es fehlen DATEV-Werte. Der Hinweis nennt sie. Bis dahin lässt sich `DATEV` nicht wählen.",
+      "Über der Liste steht `Die DATEV-Datei fehlt noch`? Es fehlen DATEV-Werte. Der Hinweis nennt sie. Bis dahin fehlt `DATEV-Datei` im Menü des Laufs.",
       "Beim Lauf steht `Alles exportiert`? Alle Buchungen sind schon in einer DATEV-Datei. Darunter steht ihre Nummer.",
       "Du kannst die DATEV-Werte nur ansehen? Ändern darf, wer im Träger-Büro das Recht für die Einstellungen hat.",
       "Im `Exportprotokoll` steht `… mit Ersatz-Kostenstelle`? Diese Ferienwochen fanden an einer Schule ohne Kostenstelle statt. Die Datei bucht sie auf den `Ersatz für die Ferienbetreuung`. Darunter stehen Rechnung, Woche und Grund. Trage für die Schule eine Kostenstelle ein. Das gilt für neue Rechnungen.",

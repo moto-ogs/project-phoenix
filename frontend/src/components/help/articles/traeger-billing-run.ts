@@ -215,7 +215,7 @@ export function traegerBillingRunTopic(): HelpTopic {
           "Die Liste der Läufe, die Familien und die Dokumente einer Familie lädst du als Datei herunter.",
         steps: [
           "Für die Läufe wählst du `Abrechnungsläufe` und dann den Reiter `Ferien`. Für die Familien wählst du `Familien und Zahlung`. Für die Dokumente einer Familie öffnest du die Familie.",
-          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Bei den Abrechnungsläufen gilt der gewählte Ferienzeitraum. Bei den Familien enthält die Datei alle Familien, ohne Suche und Filter.",
+          "Bei den Läufen und den Familien wählst du oben rechts das Menü mit den drei Punkten, bei den Dokumenten den Knopf `Herunterladen`. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Bei den Abrechnungsläufen gilt der gewählte Ferienzeitraum. Bei den Familien enthält die Datei alle Familien, ohne Suche und Filter.",
           "Die Liste der Familien und die Dokumente einer Familie enthalten personenbezogene Daten. Jeder Download wird protokolliert.",
         ],
       },

@@ -27,7 +27,7 @@ import {
 import { runSchoolsLabel } from "~/components/traeger/care-review-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import {
-  TraegerListExportMenu,
+  useTraegerListExportItems,
   traegerExportScope,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
@@ -186,6 +186,14 @@ export default function TraegerMonatsbeitraegePage() {
   );
   const noPrices = data !== null && data.tariffs.tariffs.length === 0;
 
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/care-billing-runs/export", format),
+    scope: traegerExportScope(),
+    fallbackName: "monatsbeitraege",
+    errorObject: "die Monatsläufe",
+    unavailable: runs.length === 0,
+  });
   return (
     <TenantPage
       title={billingAreaTitle("monatsbeitraege")}
@@ -206,21 +214,9 @@ export default function TraegerMonatsbeitraegePage() {
       }
       statsLoading={loading}
       tabs={billingTabs("monatsbeitraege")}
+      overflowMenu={exportItems}
       actions={
         <>
-          <TraegerListExportMenu
-            download={(format) =>
-              downloadTraegerList(
-                "/api/traeger/care-billing-runs/export",
-                format,
-              )
-            }
-            scope={traegerExportScope()}
-            ariaLabel="Monatsläufe herunterladen"
-            fallbackName="monatsbeitraege"
-            errorObject="die Monatsläufe"
-            unavailable={runs.length === 0}
-          />
           <Button
             type="button"
             variant="primary"

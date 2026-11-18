@@ -11430,7 +11430,7 @@ export const traegerBillingRunTopic =
             "Die Liste der Läufe, die Familien und die Dokumente einer Familie lädst du als Datei herunter.",
           steps: [
             "Für die Läufe wählst du `Abrechnungsläufe` und dann den Reiter `Ferien`. Für die Familien wählst du `Familien und Zahlung`. Für die Dokumente einer Familie öffnest du die Familie.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Bei den Abrechnungsläufen gilt der gewählte Ferienzeitraum. Bei den Familien enthält die Datei alle Familien, ohne Suche und Filter.",
+            "Bei den Läufen und den Familien wählst du oben rechts das Menü mit den drei Punkten, bei den Dokumenten den Knopf `Herunterladen`. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Bei den Abrechnungsläufen gilt der gewählte Ferienzeitraum. Bei den Familien enthält die Datei alle Familien, ohne Suche und Filter.",
             "Die Liste der Familien und die Dokumente einer Familie enthalten personenbezogene Daten. Jeder Download wird protokolliert.",
           ],
         },
@@ -11506,7 +11506,7 @@ export const traegerBillingTermsTopic =
           steps: [
             "Wähle unten in der Navigation `Einstellungen` und dann `Abrechnungsvorgaben`.",
             "In der Karte `Zahlung und Rechnungen` steht je Leistung eine Zeile: `Monatsbeitrag Betreuung`, `Mittagessen` und `Ferienbetreuung`.",
-            "Wähle die Zeile der Leistung. Oder wähle das Menü mit den drei Punkten und dann `Ändern`.",
+            "Wähle die Zeile der Leistung. Oder wähle das Menü mit den drei Punkten und dann `Bearbeiten`.",
             "Wähle den `Zahlungsweg`: `Überweisung` oder `Lastschrift`.",
             "Trage das `Zahlungsziel in Tagen` ein. Das sind die Tage nach dem Rechnungsdatum.",
             "Beim Mittagessen wählst du bei `Rechnung`: `Auf der Rechnung der Betreuung` oder `Eigene Rechnung`.",
@@ -11950,7 +11950,7 @@ export const traegerCareCostSharesTopic =
           title: "Alle Anteile herunterladen",
           steps: [
             "Wähle `Familien und Zahlung` und dann den Reiter `Kostenübernahmen`.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Kinder, ohne Suche und Filter.",
+            "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Kinder, ohne Suche und Filter.",
             "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
           ],
         },
@@ -12206,7 +12206,7 @@ export const traegerCareMonthsTopic =
           title: "Liste der Monatsläufe herunterladen",
           steps: [
             "Wähle `Abrechnungsläufe` und dann den Reiter `Monatsbeiträge`.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Monatsläufe.",
+            "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Monatsläufe.",
           ],
         },
       ],
@@ -12317,7 +12317,7 @@ export const traegerCareNoticesTopic =
             "Die Jahresläufe, die Bescheide eines Laufs und den Versand lädst du als Datei herunter.",
           steps: [
             "Wähle `Abrechnungsläufe` und dann den Reiter `Jahresbescheide`. Für die Bescheide öffnest du einen Jahreslauf, für den Versand dort `An Familien senden`.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Bei den Jahresläufen wählst du oben rechts das Menü mit den drei Punkten, sonst den Knopf `Herunterladen`. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Bescheide und der Versand enthalten personenbezogene Daten. Jeder Download wird protokolliert.",
           ],
         },
@@ -12418,7 +12418,7 @@ export const traegerCareReductionsTopic =
             "Du führst die Kinderzahl schon in einem anderen Programm, zum Beispiel OGS Connect? Dann trägst du viele Zahlen auf einmal aus einer CSV-Datei nach. Jede Zahl gilt als von dir bestätigt. moto bewahrt die Datei nicht auf.",
           steps: [
             "Speichere die Liste als CSV-Datei. Jede Zeile nennt ein Kind mit Vertrag: Vorname, Nachname und die Zahl der Kinder in der Familie.",
-            "Wähle `Familien und Zahlung`, den Reiter `Kinderzahl` und oben `Aus Datei nachtragen`.",
+            "Wähle `Familien und Zahlung` und den Reiter `Kinderzahl`. Wähle oben rechts das Menü mit den drei Punkten und dann `Aus Datei nachtragen`.",
             "Du kennst den Aufbau noch nicht? Wähle `Beispieldatei`.",
             "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
             "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Hat die Datei keine Spalte für die Schule, wähle `Schule für alle Zeilen`.",
@@ -12457,7 +12457,7 @@ export const traegerCareReductionsTopic =
           title: "Kinderzahl und Nachweise herunterladen",
           steps: [
             "Wähle `Familien und Zahlung` und dann den Reiter `Kinderzahl` oder `Nachweise`.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält die ganze Liste, ohne Suche.",
+            "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält die ganze Liste, ohne Suche.",
             "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
           ],
         },
@@ -12844,7 +12844,7 @@ export const traegerDatevExportTopic =
             "Das machst du nur einmal. Frage dein Steuerbüro nach den Werten.",
           steps: [
             "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
-            "Wähle oben rechts `DATEV-Werte`. Die Einstellungen öffnen sich im Bereich `DATEV`.",
+            "Wähle oben rechts das Menü mit den drei Punkten und dann `DATEV-Werte`. Die Einstellungen öffnen sich im Bereich `DATEV`.",
             "Trage `Beraternummer` und `Mandantennummer` ein.",
             "Wähle die `Länge der Sachkonten`, den `Kontenrahmen` und den `Beginn des Wirtschaftsjahres`.",
             "Trage das `Standard-Erlöskonto` ein. Darauf bucht moto alles ohne eigenes Konto.",
@@ -12856,7 +12856,7 @@ export const traegerDatevExportTopic =
             "Nur nötig, wenn dein Steuerbüro Leistungen, Schulen oder Angebote getrennt bucht.",
           steps: [
             "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
-            "Wähle oben rechts `Konten und Kostenstellen`.",
+            "Wähle oben rechts das Menü mit den drei Punkten und dann `Konten und Kostenstellen`.",
             "Unter `Erlöskonten` wählst du bei `Monatsbeiträge`, `Mensa`, `Ferienbetreuung` oder `Mittagessen in den Ferien` `Ändern`. Trage das Konto ein und wähle `Speichern`. Ein Angebot kann ein eigenes Konto haben.",
             "Ohne eigenes Konto bucht `Mittagessen in den Ferien` auf das Konto der `Ferienbetreuung`. Daneben steht dann `wie Ferienbetreuung`.",
             "Unter `Kostenstellen (KOST1)` steht jede Schule mit zwei Zeilen. Wähle bei `Monatsbeiträge und Mensa` `Neue Kostenstelle`. Wähle den Tag bei `Gilt ab` und trage die `Kostenstelle` ein.",
@@ -12871,7 +12871,7 @@ export const traegerDatevExportTopic =
             "Die Spalte `DATEV-Datei` zeigt, wie viele neue Buchungen ein Lauf hat.",
           steps: [
             "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
-            "Wähle beim Lauf `DATEV`. Die Datei wird heruntergeladen. Sie enthält nur die neuen Buchungen.",
+            "Wähle beim Lauf das Menü mit den drei Punkten und unter `Herunterladen` `DATEV-Datei`. Die Datei wird heruntergeladen. Sie enthält nur die neuen Buchungen.",
             "Gib die Datei an dein Steuerbüro.",
           ],
         },
@@ -12880,7 +12880,7 @@ export const traegerDatevExportTopic =
           description:
             "Nur wenn dein Steuerbüro eine frühere Datei nicht hat oder nicht einlesen konnte.",
           steps: [
-            "Wähle beim Lauf das Menü mit den drei Punkten neben `DATEV`.",
+            "Wähle beim Lauf das Menü mit den drei Punkten.",
             "Wähle `Alle Buchungen erneut`.",
             "Lies den Hinweis. Hat der Lauf Buchungen in mehreren Wirtschaftsjahren, wähle das `Wirtschaftsjahr`.",
             "Wähle `Erneut herunterladen`.",
@@ -12892,8 +12892,8 @@ export const traegerDatevExportTopic =
       notes: [
         "Bei Monatsbeiträgen trägst du die Debitorennummer bei `Empfänger und Zahlung` der Familie ein. Bei Ferienbeiträgen gilt die Nummer der Ferienanmeldung. Hat die Anmeldung keine, gilt die Nummer der Familie. DATEV nimmt nur Ziffern an, eine mehr als bei den Sachkonten. Bei 4 Stellen ist das zum Beispiel `10001`.",
         "Jede Buchung kommt nur einmal in eine DATEV-Datei. Stornierst du später eine Rechnung, steht das Storno in der nächsten Datei des Laufs. Die Rechnung selbst steht dort nicht noch einmal.",
-        "Eine DATEV-Datei gilt für ein Wirtschaftsjahr. Liegt ein Storno im neuen Jahr, kommt es in eine eigene Datei. Lade dafür noch einmal `DATEV` herunter.",
-        "Hat ein Lauf keine neuen Buchungen, lässt sich `DATEV` nicht wählen. Dann entsteht keine Datei und keine Nummer.",
+        "Eine DATEV-Datei gilt für ein Wirtschaftsjahr. Liegt ein Storno im neuen Jahr, kommt es in eine eigene Datei. Lade dafür noch einmal die `DATEV-Datei` herunter.",
+        "Hat ein Lauf keine neuen Buchungen, fehlt `DATEV-Datei` im Menü des Laufs. Dann entsteht keine Datei und keine Nummer.",
         "Die DATEV-Datei und die Sollstellung zählen in derselben Reihe von Dateinummern.",
         "Eine Rechnung über 0 € steht nicht in der DATEV-Datei. Sie bewegt kein Geld.",
         "Eine Rechnung hält Erlöskonto und Kostenstellen beim Ausstellen fest. Änderst du später ein Konto, gilt das nur für neue Rechnungen. Ein Storno bucht auf dieselben Konten wie seine Rechnung.",
@@ -12901,7 +12901,7 @@ export const traegerDatevExportTopic =
         "Eine Kostenstelle gilt ab ihrem Tag bis zur nächsten. Maßgeblich ist der erste Tag der Leistung, also der Monat oder die Ferienwoche.",
       ],
       differences: [
-        "Über der Liste steht `Die DATEV-Datei fehlt noch`? Es fehlen DATEV-Werte. Der Hinweis nennt sie. Bis dahin lässt sich `DATEV` nicht wählen.",
+        "Über der Liste steht `Die DATEV-Datei fehlt noch`? Es fehlen DATEV-Werte. Der Hinweis nennt sie. Bis dahin fehlt `DATEV-Datei` im Menü des Laufs.",
         "Beim Lauf steht `Alles exportiert`? Alle Buchungen sind schon in einer DATEV-Datei. Darunter steht ihre Nummer.",
         "Du kannst die DATEV-Werte nur ansehen? Ändern darf, wer im Träger-Büro das Recht für die Einstellungen hat.",
         "Im `Exportprotokoll` steht `… mit Ersatz-Kostenstelle`? Diese Ferienwochen fanden an einer Schule ohne Kostenstelle statt. Die Datei bucht sie auf den `Ersatz für die Ferienbetreuung`. Darunter stehen Rechnung, Woche und Grund. Trage für die Schule eine Kostenstelle ein. Das gilt für neue Rechnungen.",
@@ -13090,7 +13090,7 @@ export const traegerExportHandoverTopic =
           description: "Das machst du einmal je Empfänger.",
           steps: [
             "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
-            "Wähle oben rechts `Empfänger der Exporte`, dann `Empfänger hinzufügen`.",
+            "Wähle oben rechts das Menü mit den drei Punkten und dann `Empfänger der Exporte`. Wähle dort `Empfänger hinzufügen`.",
             "Gib einen `Name` ein, zum Beispiel „Kämmerei“.",
             "Trage `Adresse`, `Port`, `Benutzername`, `Passwort`, `Zielordner` und `Fingerabdruck` ein.",
             "Wähle `Empfänger anlegen`. In der Liste `Empfänger` steht er dann mit `Bereit`.",
@@ -13100,7 +13100,7 @@ export const traegerExportHandoverTopic =
           title: "Dateien zuordnen",
           description: "So legst du fest, welche Datei an wen geht.",
           steps: [
-            "Öffne `Empfänger der Exporte`.",
+            "Öffne über das Menü mit den drei Punkten oben rechts `Empfänger der Exporte`.",
             "Wähle unter `Welche Datei geht wohin` bei jeder Datei einen Empfänger. `Nur herunterladen` heißt: moto übergibt diese Datei nicht.",
             "Wähle `Speichern`.",
           ],
@@ -13109,7 +13109,7 @@ export const traegerExportHandoverTopic =
           title: "Datei übergeben",
           steps: [
             "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
-            "Wähle beim Lauf `Übergeben`, dann `Sollstellung übergeben` oder `DATEV-Datei übergeben`. Im Menü steht, an welchen Empfänger die Datei geht.",
+            "Wähle beim Lauf das Menü mit den drei Punkten. Wähle unter `Übergabe` `Sollstellung übergeben` oder `DATEV-Datei übergeben`. Im Menü steht, an welchen Empfänger die Datei geht.",
             "Kommt die Datei an, zeigt moto eine kurze Meldung mit dem Dateinamen und dem Empfänger.",
             "Die Lastschriftdatei übergibst du bei der Lastschrift des Laufs mit `Übergeben`.",
           ],
@@ -13120,12 +13120,12 @@ export const traegerExportHandoverTopic =
       notes: [
         "Jede Übergabe ist eine neue Datei mit neuer Nummer, wie ein Download.",
         "Ist dieselbe Datei schon bei diesem Empfänger, fragt moto vorher nach. So bucht die Kämmerei nichts doppelt. Ein anderer Empfänger hatte die Datei noch nicht, dann fragt moto nicht.",
-        "Hat der Empfänger eine DATEV-Datei verloren, wähle beim Lauf `Übergeben`, dann `Alle DATEV-Buchungen erneut übergeben`. Kam eine DATEV-Datei nicht an, enthält die nächste ihre Buchungen wieder.",
+        "Hat der Empfänger eine DATEV-Datei verloren, wähle beim Lauf das Menü mit den drei Punkten und dann `Alle DATEV-Buchungen erneut übergeben`. Kam eine DATEV-Datei nicht an, enthält die nächste ihre Buchungen wieder.",
         "Das Passwort speichert moto verschlüsselt. Es wird nie wieder angezeigt. Änderst du Adresse, Port, Benutzername oder Fingerabdruck, gib es noch einmal ein.",
         "Mit `Empfänger entfernen` auf der Seite des Empfängers löschst du Adresse und Passwort. Seine Dateien kannst du danach nur herunterladen, bis du sie einem anderen Empfänger zuordnest. Der Verlauf der Übergaben bleibt.",
       ],
       differences: [
-        "Beim Lauf fehlt `Übergeben`? Dir fehlt das Recht `Finanz-Export`, oder moto konnte den Empfänger nicht lesen. Lade die Seite neu. Die Lastschriftdatei übergibst du auch ohne dieses Recht.",
+        "Im Menü des Laufs fehlt `Übergabe`? Dir fehlt das Recht `Finanz-Export`, oder moto konnte den Empfänger nicht lesen. Lade die Seite neu. Die Lastschriftdatei übergibst du auch ohne dieses Recht.",
         "Im Menü steht `Empfänger einrichten` oder `Empfänger zuordnen`? Diese Datei hat noch keinen Empfänger, oder beim Empfänger fehlen Angaben oder die Übergabe ist ausgeschaltet. Das Menü nennt den Grund.",
       ],
       troubleshootingDetails: [
@@ -13165,7 +13165,7 @@ export const traegerFinanceExportsTopic =
             "Frage deine Kämmerei, welche Spalten ihr Programm liest. Das machst du nur einmal.",
           steps: [
             "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
-            "Wähle oben rechts `Feldzuordnung`.",
+            "Wähle oben rechts das Menü mit den drei Punkten und dann `Feldzuordnung`.",
             "Wähle bei jeder Spalte den `Inhalt` und trage den `Spaltennamen` ein.",
             "Mit `Spalte` fügst du eine Spalte hinzu. Für einen Wert, der in jeder Zeile gleich ist, wähle `Fester Wert`, etwa ein Konto.",
             "Für einen Text je Rechnung wähle `Buchungstext`. Schreibe feste Wörter selbst und füge Platzhalter wie `{Monat}` und `{Kind}` mit einem Klick ein. Aus `SKB {Monat} {Kind}` wird etwa `SKB 10/2026 Lia Müller`.",
@@ -13187,7 +13187,7 @@ export const traegerFinanceExportsTopic =
           title: "Sollstellung herunterladen",
           steps: [
             "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
-            "Wähle beim Lauf `Sollstellung`. Die Datei wird heruntergeladen.",
+            "Wähle beim Lauf das Menü mit den drei Punkten und unter `Herunterladen` `Sollstellung`. Die Datei wird heruntergeladen.",
             "Gib die Datei an deine Kämmerei. Oder lass moto sie übergeben, siehe „Exporte an Empfänger übergeben“.",
           ],
         },
@@ -13204,7 +13204,7 @@ export const traegerFinanceExportsTopic =
       notes: [
         "Jeder Download ist eine neue Datei mit neuer Nummer. Steht im Protokoll `Gleicher Inhalt wie Nr. …`, enthält die Datei nichts Neues.",
         "Auch jede Lastschriftdatei und jede DATEV-Datei bekommt eine Nummer aus derselben Reihe. So nennt jede Nummer genau eine Datei.",
-        "Für dein Steuerbüro gibt es beim Lauf auch `DATEV`. Wie das geht, steht unter „DATEV-Werte eintragen“.",
+        "Für dein Steuerbüro gibt es im Menü des Laufs auch `DATEV-Datei`. Wie das geht, steht unter „DATEV-Werte eintragen“.",
         "Die Debitorennummer der Familie trägst du bei `Empfänger und Zahlung` der Familie ein. Neue Monats- und Ferienrechnungen übernehmen sie. Hat eine Ferienanmeldung eine eigene Nummer, gilt bei der Ferienrechnung diese. Beim Import der Mandate übernimmt moto die Spalte `Debitorennummer`.",
         "Eine neue Feldzuordnung gilt für jede neue Datei. Frühere Dateien bleiben, wie sie waren.",
         "Wählst du als Inhalt `Erlöskonto`, `Kostenstelle (KOST1)` oder `Zweite Kostenstelle (KOST2)`, hat die Datei eine Zeile je Konto einer Rechnung. Der `Betrag` ist dann der Teil der Rechnung auf diesem Konto. Die Konten legst du unter `Konten und Kostenstellen` fest.",
@@ -13401,6 +13401,7 @@ export const traegerHolidayContributionTopic =
             "Wähle bei `Kostenträger` den Knopf `Kostenträger hinzufügen`.",
             "Trage den `Name` ein. `Anschrift` und `Dein Aktenzeichen beim Kostenträger` sind freiwillig.",
             "Wähle `Speichern`.",
+            "Angaben eines Kostenträgers änderst du im Menü der Zeile mit `Bearbeiten`.",
             "Gibt es den Kostenträger nicht mehr, wähle im Menü der Zeile `Ausschalten`. Beim Bestätigen steht er dann nicht mehr zur Wahl.",
           ],
         },
@@ -14666,7 +14667,7 @@ export const traegerSepaDebitFileTopic =
           description:
             "Bestätige erst, wenn deine Bank die Datei angenommen hat.",
           steps: [
-            "Wähle in der Karte `Lastschrift` den Knopf `Bei der Bank eingereicht`.",
+            "Wähle in der Karte `Lastschrift` das Menü mit den drei Punkten und dann `Bei der Bank eingereicht`.",
             "Wähle `Ja, eingereicht`.",
           ],
         },
@@ -14755,7 +14756,7 @@ export const traegerSepaMandatesTopic =
           steps: [
             "Speichere die Mandate im anderen Programm als CSV-Datei. Die erste Zeile enthält die Überschriften.",
             "Aus OGS Connect nimm den Export der Stammdaten. Er hat eine Zeile je Kind. moto schlägt dort die Spalte `Debitor-Nr.` als Zahler vor. Dafür muss moto die Debitorennummern schon kennen, zum Beispiel aus `Verträge importieren` oder aus dem Reiter `Familien`.",
-            "Öffne unter `Abrechnung` den Reiter `Lastschrift` und wähle `Mandate importieren`.",
+            "Öffne unter `Abrechnung` den Reiter `Lastschrift`. Wähle oben rechts das Menü mit den drei Punkten und dann `Mandate importieren`.",
             "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
             "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. moto schlägt passende Spalten vor.",
             "Wähle bei `Die Spalte „Zahler“ enthält`, ob dort die E-Mail der Familie, die Vertragsnummer oder die Debitorennummer steht. Bei `Debitorennummer` sucht moto die Nummer des Kindes oder des Zahlers, je nach deiner Einstellung.",
@@ -14777,7 +14778,7 @@ export const traegerSepaMandatesTopic =
           title: "Mandate herunterladen",
           steps: [
             "Wähle `Familien und Zahlung` und dann den Reiter `Lastschrift`.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Mandate, auch die widerrufenen.",
+            "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Mandate, auch die widerrufenen.",
             "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
           ],
         },

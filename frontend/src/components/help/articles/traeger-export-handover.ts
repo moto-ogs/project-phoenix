@@ -23,7 +23,7 @@ export function traegerExportHandoverTopic(): HelpTopic {
         description: "Das machst du einmal je Empfänger.",
         steps: [
           "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
-          "Wähle oben rechts `Empfänger der Exporte`, dann `Empfänger hinzufügen`.",
+          "Wähle oben rechts das Menü mit den drei Punkten und dann `Empfänger der Exporte`. Wähle dort `Empfänger hinzufügen`.",
           "Gib einen `Name` ein, zum Beispiel „Kämmerei“.",
           "Trage `Adresse`, `Port`, `Benutzername`, `Passwort`, `Zielordner` und `Fingerabdruck` ein.",
           "Wähle `Empfänger anlegen`. In der Liste `Empfänger` steht er dann mit `Bereit`.",
@@ -33,7 +33,7 @@ export function traegerExportHandoverTopic(): HelpTopic {
         title: "Dateien zuordnen",
         description: "So legst du fest, welche Datei an wen geht.",
         steps: [
-          "Öffne `Empfänger der Exporte`.",
+          "Öffne über das Menü mit den drei Punkten oben rechts `Empfänger der Exporte`.",
           "Wähle unter `Welche Datei geht wohin` bei jeder Datei einen Empfänger. `Nur herunterladen` heißt: moto übergibt diese Datei nicht.",
           "Wähle `Speichern`.",
         ],
@@ -42,7 +42,7 @@ export function traegerExportHandoverTopic(): HelpTopic {
         title: "Datei übergeben",
         steps: [
           "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
-          "Wähle beim Lauf `Übergeben`, dann `Sollstellung übergeben` oder `DATEV-Datei übergeben`. Im Menü steht, an welchen Empfänger die Datei geht.",
+          "Wähle beim Lauf das Menü mit den drei Punkten. Wähle unter `Übergabe` `Sollstellung übergeben` oder `DATEV-Datei übergeben`. Im Menü steht, an welchen Empfänger die Datei geht.",
           "Kommt die Datei an, zeigt moto eine kurze Meldung mit dem Dateinamen und dem Empfänger.",
           "Die Lastschriftdatei übergibst du bei der Lastschrift des Laufs mit `Übergeben`.",
         ],
@@ -53,12 +53,12 @@ export function traegerExportHandoverTopic(): HelpTopic {
     notes: [
       "Jede Übergabe ist eine neue Datei mit neuer Nummer, wie ein Download.",
       "Ist dieselbe Datei schon bei diesem Empfänger, fragt moto vorher nach. So bucht die Kämmerei nichts doppelt. Ein anderer Empfänger hatte die Datei noch nicht, dann fragt moto nicht.",
-      "Hat der Empfänger eine DATEV-Datei verloren, wähle beim Lauf `Übergeben`, dann `Alle DATEV-Buchungen erneut übergeben`. Kam eine DATEV-Datei nicht an, enthält die nächste ihre Buchungen wieder.",
+      "Hat der Empfänger eine DATEV-Datei verloren, wähle beim Lauf das Menü mit den drei Punkten und dann `Alle DATEV-Buchungen erneut übergeben`. Kam eine DATEV-Datei nicht an, enthält die nächste ihre Buchungen wieder.",
       "Das Passwort speichert moto verschlüsselt. Es wird nie wieder angezeigt. Änderst du Adresse, Port, Benutzername oder Fingerabdruck, gib es noch einmal ein.",
       "Mit `Empfänger entfernen` auf der Seite des Empfängers löschst du Adresse und Passwort. Seine Dateien kannst du danach nur herunterladen, bis du sie einem anderen Empfänger zuordnest. Der Verlauf der Übergaben bleibt.",
     ],
     differences: [
-      "Beim Lauf fehlt `Übergeben`? Dir fehlt das Recht `Finanz-Export`, oder moto konnte den Empfänger nicht lesen. Lade die Seite neu. Die Lastschriftdatei übergibst du auch ohne dieses Recht.",
+      "Im Menü des Laufs fehlt `Übergabe`? Dir fehlt das Recht `Finanz-Export`, oder moto konnte den Empfänger nicht lesen. Lade die Seite neu. Die Lastschriftdatei übergibst du auch ohne dieses Recht.",
       "Im Menü steht `Empfänger einrichten` oder `Empfänger zuordnen`? Diese Datei hat noch keinen Empfänger, oder beim Empfänger fehlen Angaben oder die Übergabe ist ausgeschaltet. Das Menü nennt den Grund.",
     ],
     troubleshootingDetails: [
