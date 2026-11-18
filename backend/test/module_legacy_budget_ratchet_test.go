@@ -354,8 +354,8 @@ var moduleLegacyFileBudgets = map[string]int{
 
 // ADR 0289: the maintenance seal constructors of the sealed document files in
 // modules/careplan/compose (+13) and modules/workforce/compose (+6).
-// ADR 0292: bind the storage backend in the API, worker and demo roots (+12).
-const moduleComposeBudgetTotal = 13672
+// ADR 0293: bind the storage backend in the API, worker and demo roots (+12).
+const moduleComposeBudgetTotal = 13666
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -382,7 +382,7 @@ const moduleComposeBudgetTotal = 13672
 // ADR 0275 raised modules/parentbilling/compose for the root clock (+2).
 // ADR 0276 raised modules/workforce/compose for the sick note retention clock (+1)
 // and workflows/staffoffboarding/compose for the offboarding clock (+2).
-// ADR 0292 counts the 12-line upload storage selector.
+// ADR 0293 counts the 12-line upload storage selector.
 var moduleComposeBudgets = map[string]int{
 	"modules/appointments/compose": 45,
 	// ADR 0103: the signature ledger constructor, construction only.
@@ -415,7 +415,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0145: +40 LOC for transport lifecycle, -8 LOC for the retired local wrapper.
 	// ADR 0267: +8, the clock fields.
 	"modules/delivery/compose":         399,
-	"modules/delivery/objects/compose": 12, // ADR 0292
+	"modules/delivery/objects/compose": 12, // ADR 0293
 	// ADR 0268: the clock of the administration and the IoT service (+6).
 	"modules/devicefleet/compose":                   209,
 	"modules/devicefleet/compose/repositoryadapter": 10,
