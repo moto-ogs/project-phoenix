@@ -27545,6 +27545,12 @@
           "nullable": false
         },
         {
+          "name": "device_slots",
+          "type": "integer",
+          "udt": "int4",
+          "nullable": true
+        },
+        {
           "name": "exported_settings",
           "type": "jsonb",
           "udt": "jsonb",

@@ -14,7 +14,7 @@ import { catalogText } from "~/test/error-catalog-text";
 import { PaperSignatureModal } from "~/components/traeger/care-contract-paper-modal";
 import type { CareContractDetail } from "~/lib/traeger-care-contracts-api";
 
-const { api, mockPush } = vi.hoisted(() => ({
+const { api, mockPush, mockReplace } = vi.hoisted(() => ({
   api: {
     fetchCareContract: vi.fn(),
     downloadCareContract: vi.fn(),
@@ -25,6 +25,7 @@ const { api, mockPush } = vi.hoisted(() => ({
     downloadCareContractVersion: vi.fn(),
   },
   mockPush: vi.fn(),
+  mockReplace: vi.fn(),
 }));
 
 vi.unmock("swr");
@@ -44,7 +45,7 @@ vi.mock("~/lib/care-contract-changes-api", async (importOriginal) => ({
   fetchContractChanges: () =>
     Promise.resolve({
       decidable: true,
-      pending: [],
+      pending: mockPendingChanges,
       lastDecision: null,
       reasonRequired: false,
       rosterImpact: null,
@@ -80,10 +81,21 @@ vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush, replace: vi.fn() }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
   useParams: () => ({ id: "7" }),
   usePathname: () => "/vertraege/7",
+  useSearchParams: () => new URLSearchParams(mockSearch),
 }));
+
+// The address of the page; `tab=…` opens a tab (#7408).
+let mockSearch = "";
+// Changes the parents asked for that wait for a decision.
+let mockPendingChanges: unknown[] = [];
+
+/** Opens a tab of the contract page, as a click does. */
+function showTab(name: string) {
+  fireEvent.click(screen.getByRole("tab", { name }));
+}
 
 import TraegerVertragPage from "./page";
 import {
@@ -180,6 +192,7 @@ function renderPage() {
 
 describe("TraegerVertragPage", () => {
   it("reads the audited contract and PDF again on a quick reopening", async () => {
+    mockSearch = "tab=versionen";
     const page = (open: boolean) => (
       <TraegerResourceTestProvider>
         {open && <TraegerVertragPage />}
@@ -213,6 +226,9 @@ describe("TraegerVertragPage", () => {
   beforeEach(() => {
     for (const fn of Object.values(api)) fn.mockReset();
     mockPush.mockReset();
+    mockReplace.mockReset();
+    mockSearch = "";
+    mockPendingChanges = [];
     api.fetchCareContract.mockResolvedValue(DRAFT);
     api.downloadCareContract.mockResolvedValue({
       blob: new Blob(["%PDF"], { type: "application/pdf" }),
@@ -227,6 +243,7 @@ describe("TraegerVertragPage", () => {
       documentFrozen: true,
       concluded: { method: "mit_anmeldung", at: "2026-09-01T08:00:00Z" },
     });
+    mockSearch = "tab=versand";
     renderPage();
     expect(
       await screen.findByText(
@@ -268,6 +285,7 @@ describe("TraegerVertragPage", () => {
           intact,
         },
       });
+      mockSearch = "tab=versand";
       renderPage();
       const checksum = await screen.findByText(
         intact ? "Prüfsumme stimmt" : "Prüfsumme stimmt nicht",
@@ -351,30 +369,38 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.getByText("Offene Ganztagsschule bis 16:30 Uhr"),
     ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.getByTestId("pdf-preview")).toHaveAttribute(
-        "data-loaded",
-        "true",
-      ),
-    );
     // Wednesday to Friday carry no care.
     expect(screen.getAllByText("Keine Betreuung")).toHaveLength(3);
     expect(
       screen.getByText("bis zum Ende des Schuljahres"),
     ).toBeInTheDocument();
+    expect(screen.getByText("95,00 €")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Die Eltern sehen den Vertrag erst/),
+    ).toBeInTheDocument();
+
+    showTab("Kündigung");
     expect(
       screen.getByText("mit 1 Monat Frist zum Monatsende"),
     ).toBeInTheDocument();
-    expect(screen.getByText("95,00 €")).toBeInTheDocument();
     // A special termination always ends at the half year (#6349); the
     // note of the terms only names the cases.
     expect(
       screen.getByText("Zum Halbjahr: 31. Januar oder 31. Juli"),
     ).toBeInTheDocument();
     expect(screen.getByText("Bei Umzug")).toBeInTheDocument();
+    // The notice above the tabs stays on every tab.
     expect(
       screen.getByText(/Die Eltern sehen den Vertrag erst/),
     ).toBeInTheDocument();
+
+    showTab("Versionen");
+    await waitFor(() =>
+      expect(screen.getByTestId("pdf-preview")).toHaveAttribute(
+        "data-loaded",
+        "true",
+      ),
+    );
   });
 
   it("names the last day of a module that ends before the contract", async () => {
@@ -486,12 +512,15 @@ describe("TraegerVertragPage", () => {
       });
       renderPage();
 
-      expect(await screen.findByText(label)).toBeInTheDocument();
-      expect(screen.getByText(text)).toBeInTheDocument();
-      expect(screen.queryByText("Gesendet")).toBeNull();
-      // The notice names „Versand“ for another address and leads there.
+      expect(await screen.findByText(text)).toBeInTheDocument();
+      // The notice names „Versand“ for another address and leads there,
+      // also from another tab (#7408).
       fireEvent.click(screen.getByRole("button", { name: "Zum Versand" }));
-      expect(screen.getByRole("heading", { name: "Versand" })).toHaveFocus();
+      await waitFor(() =>
+        expect(screen.getByRole("heading", { name: "Versand" })).toHaveFocus(),
+      );
+      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.queryByText("Gesendet")).toBeNull();
     },
   );
 
@@ -540,9 +569,17 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.getByText(/Die Mail wartet auf den Versand/),
     ).toBeInTheDocument();
-    // The notice leads to the card it names (#7054).
+    // The notice leads to the card it names (#7054), in its tab (#7408).
     fireEvent.click(screen.getByRole("button", { name: "Zum Versand" }));
-    expect(screen.getByRole("heading", { name: "Versand" })).toHaveFocus();
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Versand" })).toHaveFocus(),
+    );
+    expect(
+      screen.getByRole("tab", { name: "Unterschrift und Versand" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(mockReplace).toHaveBeenCalledWith("/vertraege/7?tab=versand", {
+      scroll: false,
+    });
     // Checking the delivery sits with the mail history in „Versand“.
     fireEvent.click(
       screen.getByRole("button", { name: "Versand aktualisieren" }),
@@ -571,6 +608,7 @@ describe("TraegerVertragPage", () => {
         ],
       });
       api.resendCareContract.mockResolvedValue({ sent: ["7"], skipped: [] });
+      mockSearch = "tab=versand";
       renderPage();
       fireEvent.change(await screen.findByLabelText("Neue Versandadresse"), {
         target: { value: "neu@example.org" },
@@ -635,10 +673,12 @@ describe("TraegerVertragPage", () => {
     expect(
       await screen.findByRole("button", { name: /Erneut senden/ }),
     ).toBeEnabled();
-    expect(screen.getByText("Gesendet")).toBeInTheDocument();
     expect(
       screen.getByText(/Die Mail ging an erika@example.org/),
     ).toBeInTheDocument();
+    showTab("Unterschrift und Versand");
+    expect(screen.getByText("Gesendet")).toBeInTheDocument();
+    showTab("Versionen");
     expect(screen.getByText("PDF für die Eltern")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /Vertrag senden/ }),
@@ -682,6 +722,7 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.getByRole("button", { name: "PDF herunterladen" }),
     ).toBeInTheDocument();
+    showTab("Unterschrift und Versand");
     expect(
       screen.getByRole("button", { name: /Erneut senden/ }),
     ).toBeInTheDocument();
@@ -698,6 +739,96 @@ describe("TraegerVertragPage", () => {
     });
     expect(within(dialog).getByText(/erika@example\.org/)).toBeInTheDocument();
     expect(api.resendCareContract).not.toHaveBeenCalled();
+  });
+
+  it("follows the address after a tab click and browser navigation", async () => {
+    const view = render(
+      <TraegerResourceTestProvider>
+        <TraegerVertragPage />
+      </TraegerResourceTestProvider>,
+    );
+    fireEvent.click(await screen.findByRole("tab", { name: "Versionen" }));
+    expect(screen.getByRole("tab", { name: "Versionen" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(mockReplace).toHaveBeenCalledWith("/vertraege/7?tab=versionen", {
+      scroll: false,
+    });
+
+    // The router catches up. This also clears the optimistic click state.
+    mockSearch = "tab=versionen";
+    view.rerender(
+      <TraegerResourceTestProvider>
+        <TraegerVertragPage />
+      </TraegerResourceTestProvider>,
+    );
+    expect(screen.getByRole("tab", { name: "Versionen" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    // Browser back must now use the address instead of the stale click.
+    mockSearch = "";
+    view.rerender(
+      <TraegerResourceTestProvider>
+        <TraegerVertragPage />
+      </TraegerResourceTestProvider>,
+    );
+    expect(screen.getByRole("tab", { name: "Vertrag" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    // A link to another tab of the same contract wins too.
+    mockSearch = "tab=kuendigung";
+    view.rerender(
+      <TraegerResourceTestProvider>
+        <TraegerVertragPage />
+      </TraegerResourceTestProvider>,
+    );
+    expect(screen.getByRole("tab", { name: "Kündigung" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("counts a waiting change of the parents on its tab", async () => {
+    mockPendingChanges = [
+      {
+        id: "41",
+        version: "v-41",
+        submittedAt: "2026-09-01T08:15:00Z",
+        effectiveFrom: "2026-10-05",
+        parentNote: "",
+        endsAllCare: false,
+        lines: [
+          {
+            careOfferingId: "5",
+            moduleName: "Offene Ganztagsschule",
+            state: "changed",
+            beforeDays: ["mon", "tue"],
+            afterDays: ["mon", "wed"],
+          },
+        ],
+      },
+    ];
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "aktiv",
+      documentFrozen: true,
+      concluded: { method: "mit_anmeldung", at: "2026-09-01T08:00:00Z" },
+    });
+    renderPage();
+
+    const tab = await screen.findByRole("tab", {
+      name: /Unterschrift und Versand/,
+    });
+    await waitFor(() => expect(within(tab).getByText("1")).toBeInTheDocument());
+    fireEvent.click(tab);
+    expect(
+      await screen.findByText("Wartet auf Entscheidung"),
+    ).toBeInTheDocument();
   });
 
   it("shows the versions of an active contract and from when a change applies", async () => {
@@ -751,11 +882,13 @@ describe("TraegerVertragPage", () => {
 
     expect(
       await screen.findByText(
-        "Ab 01.03.2027 gilt Version 2. Eine Änderung der Betreuung ist freigegeben. Was sich ändert, steht unten unter „Versionen“.",
+        "Ab 01.03.2027 gilt Version 2. Eine Änderung der Betreuung ist freigegeben. Was sich ändert, steht unter „Versionen“.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Zu den Versionen" }));
-    expect(screen.getByRole("heading", { name: "Versionen" })).toHaveFocus();
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Versionen" })).toHaveFocus(),
+    );
     expect(screen.getByText("Gilt jetzt")).toBeInTheDocument();
     expect(screen.getByText("Gilt ab 01.03.2027")).toBeInTheDocument();
     expect(
@@ -798,6 +931,7 @@ describe("TraegerVertragPage", () => {
         },
       ],
     } satisfies CareContractDetail);
+    mockSearch = "tab=versionen";
     renderPage();
 
     expect(await screen.findByText("Gilt ab 01.08.2027")).toBeInTheDocument();
@@ -847,6 +981,7 @@ describe("TraegerVertragPage", () => {
         },
       ],
     } satisfies CareContractDetail);
+    mockSearch = "tab=versionen";
     renderPage();
 
     const headings = await screen.findAllByRole("heading", { level: 3 });
@@ -857,7 +992,7 @@ describe("TraegerVertragPage", () => {
     ]);
     expect(
       screen.getByText(
-        "Ab 01.02.2027 gilt Version 3. Eine Änderung der Betreuung ist freigegeben. Was sich ändert, steht unten unter „Versionen“.",
+        "Ab 01.02.2027 gilt Version 3. Eine Änderung der Betreuung ist freigegeben. Was sich ändert, steht unter „Versionen“.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -910,6 +1045,7 @@ describe("TraegerVertragPage", () => {
         ),
       ).toBeVisible();
       expect(screen.getByText("Vertragsangaben")).toBeVisible();
+      showTab("Versionen");
       expect(screen.getByTestId("pdf-preview")).toBeVisible();
       expect(api.sendCareContracts).toHaveBeenCalledTimes(1);
     },
@@ -976,6 +1112,7 @@ describe("TraegerVertragPage", () => {
     it("keeps a contract resent to a new address when the reload fails", async () => {
       api.fetchCareContract.mockResolvedValue(FAILED_MAIL);
       api.resendCareContract.mockResolvedValue({ sent: ["7"], skipped: [] });
+      mockSearch = "tab=versand";
       renderPage();
       fireEvent.change(await screen.findByLabelText("Neue Versandadresse"), {
         target: { value: "neu@example.org" },
@@ -1000,7 +1137,9 @@ describe("TraegerVertragPage", () => {
       expect(await screen.findByText(reloadText)).toBeInTheDocument();
       expect(api.resendCareContract).toHaveBeenCalledTimes(1);
       // Anker: the contract stays shown.
-      expect(screen.getByText("Vertragsangaben")).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "Versand" }),
+      ).toBeInTheDocument();
       expect(
         screen.queryByText(
           catalogText("general.unavailable", "die Versandadresse"),

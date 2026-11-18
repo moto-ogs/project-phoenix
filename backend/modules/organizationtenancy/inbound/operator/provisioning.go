@@ -32,6 +32,7 @@ type ProvisioningResource struct {
 	requiredDetails            organizationtenancy.SchoolRequiredDetailsProvisioning
 	deviceBlocking             organizationtenancy.DeviceBlockingProvisioning
 	deviceHistory              organizationtenancy.DeviceHistoryProvisioning
+	deviceSlots                organizationtenancy.DeviceSlotProvisioning
 }
 
 // ProvisioningConfig holds the provisioning routes' dependencies.
@@ -60,6 +61,9 @@ type ProvisioningConfig struct {
 	// DeviceHistory reads the history of a device (#2321). Without it that
 	// route answers 500.
 	DeviceHistory organizationtenancy.DeviceHistoryProvisioning
+	// DeviceSlots sets the Geräteplätze of a school (#2312). Without it that
+	// route answers 500.
+	DeviceSlots organizationtenancy.DeviceSlotProvisioning
 }
 
 // NewProvisioningResource creates a new provisioning resource.
@@ -73,6 +77,7 @@ func NewProvisioningResource(cfg ProvisioningConfig) *ProvisioningResource {
 		requiredDetails:            cfg.RequiredDetails,
 		deviceBlocking:             cfg.DeviceBlocking,
 		deviceHistory:              cfg.DeviceHistory,
+		deviceSlots:                cfg.DeviceSlots,
 	}
 }
 

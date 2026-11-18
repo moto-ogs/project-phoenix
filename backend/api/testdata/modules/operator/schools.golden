@@ -21,4 +21,5 @@ POST /operator/schools/{id}/invite-admin -> basis
 POST /operator/schools/{id}/restore -> basis
 PUT /operator/schools/{id} -> basis
 PUT /operator/schools/{id}/accounts/{accountId}/mfa/override -> basis
+PUT /operator/schools/{id}/device-slots -> basis
 PUT /operator/schools/{id}/settings/values/{key} -> basis

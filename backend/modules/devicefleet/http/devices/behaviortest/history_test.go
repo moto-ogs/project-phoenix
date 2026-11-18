@@ -50,7 +50,7 @@ func TestDeviceHistoryRecordsEveryLifecycleChange(t *testing.T) {
 	router.Mount("/devices", ctx.resource.Router())
 	request := func(method, path string, body any) *testutilResponse {
 		req := testutil.NewAuthenticatedRequest(t, method, path, body,
-			testutil.WithClaims(t, claims), testutil.WithPermissions("iot:read", "iot:update", "iot:manage"))
+			testutil.WithClaims(t, claims), testutil.WithPermissions("devices:read", "devices:manage"))
 		rr := testutil.ExecuteRequest(router, req)
 		return &testutilResponse{status: rr.Code, body: rr.Body.Bytes()}
 	}
@@ -115,7 +115,7 @@ func TestDeviceHistoryStaysWithinTheSchool(t *testing.T) {
 			claims.TenantID = tenantID
 		}
 		req := testutil.NewAuthenticatedRequest(t, http.MethodGet, fmt.Sprintf("/devices/%d/history", device.ID), nil,
-			testutil.WithClaims(t, claims), testutil.WithPermissions("iot:read"))
+			testutil.WithClaims(t, claims), testutil.WithPermissions("devices:read"))
 		rr := testutil.ExecuteRequest(router, req)
 		return &testutilResponse{status: rr.Code, body: rr.Body.Bytes()}
 	}
@@ -171,7 +171,7 @@ func TestDeviceHistoryEditRacingARemovalRecordsNothing(t *testing.T) {
 	go func() {
 		req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/devices/%d", device.ID),
 			map[string]any{"device_id": hardwareID, "device_type": "terminal", "name": "Nach dem Entfernen"},
-			testutil.WithClaims(t, testutil.DefaultTestClaims()), testutil.WithPermissions("iot:update"))
+			testutil.WithClaims(t, testutil.DefaultTestClaims()), testutil.WithPermissions("devices:manage"))
 		done <- testutil.ExecuteRequest(router, req).Code
 	}()
 	require.Eventually(t, func() bool {

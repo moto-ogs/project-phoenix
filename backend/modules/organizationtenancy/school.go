@@ -42,9 +42,12 @@ type School struct {
 	Email          string     `json:"email,omitempty"`
 	// ChildQuotaBundles and ChildQuotaBundleSize are the contracted
 	// Kinderkontingent (#3567); no bundles means no limit.
-	ChildQuotaBundles    *int          `json:"child_quota_bundles"`
-	ChildQuotaBundleSize int           `json:"child_quota_bundle_size"`
-	Organization         *Organization `json:"organization,omitempty"`
+	ChildQuotaBundles    *int `json:"child_quota_bundles"`
+	ChildQuotaBundleSize int  `json:"child_quota_bundle_size"`
+	// DeviceSlots is the number of Geräteplätze the school bought (#2312);
+	// nil means moto has not set a limit yet.
+	DeviceSlots  *int          `json:"device_slots"`
+	Organization *Organization `json:"organization,omitempty"`
 }
 
 func (s School) IsDeleted() bool { return s.DeletedAt != nil }

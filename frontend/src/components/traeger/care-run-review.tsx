@@ -353,7 +353,7 @@ function DebitHintsCard({
             size="md"
             tooltip="Öffnet die Seite, auf der du die Abbuchungstage änderst."
           >
-            Fälligkeiten ändern
+            Fälligkeiten bearbeiten
           </ButtonLink>
         ) : null
       }
@@ -380,7 +380,7 @@ function DebitHintsCard({
               </p>
             </div>
             {/* The mandate stays one click away also when only the date is
-                too early: the central „Fälligkeiten ändern“ fixes the date,
+                too early: the central „Fälligkeiten bearbeiten“ fixes the date,
                 this link checks the family's mandate. */}
             <ResponsiveRowActions>
               <ButtonLink

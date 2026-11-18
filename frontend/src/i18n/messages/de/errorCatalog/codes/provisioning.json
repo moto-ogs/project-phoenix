@@ -26,6 +26,8 @@
   "device_active_session": "Auf dem Gerät läuft gerade eine Sitzung. Bitte beende sie und versuche es dann erneut.",
   "device_other_organization": "Ein Gerät kann nur zu einer Schule desselben Trägers umziehen. Bitte wähle eine andere Schule.",
   "device_same_school": "Das Gerät gehört schon zu dieser Schule. Bitte wähle eine andere Schule.",
+  "device_slots_full": "Alle Geräteplätze der Schule sind belegt. Erhöhe zuerst ihre Geräteplätze.",
+  "device_slots_below_occupied": "So wenige Geräteplätze gehen nicht: belegt sind schon {occupied}. Entferne erst Geräte der Schule.",
   "person_not_found": "Diese Person gibt es nicht mehr. Bitte lade die Seite neu.",
   "person_has_supervisions": "Diese Person führt gerade eine Aufsicht. Bitte beende die Aufsicht zuerst.",
   "caregiver_capability_blocked": "Die Betreuungsrolle kann noch nicht entfernt werden, weil die Person noch eingeplant ist. Bitte löse diese Zuordnungen zuerst.",

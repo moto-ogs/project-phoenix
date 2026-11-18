@@ -196,7 +196,7 @@ func (rs *Resource) checkIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, workforce.WorkSessionWire{WorkSession: session}, "Check-in successful")
+	common.Respond(w, r, http.StatusOK, sessionResponse(session), "Check-in successful")
 }
 
 // checkOut handles POST /api/time-tracking/check-out
@@ -229,7 +229,7 @@ func (rs *Resource) checkOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, workforce.WorkSessionWire{WorkSession: session}, "Check-out successful")
+	common.Respond(w, r, http.StatusOK, sessionResponse(session), "Check-out successful")
 }
 
 // getCurrent handles GET /api/time-tracking/current
@@ -253,7 +253,7 @@ func (rs *Resource) getCurrent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return null if no active session (not an error)
-	common.Respond(w, r, http.StatusOK, workforce.WorkSessionWire{WorkSession: session}, "Current session retrieved successfully")
+	common.Respond(w, r, http.StatusOK, sessionResponse(session), "Current session retrieved successfully")
 }
 
 // getConfig handles GET /api/time-tracking/config
@@ -297,7 +297,7 @@ func (rs *Resource) getHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, historyResp, "Session history retrieved successfully")
+	common.Respond(w, r, http.StatusOK, historyResponse(historyResp), "Session history retrieved successfully")
 }
 
 // updateSession handles PUT /api/time-tracking/{id}
@@ -334,7 +334,7 @@ func (rs *Resource) updateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, workforce.WorkSessionWire{WorkSession: session}, "Session updated successfully")
+	common.Respond(w, r, http.StatusOK, sessionResponse(session), "Session updated successfully")
 }
 
 // StartBreakRequest represents a request to start a break
@@ -398,7 +398,7 @@ func (rs *Resource) endBreak(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, workforce.WorkSessionWire{WorkSession: session}, "Break ended")
+	common.Respond(w, r, http.StatusOK, sessionResponse(session), "Break ended")
 }
 
 // getBreaks handles GET /api/time-tracking/breaks/{sessionId}

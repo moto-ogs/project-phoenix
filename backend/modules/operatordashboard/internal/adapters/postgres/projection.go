@@ -190,7 +190,8 @@ SELECT
 	COALESCE("s".email, '') AS email,
 	COALESCE("s".settings, '{}') AS settings,
 	"s".child_quota_bundles,
-	"s".child_quota_bundle_size
+	"s".child_quota_bundle_size,
+	"s".device_slots
 FROM platform.schools AS "s"
 INNER JOIN platform.organizations AS "o" ON "o".id = "s".organization_id
 ORDER BY "o".name ASC, "s".name ASC
@@ -217,7 +218,8 @@ SELECT
 	COALESCE("s".email, '') AS email,
 	COALESCE("s".settings, '{}') AS settings,
 	"s".child_quota_bundles,
-	"s".child_quota_bundle_size
+	"s".child_quota_bundle_size,
+	"s".device_slots
 FROM platform.schools AS "s"
 INNER JOIN platform.organizations AS "o" ON "o".id = "s".organization_id
 WHERE "s".organization_id = ?

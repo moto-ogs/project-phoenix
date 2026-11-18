@@ -406,6 +406,21 @@ class OperatorProvisioningService {
     );
   }
 
+  /**
+   * Setzt die Geräteplätze einer Schule (#2312); null entfernt die Grenze.
+   * Eine Zahl unter den registrierten Geräten lehnt das Backend ab
+   * (provisioning.device_slots_below_occupied).
+   */
+  async setSchoolDeviceSlots(
+    schoolId: string,
+    deviceSlots: number | null,
+  ): Promise<void> {
+    await operatorFetch<null>(
+      `/api/operator/schools/${encodeURIComponent(schoolId)}/device-slots`,
+      { method: "PUT", body: { device_slots: deviceSlots } },
+    );
+  }
+
   async transferDevice(
     deviceId: string,
     targetSchoolId: string,

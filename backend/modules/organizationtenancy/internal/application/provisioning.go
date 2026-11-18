@@ -25,16 +25,19 @@ type ProvisioningDependencies struct {
 	// ErasureOrderRecords records the hint and the customer's choice on an
 	// older open order (#4720); it stays out of the owner's facade (ADR 0178).
 	ErasureOrderRecords organizationtenancy.TraegerErasureOrderRecords
-	Transaction         ports.Transaction
-	Dashboard           organizationtenancy.OperatorDashboard
-	Identity            ports.ProvisioningIdentity
-	Devices             ports.ProvisioningDevices
-	People              ports.ProvisioningPeople
-	Presence            ports.ProvisioningPresence
-	Categories          ports.ProvisioningCategories
-	Settings            ports.ProvisioningSettings
-	Audit               ports.OperatorAudit
-	Secrets             ports.ProvisioningSecrets
+	// DeviceSlots writes the Geräteplätze of a school (#2312); it stays out
+	// of the owner's facade (ADR 0178).
+	DeviceSlots organizationtenancy.SchoolDeviceSlotCommand
+	Transaction ports.Transaction
+	Dashboard   organizationtenancy.OperatorDashboard
+	Identity    ports.ProvisioningIdentity
+	Devices     ports.ProvisioningDevices
+	People      ports.ProvisioningPeople
+	Presence    ports.ProvisioningPresence
+	Categories  ports.ProvisioningCategories
+	Settings    ports.ProvisioningSettings
+	Audit       ports.OperatorAudit
+	Secrets     ports.ProvisioningSecrets
 	// Now is the composition's clock; a device transfer stamps the archived
 	// source with it.
 	Now    func() time.Time
@@ -51,6 +54,7 @@ type Provisioning struct {
 	pwaUsageWindowDays int
 	organizations      organizationtenancy.Capability
 	erasureRecords     organizationtenancy.TraegerErasureOrderRecords
+	deviceSlots        organizationtenancy.SchoolDeviceSlotCommand
 	tx                 ports.Transaction
 	dashboard          organizationtenancy.OperatorDashboard
 	identity           ports.ProvisioningIdentity
@@ -69,7 +73,7 @@ var _ organizationtenancy.Provisioning = (*Provisioning)(nil)
 
 // NewProvisioning builds the provisioning application.
 func NewProvisioning(deps ProvisioningDependencies) (*Provisioning, error) {
-	if deps.PWAUsageWindowDays <= 0 || deps.Organizations == nil || deps.ErasureOrderRecords == nil || deps.Transaction == nil || deps.Dashboard == nil || deps.Identity == nil ||
+	if deps.PWAUsageWindowDays <= 0 || deps.Organizations == nil || deps.ErasureOrderRecords == nil || deps.DeviceSlots == nil || deps.Transaction == nil || deps.Dashboard == nil || deps.Identity == nil ||
 		deps.Devices == nil || deps.People == nil || deps.Presence == nil || deps.Categories == nil ||
 		deps.Settings == nil || deps.Audit == nil || deps.Secrets == nil || deps.Now == nil {
 		return nil, errors.New("organization tenancy provisioning: all dependencies are required")
@@ -81,7 +85,7 @@ func NewProvisioning(deps ProvisioningDependencies) (*Provisioning, error) {
 	return &Provisioning{
 		OrganizationQuery: deps.Organizations, TraegerErasureOrderQuery: deps.Organizations,
 		pwaUsageWindowDays: deps.PWAUsageWindowDays,
-		organizations:      deps.Organizations, erasureRecords: deps.ErasureOrderRecords, tx: deps.Transaction, dashboard: deps.Dashboard,
+		organizations:      deps.Organizations, erasureRecords: deps.ErasureOrderRecords, deviceSlots: deps.DeviceSlots, tx: deps.Transaction, dashboard: deps.Dashboard,
 		identity: deps.Identity, devices: deps.Devices, people: deps.People, presence: deps.Presence,
 		categories: deps.Categories, settings: deps.Settings, audit: deps.Audit, secrets: deps.Secrets,
 		now: deps.Now, logger: logger,

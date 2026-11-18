@@ -12,8 +12,8 @@ const (
 	databaseStatsGroupsRead           = "groups:read"
 	databaseStatsGroupsList           = "groups:list"
 	databaseStatsAuthManage           = "auth:manage"
-	databaseStatsIoTRead              = "iot:read"
-	databaseStatsIoTManage            = "iot:manage"
+	databaseStatsDevicesRead          = "devices:read"
+	databaseStatsDevicesManage        = "devices:manage"
 	databaseStatsSchedulesRead        = "schedules:read"
 	databaseStatsSchedulesList        = "schedules:list"
 	databaseStatsGradeTransitionsRead = "grade_transitions:read"
@@ -29,7 +29,7 @@ func DatabaseStatsPermissions() []string {
 		databaseStatsRoomsRead, databaseStatsRoomsList,
 		databaseStatsActivitiesRead, databaseStatsActivitiesList,
 		databaseStatsGroupsRead, databaseStatsGroupsList,
-		databaseStatsAuthManage, databaseStatsIoTRead, databaseStatsIoTManage,
+		databaseStatsAuthManage, databaseStatsDevicesRead, databaseStatsDevicesManage,
 		databaseStatsSchedulesRead, databaseStatsSchedulesList,
 		databaseStatsGradeTransitionsRead,
 	}
@@ -62,7 +62,7 @@ func NewDatabaseStatsCapabilities(values []string) DatabaseStatsCapabilities {
 		activities:        has(databaseStatsActivitiesRead, databaseStatsActivitiesList),
 		groups:            has(databaseStatsGroupsRead, databaseStatsGroupsList),
 		roles:             has(databaseStatsAuthManage),
-		devices:           has(databaseStatsIoTRead, databaseStatsIoTManage),
+		devices:           has(databaseStatsDevicesRead, databaseStatsDevicesManage),
 		permissionCatalog: has(databaseStatsAuthManage),
 		timetables:        has(databaseStatsSchedulesRead, databaseStatsSchedulesList),
 		gradeTransitions:  has(databaseStatsGradeTransitionsRead),

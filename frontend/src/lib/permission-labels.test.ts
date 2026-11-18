@@ -24,7 +24,7 @@ describe("permission-labels", () => {
       expect(resourceLabels.schedules).toBe("Zeitpläne");
       expect(resourceLabels.config).toBe("Einstellungen");
       expect(resourceLabels.feedback).toBe("Feedback");
-      expect(resourceLabels.iot).toBe("Geräte");
+      expect(resourceLabels.devices).toBe("Geräte");
       expect(resourceLabels.system).toBe("System");
       expect(resourceLabels.admin).toBe("Administration");
       expect(resourceLabels.time_tracking).toBe("Zeiterfassung");
@@ -244,8 +244,8 @@ describe("permission-labels", () => {
       expect(localizeDescription("config", "update")).toBe(
         "Einstellungen der Schule ändern",
       );
-      expect(localizeDescription("iot", "manage")).toBe(
-        "Tablets und Geräte anlegen und entfernen",
+      expect(localizeDescription("devices", "manage")).toBe(
+        "Geräte registrieren, bearbeiten, sperren und entfernen",
       );
       expect(localizeDescription("auth", "manage")).toBe(
         "Zahlen zu Rollen und Berechtigungen in der Übersicht sehen",

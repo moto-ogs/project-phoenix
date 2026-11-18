@@ -3,6 +3,7 @@
 # Default notification policy only; recipients remain on the monitoring host.
 # absent_over_time returns 1 for silence, including a never-created stream;
 # its empty healthy result is intentionally OK. Query errors must alert.
+# queryType instant: a range query keeps the last silent point after recovery.
 apiVersion: 1
 groups:
   - orgId: 1
@@ -22,6 +23,7 @@ groups:
             model:
               expr: 'absent_over_time({env="prod", service="daily-backup"} |~ "^backup_result=ok step=complete$" [26h])'
               instant: true
+              queryType: instant
               intervalMs: 1000
               maxDataPoints: 43200
               refId: A
@@ -73,6 +75,7 @@ groups:
             model:
               expr: 'sum(count_over_time({env="prod", service="daily-backup"} |~ "^backup_result=failed( |$)" [30m]))'
               instant: true
+              queryType: instant
               intervalMs: 1000
               maxDataPoints: 43200
               refId: A
@@ -124,6 +127,7 @@ groups:
             model:
               expr: 'absent_over_time({env="staging", service="daily-backup"} |~ "^backup_result=ok step=complete$" [26h])'
               instant: true
+              queryType: instant
               intervalMs: 1000
               maxDataPoints: 43200
               refId: A
@@ -175,6 +179,7 @@ groups:
             model:
               expr: 'sum(count_over_time({env="staging", service="daily-backup"} |~ "^backup_result=failed( |$)" [30m]))'
               instant: true
+              queryType: instant
               intervalMs: 1000
               maxDataPoints: 43200
               refId: A

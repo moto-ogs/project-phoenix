@@ -314,6 +314,10 @@ type SchoolSummary struct {
 	ChildQuotaBundles    *int `json:"child_quota_bundles"`
 	ChildQuotaBundleSize int  `json:"child_quota_bundle_size"`
 	ChildQuotaCount      int  `json:"child_quota_count"`
+	// DeviceSlots is the number of Geräteplätze the school bought, null
+	// while moto has not set one (#2312). GeraeteCount is what occupies
+	// them: the registered, not removed devices.
+	DeviceSlots *int `json:"device_slots"`
 }
 
 // DeviceBlockingProvisioning blocks and unblocks a device for operators

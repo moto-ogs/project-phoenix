@@ -10,7 +10,6 @@
 // „Schreiben“ ([id]/schreiben). Jedes Öffnen steht im Protokoll des Laufs.
 
 import dynamic from "next/dynamic";
-import { ArchiveX, Inbox } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -58,7 +57,6 @@ import { formatEuro } from "~/components/traeger/contribution-format";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
-import { EmptyState } from "~/components/ui/empty-state";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { SectionCard } from "~/components/ui/section-card";
 import { billingConcept } from "~/lib/concepts/billing";
@@ -87,6 +85,7 @@ import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
+import { EmptyRunCard } from "~/components/traeger/empty-run-card";
 
 const logger = createLogger({ component: "TraegerCareRunPage" });
 
@@ -376,11 +375,12 @@ export default function TraegerCareRunPage() {
       action: (
         <ButtonLink
           href={traegerPath(dueDatesHref)}
-          variant="ghost_tone"
+          variant="surface"
           size="compact"
-          tooltip="Öffnet die Fälligkeiten der Rechnungen dieses Laufs zum Ändern."
+          newTab
+          tooltip="Öffnet die Fälligkeiten dieses Laufs in einem neuen Tab."
         >
-          Fälligkeiten ändern
+          Fälligkeiten bearbeiten
         </ButtonLink>
       ),
     })),
@@ -391,9 +391,10 @@ export default function TraegerCareRunPage() {
           action: (
             <ButtonLink
               href={traegerPath("/traeger/abrechnung/kinderzahl")}
-              variant="ghost_tone"
+              variant="surface"
               size="compact"
-              tooltip="Öffnet die Kinderzahl der Familien zum Bestätigen."
+              newTab
+              tooltip="Öffnet die Kinderzahl der Familien in einem neuen Tab."
             >
               Kinderzahl prüfen
             </ButtonLink>
@@ -576,47 +577,24 @@ export default function TraegerCareRunPage() {
       ) : null}
       {run && (discarded || empty) ? (
         <>
-          <SectionCard title="Monatslauf">
-            <EmptyState
-              tone="neutral"
-              icon={
-                discarded ? (
-                  <ArchiveX className="h-7 w-7" aria-hidden="true" />
-                ) : (
-                  <Inbox className="h-7 w-7" aria-hidden="true" />
-                )
-              }
-              title={
-                discarded
-                  ? "Dieser Lauf ist verworfen"
-                  : "Dieser Lauf hat nichts abzurechnen"
-              }
-              description={
-                discarded
-                  ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für ${formatMonth(run.billingMonth)} kannst du einen neuen Lauf starten.`
-                  : `Für ${formatMonth(run.billingMonth)} gibt es keine Rechnung. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist der Monat frei für einen neuen Lauf.`
-              }
-              className="py-6"
-            />
-            <div className="mt-2 border-t border-gray-100 pt-5">
-              <DataGrid columns={2}>
-                <DataField label="Zeitraum">
-                  {formatMonth(run.billingMonth)}
-                </DataField>
-                <DataField label="Schulen">
-                  {run.schools.map((school) => school.name).join(", ") || "–"}
-                </DataField>
-                <DataField label="Gestartet am">
-                  {formatDate(run.createdAt)}
-                </DataField>
-                {discarded ? (
-                  <DataField label="Verworfen am">
-                    {run.discardedAt ? formatDate(run.discardedAt) : "–"}
-                  </DataField>
-                ) : null}
-              </DataGrid>
-            </div>
-          </SectionCard>
+          <EmptyRunCard
+            title="Monatslauf"
+            discarded={discarded}
+            description={
+              discarded
+                ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für ${formatMonth(run.billingMonth)} kannst du einen neuen Lauf starten.`
+                : `Für ${formatMonth(run.billingMonth)} gibt es keine Rechnung. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist der Monat frei für einen neuen Lauf.`
+            }
+            createdAt={run.createdAt}
+            discardedAt={run.discardedAt}
+          >
+            <DataField label="Zeitraum">
+              {formatMonth(run.billingMonth)}
+            </DataField>
+            <DataField label="Schulen">
+              {run.schools.map((school) => school.name).join(", ") || "–"}
+            </DataField>
+          </EmptyRunCard>
           {/* Mensa months a school has not released yet come with a later
               run; the empty run still names them. */}
           {empty ? (
@@ -657,7 +635,6 @@ export default function TraegerCareRunPage() {
             </>
           ) : null}
           <SectionCard
-            leading={<ConceptIconTile concept={billingConcept} />}
             title="Monatslauf"
             description={
               preview
@@ -666,9 +643,19 @@ export default function TraegerCareRunPage() {
                   ? "Der Lauf ist ohne Rechnungen abgeschlossen. Die Schulen sind wieder frei."
                   : "Die Rechnungen sind ausgestellt und lassen sich nicht mehr ändern. Eine falsche Rechnung stornierst du auf der Seite „Schreiben“."
             }
-            action={
+            actions={
               preview ? (
-                <CareReviewExport runId={run.id} />
+                <>
+                  <ButtonLink
+                    href={traegerPath(dueDatesHref)}
+                    variant="outline"
+                    size="md"
+                    tooltip="Öffnet die Fälligkeiten der Rechnungen dieses Laufs zum Bearbeiten."
+                  >
+                    Fälligkeiten bearbeiten
+                  </ButtonLink>
+                  <CareReviewExport runId={run.id} />
+                </>
               ) : run.previewCount > 0 ? (
                 <TraegerListExportMenu
                   download={(format) =>
@@ -723,11 +710,11 @@ export default function TraegerCareRunPage() {
                       type="button"
                       variant="outline"
                       size="compact"
-                      aria-label="Rechnungsdatum ändern"
+                      aria-label="Rechnungsdatum bearbeiten"
                       tooltip="Öffnet ein Fenster, um das Rechnungsdatum des Laufs zu ändern."
                       onClick={() => setEditingDate(true)}
                     >
-                      Ändern
+                      Bearbeiten
                     </Button>
                   </span>
                 ) : run.issuedOn ? (
@@ -737,28 +724,8 @@ export default function TraegerCareRunPage() {
                 )}
               </DataField>
               <DataField label="Fällig">
-                {preview ? (
-                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span>
-                      {runDueDatesText(run.dueDates ?? []) ??
-                        "Nach dem Zahlungsziel der Leistung"}
-                    </span>
-                    <ButtonLink
-                      href={traegerPath(
-                        `/traeger/abrechnung/monatsbeitraege/${run.id}/faelligkeiten`,
-                      )}
-                      variant="outline"
-                      size="compact"
-                      aria-label="Fälligkeiten ändern"
-                      tooltip="Öffnet die Fälligkeiten der Rechnungen dieses Laufs zum Ändern."
-                    >
-                      Ändern
-                    </ButtonLink>
-                  </span>
-                ) : (
-                  (runDueDatesText(run.dueDates ?? []) ??
-                  "Nach dem Zahlungsziel der Leistung")
-                )}
+                {runDueDatesText(run.dueDates ?? []) ??
+                  "Nach dem Zahlungsziel der Leistung"}
               </DataField>
               {/* Count and sum stand in the head, the excluded invoices
                   in their own card: no second time here. */}

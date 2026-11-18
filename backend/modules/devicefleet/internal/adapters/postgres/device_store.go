@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet/internal/domain"
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/driver/pgdriver"
 )
 
 const (
@@ -71,7 +72,7 @@ func (s *DeviceStore) selectDevices(db bun.IDB, scope TenantScope, model any) *b
 }
 
 // Create inserts one device and returns the stored row.
-func (s *DeviceStore) Create(ctx context.Context, input devicefleet.CreateDevice) (devicefleet.Device, domain.OperationStats, error) {
+func (s *DeviceStore) Create(ctx context.Context, input devicefleet.CreateDevice, slotLimit *int) (devicefleet.Device, domain.OperationStats, error) {
 	db, scope, err := s.database(ctx)
 	if err != nil {
 		return devicefleet.Device{}, domain.OperationStats{}, err
@@ -83,17 +84,102 @@ func (s *DeviceStore) Create(ctx context.Context, input devicefleet.CreateDevice
 	}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
-	insert := db.NewInsert().Model(&row).ModelTableExpr(`iot.devices`)
-	if input.RecordedBy != nil {
-		insert = recordCreation(db, insert, &row, lifecycleRecord(*input.RecordedBy, row.CreatedAt))
+	if slotLimit == nil {
+		insert := db.NewInsert().Model(&row).ModelTableExpr(`iot.devices`)
+		if input.RecordedBy != nil {
+			insert = recordCreation(db, insert, &row, lifecycleRecord(*input.RecordedBy, row.CreatedAt))
+		}
+		err = insert.Returning("*").Scan(ctx)
+	} else {
+		args := createWithinSlotsArgs(row, input.RecordedBy, *slotLimit)
+		if input.RecordedBy == nil {
+			err = db.NewRaw(createWithinSlotsSQL, args...).Scan(ctx, &row)
+		} else {
+			err = db.NewRaw(createWithinSlotsRecordedSQL, args...).Scan(ctx, &row)
+		}
 	}
-	err = insert.Returning("*").Scan(ctx)
 	stats.StatementDuration = time.Since(started)
-	if err != nil {
+	switch {
+	case slotLimit != nil && errors.Is(err, sql.ErrNoRows):
+		return devicefleet.Device{}, stats, &devicefleet.DeviceSlotsFullError{DeviceSlots: *slotLimit}
+	case isTakenDeviceID(err):
+		return devicefleet.Device{}, stats, fmt.Errorf("devicefleet postgres: create device: %w: %w", devicefleet.ErrDuplicateDeviceID, err)
+	case err != nil:
 		return devicefleet.Device{}, stats, fmt.Errorf("devicefleet postgres: create device: %w", err)
 	}
 	stats.Rows = 1
 	return toDeviceDomain(row), stats, nil
+}
+
+// deviceIDIndex keeps a device ID unique among a school's live devices; a
+// registration that hits it reuses a taken ID.
+const deviceIDIndex = "idx_devices_tenant_device_id_active"
+
+func isTakenDeviceID(err error) bool {
+	var pgErr pgdriver.Error
+	return errors.As(err, &pgErr) && pgErr.IntegrityViolation() && pgErr.Field('n') == deviceIDIndex
+}
+
+// createWithinSlotsArgs binds the INSERT of a device at a school with a
+// Geräteplatz limit (#2312). The device's ID is reserved only while the
+// school's live devices that occupy a Geräteplatz stay below the limit; the
+// history entry of #2321 and the device row both hang on that reservation,
+// so a full school gets neither and the statement returns no row. The
+// caller holds the school's Geräteplatz lock, so the count cannot move
+// before the insert commits.
+func createWithinSlotsArgs(row deviceRow, recordedBy *devicefleet.LifecycleActorRef, slotLimit int) []any {
+	args := []any{row.TenantID, devicefleet.WebManualDeviceID, slotLimit}
+	if recordedBy != nil {
+		record := lifecycleRecord(*recordedBy, row.CreatedAt)
+		args = append(args, row.TenantID, record.ActorKind, record.AccountID, record.OperatorID,
+			row.DeviceID, row.DeviceType, row.Name, row.Name, row.Status, record.OccurredAt)
+	}
+	return append(args, row.TenantID, row.CreatedAt, row.DeviceID, row.DeviceType, row.Name, row.Status, row.APIKeyHash,
+		row.MaskedAPIKey, row.LastSeen, row.RegisteredByID, row.RoomID)
+}
+
+const (
+	createWithinSlotsReserve = `WITH new_device AS (
+	SELECT nextval(pg_get_serial_sequence('iot.devices', 'id')) AS id
+	WHERE (
+		SELECT count(*) FROM iot.devices AS "device"
+		WHERE "device".tenant_id = ? AND "device".archived_at IS NULL AND "device".device_id <> ?
+	) < ?
+)`
+	createWithinSlotsInsert = `
+INSERT INTO iot.devices (id, tenant_id, created_at, device_id, device_type, name, status, api_key_hash,
+	masked_api_key, last_seen, registered_by_id, room_id)
+SELECT new_device.id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? FROM new_device
+RETURNING *`
+	createWithinSlotsSQL         = createWithinSlotsReserve + createWithinSlotsInsert
+	createWithinSlotsRecordedSQL = createWithinSlotsReserve + `, event AS (` + lifecycleCreatedSQL +
+		` WHERE EXISTS (SELECT 1 FROM new_device))` + createWithinSlotsInsert
+)
+
+// CountSlotDevices counts the live devices of the school in context that
+// occupy a Geräteplatz (#2312).
+func (s *DeviceStore) CountSlotDevices(ctx context.Context) (int, domain.OperationStats, error) {
+	db, scope, err := s.database(ctx)
+	if err != nil {
+		return 0, domain.OperationStats{}, err
+	}
+	if scope.AcrossSchools {
+		return 0, domain.OperationStats{}, devicefleet.ErrTenantRequired
+	}
+	stats := domain.OperationStats{Queries: 1}
+	started := time.Now()
+	count, err := db.NewSelect().
+		Model((*deviceRow)(nil)).
+		ModelTableExpr(deviceTableExpr).
+		Where(deviceNotArchive).
+		Where(`"device".tenant_id = ?`, scope.TenantID).
+		Where(`"device".device_id <> ?`, devicefleet.WebManualDeviceID).
+		Count(ctx)
+	stats.StatementDuration = time.Since(started)
+	if err != nil {
+		return 0, stats, fmt.Errorf("devicefleet postgres: count slot devices: %w", err)
+	}
+	return int(count), stats, nil
 }
 
 // Update replaces every writable column of one device. Trigger
@@ -400,7 +486,9 @@ func (s *DeviceStore) CountByType(ctx context.Context) (map[string]int, domain.O
 	return result, stats, nil
 }
 
-// CountByTenant counts live devices grouped by tenant. Operator listings run
+// CountByTenant counts live devices grouped by tenant: the devices that
+// occupy a Geräteplatz, without the virtual manual web check-in device
+// (#2312). Operator listings run
 // without an ambient tenant and then see every tenant, exactly as the retired
 // cross-schema aggregate did.
 func (s *DeviceStore) CountByTenant(ctx context.Context) (map[int64]int, domain.OperationStats, error) {
@@ -417,7 +505,8 @@ func (s *DeviceStore) CountByTenant(ctx context.Context) (map[int64]int, domain.
 		ModelTableExpr(deviceTableExpr).
 		Column("tenant_id").
 		ColumnExpr("COUNT(*) AS count").
-		Where(deviceNotArchive)
+		Where(deviceNotArchive).
+		Where(`"device".device_id <> ?`, devicefleet.WebManualDeviceID)
 	if !scope.AcrossSchools {
 		query = query.Where(`"device".tenant_id = ?`, scope.TenantID)
 	}

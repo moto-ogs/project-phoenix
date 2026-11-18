@@ -37,6 +37,7 @@ import {
   type Weekday,
 } from "~/lib/traeger-care-contracts-api";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
+import { CONTRACT_VERSIONS_SECTION_ID } from "./care-contract-detail-tabs";
 
 const logger = createLogger({ component: "CareContractVersions" });
 
@@ -186,9 +187,6 @@ export function plannedVersion(
     .sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom))[0];
 }
 
-/** The card's `id`, so a notice on the contract page leads to it (#7054). */
-export const CONTRACT_VERSIONS_SECTION_ID = "vertrag-versionen";
-
 export function CareContractVersions({
   contractId,
   versions,
@@ -252,7 +250,7 @@ export function CareContractVersions({
             <ResponsiveActionRow
               key={version.number}
               align="start"
-              className="gap-3 py-4 sm:gap-[normal]"
+              className="py-4"
             >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -305,11 +303,13 @@ export function CareContractVersions({
                   size="compact"
                   aria-label={`PDF von Version ${version.number} herunterladen`}
                   disabled={loading !== null}
+                  isLoading={loading === version.number}
+                  loadingText="Wird geladen …"
                   tooltip="Lädt den Vertrag in dieser Version als PDF herunter."
                   onClick={() => void download(version.number)}
                 >
                   <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />
-                  {loading === version.number ? "Wird geladen …" : "PDF"}
+                  PDF
                 </Button>
               </ResponsiveRowActions>
             </ResponsiveActionRow>

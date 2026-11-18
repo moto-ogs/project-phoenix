@@ -14,7 +14,6 @@
 // abzurechnen hat, lässt sich verwerfen; er bleibt als „Verworfen“ in der
 // Liste, und der Ferienzeitraum ist frei für einen neuen Lauf (#6628).
 
-import { ArchiveX, Inbox } from "lucide-react";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
@@ -41,6 +40,7 @@ import {
 import { BillingRunOverviewCard } from "~/components/traeger/billing-run-overview-card";
 import { BillingLettersCard } from "~/components/traeger/billing-letters-card";
 import { BillingMailCard } from "~/components/traeger/billing-mail-card";
+import { EmptyRunCard } from "~/components/traeger/empty-run-card";
 import {
   BILLING_RUN_STATUS_LABELS,
   BILLING_RUN_STATUS_TONES,
@@ -55,9 +55,7 @@ import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
-import { EmptyState } from "~/components/ui/empty-state";
 import { ConfirmationModal } from "~/components/ui/modal";
-import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { runDocumentKindLabel } from "~/components/traeger/run-document-kind";
@@ -343,11 +341,12 @@ export default function TraegerBillingRunPage() {
       action: run ? (
         <ButtonLink
           href={traegerPath(`/traeger/abrechnung/${run.id}/faelligkeiten`)}
-          variant="ghost_tone"
+          variant="surface"
           size="compact"
-          tooltip="Öffnet die Fälligkeiten der Rechnungen dieses Laufs zum Ändern."
+          newTab
+          tooltip="Öffnet die Fälligkeiten dieses Laufs in einem neuen Tab."
         >
-          Fälligkeiten ändern
+          Fälligkeiten bearbeiten
         </ButtonLink>
       ) : undefined,
     })),
@@ -386,8 +385,23 @@ export default function TraegerBillingRunPage() {
           : null
       }
       statsLoading={loading}
-      // The cross-link stands with the actions, as „Zur Abrechnung“ does on
-      // the registrations; the status line carries only facts.
+      // The way back to the holiday period is navigation: it stands in the
+      // page menu, beside the one visible action (#7406).
+      overflowMenu={
+        run && canOpenPeriod
+          ? [
+              {
+                label: "Zum Ferienzeitraum",
+                description:
+                  "Öffnet den Ferienzeitraum, zu dem dieser Lauf gehört",
+                href: traegerPath(
+                  `/traeger/ferien/${encodeURIComponent(run.holidayPeriodId)}`,
+                ),
+                onClick: () => undefined,
+              },
+            ]
+          : undefined
+      }
       actions={
         <>
           {run ? (
@@ -396,60 +410,39 @@ export default function TraegerBillingRunPage() {
               tone={BILLING_RUN_STATUS_TONES[run.status]}
             />
           ) : null}
-          {(run && canOpenPeriod) || preview || discarded ? (
-            <>
-              {run && canOpenPeriod ? (
-                <ButtonLink
-                  href={traegerPath(
-                    `/traeger/ferien/${encodeURIComponent(run.holidayPeriodId)}`,
-                  )}
-                  variant="outline"
-                  size="md"
-                  tooltip="Öffnet den Ferienzeitraum, zu dem dieser Lauf gehört."
-                >
-                  <MotoConceptIcon
-                    concept={holidayWeeksConcept}
-                    size={18}
-                    className="mr-2"
-                  />
-                  Zum Ferienzeitraum
-                </ButtonLink>
-              ) : null}
-              {empty ? (
-                <Button
-                  type="button"
-                  variant="outline_danger"
-                  size="md"
-                  tooltip="moto fragt vorher nach, dann ist der Ferienzeitraum frei für einen neuen Lauf."
-                  onClick={() => setConfirmingDiscard(true)}
-                >
-                  Leeren Lauf verwerfen
-                </Button>
-              ) : discarded ? (
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  tooltip="Öffnet den offenen Lauf dieses Ferienzeitraums oder startet einen neuen."
-                  onClick={() => void reissue()}
-                >
-                  Neuen Lauf starten
-                </Button>
-              ) : preview ? (
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  disabled={!canRelease}
-                  disabledReason={releaseBlockReason(run)}
-                  tooltip="moto fragt vorher nach, dann sind alle Rechnungen mit Nummer festgeschrieben."
-                  onClick={() => setConfirmingRelease(true)}
-                >
-                  Lauf freigeben
-                </Button>
-              ) : null}
-            </>
-          ) : undefined}
+          {empty ? (
+            <Button
+              type="button"
+              variant="outline_danger"
+              size="md"
+              tooltip="moto fragt vorher nach, dann ist der Ferienzeitraum frei für einen neuen Lauf."
+              onClick={() => setConfirmingDiscard(true)}
+            >
+              Leeren Lauf verwerfen
+            </Button>
+          ) : discarded ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              tooltip="Öffnet den offenen Lauf dieses Ferienzeitraums oder startet einen neuen."
+              onClick={() => void reissue()}
+            >
+              Neuen Lauf starten
+            </Button>
+          ) : preview ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              disabled={!canRelease}
+              disabledReason={releaseBlockReason(run)}
+              tooltip="moto fragt vorher nach, dann sind alle Rechnungen mit Nummer festgeschrieben."
+              onClick={() => setConfirmingRelease(true)}
+            >
+              Lauf freigeben
+            </Button>
+          ) : null}
         </>
       }
       error={loadError}
@@ -533,49 +526,26 @@ export default function TraegerBillingRunPage() {
       }
     >
       {run && (discarded || empty) ? (
-        <SectionCard title="Abrechnungslauf">
-          <EmptyState
-            tone="neutral"
-            icon={
-              discarded ? (
-                <ArchiveX className="h-7 w-7" aria-hidden="true" />
-              ) : (
-                <Inbox className="h-7 w-7" aria-hidden="true" />
-              )
-            }
-            title={
-              discarded
-                ? "Dieser Lauf ist verworfen"
-                : "Dieser Lauf hat nichts abzurechnen"
-            }
-            description={
-              discarded
-                ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für ${run.periodName} kannst du einen neuen Lauf starten.`
-                : `Für ${run.periodName} gibt es keine bestätigte Anmeldung ohne Rechnung. Du kannst den Lauf verwerfen. Danach ist der Ferienzeitraum frei für einen neuen Lauf.`
-            }
-            className="py-6"
-          />
-          <div className="mt-2 border-t border-gray-100 pt-5">
-            <DataGrid columns={2}>
-              <DataField label="Ferienzeitraum">{run.periodName}</DataField>
-              <DataField label="Betreuung">
-                {formatDateRange(run.serviceFrom, run.serviceUntil)}
-              </DataField>
-              <DataField label="Gestartet am">
-                {formatDate(run.createdAt)}
-              </DataField>
-              {discarded ? (
-                <DataField label="Verworfen am">
-                  {run.discardedAt ? formatDate(run.discardedAt) : "–"}
-                </DataField>
-              ) : null}
-            </DataGrid>
-          </div>
-        </SectionCard>
+        <EmptyRunCard
+          title="Abrechnungslauf"
+          discarded={discarded}
+          description={
+            discarded
+              ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für ${run.periodName} kannst du einen neuen Lauf starten.`
+              : `Für ${run.periodName} gibt es keine bestätigte Anmeldung ohne Rechnung. Du kannst den Lauf verwerfen. Danach ist der Ferienzeitraum frei für einen neuen Lauf.`
+          }
+          createdAt={run.createdAt}
+          discardedAt={run.discardedAt}
+        >
+          <DataField label="Ferienzeitraum">{run.periodName}</DataField>
+          <DataField label="Betreuung">
+            {formatDateRange(run.serviceFrom, run.serviceUntil)}
+          </DataField>
+        </EmptyRunCard>
       ) : run ? (
         <>
           <SectionCard
-            leading={<ConceptIconTile concept={billingConcept} />}
+            concept={billingConcept}
             title="Abrechnungslauf"
             description={runDescription(run)}
             actions={
@@ -586,9 +556,9 @@ export default function TraegerBillingRunPage() {
                   )}
                   variant="outline"
                   size="md"
-                  tooltip="Öffnet die Fälligkeiten der Rechnungen dieses Laufs zum Ändern."
+                  tooltip="Öffnet die Fälligkeiten der Rechnungen dieses Laufs zum Bearbeiten."
                 >
-                  Fälligkeiten ändern
+                  Fälligkeiten bearbeiten
                 </ButtonLink>
               ) : undefined
             }

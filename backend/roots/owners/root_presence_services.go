@@ -16,6 +16,7 @@ import (
 	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
 	facilitiesCompose "github.com/moto-ogs/project-phoenix/modules/facilities/compose"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	organizationCompose "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/compose"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
@@ -124,6 +125,7 @@ func BuildDeviceFleet(
 			PickupSchedule: pickups,
 		}),
 		Tenants:             NewDisplayTenantFacts(displaySchoolDirectory{schools: organizations}, settings),
+		DeviceSlots:         organizationCompose.NewDeviceSlotLimits(),
 		Now:                 func() time.Time { return env.Now().In(timezone.Berlin) },
 		OnlineWindowMinutes: NewOnlineWindowMinutes(settings, env.Logger.With("module", "device-fleet")),
 		APIKeys:             DeviceAPIKeys{},

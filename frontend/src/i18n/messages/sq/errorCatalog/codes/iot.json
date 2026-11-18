@@ -8,6 +8,7 @@
   "device_inactive": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "device_pin_invalid": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "device_pin_required": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
+  "device_slots_full": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "invalid_rfid_tag": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "invalid_staff_clock_request": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "invalid_staff_clock_state": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
