@@ -15,6 +15,8 @@ import {
 import {
   checkReason,
   childrenLabel,
+  familyAddress,
+  familyKey,
   familyName,
   NEEDS_CHECK,
   STATUS_LABELS,
@@ -23,8 +25,14 @@ import {
   validityLabel,
 } from "~/components/traeger/family-children-format";
 import { FamilyChildrenModal } from "~/components/traeger/family-children-modal";
-import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
-import { ChevronDown, ChevronUp, Trash2, TriangleAlert } from "lucide-react";
+import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
+import {
+  ChevronDown,
+  ChevronUp,
+  Trash2,
+  TriangleAlert,
+  Upload,
+} from "lucide-react";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -34,6 +42,7 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -134,13 +143,16 @@ function checkCardText(
   );
   return [
     stillValid
-      ? "Bei geänderten oder bald ablaufenden Zahlen zählt der Monatslauf bis zu Ihrer Prüfung die bisher bestätigte Zahl."
+      ? "Bei geänderten oder bald ablaufenden Zahlen zählt der Monatslauf bis zu deiner Prüfung die bisher bestätigte Zahl."
       : null,
     expired
-      ? "Eine abgelaufene Kinderzahl gilt nicht mehr. Bis Sie neu prüfen, zählen nur die Kinder mit Vertrag."
+      ? "Eine abgelaufene Kinderzahl gilt nicht mehr. Bis du neu prüfst, zählen nur die Kinder mit Vertrag."
       : null,
     toCheck.some((family) => family.status === "stated")
-      ? "Eine neue Angabe der Eltern zählt erst, wenn Sie sie bestätigen."
+      ? "Eine neue Angabe der Eltern zählt erst, wenn du sie bestätigst."
+      : null,
+    toCheck.some((family) => family.status === "differing")
+      ? "Bei verschiedenen Angaben zählt keine Zahl, bis du eine bestätigst."
       : null,
     missing > 0
       ? expired
@@ -173,7 +185,7 @@ export default function TraegerKinderzahlPage() {
   const { success } = useToast();
 
   const remove = async () => {
-    const contract = removing?.count?.contractId;
+    const contract = removing?.contractId;
     if (!removing || !contract) return;
     setBusy(true);
     removeErrors.clear();
@@ -201,7 +213,7 @@ export default function TraegerKinderzahlPage() {
       needle
         ? [
             familyName(family),
-            family.recipientEmail,
+            familyAddress(family),
             ...family.children.map(
               (child) => `${child.childFirstName} ${child.childLastName}`,
             ),
@@ -223,7 +235,7 @@ export default function TraegerKinderzahlPage() {
         <div className="min-w-0">
           <p className="font-semibold text-gray-900">{familyName(family)}</p>
           <p className="mt-0.5 truncate text-sm text-gray-600">
-            {family.recipientEmail}
+            {familyAddress(family)}
           </p>
         </div>
       ),
@@ -278,7 +290,7 @@ export default function TraegerKinderzahlPage() {
                 "Öffnet ein Fenster, um die Kinderzahl zu bestätigen oder zu ändern",
               onClick: () => setChecking(family),
             },
-            ...(family.count
+            ...(family.count || family.status === "differing"
               ? [
                   {
                     label: "Kinderzahl entfernen",
@@ -302,10 +314,18 @@ export default function TraegerKinderzahlPage() {
   const expired = countStatus("expired");
   const missing = countStatus("missing");
 
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/family-children/export", format),
+    scope: "Alle Familien, ohne Suche. Jeder Download wird protokolliert.",
+    fallbackName: "kinderzahl",
+    errorObject: "die Kinderzahl der Familien",
+    unavailable: families.length === 0,
+  });
   return (
     <TenantPage
       title={billingAreaTitle("kinderzahl")}
-      info="Hier steht, wie viele Kinder eine Familie hat, auch Geschwister ohne Betreuungsvertrag. Eltern geben die Zahl im Vertrag an. Sie bestätigen oder ändern sie. Eine Geschwisterregel nutzt die Zahl nur, wenn Sie das unter „Ermäßigungen“ einschalten. moto speichert nur die Zahl, keine Namen der Geschwister. Jedes Öffnen dieser Seite steht im Zugriffsprotokoll."
+      info="Hier steht, wie viele Kinder eine Familie hat, auch Geschwister ohne Betreuungsvertrag. Eltern geben die Zahl im Vertrag an. Du bestätigst oder änderst sie. Ein Vertrag ohne E-Mail-Adresse der Eltern ist eine eigene Familie. Eine Geschwisterregel nutzt die Zahl nur, wenn du das unter „Ermäßigungen“ einschaltest. moto speichert nur die Zahl, keine Namen der Geschwister. Jedes Öffnen dieser Seite steht im Zugriffsprotokoll."
       stats={
         families.length > 0 ? (
           <TenantPageStats
@@ -336,23 +356,22 @@ export default function TraegerKinderzahlPage() {
         ) : null
       }
       statsLoading={loading}
-      actions={
-        <TraegerListExportMenu
-          download={(format) =>
-            downloadTraegerList("/api/traeger/family-children/export", format)
-          }
-          scope="Alle Familien, ohne Suche"
-          ariaLabel="Kinderzahl herunterladen"
-          tooltip="Zeigt die Formate für alle Familien, ohne Suche. Jeder Download wird protokolliert."
-          fallbackName="kinderzahl"
-          errorObject="die Kinderzahl der Familien"
-          unavailable={families.length === 0}
-        />
-      }
+      overflowMenu={[
+        ...exportItems,
+        { kind: "separator" },
+        {
+          label: "Aus Datei nachtragen",
+          description:
+            "Öffnet das Nachtragen der Kinderzahlen aus einer CSV-Datei.",
+          icon: <Upload className="h-4 w-4" aria-hidden />,
+          href: traegerPath("/traeger/abrechnung/kinderzahl/import"),
+          onClick: () => undefined,
+        },
+      ]}
       search={{
         value: search,
         onChange: setSearch,
-        placeholder: "Familie, Adresse oder Kind",
+        placeholder: "Familie, Adresse, Vertrag oder Kind",
       }}
       tabs={billingTabs("kinderzahl")}
       error={loadError}
@@ -399,7 +418,7 @@ export default function TraegerKinderzahlPage() {
       {data && families.length > 0 && data.rules.length === 0 ? (
         <Alert
           type="info"
-          message="Noch keine Geschwisterregel zählt diese Zahl. Schalten Sie das bei der Regel unter „Ermäßigungen“ ein."
+          message="Noch keine Geschwisterregel zählt diese Zahl. Schalte das bei der Regel unter „Ermäßigungen“ ein."
           action={
             <ButtonLink
               href={traegerPath("/traeger/abrechnung/ermaessigungen")}
@@ -429,7 +448,7 @@ export default function TraegerKinderzahlPage() {
           <ResponsiveActionList>
             {(checksExpanded ? toCheck : toCheck.slice(0, INITIAL_CHECKS)).map(
               (family) => (
-                <ResponsiveActionRow key={family.recipientEmail}>
+                <ResponsiveActionRow key={familyKey(family)}>
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-900">
                       {familyName(family)}
@@ -442,7 +461,7 @@ export default function TraegerKinderzahlPage() {
                       {checkReason(family, today)}
                     </p>
                   </div>
-                  <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
+                  <ResponsiveRowActions>
                     <Button
                       type="button"
                       variant="surface"
@@ -453,7 +472,7 @@ export default function TraegerKinderzahlPage() {
                     >
                       Prüfen
                     </Button>
-                  </div>
+                  </ResponsiveRowActions>
                 </ResponsiveActionRow>
               ),
             )}
@@ -468,7 +487,7 @@ export default function TraegerKinderzahlPage() {
               tooltip={
                 checksExpanded
                   ? "Zeigt wieder nur die ersten Familien der Liste."
-                  : "Zeigt alle Familien, deren Kinderzahl Sie prüfen müssen."
+                  : "Zeigt alle Familien, deren Kinderzahl du prüfen musst."
               }
               onClick={() => setChecksExpanded((open) => !open)}
             >
@@ -491,7 +510,7 @@ export default function TraegerKinderzahlPage() {
         <DataTable
           columns={columns}
           rows={rows}
-          getRowKey={(family) => family.recipientEmail}
+          getRowKey={familyKey}
           // Six columns on a tablet: narrower cells keep the state pills
           // whole beside the row menu.
           dense
@@ -499,7 +518,7 @@ export default function TraegerKinderzahlPage() {
           emptyState={
             <EmptyState
               title="Keine Familie passt zur Suche."
-              description="Ändern Sie die Suche."
+              description="Ändere die Suche."
             />
           }
         />

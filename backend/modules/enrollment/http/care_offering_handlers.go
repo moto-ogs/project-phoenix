@@ -500,7 +500,7 @@ func (rs *Resource) deleteCareOffering(w http.ResponseWriter, r *http.Request) {
 		// this offering — admin should soft-delete (is_active=false).
 		if rs.Failures.Constraint(err) {
 			common.RenderError(w, r, common.ErrorInvalidRequestWithCode(
-				errors.New("das Betreuungsangebot wird bereits verwendet und kann nicht gelöscht werden. Deaktivieren Sie es stattdessen"),
+				errors.New("das Betreuungsangebot wird bereits verwendet und kann nicht gelöscht werden. Deaktiviere es stattdessen"),
 				common.CodeEnrollmentCareOfferingInUse,
 			))
 			return

@@ -180,8 +180,9 @@ func TestSeedRegularBookingsRefusesABookingOnAnotherChild(t *testing.T) {
 	assert.Equal(t, []string{"audience existing_students", "book 4711", "audience open"}, server.events)
 }
 
-// The bookings follow the meal orders and the phase, and precede the child
-// quota, with and without the deferred history.
+// The meal-plan change follows the meal orders that create its recipients;
+// the bookings follow both and the phase, before the child quota. This holds
+// with and without deferred history.
 func TestRegularBookingsRunAfterTheMealOrdersAndThePhase(t *testing.T) {
 	t.Parallel()
 	position := func(steps []Step) map[string]int {
@@ -190,6 +191,8 @@ func TestRegularBookingsRunAfterTheMealOrdersAndThePhase(t *testing.T) {
 			switch step.(type) {
 			case seedMealOrdersStep:
 				at["meals"] = index
+			case seedMealPlanChangeStep:
+				at["change"] = index
 			case parentRequestsSeedStep:
 				at["phase"] = index
 			case seedFamilyAppAccountsStep:
@@ -204,6 +207,7 @@ func TestRegularBookingsRunAfterTheMealOrdersAndThePhase(t *testing.T) {
 	}
 	full := position(fullDemoWorkflow(&Seeder{}).Steps)
 	require.Contains(t, full, "bookings")
+	assert.Greater(t, full["change"], full["meals"])
 	assert.Greater(t, full["bookings"], full["meals"])
 	assert.Greater(t, full["bookings"], full["phase"])
 	assert.Greater(t, full["bookings"], full["families"])
@@ -213,6 +217,7 @@ func TestRegularBookingsRunAfterTheMealOrdersAndThePhase(t *testing.T) {
 	opening := position(fullDemoWorkflow(deferredSeeder).Steps)
 	assert.NotContains(t, opening, "bookings", "the phase does not exist before the deferred steps")
 	assert.Contains(t, opening, "meals")
+	assert.Greater(t, opening["change"], opening["meals"])
 	deferred := position(deferredDemoSteps(deferredSeeder))
 	require.Contains(t, deferred, "bookings")
 	assert.Greater(t, deferred["bookings"], deferred["phase"])

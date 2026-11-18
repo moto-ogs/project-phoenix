@@ -47,7 +47,6 @@ export default function OperatorLoginPage() {
     if (status !== "loading") setSessionKnown(true);
   }, [status]);
 
-  // oxlint-disable-next-line swr/no-effect-load -- session guard: signs a stale session out before the login form shows; no read
   useEffect(() => {
     const cleanup = signOutStaleSession({
       status,
@@ -115,7 +114,7 @@ export default function OperatorLoginPage() {
   return (
     <AuthShell
       title="Operator Dashboard"
-      subtitle="Melden Sie sich an, um Plattformbetrieb, Träger und Schulen zu verwalten."
+      subtitle="Melde dich an, um Plattformbetrieb, Träger und Schulen zu verwalten."
       variant="operator"
       brand={<OperatorBrand />}
     >

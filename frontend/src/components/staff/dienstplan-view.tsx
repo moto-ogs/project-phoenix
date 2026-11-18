@@ -32,7 +32,7 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import {
   OverflowMenu,
   type OverflowMenuEntry,
@@ -541,16 +541,24 @@ function DienstplanContent() {
     view === "person" ? personShiftCount : allShifts.length;
   // Ohne geladenen Wochenplan steht keine "0 Dienste · 0 Personen" neben
   // dem Ladefehler (#2517).
-  const statusLine = scheduleError
-    ? null
-    : [
-        view !== "halbjahr"
-          ? `${displayedShiftCount} ${displayedShiftCount === 1 ? "Dienst" : "Dienste"}`
-          : null,
-        `${sortedStaff.length} ${sortedStaff.length === 1 ? "Person" : "Personen"}`,
-      ]
-        .filter(Boolean)
-        .join(" · ");
+  const statusLine = scheduleError ? null : (
+    <TenantPageStats
+      items={[
+        ...(view !== "halbjahr"
+          ? [
+              {
+                value: displayedShiftCount,
+                label: displayedShiftCount === 1 ? "Dienst" : "Dienste",
+              },
+            ]
+          : []),
+        {
+          value: sortedStaff.length,
+          label: sortedStaff.length === 1 ? "Person" : "Personen",
+        },
+      ]}
+    />
+  );
 
   return (
     <TenantPage
@@ -596,7 +604,7 @@ function DienstplanContent() {
                         label: "Springer des Trägers",
                         icon: <UsersRound className="h-4 w-4" aria-hidden />,
                         description:
-                          "Zeigt die Springer Ihres Trägers. Dort blocken Sie eine Person.",
+                          "Zeigt die Springer deines Trägers. Dort blockst du eine Person.",
                         href: tenantPath("/dienstplan/springer"),
                         // Nur Navigation: OverflowMenu verlangt onClick auch bei href.
                         onClick: () => undefined,

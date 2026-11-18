@@ -199,15 +199,15 @@ function conflictNotReadyReason(state: {
   hasResult: boolean;
   hasReason: boolean;
 }): string | undefined {
-  if (!state.complete) return "Laden Sie zuerst alle Wünsche zu diesem Punkt.";
-  if (state.choice === null) return "Wählen Sie zuerst ein Ergebnis aus.";
+  if (!state.complete) return "Lade zuerst alle Wünsche zu diesem Punkt.";
+  if (state.choice === null) return "Wähle zuerst ein Ergebnis aus.";
   if (
     state.choice === STAFF_CHOICE &&
     !(state.staffValueReady && state.hasResult)
   )
-    return "Tragen Sie zuerst Ihren eigenen Wert ein.";
-  if (!state.hasResult) return "Wählen Sie zuerst ein Ergebnis aus.";
-  if (!state.hasReason) return "Tragen Sie zuerst eine Begründung ein.";
+    return "Trage zuerst deinen eigenen Wert ein.";
+  if (!state.hasResult) return "Wähle zuerst ein Ergebnis aus.";
+  if (!state.hasReason) return "Trage zuerst eine Begründung ein.";
   return undefined;
 }
 
@@ -319,16 +319,16 @@ export function ConflictDecisionGroup({
           {group.expectedCount} Wünsche für {group.label}
         </legend>
         <p className="text-sm text-gray-600">
-          Diese Wünsche widersprechen sich. Legen Sie fest, was gelten soll.
-          Alle anderen Wünsche werden abgelehnt.
+          Diese Wünsche widersprechen sich. Lege fest, was gelten soll. Alle
+          anderen Wünsche werden abgelehnt.
         </p>
         {missing > 0 && (
           <Alert
             type="warning"
             message={
               missing === 1
-                ? "1 weiterer Wunsch ist noch nicht geladen. Laden Sie zuerst weitere Einträge."
-                : `${missing} weitere Wünsche sind noch nicht geladen. Laden Sie zuerst weitere Einträge.`
+                ? "1 weiterer Wunsch ist noch nicht geladen. Lade zuerst weitere Einträge."
+                : `${missing} weitere Wünsche sind noch nicht geladen. Lade zuerst weitere Einträge.`
             }
           />
         )}

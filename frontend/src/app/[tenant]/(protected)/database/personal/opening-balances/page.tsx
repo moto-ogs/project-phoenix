@@ -24,7 +24,7 @@ import { Input } from "~/components/ui/input";
 import { FormSkeleton, SkeletonRegion } from "~/components/ui/page-skeletons";
 import { DataTableSkeleton as TableSkeleton } from "~/components/ui/data-table";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { ModuleRouteGuard } from "~/components/tenant/module-route-guard";
@@ -369,7 +369,7 @@ function OpeningBalanceImportPageContent() {
       resetPreview();
       if (!paramsComplete) {
         importErrors.invalid(
-          "Bitte geben Sie zuerst Stichtag und Begründung an. Dann wird die Vorschau erstellt.",
+          "Bitte gib zuerst Stichtag und Begründung an. Dann wird die Vorschau erstellt.",
           {
             ...(effectiveDate
               ? {}
@@ -480,7 +480,7 @@ function OpeningBalanceImportPageContent() {
     (file: File) => {
       if (!isSpreadsheet(file)) {
         importErrors.invalid(
-          "Diese Datei passt nicht. Bitte laden Sie eine CSV- oder Excel-Datei hoch.",
+          "Diese Datei passt nicht. Bitte lade eine CSV- oder Excel-Datei hoch.",
         );
         return;
       }
@@ -491,25 +491,37 @@ function OpeningBalanceImportPageContent() {
 
   // Statuszeile des Seitenkopfs: der Stand des Imports.
   const balanceResult = importResult ?? previewResult;
-  const statusLine = uploadedFile
-    ? [
-        uploadedFile.name,
+  const statusLine = uploadedFile ? (
+    <TenantPageStats
+      // Die Zeile zeigt höchstens drei Angaben. Hat die Datei Fehler,
+      // fällt der Stichtag weg; der steht im Feld „Stichtag“ darunter.
+      items={[
+        { label: uploadedFile.name },
         importResult
           ? importInterrupted
-            ? `${importBatchSavedCount(importResult)} gespeichert`
-            : "Übernahme abgeschlossen"
-          : `${balanceResult?.TotalRows ?? 0} ${(balanceResult?.TotalRows ?? 0) === 1 ? "Zeile" : "Zeilen"}`,
-        (!importResult || importInterrupted) &&
+            ? {
+                value: importBatchSavedCount(importResult),
+                label: "gespeichert",
+              }
+            : { label: "Übernahme abgeschlossen" }
+          : {
+              value: balanceResult?.TotalRows ?? 0,
+              label: (balanceResult?.TotalRows ?? 0) === 1 ? "Zeile" : "Zeilen",
+            },
+        ...((!importResult || importInterrupted) &&
         (balanceResult?.ErrorCount ?? 0) > 0
-          ? `${balanceResult?.ErrorCount} Fehler`
-          : null,
-        effectiveDate ? `Stichtag ${formatDate(effectiveDate)}` : null,
-      ]
-        .filter(Boolean)
-        .join(" · ")
-    : effectiveDate
-      ? `Stichtag ${formatDate(effectiveDate)}`
-      : "Noch keine Datei gewählt";
+          ? [{ value: balanceResult?.ErrorCount, label: "Fehler" }]
+          : []),
+        ...(effectiveDate
+          ? [{ label: `Stichtag ${formatDate(effectiveDate)}` }]
+          : []),
+      ].slice(0, 3)}
+    />
+  ) : effectiveDate ? (
+    `Stichtag ${formatDate(effectiveDate)}`
+  ) : (
+    "Noch keine Datei gewählt"
+  );
 
   if (status === "loading") {
     return (
@@ -645,7 +657,7 @@ function OpeningBalanceImportPageContent() {
               disabledReason={
                 isLoading
                   ? undefined
-                  : "Tragen Sie zuerst Stichtag und Begründung ein."
+                  : "Trage zuerst Stichtag und Begründung ein."
               }
               tooltip="Prüft die Datei noch einmal mit Stichtag und Begründung."
               onClick={() => void runPreview(uploadedFile)}

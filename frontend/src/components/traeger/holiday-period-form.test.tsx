@@ -153,6 +153,24 @@ describe("HolidayPeriodForm", () => {
     },
   );
 
+  it("opens the settings link from the form in a new tab (#7412)", () => {
+    render(
+      <ToastProvider>
+        <HolidayPeriodForm
+          period={stored}
+          schools={schools}
+          onSaved={vi.fn()}
+          onCancel={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    const link = screen.getByRole("link", {
+      name: "Einstellungen, neuer Tab",
+    });
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link.getAttribute("href")).toContain("/traeger/einstellungen");
+  });
+
   it("marks the missing fields of a new period and sends nothing", async () => {
     render(
       <ToastProvider>
@@ -167,13 +185,11 @@ describe("HolidayPeriodForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(
-      await screen.findByText("Bitte prüfen Sie die markierten Felder."),
+      await screen.findByText("Bitte prüfe die markierten Felder."),
     ).toBeInTheDocument();
+    expect(screen.getAllByText("Bitte gib einen Namen ein.")).toHaveLength(2);
     expect(
-      screen.getAllByText("Bitte geben Sie einen Namen ein."),
-    ).toHaveLength(2);
-    expect(
-      screen.getByText("Bitte wählen Sie die ausrichtende OGS."),
+      screen.getByText("Bitte wähle die ausrichtende OGS."),
     ).toBeInTheDocument();
     expect(mockCreate).not.toHaveBeenCalled();
   });
@@ -327,7 +343,7 @@ describe("HolidayPeriodForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(
-      await screen.findByText("Bitte prüfen Sie die markierten Felder."),
+      await screen.findByText("Bitte prüfe die markierten Felder."),
     ).toBeInTheDocument();
     expect(mockUpdate).not.toHaveBeenCalled();
   });
@@ -375,9 +391,7 @@ describe("HolidayPeriodForm", () => {
     fireEvent.change(start, { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(start).toHaveFocus());
-    expect(
-      screen.getByText("Bitte tragen Sie den Beginn ein."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Bitte trage den Beginn ein.")).toBeInTheDocument();
 
     fireEvent.change(start, { target: { value: "08:00" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));

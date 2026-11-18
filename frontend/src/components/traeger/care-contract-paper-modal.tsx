@@ -51,11 +51,11 @@ export function PaperSignatureModal({
 
   // Was fehlt, sperrt den Abschluss und ist zugleich sein Grund.
   const missingText = !signerName.trim()
-    ? "Tragen Sie zuerst ein, wer unterschrieben hat."
+    ? "Trage zuerst ein, wer unterschrieben hat."
     : !signedOn
-      ? "Wählen Sie zuerst den Tag der Unterschrift."
+      ? "Wähle zuerst den Tag der Unterschrift."
       : !file
-        ? "Wählen Sie zuerst das PDF des Vertrags."
+        ? "Wähle zuerst das PDF des Vertrags."
         : undefined;
 
   const save = async () => {
@@ -117,8 +117,8 @@ export function PaperSignatureModal({
       <div className="space-y-4">
         <p className="text-sm text-gray-600">
           Für Eltern ohne Internet oder einen Vertrag, den es nur auf Papier
-          gibt. Laden Sie den unterschriebenen Vertrag als PDF hoch. Danach ist
-          der Vertrag aktiv.
+          gibt. Lade den unterschriebenen Vertrag als PDF hoch. Danach ist der
+          Vertrag aktiv.
         </p>
         <Input
           controlSize="touch"

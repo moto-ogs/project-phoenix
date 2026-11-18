@@ -4,26 +4,26 @@
 <div class="email-body">
     {{template "moto-brand" .}}
     {{if .Removed}}
-    <h1>Sie sind nicht mehr im Träger-Büro</h1>
+    <h1>Du bist nicht mehr im Träger-Büro</h1>
     <p>Guten Tag,</p>
     {{if .Self}}
-    <p>Sie wurden aus dem Träger-Büro von <strong>{{.TraegerName}}</strong> entfernt. Das geschah am {{.Date}} um {{.Time}} Uhr mit Ihrem eigenen Konto.</p>
+    <p>Du wurdest aus dem Träger-Büro von <strong>{{.TraegerName}}</strong> entfernt. Das geschah am {{.Date}} um {{.Time}} Uhr mit deinem eigenen Konto.</p>
     {{else}}
-    <p><strong>{{.ActorEmail}}</strong> hat Sie am {{.Date}} um {{.Time}} Uhr aus dem Träger-Büro von <strong>{{.TraegerName}}</strong> entfernt.</p>
+    <p><strong>{{.ActorEmail}}</strong> hat dich am {{.Date}} um {{.Time}} Uhr aus dem Träger-Büro von <strong>{{.TraegerName}}</strong> entfernt.</p>
     {{end}}
 
     <div class="highlight-box">
         <p>Bisher: <strong>{{.RolesBefore}}</strong></p>
     </div>
 
-    <p>Sie können sich im Träger-Portal nicht mehr anmelden. Ihr moto-Konto bleibt bestehen.</p>
+    <p>Du kannst dich im Träger-Portal nicht mehr anmelden. Dein moto-Konto bleibt bestehen.</p>
     {{else}}
-    <h1>Ihre Rollen haben sich geändert</h1>
+    <h1>Deine Rollen haben sich geändert</h1>
     <p>Guten Tag,</p>
     {{if .Self}}
-    <p>Ihre Rollen im Träger-Büro von <strong>{{.TraegerName}}</strong> wurden geändert. Das geschah am {{.Date}} um {{.Time}} Uhr mit Ihrem eigenen Konto.</p>
+    <p>Deine Rollen im Träger-Büro von <strong>{{.TraegerName}}</strong> wurden geändert. Das geschah am {{.Date}} um {{.Time}} Uhr mit deinem eigenen Konto.</p>
     {{else}}
-    <p><strong>{{.ActorEmail}}</strong> hat am {{.Date}} um {{.Time}} Uhr Ihre Rollen im Träger-Büro von <strong>{{.TraegerName}}</strong> geändert.</p>
+    <p><strong>{{.ActorEmail}}</strong> hat am {{.Date}} um {{.Time}} Uhr deine Rollen im Träger-Büro von <strong>{{.TraegerName}}</strong> geändert.</p>
     {{end}}
 
     <div class="highlight-box">
@@ -32,17 +32,17 @@
     </div>
 
     {{if .Withdrawn}}
-    <p>Sie wurden deshalb im Träger-Portal abgemeldet. Melden Sie sich neu an.</p>
+    <p>Du wurdest deshalb im Träger-Portal abgemeldet. Melde dich neu an.</p>
     {{else}}
     <p>Die neuen Rollen gelten nach wenigen Minuten.</p>
     {{end}}
     {{end}}
 
     {{if not .Self}}
-    <p>Sie haben Fragen dazu? Dann wenden Sie sich an {{.ActorEmail}}.</p>
+    <p>Du hast Fragen dazu? Dann wende dich an {{.ActorEmail}}.</p>
     {{end}}
 
-    <p class="security-note">Sie haben das nicht erwartet? Dann sagen Sie es der Leitung Ihres Träger-Büros. Oder schreiben Sie sofort an <a href="mailto:{{.ContactAddress}}">{{.ContactAddress}}</a>.</p>
+    <p class="security-note">Du hast das nicht erwartet? Dann sage es der Leitung deines Träger-Büros. Oder schreibe sofort an <a href="mailto:{{.ContactAddress}}">{{.ContactAddress}}</a>.</p>
 </div>
 
 {{template "footer" .}}

@@ -526,7 +526,7 @@ export function FieldEditorRow({
                   size="compact"
                   announce="off"
                   title="Wird Eltern als Hinweis angezeigt."
-                  message="Ein Infotext sammelt keine Antwort. Nutzen Sie ihn für Erklärungen, Hinweise oder Zwischenüberschriften."
+                  message="Ein Infotext sammelt keine Antwort. Nutze ihn für Erklärungen, Hinweise oder Zwischenüberschriften."
                 />
               ) : isTargetField ? (
                 <InsetPanel
@@ -538,9 +538,9 @@ export function FieldEditorRow({
                     Wird bei bestätigter Anmeldung in die Stammdaten übernommen.
                   </p>
                   <p className="mt-0.5">
-                    Sie können die angezeigte Frage umbenennen. Inhalt und Typ
-                    sind fest vorgegeben. Entfernen Sie den Vorschlag, wenn
-                    diese Angabe nicht abgefragt werden soll.
+                    Du kannst die angezeigte Frage umbenennen. Inhalt und Typ
+                    sind fest vorgegeben. Entferne den Vorschlag, wenn diese
+                    Angabe nicht abgefragt werden soll.
                   </p>
                 </InsetPanel>
               ) : freeQuestionNote ? (
@@ -640,7 +640,7 @@ export function FieldEditorRow({
                       placeholder={
                         isTargetField && target
                           ? RESERVED_TARGETS[target].label
-                          : "z. B. Wie haben Sie von uns erfahren?"
+                          : "z. B. Wie hast du von uns erfahren?"
                       }
                       disabled={disabled}
                       error={labelError.message}
@@ -723,7 +723,7 @@ export function FieldEditorRow({
                       (#6044): two sources for one time. */}
                       <Alert
                         type="info"
-                        message="Haben Ihre Betreuungsangebote eine Gehzeit? Dann brauchen Sie diese Frage nicht. Eine Antwort hier ersetzt die Gehzeit des Angebots."
+                        message="Haben deine Betreuungsangebote eine Gehzeit? Dann brauchst du diese Frage nicht. Eine Antwort hier ersetzt die Gehzeit des Angebots."
                         className="mb-3"
                       />
                       <span className="text-xs font-medium text-gray-700">
@@ -805,7 +805,7 @@ export function FieldEditorRow({
                         id={`${allowedTimeIdPrefix}-single-mode-grades-hint`}
                         className="mb-2 text-xs leading-5 text-gray-500"
                       >
-                        Tragen Sie Jahrgänge ein, deren Eltern pro Wochentag nur
+                        Trage Jahrgänge ein, deren Eltern pro Wochentag nur
                         einen Heimweg auswählen dürfen, zum Beispiel „1“ für die
                         Erstklässler. Ohne Eintrag bleibt die Mehrfachauswahl
                         für alle Jahrgänge erlaubt. Voraussetzung: Die Abfrage
@@ -828,13 +828,25 @@ export function FieldEditorRow({
                   ) : null}
 
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <CheckboxCard
-                      checked={Boolean(field.required)}
-                      onChange={(checked) => onChange({ required: checked })}
-                      label="Pflichtfrage"
-                      hint={getRequiredHint(field)}
-                      disabled={disabled}
-                    />
+                    {field.target === "student.health_info" ? (
+                      // Health information is voluntary (Art. 7 Abs. 4
+                      // DSGVO); the backend saves it as optional (#2787).
+                      <CheckboxCard
+                        checked={false}
+                        onChange={() => undefined}
+                        label="Pflichtfrage"
+                        hint="Immer freiwillig. Das Formular fragt dazu die Einwilligung der Eltern ab."
+                        disabled
+                      />
+                    ) : (
+                      <CheckboxCard
+                        checked={Boolean(field.required)}
+                        onChange={(checked) => onChange({ required: checked })}
+                        label="Pflichtfrage"
+                        hint={getRequiredHint(field)}
+                        disabled={disabled}
+                      />
+                    )}
                     <CheckboxCard
                       checked={Boolean(field.applies_to_child)}
                       onChange={(checked) =>
@@ -843,7 +855,7 @@ export function FieldEditorRow({
                       label="Pro Kind abfragen"
                       hint={
                         canAskPerChild(field)
-                          ? "Für Fragen zum Kind, etwa zu Allergien oder zum Schwimmen. Die Frage erscheint dann für jedes angemeldete Kind."
+                          ? "Für Fragen zum Kind, etwa zum Schwimmen oder zum Mittagessen. Die Frage erscheint dann für jedes angemeldete Kind."
                           : "Dateien gelten immer für die ganze Anmeldung."
                       }
                       disabled={
@@ -867,7 +879,7 @@ export function FieldEditorRow({
                         hint={
                           healthToggle?.checked
                             ? "Die OGS, die die Woche ausrichtet, sieht die Antwort bei den Gesundheitsangaben des Kindes. Nur wenn die Eltern zustimmen."
-                            : "Bei neuen Fragen ist das an. Die ausrichtende OGS sieht die Antwort. Sie können das ausschalten."
+                            : "Bei neuen Fragen ist das an. Die ausrichtende OGS sieht die Antwort. Du kannst das ausschalten."
                         }
                         disabled={disabled}
                       />
@@ -990,10 +1002,10 @@ function ConditionEditor({
         i !== index && hasControllingType(f) && Boolean(f.applies_to_child),
     );
     const description = hasQuestionWithoutText
-      ? "Schreiben Sie zuerst den Fragetext der anderen Ja/Nein- oder Auswahlfrage. Diese Frage kann dann von deren Antwort abhängen."
+      ? "Schreibe zuerst den Fragetext der anderen Ja/Nein- oder Auswahlfrage. Diese Frage kann dann von deren Antwort abhängen."
       : !field.applies_to_child && hasChildQuestion
-        ? "Eine allgemeine Frage kann nicht von einer Frage pro Kind abhängen. Legen Sie eine andere allgemeine Ja/Nein- oder Auswahlfrage an. Schreiben Sie auch den Fragetext dazu."
-        : "Legen Sie zuerst eine andere Ja/Nein- oder Auswahlfrage mit Fragetext an. Diese Frage kann dann von deren Antwort abhängen.";
+        ? "Eine allgemeine Frage kann nicht von einer Frage pro Kind abhängen. Lege eine andere allgemeine Ja/Nein- oder Auswahlfrage an. Schreibe auch den Fragetext dazu."
+        : "Lege zuerst eine andere Ja/Nein- oder Auswahlfrage mit Fragetext an. Diese Frage kann dann von deren Antwort abhängen.";
     return (
       <EmptyState
         variant="dashed"
@@ -1001,7 +1013,7 @@ function ConditionEditor({
         description={`${description}${
           field.applies_to_child || childSources.length === 0
             ? ""
-            : " Oder schalten Sie bei dieser Frage „Pro Kind abfragen“ ein."
+            : " Oder schalte bei dieser Frage „Pro Kind abfragen“ ein."
         }`}
       />
     );

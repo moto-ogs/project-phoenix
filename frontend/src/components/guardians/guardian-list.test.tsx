@@ -586,7 +586,7 @@ describe("GuardianList mail state (#5934)", () => {
     );
     expect(screen.getByText("Kein Kind in Betreuung")).toBeInTheDocument();
     expect(screen.getByText(/Kein Kind dieser Person/)).toBeInTheDocument();
-    expect(screen.queryByText(/Bitte senden Sie neu/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Bitte sende neu/)).not.toBeInTheDocument();
     openMenu();
     expect(screen.getByRole("menuitem", { name: "Bearbeiten" })).toBeVisible();
     expect(

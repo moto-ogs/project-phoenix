@@ -119,8 +119,8 @@ export function CareContractConditions({
     return (
       <SectionCard>
         <EmptyState
-          title="Ihre Schulen haben noch kein Betreuungsangebot."
-          description="Die Schulen legen ihre Angebote unter „Anmeldung“ an. Danach legen Sie hier die Vertragsbedingungen fest."
+          title="Deine Schulen haben noch kein Betreuungsangebot."
+          description="Die Schulen legen ihre Angebote unter „Anmeldung“ an. Danach legst du hier die Vertragsbedingungen fest."
         />
       </SectionCard>
     );
@@ -135,7 +135,7 @@ export function CareContractConditions({
     <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
       <SectionCard
         title="Angebote"
-        description="Wählen Sie ein Angebot. Seine Bedingungen gelten für jeden neuen Vertrag."
+        description="Wähle ein Angebot. Seine Bedingungen gelten für jeden neuen Vertrag."
       >
         <div className="space-y-5">
           {schools.map((school) => (
@@ -209,7 +209,7 @@ export function CareContractConditions({
       >
         <p className="text-sm text-gray-700">
           Die Bedingungen für „{selected?.offeringName}“ sind noch nicht
-          gespeichert. Wenn Sie ein anderes Angebot öffnen, gehen die Änderungen
+          gespeichert. Wenn du ein anderes Angebot öffnest, gehen die Änderungen
           verloren.
         </p>
       </ConfirmationModal>
@@ -302,8 +302,7 @@ function ConditionsForm({
       <form
         ref={formRef}
         noValidate
-        // Room under the last „Text kopieren“: the save bar sticks below it.
-        className="space-y-6 pb-4"
+        className="space-y-6"
         onSubmit={(event) => {
           event.preventDefault();
           void submit();
@@ -330,7 +329,7 @@ function ConditionsForm({
             label="Gespeicherter Text für das Anmeldeformular"
             rows={8}
             value={selected.acceptanceText}
-            hint="So kommt er ins Anmeldeformular: 1. Sie speichern die Bedingungen. 2. Die Schule kopiert den Text unverändert in „Rechtstext / Erklärung“ und setzt „Muss bestätigt werden“. Bestehende Rechtstexte bleiben. Ändern Sie die Bedingungen später, ersetzt die Schule nur diesen Text."
+            hint="So kommt er ins Anmeldeformular: 1. Du speicherst die Bedingungen. 2. Die Schule kopiert den Text unverändert in „Rechtstext / Erklärung“ und setzt „Muss bestätigt werden“. Bestehende Rechtstexte bleiben. Änderst du die Bedingungen später, ersetzt die Schule nur diesen Text."
           />
         ) : null}
         {selected.withdrawalText ? (
@@ -521,9 +520,8 @@ export function ContractTermsFields({
         onChange={(event) => set("contractPartner", event.target.value)}
       />
       <p className="text-sm text-gray-600">
-        Leer lassen, wenn der Name im Briefkopf steht. Sonst tragen Sie den
-        Vertragspartner hier ein. Für „Bei der Annahme“ tragen Sie ihn immer
-        ein.
+        Leer lassen, wenn der Name im Briefkopf steht. Sonst trägst du den
+        Vertragspartner hier ein. Für „Bei der Annahme“ trägst du ihn immer ein.
       </p>
     </>
   );
@@ -570,12 +568,12 @@ function CopyableLegalText({
         size="compact"
         className="gap-1.5"
         aria-describedby={id}
-        tooltip="Kopiert den Text, damit Sie ihn woanders einfügen."
+        tooltip="Kopiert den Text, damit du ihn woanders einfügst."
         onClick={async () => {
           if (await copy(value)) success("Der Text ist kopiert.");
           else
             showMessage(
-              "Der Text ließ sich nicht kopieren. Markieren Sie ihn und kopieren Sie ihn selbst.",
+              "Der Text ließ sich nicht kopieren. Markiere ihn und kopiere ihn selbst.",
             );
         }}
       >

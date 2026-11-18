@@ -11,7 +11,7 @@ import { redirect, useSearchParams } from "next/navigation";
 import { BellSimpleRingingIcon, CaretRightIcon } from "@phosphor-icons/react";
 import { CollectionGrid } from "~/components/ui/collection-grid";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { TileCard } from "~/components/ui/tile-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { formatDate } from "~/lib/date-helpers";
@@ -116,7 +116,7 @@ function DocumentDirectory({
     // Reiter, dort benennt die Karte ihren Inhalt (kein doppelter Titel).
     <SectionCard
       title={embedded ? "Personen" : "Personalunterlagen"}
-      description="Wählen Sie eine Person, um die für Sie freigegebenen Dokumente zu sehen."
+      description="Wähle eine Person, um die für dich freigegebenen Dokumente zu sehen."
     >
       {embedded && (
         <div className="mb-4">
@@ -147,7 +147,7 @@ function DocumentDirectory({
                 variant="compact"
                 className="px-4 py-6"
                 title="Keine Personen gefunden."
-                description="Passen Sie die Suche an."
+                description="Passe die Suche an."
               />
             </li>
           ) : null}
@@ -759,28 +759,30 @@ function StaffPageContent() {
       // Dieselben Zustände wie die Badges auf den Karten: "Abwesend" ist der
       // Standard für "nicht eingestempelt", gemeldete Arten (Krank, Urlaub …)
       // tragen ihren eigenen Namen. So passt die Zeile zu dem, was man sieht.
-      const byLocation = new Map<string, number>();
+      // Die Statuszeile trägt höchstens drei Angaben (#7402); die gemeldeten
+      // Arten zeigen die Badges der Karten und der Filter „Status“.
       let clockedIn = 0;
+      let absent = 0;
       for (const member of filteredStaff) {
         // Die Kopfkarte zählt die Bezeichnungen der Karten. Dadurch ist etwa
         // „Zuhause“ wie auf der Karte „Anwesend“ und verschwindet nicht aus
         // der Zusammenfassung.
         const location = getStaffLocationStatus(member).label;
-        if (location === "Anwesend") {
-          clockedIn += 1;
-        } else {
-          byLocation.set(location, (byLocation.get(location) ?? 0) + 1);
-        }
+        if (location === "Anwesend") clockedIn += 1;
+        else if (location === "Abwesend") absent += 1;
       }
-      const parts = [
-        `${filteredStaff.length} ${filteredStaff.length === 1 ? "Person" : "Personen"}`,
-        `${clockedIn} anwesend`,
-        `${byLocation.get("Abwesend") ?? 0} abwesend`,
-      ];
-      for (const [location, count] of byLocation) {
-        if (location !== "Abwesend") parts.push(`${count} ${location}`);
-      }
-      return parts.join(" · ");
+      return (
+        <TenantPageStats
+          items={[
+            {
+              value: filteredStaff.length,
+              label: filteredStaff.length === 1 ? "Person" : "Personen",
+            },
+            { value: clockedIn, label: "anwesend" },
+            { value: absent, label: "abwesend" },
+          ]}
+        />
+      );
     }
     if (documentDirectory === undefined) return undefined;
     const count = documentDirectory.length;
@@ -821,7 +823,7 @@ function StaffPageContent() {
       ? {
           title: "Keine Ehemaligen gefunden",
           description: searchTerm
-            ? "Zu dieser Suche gibt es keine Person. Setzen Sie die Suche zurück, um alle zu sehen."
+            ? "Zu dieser Suche gibt es keine Person. Setze die Suche zurück, um alle zu sehen."
             : "Hier erscheint, wer die Schule verlassen hat.",
           icon: <MotoConceptIcon concept={staffConcept} size={48} />,
           action: searchTerm ? (
@@ -847,8 +849,8 @@ function StaffPageContent() {
       ? {
           title: "Kein Personal gefunden",
           description: staffFilterActive
-            ? "Zu dieser Suche gibt es keine Person. Setzen Sie die Suche zurück, um alle zu sehen."
-            : "Es ist noch niemand angelegt. Mitarbeitende legen Sie im Reiter „Stammdaten“ an.",
+            ? "Zu dieser Suche gibt es keine Person. Setze die Suche zurück, um alle zu sehen."
+            : "Es ist noch niemand angelegt. Mitarbeitende legst du im Reiter „Stammdaten“ an.",
           icon: <MotoConceptIcon concept={staffConcept} size={48} />,
           action: staffFilterActive ? (
             <Button
@@ -869,7 +871,7 @@ function StaffPageContent() {
               variant="primary"
               size="md"
               onClick={() => router.push("/database/personal")}
-              tooltip="Öffnet das Personal in der Datenverwaltung, dort legen Sie Personen an."
+              tooltip="Öffnet das Personal in der Datenverwaltung, dort legst du Personen an."
             >
               Zur Datenverwaltung
             </Button>
@@ -1002,7 +1004,7 @@ function StaffPageContent() {
               Anträge von Mitarbeitenden
             </p>
             <p className="text-sm text-gray-600">
-              Urlaub, Krank und Fortbildung entscheiden Sie unter Anfragen.
+              Urlaub, Krank und Fortbildung entscheidest du unter Anfragen.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -1099,7 +1101,7 @@ function StaffPageContent() {
               <Alert
                 type="info"
                 announce="off"
-                message="Die Karten zeigen nur, wo jemand gerade ist. Personalakten sind für Ihr Konto nicht freigegeben. Fragen Sie bei Bedarf Ihre Leitung."
+                message="Die Karten zeigen nur, wo jemand gerade ist. Personalakten sind für dein Konto nicht freigegeben. Frage bei Bedarf deine Leitung."
               />
             )}
 
@@ -1116,8 +1118,8 @@ function StaffPageContent() {
                   announce="off"
                   message={
                     canNavigateToStaff
-                      ? "Hier stehen Personen, die früher bei Ihnen gearbeitet haben. Öffnen Sie eine Karte für die Angaben von damals."
-                      : "Hier stehen Personen, die früher bei Ihnen gearbeitet haben. Personalakten sind für Ihr Konto nicht freigegeben."
+                      ? "Hier stehen Personen, die früher bei dir gearbeitet haben. Öffne eine Karte für die Angaben von damals."
+                      : "Hier stehen Personen, die früher bei dir gearbeitet haben. Personalakten sind für dein Konto nicht freigegeben."
                   }
                 />
                 <FormerStaffCards

@@ -413,8 +413,8 @@ export function StudentsInRoomSection({
     const target = selectedTarget;
     clearMoveErrors();
     if (!target) {
-      moveErrors.invalid("Bitte wählen Sie zuerst einen Zielraum.", {
-        "room-bulk-target": "Bitte wählen Sie einen Zielraum.",
+      moveErrors.invalid("Bitte wähle zuerst einen Zielraum.", {
+        "room-bulk-target": "Bitte wähle einen Zielraum.",
       });
       return;
     }
@@ -423,7 +423,7 @@ export function StudentsInRoomSection({
       visibleStudentIds.has(studentId),
     );
     if (studentIds.length === 0) {
-      moveErrors.invalid("Bitte wählen Sie mindestens ein Kind.");
+      moveErrors.invalid("Bitte wähle mindestens ein Kind.");
       return;
     }
 
@@ -543,7 +543,7 @@ export function StudentsInRoomSection({
                   size="compact"
                   onClick={() => setRoomCheckinOpen(true)}
                   disabled={roomCheckinTarget === null}
-                  disabledReason={`In ${roomName} läuft gerade keine Aufsicht und der Raum ist nicht freigegeben. Kinder melden Sie hier an, sobald eine Aufsicht läuft.`}
+                  disabledReason={`In ${roomName} läuft gerade keine Aufsicht und der Raum ist nicht freigegeben. Kinder meldest du hier an, sobald eine Aufsicht läuft.`}
                   tooltip={`Meldet Kinder an und setzt sie sofort in ${roomName}.`}
                   className="shrink-0"
                 >
@@ -570,7 +570,7 @@ export function StudentsInRoomSection({
                 Es werden {students.length} von {totalCount} Kindern angezeigt.{" "}
                 {hiddenCount} weitere{" "}
                 {hiddenCount === 1 ? "Kind ist" : "Kinder sind"} aktuell nicht
-                in dieser Übersicht. Öffnen Sie „Alle Kinder“, um alle zu sehen.
+                in dieser Übersicht. Öffne „Alle Kinder“, um alle zu sehen.
               </>
             }
           />
@@ -649,12 +649,12 @@ function BulkMoveToolbar({
   const noTargets = targetOptions.length === 0;
   let moveBlockedReason: string | undefined;
   if (selectedCount === 0) {
-    moveBlockedReason = "Wählen Sie zuerst mindestens ein Kind aus.";
+    moveBlockedReason = "Wähle zuerst mindestens ein Kind aus.";
   } else if (noTargets) {
     moveBlockedReason =
-      "Gerade gibt es keinen Raum, in den Sie Kinder setzen können.";
+      "Gerade gibt es keinen Raum, in den du Kinder setzen kannst.";
   } else if (targetValue.length === 0) {
-    moveBlockedReason = "Wählen Sie zuerst einen Zielraum.";
+    moveBlockedReason = "Wähle zuerst einen Zielraum.";
   }
 
   return (
@@ -737,14 +737,14 @@ const TARGET_SCOPE_HINT: Record<TargetScope, string> = {
   all: "Zielraum wählen und gemeinsam verschieben",
   supervised:
     "Zur Auswahl stehen Räume mit laufender Aufsicht und offene Räume.",
-  own: "Zur Auswahl stehen nur Räume, die Sie selbst beaufsichtigen.",
+  own: "Zur Auswahl stehen nur Räume, die du selbst beaufsichtigst.",
 };
 
 /** Shown instead of a dead disabled select when no room qualifies. */
 const NO_TARGET_HINT: Record<TargetScope, string> = {
   all: "Zurzeit läuft in keinem anderen Raum ein Angebot.",
   supervised: "Zurzeit hat kein anderer Raum eine laufende Aufsicht.",
-  own: "Zurzeit beaufsichtigen Sie keinen anderen Raum.",
+  own: "Zurzeit beaufsichtigst du keinen anderen Raum.",
 };
 
 interface StudentsInRoomBodyProps {

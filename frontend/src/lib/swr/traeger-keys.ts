@@ -39,6 +39,8 @@ export const traegerKeys = {
   schools: () => "traeger-schools",
   school: (id: string) => `traeger-school-${encodeURIComponent(id)}`,
   schoolsAlerts: () => "traeger-schools-alerts",
+  // Pflichtangaben für Verträge und Abrechnung auf der Startseite (#7177).
+  requiredDetails: () => "traeger-required-details",
   keyDateCounts: () => "traeger-key-date-counts",
   occupancy: () => "traeger-occupancy",
   // Ankunft und Abholung eines Zeitraums (#4714): Durchschnitte, keine Kinder.

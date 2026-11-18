@@ -24,7 +24,7 @@ import { TraegerRoleChoice } from "./traeger-role-choice";
 
 const logger = createLogger({ component: "TraegerAccountModals" });
 
-const ROLES_REQUIRED = "Bitte wählen Sie mindestens eine Rolle.";
+const ROLES_REQUIRED = "Bitte wähle mindestens eine Rolle.";
 
 /** What the invitation sends: the address and at least one role. */
 export interface TraegerInvitationInput {
@@ -78,10 +78,10 @@ export function InviteTraegerAccountModal({
   const submit = async () => {
     formErrors.clear();
     const fields: Record<string, string> = {};
-    if (!email.trim()) fields.email = "Bitte geben Sie eine E-Mail-Adresse an.";
+    if (!email.trim()) fields.email = "Bitte gib eine E-Mail-Adresse an.";
     if (roles.length === 0) fields.roles = ROLES_REQUIRED;
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", fields);
+      formErrors.invalid("Bitte prüfe deine Angaben.", fields);
       return;
     }
     await save.run(async (op) => {
@@ -156,7 +156,7 @@ export function InviteTraegerAccountModal({
 }
 
 const LAST_LEADER_REASON =
-  "Nur diese Person hat die Rolle Leitung. Geben Sie die Rolle zuerst einer anderen Person.";
+  "Nur diese Person hat die Rolle Leitung. Gib die Rolle zuerst einer anderen Person.";
 
 const LAST_LEADER_LOCK = { leadership: LAST_LEADER_REASON } as const;
 
@@ -248,7 +248,7 @@ export function ChangeTraegerRolesModal({
         <p className="text-sm text-gray-600">
           Rollen für{" "}
           <span className="font-medium wrap-anywhere">{member?.email}</span>.
-          Neue Rollen gelten nach wenigen Minuten. Nehmen Sie eine Rolle weg,
+          Neue Rollen gelten nach wenigen Minuten. Nimmst du eine Rolle weg,
           wird die Person sofort abgemeldet.
         </p>
         <TraegerRoleChoice

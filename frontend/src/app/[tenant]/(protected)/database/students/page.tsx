@@ -49,6 +49,7 @@ import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useChildrenWithoutCarePlace } from "~/lib/tenant-context";
 import { childrenConcept } from "~/lib/concepts/children";
 import { foldForSearch } from "~/lib/search-fold";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 const logger = createLogger({ component: "DatabaseStudentsPage" });
 
@@ -173,7 +174,7 @@ function StudentsPageContent() {
   );
 
   const errorMessage = studentsError
-    ? "Fehler beim Laden der Kinder. Bitte versuchen Sie es später erneut."
+    ? "Fehler beim Laden der Kinder. Bitte versuche es später erneut."
     : null;
 
   useEffect(() => {
@@ -263,15 +264,19 @@ function StudentsPageContent() {
     const classes = new Set(
       students.map((s) => s.school_class?.trim()).filter(Boolean),
     ).size;
-    const parts = [
-      `${formatCount(students.length)} ${students.length === 1 ? "Kind" : "Kinder"}`,
-    ];
-    if (classes > 0) {
-      parts.push(
-        `${formatCount(classes)} ${classes === 1 ? "Klasse" : "Klassen"}`,
-      );
-    }
-    return parts.join(" · ");
+    const label = students.length === 1 ? "Kind" : "Kinder";
+    if (classes === 0) return `${formatCount(students.length)} ${label}`;
+    return (
+      <TenantPageStats
+        items={[
+          { value: formatCount(students.length), label },
+          {
+            value: formatCount(classes),
+            label: classes === 1 ? "Klasse" : "Klassen",
+          },
+        ]}
+      />
+    );
   }, [studentsData]);
 
   const filteredStudents = useMemo(() => {
@@ -375,7 +380,7 @@ function StudentsPageContent() {
         // The child exists, but the consent input is lost (#5970): the notice
         // stays until closed and leads to the child's page to enter it again.
         toastWarning(
-          `„${displayName}“ ist angelegt. Die Angaben unter Datenschutz wurden aber nicht gespeichert. Bitte öffnen Sie das Kind und tragen Sie sie dort nach.`,
+          `„${displayName}“ ist angelegt. Die Angaben unter Datenschutz wurden aber nicht gespeichert. Bitte öffne das Kind und trage sie dort nach.`,
           {
             duration: 0,
             action: {
@@ -469,9 +474,9 @@ function StudentsPageContent() {
                     // das Kind KANN es geben, es ist nur nicht mehr in
                     // Betreuung (#2487).
                     canDeleteStudents
-                    ? "Versuchen Sie andere Suchkriterien oder Filter. Kinder, deren Betreuung beendet ist, stehen im Menü oben rechts unter Beendete Betreuungen."
-                    : "Versuchen Sie andere Suchkriterien oder Filter."
-                  : "Legen Sie das erste Kind an, um mit der Betreuung zu starten.",
+                    ? "Versuche andere Suchkriterien oder Filter. Kinder, deren Betreuung beendet ist, stehen im Menü oben rechts unter Beendete Betreuungen."
+                    : "Versuche andere Suchkriterien oder Filter."
+                  : "Lege das erste Kind an, um mit der Betreuung zu starten.",
               icon: (
                 <MotoDuotoneIcon
                   icon={childrenConcept.icon}

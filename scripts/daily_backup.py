@@ -7,6 +7,7 @@ forwarded: tools can print SQL, paths, credentials or upload names on failure.
 import datetime as dt
 import fcntl
 import hashlib
+import ipaddress
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -29,7 +30,15 @@ QUARANTINE_GROUPS = {'phoenix_diagnostics': 'diagnostics',
                      'phoenix_school_erasure': 'school_erasure',
                      'phoenix_billing_retention': 'billing_retention',
                      'phoenix_data_return': 'data_return'}
+# Built-in read-only roles that personal and monitoring logins hold in the
+# deployed clusters (dev_* with pg_read_all_data, postgres_exporter with
+# pg_monitor). Such logins are restored but disabled.
+EXTERNAL_LOGIN_GROUPS = ('pg_read_all_data', 'pg_monitor', 'pg_read_all_stats',
+                         'pg_read_all_settings', 'pg_stat_scan_tables')
 BUNDLE_NAME = r'daily-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{16}\.tar\.age'
+# The app's upload storage contract (objects/upload_config.go).
+UPLOADS_S3 = ('ENDPOINT', 'REGION', 'BUCKET', 'ACCESS_KEY', 'SECRET_KEY')
+UPLOADS_REMOTE = 'uploads:'
 step = 'configuration'
 
 
@@ -42,12 +51,54 @@ def require(condition):
         raise ValueError('precondition failed')
 
 
-def required(name):
-    value = os.environ.get(name, '')
+def required(name, values=None):
+    value = (os.environ if values is None else values).get(name) or ''
     if not value:
         raise MissingConfiguration(name)
     require('\n' not in value and '\r' not in value)
     return value
+
+
+def endpoint_host(value, *, loopback_http=False):
+    """HTTPS only; plain HTTP only on loopback, as the app's S3 adapter allows."""
+    endpoint = urlparse(value)
+    host = endpoint.hostname or ''
+    try:
+        loopback = host == 'localhost' or ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        loopback = False
+    require(endpoint.scheme == 'https' or (loopback_http and endpoint.scheme == 'http' and loopback))
+    require(host and not endpoint.username and endpoint.path in ('', '/'))
+    require(not any(host == domain or host.endswith('.' + domain) for domain in ('moto-app.de', 'moto.nrw')))
+    return host
+
+
+def uploads_backend(values):
+    """Empty or local uses the volume, s3 the bucket; anything else fails."""
+    backend = values.get('UPLOADS_BACKEND') or 'local'
+    require(backend in ('local', 's3'))
+    return backend
+
+
+def anonymous(member):
+    # Bucket objects carry no owner; do not record the backup host's root.
+    member.uid = member.gid = 0
+    member.uname = member.gname = ''
+    return member
+
+
+def extract_tree(path, destination):
+    """Extract an archive that regular_archive accepted, files and dirs only."""
+    with tarfile.open(path) as archive:
+        for member in archive:
+            target = destination.joinpath(*PurePosixPath(member.name).parts)
+            require(target == destination or destination in target.parents)
+            if member.isdir():
+                target.mkdir(mode=0o700, parents=True, exist_ok=True)
+                continue
+            target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            with archive.extractfile(member) as source, target.open('xb') as file:
+                shutil.copyfileobj(source, file)
 
 
 def command(args, *, stdin=None, stdout=None, data=None, env=None):
@@ -121,25 +172,21 @@ class Recovery:
         self.compose_file = Path(required('BACKUP_COMPOSE_FILE'))
         require(self.compose_file.is_absolute() and self.compose_file.is_file())
         self.project = required('BACKUP_PROJECT')
-        self.volume = required('BACKUP_UPLOADS_VOLUME')
         require(re.fullmatch(r'[a-z0-9][a-z0-9_-]+', self.project))
-        require(re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9_.-]+', self.volume))
         self.compose = ['docker', 'compose', '--env-file', str(self.compose_file.parent / '.env'),
                         '-f', str(self.compose_file), '-p', self.project]
         self.transport = required('BACKUP_TRANSPORT')
         self.target = required('BACKUP_TARGET').rstrip('/')
         self.rclone_env = {key: value for key, value in os.environ.items()
                            if not key.startswith(('RCLONE_', 'AWS_'))}
+        self.backup_host = None
         if self.transport == 's3':
             require(re.fullmatch(r'moto:[a-z0-9][a-z0-9.-]+/[a-zA-Z0-9_/-]+', self.target))
             require('..' not in self.target.split('/'))
             for key in ('PROVIDER', 'ENDPOINT', 'REGION', 'ACCESS_KEY_ID', 'SECRET_ACCESS_KEY'):
                 name = 'RCLONE_CONFIG_MOTO_' + key
                 self.rclone_env[name] = required(name)
-            endpoint = urlparse(self.rclone_env['RCLONE_CONFIG_MOTO_ENDPOINT'])
-            require(endpoint.scheme == 'https' and endpoint.hostname and not endpoint.username)
-            require(not any(endpoint.hostname == host or endpoint.hostname.endswith('.' + host)
-                            for host in ('moto-app.de', 'moto.nrw')))
+            self.backup_host = endpoint_host(self.rclone_env['RCLONE_CONFIG_MOTO_ENDPOINT'])
             self.rclone_env['RCLONE_CONFIG_MOTO_TYPE'] = 's3'
             self.rclone_env['RCLONE_CONFIG_MOTO_ENV_AUTH'] = 'false'
         else:
@@ -170,6 +217,42 @@ class Recovery:
             self.passwords = {role: required(key) for role, key in LOGIN_PASSWORDS.items()}
             self.identity = Path(required('BACKUP_AGE_IDENTITY_FILE'))
             require(self.identity.is_absolute() and self.identity.is_file())
+
+    def configure_uploads(self):
+        """Choose the upload store: the app's for backup, the target's for restore."""
+        if self.mode == 'backup':
+            # Called under the operation lock: inspect the serving container,
+            # not pending Compose settings that have not been deployed yet.
+            require(not any(key.startswith('UPLOADS_') for key in os.environ))
+            container = self.dc('ps', '-a', '-q', 'server').decode().strip()
+            require(container and '\n' not in container)
+            environment = json.loads(command(['docker', 'inspect', '--format',
+                                               '{{json .Config.Env}}', container]))
+            require(isinstance(environment, list) and environment)
+            values = dict(value.split('=', 1) for value in environment)
+        else:
+            # The restore machine runs no app: its environment names the target.
+            values = os.environ
+        self.uploads = uploads_backend(values)
+        if self.uploads == 'local':
+            self.volume = required('BACKUP_UPLOADS_VOLUME')
+            require(re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9_.-]+', self.volume))
+            return
+        s3 = {key: required('UPLOADS_S3_' + key, values) for key in UPLOADS_S3}
+        host = endpoint_host(s3['ENDPOINT'], loopback_http=True)
+        require(re.fullmatch(r'[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]', s3['BUCKET']))
+        # A backup stored in the bucket it protects shares that bucket's fate.
+        require(not (host == self.backup_host and self.target[5:].split('/')[0] == s3['BUCKET']))
+        self.uploads_target = UPLOADS_REMOTE + s3['BUCKET']
+        self.rclone_env.update({
+            'RCLONE_CONFIG_UPLOADS_TYPE': 's3', 'RCLONE_CONFIG_UPLOADS_PROVIDER': 'Other',
+            'RCLONE_CONFIG_UPLOADS_ENV_AUTH': 'false',
+            # Never create a bucket: a missing one is a configuration error.
+            'RCLONE_CONFIG_UPLOADS_NO_CHECK_BUCKET': 'true',
+            'RCLONE_CONFIG_UPLOADS_ENDPOINT': s3['ENDPOINT'],
+            'RCLONE_CONFIG_UPLOADS_REGION': s3['REGION'],
+            'RCLONE_CONFIG_UPLOADS_ACCESS_KEY_ID': s3['ACCESS_KEY'],
+            'RCLONE_CONFIG_UPLOADS_SECRET_ACCESS_KEY': s3['SECRET_KEY']})
 
     def check_erasures(self, ledger):
         global step
@@ -221,7 +304,7 @@ class Recovery:
         with output.open('wb') as file:
             self.dc('exec', '-T', 'postgres', *args, stdout=file)
 
-    def uploads(self, *args, stdin=None, stdout=None):
+    def uploads_volume(self, *args, stdin=None, stdout=None):
         return command(['docker', 'run', '--rm', '-i', '--network', 'none',
                         '--mount', f'type=volume,src={self.volume},dst=/uploads' +
                         (',readonly' if self.mode == 'backup' else ''),
@@ -231,17 +314,28 @@ class Recovery:
         global step
         step = 'database_dump'
         self.cluster()
-        command(['docker', 'volume', 'inspect', self.volume])  # Never auto-create a missing source.
+        if self.uploads == 'local':
+            command(['docker', 'volume', 'inspect', self.volume])  # Never auto-create a missing source.
         created = dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
         self.dump(work / 'database.dump', 'pg_dump', '-U', 'postgres', '-d', 'postgres', '-Fc')
         self.dump(work / 'roles.sql', 'pg_dumpall', '-U', 'postgres', '--globals-only', '--no-role-passwords')
         step = 'uploads_archive'
-        with (work / 'uploads.tar.gz').open('wb') as file:
-            self.uploads('-czf', '-', '-C', '/uploads', '.', stdout=file)
+        if self.uploads == 'local':
+            with (work / 'uploads.tar.gz').open('wb') as file:
+                self.uploads_volume('-czf', '-', '-C', '/uploads', '.', stdout=file)
+        else:
+            # The same archive layout as the volume: keys become relative paths.
+            tree = work / 'uploads'
+            tree.mkdir(mode=0o700)
+            self.rclone('copy', self.uploads_target, tree, '--no-unicode-normalization')
+            with tarfile.open(work / 'uploads.tar.gz', 'w:gz') as archive:
+                archive.add(tree, arcname='.', filter=anonymous)
+            shutil.rmtree(tree)
         regular_archive(work / 'uploads.tar.gz')
         step = 'manifest'
         manifest = {'format': 'moto-daily-backup-v1', 'created_at': created,
                     'pg_major': self.pg_major, 'database': 'postgres',
+                    'uploads': 'bucket' if self.uploads == 's3' else 'volume',
                     'sha256': {name: sha256(work / name) for name in FILES}}
         (work / 'manifest.json').write_text(json.dumps(manifest) + '\n')
         step = 'encryption'
@@ -281,6 +375,40 @@ class Recovery:
             if re.fullmatch(BUNDLE_NAME, obj['Path']):
                 timestamp = dt.datetime.strptime(obj['Path'][6:22], '%Y%m%dT%H%M%SZ').replace(tzinfo=dt.timezone.utc)
                 require(timestamp > cutoff)
+
+    def quarantine_external_logins(self):
+        # Personal read logins and the metrics exporter: a login whose every
+        # membership is a built-in read-only role and that has no attribute
+        # beyond LOGIN/INHERIT. It is disabled, never mapped to a password;
+        # the operator re-enables it with a new password. Anything else still
+        # fails as an unmapped login. Ownership and ACLs are checked after
+        # pg_restore with the internal logins.
+        groups = ','.join("'" + group + "'" for group in EXTERNAL_LOGIN_GROUPS)
+        return json.loads(self.sql(f"""
+            WITH external AS (
+                SELECT r.oid, r.rolname FROM pg_roles r
+                WHERE r.rolcanlogin AND r.rolname NOT IN ('postgres', 'phoenix_auth', 'phoenix_demo')
+                    AND NOT (r.rolsuper OR r.rolcreatedb OR r.rolcreaterole
+                        OR r.rolreplication OR r.rolbypassrls)
+                    AND EXISTS (SELECT FROM pg_auth_members m WHERE m.member = r.oid)
+                    AND NOT EXISTS (SELECT FROM pg_auth_members m JOIN pg_roles g ON g.oid = m.roleid
+                        WHERE m.member = r.oid AND (m.admin_option OR g.rolname NOT IN ({groups})))
+                    AND NOT EXISTS (SELECT FROM pg_auth_members WHERE roleid = r.oid)
+            )
+            SELECT COALESCE(json_agg(oid), '[]') FROM external;
+        """))
+
+    def disable_logins(self, oids):
+        if not oids:
+            return
+        listed = ','.join(str(int(oid)) for oid in oids)
+        self.sql(f"""
+            DO $$ DECLARE r record; BEGIN
+                FOR r IN SELECT rolname FROM pg_roles WHERE oid = ANY(ARRAY[{listed}]::oid[]) LOOP
+                    EXECUTE format('ALTER ROLE %I NOLOGIN', r.rolname);
+                END LOOP;
+            END $$;
+        """)
 
     def quarantine_internal_logins(self):
         # One narrow shape for diagnostics and internal erasure/retention
@@ -341,7 +469,7 @@ class Recovery:
         require(re.fullmatch(r'[0-9]+', revoked))
         print(f'restore_data_return_revoked={int(revoked)}', flush=True)
 
-    def verify_quarantined_logins(self, quarantined):
+    def verify_quarantined_logins(self, quarantined, external=()):
         global step
         if not quarantined:
             return
@@ -364,6 +492,8 @@ class Recovery:
         for group, label in QUARANTINE_GROUPS.items():
             if counts.get(group, 0):
                 print(f'restore_{label}_disabled={int(counts[group])}', flush=True)
+        if external:
+            print(f'restore_external_logins_disabled={len(external)}', flush=True)
 
     def restore(self, work, cipher, name, ledger):
         global step
@@ -400,8 +530,15 @@ class Recovery:
                          "AND nspname !~ '^pg_toast_temp_';") == '0')
         require(self.sql("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
                          "WHERE n.nspname='public';") == '0')
-        listed = command(['docker', 'volume', 'ls', '--format', '{{.Name}}']).decode().splitlines()
-        require(self.volume not in listed)
+        # Bundles before this field always held the volume. Restore each store
+        # to its own kind: S3 objects keep no owner a volume's app user needs.
+        require(manifest.get('uploads', 'volume') == ('bucket' if self.uploads == 's3' else 'volume'))
+        if self.uploads == 'local':
+            listed = command(['docker', 'volume', 'ls', '--format', '{{.Name}}']).decode().splitlines()
+            require(self.volume not in listed)
+        else:
+            # Fresh like the volume: never merge into or overwrite live objects.
+            require(self.rclone('lsf', '-R', '--files-only', self.uploads_target) == b'')
         # Durable handover barrier before the first write; never start any app.
         marker = self.compose_file.parent / '.daily-restore-review-required'
         with marker.open('x') as file:
@@ -414,7 +551,9 @@ class Recovery:
         self.dc('exec', '-T', 'postgres', 'psql', '-X', '-U', 'postgres', '-d', 'postgres',
                 '-v', 'ON_ERROR_STOP=1', data=roles.encode())
         step = 'role_passwords'
-        quarantined = self.quarantine_internal_logins()
+        external = self.quarantine_external_logins()
+        self.disable_logins(external)
+        quarantined = self.quarantine_internal_logins() + external
         logins = self.sql('SELECT rolname FROM pg_roles WHERE rolcanlogin ORDER BY rolname;').splitlines()
         require(set(logins) <= set(LOGIN_PASSWORDS))  # Unknown LOGIN roles need an explicit operator mapping.
         for role in logins:
@@ -428,12 +567,22 @@ class Recovery:
         with (work / 'database.dump').open('rb') as file:
             self.dc('exec', '-T', 'postgres', 'pg_restore', '-U', 'postgres', '-d', 'postgres',
                     '--exit-on-error', stdin=file)
-        self.verify_quarantined_logins(quarantined)
+        self.verify_quarantined_logins(quarantined, external)
         self.revoke_data_return()
         step = 'uploads_restore'
-        command(['docker', 'volume', 'create', self.volume])
-        with (work / 'uploads.tar.gz').open('rb') as file:
-            self.uploads('-xzf', '-', '-C', '/uploads', stdin=file)
+        if self.uploads == 'local':
+            command(['docker', 'volume', 'create', self.volume])
+            with (work / 'uploads.tar.gz').open('rb') as file:
+                self.uploads_volume('-xzf', '-', '-C', '/uploads', stdin=file)
+        else:
+            tree = work / 'uploads'
+            tree.mkdir(mode=0o700)
+            extract_tree(work / 'uploads.tar.gz', tree)
+            (work / 'uploads.tar.gz').unlink()
+            # Sealed files are bound to their key: keep every name byte for byte.
+            self.rclone('copy', tree, self.uploads_target, '--immutable', '--no-unicode-normalization')
+            self.rclone('check', tree, self.uploads_target, '--download', '--no-unicode-normalization')
+            shutil.rmtree(tree)
         self.check_erasures(ledger)
 
 
@@ -462,6 +611,8 @@ def main():
         lock_path = recovery.compose_file.parent / '.release-operation.lock'
         lock_path.mkdir(mode=0o700)
         lock = lock_path
+        step = 'configuration'
+        recovery.configure_uploads()
         if mode == 'verify-erasures':
             step = 'erasure_review'
             require((recovery.compose_file.parent / '.daily-restore-review-required').is_file())

@@ -23,4 +23,5 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	PUT /traeger/staff-records/{id}/absence-accounts/{typeId}
 	PUT /traeger/staff-records/{id}/contracts/{contractId}
 	PUT /traeger/staff-records/{id}/financial
+	PUT /traeger/staff-records/{id}/person
 	PUT /traeger/staff-records/{id}/personnel-number

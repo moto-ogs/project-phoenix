@@ -5,7 +5,7 @@ package notifications
 // package does not import the API's contract types.
 type ContractTypes struct {
 	FeedPage          any
-	TraegerFeedPage   any
+	SchoolFeedPage    any
 	FeedCount         any
 	Preferences       any
 	PreferenceRequest any
@@ -18,7 +18,7 @@ type ContractTypes struct {
 func RouteContractTypes() ContractTypes {
 	return ContractTypes{
 		FeedPage:          feedPageResponse{},
-		TraegerFeedPage:   traegerFeedPageResponse{},
+		SchoolFeedPage:    schoolFeedPageResponse{},
 		FeedCount:         feedCountResponse{},
 		Preferences:       PreferenceOverview{},
 		PreferenceRequest: preferenceRequest{},

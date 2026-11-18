@@ -8,6 +8,7 @@
   "device_inactive": "У вас немає доступу до: {object}. Зверніться до школи.",
   "device_pin_invalid": "У вас немає доступу до: {object}. Зверніться до школи.",
   "device_pin_required": "У вас немає доступу до: {object}. Зверніться до школи.",
+  "device_slots_full": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "invalid_rfid_tag": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "invalid_staff_clock_request": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "invalid_staff_clock_state": "Не вдалося змінити: {object}. Перевірте поточний стан.",
@@ -33,5 +34,6 @@
   "student_already_active": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "student_not_present": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "wc_needs_staff": "Не вдалося обробити: {object}. Спробуйте пізніше.",
-  "wc_not_configured": "Не вдалося обробити: {object}. Спробуйте пізніше."
+  "wc_not_configured": "Не вдалося обробити: {object}. Спробуйте пізніше.",
+  "device_in_active_session": "Не вдалося змінити: {object}. Перевірте поточний стан."
 }

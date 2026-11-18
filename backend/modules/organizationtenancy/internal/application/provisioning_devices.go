@@ -179,6 +179,15 @@ func (p *Provisioning) CreateDevice(ctx context.Context, schoolID int64, deviceI
 		}); err != nil {
 			return nil, err
 		}
+		if err := p.recordDeviceLifecycle(adminCtx, organizationtenancy.DeviceLifecycleEntry{
+			DeviceRowID: device.ID, Action: domain.DeviceLifecycleCreated, OperatorID: operatorID,
+			Changes: map[string][2]*string{
+				"device_id": {nil, &device.DeviceID}, "device_type": {nil, &device.DeviceType},
+				"name": {nil, device.Name}, "status": {nil, &device.Status},
+			},
+		}); err != nil {
+			return nil, err
+		}
 		view, err := p.listedDevice(adminCtx, "CreateDevice", device.ID)
 		if err == nil {
 			view.APIKey = device.APIKey
@@ -232,11 +241,7 @@ func (p *Provisioning) SetDeviceAPIKey(ctx context.Context, id int64, apiKey *st
 		if err != nil {
 			return nil, err
 		}
-		if err := p.recordAction(adminCtx, operatorID, domain.AuditActionRotateAPIKey, domain.AuditResourceDevice, &id, clientIP, map[string]any{
-			"device_id":    device.DeviceID,
-			"school_id":    device.TenantID,
-			"api_key_mode": "auto",
-		}); err != nil {
+		if err := p.recordKeyRotation(adminCtx, device, operatorID, clientIP); err != nil {
 			return nil, err
 		}
 		view, err := p.listedDevice(adminCtx, "SetDeviceAPIKey", id)
@@ -244,6 +249,21 @@ func (p *Provisioning) SetDeviceAPIKey(ctx context.Context, id int64, apiKey *st
 			view.APIKey = &key
 		}
 		return view, err
+	})
+}
+
+// recordKeyRotation audits a rotation for the operator and names it in the
+// device's history (#2321), never the key.
+func (p *Provisioning) recordKeyRotation(ctx context.Context, device domain.Device, operatorID int64, clientIP net.IP) error {
+	if err := p.recordAction(ctx, operatorID, domain.AuditActionRotateAPIKey, domain.AuditResourceDevice, &device.ID, clientIP, map[string]any{
+		"device_id":    device.DeviceID,
+		"school_id":    device.TenantID,
+		"api_key_mode": "auto",
+	}); err != nil {
+		return err
+	}
+	return p.recordDeviceLifecycle(ctx, organizationtenancy.DeviceLifecycleEntry{
+		DeviceRowID: device.ID, Action: domain.DeviceLifecycleKeyRotated, OperatorID: operatorID,
 	})
 }
 
@@ -267,8 +287,14 @@ func (p *Provisioning) rotateDeviceKey(ctx context.Context, device domain.Device
 	return "", fmt.Errorf("SetDeviceAPIKey: failed to generate unique API key after %d attempts", maxAPIKeyRetries)
 }
 
-// DeleteDevice removes a device that no attendance or session row
-// references. The virtual manual web check-in device cannot be removed.
+// DeleteDevice removes a device from the fleet (Geräteentfernung, #2319).
+// Device Fleet archives the row, so attendance, sessions and audit entries
+// keep their device; the credential ends and the Geräteplatz is released.
+// An open kiosk session blocks the removal, and the virtual manual web
+// check-in device cannot be removed. The device row stays locked from the
+// session check to the archive, so a kiosk cannot open a session between
+// them. A device that is already removed is not found: a repeated removal
+// changes nothing.
 func (p *Provisioning) DeleteDevice(ctx context.Context, id int64, operatorID int64, clientIP net.IP) error {
 	if id <= 0 {
 		return invalidData("device id is required")
@@ -279,23 +305,115 @@ func (p *Provisioning) DeleteDevice(ctx context.Context, id int64, operatorID in
 			return err
 		}
 		if device.DeviceID == domain.WebManualDeviceID {
+			p.logRemovalRejection(device, operatorID, "rejected_protected", nil)
 			return &organizationtenancy.DeviceProtectedError{DeviceID: id, Reason: webManualDeviceReason}
 		}
+		if err := p.ensureNoActiveDeviceSession(adminCtx, device, operatorID); err != nil {
+			return err
+		}
 		if err := p.devices.DeleteDevice(adminCtx, id); err != nil {
-			if errors.Is(err, domain.ErrDeviceReferenced) {
-				return &organizationtenancy.DeviceInUseError{DeviceID: id}
-			}
 			return fmt.Errorf("DeleteDevice: %w", err)
 		}
 		if err := p.recordAction(adminCtx, operatorID, domain.AuditActionDelete, domain.AuditResourceDevice, &id, clientIP, map[string]any{
 			"device_id":   device.DeviceID,
 			"device_type": device.DeviceType,
 			"school_id":   device.TenantID,
+			"outcome":     "removed",
 		}); err != nil {
 			return err
 		}
-		return nil
+		return p.recordDeviceLifecycle(adminCtx, organizationtenancy.DeviceLifecycleEntry{
+			DeviceRowID: id, Action: domain.DeviceLifecycleRemoved, OperatorID: operatorID,
+		})
 	})
+}
+
+// SetDeviceBlocked blocks or unblocks a device (Gerätesperre, #2317). A
+// blocked device keeps its row, room, history, credential and Geräteplatz;
+// device authentication refuses its kiosk with iot.device_inactive until it
+// is unblocked with the same credential. The row stays locked from the read
+// to the write. Setting the state the device already has changes nothing
+// and records no second audit entry. The virtual manual web check-in device
+// cannot be blocked.
+func (p *Provisioning) SetDeviceBlocked(ctx context.Context, id int64, blocked bool, operatorID int64, clientIP net.IP) error {
+	if id <= 0 {
+		return invalidData("device id is required")
+	}
+	// adminValue opens the operator's administrative transaction, the
+	// registered boundary of the device commands.
+	_, err := adminValue(ctx, p, func(adminCtx context.Context) (struct{}, error) {
+		return struct{}{}, p.setDeviceBlocked(adminCtx, id, blocked, operatorID, clientIP)
+	})
+	return err
+}
+
+func (p *Provisioning) setDeviceBlocked(ctx context.Context, id int64, blocked bool, operatorID int64, clientIP net.IP) error {
+	device, err := p.findDevice(ctx, id)
+	if err != nil {
+		return err
+	}
+	if device.DeviceID == domain.WebManualDeviceID {
+		return &organizationtenancy.DeviceProtectedError{DeviceID: id, Reason: webManualDeviceReason}
+	}
+	status, action, lifecycle := domain.DeviceStatusActive, domain.AuditActionUnblock, domain.DeviceLifecycleUnblocked
+	if blocked {
+		status, action, lifecycle = domain.DeviceStatusInactive, domain.AuditActionBlock, domain.DeviceLifecycleBlocked
+	}
+	if device.Status == status {
+		return nil
+	}
+	previous := device.Status
+	device.Status = status
+	if err := p.devices.UpdateDevice(ctx, device); err != nil {
+		return fmt.Errorf("SetDeviceBlocked: %w", err)
+	}
+	if err := p.recordAction(ctx, operatorID, action, domain.AuditResourceDevice, &id, clientIP, map[string]any{
+		"device_id":       device.DeviceID,
+		"school_id":       device.TenantID,
+		"previous_status": previous,
+	}); err != nil {
+		return err
+	}
+	return p.recordDeviceLifecycle(ctx, organizationtenancy.DeviceLifecycleEntry{
+		DeviceRowID: id, Action: lifecycle, OperatorID: operatorID,
+		Changes: map[string][2]*string{"status": {&previous, &status}},
+	})
+}
+
+// ensureNoActiveDeviceSession rejects removing a device that runs an open
+// kiosk session.
+func (p *Provisioning) ensureNoActiveDeviceSession(ctx context.Context, device domain.Device, operatorID int64) error {
+	session, err := p.presence.ActiveDeviceSession(ctx, device.TenantID, device.ID)
+	if err != nil {
+		return fmt.Errorf("DeleteDevice: find active session: %w", err)
+	}
+	if session == nil {
+		return nil
+	}
+	p.logRemovalRejection(device, operatorID, "rejected_active_session", &session.ID)
+	return &organizationtenancy.DeviceRemovalBlockedError{
+		DeviceID: device.ID, SessionID: session.ID, StartedAt: session.StartedAt,
+		ActivityName: session.ActivityName, RoomName: session.RoomName,
+	}
+}
+
+// logRemovalRejection audits a refused removal. The refusal rolls the
+// administrative transaction back, so the entry goes to the structured log,
+// where the school portal's removal outcomes also go, not to the operator
+// audit log. It carries no credential.
+func (p *Provisioning) logRemovalRejection(device domain.Device, operatorID int64, outcome string, sessionID *int64) {
+	attrs := []any{
+		slog.String("audit", "device_removal"),
+		slog.String("outcome", outcome),
+		slog.Int64("operator_id", operatorID),
+		slog.Int64("tenant_id", device.TenantID),
+		slog.Int64("device_row_id", device.ID),
+		slog.String("device_id", device.DeviceID),
+	}
+	if sessionID != nil {
+		attrs = append(attrs, slog.Int64("session_id", *sessionID))
+	}
+	p.logger.Info("device removal", attrs...)
 }
 
 // GetDeviceTransferStatus reports the transfer blockers without changing the
@@ -343,6 +461,9 @@ func (p *Provisioning) TransferDevice(ctx context.Context, id, targetSchoolID, o
 			"source_school_id": source.TenantID,
 			"target_school_id": targetSchoolID,
 		}); err != nil {
+			return nil, err
+		}
+		if err := p.recordDeviceTransfer(adminCtx, source, target, operatorID); err != nil {
 			return nil, err
 		}
 		return p.listedDevice(adminCtx, "TransferDevice", target.ID)
@@ -534,4 +655,28 @@ func visibleDeviceSchools(schools []organizationtenancy.School, organizations []
 		tenantIDs = append(tenantIDs, school.ID)
 	}
 	return visible, tenantIDs
+}
+
+// recordDeviceTransfer leaves the move in both histories: at the archived
+// source device and at the device of the target school. Neither entry names
+// the other school; the operator reads both schools from the entries.
+func (p *Provisioning) recordDeviceTransfer(ctx context.Context, source, target domain.Device, operatorID int64) error {
+	if err := p.recordDeviceLifecycle(ctx, organizationtenancy.DeviceLifecycleEntry{
+		DeviceRowID: source.ID, Action: domain.DeviceLifecycleTransferredOut, OperatorID: operatorID,
+	}); err != nil {
+		return err
+	}
+	return p.recordDeviceLifecycle(ctx, organizationtenancy.DeviceLifecycleEntry{
+		DeviceRowID: target.ID, Action: domain.DeviceLifecycleTransferredIn, OperatorID: operatorID,
+	})
+}
+
+// recordDeviceLifecycle appends one change to the device's history (#2321)
+// in the operator's administrative transaction, so it commits or rolls back
+// with the change.
+func (p *Provisioning) recordDeviceLifecycle(ctx context.Context, entry organizationtenancy.DeviceLifecycleEntry) error {
+	if err := p.devices.RecordDeviceLifecycle(ctx, entry); err != nil {
+		return fmt.Errorf("record device lifecycle %s: %w", entry.Action, err)
+	}
+	return nil
 }

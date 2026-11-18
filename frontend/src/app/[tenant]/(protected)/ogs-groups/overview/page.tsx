@@ -8,7 +8,7 @@ import { CollectionGrid } from "~/components/ui/collection-grid";
 import { Button } from "~/components/ui/button";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { TileCard } from "~/components/ui/tile-card";
 import {
   isOwnGroup,
@@ -71,9 +71,17 @@ function GroupOverviewContent() {
 
   const ownCount = sortedGroups.filter(isOwnGroup).length;
   const stats =
-    groups.length > 0
-      ? `${groups.length} ${groups.length === 1 ? "Gruppe" : "Gruppen"} · ${ownCount} eigene`
-      : null;
+    groups.length > 0 ? (
+      <TenantPageStats
+        items={[
+          {
+            value: groups.length,
+            label: groups.length === 1 ? "Gruppe" : "Gruppen",
+          },
+          { value: ownCount, label: "eigene" },
+        ]}
+      />
+    ) : null;
 
   return (
     <TenantPage
@@ -82,8 +90,8 @@ function GroupOverviewContent() {
       statsLoading={isLoadingGroups}
       info={
         <>
-          „Meine Gruppe“: Sie sind dort als Gruppenleitung eingetragen.
-          „Vertretung“: Sie vertreten die Gruppe gerade.
+          „Meine Gruppe“: Du bist dort als Gruppenleitung eingetragen.
+          „Vertretung“: Du vertrittst die Gruppe gerade.
         </>
       }
       loading={isLoadingGroups || onlyGroup !== undefined}
@@ -116,7 +124,7 @@ function GroupOverviewContent() {
               icon: <MotoConceptIcon concept={groupsConcept} size={48} />,
               title: "Keine Gruppe sichtbar",
               description:
-                "Ihre Leitung kann Sie einer Gruppe als Gruppenleitung zuordnen.",
+                "Deine Leitung kann dich einer Gruppe als Gruppenleitung zuordnen.",
             }
           : null
       }

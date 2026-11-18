@@ -30,6 +30,8 @@ import {
   type TraegerPlanningShift,
 } from "~/lib/traeger-planning-api";
 
+import { suggestionSentence, type ContractSuggestion } from "./planning-format";
+
 const logger = createLogger({ component: "PlanShiftModal" });
 
 const BREAK_MAX = 240;
@@ -43,6 +45,8 @@ export type PlanShiftTarget =
       readonly kind: "create";
       readonly person: TraegerPlanningPerson;
       readonly date: string;
+      /** Vorschlag aus dem Arbeitsvertrag (#7381): Einsatzort und Zeiten. */
+      readonly suggestion?: ContractSuggestion;
     }
   | {
       readonly kind: "edit";
@@ -69,6 +73,17 @@ function draftOf(target: PlanShiftTarget): Draft {
       endTime: shift.endTime,
       breakMinutes: String(shift.breakMinutes),
       notes: shift.notes,
+    };
+  }
+  const { suggestion } = target;
+  if (suggestion) {
+    return {
+      schoolId: suggestion.schoolId,
+      date: target.date,
+      startTime: suggestion.startTime,
+      endTime: suggestion.endTime,
+      breakMinutes: String(suggestion.breakMinutes),
+      notes: "",
     };
   }
   return {
@@ -148,7 +163,7 @@ export function PlanShiftModal({
   const submit = async () => {
     const invalid = draftErrors(draft);
     if (Object.keys(invalid).length > 0) {
-      errors.invalid("Bitte prüfen Sie die markierten Felder.", invalid);
+      errors.invalid("Bitte prüfe die markierten Felder.", invalid);
       return;
     }
     const input = {
@@ -268,6 +283,9 @@ export function PlanShiftModal({
             {editing && target.shift.fromSeries
               ? ". Die Schicht gehört zu einer Serie der Schule. Die Änderung gilt nur für diesen Tag."
               : null}
+            {!editing && target.suggestion
+              ? `. ${suggestionSentence(target.suggestion)}`
+              : null}
           </p>
           {editing ? (
             <Input
@@ -275,7 +293,7 @@ export function PlanShiftModal({
               value={schoolName}
               readOnly
               controlSize="compact"
-              hint="Für einen anderen Einsatzort löschen Sie die Schicht und planen sie dort neu."
+              hint="Für einen anderen Einsatzort löschst du die Schicht und planst sie dort neu."
             />
           ) : (
             <CustomSelect

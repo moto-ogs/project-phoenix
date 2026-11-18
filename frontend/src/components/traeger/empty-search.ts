@@ -6,17 +6,17 @@ export function emptySearchText(
   search: string,
   filterLabels: readonly string[],
   /** The page's own next step for a search alone, e.g. what else to try. */
-  searchHint = "Prüfen Sie die Schreibweise.",
+  searchHint = "Prüfe die Schreibweise.",
 ): { readonly description: string; readonly actionLabel: string } {
   const term = search.trim();
   const filtered = filterLabels.length > 0;
   // What is active, then what to do about it.
   const next = term
     ? filtered
-      ? "Ändern Sie die Suche oder den Filter."
+      ? "Ändere die Suche oder den Filter."
       : searchHint
     : filtered
-      ? "Ändern Sie den Filter."
+      ? "Ändere den Filter."
       : "";
   const description = [
     term ? `Gesucht: „${term}“.` : "",

@@ -28,7 +28,7 @@ const MODES: readonly {
   {
     value: "criteria",
     label: "Nach Kriterien",
-    text: "Eltern beantworten Ihre Fragen. moto sortiert die Anmeldungen vor. Das Büro entscheidet, wer einen Platz bekommt.",
+    text: "Eltern beantworten deine Fragen. moto sortiert die Anmeldungen vor. Das Büro entscheidet, wer einen Platz bekommt.",
   },
 ];
 
@@ -106,22 +106,26 @@ export function HolidayAllocationModeField({
           {criteria && activeCount === 0 ? (
             <Alert
               type="warning"
-              message="Es ist noch kein Kriterium eingeschaltet. Dann sortiert moto nur nach Eingang. Bitte legen Sie zuerst die Kriterien fest."
+              message="Es ist noch kein Kriterium eingeschaltet. Dann sortiert moto nur nach Eingang. Bitte lege zuerst die Kriterien fest."
             />
           ) : null}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-gray-700">
               {criteria && activeCount > 0
                 ? activeCriteriaText(criteria)
-                : "Die Kriterien gelten für alle Ferien Ihres Trägers."}{" "}
-              moto schlägt nur vor. Jede Entscheidung trifft Ihr Büro.
+                : "Die Kriterien gelten für alle Ferien deines Trägers."}{" "}
+              moto schlägt nur vor. Jede Entscheidung trifft dein Büro.
             </p>
+            {/* In a form a link opens a new tab, so the unsaved draft stays
+                (Bauart 1 R9). */}
             <ButtonLink
               href={traegerPath("/traeger/ferien/kriterien")}
+              newTab
+              aria-label="Kriterien festlegen"
               variant="outline"
               size="md"
               className="shrink-0 gap-2"
-              tooltip="Öffnet die Kriterien. Sie gelten für alle Ferien Ihres Trägers."
+              tooltip="Öffnet die Kriterien aller Ferien deines Trägers in einem neuen Tab."
             >
               <ListChecks className="h-4 w-4" aria-hidden="true" />
               Kriterien festlegen

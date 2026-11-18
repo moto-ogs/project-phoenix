@@ -149,9 +149,9 @@ const logger = createLogger({ component: "StudentDetailPage" });
 // Shown when lifting today's status left it in place (#3854). Checking the
 // child in also lifts today's status, so it names that way out.
 const SICK_STILL_ACTIVE =
-  "Die Krankmeldung für heute ist noch eingetragen. Bitte versuchen Sie es noch einmal. Kommt das Kind doch, können Sie es auch anmelden.";
+  "Die Krankmeldung für heute ist noch eingetragen. Bitte versuche es noch einmal. Kommt das Kind doch, kannst du es auch anmelden.";
 const EXCUSED_STILL_ACTIVE =
-  "Die Entschuldigung für heute ist noch eingetragen. Bitte versuchen Sie es noch einmal. Kommt das Kind doch, können Sie es auch anmelden.";
+  "Die Entschuldigung für heute ist noch eingetragen. Bitte versuche es noch einmal. Kommt das Kind doch, kannst du es auch anmelden.";
 
 const EMPTY_GROUP_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [];
 
@@ -1580,7 +1580,7 @@ function StudentDetailPageContent() {
           >
             <FormErrorAlert message={dialogErrors.error} className="mb-3" />
             <p>
-              Möchten Sie <strong>{student.name}</strong> jetzt abmelden?
+              Möchtest du <strong>{student.name}</strong> jetzt abmelden?
             </p>
             {checkoutIsEarly && todayPickup.time ? (
               <EarlyCheckoutNoteField
@@ -1608,7 +1608,7 @@ function StudentDetailPageContent() {
           >
             <FormErrorAlert message={dialogErrors.error} className="mb-3" />
             <p>
-              Möchten Sie <strong>{student.name}</strong> jetzt anmelden?
+              Möchtest du <strong>{student.name}</strong> jetzt anmelden?
             </p>
           </ConfirmationModal>
 
@@ -1631,7 +1631,7 @@ function StudentDetailPageContent() {
               {sickFromParents && (
                 <>Die Krankmeldung für heute kam von den Eltern. </>
               )}
-              Möchten Sie die Krankmeldung für <strong>{student.name}</strong>{" "}
+              Möchtest du die Krankmeldung für <strong>{student.name}</strong>{" "}
               für heute aufheben? Geplante Kranktage in der Zukunft bleiben
               bestehen.
             </p>
@@ -1673,13 +1673,13 @@ function StudentDetailPageContent() {
                   {excusedFromParents && (
                     <>Die Abmeldung für heute kam von den Eltern. </>
                   )}
-                  Möchten Sie die Entschuldigung für{" "}
+                  Möchtest du die Entschuldigung für{" "}
                   <strong>{student.name}</strong> für heute aufheben? Geplante
                   Entschuldigungen in der Zukunft bleiben bestehen.
                 </>
               ) : (
                 <>
-                  Möchten Sie <strong>{student.name}</strong> als entschuldigt
+                  Möchtest du <strong>{student.name}</strong> als entschuldigt
                   markieren?
                 </>
               )}

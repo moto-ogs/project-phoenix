@@ -13,7 +13,7 @@ var care_times_init_betreuungszeiten_0Definitions = []config.Definition{
 	{
 		Key:             config.KeyCareDefaultArrivalTime,
 		Label:           "Übliche Ankunftszeit",
-		Description:     "Im Wochenplan eines Kindes tragen Sie diese Uhrzeit mit einem Klick ein. Für kein Kind gilt sie von selbst. Gilt die Klassenzeit, erscheint der Knopf nicht.",
+		Description:     "Im Wochenplan eines Kindes trägst du diese Uhrzeit mit einem Klick ein. Für kein Kind gilt sie von selbst. Gilt die Klassenzeit, erscheint der Knopf nicht.",
 		Type:            config.FieldTime,
 		Default:         "",
 		ReadPermission:  "config:read",
@@ -26,7 +26,7 @@ var care_times_init_betreuungszeiten_0Definitions = []config.Definition{
 	{
 		Key:             config.KeyCareDefaultPickupTime,
 		Label:           "Übliche Abholzeit",
-		Description:     "Im Wochenplan eines Kindes tragen Sie diese Uhrzeit mit einem Klick ein. Für kein Kind gilt sie von selbst.",
+		Description:     "Im Wochenplan eines Kindes trägst du diese Uhrzeit mit einem Klick ein. Für kein Kind gilt sie von selbst.",
 		Type:            config.FieldTime,
 		Default:         "",
 		ReadPermission:  "config:read",

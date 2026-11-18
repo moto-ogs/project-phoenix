@@ -12,7 +12,7 @@ export const TRAEGER_NAME_HINT =
   "Personen im Träger-Büro sehen ihn im Exportprotokoll und im Verlauf jeder Rechnung.";
 
 /** The field error of an empty own name. */
-export const OWN_NAME_REQUIRED = "Bitte geben Sie Ihren Namen ein.";
+export const OWN_NAME_REQUIRED = "Bitte gib deinen Namen ein.";
 
 /** The field error of an empty name of another person. */
-export const MEMBER_NAME_REQUIRED = "Bitte geben Sie einen Namen ein.";
+export const MEMBER_NAME_REQUIRED = "Bitte gib einen Namen ein.";

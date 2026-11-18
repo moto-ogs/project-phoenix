@@ -4,6 +4,7 @@
 // lagen Liste und Formular in einem Slide-over, das der Dienstplan öffnete.
 // Der Dienstplan verlinkt jetzt hierher.
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import {
   Suspense,
   useCallback,
@@ -25,7 +26,7 @@ import { IconTile } from "~/components/ui/icon-tile";
 import { SectionLabel } from "~/components/ui/section-label";
 import { CalendarClock } from "lucide-react";
 import { CatalogColorField } from "~/components/database/catalog-color-field";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import type { ActivityCategory } from "~/lib/activity-helpers";
 import { categoryService } from "~/lib/category-api";
@@ -134,6 +135,22 @@ function describeDeletion(type: ShiftType, linkedCategories: number) {
   );
 }
 
+/** Statuszeile der Kopfkarte aus den bereits geladenen Dienstarten. */
+function shiftTypeStats(types: readonly ShiftType[]) {
+  const inactive = types.filter((type) => !type.isActive).length;
+  const active = types.length - inactive;
+  return inactive > 0 ? (
+    <TenantPageStats
+      items={[
+        { value: formatCount(active), label: "in der Auswahl" },
+        { value: formatCount(inactive), label: "ausgeschaltet" },
+      ]}
+    />
+  ) : (
+    `${formatCount(active)} ${active === 1 ? "Dienstart" : "Dienstarten"}`
+  );
+}
+
 function ShiftTypesPageContent() {
   const searchParams = useSearchParams();
   const tenantMutate = useTenantMutate();
@@ -153,8 +170,7 @@ function ShiftTypesPageContent() {
     shiftTypeService.getShiftTypes({ withUsage: true }),
   );
   const accessRefused =
-    swrError instanceof ApiError &&
-    (swrError.status === 401 || swrError.status === 403);
+    swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
   useLayoutEffect(() => {
     if (!accessRefused) return;
@@ -293,15 +309,9 @@ function ShiftTypesPageContent() {
         "Dienstarten benennen die Aufgabe eines geplanten Dienstes, zum Beispiel Betreuung, Vorbereitung oder Pause.",
       searchPlaceholder: "Dienstart suchen…",
       emptyDescription:
-        "Legen Sie eine Dienstart an oder fügen Sie die Beispiele hinzu, damit der Dienstplan Dienste benennen kann.",
+        "Lege eine Dienstart an oder füge die Beispiele hinzu, damit der Dienstplan Dienste benennen kann.",
       preserveDraftOnSectionsChange: true,
-      stats: (types) => {
-        const inactive = types.filter((type) => !type.isActive).length;
-        const active = types.length - inactive;
-        return inactive > 0
-          ? `${formatCount(active)} in der Auswahl · ${formatCount(inactive)} ausgeschaltet`
-          : `${formatCount(active)} ${active === 1 ? "Dienstart" : "Dienstarten"}`;
-      },
+      stats: shiftTypeStats,
       toRow: (type) => ({
         name: type.name,
         subtitle: type.description,

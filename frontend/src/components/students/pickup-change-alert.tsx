@@ -88,7 +88,7 @@ function ChangeLine({
           compact
           tone="red"
           label="Neu"
-          accessibleLabel="Neu: Diese Änderung haben Sie noch nicht gesehen."
+          accessibleLabel="Neu: Diese Änderung hast du noch nicht gesehen."
         />
       ) : null}
     </span>
@@ -162,7 +162,6 @@ export function StudentPickupChanges({
   // Each loaded revision is confirmed once per visit; a failed confirmation
   // keeps the header counter and is retried on the next visit.
   const confirmed = useRef(new Set<string>());
-  // oxlint-disable-next-line swr/no-effect-load -- one-shot write: confirms the shown notices as read (markRead) after refreshing the shared pickupData key through tenantMutate; no read of its own
   useEffect(() => {
     const pending = unreadHere.filter(
       (notice) =>

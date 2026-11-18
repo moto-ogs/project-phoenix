@@ -81,7 +81,7 @@ func NewSessionMaintenance(deps SessionMaintenanceDependencies) (*SessionMainten
 			Codec: application.UnsignedSessions{}, MFALock: application.UnlockedMFAPolicy{}, Audit: deps.Audit, Push: deps.Push,
 			PortalModules: application.UnbookedPortals{}, Logger: deps.Logger,
 		},
-		Resets: &PasswordResetDependencies{
+		Resets: &identityPorts.PasswordResetDependencies{
 			DeliveryFor: func(identityaccess.PasswordResetDeliveryRecorder) identityPorts.PasswordResetDelivery {
 				return application.UnsentPasswordResets{}
 			},

@@ -53,7 +53,7 @@ const logger = createLogger({ component: "TraegerInvitePage" });
 
 const SHELL_COPY = {
   title: "Einladung ins Träger-Büro",
-  subtitle: "Nehmen Sie die Einladung an. Danach melden Sie sich an.",
+  subtitle: "Nimm die Einladung an. Danach melde dich an.",
 } as const;
 
 /**
@@ -110,8 +110,8 @@ function InviteForm({
     if (Object.keys(fields).length > 0) {
       formErrors.invalid(
         fields.name
-          ? "Bitte prüfen Sie Ihre Angaben."
-          : "Bitte prüfen Sie Ihr Passwort.",
+          ? "Bitte prüfe deine Angaben."
+          : "Bitte prüfe dein Passwort.",
         fields,
       );
       return;
@@ -157,15 +157,15 @@ function InviteForm({
       <FormErrorAlert message={formErrors.error} />
       <div className="space-y-1 text-sm wrap-anywhere text-gray-700">
         <p>
-          Sie sind ins Träger-Büro von{" "}
+          Du bist ins Träger-Büro von{" "}
           <span className="font-semibold">{invitation.organizationName}</span>{" "}
           eingeladen.
         </p>
         <p>
-          Ihre Rolle: <span className="font-semibold">{roles.join(", ")}</span>
+          Deine Rolle: <span className="font-semibold">{roles.join(", ")}</span>
         </p>
         <p>
-          Ihre E-Mail-Adresse:{" "}
+          Deine E-Mail-Adresse:{" "}
           <span className="font-semibold">{invitation.email}</span>
         </p>
       </div>
@@ -173,7 +173,7 @@ function InviteForm({
       <Input
         id="name"
         name="name"
-        label="Ihr Name"
+        label="Dein Name"
         controlSize="compact"
         autoComplete="name"
         required
@@ -187,8 +187,7 @@ function InviteForm({
 
       {existing ? (
         <p className="text-sm text-gray-700">
-          Sie haben schon ein moto-Konto. Geben Sie das Passwort dieses Kontos
-          ein.
+          Du hast schon ein moto-Konto. Gib das Passwort dieses Kontos ein.
         </p>
       ) : null}
 
@@ -198,7 +197,7 @@ function InviteForm({
           required
           invalid={Boolean(formErrors.fieldError("password"))}
         >
-          {existing ? "Passwort Ihres moto-Kontos" : "Neues Passwort"}
+          {existing ? "Passwort deines moto-Kontos" : "Neues Passwort"}
         </FieldLabel>
         <Input
           id="password"
@@ -300,7 +299,7 @@ function InviteContent() {
     }
   }, [token, clearLoadError, showLoadError]);
 
-  // oxlint-disable-next-line swr/no-effect-load -- invitation token page before the account exists; ~/lib/swr has no public reader
+  // oxlint-disable-next-line swr/no-effect-load -- invitation token page before the account exists; the shared cache reads only with a session, by design
   useEffect(() => {
     void load();
   }, [load]);
@@ -310,7 +309,7 @@ function InviteContent() {
       <div className="space-y-4 text-left">
         <Alert
           type="warning"
-          message="Der Link ist unvollständig. Öffnen Sie den Link aus Ihrer Einladungs-Mail noch einmal. Klappt das nicht, bitten Sie das Träger-Büro um eine neue Einladung."
+          message="Der Link ist unvollständig. Öffne den Link aus deiner Einladungs-Mail noch einmal. Klappt das nicht, frag das Träger-Büro nach einer neuen Einladung."
         />
         <ButtonLink
           href={traegerPath("/traeger/login")}

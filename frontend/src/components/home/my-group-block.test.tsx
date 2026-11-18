@@ -263,7 +263,7 @@ describe("MyGroupBlock (#2180)", () => {
     render(<MyGroupBlock />);
 
     expect(
-      screen.getByText("Ihnen ist heute keine Gruppe zugeteilt"),
+      screen.getByText("Dir ist heute keine Gruppe zugeteilt"),
     ).toBeInTheDocument();
   });
 

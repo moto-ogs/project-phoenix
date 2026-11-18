@@ -120,21 +120,22 @@ describe("TraegerStaffProofsPage", () => {
 
   it("lists what is open first and counts it in the status line", async () => {
     renderPage();
+    // Statuszeile: drei Paare ohne Trennpunkt (#7402).
     expect(
-      await screen.findByText("1 abgelaufen · 1 fehlen · 1 laufen bald ab"),
+      (await screen.findByText("laufen bald ab")).parentElement?.parentElement,
+    ).toHaveTextContent("1 abgelaufen, 1 fehlen, 1 laufen bald ab");
+    expect(
+      screen.getByRole("link", { name: "Sommer, Mira" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Mira Sommer" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Mira Keller" }),
+      screen.getByRole("link", { name: "Keller, Mira" }),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Abgelaufen").length).toBeGreaterThan(0);
     // „Offen“ is the default: the valid measles proof of Berg stays out.
     expect(screen.queryAllByText("Gültig", { selector: "span" })).toHaveLength(
       0,
     );
-    expect(screen.getAllByRole("link", { name: "Mira Berg" })).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "Berg, Mira" })).toHaveLength(1);
   });
 
   it("downloads the list from the backend, which logs the access", async () => {
@@ -143,8 +144,15 @@ describe("TraegerStaffProofsPage", () => {
       filename: "nachweise-2026-09-09.csv",
     });
     renderPage();
+    // #7405: the export is the only head action, so it sits in the page
+    // menu under „Herunterladen“, not as a visible button.
+    expect(
+      screen.queryByRole("button", { name: "Ablaufliste herunterladen" }),
+    ).not.toBeInTheDocument();
     fireEvent.click(
-      await screen.findByRole("button", { name: "Ablaufliste herunterladen" }),
+      (await screen.findAllByRole("button", { name: "Weitere Aktionen" })).at(
+        -1,
+      )!,
     );
     fireEvent.click(await screen.findByRole("menuitem", { name: /CSV/ }));
     await vi.waitFor(() =>
@@ -161,10 +169,28 @@ describe("TraegerStaffProofsPage", () => {
     expect(await screen.findByText("5 Jahre")).toBeInTheDocument();
     expect(screen.getByText("12 Wochen vorher")).toBeInTheDocument();
     expect(screen.getByText("Läuft nicht ab")).toBeInTheDocument();
+    // #7405: title and create button sit in the table's own head.
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Nachweisarten" }),
+    ).toBeInTheDocument();
     fireEvent.click(
       screen.getByRole("button", { name: "Nachweisart anlegen" }),
     );
     expect(await screen.findByLabelText(/Warnung vor Ablauf/)).toHaveValue("8");
+  });
+
+  it("explains that a proof type determines how long a proof is valid", () => {
+    renderPage();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Erklärung zu Personalnachweise",
+      }),
+    );
+
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "Eine Nachweisart legt fest, wie lange ein Nachweis gilt.",
+    );
   });
 
   it("maps a school kind onto a kind of the Träger", async () => {

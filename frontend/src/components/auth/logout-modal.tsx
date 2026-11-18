@@ -53,12 +53,12 @@ export function LogoutModal({ isOpen, onClose }: LogoutModalProps) {
       icon={<IconTile icon={<SignOutIcon aria-hidden />} size="sm" />}
       confirmText="Abmelden"
       loadingText="Abmeldung läuft …"
-      confirmTooltip="Meldet Sie auf diesem Gerät von moto ab."
+      confirmTooltip="Meldet dich auf diesem Gerät von moto ab."
       isConfirmLoading={isLoggingOut}
       mobileSheet
     >
       <p className="text-sm text-gray-600">
-        Möchten Sie sich wirklich von Ihrem Konto abmelden?
+        Möchtest du dich wirklich von deinem Konto abmelden?
       </p>
     </ConfirmationModal>
   );

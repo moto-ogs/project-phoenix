@@ -276,6 +276,11 @@ type FormLegalBlock struct {
 	DisplayMode  string           `json:"display_mode,omitempty"`
 	DocumentURL  string           `json:"document_url,omitempty"`
 	Translations Translations     `json:"translations,omitempty"` // of Title, Label, Text (#3377)
+	// GuardianAgreement adds the fixed GuardianAgreementLabel to a consent
+	// checkbox: the ticking parent also confirms acting in agreement with
+	// every other custodian (§ 1629 Abs. 1 BGB; OLG Düsseldorf 1 UF 74/21
+	// for photos on the internet, #2787). Only consent blocks carry it.
+	GuardianAgreement bool `json:"guardian_agreement,omitempty"`
 }
 
 // FormSchema is a row in enrollment.form_schemas. Each save creates a new
@@ -302,4 +307,8 @@ const (
 	ConsentKeyDataProcessing = "data_processing"
 	ConsentKeyEmailContact   = "email_contact"
 	ConsentKeyPhoto          = "photo"
+	// ConsentKeyHealthData is the consent moto adds to every form that asks
+	// for health information (Art. 9 Abs. 2 lit. a DSGVO, #2787). No
+	// template stores it; see HealthConsentBlock.
+	ConsentKeyHealthData = "health_data"
 )

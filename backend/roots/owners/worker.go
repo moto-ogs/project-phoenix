@@ -42,6 +42,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/workflows/studentdeletion"
 
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
+	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	schedulerPorts "github.com/moto-ogs/project-phoenix/modules/schedulerruntime/ports"
 	"github.com/moto-ogs/project-phoenix/observability"
 	"github.com/moto-ogs/project-phoenix/realtime"
@@ -54,7 +55,7 @@ import (
 // booking audit, reminder tick, document sweeps) are built here. now is the
 // root clock of Enrollment's jobs (ADR 0265); nil is the real clock.
 func NewWorker(
-	db transactionruntime.Database, logger *slog.Logger, now func() time.Time, tracer *observability.Tracer, hub *realtime.Hub,
+	db transactionruntime.Database, logger *slog.Logger, now func() time.Time, uploads nativeUploads.UploadFiles, tracer *observability.Tracer, hub *realtime.Hub,
 	settings settingsCompose.BatchSettingsService, audit auditCommand, accessLog DataAccessAppender, fleet devicefleet.Capability,
 	carePlan carePlanModule.Owner, persons peopledirectory.Capability, people PeopleRows,
 	organizations organizationtenancy.Query, identity identityaccess.Owner, rooms facilitiesModule.Capability,
@@ -95,7 +96,7 @@ func NewWorker(
 	if err != nil {
 		return nil, fmt.Errorf("compose personal reminder notifications: %w", err)
 	}
-	staffDocuments, studentDocuments, err := workerDocumentSweeps(db, logger, services.Users, staffAdmin, workforce.TimeTracking, documents)
+	staffDocuments, studentDocuments, err := workerDocumentSweeps(db, logger, services.Users, staffAdmin, workforce.TimeTracking, documents, uploads)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +115,7 @@ func NewWorker(
 		CleanupRuns:                  retention.runs,
 		StaffDocumentCleaner:         staffDocuments,
 		StudentDocumentCleaner:       studentDocuments,
-		FileStoreCleaner:             newFileStoreCleaner(db, fileStore, logger, now),
+		FileStoreCleaner:             newFileStoreCleaner(db, fileStore, logger, now, uploads),
 		Active:                       newSchedulerSessionMaintenance(active),
 		ActiveCleanup:                newSchedulerPresenceCleanup(reports.ActiveCleanup),
 		AuthCleanup:                  &identityaccessCompose.SessionMaintenance{AccountSessionMaintenance: identity, PasswordResets: identity},

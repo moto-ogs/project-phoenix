@@ -143,7 +143,7 @@ function SchoolParentConferences() {
     session ? schoolPortalKeys.parentConferences() : null,
     fetchSchoolParentConferences,
   );
-  const loadError = useSwrLoadError(error, "Ihre Elternsprechtage", () =>
+  const loadError = useSwrLoadError(error, "Deine Elternsprechtage", () =>
     mutate(),
   );
   const conferences = data?.conferences ?? [];
@@ -204,7 +204,7 @@ function SchoolParentConferences() {
     if (submitting) return;
     const fields = parentConferenceFieldErrors(draft, berlinTodayISO());
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", fields);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fields);
       return;
     }
     formErrors.clear();
@@ -279,8 +279,8 @@ function SchoolParentConferences() {
       printHideHeader
       info={
         <p>
-          Eltern buchen in der Eltern-App ein Zeitfenster je Kind. Hier sehen
-          Sie, wer wann kommt.
+          Eltern buchen in der Eltern-App ein Zeitfenster je Kind. Hier siehst
+          du, wer wann kommt.
         </p>
       }
       actions={
@@ -489,7 +489,7 @@ function SchoolParentConferences() {
     >
       {noClasses ? (
         <p className="text-sm text-gray-600 print:hidden">
-          Ihnen ist keine Klasse zugeordnet. Bitte fragen Sie die OGS-Leitung.
+          Dir ist keine Klasse zugeordnet. Bitte frage die OGS-Leitung.
         </p>
       ) : null}
 
@@ -543,7 +543,7 @@ function SchoolParentConferences() {
             />
             <p className="mt-4 text-sm text-gray-600 print:hidden">
               Eltern buchen, verschieben oder sagen ab, bis 24 Stunden vor dem
-              Termin. Danach melden sie sich bei Ihnen.
+              Termin. Danach melden sie sich bei dir.
             </p>
           </SectionCard>
         </div>
@@ -566,7 +566,7 @@ function SchoolParentConferences() {
               emptyState={
                 <EmptyState
                   title="Noch kein Elternsprechtag"
-                  description="Legen Sie einen Tag an. Dann buchen die Eltern Ihrer Klasse ein Zeitfenster."
+                  description="Lege einen Tag an. Dann buchen die Eltern deiner Klasse ein Zeitfenster."
                 />
               }
             />

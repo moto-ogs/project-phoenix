@@ -14,6 +14,7 @@ import { StatCard } from "~/components/ui/stat-card";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import type { TimeReport } from "~/lib/traeger-staff-exports-api";
@@ -66,7 +67,7 @@ export function TimeExportPanel({
       <SectionCard
         concept={timeTrackingConcept}
         title="Zeitexport"
-        description={`${monthLabel} · Für Ihr eigenes Zeiterfassungssystem. Eine Zeile je Person, Tag und Schule.`}
+        description={`${monthLabel} · Für dein eigenes Zeiterfassungssystem. Eine Zeile je Person, Tag und Schule.`}
         actions={
           <Button
             type="button"
@@ -115,7 +116,7 @@ export function TimeExportPanel({
       {report && report.withoutNumber.length > 0 ? (
         <SectionCard
           title="Nicht in der Datei"
-          description="Ohne Personalnummer kann Ihr System die Zeile niemandem zuordnen."
+          description="Ohne Personalnummer kann dein System die Zeile niemandem zuordnen."
         >
           <ResponsiveActionList>
             {report.withoutNumber.map((person) => {
@@ -125,17 +126,17 @@ export function TimeExportPanel({
                   <p className="min-w-0 text-sm text-gray-800">
                     {name} hat noch keine Personalnummer.
                   </p>
-                  <div className="flex shrink-0 gap-2">
+                  <ResponsiveRowActions>
                     <ButtonLink
                       href={`/traeger/personal/${encodeURIComponent(person.recordId)}`}
                       variant="surface"
                       size="compact"
                       aria-label={`Personalakte von ${name} öffnen`}
-                      tooltip="Öffnet die Personalakte, dort tragen Sie die Personalnummer ein."
+                      tooltip="Öffnet die Personalakte, dort trägst du die Personalnummer ein."
                     >
                       Akte öffnen
                     </ButtonLink>
-                  </div>
+                  </ResponsiveRowActions>
                 </ResponsiveActionRow>
               );
             })}
@@ -145,7 +146,7 @@ export function TimeExportPanel({
 
       <SectionCard
         title="Spalten der Datei"
-        description="Die Reihenfolge bleibt fest, damit Ihr System die Datei jeden Monat gleich einliest."
+        description="Die Reihenfolge bleibt fest, damit dein System die Datei jeden Monat gleich einliest."
       >
         <FramedList>
           {TIME_EXPORT_COLUMNS.map((column, index) => (

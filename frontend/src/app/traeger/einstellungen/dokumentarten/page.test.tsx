@@ -113,7 +113,7 @@ describe("TraegerDocumentKindsPage", () => {
     // A fee notice without the legal remedy says what to do first.
     expect(
       await screen.findByText(
-        "Ohne Belehrung können Sie keinen Gebührenbescheid freigeben. Tragen Sie sie zuerst in der Vorlage ein.",
+        "Ohne Belehrung kannst du keinen Gebührenbescheid freigeben. Trage sie zuerst in der Vorlage ein.",
       ),
     ).toBeVisible();
     expect(
@@ -131,7 +131,7 @@ describe("TraegerDocumentKindsPage", () => {
     renderPage();
     expect(
       await screen.findByText(
-        "Ohne Belehrung können Sie keinen Gebührenbescheid freigeben. Bitten Sie eine Person mit der Rolle „Verwaltung“, sie einzutragen.",
+        "Ohne Belehrung kannst du keinen Gebührenbescheid freigeben. Frag eine Person mit der Rolle „Verwaltung“, ob sie es einträgt.",
       ),
     ).toBeVisible();
     expect(
@@ -147,7 +147,7 @@ describe("TraegerDocumentKindsPage", () => {
     renderPage();
     expect(
       await screen.findByText(
-        "Ihre Vorlage „Bescheid“ hat eine Rechtsbehelfsbelehrung (Version 2).",
+        "Deine Vorlage „Bescheid“ hat eine Rechtsbehelfsbelehrung (Version 2).",
       ),
     ).toBeVisible();
     expect(

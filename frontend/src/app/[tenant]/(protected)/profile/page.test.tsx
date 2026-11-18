@@ -300,7 +300,8 @@ describe("ProfilePage", () => {
       await waitFor(() => {
         expect(screen.getByText("John")).toBeInTheDocument();
         expect(screen.getByText("Doe")).toBeInTheDocument();
-        expect(screen.getByText("john.doe@example.com")).toBeInTheDocument();
+        // Einmal in der Statuszeile, einmal im Feld „E-Mail“ (#7402).
+        expect(screen.getAllByText("john.doe@example.com")).toHaveLength(2);
         expect(screen.queryByLabelText("Vorname")).not.toBeInTheDocument();
       });
     });
@@ -390,7 +391,7 @@ describe("ProfilePage", () => {
           lastName: "Doe",
         });
         expect(mockToastSuccess).toHaveBeenCalledWith(
-          "Ihr Profil ist gespeichert.",
+          "Dein Profil ist gespeichert.",
         );
       });
     });
@@ -478,7 +479,7 @@ describe("ProfilePage", () => {
           expect(mockCompressAvatar).toHaveBeenCalledWith(mockFile);
           expect(mockUploadAvatar).toHaveBeenCalledWith(mockCompressedFile);
           expect(mockToastSuccess).toHaveBeenCalledWith(
-            "Ihr Profilbild ist gespeichert.",
+            "Dein Profilbild ist gespeichert.",
           );
         },
         { timeout: 3000 },
@@ -507,7 +508,7 @@ describe("ProfilePage", () => {
       await waitFor(() => {
         expect(screen.queryByTestId("password-modal")).not.toBeInTheDocument();
         expect(mockToastSuccess).toHaveBeenCalledWith(
-          "Ihr Passwort ist geändert.",
+          "Dein Passwort ist geändert.",
         );
       });
     });

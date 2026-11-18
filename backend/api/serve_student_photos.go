@@ -10,7 +10,7 @@ import (
 )
 
 // buildServeStudentPhotoRuntime binds photo deletion to the server's local uploads.
-func buildServeStudentPhotoRuntime(db transactionruntime.Database, env owners.RootEnvironment, settings settingsCompose.SettingsService, hub *realtime.Hub, audit owners.AuditOwner) owners.StudentPhotoRuntime {
-	unlinker := peopledirectory.NewPhotoUnlinker(env.Logger.With("component", "student-photo-unlinker"), "public", nativeUploads.UploadFiles{})
+func buildServeStudentPhotoRuntime(db transactionruntime.Database, env owners.RootEnvironment, settings settingsCompose.SettingsService, hub *realtime.Hub, audit owners.AuditOwner, uploads nativeUploads.UploadFiles) owners.StudentPhotoRuntime {
+	unlinker := peopledirectory.NewPhotoUnlinker(env.Logger.With("component", "student-photo-unlinker"), "public", uploads)
 	return owners.BuildStudentPhotoRuntime(db, env, settings, hub, audit, unlinker, actingAccountID)
 }

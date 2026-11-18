@@ -1,0 +1,4 @@
+GET /caterer/notifications/feed/ -> mittagessen  (#4895 Caterer-Portal: schulübergreifende Sitzung, Belieferung je Schule)
+GET /caterer/notifications/feed/unread-count -> mittagessen  (#4895 Caterer-Portal: schulübergreifende Sitzung, Belieferung je Schule)
+POST /caterer/notifications/feed/read-all -> mittagessen  (#4895 Caterer-Portal: schulübergreifende Sitzung, Belieferung je Schule)
+POST /caterer/notifications/feed/{id}/read -> mittagessen  (#4895 Caterer-Portal: schulübergreifende Sitzung, Belieferung je Schule)

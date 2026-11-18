@@ -514,10 +514,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentLetterLogos.ParentLetterLogo",
-      "binding_digest": "d43f2aff0c83d32f8c3ad237d32ebb11",
+      "binding_digest": "4d33a24486c378bef958d8486f424b9d",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentLetterLogos.ParentLetterLogo",
       "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.ResolveStoredPath",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentLetterLogos.ParentLetterLogo",
+      "binding_digest": "0e7c3b6b6348515540a7124ba44d794a",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentLetterLogos.ParentLetterLogo",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.StoredPath",
       "target_owner": "delivery-platform"
     },
     {

@@ -73,6 +73,10 @@ type careMonth struct {
 	// of its invoices, so a run of some schools counts only its families.
 	uncounted        int
 	uncountedSchools map[string][]int64
+	// uncountedStates tells per such family why no number counts (#7356):
+	// FamilyChildrenExpired after a confirmation that ended before the
+	// month, else FamilyChildrenMissing.
+	uncountedStates map[string]string
 }
 
 func (m careMonth) total() int64 {
@@ -187,9 +191,10 @@ func chainCareMonth(result *careMonth, in careMonthInput, chained []*careChainEn
 	uncounted := map[string][]int64{}
 	applyCareChain(chained, careChainInput{month: in.month, rules: in.rules, evidences: in.evidences,
 		costShares:     in.costShares,
-		familyChildren: familyChildrenIn(in.familyCounts, in.month), uncounted: uncounted, unbilled: unbilled})
+		familyChildren: familyChildrenIn(in.familyCounts, in.recipients, in.month), uncounted: uncounted, unbilled: unbilled})
 	result.uncounted = len(uncounted)
 	result.uncountedSchools = uncounted
+	result.uncountedStates = uncountedStates(uncounted, in.familyCounts, in.recipients, in.month)
 	slices.SortStableFunc(result.invoices, func(a, b parentbilling.CareInvoice) int {
 		return firstNonZero(compareOrdered(a.SchoolName, b.SchoolName), compareOrdered(a.ChildLastName, b.ChildLastName),
 			compareOrdered(a.ChildFirstName, b.ChildFirstName), compareOrdered(a.ContractID, b.ContractID))
@@ -216,12 +221,15 @@ func appendInForce(places []careContractPlace, in careMonthInput, versions []par
 	return append(places, careContractPlace{family: family, child: child, school: head.SchoolID})
 }
 
-// familyChildrenIn keys the confirmed numbers valid in the month by family.
-func familyChildrenIn(counts []parentbilling.FamilyChildCount, month calendar.Date) map[string]int {
+// familyChildrenIn keys the confirmed numbers valid in the month by the
+// family they belong to today (#7356): a number stored under a contract
+// goes with the mail address its family got since.
+func familyChildrenIn(counts []parentbilling.FamilyChildCount, recipients map[int64]parentbilling.CareRecipient, month calendar.Date) map[string]int {
 	children := map[string]int{}
-	for _, count := range counts {
-		if number, ok := count.ConfirmedIn(month); ok {
-			children[count.FamilyEmail] = number
+	byFamily, _ := numbersByFamily(counts, recipients)
+	for family, numbers := range byFamily {
+		if number, ok := numbers.confirmedIn(month); ok {
+			children[family] = number
 		}
 	}
 	return children

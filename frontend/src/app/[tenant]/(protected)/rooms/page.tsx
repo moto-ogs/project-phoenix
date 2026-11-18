@@ -17,7 +17,7 @@ import { Button } from "~/components/ui/button";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { TileCard } from "~/components/ui/tile-card";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import type {
@@ -535,7 +535,7 @@ function RoomsPageContent() {
             icon: <MotoConceptIcon concept={roomsConcept} size={48} />,
             title: "Keine Räume gefunden",
             description:
-              "Zu Suche und Filtern passt kein Raum. Setzen Sie die Filter zurück, um alle Räume zu sehen.",
+              "Zu Suche und Filtern passt kein Raum. Setze die Filter zurück, um alle Räume zu sehen.",
             action: (
               <Button
                 type="button"
@@ -551,7 +551,7 @@ function RoomsPageContent() {
             icon: <MotoConceptIcon concept={roomsConcept} size={48} />,
             title: "Keine Räume gefunden",
             description:
-              "Für diese Schule ist noch kein Raum angelegt. Räume legen Sie in der Datenverwaltung an.",
+              "Für diese Schule ist noch kein Raum angelegt. Räume legst du in der Datenverwaltung an.",
           }
       : null;
 
@@ -560,7 +560,17 @@ function RoomsPageContent() {
   const roomSummary = (() => {
     if (!roomsData) return null;
     const occupied = roomsData.filter((room) => room.isOccupied).length;
-    return `${roomsData.length} ${roomsData.length === 1 ? "Raum" : "Räume"} · ${occupied} belegt`;
+    return (
+      <TenantPageStats
+        items={[
+          {
+            value: roomsData.length,
+            label: roomsData.length === 1 ? "Raum" : "Räume",
+          },
+          { value: occupied, label: "belegt" },
+        ]}
+      />
+    );
   })();
 
   return (

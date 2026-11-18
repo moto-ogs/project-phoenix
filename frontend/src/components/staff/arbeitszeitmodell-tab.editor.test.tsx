@@ -137,7 +137,7 @@ describe("Arbeitszeitmodell decimal-hours editor", () => {
 
     expect(mocks.updateSchedule).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bitte wählen Sie eine Vorlage.",
+      "Bitte wähle eine Vorlage.",
     );
     expect(mocks.toastError).not.toHaveBeenCalled();
   });
@@ -274,7 +274,7 @@ describe("Arbeitszeitmodell decimal-hours editor", () => {
     // The form error stands in the alert at the top of the panel body, not in
     // a toast (BAUARTEN-SPEC Bauart 2 Regel 5); the field keeps its own alert.
     const alerts = screen.getAllByRole("alert").map((a) => a.textContent);
-    expect(alerts).toContain("Bitte korrigieren Sie die markierten Stunden.");
+    expect(alerts).toContain("Bitte korrigiere die markierten Stunden.");
     expect(mocks.toastError).not.toHaveBeenCalled();
   });
 

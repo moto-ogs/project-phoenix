@@ -11,26 +11,26 @@ export function parentGroupMessagesTopic(): HelpTopic {
     title: "Gruppennachrichten lesen und beantworten",
     question: "Was ist eine Gruppennachricht?",
     summary:
-      "Die OGS schreibt allen Eltern einer Gruppe, Klasse oder AG. Ihre Antwort lesen nur die OGS.",
+      "Die OGS schreibt allen Eltern einer Gruppe, Klasse oder AG. Deine Antwort lesen nur die OGS.",
     group: "nachrichten",
     audience: "parent",
     icon: "UsersThree",
     steps: [
-      "Tippen Sie unten auf `Nachrichten`.",
-      "Tippen Sie unter `Gruppennachrichten der OGS` auf die Nachricht.",
-      "Tippen Sie unter `Antwort an die OGS` in das Feld `Antwort an die OGS schreiben`.",
-      "Tippen Sie rechts auf den Pfeil `Senden`.",
+      "Tippe unten auf `Nachrichten`.",
+      "Tippe unter `Gruppennachrichten der OGS` auf die Nachricht.",
+      "Tippe unter `Antwort an die OGS` in das Feld `Antwort an die OGS schreiben`.",
+      "Tippe rechts auf den Pfeil `Senden`.",
     ],
     result:
-      "Ihre Antwort steht danach im Chat mit der OGS zu Ihrem Kind. Andere Eltern sehen sie nicht.",
+      "Deine Antwort steht danach im Chat mit der OGS zu deinem Kind. Andere Eltern sehen sie nicht.",
     notes: [
-      "Fotos öffnen Sie mit einem Tipp groß. Andere Dateien laden Sie mit dem Pfeil herunter. An Ihre Antwort können Sie mit `Foto oder Datei anhängen` selbst Dateien hängen.",
-      "Sie sehen nicht, welche anderen Eltern die Nachricht bekommen.",
-      "Haben mehrere Ihrer Kinder die Nachricht bekommen? Dann wählen Sie vor dem Senden das Kind.",
-      "Unter `Antwort an die OGS` steht, wer Ihre Antwort lesen kann.",
+      "Fotos öffnest du mit einem Tipp groß. Andere Dateien lädst du mit dem Pfeil herunter. An deine Antwort kannst du mit `Foto oder Datei anhängen` selbst Dateien hängen.",
+      "Du siehst nicht, welche anderen Eltern die Nachricht bekommen.",
+      "Haben mehrere deiner Kinder die Nachricht bekommen? Dann wähle vor dem Senden das Kind.",
+      "Unter `Antwort an die OGS` steht, wer deine Antwort lesen kann.",
     ],
     differences: [
-      "Steht dort `Diese Gruppennachricht ist geschlossen`? Dann können Sie nicht mehr antworten. Schreiben Sie der OGS im Chat zu Ihrem Kind.",
+      "Steht dort `Diese Gruppennachricht ist geschlossen`? Dann kannst du nicht mehr antworten. Schreibe der OGS im Chat zu deinem Kind.",
     ],
     related: [HELP_TOPICS.parentMessages, HELP_TOPICS.parentNotifications],
   };

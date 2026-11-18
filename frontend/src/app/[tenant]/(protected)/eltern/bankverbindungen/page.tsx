@@ -11,7 +11,7 @@ import { ExportDialog } from "~/components/ui/export-dialog";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { formErrorMessage } from "~/components/ui/form-error";
 import { useExportRun } from "~/hooks/use-export-run";
 import { hasPermission } from "~/lib/auth-utils";
@@ -87,7 +87,15 @@ function BankverbindungenContent() {
   // Untertitel sagt stattdessen, wie viel davon gerade zu sehen ist, sobald
   // Suche oder Filter die Liste verkürzen — so widerspricht keine Zahl den
   // Zeilen darunter.
-  const statusLine = `${rows.length} Kinder · ${rows.length - missingCount} mit Bankverbindung · ${missingCount} ohne`;
+  const statusLine = (
+    <TenantPageStats
+      items={[
+        { value: rows.length, label: "Kinder" },
+        { value: rows.length - missingCount, label: "mit Bankverbindung" },
+        { value: missingCount, label: "ohne" },
+      ]}
+    />
+  );
   const captionText =
     visibleRows.length !== rows.length
       ? `${visibleRows.length} von ${rows.length} Kindern`
@@ -172,7 +180,7 @@ function BankverbindungenContent() {
           icon: <Lock className="h-12 w-12" />,
           title: "Kein Zugriff auf Bankverbindungen",
           description:
-            "Sie brauchen dafür die Berechtigung „Bankverbindungen“. Bitte fragen Sie in der Schulleitung nach.",
+            "Du brauchst dafür die Berechtigung „Bankverbindungen“. Bitte frage in der Schulleitung nach.",
         }}
       />
     );
@@ -235,7 +243,7 @@ function BankverbindungenContent() {
     >
       <Alert
         type="info"
-        message="Die IBAN tragen Sie beim Kind ein, im Reiter „Erziehungsberechtigte“. Die Datei enthält die ganzen IBANs und wird protokolliert. Bitte nicht per E-Mail weitergeben."
+        message="Die IBAN trägst du beim Kind ein, im Reiter „Erziehungsberechtigte“. Die Datei enthält die ganzen IBANs und wird protokolliert. Bitte nicht per E-Mail weitergeben."
       />
 
       {/* A four-column table on a phone pushes the IBAN — the one value the

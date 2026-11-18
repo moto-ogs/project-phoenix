@@ -189,7 +189,7 @@ describe("DemoBanner", () => {
     );
     // The visitor is also the parent of one child (#5033).
     expect(items[2]).toHaveAccessibleDescription(
-      "Die Eltern-App für Ihr eigenes Kind an der Schule: Abholung, Krankmeldung, Nachrichten.",
+      "Die Eltern-App für dein eigenes Kind an der Schule: Abholung, Krankmeldung, Nachrichten.",
     );
     expect(items[0]).toHaveAttribute("aria-checked", "true");
     expect(items[0]).toHaveFocus();
@@ -288,7 +288,7 @@ describe("DemoBanner", () => {
 
     expect(
       await screen.findByText(
-        "Bitte öffnen Sie die Demo noch einmal über den Link aus Ihrer E-Mail.",
+        "Bitte öffne die Demo noch einmal über den Link aus deiner E-Mail.",
       ),
     ).toBeInTheDocument();
     expect(signIn).not.toHaveBeenCalled();
@@ -480,10 +480,10 @@ describe("DemoBanner", () => {
         name: "Demo neu anfangen?",
       });
       expect(dialog).toHaveTextContent(
-        "Alles, was Sie bisher geändert haben, geht verloren.",
+        "Alles, was du bisher geändert hast, geht verloren.",
       );
       expect(dialog).toHaveTextContent(
-        "Der Link aus Ihrer E-Mail gilt weiter.",
+        "Der Link aus deiner E-Mail gilt weiter.",
       );
       expect(fetchMock).not.toHaveBeenCalled();
       await user.click(screen.getByRole("button", { name: "Neu anfangen" }));
@@ -529,7 +529,7 @@ describe("DemoBanner", () => {
 
       expect(
         await screen.findByText(
-          "Bitte öffnen Sie die Demo noch einmal über den Link aus Ihrer E-Mail.",
+          "Bitte öffne die Demo noch einmal über den Link aus deiner E-Mail.",
         ),
       ).toBeInTheDocument();
       expect(assign).not.toHaveBeenCalled();

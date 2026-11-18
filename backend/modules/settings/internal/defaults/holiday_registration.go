@@ -17,7 +17,7 @@ var holidayRegistrationDefinitions = []config.Definition{
 		Key:             config.KeyHolidayRegistrationWishMode,
 		Levels:          config.LevelTraeger,
 		Label:           "Was gilt ohne Ferienwunsch?",
-		Description:     "Gilt für Ferien, bei denen Sie den Ferienwunsch berücksichtigen. Den Ferienwunsch geben Eltern in der OGS-Anmeldung an. Feriengäste ohne OGS-Platz sind nicht betroffen.",
+		Description:     "Gilt für Ferien, bei denen du den Ferienwunsch berücksichtigst. Den Ferienwunsch geben Eltern in der OGS-Anmeldung an. Feriengäste ohne OGS-Platz sind nicht betroffen.",
 		Type:            config.FieldSelect,
 		Default:         "priority",
 		ReadPermission:  "config:read",

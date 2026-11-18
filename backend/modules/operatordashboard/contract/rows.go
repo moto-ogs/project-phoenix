@@ -42,6 +42,8 @@ type SchoolSummary struct {
 	// ChildQuotaBundles is nil when the school has no Kinderkontingent.
 	ChildQuotaBundles    *int
 	ChildQuotaBundleSize int
+	// DeviceSlots is nil when moto has not set the Geräteplätze (#2312).
+	DeviceSlots *int
 }
 type PWAUsageRow struct {
 	TenantID        int64

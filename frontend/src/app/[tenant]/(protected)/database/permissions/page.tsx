@@ -23,6 +23,7 @@ import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { permissionsConcept } from "~/lib/concepts/permissions";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 const NO_PERMISSIONS: Permission[] = [];
 
@@ -89,15 +90,19 @@ function PermissionsPageContent() {
   // Statuszeile des Seitenkopfs aus der bereits geladenen Berechtigungsliste.
   const statusLine = useMemo(() => {
     const resources = new Set(permissions.map((p) => p.resource)).size;
-    const parts = [
-      `${formatCount(permissions.length)} ${permissions.length === 1 ? "Berechtigung" : "Berechtigungen"}`,
-    ];
-    if (resources > 0) {
-      parts.push(
-        `${formatCount(resources)} ${resources === 1 ? "Bereich" : "Bereiche"}`,
-      );
-    }
-    return parts.join(" · ");
+    const label = permissions.length === 1 ? "Berechtigung" : "Berechtigungen";
+    if (resources === 0) return `${formatCount(permissions.length)} ${label}`;
+    return (
+      <TenantPageStats
+        items={[
+          { value: formatCount(permissions.length), label },
+          {
+            value: formatCount(resources),
+            label: resources === 1 ? "Bereich" : "Bereiche",
+          },
+        ]}
+      />
+    );
   }, [permissions]);
 
   const filteredPermissions = useMemo(() => {
@@ -164,8 +169,8 @@ function PermissionsPageContent() {
                 ? "Keine Berechtigungen gefunden"
                 : "Keine Berechtigungen vorhanden",
               description: searchTerm
-                ? "Versuchen Sie einen anderen Suchbegriff."
-                : "Berechtigungen legt das System an. Bitte wenden Sie sich an moto.",
+                ? "Versuche einen anderen Suchbegriff."
+                : "Berechtigungen legt das System an. Bitte wende dich an moto.",
               icon: (
                 <MotoDuotoneIcon
                   icon={permissionsConcept.icon}

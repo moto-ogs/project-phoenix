@@ -457,7 +457,7 @@ does not make it a dry-run.
 ```bash
 # CLI (run inside the container via `docker compose run server go run . <cmd>`)
 go run . migrate status|validate|reset
-go run ./cmd/devtools seed --email <op-email> --password <pw> --pin 1234   # flags required; seeds via the HTTP API, server must be running
+go run ./cmd/devtools seed --email <op-email> --password <pw> --pin 4729   # flags required; seeds via the HTTP API, server must be running
 go run . cleanup preview|stats      # visit-retention dry-run / statistics
 go run . cleanup visits             # REAL deletion — there is no `cleanup visits preview`; extra args are silently ignored
 go run . cleanup timetable|time-tracking [preview|stats]      # nested dry-runs exist only for these two
@@ -674,6 +674,37 @@ Rollbacks restore matching images, configuration, roles, database and uploads;
 an old image alone is not compatible with every newer schema.
 For env changes, read `.claude/rules/env-docker-sync.md` before editing.
 
+For a shared upload bucket, follow the [migration and restore runbook](../operations/shared-upload-storage.md).
+
+## Replica runtime state
+
+The general request limiter is a load guard on each API replica.
+`RATE_LIMIT_REQUESTS_PER_MINUTE` and `RATE_LIMIT_BURST` apply per caller,
+read/write bucket and replica. With N replicas, one caller can use up to
+N times those values across them. The mail webhook has its own per-replica
+load guard and verifies the provider's signature on each request.
+
+Auth, email confirmation, invitation, public link and data-return request
+quotas share PostgreSQL counters. The kiosk error-report quota also shares
+PostgreSQL counters. Replicas need the same limiter settings and JWT signing
+key. Counter keys are purpose-scoped HMACs of the request keys, and requests
+using these quotas return 503 if PostgreSQL cannot check them. An unfinished
+auth reservation expires after three minutes, so a crashed replica cannot
+hold a burst slot indefinitely. Requests whose outcome is lost stay charged.
+
+Each Next.js replica caches the school settings returned by the tenant
+lookup for at most 60 seconds. A settings write invalidates the tag on the
+replica that handled it. The first request after expiry on any other replica
+waits for a fresh lookup. An open browser tab needs a refresh or navigation
+that makes a new lookup to see the change.
+
+| State kept in a process | Effect of adding replicas |
+| --- | --- |
+| Device last-seen debounce | Each API process can flush a heartbeat. PostgreSQL keeps the newest timestamp. |
+| Unknown tenant slug | Each Next.js process can cache a 404 for 60 seconds, so a newly created school can take that long to resolve. |
+| Client log budget | Each Next.js process caps work and log volume for its own requests. No authorization depends on the count. |
+| Session refresh deduplication | Each Next.js process can coalesce its own refreshes. PostgreSQL governs token rotation and concurrent retries across the replicas. |
+
 ## Caddy reverse proxy
 
 `deploy/caddy/Caddyfile` is the source of truth for `/etc/caddy/Caddyfile` on
@@ -694,8 +725,11 @@ each `reverse_proxy` imports `client_ip_upstream`; `--cloudflare` also compares
 `caddy-cloudflare-ranges.yml` runs that comparison weekly and opens an issue
 with the diff and the corrected line.
 
-Automatic rollout: `caddy-deploy.yml` runs on a push to `main` that changes
-`deploy/caddy/**`, or by `workflow_dispatch` from `main`. It uses the
+Automatic rollout: `caddy-deploy.yml` runs on every push to `main` and deploys
+when `git diff` between the push's before commit and its head touches
+`deploy/caddy/`, or on `workflow_dispatch` from `main`. It has no `paths`
+filter: GitHub matches paths only against the first 300 changed files, so a
+release merge from `development` skipped the rollout. It uses the
 `production` environment and its SSH secrets and shares the `deploy-production`
 concurrency group with production releases and rollbacks. After
 `check-caddyfile.mjs` it runs `scripts/deploy-caddy-remote.sh` on the server:

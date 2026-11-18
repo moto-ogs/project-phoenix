@@ -12,6 +12,9 @@ type schoolFinder interface {
 	FindSchool(ctx context.Context, id int64) (organizationtenancy.School, error)
 }
 
+// SchoolFinder is the exported name of schoolFinder for root wiring.
+type SchoolFinder = schoolFinder
+
 // schoolLister is the Organisation & Tenancy read of schools by ID.
 type schoolLister interface {
 	ListSchoolsByID(ctx context.Context, ids []int64) ([]organizationtenancy.School, error)
@@ -21,6 +24,25 @@ type schoolLister interface {
 // row as found=false. Every other failure is returned unchanged.
 func LookupSchool(ctx context.Context, schools schoolFinder, id int64) (organizationtenancy.School, bool, error) {
 	school, err := schools.FindSchool(ctx, id)
+	if errors.Is(err, organizationtenancy.ErrSchoolNotFound) {
+		return organizationtenancy.School{}, false, nil
+	}
+	if err != nil {
+		return organizationtenancy.School{}, false, err
+	}
+	return school, true, nil
+}
+
+// schoolShareFinder is the Organisation & Tenancy read of one school under a
+// share lock (#6305).
+type schoolShareFinder interface {
+	FindSchoolForShare(ctx context.Context, id int64) (organizationtenancy.School, error)
+}
+
+// lookupSchoolForShare reads one school like LookupSchool and holds it under
+// a share lock to the end of the caller's transaction (#7478).
+func lookupSchoolForShare(ctx context.Context, schools schoolShareFinder, id int64) (organizationtenancy.School, bool, error) {
+	school, err := schools.FindSchoolForShare(ctx, id)
 	if errors.Is(err, organizationtenancy.ErrSchoolNotFound) {
 		return organizationtenancy.School{}, false, nil
 	}

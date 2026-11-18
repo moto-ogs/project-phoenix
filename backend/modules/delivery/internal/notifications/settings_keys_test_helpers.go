@@ -13,6 +13,7 @@ var RestatedSettingKeys = []string{
 	settingInstanceCancelledEnabled,
 	settingStaffingChangedEnabled,
 	settingStaffNoticePublishedEnabled,
+	settingMealPlanChangedEnabled,
 	settingInstanceRoomChangedEnabled,
 	settingClassTimetableChangedEnabled,
 	settingSchoolClosingDayEnabled,

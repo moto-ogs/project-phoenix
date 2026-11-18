@@ -164,7 +164,7 @@ describe("AdminSessionEditModal", () => {
     expect(secondPause).toHaveAttribute("aria-invalid", "true");
     expect(save).toHaveAttribute("aria-disabled", "true");
     expect(
-      screen.getByText("Bitte geben Sie volle Minuten von 0 bis 300 ein."),
+      screen.getByText("Bitte gib volle Minuten von 0 bis 300 ein."),
     ).toBeInTheDocument();
     fireEvent.change(secondPause, { target: { value: "15" } });
     await waitFor(() => expect(save).toBeEnabled());

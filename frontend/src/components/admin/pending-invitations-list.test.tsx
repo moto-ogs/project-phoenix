@@ -510,7 +510,7 @@ describe("PendingInvitationsList mail state (#5934)", () => {
       invitation({ mailOutcome: "undeliverable", addressMark: "failed" }),
     ]);
     render(<PendingInvitationsList refreshKey={0} />);
-    expect(await screen.findByText(/laden Sie neu ein/)).toBeInTheDocument();
+    expect(await screen.findByText(/lade neu ein/)).toBeInTheDocument();
   });
 
   it("offers no resend while the provider holds the address", async () => {

@@ -34,7 +34,8 @@ func (rs *Resource) SchoolRouter(protectedSchoolRoutes func(chi.Router, func(chi
 	return r
 }
 
-type schoolAppointmentRequest struct {
+// SchoolAppointmentRequest is the body of a Schultermin.
+type SchoolAppointmentRequest struct {
 	Title           string        `json:"title"`
 	Description     *string       `json:"description,omitempty"`
 	Location        *string       `json:"location,omitempty"`
@@ -50,7 +51,7 @@ type schoolAppointmentRequest struct {
 }
 
 func decodeSchoolAppointment(w http.ResponseWriter, r *http.Request) (calendarService.SchoolAppointmentRequest, bool) {
-	var req schoolAppointmentRequest
+	var req SchoolAppointmentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return calendarService.SchoolAppointmentRequest{}, false
@@ -90,13 +91,9 @@ func (rs *Resource) listSchoolCalendar(w http.ResponseWriter, r *http.Request) {
 		renderCalendarError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]any{
-		"from":         from.String(),
-		"to":           to.String(),
-		"events":       view.Events,
-		"closing_days": view.ClosingDays,
-		"holidays":     view.Holidays,
-		"classes":      view.Classes,
+	common.Respond(w, r, http.StatusOK, SchoolCalendarResponse{
+		From: from, To: to, Events: view.Events,
+		ClosingDays: view.ClosingDays, Holidays: view.Holidays, Classes: view.Classes,
 	}, "School calendar retrieved")
 }
 
@@ -107,7 +104,7 @@ func (rs *Resource) schoolCalendarFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	common.Respond(w, r, http.StatusOK, map[string]string{"url": httpsURL, "webcal_url": webcalURL}, "Calendar feed URL retrieved")
+	common.Respond(w, r, http.StatusOK, CalendarFeedResponse{URL: httpsURL, WebcalURL: webcalURL}, "Calendar feed URL retrieved")
 }
 
 func (rs *Resource) rotateSchoolCalendarFeed(w http.ResponseWriter, r *http.Request) {
@@ -117,7 +114,7 @@ func (rs *Resource) rotateSchoolCalendarFeed(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	common.Respond(w, r, http.StatusOK, map[string]string{"url": httpsURL, "webcal_url": webcalURL}, "Calendar feed URL rotated")
+	common.Respond(w, r, http.StatusOK, CalendarFeedResponse{URL: httpsURL, WebcalURL: webcalURL}, "Calendar feed URL rotated")
 }
 
 func (rs *Resource) createSchoolAppointment(w http.ResponseWriter, r *http.Request) {
@@ -159,7 +156,7 @@ func (rs *Resource) deleteSchoolAppointment(w http.ResponseWriter, r *http.Reque
 		renderCalendarError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"status": "deleted"}, "School appointment deleted")
+	common.Respond(w, r, http.StatusOK, CalendarStatusResponse{Status: "deleted"}, "School appointment deleted")
 }
 
 func (rs *Resource) respondSchoolInvitation(w http.ResponseWriter, r *http.Request) {
@@ -176,5 +173,5 @@ func (rs *Resource) respondSchoolInvitation(w http.ResponseWriter, r *http.Reque
 		renderCalendarError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"status": req.Status}, "Invitation response updated")
+	common.Respond(w, r, http.StatusOK, CalendarStatusResponse{Status: req.Status}, "Invitation response updated")
 }

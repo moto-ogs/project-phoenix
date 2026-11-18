@@ -258,6 +258,14 @@ func TestProvisioningCreateDevice(t *testing.T) {
 		assert.Equal(t, map[string]any{
 			"device_id": "BURBACH-1", "device_type": "terminal", "school_id": float64(10), "api_key_mode": "auto",
 		}, auditChanges(t, entry))
+		require.Len(t, h.devices.lifecycle, 1)
+		created := h.devices.lifecycle[0]
+		assert.Equal(t, domain.DeviceLifecycleCreated, created.Action)
+		assert.Equal(t, device.ID, created.DeviceRowID)
+		assert.Equal(t, testOperatorID, created.OperatorID)
+		assert.Equal(t, "BURBACH-1", *created.Changes["device_id"][1])
+		assert.Equal(t, "Eingang", *created.Changes["name"][1])
+		assert.NotContains(t, created.Changes, "api_key", "no credential reaches the history")
 	})
 
 	t.Run("rejects custom keys before writing", func(t *testing.T) {
@@ -491,6 +499,8 @@ func TestProvisioningSetDeviceAPIKey(t *testing.T) {
 		assert.Equal(t, map[string]any{
 			"device_id": "BURBACH-1", "school_id": float64(10), "api_key_mode": "auto",
 		}, auditChanges(t, entry))
+		assert.Equal(t, []organizationtenancy.DeviceLifecycleEntry{{DeviceRowID: 1, Action: domain.DeviceLifecycleKeyRotated, OperatorID: testOperatorID}},
+			h.devices.lifecycle, "the history names the rotation, never the key")
 	})
 
 	t.Run("rejects custom keys before writing", func(t *testing.T) {
@@ -678,7 +688,7 @@ func TestProvisioningDeleteDevice(t *testing.T) {
 		h.devices.add(manual)
 	}
 
-	t.Run("deletes the device and records it", func(t *testing.T) {
+	t.Run("removes the device and records it", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t)
 		seed(h)
@@ -686,10 +696,32 @@ func TestProvisioningDeleteDevice(t *testing.T) {
 		require.NoError(t, h.svc.DeleteDevice(context.Background(), 1, testOperatorID, operatorIP))
 
 		assert.Equal(t, []int64{1}, h.devices.deleted)
+		assert.Equal(t, [][2]int64{{10, 1}}, h.presence.sessionLookups, "the session is read at the device's school")
 		entry := h.onlyAudit(t, domain.AuditActionDelete, domain.AuditResourceDevice, 1)
 		assert.Equal(t, map[string]any{
-			"device_id": "BURBACH-1", "device_type": "terminal", "school_id": float64(10),
+			"device_id": "BURBACH-1", "device_type": "terminal", "school_id": float64(10), "outcome": "removed",
 		}, auditChanges(t, entry))
+		assert.Equal(t, []organizationtenancy.DeviceLifecycleEntry{{DeviceRowID: 1, Action: domain.DeviceLifecycleRemoved, OperatorID: testOperatorID}}, h.devices.lifecycle)
+	})
+
+	t.Run("an open kiosk session blocks the removal", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		seed(h)
+		activity, room := "Fußball-AG", "Turnhalle"
+		h.presence.sessions[1] = &domain.DeviceSession{ID: 300, StartedAt: fixedTime, ActivityName: &activity, RoomName: &room}
+
+		err := h.svc.DeleteDevice(context.Background(), 1, testOperatorID, operatorIP)
+
+		var blocked *organizationtenancy.DeviceRemovalBlockedError
+		require.ErrorAs(t, err, &blocked)
+		assert.Equal(t, int64(1), blocked.DeviceID)
+		assert.Equal(t, int64(300), blocked.SessionID)
+		assert.True(t, blocked.StartedAt.Equal(fixedTime))
+		assert.Equal(t, &activity, blocked.ActivityName)
+		assert.Equal(t, &room, blocked.RoomName)
+		assert.Empty(t, h.devices.deleted, "the device stays live")
+		assert.Empty(t, h.audit.entries)
 	})
 
 	t.Run("audit failure fails the transaction", func(t *testing.T) {
@@ -736,13 +768,12 @@ func TestProvisioningDeleteDevice(t *testing.T) {
 				assert.Equal(t, "system device required for manual web check-ins", protected.Reason)
 			},
 		},
-		"referenced device is in use": {
-			seed: func(h *provisioningHarness) { h.devices.fail["DeleteDevice"] = domain.ErrDeviceReferenced },
+		"session lookup failure": {
+			seed: func(h *provisioningHarness) { h.presence.sessionErr = errBoom },
 			id:   1,
 			check: func(t *testing.T, err error) {
-				var inUse *organizationtenancy.DeviceInUseError
-				require.ErrorAs(t, err, &inUse)
-				assert.Equal(t, int64(1), inUse.DeviceID)
+				require.ErrorIs(t, err, errBoom)
+				assert.Contains(t, err.Error(), "DeleteDevice: find active session")
 			},
 		},
 		"unknown delete error is wrapped": {
@@ -766,6 +797,133 @@ func TestProvisioningDeleteDevice(t *testing.T) {
 
 			tc.check(t, err)
 			assert.Empty(t, h.devices.deleted)
+			assert.Empty(t, h.audit.entries)
+		})
+	}
+}
+
+func TestProvisioningSetDeviceBlocked(t *testing.T) {
+	t.Parallel()
+
+	seed := func(h *provisioningHarness) {
+		seedDeviceSchools(h)
+		h.devices.add(terminal(1, 10, "BURBACH-1"))
+		manual := terminal(2, 10, domain.WebManualDeviceID)
+		manual.DeviceType = domain.DeviceTypeVirtual
+		h.devices.add(manual)
+	}
+
+	t.Run("blocks the device and keeps its credential", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		seed(h)
+
+		require.NoError(t, h.svc.SetDeviceBlocked(context.Background(), 1, true, testOperatorID, operatorIP))
+
+		require.Len(t, h.devices.updated, 1)
+		assert.Equal(t, domain.DeviceStatusInactive, h.devices.updated[0].Status)
+		assert.Equal(t, "...-key", h.devices.updated[0].MaskedAPIKey, "the credential stays for the unblock")
+		assert.Nil(t, h.devices.updated[0].ArchivedAt, "a blocked device stays live")
+		assert.Empty(t, h.devices.deleted)
+		entry := h.onlyAudit(t, domain.AuditActionBlock, domain.AuditResourceDevice, 1)
+		assert.Equal(t, map[string]any{
+			"device_id": "BURBACH-1", "school_id": float64(10), "previous_status": "active",
+		}, auditChanges(t, entry))
+		active, inactive := domain.DeviceStatusActive, domain.DeviceStatusInactive
+		assert.Equal(t, []organizationtenancy.DeviceLifecycleEntry{{
+			DeviceRowID: 1, Action: domain.DeviceLifecycleBlocked, OperatorID: testOperatorID,
+			Changes: map[string][2]*string{"status": {&active, &inactive}},
+		}}, h.devices.lifecycle, "the block lands in the device's history (#2321)")
+	})
+
+	t.Run("unblocks a blocked device", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		seedDeviceSchools(h)
+		blocked := terminal(1, 10, "BURBACH-1")
+		blocked.Status = domain.DeviceStatusInactive
+		h.devices.add(blocked)
+
+		require.NoError(t, h.svc.SetDeviceBlocked(context.Background(), 1, false, testOperatorID, operatorIP))
+
+		require.Len(t, h.devices.updated, 1)
+		assert.Equal(t, domain.DeviceStatusActive, h.devices.updated[0].Status)
+		entry := h.onlyAudit(t, domain.AuditActionUnblock, domain.AuditResourceDevice, 1)
+		assert.Equal(t, "inactive", auditChanges(t, entry)["previous_status"])
+	})
+
+	t.Run("the state the device has changes nothing", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		seed(h)
+
+		require.NoError(t, h.svc.SetDeviceBlocked(context.Background(), 1, false, testOperatorID, operatorIP))
+
+		assert.Empty(t, h.devices.updated)
+		assert.Empty(t, h.audit.entries, "a repeated action is not audited again")
+		assert.Empty(t, h.devices.lifecycle, "a repeated action adds no history entry")
+	})
+
+	t.Run("a failed history entry fails the transaction", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		seed(h)
+		h.devices.fail = map[string]error{"RecordDeviceLifecycle": errBoom}
+
+		err := h.svc.SetDeviceBlocked(context.Background(), 1, true, testOperatorID, operatorIP)
+
+		require.ErrorIs(t, err, errBoom)
+		assert.ErrorIs(t, h.tx.lastErr, errBoom)
+	})
+
+	t.Run("audit failure fails the transaction", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		seed(h)
+		h.audit.err = errBoom
+
+		err := h.svc.SetDeviceBlocked(context.Background(), 1, true, testOperatorID, operatorIP)
+
+		require.ErrorIs(t, err, errBoom)
+		assert.ErrorIs(t, h.tx.lastErr, errBoom)
+	})
+
+	for name, tc := range map[string]struct {
+		id    int64
+		check func(*testing.T, error)
+	}{
+		"invalid id": {
+			id: 0,
+			check: func(t *testing.T, err error) {
+				var invalid *organizationtenancy.InvalidProvisioningDataError
+				require.ErrorAs(t, err, &invalid)
+			},
+		},
+		"missing device": {
+			id: 99,
+			check: func(t *testing.T, err error) {
+				var notFound *organizationtenancy.OperatorDeviceNotFoundError
+				require.ErrorAs(t, err, &notFound)
+			},
+		},
+		"manual web device is protected": {
+			id: 2,
+			check: func(t *testing.T, err error) {
+				var protected *organizationtenancy.DeviceProtectedError
+				require.ErrorAs(t, err, &protected)
+				assert.Equal(t, int64(2), protected.DeviceID)
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			h := newHarness(t)
+			seed(h)
+
+			err := h.svc.SetDeviceBlocked(context.Background(), tc.id, true, testOperatorID, operatorIP)
+
+			tc.check(t, err)
+			assert.Empty(t, h.devices.updated)
 			assert.Empty(t, h.audit.entries)
 		})
 	}
@@ -1017,6 +1175,10 @@ func TestProvisioningTransferDevice(t *testing.T) {
 			"device_id": "BURBACH-2", "source_device_id": float64(200), "target_device_id": float64(501),
 			"source_school_id": float64(10), "target_school_id": float64(20),
 		}, auditChanges(t, entry))
+		assert.Equal(t, []organizationtenancy.DeviceLifecycleEntry{
+			{DeviceRowID: 200, Action: domain.DeviceLifecycleTransferredOut, OperatorID: testOperatorID},
+			{DeviceRowID: 501, Action: domain.DeviceLifecycleTransferredIn, OperatorID: testOperatorID},
+		}, h.devices.lifecycle, "both schools' histories name the move, neither names the other school (#2321)")
 		assert.Equal(t, []int64{10}, h.settings.tenants)
 		assert.False(t, h.settings.adminCalled)
 	})
@@ -1252,4 +1414,38 @@ func TestProvisioningTransferDevice(t *testing.T) {
 			assert.Empty(t, h.audit.entries)
 		})
 	}
+}
+
+func TestProvisioningDeviceHistory(t *testing.T) {
+	t.Parallel()
+
+	t.Run("names the school of every entry, so a transfer shows both", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		seedDeviceSchools(h)
+		h.devices.history = map[int64][]organizationtenancy.DeviceHistoryEntry{501: {
+			{ID: 3, SchoolID: 10, Action: "transferred_in", ActorKind: "operator"},
+			{ID: 2, SchoolID: 20, Action: "transferred_out", ActorKind: "operator"},
+			{ID: 1, SchoolID: 999, Action: "created", ActorKind: "school_staff"},
+		}}
+
+		entries, err := h.svc.DeviceHistory(context.Background(), 501)
+
+		require.NoError(t, err)
+		require.Len(t, entries, 3)
+		assert.Equal(t, "Burbach", entries[0].SchoolName)
+		assert.Equal(t, "Walbach", entries[1].SchoolName)
+		assert.Empty(t, entries[2].SchoolName, "a school the directory no longer lists stays unnamed")
+	})
+
+	t.Run("an unknown device is not found", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		seedDeviceSchools(h)
+
+		_, err := h.svc.DeviceHistory(context.Background(), 77)
+
+		var notFound *organizationtenancy.OperatorDeviceNotFoundError
+		require.ErrorAs(t, err, &notFound)
+	})
 }

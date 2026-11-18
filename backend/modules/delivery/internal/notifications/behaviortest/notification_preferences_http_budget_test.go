@@ -322,7 +322,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "pickup_upcoming",
     "label": "Anstehende Abholung",
-    "description": "Kurz bevor ein Kind abgeholt wird, das Sie gerade betreuen.",
+    "description": "Kurz bevor ein Kind abgeholt wird, das du gerade betreust.",
     "group": "abholung",
     "enabled": false,
     "available": true
@@ -337,8 +337,8 @@ var notificationBudgetCatalogues = map[string]string{
   },
   {
     "key": "activity_start",
-    "label": "Aktivität in Ihrem Raum",
-    "description": "Kurz bevor eine geplante Aktivität in einem Raum startet, den Sie gerade beaufsichtigen.",
+    "label": "Aktivität in deinem Raum",
+    "description": "Kurz bevor eine geplante Aktivität in einem Raum startet, den du gerade beaufsichtigst.",
     "group": "aktivitaeten",
     "enabled": false,
     "available": true
@@ -354,15 +354,15 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "activity_running_over",
     "label": "AG dauert länger",
-    "description": "Wenn eine gestartete Aktivität in einem Raum Ihrer Aufsicht nach dem geplanten Ende noch läuft.",
+    "description": "Wenn eine gestartete Aktivität in einem Raum deiner Aufsicht nach dem geplanten Ende noch läuft.",
     "group": "aktivitaeten",
     "enabled": false,
     "available": true
   },
   {
     "key": "my_activity_starting",
-    "label": "Ihr nächster Einsatz",
-    "description": "Kurz bevor ein Einsatz aus Ihrem Betreuungsplan beginnt, auch wenn Sie gerade keine Aufsicht führen.",
+    "label": "Dein nächster Einsatz",
+    "description": "Kurz bevor ein Einsatz aus deinem Betreuungsplan beginnt, auch wenn du gerade keine Aufsicht führst.",
     "group": "aktivitaeten",
     "enabled": false,
     "available": true
@@ -370,7 +370,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "student_absence_reported",
     "label": "Krankmeldung eines Kindes",
-    "description": "Wenn für ein Kind aus Ihren Gruppen eine Krankmeldung oder Entschuldigung für heute eingetragen wird.",
+    "description": "Wenn für ein Kind aus deinen Gruppen eine Krankmeldung oder Entschuldigung für heute eingetragen wird.",
     "group": "kinder",
     "enabled": false,
     "available": true
@@ -386,7 +386,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "staff_message",
     "label": "Nachrichten von Kolleginnen und Kollegen",
-    "description": "Wenn Ihnen jemand aus dem Team eine Nachricht im Team-Chat schreibt.",
+    "description": "Wenn dir jemand aus dem Team eine Nachricht im Team-Chat schreibt.",
     "group": "mitteilungen",
     "enabled": false,
     "available": false
@@ -402,7 +402,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "staff_qualification_own_expiry",
     "label": "Eigene Nachweise",
-    "description": "Wenn einer Ihrer Nachweise bald abläuft und am Ablauftag. Eine E-Mail bekommen Sie in jedem Fall.",
+    "description": "Wenn einer deiner Nachweise bald abläuft und am Ablauftag. Eine E-Mail bekommst du in jedem Fall.",
     "group": "mitteilungen",
     "enabled": false,
     "available": true
@@ -412,23 +412,23 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "school_class_absence_reported",
     "label": "Krankmeldungen meiner Klassen",
-    "description": "Wenn ein Kind aus Ihren Klassen für heute krankgemeldet oder entschuldigt wird.",
+    "description": "Wenn ein Kind aus deinen Klassen für heute krankgemeldet oder entschuldigt wird.",
     "group": "kinder",
     "enabled": false,
     "available": true
   },
   {
     "key": "class_timetable_changed",
-    "label": "Stundenplan Ihrer Klassen: heute und morgen",
-    "description": "Wenn sich der Unterrichtsschluss einer Klasse, der Sie zugeordnet sind oder deren Kinder in Ihrer Gruppe sind, für heute oder morgen ändert. Der Hinweis in moto kommt immer.",
+    "label": "Stundenplan deiner Klassen: heute und morgen",
+    "description": "Wenn sich der Unterrichtsschluss einer Klasse, der du zugeordnet bist oder deren Kinder in deiner Gruppe sind, für heute oder morgen ändert. Der Hinweis in moto kommt immer.",
     "group": "kinder",
     "enabled": true,
     "available": true
   },
   {
     "key": "class_timetable_changed_ahead",
-    "label": "Stundenplan Ihrer Klassen: spätere Tage",
-    "description": "Mitteilung aufs Handy auch, wenn sich der Unterrichtsschluss einer Ihrer Klassen in 2 bis 14 Tagen ändert. Der Hinweis in moto kommt immer.",
+    "label": "Stundenplan deiner Klassen: spätere Tage",
+    "description": "Mitteilung aufs Handy auch, wenn sich der Unterrichtsschluss einer deiner Klassen in 2 bis 14 Tagen ändert. Der Hinweis in moto kommt immer.",
     "group": "kinder",
     "enabled": false,
     "available": true
@@ -436,7 +436,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "staff_message",
     "label": "Nachrichten von Kolleginnen und Kollegen",
-    "description": "Wenn Ihnen jemand aus dem Team eine Nachricht im Team-Chat schreibt.",
+    "description": "Wenn dir jemand aus dem Team eine Nachricht im Team-Chat schreibt.",
     "group": "mitteilungen",
     "enabled": false,
     "available": false
@@ -444,7 +444,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "instance_cancelled",
     "label": "Absage eines Termins",
-    "description": "Wenn ein Termin oder Angebot abgesagt wird, für den Sie eingeplant sind. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Absagen in den nächsten 14 Tagen.",
+    "description": "Wenn ein Termin oder Angebot abgesagt wird, für den du eingeplant bist. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Absagen in den nächsten 14 Tagen.",
     "group": "termine",
     "enabled": true,
     "available": true
@@ -452,7 +452,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "school_parent_conference_booking",
     "label": "Buchungen am Elternsprechtag",
-    "description": "Wenn Eltern einen Termin an Ihrem Elternsprechtag buchen, verschieben oder absagen.",
+    "description": "Wenn Eltern einen Termin an deinem Elternsprechtag buchen, verschieben oder absagen.",
     "group": "termine",
     "enabled": false,
     "available": true
@@ -460,7 +460,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "instance_room_changed",
     "label": "Raumänderung heute oder morgen",
-    "description": "Wenn ein Termin, für den Sie eingeplant sind, heute oder morgen in einem anderen Raum stattfindet. Der Hinweis in moto kommt immer.",
+    "description": "Wenn ein Termin, für den du eingeplant bist, heute oder morgen in einem anderen Raum stattfindet. Der Hinweis in moto kommt immer.",
     "group": "termine",
     "enabled": true,
     "available": true
@@ -468,7 +468,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "instance_room_changed_later",
     "label": "Raumänderung an späteren Tagen",
-    "description": "Wenn ein Termin, für den Sie eingeplant sind, ab übermorgen in einem anderen Raum stattfindet. Der Hinweis in moto kommt immer. Die Mitteilung aufs Handy kommt nur, wenn Sie sie einschalten, und nur für die nächsten 14 Tage.",
+    "description": "Wenn ein Termin, für den du eingeplant bist, ab übermorgen in einem anderen Raum stattfindet. Der Hinweis in moto kommt immer. Die Mitteilung aufs Handy kommt nur, wenn du sie einschaltest, und nur für die nächsten 14 Tage.",
     "group": "termine",
     "enabled": false,
     "available": true
@@ -477,16 +477,24 @@ var notificationBudgetCatalogues = map[string]string{
 	"parent": `[
   {
     "key": "parent_request_decided",
-    "label": "Entscheidung über Ihre Anfrage",
-    "description": "Wenn die OGS über eine Ihrer Anfragen entschieden hat, etwa zu Betreuungszeiten, Stammdaten oder einer Abmeldung.",
+    "label": "Entscheidung über deine Anfrage",
+    "description": "Wenn die OGS über eine deiner Anfragen entschieden hat, etwa zu Betreuungszeiten, Stammdaten oder einer Abmeldung.",
     "group": "kinder",
     "enabled": false,
     "available": false
   },
   {
+    "key": "meal_plan_changed",
+    "label": "Speiseplan geändert",
+    "description": "Wenn sich das Essen an einem Tag ändert, an dem dein Kind ein Essen gebucht hat. Der Hinweis im Elternportal kommt immer. Die Mitteilung aufs Handy kommt nur, wenn du sie einschaltest.",
+    "group": "kinder",
+    "enabled": false,
+    "available": true
+  },
+  {
     "key": "parent_class_timetable_changed",
     "label": "Stundenplan der Klasse",
-    "description": "Wenn sich der Unterrichtsschluss in der Klasse Ihres Kindes ändert. Der Hinweis in moto kommt immer. Schalten Sie das hier ein, kommt bei Änderungen in den nächsten 14 Tagen auch eine Mitteilung aufs Handy.",
+    "description": "Wenn sich der Unterrichtsschluss in der Klasse deines Kindes ändert. Der Hinweis in moto kommt immer. Schaltest du das hier ein, kommt bei Änderungen in den nächsten 14 Tagen auch eine Mitteilung aufs Handy.",
     "group": "kinder",
     "enabled": false,
     "available": true
@@ -502,7 +510,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "parent_message",
     "label": "Neue Nachricht der OGS",
-    "description": "Wenn die OGS Ihnen zu einem Kind schreibt.",
+    "description": "Wenn die OGS dir zu einem Kind schreibt.",
     "group": "mitteilungen",
     "enabled": false,
     "available": false
@@ -510,7 +518,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "parent_billing_document",
     "label": "Neues Dokument vom Träger",
-    "description": "Wenn der Träger Ihnen ein Dokument schickt oder freigibt, zum Beispiel einen Vertrag.",
+    "description": "Wenn der Träger dir ein Dokument schickt oder freigibt, zum Beispiel einen Vertrag.",
     "group": "mitteilungen",
     "enabled": false,
     "available": true
@@ -518,7 +526,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "parent_appointment",
     "label": "Neuer oder geänderter Termin",
-    "description": "Wenn ein Termin für Sie angelegt, geändert oder abgesagt wird.",
+    "description": "Wenn ein Termin für dich angelegt, geändert oder abgesagt wird.",
     "group": "termine",
     "enabled": false,
     "available": true
@@ -526,7 +534,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "parent_appointment_reminder",
     "label": "Terminerinnerung",
-    "description": "Kurz vor einem Termin, zu dem Sie eingeladen sind.",
+    "description": "Kurz vor einem Termin, zu dem du eingeladen bist.",
     "group": "termine",
     "enabled": false,
     "available": true
@@ -534,7 +542,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "parent_care_cancelled",
     "label": "Betreuung fällt aus",
-    "description": "Wenn die OGS einen Betreuungstermin Ihres Kindes absagt.",
+    "description": "Wenn die OGS einen Betreuungstermin deines Kindes absagt.",
     "group": "termine",
     "enabled": false,
     "available": true
@@ -542,7 +550,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "parent_room_changed",
     "label": "Raumänderung heute oder morgen",
-    "description": "Wenn ein Termin Ihres Kindes heute oder morgen in einem anderen Raum stattfindet.",
+    "description": "Wenn ein Termin deines Kindes heute oder morgen in einem anderen Raum stattfindet.",
     "group": "termine",
     "enabled": true,
     "available": true
@@ -550,7 +558,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "parent_room_changed_later",
     "label": "Raumänderung an späteren Tagen",
-    "description": "Wenn ein Termin Ihres Kindes ab übermorgen in einem anderen Raum stattfindet. Die Mitteilung kommt nur, wenn Sie sie einschalten, und nur für die nächsten 14 Tage.",
+    "description": "Wenn ein Termin deines Kindes ab übermorgen in einem anderen Raum stattfindet. Die Mitteilung kommt nur, wenn du sie einschaltest, und nur für die nächsten 14 Tage.",
     "group": "termine",
     "enabled": false,
     "available": true

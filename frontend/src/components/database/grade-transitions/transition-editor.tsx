@@ -394,7 +394,7 @@ export function TransitionEditor({
                 onClick={() => addRow(classToAdd)}
                 disabled={!classToAdd}
                 tooltip="Nimmt die gewählte Klasse in den Wechsel auf."
-                disabledReason="Wählen Sie zuerst eine Klasse aus."
+                disabledReason="Wähle zuerst eine Klasse aus."
               >
                 Hinzufügen
               </Button>

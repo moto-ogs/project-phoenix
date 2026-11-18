@@ -450,7 +450,7 @@ describe("PresentChildrenPicker", () => {
       ).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Unter „Alle anwesenden“ sehen Sie alle Kinder in der OGS.",
+          "Unter „Alle anwesenden“ siehst du alle Kinder in der OGS.",
         ),
       ).toBeInTheDocument();
     });

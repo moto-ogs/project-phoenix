@@ -7,25 +7,25 @@ export function parentChildMissingTopic(): HelpTopic {
     id: HELP_TOPICS.parentChildMissing,
     title: "Mein Kind wird nicht angezeigt",
     question: "Warum sehe ich mein Kind nicht?",
-    summary: "Die OGS muss Ihren Zugang zum Kind erst freigeben.",
+    summary: "Die OGS muss deinen Zugang zum Kind erst freigeben.",
     group: "probleme",
     audience: "parent",
     icon: "Search",
     steps: [
-      "Prüfen Sie, ob Sie mit der richtigen E-Mail-Adresse angemeldet sind.",
-      "Haben Sie mehrere Kinder, prüfen Sie oben die Auswahl.",
-      "Schreiben Sie sonst der OGS und nennen Sie Name und Klasse des Kindes.",
+      "Prüfe, ob du mit der richtigen E-Mail-Adresse angemeldet bist.",
+      "Hast du mehrere Kinder, prüfe oben die Auswahl.",
+      "Schreibe sonst der OGS und nenne Name und Klasse des Kindes.",
     ],
-    result: "Sobald die OGS Ihren Zugang freigibt, erscheint das Kind.",
+    result: "Sobald die OGS deinen Zugang freigibt, erscheint das Kind.",
     notes: [
-      "Ein Kind kommt nicht automatisch zu Ihrem Konto. Die OGS verbindet beides.",
+      "Ein Kind kommt nicht automatisch zu deinem Konto. Die OGS verbindet beides.",
       "Eine abgegebene Anmeldung allein genügt nicht. Das Kind erscheint erst nach der Übernahme.",
     ],
     differences: [
-      "moto sagt, mit Ihrem Konto sei noch kein Kind verknüpft? Dann fehlt die Freigabe.",
+      "moto sagt, mit deinem Konto sei noch kein Kind verknüpft? Dann fehlt die Freigabe.",
     ],
     troubleshootingDetails: [
-      "Sie haben zwei E-Mail-Adressen? Melden Sie sich mit der an, an die die Einladung ging.",
+      "Du hast zwei E-Mail-Adressen? Melde dich mit der an, an die die Einladung ging.",
     ],
     related: [
       HELP_TOPICS.parentAccount,

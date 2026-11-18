@@ -84,7 +84,7 @@ describe("HolidayRegistrationStatusView (#6676)", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: "Ihre Anmeldung ist eingegangen",
+        name: "Deine Anmeldung ist eingegangen",
       }),
     ).toBeInTheDocument();
     expect(mockFetch).toHaveBeenCalledWith("t0ken");
@@ -108,7 +108,7 @@ describe("HolidayRegistrationStatusView (#6676)", () => {
     const ben = screen.getByRole("region", { name: "Ben" });
     expect(within(ben).getByText("Warteliste")).toBeInTheDocument();
     expect(
-      screen.getByText(/Dort steht Ihr Kind auf der Warteliste/),
+      screen.getByText(/Dort steht dein Kind auf der Warteliste/),
     ).toBeInTheDocument();
     expect(
       screen.getByText("Die Anmeldung ist verbindlich."),
@@ -122,7 +122,7 @@ describe("HolidayRegistrationStatusView (#6676)", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: "Ihre Anmeldung ist bestätigt",
+        name: "Deine Anmeldung ist bestätigt",
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("Die Zusage ist da.")).toBeInTheDocument();
@@ -141,7 +141,7 @@ describe("HolidayRegistrationStatusView (#6676)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Es gibt keinen nächsten Schritt. Bei Fragen wenden Sie sich bitte an den Träger.",
+        "Es gibt keinen nächsten Schritt. Bei Fragen wende dich bitte an den Träger.",
       ),
     ).toBeInTheDocument();
     const lia = screen.getByRole("region", { name: "Lia" });
@@ -164,7 +164,7 @@ describe("HolidayRegistrationStatusView (#6676)", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Bitte öffnen Sie ihn noch einmal aus Ihrer E-Mail/),
+      screen.getByText(/Bitte öffne ihn noch einmal aus deiner E-Mail/),
     ).toBeInTheDocument();
   });
 });

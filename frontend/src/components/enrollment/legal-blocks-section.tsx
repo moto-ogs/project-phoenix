@@ -32,6 +32,7 @@ import { Alert } from "~/components/ui/alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { Button, buttonClassName } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
+import { CheckboxCard } from "~/components/ui/checkbox-card";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { EmptyState } from "~/components/ui/empty-state";
 import { SpinnerIcon } from "~/components/ui/icons";
@@ -52,6 +53,7 @@ import {
   type LegalBlockDisplayMode,
 } from "~/lib/enrollment-form-schema-api";
 import {
+  GUARDIAN_AGREEMENT_LABEL,
   LEGAL_BLOCK_DISPLAY_MODE_PDF,
   LEGAL_BLOCK_DISPLAY_MODE_TEXT,
   checkboxLegalBlockKindFor,
@@ -71,6 +73,7 @@ export function LegalBlocksSection({
   blocks,
   standardBlocks,
   customOnly = false,
+  asksForHealthInformation = false,
   uploadAdapter,
   onChange,
   disabled,
@@ -78,6 +81,12 @@ export function LegalBlocksSection({
   blocks: FormLegalBlock[];
   standardBlocks: FormLegalBlock[];
   customOnly?: boolean;
+  /**
+   * The template asks for the child's health information, so the form adds
+   * the health consent (#2787). The section shows it, read-only, beside the
+   * blocks the school edits: the school sees every block parents see.
+   */
+  asksForHealthInformation?: boolean;
   uploadAdapter?: AttachmentUploadAdapter;
   onChange: Dispatch<SetStateAction<FormLegalBlock[]>>;
   disabled: boolean;
@@ -138,12 +147,12 @@ export function LegalBlocksSection({
     if (!file) return;
     const problem = enrollmentDocumentProblem(file);
     if (problem === "not_pdf") {
-      showMessage("Bitte wählen Sie eine PDF-Datei aus.");
+      showMessage("Bitte wähle eine PDF-Datei aus.");
       return;
     }
     if (problem === "too_large") {
       showMessage(
-        `Die Datei ist größer als ${MAX_ENROLLMENT_DOCUMENT_SIZE_LABEL}. Bitte wählen Sie eine kleinere Datei.`,
+        `Die Datei ist größer als ${MAX_ENROLLMENT_DOCUMENT_SIZE_LABEL}. Bitte wähle eine kleinere Datei.`,
       );
       return;
     }
@@ -384,42 +393,65 @@ export function LegalBlocksSection({
             disabled={disabled}
           />
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <LegalBlockModeControl
-            checkboxLabel={customOnly ? "Mit Häkchen" : "Mit Checkbox"}
-            isNotice={block.kind === "notice"}
-            disabled={disabled}
-            onModeChange={(isNotice) =>
-              updateBlock(index, {
-                kind: isNotice ? "notice" : checkboxLegalBlockKindFor(block),
-                required: isNotice ? false : block.required,
-              })
-            }
-          />
-          {block.kind !== "notice" &&
-          !(block.kind === "consent" && isStandard(block)) ? (
-            <InlineCheckbox
-              checked={block.required}
+        {block.kind === "privacy_notice" || block.key === "data_processing" ? (
+          <p className="mt-3 text-sm text-gray-600">
+            Ohne Häkchen: Eltern sehen die Datenschutzinformation und können sie
+            öffnen. moto speichert bei jeder Anmeldung, welche Fassung das
+            Formular gezeigt hat.
+          </p>
+        ) : (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <LegalBlockModeControl
+              checkboxLabel={customOnly ? "Mit Häkchen" : "Mit Checkbox"}
+              isNotice={block.kind === "notice"}
               disabled={disabled}
-              muted
-              onCheckedChange={(checked) =>
-                updateBlock(
-                  index,
-                  isStandard(block)
-                    ? { required: checked }
-                    : { required: checked, kind: customCheckboxKind(checked) },
-                )
+              onModeChange={(isNotice) =>
+                updateBlock(index, {
+                  kind: isNotice ? "notice" : checkboxLegalBlockKindFor(block),
+                  required: isNotice ? false : block.required,
+                })
               }
-            >
-              Muss bestätigt werden
-            </InlineCheckbox>
-          ) : null}
-        </div>
+            />
+            {block.kind !== "notice" &&
+            !(block.kind === "consent" && isStandard(block)) ? (
+              <InlineCheckbox
+                checked={block.required}
+                disabled={disabled}
+                muted
+                onCheckedChange={(checked) =>
+                  updateBlock(
+                    index,
+                    isStandard(block)
+                      ? { required: checked }
+                      : {
+                          required: checked,
+                          kind: customCheckboxKind(checked),
+                        },
+                  )
+                }
+              >
+                Muss bestätigt werden
+              </InlineCheckbox>
+            ) : null}
+          </div>
+        )}
         {block.kind === "consent" ? (
           <p className="mt-2 text-sm text-gray-600">
             Freiwillige Einwilligung: Eltern können das Formular auch ohne
             Häkchen abschicken.
           </p>
+        ) : null}
+        {block.kind === "consent" && !customOnly ? (
+          <CheckboxCard
+            className="mt-3"
+            checked={block.guardian_agreement === true}
+            onChange={(checked) =>
+              updateBlock(index, { guardian_agreement: checked })
+            }
+            label="Einvernehmen aller Sorgeberechtigten abfragen"
+            hint={`Für Fotos im Internet. Mit dem Häkchen bestätigen Eltern dann auch: „${GUARDIAN_AGREEMENT_LABEL}“`}
+            disabled={disabled}
+          />
         ) : null}
         {block.kind === "terms" && !isStandard(block) ? (
           <p className="mt-2 text-sm text-gray-600">
@@ -443,8 +475,8 @@ export function LegalBlocksSection({
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-600">
             {customOnly
-              ? "Hier ergänzen Sie Hinweise, PDFs und freiwillige Einwilligungen für diesen Zeitraum. Die festen Zustimmungen bleiben bestehen."
-              : "Die vier Standardblöcke starten mit den Texten aus den Einstellungen. Hier blenden Sie sie für diese Vorlage aus oder bearbeiten bewusst eine Abweichung. Eigene Zustimmungen bleiben direkt an diese Vorlage gebunden."}
+              ? "Hier ergänzt du Hinweise, PDFs und freiwillige Einwilligungen für diesen Zeitraum. Die festen Zustimmungen bleiben bestehen."
+              : "Die vier Standardblöcke starten mit den Texten aus den Einstellungen. Hier blendest du sie für diese Vorlage aus oder bearbeitest bewusst eine Abweichung. Eigene Zustimmungen bleiben direkt an diese Vorlage gebunden."}
           </p>
           {customOnly ? (
             // Said once for every entry below, not in each PDF part.
@@ -466,7 +498,7 @@ export function LegalBlocksSection({
           <Alert
             type="warning"
             announce="off"
-            message="Die Datenschutzinformation ist in dieser Vorlage deaktiviert. Stellen Sie sicher, dass Eltern die Datenschutzhinweise auf anderem Weg erhalten, zum Beispiel über den Elternbrief."
+            message="Die Datenschutzinformation ist in dieser Vorlage deaktiviert. Stelle sicher, dass Eltern die Datenschutzhinweise auf anderem Weg erhalten, zum Beispiel über den Elternbrief."
           />
         </div>
       ) : null}
@@ -551,6 +583,8 @@ export function LegalBlocksSection({
             </div>
           );
         })}
+
+        {asksForHealthInformation && !customOnly ? <HealthConsentCard /> : null}
 
         {customEntries.map(({ block, index }) =>
           renderBlockEditor({
@@ -692,7 +726,7 @@ function AGBTemplateSourceEditor({
               <p className="mt-0.5 text-sm text-gray-600">
                 {hasDocument
                   ? "Diese PDF wird in dieser Formularvorlage als Link angezeigt."
-                  : "Laden Sie die AGB / Teilnahmebedingungen als PDF hoch."}
+                  : "Lade die AGB / Teilnahmebedingungen als PDF hoch."}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -817,5 +851,27 @@ function InlineCheckbox({
       />
       <span>{children}</span>
     </label>
+  );
+}
+
+/**
+ * The health consent the form adds where the template asks for health
+ * information (#2787). Its wording is fixed by moto; the school cannot
+ * switch it off, because health data need the parents' explicit consent.
+ */
+function HealthConsentCard() {
+  return (
+    <div className="moto-content-surface rounded-xl border p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="text-sm font-semibold text-gray-900">
+          Einwilligung Gesundheitsangaben
+        </h3>
+        <StatusBadge tone="gray" compact wrap label="Von moto ergänzt" />
+      </div>
+      <p className="mt-1 text-sm leading-6 text-gray-600">
+        Erscheint, weil diese Vorlage nach Gesundheitsinformationen fragt. Ohne
+        Häkchen geht die Anmeldung trotzdem, nur ohne Gesundheitsangaben.
+      </p>
+    </div>
   );
 }

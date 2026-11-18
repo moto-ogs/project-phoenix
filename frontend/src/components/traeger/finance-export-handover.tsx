@@ -253,8 +253,8 @@ export function useFinanceHandover(
           {repeat
             ? `${fileLabel(repeat)} ist schon bei ${recipientOfFormat(recipients, repeat.format)?.name ?? "diesem Empfänger"} angekommen, ist noch unterwegs oder ihr Ergebnis ist unklar.`
             : null}{" "}
-          Übergeben Sie sie nur noch einmal, wenn der Empfänger sie nicht hat.
-          Sonst bucht er sie vielleicht doppelt.
+          Übergib sie nur noch einmal, wenn der Empfänger sie nicht hat. Sonst
+          bucht er sie vielleicht doppelt.
         </p>
       </ConfirmationModal>
     ),
@@ -277,14 +277,14 @@ function HandoverNoticeAlert({
       <Alert
         type="warning"
         title={`Für die ${HANDOVER_FORMAT_LABELS[notice.attempt.format]} fehlt der Empfänger`}
-        message={`${label} wurde nicht erstellt. Ordnen Sie der Datei zuerst einen bereiten Empfänger zu.`}
+        message={`${label} wurde nicht erstellt. Ordne der Datei zuerst einen bereiten Empfänger zu.`}
         onDismiss={onDismiss}
         action={
           <ButtonLink
             href={traegerPath(EXPORT_RECIPIENT_PATH)}
-            variant="ghost_tone"
+            variant="surface"
             size="compact"
-            tooltip="Öffnet die Empfänger, dort ordnen Sie die Datei zu."
+            tooltip="Öffnet die Empfänger, dort ordnest du die Datei zu."
           >
             Empfänger zuordnen
           </ButtonLink>
@@ -325,7 +325,7 @@ function HandoverNoticeAlert({
           </Button>
           <ButtonLink
             href={traegerPath(EXPORT_RECIPIENT_PATH)}
-            variant="ghost_tone"
+            variant="surface"
             size="compact"
             tooltip="Öffnet die Empfänger der Exporte zum Prüfen."
           >
@@ -350,37 +350,37 @@ function blockedText(
   return `${recipient.name}: Es fehlen noch Angaben.`;
 }
 
-/** The menu „Übergeben“ of one run: one entry per file the run has. */
-export function HandoverMenu({
-  run,
+/** What the handover entries of one run need. */
+interface HandoverEntriesArgs {
+  readonly recipients: ExportRecipientsPage | null;
+  readonly formats: readonly HandoverFormat[];
+  readonly onHandOver: (format: HandoverFormat) => void;
+  /** DATEV: every booking again, for a file the recipient lost. */
+  readonly onHandOverAll?: () => void;
+  /** The recipients exist for the Träger but this account may not read them. */
+  readonly recipientHidden?: boolean;
+}
+
+const HANDOVER_ICONS: Record<HandoverFormat, ReactNode> = {
+  sollstellung: <FileSpreadsheet className="h-4 w-4" aria-hidden />,
+  datev: <FileSpreadsheet className="h-4 w-4" aria-hidden />,
+  pain008: <Landmark className="h-4 w-4" aria-hidden />,
+};
+
+/**
+ * The handover entries of one run: one per file the run has, „Alle
+ * DATEV-Buchungen erneut“ and the way to the recipients for a file without a
+ * ready one. Empty while the recipients load. The export page puts them under
+ * „Übergabe“ in the row menu, the debit card behind „Übergeben“.
+ */
+export function handoverMenuItems({
   recipients,
   formats,
-  busy,
-  running,
   onHandOver,
   onHandOverAll,
   recipientHidden = false,
-  size = "compact",
-}: Readonly<{
-  /** The size of the actions beside it: compact in a table row, md in a card head. */
-  size?: "compact" | "md";
-  run: HandoverRun;
-  recipients: ExportRecipientsPage | null;
-  formats: readonly HandoverFormat[];
-  busy: boolean;
-  running: boolean;
-  onHandOver: (format: HandoverFormat) => void;
-  /** DATEV: every booking again, for a file the recipient lost. */
-  onHandOverAll?: () => void;
-  /** The recipients exist for the Träger but this account may not read them. */
-  recipientHidden?: boolean;
-}>) {
-  if ((!recipients && !recipientHidden) || formats.length === 0) return null;
-  const icons: Record<HandoverFormat, ReactNode> = {
-    sollstellung: <FileSpreadsheet className="h-4 w-4" aria-hidden />,
-    datev: <FileSpreadsheet className="h-4 w-4" aria-hidden />,
-    pain008: <Landmark className="h-4 w-4" aria-hidden />,
-  };
+}: HandoverEntriesArgs): OverflowMenuItem[] {
+  if ((!recipients && !recipientHidden) || formats.length === 0) return [];
   // Without the right to read the recipients every file is offered; the
   // server names a missing recipient.
   const ready = recipients
@@ -393,13 +393,13 @@ export function HandoverMenu({
     const recipient = recipientOfFormat(recipients, format);
     return recipient
       ? `${recipient.name} (${destinationText(recipient.host, recipient.remoteDirectory)})`
-      : "dem Empfänger Ihres Trägers";
+      : "dem Empfänger deines Trägers";
   };
-  const items: OverflowMenuItem[] = [
+  return [
     ...ready.map((format) => ({
       label: `${HANDOVER_FORMAT_LABELS[format]} übergeben`,
       description: `Erstellt die Datei und legt sie bei ${target(format)} ab.`,
-      icon: icons[format],
+      icon: HANDOVER_ICONS[format],
       onClick: () => onHandOver(format),
     })),
     ...(onHandOverAll && ready.includes("datev")
@@ -430,23 +430,34 @@ export function HandoverMenu({
         ]
       : []),
   ];
+}
+
+/** The menu „Übergeben“ of one run, beside the download of the debit file. */
+export function HandoverMenu({
+  run,
+  busy,
+  running,
+  ...entries
+}: Readonly<
+  HandoverEntriesArgs & {
+    run: HandoverRun;
+    busy: boolean;
+    running: boolean;
+  }
+>) {
+  const items = handoverMenuItems(entries);
+  if (items.length === 0) return null;
   return (
     <OverflowMenu
       ariaLabel={`Dateien von ${run.label} an die Empfänger übergeben`}
       disabled={busy}
       items={items}
-      triggerButton={{ variant: size === "md" ? "outline" : "surface", size }}
-      // In a card head it stands beside full-width actions on a phone.
-      wrapperClassName={size === "md" ? "w-full min-[480px]:w-auto" : undefined}
-      triggerClassName={
-        size === "md"
-          ? "w-full justify-center gap-1.5 whitespace-nowrap"
-          : "gap-1.5 whitespace-nowrap"
-      }
+      triggerButton={{ variant: "outline", size: "md" }}
+      triggerClassName="gap-1.5 whitespace-nowrap"
       triggerContent={
         <>
           <Send className="h-4 w-4" aria-hidden />
-          {running ? "Wird übergeben…" : "Übergeben"}
+          {running ? "Wird übergeben …" : "Übergeben"}
           <ChevronDown className="h-4 w-4" aria-hidden />
         </>
       }

@@ -11,7 +11,7 @@ export function bankDetailsTopic(): HelpTopic {
     id: HELP_TOPICS.leadBankDetails,
     title: "Bankverbindungen einsehen",
     question: "Wo finde ich die Bankverbindungen der Familien?",
-    summary: "Sie sehen je Kind die hinterlegte IBAN und können sie ausgeben.",
+    summary: "Du siehst je Kind die hinterlegte IBAN und kannst sie ausgeben.",
     group: "elternarbeit",
     audience: "lead",
     icon: "Landmark",
@@ -19,19 +19,19 @@ export function bankDetailsTopic(): HelpTopic {
     imageAlt:
       "Das Fenster zum Exportieren der Bankverbindungen mit der Auswahl des Formats.",
     steps: [
-      "Klappen Sie in der Seitenleiste `Eltern` auf.",
-      "Öffnen Sie `Bankverbindungen`.",
-      "Wählen Sie `Alle Kinder` oder `Ohne IBAN`.",
-      "Öffnen Sie oben rechts das Menü mit den drei Punkten.",
-      "Wählen Sie `Exportieren`.",
-      "Wählen Sie unter `Format` `Excel`, `PDF` oder `Word`.",
-      "Wählen Sie `Herunterladen`.",
+      "Klappe in der Seitenleiste `Eltern` auf.",
+      "Öffne `Bankverbindungen`.",
+      "Wähle `Alle Kinder` oder `Ohne IBAN`.",
+      "Öffne oben rechts das Menü mit den drei Punkten.",
+      "Wähle `Exportieren`.",
+      "Wähle unter `Format` `Excel`, `PDF` oder `Word`.",
+      "Wähle `Herunterladen`.",
     ],
     result:
       "Die Liste wird als Datei erstellt und heruntergeladen. Sie enthält immer alle Kinder, auch wenn die Liste gerade gefiltert ist.",
     notes: [
-      "Die IBAN tragen Sie beim Kind ein, im Reiter `Erziehungsberechtigte`.",
-      "Die Datei enthält die vollständigen IBANs und wird protokolliert. Geben Sie sie nicht per E-Mail weiter.",
+      "Die IBAN trägst du beim Kind ein, im Reiter `Erziehungsberechtigte`.",
+      "Die Datei enthält die vollständigen IBANs und wird protokolliert. Gib sie nicht per E-Mail weiter.",
       "`Ohne IBAN` zeigt, bei welchen Kindern noch etwas fehlt.",
     ],
     differences: [
@@ -39,7 +39,7 @@ export function bankDetailsTopic(): HelpTopic {
       "Steht beim Kontoinhaber `Nicht zugeordnet`, ist beim Kind noch niemand als Kontoinhaber eingetragen.",
     ],
     troubleshootingDetails: [
-      "Fehlt `Bankverbindungen` in der Seitenleiste? Dafür braucht es ein eigenes Recht. Fragen Sie Ihre Leitung.",
+      "Fehlt `Bankverbindungen` in der Seitenleiste? Dafür braucht es ein eigenes Recht. Frage deine Leitung.",
       "`Exportieren` bleibt grau? Dann ist die Liste leer.",
     ],
     related: [

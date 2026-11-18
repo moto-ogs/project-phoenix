@@ -27,6 +27,7 @@ import {
   type HelpTopicId,
 } from "~/lib/help-topics";
 import { createLogger } from "~/lib/logger";
+import { useHasOwnStaff } from "~/lib/hooks/use-user-context";
 import { useShellAuthSafe } from "~/lib/shell-auth-context";
 import {
   setStaffOnboardingDismissed,
@@ -56,10 +57,10 @@ import { useStaffOnboarding } from "./use-staff-onboarding";
 const logger = createLogger({ component: "StaffOnboardingWizard" });
 
 const TOUR_LEFT =
-  "Die Tour ist beendet, weil Sie eine andere Seite geöffnet haben. Mit „Zeig es mir“ starten Sie sie neu.";
-const CLICK_ACTION = "Klicken Sie auf die grün umrandete Stelle.";
+  "Die Tour ist beendet, weil du eine andere Seite geöffnet hast. Mit „Zeig es mir“ startest du sie neu.";
+const CLICK_ACTION = "Klicke auf die grün umrandete Stelle.";
 const TARGET_MISSING =
-  "Diese Stelle ist gerade nicht zu sehen. Vielleicht fehlt Ihnen ein Recht, oder die Seite lädt noch.";
+  "Diese Stelle ist gerade nicht zu sehen. Vielleicht fehlt dir ein Recht, oder die Seite lädt noch.";
 
 type RunAction = (
   action: () => Promise<StaffOnboardingState>,
@@ -120,6 +121,7 @@ function StaffOnboardingForPerson() {
   const webAttendance = useAttendanceWebEnabled();
   const tenantSlug = useTenantSlugSafe();
   const { groups } = useOptionalSupervision();
+  const hasOwnStaff = useHasOwnStaff();
 
   const hasOwnGroup =
     !openCareGroupMode && groups.some((group) => group.is_personal !== false);
@@ -143,6 +145,7 @@ function StaffOnboardingForPerson() {
     () =>
       state
         ? staffOnboardingSteps(state, {
+            hasOwnStaff,
             hasOwnGroup,
             webAttendance,
             canSeeCalendar,
@@ -154,6 +157,7 @@ function StaffOnboardingForPerson() {
         : [],
     [
       state,
+      hasOwnStaff,
       hasOwnGroup,
       webAttendance,
       canSeeCalendar,
@@ -330,7 +334,7 @@ function StaffOnboardingForPerson() {
         onCollapse={() => setView("beacon")}
         onDismiss={() => setConfirmDismiss(true)}
         finishLabel="Abschließen"
-        finishTooltip="Blendet die Checkliste sofort für Sie aus."
+        finishTooltip="Blendet die Checkliste sofort für dich aus."
         onFinish={() => void run(() => setStaffOnboardingDismissed(true))}
         finished={
           <>
@@ -339,7 +343,7 @@ function StaffOnboardingForPerson() {
                 Geschafft!
               </h3>
               <p className="text-sm text-gray-700">
-                Sie kennen jetzt die wichtigsten Handgriffe in moto.
+                Du kennst jetzt die wichtigsten Handgriffe in moto.
               </p>
             </div>
             <TopicList
@@ -375,11 +379,11 @@ function StaffOnboardingForPerson() {
         loadingText="Wird ausgeblendet…"
       >
         <p className="text-sm text-gray-700">
-          Die Checkliste verschwindet für Sie in jeder OGS, in der Sie arbeiten.
-          Sie können sie nicht wieder einblenden.
+          Die Checkliste verschwindet für dich in jeder OGS, in der du
+          arbeitest. Du kannst sie nicht wieder einblenden.
         </p>
         <p className="mt-2 text-sm text-gray-700">
-          Die Anleitungen zu allen Schritten finden Sie weiter unter „Hilfe“.
+          Die Anleitungen zu allen Schritten findest du weiter unter „Hilfe“.
         </p>
       </ConfirmationModal>
     </>

@@ -17,8 +17,8 @@ import {
 import { TraegerDocumentUploadModal } from "~/components/traeger/traeger-document-upload-modal";
 import { useTraegerDocuments } from "~/components/traeger/use-traeger-documents";
 import {
-  TraegerListExportMenu,
   traegerExportScope,
+  useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { Button } from "~/components/ui/button";
@@ -26,7 +26,7 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { FileTypeIcon } from "~/components/ui/file-type-icon";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useToast } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import { formatBerlinDate } from "~/lib/date-helpers";
@@ -127,51 +127,51 @@ export default function TraegerDocumentsPage() {
   const released = documents.filter(
     (document) => document.releases.length > 0,
   ).length;
+  // #7405: the upload is the one visible head action; the export sits in
+  // the page menu under „Herunterladen“.
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/documents/export", format),
+    scope: traegerExportScope(),
+    fallbackName: "dokumente",
+    errorObject: "die Liste der Dokumente",
+    unavailable: documents.length === 0,
+  });
 
   return (
     <TenantPage
       title="Dokumente"
-      info="Hier teilen Sie vorhandene Dokumente und Listen mit Eltern und Schulen, zum Beispiel eine Hausordnung oder einen Elternbrief. Ein hochgeladenes Dokument sieht noch niemand. Erst wenn Sie es freigeben, finden Eltern es in der Eltern-App und die OGS-Leitung in moto unter „Dateien“. Hochladen, freigeben und löschen darf, wer die Rolle „Dokumente“ hat."
+      info="Hier teilst du vorhandene Dokumente und Listen mit Eltern und Schulen, zum Beispiel eine Hausordnung oder einen Elternbrief. Ein hochgeladenes Dokument sieht noch niemand. Erst wenn du es freigibst, finden Eltern es in der Eltern-App und die OGS-Leitung in moto unter „Dateien“. Hochladen, freigeben und löschen darf, wer die Rolle „Dokumente“ hat."
       stats={
         documents.length > 0 ? (
-          <span className="flex flex-wrap items-center gap-2">
-            <span>
-              {documents.length === 1
-                ? "1 Dokument"
-                : `${documents.length} Dokumente`}
-            </span>
-            <StatusBadge label={`${released} freigegeben`} tone="green" />
-          </span>
+          <TenantPageStats
+            items={[
+              {
+                value: documents.length,
+                label: documents.length === 1 ? "Dokument" : "Dokumente",
+              },
+              { value: released, label: "freigegeben" },
+            ]}
+          />
         ) : null
       }
       statsLoading={isLoading}
       error={loadError ?? schoolsError}
+      overflowMenu={exportItems}
       actions={
-        <>
-          <TraegerListExportMenu
-            download={(format) =>
-              downloadTraegerList("/api/traeger/documents/export", format)
-            }
-            scope={traegerExportScope()}
-            ariaLabel="Dokumente herunterladen"
-            fallbackName="dokumente"
-            errorObject="die Liste der Dokumente"
-            unavailable={documents.length === 0}
-          />
-          {canManage ? (
-            <Button
-              type="button"
-              variant="primary"
-              size="md"
-              className="gap-2"
-              tooltip="Fügt ein Dokument hinzu, noch ohne Freigabe für Eltern und Schulen."
-              onClick={() => setUploading(true)}
-            >
-              <UploadSimpleIcon className="h-4 w-4" aria-hidden="true" />
-              Dokument hochladen
-            </Button>
-          ) : null}
-        </>
+        canManage ? (
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            className="gap-2"
+            tooltip="Fügt ein Dokument hinzu, noch ohne Freigabe für Eltern und Schulen."
+            onClick={() => setUploading(true)}
+          >
+            <UploadSimpleIcon className="h-4 w-4" aria-hidden="true" />
+            Dokument hochladen
+          </Button>
+        ) : null
       }
       overlays={
         <TraegerDocumentUploadModal
@@ -204,7 +204,7 @@ export default function TraegerDocumentsPage() {
             title="Noch kein Dokument."
             description={
               canManage
-                ? "Laden Sie oben ein Dokument hoch. Danach geben Sie es für Eltern oder Schulen frei."
+                ? "Lade oben ein Dokument hoch. Danach gibst du es für Eltern oder Schulen frei."
                 : "Sobald jemand mit der Rolle „Dokumente“ ein Dokument hochlädt, steht es hier."
             }
           />

@@ -73,6 +73,14 @@
       "target_owner": "delivery-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.TenantObjectSources.TenantObjects",
+      "binding_digest": "4fa982bc457e3abe2dd7f635bbf24b46",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ErasureFiles.TenantObjects",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.TenantObjectSources.TenantObjects",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/operatordashboard/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DashboardCounts, github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DashboardOrganization, github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DashboardSchool, github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DashboardPWAUsage].AllSchoolsPWAUsage",
       "binding_digest": "07cc4d00b9155d85639ca8d58a2892f8",
       "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.OperatorDashboard.AllSchoolsPWAUsage",
@@ -473,11 +481,35 @@
       "target_owner": "device-fleet"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningDevices.ListDeviceLifecycle",
+      "binding_digest": "c9cafa29670ae194c3a91edb8433cccf",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.ProvisioningDevices.ListDeviceLifecycle",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet.LifecycleHistory.ListLifecycleEvents",
+      "target_owner": "device-fleet"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningDevices.ListDevicesByTenant",
       "binding_digest": "28a3429271477a61eb24451aa63ed51a",
       "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.ProvisioningDevices.ListDevicesByTenant",
       "source_owner": "organization-tenancy",
       "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet.Capability.ListDevicesByTenant",
+      "target_owner": "device-fleet"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningDevices.RecordDeviceLifecycle",
+      "binding_digest": "6d215287ace35ee8c31c96e0ff2d1655",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.ProvisioningDevices.RecordDeviceLifecycle",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet.LifecycleChanges",
+      "target_owner": "device-fleet"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningDevices.RecordDeviceLifecycle",
+      "binding_digest": "a41f26daac95a6e7d4d5fa4e301d9c72",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.ProvisioningDevices.RecordDeviceLifecycle",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet.LifecycleHistory.RecordLifecycleEvent",
       "target_owner": "device-fleet"
     },
     {

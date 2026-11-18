@@ -74,6 +74,13 @@ wird mit ihm zurückgegeben und gelöscht. Die Sicht
 `platform.delivery_guardian_contacts` speichert nichts; sie nennt dem Versand die
 Profil- und Kontoadresse je Elternkontakt samt Stopp.
 
+Migration 20261117221357 ergänzt `users.guardian_profiles.salutation` (#7362):
+die Anrede, die eine sorgeberechtigte Person im Eltern-Portal freiwillig für
+sich selbst wählt (`ms` = Frau, `mr` = Herr, leer = keine Angabe). Sie wählt nur
+das Grußwort deutscher E-Mails („Liebe“/„Lieber“ mit Vornamen); ohne Angabe
+bleibt die Begrüßung neutral. Das
+Feld gehört zum Elternkontakt und wird mit ihm zurückgegeben und gelöscht.
+
 Migration 1.15.727 ergänzt `platform.realtime_notifications` (#5504): eine
 Kopie eines In-App-Hinweises mit Empfängern, die andere API-Prozesse zwei
 Minuten lang lesen. Bei Eltern-Hinweisen enthält das JSON zusätzlich die
@@ -123,9 +130,10 @@ Die manuelle Ergänzungs-/Drittpersonenprüfung und Schulfreigabe sind Bestandte
 des [Verfahrens](../operations/auskunft-und-rueckgabe.md#6-personenauskunft-auf-weisung-der-schule),
 nicht durch `COMPLETE` erledigt.
 
-**Offen:** produktiver Nachweis, manuelle Nebensystemschritte,
-Wiederholung nach Restore (3837-d), organisatorische Fristenbestätigung
-(3838-d) und Data-Act-Abgleich (3838-e).
+**Offen:** produktiver Nachweis, manuelle Nebensystemschritte und
+Wiederholung nach Restore (3837-d). Die Fristen (3838-d) sind am 16.11.2026
+bestätigt. Den Data-Act-Abgleich (3838-e) erfüllen Register und HTTPS-Abruf
+(#6548, #6550).
 Die Katalogeinträge selbst sind
 keine Berechtigungen und kein produktiver Durchführungsnachweis.
 Die breiten Ausschlüsse geheimer/undurchsichtiger Container bleiben wirksam;

@@ -9,7 +9,7 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { formErrorMessage } from "~/components/ui/form-error";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { TileCard } from "~/components/ui/tile-card";
 import { messagesTabs } from "~/components/messaging/messages-tabs";
 import { NewGroupMessageModal } from "~/components/messaging/new-group-message-modal";
@@ -67,9 +67,18 @@ function GroupMessagesContent() {
     (Boolean(error) && formErrorMessage(loadError) === null);
   const openCount = threads.filter((thread) => !thread.closed_at).length;
   const summary =
-    data === undefined
-      ? null
-      : `${threads.length} ${threads.length === 1 ? "Gruppennachricht" : "Gruppennachrichten"} · ${openCount} offen`;
+    data === undefined ? null : (
+      <TenantPageStats
+        items={[
+          {
+            value: threads.length,
+            label:
+              threads.length === 1 ? "Gruppennachricht" : "Gruppennachrichten",
+          },
+          { value: openCount, label: "offen" },
+        ]}
+      />
+    );
 
   const composeButton = messagingEnabled ? (
     <Button
@@ -101,7 +110,7 @@ function GroupMessagesContent() {
               icon: <MotoConceptIcon concept={groupsConcept} size={48} />,
               title: "Noch keine Gruppennachrichten",
               description: messagingEnabled
-                ? "Mit einer Gruppennachricht schreiben Sie allen Eltern einer Gruppe, Klasse oder AG. Eltern antworten nur Ihnen."
+                ? "Mit einer Gruppennachricht schreibst du allen Eltern einer Gruppe, Klasse oder AG. Eltern antworten nur dir."
                 : "Der Nachrichtenaustausch mit den Eltern ist für diese Schule ausgeschaltet.",
             }
           : null

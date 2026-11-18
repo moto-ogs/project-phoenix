@@ -17,7 +17,7 @@ import {
   UnpublishAnnouncementDialog,
 } from "~/components/announcements/announcement-lifecycle-dialogs";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { formatDate } from "~/lib/date-helpers";
@@ -96,12 +96,20 @@ export default function SchoolParentLetterPage() {
     onUnpublish: () => setAction("unpublish"),
     onDelete: () => setAction("delete"),
   });
-  const statusLine = [
-    schoolClassLabel(letter.sender_school_class ?? ""),
-    letter.published_at
-      ? `Gesendet ${formatDate(letter.published_at)}`
-      : "Noch nicht gesendet",
-  ].join(" · ");
+  const classLabel = schoolClassLabel(letter.sender_school_class ?? "");
+  const statusLine = (
+    <TenantPageStats
+      items={[
+        // Ohne Klasse kein leerer Platz vor der Versandangabe.
+        ...(classLabel ? [{ label: classLabel }] : []),
+        {
+          label: letter.published_at
+            ? `Gesendet ${formatDate(letter.published_at)}`
+            : "Noch nicht gesendet",
+        },
+      ]}
+    />
+  );
 
   return (
     <TenantPage

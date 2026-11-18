@@ -58,12 +58,20 @@ evidence: [rollout and recovery](../operations/geraete-zugang-3841.md).
 
 ### Device PIN resolution (slice 3841-b)
 
-The school setting `security.ogs_device_pin` is authoritative, including its
-unchanged registry default. Settings read errors and explicit empty values reject
+The school setting `security.ogs_device_pin` is authoritative. Its registry
+default is empty (#7175): a school without a PIN of its own cannot sign in at
+the tablet until an admin sets one. Settings read errors and empty values reject
 PIN-protected requests with the existing `401 / iot.device_pin_invalid` envelope;
 no `OGS_DEVICE_PIN` fallback exists. Missing resolver wiring fails at construction.
 Device-only routes remain PIN-free. Already deployed kiosks handle the same code
 and headers, so no wire transition or compatibility-removal slice is needed.
+Migration `20261118010000` stored the former default 1234 for every NFC school
+without a PIN, so no tablet stopped on that deployment. Writes refuse PINs
+that are easy to guess (`settings.device_pin_too_simple`), and
+`GET /api/settings/device-pin-status` (`config:manage`) tells the tenant portal
+to show its notice while NFC-Anwesenheit is booked and the PIN is empty or
+easy to guess. A kiosk signed in with the old PIN reads
+`iot.device_pin_invalid` after the change and asks for the new one.
 
 ### Kiosk error codes
 
@@ -145,9 +153,9 @@ texts), `backend/api/iot_error_report_composition.go` (forwarding),
 | 400 | `error report project is not allowed` | The envelope names another project or no DSN |
 | 401 / 403 | Device key strings above | Key missing, invalid, or device inactive |
 | 429 | `error report too large` | Envelope over 1 MB |
-| 429 | `too many error reports` | Over 60 envelopes per minute and device (burst 60, per process); `Retry-After: 60` |
+| 429 | `too many error reports` | Over 60 envelopes per minute and device across all API replicas (burst 60); `Retry-After: 60` |
 | 502 | `error reporting service unavailable` | Sentry unreachable or answering 5xx; logged, never a Sentry event |
-| 503 | `error reporting is not configured` | The backend runs without Sentry (local development) |
+| 503 | `error reporting is not configured` | The backend runs without Sentry (local development) or cannot check the quota |
 
 The 502 is one of two 5xx answers that `ServerErrorReporting` does not report
 (`common.SkipServerErrorReport`); reporting it could only loop. The other is the
@@ -400,7 +408,11 @@ processes and are removed by the existing stale-window cleanup after one day.
 Legacy plaintext counters are moved to hashed keys on their next request,
 without resetting the active quota. Rotating the signing secret starts new
 hashed windows, as it invalidates existing authentication material.
-The public routes retain their separate IP-based abuse limit.
+The public routes retain their separate IP-based abuse limit. Auth,
+email confirmation, invitations, public enrollment and holiday links, and
+data-return retrieval share their IP-based quotas across API replicas. The
+kiosk error-report quota is shared per device. The general request limiter
+remains per replica. See [replica runtime state](operations.md#replica-runtime-state).
 
 ## Mail provider webhook
 

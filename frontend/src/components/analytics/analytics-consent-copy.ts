@@ -40,29 +40,29 @@ function germanCopy(
     title: "Nutzungsanalyse",
     promptTitle: "Nutzungsanalyse erlauben?",
     promptIntro:
-      "moto möchte zählen, welche Seiten und Schaltflächen Sie nutzen. So machen wir moto besser.",
+      "moto möchte zählen, welche Seiten und Schaltflächen du nutzt. So machen wir moto besser.",
     promptPrivacy: "Namen und Eingaben sieht moto dabei nicht.",
-    promptNoDisadvantage: "Wenn Sie ablehnen, können Sie moto genauso nutzen.",
-    promptChangeLater: `Ihre Wahl gilt für Ihr Konto. Sie können sie jederzeit unter „${place}“ ändern.`,
+    promptNoDisadvantage: "Wenn du ablehnst, kannst du moto genauso nutzen.",
+    promptChangeLater: `Deine Wahl gilt für dein Konto. Du kannst sie jederzeit unter „${place}“ ändern.`,
     allow: "Erlauben",
     refuse: "Ablehnen",
     allowTooltip: recordings
-      ? "Erlaubt Nutzungsanalyse und mögliche Aufzeichnungen für Ihr Konto, ändern geht jederzeit."
-      : "Erlaubt die Nutzungsanalyse für Ihr Konto, ändern geht jederzeit.",
+      ? "Erlaubt Nutzungsanalyse und mögliche Aufzeichnungen für dein Konto, ändern geht jederzeit."
+      : "Erlaubt die Nutzungsanalyse für dein Konto, ändern geht jederzeit.",
     refuseTooltip:
-      "Lehnt die Nutzungsanalyse für Ihr Konto ab, moto zählt dann nichts.",
+      "Lehnt die Nutzungsanalyse für dein Konto ab, moto zählt dann nichts.",
     saving: "Wird gespeichert…",
     closeLabel: "Später entscheiden",
     sectionDescription:
-      "Darf moto zählen, welche Seiten und Schaltflächen Sie nutzen? Namen und Eingaben sieht moto dabei nicht. Das entscheiden nur Sie.",
+      "Darf moto zählen, welche Seiten und Schaltflächen du nutzt? Namen und Eingaben sieht moto dabei nicht. Das entscheidest nur du.",
     switchLabel: "Nutzungsanalyse erlauben",
     schoolOff:
-      "Ihre Schule hat die Nutzungsanalyse ausgeschaltet. Ihre Wahl gilt, sobald die Schule sie wieder einschaltet.",
+      "Deine Schule hat die Nutzungsanalyse ausgeschaltet. Deine Wahl gilt, sobald die Schule sie wieder einschaltet.",
     recordingActive: recordings
-      ? "Ihre Schule hat zusätzlich Aufzeichnungen erlaubt. Ihre Wahl gilt auch dafür. Texte, Eingaben und Bilder sind darin unkenntlich. Niemand wird damit bewertet."
+      ? "Deine Schule hat zusätzlich Aufzeichnungen erlaubt. Deine Wahl gilt auch dafür. Texte, Eingaben und Bilder sind darin unkenntlich. Niemand wird damit bewertet."
       : "",
     recordingPossible: recordings
-      ? "Erlaubt Ihre Schule Aufzeichnungen, gilt Ihre Wahl auch dafür. Texte, Eingaben und Bilder sind darin unkenntlich."
+      ? "Erlaubt deine Schule Aufzeichnungen, gilt deine Wahl auch dafür. Texte, Eingaben und Bilder sind darin unkenntlich."
       : "",
     errorObject: "die Einstellung zur Nutzungsanalyse",
   };

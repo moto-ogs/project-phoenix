@@ -67,13 +67,12 @@ interface PeriodHint {
 
 function periodHint(period: Period): PeriodHint | null {
   if (!period.from)
-    return { field: "from", text: "Bitte wählen Sie ein Von-Datum." };
-  if (!period.to)
-    return { field: "to", text: "Bitte wählen Sie ein Bis-Datum." };
+    return { field: "from", text: "Bitte wähle ein Von-Datum." };
+  if (!period.to) return { field: "to", text: "Bitte wähle ein Bis-Datum." };
   if (period.to < period.from)
     return { field: "to", text: "Das Bis-Datum liegt vor dem Von-Datum." };
   if (periodDays(period) > MAX_PERIOD_DAYS)
-    return { field: "to", text: "Wählen Sie höchstens ein Schuljahr." };
+    return { field: "to", text: "Wähle höchstens ein Schuljahr." };
   return null;
 }
 
@@ -269,8 +268,8 @@ export default function SchoolAbsenceListPage() {
       ) : noClasses ? (
         <SectionCard>
           <EmptyState
-            title="Ihnen ist keine Klasse zugeordnet."
-            description="Die OGS-Leitung ordnet Ihnen eine Klasse zu."
+            title="Dir ist keine Klasse zugeordnet."
+            description="Die OGS-Leitung ordnet dir eine Klasse zu."
           />
         </SectionCard>
       ) : (

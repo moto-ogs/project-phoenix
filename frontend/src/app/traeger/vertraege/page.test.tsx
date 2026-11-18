@@ -472,7 +472,7 @@ describe("TraegerVertraegePage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getAllByText(
-        /Zum Senden stellen Sie die Schule auf „Später verschicken“\./,
+        /Zum Senden stellst du die Schule auf „Später verschicken“\./,
       ),
     ).toHaveLength(3);
     expect(

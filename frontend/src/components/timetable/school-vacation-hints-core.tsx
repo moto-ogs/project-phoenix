@@ -30,6 +30,7 @@ import { Button, ButtonLink } from "~/components/ui/button";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
@@ -49,7 +50,7 @@ import { useTenantAwarePath } from "~/lib/tenant-path";
 const logger = createLogger({ component: "SchoolVacationHints" });
 
 const DECISION_TEXT =
-  "Findet in dieser Zeit Betreuung statt? Wenn nicht, sagen Sie die Termine ab oder tragen Sie Schließtage ein.";
+  "Findet in dieser Zeit Betreuung statt? Wenn nicht, sage die Termine ab oder trage Schließtage ein.";
 
 /** „vom 23.12.2026 bis 06.01.2027“, ein einzelner Tag als „am 18.05.2027“. */
 function vacationRangeLabel(hint: SchoolVacationHint): string {
@@ -253,9 +254,7 @@ function SchoolVacationHintList({
                   {vacationRangeLabel(hint)} · {regelterminLabel(hint.count)}
                 </p>
               </div>
-              <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
-                {actions(hint, true)}
-              </div>
+              <ResponsiveRowActions>{actions(hint, true)}</ResponsiveRowActions>
             </ResponsiveActionRow>
           ))}
         </ResponsiveActionList>

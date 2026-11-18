@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -11,8 +12,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	iotAPI "github.com/moto-ogs/project-phoenix/api/iot/compose"
+	customMiddleware "github.com/moto-ogs/project-phoenix/middleware"
 	carePlanModule "github.com/moto-ogs/project-phoenix/modules/careplan"
 	eventContract "github.com/moto-ogs/project-phoenix/modules/communication/eventcontract"
+	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	devicefleetCompose "github.com/moto-ogs/project-phoenix/modules/devicefleet/compose"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth"
 	devicescanCompose "github.com/moto-ogs/project-phoenix/modules/devicescan/compose"
@@ -59,7 +62,7 @@ func newDeviceAuthentication(iot devicefleetCompose.IoTService, organizations or
 // mountPresenceRoutes serves the attendance routes and the kiosk API. Both
 // move children through one open-room move over the Student Presence owner.
 func mountPresenceRoutes(
-	tenant chi.Router, db transactionruntime.Database, logger *slog.Logger, errorReportDSN string,
+	tenant chi.Router, db transactionruntime.Database, logger *slog.Logger, errorReportDSN string, limits customMiddleware.RateLimitStore,
 	deviceAuth *deviceauth.Authenticators, presence studentpresence.Owner, active studentpresence.Presence,
 	facilities facilitiesModule.Capability, timetableOwner timetableModule.Capability, timetableRepos timetableCompose.Repositories,
 	days owners.TimetableDays, persons peopledirectory.Capability, users peoplePorts.PersonDirectory, caller *owners.CallerRows,
@@ -82,7 +85,7 @@ func mountPresenceRoutes(
 	if err != nil {
 		return err
 	}
-	iotResource, err := newIoTResource(db, logger, errorReportDSN, deviceAuth, presence, openRoomMove, sessionEnd, iot, facilities, active, users,
+	iotResource, err := newIoTResource(db, logger, errorReportDSN, limits, deviceAuth, presence, openRoomMove, sessionEnd, iot, persons, facilities, active, users,
 		activities, timetableOwner, timetableRepos, education, pickups, settings, timeTracking, rooms, feedback, organizations, hub, invitations, now)
 	if err != nil {
 		return err
@@ -125,9 +128,9 @@ func teacherGroupIDs(education schoolstructure.GroupManagement) func(context.Con
 // Presence, Facilities and Timetable & Activities capabilities; the retained
 // services behind its ports are compatibility bindings (#2698).
 func newIoTResource(
-	db transactionruntime.Database, logger *slog.Logger, errorReportDSN string, deviceAuth *deviceauth.Authenticators,
+	db transactionruntime.Database, logger *slog.Logger, errorReportDSN string, limits customMiddleware.RateLimitStore, deviceAuth *deviceauth.Authenticators,
 	presence studentpresence.Owner, openRoomMove openroommove.Command, sessionEnd sessionend.Command,
-	iot devicefleetCompose.IoTService, facilities facilitiesModule.Capability, active studentpresence.Presence,
+	iot devicefleetCompose.IoTService, persons DeviceActorDirectory, facilities facilitiesModule.Capability, active studentpresence.Presence,
 	users peoplePorts.PersonDirectory, activities activityContract.ActivityService, timetableOwner timetableModule.Capability,
 	timetableRepos timetableCompose.Repositories, education schoolstructure.GroupManagement, pickups carePlanModule.PickupScheduleService,
 	settings settingsCompose.SettingsService, timeTracking *workforceCompose.TimeTracking, rooms FacilitiesRooms,
@@ -137,6 +140,10 @@ func newIoTResource(
 	errorReports, err := NewIoTErrorReportRelay(errorReportDSN)
 	if err != nil {
 		return nil, err
+	}
+	deviceHistory, ok := iot.Fleet().(devicefleet.LifecycleHistory)
+	if !ok {
+		return nil, errors.New("iot routes: the device fleet carries no device history")
 	}
 	deviceScan := scanBindings.New(devicescanCompose.Dependencies{Principal: DeviceScanPrincipal,
 		Fleet:      iot.Fleet(),
@@ -155,7 +162,7 @@ func newIoTResource(
 		Logger:    logger.With("service", "device-scan"), Now: now,
 	})
 	return iotAPI.NewResource(iotAPI.ServiceDependencies{
-		Administration:   NewIoTAdministration(devicefleetCompose.NewAdministration(iot.Fleet(), now), now),
+		Administration:   NewIoTAdministration(devicefleetCompose.NewAdministration(iot.Fleet(), now), deviceHistory, persons, presence, logger.With("handler", "iot-devices"), now),
 		Runtime:          NewIoTHTTPRuntime(now),
 		DeviceScan:       deviceScan,
 		OpenRooms:        deviceScan,
@@ -170,7 +177,7 @@ func newIoTResource(
 			observability.ObserveFeedbackHTTPResponse("iot", status, code)
 		},
 		SchoolName:              devicescanCompose.NewSchoolName(schoolName(organizations), DeviceScanPrincipal),
-		ErrorReports:            NewIoTErrorReporter(errorReports),
+		ErrorReports:            NewIoTErrorReporter(errorReports, deviceErrorReportQuota(limits)),
 		SessionEnd:              bindIoTHostSessionEnd(BindIoTSessionEnd(sessionEnd)),
 		SessionLifecycle:        scanBindings.NewSessionLifecycle(active, presence, scanBindings.NewSupervisionQuery(presence), NewDeviceScanPeople(users), iot, NewKioskSessionMirror(timetableRepos, activities, KioskMirrorPublisher(hub, logger), logger), logger, DeviceScanPrincipal, now),
 		Logger:                  logger.With("handler", "iot"),

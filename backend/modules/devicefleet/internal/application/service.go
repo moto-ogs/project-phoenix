@@ -19,16 +19,20 @@ type Dependencies struct {
 	Devices   ports.DeviceStore
 	Displays  ports.DisplayStore
 	Scans     ports.UnregisteredTagScanStore
+	History   ports.LifecycleEventStore
 	Rooms     ports.RoomDirectory
 	Presence  ports.PresenceReader
 	Dashboard ports.DashboardSources
 	Tenants   ports.TenantFacts
-	Tx        ports.Transaction
-	Tokens    ports.TokenMinter
-	APIKeys   ports.APIKeyMinter
-	Now       ports.Clock
-	Window    ports.WindowResolver
-	Observe   ports.Observer
+	// Slots reads the school's Geräteplätze (#2312). Graphs that register
+	// no device leave it unset; a registration then fails loudly.
+	Slots   ports.DeviceSlotLimits
+	Tx      ports.Transaction
+	Tokens  ports.TokenMinter
+	APIKeys ports.APIKeyMinter
+	Now     ports.Clock
+	Window  ports.WindowResolver
+	Observe ports.Observer
 }
 
 // Service is the Device Fleet application service.
@@ -36,7 +40,7 @@ type Service struct{ deps Dependencies }
 
 // New validates and freezes the owner's dependency graph.
 func New(deps Dependencies) *Service {
-	if deps.Devices == nil || deps.Displays == nil || deps.Scans == nil || deps.Rooms == nil || deps.Presence == nil ||
+	if deps.Devices == nil || deps.Displays == nil || deps.Scans == nil || deps.History == nil || deps.Rooms == nil || deps.Presence == nil ||
 		deps.Dashboard == nil || deps.Tenants == nil || deps.Tx == nil || deps.Tokens == nil ||
 		deps.APIKeys == nil || deps.Now == nil || deps.Observe == nil {
 		panic("devicefleet application: all dependencies are required")

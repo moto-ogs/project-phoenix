@@ -476,7 +476,7 @@ export function useSchoolCheckinMode(
           // The server answered, but did not take the child (no longer in
           // care, or a stay it could not open): say so, it stays visible.
           showMessage(
-            `Das Kind wurde nicht in ${target.roomName} angemeldet. Prüfen Sie die Angaben des Kindes.`,
+            `Das Kind wurde nicht in ${target.roomName} angemeldet. Prüfe die Angaben des Kindes.`,
           );
         }
 

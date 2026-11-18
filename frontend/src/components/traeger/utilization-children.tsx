@@ -67,7 +67,7 @@ const CHILD_COLUMNS: DataTableColumn<UtilizationChild>[] = [
         <span className="font-medium text-gray-900">
           {child.lastName}, {child.firstName}
         </span>
-        <span className="block text-xs text-gray-500">
+        <span className="block text-sm text-gray-500">
           {[
             child.schoolClass ? schoolClassLabel(child.schoolClass) : "",
             child.groupName,
@@ -172,7 +172,7 @@ export function UtilizationChildrenSection({
       <SectionCard
         title={TITLE}
         concept={childrenConcept}
-        description="Wählen Sie oben eine Schule. Dann sehen Sie, an wie vielen Tagen jedes Kind da war."
+        description="Wähle oben eine Schule. Dann siehst du, an wie vielen Tagen jedes Kind da war."
       />
     );
   }
@@ -216,7 +216,7 @@ export function UtilizationChildrenSection({
       <SectionCard
         title={TITLE}
         concept={childrenConcept}
-        description={`An wie vielen Tagen jedes Kind der ${school.name} da war${later ? `, ab dem ersten Check-in am ${formatDate(window.from)}` : ""}. Die Schule sieht im Zugriffsprotokoll, dass Sie die Namen geöffnet haben.`}
+        description={`An wie vielen Tagen jedes Kind der ${school.name} da war${later ? `, ab dem ersten Check-in am ${formatDate(window.from)}` : ""}. Die Schule sieht im Zugriffsprotokoll, dass du die Namen geöffnet hast.`}
         action={
           <Button
             type="button"

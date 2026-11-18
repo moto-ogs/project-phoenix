@@ -258,7 +258,7 @@ describe("RequestSharingControl", () => {
 
     expect(
       await screen.findByText(
-        `${catalogText("general.unavailable", "die Liste der Empfänger")} Sie können die Anfrage trotzdem senden und später teilen.`,
+        `${catalogText("general.unavailable", "die Liste der Empfänger")} Du kannst die Anfrage trotzdem senden und später teilen.`,
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
@@ -335,7 +335,7 @@ describe("RequestSharingControl", () => {
     expect(screen.getByText("Anfrage teilen (optional)")).toBeVisible();
     expect(
       screen.getByText(
-        "Nur ausgewählte Sorgeberechtigte sehen Ihre Anfrage und die Antwort der OGS.",
+        "Nur ausgewählte Sorgeberechtigte sehen deine Anfrage und die Antwort der OGS.",
       ),
     ).toBeVisible();
   });

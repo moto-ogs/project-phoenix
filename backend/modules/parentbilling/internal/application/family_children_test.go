@@ -293,3 +293,182 @@ func TestFamilyChildrenStatusSeesAConfirmationInBetween(t *testing.T) {
 		}}
 	assert.Equal(t, parentbilling.FamilyChildrenUpcoming, familyChildrenStatus(&count, calendar.NewDate(2026, 11, 10)))
 }
+
+// The review names the contracts of the families a sibling rule ranked
+// without a number, each with the reason (#7356): a contract without a mail
+// address is a family too, and only the run's schools show.
+func TestReviewNamesTheContractsWithoutAConfirmedNumber(t *testing.T) {
+	t.Parallel()
+	january := calendar.NewDate(2027, 1, 1)
+	ended := calendar.NewDate(2026, 12, 31)
+	contractFamily := parentbilling.ContractFamilyKey("", 7)
+	counts := []parentbilling.FamilyChildCount{{FamilyEmail: "eva@example.org", ConfirmedChildren: ptr(3),
+		ValidFrom: ptr(calendar.NewDate(2026, 9, 1)), ValidUntil: &ended}}
+	uncounted := map[string][]int64{contractFamily: {1}, "eva@example.org": {1}, "other@example.org": {2}}
+	month := careMonth{
+		invoices: []parentbilling.CareInvoice{
+			{ContractID: 7, SchoolID: 1, SchoolName: "Birkenfeld", ChildFirstName: "Mia", ChildLastName: "Meier", FamilyEmail: contractFamily},
+			{ContractID: 8, SchoolID: 1, SchoolName: "Birkenfeld", ChildFirstName: "Noah", ChildLastName: "Beispiel", FamilyEmail: "eva@example.org"},
+			{ContractID: 9, SchoolID: 2, SchoolName: "Ispringen", ChildFirstName: "Lea", ChildLastName: "Other", FamilyEmail: "other@example.org"},
+			{ContractID: 10, SchoolID: 1, SchoolName: "Birkenfeld", ChildFirstName: "Tom", ChildLastName: "Counted", FamilyEmail: "tom@example.org"},
+		},
+		uncountedSchools: uncounted,
+		uncountedStates:  uncountedStates(uncounted, counts, nil, january),
+	}
+	review := narrowMonth(month, []int64{1}, nil)
+	assert.Equal(t, 2, review.uncounted)
+	assert.Equal(t, []parentbilling.CareUncountedContract{
+		{ContractID: 7, SchoolName: "Birkenfeld", ChildFirstName: "Mia", ChildLastName: "Meier", Status: parentbilling.FamilyChildrenMissing},
+		{ContractID: 8, SchoolName: "Birkenfeld", ChildFirstName: "Noah", ChildLastName: "Beispiel", Status: parentbilling.FamilyChildrenExpired},
+	}, review.uncountedContracts)
+}
+
+// A contract whose invoice goes to no mail address is a family of its own
+// in the office's list (#7356): named by its contract, with its number and
+// the same states as every family.
+func TestFamilyChildrenListsContractsWithoutAMailAddress(t *testing.T) {
+	t.Parallel()
+	today := calendar.NewDate(2027, 1, 10)
+	from := calendar.NewDate(2026, 9, 1)
+	ended := calendar.NewDate(2026, 12, 31)
+	versions := []parentbilling.CareContractVersion{
+		{ContractID: 1, SchoolName: "Birkenfeld", ChildFirstName: "Mia", ChildLastName: "Zeller"},
+		{ContractID: 2, SchoolName: "Birkenfeld", ChildFirstName: "Noah", ChildLastName: "Zeller"},
+		{ContractID: 3, SchoolName: "Birkenfeld", ChildFirstName: "Lea", ChildLastName: "Adam"},
+		{ContractID: 4, SchoolName: "Birkenfeld", ChildFirstName: "Tom", ChildLastName: "Mail"},
+	}
+	recipients := map[int64]parentbilling.CareRecipient{
+		1: {FirstName: "Ute", LastName: "Zeller"}, 2: {FirstName: "Ute", LastName: "Zeller"},
+		4: {FirstName: "Eva", LastName: "Mail", Email: "Eva@Example.org"},
+	}
+	counts := []parentbilling.FamilyChildCount{
+		{ID: 11, ContractID: 1, FamilyEmail: parentbilling.ContractFamilyKey("", 1), ConfirmedChildren: ptr(2), ValidFrom: &from},
+		{ID: 12, ContractID: 3, FamilyEmail: parentbilling.ContractFamilyKey("", 3), ConfirmedChildren: ptr(3), ValidFrom: &from, ValidUntil: &ended},
+	}
+	families := groupFamilies(versions, recipients, counts, today)
+	require.Len(t, families, 4, "siblings without a mail address stay apart until an address joins them")
+	type row struct {
+		contract int64
+		child    string
+		status   string
+		children *int
+	}
+	got := make([]row, len(families))
+	for i, family := range families {
+		got[i] = row{contract: family.ContractID, child: family.Children[0].ChildFirstName, status: family.Status}
+		if family.Count != nil {
+			got[i].children = family.Count.ConfirmedChildren
+		}
+		assert.Len(t, family.Children, 1)
+	}
+	assert.Equal(t, []row{
+		{3, "Lea", parentbilling.FamilyChildrenExpired, ptr(3)},
+		{4, "Tom", parentbilling.FamilyChildrenMissing, nil},
+		{1, "Mia", parentbilling.FamilyChildrenConfirmed, ptr(2)},
+		{2, "Noah", parentbilling.FamilyChildrenMissing, nil},
+	}, got, "a family without a recipient sorts by its child")
+	assert.Empty(t, families[2].RecipientEmail)
+}
+
+// A number confirmed for a contract goes with the mail address its family
+// got since (#7356). Contracts that bring different numbers into one family
+// show none and ask the office; the family's own confirmation settles it.
+func TestFamilyChildrenNumberGoesWithTheFamily(t *testing.T) {
+	t.Parallel()
+	today := calendar.NewDate(2027, 1, 10)
+	from := calendar.NewDate(2026, 9, 1)
+	versions := []parentbilling.CareContractVersion{
+		{ContractID: 1, ChildFirstName: "Mia", ChildLastName: "Zeller"},
+		{ContractID: 2, ChildFirstName: "Noah", ChildLastName: "Zeller"},
+	}
+	recipients := map[int64]parentbilling.CareRecipient{
+		1: {LastName: "Zeller", Email: "ute@example.org"}, 2: {LastName: "Zeller", Email: "ute@example.org"},
+	}
+	brought := func(contract int64, children int) parentbilling.FamilyChildCount {
+		return parentbilling.FamilyChildCount{ID: contract, ContractID: contract, FamilyEmail: parentbilling.ContractFamilyKey("", contract),
+			ConfirmedChildren: ptr(children), ValidFrom: &from}
+	}
+
+	families := groupFamilies(versions, recipients, []parentbilling.FamilyChildCount{brought(1, 3)}, today)
+	require.Len(t, families, 1)
+	assert.Equal(t, parentbilling.FamilyChildrenConfirmed, families[0].Status)
+	assert.Equal(t, ptr(3), families[0].Count.ConfirmedChildren)
+
+	families = groupFamilies(versions, recipients, []parentbilling.FamilyChildCount{brought(1, 3), brought(2, 3)}, today)
+	assert.Equal(t, parentbilling.FamilyChildrenConfirmed, families[0].Status, "the same number twice is the family's number")
+
+	differing := []parentbilling.FamilyChildCount{brought(1, 3), brought(2, 4)}
+	families = groupFamilies(versions, recipients, differing, today)
+	require.Len(t, families, 1)
+	assert.Equal(t, parentbilling.FamilyChildrenDiffering, families[0].Status)
+	assert.True(t, families[0].Differing)
+	assert.Nil(t, families[0].Count, "no number counts by itself")
+
+	own := parentbilling.FamilyChildCount{ID: 9, ContractID: 2, FamilyEmail: "ute@example.org", ConfirmedChildren: ptr(4), ValidFrom: &from}
+	families = groupFamilies(versions, recipients, append(differing, own), today)
+	assert.Equal(t, parentbilling.FamilyChildrenConfirmed, families[0].Status)
+	assert.Equal(t, own.ID, families[0].Count.ID, "the office's confirmation for the family decides")
+}
+
+// What a file does with the number of a family (#7356): a confirmed number
+// in force stays, rows of one family that disagree take over none, and a
+// confirmation that ran out is renewed from the day after its end, so the
+// months it covered keep what they had.
+func TestImportedChildrenAreDecidedAgainstTheConfirmedNumber(t *testing.T) {
+	t.Parallel()
+	today := calendar.NewDate(2027, 1, 10)
+	start := calendar.NewDate(2026, 9, 1)
+	ended := calendar.NewDate(2026, 12, 31)
+	confirmed := map[string]*parentbilling.FamilyChildCount{
+		"same@example.org":    {ConfirmedChildren: ptr(2), ValidFrom: &start},
+		"other@example.org":   {ConfirmedChildren: ptr(3), ValidFrom: &start},
+		"expired@example.org": {ConfirmedChildren: ptr(3), ValidFrom: &start, ValidUntil: &ended},
+		"stated@example.org":  {StatedChildren: ptr(4)},
+	}
+	row := func(family string, children int) importedChildren {
+		return importedChildren{family: family, number: parentbilling.ImportedFamilyChildren{Children: children, ValidFrom: start}}
+	}
+	rows := []importedChildren{
+		row("same@example.org", 2), row("other@example.org", 2), row("expired@example.org", 3), row("stated@example.org", 2),
+		row("contract:7", 2), row("split@example.org", 2), row("split@example.org", 3),
+		{family: "contract:8", status: parentbilling.ImportedChildrenInvalid},
+	}
+	decideImportedChildren(rows, func(family string) *parentbilling.FamilyChildCount { return confirmed[family] },
+		func(importedChildren) calendar.Date { return today })
+	statuses := make([]string, len(rows))
+	for i, decided := range rows {
+		statuses[i] = decided.status
+	}
+	assert.Equal(t, []string{
+		parentbilling.ImportedChildrenSame, parentbilling.ImportedChildrenDiffers, parentbilling.ImportedChildrenNew,
+		parentbilling.ImportedChildrenNew, parentbilling.ImportedChildrenNew, parentbilling.ImportedChildrenRowsDiffer,
+		parentbilling.ImportedChildrenRowsDiffer, parentbilling.ImportedChildrenInvalid,
+	}, statuses)
+	assert.Equal(t, ptr(3), rows[1].confirmed, "a row that differs names the confirmed number")
+	assert.Equal(t, calendar.NewDate(2027, 1, 1), rows[2].number.ValidFrom, "the renewed number starts after the one that ran out")
+	assert.Equal(t, start, rows[3].number.ValidFrom, "a number the parents only stated is confirmed from the contract's first day")
+
+	// Each family is stored once, from the earliest first day its rows name.
+	later := calendar.NewDate(2026, 10, 1)
+	stored := newImportedChildren([]importedChildren{
+		{family: "eva@example.org", status: parentbilling.ImportedChildrenNew, number: parentbilling.ImportedFamilyChildren{ContractID: 2, Children: 2, ValidFrom: later}},
+		{family: "eva@example.org", status: parentbilling.ImportedChildrenNew, number: parentbilling.ImportedFamilyChildren{ContractID: 1, Children: 2, ValidFrom: start}},
+		{family: "line:4", status: parentbilling.ImportedChildrenNew, number: parentbilling.ImportedFamilyChildren{Children: 2, ValidFrom: start}},
+		{family: "contract:7", status: parentbilling.ImportedChildrenSame, number: parentbilling.ImportedFamilyChildren{ContractID: 7, Children: 2, ValidFrom: start}},
+	})
+	assert.Equal(t, []parentbilling.ImportedFamilyChildren{{FamilyEmail: "eva@example.org", ContractID: 1, Children: 2, ValidFrom: start}}, stored,
+		"a row of a preview and a number the family has store nothing")
+}
+
+// The review tells a number that ran out from one that never was (#7356),
+// also when a later confirmation is stored as the current one.
+func TestUncountedStatesReadTheRetainedConfirmations(t *testing.T) {
+	t.Parallel()
+	december := calendar.NewDate(2026, 12, 1)
+	autumn, january := calendar.NewDate(2026, 9, 1), calendar.NewDate(2027, 1, 1)
+	november := calendar.NewDate(2026, 11, 30)
+	counts := []parentbilling.FamilyChildCount{{FamilyEmail: "eva@example.org", ConfirmedChildren: ptr(3), ValidFrom: &january,
+		Confirmations: []parentbilling.FamilyChildConfirmation{{Children: ptr(2), ValidFrom: &autumn, ValidUntil: &november}}}}
+	states := uncountedStates(map[string][]int64{"eva@example.org": {1}, "new@example.org": {1}}, counts, nil, december)
+	assert.Equal(t, map[string]string{"eva@example.org": parentbilling.FamilyChildrenExpired, "new@example.org": parentbilling.FamilyChildrenMissing}, states)
+}

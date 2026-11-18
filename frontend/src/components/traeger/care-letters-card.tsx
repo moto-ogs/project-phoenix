@@ -92,7 +92,7 @@ export function CareLettersCard({
     create: (input) => createCareLetters(runId, input),
     preview: (input) => previewCareLetter(runId, input),
     intro:
-      "Jede Familie bekommt ein Schreiben mit ihrer Rechnung. Ihre Hinweise stehen in allen Schreiben. Danach lässt sich nichts mehr ändern. Die Familien sehen die Schreiben erst, wenn Sie sie senden.",
+      "Jede Familie bekommt ein Schreiben mit ihrer Rechnung. Deine Hinweise stehen in allen Schreiben. Danach lässt sich nichts mehr ändern. Die Familien sehen die Schreiben erst, wenn du sie sendest.",
     notesLabel: "Hinweis für die Familien (freiwillig)",
     notesPlaceholder:
       "Zum Beispiel: Ab Februar gilt eine neue Preisliste. Fragen beantwortet die Verwaltung.",
@@ -102,7 +102,7 @@ export function CareLettersCard({
     return (
       <LettersCreateCard<CareLetters>
         title={TITLE}
-        description="Jede Familie bekommt ein Schreiben mit ihrer Rechnung. Erstellen sendet noch nichts: Die Familien sehen es erst, wenn Sie es senden."
+        description="Jede Familie bekommt ein Schreiben mit ihrer Rechnung. Erstellen sendet noch nichts: Die Familien sehen es erst, wenn du es sendest."
         runId={runId}
         payments={payments}
         source={source}
@@ -139,7 +139,7 @@ export function CareLettersCard({
   return (
     <SectionCard
       title={TITLE}
-      description="Jede Familie bekommt ihr Schreiben per E-Mail. Hat sie mit dieser Adresse ein Konto in der Eltern-App, liegt es auch dort unter „Dokumente“, wenn das Kind einen Schülerdatensatz hat. Familien ohne E-Mail geben Sie das gedruckte Schreiben."
+      description="Jede Familie bekommt ihr Schreiben per E-Mail. Hat sie mit dieser Adresse ein Konto in der Eltern-App, liegt es auch dort unter „Dokumente“, wenn das Kind einen Schülerdatensatz hat. Familien ohne E-Mail gibst du das gedruckte Schreiben."
       actions={
         <div className="flex flex-wrap gap-2">
           <OverflowMenu
@@ -170,7 +170,7 @@ export function CareLettersCard({
               summary.letters === 0
                 ? "Es gibt noch kein Schreiben zum Senden."
                 : summary.withoutEmail >= summary.notSent && summary.sent === 0
-                  ? "Keine Familie hat eine E-Mail-Adresse. Drucken Sie die Schreiben."
+                  ? "Keine Familie hat eine E-Mail-Adresse. Drucke die Schreiben."
                   : "Alle Schreiben mit E-Mail-Adresse sind schon gesendet."
             }
             tooltip="Sendet allen Familien mit E-Mail-Adresse ihr Schreiben, moto fragt vorher nach."
@@ -190,7 +190,7 @@ export function CareLettersCard({
         {toSend === 0 && summary.letters > 0 ? (
           <p className="text-sm text-gray-600">
             Alle Schreiben mit E-Mail-Adresse sind gesendet. Einzelne Schreiben
-            senden Sie erneut über das Menü ihrer Rechnung.
+            sendest du erneut über das Menü ihrer Rechnung.
           </p>
         ) : null}
         <LettersFacts
@@ -227,7 +227,7 @@ export function CareLettersCard({
             <p>
               {familyCount(summary.withoutEmail)} ohne E-Mail-Adresse{" "}
               {summary.withoutEmail === 1 ? "bekommt" : "bekommen"} nichts.
-              Drucken Sie deren Schreiben über „Drucken“.
+              Drucke deren Schreiben über „Drucken“.
             </p>
           ) : null}
         </div>

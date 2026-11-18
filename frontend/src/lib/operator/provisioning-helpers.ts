@@ -120,6 +120,9 @@ export interface BackendSchoolSummary {
   child_quota_bundle_size: number;
   // Kontingentzahl the Kinderkontingent is checked against (#3568).
   child_quota_count: number;
+  // Geräteplätze the school bought (#2312); null while moto set none.
+  // geraete_count is what occupies them.
+  device_slots?: number | null;
 }
 
 export interface SchoolSummary {
@@ -145,6 +148,8 @@ export interface SchoolSummary {
   childQuotaBundles: number | null;
   childQuotaBundleSize: number;
   childQuotaCount: number;
+  /** Geräteplätze der Schule (#2312); null, solange moto keine Grenze gesetzt hat. */
+  deviceSlots: number | null;
 }
 
 export function mapSchoolSummary(data: BackendSchoolSummary): SchoolSummary {
@@ -171,6 +176,7 @@ export function mapSchoolSummary(data: BackendSchoolSummary): SchoolSummary {
     childQuotaBundles: data.child_quota_bundles,
     childQuotaBundleSize: data.child_quota_bundle_size,
     childQuotaCount: data.child_quota_count,
+    deviceSlots: data.device_slots ?? null,
   };
 }
 
@@ -864,7 +870,7 @@ export function mapUnregisteredTagScan(
 
 /** Shown when the browser refuses to copy an API key (#2519). */
 export const API_KEY_COPY_FAILED_MESSAGE =
-  "Der API-Key konnte nicht kopiert werden. Bitte markieren und kopieren Sie ihn selbst.";
+  "Der API-Key konnte nicht kopiert werden. Bitte markiere und kopiere ihn selbst.";
 
 // --- Träger-Büro (#4649) ---
 

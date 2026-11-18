@@ -34,11 +34,15 @@ import {
 import { HomeBlocksTab } from "./home-blocks-tab";
 import { PersonalizationTab } from "./personalization-tab";
 import { EnrollmentLinkPanel } from "./enrollment-link-panel";
+import { EnrollmentActivationDialog } from "./enrollment-activation-dialog";
+import { EnrollmentPrivacyNoticeWarning } from "~/components/enrollment/enrollment-privacy-notice-warning";
+import { enrollmentPrivacyNotice } from "~/lib/enrollment-privacy-notice";
 import { useOptionalSupervision } from "~/lib/supervision-context";
 import { useNFCEnabled } from "~/lib/tenant-context";
 import { useInvalidateFamily } from "~/lib/swr";
 import { useTenantMutate } from "~/lib/swr/hooks";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
+import { devicePinKeys } from "~/lib/swr/portal-keys";
 import { useSettingsSchema } from "~/lib/hooks/use-settings-schema";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 
@@ -91,6 +95,13 @@ function SettingsTabContent({
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(
     () => new Set<string>(),
+  );
+  const [enrollmentActivationOpen, setEnrollmentActivationOpen] =
+    useState(false);
+  const enrollmentNotice = enrollmentPrivacyNotice(allTabs);
+  const openEnrollmentActivation = useCallback(
+    () => setEnrollmentActivationOpen(true),
+    [],
   );
   // The deep-linked category is expanded once per (tab, key); a later schema
   // revalidation must not re-open it after the person collapsed it.
@@ -208,7 +219,7 @@ function SettingsTabContent({
               variant="compact"
               icon={<SearchX className="h-5 w-5" aria-hidden="true" />}
               title={`Keine Einstellung passt zu „${query.trim()}“.`}
-              description="Versuchen Sie ein anderes Wort, zum Beispiel „Abholung“ oder „Eltern“."
+              description="Versuche ein anderes Wort, zum Beispiel „Abholung“ oder „Eltern“."
             />
           </SectionCard>
         ) : (
@@ -221,12 +232,18 @@ function SettingsTabContent({
               onSave={onSave}
               onReset={onReset}
               onSchemaRefresh={onSchemaRefresh}
+              onEnrollmentEnable={openEnrollmentActivation}
             />
           ))
         )
       ) : (
         <>
-          {tab.key === "enrollment" && <EnrollmentLinkPanel tab={tab} />}
+          {tab.key === "enrollment" && (
+            <>
+              <EnrollmentPrivacyNoticeWarning state={enrollmentNotice} />
+              <EnrollmentLinkPanel tab={tab} />
+            </>
+          )}
           {tab.categories.map((category) => {
             const key = expansionKey(tab.key, category.key);
             return (
@@ -240,11 +257,19 @@ function SettingsTabContent({
                 onSave={onSave}
                 onReset={onReset}
                 onSchemaRefresh={onSchemaRefresh}
+                onEnrollmentEnable={openEnrollmentActivation}
               />
             );
           })}
         </>
       )}
+      <EnrollmentActivationDialog
+        isOpen={enrollmentActivationOpen}
+        onClose={() => setEnrollmentActivationOpen(false)}
+        noticePresent={enrollmentNotice?.noticePresent ?? false}
+        currentRecipients={enrollmentNotice?.notificationRecipients ?? ""}
+        onSave={onSave}
+      />
     </div>
   );
 }
@@ -304,6 +329,10 @@ function SettingsContent({ tabKey, highlightKey }: SettingsContentProps) {
   // settings are read the same way by the care plan forms.
   const revalidateReadersOf = useCallback(
     (key: string) => {
+      // The home notice has a status cache separate from the settings schema.
+      if (key === "security.ogs_device_pin") {
+        void tenantMutate(devicePinKeys.status());
+      }
       if (ARRIVAL_SETTING_PREFIXES.some((prefix) => key.startsWith(prefix))) {
         void invalidateFamily(tenantStudentKeys.arrivalSettings());
       }

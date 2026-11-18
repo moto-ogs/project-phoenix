@@ -81,7 +81,7 @@ describe("ParentContractNoticePage (#4682, § 312k BGB)", () => {
     ).toBeChecked();
     expect(
       screen.getByText(
-        "Ihr Vertrag endet am 31.12.2026. Bis dahin findet die Betreuung wie gebucht statt.",
+        "Dein Vertrag endet am 31.12.2026. Bis dahin findet die Betreuung wie gebucht statt.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Jetzt kündigen" }));
@@ -95,7 +95,7 @@ describe("ParentContractNoticePage (#4682, § 312k BGB)", () => {
     );
     expect(
       await screen.findByText(
-        "Ihre Kündigung ist eingegangen. Der Vertrag endet am 31.12.2026.",
+        "Deine Kündigung ist eingegangen. Der Vertrag endet am 31.12.2026.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -155,7 +155,7 @@ describe("ParentContractNoticePage (#4682, § 312k BGB)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Hier widerrufen Sie Ihren Betreuungsvertrag. Sie bekommen sofort eine Bestätigung.",
+        "Hier widerrufst du deinen Betreuungsvertrag. Du bekommst sofort eine Bestätigung.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -177,7 +177,7 @@ describe("ParentContractNoticePage (#4682, § 312k BGB)", () => {
     );
     expect(
       await screen.findByText(
-        "Die Widerrufsfrist ist vorbei. Sie können den Vertrag nur noch kündigen.",
+        "Die Widerrufsfrist ist vorbei. Du kannst den Vertrag nur noch kündigen.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -213,16 +213,16 @@ describe("ParentContractNoticePage (#4682, § 312k BGB)", () => {
     );
     expect(
       screen.getByText(
-        "Der Träger prüft Ihren Grund. Erkennt er ihn an, legt er das Vertragsende fest. Erkennt er ihn nicht an, endet der Vertrag zum nächsten möglichen Termin wie bei einer ordentlichen Kündigung. Sie bekommen die Entscheidung per E-Mail. Bis dahin findet die Betreuung wie gebucht statt.",
+        "Der Träger prüft deinen Grund. Erkennt er ihn an, legt er das Vertragsende fest. Erkennt er ihn nicht an, endet der Vertrag zum nächsten möglichen Termin wie bei einer ordentlichen Kündigung. Du bekommst die Entscheidung per E-Mail. Bis dahin findet die Betreuung wie gebucht statt.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Jetzt kündigen" }));
     expect(
-      await screen.findByText("Bitte schreiben Sie Ihren Grund."),
+      await screen.findByText("Bitte schreibe deinen Grund."),
     ).toBeInTheDocument();
     expect(mocks.declareMyContractNotice).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText(/Ihr Grund/), {
+    fireEvent.change(screen.getByLabelText(/Dein Grund/), {
       target: { value: "  Wir ziehen nach Hamburg. " },
     });
     fireEvent.click(screen.getByRole("button", { name: "Jetzt kündigen" }));
@@ -235,7 +235,7 @@ describe("ParentContractNoticePage (#4682, § 312k BGB)", () => {
     );
     expect(
       await screen.findByText(
-        "Ihre Kündigung ist eingegangen. Der Träger prüft Ihren Grund. Seine Entscheidung bekommen Sie per E-Mail und hier in der App.",
+        "Deine Kündigung ist eingegangen. Der Träger prüft deinen Grund. Seine Entscheidung bekommst du per E-Mail und hier in der App.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Außerordentlich")).toBeInTheDocument();
@@ -264,9 +264,7 @@ describe("ParentContractNoticePage (#4682, § 312k BGB)", () => {
     });
     expect(mocks.fetchMyContractNoticeOptions).toHaveBeenCalledTimes(2);
     expect(
-      screen.getByText(
-        "Die Termine haben sich geändert. Bitte wählen Sie erneut.",
-      ),
+      screen.getByText("Die Termine haben sich geändert. Bitte wähle erneut."),
     ).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /31.01.2027/ })).not.toBeChecked();
     expect(
@@ -306,7 +304,7 @@ describe("ParentContractNoticePage (#4682, § 312k BGB)", () => {
 
     expect(
       await screen.findByText(
-        "Der Träger erkennt Ihren Grund nicht an. Ihre Kündigung gilt als ordentliche Kündigung. Der Vertrag endet am 31.12.2026.",
+        "Der Träger erkennt deinen Grund nicht an. Deine Kündigung gilt als ordentliche Kündigung. Der Vertrag endet am 31.12.2026.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -320,7 +318,7 @@ describe("ParentContractNoticePage (#4682, § 312k BGB)", () => {
       }),
     ).toHaveTextContent("Ihren Grund erkennen wir nicht an.");
     expect(
-      screen.getByRole("figure", { name: "Ihre Bestätigung" }),
+      screen.getByRole("figure", { name: "Deine Bestätigung" }),
     ).toHaveTextContent("wir bestätigen den Eingang Ihrer Kündigung.");
   });
 });

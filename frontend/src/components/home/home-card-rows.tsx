@@ -47,7 +47,7 @@ export function HomeCardLink({
 export function dayPlanLinkTooltip(dayPlanHref: string): string {
   return dayPlanHref.endsWith("/betreuungsplan")
     ? "Öffnet den Betreuungsplan der Schule."
-    : "Öffnet Ihren Tagesplan für heute.";
+    : "Öffnet deinen Tagesplan für heute.";
 }
 
 /**

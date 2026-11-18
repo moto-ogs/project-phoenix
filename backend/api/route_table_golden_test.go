@@ -390,6 +390,11 @@ func TestFullProductionRouterGolden(t *testing.T) {
 	sentryFake := newFakeSentry(t)
 	newKiosk := func(t *testing.T, name string) (string, string, int64) {
 		kiosk := testpkg.CreateTestDevice(t, db, name)
+		key := requestRateLimitFingerprint(CurrentServiceConfig().JWTSecret)(deviceErrorReportRateKey(kiosk.ID))
+		t.Cleanup(func() {
+			_, err := db.ExecContext(context.Background(), `DELETE FROM auth.request_rate_limits WHERE bucket_key = ?`, key)
+			require.NoError(t, err)
+		})
 		return *kiosk.APIKey, kiosk.DeviceID, kiosk.TenantID
 	}
 	called := false
@@ -448,6 +453,7 @@ func TestFullProductionRouterGolden(t *testing.T) {
 			t.Run("caterer scope matrix", func(t *testing.T) { checkCatererScopeMatrix(t, api) })
 			t.Run("ag-leitung route permissions", func(t *testing.T) { checkAGLeitungRoutePermissions(t, api) })
 			t.Run("guest route permissions", func(t *testing.T) { checkGuestRoutePermissions(t, api) })
+			t.Run("own routes without staff profile", func(t *testing.T) { checkNoStaffProfileOwnRoutes(t, api) })
 			t.Run("module route map", func(t *testing.T) { checkModuleRouteMap(t, api) })
 			t.Run("module booking gate", func(t *testing.T) { checkModuleBookingGate(t, api) })
 		})

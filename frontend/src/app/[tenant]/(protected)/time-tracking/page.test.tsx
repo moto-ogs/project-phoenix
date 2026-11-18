@@ -11,7 +11,7 @@ import {
   within,
 } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { releaseFakeTimers, setTestClock } from "~/test/clock";
 
 // ─── Mocks (must come before component imports) ─────────────────────────────
@@ -85,6 +85,7 @@ vi.mock("~/lib/swr", async (importOriginal) => {
 // The own staff ID comes from the preloaded user context (#4992); the hook's
 // own tests cover the context and its `/api/me/staff` fallback.
 vi.mock("~/lib/hooks/use-user-context", () => ({
+  useHasOwnStaff: () => mockOwnStaff.inSchool,
   useUserContext: () => ({
     userContext: { currentStaff: { id: mockOwnStaff.id, personId: "1" } },
     isLoading: false,
@@ -649,7 +650,7 @@ const mockVacationAbsence: StaffAbsence = {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const mockMutate = vi.fn();
-const mockOwnStaff = { id: "10" };
+const mockOwnStaff = { id: "10", inSchool: true };
 const mockOwnSchedule = {
   mode: "custom",
   model: null,
@@ -713,7 +714,13 @@ function setupDefaultMocks(overrides?: {
   laborDays?: WorkDayLaborHint[];
 }) {
   vi.mocked(useSession).mockReturnValue({
-    data: { user: { id: "1", token: "test-token" } },
+    data: {
+      user: {
+        id: "1",
+        token: "test-token",
+        permissions: ["time_tracking:own"],
+      },
+    },
     status: "authenticated",
     update: vi.fn(),
   } as never);
@@ -923,6 +930,71 @@ describe("TimeTrackingPage", () => {
 
   // ── Loading / Auth ──────────────────────────────────────────────────────
 
+  // Ohne Personalprofil in dieser Schule, etwa über den Träger (#7306).
+  describe("without a staff profile", () => {
+    afterEach(() => {
+      mockOwnStaff.inSchool = true;
+    });
+
+    it("shows the hint and loads nothing when the context names no profile", () => {
+      setupDefaultMocks();
+      mockOwnStaff.inSchool = false;
+
+      render(<TimeTrackingPage />);
+
+      expect(
+        screen.getByText(/Kein eigenes Personalprofil/),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: "Zur Startseite" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Stempeluhr")).not.toBeInTheDocument();
+    });
+
+    it("shows the hint instead of an error or a redirect when the server refuses", async () => {
+      const assign = vi
+        .spyOn(window.location, "assign")
+        .mockImplementation(() => undefined);
+      setupDefaultMocks({
+        currentSessionError: new ApiError("no staff profile", 403, {
+          code: "workforce.no_staff_profile",
+        }),
+      });
+
+      render(<TimeTrackingPage />);
+
+      expect(
+        await screen.findByText(/Kein eigenes Personalprofil/),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(assign).not.toHaveBeenCalled();
+      assign.mockRestore();
+    });
+
+    it("keeps the permission refusal when the person cannot open own time tracking", async () => {
+      setupDefaultMocks({
+        currentSessionError: new ApiError("permission denied", 403, {
+          code: "general.permission",
+        }),
+      });
+      mockOwnStaff.inSchool = false;
+      vi.mocked(useSession).mockReturnValue({
+        data: { user: { id: "1", token: "test-token", permissions: [] } },
+        status: "authenticated",
+        update: vi.fn(),
+      } as never);
+
+      render(<TimeTrackingPage />);
+
+      expect(
+        await screen.findByText(
+          catalogText("general.permission", "die laufende Arbeitszeit"),
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/Kein eigenes Personalprofil/)).toBeNull();
+    });
+  });
+
   describe("authentication and loading", () => {
     it("shows loading when auth status is loading", () => {
       vi.mocked(useSession).mockReturnValue({
@@ -1104,7 +1176,7 @@ describe("TimeTrackingPage", () => {
 
       await waitFor(() => {
         expect(mockToast.success).toHaveBeenCalledWith(
-          "Sie sind eingestempelt.",
+          "Du bist eingestempelt.",
         );
       });
     });
@@ -1536,7 +1608,7 @@ describe("TimeTrackingPage", () => {
         // A failed reload is no API answer: the crash text names the screen.
         expect(
           await screen.findByText(
-            "Die Zeiterfassung konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+            "Die Zeiterfassung konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
           ),
         ).toBeInTheDocument();
         expect(logError).toHaveBeenCalledWith("end_break_failed", {
@@ -2659,7 +2731,7 @@ describe("TimeTrackingPage", () => {
 
       await waitFor(() => {
         expect(mockToast.success).toHaveBeenCalledWith(
-          "Sie sind ausgestempelt.",
+          "Du bist ausgestempelt.",
         );
       });
     });
@@ -2733,7 +2805,7 @@ describe("TimeTrackingPage", () => {
       render(<TimeTrackingPage />);
       expect(
         await screen.findByText(
-          catalogText("general.unavailable", "die Liste Ihrer Schichten"),
+          catalogText("general.unavailable", "die Liste deiner Schichten"),
         ),
       ).toBeInTheDocument();
       expect(
@@ -2764,7 +2836,7 @@ describe("TimeTrackingPage", () => {
 
       render(<TimeTrackingPage />);
       const tableError = await screen.findByText(
-        catalogText("general.server", "die Liste Ihrer Arbeitszeiten"),
+        catalogText("general.server", "die Liste deiner Arbeitszeiten"),
       );
       const tableErrorAlert = tableError.closest<HTMLElement>('[role="alert"]');
       expect(tableErrorAlert).not.toBeNull();
@@ -2834,7 +2906,7 @@ describe("TimeTrackingPage", () => {
 
       expect(
         await screen.findByText(
-          catalogText("general.unavailable", "die Liste Ihrer Abwesenheiten"),
+          catalogText("general.unavailable", "die Liste deiner Abwesenheiten"),
         ),
       ).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "In der OGS" })).toBeDisabled();
@@ -5566,7 +5638,7 @@ describe("deviation-reason gate (F9)", () => {
     });
     expect(screen.getByText(/30 Minuten/)).toBeInTheDocument();
     expect(
-      screen.getByText(/nach Ihrem geplanten Dienstende/),
+      screen.getByText(/nach deinem geplanten Dienstende/),
     ).toBeInTheDocument();
     // Confirm stays disabled until a reason is entered.
     expect(screen.getByText("Mit Begründung ausstempeln")).toHaveAttribute(
@@ -5627,7 +5699,7 @@ describe("deviation-reason gate (F9)", () => {
       expect(screen.getByText("Abweichung vom Dienstplan")).toBeInTheDocument();
     });
     expect(
-      screen.getByText(/vor Ihrem geplanten Dienstbeginn/),
+      screen.getByText(/vor deinem geplanten Dienstbeginn/),
     ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Grund"), {

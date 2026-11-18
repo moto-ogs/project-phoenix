@@ -126,6 +126,7 @@ func (s *Service) mailGroupRecipient(ctx context.Context, thread *deliveryPorts.
 			messagePayloadRecipient:   deliveryPorts.JSONString(strings.TrimSpace(*profile.Email)),
 			messagePayloadFirstName:   deliveryPorts.JSONString(profile.FirstName),
 			messagePayloadLastName:    deliveryPorts.JSONString(profile.LastName),
+			messagePayloadSalutation:  deliveryPorts.JSONString(profile.Salutation),
 			messagePayloadLocale:      deliveryPorts.JSONString(locale),
 			messagePayloadSchoolName:  deliveryPorts.JSONString(schoolName),
 			messagePayloadMessagesURL: deliveryPorts.JSONString(link),

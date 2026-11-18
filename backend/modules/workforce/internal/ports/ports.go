@@ -198,8 +198,8 @@ type StaffRecordStore interface {
 	// ListQueuedStaffDocumentFileCleanups returns and row-locks the eligible
 	// intents; a positive staffID narrows them to one staff member.
 	ListQueuedStaffDocumentFileCleanups(ctx context.Context, staffID int64, now time.Time) ([]domain.StaffDocumentFileCleanup, domain.OperationStats, error)
-	CompleteStaffDocumentFileCleanup(ctx context.Context, id int64, at time.Time) (domain.OperationStats, error)
-	CompleteStaffDocumentFileCleanupByFilename(ctx context.Context, filename string, at time.Time) (domain.OperationStats, error)
+	CompleteStaffDocumentFileCleanup(ctx context.Context, id int64) (domain.OperationStats, error)
+	CompleteStaffDocumentFileCleanupByFilename(ctx context.Context, filename string) (domain.OperationStats, error)
 	ActivateStaffDocumentFileCleanup(ctx context.Context, filename string, at time.Time) (domain.OperationStats, error)
 }
 
@@ -446,6 +446,9 @@ type TraegerStaffStore interface {
 	// hire just created at the school (#7206): entry day, last day, address
 	// and phone. The employment has no row yet.
 	InsertSchoolHireData(ctx context.Context, data domain.StaffMasterData) error
+	// SchoolStaffIDsByEmail returns the employments of the school whose
+	// master data reach the person at the address, without case (#7378).
+	SchoolStaffIDsByEmail(ctx context.Context, email string) ([]int64, error)
 
 	ReleaseOfTraeger(ctx context.Context, organizationID int64) (*domain.TraegerStaffRelease, error)
 	CountStaffRecords(ctx context.Context, organizationID int64) (int, error)

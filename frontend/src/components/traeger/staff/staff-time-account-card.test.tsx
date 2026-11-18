@@ -146,7 +146,7 @@ describe("StaffTimeAccountCard", () => {
     expect(
       (
         await screen.findAllByText(
-          "An der Schule OGS Süd ist September 2026 schon abgeschlossen. Öffnen Sie zuerst diesen Monat.",
+          "An der Schule OGS Süd ist September 2026 schon abgeschlossen. Öffne zuerst diesen Monat.",
         )
       ).length,
     ).toBe(2);

@@ -20,7 +20,12 @@ import (
 //
 // Invariants:
 //   - The family is the address of the invoice's recipient, compared without
-//     case, like the families of the rule chain (ADR 0164 point 4).
+//     case, like the families of the rule chain (ADR 0164 point 4). A
+//     contract whose invoice goes to no address, such as one imported
+//     without mail addresses, is a family of its own, known by the contract
+//     (ContractFamilyKey, ADR 0232 point 7, #7356). Its number goes with it
+//     when the family gets an address; contracts that bring different
+//     numbers into one family count none until the Abrechnung decides.
 //   - Only the number is stored, never a name or a date of birth of a child
 //     without a contract, and no contract or registration is made up.
 //   - A number the parents stated counts only once the Abrechnung confirmed
@@ -58,16 +63,17 @@ const (
 	FamilyChildrenExpired = "expired"
 	// FamilyChildrenUpcoming: confirmed from a later day on.
 	FamilyChildrenUpcoming = "upcoming"
+	// FamilyChildrenDiffering: contracts that became one family brought
+	// different confirmed numbers; none counts until the Abrechnung
+	// confirms one for the family (#7356).
+	FamilyChildrenDiffering = "differing"
 )
 
-var (
-	// ErrFamilyChildrenNotFound reports a family the Träger has no number
-	// or no contract for.
-	ErrFamilyChildrenNotFound = errors.New("no number of children for this family")
-	// ErrFamilyWithoutAddress reports a contract whose invoice goes to no
-	// address: it is a family of its own and has no number.
-	ErrFamilyWithoutAddress = errors.New("the contract's invoice goes to no address")
-)
+// ErrFamilyChildrenNotFound reports a family the Träger has no number or no
+// contract for. A contract whose invoice goes to no address is a family of
+// its own since #7356; the code parent_billing.family_without_address stays
+// registered and is no longer sent.
+var ErrFamilyChildrenNotFound = errors.New("no number of children for this family")
 
 // FamilyChildCount is the number of a family: what the parents stated and
 // what the Abrechnung confirmed with its validity.
@@ -139,12 +145,18 @@ type FamilyContractChild struct {
 // of its invoices, its children with a contract, its number and the state
 // of that number today.
 type FamilyChildren struct {
+	// ContractID names the family in a request: one of its contracts. A
+	// family without an address has only this one.
+	ContractID         int64                 `json:"contract_id"`
 	RecipientFirstName string                `json:"recipient_first_name"`
 	RecipientLastName  string                `json:"recipient_last_name"`
 	RecipientEmail     string                `json:"recipient_email"`
 	Children           []FamilyContractChild `json:"children"`
 	Count              *FamilyChildCount     `json:"count"`
 	Status             string                `json:"status"`
+	// Differing tells that the family's contracts brought different
+	// confirmed numbers and Count is none of them.
+	Differing bool `json:"differing"`
 }
 
 // FamilyChildrenSet is what the page shows: every family with a contract in
@@ -273,4 +285,6 @@ type ContractFamilyChildren interface {
 	// that applies to the school and has not ended by day counts the
 	// family's children, so a registration there asks for them.
 	CountsFamilyChildrenAt(ctx context.Context, organizationID, schoolID int64, day calendar.Date) (bool, error)
+	// The numbers an import of contracts names (#7356).
+	ContractImportFamilyChildren
 }

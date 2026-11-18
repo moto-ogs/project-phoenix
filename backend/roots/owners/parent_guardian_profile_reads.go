@@ -61,7 +61,7 @@ func ParentGuardianProfile(row *peopledirectory.GuardianProfileSnapshot) *parent
 	if row == nil {
 		return nil
 	}
-	out := &parentportal.GuardianProfile{ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, FirstName: row.FirstName, LastName: row.LastName, Email: row.Email, AddressStreet: row.AddressStreet, AddressCity: row.AddressCity, AddressPostalCode: row.AddressPostalCode, AccountID: row.AccountID, HasAccount: row.HasAccount, PreferredContactMethod: row.PreferredContactMethod, LanguagePreference: row.LanguagePreference, PortalLocale: row.PortalLocale, Notes: row.Notes}
+	out := &parentportal.GuardianProfile{ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, FirstName: row.FirstName, LastName: row.LastName, Salutation: row.Salutation, Email: row.Email, AddressStreet: row.AddressStreet, AddressCity: row.AddressCity, AddressPostalCode: row.AddressPostalCode, AccountID: row.AccountID, HasAccount: row.HasAccount, PreferredContactMethod: row.PreferredContactMethod, LanguagePreference: row.LanguagePreference, PortalLocale: row.PortalLocale, Notes: row.Notes}
 	var phones []*parentportal.GuardianProfilePhone
 	if row.PhoneNumbers != nil {
 		phones = make([]*parentportal.GuardianProfilePhone, len(row.PhoneNumbers))
@@ -76,7 +76,7 @@ func ParentGuardianProfile(row *peopledirectory.GuardianProfileSnapshot) *parent
 }
 
 func directoryGuardianProfile(value *parentportal.GuardianProfile) *peopledirectory.GuardianProfileSnapshot {
-	row := &peopledirectory.GuardianProfileSnapshot{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, FirstName: value.FirstName, LastName: value.LastName, Email: value.Email, AddressStreet: value.AddressStreet, AddressCity: value.AddressCity, AddressPostalCode: value.AddressPostalCode, AccountID: value.AccountID, HasAccount: value.HasAccount, PreferredContactMethod: value.PreferredContactMethod, LanguagePreference: value.LanguagePreference, PortalLocale: value.PortalLocale, Notes: value.Notes}
+	row := &peopledirectory.GuardianProfileSnapshot{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, FirstName: value.FirstName, LastName: value.LastName, Salutation: value.Salutation, Email: value.Email, AddressStreet: value.AddressStreet, AddressCity: value.AddressCity, AddressPostalCode: value.AddressPostalCode, AccountID: value.AccountID, HasAccount: value.HasAccount, PreferredContactMethod: value.PreferredContactMethod, LanguagePreference: value.LanguagePreference, PortalLocale: value.PortalLocale, Notes: value.Notes}
 	if value.PhoneNumbers != nil {
 		row.PhoneNumbers = make([]*peopledirectory.GuardianProfilePhoneSnapshot, len(value.PhoneNumbers))
 		for i, p := range value.PhoneNumbers {

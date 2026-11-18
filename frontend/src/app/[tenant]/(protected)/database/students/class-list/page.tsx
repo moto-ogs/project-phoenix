@@ -34,7 +34,7 @@ import {
 } from "~/components/ui/page-header/OverflowMenu";
 import type { FilterConfig } from "~/components/ui/page-header/types";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { formatCount } from "~/lib/format-utils";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
@@ -296,17 +296,28 @@ export default function ClassListEntriesPage() {
   // nur die angelegten Kinder, entfällt die Gesamtzahl, statt sie still
   // auszulassen (#2517).
   const statusLine =
-    entries === undefined
-      ? null
-      : [
+    entries === undefined ? null : (
+      <TenantPageStats
+        items={[
           ...(students === undefined
             ? []
             : [
-                `${formatCount(allRows.length)} ${allRows.length === 1 ? "Kind" : "Kinder"}`,
+                {
+                  value: formatCount(allRows.length),
+                  label: allRows.length === 1 ? "Kind" : "Kinder",
+                },
               ]),
-          `${formatCount(entryRows.length)} ohne Betreuung`,
-          `${formatCount(duplicateCount)} mögliche ${duplicateCount === 1 ? "Dublette" : "Dubletten"}`,
-        ].join(" · ");
+          {
+            value: formatCount(entryRows.length),
+            label: "ohne Betreuung",
+          },
+          {
+            value: formatCount(duplicateCount),
+            label: `mögliche ${duplicateCount === 1 ? "Dublette" : "Dubletten"}`,
+          },
+        ]}
+      />
+    );
   const rosterSummary =
     students === undefined
       ? ""
@@ -698,7 +709,7 @@ export default function ClassListEntriesPage() {
                   disabledReason={
                     saving
                       ? undefined
-                      : "Füllen Sie zuerst Vorname, Nachname und Klasse aus."
+                      : "Fülle zuerst Vorname, Nachname und Klasse aus."
                   }
                   tooltip={
                     modal?.kind === "edit"
@@ -814,7 +825,7 @@ export default function ClassListEntriesPage() {
             type="info"
             announce="off"
             className="mb-4"
-            message="Ihre Schule führt Kinder ohne OGS-Platz als eigene Kinder. Sie stehen in den Kinderdaten. Ihre Eltern können die Eltern-App nutzen. Neue Kinder legen Sie in den Kinderdaten mit „Ohne OGS-Platz“ an."
+            message="Deine Schule führt Kinder ohne OGS-Platz als eigene Kinder. Sie stehen in den Kinderdaten. Ihre Eltern können die Eltern-App nutzen. Neue Kinder legst du in den Kinderdaten mit „Ohne OGS-Platz“ an."
           />
         ) : null}
         {/* Ohne die angelegten Kinder ist die Liste unvollständig: der Fehler
@@ -840,7 +851,7 @@ export default function ClassListEntriesPage() {
                   ? "Noch keine Kinder erfasst"
                   : "Keine Kinder in dieser Klasse"
               }
-              description="Legen Sie Kinder ohne OGS-Betreuung mit Name und Klasse an, damit Klassenlisten den vollständigen Klassenverband zeigen."
+              description="Lege Kinder ohne OGS-Betreuung mit Name und Klasse an, damit Klassenlisten den vollständigen Klassenverband zeigen."
             />
           }
         />

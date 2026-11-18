@@ -123,7 +123,7 @@ export function StaffPreviewModal({ isOpen, onClose }: StaffPreviewModalProps) {
             size="md"
             onClick={() => void handleStart()}
             disabled={!selectedId || isStarting}
-            disabledReason="Wählen Sie zuerst eine Person aus."
+            disabledReason="Wähle zuerst eine Person aus."
             isLoading={isStarting}
             loadingText="Wird gestartet …"
             tooltip="Zeigt moto so, wie diese Person es sieht, nur zum Lesen."
@@ -135,8 +135,8 @@ export function StaffPreviewModal({ isOpen, onClose }: StaffPreviewModalProps) {
     >
       <div className="space-y-4">
         <p className="text-sm text-gray-600">
-          Wählen Sie eine Person. Sie sehen moto danach so wie diese Person. Sie
-          können dabei nur lesen, nichts ändern.
+          Wähle eine Person. Du siehst moto danach so wie diese Person. Du
+          kannst dabei nur lesen, nichts ändern.
         </p>
 
         <FormErrorAlert message={startError.error} />
@@ -152,7 +152,7 @@ export function StaffPreviewModal({ isOpen, onClose }: StaffPreviewModalProps) {
           <Loading />
         ) : candidates.length === 0 ? (
           <p className="text-sm text-gray-500">
-            Keine Person gefunden, die Sie ansehen können.
+            Keine Person gefunden, die du ansehen kannst.
           </p>
         ) : (
           <CustomSelect

@@ -22,10 +22,10 @@ Werte mit den Registern; die Summen unten sind nicht aus früheren PRs übernomm
 | Policy-Epoche | 91 | `policy_epoch` in `backend/architecture/policy.json` |
 | Regeln mit `issue`-Feld oder Übergangsmarker | 0 von 927 | `rules` in `backend/architecture/policy.json`, `validateTargetOnlyRule` in `backend/internal/architecture/target_rule.go` |
 | Composition-Surface | 0 | `scripts/backend-architecture.sh check` |
-| Legacy-LOC in `legacy/`-Bäumen | 0 | `moduleLegacyBudgetTotal` in `backend/test/module_legacy_budget_ratchet_test.go` |
+| Legacy-LOC in `legacy/`-Bäumen | 0 | `moduleLegacyBudgets` in `backend/test/module_legacy_budget_ratchet_test.go` |
 | Legacy-LOC in `legacy_*.go` außerhalb solcher Bäume | 246 in 1 Datei | `moduleLegacyFileBudgets`, ebenda; `backend/roots/owners/legacy_workforce_schedule_adapter.go` (ADR 0082) |
-| Compose-LOC | 12.384 in 55 Paketen | `moduleComposeBudgets` / `moduleComposeBudgetTotal`, ebenda |
-| Pass-through-Methoden | 1.408 in 30 Ownern | `modulePassthroughOwnerBudgets` / `modulePassthroughOwnerBudgetTotal` in `backend/test/module_passthrough_ratchet_test.go` |
+| Compose-LOC | 12.384 in 55 Paketen | Summe von `moduleComposeBudgets`, ebenda |
+| Pass-through-Methoden | 1.408 in 30 Ownern | Summe von `modulePassthroughOwnerBudgets` in `backend/test/module_passthrough_ratchet_test.go` |
 | Dateigrößen-Ausnahmen, inkl. Roots | 2 Dateien: 1.348 und 1.139 LOC | `moduleFileSizeAllowlist` in `backend/test/module_file_size_ratchet_test.go` |
 | Funktionslängen-Ausnahmen, inkl. Roots | 27 Funktionen, Summe 3.834 Body-Zeilen | `moduleFuncLenAllowlist` in `backend/test/module_function_length_ratchet_test.go` |
 | Komplexitäts-Ausnahmen, inkl. Roots | 13 Funktionen, Summe 285 | `moduleComplexityAllowlist` in `backend/test/module_complexity_ratchet_test.go` |

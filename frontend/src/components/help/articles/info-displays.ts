@@ -17,14 +17,14 @@ export function infoDisplaysTopic(): HelpTopic {
       {
         title: "Ein Display anlegen",
         description:
-          "Ein Display lohnt sich dort, wo viele vorbeikommen. Eltern sehen beim Abholen selbst, in welchem Raum die Gruppen gerade sind. Ihr Team muss dann nicht jedem einzeln Auskunft geben.",
+          "Ein Display lohnt sich dort, wo viele vorbeikommen. Eltern sehen beim Abholen selbst, in welchem Raum die Gruppen gerade sind. Dein Team muss dann nicht jedem einzeln Auskunft geben.",
         steps: [
-          "Klappen Sie in der Seitenleiste `Verwaltung` auf.",
-          "Öffnen Sie `Info-Displays`.",
-          "Wählen Sie `Neues Display`.",
-          "Tragen Sie einen Namen ein, zum Beispiel `Eingang`.",
-          "Speichern Sie das Display.",
-          "Öffnen Sie den Link des Displays auf dem Bildschirm im Flur.",
+          "Klappe in der Seitenleiste `Verwaltung` auf.",
+          "Öffne `Info-Displays`.",
+          "Wähle `Neues Display`.",
+          "Trage einen Namen ein, zum Beispiel `Eingang`.",
+          "Speichere das Display.",
+          "Öffne den Link des Displays auf dem Bildschirm im Flur.",
         ],
       },
     ],
@@ -32,13 +32,13 @@ export function infoDisplaysTopic(): HelpTopic {
     notes: [
       "Auf dem Bildschirm stehen nur Anzahlen, Raumnamen und Uhrzeiten. Namen von Kindern erscheinen nicht.",
       "Oben läuft eine Uhr. Bei fehlender Verbindung steht dort, wie alt der Stand ist.",
-      "Legen Sie für jeden Bildschirm ein eigenes Display an.",
+      "Lege für jeden Bildschirm ein eigenes Display an.",
     ],
     differences: [
-      "Fehlt `Info-Displays` in der Seitenleiste? Dann ist die Funktion ausgeschaltet. Schalten Sie sie in den `Einstellungen` unter `Betrieb` bei `Info-Displays nutzen` ein.",
+      "Fehlt `Info-Displays` in der Seitenleiste? Dann ist die Funktion ausgeschaltet. Schalte sie in den `Einstellungen` unter `Betrieb` bei `Info-Displays nutzen` ein.",
     ],
     troubleshootingDetails: [
-      "Der Bildschirm zeigt nichts? Prüfen Sie, ob der Link vollständig geöffnet wurde.",
+      "Der Bildschirm zeigt nichts? Prüfe, ob der Link vollständig geöffnet wurde.",
     ],
     related: [
       HELP_TOPICS.leadDevices,

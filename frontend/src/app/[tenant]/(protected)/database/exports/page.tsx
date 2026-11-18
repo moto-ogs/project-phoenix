@@ -27,7 +27,7 @@ import {
   type ExportMenuOption,
 } from "~/components/ui/export-menu";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
 import { exportEmergencySnapshot } from "~/lib/emergency-export-api";
@@ -161,7 +161,14 @@ export default function DatabaseExportsPage() {
       ? 1
       : 0) +
     (zeiterfassungBooked ? 1 : 0); // Zeitnachweis
-  const statusLine = `${listCount} ${listCount === 1 ? "Liste" : "Listen"} · ${linkCount} auf anderen Seiten`;
+  const statusLine = (
+    <TenantPageStats
+      items={[
+        { value: listCount, label: listCount === 1 ? "Liste" : "Listen" },
+        { value: linkCount, label: "auf anderen Seiten" },
+      ]}
+    />
+  );
 
   const runExport = async (key: string, task: () => Promise<void>) => {
     setBusy((current) => new Set(current).add(key));
@@ -195,8 +202,8 @@ export default function DatabaseExportsPage() {
         <SectionCard>
           <p className="text-sm text-gray-600">
             Jeder Export enthält nur die Daten, die für die jeweilige Liste
-            nötig sind. Bitte behandeln Sie die erzeugten Dateien wie jede
-            andere personenbezogene Unterlage.
+            nötig sind. Bitte behandle die erzeugten Dateien wie jede andere
+            personenbezogene Unterlage.
           </p>
         </SectionCard>
 
@@ -213,7 +220,7 @@ export default function DatabaseExportsPage() {
                   type="button"
                   size="md"
                   variant="outline"
-                  tooltip="Öffnet ein Fenster, in dem Sie Spalten und Format wählen."
+                  tooltip="Öffnet ein Fenster, in dem du Spalten und Format wählst."
                   onClick={() =>
                     setStudentModal({
                       heading: `${preset.label} exportieren`,
@@ -242,7 +249,7 @@ export default function DatabaseExportsPage() {
                   type="button"
                   size="md"
                   variant="outline"
-                  tooltip="Öffnet ein Fenster, in dem Sie Monate und Format wählen."
+                  tooltip="Öffnet ein Fenster, in dem du Monate und Format wählst."
                   onClick={() => setStaffBirthdayModalOpen(true)}
                 >
                   <Download className="mr-2 h-4 w-4" aria-hidden />

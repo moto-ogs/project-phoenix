@@ -321,7 +321,10 @@ excluded here too. `GET /traeger/notifications/feed` lists the entries of all
 schools of the session's Träger with `school_id` and `school_name`; it reads
 in one administrative unit whose statements keep only the Träger's schools
 while the account is an active member. The bell reloads its count on every
-page change and every minute.
+page change and every minute. The caterer that currently supplies the school
+(`auth.caterer_schools`, active account) reads it in the bell of the caterer
+portal (`caterer_school_closing_day_changed`, #7147, ADR 0292), on the same
+terms; see the meal plan below.
 
 A block that moves to another room (#7141) comes from Timetable's edit of a
 planned block (`UpdatePlanned`, also its series conversion): only a change
@@ -390,6 +393,34 @@ The first parent producer is Communication's cancellation notice
 (`parent_care_cancelled`, #2601): the one notice the person cancelling sends
 to the families writes the feed next to its push and its news entry; there is
 no second message. The family's switch decides only the push.
+
+A changed meal plan (`meal_plan_changed`, #7145) reaches the guardians of the
+children with a meal booked on the changed day, as the daily list counts
+them after absences, who hold `parent_portal.access` for one of them, without
+the person who changed it. Meal Plan writes it in the unit that saves the
+menu, only when a day that already had a menu changes: a first menu for an
+empty day, an unchanged save and a past day tell nobody, and neither does a
+school without meal registration. The object is the week
+(`meal_plan_week`, its Monday as `YYYYMMDD`), so changes to one week within
+ten minutes update the unread entry without a second push. Feed and push
+within 14 days, feed only later. The push is off by default (`FilterOptedIn`),
+in the guardian's language and without child or dish; the entry names the
+week and links to `/meal-plan?week=<Monday>`. The school switch is
+`notifications.meal_plan_changed_enabled`.
+
+The caterer that currently supplies the school reads the same change in the
+bell of the caterer portal (`caterer_meal_plan_changed`, #7147, ADR 0292):
+one entry per active account of the caterer, in the school it is about,
+naming the week and linked to the order overview `/caterer`, without push
+and without live signal, under the same school switch and the same rules
+(a first menu, an unchanged save, a past day and a day without a booked meal
+tell nobody; one entry per week while unread). Delivery's
+`CatererFeedNotifier.CatererAudience` names the accounts in the school's
+tenant transaction. `GET /caterer/notifications/feed` lists the entries of
+every school the caterer supplies with `school_id` and `school_name`, in one
+administrative unit whose statements keep only the running supplies of the
+account's caterer; an ended supply hides the school's entries at once. The
+bell reloads its count on every page change and every minute.
 
 ### Web Push (#2003)
 

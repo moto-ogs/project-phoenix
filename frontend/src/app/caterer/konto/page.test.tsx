@@ -115,7 +115,7 @@ describe("Caterer-Konto (#4496)", () => {
     expect(screen.getByText("kueche@example.com")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Nach dem Ändern melden Sie sich auf allen Geräten neu an.",
+        "Nach dem Ändern meldest du dich auf allen Geräten neu an.",
       ),
     ).toBeInTheDocument();
   });
@@ -238,7 +238,7 @@ describe("Caterer-Konto: Zwei-Faktor-Anmeldung (#4497)", () => {
     // Anker: Der fehlgeschlagene Sitzungswechsel zeigt die neue Anmeldung an.
     expect(
       await screen.findByText(
-        "Die Zwei-Faktor-Anmeldung ist eingeschaltet. Die Anmeldung konnte nicht erneuert werden. Bitte melden Sie sich neu an.",
+        "Die Zwei-Faktor-Anmeldung ist eingeschaltet. Die Anmeldung konnte nicht erneuert werden. Bitte melde dich neu an.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Code")).not.toBeInTheDocument();
@@ -306,7 +306,9 @@ describe("Caterer-Konto: Zwei-Faktor-Anmeldung (#4497)", () => {
     render(<CatererAccountPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Eingeschaltet")).toBeInTheDocument();
-    expect(screen.getByText("Gemerkte Geräte (Karte)")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Gemerkte Geräte (Karte)"),
+    ).toBeInTheDocument();
 
     // Switching off deletes the remembered devices in the backend.
     fireEvent.click(screen.getByRole("button", { name: "Ausschalten" }));
@@ -316,8 +318,10 @@ describe("Caterer-Konto: Zwei-Faktor-Anmeldung (#4497)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ausschalten" }));
 
     expect(await screen.findByText("Ausgeschaltet")).toBeInTheDocument();
-    expect(
-      screen.queryByText("Gemerkte Geräte (Karte)"),
-    ).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Gemerkte Geräte (Karte)"),
+      ).not.toBeInTheDocument();
+    });
   });
 });

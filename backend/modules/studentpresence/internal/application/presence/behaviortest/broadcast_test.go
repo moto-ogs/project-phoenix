@@ -318,7 +318,7 @@ func TestBroadcast_EndActivitySessionSendsBoundedRefreshes(t *testing.T) {
 
 	broadcaster.Reset()
 
-	err := svc.EndActivitySession(testpkg.Ctx(t), session.ID)
+	_, err := svc.EndActivitySession(testpkg.Ctx(t), session.ID)
 	require.NoError(t, err)
 
 	// The batch checkout and activity end each emit one tenant-scoped refresh
@@ -363,7 +363,8 @@ func TestBroadcast_EndActivitySessionEmitsActivityEndOnServeRole(t *testing.T) {
 	ctx = tenant.WithTenantID(ctx, testpkg.Tenant(t))
 	broadcaster.Reset()
 
-	require.NoError(t, svc.EndActivitySession(ctx, session.ID))
+	_, endErr := svc.EndActivitySession(ctx, session.ID)
+	require.NoError(t, endErr)
 
 	ends := broadcaster.EventsOfType(presenceevents.EventActivityEnd)
 	require.Len(t, ends, 1, "activity_end must reach the SSE client after the commit")
@@ -401,7 +402,7 @@ func TestBroadcast_EndActivitySessionBatchesCheckouts(t *testing.T) {
 
 	broadcaster.Reset()
 
-	err := svc.EndActivitySession(testpkg.Ctx(t), session.ID)
+	_, err := svc.EndActivitySession(testpkg.Ctx(t), session.ID)
 	require.NoError(t, err)
 
 	// No per-student student_checkout events on the bulk path — those would be
@@ -476,7 +477,7 @@ func TestBroadcast_EndActivitySessionBatchesPerEducationGroup(t *testing.T) {
 
 	broadcaster.Reset()
 
-	err := svc.EndActivitySession(testpkg.Ctx(t), session.ID)
+	_, err := svc.EndActivitySession(testpkg.Ctx(t), session.ID)
 	require.NoError(t, err)
 
 	idA := strconv.FormatInt(studentA.ID, 10)
@@ -660,7 +661,8 @@ func TestBroadcast_TenantWideEventsCarryNoStudentIdentity(t *testing.T) {
 	// --- whole-session end (bulk path) --------------------------------------
 	broadcaster.Reset()
 	testpkg.CreateTestVisit(t, db, student.ID, activeGroup.ID, time.Now(), nil)
-	require.NoError(t, svc.EndActivitySession(ctx, activeGroup.ID))
+	_, endErr := svc.EndActivitySession(ctx, activeGroup.ID)
+	require.NoError(t, endErr)
 
 	assertBothHalvesOfTheContract(t, broadcaster, presenceevents.EventBulkStudentCheckOut, studentIDStr)
 }

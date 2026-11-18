@@ -421,6 +421,11 @@
       "reason": "ADR 0153 (#4680): Consumer-port adapter that resolves care_contract.conclusion_mode of the school through the settings and refuses any value the Betreuungsvertrag does not know."
     },
     {
+      "decision": "0075",
+      "id": "api/catererNotificationFeed.Page",
+      "reason": "ADR 0075 consumer-port adapter (#7147): translates Delivery's caterer bell page with each entry's school onto the caterer feed port of the HTTP adapter; the count and read-state calls reach Delivery's reader unchanged through the embedded interface. No decision or SQL."
+    },
+    {
       "decision": "0090",
       "id": "api/childQuotaStudentsReader.ChildQuotaUsage",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
@@ -2418,7 +2423,7 @@
     {
       "decision": "0090",
       "id": "roots/owners/PushSubscriptionCleanup.ListLinks",
-      "reason": "Root translation of Delivery's ListSessionLinks onto Identity \u0026 Access's push cleanup port (#7295): maps Delivery's link values onto Identity \u0026 Access's, which decides session liveness on its own clock instead of a Delivery view on the database clock. No forwarding without translation."
+      "reason": "Root translation of Delivery's bounded ListSessionLinks page onto the Identity \u0026 Access push cleanup port (#7383). It maps the returned link values into the Identity \u0026 Access types. Session liveness uses the Identity \u0026 Access clock."
     },
     {
       "decision": "0090",
@@ -2588,11 +2593,6 @@
     {
       "decision": "0090",
       "id": "roots/owners/StatisticsAuditLog.SeenStatisticsAccessWithin",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/StatisticsReportPeriods.StatisticsHolidayPeriods",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -5227,6 +5227,11 @@
     },
     {
       "decision": "0090",
+      "id": "roots/owners/provisioningDevices.RecordDeviceLifecycle",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0090",
       "id": "roots/owners/provisioningDevices.UpdateDevice",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -5593,17 +5598,17 @@
     {
       "decision": "0090",
       "id": "roots/owners/staffDirectoryCapability.PersonByAccountID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending. #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile (owner-edge error translation)."
     },
     {
       "decision": "0090",
       "id": "roots/owners/staffDirectoryCapability.ResolveStaffIDByAccountID",
-      "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
+      "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending. #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile (owner-edge error translation)."
     },
     {
       "decision": "0090",
       "id": "roots/owners/staffDirectoryCapability.StaffByPersonID",
-      "reason": "E1 #5892: own-subject resolution consumes membership ID only. Narrow live membership query retains identity/not-found mapping; no writes or locks. ADR 0075 consumer-port translation unchanged."
+      "reason": "E1 #5892: own-subject resolution consumes membership ID only. Narrow live membership query retains identity/not-found mapping; no writes or locks. ADR 0075 consumer-port translation unchanged. #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile (owner-edge error translation)."
     },
     {
       "decision": "0090",

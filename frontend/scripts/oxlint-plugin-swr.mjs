@@ -527,12 +527,18 @@ const noFreeKey = {
 // Reads belong in the shared cache (#4986, Welle 2): a load started by an
 // effect that fills component state is lost on the next page switch, has no
 // scope lock and repeats its own stale-answer and retry handling. Counted per
-// file as effects that reach asynchronous work and a state setter; the
-// baseline is shrink-only. Sessionless pages and DOM work (fonts, images,
-// clipboard) that match keep their baseline entry or an
+// file as effects that reach asynchronous work whose answer reaches a state
+// setter: `setRows(await load())`, `.then(setRows)`, a value derived from the
+// answer, or the answer handed to a component function that sets state. An
+// effect that only notes that something finished (`await markRead();
+// setDone(true)`, a sign-out, a write) keeps no answer and is no load; nor is
+// a code chunk loaded with `import()`. The baseline is shrink-only.
+// Sessionless pages and browser work that keep an answer (a token page, a
+// decoded image, a push subscription) carry an
 // `oxlint-disable-next-line swr/no-effect-load -- <reason>` line.
 // Not traced: loaders from another module (`const { load } = useLoader()`),
-// `useReducer` dispatch and setters passed in as props.
+// `useReducer` dispatch, setters passed in as props and an answer kept
+// outside state (a ref, a store).
 const effectLoadBaseline = JSON.parse(
   readFileSync(
     new URL("./swr-effect-load-baseline.json", import.meta.url),
@@ -571,6 +577,44 @@ function calleeName(node) {
   if (node?.type === "MemberExpression" && !node.computed)
     return node.property?.name;
   return null;
+}
+
+/** Does `node` contain a node that `test` accepts, nested functions included? */
+function contains(node, test) {
+  if (!node || typeof node.type !== "string") return false;
+  if (test(node)) return true;
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "parent") continue;
+    for (const child of Array.isArray(value) ? value : [value])
+      if (child && typeof child === "object" && contains(child, test))
+        return true;
+  }
+  return false;
+}
+
+/** The names a pattern binds (`rows`, `{ rows }`, `[first, ...rest]`). */
+function boundNames(pattern, into = []) {
+  if (!pattern) return into;
+  if (pattern.type === "Identifier") into.push(pattern.name);
+  else if (pattern.type === "ObjectPattern")
+    for (const property of pattern.properties)
+      boundNames(property.value ?? property.argument, into);
+  else if (pattern.type === "ArrayPattern")
+    for (const element of pattern.elements) boundNames(element, into);
+  else if (pattern.type === "AssignmentPattern") boundNames(pattern.left, into);
+  else if (pattern.type === "RestElement") boundNames(pattern.argument, into);
+  return into;
+}
+
+/** `import("./chunk")`, also behind `.then(...)` or other chained calls. */
+function isChunkImport(node) {
+  let current = node;
+  while (
+    current?.type === "CallExpression" &&
+    current.callee.type === "MemberExpression"
+  )
+    current = current.callee.object;
+  return current?.type === "ImportExpression";
 }
 
 /**
@@ -689,6 +733,7 @@ const noEffectLoad = {
           const queue = [effect.arguments[0]];
           let asynchronous = false;
           let setsState = false;
+          const reached = [];
           while (queue.length > 0) {
             const fn = queue.pop();
             if (!fn || seen.has(fn)) continue;
@@ -729,8 +774,98 @@ const noEffectLoad = {
             };
             // `() => () => cleanup()`: the returned function does not run.
             walkExecuted(fn.body, visit, !FUNCTION_TYPES.has(fn.body.type));
+            reached.push(fn);
           }
-          return asynchronous && setsState;
+          return asynchronous && setsState && keepsAnswer(reached);
+        }
+
+        // Does a component function, or one it calls, call a state setter?
+        function reachesSetter(name, seen = new Set()) {
+          if (setters.has(name)) return true;
+          if (seen.has(name)) return false;
+          seen.add(name);
+          for (const fn of functions.get(name) ?? []) {
+            if (fn.type === "Identifier") {
+              if (reachesSetter(fn.name, seen)) return true;
+              continue;
+            }
+            let found = false;
+            walkExecuted(fn.body, (node) => {
+              if (node.type !== "CallExpression") return;
+              for (const used of [node.callee, ...node.arguments])
+                if (
+                  used.type === "Identifier" &&
+                  reachesSetter(used.name, seen)
+                )
+                  found = true;
+            });
+            if (found) return true;
+          }
+          return false;
+        }
+
+        // Does the answer of the asynchronous work reach state? Names are
+        // followed across the reached functions without regard to scope: a
+        // shared name only makes the rule stricter.
+        function keepsAnswer(reached) {
+          const answers = new Set();
+          const isAnswer = (node) =>
+            (node.type === "AwaitExpression" &&
+              !isChunkImport(node.argument)) ||
+            (node.type === "Identifier" && answers.has(node.name));
+          const carries = (node) => contains(node, isAnswer);
+          const thenOf = (node) =>
+            node.type === "CallExpression" &&
+            node.callee.type === "MemberExpression" &&
+            calleeName(node.callee) === "then" &&
+            !isChunkImport(node.callee.object);
+          let grew = true;
+          while (grew) {
+            grew = false;
+            const add = (pattern) => {
+              for (const name of boundNames(pattern))
+                if (!answers.has(name)) {
+                  answers.add(name);
+                  grew = true;
+                }
+            };
+            for (const fn of reached)
+              walkExecuted(fn.body, (node) => {
+                if (node.type === "VariableDeclarator" && carries(node.init))
+                  add(node.id);
+                if (node.type === "AssignmentExpression" && carries(node.right))
+                  add(node.left);
+                if (node.type === "ForOfStatement" && node.await)
+                  add(node.left.declarations?.[0]?.id ?? node.left);
+                if (thenOf(node)) {
+                  const handler = node.arguments[0];
+                  if (FUNCTION_TYPES.has(handler?.type))
+                    for (const param of handler.params) add(param);
+                }
+              });
+          }
+          let kept = false;
+          for (const fn of reached)
+            walkExecuted(fn.body, (node) => {
+              if (node.type !== "CallExpression") return;
+              // `.then(setRows)`, `.then(apply)`.
+              if (thenOf(node)) {
+                const handler = node.arguments[0];
+                if (
+                  handler?.type === "Identifier" &&
+                  reachesSetter(handler.name)
+                )
+                  kept = true;
+              }
+              // `setRows(next)`, `apply(next)` with the answer in an argument.
+              if (
+                node.callee.type === "Identifier" &&
+                reachesSetter(node.callee.name) &&
+                node.arguments.some(carries)
+              )
+                kept = true;
+            });
+          return kept;
         }
         let actual = 0;
         for (const effect of effects) {

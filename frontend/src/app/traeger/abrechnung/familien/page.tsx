@@ -44,7 +44,7 @@ import {
 import { FamilyDebtorNumberModal } from "~/components/traeger/family-debtor-number-modal";
 import { useDebtorNumberSettings } from "~/components/traeger/use-debtor-number-format";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
-import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
@@ -544,10 +544,19 @@ export default function TraegerBillingFamiliesPage() {
     activeFilters.map((filter) => filter.label),
   );
 
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/billing-families/export", format),
+    scope:
+      "Alle Familien, ohne Suche und Filter. Jeder Download wird protokolliert.",
+    fallbackName: "familien",
+    errorObject: "die Liste der Familien",
+    unavailable: !families || families.length === 0,
+  });
   return (
     <TenantPage
       title={billingAreaTitle("familien")}
-      info={`Hier sehen Sie je Familie alle Rechnungen, Stornos und Gutschriften und ${scope === "child" ? "die Debitorennummer jedes Kindes" : "ihre Debitorennummer"}. Eine Familie ist eine E-Mail-Adresse. Familien aus der Ferienbetreuung stehen hier schon nach dem Bestätigen der Anmeldung. Die offene Forderung ist, was die Rechnungen nach Storno und Gutschrift noch verlangen. Zahlungen sieht moto nicht. Ob eine Familie schon gezahlt hat, prüfen Sie in Ihrer Buchhaltung.`}
+      info={`Hier siehst du je Familie alle Rechnungen, Stornos und Gutschriften und ${scope === "child" ? "die Debitorennummer jedes Kindes" : "ihre Debitorennummer"}. Eine Familie ist eine E-Mail-Adresse. Familien aus der Ferienbetreuung stehen hier schon nach dem Bestätigen der Anmeldung. Die offene Forderung ist, was die Rechnungen nach Storno und Gutschrift noch verlangen. Zahlungen sieht moto nicht. Ob eine Familie schon gezahlt hat, prüfst du in deiner Buchhaltung.`}
       tabs={billingTabs("familien")}
       stats={
         families && families.length > 0 ? (
@@ -577,19 +586,7 @@ export default function TraegerBillingFamiliesPage() {
         ) : null
       }
       statsLoading={!families && !loadError}
-      actions={
-        <TraegerListExportMenu
-          download={(format) =>
-            downloadTraegerList("/api/traeger/billing-families/export", format)
-          }
-          scope="Alle Familien, ohne Suche und Filter"
-          ariaLabel="Familien herunterladen"
-          tooltip="Zeigt die Formate für alle Familien, ohne Suche und Filter. Jeder Download wird protokolliert."
-          fallbackName="familien"
-          errorObject="die Liste der Familien"
-          unavailable={!families || families.length === 0}
-        />
-      }
+      overflowMenu={exportItems}
       search={{
         value: search,
         onChange: setSearch,
@@ -676,7 +673,7 @@ export default function TraegerBillingFamiliesPage() {
                 <EmptyState
                   icon={<MotoConceptIcon concept={parentsConcept} size={48} />}
                   title="Noch keine Familie."
-                  description="Eine Familie steht hier, sobald Sie eine Ferienanmeldung bestätigen oder eine Rechnung freigeben."
+                  description="Eine Familie steht hier, sobald du eine Ferienanmeldung bestätigst oder eine Rechnung freigibst."
                 />
               )
             }

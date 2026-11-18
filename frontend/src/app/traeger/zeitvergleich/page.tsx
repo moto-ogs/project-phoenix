@@ -285,7 +285,7 @@ const CHILD_COLUMNS: DataTableColumn<OverrunChild>[] = [
     render: (child) => (
       <span className="block min-w-0">
         <span className="block font-medium text-gray-900">
-          {child.firstName} {child.lastName}
+          {child.lastName}, {child.firstName}
         </span>
         <span className="block text-sm text-gray-500">
           {child.schoolClass
@@ -363,57 +363,76 @@ function ChildrenEmptyState({
   }
   return (
     <EmptyState
-      icon={<CircleCheck className="h-12 w-12" aria-hidden="true" />}
+      tone="success"
+      icon={<CircleCheck className="h-6 w-6" aria-hidden="true" />}
       title="Kein Kind war länger da als gebucht."
       description="In diesem Monat passen alle Zeiten zur Buchung."
     />
   );
 }
 
-function Figures({ evaluation }: Readonly<{ evaluation: OverrunEvaluation }>) {
-  const { total } = evaluation;
-  const days = overrunDayCount(total);
+/**
+ * Die Kennzahlen über den Tabellen. Beim Laden stehen die Kacheln schon da,
+ * mit Platzhaltern statt Zahlen.
+ */
+function Figures({
+  evaluation,
+  loading,
+}: Readonly<{ evaluation: OverrunEvaluation | null; loading: boolean }>) {
+  const total = evaluation?.total;
   // Without any check-in the figures are unknown, not zero.
-  const noData = overrunCoverage(evaluation) === "none";
+  const noData = evaluation === null || overrunCoverage(evaluation) === "none";
+  const children = total?.children ?? 0;
+  const unbookedDays = total?.unbookedDays ?? 0;
+  const extraMinutes = total?.extraMinutes ?? 0;
   return (
-    <div className="grid grid-cols-2 gap-4 max-sm:gap-3 lg:grid-cols-3">
+    <div className="grid gap-4 max-sm:gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <StatCard
         label="Kinder"
-        value={noData ? "–" : total.children}
+        value={noData ? "–" : children}
         tone="neutral"
         hint={
-          noData
-            ? noDataTitle(evaluation)
-            : total.children === 1
-              ? "Ein Kind war länger da als gebucht."
-              : `${total.children} Kinder waren länger da als gebucht.`
+          evaluation === null
+            ? undefined
+            : noData
+              ? noDataTitle(evaluation)
+              : children === 1
+                ? "Ein Kind war länger da als gebucht."
+                : `${children} Kinder waren länger da als gebucht.`
         }
         icon={<MotoConceptIcon concept={childrenConcept} />}
+        loading={loading}
       />
       <StatCard
         label="Tage"
-        value={noData ? "–" : days}
+        value={noData || total === undefined ? "–" : overrunDayCount(total)}
         tone="neutral"
         hint={
-          noData
-            ? "Ohne verglichene Check-ins zählt moto keine Tage."
-            : total.unbookedDays > 0
-              ? `Davon ${total.unbookedDays} an Tagen ohne Buchung.`
-              : "Tage, an denen ein Kind länger da war."
+          evaluation === null
+            ? undefined
+            : noData
+              ? "Ohne verglichene Check-ins zählt moto keine Tage."
+              : unbookedDays > 0
+                ? `Davon ${unbookedDays} an Tagen ohne Buchung.`
+                : "Tage, an denen ein Kind länger da war."
         }
         icon={<MotoConceptIcon concept={calendarConcept} />}
+        loading={loading}
       />
-      <div className="col-span-2 lg:col-span-1">
-        <StatCard
-          label="Zusätzliche Zeit"
-          // Each number keeps its unit; a narrow tile breaks only between
-          // hours and minutes instead of running into the symbol.
-          value={noData ? "–" : formatExtraTime(total.extraMinutes)}
-          tone={!noData && total.extraMinutes > 0 ? "red" : "neutral"}
-          hint={`Zählt ab ${evaluation.toleranceMinutes || 15} Minuten früher oder später.`}
-          icon={<MotoConceptIcon concept={careTimesConcept} />}
-        />
-      </div>
+      <StatCard
+        label="Zusätzliche Zeit"
+        // Each number keeps its unit; a narrow tile breaks only between
+        // hours and minutes instead of running into the symbol.
+        value={noData ? "–" : formatExtraTime(extraMinutes)}
+        tone={!noData && extraMinutes > 0 ? "red" : "neutral"}
+        hint={
+          evaluation === null
+            ? undefined
+            : `Zählt ab ${evaluation.toleranceMinutes || 15} Minuten früher oder später.`
+        }
+        icon={<MotoConceptIcon concept={careTimesConcept} />}
+        loading={loading}
+      />
     </div>
   );
 }
@@ -504,7 +523,7 @@ function TraegerZeitvergleichContent() {
       title="Länger als gebucht"
       info={
         <>
-          Hier sehen Sie, wie oft Kinder länger da waren als gebucht. moto
+          Hier siehst du, wie oft Kinder länger da waren als gebucht. moto
           vergleicht dafür die Zeiten im Vertrag mit dem Ein- und Auschecken.
           Ohne Vertrag gilt der Betreuungsplan der Schule. Mehr als 15 Minuten
           früher oder später zählt. Ein Tag ohne Buchung zählt ganz.
@@ -567,7 +586,7 @@ function TraegerZeitvergleichContent() {
         />
       }
     >
-      {evaluation ? <Figures evaluation={evaluation} /> : null}
+      <Figures evaluation={evaluation ?? null} loading={loading} />
       <DataTable
         heading={{
           title: "Je Schule",

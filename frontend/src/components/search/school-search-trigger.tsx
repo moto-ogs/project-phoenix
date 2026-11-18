@@ -147,7 +147,7 @@ function SearchLoadFailed({ onShown }: Readonly<{ onShown: () => void }>) {
   const { showMessage } = useApiErrorDisplay();
   useEffect(() => {
     showMessage(
-      "Die Suche konnte nicht geöffnet werden. Bitte versuchen Sie es noch einmal.",
+      "Die Suche konnte nicht geöffnet werden. Bitte versuche es noch einmal.",
     );
     onShown();
   }, [showMessage, onShown]);
@@ -188,7 +188,6 @@ export function SchoolSearchProvider({
     return () => globalThis.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // oxlint-disable-next-line swr/no-effect-load -- loads the search dialog's code chunk (dynamic import), no data read
   useEffect(() => {
     if (hasDialog) return;
     let live = true;

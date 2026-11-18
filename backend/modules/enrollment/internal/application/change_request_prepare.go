@@ -17,9 +17,11 @@ import (
 // proposal is a validated, normalized change request payload ready to store
 // or apply.
 type proposal struct {
-	request    SubmitRequest
-	selections [][]selection.Selection
-	phase      *enrollmentNative.Phase
+	request     SubmitRequest
+	schema      *enrollmentNative.FormSchema
+	legalBlocks []enrollmentNative.LegalBlock
+	selections  [][]selection.Selection
+	phase       *enrollmentNative.Phase
 	// locked is the phase as the phase bounds reader read it; phase is its
 	// row. Only locked reaches the bookings.
 	locked    enrollmentNative.LockedPhase
@@ -201,20 +203,12 @@ func (s *ChangeRequests) validateProposal(ctx context.Context, req *enrollmentNa
 	if err := normalizeAdditionalGuardians(editReq); err != nil {
 		return err
 	}
+	prepared.schema, prepared.legalBlocks = schema, legalBlocks
+	editReq.ConsentFlags = filterConsentFlags(editReq.ConsentFlags, legalBlocks)
 	consentBlocks := legalBlocks
 	if renewalRequest(children) {
-		// A renewal's acceptance of the new phase comes only with its
-		// evidence (ConfirmRenewal, #6456), so a change request on it, such
-		// as the offerings adjustment whose form shows no consent, demands
-		// no tick. Its answers go over the stored ones and never drop an
-		// acceptance recorded in between.
 		consentBlocks = requiredFreeLegalBlocks(legalBlocks)
-		merged := formMap(req.ConsentFlags)
-		if merged == nil {
-			merged = map[string]any{}
-		}
-		maps.Copy(merged, editReq.ConsentFlags)
-		editReq.ConsentFlags = merged
+		editReq.ConsentFlags = renewalProposalConsentFlags(req, editReq.ConsentFlags, legalBlocks)
 	}
 	if err := s.intake.validateSubmission(ctx, changeRequestValidationSubmission(*editReq, children, opts.lockTakenOverChildren), consentBlocks, capabilities); err != nil {
 		return err
@@ -230,12 +224,34 @@ func (s *ChangeRequests) validateProposal(ctx context.Context, req *enrollmentNa
 	if err := s.validateAccountLinkedGuardianEdits(ctx, req, *editReq); err != nil {
 		return err
 	}
-	editReq.ConsentFlags = filterConsentFlags(editReq.ConsentFlags, legalBlocks)
 	if err := validateSubmittedFields(schema, changeRequestValidationSubmission(*editReq, children, opts.lockTakenOverChildren), prepared.offerings, children); err != nil {
 		return err
 	}
 	mergeProposalAnswers(schema, editReq, formMap(req.CustomData), children, prepared.offerings, opts.lockTakenOverChildren)
 	return nil
+}
+
+// renewalProposalConsentFlags overlays optional answers while keeping all
+// confirmations, including terms published after the pinned proposal form.
+func renewalProposalConsentFlags(req *enrollmentNative.Request, incoming map[string]any, legalBlocks []enrollmentNative.LegalBlock) map[string]any {
+	merged := formMap(req.ConsentFlags)
+	if merged == nil {
+		merged = map[string]any{}
+	}
+	for _, block := range legalBlocks {
+		if block.Required {
+			delete(incoming, block.Key)
+		}
+	}
+	if evidence, ok := enrollmentNative.LastSubmissionLegalSnapshot(req.LegalBlocksSnapshot); ok {
+		for _, block := range evidence.Blocks {
+			if block.Required {
+				delete(incoming, block.Key)
+			}
+		}
+	}
+	maps.Copy(merged, incoming)
+	return merged
 }
 
 // validateProposalEligibility applies the eligible classes and grades — a

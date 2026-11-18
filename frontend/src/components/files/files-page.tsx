@@ -21,7 +21,7 @@ import { Dropzone } from "~/components/ui/dropzone";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { FileTypeIcon } from "~/components/ui/file-type-icon";
 import { DataField } from "~/components/ui/data-field";
 import {
@@ -54,11 +54,11 @@ import {
 const logger = createLogger({ component: "FilesPage" });
 
 /** Statuszeile unter dem Titel: gezählte Dateien und Ordner der Ablage. */
-function filesStatusLine(folders: readonly FileFolder[]): string {
+function filesStatusItems(folders: readonly FileFolder[]) {
   const fileCount = folders.reduce((sum, folder) => sum + folder.fileCount, 0);
-  return `${fileCount} ${fileCount === 1 ? "Datei" : "Dateien"} · ${
-    folders.length
-  } Ordner`;
+  const fileLabel = fileCount === 1 ? "Datei" : "Dateien";
+  const folderCount = { value: folders.length, label: "Ordner" };
+  return [{ value: fileCount, label: fileLabel }, folderCount];
 }
 
 const ACCEPTED_FILE_TYPES = ".pdf,.docx,.xlsx,.pptx,.png,.jpg,.jpeg";
@@ -206,7 +206,11 @@ export function FilesPage() {
     <TenantPage
       title="Dateien"
       // Ohne geladene Ablage keine "0 Ordner" neben dem Ladefehler (#2517).
-      stats={overview === undefined ? null : filesStatusLine(folders)}
+      stats={
+        overview === undefined ? null : (
+          <TenantPageStats items={filesStatusItems(folders)} />
+        )
+      }
       statsLoading={isLoading}
       // Bis der Katalogtext des Ladefehlers da ist, bleibt das Skelett
       // stehen, nie der Leerzustand.
@@ -218,8 +222,8 @@ export function FilesPage() {
               icon: <FolderOpen className="h-12 w-12" aria-hidden="true" />,
               title: "Noch keine Ordner",
               description: canManage
-                ? "Legen Sie den ersten Ordner an und wählen Sie, wer ihn sehen darf."
-                : "Sobald die Leitung einen Ordner für Sie freigibt, erscheint er hier.",
+                ? "Lege den ersten Ordner an und wähle, wer ihn sehen darf."
+                : "Sobald die Leitung einen Ordner für dich freigibt, erscheint er hier.",
             }
           : null
       }
@@ -392,7 +396,7 @@ function FolderFilesPanel({
     const tooLarge = picked.find((file) => file.size > MAX_FILE_SIZE_BYTES);
     if (tooLarge) {
       showMessage(
-        `Die Datei „${tooLarge.name}“ ist größer als 25 MB. Bitte wählen Sie eine kleinere Datei.`,
+        `Die Datei „${tooLarge.name}“ ist größer als 25 MB. Bitte wähle eine kleinere Datei.`,
       );
       return;
     }
@@ -525,7 +529,7 @@ function FolderFilesPanel({
         }
         items.push({
           label: "Herunterladen",
-          description: "Speichert die Datei auf Ihrem Gerät",
+          description: "Speichert die Datei auf deinem Gerät",
           href: filesService.downloadUrl(folder.id, file.id),
           external: true,
           onClick: () => undefined,
@@ -633,7 +637,7 @@ function FolderFilesPanel({
               title="Noch keine Dateien in diesem Ordner"
               description={
                 canUpload
-                  ? "Laden Sie oben die erste Datei hoch."
+                  ? "Lade oben die erste Datei hoch."
                   : "Sobald die Leitung Dateien ablegt, erscheinen sie hier."
               }
             />

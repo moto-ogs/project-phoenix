@@ -76,7 +76,7 @@ export function sollMappingErrors(
         : null;
     if (unknown) {
       errors[`columns.${index}.value`] =
-        `${unknown} kennt moto nicht. Wählen Sie einen Platzhalter darunter.`;
+        `${unknown} kennt moto nicht. Wähle einen Platzhalter darunter.`;
     }
   });
   if (mapping.decimalSeparator === mapping.delimiter) {
@@ -156,7 +156,7 @@ function BookingTextField({
         className="flex min-w-0 flex-col gap-3 sm:col-span-2 lg:col-span-3"
       >
         <p className="text-sm text-gray-600" id={helpId}>
-          Feste Wörter schreiben Sie selbst. Einen Platzhalter füllt moto für
+          Feste Wörter schreibst du selbst. Einen Platzhalter füllt moto für
           jede Rechnung aus. Ein Klick setzt ihn ein.
         </p>
         <ul className="flex flex-wrap gap-2" aria-label="Platzhalter">
@@ -356,7 +356,7 @@ export function SollMappingEditor({
     formErrors.clear();
     const errors = sollMappingErrors(draft);
     if (Object.keys(errors).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", errors);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", errors);
       return;
     }
     setSaving(true);
@@ -383,7 +383,7 @@ export function SollMappingEditor({
     <form
       ref={formRef}
       noValidate
-      className="flex flex-col gap-6"
+      className="compact:gap-4 flex flex-col gap-6 max-sm:gap-3"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
@@ -391,14 +391,14 @@ export function SollMappingEditor({
     >
       <SectionCard
         title="Spalten"
-        description="So stehen die Spalten in der Datei, von links nach rechts. Fehlt Ihrer Kämmerei ein Wert, legen Sie eine Spalte mit festem Wert an."
+        description="So stehen die Spalten in der Datei, von links nach rechts. Fehlt deiner Kämmerei ein Wert, lege eine Spalte mit festem Wert an."
         action={
           <Button
             type="button"
             variant="outline"
             size="md"
             disabled={draft.columns.length >= 40}
-            disabledReason="Entfernen Sie zuerst eine Spalte, mehr als 40 gehen nicht."
+            disabledReason="Entferne zuerst eine Spalte, mehr als 40 gehen nicht."
             tooltip="Fügt rechts eine neue Spalte an, zuerst mit der Rechnungsnummer."
             onClick={() =>
               setColumns((columns) => [
@@ -455,7 +455,7 @@ export function SollMappingEditor({
             action={
               <ButtonLink
                 href={traegerPath(BOOKING_ACCOUNTS_PATH)}
-                variant="ghost_tone"
+                variant="surface"
                 size="compact"
                 tooltip={BOOKING_ACCOUNTS_HINT}
               >
@@ -468,7 +468,7 @@ export function SollMappingEditor({
 
       <SectionCard
         title="Datei"
-        description="Fragen Sie Ihre Kämmerei, welche Form ihr Programm liest."
+        description="Frage deine Kämmerei, welche Form ihr Programm liest."
       >
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
@@ -518,7 +518,7 @@ export function SollMappingEditor({
               name="encoding"
               value={draft.encoding}
               options={SOLL_ENCODINGS}
-              hint="Zeigt die Kämmerei falsche Umlaute, wählen Sie Windows-1252."
+              hint="Zeigt die Kämmerei falsche Umlaute, wähle Windows-1252."
               onChange={(encoding) =>
                 set({ encoding: encoding as SollMapping["encoding"] })
               }

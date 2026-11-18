@@ -166,7 +166,7 @@ func seedBelege(t *testing.T, ctx context.Context, db *bun.DB, organization, stu
 // all tables of the schemas parent_billing and care_contract and the
 // signatures of Träger documents. Tables the fixture left empty count too,
 // so a row that appears or vanishes anywhere fails the comparison.
-func belegSnapshot(t *testing.T, ctx context.Context, db *bun.DB, organization int64) map[string]string {
+func prepareBelegSnapshot(t *testing.T, ctx context.Context, db *bun.DB, organization int64) func() map[string]string {
 	t.Helper()
 	var tables []string
 	require.NoError(t, db.NewRaw(`SELECT c.table_schema || '.' || c.table_name FROM information_schema.columns AS c
@@ -174,19 +174,21 @@ func belegSnapshot(t *testing.T, ctx context.Context, db *bun.DB, organization i
 		WHERE t.table_type = 'BASE TABLE' AND c.column_name = 'organization_id'
 			AND (c.table_schema IN ('parent_billing', 'care_contract')
 				OR (c.table_schema = 'audit' AND c.table_name = 'traeger_signatures'))`).Scan(ctx, &tables))
-	snapshot := map[string]string{}
+	queries := make(testpkg.SnapshotQueries, len(tables))
 	for _, table := range tables {
-		var rows *string
-		require.NoError(t, db.NewRaw(`SELECT jsonb_agg(to_jsonb(row) ORDER BY to_jsonb(row)::text)::text FROM `+table+` AS row
-			WHERE row.organization_id = ?`, organization).Scan(ctx, &rows))
-		if rows != nil {
-			snapshot[table] = *rows
+		queries[table] = `SELECT jsonb_agg(to_jsonb(row) ORDER BY to_jsonb(row)::text)
+			FROM ` + table + ` AS row WHERE row.organization_id = $1`
+	}
+	read := queries.Prepare(t, db)
+	return func() map[string]string {
+		t.Helper()
+		snapshot, err := read(ctx, organization)
+		require.NoError(t, err)
+		for _, table := range seededBelegTables {
+			require.Contains(t, snapshot, table, "the fixture wrote %s", table)
 		}
+		return snapshot
 	}
-	for _, table := range seededBelegTables {
-		require.Contains(t, snapshot, table, "the fixture wrote %s", table)
-	}
-	return snapshot
 }
 
 func TestBelegeSurviveTheDeletionOfChildGuardianAndAccount(t *testing.T) {
@@ -213,7 +215,8 @@ func TestBelegeSurviveTheDeletionOfChildGuardianAndAccount(t *testing.T) {
 	require.NoError(t, err)
 	testpkg.CreateTestStudentGuardianLink(t, db, child.ID, guardian.ID, "legal_guardian")
 	seedBelege(t, ctx, db, organization, child.ID, guardianAccount.ID, family)
-	issued := belegSnapshot(t, ctx, db, organization)
+	snapshot := prepareBelegSnapshot(t, ctx, db, organization)
+	issued := snapshot()
 
 	// The child goes through the deletion workflow.
 	workflow := f.workflow(t)
@@ -222,7 +225,7 @@ func TestBelegeSurviveTheDeletionOfChildGuardianAndAccount(t *testing.T) {
 	_, err = workflow.Execute(ctx, child.ID, confirm(preview, studentdeletion.ReasonTestData))
 	require.NoError(t, err)
 	require.Zero(t, rowCount(t, db, "users.student_profiles", child.ID))
-	assert.Equal(t, issued, belegSnapshot(t, ctx, db, organization), "deleting the child keeps every Beleg unchanged")
+	assert.Equal(t, issued, snapshot(), "deleting the child keeps every Beleg unchanged")
 
 	// Its guardian contact goes next.
 	guardians, err := api.NewGuardianTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
@@ -230,7 +233,7 @@ func TestBelegeSurviveTheDeletionOfChildGuardianAndAccount(t *testing.T) {
 	require.NoError(t, guardians.PeopleDirectory.DeleteGuardian(ctx,
 		peopledirectory.GuardianDelete{GuardianID: guardian.ID, ActorAccountID: f.actorID}))
 	require.Zero(t, rowCount(t, db, "users.guardian_profiles", guardian.ID))
-	assert.Equal(t, issued, belegSnapshot(t, ctx, db, organization), "deleting the guardian keeps every Beleg unchanged")
+	assert.Equal(t, issued, snapshot(), "deleting the guardian keeps every Beleg unchanged")
 
 	// The account of the guardian is no longer used and is erased.
 	_, err = db.ExecContext(ctx, `SELECT * FROM auth.erase_unused_accounts()`)
@@ -239,5 +242,5 @@ func TestBelegeSurviveTheDeletionOfChildGuardianAndAccount(t *testing.T) {
 	require.NoError(t, db.NewRaw(`SELECT personal_data_erased_at IS NOT NULL FROM auth.accounts WHERE id = ?`, guardianAccount.ID).
 		Scan(ctx, &erased))
 	require.True(t, erased, "the account erasure ran for the guardian's account")
-	assert.Equal(t, issued, belegSnapshot(t, ctx, db, organization), "erasing the account keeps every Beleg unchanged")
+	assert.Equal(t, issued, snapshot(), "erasing the account keeps every Beleg unchanged")
 }

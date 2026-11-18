@@ -434,8 +434,8 @@ describe("ActivitiesPage", () => {
       ),
     ).toBeInTheDocument();
     // #2517: keine Zählung aus einer Liste, die nie geladen wurde.
-    expect(screen.queryByText(/0 Aktivitäten/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/0 Kategorien/)).not.toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/0\s*Aktivitäten/);
+    expect(document.body).not.toHaveTextContent(/0\s*Kategorien/);
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     expect(mockMutate).toHaveBeenCalled();
   });

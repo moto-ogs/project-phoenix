@@ -29,6 +29,10 @@ type planningPerson struct {
 	sites  []workforce.TraegerPlanningSite
 	shifts []workforce.TraegerPlanningShift
 	soll   map[string]int
+	// sollDays is the Soll by school and day of the shown week.
+	sollDays []workforce.TraegerPlanningSollDay
+	// absentDays are the full absence days by school of the shown week.
+	absentDays []workforce.TraegerPlanningAbsentDay
 }
 
 // planningScene is what the week view reads in the Träger transaction.
@@ -141,8 +145,29 @@ func (t *TraegerStaff) readPlanningSchool(ctx context.Context, actor workforce.T
 		person := people[live[shift.StaffID]]
 		person.shifts = append(person.shifts, planningShift(shift, school))
 	}
+	type recordDay struct {
+		recordID int64
+		date     calendar.Date
+	}
+	sollDays := map[recordDay]bool{}
 	for _, day := range view.Soll {
-		people[day.StaffRecordID].soll[day.Date.StartOfISOWeek().String()] += day.Minutes
+		person := people[day.StaffRecordID]
+		person.soll[day.Date.StartOfISOWeek().String()] += day.Minutes
+		if day.Minutes > 0 {
+			person.sollDays = append(person.sollDays, workforce.TraegerPlanningSollDay{SchoolID: school.ID, Date: day.Date, Minutes: day.Minutes})
+			sollDays[recordDay{day.StaffRecordID, day.Date}] = true
+		}
+	}
+	// Only the absence days that change a suggestion leave the school: a day
+	// with Soll there, today or later. The kind of absence never does.
+	today := calendar.Date(t.clock.Today())
+	for _, day := range view.AbsentDays {
+		recordID := live[day.StaffID]
+		if day.Date.Before(today) || !sollDays[recordDay{recordID, day.Date}] {
+			continue
+		}
+		person := people[recordID]
+		person.absentDays = append(person.absentDays, workforce.TraegerPlanningAbsentDay{SchoolID: school.ID, Date: day.Date})
 	}
 	return nil
 }
@@ -200,7 +225,8 @@ func (p *planningPerson) public(rules workforce.TraegerPlanningRules, monday cal
 		return strings.Compare(a.StartTime, b.StartTime)
 	})
 	person := workforce.TraegerPlanningPerson{RecordID: p.record.ID, FirstName: p.record.FirstName, LastName: p.record.LastName,
-		Sites: p.sites, Shifts: []workforce.TraegerPlanningShift{}, Warnings: []workforce.ShiftWorkingTimeWarning{}}
+		Sites: p.sites, Shifts: []workforce.TraegerPlanningShift{}, SollDays: p.weekSollDays(),
+		AbsentDays: append([]workforce.TraegerPlanningAbsentDay{}, p.absentDays...), Warnings: []workforce.ShiftWorkingTimeWarning{}}
 	slots := make([]domain.PlanSlot, 0, len(p.shifts))
 	for _, shift := range p.shifts {
 		if shift.Cancelled {
@@ -225,6 +251,25 @@ func (p *planningPerson) public(rules workforce.TraegerPlanningRules, monday cal
 		}
 	}
 	return person
+}
+
+// weekSollDays orders the Soll of the week by day and school; the schools
+// read it for the shown week only.
+func (p *planningPerson) weekSollDays() []workforce.TraegerPlanningSollDay {
+	days := append([]workforce.TraegerPlanningSollDay{}, p.sollDays...)
+	slices.SortFunc(days, func(a, b workforce.TraegerPlanningSollDay) int {
+		if order := a.Date.Compare(b.Date); order != 0 {
+			return order
+		}
+		switch {
+		case a.SchoolID < b.SchoolID:
+			return -1
+		case a.SchoolID > b.SchoolID:
+			return 1
+		}
+		return 0
+	})
+	return days
 }
 
 func appendInWeek(shifts []workforce.TraegerPlanningShift, shift workforce.TraegerPlanningShift, monday calendar.Date) []workforce.TraegerPlanningShift {

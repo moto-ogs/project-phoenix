@@ -545,7 +545,7 @@ func TestClaimActiveGroup(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "EndedGroup", "Staff")
 
 		// End the group
-		err := testpkg.TenantCommand1(t, ctx, db, service.EndActivitySession, activeGroup.ID)
+		_, err := testpkg.TenantQuery1(t, ctx, db, service.EndActivitySession, activeGroup.ID)
 		require.NoError(t, err)
 
 		// ACT - try to claim ended group

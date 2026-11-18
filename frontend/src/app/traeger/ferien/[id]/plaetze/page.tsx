@@ -7,15 +7,9 @@
 
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import {
-  HolidayHeadFacts,
-  holidayPeriodTabs,
-} from "~/components/traeger/holiday-period-head";
+import { holidayPeriodTabs } from "~/components/traeger/holiday-period-head";
 import { schoolNames } from "~/components/traeger/holiday-registration-format";
-import {
-  HolidayWeekPlacesCard,
-  WaitlistFact,
-} from "~/components/traeger/holiday-week-places";
+import { HolidayWeekPlacesCard } from "~/components/traeger/holiday-week-places";
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import {
@@ -23,7 +17,7 @@ import {
   traegerExportScope,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { fetchHolidayWeekPlaces } from "~/lib/traeger-holiday-registrations-api";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
@@ -58,7 +52,6 @@ export default function TraegerHolidayPlacesPage() {
       waiting: new Set(
         all.flatMap((week) => week.waitlist.map((entry) => entry.childId)),
       ).size,
-      limited: all.filter((week) => week.capacity !== null).length,
     };
   }, [weeks]);
 
@@ -71,17 +64,17 @@ export default function TraegerHolidayPlacesPage() {
       info={
         period?.allocationMode === "criteria" ? (
           <p>
-            Hier legen Sie fest, wie viele Kinder in einer Woche mitmachen
-            können. Die Plätze vergibt Ihr Büro im Reiter „Vergabe“. moto
-            sortiert die Anmeldungen dafür nach Ihren Kriterien vor. Wird später
-            ein Platz frei, rückt das nächste Kind der Warteliste automatisch
-            nach. Seine Eltern bekommen eine E-Mail. Kinder auf der Warteliste
-            oder mit offenem Platz zahlen nichts und stehen nicht auf der Liste
-            der OGS.
+            Hier legst du fest, wie viele Kinder in einer Woche mitmachen
+            können. Die Plätze vergibt dein Büro im Reiter „Vergabe“. moto
+            sortiert die Anmeldungen dafür nach deinen Kriterien vor. Wird
+            später ein Platz frei, rückt das nächste Kind der Warteliste
+            automatisch nach. Seine Eltern bekommen eine E-Mail. Kinder auf der
+            Warteliste oder mit offenem Platz zahlen nichts und stehen nicht auf
+            der Liste der OGS.
           </p>
         ) : (
           <p>
-            Hier legen Sie fest, wie viele Kinder in einer Woche mitmachen
+            Hier legst du fest, wie viele Kinder in einer Woche mitmachen
             können. Plätze gehen in der Reihenfolge, in der die Anmeldungen
             eingehen. Ist eine Woche voll, kommt das Kind auf die Warteliste.
             Wird ein Platz frei, rückt das nächste Kind automatisch nach. Seine
@@ -92,17 +85,27 @@ export default function TraegerHolidayPlacesPage() {
       }
       stats={
         weeks ? (
-          <HolidayHeadFacts>
-            <span>
-              {weeks.length === 1 ? "1 Woche" : `${weeks.length} Wochen`},{" "}
-              {totals.limited === 0
-                ? "ohne Grenze"
-                : `${totals.limited} mit Grenze`}
-            </span>
-            <span>{totals.placed} Plätze vergeben</span>
-            {totals.pending > 0 ? <span>{totals.pending} offen</span> : null}
-            <WaitlistFact count={totals.waiting} />
-          </HolidayHeadFacts>
+          // Wochen und ihre Grenze zeigt jede Wochenkarte; die Zeile trägt
+          // nur die Summen über alle Wochen (#7402).
+          <TenantPageStats
+            items={[
+              { value: totals.placed, label: "Plätze vergeben" },
+              ...(totals.pending > 0
+                ? [{ value: totals.pending, label: "offen" }]
+                : []),
+              ...(totals.waiting > 0
+                ? [
+                    {
+                      value: totals.waiting,
+                      label:
+                        totals.waiting === 1
+                          ? "Kind wartet auf einen Platz"
+                          : "Kinder warten auf einen Platz",
+                    },
+                  ]
+                : []),
+            ]}
+          />
         ) : null
       }
       statsLoading={!weeks && !loadError}
@@ -134,7 +137,7 @@ export default function TraegerHolidayPlacesPage() {
           ? {
               title: "Noch keine Wochen",
               description:
-                "Legen Sie zuerst im Reiter „Planung“ die Wochen der Ferien an.",
+                "Lege zuerst im Reiter „Planung“ die Wochen der Ferien an.",
             }
           : undefined
       }

@@ -51,6 +51,15 @@ vi.mock("next-auth/react", () => ({
 vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: vi.fn(),
 }));
+// Personalprofil in dieser Schule (#7306); Standard: vorhanden.
+const ownStaff = vi.hoisted(() => ({ present: true }));
+vi.mock("~/lib/hooks/use-user-context", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/hooks/use-user-context")>()),
+  useHasOwnStaff: () => ownStaff.present,
+}));
+afterEach(() => {
+  ownStaff.present = true;
+});
 
 vi.mock("~/lib/auth-utils", () => {
   const isAdminFn = vi.fn();
@@ -551,9 +560,9 @@ describe("MobileBottomNav", () => {
       try {
         render(<MobileBottomNav />);
         // Ohne „Neu für Sie“ zählt „Mehr“ nur die Hinweise, ab 10 als „9+“.
-        expect(getBadge("9+ neu für Sie")).toHaveTextContent("9+");
+        expect(getBadge("9+ neu für dich")).toHaveTextContent("9+");
         const more = screen.getByRole("button", {
-          name: "Mehr 9+ neu für Sie",
+          name: "Mehr 9+ neu für dich",
         });
         // The sheet loads through next/dynamic: wait for it, no fixed sleep.
         expect(
@@ -621,10 +630,10 @@ describe("MobileBottomNav", () => {
         render(<MobileBottomNav />);
         // Zwei Einträge „Neu für Sie“ plus drei ungelesene Hinweise (#7148).
         const more = screen.getByRole("button", {
-          name: "Mehr 5 neu für Sie",
+          name: "Mehr 5 neu für dich",
         });
         fireEvent.click(more);
-        expect(screen.getByText("Neu für Sie")).toBeInTheDocument();
+        expect(screen.getByText("Neu für dich")).toBeInTheDocument();
         expect(
           screen.getByRole("link", { name: /Mia Muster/ }),
         ).toHaveAttribute(
@@ -735,7 +744,7 @@ describe("MobileBottomNav", () => {
 
       expect(
         screen.getByText(
-          "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+          "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
         ),
       ).toBeInTheDocument();
       expect(screen.getAllByText("Aktualisieren")).not.toHaveLength(0);
@@ -1080,6 +1089,18 @@ describe("MobileBottomNav", () => {
       expect(screen.getByText("Planung").closest("a")).toBeNull();
       expect(screen.getByText("Übergaben")).toBeInTheDocument();
       expect(screen.getByText("Datenverwaltung")).toBeInTheDocument();
+    });
+
+    it("leaves the own pages out of the overflow menu without a staff profile (#7306)", () => {
+      ownStaff.present = false;
+      render(<MobileBottomNav />);
+      fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
+
+      // Anker: das geöffnete Mehr-Menü.
+      expect(screen.getByText("Datenverwaltung")).toBeInTheDocument();
+      expect(screen.queryByText("Mein Kalender")).not.toBeInTheDocument();
+      expect(screen.queryByText("Mein Dienstplan")).not.toBeInTheDocument();
+      expect(screen.queryByText("Zeiterfassung")).not.toBeInTheDocument();
     });
 
     it("labels the staff calendar entry 'Mein Kalender' in the overflow menu", () => {

@@ -1,6 +1,12 @@
 import "@testing-library/jest-dom/vitest";
 import type { TenantPageSearchRowProps } from "~/components/ui/tenant-page-search-row";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { useState, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import DevicesPage from "./page";
@@ -15,9 +21,13 @@ function errorText(error: unknown): string | null {
     : (error as { message: string }).message;
 }
 
+let mockPermissions: string[] = ["devices:read", "devices:manage"];
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
-    data: { user: { id: "1", token: "test-token" }, expires: "2099-01-01" },
+    data: {
+      user: { id: "1", token: "test-token", permissions: mockPermissions },
+      expires: "2099-01-01",
+    },
     status: "authenticated",
   })),
 }));
@@ -45,6 +55,7 @@ vi.mock("~/lib/swr", () => ({
   useSWRAuth: vi.fn(),
   mutate: vi.fn(),
   useTenantMutate: vi.fn(() => vi.fn()),
+  useInvalidateFamily: vi.fn(() => vi.fn()),
 }));
 
 const mockGetList = vi.fn();
@@ -67,12 +78,20 @@ vi.mock("@/lib/database/service-factory", () => {
 
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
+const mockShowActionError = vi.fn();
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: vi.fn(() => ({
     success: mockToastSuccess,
     error: mockToastError,
   })),
+  useApiErrorDisplay: vi.fn(() => ({ show: mockShowActionError })),
+}));
+
+const mockSetDeviceBlocked = vi.fn();
+vi.mock("~/lib/device-blocking-api", () => ({
+  setDeviceBlocked: (...args: unknown[]) =>
+    mockSetDeviceBlocked(...args) as Promise<void>,
 }));
 
 vi.mock("~/components/ui/confirm-delete-modal", () => ({
@@ -253,6 +272,7 @@ vi.mock("@/components/devices/devices-master-detail", () => ({
     onSelect,
     onSaveDevice,
     onDeleteClick,
+    onSetBlocked,
   }: {
     groupDefinitions: Array<{
       id: string;
@@ -272,6 +292,7 @@ vi.mock("@/components/devices/devices-master-detail", () => ({
       device_id?: string;
     }) => Promise<void>;
     onDeleteClick: () => void;
+    onSetBlocked: (blocked: boolean) => void;
   }) => {
     const [editing, setEditing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -325,6 +346,13 @@ vi.mock("@/components/devices/devices-master-detail", () => ({
               onClick={onDeleteClick}
             >
               Delete
+            </button>
+            <button
+              type="button"
+              data-testid="trigger-block"
+              onClick={() => onSetBlocked(true)}
+            >
+              Block
             </button>
             <button
               type="button"
@@ -411,21 +439,118 @@ const mockDevices: Device[] = [
   },
 ];
 
-function setSwrData(devices: Device[]) {
-  vi.mocked(useSWRAuth).mockReturnValue({
-    data: devices,
-    isLoading: false,
-    error: null,
-    isValidating: false,
-    mutate: vi.fn(),
-  } as ReturnType<typeof useSWRAuth>);
+type Slots = { booked: number | null; occupied: number; free: number | null };
+
+/**
+ * Answers each SWR key with its own data: the device list, and the school's
+ * Geräteplätze (#2312), which default to no limit.
+ */
+function setSwrData(
+  devices: Device[],
+  slots: Slots = { booked: null, occupied: devices.length, free: null },
+) {
+  vi.mocked(useSWRAuth).mockImplementation(
+    (key) =>
+      ({
+        data: key === "database-devices-slots" ? slots : devices,
+        isLoading: false,
+        error: null,
+        isValidating: false,
+        mutate: vi.fn(),
+      }) as ReturnType<typeof useSWRAuth>,
+  );
 }
 
 describe("DevicesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     currentSearch = new URLSearchParams();
+    mockPermissions = ["devices:read", "devices:manage"];
     setSwrData(mockDevices);
+  });
+
+  it("shows occupied and free Geräteplätze in the status line (#2312)", () => {
+    setSwrData(mockDevices, { booked: 5, occupied: 2, free: 3 });
+
+    render(<DevicesPage />);
+
+    const status = screen.getByTestId("device-slot-status");
+    expect(status).toHaveTextContent("Geräteplätze: 2 von 5 belegt");
+    expect(status).toHaveTextContent("3 frei");
+    for (const create of screen.getAllByRole("button", {
+      name: "Gerät registrieren",
+    })) {
+      expect(create).not.toHaveAttribute("aria-disabled", "true");
+    }
+  });
+
+  it("blocks registering a device when every Geräteplatz is taken (#2312)", () => {
+    setSwrData(mockDevices, { booked: 2, occupied: 2, free: 0 });
+
+    render(<DevicesPage />);
+
+    expect(screen.getByTestId("device-slot-status")).toHaveTextContent("voll");
+    const buttons = screen.getAllByRole("button", {
+      name: "Gerät registrieren",
+    });
+    expect(buttons.length).toBeGreaterThan(0);
+    for (const create of buttons) {
+      expect(create).toHaveAttribute("aria-disabled", "true");
+      fireEvent.click(create);
+    }
+    expect(screen.queryByTestId("device-create-modal")).not.toBeInTheDocument();
+    expect(screen.getByText("Eingang Kiosk")).toBeInTheDocument();
+  });
+
+  it("asks again for the Geräteplätze on focus and while all are taken (#2312)", () => {
+    type SlotOptions = {
+      revalidateOnFocus?: boolean;
+      focusThrottleInterval?: number;
+      refreshInterval?: number;
+      onSuccess?: (slots: Slots) => void;
+    };
+    const lastSlotOptions = () =>
+      vi
+        .mocked(useSWRAuth)
+        .mock.calls.filter(([key]) => key === "database-devices-slots")
+        .at(-1)?.[2] as SlotOptions;
+    render(<DevicesPage />);
+
+    // A cold load knows nothing yet: no timer until the first answer.
+    expect(lastSlotOptions().revalidateOnFocus).toBe(true);
+    expect(lastSlotOptions().focusThrottleInterval).toBe(0);
+    expect(lastSlotOptions().refreshInterval).toBe(0);
+
+    act(() =>
+      lastSlotOptions().onSuccess?.({ booked: 2, occupied: 2, free: 0 }),
+    );
+    expect(lastSlotOptions().refreshInterval).toBe(30_000);
+
+    act(() =>
+      lastSlotOptions().onSuccess?.({ booked: 3, occupied: 2, free: 1 }),
+    );
+    expect(lastSlotOptions().refreshInterval).toBe(0);
+  });
+
+  it("shows no Geräteplatz line while moto set no limit", () => {
+    render(<DevicesPage />);
+
+    expect(screen.getByText("Eingang Kiosk")).toBeInTheDocument();
+    expect(screen.queryByTestId("device-slot-status")).not.toBeInTheDocument();
+  });
+
+  it("lets devices:read look but not register (#2312)", () => {
+    mockPermissions = ["devices:read"];
+    setSwrData([]);
+
+    render(<DevicesPage />);
+
+    expect(screen.getByTestId("page-empty")).toHaveTextContent(
+      "Deine Schule hat noch kein Gerät registriert.",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Gerät registrieren" }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders the page with devices data", async () => {
@@ -640,6 +765,82 @@ describe("DevicesPage", () => {
     });
   });
 
+  it("blocks the selected device and offers to undo it (#2317)", async () => {
+    setSelectedDevice("1");
+    mockSetDeviceBlocked.mockResolvedValue(undefined);
+
+    render(<DevicesPage />);
+    fireEvent.click(await screen.findByTestId("trigger-block"));
+
+    await waitFor(() => {
+      expect(mockSetDeviceBlocked).toHaveBeenCalledWith("kiosk-001", true);
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        "Das Gerät „Eingang Kiosk“ ist gesperrt. Es kann sich erst wieder anmelden, wenn du es entsperrst.",
+        expect.objectContaining({
+          action: expect.objectContaining({ label: "Rückgängig" }),
+        }),
+      );
+    });
+
+    const options = mockToastSuccess.mock.calls[0]![1] as {
+      action: { onClick: () => void };
+    };
+    options.action.onClick();
+
+    await waitFor(() => {
+      expect(mockSetDeviceBlocked).toHaveBeenLastCalledWith("kiosk-001", false);
+      expect(mockToastSuccess).toHaveBeenLastCalledWith(
+        "Das Gerät „Eingang Kiosk“ ist entsperrt und kann sich wieder anmelden.",
+      );
+    });
+  });
+
+  it("offers no undo when the blocked device had no access before", async () => {
+    setSwrData([
+      { ...mockDevices[0]!, status: "maintenance" },
+      mockDevices[1]!,
+    ]);
+    setSelectedDevice("1");
+    mockSetDeviceBlocked.mockResolvedValue(undefined);
+
+    render(<DevicesPage />);
+    fireEvent.click(await screen.findByTestId("trigger-block"));
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        expect.stringContaining("ist gesperrt"),
+        undefined,
+      );
+    });
+  });
+
+  it("shows a failed block as an action error without a success toast", async () => {
+    setSelectedDevice("1");
+    const failure = new ApiError("forbidden", 403, {
+      code: "general.permission",
+    });
+    mockSetDeviceBlocked.mockRejectedValueOnce(failure);
+
+    render(<DevicesPage />);
+    fireEvent.click(await screen.findByTestId("trigger-block"));
+
+    await waitFor(() => {
+      expect(mockShowActionError).toHaveBeenCalledWith(
+        failure,
+        expect.objectContaining({ object: "das Sperren des Geräts" }),
+      );
+    });
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+  });
+
+  it("counts blocked devices in the status line, not as online", async () => {
+    setSwrData([{ ...mockDevices[0]!, status: "inactive" }, mockDevices[1]!]);
+
+    render(<DevicesPage />);
+
+    expect(await screen.findByText("gesperrt")).toBeInTheDocument();
+  });
+
   it("keeps a delete error in the confirmation dialog", async () => {
     setSelectedDevice("1");
     mockRemove.mockRejectedValueOnce(
@@ -660,9 +861,58 @@ describe("DevicesPage", () => {
     fireEvent.click(screen.getByTestId("confirm-delete"));
 
     expect(await screen.findByTestId("delete-error")).toHaveTextContent(
-      catalogText("general.permission", "das Löschen des Geräts"),
+      catalogText("general.permission", "das Entfernen des Geräts"),
     );
     expect(screen.getByTestId("confirmation-modal")).toBeInTheDocument();
+  });
+
+  it("explains a removal an open session blocks and keeps the dialog", async () => {
+    setSelectedDevice("1");
+    mockRemove.mockRejectedValueOnce(
+      new ApiError("active session", 409, {
+        code: "iot.device_in_active_session",
+      }),
+    );
+
+    render(<DevicesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("device-detail-panel")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId("trigger-delete"));
+    fireEvent.click(await screen.findByTestId("confirm-delete"));
+
+    expect(await screen.findByTestId("delete-error")).toHaveTextContent(
+      "Auf diesem Gerät läuft gerade eine Sitzung. Beende sie zuerst am Gerät, dann kannst du es entfernen.",
+    );
+    expect(screen.getByTestId("confirmation-modal")).toBeInTheDocument();
+    expect(mockReplace).not.toHaveBeenCalledWith("/tenant/database/devices", {
+      scroll: false,
+    });
+  });
+
+  it("reloads the list when the device is already gone", async () => {
+    setSelectedDevice("1");
+    mockRemove.mockRejectedValueOnce(
+      new ApiError("gone", 404, { code: "general.not_found" }),
+    );
+
+    render(<DevicesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("device-detail-panel")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId("trigger-delete"));
+    fireEvent.click(await screen.findByTestId("confirm-delete"));
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/tenant/database/devices", {
+        scroll: false,
+      });
+    });
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "Das Gerät „Eingang Kiosk“ ist hier nicht mehr verfügbar.",
+    );
   });
 
   it("preserves the once-only API key in the detail panel after create", async () => {

@@ -28,7 +28,7 @@ func registerStaffingTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeStaffingChanged,
 		Label:       "Eigene Vertretung",
-		Description: "Wenn Sie jemanden vertreten, vertreten werden oder an einem Tag als nicht da eingetragen sind. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Änderungen in den nächsten 14 Tagen.",
+		Description: "Wenn du jemanden vertrittst, vertreten wirst oder an einem Tag als nicht da eingetragen bist. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Änderungen in den nächsten 14 Tagen.",
 		Group:       GroupStaffing,
 		Portal:      PortalStaff,
 		TenantGate:  settingStaffingChangedEnabled,
@@ -39,8 +39,8 @@ func registerStaffingTypes() {
 	})
 	RegisterType(TypeDefinition{
 		Key:         TypeGroupStaffingChanged,
-		Label:       "Vertretung in Ihren Gruppen",
-		Description: "Wenn in einer Gruppe, der Sie zugeordnet sind, jemand nicht da ist oder vertreten wird. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Änderungen in den nächsten 14 Tagen.",
+		Label:       "Vertretung in deinen Gruppen",
+		Description: "Wenn in einer Gruppe, der du zugeordnet bist, jemand nicht da ist oder vertreten wird. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Änderungen in den nächsten 14 Tagen.",
 		Group:       GroupStaffing,
 		Portal:      PortalStaff,
 		TenantGate:  settingStaffingChangedEnabled,
@@ -52,7 +52,7 @@ func registerStaffingTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeTeamMemberAbsent,
 		Label:       "Ausfall im Team",
-		Description: "Wenn in einer Gruppe, die Ihnen übergeben wurde, jemand nicht da ist. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Änderungen in den nächsten 14 Tagen.",
+		Description: "Wenn in einer Gruppe, die dir übergeben wurde, jemand nicht da ist. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Änderungen in den nächsten 14 Tagen.",
 		Group:       GroupStaffing,
 		Portal:      PortalStaff,
 		TenantGate:  settingStaffingChangedEnabled,

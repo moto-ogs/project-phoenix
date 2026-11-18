@@ -36,7 +36,7 @@ describe("ParentMessagesCard", () => {
 
     expect(
       await screen.findByText(
-        "Die Liste der Nachrichten ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Liste der Nachrichten ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     expect(

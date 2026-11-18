@@ -600,8 +600,8 @@ describe("TenantPage", () => {
     }
   });
 
-  it("setzt zwischen die Wert-Label-Paare der Statuszeile ein Trennzeichen", () => {
-    render(
+  it("trennt die Wert-Label-Paare sichtbar mit Abstand und unsichtbar mit Komma (#5684)", () => {
+    const { container } = render(
       <TenantPageStats
         items={[
           { value: 116, label: "Kinder" },
@@ -612,7 +612,43 @@ describe("TenantPage", () => {
 
     expect(screen.getByText("116")).toBeInTheDocument();
     expect(screen.getByText("krank")).toBeInTheDocument();
-    expect(screen.getByText("·")).toBeInTheDocument();
+    expect(container.textContent).toBe("116 Kinder, 9 krank");
+    expect(
+      [...container.querySelectorAll(".sr-only")].map(
+        (separator) => separator.textContent,
+      ),
+    ).toEqual([" ", ", ", " "]);
+    expect(container.firstElementChild).toHaveClass("gap-x-3");
+  });
+
+  it("zeigt eine Angabe ohne Wert als schlichten Text", () => {
+    render(
+      <TenantPageStats
+        items={[
+          { value: 3, label: "Wochen" },
+          { label: "Eingegangen am 01.09.2026" },
+        ]}
+      />,
+    );
+
+    const fact = screen.getByText("Eingegangen am 01.09.2026");
+    expect(fact).not.toHaveClass("font-medium");
+  });
+
+  it("zeigt höchstens drei Angaben", () => {
+    render(
+      <TenantPageStats
+        items={[
+          { value: 1, label: "eins" },
+          { value: 2, label: "zwei" },
+          { value: 3, label: "drei" },
+          { value: 4, label: "vier" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("drei")).toBeInTheDocument();
+    expect(screen.queryByText("vier")).not.toBeInTheDocument();
   });
 
   it("macht ein Paar mit onSelect zum Textknopf und lässt die übrigen Anzeige", () => {

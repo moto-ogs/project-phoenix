@@ -105,7 +105,7 @@ function UndoAbsenceAction({ person, name, onUpdate }: PersonHeaderProps) {
       tooltip={
         person.wasAbsent
           ? "Meldet die Person beim Speichern wieder als anwesend."
-          : "Verwirft die Abwesenheit, die Sie gerade eingetragen haben."
+          : "Verwirft die Abwesenheit, die du gerade eingetragen hast."
       }
       onClick={() =>
         onUpdate({
@@ -322,7 +322,7 @@ function PersonScope(props: PersonCardProps) {
       {/* Der Hinweis gehört direkt unter die Legend, Legend und Text bilden
           einen Kopf. */}
       <p className="mt-1 text-xs leading-5 text-gray-500">
-        Wählen Sie vor dem Speichern.
+        Wähle vor dem Speichern.
       </p>
       <ScopeChoices {...props} />
       {person.scope === "selected" && (
@@ -350,23 +350,20 @@ function SubstituteHint(props: SubstituteHintProps) {
   }
   if (!props.scopeReady) {
     return (
-      <p className="mt-1 text-xs text-gray-500">
-        Wählen Sie zuerst die Termine.
-      </p>
+      <p className="mt-1 text-xs text-gray-500">Wähle zuerst die Termine.</p>
     );
   }
   if (props.fullyCovered) {
     return (
       <p className="mt-1 text-xs text-gray-500">
-        Der Termin ist bereits vollständig vertreten. Wählen Sie zuerst
-        „Entfernen“.
+        Der Termin ist bereits vollständig vertreten. Wähle zuerst „Entfernen“.
       </p>
     );
   }
   if (props.staffLoadError && !props.hasOptions) {
     return (
       <p className="text-moto-red-strong mt-1 text-xs">
-        Die Personalliste konnte nicht geladen werden. Laden Sie die Seite neu.
+        Die Personalliste konnte nicht geladen werden. Lade die Seite neu.
       </p>
     );
   }
@@ -440,8 +437,8 @@ function AbsentDetails(props: PersonCardProps) {
           type="warning"
           message={
             props.person.lockedByOtherAbsence
-              ? "Diese Abwesenheit ist in der Zeiterfassung eingetragen. Sie können hier nur die Vertretung ändern."
-              : "Diese Abwesenheit kommt aus einer Krankmeldung. Sie können hier nur die Vertretung ändern."
+              ? "Diese Abwesenheit ist in der Zeiterfassung eingetragen. Du kannst hier nur die Vertretung ändern."
+              : "Diese Abwesenheit kommt aus einer Krankmeldung. Du kannst hier nur die Vertretung ändern."
           }
         />
       )}

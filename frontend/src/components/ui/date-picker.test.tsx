@@ -976,6 +976,27 @@ describe("ISODateInput", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  // A phone's number pad, which the field opens, may have no period (#7379).
+  it("takes eight digits without periods", () => {
+    const onChange = vi.fn();
+    render(
+      <ISODateInput
+        id="birthday"
+        label="Geburtsdatum"
+        value=""
+        onChange={onChange}
+        max="2026-08-12"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Geburtsdatum"), {
+      target: { value: "17041982" },
+    });
+
+    expect(onChange).toHaveBeenLastCalledWith("1982-04-17");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("rejects an impossible calendar date", () => {
     const onChange = vi.fn();
     render(
@@ -993,7 +1014,7 @@ describe("ISODateInput", () => {
 
     expect(onChange).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bitte geben Sie ein gültiges Datum im Format TT.MM.JJJJ ein.",
+      "Bitte gib ein gültiges Datum im Format TT.MM.JJJJ ein.",
     );
     expect(input).toHaveAttribute("aria-invalid", "true");
   });

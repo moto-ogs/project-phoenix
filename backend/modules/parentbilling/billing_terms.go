@@ -327,6 +327,17 @@ func ContractFamilyKey(email string, contractID int64) string {
 // address: nobody can be written to under it.
 func IsContractFamily(key string) bool { return strings.HasPrefix(key, contractFamilyPrefix) }
 
+// ContractOfFamily is the contract a family key names; ok is false for a
+// mail address.
+func ContractOfFamily(key string) (contractID int64, ok bool) {
+	rest, found := strings.CutPrefix(key, contractFamilyPrefix)
+	if !found {
+		return 0, false
+	}
+	id, err := strconv.ParseInt(rest, 10, 64)
+	return id, err == nil && id > 0
+}
+
 // BillingTerms lets the Abrechnung of a Träger keep the terms of its
 // services, the deviations of its families and the due dates of its runs.
 // Every operation names the person of the session and runs in the Träger

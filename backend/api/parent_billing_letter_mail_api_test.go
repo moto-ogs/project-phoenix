@@ -22,6 +22,7 @@ import (
 
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 )
 
 type letterMailingBody struct {
@@ -238,6 +239,17 @@ func TestBillingLetterMailsReachEveryFamilyOnceAndShowTheirState(t *testing.T) {
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Equal(t, letterSeriesBody{Already: 2}, decodeSchoolPortalData[letterSeriesBody](t, rec.Body.Bytes()))
 	assert.Len(t, queuedLetterMails(t, f, run.ID), 2)
+	// A retry that cannot enqueue another mail does not need the current
+	// letterhead. The stored letters already carry their original sender.
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut,
+		"/traeger/settings/values/"+configModels.KeyBrandingLetterheadText, map[string]any{"value": " \n "})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/mailings"), nil)
+	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
+	assert.Equal(t, letterSeriesBody{Already: 2}, decodeSchoolPortalData[letterSeriesBody](t, rec.Body.Bytes()))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut,
+		"/traeger/settings/values/"+configModels.KeyBrandingLetterheadText, map[string]any{"value": traegerTestLetterhead})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	queued := letterMailings(t, f, billing, run.ID)
 	first, second := queued["FE-0001"], queued["FE-0002"]
@@ -314,7 +326,7 @@ func TestBillingLetterMailsReachEveryFamilyOnceAndShowTheirState(t *testing.T) {
 	var reads []string
 	require.NoError(t, f.db.NewRaw(`SELECT COALESCE(details->>'mail', details->>'letter') FROM parent_billing.run_events
 		WHERE run_id = ? AND action = 'read' AND (details ? 'mail' OR details->>'letter' = 'print') ORDER BY id`, run.ID).Scan(ctx, &reads))
-	assert.Equal(t, []string{"status", "series", "series", "status", "status", "status", "status", "print"}, reads)
+	assert.Equal(t, []string{"status", "series", "series", "series", "status", "status", "status", "status", "print"}, reads)
 }
 
 func TestBillingLetterMailsNeedTheBillingRightAndStayWithTheirTraeger(t *testing.T) {

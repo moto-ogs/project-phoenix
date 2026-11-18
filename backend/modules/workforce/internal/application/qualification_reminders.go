@@ -95,6 +95,13 @@ func (r *QualificationReminders) RunDue(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("read school for qualification reminders: %w", err)
 	}
+	// A retired school gets no reminder (#7478). The read holds the school
+	// until this transaction ends, so a retirement that hides it either
+	// waits for these mails, which its erasure then removes, or committed
+	// before the read, which then sees it retired.
+	if school.Retired {
+		return nil
+	}
 	for _, reminder := range due {
 		if !live[reminder.qualification.StaffID] {
 			continue
@@ -291,20 +298,20 @@ func qualificationNotice(reminder dueReminder, own bool) workforce.Qualification
 	notice := workforce.QualificationNotice{Stage: reminder.stage, Own: own}
 	switch {
 	case reminder.lapsed && own:
-		notice.Title = "Ihr Nachweis ist abgelaufen"
-		notice.Body = "Ihr Nachweis „" + reminder.name + "“ galt bis " + day + ". Bitte reichen Sie einen neuen Nachweis ein."
+		notice.Title = "Dein Nachweis ist abgelaufen"
+		notice.Body = "Dein Nachweis „" + reminder.name + "“ galt bis " + day + ". Bitte reiche einen neuen Nachweis ein."
 	case reminder.lapsed:
 		notice.Title = "Nachweis ist abgelaufen"
 		notice.Body = "Am " + day + " ist ein Nachweis „" + reminder.name + "“ einer Person aus dem Team abgelaufen."
 	case reminder.stage == domain.QualificationReminderExpiry && own:
-		notice.Title = "Ihr Nachweis läuft heute ab"
-		notice.Body = "Ihr Nachweis „" + reminder.name + "“ gilt nur noch heute. Bitte reichen Sie einen neuen Nachweis ein."
+		notice.Title = "Dein Nachweis läuft heute ab"
+		notice.Body = "Dein Nachweis „" + reminder.name + "“ gilt nur noch heute. Bitte reiche einen neuen Nachweis ein."
 	case reminder.stage == domain.QualificationReminderExpiry:
 		notice.Title = "Nachweis läuft heute ab"
 		notice.Body = "Heute läuft ein Nachweis „" + reminder.name + "“ einer Person aus dem Team ab."
 	case own:
-		notice.Title = "Ihr Nachweis läuft bald ab"
-		notice.Body = "Ihr Nachweis „" + reminder.name + "“ gilt bis " + day + ". Bitte kümmern Sie sich rechtzeitig um einen neuen."
+		notice.Title = "Dein Nachweis läuft bald ab"
+		notice.Body = "Dein Nachweis „" + reminder.name + "“ gilt bis " + day + ". Bitte kümmere dich rechtzeitig um einen neuen."
 	default:
 		notice.Title = "Nachweis läuft bald ab"
 		notice.Body = "Am " + day + " läuft ein Nachweis „" + reminder.name + "“ einer Person aus dem Team ab."

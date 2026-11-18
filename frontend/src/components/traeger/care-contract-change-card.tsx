@@ -96,8 +96,8 @@ export function CareContractChangeCard({
       }
       description={
         request
-          ? "Die Eltern möchten die gebuchte Betreuung ändern. Sie oder die Schule entscheiden."
-          : "Eltern beantragen andere Tage oder Module in der Eltern-App. Sie oder die Schule entscheiden."
+          ? "Die Eltern möchten die gebuchte Betreuung ändern. Du oder die Schule entscheidet."
+          : "Eltern beantragen andere Tage oder Module in der Eltern-App. Du oder die Schule entscheidet."
       }
       loading={changes === null && !error}
       loadingRows={3}
@@ -136,7 +136,7 @@ export function CareContractChangeCard({
       {refreshed ? (
         <Alert
           type="info"
-          message="Der Änderungswunsch wurde inzwischen geändert oder entschieden. Bitte prüfen Sie den aktuellen Stand."
+          message="Der Änderungswunsch wurde inzwischen geändert oder entschieden. Bitte prüfe den aktuellen Stand."
         />
       ) : null}
       {changes && request ? <PendingChange request={request} /> : null}
@@ -149,7 +149,7 @@ export function CareContractChangeCard({
           impact.pickupOverrides.length > 0 ? (
             <Alert
               type="warning"
-              message="Bitte geben Sie diese Hinweise an die Schule weiter. Die Schule muss Regeltermine und Abholzeiten prüfen."
+              message="Bitte gib diese Hinweise an die Schule weiter. Die Schule muss Regeltermine und Abholzeiten prüfen."
             />
           ) : null}
           <ChangeFollowUp impact={impact} />
@@ -197,7 +197,7 @@ function PendingChange({
       {request.endsAllCare ? (
         <Alert
           type="warning"
-          message="Die Eltern melden damit die ganze Betreuung ab. Das ist eine Kündigung. Tragen Sie sie unter „Vertrag beenden“ ein. Hier können Sie den Wunsch nur ablehnen."
+          message="Die Eltern melden damit die ganze Betreuung ab. Das ist eine Kündigung. Trage sie unter „Vertrag beenden“ ein. Hier kannst du den Wunsch nur ablehnen."
           action={<NoticeCardJump />}
         />
       ) : null}

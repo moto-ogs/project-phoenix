@@ -14,7 +14,7 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import type {
   ActiveFilter,
   FilterConfig,
@@ -209,20 +209,25 @@ export default function QualificationsPage() {
   ];
 
   const loading = isLoading && data === undefined;
-  const statusLine = loading
-    ? undefined
-    : [
-        `${formatCount(counts.expiring_soon)} laufen bald ab`,
-        `${formatCount(counts.expired)} abgelaufen`,
-        `${formatCount(counts.missing)} fehlen`,
-      ].join(" · ");
+  const statusLine = loading ? undefined : (
+    <TenantPageStats
+      items={[
+        {
+          value: formatCount(counts.expiring_soon),
+          label: "laufen bald ab",
+        },
+        { value: formatCount(counts.expired), label: "abgelaufen" },
+        { value: formatCount(counts.missing), label: "fehlen" },
+      ]}
+    />
+  );
 
   return (
     <TenantPage
       title="Nachweise"
       stats={statusLine}
       statsLoading={loading}
-      info="Hier sehen Sie, wer welchen Nachweis hat und wann er abläuft. Nachweise tragen Sie im Profil der Person im Reiter Stammdaten ein."
+      info="Hier siehst du, wer welchen Nachweis hat und wann er abläuft. Nachweise trägst du im Profil der Person im Reiter Stammdaten ein."
       search={{
         value: search,
         onChange: setSearch,
@@ -256,7 +261,7 @@ export default function QualificationsPage() {
                     {
                       label: "Für Excel herunterladen",
                       description:
-                        "Speichert die gefilterte Liste als Datei auf Ihrem Gerät.",
+                        "Speichert die gefilterte Liste als Datei auf deinem Gerät.",
                       icon: <FileSpreadsheet className="h-4 w-4" aria-hidden />,
                       onClick: () =>
                         downloadBlob(
@@ -293,8 +298,8 @@ export default function QualificationsPage() {
               }
               description={
                 rows.length === 0
-                  ? "Nachweise tragen Sie im Profil der Person im Reiter Stammdaten ein."
-                  : "Ändern Sie die Suche oder die Filter."
+                  ? "Nachweise trägst du im Profil der Person im Reiter Stammdaten ein."
+                  : "Ändere die Suche oder die Filter."
               }
             />
           }

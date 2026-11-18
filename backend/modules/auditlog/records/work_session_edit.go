@@ -10,14 +10,15 @@ import (
 type WorkSessionEdit struct {
 	ID int64 `bun:"id,pk,autoincrement" json:"id"`
 	TenantModel
-	SessionID int64     `bun:"session_id,notnull" json:"session_id"`
-	StaffID   int64     `bun:"staff_id,notnull" json:"staff_id"`
-	EditedBy  int64     `bun:"edited_by,notnull" json:"edited_by"`
-	FieldName string    `bun:"field_name,notnull" json:"field_name"`
-	OldValue  *string   `bun:"old_value" json:"old_value"`
-	NewValue  *string   `bun:"new_value" json:"new_value"`
-	Notes     *string   `bun:"notes" json:"notes"`
-	CreatedAt time.Time `bun:"created_at,nullzero,notnull" json:"created_at"`
+	SessionID       int64      `bun:"session_id,notnull" json:"session_id"`
+	StaffID         int64      `bun:"staff_id,notnull" json:"staff_id"`
+	EditedBy        int64      `bun:"edited_by,notnull" json:"edited_by"`
+	FieldName       string     `bun:"field_name,notnull" json:"field_name"`
+	OldValue        *string    `bun:"old_value" json:"old_value"`
+	NewValue        *string    `bun:"new_value" json:"new_value"`
+	Notes           *string    `bun:"notes" json:"notes"`
+	CreatedAt       time.Time  `bun:"created_at,nullzero,notnull" json:"created_at"`
+	AuditRecordedAt *time.Time `bun:"audit_recorded_at,scanonly" json:"-"`
 }
 
 // SystemEditorID is the sentinel edited_by value for changes performed by

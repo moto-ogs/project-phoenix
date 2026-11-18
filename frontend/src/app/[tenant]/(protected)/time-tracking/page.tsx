@@ -81,6 +81,7 @@ import { BetreuungsplanHeuteCard } from "~/components/time-tracking/betreuungspl
 import { Monatskarte } from "~/components/time-tracking/monatskarte";
 import { LeaveRequestsCard } from "~/components/time-tracking/leave-requests-card";
 import { OwnAllowancesCard } from "~/components/time-tracking/own-allowances-card";
+import { useNoOwnStaffProfileEmpty } from "~/components/time-tracking/no-own-staff-profile";
 import type { StaffHistorySession, StaffAbsenceRow } from "~/lib/staff-api";
 import { ownShiftService } from "~/lib/shift-api";
 import type { StaffShift } from "~/lib/shift-helpers";
@@ -169,6 +170,8 @@ import { formatWeekLabel } from "~/lib/timetable-helpers";
 import { createLogger } from "~/lib/logger";
 import { errorStatus } from "~/lib/expected-failure";
 import { IconTile } from "~/components/ui/icon-tile";
+import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
+import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
@@ -267,7 +270,7 @@ function formatTimeFromDate(date: Date): string {
 
 const DEFAULT_BREAK_MINUTES = 30;
 const BREAK_STEP_MINUTES = 15;
-const ABSENCE_RANGE_MISSING = "Wählen Sie zuerst Von und Bis.";
+const ABSENCE_RANGE_MISSING = "Wähle zuerst Von und Bis.";
 const BREAK_START_TOOLTIP =
   "Startet sofort eine Pause mit der gewählten Dauer.";
 const MIN_BREAK_MINUTES = 15;
@@ -709,7 +712,6 @@ function ClockInCard({
   })();
 
   // Auto-end break when countdown reaches 0
-  // oxlint-disable-next-line swr/no-effect-load -- one-shot write: ends the running break once its countdown expires; it reads nothing into state
   useEffect(() => {
     if (
       shouldAutoEndBreak(countdownRemainingSecs, isOnBreak, actionLoading) &&
@@ -1006,11 +1008,11 @@ function ClockInCard({
                 onClick={handleCheckIn}
                 disabled={stampingDisabled || actionLoading || mode === null}
                 disabledReason={reasonOnceReady(
-                  "Wählen Sie zuerst oben Ihren Status.",
+                  "Wähle zuerst oben deinen Status.",
                 )}
                 className={getCheckInButtonClassName(mode)}
                 aria-label="Einstempeln"
-                tooltip="Startet Ihre Arbeitszeit im gewählten Status."
+                tooltip="Startet deine Arbeitszeit im gewählten Status."
               >
                 {actionLoading ? (
                   <SpinnerIcon className="h-5 w-5" />
@@ -1051,7 +1053,7 @@ function ClockInCard({
                     disabled={stampingDisabled || actionLoading}
                     className={getBreakButtonClassName(true, breakMins)}
                     aria-label="Pause beenden"
-                    tooltip="Beendet die Pause sofort, Ihre Arbeitszeit läuft weiter."
+                    tooltip="Beendet die Pause sofort, deine Arbeitszeit läuft weiter."
                   >
                     <svg
                       className="h-5 w-5"
@@ -1169,10 +1171,8 @@ function ClockInCard({
                 variant="ghost"
                 onClick={handleCheckOut}
                 disabled={stampingDisabled || actionLoading || isOnBreak}
-                disabledReason={reasonOnceReady(
-                  "Beenden Sie zuerst die Pause.",
-                )}
-                tooltip="Stempelt Sie aus und beendet Ihre Arbeitszeit."
+                disabledReason={reasonOnceReady("Beende zuerst die Pause.")}
+                tooltip="Stempelt dich aus und beendet deine Arbeitszeit."
                 className={`${STAMP_BUTTON_BASE} hover:border-moto-red hover:text-moto-red h-12 w-12 border-gray-300 text-gray-500 disabled:opacity-50`}
                 aria-label="Ausstempeln"
               >
@@ -1805,7 +1805,7 @@ function OwnZeiterfassungSection({
   useEffect(() => {
     if (tableError) {
       void showTableLoadError(tableError, {
-        object: "die Liste Ihrer Arbeitszeiten",
+        object: "die Liste deiner Arbeitszeiten",
         retry: () => void mutateTable(),
       });
     } else {
@@ -1818,7 +1818,7 @@ function OwnZeiterfassungSection({
   useEffect(() => {
     if (tableAbsencesError) {
       void showTableAbsencesLoadError(tableAbsencesError, {
-        object: "die Liste Ihrer Abwesenheiten",
+        object: "die Liste deiner Abwesenheiten",
         retry: () => void mutateTableAbsences(),
       });
     } else {
@@ -1836,7 +1836,7 @@ function OwnZeiterfassungSection({
   useEffect(() => {
     if (shiftsError) {
       void showShiftsLoadError(shiftsError, {
-        object: "die Liste Ihrer Schichten",
+        object: "die Liste deiner Schichten",
         retry: () => void mutateShifts(),
       });
     } else {
@@ -2118,13 +2118,12 @@ function MissingSessionHint({
       </p>
       {canManage ? (
         <p>
-          Mit „Nachtragen“ öffnen Sie die passende Seite. Dort tragen Sie die
+          Mit „Nachtragen“ öffnest du die passende Seite. Dort trägst du die
           Arbeitszeit für diesen Tag ein.
         </p>
       ) : (
         <p>
-          Nur die Leitung kann fehlende Tage nachtragen. Bitte melden Sie sich
-          dort.
+          Nur die Leitung kann fehlende Tage nachtragen. Bitte melde dich dort.
         </p>
       )}
     </div>
@@ -2156,7 +2155,7 @@ function BackfillFooter({
           variant="primary"
           size="md"
           onClick={onBackfill}
-          tooltip="Öffnet Ihre Zeiterfassung in der Verwaltung, um den Tag nachzutragen."
+          tooltip="Öffnet deine Zeiterfassung in der Verwaltung, um den Tag nachzutragen."
           className="flex-1"
         >
           Nachtragen
@@ -2395,8 +2394,8 @@ function EditSessionModal({
   const sessionSaveBlockedReason = saving
     ? undefined
     : !startTime || hasInvalidTimeRange || hasUnresolvableTime
-      ? "Prüfen Sie zuerst die markierten Uhrzeiten."
-      : "Wählen oder schreiben Sie zuerst einen Grund.";
+      ? "Prüfe zuerst die markierten Uhrzeiten."
+      : "Wähle oder schreibe zuerst einen Grund.";
 
   const handleBreakDurationChange = (breakId: string, minutes: number) => {
     setBreakDurations((prev) => {
@@ -2543,7 +2542,7 @@ function EditSessionModal({
       onCancel={onClose}
       onConfirm={handleSave}
       confirmLabel={saving ? "Speichern…" : "Speichern"}
-      confirmTooltip="Speichert die Korrektur im Verlauf, den Sie und die Leitung sehen."
+      confirmTooltip="Speichert die Korrektur im Verlauf. Du und die Leitung sehen ihn."
       confirmDisabled={
         saving ||
         !startTime ||
@@ -3050,7 +3049,7 @@ function CreateAbsenceModal({
           confirmTooltip={
             isRequest
               ? "Schickt den Antrag an die Leitung. Sie entscheidet."
-              : "Trägt die Abwesenheit sofort in Ihre Zeiterfassung ein."
+              : "Trägt die Abwesenheit sofort in deine Zeiterfassung ein."
           }
           confirmDisabled={saving || !dateStart || !dateEnd}
           confirmDisabledReason={saving ? undefined : ABSENCE_RANGE_MISSING}
@@ -3084,8 +3083,8 @@ function CreateAbsenceModal({
           />
           {isRequest && (
             <p className="mt-2 text-sm text-gray-600">
-              Diese Art beantragen Sie. Die Leitung entscheidet. Bis dahin sind
-              die Tage für Sie vorgemerkt.
+              Diese Art beantragst du. Die Leitung entscheidet. Bis dahin sind
+              die Tage für dich vorgemerkt.
             </p>
           )}
         </div>
@@ -3336,6 +3335,12 @@ function TimeTrackingContent() {
     { keepPreviousData: true, revalidateOnFocus: false, errorRetryCount: 1 },
   );
 
+  const noOwnStaff = useNoOwnStaffProfileEmpty(
+    TIME_TRACKING_EMPTY_ICON,
+    hasPermission(authSession, "time_tracking:own"),
+    [currentSessionError],
+  );
+
   const stampAction = useOptimisticStamp(
     confirmedSession,
     mutateCurrentSession,
@@ -3534,7 +3539,7 @@ function TimeTrackingContent() {
   useEffect(() => {
     if (absencesError) {
       void showAbsencesLoadError(absencesError, {
-        object: "die Liste Ihrer Abwesenheiten",
+        object: "die Liste deiner Abwesenheiten",
         retry: () => void mutateAbsences(),
       });
     } else {
@@ -3698,7 +3703,7 @@ function TimeTrackingContent() {
         return;
       }
       void Promise.all([mutateHistory(), refreshTableData()]);
-      toast.success("Sie sind eingestempelt.");
+      toast.success("Du bist eingestempelt.");
     },
     [
       stamp,
@@ -3738,7 +3743,7 @@ function TimeTrackingContent() {
       return;
     }
     void Promise.all([mutateHistory(), refreshTableData()]);
-    toast.success("Sie sind ausgestempelt.");
+    toast.success("Du bist ausgestempelt.");
   }, [
     stamp,
     mutateHistory,
@@ -3781,8 +3786,8 @@ function TimeTrackingContent() {
     }
     toast.success(
       pending.action === "check_in"
-        ? "Sie sind eingestempelt."
-        : "Sie sind ausgestempelt.",
+        ? "Du bist eingestempelt."
+        : "Du bist ausgestempelt.",
     );
     setPendingDeviation(null);
     setDeviationReason("");
@@ -3984,6 +3989,12 @@ function TimeTrackingContent() {
     ownMetrics.week === null || ownMetrics.accountBalanceMinutes === null;
   const metricsLoading = metricsPending && !ownMetrics.failed;
 
+  // Lehnt der Server die eigene Zeiterfassung ohne Personalprofil ab, steht
+  // der Hinweis statt der Seite (#7306).
+  if (noOwnStaff) {
+    return <TenantPage title="Zeiterfassung" empty={noOwnStaff} />;
+  }
+
   return (
     <TenantPage
       title="Zeiterfassung"
@@ -4024,7 +4035,7 @@ function TimeTrackingContent() {
                 href={tenantPath("/mein-dienstplan")}
                 variant="outline"
                 size="md"
-                tooltip="Öffnet Ihre geplanten Schichten der Woche."
+                tooltip="Öffnet deine geplanten Schichten der Woche."
               >
                 <CalendarRange
                   className="mr-1.5 h-4 w-4 shrink-0"
@@ -4099,7 +4110,7 @@ function TimeTrackingContent() {
                   if (status) void executeCheckIn(status);
                 }}
                 confirmLabel="Trotzdem einstempeln"
-                confirmTooltip="Stempelt Sie trotz der Abwesenheit sofort ein."
+                confirmTooltip="Stempelt dich trotz der Abwesenheit sofort ein."
               />
             }
           >
@@ -4150,12 +4161,12 @@ function TimeTrackingContent() {
                 confirmDisabledReason={
                   deviationSubmitting
                     ? undefined
-                    : "Geben Sie zuerst einen kurzen Grund an."
+                    : "Gib zuerst einen kurzen Grund an."
                 }
                 confirmTooltip={
                   pendingDeviation?.action === "check_in"
-                    ? "Stempelt Sie ein und speichert den Grund beim Eintrag."
-                    : "Stempelt Sie aus und speichert den Grund beim Eintrag."
+                    ? "Stempelt dich ein und speichert den Grund beim Eintrag."
+                    : "Stempelt dich aus und speichert den Grund beim Eintrag."
                 }
                 confirmLabel={
                   pendingDeviation?.action === "check_in"
@@ -4173,7 +4184,7 @@ function TimeTrackingContent() {
               <p className="text-sm text-gray-600">
                 {pendingDeviation?.action === "check_in" ? (
                   <>
-                    Sie stempeln
+                    Du stempelst
                     {pendingDeviation?.deviationMinutes ? (
                       <span className="font-medium text-gray-900">
                         {" "}
@@ -4182,7 +4193,7 @@ function TimeTrackingContent() {
                     ) : (
                       " deutlich"
                     )}{" "}
-                    vor Ihrem geplanten Dienstbeginn
+                    vor deinem geplanten Dienstbeginn
                     {pendingDeviation?.plannedTime
                       ? ` (${pendingDeviation.plannedTime} Uhr)`
                       : ""}{" "}
@@ -4190,7 +4201,7 @@ function TimeTrackingContent() {
                   </>
                 ) : (
                   <>
-                    Sie stempeln
+                    Du stempelst
                     {pendingDeviation?.deviationMinutes ? (
                       <span className="font-medium text-gray-900">
                         {" "}
@@ -4199,14 +4210,14 @@ function TimeTrackingContent() {
                     ) : (
                       " deutlich"
                     )}{" "}
-                    nach Ihrem geplanten Dienstende
+                    nach deinem geplanten Dienstende
                     {pendingDeviation?.plannedTime
                       ? ` (${pendingDeviation.plannedTime} Uhr)`
                       : ""}{" "}
                     aus.
                   </>
                 )}{" "}
-                Bitte geben Sie einen kurzen Grund an. Er wird beim Eintrag
+                Bitte gib einen kurzen Grund an. Er wird beim Eintrag
                 gespeichert.
               </p>
               <div className="mt-4">
@@ -4305,6 +4316,10 @@ function TimeTrackingContent() {
   );
 }
 
+const TIME_TRACKING_EMPTY_ICON = (
+  <MotoConceptIcon concept={timeTrackingConcept} size={48} />
+);
+
 // ─── Page Export ───────────────────────────────────────────────────────────────
 
 /** Ladezustand der Seite: der eingebaute Zustand des Gerüsts, kein eigenes
@@ -4320,10 +4335,27 @@ function TimeTrackingPageSkeleton() {
   );
 }
 
+/**
+ * Ohne Personalprofil in dieser Schule gibt es keine eigene Zeiterfassung,
+ * etwa für eine Person des Trägers (#7306). Dann lädt die Seite nichts und
+ * zeigt den Hinweis mit dem Weg zur Startseite.
+ */
+function TimeTrackingGate() {
+  const { data: session } = useSession();
+  const noOwnStaff = useNoOwnStaffProfileEmpty(
+    TIME_TRACKING_EMPTY_ICON,
+    hasPermission(session, "time_tracking:own"),
+  );
+  if (noOwnStaff) {
+    return <TenantPage title="Zeiterfassung" empty={noOwnStaff} />;
+  }
+  return <TimeTrackingContent />;
+}
+
 export default function TimeTrackingPage() {
   return (
     <Suspense fallback={<TimeTrackingPageSkeleton />}>
-      <TimeTrackingContent />
+      <TimeTrackingGate />
     </Suspense>
   );
 }

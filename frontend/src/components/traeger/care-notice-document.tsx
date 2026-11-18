@@ -173,7 +173,7 @@ function installmentColumns(
 function paymentText(notice: CareNotice): string {
   return notice.paymentMethod === "direct_debit"
     ? "Die fälligen Raten werden per SEPA-Lastschrift eingezogen. Bitte nicht überweisen."
-    : `Bitte überweisen Sie jede Rate bis zum Fälligkeitstag. Geben Sie dabei die Bescheid-Nr.${notice.number ? ` ${notice.number}` : ""} an.`;
+    : `Bitte überweist jede Rate bis zum Fälligkeitstag. Gebt dabei die Bescheid-Nr.${notice.number ? ` ${notice.number}` : ""} an.`;
 }
 
 /** The lines of the address field: recipient, second parent, address. */

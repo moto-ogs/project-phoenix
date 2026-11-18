@@ -30,7 +30,7 @@ import {
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { formatDateRange } from "~/components/traeger/holiday-period-format";
 import {
-  TraegerListExportMenu,
+  useTraegerListExportItems,
   traegerExportScope,
 } from "~/components/traeger/traeger-list-export-menu";
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -198,7 +198,7 @@ function filteredEmptyText(
       ? `Noch kein Abrechnungslauf für ${filterName}.`
       : "Noch kein Abrechnungslauf für diesen Ferienzeitraum.",
     description: canStart
-      ? "Starten Sie ihn oben mit „Lauf starten“. Der Zeitraum ist dort schon gewählt."
+      ? "Starte ihn oben mit „Lauf starten“. Der Zeitraum ist dort schon gewählt."
       : "Einen Lauf gibt es erst, wenn der Ferienzeitraum veröffentlicht ist.",
   };
 }
@@ -297,10 +297,22 @@ function BillingRunsPage() {
       ]
     : [];
 
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/billing-runs/export", format, {
+        holiday_period_id: periodFilter,
+      }),
+    scope: periodFilter
+      ? `Nur ${filterName ?? "der gewählte Ferienzeitraum"}`
+      : traegerExportScope(),
+    fallbackName: "abrechnungslaeufe",
+    errorObject: "die Abrechnungsläufe",
+    unavailable: shownRuns.length === 0,
+  });
   return (
     <TenantPage
       title={billingAreaTitle("laeufe")}
-      info="Hier rechnen Sie die Ferienbetreuung im Voraus ab, nach den bestätigten Buchungen. Ein Lauf erstellt die Rechnungen für einen Ferienzeitraum. Sie prüfen die Vorschau und geben den Lauf dann frei."
+      info="Hier rechnest du die Ferienbetreuung im Voraus ab, nach den bestätigten Buchungen. Ein Lauf erstellt die Rechnungen für einen Ferienzeitraum. Du prüfst die Vorschau und gibst den Lauf dann frei."
       stats={
         shownRuns.length > 0 ? (
           <TenantPageStats
@@ -322,24 +334,9 @@ function BillingRunsPage() {
       filters={filters}
       activeFilters={activeFilters}
       onClearAllFilters={() => setPeriodFilter("")}
+      overflowMenu={exportItems}
       actions={
         <>
-          <TraegerListExportMenu
-            download={(format) =>
-              downloadTraegerList("/api/traeger/billing-runs/export", format, {
-                holiday_period_id: periodFilter,
-              })
-            }
-            scope={
-              periodFilter
-                ? `Nur ${filterName ?? "der gewählte Ferienzeitraum"}`
-                : traegerExportScope()
-            }
-            ariaLabel="Abrechnungsläufe herunterladen"
-            fallbackName="abrechnungslaeufe"
-            errorObject="die Abrechnungsläufe"
-            unavailable={shownRuns.length === 0}
-          />
           <Button
             type="button"
             variant="primary"

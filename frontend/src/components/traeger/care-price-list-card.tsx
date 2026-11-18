@@ -10,6 +10,7 @@
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { Button } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
@@ -297,7 +298,7 @@ export function CarePriceListCard({
       ? `Im ${freeMonthsLabel(freeMonths)} zahlen Familien keinen Beitrag.`
       : null,
     billedUntil
-      ? `Abgerechnet bis ${formatMonth(billedUntil)}. Abgerechnete Preise bleiben, fehlende können Sie ergänzen.`
+      ? `Abgerechnet bis ${formatMonth(billedUntil)}. Abgerechnete Preise bleiben, fehlende kannst du ergänzen.`
       : null,
   ]
     .filter(Boolean)
@@ -323,7 +324,7 @@ export function CarePriceListCard({
         <p className="text-sm text-gray-600">
           {basis}
           {inactiveModules.length > 0
-            ? ` Die Preise ab dem 2. Kind gelten hier zurzeit nicht: ${inactiveModules.map((row) => `„${row.moduleName}“`).join(", ")}. Prüfen Sie die Regel unter „Ermäßigungen“.`
+            ? ` Die Preise ab dem 2. Kind gelten hier zurzeit nicht: ${inactiveModules.map((row) => `„${row.moduleName}“`).join(", ")}. Prüfe die Regel unter „Ermäßigungen“.`
             : null}
         </p>
         <DataTable
@@ -365,7 +366,7 @@ export function CarePriceListCard({
                     : "Preise löschen",
                   description: deletable
                     ? "Dann gelten die Preise davor, moto fragt vorher nach"
-                    : "Wählen Sie zuerst oben, welche Preise Sie sehen",
+                    : "Wähle zuerst oben, welche Preise du siehst",
                   destructive: true,
                   disabled: !deletable,
                   onClick: () => onDelete(shownMonth),
@@ -430,7 +431,7 @@ export function CarePriceListCard({
                 Diese Kinder kommen erst in den Monatslauf, wenn jeder Tag einen
                 Preis hat.
               </p>
-              <div className="flex sm:justify-end">
+              <ResponsiveRowActions>
                 <Button
                   type="button"
                   variant="surface"
@@ -441,7 +442,7 @@ export function CarePriceListCard({
                 >
                   Preise ergänzen
                 </Button>
-              </div>
+              </ResponsiveRowActions>
             </ResponsiveActionRow>
           </ResponsiveActionList>
         ) : null}

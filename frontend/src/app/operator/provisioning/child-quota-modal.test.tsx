@@ -61,6 +61,7 @@ const school: SchoolSummary = {
   childQuotaBundles: 2,
   childQuotaBundleSize: 50,
   childQuotaCount: 80,
+  deviceSlots: null,
 };
 
 const unlimited: SchoolSummary = {
@@ -199,7 +200,7 @@ describe("ChildQuotaModal", () => {
       "true",
     );
     expect(
-      screen.getByText("Bitte geben Sie eine ganze Zahl von 1 bis 1000 ein."),
+      screen.getByText("Bitte gib eine ganze Zahl von 1 bis 1000 ein."),
     ).toBeInTheDocument();
     expect(mockUpdateSchool).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();

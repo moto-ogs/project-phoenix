@@ -132,10 +132,10 @@ const DATEV_FIXED_REASON =
 /** Warum eine DATEV-Datei noch nicht heruntergeladen werden kann. */
 function datevBlockedReason(state: DatevReportState): string {
   if (state.status === "failed") {
-    return "Beheben Sie zuerst den Fehler bei der Vorschau oben.";
+    return "Behebe zuerst den Fehler bei der Vorschau oben.";
   }
   if (state.status === "ready") {
-    return "Tragen Sie zuerst die fehlenden Personalnummern ein.";
+    return "Trage zuerst die fehlenden Personalnummern ein.";
   }
   return "moto lädt noch die Vorschau der DATEV-Datei.";
 }
@@ -493,7 +493,7 @@ export function StaffTimeExportModal({
                 Die Übertragung ist eingeschaltet, aber noch nicht vollständig
                 eingerichtet. Ein Admin kann die fehlenden Angaben in den
                 Einstellungen unter `Kalender und Export` bei `Zeitkonten
-                übertragen` ergänzen. Solange laden Sie die Datei herunter.
+                übertragen` ergänzen. Solange lade die Datei herunter.
               </p>
             )}
             {delivery === "sftp" && sftpStatus.host && (
@@ -533,10 +533,10 @@ export function StaffTimeExportModal({
           <div className="space-y-3">
             <p className="text-xs text-gray-500">
               Export im DATEV-Format (Bewegungsdaten, ANSI-kodiert, ein
-              Abrechnungsmonat pro Datei). Stimmen Sie die erste Datei vor dem
-              Echtlauf mit Ihrer Lohnbuchhaltung ab: die Zuordnung der Lohnarten
-              und bei Lohn und Gehalt die Importbeschreibung legt das Lohnbüro
-              fest.
+              Abrechnungsmonat pro Datei). Stimme die erste Datei vor dem
+              Echtlauf mit deiner Lohnbuchhaltung ab: die Zuordnung der
+              Lohnarten und bei Lohn und Gehalt die Importbeschreibung legt das
+              Lohnbüro fest.
             </p>
             <DatevReportPanel state={activeReportState} error={reportError} />
           </div>

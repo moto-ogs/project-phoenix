@@ -172,10 +172,10 @@ export const ABSENCE_STATUS_OPTIONS = [
 ] as const;
 
 export const DECISION_BLOCKED_BY_CONFLICT =
-  "Diese Anfragen widersprechen sich. Legen Sie oben ein Ergebnis fest.";
+  "Diese Anfragen widersprechen sich. Lege oben ein Ergebnis fest.";
 
 export const CURRENT_VALUE_CHANGED_WARNING =
-  "Die OGS hat diesen Wert nach der Anfrage geändert. Prüfen Sie, welcher Wert jetzt gelten soll.";
+  "Die OGS hat diesen Wert nach der Anfrage geändert. Prüfe, welcher Wert jetzt gelten soll.";
 
 export const PAST_REQUEST_HINT =
   "Diese Anfrage betrifft nur vergangene Tage. Sie ändert nichts mehr.";

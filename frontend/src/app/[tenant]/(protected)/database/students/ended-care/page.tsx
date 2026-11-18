@@ -24,7 +24,7 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { ForbiddenPage } from "~/components/ui/forbidden-page";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { formatCount } from "~/lib/format-utils";
 import { CareResumeModal } from "~/components/students/care-resume-modal";
 import { StudentDeletionModal } from "~/components/students/student-deletion-modal";
@@ -216,18 +216,28 @@ export default function EndedCarePage() {
   // Statuszeile des Seitenkopfs aus der bereits geladenen Seite. Ohne
   // geladene Seite steht keine "0 Kinder" neben dem Ladefehler (#2517).
   const statusLine =
-    data === undefined || accessRefused
-      ? null
-      : [
-          `${formatCount(total)} ${total === 1 ? "Kind" : "Kinder"}`,
-          total > 0
-            ? `${firstOnPage} bis ${lastOnPage} auf dieser Seite`
-            : null,
-          debouncedSearch ? `gefiltert nach „${debouncedSearch}“` : null,
-          totalPages > 1 ? `Seite ${page} von ${totalPages}` : null,
-        ]
-          .filter(Boolean)
-          .join(" · ");
+    data === undefined || accessRefused ? null : (
+      <TenantPageStats
+        // Die Zeile zeigt höchstens drei Angaben. Kommt die Suche dazu,
+        // fällt „Seite … von …“ weg; das steht dann noch am Blätterknopf
+        // unter der Liste.
+        items={[
+          {
+            value: formatCount(total),
+            label: total === 1 ? "Kind" : "Kinder",
+          },
+          ...(total > 0
+            ? [{ label: `${firstOnPage} bis ${lastOnPage} auf dieser Seite` }]
+            : []),
+          ...(debouncedSearch
+            ? [{ label: `gefiltert nach „${debouncedSearch}“` }]
+            : []),
+          ...(totalPages > 1
+            ? [{ label: `Seite ${page} von ${totalPages}` }]
+            : []),
+        ].slice(0, 3)}
+      />
+    );
 
   const contentEmpty = status !== "loading" && (!canManage || accessRefused);
 
@@ -316,7 +326,7 @@ export default function EndedCarePage() {
                   }
                   description={
                     debouncedSearch
-                      ? "Versuchen Sie einen anderen Namen oder eine andere Klasse."
+                      ? "Versuche einen anderen Namen oder eine andere Klasse."
                       : "Hier stehen Kinder, deren Betreuung beendet wurde."
                   }
                 />

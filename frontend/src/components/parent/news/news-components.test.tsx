@@ -697,7 +697,7 @@ describe("announcement detail presentation", () => {
     expect(screen.getByText("Lesebestätigung")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Damit bestätigen Sie nur, dass Sie den Elternbrief gelesen haben.",
+        "Damit bestätigst du nur, dass du den Elternbrief gelesen hast.",
       ),
     ).toBeInTheDocument();
     const messageSection = screen.getByRole("region", {
@@ -1136,7 +1136,7 @@ describe("Elternbrief per child (#4813)", () => {
       screen.getByText("Liebe Eltern von Lina, Lina ist in der Gruppe Füchse."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Jedes Ihrer Kinder hat einen eigenen Brief."),
+      screen.getByText("Jedes deiner Kinder hat einen eigenen Brief."),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Ben" }));
@@ -1172,7 +1172,7 @@ describe("Elternbrief per child (#4813)", () => {
     );
     expect(screen.getByText("Liebe Eltern von Emil.")).toBeInTheDocument();
     expect(
-      screen.queryByText("Jedes Ihrer Kinder hat einen eigenen Brief."),
+      screen.queryByText("Jedes deiner Kinder hat einen eigenen Brief."),
     ).not.toBeInTheDocument();
   });
 });

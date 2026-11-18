@@ -34,6 +34,9 @@ func (p *Provisioning) RecordOperatorRead(ctx context.Context, access organizati
 	if access.TagScanID > 0 {
 		resourceID = &access.TagScanID
 	}
+	if access.DeviceID > 0 {
+		resourceID = &access.DeviceID
+	}
 	if resource == domain.AuditResourceSchool && access.SchoolID > 0 {
 		resourceID = &access.SchoolID
 	}
@@ -60,6 +63,8 @@ func operatorReadResource(view organizationtenancy.OperatorReadView) (string, er
 		resource = domain.AuditResourceInvitation
 	case organizationtenancy.ReadUnregisteredTagScans:
 		resource = domain.AuditResourceTagScan
+	case organizationtenancy.ReadDeviceHistory:
+		resource = domain.AuditResourceDevice
 	case organizationtenancy.ReadTraegerMembers:
 		resource = domain.AuditResourceTraegerMember
 	case organizationtenancy.ReadTraegerSettings:

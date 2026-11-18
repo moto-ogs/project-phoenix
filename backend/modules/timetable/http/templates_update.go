@@ -639,7 +639,7 @@ func renderTemplateStartPullError(w http.ResponseWriter, r *http.Request, err er
 		))
 	case errors.Is(err, timetableModule.ErrTemplateStartPredecessorOverlap):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(
-			errors.New("der neue Serienbeginn überschneidet sich mit dem vorherigen Serienteil. Bitte wählen Sie ein Datum ab dessen Ende"),
+			errors.New("der neue Serienbeginn überschneidet sich mit dem vorherigen Serienteil. Bitte wähle ein Datum ab dessen Ende"),
 			common.CodeTimetableTemplateStartPredecessorOverlap,
 		))
 	default:

@@ -241,7 +241,7 @@ describe("ExternalCaregiverEntry", () => {
     submit();
 
     expect(
-      screen.getByText("Bitte geben Sie Vor- und Nachnamen ein."),
+      screen.getByText("Bitte gib Vor- und Nachnamen ein."),
     ).toBeInTheDocument();
     expect(screen.getByText("Bitte Nachnamen eingeben.")).toBeInTheDocument();
     expect(createExternal).not.toHaveBeenCalled();
@@ -258,7 +258,7 @@ describe("ExternalCaregiverEntry", () => {
 
     const email = screen.getByLabelText("E-Mail-Adresse");
     expect(
-      screen.getByText("Bitte prüfen Sie die E-Mail-Adresse."),
+      screen.getByText("Bitte prüfe die E-Mail-Adresse."),
     ).toBeInTheDocument();
     expect(email).toHaveAttribute("aria-invalid", "true");
     expect(email).toHaveAccessibleDescription("Bitte E-Mail-Adresse eingeben.");

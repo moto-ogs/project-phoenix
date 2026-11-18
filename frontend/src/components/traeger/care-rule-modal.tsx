@@ -252,10 +252,7 @@ export function CareRuleModal({
       }
     }
     if (Object.keys(fieldErrors).length > 0) {
-      formErrors.invalid(
-        "Bitte prüfen Sie die markierten Felder.",
-        fieldErrors,
-      );
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fieldErrors);
       return;
     }
     const input: CareRuleInput = {
@@ -413,7 +410,7 @@ export function CareRuleModal({
           />
           <p className="mt-1 text-sm text-gray-600">
             {draft.schoolIds.length === 0
-              ? "Wählen Sie zuerst die Schulen. Lassen Sie die Module danach leer, gilt die Regel für alle."
+              ? "Wähle zuerst die Schulen. Lässt du die Module danach leer, gilt die Regel für alle."
               : moduleOptions.length === 0
                 ? "Die gewählten Schulen haben noch keine Module."
                 : "Leer lassen, dann gilt die Regel für alle Module."}
@@ -465,7 +462,7 @@ export function CareRuleModal({
         {kind === "sibling" ? (
           <SwitchRow
             label="Geschwister ohne Vertrag mitzählen"
-            description="moto zählt die Kinderzahl, die Sie unter „Kinderzahl“ bestätigt haben. Es zählen immer mindestens die Kinder mit Vertrag. Kinder mit Vertrag an einer anderen Schule zählen nur, wenn die Regel dort Geschwister zählt."
+            description="moto zählt die Kinderzahl, die du unter „Kinderzahl“ bestätigt hast. Es zählen immer mindestens die Kinder mit Vertrag. Kinder mit Vertrag an einer anderen Schule zählen nur, wenn die Regel dort Geschwister zählt."
             checked={draft.countsFamilyChildren}
             onCheckedChange={(countsFamilyChildren) =>
               set({ countsFamilyChildren })

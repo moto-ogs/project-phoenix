@@ -263,7 +263,6 @@ function GuardedTenant({
     })();
   }, [setRefusal]);
 
-  // oxlint-disable-next-line swr/no-effect-load -- session guard: subscribes to tenant mismatch refusals and redirects; timing-sensitive, no resource read
   useEffect(
     () =>
       onSessionTenantMismatch((code) => {
@@ -323,7 +322,6 @@ function GuardedTenant({
   // stripped token/roles because refresh failed. Do not render tenant UI in
   // that limbo state; it makes real admins look like caregivers and produces
   // confusing forbidden screens.
-  // oxlint-disable-next-line swr/no-effect-load -- session guard: signs an expired session out and clears the cache; no read
   useEffect(() => {
     if (status !== "authenticated") return;
     if (sessionHasAccess || onLoginEntry) return;
@@ -361,7 +359,6 @@ function GuardedTenant({
   }, [status, sessionHasAccess, sessionError, redirect, onLoginEntry]);
 
   // Operator session on tenant subdomain — sign out immediately
-  // oxlint-disable-next-line swr/no-effect-load -- session guard: signs an operator session out on a school host; no read
   useEffect(() => {
     if (status !== "authenticated" || !tenant) return;
     if (!sessionHasAccess) return;
@@ -404,7 +401,6 @@ function GuardedTenant({
     redirect,
   ]);
 
-  // oxlint-disable-next-line swr/no-effect-load -- session guard: switches the session to the URL's school; a write with retry limits, no read
   useEffect(() => {
     // Only check when authenticated and tenant context is resolved
     if (status !== "authenticated" || !tenant) return;
@@ -566,12 +562,12 @@ function GuardedTenant({
     return (
       <div className="mx-auto flex min-h-[200px] max-w-3xl items-center p-4">
         <div className="w-full space-y-3">
-          <LoadErrorAlert error="moto kann gerade nicht prüfen, bei welcher Schule Sie angemeldet sind. Bitte versuchen Sie es gleich noch einmal." />
+          <LoadErrorAlert error="moto kann gerade nicht prüfen, bei welcher Schule du angemeldet bist. Bitte versuche es gleich noch einmal." />
           <Button
             type="button"
             size="md"
             onClick={checkSessionSchool}
-            tooltip="Prüft noch einmal, bei welcher Schule Sie angemeldet sind."
+            tooltip="Prüft noch einmal, bei welcher Schule du angemeldet bist."
           >
             Erneut versuchen
           </Button>
@@ -637,7 +633,7 @@ function GuardedTenant({
             <LoadErrorAlert
               error={
                 switchError ??
-                `Der Wechsel zu ${tenant.name} hat nicht geklappt. Bitte versuchen Sie es noch einmal. Wenn das nicht hilft, melden Sie sich neu an.`
+                `Der Wechsel zu ${tenant.name} hat nicht geklappt. Bitte versuche es noch einmal. Wenn das nicht hilft, melde dich neu an.`
               }
             />
             <span className="flex flex-wrap gap-2">
@@ -691,7 +687,7 @@ function GuardedTenant({
                     type="button"
                     size="md"
                     variant="outline"
-                    tooltip="Meldet Sie ab und öffnet die Anmeldung."
+                    tooltip="Meldet dich ab und öffnet die Anmeldung."
                     onClick={() => {
                       void signOut({ callbackUrl: "/" }).catch(
                         (err: unknown) => {

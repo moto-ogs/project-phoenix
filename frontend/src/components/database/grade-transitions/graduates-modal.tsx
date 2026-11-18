@@ -321,7 +321,7 @@ export function GraduatesModal({
                   disabled={selectedIds.length === 0}
                   onClick={() => setConfirmOpen(true)}
                   tooltip="Löscht die gewählten Kinder mit allen Daten, moto fragt vorher nach."
-                  disabledReason="Wählen Sie zuerst mindestens ein Kind aus."
+                  disabledReason="Wähle zuerst mindestens ein Kind aus."
                 >
                   Endgültig löschen
                 </Button>

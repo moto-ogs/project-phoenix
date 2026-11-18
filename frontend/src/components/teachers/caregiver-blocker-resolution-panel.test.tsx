@@ -464,7 +464,7 @@ describe("CaregiverBlockerResolutionPanel", () => {
 
     expect(
       screen.getByText(
-        "Alle Zuordnungen wurden aufgelöst. Gehen Sie zurück zur Übersicht, um die Betreuung zu deaktivieren.",
+        "Alle Zuordnungen wurden aufgelöst. Gehe zurück zur Übersicht, um die Betreuung zu deaktivieren.",
       ),
     ).toBeInTheDocument();
   });

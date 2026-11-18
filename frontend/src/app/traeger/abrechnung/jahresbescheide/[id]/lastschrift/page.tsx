@@ -37,11 +37,9 @@ export default function TraegerNoticeDebitsPage() {
       backHref={traegerPath(`/traeger/abrechnung/jahresbescheide/${runId}`)}
       backLabel="Zurück zum Jahreslauf"
       stats={
-        run ? (
-          <span className="text-sm text-gray-600 tabular-nums">
-            {formatDate(run.periodFrom)} bis {formatDate(run.periodUntil)}
-          </span>
-        ) : null
+        run
+          ? `${formatDate(run.periodFrom)} bis ${formatDate(run.periodUntil)}`
+          : null
       }
       statsLoading={loading}
       error={error}
@@ -59,7 +57,7 @@ export default function TraegerNoticeDebitsPage() {
             description={
               run.status === "released"
                 ? "Dieser Jahreslauf hat keinen Bescheid. Es gibt nichts abzubuchen."
-                : "Die Datei für die Bank gibt es, sobald Sie die Bescheide auf der Seite des Jahreslaufs ausgestellt haben."
+                : "Die Datei für die Bank gibt es, sobald du die Bescheide auf der Seite des Jahreslaufs ausgestellt hast."
             }
           />
         )

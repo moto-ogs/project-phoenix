@@ -66,9 +66,15 @@ school of #3461 stays selectable as the fallback (see below).
    named like the profile's (`Ganztag Nord e. V.`), the same for every attempt
    of the order. The seed records it on the order (`traeger_id`) as soon as it
    exists, adds two neighbour schools (`<slug>-n1` „OGS Am Lindenhof",
-   `<slug>-n2` „OGS Rheinblick": two groups, twelve children, today's web
-   attendance) and records them in `visitor_school_ids`, then runs the Träger
-   steps over all three. The visitor's caregiver joins the Träger-Büro with
+   `<slug>-n2` „OGS Rheinblick": two groups each, distinct children, booked
+   places and a month of past attendance) and records them in
+   `visitor_school_ids`, then runs the Träger
+   steps over all three. While a visitor uses the demo, the runner checks a
+   small set of booked children in and out through web attendance at each
+   neighbour. It closes its open check-ins when the school's ticker stops.
+   Two synthetic employees share their week between schools, and the deferred
+   seed signs two care contracts on paper at each neighbour.
+   The visitor's caregiver joins the Träger-Büro with
    every role of the office and the visitor's name; the deferred seed links
    the Träger's staff records without the visitor's employment. The demo role
    Träger-Büro opens the Träger-Portal on its own host. Expiry, restart and a
@@ -193,10 +199,11 @@ module.
 
 The first run needs `OPERATOR_EMAIL`, `OPERATOR_PASSWORD` and `OGS_DEVICE_PIN`
 from the normal local environment. `OGS_DEVICE_PIN` must be exactly four
-digits: the seeder writes it into the school's `security.ogs_device_pin`
-setting before the first device request, because device auth checks that
-setting (default 1234) and uses the variable only when the setting is empty.
-The demo process refuses to start with any other shape. Staff/admin passwords
+digits that are not easy to guess (no 1234, 1111, 1212): the seeder writes it
+into the school's `security.ogs_device_pin` setting before the first device
+request, because device auth checks only that setting, which has no default.
+The demo process refuses to start with any other shape; an easy PIN fails the
+seed at that write with `settings.device_pin_too_simple`. Staff/admin passwords
 are generated for this school. A restart reads the existing state and does not seed another
 school. Ctrl+C stops the runner; it does not delete the school.
 
@@ -275,7 +282,8 @@ introduced.
   that header, because the server takes the client address from it.
   `scripts/check-runtime-env.py` pins the sidecar command to the loopback URL.
 - **Device PIN:** `OGS_DEVICE_PIN` in `demo.sops.env` must be exactly four
-  digits (`^\d{4}$`, the pattern of `security.ogs_device_pin`). The seeder
+  digits (`^\d{4}$`, the pattern of `security.ogs_device_pin`) and not easy to
+  guess (same digit, run up or down, repeated pair; #7175). The seeder
   writes it into every demo school it creates; a six-digit value stops the
   demo process at start. Rotate it with `sops set` only; schools seeded
   earlier keep the PIN they were seeded with.

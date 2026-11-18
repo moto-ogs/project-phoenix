@@ -12,7 +12,7 @@ export const CHECKIN_HINTS = {
   checkIn: "Meldet die ausgewählten Kinder in der Schule an.",
   checkOut:
     "Meldet die ausgewählten Kinder ab, bei Raumbesuchen fragt moto vorher nach.",
-  noneSelected: "Wählen Sie zuerst mindestens ein Kind aus.",
+  noneSelected: "Wähle zuerst mindestens ein Kind aus.",
 } as const;
 
 /** Warum „Alle N auswählen“ gerade nicht geht, sonst `undefined`. */

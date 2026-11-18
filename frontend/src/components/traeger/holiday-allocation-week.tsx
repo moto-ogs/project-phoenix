@@ -15,6 +15,7 @@ import { ProgressBar } from "~/components/ui/progress-bar";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -142,7 +143,7 @@ function AllocationRow({
           <AllocationCriteriaChips entry={entry} criteria={criteria} />
         </div>
       </div>
-      <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
+      <ResponsiveRowActions leading={36}>
         <Button
           type="button"
           variant="surface"
@@ -165,7 +166,7 @@ function AllocationRow({
         >
           Auf die Warteliste
         </Button>
-      </div>
+      </ResponsiveRowActions>
     </ResponsiveActionRow>
   );
 }
@@ -275,7 +276,7 @@ export function HolidayAllocationWeekCard({
           <p className="text-sm text-gray-600">
             {week.bookingUnit === "day"
               ? "An mindestens einem Tag ist kein Platz frei. Andere Tage können noch Plätze haben."
-              : "Es ist kein Platz frei. Für mehr Kinder erhöhen Sie zuerst im Reiter „Plätze“ die Zahl der Plätze."}
+              : "Es ist kein Platz frei. Für mehr Kinder erhöhe zuerst im Reiter „Plätze“ die Zahl der Plätze."}
           </p>
         ) : null}
         <ResponsiveActionList>

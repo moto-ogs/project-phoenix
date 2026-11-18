@@ -96,9 +96,9 @@ export function TraegerDocumentUploadModal({
     formErrors.clear();
     const trimmed = title.trim();
     if (!file || !trimmed) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", {
-        ...(file ? {} : { file: "Bitte wählen Sie eine Datei." }),
-        ...(trimmed ? {} : { title: "Bitte geben Sie einen Titel ein." }),
+      formErrors.invalid("Bitte prüfe deine Angaben.", {
+        ...(file ? {} : { file: "Bitte wähle eine Datei." }),
+        ...(trimmed ? {} : { title: "Bitte gib einen Titel ein." }),
       });
       return;
     }
@@ -167,7 +167,7 @@ export function TraegerDocumentUploadModal({
               type="button"
               variant="ghost"
               size="compact"
-              tooltip="Verwirft die gewählte Datei, damit Sie eine andere wählen."
+              tooltip="Verwirft die gewählte Datei, damit du eine andere wählst."
               onClick={() => setFile(null)}
             >
               Andere Datei
@@ -196,7 +196,7 @@ export function TraegerDocumentUploadModal({
           live
         />
         <Input
-          controlSize="touch"
+          controlSize="compact"
           id="traeger-document-title"
           name="title"
           label="Titel"
@@ -208,7 +208,7 @@ export function TraegerDocumentUploadModal({
           placeholder="z. B. Hausordnung 2026/27"
         />
         <p className="text-sm text-gray-600">
-          Eltern und Schulen sehen das Dokument erst, wenn Sie es freigeben. Den
+          Eltern und Schulen sehen das Dokument erst, wenn du es freigibst. Den
           Titel sehen alle, die das Dokument bekommen.
         </p>
       </form>

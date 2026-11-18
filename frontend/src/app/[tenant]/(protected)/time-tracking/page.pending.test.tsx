@@ -87,6 +87,7 @@ vi.mock("~/lib/swr", async (importOriginal) => {
   };
 });
 vi.mock("~/lib/hooks/use-user-context", () => ({
+  useHasOwnStaff: () => true,
   useUserContext: () => ({
     userContext: { currentStaff: { id: "10", personId: "1" } },
     isLoading: false,

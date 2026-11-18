@@ -17,7 +17,7 @@ import { Button } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
-import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { TenantPage } from "~/components/ui/tenant-page";
 import { formatBerlinTime } from "~/lib/date-helpers";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { childrenConcept } from "~/lib/concepts/children";
@@ -185,16 +185,7 @@ export default function TraegerSchoolPage() {
         </>
       }
       stats={
-        school ? (
-          <TenantPageStats
-            items={[
-              {
-                value: `Stand ${formatBerlinTime(school.figures.asOf)} Uhr`,
-                label: "",
-              },
-            ]}
-          />
-        ) : null
+        school ? `Stand ${formatBerlinTime(school.figures.asOf)} Uhr` : null
       }
       statsLoading={school === null && !error}
       error={error}

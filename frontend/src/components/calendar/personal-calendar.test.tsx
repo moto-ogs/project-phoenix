@@ -311,7 +311,7 @@ describe("PersonalCalendar", () => {
     );
 
     openEvent("Staff meeting");
-    const scope = screen.getByRole("group", { name: "Ihre Antwort gilt für" });
+    const scope = screen.getByRole("group", { name: "Deine Antwort gilt für" });
     // Answered series: the next answer changes only this date.
     expect(
       within(scope).getByRole("button", { name: "Nur am Mo., 05.01." }),
@@ -325,7 +325,7 @@ describe("PersonalCalendar", () => {
     openEvent("Staff meeting");
     fireEvent.click(screen.getByRole("button", { name: "Alle Termine" }));
     expect(
-      screen.getByText("Ihre Antwort gilt für alle Termine dieser Reihe."),
+      screen.getByText("Deine Antwort gilt für alle Termine dieser Reihe."),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Zusagen" }));
     expect(onRespond).toHaveBeenLastCalledWith("42", "accepted", undefined);
@@ -360,7 +360,7 @@ describe("PersonalCalendar", () => {
     fireEvent.click(screen.getByRole("button", { name: "Alle Termine" }));
     expect(
       screen.getByText(
-        "Ihre Antwort gilt dann für alle Termine, auch für einzeln beantwortete.",
+        "Deine Antwort gilt dann für alle Termine, auch für einzeln beantwortete.",
       ),
     ).toBeInTheDocument();
   });

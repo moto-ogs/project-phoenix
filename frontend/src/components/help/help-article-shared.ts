@@ -17,7 +17,7 @@ export function loginResult(
   if (presenceMode === "detailed" && groupMode === "fixed_groups") {
     return "Nach der Anmeldung öffnet moto den Bereich `Gruppen`.";
   }
-  return "Nach der Anmeldung öffnet moto die für Sie vorgesehene Startseite.";
+  return "Nach der Anmeldung öffnet moto die für dich vorgesehene Startseite.";
 }
 
 export function unavailableNfcTopic(
@@ -33,15 +33,16 @@ export function unavailableNfcTopic(
     title,
     question,
     summary:
-      "Dieser Ablauf ist nicht verfügbar, weil Ihre OGS NFC nicht nutzt.",
+      "Dieser Ablauf ist nicht verfügbar, weil deine OGS NFC nicht nutzt.",
     group,
     audience: ["caregiver", "lead"],
     icon,
     steps: [
-      "Nutzen Sie die entsprechenden Funktionen in der moto-App.",
-      "Erwarten Sie ein NFC-Tablet? Nur das moto-Team kann NFC einschalten.",
+      "Nutze die entsprechenden Funktionen in der moto-App.",
+      "Erwartest du ein NFC-Tablet? Nur das moto-Team kann NFC einschalten.",
     ],
-    result: "In Ihrer OGS werden Anwesenheit und Arbeitszeit ohne NFC erfasst.",
+    result:
+      "In deiner OGS werden Anwesenheit und Arbeitszeit ohne NFC erfasst.",
     related,
   };
 }
@@ -58,13 +59,13 @@ export function unknownNfcTopic(
     id,
     title,
     question,
-    summary: "Ob dieser Ablauf verfügbar ist, hängt von Ihrer OGS ab.",
+    summary: "Ob dieser Ablauf verfügbar ist, hängt von deiner OGS ab.",
     group,
     audience: ["caregiver", "lead"],
     icon,
     steps: [
-      "Prüfen Sie, ob in Ihrer OGS ein Tablet mit moto steht.",
-      "Steht dort keines? Nutzen Sie die entsprechenden Funktionen in der moto-App.",
+      "Prüfe, ob in deiner OGS ein Tablet mit moto steht.",
+      "Steht dort keines? Nutze die entsprechenden Funktionen in der moto-App.",
       "Ein- und ausschalten kann NFC nur das moto-Team.",
     ],
     result:
@@ -88,7 +89,7 @@ export function missingMenuDifferences(
     // Vollstaendige Liste aus sidebar.tsx BINARY_HIDDEN_HREFS (/rooms,
     // /activities, /tagesplan) plus dem separat gegateten Aufsicht-Akkordeon.
     lines.push(
-      "In Ihrer OGS gibt es `Räume`, `Aktivitäten`, `Aktuelle Aufsicht` und `Heute` nicht. Ihre OGS hält nur fest, ob ein Kind da ist.",
+      "In deiner OGS gibt es `Räume`, `Aktivitäten`, `Aktuelle Aufsicht` und `Heute` nicht. Deine OGS hält nur fest, ob ein Kind da ist.",
     );
   } else if (presenceMode === "unknown") {
     lines.push(
@@ -98,7 +99,7 @@ export function missingMenuDifferences(
 
   if (groupMode === "open_care") {
     lines.push(
-      "In Ihrer OGS gibt es den Bereich `Gruppen` nicht. Ihre OGS arbeitet mit offener Betreuung.",
+      "In deiner OGS gibt es den Bereich `Gruppen` nicht. Deine OGS arbeitet mit offener Betreuung.",
     );
   } else if (groupMode === "unknown") {
     lines.push("Bei offener Betreuung fehlt `Gruppen`.");
@@ -107,7 +108,7 @@ export function missingMenuDifferences(
   if (nfcEnabled === false) {
     if (presenceMode !== "binary") {
       lines.push(
-        "In Ihrer OGS gibt es den Bereich `Aktivitäten` nicht. Ihre OGS nutzt kein NFC.",
+        "In deiner OGS gibt es den Bereich `Aktivitäten` nicht. Deine OGS nutzt kein NFC.",
       );
     }
   } else if (nfcEnabled === null) {
@@ -132,14 +133,14 @@ export function parentAnnouncementSteps(
   titleField: string,
 ): readonly string[] {
   return [
-    "Klappen Sie in der Seitenleiste `Eltern` auf.",
-    "Öffnen Sie `Mitteilungen`.",
-    `Wählen Sie oben \`${kindTab}\`.`,
-    `Wählen Sie oben rechts \`+ ${actionLabel}\`.`,
-    `Tragen Sie bei \`${titleField}\` ein, worum es geht.`,
-    "Tragen Sie bei `Text` die Nachricht ein.",
-    "Wählen Sie unten `Weiter`.",
-    "Wählen Sie in `Schritt 2 von 2` unter `Wer soll diese Mitteilung erhalten?` die Empfänger.",
+    "Klappe in der Seitenleiste `Eltern` auf.",
+    "Öffne `Mitteilungen`.",
+    `Wähle oben \`${kindTab}\`.`,
+    `Wähle oben rechts \`+ ${actionLabel}\`.`,
+    `Trage bei \`${titleField}\` ein, worum es geht.`,
+    "Trage bei `Text` die Nachricht ein.",
+    "Wähle unten `Weiter`.",
+    "Wähle in `Schritt 2 von 2` unter `Wer soll diese Mitteilung erhalten?` die Empfänger.",
   ];
 }
 
@@ -149,4 +150,12 @@ export function parentAnnouncementSteps(
  * Seitenleiste (#6956) gibt es diese Überschriften nicht.
  */
 export const SIMPLE_NAV_DIFFERENCE =
-  "Sie sehen in der Seitenleiste keine Überschriften wie `Team` oder `Tagesbetrieb`? Dann nutzt Ihre OGS die einfache Seitenleiste. Die Seite steht dort direkt. Fehlt sie, wählen Sie ganz unten `Alle Seiten anzeigen`.";
+  "Du siehst in der Seitenleiste keine Überschriften wie `Team` oder `Tagesbetrieb`? Dann nutzt deine OGS die einfache Seitenleiste. Die Seite steht dort direkt. Fehlt sie, wählst du ganz unten `Alle Seiten anzeigen`.";
+
+/**
+ * Die eigenen Seiten `Zeiterfassung`, `Mein Dienstplan` und `Mein Kalender`
+ * brauchen ein Personalprofil in dieser Schule (#7306). Ohne Profil, etwa
+ * über den Träger, fehlen sie in der Navigation.
+ */
+export const OWN_STAFF_PROFILE_TROUBLESHOOTING =
+  "Die Seite fehlt? Sie zeigt deine eigenen Zeiten und Termine. Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Die Leitung kann es anlegen.";

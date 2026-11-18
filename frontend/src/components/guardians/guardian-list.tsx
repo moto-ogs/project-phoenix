@@ -339,7 +339,7 @@ export default function GuardianList({
                 {emailState?.stopShared ? ` ${STOP_SHARED_NOTE}` : null}
                 {readOnly
                   ? null
-                  : " Mit „Mails wieder senden“ heben Sie den Stopp auf."}
+                  : " Mit „Mails wieder senden“ hebst du den Stopp auf."}
               </p>
             )}
 

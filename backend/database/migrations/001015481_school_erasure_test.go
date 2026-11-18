@@ -243,22 +243,25 @@ func seedErasureSchool(t *testing.T, db *bun.DB, schoolID int64) erasureFixture 
 	return erasureFixture{AccountID: account.ID, RoleID: role.ID}
 }
 
-func erasureSnapshot(t *testing.T, db *bun.DB, schoolID int64) map[string]string {
+func prepareErasureSnapshot(t *testing.T, db *bun.DB) func(int64) map[string]string {
 	t.Helper()
-	snapshot := make(map[string]string)
+	queries := testpkg.SnapshotQueries{}
 	for _, entry := range readErasurePlan(t, db) {
-		var data string
-		query := fmt.Sprintf(`SELECT COALESCE(jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text),'[]'::jsonb)::text FROM %s AS r WHERE %s`, entry.Name,
-			strings.ReplaceAll(entry.Predicate, "$1", "?"))
-		require.NoError(t, db.NewRaw(query, schoolID).Scan(t.Context(), &data))
-		snapshot[entry.Name] = data
+		queries[entry.Name] = testpkg.TableSnapshotQuery(db, entry.Name, entry.Predicate)
 	}
-	return snapshot
+	read := queries.Prepare(t, db)
+	return func(schoolID int64) map[string]string {
+		t.Helper()
+		snapshot, err := read(t.Context(), schoolID)
+		require.NoError(t, err)
+		return snapshot
+	}
 }
 
 func TestSchoolErasureSeparatesSchoolsAndKeepsSharedAccounts(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
+	snapshot := prepareErasureSnapshot(t, db)
 	schoolA := testpkg.Tenant(t)
 	schoolB, _ := testpkg.CreateTestTenant(t, db)
 	fixtureA := seedErasureSchool(t, db, schoolA)
@@ -266,8 +269,8 @@ func TestSchoolErasureSeparatesSchoolsAndKeepsSharedAccounts(t *testing.T) {
 	// This account belongs to A and B. A's exclusive account remains unmapped
 	// afterwards, ready for auth.erase_unused_accounts, never directly deleted.
 	testpkg.MapAccountToTenant(t, db, fixtureB.AccountID, schoolA)
-	beforeA := erasureSnapshot(t, db, schoolA)
-	beforeB := erasureSnapshot(t, db, schoolB)
+	beforeA := snapshot(schoolA)
+	beforeB := snapshot(schoolB)
 	populated := 0
 	for _, rows := range beforeA {
 		if rows != "[]" {
@@ -280,7 +283,7 @@ func TestSchoolErasureSeparatesSchoolsAndKeepsSharedAccounts(t *testing.T) {
 	result := eraseSchoolAsCLI(t, db, schoolA, orderID)
 	require.Equal(t, "db_done", result.Status, result.ErrorCode)
 	require.Nil(t, result.ErrorCode)
-	afterA := erasureSnapshot(t, db, schoolA)
+	afterA := snapshot(schoolA)
 	for table, rows := range afterA {
 		assert.Equal(t, "[]", rows, "school A: %s", table)
 		assert.Contains(t, result.RowCounts, table)
@@ -288,7 +291,7 @@ func TestSchoolErasureSeparatesSchoolsAndKeepsSharedAccounts(t *testing.T) {
 		require.NoError(t, json.Unmarshal([]byte(beforeA[table]), &originalRows))
 		assert.GreaterOrEqual(t, result.RowCounts[table], int64(len(originalRows)), "counts include every original row plus trigger-generated rows in %s", table)
 	}
-	assert.Equal(t, beforeB, erasureSnapshot(t, db, schoolB), "every row, not just counts, of B remains intact")
+	assert.Equal(t, beforeB, snapshot(schoolB), "every row, not just counts, of B remains intact")
 	var mappings int
 	require.NoError(t, db.NewRaw(`SELECT count(*) FROM auth.account_tenants WHERE account_id=?`, fixtureA.AccountID).Scan(t.Context(), &mappings))
 	assert.Zero(t, mappings)
@@ -305,12 +308,13 @@ func TestSchoolErasureSeparatesSchoolsAndKeepsSharedAccounts(t *testing.T) {
 func TestSchoolErasureRollsBackAndRetriesAfterMidDeleteFailure(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
+	snapshot := prepareErasureSnapshot(t, db)
 	schoolID := testpkg.Tenant(t)
 	seedErasureSchool(t, db, schoolID)
 	schoolB, _ := testpkg.CreateTestTenant(t, db)
 	seedErasureSchool(t, db, schoolB)
-	beforeB := erasureSnapshot(t, db, schoolB)
-	before := erasureSnapshot(t, db, schoolID)
+	beforeB := snapshot(schoolB)
+	before := snapshot(schoolID)
 	orderID := beginErasure(t, db, schoolID)
 	erasureExec(t, db, `CREATE FUNCTION platform.fail_erasure_fixture() RETURNS trigger LANGUAGE plpgsql AS $$
  BEGIN RAISE EXCEPTION 'synthetic detail must not be stored'; END $$;
@@ -320,8 +324,8 @@ func TestSchoolErasureRollsBackAndRetriesAfterMidDeleteFailure(t *testing.T) {
 	require.NotNil(t, failed.ErrorCode)
 	assert.Equal(t, "P0001", *failed.ErrorCode)
 	assert.Empty(t, failed.RowCounts)
-	assert.Equal(t, before, erasureSnapshot(t, db, schoolID), "all earlier deletes and trigger writes must roll back")
-	assert.Equal(t, beforeB, erasureSnapshot(t, db, schoolB), "injected failure also leaves B intact")
+	assert.Equal(t, before, snapshot(schoolID), "all earlier deletes and trigger writes must roll back")
+	assert.Equal(t, beforeB, snapshot(schoolB), "injected failure also leaves B intact")
 	var proof string
 	require.NoError(t, db.NewRaw(`SELECT platform.read_school_erasure(?)::text`, orderID).Scan(t.Context(), &proof))
 	assert.NotContains(t, proof, "synthetic detail")
@@ -333,6 +337,7 @@ func TestSchoolErasureRollsBackAndRetriesAfterMidDeleteFailure(t *testing.T) {
 func TestSchoolErasureRejectsCrossSchoolCascade(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
+	snapshot := prepareErasureSnapshot(t, db)
 	schoolA := testpkg.Tenant(t)
 	schoolB, _ := testpkg.CreateTestTenant(t, db)
 	a := seedErasureSchool(t, db, schoolA)
@@ -340,14 +345,14 @@ func TestSchoolErasureRejectsCrossSchoolCascade(t *testing.T) {
 	// A legacy single-column FK permits this polluted row. CASCADE would delete
 	// B's role assignment; the erasure preflight must reject it instead.
 	erasureExec(t, db, `INSERT INTO auth.account_roles(account_id,role_id,tenant_id) VALUES (?,?,?)`, b.AccountID, a.RoleID, schoolB)
-	beforeA := erasureSnapshot(t, db, schoolA)
-	beforeB := erasureSnapshot(t, db, schoolB)
+	beforeA := snapshot(schoolA)
+	beforeB := snapshot(schoolB)
 	failed := eraseSchoolAsCLI(t, db, schoolA, beginErasure(t, db, schoolA))
 	require.Equal(t, "failed", failed.Status)
 	require.NotNil(t, failed.ErrorCode)
 	assert.Equal(t, "23503", *failed.ErrorCode)
-	assert.Equal(t, beforeA, erasureSnapshot(t, db, schoolA))
-	assert.Equal(t, beforeB, erasureSnapshot(t, db, schoolB))
+	assert.Equal(t, beforeA, snapshot(schoolA))
+	assert.Equal(t, beforeB, snapshot(schoolB))
 }
 
 func TestSchoolErasurePrivilegesAndMatchingOrder(t *testing.T) {
@@ -504,6 +509,8 @@ func TestSchoolErasureMigrationRoundTripPreservesEvidence(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
 	// The letter copies (#4813) follow the notification feed at the head; they go first.
+	// The device history (#2321) follows the letter copies at the head; it goes first.
+	require.NoError(t, deviceLifecycleEventsDown(t.Context(), db))
 	require.NoError(t, parentLetterCopiesDown(t.Context(), db))
 	// The notification feed (#7148) extends the erasure at the head; it goes first.
 	require.NoError(t, notificationFeedDown(t.Context(), db))

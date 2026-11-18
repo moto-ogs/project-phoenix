@@ -363,13 +363,14 @@ describe("StudentFeedbackHistoryPage", () => {
     render(<StudentFeedbackHistoryPage />);
 
     expect(await screen.findByTestId("alert-error")).toHaveTextContent(
-      "Die Feedbackhistorie ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+      "Die Feedbackhistorie ist gerade nicht erreichbar. Bitte versuche es erneut.",
     );
     // #2517: keine Zählung aus einer Historie, die nie geladen wurde.
     expect(screen.getByTestId("alert-error")).toHaveTextContent(
       catalogText("general.unavailable", "die Feedbackhistorie"),
     );
-    expect(screen.queryByText(/0 Einträge/)).not.toBeInTheDocument();
+    // Die Statuszeile setzt Zahl und Wort in eigene Elemente (#7402).
+    expect(screen.queryByText(/^(\d+ )?Einträge?$/)).not.toBeInTheDocument();
   });
 
   it("shows the switched-off state from the child's record", async () => {
@@ -389,7 +390,7 @@ describe("StudentFeedbackHistoryPage", () => {
 
     expect(
       await screen.findByText(
-        /Die Feedbackhistorie ist für Ihre Schule ausgeschaltet/,
+        /Die Feedbackhistorie ist für deine Schule ausgeschaltet/,
       ),
     ).toBeInTheDocument();
     expect(screen.queryByTestId("alert-error")).not.toBeInTheDocument();
@@ -446,16 +447,21 @@ describe("StudentFeedbackHistoryPage", () => {
           },
         ]);
         render(<StudentFeedbackHistoryPage />);
-        await screen.findByText(/4 Einträge/);
+        expect(
+          (await screen.findByText("Einträge")).parentElement,
+        ).toHaveTextContent(/^4 Einträge$/);
         for (const [label, count] of [
           ["Heute", 1],
           ["Diese Woche", 3],
           ["Diesen Monat", 1],
         ] as const) {
           fireEvent.click(screen.getByText(label));
-          expect(
-            await screen.findByText(count === 1 ? /1 Eintrag/ : /3 Einträge/),
-          ).toBeInTheDocument();
+          await waitFor(() =>
+            expect(
+              screen.getByText(count === 1 ? "Eintrag" : "Einträge")
+                .parentElement,
+            ).toHaveTextContent(count === 1 ? /^1 Eintrag$/ : /^3 Einträge$/),
+          );
         }
       } finally {
         rangeHelper.mockImplementation(previous);
@@ -507,11 +513,11 @@ it.each([false, true])(
       fireEvent.click(screen.getByRole("button", { name: "Reload feedback" }));
       expect(
         await screen.findByText(
-          /Die Feedbackhistorie ist für Ihre Schule ausgeschaltet/,
+          /Die Feedbackhistorie ist für deine Schule ausgeschaltet/,
         ),
       ).toBeVisible();
       expect(screen.queryByText("Feedback-Übersicht")).not.toBeInTheDocument();
-      expect(screen.queryByText(/\d+ Einträge?/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^(\d+ )?Einträge?$/)).not.toBeInTheDocument();
       const readsBeforeFailure =
         vi.mocked(fetchStudentFeedback).mock.calls.length;
       vi.mocked(fetchStudentFeedback).mockRejectedValue(
@@ -525,11 +531,11 @@ it.each([false, true])(
       );
       expect(
         screen.getByText(
-          /Die Feedbackhistorie ist für Ihre Schule ausgeschaltet/,
+          /Die Feedbackhistorie ist für deine Schule ausgeschaltet/,
         ),
       ).toBeVisible();
       expect(screen.queryByText("Feedback-Übersicht")).not.toBeInTheDocument();
-      expect(screen.queryByText(/\d+ Einträge?/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^(\d+ )?Einträge?$/)).not.toBeInTheDocument();
     } finally {
       vi.mocked(fetchStudent).mockImplementation(studentRead);
       vi.mocked(fetchStudentFeedback).mockImplementation(feedbackRead);

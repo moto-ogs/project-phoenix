@@ -523,7 +523,7 @@ describe("StudentSearchPage — check-in mode on detailed-mode tenants", () => {
 
     // Die Wahl gilt für alle, auch ohne Raum, und der Dialog sagt das.
     expect(
-      within(dialog).getByText(/Ihre Wahl gilt für alle ausgewählten Kinder/),
+      within(dialog).getByText(/Deine Wahl gilt für alle ausgewählten Kinder/),
     ).toBeInTheDocument();
     expect(
       within(dialog).getByRole("button", { name: "Alle zum Unterricht" }),

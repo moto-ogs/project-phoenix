@@ -128,14 +128,27 @@ beforeEach(() => {
 
 async function openDeleteDialog() {
   fireEvent.click(
-    await screen.findByRole("button", {
-      name: "Weitere Aktionen zum Dokument",
-    }),
+    await screen.findByRole("button", { name: "Weitere Aktionen" }),
   );
   fireEvent.click(
     await screen.findByRole("menuitem", { name: /Dokument löschen/ }),
   );
   return screen.findByRole("dialog", { name: "Dokument löschen?" });
+}
+
+// #7405: Download sits in the page menu for everyone who reads the
+// document; deleting appears there only for the role Dokumente once the
+// school names are loaded.
+async function expectDownloadWithoutDeletion() {
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Weitere Aktionen" }),
+  );
+  expect(
+    await screen.findByRole("menuitem", { name: /Herunterladen/ }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("menuitem", { name: /Dokument löschen/ }),
+  ).not.toBeInTheDocument();
 }
 
 function confirmDeletion(dialog: HTMLElement) {
@@ -144,7 +157,7 @@ function confirmDeletion(dialog: HTMLElement) {
   });
   expect(confirm).toBeDisabled();
   fireEvent.change(
-    within(dialog).getByLabelText("Tippen Sie zur Bestätigung LÖSCHEN ein:"),
+    within(dialog).getByLabelText("Tippe zur Bestätigung LÖSCHEN ein:"),
     { target: { value: "LÖSCHEN" } },
   );
   fireEvent.click(confirm);
@@ -249,12 +262,7 @@ it("offers no deletion without the right to manage", async () => {
   sessionState.permissions = ["traeger_overview:read"];
   renderPage();
 
-  expect(
-    await screen.findByRole("button", { name: "Herunterladen" }),
-  ).toBeInTheDocument();
-  expect(
-    screen.queryByRole("button", { name: "Weitere Aktionen zum Dokument" }),
-  ).not.toBeInTheDocument();
+  await expectDownloadWithoutDeletion();
 });
 
 // #5992: "Anmeldung verwalten" alone no longer writes documents. The
@@ -269,17 +277,12 @@ it("offers no write action to the Verwaltung without the role Dokumente", async 
   renderPage();
 
   expect(
-    await screen.findByRole("button", { name: "Herunterladen" }),
-  ).toBeInTheDocument();
-  expect(
-    screen.getByText(/Ändern kann, wer die Rolle „Dokumente“ hat\./),
+    await screen.findByText(/Ändern kann, wer die Rolle „Dokumente“ hat\./),
   ).toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "Freigeben" }),
   ).not.toBeInTheDocument();
-  expect(
-    screen.queryByRole("button", { name: "Weitere Aktionen zum Dokument" }),
-  ).not.toBeInTheDocument();
+  await expectDownloadWithoutDeletion();
   expect(
     screen.queryByRole("button", { name: /^Freigabe zurücknehmen/ }),
   ).not.toBeInTheDocument();
@@ -295,7 +298,26 @@ it("offers no deletion while the school names are missing", async () => {
       catalogText("general.unavailable", "die Liste der Schulen"),
     ),
   ).toBeInTheDocument();
+  await expectDownloadWithoutDeletion();
+});
+
+// #7405: one visible head action. „Freigeben“ stays, „Herunterladen“ and
+// „Dokument löschen“ share the page menu.
+it("shows Freigeben as the only head button and the rest in the menu", async () => {
+  schoolsState.failed = false;
+  renderPage();
+
   expect(
-    screen.queryByRole("button", { name: "Weitere Aktionen zum Dokument" }),
+    await screen.findByRole("button", { name: "Freigeben" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Herunterladen" }),
   ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
+  expect(
+    await screen.findByRole("menuitem", { name: /Herunterladen/ }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("menuitem", { name: /Dokument löschen/ }),
+  ).toBeInTheDocument();
 });

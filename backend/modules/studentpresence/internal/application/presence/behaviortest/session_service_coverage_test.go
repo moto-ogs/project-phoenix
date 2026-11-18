@@ -184,7 +184,7 @@ func TestProcessSessionTimeout_AlreadyEnded(t *testing.T) {
 	session, err := service.StartActivitySessionWithSupervisors(ctx, activityGroup.ID, device.ID, []int64{staff.ID}, &room.ID)
 	require.NoError(t, err)
 
-	err = service.EndActivitySession(ctx, session.ID)
+	_, err = service.EndActivitySession(ctx, session.ID)
 	require.NoError(t, err)
 
 	// ACT: Try to timeout already-ended session
@@ -640,7 +640,7 @@ func TestEndActivitySession_BySessionID(t *testing.T) {
 	require.NotNil(t, session)
 
 	// ACT: End the session by ID
-	err = service.EndActivitySession(ctx, session.ID)
+	_, err = service.EndActivitySession(ctx, session.ID)
 
 	// ASSERT
 	require.NoError(t, err)

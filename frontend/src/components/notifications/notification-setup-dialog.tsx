@@ -21,7 +21,7 @@ import {
 } from "~/lib/notification-preferences-api";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
-import { useInvalidateMatching } from "~/lib/swr";
+import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import {
   isPushConfigurationMissing,
@@ -30,9 +30,9 @@ import {
   needsIOSInstall,
   subscribePush,
   syncExistingPushSubscription,
-  verifyPushConfiguration,
   type PushPortal,
 } from "~/lib/push-api";
+import { usePushPublicKey } from "~/lib/hooks/use-push-public-key";
 import {
   canPromptInstall,
   isAndroidDevice,
@@ -55,6 +55,14 @@ const REMIND_LATER_MS = 7 * 24 * 60 * 60 * 1000;
 const ACTION_CLASS = "w-full sm:w-auto";
 
 type SetupMode = "enable" | "install-ios" | "install-android" | "denied";
+
+/**
+ * This device reached the step that needs the account's preferences;
+ * `subscribed` is undefined until its push subscription is checked.
+ */
+interface PreferencesCheck {
+  readonly subscribed: boolean | undefined;
+}
 
 interface StoredDecision {
   readonly done?: boolean;
@@ -109,8 +117,19 @@ export function NotificationSetupDialog({
     () => setupStorageKey(portal, accountId, tenantSlug),
     [accountId, portal, tenantSlug],
   );
+  // Shared with the session sync and the settings card: one read per page.
+  const pushKey = usePushPublicKey(portal);
   const [mode, setMode] = useState<SetupMode | null>(null);
   const [types, setTypes] = useState<NotificationPreferenceType[]>([]);
+  const [check, setCheck] = useState<PreferencesCheck | null>(null);
+  // The same cached read as the settings card: on the settings page both
+  // share one request instead of one each (#7429 did the same for the key).
+  // Within a page load the card's answer is current, so it is not read again.
+  const { data: preferences, error: preferencesError } = useSWRAuth(
+    check ? tenantAdminKeys.notificationPreferences(portal) : null,
+    () => fetchNotificationPreferences(portal),
+    { revalidateIfStale: false },
+  );
   const [busy, setBusy] = useState(false);
   // Fehler bleiben im offenen Dialog (#2517). Ein API-Fehler zeigt im OGS-
   // und Schulportal den Katalogtext; das Elternportal und Ablehnungen des
@@ -153,10 +172,13 @@ export function NotificationSetupDialog({
       return;
     }
 
+    // Every path below needs the server's answer about Web Push first.
+    if (pushKey.state === "loading") return;
+
     const inspect = async () => {
       if (needsIOSInstall()) {
         try {
-          await verifyPushConfiguration(portal);
+          pushKey.require();
           if (active) setMode("install-ios");
         } catch (err) {
           // Prüfung ohne Zutun der Person: scheitert sie, öffnet sich der
@@ -178,7 +200,7 @@ export function NotificationSetupDialog({
         !installAccepted
       ) {
         try {
-          await verifyPushConfiguration(portal);
+          pushKey.require();
           if (active) setMode("install-android");
         } catch (err) {
           // Prüfung ohne Zutun der Person: scheitert sie, öffnet sich der
@@ -199,20 +221,17 @@ export function NotificationSetupDialog({
       }
 
       try {
-        const [preferences, subscription] = await Promise.all([
-          fetchNotificationPreferences(portal),
-          syncExistingPushSubscription(portal),
-        ]);
-        if (!active) return;
-        if (!preferences.tenant_enabled) return;
-        setTypes(preferences.types);
-        const hasEnabledType = preferences.types.some(
-          (type) => type.available && type.enabled,
+        const publicKey = pushKey.require();
+        // Starts the preferences read beside the subscription check.
+        if (active) setCheck({ subscribed: undefined });
+        const subscription = await syncExistingPushSubscription(
+          portal,
+          publicKey,
         );
-        if (!subscription || !hasEnabledType) setMode("enable");
-        else writeDecision(storageKey, { done: true });
+        if (active) setCheck({ subscribed: Boolean(subscription) });
       } catch (err) {
         // Same: a failed background check only means the dialog stays shut.
+        if (active) setCheck(null);
         if (isPushConfigurationMissing(err)) return;
         logger.warn("notification_setup_check_failed", {
           portal,
@@ -230,9 +249,35 @@ export function NotificationSetupDialog({
     installationCompleted,
     installPromptReady,
     portal,
+    pushKey,
     restartToken,
     storageKey,
   ]);
+
+  // Decides once both answers are there, then stops reading.
+  useEffect(() => {
+    if (check?.subscribed === undefined) return;
+    if (preferences === undefined) {
+      if (preferencesError === undefined) return;
+      setCheck(null);
+      logger.warn("notification_setup_check_failed", {
+        portal,
+        error:
+          preferencesError instanceof Error
+            ? preferencesError.message
+            : String(preferencesError),
+      });
+      return;
+    }
+    setCheck(null);
+    if (!preferences.tenant_enabled) return;
+    setTypes(preferences.types);
+    const hasEnabledType = preferences.types.some(
+      (type) => type.available && type.enabled,
+    );
+    if (!check.subscribed || !hasEnabledType) setMode("enable");
+    else writeDecision(storageKey, { done: true });
+  }, [check, portal, preferences, preferencesError, storageKey]);
 
   const remindLater = () => {
     writeDecision(storageKey, { remindAfter: Date.now() + REMIND_LATER_MS });
@@ -276,7 +321,7 @@ export function NotificationSetupDialog({
     dialogErrors.clear();
     const preferences = tenantAdminKeys.notificationPreferences(portal);
     try {
-      const pushRequest = subscribePush(portal);
+      const pushRequest = subscribePush(portal, pushKey.load);
       const preferenceRequests = types
         .filter((type) => type.available && !type.enabled)
         .map((type) => setNotificationPreference(type.key, true, portal));

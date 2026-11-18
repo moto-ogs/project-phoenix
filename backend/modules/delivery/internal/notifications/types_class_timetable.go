@@ -23,8 +23,8 @@ const (
 func registerClassTimetableTypes() {
 	RegisterType(TypeDefinition{
 		Key:                           TypeClassTimetableChanged,
-		Label:                         "Stundenplan Ihrer Klassen: heute und morgen",
-		Description:                   "Wenn sich der Unterrichtsschluss einer Klasse, der Sie zugeordnet sind oder deren Kinder in Ihrer Gruppe sind, für heute oder morgen ändert. Der Hinweis in moto kommt immer.",
+		Label:                         "Stundenplan deiner Klassen: heute und morgen",
+		Description:                   "Wenn sich der Unterrichtsschluss einer Klasse, der du zugeordnet bist oder deren Kinder in deiner Gruppe sind, für heute oder morgen ändert. Der Hinweis in moto kommt immer.",
 		Group:                         GroupChildren,
 		Portal:                        PortalStaff,
 		TenantGate:                    settingClassTimetableChangedEnabled,
@@ -37,8 +37,8 @@ func registerClassTimetableTypes() {
 	})
 	RegisterType(TypeDefinition{
 		Key:                           TypeClassTimetableChangedAhead,
-		Label:                         "Stundenplan Ihrer Klassen: spätere Tage",
-		Description:                   "Mitteilung aufs Handy auch, wenn sich der Unterrichtsschluss einer Ihrer Klassen in 2 bis 14 Tagen ändert. Der Hinweis in moto kommt immer.",
+		Label:                         "Stundenplan deiner Klassen: spätere Tage",
+		Description:                   "Mitteilung aufs Handy auch, wenn sich der Unterrichtsschluss einer deiner Klassen in 2 bis 14 Tagen ändert. Der Hinweis in moto kommt immer.",
 		Group:                         GroupChildren,
 		Portal:                        PortalStaff,
 		TenantGate:                    settingClassTimetableChangedEnabled,
@@ -50,7 +50,7 @@ func registerClassTimetableTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeParentClassTimetableChanged,
 		Label:       "Stundenplan der Klasse",
-		Description: "Wenn sich der Unterrichtsschluss in der Klasse Ihres Kindes ändert. Der Hinweis in moto kommt immer. Schalten Sie das hier ein, kommt bei Änderungen in den nächsten 14 Tagen auch eine Mitteilung aufs Handy.",
+		Description: "Wenn sich der Unterrichtsschluss in der Klasse deines Kindes ändert. Der Hinweis in moto kommt immer. Schaltest du das hier ein, kommt bei Änderungen in den nächsten 14 Tagen auch eine Mitteilung aufs Handy.",
 		Group:       GroupChildren,
 		Portal:      PortalParent,
 		TenantGate:  settingClassTimetableChangedEnabled,

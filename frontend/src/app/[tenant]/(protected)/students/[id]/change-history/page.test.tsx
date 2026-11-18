@@ -195,7 +195,7 @@ describe("StudentChangeHistoryPage", () => {
 
     expect(
       await screen.findByText(
-        "Die Liste der Änderungen konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Liste der Änderungen konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -207,7 +207,8 @@ describe("StudentChangeHistoryPage", () => {
         catalogText("general.server", "die Liste der Änderungen"),
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/0 Einträge/)).not.toBeInTheDocument();
+    // Statuszeile: Zahl und Wort stehen in eigenen Elementen (#7402).
+    expect(screen.queryByText(/^(\d+ )?Einträge?$/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
 
@@ -233,7 +234,7 @@ describe("StudentChangeHistoryPage", () => {
 
     expect(
       await screen.findByText(
-        "Für die Liste der Änderungen fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
+        "Für die Liste der Änderungen fehlt dir die Berechtigung. Bitte frage die Schule.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByTestId("back-button")).toHaveAttribute(

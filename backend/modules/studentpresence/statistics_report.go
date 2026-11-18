@@ -194,8 +194,22 @@ type StatisticsReport struct {
 	Occupancy *StatisticsOccupancy
 }
 
+// DemoCareDay carries the effective booking for one enrolled child on one day.
+type DemoCareDay struct {
+	StudentID int64
+	Date      calendar.Date
+	PlannedCareDay
+}
+
+// DemoCareDays reads the same booking, contract and holiday times as the
+// comparison report. Its caller provides the school transaction and audit.
+type DemoCareDays interface {
+	DemoCareDays(ctx context.Context, from, to calendar.Date) ([]DemoCareDay, error)
+}
+
 // StatisticsReports is the statistics use case.
 type StatisticsReports interface {
+	DemoCareDays
 	// Report computes the statistics for the window. It records one
 	// data-access log row per actor and window (deduplicated for 15 min).
 	Report(ctx context.Context, filters StatisticsFilters, actor StatisticsActor) (*StatisticsReport, error)

@@ -82,7 +82,7 @@ func (rs *Resource) putAbsenceReport(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, absenceReportErrorRenderer(err))
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }
 
 // deleteAbsenceReport handles
@@ -98,7 +98,7 @@ func (rs *Resource) deleteAbsenceReport(w http.ResponseWriter, r *http.Request) 
 		common.RenderError(w, r, absenceReportErrorRenderer(err))
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }
 
 // absenceReportTarget resolves the class within the caller's reach, the date,

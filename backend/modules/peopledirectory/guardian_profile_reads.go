@@ -15,6 +15,7 @@ type GuardianProfileSnapshot struct {
 	ChildlessSince         *time.Time                      `json:"-"`
 	FirstName              string                          `json:"first_name"`
 	LastName               string                          `json:"last_name"`
+	Salutation             *string                         `json:"salutation,omitempty"`
 	Email                  *string                         `json:"email,omitempty"`
 	AddressStreet          *string                         `json:"address_street,omitempty"`
 	AddressCity            *string                         `json:"address_city,omitempty"`

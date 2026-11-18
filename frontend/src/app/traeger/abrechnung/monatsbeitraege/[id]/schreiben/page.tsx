@@ -16,7 +16,6 @@ import {
   CARE_RUN_STATUS_LABELS,
   CARE_RUN_STATUS_TONES,
   formatMonth,
-  invoiceCountLabel,
 } from "~/components/traeger/care-billing-format";
 import { CareLetterPanel } from "~/components/traeger/care-letter-panel";
 import {
@@ -26,14 +25,13 @@ import {
 import { careLetterKey } from "~/components/traeger/care-run-invoices";
 import { CareRunLetterInvoices } from "~/components/traeger/care-run-letter-invoices";
 import { formatEuro } from "~/components/traeger/contribution-format";
-import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
 import { useRefusalGuard } from "~/components/traeger/use-traeger-confirmed-resource";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { downloadBlob } from "~/lib/file-download";
@@ -72,12 +70,12 @@ function seriesMessage(series: CareLetterSeries): string {
   ];
   if (series.withoutEmail > 0) {
     parts.push(
-      `${familyCount(series.withoutEmail)} ohne E-Mail-Adresse: Bitte drucken Sie deren Schreiben.`,
+      `${familyCount(series.withoutEmail)} ohne E-Mail-Adresse: Bitte drucke deren Schreiben.`,
     );
   }
   if (series.recipientChanged > 0) {
     parts.push(
-      `${series.recipientChanged === 1 ? "1 Schreiben ging" : `${series.recipientChanged} Schreiben gingen`} nicht raus: Die Person steht nicht mehr im Vertrag. Stornieren Sie diese Rechnung. Ein neuer Lauf stellt sie neu aus.`,
+      `${series.recipientChanged === 1 ? "1 Schreiben ging" : `${series.recipientChanged} Schreiben gingen`} nicht raus: Die Person steht nicht mehr im Vertrag. Storniere diese Rechnung. Ein neuer Lauf stellt sie neu aus.`,
     );
   }
   return parts.join(" ");
@@ -298,17 +296,26 @@ export default function TraegerCareRunLettersPage() {
       backLabel="Zurück zum Monatslauf"
       stats={
         run ? (
-          <HolidayHeadFacts>
+          <TenantPageStats
+            items={[
+              {
+                value: run.previewCount,
+                label: run.previewCount === 1 ? "Rechnung" : "Rechnungen",
+              },
+              { value: formatEuro(run.previewCents), label: "" },
+            ]}
+          />
+        ) : null
+      }
+      actions={
+        <>
+          {run ? (
             <StatusBadge
               label={CARE_RUN_STATUS_LABELS[run.status]}
               tone={CARE_RUN_STATUS_TONES[run.status]}
             />
-            <span className="tabular-nums">
-              {invoiceCountLabel(run.previewCount)} ·{" "}
-              {formatEuro(run.previewCents)}
-            </span>
-          </HolidayHeadFacts>
-        ) : null
+          ) : null}
+        </>
       }
       statsLoading={loading}
       error={loadError}
@@ -347,7 +354,7 @@ export default function TraegerCareRunLettersPage() {
       {run && !released ? (
         <SectionCard
           title="Noch nicht freigegeben"
-          description="Schreiben gibt es erst, wenn der Monatslauf freigegeben ist. Geben Sie ihn auf der Seite des Laufs frei."
+          description="Schreiben gibt es erst, wenn der Monatslauf freigegeben ist. Gib ihn auf der Seite des Laufs frei."
         />
       ) : null}
       {run && released ? (

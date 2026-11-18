@@ -20,7 +20,7 @@ import {
 } from "~/components/traeger/finance-export-datev";
 import {
   type DatevHandoverNotices,
-  HandoverMenu,
+  handoverMenuItems,
   useFinanceHandover,
 } from "~/components/traeger/finance-export-handover";
 import {
@@ -34,7 +34,6 @@ import {
   traegerExportScope,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
-import { Button, ButtonLink } from "~/components/ui/button";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
@@ -66,7 +65,7 @@ import { traegerPath } from "~/lib/traeger-url";
 const logger = createLogger({ component: "TraegerFinanceExportsPage" });
 
 const INFO =
-  "Hier laden Sie die Sollstellung für Ihre Kämmerei und die DATEV-Datei für Ihr Steuerbüro herunter. Welche Spalten die Sollstellung hat, legen Sie unter „Feldzuordnung“ fest. Jede Datei bekommt eine neue Nummer und steht im Protokoll.";
+  "Hier lädst du die Sollstellung für deine Kämmerei und die DATEV-Datei für dein Steuerbüro herunter. Welche Spalten die Sollstellung hat, legst du unter „Feldzuordnung“ fest. Jede Datei bekommt eine neue Nummer und steht im Protokoll.";
 
 /** What the page shows, once runs, protocol and settings are there. */
 function exportsData(
@@ -138,39 +137,51 @@ async function readPages<P extends FinanceExportPage<unknown>>(
   return pages;
 }
 
-/** The line under a list that is longer than one page. */
-function MorePages({
-  shown,
-  total,
-  noun,
-  loading,
-  onMore,
-}: Readonly<{
-  shown: number;
-  total: number;
-  noun: string;
-  loading: boolean;
-  onMore: () => void;
-}>) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <p className="text-sm text-gray-600">
-        Sie sehen {shown} von {total} {noun}.
-      </p>
-      <Button
-        type="button"
-        variant="outline"
-        size="md"
-        isLoading={loading}
-        loadingText="Wird geladen …"
-        tooltip="Zeigt weitere Einträge unten in der Liste an."
-        onClick={onMore}
-      >
-        Ältere anzeigen
-      </Button>
-    </div>
-  );
+/** „Ältere anzeigen“ under a list the server pages (`DataTable moreAction`). */
+function olderPages(
+  page: FinanceExportPage<unknown>,
+  loading: boolean,
+  onMore: () => void,
+) {
+  if (page.nextOffset === null) return undefined;
+  return {
+    label: "Ältere anzeigen",
+    onClick: onMore,
+    loading,
+    loadingText: "Wird geladen …",
+    tooltip: "Zeigt weitere Einträge unten in der Liste an.",
+  };
 }
+
+/** The pages beside the exports, in the page menu (#7407). */
+const SETTINGS_PAGES: readonly {
+  readonly label: string;
+  readonly href: string;
+  readonly description: string;
+}[] = [
+  {
+    label: "Empfänger der Exporte",
+    href: EXPORT_RECIPIENT_PATH,
+    description: "Öffnet die Empfänger, an die moto die Exporte schickt.",
+  },
+  {
+    label: "DATEV-Werte",
+    href: DATEV_SETTINGS_PATH,
+    description: "Öffnet die DATEV-Werte in den Einstellungen.",
+  },
+  {
+    label: "Feldzuordnung",
+    href: "/traeger/abrechnung/exporte/feldzuordnung",
+    description:
+      "Öffnet die Spalten der Sollstellung für die Kämmerei zum Ändern.",
+  },
+  {
+    label: "Konten und Kostenstellen",
+    href: BOOKING_ACCOUNTS_PATH,
+    description:
+      "Öffnet die Erlöskonten und Kostenstellen für DATEV-Datei und Sollstellung.",
+  },
+];
 
 export default function TraegerFinanceExportsPage() {
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -351,42 +362,12 @@ export default function TraegerFinanceExportsPage() {
       title="Exporte"
       info={INFO}
       tabs={billingTabs("exporte")}
-      actions={
-        <>
-          <ButtonLink
-            href={traegerPath(EXPORT_RECIPIENT_PATH)}
-            variant="outline"
-            size="md"
-            tooltip="Öffnet die Empfänger, an die moto die Exporte schickt."
-          >
-            Empfänger der Exporte
-          </ButtonLink>
-          <ButtonLink
-            href={traegerPath(DATEV_SETTINGS_PATH)}
-            variant="outline"
-            size="md"
-            tooltip="Öffnet die DATEV-Werte in den Einstellungen."
-          >
-            DATEV-Werte
-          </ButtonLink>
-          <ButtonLink
-            href={traegerPath("/traeger/abrechnung/exporte/feldzuordnung")}
-            variant="outline"
-            size="md"
-            tooltip="Öffnet die Spalten der Sollstellung für die Kämmerei zum Ändern."
-          >
-            Feldzuordnung
-          </ButtonLink>
-          <ButtonLink
-            href={traegerPath(BOOKING_ACCOUNTS_PATH)}
-            variant="outline"
-            size="md"
-            tooltip="Öffnet die Erlöskonten und Kostenstellen für DATEV-Datei und Sollstellung."
-          >
-            Konten und Kostenstellen
-          </ButtonLink>
-        </>
-      }
+      overflowMenu={SETTINGS_PAGES.map((page) => ({
+        label: page.label,
+        description: page.description,
+        href: traegerPath(page.href),
+        onClick: () => undefined,
+      }))}
       stats={
         data ? (
           <TenantPageStats
@@ -429,7 +410,7 @@ export default function TraegerFinanceExportsPage() {
           ) : null}
           <SectionCard
             title="Dateien je Lauf"
-            description="Die Sollstellung ist für Ihre Kämmerei, die DATEV-Datei für Ihr Steuerbüro. Die DATEV-Datei enthält nur neue Buchungen."
+            description="Die Sollstellung ist für deine Kämmerei, die DATEV-Datei für dein Steuerbüro. Die DATEV-Datei enthält nur neue Buchungen."
             action={
               <TraegerListExportMenu
                 download={(format) =>
@@ -445,17 +426,6 @@ export default function TraegerFinanceExportsPage() {
                 unavailable={data.runs.total === 0}
               />
             }
-            footer={
-              data.runs.nextOffset === null ? null : (
-                <MorePages
-                  shown={data.runs.items.length}
-                  total={data.runs.total}
-                  noun="Läufen"
-                  loading={loadingMore === "runs"}
-                  onMore={() => void loadMore("runs")}
-                />
-              )
-            }
           >
             <ExportRunsTable
               runs={data.runs.items}
@@ -463,30 +433,31 @@ export default function TraegerFinanceExportsPage() {
               datev={{ ...data.datevRuns, settingsReady: data.datev.ready }}
               onDownload={(format, run) => void download(format, run)}
               onRepeat={(run) => openRepeat(run, false)}
-              renderRunActions={(run) => (
-                <HandoverMenu
-                  run={run}
-                  recipients={handover.recipients}
-                  formats={
-                    data.datev.ready
-                      ? ["sollstellung", "datev"]
-                      : ["sollstellung"]
-                  }
-                  busy={downloading !== null || handover.running !== null}
-                  running={
-                    handover.isRunning("sollstellung", run) ||
-                    handover.isRunning("datev", run)
-                  }
-                  onHandOver={(format) => handover.handOver(format, run)}
-                  onHandOverAll={
+              busy={downloading !== null || handover.running !== null}
+              handingOver={(run) =>
+                handover.isRunning("sollstellung", run) ||
+                handover.isRunning("datev", run)
+              }
+              handoverItems={(run) =>
+                handoverMenuItems({
+                  recipients: handover.recipients,
+                  formats: data.datev.ready
+                    ? ["sollstellung", "datev"]
+                    : ["sollstellung"],
+                  onHandOver: (format) => handover.handOver(format, run),
+                  onHandOverAll:
                     data.datev.ready &&
                     run.lastDatev &&
                     (data.datevRuns.runs.get(datevRunKey(run))?.fiscalYears
                       .length ?? 0) > 0
                       ? () => openRepeat(run, true)
-                      : undefined
-                  }
-                />
+                      : undefined,
+                })
+              }
+              moreAction={olderPages(
+                data.runs,
+                loadingMore === "runs",
+                () => void loadMore("runs"),
               )}
             />
           </SectionCard>
@@ -508,19 +479,15 @@ export default function TraegerFinanceExportsPage() {
                 unavailable={data.protocol.total === 0}
               />
             }
-            footer={
-              data.protocol.nextOffset === null ? null : (
-                <MorePages
-                  shown={data.protocol.items.length}
-                  total={data.protocol.total}
-                  noun="Dateien"
-                  loading={loadingMore === "protocol"}
-                  onMore={() => void loadMore("protocol")}
-                />
-              )
-            }
           >
-            <ExportProtocolTable entries={data.protocol.items} />
+            <ExportProtocolTable
+              entries={data.protocol.items}
+              moreAction={olderPages(
+                data.protocol,
+                loadingMore === "protocol",
+                () => void loadMore("protocol"),
+              )}
+            />
           </SectionCard>
           {handover.dialog}
           <DatevRepeatDialog

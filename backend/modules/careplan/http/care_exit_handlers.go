@@ -35,7 +35,7 @@ type careWithdrawalExitRequest struct {
 
 func (b *careWithdrawalExitRequest) Bind(_ *http.Request) error {
 	if strings.TrimSpace(b.LastCareDay) == "" {
-		return errors.New("bitte geben Sie den letzten Betreuungstag an")
+		return errors.New("bitte gib den letzten Betreuungstag an")
 	}
 	return nil
 }
@@ -43,7 +43,7 @@ func (b *careWithdrawalExitRequest) Bind(_ *http.Request) error {
 func (b *careWithdrawalExitRequest) toInput() (careplan.CareExitInput, error) {
 	day, err := calendar.ParseDate(strings.TrimSpace(b.LastCareDay))
 	if err != nil {
-		return careplan.CareExitInput{}, errors.New("bitte geben Sie den letzten Betreuungstag im Format JJJJ-MM-TT an")
+		return careplan.CareExitInput{}, errors.New("bitte gib den letzten Betreuungstag im Format JJJJ-MM-TT an")
 	}
 	return careplan.CareExitInput{
 		LastCareDay: day, Reason: strings.TrimSpace(b.Reason), ReasonNote: strings.TrimSpace(b.ReasonNote),
@@ -55,7 +55,7 @@ func (b *careExitRequest) Bind(_ *http.Request) error {
 		return careplan.ErrCareExitNoStudents
 	}
 	if strings.TrimSpace(b.LastCareDay) == "" {
-		return errors.New("bitte geben Sie den letzten Betreuungstag an")
+		return errors.New("bitte gib den letzten Betreuungstag an")
 	}
 	return nil
 }
@@ -73,7 +73,7 @@ func (b *careExitRequest) toInput() (careplan.CareExitInput, error) {
 	}
 	day, err := calendar.ParseDate(strings.TrimSpace(b.LastCareDay))
 	if err != nil {
-		return careplan.CareExitInput{}, errors.New("bitte geben Sie den letzten Betreuungstag im Format JJJJ-MM-TT an")
+		return careplan.CareExitInput{}, errors.New("bitte gib den letzten Betreuungstag im Format JJJJ-MM-TT an")
 	}
 	return careplan.CareExitInput{
 		StudentIDs:  ids,
@@ -426,7 +426,7 @@ type careResumeRequest struct {
 
 func (b *careResumeRequest) Bind(_ *http.Request) error {
 	if strings.TrimSpace(b.NewStart) == "" {
-		return errors.New("bitte geben Sie den neuen Beginn an")
+		return errors.New("bitte gib den neuen Beginn an")
 	}
 	if !b.Checked {
 		return careplan.ErrCareResumeNotChecked
@@ -451,7 +451,7 @@ func (rs *Resource) resumeCare(w http.ResponseWriter, r *http.Request) {
 	}
 	start, parseErr := calendar.ParseDate(strings.TrimSpace(body.NewStart))
 	if parseErr != nil {
-		renderError(w, r, common.ErrorInvalidRequest(errors.New("bitte geben Sie den neuen Beginn im Format JJJJ-MM-TT an")))
+		renderError(w, r, common.ErrorInvalidRequest(errors.New("bitte gib den neuen Beginn im Format JJJJ-MM-TT an")))
 		return
 	}
 	err := rs.CareResumption(r.Context(), careplan.CareResumeInput{
@@ -570,7 +570,7 @@ var careExitErrorRenderer = common.RulesRenderer([]common.ErrorRule{
 	// Satz als Diagnose. Der Dialog zeigt den Katalogtext für den Fehlercode;
 	// die volle Fehlerkette geht an slog und Sentry.
 	return common.ErrorInternalServerWrap(
-		"Die Betreuung wurde nicht beendet. Bitte versuchen Sie es noch einmal.",
+		"Die Betreuung wurde nicht beendet. Bitte versuche es noch einmal.",
 		cause,
 	)
 })

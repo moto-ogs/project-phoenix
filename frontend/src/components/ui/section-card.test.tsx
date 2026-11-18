@@ -284,6 +284,8 @@ describe("SectionCard als einzige Kopfkarte (#5581)", () => {
     }).parentElement!;
     expect(footer).toHaveClass("border-t");
     expect(footer).not.toHaveClass("compact:mt-3", "mt-4");
+    // The body keeps the card's bottom padding above the footer's divider.
+    expect(screen.getByText("Inhalt")).toHaveClass("pb-5", "max-sm:pb-4");
     await user.click(screen.getByRole("button", { name: "Block einklappen" }));
     expect(
       screen.queryByRole("button", { name: "Kinder" }),
@@ -406,5 +408,33 @@ describe("SectionCard style", () => {
     expect(
       screen.getByTestId("raster").style.getPropertyValue("--day-grid-cols"),
     ).toBe("repeat(5, 1fr)");
+  });
+});
+
+describe("SectionCard klebender Fuß", () => {
+  // Unter `lg` schwebt der Fuß als eigene Leiste über dem Inhalt (eigener
+  // Rand, Schatten, eingerückt), statt als Streifen der Karte mitten im
+  // Text abzuschneiden. Ab `lg` bleibt er der Kartenfuß.
+  it("schwebt unter lg als eigene Leiste und bleibt ab lg der Kartenfuß", () => {
+    render(
+      <SectionCard
+        stickyFooter
+        footer={<button type="button">Speichern</button>}
+      >
+        Inhalt
+      </SectionCard>,
+    );
+    const foot = screen.getByRole("button", {
+      name: "Speichern",
+    }).parentElement;
+    expect(foot).toHaveClass(
+      "sticky",
+      "max-lg:rounded-2xl",
+      "max-lg:border",
+      "max-lg:bg-white",
+      "max-lg:shadow-lg",
+      "lg:bottom-0",
+      "lg:rounded-b-2xl",
+    );
   });
 });

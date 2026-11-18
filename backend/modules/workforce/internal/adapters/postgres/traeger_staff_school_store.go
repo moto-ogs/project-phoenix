@@ -117,6 +117,21 @@ func (s *TraegerStaffStore) InsertSchoolHireData(ctx context.Context, data domai
 	return nil
 }
 
+// SchoolStaffIDsByEmail returns the employments of the school whose master
+// data carry the address, without case, in one statement (#7378).
+func (s *TraegerStaffStore) SchoolStaffIDsByEmail(ctx context.Context, email string) ([]int64, error) {
+	db, schoolID, err := schoolStaffDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var staffIDs []int64
+	if err := db.NewRaw(`SELECT staff_id FROM users.staff_master_data WHERE tenant_id = ? AND LOWER(BTRIM(email)) = LOWER(BTRIM(?))`,
+		schoolID, email).Scan(ctx, &staffIDs); err != nil {
+		return nil, fmt.Errorf("workforce postgres: read staff by email: %w", err)
+	}
+	return staffIDs, nil
+}
+
 // ReleaseOfTraeger returns the release of a Träger, nil without one, in the
 // administrative transaction.
 func (s *TraegerStaffStore) ReleaseOfTraeger(ctx context.Context, organizationID int64) (*domain.TraegerStaffRelease, error) {

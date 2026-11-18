@@ -54,8 +54,8 @@ export default function GlobalError({
         <div style={PAGE_STYLE}>
           <h2 style={TITLE_STYLE}>Ein unerwarteter Fehler ist aufgetreten</h2>
           <p style={MESSAGE_STYLE}>
-            Bitte versuchen Sie es erneut. Falls das Problem bestehen bleibt,
-            kontaktieren Sie den Support.
+            Bitte versuche es erneut. Falls das Problem bestehen bleibt,
+            kontaktiere den Support.
           </p>
           <button
             type="button"

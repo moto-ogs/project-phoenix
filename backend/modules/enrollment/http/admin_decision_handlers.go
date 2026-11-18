@@ -58,9 +58,10 @@ type AdminRequestSummary struct {
 // detail UI exposes a direct link to the parent status page.
 type AdminRequestDetail struct {
 	AdminRequestSummary
-	StatusToken             string `json:"status_token"`
-	LateInviteGuardianEmail string `json:"late_invite_guardian_email,omitempty"`
-	LateInviteEmailMismatch bool   `json:"late_invite_email_mismatch,omitempty"`
+	LegalBlocksSnapshot     []AdminLegalEvidenceEntry `json:"legal_blocks_snapshot"`
+	StatusToken             string                    `json:"status_token"`
+	LateInviteGuardianEmail string                    `json:"late_invite_guardian_email,omitempty"`
+	LateInviteEmailMismatch bool                      `json:"late_invite_email_mismatch,omitempty"`
 	// CanViewUploads and Uploads carry the files parents attached (#4783).
 	CanViewUploads bool                 `json:"can_view_uploads"`
 	Uploads        []AdminRequestUpload `json:"uploads"`
@@ -388,11 +389,13 @@ func (rs *Resource) listAdminRequestsByStudent(w http.ResponseWriter, r *http.Re
 func (rs *Resource) toAdminRequestDetail(ctx context.Context, summary *RequestSummary) AdminRequestDetail {
 	detail := AdminRequestDetail{
 		AdminRequestSummary: rs.toAdminRequestDetailSummary(ctx, summary),
+		LegalBlocksSnapshot: []AdminLegalEvidenceEntry{},
 	}
 	if summary == nil || summary.Request == nil {
 		return detail
 	}
 	detail.StatusToken = summary.Request.StatusToken
+	detail.LegalBlocksSnapshot = adminLegalEvidence(summary.Request)
 	if summary.LateInvite != nil {
 		detail.LateInviteGuardianEmail = summary.LateInvite.GuardianEmail
 		detail.LateInviteEmailMismatch = !strings.EqualFold(

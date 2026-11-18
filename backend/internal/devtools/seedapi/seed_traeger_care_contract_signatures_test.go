@@ -76,7 +76,7 @@ func TestSeedPaperContractSignsADraftOfTheSeededSchool(t *testing.T) {
 			})
 			defer srv.Close()
 
-			paper, err := seedPaperContract(newTestClient(srv.URL, false), AuthRef{Kind: AuthBearer, Token: "traeger"}, 65)
+			paper, err := seedPaperContracts(newTestClient(srv.URL, false), AuthRef{Kind: AuthBearer, Token: "traeger"}, 65, 1)
 			require.NoError(t, err)
 			if active > 0 {
 				assert.Zero(t, paper)

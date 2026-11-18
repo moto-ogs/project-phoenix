@@ -213,7 +213,7 @@ describe("TraegerAbrechnungPage", () => {
         )[0],
       ).toBeInTheDocument();
       expect(
-        screen.getAllByText(/Starten Sie ihn oben mit „Lauf starten“/)[0],
+        screen.getAllByText(/Starte ihn oben mit „Lauf starten“/)[0],
       ).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole("button", { name: /Lauf starten/ }));

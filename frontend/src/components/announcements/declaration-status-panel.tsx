@@ -436,7 +436,7 @@ function VersionSection({
         ) : (
           <Alert
             type="warning"
-            message="Achtung: Mindestens ein gespeicherter Eintrag wurde nachträglich verändert. Bitte wenden Sie sich an den moto-Support."
+            message="Achtung: Mindestens ein gespeicherter Eintrag wurde nachträglich verändert. Bitte wende dich an den moto-Support."
           />
         )}
       </div>

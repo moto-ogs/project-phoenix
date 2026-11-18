@@ -74,7 +74,7 @@ async function signByTyping(container: HTMLElement, name = "Sabine Muster") {
   fireEvent.click(
     await within(container).findByRole("button", { name: "Namen tippen" }),
   );
-  fireEvent.change(within(container).getByLabelText("Ihr Vor- und Nachname"), {
+  fireEvent.change(within(container).getByLabelText("Dein Vor- und Nachname"), {
     target: { value: name },
   });
   fireEvent.click(
@@ -244,6 +244,55 @@ describe("GuardiansPanel", () => {
     );
   });
 
+  it("offers the form of address on the own profile and saves the choice", async () => {
+    mocks.listChildGuardians.mockResolvedValue([
+      { ...editableGuardian, is_self: true, salutation: "mr" },
+    ]);
+    render(
+      <GuardiansPanel studentId="42" canInvite={false} canRemove={false} />,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
+    const select = screen.getByRole("combobox", { name: "Anrede" });
+    expect(select).toHaveTextContent("Herr");
+    expect(
+      screen.getByText(
+        "Freiwillig. Mit Anrede beginnen E-Mails zum Beispiel mit „Liebe Karin“ oder „Lieber Jonas“.",
+      ),
+    ).toBeVisible();
+    fireEvent.click(select);
+    fireEvent.click(screen.getByRole("option", { name: "Frau" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => {
+      expect(mocks.updateGuardianContact).toHaveBeenCalledWith(
+        "42",
+        "7",
+        expect.objectContaining({ salutation: "ms" }),
+      );
+    });
+  });
+
+  it("offers no form of address for another person's contact", async () => {
+    render(
+      <GuardiansPanel studentId="42" canInvite={false} canRemove={false} />,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
+    expect(screen.getByLabelText("Vorname")).toBeVisible();
+    expect(
+      screen.queryByRole("combobox", { name: "Anrede" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => {
+      expect(mocks.updateGuardianContact).toHaveBeenCalledTimes(1);
+    });
+    expect(mocks.updateGuardianContact.mock.calls[0]?.[2]).not.toHaveProperty(
+      "salutation",
+    );
+  });
+
   it("explains access in a dialog and sends the invitation", async () => {
     mocks.inviteRelatedAccount.mockResolvedValue({
       outcome: "invited",
@@ -258,13 +307,13 @@ describe("GuardiansPanel", () => {
     const dialog = screen.getByRole("dialog", { name: "App-Zugang geben" });
     expect(
       within(dialog).getByText(
-        "Hat die Person bereits ein Konto, wird es verbunden. Andernfalls erhält sie eine Einladung per E-Mail. Je nach Einstellung prüft die OGS Ihre Anfrage zuerst.",
+        "Hat die Person bereits ein Konto, wird es verbunden. Andernfalls erhält sie eine Einladung per E-Mail. Je nach Einstellung prüft die OGS deine Anfrage zuerst.",
       ),
     ).toBeInTheDocument();
 
     fireEvent.change(
       within(dialog).getByLabelText(
-        "E-Mail-Adresse der Person, die Sie einladen möchten",
+        "E-Mail-Adresse der Person, die du einladen möchtest",
       ),
       { target: { value: "person@example.test" } },
     );
@@ -298,7 +347,7 @@ describe("GuardiansPanel", () => {
     const dialog = screen.getByRole("dialog", { name: "App-Zugang geben" });
     fireEvent.change(
       within(dialog).getByLabelText(
-        "E-Mail-Adresse der Person, die Sie einladen möchten",
+        "E-Mail-Adresse der Person, die du einladen möchtest",
       ),
       { target: { value: "person@example.test" } },
     );
@@ -510,7 +559,7 @@ describe("GuardiansPanel", () => {
     expect(await screen.findByText("juergen@example.test")).toBeInTheDocument();
     expect(screen.getByText("petra@example.test")).toBeInTheDocument();
     // Outside the public demo a parent's own row carries no marker (#5033).
-    expect(screen.queryByText("Das sind Sie")).not.toBeInTheDocument();
+    expect(screen.queryByText("Das bist du")).not.toBeInTheDocument();
     expect(
       screen.queryByText("magdalena@example.test"),
     ).not.toBeInTheDocument();
@@ -544,7 +593,7 @@ describe("GuardiansPanel", () => {
     expect(
       await screen.findByRole("heading", { name: "Verbundene Konten" }),
     ).toBeInTheDocument();
-    expect(await screen.findAllByText("Das sind Sie")).toHaveLength(2);
+    expect(await screen.findAllByText("Das bist du")).toHaveLength(2);
   });
 
   it("does not offer access for a hidden demo seed address", async () => {
@@ -1024,7 +1073,7 @@ describe("GuardiansPanel", () => {
       );
       expect(
         await within(dialog).findAllByText(
-          "Bitte unterschreiben Sie und tippen Sie auf „Unterschrift bestätigen“.",
+          "Bitte unterschreibe und tippe auf „Unterschrift bestätigen“.",
         ),
       ).not.toHaveLength(0);
       expect(mocks.submitPickupPermissionRequest).not.toHaveBeenCalled();
@@ -1101,7 +1150,7 @@ describe("GuardiansPanel", () => {
 
       expect(
         await within(dialog).findAllByText(
-          "Bitte unterschreiben Sie und tippen Sie auf „Unterschrift bestätigen“.",
+          "Bitte unterschreibe und tippe auf „Unterschrift bestätigen“.",
         ),
       ).not.toHaveLength(0);
       expect(mocks.submitPickupPermissionRequest).not.toHaveBeenCalled();
@@ -1366,7 +1415,7 @@ describe("GuardiansPanel", () => {
       const dialog = screen.getByRole("dialog", { name: "App-Zugang geben" });
       fireEvent.change(
         within(dialog).getByLabelText(
-          "E-Mail-Adresse der Person, die Sie einladen möchten",
+          "E-Mail-Adresse der Person, die du einladen möchtest",
         ),
         { target: { value: "person@example.test" } },
       );

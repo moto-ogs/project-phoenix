@@ -136,6 +136,7 @@ func (s buildStateStep) Run(ctx context.Context, rt *Runtime) error {
 
 	state := s.seeder.collectSeedState(rt.FixedSeeder, rt.StaffPIN, rt.Bootstrap)
 	state.DeferredSeedPending = rt.DeferredSeedPending
+	state.NeighbourAttendance = rt.neighbourAttendance
 	if virtual, ok := rt.Values["profile.virtual_device"].(SeedDevice); ok {
 		state.Devices[virtual.DeviceID] = virtual
 	}
@@ -224,7 +225,7 @@ func fullDemoWorkflow(seeder *Seeder) Workflow {
 	steps = append(steps,
 		seedParentEngagementStep{}, seedParentCancellationNoticeStep{}, seedRoomChangeNoticeStep{}, seedAnalyticsConsentStep{}, seedSchoolLifeStep{},
 		// After the parents: it orders lunch for the children they registered.
-		seedMealOrdersStep{seeder: seeder}, seedEmailStopStep{},
+		seedMealOrdersStep{seeder: seeder}, seedMealPlanChangeStep{}, seedEmailStopStep{},
 	)
 	if !seeder.options.DeferHistory {
 		// After the meal orders: books care and lunch for the children who eat.
@@ -264,7 +265,7 @@ func fullDemoWorkflow(seeder *Seeder) Workflow {
 	steps = append(append(steps, seedStaffPersonMergeStep{}, seedDemoNeighbourSchoolsStep{seeder: seeder}), traegerSteps(seeder)...)
 	if !seeder.options.DeferHistory {
 		// Erst jetzt sind alle Kinder der Schule angelegt (#5031).
-		steps = append(steps, seedPresenceHistoryStep{seeder: seeder}, seedFeedbackHistoryStep{seeder: seeder}, seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedBillingKeyDateCountsStep{})
+		steps = append(steps, seedPresenceHistoryStep{seeder: seeder}, seedFeedbackHistoryStep{seeder: seeder}, seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedDeviceSlotsStep{}, seedBillingKeyDateCountsStep{})
 	}
 	if seeder.options.SeedWeekProtocols {
 		steps = append(steps, seedWeekProtocolStep{})
@@ -293,7 +294,7 @@ func traegerSteps(seeder *Seeder) []Step {
 // traegerSetupSteps prepare the Träger: office, holidays, settings and
 // master data.
 func traegerSetupSteps(seeder *Seeder) []Step {
-	return traegerSerial(seedTraegerBueroStep{}, seedVisitorTraegerBueroStep{seeder: seeder}, seedTraegerHolidayPeriodStep{}, seedHolidayParentAccountStep{seeder: seeder}, seedTraegerClosingDayStep{}, seedTraegerHolidayDaysStep{}, seedTraegerHolidayCriteriaStep{}, seedTraegerHolidayHomeSchoolStep{}, seedHolidayLegalStep{}, seedTraegerSettingsStep{}, seedTraegerMasterDataStep{}, seedTraegerReportTemplatesStep{})
+	return traegerSerial(seedTraegerBueroStep{}, seedVisitorTraegerBueroStep{seeder: seeder}, seedTraegerHolidayPeriodStep{}, seedHolidayParentAccountStep{seeder: seeder}, seedTraegerClosingDayStep{}, seedTraegerHolidayDaysStep{}, seedTraegerHolidayCriteriaStep{}, seedTraegerHolidayHomeSchoolStep{}, seedHolidayLegalStep{}, seedTraegerSettingsStep{}, seedTraegerMasterDataStep{}, seedTraegerReportTemplatesStep{}, seedDemoNeighbourPlanningStep{retry: seeder.options.ReplaceAbandoned})
 }
 
 // traegerCareSteps conclude and bill the contracts of the school's accepted
@@ -361,7 +362,7 @@ func deferredDemoSteps(seeder *Seeder) []Step {
 		seedPresenceHistoryStep{seeder: seeder},
 		// The feedback the children gave on those days (#5029).
 		seedFeedbackHistoryStep{seeder: seeder},
-		seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedBillingKeyDateCountsStep{})
+		seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedDeviceSlotsStep{}, seedBillingKeyDateCountsStep{})
 }
 
 // fullDemoSetupSteps prepares the school before its history and parent flows.

@@ -28,7 +28,7 @@ const logger = createLogger({ component: "TraegerSollMappingPage" });
 const EXPORTS_PATH = "/traeger/abrechnung/exporte";
 
 const INFO =
-  "Die Kämmerei liest die Sollstellung mit ihrem eigenen Programm. Legen Sie hier fest, welche Spalten die Datei in welcher Reihenfolge hat. Die Änderung gilt für jede neue Datei.";
+  "Die Kämmerei liest die Sollstellung mit ihrem eigenen Programm. Lege hier fest, welche Spalten die Datei in welcher Reihenfolge hat. Die Änderung gilt für jede neue Datei.";
 
 export default function TraegerSollMappingPage() {
   const router = useRouter();
@@ -131,7 +131,7 @@ export default function TraegerSollMappingPage() {
             loadingText="Wird wiederhergestellt …"
           >
             <p>
-              Ihre Spalten und Einstellungen gehen verloren. Neue Dateien haben
+              Deine Spalten und Einstellungen gehen verloren. Neue Dateien haben
               dann die Spalten der Vorgabe von moto.
             </p>
           </ConfirmationModal>

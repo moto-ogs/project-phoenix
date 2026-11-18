@@ -117,7 +117,7 @@ function FormerEmploymentHint({
   return (
     <Alert
       type="info"
-      title="Diese Person war schon bei Ihnen beschäftigt"
+      title="Diese Person war schon bei dir beschäftigt"
       message={`In moto eingetragen vom ${formatDate(formerEmployment.startedOn)} bis ${formatDate(formerEmployment.endedOn)}.`}
       details={
         <div className="mt-2 space-y-2">
@@ -155,7 +155,7 @@ function FormerEmploymentHint({
               <span>{notReturning}</span>
             </p>
           ) : null}
-          <p>Gruppen, Klassen und Vertretungen legen Sie danach neu fest.</p>
+          <p>Gruppen, Klassen und Vertretungen legst du danach neu fest.</p>
         </div>
       }
     />

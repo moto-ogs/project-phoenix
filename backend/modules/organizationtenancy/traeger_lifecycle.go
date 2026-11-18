@@ -153,6 +153,12 @@ type OperatorProvisioning struct {
 	ErasureOrderRecords TraegerErasureOrderRecordsProvisioning
 	// RequiredDetails marks the schools that lack a required detail (#7174).
 	RequiredDetails SchoolRequiredDetailsProvisioning
+	// DeviceBlocking blocks and unblocks devices (#2317).
+	DeviceBlocking DeviceBlockingProvisioning
+	// DeviceHistory reads the history of a device (#2321).
+	DeviceHistory DeviceHistoryProvisioning
+	// DeviceSlots sets the Geräteplätze of a school (#2312).
+	DeviceSlots DeviceSlotProvisioning
 }
 
 // TraegerErasureOrderRecordsProvisioning lets the operator record the hint

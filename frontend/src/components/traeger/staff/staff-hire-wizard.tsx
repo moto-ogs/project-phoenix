@@ -9,8 +9,10 @@
 import { CheckCircleIcon, WarningIcon } from "@phosphor-icons/react";
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Alert } from "~/components/ui/alert";
+import { Avatar } from "~/components/ui/avatar";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { CheckboxCard } from "~/components/ui/checkbox-card";
+import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { useInvalidateFamily } from "~/lib/swr";
@@ -20,13 +22,21 @@ import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { FormFieldset } from "~/components/ui/form-fieldset";
 import { Input } from "~/components/ui/input";
+import { InsetPanel } from "~/components/ui/inset-panel";
 import { ConfirmationModal } from "~/components/ui/modal";
+import {
+  ResponsiveActionList,
+  ResponsiveActionRow,
+  ResponsiveRowActions,
+} from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
+import { StatusBadge } from "~/components/ui/status-badge";
 import { useStepFocus } from "~/components/ui/use-step-focus";
 import { WizardStepper } from "~/components/ui/wizard-stepper";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
+import { staffConcept } from "~/lib/concepts/staff";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import {
@@ -35,9 +45,15 @@ import {
   staffHireMatches,
   type StaffHireIncomplete,
   type StaffHireMatch,
+  type StaffHireMatchReason,
   type StaffRecordDetail,
 } from "~/lib/traeger-staff-api";
-import { traegerPath } from "~/lib/traeger-url";
+import {
+  staffCreateRecordHref,
+  staffOverviewHref,
+  staffSubpageHref,
+  type StaffOverviewTab,
+} from "./staff-overview-tab";
 import { KindChoice, WeekHoursRow } from "./staff-contract-dialogs";
 import {
   CONTRACT_KIND_LABELS,
@@ -62,7 +78,7 @@ import {
 const logger = createLogger({ component: "TraegerStaffHireWizard" });
 
 const PERSONAL = "/traeger/personal";
-const CHECK_FIELDS = "Bitte prüfen Sie die markierten Felder.";
+const CHECK_FIELDS = "Bitte prüfe die markierten Felder.";
 
 interface School {
   readonly id: string;
@@ -130,7 +146,7 @@ function PersonStep({
           id="hire-personnel-number"
           name="personnel_number"
           label="Personalnummer"
-          hint="Aus Ihrem Lohnprogramm. Geht auch später."
+          hint="Aus deinem Lohnprogramm. Geht auch später."
           inputMode="numeric"
           autoComplete="off"
           maxLength={9}
@@ -178,7 +194,7 @@ function ContractStep({
   return (
     <SectionCard
       title="Arbeitsvertrag"
-      description="Art und Laufzeit. Die Stunden tragen Sie im nächsten Schritt je Schule ein."
+      description="Art und Laufzeit. Die Stunden trägst du im nächsten Schritt je Schule ein."
     >
       <div className="max-w-3xl space-y-5">
         <KindChoice
@@ -188,6 +204,7 @@ function ContractStep({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <ISODatePicker
             id="hire-starts-on"
+            monthYearNavigation
             name="starts_on"
             label="Erster Tag"
             required
@@ -199,6 +216,7 @@ function ContractStep({
           />
           <ISODatePicker
             id="hire-ends-on"
+            monthYearNavigation
             name="ends_on"
             label="Letzter Tag"
             hint="Leer lassen, wenn der Vertrag unbefristet ist."
@@ -306,7 +324,7 @@ function ReviewStep({ draft }: Readonly<{ draft: HireDraft }>) {
   return (
     <SectionCard
       title="Prüfen"
-      description="Stimmt alles? Mit „Zurück“ ändern Sie eine Angabe."
+      description="Stimmt alles? Mit „Zurück“ änderst du eine Angabe."
     >
       <div className="max-w-3xl space-y-5">
         <DataGrid>
@@ -346,39 +364,145 @@ function ReviewStep({ draft }: Readonly<{ draft: HireDraft }>) {
   );
 }
 
+const MATCH_REASON_LABELS: Record<StaffHireMatchReason, string> = {
+  name_birthday: "Gleicher Name und Geburtsdatum",
+  name: "Gleicher Name, Geburtsdatum fehlt",
+  email: "Gleiche E-Mail-Adresse",
+};
+
+function matchName(match: StaffHireMatch, fallback: string): string {
+  return `${match.firstName} ${match.lastName}`.trim() || fallback;
+}
+
+/** Eine Person, die es vielleicht schon gibt, mit Grund und nächstem Schritt. */
+function DuplicateRow({
+  match,
+  name,
+  from,
+}: Readonly<{
+  match: StaffHireMatch;
+  name: string;
+  from: StaffOverviewTab | null;
+}>) {
+  const shown = matchName(match, name);
+  return (
+    <ResponsiveActionRow className="gap-3">
+      <div className="flex min-w-0 items-start gap-3">
+        <Avatar name={shown} tone="neutral" decorative />
+        <div className="min-w-0 space-y-1.5">
+          <p className="leading-tight">
+            <span className="block truncate font-medium text-gray-900">
+              {shown}
+            </span>
+            <span className="block text-sm text-gray-600">
+              {match.kind === "record"
+                ? "Hat schon eine Personalakte"
+                : `${match.schoolName} · noch ohne Akte`}
+            </span>
+          </p>
+          <ul
+            className="flex flex-wrap gap-1.5"
+            aria-label={`Warum moto ${shown} gefunden hat`}
+          >
+            {match.reasons.map((reason) => (
+              <li key={reason}>
+                <StatusBadge
+                  tone="gray"
+                  compact
+                  label={MATCH_REASON_LABELS[reason]}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      <ResponsiveRowActions leading={32}>
+        {match.kind === "record" ? (
+          <ButtonLink
+            href={staffSubpageHref(`${PERSONAL}/${match.recordId}`, from)}
+            variant="surface"
+            size="compact"
+            newTab
+            aria-label={`Akte von ${shown} öffnen`}
+            tooltip="Öffnet die vorhandene Akte in einem neuen Tab."
+          >
+            Akte öffnen
+          </ButtonLink>
+        ) : (
+          <ButtonLink
+            href={staffCreateRecordHref(match.schoolId, match.staffId)}
+            variant="surface"
+            size="compact"
+            aria-label={`Akte für ${shown} anlegen`}
+            tooltip="Bricht das Einstellen ab und öffnet die Person unter „Ohne Akte“."
+          >
+            Akte anlegen
+          </ButtonLink>
+        )}
+      </ResponsiveRowActions>
+    </ResponsiveActionRow>
+  );
+}
+
+/**
+ * Die Rückfrage vor einer Dublette (#7378): Wer es vielleicht schon gibt,
+ * warum moto die Person gefunden hat, und der richtige Weg. Eine Person
+ * einer Schule bekommt ihre Akte unter „Ohne Akte“, nicht ein zweites Mal
+ * über das Einstellen.
+ */
 function DuplicateBody({
   matches,
-}: Readonly<{ matches: readonly StaffHireMatch[] }>) {
+  name,
+  from,
+}: Readonly<{
+  matches: readonly StaffHireMatch[];
+  name: string;
+  from: StaffOverviewTab | null;
+}>) {
+  const intro =
+    matches.length === 1
+      ? `moto hat eine Person gefunden, die ${name} sein könnte:`
+      : `moto hat ${matches.length} Personen gefunden, die ${name} sein könnten:`;
+  const atSchool = matches.some((match) => match.kind === "school");
+  const withRecord = matches.some((match) => match.kind === "record");
+  let same =
+    "Dann stell sie nicht neu ein. Öffne ihre Akte und trage dort Vertrag und Schulen ein.";
+  if (atSchool && withRecord) {
+    same =
+      "Dann stell sie nicht neu ein. Wähle bei ihr „Akte anlegen“ oder „Akte öffnen“.";
+  } else if (atSchool) {
+    same =
+      "Dann stell sie nicht neu ein. Leg mit „Akte anlegen“ ihre Akte an. Die Person gibt es an der Schule schon.";
+  }
   return (
-    <div className="space-y-3 text-sm text-gray-700">
-      <p>moto kennt schon eine Person mit diesem Namen und Geburtsdatum:</p>
-      <ul className="list-disc space-y-2 pl-5">
-        {matches.map((match) =>
-          match.kind === "record" ? (
-            <li key={`record-${match.recordId}`}>
-              Es gibt schon eine Personalakte.{" "}
-              <ButtonLink
-                href={traegerPath(`${PERSONAL}/${match.recordId}`)}
-                variant="link"
-                newTab
-                tooltip="Öffnet die vorhandene Akte in einem neuen Tab."
-              >
-                Akte öffnen
-              </ButtonLink>
-            </li>
-          ) : (
-            <li key={`school-${match.schoolName}`}>
-              An der Schule {match.schoolName} arbeitet die Person schon, noch
-              ohne Akte.
-            </li>
-          ),
-        )}
-      </ul>
-      <p>
-        Ist es dieselbe Person? Dann brechen Sie ab. Eine Person ohne Akte
-        finden Sie bei den Personalakten unter „Ohne Akte“.
-      </p>
-      <p>Sind es zwei Personen? Dann stellen Sie die Person trotzdem ein.</p>
+    <div className="space-y-4 text-sm text-gray-700">
+      <p>{intro}</p>
+      <InsetPanel tone="white" framed padding="compact">
+        <ResponsiveActionList>
+          {matches.map((match) => (
+            <DuplicateRow
+              key={
+                match.kind === "record"
+                  ? `record-${match.recordId}`
+                  : `school-${match.schoolId}-${match.staffId}`
+              }
+              match={match}
+              name={name}
+              from={from}
+            />
+          ))}
+        </ResponsiveActionList>
+      </InsetPanel>
+      <div className="space-y-2">
+        <p>
+          <span className="font-medium text-gray-900">Dieselbe Person?</span>{" "}
+          {same}
+        </p>
+        <p>
+          <span className="font-medium text-gray-900">Zwei Personen?</span> Dann
+          wähle „Trotzdem einstellen“.
+        </p>
+      </div>
     </div>
   );
 }
@@ -386,7 +510,12 @@ function DuplicateBody({
 function HiredCard({
   record,
   onRestart,
-}: Readonly<{ record: StaffRecordDetail; onRestart: () => void }>) {
+  from,
+}: Readonly<{
+  record: StaffRecordDetail;
+  onRestart: () => void;
+  from: StaffOverviewTab | null;
+}>) {
   const schools = record.employments.map((site) => site.schoolName);
   return (
     <SectionCard>
@@ -399,7 +528,7 @@ function HiredCard({
         action={
           <div className="flex flex-wrap justify-center gap-3">
             <ButtonLink
-              href={traegerPath(`${PERSONAL}/${record.id}`)}
+              href={staffSubpageHref(`${PERSONAL}/${record.id}`, from)}
               variant="primary"
               size="md"
               tooltip="Öffnet die neue Akte mit Vertrag und Einsatzorten."
@@ -421,7 +550,7 @@ function HiredCard({
       {record.unsyncedSchools.length > 0 ? (
         <Alert
           type="warning"
-          message={`Das Soll ist bei ${record.unsyncedSchools.join(", ")} noch nicht angekommen. Speichern Sie später eine Änderung am Vertrag, dann holt moto es nach.`}
+          message={`Das Soll ist bei ${record.unsyncedSchools.join(", ")} noch nicht angekommen. Speichere später eine Änderung am Vertrag, dann holt moto es nach.`}
         />
       ) : null}
     </SectionCard>
@@ -436,11 +565,16 @@ function HiredCard({
 function IncompleteCard({
   name,
   incomplete,
-}: Readonly<{ name: string; incomplete: StaffHireIncomplete }>) {
+  from,
+}: Readonly<{
+  name: string;
+  incomplete: StaffHireIncomplete;
+  from: StaffOverviewTab | null;
+}>) {
   const schools = incomplete.schools.join(", ");
   const description = incomplete.recordId
-    ? `Die Akte und der Arbeitsvertrag sind gespeichert. moto konnte sie nur nicht noch einmal laden. Bitte öffnen Sie die Akte und prüfen Sie Vertrag und Schulen.`
-    : `Es gibt die Person jetzt an: ${schools}. Die Akte fehlt noch. Bitte legen Sie die Akte bei den Personalakten unter „Ohne Akte“ an und tragen Sie dort den Vertrag ein.`;
+    ? `Die Akte und der Arbeitsvertrag sind gespeichert. moto konnte sie nur nicht noch einmal laden. Bitte öffne die Akte und prüfe Vertrag und Schulen.`
+    : `Es gibt die Person jetzt an: ${schools}. Die Akte fehlt noch. Bitte lege die Akte bei den Personalakten unter „Ohne Akte“ an und trage dort den Vertrag ein.`;
   return (
     <SectionCard>
       <EmptyState
@@ -448,11 +582,14 @@ function IncompleteCard({
         titleAs="h2"
         icon={<WarningIcon aria-hidden className="size-6" />}
         title={`${name} ist nur zum Teil angelegt.`}
-        description={`${description} Bitte stellen Sie die Person nicht noch einmal ein.`}
+        description={`${description} Bitte stelle die Person nicht noch einmal ein.`}
         action={
           incomplete.recordId ? (
             <ButtonLink
-              href={traegerPath(`${PERSONAL}/${incomplete.recordId}`)}
+              href={staffSubpageHref(
+                `${PERSONAL}/${incomplete.recordId}`,
+                from,
+              )}
               variant="primary"
               size="md"
               tooltip="Öffnet die gespeicherte Akte."
@@ -461,7 +598,7 @@ function IncompleteCard({
             </ButtonLink>
           ) : (
             <ButtonLink
-              href={traegerPath(PERSONAL)}
+              href={staffOverviewHref("ohne-akte")}
               variant="primary"
               size="md"
               tooltip="Öffnet die Personalakten. Die Person steht dort unter „Ohne Akte“."
@@ -479,12 +616,18 @@ function StepActions({
   step,
   saving,
   onBack,
-}: Readonly<{ step: number; saving: boolean; onBack: () => void }>) {
+  cancelHref,
+}: Readonly<{
+  step: number;
+  saving: boolean;
+  onBack: () => void;
+  cancelHref: string;
+}>) {
   let back: ReactNode;
   if (step === 0) {
     back = (
       <ButtonLink
-        href={traegerPath(PERSONAL)}
+        href={cancelHref}
         variant="outline"
         size="md"
         noTooltip="Abbrechen führt zurück zu den Personalakten, ohne etwas anzulegen."
@@ -547,7 +690,16 @@ function stepOfRefusal(err: unknown): number {
 export function StaffHireWizard({
   schools,
   today,
-}: Readonly<{ schools: readonly School[]; today: string }>) {
+  from,
+}: Readonly<{
+  schools: readonly School[];
+  today: string;
+  /**
+   * Reiter der Personalakten, von dem man kam: Abbrechen führt dorthin,
+   * und eine geöffnete Akte führt mit Zurück dorthin.
+   */
+  from: StaffOverviewTab | null;
+}>) {
   const [draft, setDraft] = useState(() => emptyHireDraft(schools));
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -650,6 +802,7 @@ export function StaffHireWizard({
         <IncompleteCard
           name={`${draft.firstName.trim()} ${draft.lastName.trim()}`}
           incomplete={incomplete}
+          from={from}
         />
       </div>
     );
@@ -658,7 +811,7 @@ export function StaffHireWizard({
   if (hired) {
     return (
       <div ref={stepRef} className="flex flex-col gap-6">
-        <HiredCard record={hired} onRestart={restart} />
+        <HiredCard record={hired} onRestart={restart} from={from} />
       </div>
     );
   }
@@ -701,13 +854,19 @@ export function StaffHireWizard({
           ) : null}
           {step === HIRE_REVIEW_STEP ? <ReviewStep draft={draft} /> : null}
         </div>
-        <StepActions step={step} saving={saving} onBack={back} />
+        <StepActions
+          step={step}
+          saving={saving}
+          onBack={back}
+          cancelHref={staffOverviewHref(from)}
+        />
       </form>
       <ConfirmationModal
         isOpen={matches !== null}
         onClose={() => setMatches(null)}
         onConfirm={() => void send(true)}
         title="Gibt es diese Person schon?"
+        icon={<ConceptIconTile concept={staffConcept} size="sm" />}
         confirmText="Trotzdem einstellen"
         confirmVariant="warning"
         confirmTooltip="Stellt die Person als neue, zweite Person ein."
@@ -715,7 +874,11 @@ export function StaffHireWizard({
         loadingText="Stellt ein…"
         isBackdropDismissDisabled
       >
-        <DuplicateBody matches={matches ?? []} />
+        <DuplicateBody
+          matches={matches ?? []}
+          name={`${draft.firstName.trim()} ${draft.lastName.trim()}`}
+          from={from}
+        />
       </ConfirmationModal>
     </>
   );

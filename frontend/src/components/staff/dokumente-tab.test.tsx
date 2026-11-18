@@ -191,7 +191,7 @@ describe("DokumenteTab", () => {
 
     expect(
       await screen.findByText(
-        "Die Datei ist größer als 10 MB. Bitte wählen Sie eine kleinere Datei.",
+        "Die Datei ist größer als 10 MB. Bitte wähle eine kleinere Datei.",
       ),
     ).toBeInTheDocument();
     expect(uploadMock).not.toHaveBeenCalled();

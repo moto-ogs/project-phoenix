@@ -339,8 +339,8 @@ export function LetterStatusPanel({
                     : s.without_email > 0
                       ? "Bei manchen Bezugspersonen fehlt die E-Mail-Adresse."
                       : "Bei manchen Bezugspersonen fehlt der Portalzugang."}{" "}
-                  Tragen Sie die fehlenden Daten bei der Bezugsperson ein.
-                  Senden Sie den Brief danach noch einmal.
+                  Trage die fehlenden Daten bei der Bezugsperson ein. Sende den
+                  Brief danach noch einmal.
                 </>
               )}
             </span>
@@ -362,7 +362,7 @@ export function LetterStatusPanel({
               ? `An ${s.emails_stopped} ${s.emails_stopped === 1 ? "Person" : "Personen"} gehen keine Mails, weil die Schule sie gestoppt hat.`
               : null,
             (s.emails_provider_blocked ?? 0) > 0
-              ? `Bei ${s.emails_provider_blocked} ${s.emails_provider_blocked === 1 ? "Adresse" : "Adressen"} geht eine neue Mail gerade nicht raus. Den Grund sehen Sie beim Empfänger.`
+              ? `Bei ${s.emails_provider_blocked} ${s.emails_provider_blocked === 1 ? "Adresse" : "Adressen"} geht eine neue Mail gerade nicht raus. Den Grund siehst du beim Empfänger.`
               : null,
             (s.emails_delayed ?? 0) > 0
               ? "Verzögerte Mails kommen später an. Sie werden nicht erneut gesendet."

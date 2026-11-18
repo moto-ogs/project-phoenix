@@ -116,8 +116,8 @@ export function CreateAccountModal({
       // with no role lands here and must show a visible error instead of
       // returning silently. The remaining fields keep their native `required`.
       if (!roleId) {
-        const hint = "Bitte wählen Sie eine System-Rolle aus.";
-        invalid("Bitte prüfen Sie die markierten Felder.", { role_id: hint });
+        const hint = "Bitte wähle eine System-Rolle aus.";
+        invalid("Bitte prüfe die markierten Felder.", { role_id: hint });
         return;
       }
       if (
@@ -132,7 +132,7 @@ export function CreateAccountModal({
 
       if (password !== confirmPassword) {
         const hint = "Passwörter stimmen nicht überein.";
-        invalid("Bitte prüfen Sie die markierten Felder.", {
+        invalid("Bitte prüfe die markierten Felder.", {
           confirm_password: hint,
         });
         return;

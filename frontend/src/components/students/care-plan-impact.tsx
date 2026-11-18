@@ -7,6 +7,7 @@ import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -214,7 +215,7 @@ export function CarePlanImpact({
       {impact.notAdjusted.length > 0 ? (
         <SectionCard
           title="Nicht angepasst, weil von Hand gepflegt"
-          description="Hier steht das Kind weiter im Plan. Prüfen Sie, ob das so bleiben soll."
+          description="Hier steht das Kind weiter im Plan. Prüfe, ob das so bleiben soll."
           headingLevel={5}
           titleSize="sm"
           titleClassName="font-medium text-gray-600"
@@ -228,9 +229,7 @@ export function CarePlanImpact({
               Regeltermine für eine Klasse, einen Jahrgang oder eine Gruppe
               planen alle Kinder darin ein. Bei der nächsten Planung steht das
               Kind wieder im Plan.
-              {canManage
-                ? " Verbinden Sie den Regeltermin mit dem Angebot."
-                : null}
+              {canManage ? " Verbinde den Regeltermin mit dem Angebot." : null}
             </p>
           ) : null}
           <ResponsiveActionList>
@@ -321,7 +320,7 @@ function ManualTemplateEntry({
           : {removed ? "Kind entfernt." : "Kind bleibt eingeplant."}
         </p>
       </div>
-      <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row min-[480px]:items-center sm:justify-end">
+      <ResponsiveRowActions>
         {removed ? (
           <span className="flex">
             <StatusBadge tone="green" label="Entfernt" />
@@ -359,7 +358,7 @@ function ManualTemplateEntry({
         >
           Im Betreuungsplan ansehen
         </ButtonLink>
-      </div>
+      </ResponsiveRowActions>
     </ResponsiveActionRow>
   );
 }
@@ -482,7 +481,7 @@ function PickupOverrides({
             formatWeekdayAdverbs(later.map((override) => override.weekday)),
           )}{" "}
           gilt die eingetragene Zeit bis zum genannten Tag weiter. Ab diesem Tag
-          setzen Sie sie unter „Betreuungszeiten“ zurück.
+          setze sie unter „Betreuungszeiten“ zurück.
         </p>
       ) : null}
       {studentId !== undefined && !canReset && resettable.length > 0 ? (

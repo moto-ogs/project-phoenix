@@ -14,6 +14,7 @@ import { MessagesSquare, UsersRound } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { formErrorMessage } from "~/components/ui/form-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 import { TileCard } from "~/components/ui/tile-card";
 import { renderInboxFrame } from "~/components/messaging/team-chat-frames";
 import type {
@@ -40,7 +41,7 @@ const logger = createLogger({ component: "TeamChatInbox" });
 
 const DISABLED_TITLE = "Der Team-Chat ist ausgeschaltet";
 const DISABLED_DESCRIPTION =
-  "Ihre Schule hat den Team-Chat ausgeschaltet. Wenden Sie sich an die OGS-Leitung, wenn Sie ihn nutzen möchten.";
+  "Deine Schule hat den Team-Chat ausgeschaltet. Wende dich an die OGS-Leitung, wenn du ihn nutzen möchtest.";
 
 export type { TeamChatInboxParts } from "~/components/messaging/team-chat-frame-parts";
 
@@ -157,11 +158,19 @@ export function TeamChatInbox({
   ).length;
   // Ohne geladene Liste steht keine "0 Unterhaltungen" neben dem Ladefehler
   // (#2517).
-  const stats = !chatEnabled
-    ? "Ausgeschaltet"
-    : threads === undefined
-      ? null
-      : `${threadList.length} ${threadList.length === 1 ? "Unterhaltung" : "Unterhaltungen"} · ${unreadThreads} ungelesen`;
+  const stats = !chatEnabled ? (
+    "Ausgeschaltet"
+  ) : threads === undefined ? null : (
+    <TenantPageStats
+      items={[
+        {
+          value: threadList.length,
+          label: threadList.length === 1 ? "Unterhaltung" : "Unterhaltungen",
+        },
+        { value: unreadThreads, label: "ungelesen" },
+      ]}
+    />
+  );
 
   const composeButton = chatEnabled ? (
     <>
@@ -209,7 +218,7 @@ export function TeamChatInbox({
         ? {
             icon: emptyIcon,
             title: "Keine passenden Unterhaltungen",
-            description: "Ändern Sie die Suche oder den Filter.",
+            description: "Ändere die Suche oder den Filter.",
           }
         : {
             icon: emptyIcon,
@@ -349,9 +358,9 @@ function memberCountLabel(count: number): string {
   return `${count} ${count === 1 ? "Mitglied" : "Mitglieder"}`;
 }
 
-/** „Sie: “ vor der eigenen Nachricht, in einer Gruppe der Vorname sonst. */
+/** „Du: “ vor der eigenen Nachricht, in einer Gruppe der Vorname sonst. */
 function previewSender(thread: StaffInboxThread): string {
-  if (thread.last_message_mine) return "Sie: ";
+  if (thread.last_message_mine) return "Du: ";
   if (isGroupThread(thread) && thread.last_sender_name) {
     return `${thread.last_sender_name.split(" ")[0]}: `;
   }

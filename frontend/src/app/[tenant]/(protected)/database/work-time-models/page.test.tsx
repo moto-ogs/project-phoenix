@@ -138,9 +138,10 @@ describe("Arbeitszeitmodelle (#6891)", () => {
       screen.getAllByText("40 Std. pro Woche · 1 Woche · 2 Personen").length,
     ).toBeGreaterThan(0);
     expect(screen.getByText("Nicht mehr in der Auswahl")).toBeInTheDocument();
+    // Zahl und Wort stehen in eigenen Elementen, die Paare ohne Trennpunkt.
     expect(
-      screen.getByText("1 Vorlage · 1 nicht mehr angeboten"),
-    ).toBeInTheDocument();
+      screen.getByText("nicht mehr angeboten").parentElement?.parentElement,
+    ).toHaveTextContent(/^1 Vorlage, 1 nicht mehr angeboten$/);
   });
 
   it("says before saving whom a change reaches", () => {
@@ -148,7 +149,7 @@ describe("Arbeitszeitmodelle (#6891)", () => {
 
     expect(
       screen.getByText(
-        "2 Personen nutzen diese Vorlage. Wenn Sie speichern, gilt das neue Soll ab heute für alle 2.",
+        "2 Personen nutzen diese Vorlage. Wenn du speicherst, gilt das neue Soll ab heute für alle 2.",
       ),
     ).toBeInTheDocument();
   });
@@ -189,7 +190,7 @@ describe("Arbeitszeitmodelle (#6891)", () => {
 
     expect(
       await screen.findAllByText(
-        "Woche B hat noch keine Stunden. Bitte tragen Sie mindestens einen Tag ein.",
+        "Woche B hat noch keine Stunden. Bitte trage mindestens einen Tag ein.",
       ),
     ).not.toHaveLength(0);
     expect(workTimeModelService.update).not.toHaveBeenCalled();
@@ -206,7 +207,7 @@ describe("Arbeitszeitmodelle (#6891)", () => {
       screen.getByRole("button", { name: "Personen zuordnen" }),
     ).toBeVisible();
     expect(
-      screen.getByText(/Zuordnen können Sie eine Vorlage im Reiter „Personen“/),
+      screen.getByText(/Zuordnen kannst du eine Vorlage im Reiter „Personen“/),
     ).toBeVisible();
   });
 });

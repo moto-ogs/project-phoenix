@@ -294,9 +294,7 @@ describe("TraegerUtilizationPage", () => {
     renderPage();
     await screen.findByText("70 %");
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Auslastung herunterladen" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: /CSV/ }));
 
     await vi.waitFor(() =>
@@ -333,7 +331,7 @@ describe("TraegerUtilizationPage", () => {
     renderPage();
     await screen.findByText("70 %");
 
-    expect(screen.getByText(/Wählen Sie oben eine Schule/)).toBeInTheDocument();
+    expect(screen.getByText(/Wähle oben eine Schule/)).toBeInTheDocument();
     fireEvent.click(rowOf(screen.getByRole("table"), "OGS Am Bach"));
     const open = await screen.findByRole("button", { name: "Namen anzeigen" });
     expect(mockFetchChildren).not.toHaveBeenCalled();

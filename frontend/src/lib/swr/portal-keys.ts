@@ -34,6 +34,7 @@ export const operatorProvisioningKeys = {
   ],
   deviceFamilies: [
     "operator-all-devices",
+    "operator-device-history-",
     "operator-school-devices-",
     "operator-org-devices-",
     ...operatorSummaryPrefixes,
@@ -43,6 +44,9 @@ export const operatorProvisioningKeys = {
   orgDevices: (id: string | undefined) =>
     `operator-org-devices-${encodeURIComponent(id ?? "")}`,
   allDevices: () => "operator-all-devices",
+  /** The history of one device across its schools (#2321). */
+  deviceHistory: (id: string) =>
+    `operator-device-history-${encodeURIComponent(id)}`,
   organizations: () => "operator-organizations",
   schoolSummaries: () => "operator-school-summaries",
   schoolRequiredDetails: () => "operator-school-required-details",
@@ -223,7 +227,8 @@ export const studentKeys = {
       context:
         [previewText(row.school_class), previewText(row.group_name)]
           .filter(Boolean)
-          .join(" · ") || undefined,
+          // Ohne Trennpunkt wie die Statuszeile der Kindseite (#7402).
+          .join(", ") || undefined,
     };
   },
   studentThreads: (id: string | undefined) =>
@@ -316,6 +321,10 @@ export const payrollKeys = {
   sftpStatus: () => "payroll-sftp-status",
   rules: () => "payroll-rules",
   targetCoverage: () => "payroll-target-coverage",
+} as const;
+
+export const devicePinKeys = {
+  status: () => "settings-device-pin-status",
 } as const;
 
 export const databaseKeys = {
@@ -523,6 +532,10 @@ export const catererKeys = {
     }
   },
   schools: () => "caterer-schools",
+  // Die Glocke des Caterer-Portals (#7147): Zähler und erste Seite der
+  // Hinweise aller belieferten Schulen.
+  notificationFeedFirstPage: () => "caterer-notification-feed-first-page",
+  notificationFeedUnread: () => "caterer-notification-feed-unread",
   orders: (schoolIds: readonly string[], from: string, to: string) =>
     resourceKey(catererOrdersFamily, {
       schoolIds: [...schoolIds].sort(),

@@ -44,7 +44,7 @@ const GERMAN_LABELS: MessageAttachmentLabels = {
   openImage: (filename) => `Bild öffnen: ${filename}`,
   openFile: (filename) => `Datei öffnen: ${filename}`,
   downloadFile: (filename) => `Herunterladen: ${filename}`,
-  downloadHint: "Speichert die Datei auf Ihrem Gerät.",
+  downloadHint: "Speichert die Datei auf deinem Gerät.",
   moreImages: (count) =>
     count === 1 ? "1 weiteres Bild" : `${count} weitere Bilder`,
 };

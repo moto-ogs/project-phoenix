@@ -34,7 +34,7 @@ func RenderContractMail(_ context.Context, payload []byte) (carecontract.Rendere
 	if mail.Concluded && template == contractMailTemplate {
 		// Concluded at the acceptance (Weg b, #4680): the parents receive it
 		// for their records and sign nothing.
-		subject = "Ihr Betreuungsvertrag ist abgeschlossen"
+		subject = "Dein Betreuungsvertrag ist abgeschlossen"
 	}
 	return carecontract.RenderedContractMail{
 		SenderName: strings.TrimSpace(mail.TraegerName),

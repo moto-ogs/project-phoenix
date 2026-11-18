@@ -35,5 +35,5 @@ type FileNoDataRowsError struct {
 }
 
 func (e *FileNoDataRowsError) Error() string {
-	return fmt.Sprintf("die %s-Datei enthält keine Datenzeilen. Möglicherweise haben Sie versehentlich die Vorlage hochgeladen", e.Kind)
+	return fmt.Sprintf("die %s-Datei enthält keine Datenzeilen. Möglicherweise hast du versehentlich die Vorlage hochgeladen", e.Kind)
 }

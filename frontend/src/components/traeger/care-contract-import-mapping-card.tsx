@@ -56,6 +56,7 @@ export function CareContractImportMappingCard({
   unmapped,
   schools,
   debtorNumberScope,
+  familyChildrenAllowed,
   disabled,
   onChange,
 }: Readonly<{
@@ -64,6 +65,8 @@ export function CareContractImportMappingCard({
   unmapped: readonly ContractImportField[];
   schools: readonly ContractImportSchool[];
   debtorNumberScope: "payer" | "child";
+  /** Whether the account bills: only then a file may name the number. */
+  familyChildrenAllowed: boolean;
   disabled: boolean;
   onChange: (mapping: ContractImportMapping) => void;
 }>) {
@@ -90,8 +93,8 @@ export function CareContractImportMappingCard({
   const hint = (field: ContractImportField): string | undefined => {
     if (field === "debtor_number") {
       return debtorNumberScope === "child"
-        ? "Bei Ihnen gilt eine Nummer je Kind."
-        : "Bei Ihnen gilt eine Nummer je Zahler. Geschwister teilen sie.";
+        ? "Bei dir gilt eine Nummer je Kind."
+        : "Bei dir gilt eine Nummer je Zahler. Geschwister teilen sie.";
     }
     return CONTRACT_IMPORT_FIELD_HINTS[field];
   };
@@ -99,8 +102,15 @@ export function CareContractImportMappingCard({
   // rows stand right under the file; it opens again on request.
   const complete = unmapped.length === 0;
   const collapsed = complete && !open;
-  const mapped = Object.values(mapping.columns).filter(
-    (header) => header !== UNMAPPED,
+  // The number of the family's children counts as confirmed by the
+  // Abrechnung (#7356): without that right the field is not offered.
+  const offered = (field: ContractImportField) =>
+    field !== "family_children" || familyChildrenAllowed;
+  const fields = (Object.keys(mapping.columns) as ContractImportField[]).filter(
+    offered,
+  );
+  const mapped = fields.filter(
+    (field) => mapping.columns[field] !== UNMAPPED,
   ).length;
   const schoolForAll = mapping.columns.school === UNMAPPED;
   const moduleForAll = mapping.columns.module === UNMAPPED;
@@ -113,8 +123,8 @@ export function CareContractImportMappingCard({
       title="Spalten zuordnen"
       description={
         collapsed
-          ? `${mapped} von ${Object.keys(mapping.columns).length} Feldern sind zugeordnet, alle Pflichtfelder sind dabei.`
-          : "Wählen Sie für jedes Feld die Spalte aus Ihrer Datei. moto hat schon passende Spalten vorgeschlagen."
+          ? `${mapped} von ${fields.length} Feldern sind zugeordnet, alle Pflichtfelder sind dabei.`
+          : "Wähle für jedes Feld die Spalte aus deiner Datei. moto hat schon passende Spalten vorgeschlagen."
       }
       collapsible={complete}
       collapsed={collapsed}
@@ -127,7 +137,7 @@ export function CareContractImportMappingCard({
               {group.title}
             </SectionLabel>
             <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
-              {group.fields.map((field) => (
+              {group.fields.filter(offered).map((field) => (
                 <CustomSelect
                   key={field}
                   id={`contract-import-${field}`}
@@ -162,7 +172,7 @@ export function CareContractImportMappingCard({
                     onChange({ ...mapping, schoolId, moduleName: "" })
                   }
                   disabled={disabled}
-                  hint="Ihre Datei hat keine Spalte für die Schule. Dann gilt eine Schule für alle Kinder."
+                  hint="Deine Datei hat keine Spalte für die Schule. Dann gilt eine Schule für alle Kinder."
                   error={
                     missing.has("school")
                       ? "Bitte eine Spalte oder eine Schule wählen."
@@ -184,7 +194,7 @@ export function CareContractImportMappingCard({
                     onChange({ ...mapping, moduleName })
                   }
                   disabled={disabled}
-                  hint="Ihre Datei hat keine Spalte für das Modul. Dann buchen alle Kinder dieses Modul."
+                  hint="Deine Datei hat keine Spalte für das Modul. Dann buchen alle Kinder dieses Modul."
                   error={
                     missing.has("module")
                       ? "Bitte eine Spalte oder ein Modul wählen."
@@ -220,7 +230,7 @@ export function CareContractImportMappingCard({
                         ? "contract-import-start-for-all-error"
                         : undefined
                     }
-                    hint="Ihre Datei hat keine Spalte für den Vertragsbeginn. Dann beginnen alle Verträge an diesem Tag."
+                    hint="Deine Datei hat keine Spalte für den Vertragsbeginn. Dann beginnen alle Verträge an diesem Tag."
                   />
                   {startMissing ? (
                     <FieldErrorHint

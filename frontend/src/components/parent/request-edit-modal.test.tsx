@@ -296,7 +296,7 @@ describe("RequestEditModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
 
     expect(
-      await screen.findByText("Bitte tragen Sie einen Wert ein."),
+      await screen.findByText("Bitte trage einen Wert ein."),
     ).toBeInTheDocument();
     expect(input).toHaveAttribute("aria-invalid", "true");
     expect(updateMasterData).not.toHaveBeenCalled();

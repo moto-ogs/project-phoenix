@@ -72,7 +72,11 @@ import {
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import type { OverflowMenuItem } from "~/components/ui/page-header/types";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
-import { TenantPage, type TenantPageTab } from "~/components/ui/tenant-page";
+import {
+  TenantPage,
+  TenantPageStats,
+  type TenantPageTab,
+} from "~/components/ui/tenant-page";
 import { FormerEmploymentDetails } from "~/components/staff/former-employment-details";
 import { AbwesenheitenTab } from "~/components/staff/abwesenheiten-tab";
 import { ArbeitszeitmodellTab } from "~/components/staff/arbeitszeitmodell-tab";
@@ -580,16 +584,22 @@ export default function StaffDetailContent() {
     ? (employmentTypeLabels[staff.employmentType] ?? staff.employmentType)
     : null;
   // Statuszeile der Kopfkarte: echte Angaben zur Person, keine Erklärzeile.
-  const statusLine = staff
+  // Höchstens drei Angaben (#7402): „RFID zugewiesen“ steht nur, solange
+  // eine der ersten drei fehlt; die Karte zeigt der Reiter „Konto“.
+  const statusParts = staff
     ? [
         staff.specialization ?? (displayType || null),
         employmentLabel,
         staff.email,
         staff.hasRfid ? "RFID zugewiesen" : null,
-      ]
-        .filter(Boolean)
-        .join(" · ")
-    : null;
+      ].filter((part): part is string => Boolean(part))
+    : [];
+  const statusLine =
+    statusParts.length > 1 ? (
+      <TenantPageStats items={statusParts.map((label) => ({ label }))} />
+    ) : (
+      statusParts.join("")
+    );
 
   // Reiter eines nicht gebuchten Moduls fehlen (#4894): Zeiterfassung,
   // Arbeitszeitmodell und Abwesenheiten gehören zur Zeiterfassung,
@@ -804,7 +814,7 @@ export default function StaffDetailContent() {
                 mode: "textConfirm",
                 expected: recordLabel,
                 inputId: "confirm-delete-staff-name",
-                label: "Tippen Sie zur Bestätigung den Namen der Person:",
+                label: "Tippe zur Bestätigung den Namen der Person:",
                 preview: recordLabel,
                 placeholder: "Vorname Nachname",
               }}

@@ -12,7 +12,7 @@ export interface TeamChatEmptyState {
 export interface TeamChatInboxParts {
   readonly title: string;
   /** Statuszeile aus echten Zahlen; `null`, solange keine Liste geladen ist. */
-  readonly stats: string | null;
+  readonly stats: ReactNode | null;
   readonly statsLoading: boolean;
   readonly chatEnabled: boolean;
   /** Zahl der sichtbaren Unterhaltungen; `null`, solange keine Liste geladen ist. */
@@ -46,7 +46,7 @@ export interface TeamChatThreadParts {
   readonly title: string;
   readonly previewTitle?: string;
   readonly roleLabel: string | null;
-  readonly stats: string;
+  readonly stats: ReactNode;
   readonly audience: string;
   readonly actions: ReactNode | null;
   readonly statsLoading: boolean;

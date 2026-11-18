@@ -4,9 +4,9 @@
 // (#5198), „Anmeldungen“ und „Plätze“ (#4699) sind Reiter derselben Sache,
 // jeder mit eigener Adresse. Vergibt der Zeitraum seine Plätze nach Kriterien
 // (#4700), kommt der Reiter „Vergabe“ dazu.
-// Der Status steht als Plakette in der Statuszeile, auf beiden Reitern gleich.
+// Der Status steht als Plakette neben der Kopfaktion, auf allen Reitern
+// gleich; die Statuszeile trägt nur Angaben (#7402).
 
-import type { ReactNode } from "react";
 import { StatusBadge } from "~/components/ui/status-badge";
 import type { TenantPageProps } from "~/components/ui/tenant-page";
 import type { HolidayAllocationMode, HolidayPeriod } from "~/lib/traeger-api";
@@ -67,42 +67,32 @@ export function holidayPeriodTabs(
   };
 }
 
-/**
- * Die Angaben einer Statuszeile im Ferienbereich: einzeln mit Abstand, ohne
- * Trennpunkte dazwischen (#5684).
- */
-export function HolidayHeadFacts({
-  children,
-}: Readonly<{ children: ReactNode }>) {
+/** Der Status des Zeitraums als Plakette neben der Kopfaktion. */
+export function HolidayPeriodStatusBadge({
+  period,
+}: Readonly<{ period: HolidayPeriod }>) {
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-      {children}
-    </span>
+    <StatusBadge
+      label={holidayStatusLabel(period)}
+      tone={period.status === "published" ? "green" : "gray"}
+    />
   );
 }
 
-/** Statuszeile: Status des Zeitraums und seine Anmeldefrist. */
-export function HolidayPeriodStatusLine({
-  period,
-  children,
-}: Readonly<{ period: HolidayPeriod; children?: ReactNode }>) {
-  return (
-    <HolidayHeadFacts>
-      <StatusBadge
-        label={holidayStatusLabel(period)}
-        tone={period.status === "published" ? "green" : "gray"}
-      />
-      <span>
-        Anmeldung{" "}
-        {formatDateRange(
-          period.registrationOpensOn,
-          period.registrationClosesOn,
-        )}
-      </span>
-      {period.maxDaysPerChild == null ? null : (
-        <span>höchstens {period.maxDaysPerChild} Tage je Kind</span>
-      )}
-      {children}
-    </HolidayHeadFacts>
-  );
+/**
+ * Die Angaben der Statuszeile eines Zeitraums für `TenantPageStats`:
+ * Anmeldefrist und, wenn gesetzt, die Grenze je Kind.
+ */
+export function holidayPeriodStats(period: HolidayPeriod): { label: string }[] {
+  return [
+    {
+      label: `Anmeldung ${formatDateRange(
+        period.registrationOpensOn,
+        period.registrationClosesOn,
+      )}`,
+    },
+    ...(period.maxDaysPerChild == null
+      ? []
+      : [{ label: `höchstens ${period.maxDaysPerChild} Tage je Kind` }]),
+  ];
 }

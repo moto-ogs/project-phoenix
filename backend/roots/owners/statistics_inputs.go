@@ -12,7 +12,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 
-	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -52,24 +51,6 @@ func (a StatisticsReportRooms) StatisticsRooms(ctx context.Context) ([]presenceC
 	result := make([]presenceCompose.StatisticsRoom, 0, len(values))
 	for _, value := range values {
 		result = append(result, presenceCompose.StatisticsRoom{ID: value.ID, Name: value.Name, Capacity: value.Capacity})
-	}
-	return result, nil
-}
-
-type StatisticsReportPeriods struct {
-	Periods interface {
-		ListCalendarPeriods(context.Context, schoolcalendar.CalendarPeriodFilter) ([]schoolcalendar.CalendarPeriod, error)
-	}
-}
-
-func (a StatisticsReportPeriods) StatisticsHolidayPeriods(ctx context.Context, from, to timezone.Date) ([]presenceCompose.HolidayPeriod, error) {
-	values, err := a.Periods.ListCalendarPeriods(ctx, schoolcalendar.HolidaysOverlapping(from.String(), to.String()))
-	if err != nil {
-		return nil, err
-	}
-	result := make([]presenceCompose.HolidayPeriod, 0, len(values))
-	for _, value := range values {
-		result = append(result, presenceCompose.HolidayPeriod{StartDate: timezone.Date(value.StartDate), EndDate: timezone.Date(value.EndDate)})
 	}
 	return result, nil
 }

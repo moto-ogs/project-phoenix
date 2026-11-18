@@ -83,7 +83,7 @@ var devices_init_kapazit_t_2Definitions = []config.Definition{
 	{
 		Key:             config.KeyCheckinActivityCapacityDetailsEnabled,
 		Label:           "Name und Belegung bei voller Aktivität",
-		Description:     "Das Tablet zeigt dann zum Beispiel „Fußball AG ist voll (20/20 Teilnehmer)“. So sieht Ihr Team, dass die Aktivität voll ist und nicht der Raum. Ausgeschaltet erscheint nur ein allgemeiner Hinweis.",
+		Description:     "Das Tablet zeigt dann zum Beispiel „Fußball AG ist voll (20/20 Teilnehmer)“. So sieht dein Team, dass die Aktivität voll ist und nicht der Raum. Ausgeschaltet erscheint nur ein allgemeiner Hinweis.",
 		Type:            config.FieldBoolean,
 		Default:         true,
 		ReadPermission:  "config:read",

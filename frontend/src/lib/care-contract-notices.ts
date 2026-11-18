@@ -18,7 +18,19 @@ export type TerminationKind =
   "ordentlich" | "sonderkuendigung" | "ausserordentlich";
 
 /** Why the notice of a decided end was not mailed, recorded at decision time. */
-type EndNoticeNotSentReason = "missing_student" | "no_permitted_address";
+const END_NOTICE_NOT_SENT_REASONS = [
+  "letterhead_missing",
+  "missing_student",
+  "no_permitted_address",
+] as const;
+type EndNoticeNotSentReason = (typeof END_NOTICE_NOT_SENT_REASONS)[number];
+
+/** A reason this client does not know yet reads as no recorded reason. */
+function endNoticeNotSentReason(
+  reason: string | undefined,
+): EndNoticeNotSentReason | null {
+  return END_NOTICE_NOT_SENT_REASONS.find((known) => known === reason) ?? null;
+}
 
 /**
  * How the Träger-Büro decided the end of an extraordinary termination: it
@@ -105,7 +117,7 @@ interface BackendNotice {
   end_decided_at?: string;
   end_notice_text?: string;
   end_notice_sent?: boolean;
-  end_notice_not_sent_reason?: EndNoticeNotSentReason;
+  end_notice_not_sent_reason?: string;
 }
 
 export interface BackendNoticeOptions {
@@ -156,7 +168,9 @@ export function noticeOptionsFromBackend(
           endDecidedAt: row.notice.end_decided_at ?? null,
           endNoticeText: row.notice.end_notice_text ?? null,
           endNoticeSent: row.notice.end_notice_sent ?? false,
-          endNoticeNotSentReason: row.notice.end_notice_not_sent_reason ?? null,
+          endNoticeNotSentReason: endNoticeNotSentReason(
+            row.notice.end_notice_not_sent_reason,
+          ),
         }
       : null,
   };

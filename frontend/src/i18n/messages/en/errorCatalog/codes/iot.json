@@ -8,6 +8,7 @@
   "device_inactive": "You cannot access {object}. Please contact the school.",
   "device_pin_invalid": "You cannot access {object}. Please contact the school.",
   "device_pin_required": "You cannot access {object}. Please contact the school.",
+  "device_slots_full": "{object} could not be changed. Please check its current status.",
   "invalid_rfid_tag": "{object} could not be saved. Please check your entries.",
   "invalid_staff_clock_request": "{object} could not be saved. Please check your entries.",
   "invalid_staff_clock_state": "{object} could not be changed. Please check its current status.",
@@ -33,5 +34,6 @@
   "student_already_active": "{object} could not be changed. Please check its current status.",
   "student_not_present": "{object} could not be changed. Please check its current status.",
   "wc_needs_staff": "{object} could not be processed. Please try again later.",
-  "wc_not_configured": "{object} could not be processed. Please try again later."
+  "wc_not_configured": "{object} could not be processed. Please try again later.",
+  "device_in_active_session": "{object} could not be changed. Please check its current status."
 }

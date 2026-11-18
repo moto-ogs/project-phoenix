@@ -7,7 +7,7 @@
 // ersten Lastschrift eines Mandats eine Folgelastschrift. Lastschriften, die
 // nicht in die Datei dürfen, stehen mit Grund darunter.
 
-import { DownloadIcon, LandmarkIcon } from "lucide-react";
+import { CheckCircle2, DownloadIcon, LandmarkIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import {
@@ -28,9 +28,11 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ConfirmationModal } from "~/components/ui/modal";
+import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
@@ -64,7 +66,14 @@ const STEPS = [
 
 /** Why the file and its confirmation wait while the Träger has no account. */
 const ACCOUNT_MISSING_REASON =
-  "Legen Sie zuerst eine Bankverbindung des Trägers als Standard fest.";
+  "Lege zuerst eine Bankverbindung des Trägers als Standard fest.";
+
+/** What „Bei der Bank eingereicht“ does, or what comes first. */
+function submitHint(downloadedId: string | null, downloading: boolean) {
+  if (downloading) return "Die Datei wird gerade erstellt.";
+  if (!downloadedId) return "Lade zuerst die Datei herunter.";
+  return "Vermerkt die Lastschriften als eingereicht. moto fragt vorher nach.";
+}
 
 /** The mandate page of a family. */
 function mandateHref(debit: SepaDebit): string {
@@ -279,35 +288,17 @@ export function SepaDebitCard({
         }
         description={
           pending
-            ? "Die Bank bucht die Beiträge ab, nicht moto. Laden Sie die Datei herunter und im Online-Banking hoch. Bestätigen Sie es danach hier."
+            ? "Die Bank bucht die Beiträge ab, nicht moto. Lade die Datei herunter und im Online-Banking hoch. Bestätige es danach hier."
             : run.submitted.length > 0
               ? `Die Datei ist eingereicht${run.submittedAt ? ` (${formatDate(run.submittedAt)})` : ""}. Die Bank bucht am Fälligkeitstag ab.`
               : "In diesem Lauf darf keine Lastschrift in die Datei. Die Gründe stehen unten."
         }
         actions={
           pending ? (
-            <div className="flex w-full max-w-full flex-col flex-wrap gap-2 min-[480px]:w-auto min-[480px]:flex-row">
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                disabled={fileBlocked || !downloadedId || downloading}
-                disabledReason={
-                  fileBlocked
-                    ? ACCOUNT_MISSING_REASON
-                    : !downloadedId
-                      ? "Laden Sie zuerst die Datei herunter."
-                      : undefined
-                }
-                tooltip="Vermerkt die Lastschriften als eingereicht. moto fragt vorher nach."
-                onClick={() => setConfirming(true)}
-              >
-                Bei der Bank eingereicht
-              </Button>
+            <>
               {fileBlocked ? null : (
                 <HandoverMenu
                   run={handoverRun}
-                  size="md"
                   recipients={handover.recipients}
                   recipientHidden={handover.recipientHidden}
                   formats={["pain008"]}
@@ -324,7 +315,7 @@ export function SepaDebitCard({
                 size="md"
                 disabled={fileBlocked}
                 disabledReason={ACCOUNT_MISSING_REASON}
-                tooltip="Lädt die Lastschriftdatei (SEPA) für Ihr Online-Banking herunter."
+                tooltip="Lädt die Lastschriftdatei (SEPA) für dein Online-Banking herunter."
                 className="gap-2"
                 isLoading={downloading}
                 loadingText="Wird erstellt …"
@@ -333,7 +324,23 @@ export function SepaDebitCard({
                 <DownloadIcon aria-hidden className="size-4" />
                 Datei herunterladen
               </Button>
-            </div>
+              {fileBlocked ? null : (
+                // „Bei der Bank eingereicht“ is a step after the file, not an
+                // action of every visit (#7407): it waits in the card menu.
+                <OverflowMenu
+                  ariaLabel="Weitere Aktionen zur Lastschriftdatei"
+                  items={[
+                    {
+                      label: "Bei der Bank eingereicht",
+                      description: submitHint(downloadedId, downloading),
+                      icon: <CheckCircle2 className="h-4 w-4" aria-hidden />,
+                      disabled: !downloadedId || downloading,
+                      onClick: () => setConfirming(true),
+                    },
+                  ]}
+                />
+              )}
+            </>
           ) : undefined
         }
       >
@@ -344,7 +351,7 @@ export function SepaDebitCard({
             <Alert
               type="warning"
               title="Konto des Trägers fehlt"
-              message="Die Datei braucht das Konto, auf das die Beiträge gehen. Legen Sie unter Einstellungen → Abrechnung eine Bankverbindung als Standard fest. Das darf, wer das Recht „Einstellungen“ hat."
+              message="Die Datei braucht das Konto, auf das die Beiträge gehen. Lege unter Einstellungen → Abrechnung eine Bankverbindung als Standard fest. Das darf, wer das Recht „Einstellungen“ hat."
               action={
                 <ButtonLink
                   href={traegerPath("/traeger/einstellungen/abrechnung")}
@@ -367,8 +374,8 @@ export function SepaDebitCard({
             <p className="text-sm text-gray-600">
               {recipientOfFormat(handover.recipients, "pain008")?.ready ||
               handover.recipientHidden
-                ? "Laden Sie zuerst die Datei herunter oder übergeben Sie sie. Danach können Sie das Einreichen bestätigen."
-                : "Laden Sie zuerst die Datei herunter. Danach können Sie das Einreichen bestätigen."}
+                ? "Lade zuerst die Datei herunter oder übergib sie. Danach kannst du das Einreichen bestätigen."
+                : "Lade zuerst die Datei herunter. Danach kannst du das Einreichen bestätigen."}
             </p>
           ) : null}
           {pending ? (
@@ -433,7 +440,7 @@ export function SepaDebitCard({
         onConfirm={() => void submit()}
       >
         <p className="text-sm text-gray-700">
-          Bestätigen Sie erst, wenn Ihre Bank die Datei angenommen hat. Danach
+          Bestätige erst, wenn deine Bank die Datei angenommen hat. Danach
           gelten {debitCountLabel(run.count)} über {formatEuro(run.totalCents)}{" "}
           als eingereicht. Bei einem neuen Mandat ist die nächste Lastschrift
           dann eine Folgelastschrift.
@@ -458,7 +465,7 @@ function SepaDebitsLeftCard({
           {debitCountLabel(left.length)}
         </span>
       }
-      description="Für diese Rechnungen darf die Bank nicht abbuchen. Die Familie zahlt anders, oder Sie klären das Mandat."
+      description="Für diese Rechnungen darf die Bank nicht abbuchen. Die Familie zahlt anders, oder du klärst das Mandat."
     >
       <ResponsiveActionList>
         {left.map((debit) => (
@@ -479,17 +486,17 @@ function SepaDebitsLeftCard({
                 {debit.left ? SEPA_DEBIT_LEFT_LABELS[debit.left] : ""}
               </p>
             </div>
-            <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
+            <ResponsiveRowActions>
               <ButtonLink
                 href={mandateHref(debit)}
                 variant="surface"
                 size="compact"
                 aria-label={`Mandat prüfen: ${debit.recipientName}`}
-                tooltip="Öffnet das Mandat dieser Familie, damit Sie es klären."
+                tooltip="Öffnet das Mandat dieser Familie, damit du es klärst."
               >
                 Mandat prüfen
               </ButtonLink>
-            </div>
+            </ResponsiveRowActions>
           </ResponsiveActionRow>
         ))}
       </ResponsiveActionList>

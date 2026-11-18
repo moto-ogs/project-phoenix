@@ -39,6 +39,14 @@ func BindParentMessageGuardianProfiles(source interface {
 		if row == nil {
 			return nil, err
 		}
-		return &communication.ParentMessageGuardianContact{FirstName: row.FirstName, LastName: row.LastName, Email: row.Email, PortalLocale: row.PortalLocale}, err
+		return &communication.ParentMessageGuardianContact{FirstName: row.FirstName, LastName: row.LastName, Salutation: guardianSalutation(row.Salutation), Email: row.Email, PortalLocale: row.PortalLocale}, err
 	})
+}
+
+// guardianSalutation is the chosen form of address, empty without a choice.
+func guardianSalutation(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }

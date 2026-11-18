@@ -88,7 +88,7 @@ describe("room plan help", () => {
     );
 
     expect(roomPlan?.steps).toContain(
-      "Für den PDF-Aushang brauchen Sie auch das Recht, die Kinderliste zu sehen.",
+      "Für den PDF-Aushang brauchst du auch das Recht, die Kinderliste zu sehen.",
     );
   });
 });

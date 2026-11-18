@@ -40,7 +40,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { TileCard } from "~/components/ui/tile-card";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { StatCard } from "~/components/ui/stat-card";
-import { getUserDisplayName } from "~/lib/auth-utils";
+import { getGreetingName } from "~/lib/auth-utils";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import { useTimeBasedGreeting } from "~/lib/greeting";
 import type { ClassDayReport } from "~/lib/class-day-api";
@@ -432,7 +432,7 @@ function ClassDayOverviewInfo() {
 
   return (
     <p>
-      Ihre Übergabe nach Unterricht am {formatDate(dateISO)}. Öffnen Sie eine
+      Deine Übergabe nach Unterricht am {formatDate(dateISO)}. Öffne eine
       Klasse, um zu sehen, wer in Randstunde oder Ganztag bleibt und wer nach
       Hause geht.
     </p>
@@ -508,10 +508,11 @@ function ClassDayOverviewLoading() {
 export function ClassDayOverview({ notices, ...props }: ClassDayOverviewProps) {
   const greeting = useTimeBasedGreeting();
   const { data: session } = useSession();
+  const greetingName = getGreetingName(session);
 
   return (
     <TenantPage
-      title={`${greeting}, ${getUserDisplayName(session)}`}
+      title={greetingName ? `${greeting}, ${greetingName}` : greeting}
       prominent
       info={
         <Suspense fallback={null}>
@@ -646,7 +647,7 @@ function ClassDayOverviewContent({
     (schoolMode && !weekend && schoolDay === undefined && schoolDayLoading);
   const { error: classesLoadError } = useSwrResourceLoadError(
     [{ data: classList, error: classesError }],
-    "die Liste Ihrer Klassen",
+    "die Liste deiner Klassen",
     reloadClasses,
   );
   const { error: schoolDayLoadError } = useSwrResourceLoadError(
@@ -685,7 +686,7 @@ function ClassDayOverviewContent({
             <EmptyState
               className="mt-4"
               title="Keine Klassen zugewiesen"
-              description="Ihrem Konto ist noch keine Klasse zugeordnet. Die OGS-Verwaltung kann Ihnen Klassen unter Mitarbeitende zuweisen."
+              description="Deinem Konto ist noch keine Klasse zugeordnet. Die OGS-Verwaltung kann dir Klassen unter Mitarbeitende zuweisen."
             />
           )}
 
@@ -773,7 +774,7 @@ function ClassDayOverviewContent({
                                 Die Lehrkraft hat diese Kinder als fehlend
                                 eingetragen. Es gibt keine Krankmeldung.
                                 {canReportAbsences
-                                  ? " Rufen die Eltern an, tragen Sie die Meldung hier ein."
+                                  ? " Rufen die Eltern an, trage die Meldung hier ein."
                                   : ""}
                               </p>
                             )}
@@ -874,7 +875,7 @@ function ClassDayOverviewContent({
                     {classes !== undefined && (
                       <>
                         <SectionLabel className="mt-5">
-                          {schoolMode ? "Alle Klassen" : "Ihre Klassen"}
+                          {schoolMode ? "Alle Klassen" : "Deine Klassen"}
                         </SectionLabel>
                         {schoolMode ? (
                           <div className="mt-2 grid gap-3 lg:grid-cols-2">

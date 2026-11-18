@@ -148,8 +148,8 @@ export function MyDayBlock() {
         if (mine.length === 0) {
           return (
             <HomeCardEmpty
-              title="Heute sind Sie für keinen Block eingeteilt"
-              description="Ihre Einsätze aus dem Betreuungsplan erscheinen hier, mit Raum, Kindern und dem Starten-Knopf."
+              title="Heute bist du für keinen Block eingeteilt"
+              description="Deine Einsätze aus dem Betreuungsplan erscheinen hier, mit Raum, Kindern und dem Starten-Knopf."
             />
           );
         }
@@ -315,7 +315,7 @@ function BlockRow({
                 {busy ? "Startet..." : "Starten"}
               </Button>
             ) : block.isAbsent ? (
-              <StatusBadge tone="gray" label="Sie fehlen" />
+              <StatusBadge tone="gray" label="Du fehlst" />
             ) : over ? null : (
               <BlockState block={block} now={now} />
             )}

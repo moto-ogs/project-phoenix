@@ -175,7 +175,7 @@ type fakeStore struct {
 	nextSessionID  int64
 	operatorTokens map[int64]domain.OperatorSession
 
-	// pushLiveness answers LivePushSubscriptionLinks as is; pushLivenessErr
+	// pushLiveness answers ProtectedPushSubscriptionLinks as is; pushLivenessErr
 	// fails it.
 	pushLiveness    map[int64]bool
 	pushLivenessErr error
@@ -583,7 +583,7 @@ func (s *fakeStore) HasLiveAccountSessionsCreatedAfter(_ context.Context, accoun
 	return false, stats(), nil
 }
 
-func (s *fakeStore) LivePushSubscriptionLinks(context.Context, []domain.PushSubscriptionLink, time.Time) (map[int64]bool, domain.OperationStats, error) {
+func (s *fakeStore) ProtectedPushSubscriptionLinks(context.Context, []domain.PushSubscriptionLink, time.Time) (map[int64]bool, domain.OperationStats, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.pushLivenessErr != nil {
@@ -1107,8 +1107,14 @@ func (p *fakePush) DeleteUnboundByAccount(_ context.Context, accountID, tenantID
 	p.record(fmt.Sprintf("unbound:%s:%d:%d", portal, accountID, tenantID))
 	return nil
 }
-func (p *fakePush) ListLinks(context.Context) ([]identityaccess.PushSubscriptionLink, error) {
-	return p.links, nil
+func (p *fakePush) ListLinks(_ context.Context, afterID int64, limit int) ([]identityaccess.PushSubscriptionLink, error) {
+	var page []identityaccess.PushSubscriptionLink
+	for _, link := range p.links {
+		if link.SubscriptionID > afterID && len(page) < limit {
+			page = append(page, link)
+		}
+	}
+	return page, nil
 }
 func (p *fakePush) DeleteLinks(_ context.Context, links []identityaccess.PushSubscriptionLink) error {
 	for _, link := range links {

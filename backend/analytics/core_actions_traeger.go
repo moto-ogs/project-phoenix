@@ -128,6 +128,7 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPut, "/traeger/billing-runs/{id}/carried-corrections/{positionID}"}:    notCaptured,
 	{http.MethodDelete, "/traeger/billing-runs/{id}/carried-corrections/{positionID}"}: notCaptured,
 	{http.MethodPut, "/traeger/number-ranges/{service}"}:                               notCaptured,
+	{http.MethodPut, "/traeger/number-ranges/{service}/start"}:                         notCaptured,
 	{http.MethodPut, "/traeger/billing-document-kinds/{service}"}:                      notCaptured,
 	// The confirmation letters of a released run (#4669, ADR 0121) belong
 	// to the Träger as well.
@@ -222,6 +223,10 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	// The children of a family (#5918): the Abrechnung confirms or removes.
 	{http.MethodPut, "/traeger/family-children/"}:                notCaptured,
 	{http.MethodDelete, "/traeger/family-children/{contractId}"}: notCaptured,
+	// The numbers of the families from a file (#7356) belong to the Träger;
+	// the preview stores nothing.
+	{http.MethodPost, "/traeger/family-children/imports"}:         notCaptured,
+	{http.MethodPost, "/traeger/family-children/imports/preview"}: notCaptured,
 	// The care contracts and their templates (#4678, ADR 0153) belong to
 	// the Träger, not to a school.
 	{http.MethodPost, "/traeger/contracts/"}:       notCaptured,

@@ -96,6 +96,9 @@ const (
 	CodeHolidayRegistrationFormChanged = "enrollment.holiday_registration_form_changed"
 
 	CodeConsentRequired = "enrollment.consent_required"
+	// CodeHealthConsentRequired refuses health answers without the health
+	// consent (#2787).
+	CodeHealthConsentRequired = "enrollment.health_consent_required"
 	// CodeRenewalTermsRequired refuses a renewal confirmation without the
 	// tick of a required block; CodeRenewalTermsChanged one for a form
 	// version that is no longer in force (#6456).

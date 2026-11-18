@@ -176,15 +176,15 @@ describe("MealBillingReleasePage", () => {
     });
     expect(
       screen.getByText(
-        "Eine Freigabe lässt sich nicht zurücknehmen. So korrigieren Sie einen freigegebenen Monat:",
+        "Eine Freigabe lässt sich nicht zurücknehmen. So korrigierst du einen freigegebenen Monat:",
       ),
     ).toBeInTheDocument();
     const items = Array.from(steps.querySelectorAll("li")).map(
       (item) => item.textContent,
     );
     expect(items).toEqual([
-      "Tragen Sie die fehlende oder falsche Anwesenheit nach.",
-      "Oben steht dann „Seit der Freigabe hat sich die Anwesenheit geändert“. Wählen Sie „Erneut freigeben“ und nennen Sie den Grund.",
+      "Trage die fehlende oder falsche Anwesenheit nach.",
+      "Oben steht dann „Seit der Freigabe hat sich die Anwesenheit geändert“. Wähle „Erneut freigeben“ und nenne den Grund.",
       "Hat der Träger den Monat schon abgerechnet, sieht er die neue Zahl. Er storniert die Rechnung und stellt sie neu aus.",
     ]);
     expect(
@@ -217,7 +217,7 @@ describe("MealBillingReleasePage", () => {
     renderPage();
     expect(
       await screen.findByText(
-        "Der Monat läuft noch. Sie können ihn ab dem 1. Mai 2026 freigeben.",
+        "Der Monat läuft noch. Du kannst ihn ab dem 1. Mai 2026 freigeben.",
       ),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Albers, Mia").length).toBeGreaterThan(0);
@@ -346,7 +346,7 @@ describe("MealBillingReleasePage", () => {
     renderPage();
     expect(
       await screen.findByText(
-        "Seit der Freigabe hat sich die Anwesenheit geändert: jetzt 6 Essen statt 5. Prüfen Sie die Liste und geben Sie den Monat erneut frei.",
+        "Seit der Freigabe hat sich die Anwesenheit geändert: jetzt 6 Essen statt 5. Prüfe die Liste und gib den Monat erneut frei.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Erneut freigeben" }));

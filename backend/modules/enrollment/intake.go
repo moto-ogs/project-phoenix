@@ -192,6 +192,8 @@ type LegalTexts struct {
 // LegalBlock is one legal row of the public enrollment form. Required
 // checkbox blocks must be accepted; notice blocks only inform.
 type LegalBlock struct {
+	// PDFURL holds the PDF linked from the generated terms text.
+	PDFURL      string           `json:"-"`
 	Attachments []FormAttachment `json:"attachments,omitempty"`
 	Key         string           `json:"key"`
 	Kind        string           `json:"kind"`
@@ -204,6 +206,9 @@ type LegalBlock struct {
 	// Translations holds only translations that still match the German
 	// text, without their source (#3377).
 	Translations Translations `json:"translations,omitempty"`
+	// GuardianAgreement: ticking the consent also confirms
+	// GuardianAgreementLabel.
+	GuardianAgreement bool `json:"guardian_agreement,omitempty"`
 }
 
 // EnrolleeAudienceAccess carries a caller's per-audience form-load

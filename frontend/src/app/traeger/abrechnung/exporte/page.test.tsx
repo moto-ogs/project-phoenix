@@ -47,6 +47,18 @@ const RUN: ExportRun = {
   exports: 0,
 };
 
+/** Opens the one menu of a run (#7407) and returns its entries. */
+async function openRunMenu(label = RUN.label) {
+  fireEvent.click(
+    (
+      await screen.findAllByRole("button", {
+        name: `Dateien von ${label} herunterladen oder übergeben`,
+      })
+    )[0]!,
+  );
+  return within(await screen.findByRole("menu"));
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
   api.fetchExportRuns.mockResolvedValue({
@@ -80,11 +92,9 @@ it("downloads the Sollstellung of a run and reads the protocol again", async () 
   expect(
     (await screen.findAllByText("Noch nicht exportiert")).length,
   ).toBeGreaterThan(0);
-  fireEvent.click(
-    screen.getAllByRole("button", {
-      name: "Sollstellung von Monatsbeiträge Oktober 2026 herunterladen",
-    })[0]!,
-  );
+  const menu = await openRunMenu();
+  expect(menu.getByText("Herunterladen")).toBeInTheDocument();
+  fireEvent.click(menu.getByRole("menuitem", { name: /^Sollstellung/ }));
   await waitFor(() =>
     expect(api.downloadSollstellung).toHaveBeenCalledWith("care-runs", "7"),
   );
@@ -117,37 +127,31 @@ it("opens older runs page by page and keeps them after a download", async () => 
     </TraegerResourceTestProvider>,
   );
   expect(
-    await screen.findByText("Sie sehen 1 von 2 Läufen."),
+    await screen.findByRole("button", { name: "Ältere anzeigen" }),
   ).toBeInTheDocument();
-  expect(screen.getByText("Läufe").parentElement).toHaveTextContent("2Läufe");
+  expect(screen.getByText("Läufe").parentElement).toHaveTextContent("2 Läufe");
   expect(
     screen.getByText("noch nicht exportiert").parentElement,
-  ).toHaveTextContent("2noch nicht exportiert");
-  expect(
-    screen.queryAllByRole("button", {
-      name: "Sollstellung von Monatsbeiträge März 2026 herunterladen",
-    }),
-  ).toHaveLength(0);
+  ).toHaveTextContent("2 noch nicht exportiert");
+  const olderMenu = {
+    name: "Dateien von Monatsbeiträge März 2026 herunterladen oder übergeben",
+  };
+  expect(screen.queryAllByRole("button", olderMenu)).toHaveLength(0);
 
   fireEvent.click(screen.getByRole("button", { name: "Ältere anzeigen" }));
-  const olderDownload = await screen.findAllByRole("button", {
-    name: "Sollstellung von Monatsbeiträge März 2026 herunterladen",
-  });
+  expect(await screen.findAllByRole("button", olderMenu)).not.toHaveLength(0);
   expect(api.fetchExportRuns).toHaveBeenLastCalledWith(1);
   expect(
-    screen.queryByText("Sie sehen 1 von 2 Läufen."),
+    screen.queryByRole("button", { name: "Ältere anzeigen" }),
   ).not.toBeInTheDocument();
 
-  fireEvent.click(olderDownload[0]!);
+  const menu = await openRunMenu("Monatsbeiträge März 2026");
+  fireEvent.click(menu.getByRole("menuitem", { name: /^Sollstellung/ }));
   await waitFor(() =>
     expect(api.downloadSollstellung).toHaveBeenCalledWith("care-runs", "3"),
   );
   await waitFor(() => expect(api.fetchExportRuns).toHaveBeenCalledTimes(4));
-  expect(
-    await screen.findAllByRole("button", {
-      name: "Sollstellung von Monatsbeiträge März 2026 herunterladen",
-    }),
-  ).not.toHaveLength(0);
+  expect(await screen.findAllByRole("button", olderMenu)).not.toHaveLength(0);
 });
 
 const PROTOCOL_ENTRY = {
@@ -194,10 +198,9 @@ it("offers older files of the protocol", async () => {
       <TraegerFinanceExportsPage />
     </TraegerResourceTestProvider>,
   );
-  expect(
-    await screen.findByText("Sie sehen 1 von 2 Dateien."),
-  ).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Ältere anzeigen" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Ältere anzeigen" }),
+  );
   expect(
     (await screen.findAllByText("sollstellung-8.csv")).length,
   ).toBeGreaterThan(0);
@@ -205,7 +208,7 @@ it("offers older files of the protocol", async () => {
 });
 
 // A DataTable draws its own frame; in a flush card it met the card frame
-// (#7303). The card body keeps its inset, the footer stays in the card.
+// (#7303). The card keeps its inset; „Ältere anzeigen“ stays in the card.
 it("keeps the card inset around the run table and the protocol table", async () => {
   api.fetchExportRuns.mockResolvedValue({
     items: [RUN],
@@ -220,17 +223,16 @@ it("keeps the card inset around the run table and the protocol table", async () 
   });
   renderPage();
   expect(
-    await screen.findByText("Sie sehen 1 von 2 Dateien."),
-  ).toBeInTheDocument();
+    await screen.findAllByRole("button", { name: "Ältere anzeigen" }),
+  ).toHaveLength(2);
 
   for (const title of ["Dateien je Lauf", "Exportprotokoll"]) {
     const card = screen
       .getByRole("heading", { name: title })
       .closest("section")!;
-    const body = [...card.children].find((child) =>
-      child.querySelector("table"),
-    );
-    expect(body).toHaveClass("px-5");
+    // Without a footer zone the card's own padding is the inset.
+    expect(card).toHaveClass("p-5");
+    expect(card.querySelector("table")?.closest("section")).toBe(card);
     expect(
       within(card).getByRole("button", { name: "Ältere anzeigen" }),
     ).toBeInTheDocument();
@@ -245,9 +247,7 @@ function renderPage() {
   );
 }
 
-const DATEV_BUTTON = {
-  name: "DATEV-Datei von Monatsbeiträge Oktober 2026 herunterladen",
-};
+const DATEV_ENTRY = { name: /^DATEV-Datei/ };
 
 // The DATEV file waits for the values of the tax office (#4694): the page
 // names each missing or wrong value, links to the settings and keeps the
@@ -272,16 +272,13 @@ it("names the missing DATEV values and keeps the DATEV download off", async () =
   expect(
     screen.getByRole("link", { name: "DATEV-Werte eintragen" }),
   ).toHaveAttribute("href", "/traeger/einstellungen?bereich=datev");
-  const button = screen.getAllByRole("button", DATEV_BUTTON)[0]!;
-  expect(button).toHaveAttribute("aria-disabled", "true");
-  expect(button.getAttribute("aria-describedby")?.split(" ")[0]).toBe(
-    "datev-readiness",
+  expect(screen.getAllByText("Wartet auf DATEV-Werte").length).toBeGreaterThan(
+    0,
   );
-  expect(
-    screen.getAllByRole("button", {
-      name: "Sollstellung von Monatsbeiträge Oktober 2026 herunterladen",
-    })[0],
-  ).toBeEnabled();
+  // A DATEV file that is not possible is no entry of the menu (#7407).
+  const menu = await openRunMenu();
+  expect(menu.getByRole("menuitem", { name: /^Sollstellung/ })).toBeEnabled();
+  expect(menu.queryByRole("menuitem", DATEV_ENTRY)).toBeNull();
 });
 
 it("downloads the DATEV file of a run once the values are complete", async () => {
@@ -290,9 +287,9 @@ it("downloads the DATEV file of a run once the values are complete", async () =>
     filename: "EXTF_Buchungsstapel_110.csv",
   });
   renderPage();
-  const button = (await screen.findAllByRole("button", DATEV_BUTTON))[0]!;
+  const menu = await openRunMenu();
   expect(screen.queryByText("Die DATEV-Datei fehlt noch")).toBeNull();
-  fireEvent.click(button);
+  fireEvent.click(menu.getByRole("menuitem", DATEV_ENTRY));
   await waitFor(() =>
     expect(api.downloadDatevBatch).toHaveBeenCalledWith("care-runs", "7", {}),
   );
@@ -350,13 +347,8 @@ it.each(["care", "holiday"] as const)(
       }),
     );
     renderPage();
-    fireEvent.click(
-      (
-        await screen.findAllByRole("button", {
-          name: `DATEV-Datei von ${run.label} herunterladen`,
-        })
-      )[0]!,
-    );
+    const menu = await openRunMenu(run.label);
+    fireEvent.click(menu.getByRole("menuitem", DATEV_ENTRY));
     expect(
       await screen.findByText(`Keine DATEV-Datei für ${run.label}`),
     ).toBeInTheDocument();
@@ -371,8 +363,8 @@ it.each(["care", "holiday"] as const)(
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
     const correction =
       runKind === "holiday"
-        ? "Bei Rechnungen ohne Gutschrift: Stornieren Sie die Rechnung. Korrigieren Sie die Debitorennummer in der Ferienanmeldung. Stellen Sie dann die Rechnung neu aus. Danach ist der Lauf wieder frei. Hat die Rechnung schon eine Gutschrift, ist kein Storno möglich. Laden Sie dann die Sollstellung für Ihr Steuerbüro herunter. Es kann die Buchungen daraus manuell in DATEV erfassen. Der DATEV-Download dieses Laufs bleibt gesperrt."
-        : "Tragen Sie bei der Familie die richtige Debitorennummer ein. Stornieren Sie dann die Rechnung und stellen Sie sie neu aus. Danach ist der Lauf wieder frei.";
+        ? "Bei Rechnungen ohne Gutschrift: Storniere die Rechnung. Korrigiere die Debitorennummer in der Ferienanmeldung. Stelle dann die Rechnung neu aus. Danach ist der Lauf wieder frei. Hat die Rechnung schon eine Gutschrift, ist kein Storno möglich. Lade dann die Sollstellung für dein Steuerbüro herunter. Es kann die Buchungen daraus manuell in DATEV erfassen. Der DATEV-Download dieses Laufs bleibt gesperrt."
+        : "Trage bei der Familie die richtige Debitorennummer ein. Storniere dann die Rechnung und stelle sie neu aus. Danach ist der Lauf wieder frei.";
     expect(screen.getByText(/So geht es weiter:/)).toHaveTextContent(
       correction,
     );
@@ -426,15 +418,13 @@ it("counts the new DATEV bookings of a run", async () => {
   expect(screen.getAllByText("Noch keine DATEV-Datei").length).toBeGreaterThan(
     0,
   );
-  const button = screen.getAllByRole("button", {
-    name: "3 neue Buchungen von Monatsbeiträge Oktober 2026 als DATEV-Datei herunterladen",
-  })[0]!;
-  expect(button).toBeEnabled();
   expect(api.fetchDatevRunStates).toHaveBeenCalledWith([RUN]);
+  const menu = await openRunMenu();
+  const entry = menu.getByRole("menuitem", DATEV_ENTRY);
+  expect(entry).toBeEnabled();
+  expect(entry).toHaveTextContent("Lädt 3 neue Buchungen als DATEV-Datei");
   expect(
-    screen.queryByRole("button", {
-      name: "Weitere DATEV-Aktionen für Monatsbeiträge Oktober 2026",
-    }),
+    menu.queryByRole("menuitem", { name: /Alle Buchungen erneut/ }),
   ).toBeNull();
 });
 
@@ -459,21 +449,14 @@ it("repeats every DATEV booking only after the warning", async () => {
   expect(
     (await screen.findAllByText("Alles exportiert")).length,
   ).toBeGreaterThan(0);
-  const button = screen.getAllByRole("button", DATEV_BUTTON)[0]!;
-  expect(button).toHaveAttribute("aria-disabled", "true");
-  const reason = button.getAttribute("aria-describedby")?.split(" ")[0];
-  expect(reason).toBe("datev-state-care-runs-7");
-  expect(document.getElementById(reason!)).toHaveTextContent(
-    "Zuletzt Nr. 12 am 09.11.2026",
-  );
+  expect(
+    screen.getAllByText("Zuletzt Nr. 12 am 09.11.2026").length,
+  ).toBeGreaterThan(0);
 
+  const menu = await openRunMenu();
+  expect(menu.queryByRole("menuitem", DATEV_ENTRY)).toBeNull();
   fireEvent.click(
-    screen.getAllByRole("button", {
-      name: "Weitere DATEV-Aktionen für Monatsbeiträge Oktober 2026",
-    })[0]!,
-  );
-  fireEvent.click(
-    await screen.findByRole("menuitem", { name: /Alle Buchungen erneut/ }),
+    menu.getByRole("menuitem", { name: /Alle Buchungen erneut/ }),
   );
   expect(
     await screen.findByText("Alle Buchungen erneut herunterladen?"),
@@ -520,15 +503,9 @@ it("closes the repeat dialog when DATEV refuses a booking", async () => {
     }),
   );
   renderPage();
+  const menu = await openRunMenu();
   fireEvent.click(
-    (
-      await screen.findAllByRole("button", {
-        name: "Weitere DATEV-Aktionen für Monatsbeiträge Oktober 2026",
-      })
-    )[0]!,
-  );
-  fireEvent.click(
-    await screen.findByRole("menuitem", { name: /Alle Buchungen erneut/ }),
+    menu.getByRole("menuitem", { name: /Alle Buchungen erneut/ }),
   );
   expect(await screen.findByRole("dialog")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Erneut herunterladen" }));
@@ -554,13 +531,9 @@ it("says when a DATEV download found no new booking", async () => {
     }),
   );
   renderPage();
-  fireEvent.click(
-    (
-      await screen.findAllByRole("button", {
-        name: "1 neue Buchung von Monatsbeiträge Oktober 2026 als DATEV-Datei herunterladen",
-      })
-    )[0]!,
-  );
+  await screen.findAllByText("1 neue Buchung");
+  const menu = await openRunMenu();
+  fireEvent.click(menu.getByRole("menuitem", DATEV_ENTRY));
   expect(
     await screen.findByText(
       "Keine neuen Buchungen für Monatsbeiträge Oktober 2026",

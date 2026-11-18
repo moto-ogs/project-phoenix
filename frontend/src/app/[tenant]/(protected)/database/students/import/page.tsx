@@ -12,7 +12,7 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { Alert } from "~/components/ui/alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { UploadSection } from "~/components/import/upload-section";
 import {
   DISCARD_UPLOAD_HINT,
@@ -462,7 +462,7 @@ export default function StudentImportPage() {
       void handleFileUpload(file);
     } else {
       importErrors.invalid(
-        "Diese Datei passt nicht. Bitte laden Sie eine CSV- oder Excel-Datei hoch.",
+        "Diese Datei passt nicht. Bitte lade eine CSV- oder Excel-Datei hoch.",
       );
     }
   };
@@ -498,19 +498,26 @@ export default function StudentImportPage() {
     quotaNotice?.type === "error" ? quotaNotice.message : null;
 
   // Statuszeile des Seitenkopfs: der Stand des Imports, nicht ein Erklärsatz.
-  const statusLine = uploadedFile
-    ? [
-        uploadedFile.name,
+  const statusLine = uploadedFile ? (
+    <TenantPageStats
+      items={[
+        { label: uploadedFile.name },
         importComplete
-          ? "Import abgeschlossen"
+          ? { label: "Import abgeschlossen" }
           : importInterrupted
-            ? `${savedCount} gespeichert`
-            : `${stats.total} ${stats.total === 1 ? "Zeile" : "Zeilen"}`,
-        !importComplete && stats.errors > 0 ? `${stats.errors} Fehler` : null,
-      ]
-        .filter(Boolean)
-        .join(" · ")
-    : "Noch keine Datei gewählt";
+            ? { value: savedCount, label: "gespeichert" }
+            : {
+                value: stats.total,
+                label: stats.total === 1 ? "Zeile" : "Zeilen",
+              },
+        ...(!importComplete && stats.errors > 0
+          ? [{ value: stats.errors, label: "Fehler" }]
+          : []),
+      ]}
+    />
+  ) : (
+    "Noch keine Datei gewählt"
+  );
 
   if (status === "loading") {
     return (
@@ -539,8 +546,8 @@ export default function StudentImportPage() {
       {/* Info Section */}
       <SectionCard title="Import-Anleitung" icon={Info}>
         <ul className="list-inside list-disc space-y-1 text-sm text-gray-600">
-          <li>Laden Sie die Vorlage herunter (siehe unten)</li>
-          <li>Füllen Sie die Datei mit Ihren Kinderdaten aus</li>
+          <li>Lade die Vorlage herunter (siehe unten)</li>
+          <li>Fülle die Datei mit deinen Kinderdaten aus</li>
           <li>
             Für Geburtstage sind diese Formate erlaubt: JJJJ-MM-TT, TT.MM.JJJJ
             oder TT.MM.JJ
@@ -549,9 +556,9 @@ export default function StudentImportPage() {
             Die Vorlage enthält auch Adresse, RFID-Karte und bis zu vier
             Erziehungsberechtigte. Das Blatt „Hinweise“ erklärt jede Spalte
           </li>
-          <li>Speichern Sie die ausgefüllte Datei</li>
-          <li>Laden Sie die Datei hier hoch und überprüfen Sie die Vorschau</li>
-          <li>Bestätigen Sie den Import</li>
+          <li>Speichere die ausgefüllte Datei</li>
+          <li>Lade die Datei hier hoch und überprüfe die Vorschau</li>
+          <li>Bestätige den Import</li>
         </ul>
       </SectionCard>
 
@@ -691,7 +698,7 @@ export default function StudentImportPage() {
                   : stats.errors > 0
                     ? IMPORT_BLOCKED_BY_ERRORS
                     : quotaNotice?.type === "error"
-                      ? "Nehmen Sie zuerst Kinder aus der Datei, bis die freien Plätze reichen."
+                      ? "Nimm zuerst Kinder aus der Datei, bis die freien Plätze reichen."
                       : IMPORT_BLOCKED_NOTHING_TO_IMPORT
               }
               tooltip={

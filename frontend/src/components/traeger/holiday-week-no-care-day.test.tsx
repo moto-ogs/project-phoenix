@@ -79,7 +79,7 @@ describe("holiday week editor with a day without care", () => {
   it("points a whole week to single days", () => {
     renderEditor(week("week"), [epiphany]);
     expect(
-      screen.getByText(/Wählen Sie bei „Buchung“ „Einzelne Tage“\./),
+      screen.getByText(/Wähle bei „Buchung“ „Einzelne Tage“\./),
     ).toBeInTheDocument();
   });
 });

@@ -35,7 +35,7 @@ export function ReleaseOpenPoints({
       announce="off"
       className="mt-3"
       title="Noch offen"
-      message="Sie können das vorher klären oder trotzdem freigeben."
+      message="Du kannst das vorher klären oder trotzdem freigeben."
       details={
         <ul className="mt-2 list-disc space-y-2 pl-4">
           {items.map((point) => (

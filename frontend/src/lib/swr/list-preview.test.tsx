@@ -55,7 +55,7 @@ const cases = [
         },
       ],
     },
-    expected: { id: "7", name: "Mila Muster", context: "2a · Eulen" },
+    expected: { id: "7", name: "Mila Muster", context: "2a, Eulen" },
   },
   {
     label: "OGS group",

@@ -21,6 +21,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { payrollConcept } from "~/lib/concepts/payroll";
 import type { StaffContractKind } from "~/lib/traeger-staff-api";
@@ -72,7 +73,7 @@ function blockersOf(
   if (report.noWageType) {
     blockers.push({
       key: "no-wage-type",
-      text: "Es gibt noch keine Lohnart. Tragen Sie die Nummern aus Ihrem DATEV ein.",
+      text: "Es gibt noch keine Lohnart. Trage die Nummern aus deinem DATEV ein.",
       action: openWageTypes(
         "Lohnarten öffnen, um die erste Lohnart einzutragen",
       ),
@@ -97,7 +98,7 @@ function blockersOf(
           variant="surface"
           size="compact"
           aria-label={`Personalakte von ${personName(person)} öffnen`}
-          tooltip="Öffnet die Personalakte, dort tragen Sie die Personalnummer ein."
+          tooltip="Öffnet die Personalakte, dort trägst du die Personalnummer ein."
         >
           Akte öffnen
         </ButtonLink>
@@ -133,7 +134,7 @@ function BlockerList({ blockers }: Readonly<{ blockers: readonly Blocker[] }>) {
         {shown.map((blocker) => (
           <ResponsiveActionRow key={blocker.key}>
             <p className="min-w-0 text-sm text-gray-800">{blocker.text}</p>
-            <div className="flex shrink-0 gap-2">{blocker.action}</div>
+            <ResponsiveRowActions>{blocker.action}</ResponsiveRowActions>
           </ResponsiveActionRow>
         ))}
       </ResponsiveActionList>

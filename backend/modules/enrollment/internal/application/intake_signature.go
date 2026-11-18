@@ -117,8 +117,8 @@ func newSignedEnrollmentDocument(
 		ConsentFlags:        formMap(request.ConsentFlags), CustomData: formMap(request.CustomData),
 		Children: make([]signedEnrollmentChild, 0, len(children)),
 	}
-	if n := len(request.LegalBlocksSnapshot); n > 0 {
-		doc.LegalSnapshot = request.LegalBlocksSnapshot[n-1]
+	if snapshot, ok := enrollmentNative.LastSubmissionLegalSnapshot(request.LegalBlocksSnapshot); ok {
+		doc.LegalSnapshot = snapshot
 	}
 	for _, g := range guardians {
 		doc.AdditionalGuardians = append(doc.AdditionalGuardians, signedEnrollmentGuardian{FirstName: g.FirstName, LastName: g.LastName, Email: g.Email, Phone: g.Phone})

@@ -38,7 +38,7 @@ export function EditActions({
   disabled?: boolean;
   /**
    * Warum Speichern gerade gesperrt ist, solange `disabled` gilt: was fehlt
-   * oder zuerst geschehen muss („Ändern Sie zuerst ein Feld.“). Ohne Standard:
+   * oder zuerst geschehen muss („Ändere zuerst ein Feld.“). Ohne Standard:
    * Gesperrt ist es mal wegen fehlender Pflichtfelder, mal ohne Änderung.
    */
   disabledReason?: string;

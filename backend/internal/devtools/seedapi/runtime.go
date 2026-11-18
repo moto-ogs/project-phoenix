@@ -1,6 +1,10 @@
 package api
 
-import "context"
+import (
+	"context"
+
+	"github.com/moto-ogs/project-phoenix/demoprofile"
+)
 
 type Runtime struct {
 	Adapter            Adapter
@@ -21,8 +25,12 @@ type Runtime struct {
 	// full parent rights (seedFamilyAppAccountsStep). Later steps answer
 	// polls and declarations and write messages as them; empty until that
 	// step ran, which DeferHistory moves behind the parent steps.
-	FamilyAccounts      []ParentCredentials
-	Enrollment          SeedEnrollmentState
+	FamilyAccounts []ParentCredentials
+	Enrollment     SeedEnrollmentState
+	// demoPresenceDays supply the feedback step with the visits just seeded.
+	demoPresenceDays    []PastPresenceDay
+	demoNeighbourIDs    []int64
+	neighbourAttendance []demoprofile.NeighbourAttendance
 	DeferredSeedPending bool
 	Values              map[string]any
 	// TraegerLock is SeedOptions.TraegerLock.

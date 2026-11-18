@@ -55,7 +55,7 @@
     "photoViaCareDescription": "Aby wycofać zgodę na zdjęcia, skontaktuj się z {careTerm}.",
     "items": {
       "agb": "Ogólne warunki umowy (regulamin)",
-      "data_processing": "Zapoznano się z informacją o ochronie danych",
+      "data_processing": "Przekazano informację o ochronie danych",
       "email_contact": "Zgoda na kontakt e-mailem",
       "photo": "Zgoda na zdjęcia"
     },

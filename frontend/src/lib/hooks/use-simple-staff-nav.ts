@@ -13,7 +13,7 @@ import {
 const SIMPLE_STAFF_NAV_SHOW_ALL_LABEL = "Alle Seiten anzeigen";
 const SIMPLE_STAFF_NAV_SHOW_SIMPLE_LABEL = "Weniger Seiten anzeigen";
 const SIMPLE_STAFF_NAV_SHOW_ALL_TOOLTIP =
-  "Zeigt im Menü alle Seiten, die Sie öffnen dürfen.";
+  "Zeigt im Menü alle Seiten, die du öffnen darfst.";
 const SIMPLE_STAFF_NAV_SHOW_SIMPLE_TOOLTIP =
   "Zeigt im Menü nur die Seiten für den Betreuungsalltag.";
 

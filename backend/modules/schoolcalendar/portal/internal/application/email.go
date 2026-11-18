@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // GuardianChildAccessChecker answers, at the moment a queued mail is sent, which
@@ -46,6 +47,8 @@ func NewAppointmentRenderer(cfg EmailConfig) func(context.Context, *ports.EmailO
 		schoolName, _ := row.Payload[apptPayloadSchoolName].(string)
 		first, _ := row.Payload[apptPayloadFirstName].(string)
 		last, _ := row.Payload[apptPayloadLastName].(string)
+		// A mail queued before #7362 carries no form of address.
+		salutation, _ := row.Payload[apptPayloadSalutation].(string)
 		portalURL, _ := row.Payload[apptPayloadPortalURL].(string)
 		logoURL, _ := row.Payload[apptPayloadLogoURL].(string)
 		motoLogoURL, _ := row.Payload[apptPayloadMotoLogoURL].(string)
@@ -69,6 +72,7 @@ func NewAppointmentRenderer(cfg EmailConfig) func(context.Context, *ports.EmailO
 				"SchoolName":        schoolName,
 				"GuardianFirstName": first,
 				"GuardianLastName":  last,
+				"Greeting":          textnorm.GermanGreeting(salutation, first, last),
 				"PortalURL":         portalURL,
 				"LogoURL":           logoURL,
 				"MotoLogoURL":       motoLogoURL,
@@ -169,7 +173,7 @@ func payloadInt64Slice(raw any) []int64 {
 // sentence for each appointment e-mail kind.
 //
 // The intro is a COMPLETE sentence that already names the sender, and it
-// continues the "Guten Tag Frau Schneider," greeting — hence lower case. The
+// continues the "Guten Tag Erika Mustermann," greeting — hence lower case. The
 // template used to glue a "die {Schule}: " prefix in front of a sentence that
 // did not expect one, which produced "die OGS Musterschule: ein Termin wurde
 // abgesagt." Naming the school inside the sentence is the only way the two
@@ -191,13 +195,13 @@ func appointmentCopy(kind, schoolName string) (kicker, subjectVerb, intro string
 		return "Termin abgesagt", "Termin abgesagt", "ein Termin wurde abgesagt."
 	case portal.EmailKindAppointmentReminder:
 		if known {
-			return "Terminerinnerung", "Erinnerung", sender + " erinnert Sie an einen bevorstehenden Termin."
+			return "Terminerinnerung", "Erinnerung", sender + " erinnert dich an einen bevorstehenden Termin."
 		}
-		return "Terminerinnerung", "Erinnerung", "wir erinnern Sie an einen bevorstehenden Termin."
+		return "Terminerinnerung", "Erinnerung", "wir erinnern dich an einen bevorstehenden Termin."
 	default:
 		if known {
-			return "Neuer Termin", "Neuer Termin", sender + " hat einen neuen Termin für Sie eingetragen."
+			return "Neuer Termin", "Neuer Termin", sender + " hat einen neuen Termin für dich eingetragen."
 		}
-		return "Neuer Termin", "Neuer Termin", "es gibt einen neuen Termin für Sie."
+		return "Neuer Termin", "Neuer Termin", "es gibt einen neuen Termin für dich."
 	}
 }

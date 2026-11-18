@@ -71,8 +71,8 @@ export function DecisionCorrectionDialog({
     // Eine Korrektur braucht immer einen Grund: sie widerspricht einer
     // Entscheidung, die jemand anderes getroffen hat.
     if (trimmed === "") {
-      errors.invalid("Bitte tragen Sie ein, warum Sie korrigieren.", {
-        reason: "Bitte tragen Sie einen Grund ein.",
+      errors.invalid("Bitte trage ein, warum du korrigierst.", {
+        reason: "Bitte trage einen Grund ein.",
       });
       return;
     }
@@ -146,7 +146,7 @@ export function DecisionCorrectionDialog({
           />
         </div>
         <Textarea
-          label={`Warum korrigieren Sie?${reasonRequired ? "" : " Pflicht bei einer Korrektur."}`}
+          label={`Warum korrigierst du?${reasonRequired ? "" : " Pflicht bei einer Korrektur."}`}
           id="correction-reason"
           name="reason"
           value={reason}

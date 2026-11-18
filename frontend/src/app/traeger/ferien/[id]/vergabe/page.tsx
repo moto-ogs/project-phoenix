@@ -26,7 +26,6 @@ import {
 import { HolidayAllocationWeekCard } from "~/components/traeger/holiday-allocation-week";
 import {
   HOLIDAY_CRITERIA_HINT,
-  HolidayHeadFacts,
   holidayPeriodTabs,
 } from "~/components/traeger/holiday-period-head";
 import { schoolNames } from "~/components/traeger/holiday-registration-format";
@@ -42,7 +41,7 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { focusStepHeading } from "~/components/ui/use-step-focus";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
@@ -213,28 +212,32 @@ export default function TraegerHolidayAllocationPage() {
       backLabel="Zurück zu den Ferien"
       info={
         <p>
-          moto sortiert die offenen Anmeldungen jeder Woche nach Ihren
+          moto sortiert die offenen Anmeldungen jeder Woche nach deinen
           Kriterien. Bei gleichen Kriterien zählt der Eingang. Das ist nur ein
-          Vorschlag. Ihr Büro entscheidet über jeden Platz. Weichen Sie vom
-          Vorschlag ab, schreiben Sie kurz, warum. Die Eltern bekommen nach der
+          Vorschlag. Dein Büro entscheidet über jeden Platz. Weiche vom
+          Vorschlag ab, schreibe kurz, warum. Die Eltern bekommen nach der
           Entscheidung eine E-Mail. Danach rücken Kinder von der Warteliste
           automatisch nach, wenn ein Platz frei wird.
         </p>
       }
       stats={
         board ? (
-          <HolidayHeadFacts>
-            <span>
-              {pendingTotal === 1
-                ? "1 Anmeldung offen"
-                : `${pendingTotal} Anmeldungen offen`}
-            </span>
-            <span>
-              {board.decisions.length === 1
-                ? "1 Entscheidung"
-                : `${board.decisions.length} Entscheidungen`}
-            </span>
-          </HolidayHeadFacts>
+          <TenantPageStats
+            items={[
+              {
+                value: pendingTotal,
+                label:
+                  pendingTotal === 1 ? "Anmeldung offen" : "Anmeldungen offen",
+              },
+              {
+                value: board.decisions.length,
+                label:
+                  board.decisions.length === 1
+                    ? "Entscheidung"
+                    : "Entscheidungen",
+              },
+            ]}
+          />
         ) : null
       }
       statsLoading={byCriteria && !board && !loadError}
@@ -293,7 +296,7 @@ export default function TraegerHolidayAllocationPage() {
         <div ref={boardRef} className="flex flex-col gap-6">
           <SectionCard
             title="So sortiert moto vor"
-            description="Zuerst zählt das Kriterium mit der höchsten Priorität, dann das nächste. Bei Gleichstand zählt der Eingang. Sie entscheiden."
+            description="Zuerst zählt das Kriterium mit der höchsten Priorität, dann das nächste. Bei Gleichstand zählt der Eingang. Du entscheidest."
             action={
               <ButtonLink
                 href={traegerPath("/traeger/ferien/kriterien")}
@@ -339,7 +342,7 @@ export default function TraegerHolidayAllocationPage() {
                   icon={<CheckCircle2 aria-hidden="true" />}
                   titleAs="h2"
                   title="Alles entschieden"
-                  description="Es gibt keine offene Anmeldung. Neue Anmeldungen erscheinen hier, vorsortiert nach Ihren Kriterien."
+                  description="Es gibt keine offene Anmeldung. Neue Anmeldungen erscheinen hier, vorsortiert nach deinen Kriterien."
                   variant="compact"
                 />
               </SectionCard>

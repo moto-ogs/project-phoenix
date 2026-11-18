@@ -16,6 +16,7 @@ import (
 	communicationModule "github.com/moto-ogs/project-phoenix/modules/communication"
 	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
 	importModels "github.com/moto-ogs/project-phoenix/modules/dataimport"
+	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	deliveryRuntime "github.com/moto-ogs/project-phoenix/modules/delivery/runtime"
 	devicefleetCompose "github.com/moto-ogs/project-phoenix/modules/devicefleet/compose"
 	tagScanOperatorAPI "github.com/moto-ogs/project-phoenix/modules/devicefleet/inbound/operator"
@@ -119,6 +120,7 @@ func newOperatorRouter(
 	provisioning organizationtenancy.OperatorProvisioning, caregivers peoplePorts.CaregiverCapabilityService,
 	lifecycle carePlanModule.CareLifecycle, communication communicationModule.Capability,
 	students importModels.RowImporter[importModels.StudentImportRow], traegerSettings settingsOperatorAPI.TraegerOperations,
+	demoPlans studentpresence.DemoCareDays,
 	now func() time.Time,
 ) (chi.Router, error) {
 	tagScanReview := tagScanOperatorAPI.NewResource(tagScanOperatorAPI.Config{
@@ -176,7 +178,7 @@ func newOperatorRouter(
 		limiters,
 		mergeRoutes,
 		newSampleChildrenRoute(provisioning, students),
-		newDemoPresenceHistoryRoute(db, viper.GetString("app_env")),
+		newDemoPresenceHistoryRoute(db, viper.GetString("app_env"), demoPlans),
 		now,
 	), nil
 }
@@ -185,7 +187,7 @@ func newOperatorRouter(
 // /parent/auth/login and the protected /parent/* routes; now is the root
 // clock the parents' uploads are stamped with (ADR 0265).
 func newParentResource(
-	logger *slog.Logger, identity identityaccess.Owner, parent *parentportal.Portal, calendarApp calendarCompose.Application, flows owners.EnrollmentFlows,
+	logger *slog.Logger, uploads nativeUploads.UploadFiles, identity identityaccess.Owner, parent *parentportal.Portal, calendarApp calendarCompose.Application, flows owners.EnrollmentFlows,
 	guardianProfiles *peopleCompose.GuardianProfileLoader, organizations organizationtenancy.Query,
 	devices owners.DeliveryDevices, notifications owners.DeliveryNotifications, delivery deliveryRuntime.Capability,
 	healthData enrollmentOwner.HolidayHealthCipher, traegerSettings TraegerBrandingSettings, now func() time.Time,
@@ -200,7 +202,7 @@ func newParentResource(
 		Enrollment: parentEnrollmentForms(
 			enrollmentAPI.NewRequestService(flows.Intake),
 			enrollmentUploadUnits{intake: flows.Intake, records: owners.NewEnrollmentBookings(now), reads: flows.Uploads},
-			NewEnrollmentUploadStorage(logger.With("handler", "parent-enrollment-uploads")),
+			NewEnrollmentUploadStorage(logger.With("handler", "parent-enrollment-uploads"), uploads),
 		),
 		GuardianProfileLoader: newParentGuardianProfiles(guardianProfiles),
 		Schools:               parentSchoolDirectory{schools: organizations},
@@ -212,7 +214,7 @@ func newParentResource(
 		Reports:               newDeclarationReports(),
 		SupportedLocale:       bindParentLocale(notifications.Preferences),
 		// Fotos und Dateien in den Nachrichten der Eltern (#6685).
-		MessageAttachmentFiles: NewMessageAttachmentStorage(logger.With("handler", "parent-message-attachments")),
+		MessageAttachmentFiles: NewMessageAttachmentStorage(logger.With("handler", "parent-message-attachments"), uploads),
 	})
 }
 
@@ -270,6 +272,8 @@ func newProvisioningConfig(provisioning organizationtenancy.OperatorProvisioning
 	return provisioningOperatorAPI.ProvisioningConfig{
 		Service: provisioning, CaregiverCapability: caregivers, AppEnv: viper.GetString("app_env"), BelegRetentionAudit: audit,
 		TraegerStaffReleaseAudit: staffRelease, ErasureOrderRecords: provisioning.ErasureOrderRecords,
-		RequiredDetails: provisioning.RequiredDetails,
+		RequiredDetails: provisioning.RequiredDetails, DeviceBlocking: provisioning.DeviceBlocking,
+		DeviceHistory: provisioning.DeviceHistory,
+		DeviceSlots:   provisioning.DeviceSlots,
 	}, nil
 }

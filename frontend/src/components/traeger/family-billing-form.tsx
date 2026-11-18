@@ -240,7 +240,7 @@ export function FamilyBillingForm({
     formErrors.clear();
     const errors = familyBillingErrors(draft, format, existing?.debtorNumber);
     if (Object.keys(errors).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", errors);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", errors);
       return;
     }
     setSaving(true);
@@ -321,7 +321,7 @@ export function FamilyBillingForm({
       {draft.recipientKind === "both" ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id={id("second-first")}
             name="second_first_name"
             label="Vorname des zweiten Elternteils"
@@ -332,7 +332,7 @@ export function FamilyBillingForm({
             onChange={(event) => set({ secondFirstName: event.target.value })}
           />
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id={id("second-last")}
             name="second_last_name"
             label="Nachname des zweiten Elternteils"
@@ -347,7 +347,7 @@ export function FamilyBillingForm({
       {draft.recipientKind === "payer" ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id={id("payer-first")}
             name="payer_first_name"
             label="Vorname"
@@ -358,7 +358,7 @@ export function FamilyBillingForm({
             onChange={(event) => set({ payerFirstName: event.target.value })}
           />
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id={id("payer-last")}
             name="payer_last_name"
             label="Nachname"
@@ -370,7 +370,7 @@ export function FamilyBillingForm({
           />
           <div className="sm:col-span-2">
             <Input
-              controlSize="touch"
+              controlSize="compact"
               id={id("payer-email")}
               name="payer_email"
               type="email"
@@ -384,7 +384,7 @@ export function FamilyBillingForm({
           </div>
           <div className="sm:col-span-2">
             <Input
-              controlSize="touch"
+              controlSize="compact"
               id={id("street")}
               name="payer_address.street"
               label="Straße und Hausnummer"
@@ -396,7 +396,7 @@ export function FamilyBillingForm({
             />
           </div>
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id={id("postal-code")}
             name="payer_address.postal_code"
             label="Postleitzahl"
@@ -408,7 +408,7 @@ export function FamilyBillingForm({
             onChange={(event) => set({ postalCode: event.target.value })}
           />
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id={id("city")}
             name="payer_address.city"
             label="Ort"
@@ -450,7 +450,7 @@ export function FamilyBillingForm({
         </div>
         {/* The precondition where the person chooses the debit. */}
         <p className="text-sm text-gray-600">
-          Lastschrift geht nur mit gültigem Mandat. Den Stand sehen Sie unten
+          Lastschrift geht nur mit gültigem Mandat. Den Stand siehst du unten
           unter „SEPA-Lastschriftmandat“.
         </p>
       </div>
@@ -477,7 +477,7 @@ export function FamilyBillingForm({
         inputMode={format.digitsOnly ? "numeric" : undefined}
         maxLength={DEBTOR_NUMBER_MAX_LENGTH}
         value={draft.debtorNumber}
-        hint={`${debtorNumberFormatHint(format)} Die Nummer der Familie in Ihrer Buchhaltung. Sie steht auf jeder neuen Monats- und Ferienrechnung und in der Sollstellung. Hat eine Ferienanmeldung eine eigene Nummer, gilt diese.`.trim()}
+        hint={`${debtorNumberFormatHint(format)} Die Nummer der Familie in deiner Buchhaltung. Sie steht auf jeder neuen Monats- und Ferienrechnung und in der Sollstellung. Hat eine Ferienanmeldung eine eigene Nummer, gilt diese.`.trim()}
         error={fieldError("debtor_number")}
         onChange={(event) => set({ debtorNumber: event.target.value })}
       />

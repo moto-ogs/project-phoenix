@@ -229,10 +229,10 @@ function checkRegistration(
   errors: Record<string, string>,
 ) {
   if (!isValidISODate(draft.registrationOpensOn)) {
-    errors.registration_opens_on = "Bitte wählen Sie den Anmeldebeginn.";
+    errors.registration_opens_on = "Bitte wähle den Anmeldebeginn.";
   }
   if (!isValidISODate(draft.registrationClosesOn)) {
-    errors.registration_closes_on = "Bitte wählen Sie den Anmeldeschluss.";
+    errors.registration_closes_on = "Bitte wähle den Anmeldeschluss.";
   } else if (
     isValidISODate(draft.registrationOpensOn) &&
     draft.registrationClosesOn < draft.registrationOpensOn
@@ -256,10 +256,10 @@ function checkWeekDates(
   errors: Record<string, string>,
 ) {
   if (!isValidISODate(week.startsOn)) {
-    errors[`${prefix}.starts_on`] = "Bitte wählen Sie den ersten Tag.";
+    errors[`${prefix}.starts_on`] = "Bitte wähle den ersten Tag.";
   }
   if (!isValidISODate(week.endsOn)) {
-    errors[`${prefix}.ends_on`] = "Bitte wählen Sie den letzten Tag.";
+    errors[`${prefix}.ends_on`] = "Bitte wähle den letzten Tag.";
     return;
   }
   if (!isValidISODate(week.startsOn)) return;
@@ -280,7 +280,7 @@ function checkTimeModels(
     const field = `${prefix}.time_models.${index}`;
     const name = model.name.trim().toLowerCase();
     if (!name) {
-      errors[`${field}.name`] = "Bitte geben Sie einen Namen ein.";
+      errors[`${field}.name`] = "Bitte gib einen Namen ein.";
     } else if (names.has(name)) {
       errors[`${field}.name`] = "Diesen Namen gibt es in der Woche schon.";
     }
@@ -289,20 +289,20 @@ function checkTimeModels(
     const endsValid = WALL_CLOCK.test(model.endsAt);
     if (!startsValid) {
       errors[`${field}.starts_at`] = model.startsAt
-        ? "Bitte geben Sie die Zeit im Format 08:00 ein."
-        : "Bitte tragen Sie den Beginn ein.";
+        ? "Bitte gib die Zeit im Format 08:00 ein."
+        : "Bitte trage den Beginn ein.";
     }
     if (!endsValid) {
       errors[`${field}.ends_at`] = model.endsAt
-        ? "Bitte geben Sie die Zeit im Format 13:00 ein."
-        : "Bitte tragen Sie das Ende ein.";
+        ? "Bitte gib die Zeit im Format 13:00 ein."
+        : "Bitte trage das Ende ein.";
     } else if (startsValid && model.endsAt <= model.startsAt) {
       errors[`${field}.ends_at`] = "Das Ende liegt nicht nach dem Beginn.";
     }
     const cents = euroInputToCents(model.price);
     if (cents === null || cents > MAX_PRICE_CENTS) {
       errors[`${field}.price_cents`] =
-        "Bitte geben Sie einen Preis in Euro ein, zum Beispiel 45,00.";
+        "Bitte gib einen Preis in Euro ein, zum Beispiel 45,00.";
     }
   });
 }
@@ -329,7 +329,7 @@ export function validateHolidayPeriod(
 ): Record<string, string> {
   const errors: Record<string, string> = {};
   if (!draft.name.trim()) {
-    errors.name = "Bitte geben Sie einen Namen ein.";
+    errors.name = "Bitte gib einen Namen ein.";
   }
   checkRegistration(draft, errors);
   const limit = draft.maxDaysPerChild.trim();
@@ -349,8 +349,7 @@ export function validateHolidayPeriod(
     const prefix = `weeks.${index}`;
     checkWeekDates(week, prefix, errors);
     if (!week.hostSchoolId) {
-      errors[`${prefix}.host_school_id`] =
-        "Bitte wählen Sie die ausrichtende OGS.";
+      errors[`${prefix}.host_school_id`] = "Bitte wähle die ausrichtende OGS.";
     }
     const overlap = draft.weeks.findIndex(
       (other, otherIndex) =>
@@ -371,7 +370,7 @@ export function validateHolidayPeriod(
       const cents = euroInputToCents(week.lunchPrice ?? "");
       if (cents === null || cents > MAX_PRICE_CENTS) {
         errors[`${prefix}.lunch_price_cents`] =
-          "Bitte geben Sie den Preis für ein Essen in Euro ein, zum Beispiel 4,30.";
+          "Bitte gib den Preis für ein Essen in Euro ein, zum Beispiel 4,30.";
       }
     }
   });

@@ -298,7 +298,7 @@ describe("PayrollPage Versand an das Lohnbüro (#4805)", () => {
     fireEvent.change(input, { target: { value: "lohn@" } });
     fireEvent.blur(input);
     expect(
-      screen.getByText("Bitte geben Sie eine vollständige E-Mail-Adresse ein."),
+      screen.getByText("Bitte gib eine vollständige E-Mail-Adresse ein."),
     ).toBeInTheDocument();
     expect(setSettingValueMock).not.toHaveBeenCalledWith(
       "payroll.dispatch_email",
@@ -322,7 +322,7 @@ describe("PayrollPage Versand an das Lohnbüro (#4805)", () => {
 
     expect(
       screen.getByText(
-        "Tragen Sie die E-Mail-Adresse des Lohnbüros ein. Ohne sie sendet moto nichts.",
+        "Trage die E-Mail-Adresse des Lohnbüros ein. Ohne sie sendet moto nichts.",
       ),
     ).toBeInTheDocument();
   });
@@ -538,7 +538,7 @@ describe("PayrollPage Versand an das Lohnbüro (#4805)", () => {
     expect(screen.getByText("Nicht zustellbar")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Die Mail kam nicht an. Prüfen Sie oben die E-Mail-Adresse des Lohnbüros. Die Monatsdatei finden Sie unter Mitarbeiter im Reiter Zeitkonten bei „Exportieren“.",
+        "Die Mail kam nicht an. Prüfe oben die E-Mail-Adresse des Lohnbüros. Die Monatsdatei findest du unter Mitarbeiter im Reiter Zeitkonten bei „Exportieren“.",
       ),
     ).toBeInTheDocument();
   });
@@ -1032,7 +1032,7 @@ describe("PayrollPage eigene Lohnarten und Zuschläge (#4807)", () => {
       screen.getByRole("button", { name: "Zuschlagsregel anlegen" }),
     ).toHaveAttribute("aria-disabled", "true");
     expect(
-      screen.getByText(/Legen Sie zuerst oben eine Lohnart an/),
+      screen.getByText(/Lege zuerst oben eine Lohnart an/),
     ).toBeInTheDocument();
   });
 });

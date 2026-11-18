@@ -1,4 +1,5 @@
-import { revalidatePath, revalidateTag } from "next/cache";
+import { invalidateTenantResolve } from "~/lib/tenant-resolve.server";
+import { revalidatePath } from "next/cache";
 import type { NextRequest } from "next/server";
 import { apiPut, apiDelete } from "~/lib/api-helpers.server";
 import { createLogger } from "~/lib/logger";
@@ -15,7 +16,7 @@ const logger = createLogger({ component: "SettingsValuesRoute" });
 const VALID_KEY_PATTERN = /^[a-z0-9_.]{1,255}$/;
 
 // Settings whose value rides on /auth/tenant/resolve are tagged with
-// `tenant-${slug}` in the layout's cached lookup (revalidate: 300). A naked
+// `tenant-${slug}` in the cached tenant lookup. A naked
 // router.refresh() on the client would still see the cached value until
 // the TTL expires, so we purge the tag here before responding.
 function revalidateTenantIfNeeded(request: NextRequest, key: string): void {
@@ -30,7 +31,7 @@ function revalidateTenantIfNeeded(request: NextRequest, key: string): void {
     return;
   }
 
-  revalidateTag(`tenant-${slug}`, { expire: 0 });
+  invalidateTenantResolve(slug);
   revalidatePath(`/${slug}`, "layout");
   logger.info("tenant_cache_revalidated", { slug, key });
 }

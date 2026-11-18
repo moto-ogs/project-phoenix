@@ -9,11 +9,11 @@ const demoUploadsTargetPackage = "modules/delivery/objects"
 // process, the dev tools binary cmd/devtools (dev-tools/compose, ADR 0060),
 // binds the demo server's uploads store so Organization & Tenancy can remove
 // the files of retired demo schools. It is pinned to the source owner and
-// role, the one target package and production. It grants no other Delivery
+// role, the upload packages and production. It grants no other Delivery
 // package, no owner kind, no external class and no test scope.
 func reviewedDemoUploadsRule(rule Rule) bool {
 	return rule.SourceOwner == "dev-tools" && rule.SourceOwnerKind == "" && rule.SourceRole == "compose" && rule.SourcePackage == "" &&
-		rule.TargetOwner == "delivery-platform" && rule.TargetOwnerKind == "" && rule.TargetRole == "public" &&
-		rule.TargetPackage == demoUploadsTargetPackage && rule.TargetClass == "" && !rule.SameOwner &&
+		rule.TargetOwner == "delivery-platform" && rule.TargetOwnerKind == "" && ((rule.TargetRole == "public" && rule.TargetPackage == demoUploadsTargetPackage) ||
+		(rule.TargetRole == "compose" && rule.TargetPackage == demoUploadsTargetPackage+"/compose")) && rule.TargetClass == "" && !rule.SameOwner &&
 		len(rule.Scopes) == 1 && rule.Scopes[0] == string(ScopeProduction)
 }

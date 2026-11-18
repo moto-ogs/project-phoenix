@@ -1,5 +1,5 @@
 {
-  "sectionTitle": "Ihre Antwort",
+  "sectionTitle": "Deine Antwort",
   "signersAny": "Eine sorgeberechtigte Person pro Kind genügt.",
   "signersAll": "Jede sorgeberechtigte Person antwortet selbst.",
   "nothingPreselected": "Nichts ist vorausgewählt.",
@@ -7,9 +7,9 @@
   "deadline": "Frist bis {date}",
   "closed": "Frist abgelaufen",
   "ended": "Einverständnis beendet",
-  "endedNote": "Die Schule fragt hier nicht mehr nach. Sie können nicht mehr neu antworten.",
-  "passwordNote": "Bevor Sie antworten, fragt moto Ihr Passwort ab.",
-  "signatureNote": "Zum Zustimmen unterschreiben Sie mit dem Finger oder der Maus.",
+  "endedNote": "Die Schule fragt hier nicht mehr nach. Du kannst nicht mehr neu antworten.",
+  "passwordNote": "Bevor du antwortest, fragt moto dein Passwort ab.",
+  "signatureNote": "Zum Zustimmen unterschreibst du mit dem Finger oder der Maus.",
   "state": {
     "open": "Offen",
     "partial": "Teilweise beantwortet",
@@ -30,8 +30,8 @@
     "revoked": "Zustimmung widerrufen"
   },
   "explain": {
-    "agreed": "Mit „Zustimmen“ erklären Sie für {name}, dass Sie einverstanden sind.",
-    "declined": "Mit „Ablehnen“ erklären Sie für {name}, dass Sie nicht einverstanden sind."
+    "agreed": "Mit „Zustimmen“ erklärst du für {name}, dass du einverstanden bist.",
+    "declined": "Mit „Ablehnen“ erklärst du für {name}, dass du nicht einverstanden bist."
   },
   "settled": {
     "agreed": "{name} hat zugestimmt.",
@@ -45,66 +45,66 @@
   },
   "settledUnknown": "Für {name} liegt schon eine Antwort vor.",
   "oneIsEnough": "Eine Antwort genügt.",
-  "ownAnyway": "Sie können trotzdem selbst antworten.",
-  "cannotSubmit": "Für {name} können Sie hier nicht antworten. Das machen die sorgeberechtigten Personen.",
-  "cannotSubmitAnymore": "Für {name} können Sie nicht mehr neu antworten.",
-  "myAction": "Ihre Antwort: {action} am {date} Uhr",
-  "myActionNoDate": "Ihre Antwort: {action}",
+  "ownAnyway": "Du kannst trotzdem selbst antworten.",
+  "cannotSubmit": "Für {name} kannst du hier nicht antworten. Das machen die sorgeberechtigten Personen.",
+  "cannotSubmitAnymore": "Für {name} kannst du nicht mehr neu antworten.",
+  "myAction": "Deine Antwort: {action} am {date} Uhr",
+  "myActionNoDate": "Deine Antwort: {action}",
   "proof": "Nachweis ansehen",
   "othersTitle": "Andere sorgeberechtigte Personen",
   "otherOpen": "noch keine Antwort",
-  "revokeHint": "Sie können Ihre Zustimmung zurücknehmen. Die Schule sieht das sofort.",
-  "revokeAnytime": "Sie können Ihre Zustimmung jederzeit widerrufen.",
-  "closedNoAction": "Die Frist ist abgelaufen. Sie können nicht mehr antworten.",
-  "confirmTitle": "Ihre Antwort prüfen",
-  "confirmBody": "Ihre Antwort für {name}: {action}.",
+  "revokeHint": "Du kannst deine Zustimmung zurücknehmen. Die Schule sieht das sofort.",
+  "revokeAnytime": "Du kannst deine Zustimmung jederzeit widerrufen.",
+  "closedNoAction": "Die Frist ist abgelaufen. Du kannst nicht mehr antworten.",
+  "confirmTitle": "Deine Antwort prüfen",
+  "confirmBody": "Deine Antwort für {name}: {action}.",
   "confirmChild": "Kind",
-  "confirmAction": "Ihre Antwort",
+  "confirmAction": "Deine Antwort",
   "confirmVersion": "Text",
-  "confirmRecorded": "moto speichert Ihre Antwort mit Datum und Uhrzeit. Die Schule sieht sie.",
-  "passwordLabel": "Passwort Ihres Eltern-Kontos",
+  "confirmRecorded": "moto speichert deine Antwort mit Datum und Uhrzeit. Die Schule sieht sie.",
+  "passwordLabel": "Passwort deines Eltern-Kontos",
   "signature": {
-    "label": "Ihre Unterschrift",
-    "hint": "Unterschreiben Sie im Feld mit dem Finger, dem Stift oder der Maus.",
+    "label": "Deine Unterschrift",
+    "hint": "Unterschreibe im Feld mit dem Finger, dem Stift oder der Maus.",
     "canvas": "Feld zum Unterschreiben",
     "clear": "Feld leeren",
     "typeInstead": "Namen tippen",
     "drawInstead": "Lieber zeichnen",
-    "typedName": "Ihr Vor- und Nachname",
+    "typedName": "Dein Vor- und Nachname",
     "confirm": "Unterschrift bestätigen",
-    "confirmed": "Ihre Unterschrift ist bereit.",
-    "confirmedTyped": "Ihr getippter Name ist bereit.",
+    "confirmed": "Deine Unterschrift ist bereit.",
+    "confirmedTyped": "Dein getippter Name ist bereit.",
     "change": "Neu unterschreiben",
-    "preview": "Ihre Unterschrift",
-    "emptyDrawing": "Bitte unterschreiben Sie im Feld.",
-    "nameTooShort": "Bitte tippen Sie Ihren Namen."
+    "preview": "Deine Unterschrift",
+    "emptyDrawing": "Bitte unterschreibe im Feld.",
+    "nameTooShort": "Bitte tippe deinen Namen."
   },
   "revokeTitle": "Zustimmung widerrufen",
-  "revokeBody": "Sie nehmen Ihre Zustimmung für {name} zurück.",
+  "revokeBody": "Du nimmst deine Zustimmung für {name} zurück.",
   "revokeConfirm": "Widerrufen",
   "cancel": "Abbrechen",
   "saving": "Wird gespeichert …",
-  "saved": "Ihre Antwort für {name} ist gespeichert.",
+  "saved": "Deine Antwort für {name} ist gespeichert.",
   "errors": {
-    "passwordRequired": "Bitte geben Sie Ihr Passwort ein.",
-    "uncertainReload": "Der Stand wird neu geladen. Bitte prüfen Sie ihn, bevor Sie noch einmal antworten.",
-    "signatureRequired": "Bitte unterschreiben Sie und tippen Sie auf „Unterschrift bestätigen“."
+    "passwordRequired": "Bitte gib dein Passwort ein.",
+    "uncertainReload": "Der Stand wird neu geladen. Bitte prüfe ihn, bevor du noch einmal antwortest.",
+    "signatureRequired": "Bitte unterschreibe und tippe auf „Unterschrift bestätigen“."
   },
   "errorObjectAnswer": "die Antwort",
   "earlierConsent": {
-    "title": "Sie haben Fassung {version} am {date} Uhr zugestimmt.",
-    "note": "Die Schule hat den Text danach geändert. Ihre Zustimmung zu diesem Text gilt, bis Sie sie widerrufen.",
-    "endsToo": "Damit endet auch Ihre Zustimmung zu Fassung {version}."
+    "title": "Du hast Fassung {version} am {date} Uhr zugestimmt.",
+    "note": "Die Schule hat den Text danach geändert. Deine Zustimmung zu diesem Text gilt, bis du sie widerrufst.",
+    "endsToo": "Damit endet auch deine Zustimmung zu Fassung {version}."
   },
   "actionTooltip": {
     "agreed": "Stimmt für {name} zu, moto fragt vorher nach.",
     "declined": "Lehnt für {name} ab, moto fragt vorher nach.",
-    "revoked": "Nimmt Ihre Zustimmung für {name} zurück, moto fragt vorher nach.",
-    "revokeEarlier": "Nimmt Ihre Zustimmung zu Fassung {version} zurück, moto fragt vorher nach."
+    "revoked": "Nimmt deine Zustimmung für {name} zurück, moto fragt vorher nach.",
+    "revokeEarlier": "Nimmt deine Zustimmung zu Fassung {version} zurück, moto fragt vorher nach."
   },
   "confirmTooltip": {
-    "agreed": "Speichert Ihre Zustimmung sofort, die Schule sieht sie.",
-    "declined": "Speichert Ihre Ablehnung sofort, die Schule sieht sie.",
-    "revoked": "Widerruft Ihre Zustimmung sofort, die Schule sieht das."
+    "agreed": "Speichert deine Zustimmung sofort, die Schule sieht sie.",
+    "declined": "Speichert deine Ablehnung sofort, die Schule sieht sie.",
+    "revoked": "Widerruft deine Zustimmung sofort, die Schule sieht das."
   }
 }

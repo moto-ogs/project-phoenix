@@ -431,6 +431,7 @@ describe("summary adapters", () => {
       childQuotaBundles: 2,
       childQuotaBundleSize: 50,
       childQuotaCount: 90,
+      deviceSlots: null,
     };
 
     expect(summaryToSchool(summary)).toEqual({

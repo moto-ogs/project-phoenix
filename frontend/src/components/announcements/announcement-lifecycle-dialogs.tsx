@@ -188,7 +188,7 @@ export function UnpublishAnnouncementDialog({
           <p className="text-xs text-gray-500">
             Bisherige Antworten bleiben gespeichert. Wer schon geantwortet hat,
             sieht das Einverständnis weiter und kann eine Zustimmung widerrufen.
-            Ändern Sie danach den Text, müssen die Eltern noch einmal antworten.
+            Änderst du danach den Text, müssen die Eltern noch einmal antworten.
           </p>
         )}
       </div>
@@ -221,7 +221,7 @@ export function DeleteAnnouncementDialog({
       title="Elternmitteilung löschen"
       description={
         <>
-          Möchten Sie die Elternmitteilung
+          Möchtest du die Elternmitteilung
           <span className="font-medium text-gray-900">
             {" "}
             „{announcement.title}“{" "}
@@ -280,7 +280,8 @@ export function buildAnnouncementMenuItems(
     items.push({
       // moto schule sagt Senden: die Lehrkraft schickt einen Brief ab.
       label: handlers.classLetterAuthor ? "Senden" : "Veröffentlichen",
-      description: "Geht nach Ihrer Bestätigung sofort an die gewählten Eltern",
+      description:
+        "Geht nach deiner Bestätigung sofort an die gewählten Eltern",
       icon: <Send className="size-4" aria-hidden />,
       onClick: handlers.onPublish,
     });

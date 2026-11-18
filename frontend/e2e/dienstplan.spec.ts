@@ -442,7 +442,7 @@ test.describe("Dienstplan UI-Flow", () => {
       // shift_overlap seit dem gemeinsamen Fehlerweg (6a7fbe609f, #2514).
       await expect(
         dialog.getByText(
-          "Die Schicht überschneidet sich mit einer anderen Schicht dieser Person. Bitte prüfen Sie die Zeiten.",
+          "Die Schicht überschneidet sich mit einer anderen Schicht dieser Person. Bitte prüfe die Zeiten.",
         ),
       ).toBeVisible(DATA);
       await expect(dialog).toBeVisible();

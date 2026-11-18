@@ -27,12 +27,13 @@ func TestAppointmentNotificationTemplate_Renders(t *testing.T) {
 	err = tpl.ExecuteTemplate(&buf, "appointment-notification.html", map[string]any{
 		"Title":             "Elternabend",
 		"BrandKicker":       "Neuer Termin",
-		"IntroText":         "es gibt einen neuen Termin für Sie.",
+		"IntroText":         "es gibt einen neuen Termin für dich.",
 		"WhenText":          "02.04.2026, 18:00–19:30 Uhr",
 		"Location":          "Aula",
 		"SchoolName":        "OGS Musterschule",
 		"GuardianFirstName": "Erika",
 		"GuardianLastName":  "Mustermann",
+		"Greeting":          "Liebe Erika",
 		"PortalURL":         "https://parents.example.com",
 		"LogoURL":           "https://example.com/school-logo.png",
 		"MotoLogoURL":       "https://example.com/moto.png",
@@ -44,7 +45,7 @@ func TestAppointmentNotificationTemplate_Renders(t *testing.T) {
 		"Elternabend",
 		"02.04.2026, 18:00–19:30 Uhr",
 		"Aula",
-		"Erika",
+		"Liebe Erika,",
 		"https://parents.example.com",
 		"OGS Musterschule",
 	} {

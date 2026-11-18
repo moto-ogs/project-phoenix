@@ -136,6 +136,10 @@
   ],
   "data_objects": [
     {
+      "name": "audit.device_lifecycle_events",
+      "write_owner": "device-fleet"
+    },
+    {
       "name": "audit.unregistered_tag_scans",
       "write_owner": "device-fleet"
     },

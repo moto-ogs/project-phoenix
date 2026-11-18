@@ -4,7 +4,7 @@
     "title": "moto Datenrückgabe",
     "version": "1.0.0",
     "summary": "Register und Abruf des Rückgabepakets einer Schule oder eines Trägers (Data Act Art. 26 und Art. 30 Abs. 2).",
-    "description": "moto erstellt und prüft das Rückgabepaket. Danach können der Kunde und ein vom Kunden benannter neuer Anbieter es hier abrufen. Für den Abruf gibt moto ein kurzlebiges Token aus, das genau ein Paket öffnet. Der Abruf ist kostenlos. Das Paket enthält vollständige Bankdaten (IBAN, Kontoinhaber) und Gesundheitsangaben; bewahren Sie es entsprechend geschützt auf. Pfade gelten relativ zur API-Adresse der Installation."
+    "description": "moto erstellt und prüft das Rückgabepaket. Danach können der Kunde und ein vom Kunden benannter neuer Anbieter es hier abrufen. Für den Abruf gibt moto ein kurzlebiges Token aus, das genau ein Paket öffnet. Der Abruf ist kostenlos. Das Paket enthält vollständige Bankdaten (IBAN, Kontoinhaber) und Gesundheitsangaben; bewahre es entsprechend geschützt auf. Pfade gelten relativ zur API-Adresse der Installation."
   },
   "servers": [
     {
@@ -70,7 +70,7 @@
       "get": {
         "operationId": "downloadPackage",
         "summary": "Paket als ZIP herunterladen",
-        "description": "Verbraucht einen Download des Tokens. Die ZIP-Datei enthält das Paket unverändert: manifest.json, COMPLETE, model.json, eine JSON-Lines-Datei je Tabelle und die gespeicherten Dateien. Prüfen Sie nach dem Download die SHA-256-Prüfsumme (Repr-Digest bzw. archiveSHA256) und danach COMPLETE und manifest.json. Ein abgebrochener Download liefert weniger Bytes als Content-Length; starten Sie ihn dann neu.",
+        "description": "Verbraucht einen Download des Tokens. Die ZIP-Datei enthält das Paket unverändert: manifest.json, COMPLETE, model.json, eine JSON-Lines-Datei je Tabelle und die gespeicherten Dateien. Prüfe nach dem Download die SHA-256-Prüfsumme (Repr-Digest bzw. archiveSHA256) und danach COMPLETE und manifest.json. Ein abgebrochener Download liefert weniger Bytes als Content-Length; starte ihn dann neu.",
         "responses": {
           "200": {
             "description": "Das Paket als ZIP.",
@@ -138,7 +138,7 @@
         "content": {"application/problem+json": {"schema": {"$ref": "#/components/schemas/Problem"}}}
       },
       "Problem": {
-        "description": "Das Paket ist gerade nicht verfügbar; wenden Sie sich an moto.",
+        "description": "Das Paket ist gerade nicht verfügbar; wende dich an moto.",
         "content": {"application/problem+json": {"schema": {"$ref": "#/components/schemas/Problem"}}}
       }
     }

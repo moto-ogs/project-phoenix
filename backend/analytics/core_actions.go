@@ -696,6 +696,10 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/caterer/auth/login"}:                                  session("login_success"),
 	{http.MethodPost, "/caterer/invitations/{schoolId}/{token}/accept"}:       catererEvent("caterer_invite_accepted"),
 	{http.MethodPost, "/caterer/schools/{schoolId}/orders/{orderId}/confirm"}: catererEvent("meal_order_confirmed"),
+	// The bell of the caterer portal (#7147): marking an entry read is no
+	// core action, like the Träger bell's.
+	{http.MethodPost, "/caterer/notifications/feed/read-all"}:  notCaptured,
+	{http.MethodPost, "/caterer/notifications/feed/{id}/read"}: notCaptured,
 }
 
 // CoreActions returns a copy of the route table for the guard tests.

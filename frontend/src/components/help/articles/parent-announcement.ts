@@ -14,27 +14,27 @@ export function parentAnnouncementTopic(): HelpTopic {
     icon: "Megaphone",
     steps: [
       ...parentAnnouncementSteps("Mitteilungen", "Mitteilung", "Titel"),
-      "Wählen Sie `Veröffentlichen`.",
+      "Wähle `Veröffentlichen`.",
     ],
     result:
       "Die Mitteilung steht sofort im Elternportal der erreichten Eltern.",
     notes: [
-      "Mit `Als Entwurf speichern` legen Sie die Mitteilung zurück, ohne sie zu senden.",
-      "Sie können mehrere Empfänger kombinieren: `Ganze Schule`, `Offene Anmeldungen`, `Klassen`, `Gruppen`, `AGs / Betreuung` oder einzelne Kinder.",
+      "Mit `Als Entwurf speichern` legst du die Mitteilung zurück, ohne sie zu senden.",
+      "Du kannst mehrere Empfänger kombinieren: `Ganze Schule`, `Offene Anmeldungen`, `Klassen`, `Gruppen`, `AGs / Betreuung` oder einzelne Kinder.",
       "Jedes Elternteil bekommt die Mitteilung höchstens einmal.",
-      "Mit `Dateien anhängen` geben Sie Dateien mit. Sie liegen im Elternportal und gehen nicht per E-Mail mit.",
+      "Mit `Dateien anhängen` gibst du Dateien mit. Sie liegen im Elternportal und gehen nicht per E-Mail mit.",
     ],
     differences: [
       "Eine Mitteilung trägt `Entwurf`, `Veröffentlicht` oder `Abgelaufen`.",
-      "Unter einer Mitteilung steht `Von …, Lehrkraft der Klasse … · nur zum Lesen`? Die hat eine Lehrkraft in moto schule geschrieben. Sie können sie lesen, ändern kann sie nur die Lehrkraft.",
+      "Unter einer Mitteilung steht `Von …, Lehrkraft der Klasse … · nur zum Lesen`? Die hat eine Lehrkraft in moto schule geschrieben. Du kannst sie lesen, ändern kann sie nur die Lehrkraft.",
       "Unter `Priorität` stehen `Info` und `Wichtig` zur Wahl.",
-      "Mit `Ablaufdatum (optional)` blenden Sie die Mitteilung später wieder aus.",
+      "Mit `Ablaufdatum (optional)` blendest du die Mitteilung später wieder aus.",
       "Eine Mitteilung bleibt bei den Kindern, die sie beim Veröffentlichen erreicht hat. Wechselt danach ein Kind die Klasse, behält es die Mitteilung. Die neue Klasse bekommt sie nicht. Das gilt auch für `Statistik` und Erinnerungen.",
     ],
     troubleshootingDetails: [
       "`Veröffentlichen` bleibt grau? Dann fehlt noch ein Empfänger.",
-      "Soll die Nachricht auch per E-Mail gehen? Schalten Sie `Eltern zusätzlich per E-Mail benachrichtigen` ein.",
-      "Sollen Eltern den Erhalt bestätigen? Schalten Sie `Lesebestätigung erforderlich` ein.",
+      "Soll die Nachricht auch per E-Mail gehen? Schalte `Eltern zusätzlich per E-Mail benachrichtigen` ein.",
+      "Sollen Eltern den Erhalt bestätigen? Schalte `Lesebestätigung erforderlich` ein.",
     ],
     related: [
       HELP_TOPICS.leadParentLetter,

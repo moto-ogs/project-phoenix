@@ -116,7 +116,7 @@ describe("FamilyProtectionControl", () => {
 
     expect(
       await screen.findByText(
-        "Die Einstellung zum Familienschutz ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Einstellung zum Familienschutz ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     expect(

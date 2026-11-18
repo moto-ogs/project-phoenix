@@ -15,7 +15,7 @@ var display_init_info_displays_0Definitions = []config.Definition{
 	{
 		Key:             config.KeyDisplayEnabled,
 		Label:           "Info-Displays nutzen",
-		Description:     "Ihr Team kann Anzeigen für große Bildschirme anlegen, zum Beispiel für den Eingangsbereich.",
+		Description:     "Dein Team kann Anzeigen für große Bildschirme anlegen, zum Beispiel für den Eingangsbereich.",
 		Type:            config.FieldBoolean,
 		Default:         false,
 		ReadPermission:  "config:read",

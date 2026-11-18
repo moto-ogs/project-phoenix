@@ -7,30 +7,30 @@ export function teacherClassHandoverTopic(): HelpTopic {
     title: "Klasse an die OGS übergeben",
     question: "Wie übergebe ich meine Klasse nach dem Unterricht?",
     summary:
-      "Sie bestätigen die Übergabe und markieren Kinder, die nicht da sind.",
+      "Du bestätigst die Übergabe und markierst Kinder, die nicht da sind.",
     group: "klasse",
     audience: "teacher",
     icon: "ArrowsLeftRight",
     steps: [
-      "Öffnen Sie in der `Klassenansicht` Ihre Klasse für heute.",
-      "Tippen Sie auf `Klasse übergeben`.",
-      "Tippen Sie bei jedem Kind, das nicht da ist, auf `Nicht da`.",
-      "Tippen Sie auf `Übergeben`.",
+      "Öffne in der `Klassenansicht` deine Klasse für heute.",
+      "Tippe auf `Klasse übergeben`.",
+      "Tippe bei jedem Kind, das nicht da ist, auf `Nicht da`.",
+      "Tippe auf `Übergeben`.",
     ],
     result:
-      "Oben steht, wann Sie übergeben haben. Die OGS sieht sofort bei jedem Kind, ob es da ist.",
+      "Oben steht, wann du übergeben hast. Die OGS sieht sofort bei jedem Kind, ob es da ist.",
     notes: [
       "In der Liste stehen nur die Kinder, die heute in die OGS gehen.",
       "Kinder, die am Morgen als `Fehlt` eingetragen sind, stehen schon auf `Nicht da`.",
       "Die Anwesenheit am Morgen ändert sich dadurch nicht.",
-      "Mit `Übergabe ändern` korrigieren Sie einzelne Kinder. Die OGS sieht dann den neuen Stand.",
-      "Mit `Übergabe zurücknehmen` nehmen Sie die Übergabe heute wieder zurück.",
+      "Mit `Übergabe ändern` korrigierst du einzelne Kinder. Die OGS sieht dann den neuen Stand.",
+      "Mit `Übergabe zurücknehmen` nimmst du die Übergabe heute wieder zurück.",
     ],
     differences: [
-      "Fehlt `Klasse übergeben`? Übergeben geht nur heute und an Schultagen. Oder Ihre OGS hat es nicht freigegeben.",
+      "Fehlt `Klasse übergeben`? Übergeben geht nur heute und an Schultagen. Oder deine OGS hat es nicht freigegeben.",
     ],
     troubleshootingDetails: [
-      "Übergeben klappt nicht und ein Kind gehört nicht mehr zur Klasse? Laden Sie die Seite neu.",
+      "Übergeben klappt nicht und ein Kind gehört nicht mehr zur Klasse? Lade die Seite neu.",
     ],
     related: [
       HELP_TOPICS.teacherMorningAttendance,

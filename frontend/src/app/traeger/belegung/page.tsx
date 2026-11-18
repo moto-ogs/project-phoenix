@@ -40,8 +40,8 @@ import {
   type OccupancyTotals,
 } from "~/components/traeger/occupancy-model";
 import {
-  TraegerListExportMenu,
   traegerExportScope,
+  useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerOccupancy } from "~/components/traeger/use-traeger-occupancy";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
@@ -76,7 +76,7 @@ function SchoolCell({ school }: Readonly<{ school: TraegerSchoolOccupancy }>) {
         {school.name}
       </NavigationLink>
       {school.city ? (
-        <span className="block text-xs text-gray-500 max-md:hidden">
+        <span className="block text-sm text-gray-500 max-md:hidden">
           {school.city}
         </span>
       ) : null}
@@ -378,18 +378,14 @@ function TotalFigures({
 }>) {
   return (
     <div className="grid gap-4 max-sm:gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <div>
-        <StatCard
-          label="Kinder heute"
-          value={totals.children}
-          hint={
-            loading ? undefined : "Alle Kinder in Betreuung, auch abwesende."
-          }
-          icon={<MotoConceptIcon concept={childrenConcept} />}
-          loading={loading}
-          tone="neutral"
-        />
-      </div>
+      <StatCard
+        label="Kinder heute"
+        value={totals.children}
+        hint={loading ? undefined : "Alle Kinder in Betreuung, auch abwesende."}
+        icon={<MotoConceptIcon concept={childrenConcept} />}
+        loading={loading}
+        tone="neutral"
+      />
       <StatCard
         label="In einer Gruppe"
         value={loading ? 0 : `${totals.inGroup} von ${totals.children}`}
@@ -449,8 +445,8 @@ function TotalFigures({
 const NO_SCHOOL_MATCH = (
   <EmptyState
     icon={<School className="h-12 w-12" aria-hidden="true" />}
-    title="Keine Schule passt zu Ihrer Suche."
-    description="Prüfen Sie den Namen oder suchen Sie nach dem Ort."
+    title="Keine Schule passt zu deiner Suche."
+    description="Prüfe den Namen oder suche nach dem Ort."
   />
 );
 
@@ -491,7 +487,7 @@ function ViewContent({
         emptyState={emptyRows(
           search,
           "Noch keine Gruppen",
-          "Ihre Schulen haben noch keine OGS-Gruppen angelegt.",
+          "Deine Schulen haben noch keine OGS-Gruppen angelegt.",
         )}
       />
     );
@@ -598,37 +594,35 @@ export default function TraegerOccupancyPage() {
       ]
     : [];
 
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerOccupancy(format, schoolId || undefined),
+    scope: traegerExportScope(chosenSchool?.name),
+    fallbackName: `belegung-${occupancy?.day ?? "heute"}`,
+    errorObject: "die Belegung",
+    unavailable: !occupancy,
+    onError: reportError,
+  });
+
   return (
     <TenantPage
       title="Belegung"
       info={
         <>
-          Hier sehen Sie, wie viele Kinder Ihre Schulen heute betreuen. Die
+          Hier siehst du, wie viele Kinder deine Schulen heute betreuen. Die
           Zahlen stehen je Schule, je OGS-Gruppe und je Betreuungsform. Eine
           Betreuungsform ist ein Betreuungsangebot der Schule, das als Betreuung
           zählt, zum Beispiel „OGS bis 16 Uhr“. Mittagessen zählt nicht. Jedes
-          Angebot, das heute läuft, steht hier, auch ohne Buchung. Daneben sehen
-          Sie seine freien Plätze. Gibt es ein Angebot mit gleichem Namen an
-          mehreren Schulen, steht es unter „Betreuungsformen“ auch
+          Angebot, das heute läuft, steht hier, auch ohne Buchung. Daneben
+          siehst du seine freien Plätze. Gibt es ein Angebot mit gleichem Namen
+          an mehreren Schulen, steht es unter „Betreuungsformen“ auch
           zusammengezählt. Es zählen dieselben Kinder wie bei der Stichtagszahl.
-          moto zeigt hier keine Namen von Kindern. Mit „Herunterladen“ bekommen
-          Sie die Zahlen als PDF, Excel oder CSV, für alle Schulen oder die
-          gewählte Schule.
+          moto zeigt hier keine Namen von Kindern. Im Drei-Punkte-Menü unter
+          „Herunterladen“ bekommst du die Zahlen als PDF, Excel oder CSV, für
+          alle Schulen oder die gewählte Schule.
         </>
       }
-      actions={
-        <TraegerListExportMenu
-          download={(format) =>
-            downloadTraegerOccupancy(format, schoolId || undefined)
-          }
-          scope={traegerExportScope(chosenSchool?.name)}
-          ariaLabel="Belegung herunterladen"
-          fallbackName={`belegung-${occupancy?.day ?? "heute"}`}
-          errorObject="die Belegung"
-          unavailable={!occupancy}
-          onError={reportError}
-        />
-      }
+      overflowMenu={exportItems}
       stats={
         occupancy ? (
           <TenantPageStats
@@ -652,7 +646,7 @@ export default function TraegerOccupancyPage() {
           ? {
               title: "Noch keine Schulen",
               description:
-                "Sobald das moto-Team Ihrem Träger Schulen zuordnet, steht hier ihre Belegung.",
+                "Sobald das moto-Team deinem Träger Schulen zuordnet, steht hier ihre Belegung.",
               icon: <School className="h-12 w-12" aria-hidden="true" />,
             }
           : null

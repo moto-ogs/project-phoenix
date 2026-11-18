@@ -64,5 +64,5 @@ export const APPROVAL_WITH_CHANGED_TERMS_COPY = {
   title: "Angebot wurde geändert",
   confirmText: "Neue Angaben bestätigen",
   message:
-    "Ein Angebot hat sich nach der Anmeldung geändert. Beim Bestätigen gelten die neuen Angaben. Bitte informieren Sie die Familie.",
+    "Ein Angebot hat sich nach der Anmeldung geändert. Beim Bestätigen gelten die neuen Angaben. Bitte informiere die Familie.",
 } as const;

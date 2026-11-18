@@ -235,6 +235,8 @@ type router struct {
 	guardian *guardianFeed
 	// traeger serves the bell of the Träger-Portal (#7146).
 	traeger *traegerFeed
+	// caterer serves the bell of the caterer portal (#7147).
+	caterer *catererFeed
 }
 
 // DeliveryObserver records one synchronous transport outcome. All arguments
@@ -283,6 +285,7 @@ func NewServiceWithFeed(settings RouterSettings, logger *slog.Logger, observe De
 		if sse, ok := channel.(*sseChannel); ok {
 			service.guardian = newGuardianFeed(sse, feed, logger, now)
 			service.traeger = newTraegerFeed(sse, feed, now)
+			service.caterer = newCatererFeed(sse, feed, now)
 		}
 	}
 	return service

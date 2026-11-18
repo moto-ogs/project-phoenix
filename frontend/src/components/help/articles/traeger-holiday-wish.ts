@@ -11,12 +11,12 @@ export function traegerHolidayWishTopic(): HelpTopic {
     title: "Ferienwunsch aus der OGS-Anmeldung",
     question: "Wie bekommen Kinder mit Ferienwunsch Vorrang?",
     summary:
-      "Eltern geben in der OGS-Anmeldung an, ob ihr Kind in den Ferien Betreuung braucht. Sie schalten je Ferienzeitraum ein, dass dieser Ferienwunsch zählt.",
+      "Eltern geben in der OGS-Anmeldung an, ob ihr Kind in den Ferien Betreuung braucht. Du schaltest je Ferienzeitraum ein, dass dieser Ferienwunsch zählt.",
     group: "anmeldeverwaltung",
     audience: "traeger",
     icon: "Sun",
     requirements: [
-      "Ihre Rolle im Träger-Büro darf Anmeldungen verwalten. Das gilt für die Rolle Verwaltung.",
+      "Deine Rolle im Träger-Büro darf Anmeldungen verwalten. Das gilt für die Rolle Verwaltung.",
       "Die OGS fragt den Ferienwunsch in ihrer Formularvorlage ab. Das schaltet die OGS bei `Ferienwunsch (Kind)` mit `Ferienwunsch abfragen` ein.",
     ],
     steps: [],
@@ -24,18 +24,18 @@ export function traegerHolidayWishTopic(): HelpTopic {
       {
         title: "Festlegen, was ohne Ferienwunsch gilt",
         steps: [
-          "Wählen Sie unten in der Navigation `Einstellungen`.",
-          "Wählen Sie `Allgemein` und dann den Reiter `Ferienbetreuung`.",
-          "Wählen Sie bei `Was gilt ohne Ferienwunsch?`: `Kinder mit Ferienwunsch haben Vorrang` oder `Nur Kinder mit Ferienwunsch können sich anmelden`.",
+          "Wähle unten in der Navigation `Einstellungen`.",
+          "Wähle `Allgemein` und dann den Reiter `Ferienbetreuung`.",
+          "Wähle bei `Was gilt ohne Ferienwunsch?`: `Kinder mit Ferienwunsch haben Vorrang` oder `Nur Kinder mit Ferienwunsch können sich anmelden`.",
         ],
       },
       {
         title: "Für einen Ferienzeitraum einschalten",
         steps: [
-          "Wählen Sie in der Navigation `Ferienbetreuung`.",
-          "Öffnen Sie den Ferienzeitraum und wählen Sie den Reiter `Planung`.",
-          "Schalten Sie `Ferienwunsch aus der OGS-Anmeldung berücksichtigen` ein.",
-          "Wählen Sie `Speichern`.",
+          "Wähle in der Navigation `Ferienbetreuung`.",
+          "Öffne den Ferienzeitraum und wähle den Reiter `Planung`.",
+          "Schalte `Ferienwunsch aus der OGS-Anmeldung berücksichtigen` ein.",
+          "Wähle `Speichern`.",
         ],
       },
       {
@@ -43,10 +43,10 @@ export function traegerHolidayWishTopic(): HelpTopic {
         description:
           "Ist der Ferienwunsch nicht bekannt, steht beim Kind `Ferienwunsch prüfen`.",
         steps: [
-          "Wählen Sie im Reiter `Anmeldungen` beim Filter `Ferienwunsch` den Eintrag `Ferienwunsch prüfen`.",
-          "Öffnen Sie eine Anmeldung.",
-          "Fragen Sie bei der OGS nach, was in der OGS-Anmeldung steht.",
-          "Wählen Sie beim Kind unter `Ferienwunsch` den Knopf `Mit Ferienwunsch` oder `Ohne Ferienwunsch`.",
+          "Wähle im Reiter `Anmeldungen` beim Filter `Ferienwunsch` den Eintrag `Ferienwunsch prüfen`.",
+          "Öffne eine Anmeldung.",
+          "Frage bei der OGS nach, was in der OGS-Anmeldung steht.",
+          "Wähle beim Kind unter `Ferienwunsch` den Knopf `Mit Ferienwunsch` oder `Ohne Ferienwunsch`.",
         ],
       },
     ],
@@ -63,7 +63,7 @@ export function traegerHolidayWishTopic(): HelpTopic {
       "Beim Kind steht nichts zum Ferienwunsch? Der Ferienzeitraum berücksichtigt ihn nicht, oder das Kind ist ein Feriengast.",
     ],
     troubleshootingDetails: [
-      "Auch mit Elternkonto kann der Ferienwunsch fehlen. Dann steht beim Kind `Ferienwunsch prüfen`. Bitte fragen Sie bei der OGS nach.",
+      "Auch mit Elternkonto kann der Ferienwunsch fehlen. Dann steht beim Kind `Ferienwunsch prüfen`. Bitte frage bei der OGS nach.",
     ],
     related: [
       HELP_TOPICS.traegerHolidayPlaces,

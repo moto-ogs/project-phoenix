@@ -228,6 +228,7 @@ const mockSchool = {
   childQuotaBundles: null as number | null,
   childQuotaBundleSize: 50,
   childQuotaCount: 37,
+  deviceSlots: null as number | null,
 };
 
 interface SetupOpts {
@@ -651,7 +652,7 @@ describe("OperatorSchoolDetailPage", () => {
     fireEvent.click(await screen.findByText("Löschen"));
 
     expect(await screen.findByText("Schule löschen")).toBeInTheDocument();
-    expect(screen.getByText(/Möchten Sie die Schule/)).toBeInTheDocument();
+    expect(screen.getByText(/Möchtest du die Schule/)).toBeInTheDocument();
   });
 
   // --- Konten tab actions ---
@@ -838,6 +839,39 @@ describe("OperatorSchoolDetailPage", () => {
       expect(await screen.findByText("OGS-001")).toBeInTheDocument();
     });
 
+    it("shows the Geräteplätze with occupied and free places (#2312)", async () => {
+      currentSearchParams = new URLSearchParams("tab=geraete");
+      setupSWR({
+        devices: [mockDevice],
+        schools: [{ ...mockSchool, deviceSlots: 4 }],
+      });
+
+      await renderPage();
+
+      const card = await screen.findByTestId("device-slots-card");
+      expect(card).toHaveTextContent("Geräteplätze");
+      expect(card).toHaveTextContent("3 / 4 belegt");
+      expect(card).toHaveTextContent("1 Platz frei");
+      fireEvent.click(within(card).getByRole("button", { name: "Ändern" }));
+      expect(
+        await screen.findByRole("textbox", { name: "Anzahl Geräteplätze" }),
+      ).toHaveValue("4");
+    });
+
+    it("marks full Geräteplätze and offers a limit where none is set", async () => {
+      currentSearchParams = new URLSearchParams("tab=geraete");
+      setupSWR({
+        devices: [mockDevice],
+        schools: [{ ...mockSchool, deviceSlots: 3 }],
+      });
+
+      await renderPage();
+
+      expect(await screen.findByTestId("device-slots-card")).toHaveTextContent(
+        "Keine freien Plätze",
+      );
+    });
+
     it("renders empty state when there are no devices", async () => {
       currentSearchParams = new URLSearchParams("tab=geraete");
       setupSWR({ devices: [] });
@@ -884,12 +918,12 @@ describe("OperatorSchoolDetailPage", () => {
           name: /Aktionen für/,
         }),
       );
-      fireEvent.click(screen.getByRole("menuitem", { name: "Löschen" }));
+      fireEvent.click(screen.getByRole("menuitem", { name: "Entfernen" }));
 
-      // The DeleteDeviceModal renders "Gerät löschen" as a heading.
+      // The DeleteDeviceModal renders "Gerät entfernen" as a heading.
       await waitFor(() => {
         expect(
-          screen.getByRole("heading", { name: "Gerät löschen" }),
+          screen.getByRole("heading", { name: "Gerät entfernen" }),
         ).toBeInTheDocument();
       });
     });
@@ -906,11 +940,13 @@ describe("OperatorSchoolDetailPage", () => {
           name: /Aktionen für/,
         }),
       );
-      fireEvent.click(screen.getByRole("menuitem", { name: "Löschen" }));
+      fireEvent.click(screen.getByRole("menuitem", { name: "Entfernen" }));
 
-      // Two-step confirm: click "Ja, löschen" then "Endgültig löschen"
-      fireEvent.click(await screen.findByText("Ja, löschen"));
-      fireEvent.click(await screen.findByText("Endgültig löschen"));
+      // Two-step confirm: click "Ja, entfernen" then "Gerät entfernen"
+      fireEvent.click(await screen.findByText("Ja, entfernen"));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Gerät entfernen" }),
+      );
 
       await waitFor(() => {
         expect(mockDeleteDevice).toHaveBeenCalledWith("1");

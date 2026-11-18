@@ -36,7 +36,7 @@ import { DataField } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { enrollmentsConcept } from "~/lib/concepts/enrollments";
 import { FormFieldset } from "~/components/ui/form-fieldset";
@@ -168,21 +168,21 @@ export function RolloverForm({
     formErrors.clear();
     if (!draft.service_start_date || !draft.service_end_date) {
       formErrors.invalid(
-        "Bitte geben Sie Beginn und Ende des Betreuungszeitraums an.",
+        "Bitte gib Beginn und Ende des Betreuungszeitraums an.",
         {
           ...(draft.service_start_date
             ? {}
-            : { service_start_date: "Bitte wählen Sie den Beginn." }),
+            : { service_start_date: "Bitte wähle den Beginn." }),
           ...(draft.service_end_date
             ? {}
-            : { service_end_date: "Bitte wählen Sie das Ende." }),
+            : { service_end_date: "Bitte wähle das Ende." }),
         },
       );
       return;
     }
     if (!deadlineLocal) {
-      formErrors.invalid("Bitte geben Sie eine Frist für die Eltern an.", {
-        rollover_deadline: "Bitte wählen Sie eine Frist.",
+      formErrors.invalid("Bitte gib eine Frist für die Eltern an.", {
+        rollover_deadline: "Bitte wähle eine Frist.",
       });
       return;
     }
@@ -223,14 +223,20 @@ export function RolloverForm({
 
   // Statuszeile des Seitenkopfs: Quelle und die Vorschau, die das Formular
   // ohnehin lädt.
-  const statusLine = [
-    `Quelle: ${source.name}`,
-    // Ohne Vorschau keine Zahlen: ein Ladefehler ist keine „0“.
-    preview ? `${preview.carried_count} werden übernommen` : null,
-    preview ? `${preview.review_count} zu prüfen` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const statusLine = (
+    <TenantPageStats
+      items={[
+        { label: `Quelle: ${source.name}` },
+        // Ohne Vorschau keine Zahlen: ein Ladefehler ist keine „0“.
+        ...(preview
+          ? [
+              { value: preview.carried_count, label: "werden übernommen" },
+              { value: preview.review_count, label: "zu prüfen" },
+            ]
+          : []),
+      ]}
+    />
+  );
 
   const form = (
     <SectionCard>
@@ -346,8 +352,8 @@ export function RolloverForm({
               label="Modus"
               hint={
                 draft.rollover_mode === "opt_out"
-                  ? "Eltern müssen nichts tun. Bis zur Frist können sie Angebote und Tage ändern oder abmelden. Danach prüfen Sie die Anmeldungen, außer bei automatischer Genehmigung."
-                  : "Eltern bestätigen bis zur Frist und können dabei Angebote und Tage ändern. Ohne Bestätigung wird die Anmeldung zurückgezogen. Bestätigte Anmeldungen prüfen Sie."
+                  ? "Eltern müssen nichts tun. Bis zur Frist können sie Angebote und Tage ändern oder abmelden. Danach prüfst du die Anmeldungen, außer bei automatischer Genehmigung."
+                  : "Eltern bestätigen bis zur Frist und können dabei Angebote und Tage ändern. Ohne Bestätigung wird die Anmeldung zurückgezogen. Bestätigte Anmeldungen prüfst du."
               }
               value={draft.rollover_mode}
               onChange={(value) =>
@@ -396,7 +402,7 @@ export function RolloverForm({
             checked={draft.rollover_auto_approve}
             onChange={(checked) => update("rollover_auto_approve", checked)}
             label="Vorgemerkte Anmeldungen automatisch genehmigen"
-            hint="Nur bei „Anmeldungen laufen weiter“. Nach der Frist bestätigt moto die Anmeldungen ohne Ihre Prüfung. Ist kein Platz mehr frei, entscheiden Sie selbst."
+            hint="Nur bei „Anmeldungen laufen weiter“. Nach der Frist bestätigt moto die Anmeldungen ohne deine Prüfung. Ist kein Platz mehr frei, entscheidest du selbst."
           />
         </div>
 

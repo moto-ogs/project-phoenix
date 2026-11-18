@@ -62,6 +62,8 @@ vi.mock("~/components/messaging/pickup-request-detail-modal", () => ({
 // The scaffold by its contract: the page error where the thread is missing,
 // otherwise the content.
 vi.mock("~/components/ui/tenant-page", () => ({
+  // Die Attrappe zeigt keine Statuszeile; die Paare braucht hier niemand.
+  TenantPageStats: () => null,
   TenantPage: ({
     error,
     children,
@@ -311,7 +313,7 @@ describe("E-Mail-Status unter der eigenen Nachricht", () => {
     render(<MessageThreadPage />, { wrapper: Fresh });
     expect(await screen.findByText("Zugestellt")).toBeInTheDocument();
     expect(mockFetchThreadMails).toHaveBeenCalledWith("t1");
-    expect(screen.queryByText(/Korrigieren Sie die Adresse/)).toBeNull();
+    expect(screen.queryByText(/Korrigiere die Adresse/)).toBeNull();
   });
 
   it("nennt den nächsten Schritt, wenn die Mail nicht ankam", async () => {
@@ -320,7 +322,7 @@ describe("E-Mail-Status unter der eigenen Nachricht", () => {
     expect(await screen.findByText("Nicht zustellbar")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Die Mail kam nicht an. Korrigieren Sie die Adresse beim Kind unter „Erziehungsberechtigte“.",
+        "Die Mail kam nicht an. Korrigiere die Adresse beim Kind unter „Erziehungsberechtigte“.",
       ),
     ).toBeInTheDocument();
   });

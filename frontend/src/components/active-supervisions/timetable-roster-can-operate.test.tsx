@@ -17,7 +17,7 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 
-const VIEW_ONLY_HINT = "Sie sind für diese Aktivität nicht eingeplant.";
+const VIEW_ONLY_HINT = "Du bist für diese Aktivität nicht eingeplant.";
 
 // The arrows that fold a list (#4353) only change the view; every other
 // button acts on the block or a child.

@@ -159,7 +159,7 @@ describe("RootLayout", () => {
       const metadata = await generateMetadata();
 
       expect(metadata).not.toHaveProperty("title");
-      expect(metadata.description).toContain("Betreuung Ihres Kindes");
+      expect(metadata.description).toContain("Betreuung deines Kindes");
     });
 
     it("uses operator favicon assets on the operator host", async () => {

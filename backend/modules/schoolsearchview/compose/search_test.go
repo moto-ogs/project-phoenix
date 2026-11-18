@@ -464,7 +464,11 @@ func TestEveryStatementWithTheTypedTextIsMarkedForTheLog(t *testing.T) {
 		search(t, db, tenantID, nil, text, fullScope)
 		typed := strings.ToLower(strings.Fields(text)[0])
 		carrying := counter.Matching(func(sql string) bool {
-			return strings.Contains(strings.ToLower(sql), typed) || strings.Contains(sql, "1709876543")
+			// The tenant ID in transaction setup can contain the phone prefix.
+			if strings.HasPrefix(sql, "select set_config('role', 'phoenix_tenant', true), set_config('app.current_tenant_id', ") {
+				return false
+			}
+			return strings.Contains(sql, typed) || strings.Contains(sql, "1709876543")
 		})
 		require.NotEmpty(t, carrying, text)
 		for _, statement := range carrying {

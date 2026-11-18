@@ -1148,7 +1148,7 @@ describe("ChildMasterDataView", () => {
 
     expect(
       await screen.findByText(
-        "Anfrage gesendet. Das Team prüft Ihre Änderung.",
+        "Anfrage gesendet. Das Team prüft deine Änderung.",
       ),
     ).toBeInTheDocument();
     expect(await screen.findByText("In Prüfung")).toBeInTheDocument();
@@ -1277,7 +1277,7 @@ describe("ChildMasterDataView", () => {
     expect(within(section).queryAllByRole("checkbox")).toHaveLength(0);
     expect(
       screen.getByText(
-        "Ihr Kind geht an mindestens einem Tag mit einem anderen Kind. Sie können den Heimweg hier nicht ändern.",
+        "Dein Kind geht an mindestens einem Tag mit einem anderen Kind. Du kannst den Heimweg hier nicht ändern.",
       ),
     ).toBeInTheDocument();
     expect(within(section).queryByRole("button")).not.toBeInTheDocument();
@@ -1363,7 +1363,7 @@ describe("ChildMasterDataView", () => {
     expect(within(request).getByText("In Prüfung")).toBeInTheDocument();
     expect(
       within(request).getByText(
-        "Die OGS prüft Ihre Änderung. Bis zur Bestätigung gilt der bisherige Heimweg.",
+        "Die OGS prüft deine Änderung. Bis zur Bestätigung gilt der bisherige Heimweg.",
       ),
     ).toBeInTheDocument();
     expect(

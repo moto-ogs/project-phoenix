@@ -1,6 +1,7 @@
 "use client";
 
-// Eine Personalakte des Trägers (#4705, ADR 0089): die Person, die
+// Eine Personalakte des Trägers (#4705, ADR 0089): die Person (Name und
+// Geburtstag korrigiert die Personalverwaltung, #7379), die
 // Personalnummer des Trägers, die Einsatzorte, die Kontingente (#4710), das
 // Stundenkonto mit dem Monatsabschluss (#4711), die
 // Bank- und Steuerdaten und der Verlauf. Die Personalnummer und die Bankdaten ändert nur die
@@ -9,14 +10,12 @@
 import { EyeIcon, PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
-import {
-  STAFF_FIELD_LABELS,
-  schoolCount,
-  staffChangeText,
-} from "~/components/traeger/staff/staff-record-format";
+import { Suspense, useState } from "react";
+import { staffChangeText } from "~/components/traeger/staff/staff-record-format";
+import { StaffPersonCard } from "~/components/traeger/staff/staff-person-card";
 import { StaffProofsCard } from "~/components/traeger/staff/staff-proofs-card";
 import { StaffAbsenceAccountsCard } from "~/components/traeger/staff/staff-absence-accounts-card";
+import { useStaffOverviewReturn } from "~/components/traeger/staff/staff-overview-tab";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Button } from "~/components/ui/button";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
@@ -39,7 +38,7 @@ import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
 import { payrollConcept } from "~/lib/concepts/payroll";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { staffConcept } from "~/lib/concepts/staff";
-import { formatBerlinDate, formatDate } from "~/lib/date-helpers";
+import { formatBerlinDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import { useInvalidateFamily } from "~/lib/swr";
 import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
@@ -53,7 +52,6 @@ import {
   type StaffFinancial,
   type StaffRecordDetail,
 } from "~/lib/traeger-staff-api";
-import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerStaffRecordPage" });
 
@@ -122,7 +120,7 @@ function PersonnelNumberCard({
   const save = async () => {
     const value = draft.trim();
     if (value !== "" && !/^\d{1,9}$/.test(value)) {
-      errors.invalid("Bitte prüfen Sie die Personalnummer.", {
+      errors.invalid("Bitte prüfe die Personalnummer.", {
         personnel_number: "Die Personalnummer hat 1 bis 9 Ziffern.",
       });
       return;
@@ -147,7 +145,7 @@ function PersonnelNumberCard({
     <SectionCard
       concept={payrollConcept}
       title="Personalnummer"
-      description="Die Nummer aus Ihrem Lohnsystem. Sie gilt an allen Schulen dieser Person und ist bei Ihrem Träger nur einmal vergeben."
+      description="Die Nummer aus deinem Lohnsystem. Sie gilt an allen Schulen dieser Person und ist bei deinem Träger nur einmal vergeben."
       action={
         editing ? undefined : (
           <Button
@@ -349,6 +347,16 @@ function FinancialCard({
 }
 
 export default function TraegerStaffRecordPage() {
+  // `useSearchParams` braucht eine Suspense-Grenze.
+  return (
+    <Suspense fallback={<TenantPage title="Personalakte" loading />}>
+      <StaffRecordContent />
+    </Suspense>
+  );
+}
+
+function StaffRecordContent() {
+  const { backHref } = useStaffOverviewReturn();
   const params = useParams<{ id: string }>();
   const recordId = params?.id ?? "";
   const router = useRouter();
@@ -369,8 +377,8 @@ export default function TraegerStaffRecordPage() {
   const dissolveErrors = useApiFormError();
   const invalidateFamily = useInvalidateFamily();
 
-  // Name, Personalnummer, Einsatzorte and Bank und Steuer of a record also
-  // stand in the list of records.
+  // Name, Geburtstag, Personalnummer, Einsatzorte and Bank und Steuer of a
+  // record also stand in the list of records.
   const refreshOverview = () =>
     void invalidateFamily(traegerStaffKeys.overviewFamily);
   const replace = (next: StaffRecordDetail) => {
@@ -385,7 +393,7 @@ export default function TraegerStaffRecordPage() {
       await dissolveStaffRecord(record.id);
       refreshOverview();
       success(`Die Akte von ${staffName(record)} ist aufgelöst.`);
-      router.push(traegerPath("/traeger/personal"));
+      router.push(backHref);
     } catch (err) {
       logger.error("traeger_staff_record_dissolve_failed", {
         error: errorMessage(err),
@@ -404,7 +412,7 @@ export default function TraegerStaffRecordPage() {
       title={record ? staffName(record) : "Personalakte"}
       leading={<ConceptIconTile concept={staffConcept} size="page" />}
       back
-      backHref={traegerPath("/traeger/personal")}
+      backHref={backHref}
       backLabel="Zurück zu den Personalakten"
       stats={
         record ? (
@@ -483,26 +491,13 @@ export default function TraegerStaffRecordPage() {
     >
       {record ? (
         <>
-          <SectionCard
-            concept={staffConcept}
-            title="Person"
-            description="Name und Geburtstag stammen vom Verknüpfen, vom Einstellen oder aus dem Import. Die Schulen pflegen ihre eigenen Angaben weiter selbst."
-          >
-            <DataGrid columns={4}>
-              <DataField label={STAFF_FIELD_LABELS.first_name}>
-                {record.firstName}
-              </DataField>
-              <DataField label={STAFF_FIELD_LABELS.last_name}>
-                {record.lastName}
-              </DataField>
-              <DataField label={STAFF_FIELD_LABELS.birthday}>
-                {record.birthday ? formatDate(record.birthday) : "–"}
-              </DataField>
-              <DataField label="Schulen">
-                {schoolCount(record.employments.length)}
-              </DataField>
-            </DataGrid>
-          </SectionCard>
+          <StaffPersonCard
+            record={record}
+            onSaved={() => {
+              refreshOverview();
+              return mutate();
+            }}
+          />
 
           <div className="grid gap-6 lg:grid-cols-2">
             <PersonnelNumberCard record={record} onSaved={replace} />

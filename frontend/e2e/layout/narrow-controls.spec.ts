@@ -25,6 +25,11 @@ const HEAD_ACTIONS_BEFORE =
 const HEAD_LAYOUT_BEFORE =
   "[&>div[data-icon-only]]:inline-flex max-sm:contents max-sm:[&>*:not([data-icon-only])]:order-last max-sm:[&>*:not([data-icon-only])]:basis-full max-sm:[&>div:not([data-icon-only])>button]:w-full";
 
+// `HEAD_ACTIONS_LAYOUT` vor #7402: unter sm zog es jede Status-Plakette in
+// den Kopfaktionen auf eine eigene, volle Zeile wie einen Textknopf.
+const HEAD_LAYOUT_BEFORE_7402 =
+  "[&>div[data-icon-only]]:inline-flex max-sm:contents max-sm:[&>*:not([data-icon-only])]:order-last max-sm:[&>*:not([data-icon-only])]:basis-full max-sm:[&>div:not([data-icon-only])>button:not([data-icon-only])]:w-full";
+
 const NAV_ITEM =
   "relative z-10 flex min-h-[44px] items-center justify-center gap-2.5 rounded-full px-3 py-2.5";
 
@@ -83,6 +88,20 @@ function dayNavigationHeader(layoutClass: string): string {
             <div class="min-w-0 flex-1"><input class="w-full" value="15.11.2026"></div>
             ${arrow("last")}
           </div>
+        </div>
+      </div>
+    </header>`;
+}
+
+/** Kopf von `TenantPage` mit Status-Plakette und Textknopf, wie ein Vertrag. */
+function statusPillHeader(layoutClass: string): string {
+  return `
+    <header data-testid="head" class="moto-content-surface rounded-2xl border p-4">
+      <div class="flex flex-wrap items-start justify-between gap-x-2 gap-y-2">
+        <h1 class="min-w-24 text-xl font-semibold">Tilda Berger</h1>
+        <div class="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2 ${layoutClass}">
+          <span data-testid="pill" data-status-pill class="inline-flex items-center rounded-full px-2.5 py-1 text-xs whitespace-nowrap">Aktiv</span>
+          <button data-testid="text-button" type="button">PDF herunterladen</button>
         </div>
       </div>
     </header>`;
@@ -190,4 +209,29 @@ test("stretched day arrows run past the page header at 320 px", async ({
   await render(page, compiledCss, dayNavigationHeader(HEAD_LAYOUT_BEFORE));
 
   expect(await overhang(page, "head")).toBeGreaterThan(0);
+});
+
+test("a status pill in the page header keeps its size on a phone (#7402)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await render(page, compiledCss, statusPillHeader(HEAD_ACTIONS_LAYOUT));
+
+  const pill = await page.getByTestId("pill").boundingBox();
+  const textButton = await page.getByTestId("text-button").boundingBox();
+  const head = await page.getByTestId("head").boundingBox();
+  expect(pill!.width).toBeLessThan(80);
+  // Der Textknopf bekommt weiter seine volle Zeile.
+  expect(textButton!.width).toBeGreaterThan(head!.width / 2);
+});
+
+test("before #7402 the status pill stretched over the whole head", async ({
+  page,
+}) => {
+  // Gegenprobe: der Zustand vor #7402.
+  await page.setViewportSize({ width: 390, height: 800 });
+  await render(page, compiledCss, statusPillHeader(HEAD_LAYOUT_BEFORE_7402));
+
+  const pill = await page.getByTestId("pill").boundingBox();
+  expect(pill!.width).toBeGreaterThan(200);
 });

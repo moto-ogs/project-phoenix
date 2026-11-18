@@ -66,7 +66,9 @@ vi.mock("next-auth/react", () => ({
 
 vi.mock("~/lib/school-url", () => ({ schoolPortalLoginUrl }));
 
-vi.mock("~/lib/auth-utils", () => ({
+vi.mock("~/lib/auth-utils", async (importOriginal) => ({
+  getGreetingName: (await importOriginal<typeof import("~/lib/auth-utils")>())
+    .getGreetingName,
   isAdmin: vi.fn((session) => session?.user?.isAdmin ?? false),
   hasEffectiveAdminScope: vi.fn((session) => session?.user?.isAdmin ?? false),
   hasPermission: vi.fn((session) => session?.user?.isAdmin ?? false),
@@ -93,6 +95,9 @@ vi.mock("~/lib/usercontext-context", () => ({
   ),
 }));
 
+vi.mock("~/components/devices/device-pin-warning", () => ({
+  DevicePinWarning: () => <div data-testid="device-pin-warning" />,
+}));
 vi.mock("~/components/enrollment/phase-expiry-warnings", () => ({
   PhaseExpiryWarnings: () => <div data-testid="phase-expiry-warnings" />,
 }));
@@ -321,6 +326,25 @@ describe("Startseite", () => {
     );
   });
 
+  // Ein Konto ohne Personendaten trägt im Sitzungsnamen seine Adresse
+  // (#7305): Die Startseite grüßt dann ohne Anrede.
+  it("grüßt nie mit einer E-Mail-Adresse", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: {
+        ...mockSession,
+        user: { ...mockSession.user, name: "x@traeger.de", firstName: "" },
+      },
+      status: "authenticated",
+      update: vi.fn(),
+    } as unknown as ReturnType<typeof useSession>);
+
+    render(<HomePage />);
+
+    const heading = await screen.findByRole("heading", { level: 1 });
+    expect(heading).toHaveTextContent(/^Guten (Morgen|Tag|Abend)$/);
+    expect(heading).not.toHaveTextContent("@");
+  });
+
   it("zeigt der Leitung ihre Standardansicht", async () => {
     render(<HomePage />);
 
@@ -406,7 +430,7 @@ describe("Startseite", () => {
 
     // Anker: die Standardansicht der Betreuungskraft ist geladen.
     expect(
-      await screen.findByText("Ihre Startseite ist leer"),
+      await screen.findByText("Deine Startseite ist leer"),
     ).toBeInTheDocument();
     expect(screen.queryByText("Kein Zugriff")).not.toBeInTheDocument();
     // Ohne Rechte auf die Betriebszahlen bleiben die Kennzahlen weg; die
@@ -453,6 +477,8 @@ describe("Startseite", () => {
     expect(
       await screen.findByTestId("phase-expiry-warnings"),
     ).toBeInTheDocument();
+    // Geräte-PIN (#7175): dasselbe Recht setzt die PIN.
+    expect(screen.getByTestId("device-pin-warning")).toBeInTheDocument();
   });
 
   it("lädt die Ablaufwarnungen der Anmeldephasen nur für die Leitung", async () => {
@@ -466,6 +492,7 @@ describe("Startseite", () => {
     expect(
       screen.queryByTestId("phase-expiry-warnings"),
     ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("device-pin-warning")).not.toBeInTheDocument();
   });
 
   it("behält die Zahlen, wenn eine spätere Abfrage fehlschlägt", async () => {

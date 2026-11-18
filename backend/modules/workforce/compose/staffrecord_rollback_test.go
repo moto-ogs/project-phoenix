@@ -10,7 +10,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 func TestWorkforceRecordWritesRollbackAndRetry(t *testing.T) {
@@ -20,13 +19,16 @@ func TestWorkforceRecordWritesRollbackAndRetry(t *testing.T) {
 	staff := testpkg.CreateTestStaff(t, db, "Record", "Rollback")
 	capability := buildWorkforce(t, db)
 	tables := []string{"active.staff_balance_adjustments", "active.staff_vacation_openings", "active.staff_vacation_quota", "users.staff_master_data", "users.staff_financial_data", "users.staff_qualifications", "users.staff_documents", "users.staff_document_file_cleanup"}
+	queries := make(testpkg.SnapshotQueries, len(tables))
+	for _, table := range tables {
+		queries[table] = `SELECT COALESCE(jsonb_agg(to_jsonb(entry) ORDER BY entry.id), '[]'::jsonb)
+			FROM ` + table + ` AS entry WHERE entry.tenant_id = $1`
+	}
+	read := queries.Prepare(t, db)
 	snapshot := func() map[string]string {
-		result := make(map[string]string)
-		for _, table := range tables {
-			var rows string
-			require.NoError(t, db.NewSelect().TableExpr("? AS entry", bun.Ident(table)).ColumnExpr("COALESCE(jsonb_agg(to_jsonb(entry) ORDER BY entry.id), '[]'::jsonb)").Where("entry.tenant_id = ?", testpkg.Tenant(t)).Scan(ctx, &rows))
-			result[table] = rows
-		}
+		t.Helper()
+		result, err := read(ctx, testpkg.Tenant(t))
+		require.NoError(t, err)
 		return result
 	}
 	type writeStep struct {

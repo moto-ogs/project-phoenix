@@ -14,13 +14,15 @@ import { DESKTOP_WIDTH, setViewportWidth } from "~/test/helpers/viewport";
 
 vi.unmock("swr");
 
-const { api, mockPush } = vi.hoisted(() => ({
+const { api, mockPush, mockReplace, address } = vi.hoisted(() => ({
   api: {
     fetchStaffOverview: vi.fn(),
     previewStaffLink: vi.fn(),
     linkStaff: vi.fn(),
   },
   mockPush: vi.fn(),
+  mockReplace: vi.fn(),
+  address: { search: "" },
 }));
 
 vi.mock("~/lib/traeger-staff-api", async (original) => ({
@@ -31,9 +33,9 @@ vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush, replace: vi.fn() }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
   usePathname: () => "/personal",
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(address.search),
 }));
 
 import TraegerStaffRecordsPage from "./page";
@@ -120,6 +122,10 @@ function renderPage() {
 describe("TraegerStaffRecordsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    address.search = "";
+    mockReplace.mockImplementation((url: string) => {
+      address.search = url.replace(/^\?/, "");
+    });
     api.fetchStaffOverview.mockResolvedValue(OVERVIEW);
     api.previewStaffLink.mockResolvedValue(PREVIEW);
     api.linkStaff.mockResolvedValue(RECORD);
@@ -173,7 +179,7 @@ describe("TraegerStaffRecordsPage", () => {
     );
     expect(
       await within(dialog).findByText(
-        "Bitte wählen Sie bei jedem Feld, welcher Wert gilt.",
+        "Bitte wähle bei jedem Feld, welcher Wert gilt.",
       ),
     ).toBeInTheDocument();
     expect(api.linkStaff).not.toHaveBeenCalled();
@@ -193,14 +199,190 @@ describe("TraegerStaffRecordsPage", () => {
       }),
     );
     await vi.waitFor(() =>
-      expect(mockPush).toHaveBeenCalledWith("/personal/5"),
+      expect(mockPush).toHaveBeenCalledWith("/personal/5?from=vorschlaege"),
     );
   });
 
-  it("lists the people without a record", async () => {
-    renderPage();
+  it("lists the people without a record and keeps the tab in the address", async () => {
+    const view = renderPage();
     fireEvent.click(await screen.findByRole("tab", { name: /Ohne Akte/ }));
+    expect(mockReplace).toHaveBeenCalledWith("?tab=ohne-akte", {
+      scroll: false,
+    });
+    // Der Router rendert nach `replace` mit der neuen Adresse neu.
+    view.rerender(
+      <TraegerResourceTestProvider>
+        <TraegerStaffRecordsPage />
+      </TraegerResourceTestProvider>,
+    );
     expect(await screen.findByText("Jonas Keller")).toBeInTheDocument();
+  });
+
+  // #7377: Abbrechen und Zurück einer Unterseite führen auf den Reiter
+  // zurück, von dem man kam.
+  it("opens the tab from the address and hands it to its sub pages", async () => {
+    address.search = "tab=ohne-akte";
+    renderPage();
+    expect(await screen.findByText("Jonas Keller")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Ohne Akte/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      screen.getByRole("link", { name: /Person einstellen/ }),
+    ).toHaveAttribute("href", "/personal/einstellen?from=ohne-akte");
+    expect(
+      screen.getByRole("link", { name: /Personal importieren/ }),
+    ).toHaveAttribute("href", "/personal/import?from=ohne-akte");
+  });
+
+  // #7378: „Akte anlegen“ in der Rückfrage beim Einstellen öffnet den
+  // Dialog für genau die Person, die es an der Schule schon gibt.
+  it("opens „Akte anlegen“ for the person the address names", async () => {
+    address.search = "tab=ohne-akte&schule=2&person=33";
+    api.previewStaffLink.mockResolvedValue({
+      ...PREVIEW,
+      members: [{ ...mira("2", "33", "Keller"), firstName: "Jonas" }],
+      fields: [],
+    });
+    renderPage();
+    const dialog = await screen.findByRole("dialog");
+    await vi.waitFor(() =>
+      expect(api.previewStaffLink).toHaveBeenCalledWith({
+        recordId: null,
+        members: [{ schoolId: "2", staffId: "33" }],
+        choices: {},
+      }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Akte anlegen" }),
+    );
+    await vi.waitFor(() =>
+      expect(api.linkStaff).toHaveBeenCalledWith({
+        recordId: null,
+        members: [{ schoolId: "2", staffId: "33" }],
+        choices: {},
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith("/personal/5?from=ohne-akte"),
+    );
+    // The address still names the person until the router moves on; the
+    // dialog stays closed anyway.
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("drops the person from the address when the dialog closes", async () => {
+    address.search = "tab=ohne-akte&schule=2&person=33";
+    renderPage();
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Abbrechen" }));
+    expect(mockReplace).toHaveBeenCalledWith("?tab=ohne-akte", {
+      scroll: false,
+    });
+  });
+
+  it("opens the person again when the address names it again", async () => {
+    address.search = "tab=ohne-akte&schule=2&person=33";
+    const view = renderPage();
+    const rerender = () =>
+      view.rerender(
+        <TraegerResourceTestProvider>
+          <TraegerStaffRecordsPage />
+        </TraegerResourceTestProvider>,
+      );
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Abbrechen",
+      }),
+    );
+    rerender();
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    address.search = "tab=ohne-akte&schule=2&person=33";
+    rerender();
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("ignores a person in the address that is no ID", async () => {
+    address.search = "tab=ohne-akte&schule=2&person=../x";
+    renderPage();
+    expect(await screen.findByText("Jonas Keller")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(api.previewStaffLink).not.toHaveBeenCalled();
+  });
+
+  it("hands the default suggestions tab to its sub pages", async () => {
+    renderPage();
+    await screen.findByText("Vorschläge zum Verknüpfen");
+    expect(
+      screen.getByRole("link", { name: /Person einstellen/ }),
+    ).toHaveAttribute("href", "/personal/einstellen?from=vorschlaege");
+    expect(
+      screen.getByRole("link", { name: /Personal importieren/ }),
+    ).toHaveAttribute("href", "/personal/import?from=vorschlaege");
+  });
+
+  it("hands the default records tab to its sub pages", async () => {
+    api.fetchStaffOverview.mockResolvedValue({
+      ...OVERVIEW,
+      suggestions: [],
+      records: [
+        {
+          id: "5",
+          firstName: "Mira",
+          lastName: "Sommer",
+          birthday: "",
+          personnelNumber: null,
+          hasFinancial: false,
+          employments: [],
+        },
+      ],
+    });
+    renderPage();
+    const row = (await screen.findByText("Mira Sommer")).closest("tr");
+    expect(row).not.toBeNull();
+    expect(
+      screen.getByRole("link", { name: /Person einstellen/ }),
+    ).toHaveAttribute("href", "/personal/einstellen?from=akten");
+    expect(
+      screen.getByRole("link", { name: /Personal importieren/ }),
+    ).toHaveAttribute("href", "/personal/import?from=akten");
+    fireEvent.click(row!);
+    expect(mockPush).toHaveBeenCalledWith("/personal/5?from=akten");
+  });
+
+  it("opens a record with the tab it came from", async () => {
+    address.search = "tab=akten";
+    api.fetchStaffOverview.mockResolvedValue({
+      ...OVERVIEW,
+      records: [
+        {
+          id: "5",
+          firstName: "Mira",
+          lastName: "Sommer",
+          birthday: "",
+          personnelNumber: null,
+          hasFinancial: false,
+          employments: [],
+        },
+      ],
+    });
+    renderPage();
+    const row = (await screen.findByText("Mira Sommer")).closest("tr");
+    expect(row).not.toBeNull();
+    fireEvent.click(row!);
+    expect(mockPush).toHaveBeenCalledWith("/personal/5?from=akten");
+  });
+
+  it("ignores an unknown tab in the address and uses the default tab", async () => {
+    address.search = "tab=unbekannt";
+    renderPage();
+    expect(
+      await screen.findByText("Vorschläge zum Verknüpfen"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Person einstellen/ }),
+    ).toHaveAttribute("href", "/personal/einstellen?from=vorschlaege");
   });
 });
 

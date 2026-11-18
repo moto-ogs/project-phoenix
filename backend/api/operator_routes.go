@@ -299,7 +299,10 @@ func mountOperatorProvisioningRoutes(r chi.Router, provisioning *provisioningOpe
 		r.Post("/{id}/set-api-key", provisioning.SetDeviceAPIKey)
 		r.Get("/{id}/transfer-status", provisioning.GetDeviceTransferStatus)
 		r.Post("/{id}/transfer", provisioning.TransferDevice)
+		r.Post("/{id}/block", provisioning.BlockDevice)
+		r.Post("/{id}/unblock", provisioning.UnblockDevice)
 		r.Delete("/{id}", provisioning.DeleteDevice)
+		r.Get("/{id}/history", provisioning.AuditReadAccess(organizationtenancy.ReadDeviceHistory, provisioning.DeviceHistory))
 	})
 
 	r.Route("/organizations", func(r chi.Router) {
@@ -407,10 +410,13 @@ func mountOperatorSchoolRoutes(
 			r.Put("/override", mfaAdmin.SetSchoolAccountMFAOverride)
 		})
 		r.Get("/{id}/devices", provisioning.ListSchoolDevices)
+		r.Put("/{id}/device-slots", provisioning.SetSchoolDeviceSlots)
 		r.Get("/{id}/persons", provisioning.AuditReadAccess(organizationtenancy.ReadSchoolPersons, provisioning.ListSchoolPersons))
 		r.Get("/{id}/pwa-usage", provisioning.GetSchoolPWAUsage)
 		if demoPresenceHistory != nil {
-			r.Post("/{id}/demo-presence-history", provisioning.AuditReadAccess(organizationtenancy.ReadDemoPresenceHistory, demoPresenceHistory))
+			history := provisioning.AuditReadAccess(organizationtenancy.ReadDemoPresenceHistory, demoPresenceHistory)
+			r.Get("/{id}/demo-presence-history", history)
+			r.Post("/{id}/demo-presence-history", history)
 		}
 		if schoolSettings != nil {
 			values := schoolSettings.values

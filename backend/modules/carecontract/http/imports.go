@@ -35,13 +35,16 @@ var errImportFileType = errors.New("the import file must be a .csv or .txt file"
 type ImportResource struct {
 	imports         carecontract.ContractImports
 	requireContract common.Middleware
+	// billingRight is the right "Abrechnung": only with it a file may name
+	// the number of the family's children (#7356).
+	billingRight string
 }
 
-func NewImportResource(imports carecontract.ContractImports, requireContract common.Middleware) *ImportResource {
-	if imports == nil || requireContract == nil {
-		panic("care contract http: the imports and the right check are required")
+func NewImportResource(imports carecontract.ContractImports, requireContract common.Middleware, billingRight string) *ImportResource {
+	if imports == nil || requireContract == nil || billingRight == "" {
+		panic("care contract http: the imports, the right check and the right to bill are required")
 	}
-	return &ImportResource{imports: imports, requireContract: requireContract}
+	return &ImportResource{imports: imports, requireContract: requireContract, billingRight: billingRight}
 }
 
 // Router returns the routes mounted at /traeger/contract-imports.
@@ -72,6 +75,8 @@ func (rs *ImportResource) look(w http.ResponseWriter, r *http.Request, apply boo
 		return
 	}
 	request.Apply = apply
+	principal, err := common.CurrentPrincipal(r.Context())
+	request.KeepsFamilyChildren = err == nil && principal.HasPermission(rs.billingRight)
 	result, err := rs.imports.ImportContracts(r.Context(), reviewer, request)
 	if err != nil {
 		renderImportError(w, r, err)
@@ -149,6 +154,7 @@ var importErrorRules = []struct {
 	{errImportFileType, func(err error) render.Renderer {
 		return common.ErrorInvalidRequestWithCode(err, common.CodeCareContractImportFileInvalid)
 	}},
+	{carecontract.ErrContractImportFamilyChildrenRight, func(error) render.Renderer { return common.AuthorizationForbidden() }},
 	{carecontract.ErrContractImportChanged, func(err error) render.Renderer {
 		return common.ErrorConflictWithCode(err, common.CodeCareContractImportChanged)
 	}},

@@ -5,24 +5,24 @@
     {{template "school-brand" .}}
     <h1>Anmeldung wurde verlängert</h1>
 
-    <p>Sehr geehrte/r {{.GuardianFirstName}} {{.GuardianLastName}},</p>
+    <p>Guten Tag {{.GuardianFirstName}} {{.GuardianLastName}},</p>
 
-    <p>{{if .SchoolName}}die <strong>{{.SchoolName}}</strong> hat{{else}}wir haben{{end}} Ihre Anmeldung für <strong>{{.PhaseName}}</strong> automatisch übernommen. Die Betreuung Ihres Kindes läuft im neuen Zeitraum weiter.{{if not .RenewalTermsRequired}} Sie müssen dafür nichts tun.{{end}}</p>
+    <p>{{if .SchoolName}}die <strong>{{.SchoolName}}</strong> hat{{else}}wir haben{{end}} deine Anmeldung für <strong>{{.PhaseName}}</strong> automatisch übernommen. Die Betreuung deines Kindes läuft im neuen Zeitraum weiter.{{if not .RenewalTermsRequired}} Du musst dafür nichts tun.{{end}}</p>
 
     {{if .RenewalTermsRequired}}
     <div class="highlight-box">
-        <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Bitte bestätigen Sie die Vertragsbedingungen.</strong></p>
-        <p style="margin: 0; font-size: 14px;">Für den Vertrag im neuen Zeitraum brauchen wir Ihre Zustimmung. Die Bedingungen sehen Sie über den Link unten. Die Betreuung läuft auch ohne Ihre Zustimmung weiter.</p>
+        <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Bitte bestätige die Vertragsbedingungen.</strong></p>
+        <p style="margin: 0; font-size: 14px;">Für den Vertrag im neuen Zeitraum brauchen wir deine Zustimmung. Die Bedingungen siehst du über den Link unten. Die Betreuung läuft auch ohne deine Zustimmung weiter.</p>
     </div>
     {{end}}
 
     <div class="highlight-box">
-        <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Über den Link können Sie außerdem:</strong></p>
+        <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Über den Link kannst du außerdem:</strong></p>
         <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
             <li>Betreuungsangebote oder Wochentage anpassen</li>
             <li>Betreuung zum Ende des aktuellen Zeitraums beenden</li>
         </ul>
-        <p style="margin: 8px 0 0 0; font-size: 14px;">Ihre übrigen Daten bleiben unverändert und müssen nicht neu eingegeben werden.</p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">Deine übrigen Daten bleiben unverändert und müssen nicht neu eingegeben werden.</p>
     </div>
 
     {{if .ChildNames}}
@@ -38,8 +38,8 @@
 
     {{if .RolloverDeadline}}
     <div class="highlight-box" style="margin-top: 16px;">
-        <p style="margin: 0; font-size: 14px;"><strong>Falls Sie nicht teilnehmen möchten:</strong></p>
-        <p style="margin: 8px 0 0 0; font-size: 14px;">Bitte melden Sie sich bis zum <strong>{{.RolloverDeadline}}</strong> über den Link unten ab. Nach diesem Datum wird die Anmeldung in die reguläre Prüfung übernommen.</p>
+        <p style="margin: 0; font-size: 14px;"><strong>Falls du nicht teilnehmen möchtest:</strong></p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">Bitte melde dich bis zum <strong>{{.RolloverDeadline}}</strong> über den Link unten ab. Nach diesem Datum wird die Anmeldung in die reguläre Prüfung übernommen.</p>
     </div>
     {{end}}
 
@@ -47,17 +47,17 @@
         <a class="button" href="{{.StatusURL}}">{{if .RenewalTermsRequired}}Vertragsbedingungen bestätigen{{else}}Status ansehen oder abmelden{{end}}</a>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:</p>
+    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopiere bitte diesen Link:</p>
     <div class="link-box">
         <a href="{{.StatusURL}}">{{.StatusURL}}</a>
     </div>
 
     <div class="highlight-box" style="margin-top: 24px;">
         <p style="margin: 0; font-size: 14px;"><strong>Wie geht es weiter?</strong></p>
-        <p style="margin: 8px 0 0 0; font-size: 14px;">Sobald die Bearbeitungszeit endet, geht Ihre Anmeldung in die reguläre Prüfung der Schulleitung. Sie erhalten anschließend eine separate E-Mail mit dem Ergebnis.</p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">Sobald die Bearbeitungszeit endet, geht deine Anmeldung in die reguläre Prüfung der Schulleitung. Du erhältst anschließend eine separate E-Mail mit dem Ergebnis.</p>
     </div>
 
-    <p class="security-note">Bewahren Sie diese E-Mail auf. Der Link bleibt bis zur Frist gültig.</p>
+    <p class="security-note">Bewahre diese E-Mail auf. Der Link bleibt bis zur Frist gültig.</p>
 </div>
 
 {{template "footer" .}}

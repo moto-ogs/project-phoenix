@@ -214,7 +214,7 @@ describe("Anfragen: Liste und Detail", () => {
 
     expect(
       await screen.findByText(
-        "Sie dürfen Elternanfragen zurzeit nicht entscheiden.",
+        "Du darfst Elternanfragen zurzeit nicht entscheiden.",
       ),
     ).toBeVisible();
     expect(

@@ -110,20 +110,32 @@ func (req *CheckInRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
-// getStaffIDFromClaims resolves JWT account ID to staff ID through PersonService
+// errNoAccount marks a request without an authenticated account.
+var errNoAccount = errors.New("invalid token")
+
+// getStaffIDFromClaims resolves the JWT account to the caller's staff ID in
+// this school. A missing account fails with errNoAccount, a missing person or
+// staff profile with workforce.ErrNoStaffProfile; other lookup failures pass
+// through. Render the error with ownStaffError.
 func (rs *Resource) getStaffIDFromClaims(ctx context.Context, claims Identity) (int64, error) {
 	if claims.AccountID == 0 {
-		return 0, errors.New("invalid token")
+		return 0, errNoAccount
 	}
 
 	person, err := rs.PersonService.PersonByAccountID(ctx, claims.AccountID)
 	if err != nil {
-		return 0, errors.New("person not found for account")
+		return 0, fmt.Errorf("person for account: %w", err)
+	}
+	if person == nil {
+		return 0, workforce.ErrNoStaffProfile
 	}
 
 	staff, err := rs.PersonService.StaffByPersonID(ctx, person.ID)
 	if err != nil {
-		return 0, errors.New("staff record not found")
+		return 0, fmt.Errorf("staff for person: %w", err)
+	}
+	if staff == nil {
+		return 0, workforce.ErrNoStaffProfile
 	}
 
 	return staff.ID, nil
@@ -168,7 +180,7 @@ func (rs *Resource) checkIn(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -184,7 +196,7 @@ func (rs *Resource) checkIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, workforce.WorkSessionWire{WorkSession: session}, "Check-in successful")
+	common.Respond(w, r, http.StatusOK, sessionResponse(session), "Check-in successful")
 }
 
 // checkOut handles POST /api/time-tracking/check-out
@@ -201,7 +213,7 @@ func (rs *Resource) checkOut(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -217,7 +229,7 @@ func (rs *Resource) checkOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, workforce.WorkSessionWire{WorkSession: session}, "Check-out successful")
+	common.Respond(w, r, http.StatusOK, sessionResponse(session), "Check-out successful")
 }
 
 // getCurrent handles GET /api/time-tracking/current
@@ -226,7 +238,7 @@ func (rs *Resource) getCurrent(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -241,7 +253,7 @@ func (rs *Resource) getCurrent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return null if no active session (not an error)
-	common.Respond(w, r, http.StatusOK, workforce.WorkSessionWire{WorkSession: session}, "Current session retrieved successfully")
+	common.Respond(w, r, http.StatusOK, sessionResponse(session), "Current session retrieved successfully")
 }
 
 // getConfig handles GET /api/time-tracking/config
@@ -267,7 +279,7 @@ func (rs *Resource) getHistory(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -285,7 +297,7 @@ func (rs *Resource) getHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, historyResp, "Session history retrieved successfully")
+	common.Respond(w, r, http.StatusOK, historyResponse(historyResp), "Session history retrieved successfully")
 }
 
 // updateSession handles PUT /api/time-tracking/{id}
@@ -294,7 +306,7 @@ func (rs *Resource) updateSession(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -322,7 +334,7 @@ func (rs *Resource) updateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, workforce.WorkSessionWire{WorkSession: session}, "Session updated successfully")
+	common.Respond(w, r, http.StatusOK, sessionResponse(session), "Session updated successfully")
 }
 
 // StartBreakRequest represents a request to start a break
@@ -336,7 +348,7 @@ func (rs *Resource) startBreak(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -370,7 +382,7 @@ func (rs *Resource) endBreak(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -386,7 +398,7 @@ func (rs *Resource) endBreak(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, workforce.WorkSessionWire{WorkSession: session}, "Break ended")
+	common.Respond(w, r, http.StatusOK, sessionResponse(session), "Break ended")
 }
 
 // getBreaks handles GET /api/time-tracking/breaks/{sessionId}
@@ -395,7 +407,7 @@ func (rs *Resource) getBreaks(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -420,7 +432,7 @@ func (rs *Resource) getSessionEdits(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -460,7 +472,7 @@ func (rs *Resource) exportSessions(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -498,7 +510,7 @@ func (rs *Resource) requestVacation(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -527,7 +539,7 @@ func (rs *Resource) cancelAbsence(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	absenceID, ok := common.ParseInt64IDWithError(w, r, "id", "invalid absence ID")
@@ -550,7 +562,7 @@ func (rs *Resource) resubmitAbsence(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	absenceID, ok := common.ParseInt64IDWithError(w, r, "id", "invalid absence ID")
@@ -582,7 +594,7 @@ func (rs *Resource) getOwnVacationQuota(w http.ResponseWriter, r *http.Request) 
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	year, err := parseYearParam(r, rs.today())
@@ -628,7 +640,7 @@ func (rs *Resource) getOwnShifts(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 
@@ -666,7 +678,7 @@ func (rs *Resource) getOwnAssignments(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 

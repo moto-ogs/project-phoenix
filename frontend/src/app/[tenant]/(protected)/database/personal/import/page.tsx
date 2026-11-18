@@ -11,7 +11,7 @@ import { StickyActionBar } from "~/components/ui/sticky-action-bar";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { SectionCard } from "~/components/ui/section-card";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { UploadSection } from "~/components/import/upload-section";
 import {
   DISCARD_UPLOAD_HINT,
@@ -379,7 +379,7 @@ export default function StaffImportPage() {
       void handleFileUpload(file);
     } else {
       importErrors.invalid(
-        "Diese Datei passt nicht. Bitte laden Sie eine CSV- oder Excel-Datei hoch.",
+        "Diese Datei passt nicht. Bitte lade eine CSV- oder Excel-Datei hoch.",
       );
     }
   };
@@ -405,19 +405,26 @@ export default function StaffImportPage() {
   const savedCount = importResult ? importBatchSavedCount(importResult) : 0;
 
   // Statuszeile des Seitenkopfs: der Stand des Imports, nicht ein Erklärsatz.
-  const statusLine = uploadedFile
-    ? [
-        uploadedFile.name,
+  const statusLine = uploadedFile ? (
+    <TenantPageStats
+      items={[
+        { label: uploadedFile.name },
         importComplete
-          ? "Import abgeschlossen"
+          ? { label: "Import abgeschlossen" }
           : importInterrupted
-            ? `${savedCount} gespeichert`
-            : `${stats.total} ${stats.total === 1 ? "Zeile" : "Zeilen"}`,
-        !importComplete && stats.errors > 0 ? `${stats.errors} Fehler` : null,
-      ]
-        .filter(Boolean)
-        .join(" · ")
-    : "Noch keine Datei gewählt";
+            ? { value: savedCount, label: "gespeichert" }
+            : {
+                value: stats.total,
+                label: stats.total === 1 ? "Zeile" : "Zeilen",
+              },
+        ...(!importComplete && stats.errors > 0
+          ? [{ value: stats.errors, label: "Fehler" }]
+          : []),
+      ]}
+    />
+  ) : (
+    "Noch keine Datei gewählt"
+  );
 
   if (status === "loading") {
     return (
@@ -446,8 +453,8 @@ export default function StaffImportPage() {
       {/* Info Section */}
       <SectionCard title="Import-Anleitung" icon={Info}>
         <ul className="list-inside list-disc space-y-1 text-sm text-gray-600">
-          <li>Laden Sie die Vorlage herunter (siehe unten)</li>
-          <li>Füllen Sie die Datei mit Ihren Mitarbeiterdaten aus</li>
+          <li>Lade die Vorlage herunter (siehe unten)</li>
+          <li>Fülle die Datei mit deinen Mitarbeiterdaten aus</li>
           <li>
             Die Spalte „Rolle“ muss exakt einer vorhandenen Rolle entsprechen
             {availableRoles.length > 0 && (
@@ -471,8 +478,8 @@ export default function StaffImportPage() {
             Einladung und setzt ihr Passwort selbst. Ohne E-Mail gibt es keinen
             Zugang
           </li>
-          <li>Laden Sie die Datei hier hoch und überprüfen Sie die Vorschau</li>
-          <li>Bestätigen Sie den Import</li>
+          <li>Lade die Datei hier hoch und überprüfe die Vorschau</li>
+          <li>Bestätige den Import</li>
         </ul>
       </SectionCard>
 
@@ -532,7 +539,7 @@ export default function StaffImportPage() {
           </>
         ) : (
           <p className="text-sm text-gray-600">
-            Mit Ihren Berechtigungen legt der Import nur neue Mitarbeiter an.
+            Mit deinen Berechtigungen legt der Import nur neue Mitarbeiter an.
             Zeilen, die es schon gibt, werden als Fehler gemeldet. Bestehende
             Datensätze ändert die Leitung.
           </p>

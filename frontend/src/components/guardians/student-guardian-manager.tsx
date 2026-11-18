@@ -92,13 +92,13 @@ function inviteSuccessMessage(
 ): string {
   switch (outcome) {
     case "invited":
-      return `Die Einladung an ${email} wird gesendet. Den Stand sehen Sie bei der Person.`;
+      return `Die Einladung an ${email} wird gesendet. Den Stand siehst du bei der Person.`;
     case "pending_approval":
       return `Die Anfrage für ${name} wartet auf Freigabe.`;
     case "already_linked":
     case "linked_existing_account":
       if (mailHeld) {
-        return `${name} ist verknüpft. An ${email} geht kein Hinweis raus. Den Grund sehen Sie bei der Person.`;
+        return `${name} ist verknüpft. An ${email} geht kein Hinweis raus. Den Grund siehst du bei der Person.`;
       }
       return confirmRoleUpgrade
         ? `${name} hat jetzt vollen Zugriff.`

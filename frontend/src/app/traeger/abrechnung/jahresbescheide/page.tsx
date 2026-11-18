@@ -20,7 +20,7 @@ import { formatMonth } from "~/components/traeger/care-billing-format";
 import { runSchoolsLabel } from "~/components/traeger/care-review-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import {
-  TraegerListExportMenu,
+  useTraegerListExportItems,
   traegerExportScope,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
@@ -147,10 +147,18 @@ export default function TraegerJahresbescheidePage() {
     0,
   );
 
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/care-notice-runs/export", format),
+    scope: traegerExportScope(),
+    fallbackName: "jahresbescheide",
+    errorObject: "die Jahresläufe",
+    unavailable: runs.length === 0,
+  });
   return (
     <TenantPage
       title="Abrechnung"
-      info="Hier setzen Sie den Beitrag für mehrere Monate eines Jahres in einem Bescheid fest. Jede Familie bekommt je Vertrag einen Bescheid mit Monatsraten. Für diese Monate berechnet der Monatslauf keine Betreuung erneut. Essen rechnet er weiterhin ab."
+      info="Hier setzt du den Beitrag für mehrere Monate eines Jahres in einem Bescheid fest. Jede Familie bekommt je Vertrag einen Bescheid mit Monatsraten. Für diese Monate berechnet der Monatslauf keine Betreuung erneut. Essen rechnet er weiterhin ab."
       stats={
         runs.length > 0 ? (
           <TenantPageStats
@@ -166,21 +174,9 @@ export default function TraegerJahresbescheidePage() {
       }
       statsLoading={loading}
       tabs={billingTabs("jahresbescheide")}
+      overflowMenu={exportItems}
       actions={
         <>
-          <TraegerListExportMenu
-            download={(format) =>
-              downloadTraegerList(
-                "/api/traeger/care-notice-runs/export",
-                format,
-              )
-            }
-            scope={traegerExportScope()}
-            ariaLabel="Jahresläufe herunterladen"
-            fallbackName="jahresbescheide"
-            errorObject="die Jahresläufe"
-            unavailable={runs.length === 0}
-          />
           <Button
             type="button"
             variant="primary"
@@ -226,7 +222,7 @@ export default function TraegerJahresbescheidePage() {
             <EmptyState
               icon={<FileText className="h-12 w-12" aria-hidden="true" />}
               title="Noch kein Jahreslauf."
-              description={`Starten Sie oben einen Lauf, zum Beispiel ab ${formatMonth(data.list.suggestedMonth)}.`}
+              description={`Starte oben einen Lauf, zum Beispiel ab ${formatMonth(data.list.suggestedMonth)}.`}
             />
           }
         />

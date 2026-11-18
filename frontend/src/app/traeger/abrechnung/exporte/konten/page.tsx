@@ -2,10 +2,11 @@
 
 // Konten und Kostenstellen (#4821): auf welches Erlöskonto moto die Beiträge
 // jeder Leistung und jedes Angebots bucht, welche Kostenstelle (KOST1) eine
-// Schule und die Ferienbetreuung haben und welche zweite Kostenstelle (KOST2)
-// ein Angebot hat, jeweils ab einem Tag. Beim Ausstellen hält jede
-// Rechnungsposition ihre Werte fest; DATEV-Datei und Sollstellung buchen
-// damit. Nur das Recht „Finanz-Export“ sieht die Seite.
+// Schule, ihre Ferienbetreuung (#7357) und die Ferienbetreuung ohne Schule
+// haben und welche zweite Kostenstelle (KOST2) ein Angebot hat, jeweils ab
+// einem Tag. Beim Ausstellen hält jede Rechnungsposition ihre Werte fest;
+// DATEV-Datei und Sollstellung buchen damit. Nur das Recht „Finanz-Export“
+// sieht die Seite.
 
 import {
   CostCentersCard,
@@ -34,7 +35,7 @@ import { traegerPath } from "~/lib/traeger-url";
 const EXPORTS_PATH = "/traeger/abrechnung/exporte";
 
 const INFO =
-  "Ihr Steuerbüro bucht die Beiträge auf Erlöskonten und Kostenstellen. Legen Sie hier fest, welche Leistung wohin gehört. Eine Rechnung hält die Werte beim Ausstellen fest. Eine Änderung gilt nur für neue Rechnungen.";
+  "Dein Steuerbüro bucht die Beiträge auf Erlöskonten und Kostenstellen. Lege hier fest, welche Leistung wohin gehört. Eine Rechnung hält die Werte beim Ausstellen fest. Eine Änderung gilt nur für neue Rechnungen.";
 
 export default function TraegerBookingAccountsPage() {
   const today = useBerlinToday();
@@ -96,11 +97,11 @@ export default function TraegerBookingAccountsPage() {
             <Alert
               type="warning"
               title="Das Standard-Erlöskonto fehlt"
-              message="Ohne Standard-Erlöskonto gibt es keine DATEV-Datei. Tragen Sie es in den DATEV-Werten ein."
+              message="Ohne Standard-Erlöskonto gibt es keine DATEV-Datei. Trage es in den DATEV-Werten ein."
               action={
                 <ButtonLink
                   href={traegerPath(DATEV_SETTINGS_PATH)}
-                  variant="ghost_tone"
+                  variant="surface"
                   size="compact"
                   tooltip="Öffnet die DATEV-Werte in den Einstellungen."
                 >

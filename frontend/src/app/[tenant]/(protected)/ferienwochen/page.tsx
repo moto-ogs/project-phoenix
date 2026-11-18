@@ -9,7 +9,7 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import NavigationLink from "~/components/ui/navigation-link";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import {
@@ -86,10 +86,6 @@ const HOME_SCHOOL_TAB = "andere-ogs";
 /** „06.07. bis 10.07.2099“ */
 function weekLabel(week: HostedHolidayWeek): string {
   return `${formatDate(week.startsOn).slice(0, 6)} bis ${formatDate(week.endsOn)}`;
-}
-
-function childCount(count: number): string {
-  return count === 1 ? "1 Kind" : `${count} Kinder`;
 }
 
 /** Die zweite sorgeberechtigte Person mit anrufbarer Nummer. */
@@ -404,20 +400,41 @@ export default function FerienwochenPage() {
         .size;
       const weekCount = new Set(homeSchool.data.map((child) => child.weekId))
         .size;
-      return `${childCount(children)} bei anderen OGS · ${
-        weekCount === 1 ? "1 Ferienwoche" : `${weekCount} Ferienwochen`
-      }`;
+      return (
+        <TenantPageStats
+          items={[
+            {
+              value: children,
+              label: `${children === 1 ? "Kind" : "Kinder"} bei anderen OGS`,
+            },
+            {
+              value: weekCount,
+              label: weekCount === 1 ? "Ferienwoche" : "Ferienwochen",
+            },
+          ]}
+        />
+      );
     }
     if (!selectedWeek) return null;
-    return `${selectedWeek.periodName} · ${weekLabel(selectedWeek)} · ${childCount(
-      list?.participants.length ?? selectedWeek.participants,
-    )}`;
+    const participants = list?.participants.length ?? selectedWeek.participants;
+    return (
+      <TenantPageStats
+        items={[
+          { label: selectedWeek.periodName },
+          { label: weekLabel(selectedWeek) },
+          {
+            value: participants,
+            label: participants === 1 ? "Kind" : "Kinder",
+          },
+        ]}
+      />
+    );
   }, [showHomeSchool, homeSchool.data, selectedWeek, list]);
 
   return (
     <TenantPage
       title="Ferienwochen"
-      info="Hier stehen die Ferienwochen, die Ihre OGS für den Träger ausrichtet. Unter „Kinder bei anderen OGS“ sehen Sie Kinder Ihrer OGS, die in den Ferien eine andere OGS des Trägers betreut. Sie sehen nur Kinder, deren Anmeldung der Träger bestätigt hat. Nach dem letzten Tag der Woche sind sie nicht mehr da. Gesundheitsangaben stehen nur in der Teilnehmerliste, nicht in der Excel- oder CSV-Datei."
+      info="Hier stehen die Ferienwochen, die deine OGS für den Träger ausrichtet. Unter „Kinder bei anderen OGS“ siehst du Kinder deiner OGS, die in den Ferien eine andere OGS des Trägers betreut. Du siehst nur Kinder, deren Anmeldung der Träger bestätigt hat. Nach dem letzten Tag der Woche sind sie nicht mehr da. Gesundheitsangaben stehen nur in der Teilnehmerliste, nicht in der Excel- oder CSV-Datei."
       stats={stats}
       statsLoading={loadingWeeks}
       loading={loading}
@@ -467,9 +484,9 @@ export default function FerienwochenPage() {
       empty={
         weeks.data && !hostsWeeks && homeSchool.data?.length === 0
           ? {
-              title: "Ihre OGS richtet gerade keine Ferienwoche aus",
+              title: "Deine OGS richtet gerade keine Ferienwoche aus",
               description:
-                "Die Ferienwochen plant der Träger. Kein Kind Ihrer OGS ist gerade für die Ferienwoche einer anderen OGS bestätigt. Sobald der Träger eine solche Anmeldung bestätigt, steht das Kind hier.",
+                "Die Ferienwochen plant der Träger. Kein Kind deiner OGS ist gerade für die Ferienwoche einer anderen OGS bestätigt. Sobald der Träger eine solche Anmeldung bestätigt, steht das Kind hier.",
             }
           : null
       }
@@ -560,7 +577,7 @@ function ParticipantList({
         description={[
           "Nur zur Information. Anmeldungen prüft und bestätigt der Träger.",
           list.questions.length > 0
-            ? "Dazu kommen Antworten der Eltern, die der Träger für Sie freigibt."
+            ? "Dazu kommen Antworten der Eltern, die der Träger für dich freigibt."
             : "",
           list.participants.some((child) => child.health !== null)
             ? "Gesundheitsangaben stehen bei den Kindern, deren Eltern zugestimmt haben."

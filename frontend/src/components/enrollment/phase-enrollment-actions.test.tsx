@@ -67,7 +67,7 @@ describe("LateInviteModal (#2515)", () => {
 
     expect(
       await screen.findByText(
-        "Der Link zur Anmeldephase fehlt. Bitte laden Sie die Seite neu.",
+        "Der Link zur Anmeldephase fehlt. Bitte lade die Seite neu.",
       ),
     ).toBeVisible();
     expect(mocks.createLateInvite).not.toHaveBeenCalled();

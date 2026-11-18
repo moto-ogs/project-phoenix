@@ -91,7 +91,7 @@ func TestDeviceListQueryBudgets(t *testing.T) {
 			// All list requests run under the real tenant role and RLS. This
 			// test-only metadata query uses an unmarked context on the SAME tx.
 			// No production SQL is removed from the captured request.
-			runtime := testRuntime()
+			runtime := testRuntime(fleet)
 			success := runtime.Success
 			runtime.Success = func(w http.ResponseWriter, r *http.Request, code int, data any, message string) {
 				raw, present := testpkg.TransactionFromContext(r.Context())
@@ -153,7 +153,7 @@ func TestDeviceListQueryBudgets(t *testing.T) {
 			}
 			request := func(t *testing.T, target string, expected map[int64]deviceListBudgetWire) *testpkg.QueryCounter {
 				t.Helper()
-				req := testutil.NewAuthenticatedRequest(t, http.MethodGet, target, nil, testutil.WithClaims(t, testutil.DefaultTestClaims()), testutil.WithPermissions("iot:read"))
+				req := testutil.NewAuthenticatedRequest(t, http.MethodGet, target, nil, testutil.WithClaims(t, testutil.DefaultTestClaims()), testutil.WithPermissions("devices:read"))
 				ctx, cancel := context.WithTimeout(settings.WithSettingsRequestCache(req.Context()), 10*time.Second)
 				defer cancel()
 				counter := testpkg.CaptureQueriesForContext(t, db)

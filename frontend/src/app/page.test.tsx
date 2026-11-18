@@ -232,7 +232,7 @@ describe("RootPage", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "Backend nicht erreichbar. Bitte versuchen Sie es später erneut.",
+          "Backend nicht erreichbar. Bitte versuche es später erneut.",
         ),
       ).toBeInTheDocument();
     });

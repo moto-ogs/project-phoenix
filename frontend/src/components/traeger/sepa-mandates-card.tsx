@@ -15,10 +15,12 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { Loading } from "~/components/ui/loading";
 import { ConfirmationModal, Modal } from "~/components/ui/modal";
 import NavigationLink from "~/components/ui/navigation-link";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
+import { SectionLabel } from "~/components/ui/section-label";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
@@ -129,7 +131,7 @@ function RevokeModal({
     >
       <div className="space-y-4">
         <p className="text-sm text-gray-700">
-          Ab dem nächsten Lauf buchen Sie bei dieser Familie nicht mehr ab. Sie
+          Ab dem nächsten Lauf buchst du bei dieser Familie nicht mehr ab. Sie
           bekommt dann eine Rechnung zum Überweisen, bis ein neues Mandat da
           ist. Ausgestellte Rechnungen bleiben, wie sie sind.
         </p>
@@ -182,7 +184,7 @@ function HistoryModal({
       {error ? (
         <LoadErrorAlert error={error} actionLayout="responsive" />
       ) : events === null ? (
-        <p className="text-sm text-gray-600">Wird geladen …</p>
+        <Loading compact message="Wird geladen …" />
       ) : events.length === 0 ? (
         <p className="text-sm text-gray-600">Noch keine Einträge.</p>
       ) : (
@@ -319,8 +321,8 @@ function FamilyMandates({
                   </span>
                   {mandateExpired(inForce, today) ? (
                     <span className="text-moto-red-strong block">
-                      Verfallen: 36 Monate lang wurde nicht abgebucht.
-                      Widerrufen Sie dieses Mandat und erfassen Sie ein neues.
+                      Verfallen: 36 Monate lang wurde nicht abgebucht. Widerrufe
+                      dieses Mandat und erfasse ein neues.
                     </span>
                   ) : (
                     <span className="block text-gray-500">
@@ -333,8 +335,8 @@ function FamilyMandates({
                 <span className="font-mono">{inForce.creditorId}</span>
                 {inForce.creditorCurrent ? null : (
                   <span className="text-moto-red-strong block">
-                    Gilt nicht mehr: Ihre Gläubiger-ID hat sich geändert.
-                    Widerrufen Sie dieses Mandat und erfassen Sie das neue.
+                    Gilt nicht mehr: deine Gläubiger-ID hat sich geändert.
+                    Widerrufe dieses Mandat und erfasse das neue.
                   </span>
                 )}
               </DataField>
@@ -351,7 +353,7 @@ function FamilyMandates({
       ) : null}
       {earlier.length > 0 ? (
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-gray-600">Frühere Mandate</p>
+          <SectionLabel>Frühere Mandate</SectionLabel>
           <ul className="divide-y divide-gray-100">
             {earlier.map((mandate) => (
               <li
@@ -574,8 +576,8 @@ export function SepaMandatesCard({
       }
       description={
         forFamily
-          ? "Damit buchen Sie den Beitrag dieser Familie ab. Die IBAN sehen Sie nur verdeckt."
-          : `${scopeLabel} Mandate Ihrer Familien. Ein neues Mandat erfassen Sie beim Vertrag der Familie unter „Mandat erfassen“.`
+          ? "Damit buchst du den Beitrag dieser Familie ab. Die IBAN siehst du nur verdeckt."
+          : `${scopeLabel} Mandate deiner Familien. Ein neues Mandat erfasst du beim Vertrag der Familie unter „Mandat erfassen“.`
       }
       actions={createAction}
       loading={mandates === null && !own.error}
@@ -607,7 +609,7 @@ export function SepaMandatesCard({
           description={
             forFamily
               ? "Ohne Mandat bekommt die Familie eine Rechnung zum Überweisen."
-              : "Erfassen Sie ein Mandat beim Vertrag der Familie."
+              : "Erfasse ein Mandat beim Vertrag der Familie."
           }
         />
       ) : null}

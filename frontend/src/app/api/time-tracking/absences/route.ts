@@ -1,25 +1,21 @@
-import { proxyGet, proxyPost } from "~/lib/route-wrapper.server";
+import type { NextRequest } from "next/server";
+import { portalRoutes } from "~/lib/contract/portals.generated";
+import { withPrivateNoStore } from "~/lib/private-no-store";
+import { catalogProxy } from "~/lib/route-wrapper.server";
 
-/**
- * GET /api/time-tracking/absences?from=YYYY-MM-DD&to=YYYY-MM-DD
- * Get staff absences for date range
- */
-export const GET = proxyGet("/api/time-tracking/absences");
+// Temporary (#2352): while time-tracking/[id] keeps its PUT for one release,
+// Next selects that file for this path, not the portal's catch-all. Hand the
+// request to the catalog proxy with the path the catch-all would receive.
+const path = {
+  params: Promise.resolve({ path: ["time-tracking", "absences"] }),
+};
 
-interface CreateAbsenceBody {
-  absence_type: string;
-  /** School-defined Abwesenheitsart (#2403). */
-  absence_type_id?: number | null;
-  date_start: string;
-  date_end: string;
-  half_day?: boolean;
-  note?: string;
-}
+const get = catalogProxy(portalRoutes.tenant, "GET");
+export const GET = withPrivateNoStore((request: NextRequest) =>
+  get(request, path),
+);
 
-/**
- * POST /api/time-tracking/absences
- * Create a new absence
- */
-export const POST = proxyPost<unknown, CreateAbsenceBody>(
-  "/api/time-tracking/absences",
+const post = catalogProxy(portalRoutes.tenant, "POST");
+export const POST = withPrivateNoStore((request: NextRequest) =>
+  post(request, path),
 );

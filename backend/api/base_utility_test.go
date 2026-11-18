@@ -22,6 +22,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	customMiddleware "github.com/moto-ogs/project-phoenix/middleware"
+	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	devicefleetCompose "github.com/moto-ogs/project-phoenix/modules/devicefleet/compose"
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
@@ -303,7 +304,7 @@ func setupCaregiverCompositionModule(t *testing.T, graph *goldenRuntime) *caregi
 	require.NoError(t, err)
 	auth := newAccountResource(graph.db, nil, nil, services.CaregiverCapability, settings.Service)
 	operator, err := newOperatorRouter(graph.db, slog.Default(), sessionAuth, authRateLimiters{}, devicefleetCompose.NewIoTService(deviceFleet, time.Now), nil,
-		settings.Service, hub, active, settingsWrites, nil, provisioning, services.CaregiverCapability, schedules.Lifecycle, nil, nil, settings.Traeger, time.Now)
+		settings.Service, hub, active, settingsWrites, nil, provisioning, services.CaregiverCapability, schedules.Lifecycle, nil, nil, settings.Traeger, nil, time.Now)
 	require.NoError(t, err)
 	return &caregiverComposition{
 		authWired:        auth != nil,
@@ -326,7 +327,9 @@ func setupSettingsCallbackRoute(t *testing.T) *settingsCallbackRoute {
 		SetHomeBlockPolicies(context.Context, int64, int64, []string, map[string]string) error
 	})
 	require.True(t, ok)
-	return &settingsCallbackRoute{router: newSettingsResource(testpkg.NewDatabase(t, db), module.TenantSettings, homeLayouts, repos.Enrollment().SchemaReferencesLegalDocument, time.Now).SettingsRouter(), hub: hub}
+	schools, err := owners.BuildServeOrganizations(testpkg.NewDatabase(t, db), time.Now)
+	require.NoError(t, err)
+	return &settingsCallbackRoute{router: newSettingsResource(testpkg.NewDatabase(t, db), module.TenantSettings, homeLayouts, requireDevicePINOperations(module.Settings), repos.Enrollment().SchemaReferencesLegalDocument, time.Now, schools, nativeUploads.UploadFiles{}).SettingsRouter(), hub: hub}
 }
 
 func setupOperatorInvitationRoute(t *testing.T, graph *goldenRuntime) chi.Router {
@@ -337,9 +340,9 @@ func setupOperatorInvitationRoute(t *testing.T, graph *goldenRuntime) chi.Router
 	require.NoError(t, err)
 	_, _, _, _, _, hub, _, _, settings, _, services, schedules, _, active, _, _, _, _, provisioning, _, _, _, deviceFleet, _, settingsWrites, _, _, err := composeTestRoot(graph.db, slog.Default(), currentTestServiceConfig())
 	require.NoError(t, err)
-	operator, err := newOperatorRouter(graph.db, slog.Default(), sessionAuth, buildAuthRateLimiters(nil, "5", demoLoopbackExempt()),
+	operator, err := newOperatorRouter(graph.db, slog.Default(), sessionAuth, buildAuthRateLimiters(nil, "5", demoLoopbackExempt(), customMiddleware.NewRateLimiter),
 		devicefleetCompose.NewIoTService(deviceFleet, time.Now), nil, settings.Service, hub, active, settingsWrites, nil, provisioning,
-		services.CaregiverCapability, schedules.Lifecycle, nil, nil, settings.Traeger, time.Now)
+		services.CaregiverCapability, schedules.Lifecycle, nil, nil, settings.Traeger, nil, time.Now)
 	require.NoError(t, err)
 	router := chi.NewRouter()
 	router.Mount("/operator", operator)
@@ -854,7 +857,7 @@ func TestBuildAuthRateLimitersBurstFollowsLimit(t *testing.T) {
 		limit string
 		burst int
 	}{{"5", 10}, {"30", 30}} {
-		limiters := buildAuthRateLimiters(nil, tc.limit, false)
+		limiters := buildAuthRateLimiters(nil, tc.limit, false, customMiddleware.NewRateLimiter)
 		handler := limiters.auth.Middleware()(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusUnauthorized)
 		}))
@@ -878,7 +881,7 @@ func TestBuildAuthRateLimitersBurstFollowsLimit(t *testing.T) {
 func TestAuthRateLimiterLetsOneNetworkSignInTogether(t *testing.T) {
 	t.Parallel()
 
-	limiters := buildAuthRateLimiters(nil, "", false)
+	limiters := buildAuthRateLimiters(nil, "", false, customMiddleware.NewRateLimiter)
 	handler := limiters.auth.Middleware()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case sendsAuthMail(r):
@@ -934,7 +937,7 @@ func TestBuildAuthRateLimitersExemptLoopbackOnlyWhenAsked(t *testing.T) {
 	t.Parallel()
 
 	for _, exempt := range []bool{true, false} {
-		limiters := buildAuthRateLimiters(nil, "1", exempt)
+		limiters := buildAuthRateLimiters(nil, "1", exempt, customMiddleware.NewRateLimiter)
 		for name, limiter := range map[string]*customMiddleware.RateLimiter{
 			"auth": limiters.auth, "email confirm": limiters.emailConfirm, "invitation": limiters.invitation,
 		} {

@@ -187,7 +187,7 @@ describe("DemoEntryPage", () => {
 
     expect(
       await screen.findByText(
-        "Die Demo konnte nicht vorbereitet werden. Auf unserer Website bekommen Sie sofort einen neuen Link.",
+        "Die Demo konnte nicht vorbereitet werden. Auf unserer Website bekommst du sofort einen neuen Link.",
       ),
     ).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);

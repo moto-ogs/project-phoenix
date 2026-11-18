@@ -276,12 +276,12 @@ export function TransitStudentsSection({
   // Fachliche Sperre mit Grund; solange Räume laden, bleibt es ohne (#6643).
   let assignBlockedReason: string | undefined;
   if (selectedVisibleCount === 0) {
-    assignBlockedReason = "Wählen Sie zuerst mindestens ein Kind aus.";
+    assignBlockedReason = "Wähle zuerst mindestens ein Kind aus.";
   } else if (!targetsLoading && targetOptions.length === 0) {
     assignBlockedReason =
-      "Gerade gibt es keinen Raum, in den Sie Kinder setzen können.";
+      "Gerade gibt es keinen Raum, in den du Kinder setzen kannst.";
   } else if (!targetsLoading && !targetValue) {
-    assignBlockedReason = "Wählen Sie zuerst einen Zielraum.";
+    assignBlockedReason = "Wähle zuerst einen Zielraum.";
   }
   // Die Kindakte kehrt auf die Seite „Unterwegs" zurück (#3115); ihre
   // Abfrage (etwa der Rückweg zur Übersicht) reist mit.

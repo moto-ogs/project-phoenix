@@ -8,6 +8,7 @@
   "device_inactive": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "device_pin_invalid": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "device_pin_required": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
+  "device_slots_full": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "invalid_rfid_tag": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "invalid_staff_clock_request": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "invalid_staff_clock_state": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
@@ -33,5 +34,6 @@
   "student_already_active": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "student_not_present": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "wc_needs_staff": "Nuk u përpunua: {object}. Provoni përsëri më vonë.",
-  "wc_not_configured": "Nuk u përpunua: {object}. Provoni përsëri më vonë."
+  "wc_not_configured": "Nuk u përpunua: {object}. Provoni përsëri më vonë.",
+  "device_in_active_session": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale."
 }

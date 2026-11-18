@@ -61,6 +61,7 @@ describe("DevicesMasterDetail", () => {
   const onSelect = vi.fn();
   const onSaveDevice = vi.fn(async () => undefined);
   const onDeleteClick = vi.fn();
+  const onSetBlocked = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -75,6 +76,9 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+        canManage
       />,
     );
 
@@ -91,6 +95,9 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+        canManage
       />,
     );
 
@@ -99,6 +106,34 @@ describe("DevicesMasterDetail", () => {
     expect(screen.getByText("Foyer")).toBeInTheDocument();
     // Einmal als Pille in der Liste, einmal im Feld „Verbindung“.
     expect(screen.getAllByText("Online")).toHaveLength(2);
+  });
+
+  it("shows a device without edit, block or remove to devices:read (#2312)", () => {
+    const blocked: Device = { ...onlineDevice, status: "inactive" };
+    render(
+      <DevicesMasterDetail
+        groupDefinitions={flatGroup([blocked])}
+        selectedId="1"
+        selectedDevice={blocked}
+        onSelect={onSelect}
+        onSaveDevice={onSaveDevice}
+        onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+        canManage={false}
+      />,
+    );
+
+    expect(screen.getByText("kiosk-001")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /bis es jemand mit dem Recht „Geräte verwalten“ entsperrt/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Bearbeiten")).not.toBeInTheDocument();
+    expect(screen.queryByText("Entfernen")).not.toBeInTheDocument();
+    expect(screen.queryByText("Entsperren")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sperren")).not.toBeInTheDocument();
   });
 
   it("opens the inline edit form from the header and triggers delete", () => {
@@ -110,10 +145,13 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+        canManage
       />,
     );
 
-    fireEvent.click(screen.getByText("Löschen"));
+    fireEvent.click(screen.getByText("Entfernen"));
     expect(onDeleteClick).toHaveBeenCalled();
 
     // Bearbeitet wird im Detailbereich, nicht in einem Modal daneben: der
@@ -137,6 +175,9 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+        canManage
       />,
     );
 
@@ -150,6 +191,9 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+        canManage
       />,
     );
 
@@ -187,6 +231,9 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+        canManage
       />,
     );
 
@@ -204,6 +251,9 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+        canManage
       />,
     );
 
@@ -234,6 +284,9 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+        canManage
       />,
     );
 
@@ -254,6 +307,9 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+        canManage
       />,
     );
 
@@ -270,9 +326,68 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+        canManage
       />,
     );
 
     expect(screen.getByText("Online")).toBeInTheDocument();
+  });
+  it("blocks an active device from the header (#2317)", () => {
+    render(
+      <DevicesMasterDetail
+        groupDefinitions={flatGroup([onlineDevice])}
+        selectedId="1"
+        selectedDevice={onlineDevice}
+        onSelect={onSelect}
+        onSaveDevice={onSaveDevice}
+        onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+        canManage
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^Sperren$/ }));
+
+    expect(onSetBlocked).toHaveBeenCalledWith(true);
+    expect(
+      screen.queryByText(/Dieses Gerät ist gesperrt/),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByText("Online").length).toBeGreaterThan(0);
+  });
+
+  it("shows a blocked device as blocked and unblocks it (#2317)", () => {
+    const blockedDevice: Device = { ...onlineDevice, status: "inactive" };
+    render(
+      <DevicesMasterDetail
+        groupDefinitions={flatGroup([blockedDevice])}
+        selectedId="1"
+        selectedDevice={blockedDevice}
+        onSelect={onSelect}
+        onSaveDevice={onSaveDevice}
+        onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+        canManage
+      />,
+    );
+
+    // The list pill and the status field name the block; the connection
+    // overview says the device cannot connect instead of „Online“ (#2321).
+    expect(screen.getAllByText("Gesperrt")).toHaveLength(2);
+    expect(screen.getByText("Keine Verbindung möglich")).toBeInTheDocument();
+    expect(screen.queryByText("Online")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Dieses Gerät ist gesperrt\. Es kann sich nicht anmelden/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Foyer")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /^Entsperren$/ }));
+
+    expect(onSetBlocked).toHaveBeenCalledWith(false);
   });
 });

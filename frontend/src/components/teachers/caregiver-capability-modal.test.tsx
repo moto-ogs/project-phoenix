@@ -338,7 +338,7 @@ describe("CaregiverCapabilityModal", () => {
 
     expect(mockEnableTenantAccountCapability).not.toHaveBeenCalled();
     expect(screen.getByTestId("form-error")).toHaveTextContent(
-      "Bitte geben Sie Vor- und Nachnamen an.",
+      "Bitte gib Vor- und Nachnamen an.",
     );
   });
 

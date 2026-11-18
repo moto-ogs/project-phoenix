@@ -435,7 +435,7 @@ func (s *ImportService[T]) countChildQuota(ctx context.Context, result *importMo
 	if err != nil {
 		appendRowErrors(s.now(), result, rowNum, row, []importModels.ValidationError{{
 			Field:    "child_quota",
-			Message:  "Das Kinderkontingent ließ sich für diese Zeile nicht prüfen. Bitte versuchen Sie es noch einmal.",
+			Message:  "Das Kinderkontingent ließ sich für diese Zeile nicht prüfen. Bitte versuche es noch einmal.",
 			Code:     "child_quota_check_failed",
 			Severity: importModels.ErrorSeverityError,
 		}})

@@ -764,7 +764,7 @@ export function ISODatePicker({
 }
 
 const INVALID_DATE_ERROR =
-  "Bitte geben Sie ein gültiges Datum im Format TT.MM.JJJJ ein.";
+  "Bitte gib ein gültiges Datum im Format TT.MM.JJJJ ein.";
 
 interface ISODateInputProps {
   readonly id: string;

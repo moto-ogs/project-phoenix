@@ -4,7 +4,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 
 import { BrandedQrCode } from "~/components/qr-code/branded-qr-code";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { DataTable, DataTableStatusBadge } from "~/components/ui/data-table";
 import type { DataTableColumn } from "~/components/ui/data-table";
@@ -389,9 +389,14 @@ function InfoDisplaysPageContent() {
       title="Info-Displays"
       // Ohne geladene Liste keine "0 Displays" neben dem Ladefehler (#2517).
       stats={
-        displays === undefined
-          ? null
-          : `${total} ${total === 1 ? "Display" : "Displays"} · ${active} aktiv`
+        displays === undefined ? null : (
+          <TenantPageStats
+            items={[
+              { value: total, label: total === 1 ? "Display" : "Displays" },
+              { value: active, label: "aktiv" },
+            ]}
+          />
+        )
       }
       statsLoading={listLoading}
       actions={
@@ -421,7 +426,7 @@ function InfoDisplaysPageContent() {
           ? {
               title: "Noch keine Info-Displays",
               description:
-                "Ein Info-Display zeigt die Anwesenheit auf einem Fernseher oder Smartboard. Legen Sie eines an; den Link öffnen Sie danach im Browser des Geräts.",
+                "Ein Info-Display zeigt die Anwesenheit auf einem Fernseher oder Smartboard. Lege eines an; den Link öffnest du danach im Browser des Geräts.",
             }
           : null
       }
@@ -451,7 +456,7 @@ function InfoDisplaysPageContent() {
                   size="md"
                   disabled={busy || nameInput.trim() === ""}
                   disabledReason={
-                    busy ? undefined : "Geben Sie zuerst einen Namen ein."
+                    busy ? undefined : "Gib zuerst einen Namen ein."
                   }
                   tooltip={
                     renameTarget
@@ -530,7 +535,7 @@ function InfoDisplaysPageContent() {
         emptyState={
           <EmptyState
             title="Kein Display gefunden"
-            description="Zu Ihrer Suche gibt es kein Display. Ändern Sie den Suchbegriff."
+            description="Zu deiner Suche gibt es kein Display. Ändere den Suchbegriff."
           />
         }
       />
@@ -570,14 +575,14 @@ function TokenModal({
       <div className="space-y-5">
         <Alert
           type="warning"
-          message="Dieser Link wird nur einmal angezeigt. Kopieren Sie ihn jetzt oder scannen Sie den QR-Code am Zielgerät. Bei Verlust können Sie jederzeit einen neuen Link erstellen."
+          message="Dieser Link wird nur einmal angezeigt. Kopiere ihn jetzt oder scanne den QR-Code am Zielgerät. Bei Verlust kannst du jederzeit einen neuen Link erstellen."
         />
         <CopyField
           value={state.url}
           monospace
           onCopyFailed={() =>
             showMessage(
-              "Der Link konnte nicht kopiert werden. Bitte markieren und kopieren Sie ihn selbst.",
+              "Der Link konnte nicht kopiert werden. Bitte markieren und kopiere ihn selbst.",
             )
           }
         />
@@ -585,7 +590,7 @@ function TokenModal({
           <BrandedQrCode url={state.url} brand="school" className="h-52 w-52" />
         </SectionCard>
         <p className="text-sm text-gray-500">
-          Öffnen Sie den Link im Browser des Fernsehers oder Smartboards. Das
+          Öffne den Link im Browser des Fernsehers oder Smartboards. Das
           Dashboard aktualisiert sich automatisch.
         </p>
       </div>

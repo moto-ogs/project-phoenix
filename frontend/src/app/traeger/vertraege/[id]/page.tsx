@@ -55,7 +55,7 @@ import {
   StatusBadge,
   type StatusBadgeTone,
 } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import {
   useApiErrorDisplay,
   useApiFormError,
@@ -340,7 +340,7 @@ export default function TraegerVertragPage() {
   if (contract && sendInHead) {
     headMenu.push({
       label: "PDF herunterladen",
-      description: "Speichert den Vertrag als PDF auf Ihrem Gerät.",
+      description: "Speichert den Vertrag als PDF auf deinem Gerät.",
       icon: <Download className="h-4 w-4" aria-hidden="true" />,
       onClick: () => void download(),
     });
@@ -364,84 +364,92 @@ export default function TraegerVertragPage() {
       backLabel="Zurück zu den Verträgen"
       stats={
         contract ? (
-          <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
-            <StatusBadge
-              label={CONTRACT_STATUS_LABELS[contract.status]}
-              tone={contractStatusTone(contract)}
-            />
-            <span>
-              {contract.modulesText || "–"} · {contract.schoolName} ·{" "}
-              {/* A date keeps its word: „ab 01.08.2026“ never parts. */}
-              {`ab\u00A0${formatDate(contract.effectiveFrom)}`}
-              {contract.endsOn
-                ? ` bis\u00A0${formatDate(contract.endsOn)}`
-                : ""}
-            </span>
-          </span>
+          <TenantPageStats
+            items={[
+              { label: contract.modulesText || "–" },
+              { label: contract.schoolName },
+              {
+                // A date keeps its word: „ab 01.08.2026“ never parts.
+                label: `ab\u00A0${formatDate(contract.effectiveFrom)}${
+                  contract.endsOn
+                    ? ` bis\u00A0${formatDate(contract.endsOn)}`
+                    : ""
+                }`,
+              },
+            ]}
+          />
         ) : null
       }
       statsLoading={loading}
       actions={
-        contract ? (
-          <>
-            {sendInHead ? (
-              <Button
-                type="button"
-                variant={isDraft ? "success" : "outline"}
-                size="md"
-                disabled={sendBlocked}
-                tooltip={
-                  isDraft
-                    ? "moto fragt vorher nach, dann geht der Vertrag per E-Mail und in die Eltern-App."
-                    : "moto fragt vorher nach, dann geht der Vertrag noch einmal an die Eltern."
-                }
-                disabledReason={sendBlockedReason}
-                onClick={() => setConfirmingSend(true)}
-              >
-                <Send className="mr-2 h-4 w-4" aria-hidden="true" />
-                {sending
-                  ? "Wird gesendet …"
-                  : isDraft
-                    ? "Vertrag senden"
-                    : "Erneut senden"}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                tooltip="Speichert den Vertrag als PDF auf Ihrem Gerät."
-                onClick={() => void download()}
-              >
-                <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-                PDF herunterladen
-              </Button>
-            )}
-            {/* One visible action; the rest waits in the menu (TENANT-PAGE-SPEC
+        <>
+          {contract ? (
+            <StatusBadge
+              label={CONTRACT_STATUS_LABELS[contract.status]}
+              tone={contractStatusTone(contract)}
+            />
+          ) : null}
+          {contract ? (
+            <>
+              {sendInHead ? (
+                <Button
+                  type="button"
+                  variant={isDraft ? "success" : "outline"}
+                  size="md"
+                  disabled={sendBlocked}
+                  tooltip={
+                    isDraft
+                      ? "moto fragt vorher nach, dann geht der Vertrag per E-Mail und in die Eltern-App."
+                      : "moto fragt vorher nach, dann geht der Vertrag noch einmal an die Eltern."
+                  }
+                  disabledReason={sendBlockedReason}
+                  onClick={() => setConfirmingSend(true)}
+                >
+                  <Send className="mr-2 h-4 w-4" aria-hidden="true" />
+                  {sending
+                    ? "Wird gesendet …"
+                    : isDraft
+                      ? "Vertrag senden"
+                      : "Erneut senden"}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  tooltip="Speichert den Vertrag als PDF auf deinem Gerät."
+                  onClick={() => void download()}
+                >
+                  <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+                  PDF herunterladen
+                </Button>
+              )}
+              {/* One visible action; the rest waits in the menu (TENANT-PAGE-SPEC
                 rule 4). An entry that cannot run right now stays out. For an
                 active contract the menu holds only the mail actions, so it
                 is named „Versand“ instead of a bare ⋮. */}
-            {headMenu.length > 0 ? (
-              resendInCard && !isDraft ? (
-                <OverflowMenu
-                  items={headMenu}
-                  ariaLabel="Versand"
-                  triggerButton={{ variant: "outline", size: "md" }}
-                  // The arrow says that a menu opens, as on the download menus.
-                  triggerClassName="gap-2 whitespace-nowrap"
-                  triggerContent={
-                    <>
-                      Versand
-                      <ChevronDown className="h-4 w-4" aria-hidden />
-                    </>
-                  }
-                />
-              ) : (
-                <OverflowMenu items={headMenu} ariaLabel="Weitere Aktionen" />
-              )
-            ) : null}
-          </>
-        ) : null
+              {headMenu.length > 0 ? (
+                resendInCard && !isDraft ? (
+                  <OverflowMenu
+                    items={headMenu}
+                    ariaLabel="Versand"
+                    triggerButton={{ variant: "outline", size: "md" }}
+                    // The arrow says that a menu opens, as on the download menus.
+                    triggerClassName="gap-2 whitespace-nowrap"
+                    triggerContent={
+                      <>
+                        Versand
+                        <ChevronDown className="h-4 w-4" aria-hidden />
+                      </>
+                    }
+                  />
+                ) : (
+                  <OverflowMenu items={headMenu} ariaLabel="Weitere Aktionen" />
+                )
+              ) : null}
+            </>
+          ) : null}
+        </>
       }
       error={
         refused
@@ -479,7 +487,7 @@ export default function TraegerVertragPage() {
             title="Entwurf verwerfen?"
             description={
               contract
-                ? `Der Entwurf für ${childName(contract)} wird gelöscht. Die Anmeldung bleibt; Sie können danach einen neuen Entwurf erstellen.`
+                ? `Der Entwurf für ${childName(contract)} wird gelöscht. Die Anmeldung bleibt; du kannst danach einen neuen Entwurf erstellen.`
                 : ""
             }
             gate={{ mode: "twoStep" }}
@@ -524,7 +532,7 @@ export default function TraegerVertragPage() {
                     ? "So steht es im abgeschlossenen Vertrag."
                     : contract.documentFrozen
                       ? "So steht es im versendeten Vertrag."
-                      : "So steht es im Vertrag, wenn Sie ihn senden."
+                      : "So steht es im Vertrag, wenn du ihn sendest."
                 }
               >
                 <DataGrid>
@@ -728,7 +736,7 @@ export default function TraegerVertragPage() {
                   >
                     <FormErrorAlert message={recipientErrors.error} />
                     <p className="text-sm text-gray-600">
-                      Sie können eine andere Versandadresse verwenden. Das PDF
+                      Du kannst eine andere Versandadresse verwenden. Das PDF
                       bleibt gleich. Die Vertragspartei und die bisherigen
                       Versanddaten bleiben erhalten.
                     </p>
@@ -789,7 +797,7 @@ export default function TraegerVertragPage() {
             description={
               contract.documentFrozen
                 ? "Dieses PDF gehört zum Versand. Es ändert sich nicht mehr."
-                : "So sieht der Vertrag mit Ihrem Briefkopf aus."
+                : "So sieht der Vertrag mit deinem Briefkopf aus."
             }
           >
             <PdfPreview
@@ -838,10 +846,10 @@ function contractSendBlockedReason(
   if (isDraft) return undefined;
   switch (mailing.sendBlock) {
     case "stopped":
-      return "Die Schule hat Mails an diese Person gestoppt, klären Sie das mit ihr.";
+      return "Die Schule hat Mails an diese Person gestoppt, kläre das mit ihr.";
     case "address":
     case "provider":
-      return "Die Adresse ist gesperrt, senden Sie unter „Versand“ an eine andere.";
+      return "Die Adresse ist gesperrt, sende unter „Versand“ an eine andere.";
     case "provider_unknown":
       return "Die Sperre der Adresse lässt sich gerade nicht prüfen, bitte später versuchen.";
     case "delayed":
@@ -854,33 +862,33 @@ function contractSendBlockedReason(
 // The reason and the next step as they are now. "Prüfen Sie die Adresse" only
 // fits a mail that came back; a stop or a block has another way out.
 const OTHER_ADDRESS_HINT =
-  "Unter „Versand“ können Sie eine andere Adresse verwenden.";
+  "Unter „Versand“ kannst du eine andere Adresse verwenden.";
 
 function contractHoldNotice(mailing: ContractMailing): string | null {
   const other = OTHER_ADDRESS_HINT;
   switch (mailing.sendBlock) {
     case "stopped":
-      return "Die Schule hat die Mails an diese Person gestoppt. Klären Sie das mit der Schule, oder geben Sie den Vertrag anders weiter.";
+      return "Die Schule hat die Mails an diese Person gestoppt. Kläre das mit der Schule, oder gib den Vertrag anders weiter.";
     case "address":
-      return `Die Adresse ${mailing.recipient} ist bei einer Ihrer Schulen gesperrt. Die Schule kann sie prüfen. ${other}`;
+      return `Die Adresse ${mailing.recipient} ist bei einer deiner Schulen gesperrt. Die Schule kann sie prüfen. ${other}`;
     case "provider":
       return `Die Adresse ${mailing.recipient} ist gesperrt. Der moto-Support muss das klären. ${other}`;
     case "provider_unknown":
-      return "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuchen Sie es später noch einmal.";
+      return "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuche es später noch einmal.";
     case "delayed":
-      return "Die Mail kommt später an, es wird weiter versucht. Bitte senden Sie sie nicht noch einmal, sonst kommt sie doppelt an.";
+      return "Die Mail kommt später an, es wird weiter versucht. Bitte sende sie nicht noch einmal, sonst kommt sie doppelt an.";
   }
   switch (mailing.outcome) {
     case "unsubscribed":
-      return `${mailing.recipient} hat sich von den Mails abgemeldet. Sprechen Sie die Person direkt an. ${other}`;
+      return `${mailing.recipient} hat sich von den Mails abgemeldet. Sprich die Person direkt an. ${other}`;
     case "complained":
-      return `${mailing.recipient} hat eine Mail als unerwünscht gemeldet. Sprechen Sie die Person direkt an. ${other}`;
+      return `${mailing.recipient} hat eine Mail als unerwünscht gemeldet. Sprich die Person direkt an. ${other}`;
     case "held_by_stop":
     case "blocked":
     case "provider_blocked":
-      return "Die Mail ging damals nicht raus. Die Sperre besteht nicht mehr. Sie können neu senden.";
+      return "Die Mail ging damals nicht raus. Die Sperre besteht nicht mehr. Du kannst neu senden.";
     case "overdue":
-      return "Die Mail ist seit Tagen verzögert. Sie können sie noch einmal senden.";
+      return "Die Mail ist seit Tagen verzögert. Du kannst sie noch einmal senden.";
     default:
       return null;
   }
@@ -908,7 +916,7 @@ function StatusNotice({
     return (
       <Alert
         type="info"
-        message="Entwurf. Die Eltern sehen den Vertrag erst, wenn Sie ihn senden. Prüfen Sie die gebuchte Betreuung, den Beginn und den Beitrag."
+        message="Entwurf. Die Eltern sehen den Vertrag erst, wenn du ihn sendest. Prüfe die gebuchte Betreuung, den Beginn und den Beitrag."
       />
     );
   }
@@ -932,7 +940,7 @@ function StatusNotice({
     return (
       <Alert
         type="warning"
-        message={`Die Mail an ${last.recipient} kam nicht an. Prüfen Sie die Adresse. Unter „Versand“ können Sie eine andere Adresse verwenden.`}
+        message={`Die Mail an ${last.recipient} kam nicht an. Prüfe die Adresse. Unter „Versand“ kannst du eine andere Adresse verwenden.`}
         action={<DeliveryJump />}
       />
     );
@@ -950,7 +958,7 @@ function StatusNotice({
     return (
       <Alert
         type="warning"
-        message="Außerordentlich gekündigt. Prüfen Sie den Grund der Eltern und legen Sie unter „Vertrag beenden“ fest, wann der Vertrag endet. Bis dahin gilt die gebuchte Betreuung."
+        message="Außerordentlich gekündigt. Prüfe den Grund der Eltern und lege unter „Vertrag beenden“ fest, wann der Vertrag endet. Bis dahin gilt die gebuchte Betreuung."
         action={contract.concluded ? <NoticeCardJump /> : undefined}
       />
     );
@@ -985,7 +993,7 @@ function StatusNotice({
     return (
       <Alert
         type="info"
-        message="Die Mail wartet auf den Versand. Mit „Versand aktualisieren“ unter „Versand“ prüfen Sie den Stand."
+        message="Die Mail wartet auf den Versand. Mit „Versand aktualisieren“ unter „Versand“ prüfst du den Stand."
         action={<DeliveryJump />}
       />
     );
@@ -994,7 +1002,7 @@ function StatusNotice({
     return (
       <Alert
         type="warning"
-        message="Das Ergebnis des Mail-Versands ist unbekannt. Mit „Versand aktualisieren“ unter „Versand“ prüfen Sie den Stand."
+        message="Das Ergebnis des Mail-Versands ist unbekannt. Mit „Versand aktualisieren“ unter „Versand“ prüfst du den Stand."
         action={<DeliveryJump />}
       />
     );

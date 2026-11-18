@@ -17,12 +17,12 @@ export function parentChildOverviewTopic(): HelpTopic {
     audience: "parent",
     icon: "UserRoundSearch",
     steps: [
-      "Tippen Sie unten auf `Mein Kind`.",
-      "Haben Sie mehrere Kinder, wählen Sie oben das Kind.",
-      "Lesen Sie unter `Heute` den `Aktueller Status` und die `Abholung`.",
-      "Wählen Sie darunter einen Reiter: `Betreuung`, `Angaben` oder `Kontakte`.",
+      "Tippe unten auf `Mein Kind`.",
+      "Hast du mehrere Kinder, wähle oben das Kind.",
+      "Lies unter `Heute` den `Aktueller Status` und die `Abholung`.",
+      "Wähle darunter einen Reiter: `Betreuung`, `Angaben` oder `Kontakte`.",
     ],
-    result: "Sie sehen den gewählten Reiter mit allen Angaben dazu.",
+    result: "Du siehst den gewählten Reiter mit allen Angaben dazu.",
     notes: [
       "`Betreuung`: Abwesenheiten, Wochenplan, gebuchte Betreuung und der Weg nach Hause.",
       "`Angaben`: persönliche Angaben, Klasse und Gesundheit.",
@@ -30,14 +30,14 @@ export function parentChildOverviewTopic(): HelpTopic {
       "Unter `Heute` stehen die Knöpfe zum Abmelden, zur Abholzeit und für eine Nachricht.",
     ],
     differences: [
-      "Haben Sie mehrere Kinder, heißt der Punkt unten `Meine Kinder`.",
-      "Ist Ihr Kind heute abgemeldet, steht dort `Heute abgemeldet, keine Abholung`.",
+      "Hast du mehrere Kinder, heißt der Punkt unten `Meine Kinder`.",
+      "Ist dein Kind heute abgemeldet, steht dort `Heute abgemeldet, keine Abholung`.",
       "Wurde die Abholzeit für heute geändert, steht die Zeit mit dem Hinweis `geändert für heute`.",
       "Ist für heute nichts eingetragen, steht dort `Für heute ist keine Abholung eingetragen`.",
-      "Hat Ihr Kind keinen Platz in der OGS, steht unter `Betreuung` der Hinweis `Kein Platz in der OGS`. Abholung, Betreuungszeiten und Essen fehlen dann. Krankmeldung, Elternsprechtag und Angaben bleiben.",
+      "Hat dein Kind keinen Platz in der OGS, steht unter `Betreuung` der Hinweis `Kein Platz in der OGS`. Abholung, Betreuungszeiten und Essen fehlen dann. Krankmeldung, Elternsprechtag und Angaben bleiben.",
     ],
     troubleshootingDetails: [
-      "Sie sehen kein Kind? Dann hat die OGS Ihren Zugang noch nicht freigegeben.",
+      "Du siehst kein Kind? Dann hat die OGS deinen Zugang noch nicht freigegeben.",
     ],
     related: [
       HELP_TOPICS.parentChildData,

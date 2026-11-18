@@ -15,6 +15,7 @@ import {
   useMemo,
   useCallback,
   useRef,
+  type ReactNode,
 } from "react";
 import { useSession } from "next-auth/react";
 import { hasSessionAccess } from "~/lib/session-access";
@@ -27,7 +28,7 @@ import { CollectionGrid } from "~/components/ui/collection-grid";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { OGS_GROUPS_LABEL } from "~/lib/ogs-groups-navigation";
 import {
   OverflowMenu,
@@ -652,7 +653,7 @@ function OGSGroupPageContent() {
     wireErrorCode(liveError.code) === "general.permission";
   const error = useSwrLoadError(
     liveNoAccess ? null : liveError,
-    "die Liste Ihrer OGS-Gruppe",
+    "die Liste deiner OGS-Gruppe",
     () => reloadLive(),
   );
   useEffect(() => {
@@ -1080,7 +1081,7 @@ function OGSGroupPageContent() {
           icon: <MotoConceptIcon concept={groupsConcept} size={48} />,
           title: "Keine OGS-Gruppe zugeordnet",
           description:
-            "Sie sind keiner OGS-Gruppe als Leitung zugeordnet. Wenden Sie sich an Ihre Verwaltung, um einer Gruppe zugewiesen zu werden.",
+            "Du bist keiner OGS-Gruppe als Leitung zugeordnet. Wende dich an deine Verwaltung, um einer Gruppe zugewiesen zu werden.",
         }}
       />
     );
@@ -1388,16 +1389,28 @@ function OGSGroupPageContent() {
   ) : undefined;
   const holidayGroupExplanation = canOpenHolidayWeeks
     ? "Feriengäste stehen erst ab dem ersten Tag der Ferienwoche in der Gruppe. Wer kommt, steht unter Ferienwochen."
-    : "Feriengäste stehen erst ab dem ersten Tag der Ferienwoche in der Gruppe. Wer kommt, weiß Ihre Leitung.";
+    : "Feriengäste stehen erst ab dem ersten Tag der Ferienwoche in der Gruppe. Wer kommt, weiß deine Leitung.";
 
   // Statuszeile aus den bereits geladenen Gruppendaten. Der Gruppenname
   // steht im Titel und wiederholt sich hier nicht.
-  let groupStats: string | null = "Keine Gruppe zugeordnet";
+  let groupStats: ReactNode = "Keine Gruppe zugeordnet";
   if (currentGroup) {
     groupStats =
-      currentGroup.student_count === undefined
-        ? null
-        : `${currentGroup.present_count ?? 0} von ${currentGroup.student_count} da · ${groupAbsenceOverview.sickCount} krank · ${groupAbsenceOverview.excusedCount} entschuldigt`;
+      currentGroup.student_count === undefined ? null : (
+        <TenantPageStats
+          items={[
+            {
+              value: `${currentGroup.present_count ?? 0} von ${currentGroup.student_count}`,
+              label: "da",
+            },
+            { value: groupAbsenceOverview.sickCount, label: "krank" },
+            {
+              value: groupAbsenceOverview.excusedCount,
+              label: "entschuldigt",
+            },
+          ]}
+        />
+      );
   }
 
   return (

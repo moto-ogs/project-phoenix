@@ -26,7 +26,7 @@ import {
 import { formErrorMessage } from "~/components/ui/form-error";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { ChatBubble } from "~/components/messaging/chat-bubble";
 import { MessageComposer } from "~/components/messaging/message-composer";
 import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
@@ -273,13 +273,15 @@ function GroupMessageContent() {
   const closed = Boolean(thread?.closed_at);
   const children = data?.children ?? [];
   const stats =
-    data && thread
-      ? [
-          thread.target_label,
-          familyReadLabel(data.read_count, data.family_count),
-          ...(closed ? ["Geschlossen"] : []),
-        ].join(" · ")
-      : null;
+    data && thread ? (
+      <TenantPageStats
+        items={[
+          { label: thread.target_label },
+          { label: familyReadLabel(data.read_count, data.family_count) },
+          ...(closed ? [{ label: "Geschlossen" }] : []),
+        ]}
+      />
+    ) : null;
 
   return (
     <TenantPage
@@ -312,7 +314,7 @@ function GroupMessageContent() {
           loadingText="Wird geschlossen…"
         >
           <p className="text-sm text-gray-700">
-            Danach können Eltern nicht mehr antworten. Sie selbst können auch
+            Danach können Eltern nicht mehr antworten. Du selbst kannst auch
             nichts mehr dazuschreiben.
           </p>
         </ConfirmationModal>
@@ -340,7 +342,7 @@ function GroupMessageContent() {
         <LoadErrorAlert error={groupMails.loadError} className="mt-3" />
         <p className="mt-4 text-sm text-gray-500" data-testid="group-readers">
           {data?.readers ? `${groupRecipientsLabel(data.readers)} ` : null}
-          Eltern antworten nur der OGS. Ihre Antworten finden Sie in der
+          Eltern antworten nur der OGS. Ihre Antworten findest du in der
           Unterhaltung mit der Familie.
         </p>
         <FormErrorAlert message={sendError.error} className="mt-3" />
@@ -372,7 +374,7 @@ function GroupMessageContent() {
           ) : (
             <Alert
               type="info"
-              message="Die Eltern-Nachrichten sind für diese Schule ausgeschaltet. Sie können den Verlauf weiterhin lesen."
+              message="Die Eltern-Nachrichten sind für diese Schule ausgeschaltet. Du kannst den Verlauf weiterhin lesen."
             />
           )}
         </div>

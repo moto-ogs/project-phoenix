@@ -1,6 +1,7 @@
 package enrollmenthttp_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -72,6 +73,21 @@ func TestRolloverHolidayWishCanBeAnsweredWithBookingAdjustment(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
+			// The booking proposal uses the pinned old form. The renewal
+			// is accepted on the new form before the proposal is approved.
+			newSchema, err := NewTestFormSchemas(env.repos.Enrollment()).CreateSchemaWithLegal(ctx,
+				"Neue Bedingungen im nächsten Schuljahr", nil, env.creatorID,
+				enrollment.CoreRequirements{enrollment.CoreRequirementHolidayCareWish: true},
+				[]enrollment.FormLegalBlock{{
+					Key: "new_terms", Kind: enrollment.LegalBlockKindTerms, Title: "Neue Teilnahmebedingungen",
+					Label: "Ich stimme zu.", Text: "Die Betreuung nutzt neue Räume.", Required: true, Enabled: true,
+					Source: enrollment.LegalBlockSourceCustom,
+				}})
+			require.NoError(t, err)
+			result.Phase.FormSchemaID = &newSchema.ID
+			require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, env.repos.Enrollment().UpdatePhase, result.Phase))
+			confirmation = acceptedRenewalTerms(t, ctx, env.requestSvc, request.StatusToken)
+			require.Equal(t, true, testFormValue(confirmation.ConsentFlags, "new_terms"))
 			_, err = env.requestSvc.ConfirmRenewal(ctx, request.StatusToken, confirmation)
 			require.NoError(t, err)
 			_, err = testpkg.TenantQuery2(t, ctx, env.db, svc.Approve, created.ChangeRequest.ID, enrollmentAPI.ReviewChangeRequestInput{
@@ -80,7 +96,19 @@ func TestRolloverHolidayWishCanBeAnsweredWithBookingAdjustment(t *testing.T) {
 			require.NoError(t, err)
 			stored, saved, err := env.requestSvc.GetByStatusToken(ctx, request.StatusToken)
 			require.NoError(t, err)
-			require.Len(t, stored.LegalBlocksSnapshot, 1, "approval keeps the renewal evidence")
+			require.Len(t, stored.LegalBlocksSnapshot, 2, "approval preserves the renewal and adds the changed optional consent")
+			renewal, ok := enrollment.LastSubmissionLegalSnapshot(stored.LegalBlocksSnapshot)
+			require.True(t, ok)
+			var requiredFlags map[string]bool
+			require.NoError(t, json.Unmarshal(renewal.ConsentFlags, &requiredFlags))
+			for key := range confirmation.ConsentFlags.All() {
+				assert.True(t, requiredFlags[key], "the renewal separately confirms %s", key)
+			}
+			change := stored.LegalBlocksSnapshot[1]
+			require.True(t, change.ChangeRequest)
+			require.Len(t, change.Blocks, 1)
+			require.Equal(t, enrollment.ConsentKeyPhoto, change.Blocks[0].Key)
+			require.JSONEq(t, `{"photo":true}`, string(change.ConsentFlags))
 			assert.Equal(t, true, testFormValue(stored.ConsentFlags, "photo"), "approval keeps the proposed optional consent")
 			for key := range confirmation.ConsentFlags.All() {
 				assert.Equal(t, true, testFormValue(stored.ConsentFlags, key), "approval keeps accepted %s", key)

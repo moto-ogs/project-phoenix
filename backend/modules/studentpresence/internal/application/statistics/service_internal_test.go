@@ -175,19 +175,19 @@ func TestBuildStudentRows_CategoriesAndPrecedence(t *testing.T) {
 	students[0].ID = 100
 	students[1].ID = 101
 
-	rows := buildStudentRows(students, care,
-		[]ports.AttendanceDay{
+	rows := buildStudentRows(students, attendanceInputs{
+		careDays: care,
+		attendance: []ports.AttendanceDay{
 			{StudentID: 100, Date: d1},
 			{StudentID: 100, Date: calendar.NewDate(2026, 6, 13)}, // not a care day: ignored
 		},
-		[]ports.StatusDay{
+		statusDays: []ports.StatusDay{
 			{StudentID: 100, Date: d2, Status: statusExcused},
 			{StudentID: 100, Date: d2, Status: statusSick}, // sick wins
 			{StudentID: 100, Date: d3, Status: statusClassTrip},
 			{StudentID: 100, Date: d1, Status: statusSick}, // present beats any status
 		},
-		calendar.DateFromTime(fixedNow()),
-	)
+	}, calendar.DateFromTime(fixedNow()))
 	require.Len(t, rows, 2)
 	assert.Equal(t, "Alpha", rows[0].LastName, "sorted by last name")
 
@@ -269,9 +269,9 @@ func TestBuildStudentRows_OnlyCountsDaysInsideEnrollment(t *testing.T) {
 	student := &ports.StatisticsStudent{EnrolledOn: func(day, _ calendar.Date) bool { return !day.Before(enrolledFrom) }}
 	student.ID = 100
 
-	rows := buildStudentRows([]*ports.StatisticsStudent{student}, care,
-		[]ports.AttendanceDay{{StudentID: student.ID, Date: enrolledFrom}}, nil,
-		calendar.DateFromTime(fixedNow()))
+	rows := buildStudentRows([]*ports.StatisticsStudent{student}, attendanceInputs{
+		careDays: care, attendance: []ports.AttendanceDay{{StudentID: student.ID, Date: enrolledFrom}},
+	}, calendar.DateFromTime(fixedNow()))
 
 	require.Len(t, rows, 1)
 	assert.Equal(t, 2, rows[0].CareDays)
@@ -339,17 +339,14 @@ func TestBuildStudentRows_UsesOwnerEnrollmentEligibility(t *testing.T) {
 	pending := &ports.StatisticsStudent{EnrolledOn: func(day, _ calendar.Date) bool { return !day.Before(startsLater) }}
 	pending.ID = 101
 
-	rows := buildStudentRows(
-		[]*ports.StatisticsStudent{activated, pending},
-		care,
-		[]ports.AttendanceDay{
+	rows := buildStudentRows([]*ports.StatisticsStudent{activated, pending}, attendanceInputs{
+		careDays: care,
+		attendance: []ports.AttendanceDay{
 			{StudentID: activated.ID, Date: today},
 			{StudentID: activated.ID, Date: today.AddDays(-1)}, // before care begins
 			{StudentID: pending.ID, Date: today},
 		},
-		nil,
-		today,
-	)
+	}, today)
 
 	require.Len(t, rows, 2)
 	byID := map[int64]studentpresence.StatisticsStudentRow{}

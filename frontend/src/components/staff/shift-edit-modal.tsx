@@ -76,8 +76,7 @@ const EMPTY_STAFF_OPTIONS: readonly StaffScheduleStaff[] = [];
 // Stable empty default for the optional existingReplacements prop (same
 // rationale as EMPTY_STAFF_OPTIONS).
 const EMPTY_REPLACEMENTS: readonly StaffShift[] = [];
-const WEEKDAY_REQUIRED_MESSAGE =
-  "Bitte wählen Sie mindestens einen Wochentag aus.";
+const WEEKDAY_REQUIRED_MESSAGE = "Bitte wähle mindestens einen Wochentag aus.";
 
 // Create/edit modal for one planned shift (Dienstplan). Times are plain
 // "HH:MM" strings end-to-end — no Date/ISO conversion, which sidesteps the
@@ -438,8 +437,8 @@ export function ShiftEditModal({
     seriesHasDateRange &&
     (seriesPeriod === null || seriesEditClosingDayWindow?.dates.length !== 0);
   const seriesNoOccurrenceMessage = seriesHasDateRange
-    ? `Für die gewählten Wochentage und den Wochenrhythmus bleibt ab ${formatShortDate(seriesAppliesFrom)} kein Termin mehr. Setzen Sie „Gültig bis" auf ein späteres Datum oder ändern Sie die Wiederholung.`
-    : `Diese Serie endet am ${formatShortDate(seriesValidUntil)}, Änderungen wirken aber erst ab ${formatShortDate(seriesAppliesFrom)}. Setzen Sie „Gültig bis" auf ein späteres Datum, um die Serie fortzuführen.`;
+    ? `Für die gewählten Wochentage und den Wochenrhythmus bleibt ab ${formatShortDate(seriesAppliesFrom)} kein Termin mehr. Setze „Gültig bis" auf ein späteres Datum oder ändere die Wiederholung.`
+    : `Diese Serie endet am ${formatShortDate(seriesValidUntil)}, Änderungen wirken aber erst ab ${formatShortDate(seriesAppliesFrom)}. Setze „Gültig bis" auf ein späteres Datum, um die Serie fortzuführen.`;
 
   const timesValid = startTime !== "" && endTime !== "" && startTime < endTime;
   const breakMaxMinutes = timesValid
@@ -654,7 +653,7 @@ export function ShiftEditModal({
       return false;
     }
     if (repeatEnabled && periodId === "") {
-      formErrors.invalid("Bitte wählen Sie einen Kalenderzeitraum aus.", {
+      formErrors.invalid("Bitte wähle einen Kalenderzeitraum aus.", {
         calendar_period_id: "Bitte einen Zeitraum wählen.",
       });
       return false;
@@ -663,7 +662,7 @@ export function ShiftEditModal({
       for (const row of replacements) {
         if (row.staffId === "") {
           formErrors.invalid(
-            "Bitte wählen Sie für jede Vertretung eine Person aus.",
+            "Bitte wähle für jede Vertretung eine Person aus.",
           );
           return false;
         }
@@ -1051,7 +1050,7 @@ export function ShiftEditModal({
             : (timeBlockedReason(timesValid, breakValid) ??
               (weekdays.length === 0
                 ? WEEKDAY_BLOCKED_REASON
-                : "Wählen Sie zuerst einen Planungszeitraum aus."))
+                : "Wähle zuerst einen Planungszeitraum aus."))
         }
         tooltip={submitTooltip({
           mode,
@@ -1337,8 +1336,7 @@ export function ShiftEditModal({
                           <p className="text-xs text-gray-500">
                             Die Schicht zählt nicht mehr zur geplanten Zeit.
                             Ohne Vertretung bleibt die Lücke bewusst offen;
-                            sonst tragen Sie eine oder mehrere Ersatzpersonen
-                            ein.
+                            sonst trage eine oder mehrere Ersatzpersonen ein.
                           </p>
                           {replacements.map((row, index) => (
                             <InsetPanel
@@ -1647,16 +1645,15 @@ function submitLabel(mode: ShiftEditMode, repeatEnabled: boolean): string {
   return repeatEnabled ? "Serie anlegen" : "Schicht anlegen";
 }
 
-const WEEKDAY_BLOCKED_REASON =
-  "Wählen Sie zuerst mindestens einen Wochentag aus.";
+const WEEKDAY_BLOCKED_REASON = "Wähle zuerst mindestens einen Wochentag aus.";
 
 /** Warum Beginn, Ende oder Pause das Speichern sperren (#6643). */
 function timeBlockedReason(
   timesValid: boolean,
   breakValid: boolean,
 ): string | undefined {
-  if (!timesValid) return "Prüfen Sie zuerst Beginn und Ende.";
-  if (!breakValid) return "Prüfen Sie zuerst die Pause.";
+  if (!timesValid) return "Prüfe zuerst Beginn und Ende.";
+  if (!breakValid) return "Prüfe zuerst die Pause.";
   return undefined;
 }
 

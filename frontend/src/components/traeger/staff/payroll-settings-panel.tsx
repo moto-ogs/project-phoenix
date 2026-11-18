@@ -104,7 +104,7 @@ function gapSentence(gaps: readonly PayrollGap[]): string | null {
     (gap) =>
       `${PAYROLL_CATEGORY_LABELS[gap.category]} bei ${CONTRACT_KIND_LABELS[gap.kind as StaffContractKind] ?? gap.kind}`,
   );
-  return `Im gewählten Monat fehlen in der Datei: ${parts.join(", ")}. Tragen Sie dafür eine Lohnart ein.`;
+  return `Im gewählten Monat fehlen in der Datei: ${parts.join(", ")}. Trage dafür eine Lohnart ein.`;
 }
 
 export function PayrollSettingsPanel({
@@ -142,7 +142,7 @@ export function PayrollSettingsPanel({
     if (!draft) return;
     const invalid = invalidFields(draft);
     if (Object.keys(invalid).length > 0) {
-      errors.invalid("Bitte prüfen Sie die markierten Felder.", invalid);
+      errors.invalid("Bitte prüfe die markierten Felder.", invalid);
       return;
     }
     setSaving(true);
@@ -254,7 +254,7 @@ export function PayrollSettingsPanel({
           <Input
             name={CONSULTANT_KEY}
             label="Beraternummer"
-            hint="1 bis 7 Ziffern, von Ihrem Lohnbüro."
+            hint="1 bis 7 Ziffern, von deinem Lohnbüro."
             controlSize="compact"
             inputMode="numeric"
             maxLength={7}
@@ -266,7 +266,7 @@ export function PayrollSettingsPanel({
           <Input
             name={CLIENT_KEY}
             label="Mandantennummer"
-            hint="1 bis 5 Ziffern, von Ihrem Lohnbüro."
+            hint="1 bis 5 Ziffern, von deinem Lohnbüro."
             controlSize="compact"
             inputMode="numeric"
             maxLength={5}
@@ -281,7 +281,7 @@ export function PayrollSettingsPanel({
       <SectionCard
         concept={settingsConcept}
         title="Lohnarten je Art des Vertrags"
-        description="Tragen Sie die Nummer aus Ihrem DATEV ein. Ein leeres Feld fehlt in der Lohndatei."
+        description="Trage die Nummer aus deinem DATEV ein. Ein leeres Feld fehlt in der Lohndatei."
         bodyClassName="mt-4 space-y-4"
       >
         {gapText ? (

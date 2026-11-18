@@ -24,6 +24,7 @@ import { Button } from "~/components/ui/button";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -94,7 +95,7 @@ export function HolidayClosureNotices({
   } = useNoticeList(rows, isSending);
   const title = "Eltern der Ferienbetreuung informieren";
   const description =
-    "Diese Schließtage liegen in gebuchten Ferienwochen. Die Eltern bekommen erst eine E-Mail, wenn Sie oder das Träger-Büro „Eltern informieren“ wählen.";
+    "Diese Schließtage liegen in gebuchten Ferienwochen. Die Eltern bekommen erst eine E-Mail, wenn du oder das Träger-Büro „Eltern informieren“ wählt.";
   const renderRow = (
     row: HolidayClosureNoticeRowContent<HolidayClosureNotice>,
   ) => {
@@ -160,7 +161,7 @@ export function HolidayClosureNotices({
           ) : null}
         </div>
         {notice.canNotify ? (
-          <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
+          <ResponsiveRowActions>
             <Button
               type="button"
               variant="surface"
@@ -172,7 +173,7 @@ export function HolidayClosureNotices({
               <Mail className="h-4 w-4" aria-hidden="true" />
               Eltern informieren
             </Button>
-          </div>
+          </ResponsiveRowActions>
         ) : null}
       </ResponsiveActionRow>
     );

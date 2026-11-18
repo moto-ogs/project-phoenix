@@ -1,5 +1,6 @@
 "use client";
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import {
   Suspense,
   useCallback,
@@ -41,6 +42,7 @@ import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { rolesConcept } from "~/lib/concepts/roles";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 const NO_ROLES: Role[] = [];
 
@@ -104,8 +106,7 @@ function RolesPageContent() {
     mutate: mutateRoles,
   } = useSWRAuth(tenantAdminKeys.roles(), readRoles);
   const accessRefused =
-    rolesError instanceof ApiError &&
-    (rolesError.status === 401 || rolesError.status === 403);
+    rolesError instanceof ApiError && isAccessRefusal(rolesError);
   // Eltern vergibt die Einladung zur Eltern-App, nicht diese Seite (#4574).
   const roles = useMemo(
     () =>
@@ -155,13 +156,16 @@ function RolesPageContent() {
   // Statuszeile des Seitenkopfs aus der bereits geladenen Rollenliste.
   const statusLine = useMemo(() => {
     const systemRoles = roles.filter((r) => r.isSystem).length;
-    const parts = [
-      `${formatCount(roles.length)} ${roles.length === 1 ? "Rolle" : "Rollen"}`,
-    ];
-    if (systemRoles > 0) {
-      parts.push(`${formatCount(systemRoles)} vom System`);
-    }
-    return parts.join(" · ");
+    const label = roles.length === 1 ? "Rolle" : "Rollen";
+    if (systemRoles === 0) return `${formatCount(roles.length)} ${label}`;
+    return (
+      <TenantPageStats
+        items={[
+          { value: formatCount(roles.length), label },
+          { value: formatCount(systemRoles), label: "vom System" },
+        ]}
+      />
+    );
   }, [roles]);
 
   const unclassifiedCount = useMemo(
@@ -340,8 +344,8 @@ function RolesPageContent() {
                 ? "Keine Rollen gefunden"
                 : "Keine Rollen vorhanden",
               description: searchTerm
-                ? "Versuchen Sie einen anderen Suchbegriff."
-                : "Legen Sie die erste Rolle an, um Rechte zu vergeben.",
+                ? "Versuche einen anderen Suchbegriff."
+                : "Lege die erste Rolle an, um Rechte zu vergeben.",
               icon: (
                 <MotoDuotoneIcon
                   icon={rolesConcept.icon}
@@ -372,7 +376,7 @@ function RolesPageContent() {
               title="Rolle löschen?"
               description={
                 <>
-                  Möchten Sie die Rolle{" "}
+                  Möchtest du die Rolle{" "}
                   <span className="font-medium">
                     {getRoleDisplayName(selectedRole.name)}
                   </span>{" "}
@@ -434,7 +438,7 @@ function RolesPageContent() {
                 ? "Bei 1 Rolle fehlt „Gilt als“"
                 : `Bei ${unclassifiedCount} Rollen fehlt „Gilt als“`
             }
-            message="Mitteilungen kommen dort vielleicht nicht an. Öffnen Sie die Rolle, tippen Sie auf „Bearbeiten“ und wählen Sie bei „Gilt als“ einen Eintrag."
+            message="Mitteilungen kommen dort vielleicht nicht an. Öffne die Rolle, tippe auf „Bearbeiten“ und wähle bei „Gilt als“ einen Eintrag."
           />
         </div>
       )}

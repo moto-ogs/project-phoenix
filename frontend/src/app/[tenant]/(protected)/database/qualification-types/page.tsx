@@ -6,6 +6,7 @@
 // Erinnerung und Pflicht für alle. Archivieren statt Löschen: eingetragene
 // Nachweise behalten ihre Art.
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { Suspense, useCallback, useLayoutEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -28,6 +29,7 @@ import { staffQualificationKeys } from "~/lib/swr/staff-keys";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 const CACHE_KEY = staffQualificationKeys.types();
 
@@ -125,11 +127,21 @@ const config: CatalogConfig<QualificationType> = {
     "Arten von Nachweisen wie Erste Hilfe am Kind, mit Gültigkeit, Erinnerung und Pflicht. Wer welchen Nachweis hat, steht unter Nachweise.",
   searchPlaceholder: "Nachweisart suchen…",
   emptyDescription:
-    "Erste Hilfe am Kind, Rettungsfähigkeit und erweitertes Führungszeugnis sind immer da. Eigene Arten legen Sie oben an.",
+    "Erste Hilfe am Kind, Rettungsfähigkeit und erweitertes Führungszeugnis sind immer da. Eigene Arten legst du oben an.",
   stats: (types) => {
     const live = types.filter((type) => !type.archived);
     const mandatory = live.filter((type) => type.mandatory).length;
-    return `${formatCount(live.length)} ${live.length === 1 ? "Art" : "Arten"} · ${formatCount(mandatory)} Pflicht`;
+    return (
+      <TenantPageStats
+        items={[
+          {
+            value: formatCount(live.length),
+            label: live.length === 1 ? "Art" : "Arten",
+          },
+          { value: formatCount(mandatory), label: "Pflicht" },
+        ]}
+      />
+    );
   },
   toRow: (type) => ({
     name: type.name,
@@ -188,8 +200,7 @@ function QualificationTypesPageContent() {
     staffQualificationService.listTypes(),
   );
   const accessRefused =
-    swrError instanceof ApiError &&
-    (swrError.status === 401 || swrError.status === 403);
+    swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
   useLayoutEffect(() => {
     if (!accessRefused) return;

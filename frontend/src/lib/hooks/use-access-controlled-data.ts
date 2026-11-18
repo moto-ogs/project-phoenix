@@ -1,5 +1,6 @@
 "use client";
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { useLayoutEffect, useState } from "react";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
@@ -13,8 +14,7 @@ export function useAccessControlledData<T>(
 ) {
   const discard = useDiscardRefusedEntity();
   const [refusedKey, setRefusedKey] = useState<string | null>(null);
-  const refusal =
-    error instanceof ApiError && (error.status === 401 || error.status === 403);
+  const refusal = error instanceof ApiError && isAccessRefusal(error);
   const accessRefused =
     refusal ||
     (key !== null &&

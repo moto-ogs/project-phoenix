@@ -241,10 +241,9 @@ function legalTexts(
       key: "data_processing",
       kind: "privacy_notice",
       title: "Datenschutzinformation",
-      label:
-        "Ich habe die Datenschutzinformation der Schule zur Kenntnis genommen.",
+      label: "Hier findest du die Datenschutzinformation der Schule.",
       text: "Datenschutz Text",
-      required: true,
+      required: false,
     },
     {
       key: "photo",
@@ -374,14 +373,21 @@ type FormProps = Partial<
 /**
  * Renders the form the way the phase pages do: with the phase's data
  * prefetched, built from the fixtures above. A test that passes
- * `previewSchema` gets the template preview instead.
+ * `previewSchema` gets the template preview instead, with the school's legal
+ * texts handed in as the preview page does.
  */
 async function renderForm(props: FormProps = {}) {
+  const preview =
+    "previewSchema" in props && props.prefetchedData === undefined;
   const prefetchedData =
     props.prefetchedData ??
-    ("previewSchema" in props
+    (preview
       ? undefined
       : await fixturePrefetchedData(props.skipCaptcha === true));
+  const previewLegalTexts = preview
+    ? (props.previewLegalTexts ??
+      ((await mockFetchPublicLegalTexts()) as PublicLegalTexts))
+    : props.previewLegalTexts;
   return render(
     <EnrollmentForm
       phaseID="5"
@@ -389,6 +395,7 @@ async function renderForm(props: FormProps = {}) {
       onSubmitted={vi.fn()}
       {...props}
       prefetchedData={prefetchedData}
+      previewLegalTexts={previewLegalTexts}
     />,
   );
 }
@@ -451,12 +458,6 @@ async function fillRequiredFields() {
   const agb = screen.queryByText(/AGB|Ganztag Info-Brief/);
   if (agb) {
     fireEvent.click(agb);
-  }
-  const privacy = screen.queryByText(
-    /Datenschutzinformation der Schule zur Kenntnis/,
-  );
-  if (privacy) {
-    fireEvent.click(privacy);
   }
 }
 
@@ -749,7 +750,7 @@ describe("EnrollmentForm", () => {
 
     expect(
       await screen.findByText(
-        "Bei einigen Feldern steht ein Hinweis. Bitte korrigieren Sie diese Felder.",
+        "Bei einigen Feldern steht ein Hinweis. Bitte korrigiere diese Felder.",
       ),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Bitte Vornamen angeben.")).toHaveLength(2);
@@ -766,7 +767,7 @@ describe("EnrollmentForm", () => {
       );
       expect(
         await screen.findByText(
-          "Bei einigen Feldern steht ein Hinweis. Bitte korrigieren Sie diese Felder.",
+          "Bei einigen Feldern steht ein Hinweis. Bitte korrigiere diese Felder.",
         ),
       ).toBeInTheDocument();
       await submitAttemptFinished();
@@ -989,7 +990,7 @@ describe("EnrollmentForm", () => {
   // second step after the form.
   describe("grade-restricted offerings before the grade is picked", () => {
     const CHOOSE_GRADE_FIRST =
-      "Wählen Sie zuerst die Klassenstufe Ihres Kindes. Danach sehen Sie hier die passenden Betreuungsangebote.";
+      "Wähle zuerst die Klassenstufe deines Kindes. Danach siehst du hier die passenden Betreuungsangebote.";
 
     function gradeOffering(
       id: string,
@@ -1071,11 +1072,11 @@ describe("EnrollmentForm", () => {
 
       expect(
         screen.getByText(
-          "Für die 4. Klasse gibt es hier keine passenden Betreuungsangebote. Bei Fragen wenden Sie sich bitte an die OGS.",
+          "Für die 4. Klasse gibt es hier keine passenden Betreuungsangebote. Bei Fragen wende dich bitte an die OGS.",
         ),
       ).toBeVisible();
       expect(screen.getByRole("status")).toHaveTextContent(
-        "Für die 4. Klasse gibt es hier keine passenden Betreuungsangebote. Bei Fragen wenden Sie sich bitte an die OGS.",
+        "Für die 4. Klasse gibt es hier keine passenden Betreuungsangebote. Bei Fragen wende dich bitte an die OGS.",
       );
       expect(screen.queryByText(CHOOSE_GRADE_FIRST)).not.toBeInTheDocument();
     });
@@ -1194,7 +1195,7 @@ describe("EnrollmentForm", () => {
       expect(screen.getByLabelText("Jahr")).toBeInTheDocument();
       expect(
         screen.queryByText(
-          "Für die 2. Klasse gibt es hier keine passenden Betreuungsangebote. Bei Fragen wenden Sie sich bitte an die OGS.",
+          "Für die 2. Klasse gibt es hier keine passenden Betreuungsangebote. Bei Fragen wende dich bitte an die OGS.",
         ),
       ).not.toBeInTheDocument();
     });
@@ -1396,36 +1397,9 @@ describe("EnrollmentForm", () => {
 
     expect(
       screen.getByText(
-        /Mit der Anmeldung zum Ganztagsangebot ist Ihr Kind laut Ganztagsschulerlass zu den angemeldeten Zeiten schulpflichtig\./,
+        /Mit der Anmeldung zum Ganztagsangebot ist dein Kind laut Ganztagsschulerlass zu den angemeldeten Zeiten schulpflichtig\./,
       ),
     ).toBeInTheDocument();
-  });
-
-  it("fails closed when the preview cannot load the legal texts", async () => {
-    // A template without its own legal blocks previews the school's texts.
-    // A real load failure must replace the form, so it never shows consent
-    // without the configured documents. Unconfigured texts (empty strings,
-    // a 200) do not trigger this; see the beforeEach default.
-    mockFetchPublicLegalTexts.mockReset();
-    mockFetchPublicLegalTexts.mockRejectedValue(
-      new ApiError("legal texts request failed: 500", 500),
-    );
-    await renderForm({
-      phaseID: undefined,
-      previewMode: true,
-      previewSchema: schema(),
-    });
-    await waitForLoaded();
-
-    // The backend sentence never reaches the reader.
-    expect(
-      await screen.findByText(catalogText("general.server", "die Anmeldung")),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText("legal texts request failed: 500"),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /absenden/i })).toBeNull();
-    expect(screen.queryByText("Allergien")).not.toBeInTheDocument();
   });
 
   it("localizes the e-mail contact notice CTA in localized public copy", async () => {
@@ -1825,9 +1799,7 @@ describe("EnrollmentForm", () => {
     expect(payload.consent_flags).toEqual({ custom_pool: true });
   });
 
-  it("renders legal blocks from preview schemas without loading tenant legal texts", async () => {
-    mockFetchPublicLegalTexts.mockClear();
-
+  it("renders a preview template's own legal blocks instead of the school's texts", async () => {
     await renderForm({
       phaseID: undefined,
       previewMode: true,
@@ -1864,10 +1836,15 @@ describe("EnrollmentForm", () => {
     });
     await waitForLoaded();
 
-    expect(mockFetchPublicLegalTexts).not.toHaveBeenCalled();
     expect(
       screen.getByText("Mein Kind darf beim Ausflug fotografiert werden."),
     ).toBeInTheDocument();
+    // The school's texts were handed in, the template's own blocks win.
+    expect(
+      screen.queryByText(
+        "Ich habe die Datenschutzinformation der Schule zur Kenntnis genommen.",
+      ),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByText("Diese Zustimmung ist deaktiviert."),
     ).not.toBeInTheDocument();
@@ -1993,7 +1970,7 @@ describe("EnrollmentForm", () => {
     // pickup field prompts the parent to pick care days first instead of
     // showing all weekdays.
     expect(
-      screen.getByText("Wählen Sie zuerst die Betreuungstage aus."),
+      screen.getByText("Wähle zuerst die Betreuungstage aus."),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Montag")).not.toBeInTheDocument();
 
@@ -2481,7 +2458,7 @@ describe("EnrollmentForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
     expect(
       await screen.findByText(
-        "Bitte wählen Sie für jedes Kind mindestens ein Betreuungsangebot aus.",
+        "Bitte wähle für jedes Kind mindestens ein Betreuungsangebot aus.",
       ),
     ).toBeInTheDocument();
 
@@ -2682,7 +2659,7 @@ describe("EnrollmentForm", () => {
     await waitForLoaded();
 
     expect(
-      screen.queryByText("Wählen Sie zuerst die Betreuungstage aus."),
+      screen.queryByText("Wähle zuerst die Betreuungstage aus."),
     ).not.toBeInTheDocument();
     const group = screen.getByRole("group", { name: /Erlaubte Heimwege/ });
     expect(within(group).getAllByRole("button")).toHaveLength(5);
@@ -2736,9 +2713,7 @@ describe("EnrollmentForm", () => {
 
     const group = screen.getByRole("group", { name: /Erlaubte Heimwege/ });
     expect(
-      within(group).getByText(
-        "Wählen Sie pro Betreuungstag einen Heimweg aus.",
-      ),
+      within(group).getByText("Wähle pro Betreuungstag einen Heimweg aus."),
     ).toBeInTheDocument();
     fireEvent.click(within(group).getByRole("button", { name: "Mo" }));
     // The modes render as a real radio group, not checkboxes.
@@ -3073,7 +3048,7 @@ describe("EnrollmentForm", () => {
 
     const group = screen.getByRole("group", { name: /Erlaubte Heimwege/ });
     expect(
-      within(group).getByText("Wählen Sie zuerst die Betreuungstage aus."),
+      within(group).getByText("Wähle zuerst die Betreuungstage aus."),
     ).toBeInTheDocument();
     expect(within(group).queryByRole("checkbox")).not.toBeInTheDocument();
     expect(within(group).queryByRole("button")).not.toBeInTheDocument();
@@ -3344,7 +3319,7 @@ describe("EnrollmentForm", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Sie kommen nicht in die Eltern-App\? Bitte melden Sie sich bei der OGS\./,
+        /Du kommst nicht in die Eltern-App\? Bitte melde dich bei der OGS\./,
       ),
     ).toBeInTheDocument();
     expect(
@@ -4044,11 +4019,11 @@ describe("EnrollmentForm", () => {
     // The pickup field gets the pickup copy, not the bus copy — guards the
     // regression where the shared weekday_boolean input hardcoded bus text.
     expect(
-      screen.getByText(/an denen Ihr Kind abgeholt wird/),
+      screen.getByText(/an denen dein Kind abgeholt wird/),
     ).toBeInTheDocument();
     // The Buskind field still shows its own bus copy.
     expect(
-      screen.getByText(/an denen Ihr Kind mit dem Bus fährt/),
+      screen.getByText(/an denen dein Kind mit dem Bus fährt/),
     ).toBeInTheDocument();
   });
 
@@ -4553,7 +4528,7 @@ describe("EnrollmentForm", () => {
     const shortCare = perDayVariant("41", "Verlässlichkeit bis 13 Uhr");
     const longCare = perDayVariant("42", "Nachmittagsgruppe bis 17 Uhr");
     const conflictOnMonday =
-      "Am Montag sind „Verlässlichkeit bis 13 Uhr“ und „Nachmittagsgruppe bis 17 Uhr“ gewählt. Bitte wählen Sie pro Tag nur ein Angebot.";
+      "Am Montag sind „Verlässlichkeit bis 13 Uhr“ und „Nachmittagsgruppe bis 17 Uhr“ gewählt. Bitte wähle pro Tag nur ein Angebot.";
 
     function pick(offeringId: string, day: string) {
       const input = document.querySelector<HTMLInputElement>(
@@ -4630,7 +4605,7 @@ describe("EnrollmentForm", () => {
 
       expect(
         screen.getByText(
-          "Am Freitag sind „Verlässlichkeit bis 13 Uhr“ und „Freitag bis 15 Uhr“ gewählt. Bitte wählen Sie pro Tag nur ein Angebot.",
+          "Am Freitag sind „Verlässlichkeit bis 13 Uhr“ und „Freitag bis 15 Uhr“ gewählt. Bitte wähle pro Tag nur ein Angebot.",
         ),
       ).toBeInTheDocument();
     });
@@ -4657,14 +4632,14 @@ describe("EnrollmentForm", () => {
       pick("44", "Mi");
       pick("41", "Di");
       expect(
-        screen.queryByText(/Bitte wählen Sie pro Tag nur ein Angebot/),
+        screen.queryByText(/Bitte wähle pro Tag nur ein Angebot/),
       ).not.toBeInTheDocument();
       expect(screen.getByText("Höchstens eines pro Tag")).toBeInTheDocument();
       fireEvent.click(dayButton(offeringCard("children_0_offering_41"), "Mi"));
 
       expect(
         screen.getByText(
-          "Am Mittwoch sind „Nachmittag bis 15 Uhr“ und „Verlässlichkeit bis 13 Uhr“ gewählt. Bitte wählen Sie pro Tag nur ein Angebot.",
+          "Am Mittwoch sind „Nachmittag bis 15 Uhr“ und „Verlässlichkeit bis 13 Uhr“ gewählt. Bitte wähle pro Tag nur ein Angebot.",
         ),
       ).toBeInTheDocument();
     });
@@ -4723,7 +4698,7 @@ describe("EnrollmentForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
     expect(
       await screen.findByText(
-        "Bitte wählen Sie für jedes Kind genau ein Betreuungsangebot aus.",
+        "Bitte wähle für jedes Kind genau ein Betreuungsangebot aus.",
       ),
     ).toBeInTheDocument();
     expect(mockSubmitEnrollment).not.toHaveBeenCalled();
@@ -5116,34 +5091,6 @@ describe("EnrollmentForm — fixed pickup times", () => {
     await waitFor(() => expect(onSubmitted).toHaveBeenCalled());
     expect(mockSubmitEnrollment).toHaveBeenCalledTimes(2);
   });
-
-  it("stops the preview when its legal texts fail, then retries", async () => {
-    mockFetchPublicLegalTexts.mockReset();
-    mockFetchPublicLegalTexts
-      .mockRejectedValueOnce(new ApiError("legal texts", 503))
-      .mockResolvedValueOnce(legalTexts());
-    await renderForm({
-      phaseID: undefined,
-      previewMode: true,
-      previewSchema: pickupSchema(),
-    });
-    await waitForLoaded();
-
-    expect(
-      await screen.findByText(
-        catalogText("general.unavailable", "die Anmeldung"),
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Vorschau, nicht absenden" }),
-    ).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
-
-    expect(
-      await screen.findByRole("button", { name: "Vorschau, nicht absenden" }),
-    ).toBeInTheDocument();
-  });
 });
 
 describe("EnrollmentForm restrictToOfferings (#2251)", () => {
@@ -5289,6 +5236,7 @@ describe("EnrollmentForm restrictToOfferings (#2251)", () => {
 
     await waitFor(() => expect(submitter).toHaveBeenCalledTimes(1));
     const payload = submitter.mock.calls[0]?.[0] as {
+      consent_flags: Record<string, unknown>;
       guardian_first_name: string;
       guardian_email: string;
       children: {
@@ -5300,6 +5248,7 @@ describe("EnrollmentForm restrictToOfferings (#2251)", () => {
       custom_data: Record<string, unknown>;
     };
     // Hidden master data travels unchanged from the draft.
+    expect(payload.consent_flags).toEqual({});
     expect(payload.guardian_first_name).toBe("Mara");
     expect(payload.guardian_email).toBe("mara@example.test");
     expect(payload.children[0]?.first_name).toBe("Anton");
@@ -5554,16 +5503,16 @@ describe("EnrollmentForm signature (#4786)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
     expect(
-      await screen.findAllByText("Bitte unterschreiben Sie die Anmeldung."),
+      await screen.findAllByText("Bitte unterschreibe die Anmeldung."),
     ).not.toHaveLength(0);
     expect(mockSubmitEnrollment).not.toHaveBeenCalled();
     expect(document.getElementById("signature-error")).toHaveTextContent(
-      "Bitte unterschreiben Sie die Anmeldung.",
+      "Bitte unterschreibe die Anmeldung.",
     );
 
     sign();
     expect(
-      screen.getByText("Ihre Unterschrift ist bereit."),
+      screen.getByText("Deine Unterschrift ist bereit."),
     ).toBeInTheDocument();
     expect(document.getElementById("signature-error")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
@@ -5586,7 +5535,7 @@ describe("EnrollmentForm signature (#4786)", () => {
     await fillRequiredFields();
     sign();
     expect(
-      screen.getByText("Ihre Unterschrift ist bereit."),
+      screen.getByText("Deine Unterschrift ist bereit."),
     ).toBeInTheDocument();
 
     fireEvent.change(screen.getAllByLabelText("Vorname")[0]!, {
@@ -5595,7 +5544,7 @@ describe("EnrollmentForm signature (#4786)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
 
     expect(
-      await screen.findAllByText("Bitte unterschreiben Sie die Anmeldung."),
+      await screen.findAllByText("Bitte unterschreibe die Anmeldung."),
     ).not.toHaveLength(0);
     expect(mockSubmitEnrollment).not.toHaveBeenCalled();
   });
@@ -5627,5 +5576,167 @@ describe("EnrollmentForm signature (#4786)", () => {
     expect(
       screen.queryByRole("img", { name: "Feld zum Unterschreiben" }),
     ).not.toBeInTheDocument();
+  });
+
+  describe("legal decisions of #2787", () => {
+    const healthField = {
+      key: "health",
+      label: "Gesundheitsangaben",
+      type: "textarea" as const,
+      required: false,
+      applies_to_child: true,
+      sort_order: 9,
+      target: "student.health_info" as const,
+    };
+    const healthConsent = {
+      key: "health_data",
+      kind: "consent" as const,
+      title: "Gesundheitsangaben",
+      label: "Ich bin einverstanden mit den Gesundheitsangaben.",
+      text: "Gesundheit Text",
+      required: false,
+      sort_order: 45,
+    };
+
+    async function submittedPayload() {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Anmeldung absenden" }),
+      );
+      await waitFor(() => {
+        expect(mockSubmitEnrollment).toHaveBeenCalledTimes(1);
+      });
+      return (
+        mockSubmitEnrollment.mock.calls[0] as [string, SubmitEnrollmentPayload]
+      )[1];
+    }
+
+    it("shows the Datenschutzinformation without a checkbox and records it as shown", async () => {
+      phaseSchemaFixture.mockResolvedValue(schema());
+      await renderForm();
+      await waitForLoaded();
+
+      expect(
+        screen.getByText(
+          "Hier findest du die Datenschutzinformation der Schule.",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("checkbox", { name: /Datenschutzinformation/ }),
+      ).not.toBeInTheDocument();
+      await fillRequiredFields();
+      const payload = await submittedPayload();
+      expect(payload.consent_flags).toMatchObject({ data_processing: true });
+    });
+
+    it("renders a privacy notice saved with a checkbox before #2787 without one", async () => {
+      phaseSchemaFixture.mockResolvedValue(schema());
+      mockFetchPublicLegalTexts.mockResolvedValue(
+        legalTexts([
+          {
+            key: "data_processing",
+            kind: "privacy_notice",
+            title: "Datenschutzinformation",
+            label:
+              "Ich habe die Datenschutzinformation der Schule zur Kenntnis genommen.",
+            text: "Datenschutz Text",
+            required: true,
+          },
+        ]),
+      );
+      await renderForm();
+      await waitForLoaded();
+
+      expect(
+        screen.queryByRole("checkbox", { name: /Datenschutzinformation/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Hier findest du die Datenschutzinformation der Schule.",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it("asks the custodians' agreement with the consent that carries it", async () => {
+      phaseSchemaFixture.mockResolvedValue(schema());
+      mockFetchPublicLegalTexts.mockResolvedValue(
+        legalTexts([
+          {
+            key: "internet_photos",
+            kind: "consent",
+            title: "Fotos im Internet",
+            label: "Fotos meines Kindes dürfen auf die Website.",
+            text: "",
+            required: false,
+            guardian_agreement: true,
+          },
+        ]),
+      );
+      await renderForm();
+      await waitForLoaded();
+
+      expect(
+        screen.getByRole("checkbox", {
+          name: "Fotos meines Kindes dürfen auf die Website. Ich handle dabei im Einvernehmen mit allen anderen sorgeberechtigten Personen meines Kindes.",
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it("sends health answers only with the health consent and the form without both", async () => {
+      phaseSchemaFixture.mockResolvedValue({
+        ...schema(),
+        fields: [...schema().fields, healthField],
+      });
+      mockFetchPublicLegalTexts.mockResolvedValue(
+        legalTexts([...legalTexts().blocks, healthConsent]),
+      );
+      await renderForm();
+      await waitForLoaded();
+      expect(
+        screen.getByText(
+          "Freiwillig. Wenn du etwas einträgst, setze unten das Häkchen bei den Gesundheitsangaben.",
+        ),
+      ).toBeInTheDocument();
+      await fillRequiredFields();
+      fireEvent.change(screen.getByLabelText("Gesundheitsangaben"), {
+        target: { value: "Nussallergie" },
+      });
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Anmeldung absenden" }),
+      );
+      expect(
+        await screen.findAllByText(
+          "Du hast Gesundheitsangaben eingetragen. Setze dafür das Häkchen bei der Einwilligung für Gesundheitsangaben oder lass die Felder leer.",
+        ),
+      ).not.toHaveLength(0);
+      expect(mockSubmitEnrollment).not.toHaveBeenCalled();
+
+      fireEvent.click(
+        screen.getByRole("checkbox", {
+          name: "Ich bin einverstanden mit den Gesundheitsangaben.",
+        }),
+      );
+      const payload = await submittedPayload();
+      expect(payload.consent_flags).toMatchObject({ health_data: true });
+      expect(payload.children[0]?.custom_data).toMatchObject({
+        health: "Nussallergie",
+      });
+    });
+
+    it("submits without the health consent when no health answer is given", async () => {
+      phaseSchemaFixture.mockResolvedValue({
+        ...schema(),
+        fields: [...schema().fields, { ...healthField, required: true }],
+      });
+      mockFetchPublicLegalTexts.mockResolvedValue(
+        legalTexts([...legalTexts().blocks, healthConsent]),
+      );
+      await renderForm();
+      await waitForLoaded();
+      await fillRequiredFields();
+
+      const payload = await submittedPayload();
+      expect(payload.consent_flags).toMatchObject({ health_data: false });
+    });
   });
 });

@@ -716,7 +716,8 @@ describe("VertretungView", () => {
     expect(screen.queryByTestId("day-list")).not.toBeInTheDocument();
     expect(screen.queryByTestId("calendar-grid")).not.toBeInTheDocument();
     // #2517: keine Zählung aus einer Woche, die nie geladen wurde.
-    expect(screen.queryByText(/0 Termine/)).not.toBeInTheDocument();
+    // Wert und Wort der Statuszeile stehen in eigenen Elementen.
+    expect(document.body).not.toHaveTextContent(/0\s*Termine/);
     // Ladefehler nie als Toast: niemand hat eine Aktion ausgelöst.
     expect(mockToastError).not.toHaveBeenCalled();
   });
@@ -897,7 +898,7 @@ describe("VertretungView", () => {
 
     await waitFor(() =>
       expect(mockToastWarning).toHaveBeenCalledWith(
-        "Bitte prüfen Sie 2 mögliche Zeitüberschneidungen.",
+        "Bitte prüfe 2 mögliche Zeitüberschneidungen.",
         { duration: 0 },
       ),
     );

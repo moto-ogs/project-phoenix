@@ -56,7 +56,7 @@ export function DemoBookingDialog({ isOpen, onClose }: DemoBookingDialogProps) {
       titleLevel={2}
       description={
         <>
-          Wählen Sie einen freien Termin mit dem moto-Team.{" "}
+          Wähle einen freien Termin mit dem moto-Team.{" "}
           <ButtonLink
             href={DEMO_BOOKING_URL}
             target="_blank"

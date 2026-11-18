@@ -863,9 +863,10 @@ describe("OGSGroupPage", () => {
 
     await waitFor(() => {
       // Die Zähler stehen in der Statuszeile, nicht in einer eigenen Zeile.
+      // Wert-Label-Paare ohne Trennpunkt (#7402).
       expect(
-        screen.getByText(/von 3 da · 1 krank · 1 entschuldigt$/),
-      ).toBeInTheDocument();
+        screen.getByText("entschuldigt").parentElement?.parentElement,
+      ).toHaveTextContent(/von 3 da, 1 krank, 1 entschuldigt$/);
       expect(screen.queryByText("3 Kinder")).not.toBeInTheDocument();
     });
   });
@@ -913,8 +914,8 @@ describe("OGSGroupPage", () => {
     render(<OGSGroupPage />);
 
     expect(
-      await screen.findByText(/von 3 da · 1 krank · 0 entschuldigt$/),
-    ).toBeInTheDocument();
+      (await screen.findByText("entschuldigt")).parentElement?.parentElement,
+    ).toHaveTextContent(/von 3 da, 1 krank, 0 entschuldigt$/);
   });
 
   // Ort vor Status, Entscheidung A (#6407): Ein eingechecktes, krank
@@ -1530,7 +1531,7 @@ describe("OGSGroupPage additional scenarios", () => {
     // mocked here, so the retry action is not rendered).
     expect(
       await screen.findByText(
-        catalogText("general.server", "die Liste Ihrer OGS-Gruppe"),
+        catalogText("general.server", "die Liste deiner OGS-Gruppe"),
       ),
     ).toBeInTheDocument();
   });

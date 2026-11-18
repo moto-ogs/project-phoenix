@@ -43,11 +43,19 @@ vi.mock("~/lib/supervision-context", () => ({
 vi.mock("~/lib/timetable-operations-api", () => ({
   timetableOperationsApi: {
     patchAttendance: vi.fn(),
+    checkIn: vi.fn(),
+    checkInMany: vi.fn(),
   },
   isReopenUnavailableError: vi.fn(() => false),
 }));
 
+vi.mock("~/lib/sse-optimistic-mutations", () => ({
+  markOwnAttendanceMutation: vi.fn(),
+  clearOwnAttendanceMutation: vi.fn(),
+}));
+
 import { ApiError } from "~/lib/api-error";
+import { clearOwnAttendanceMutation } from "~/lib/sse-optimistic-mutations";
 import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import type {
   TimetableRoster,
@@ -104,7 +112,7 @@ describe("useTimetableActions roster sync after a saved action", () => {
     expect(shownError).toBe(failure);
     expect(shownOptions).toMatchObject({
       object: "die Anwesenheitsliste",
-      messageSuffix: "Ihre Änderung ist gespeichert.",
+      messageSuffix: "Deine Änderung ist gespeichert.",
       action: { label: "Liste neu laden" },
     });
 
@@ -140,8 +148,86 @@ describe("useTimetableActions roster sync after a saved action", () => {
     expect(showActionError).toHaveBeenCalledTimes(2);
     expect(showActionError.mock.calls[1]![1]).toMatchObject({
       object: "die Anwesenheitsliste",
-      messageSuffix: "Ihre Änderung ist gespeichert.",
+      messageSuffix: "Deine Änderung ist gespeichert.",
       action: { label: "Liste neu laden" },
     });
+  });
+});
+
+// Safari's message when SWR's mutate finds no state for its cache (#2459).
+const localUpdateFailure = new TypeError(
+  "undefined is not a function (near '...[t,r,i,o]...')",
+);
+
+const savedRoster = {
+  instance: { id: "99" },
+  rows: [],
+  movedFrom: null,
+} as unknown as TimetableRoster;
+
+function expectSavedListOutOfSync() {
+  expect(showActionError).toHaveBeenCalledOnce();
+  const [shownError, shownOptions] = showActionError.mock.calls[0]!;
+  expect(shownError).toBe(localUpdateFailure);
+  expect(shownOptions).toMatchObject({
+    object: "die Anwesenheitsliste",
+    messageSuffix: "Deine Änderung ist gespeichert.",
+    action: { label: "Liste neu laden" },
+  });
+  expect(shownOptions).not.toHaveProperty("retry");
+}
+
+describe("useTimetableActions local update after saved check-ins (#2459)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(timetableOperationsApi.checkIn).mockResolvedValue(savedRoster);
+    vi.mocked(timetableOperationsApi.checkInMany).mockResolvedValue(
+      savedRoster,
+    );
+  });
+
+  it("reports confirmed expected children as saved when the list cannot follow", async () => {
+    const { result } = setup(() => Promise.reject(localUpdateFailure));
+    const rows = [
+      row,
+      { studentId: "8", studentName: "Ben" } as TimetableRosterRow,
+    ];
+
+    await act(async () => {
+      await result.current.handleConfirmExpectedStudents(rows);
+    });
+
+    expect(timetableOperationsApi.checkIn).toHaveBeenCalledTimes(2);
+    expectSavedListOutOfSync();
+    expect(result.current.isConfirmingExpected).toBe(false);
+  });
+
+  it("closes the add dialog and reports the saved child when the list cannot follow", async () => {
+    const { result } = setup(() => Promise.reject(localUpdateFailure));
+
+    let added: boolean | undefined;
+    await act(async () => {
+      added = await result.current.handleAddUnplannedStudent("7");
+    });
+
+    expect(added).toBe(true);
+    expect(formError.show).not.toHaveBeenCalled();
+    expect(clearOwnAttendanceMutation).not.toHaveBeenCalled();
+    expectSavedListOutOfSync();
+  });
+
+  it("closes the present-children picker and keeps the own check-ins when the list cannot follow", async () => {
+    const { result } = setup(() => Promise.reject(localUpdateFailure));
+
+    let added: boolean | undefined;
+    await act(async () => {
+      added = await result.current.handleAddPresentStudents(["7", "8"]);
+    });
+
+    expect(added).toBe(true);
+    expect(timetableOperationsApi.checkInMany).toHaveBeenCalledOnce();
+    expect(formError.show).not.toHaveBeenCalled();
+    expect(clearOwnAttendanceMutation).not.toHaveBeenCalled();
+    expectSavedListOutOfSync();
   });
 });

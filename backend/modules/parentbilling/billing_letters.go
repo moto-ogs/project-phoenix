@@ -43,6 +43,9 @@ var (
 	// ErrBankAccountMissing reports letters of a Träger without a bank
 	// account to pay to.
 	ErrBankAccountMissing = errors.New("the Träger has no bank account for the letters")
+	// ErrLetterheadMissing reports letters of a Träger without a
+	// letterhead: it names the Träger as the sender (#7177).
+	ErrLetterheadMissing = errors.New("the Träger has no letterhead for the letters")
 	// ErrLetterheadTooLong reports a letterhead or footer of the Träger
 	// that leaves too little room on a page for the letter.
 	ErrLetterheadTooLong = errors.New("the letterhead or footer of the Träger is too long for a letter")

@@ -41,6 +41,8 @@ type schoolRow struct {
 	// the full school update leaves both columns alone.
 	ChildQuotaBundles    *int `bun:"child_quota_bundles"`
 	ChildQuotaBundleSize int  `bun:"child_quota_bundle_size,nullzero,notnull,default:50"`
+	// The Geräteplätze (#2312) are written only by SetSchoolDeviceSlots.
+	DeviceSlots *int `bun:"device_slots"`
 }
 
 func (s *Store) CreateSchool(ctx context.Context, input organizationtenancy.CreateSchool) (organizationtenancy.School, domain.OperationStats, error) {
@@ -272,6 +274,7 @@ func toSchoolDomain(row schoolRow) organizationtenancy.School {
 		Active: row.Active, Hidden: row.Hidden, DeletedAt: row.DeletedAt, Settings: row.Settings,
 		Address: row.Address, City: row.City, Zip: row.Zip, Phone: row.Phone, Email: row.Email,
 		ChildQuotaBundles: row.ChildQuotaBundles, ChildQuotaBundleSize: row.ChildQuotaBundleSize,
+		DeviceSlots: row.DeviceSlots,
 	}
 }
 

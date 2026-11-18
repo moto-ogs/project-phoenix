@@ -57,14 +57,14 @@ func TestCareInvoiceLetterNamesOneLinePerModuleAndAsksForPayment(t *testing.T) {
 	text := careLetterText(careInvoiceLetter(careLetterSJR()))
 	for _, want := range []string{
 		"Rechnung MB-2027-0001: Monatsbeitrag Januar 2027",
-		"Sehr geehrte Familie Beispiel,",
+		"Liebe Familie Beispiel,",
 		"Kind: Mia Beispiel", "Monat: Januar 2027", "Datum: 04.01.2027", "Zahlen bis: 15.01.2027", "Ansprechperson: Ute Muster",
 		"für die Betreuung von Mia Beispiel an der Grundschule Ispringen",
 		"Betreuung bis 14:00 Uhr (Mo) = 32,00 €",
 		"Betreuung bis 16:30 Uhr (Di), 01.01. bis 15.01.2027 = 22,01 €",
 		"Summe = 54,01 €",
-		"Ihre Betreuung", "Abgerechnet wird nach Ihrem Vertrag, nicht nach Anwesenheit.",
-		"Bitte überweisen Sie 54,01 € bis zum 15.01.2027 auf das Konto unten. Geben Sie als Verwendungszweck die Rechnungsnummer MB-2027-0001 an.",
+		"Eure Betreuung", "Abgerechnet wird nach eurem Vertrag, nicht nach Anwesenheit.",
+		"Bitte überweist 54,01 € bis zum 15.01.2027 auf das Konto unten. Gebt als Verwendungszweck die Rechnungsnummer MB-2027-0001 an.",
 		"Hinweise", "Die Betreuung ist am 2. Januar geschlossen.",
 		"Bankverbindung: SJR Pforzheim · IBAN DE02 1203 0000 0000 2020 51",
 	} {
@@ -86,7 +86,7 @@ func TestCarePaymentTextUsesTheTraegersTextUnlessItNeedsADebtorNumber(t *testing
 	content.letterhead.PaymentText = "Zweck: {Debitorennummer}"
 	assert.Contains(t, carePaymentText(content), "die Rechnungsnummer MB-2027-0001", "no gap where the debtor number belongs")
 	content.invoice.TotalCents = 0
-	assert.Equal(t, "Sie müssen für diesen Monat nichts bezahlen.", carePaymentText(content))
+	assert.Equal(t, "Ihr müsst für diesen Monat nichts bezahlen.", carePaymentText(content))
 }
 
 func TestCareCancellationLetterAsksForNothing(t *testing.T) {
@@ -102,7 +102,7 @@ func TestCareCancellationLetterAsksForNothing(t *testing.T) {
 		"Storno-Nummer: MB-2027-0009", "Zur Rechnung: MB-2027-0001", "Datum: 10.01.2027",
 		"wir stornieren die Rechnung MB-2027-0001 vom 04.01.2027 für Monatsbeitrag Januar 2027. Grund: Falscher Empfänger.",
 		"Betreuung bis 14:00 Uhr (Mo) = -32,00 €", "Storno gesamt = -54,01 €",
-		"Diese Rechnung gilt nicht mehr. Sie müssen sie nicht bezahlen.",
+		"Diese Rechnung gilt nicht mehr. Ihr müsst sie nicht bezahlen.",
 	} {
 		assert.Contains(t, text, want)
 	}
@@ -113,8 +113,8 @@ func TestCareCancellationLetterAsksForNothing(t *testing.T) {
 func TestCareMailOfAMonthlyLetter(t *testing.T) {
 	t.Parallel()
 	for kind, want := range map[string][2]string{
-		parentbilling.MailDocumentCareInvoice:      {"Ihre Rechnung: Monatsbeitrag Januar 2027", "billing-care-letter.html"},
-		parentbilling.MailDocumentCareCancellation: {"Storno Ihrer Rechnung: Monatsbeitrag Januar 2027", "billing-correction-letter.html"},
+		parentbilling.MailDocumentCareInvoice:      {"Deine Rechnung: Monatsbeitrag Januar 2027", "billing-care-letter.html"},
+		parentbilling.MailDocumentCareCancellation: {"Storno deiner Rechnung: Monatsbeitrag Januar 2027", "billing-correction-letter.html"},
 	} {
 		payload := `{"document_kind":"` + kind + `","period_name":"Monatsbeitrag Januar 2027","number":"MB-2027-0001",` +
 			`"traeger_name":"SJR Pforzheim","filename":"rechnung.pdf","pdf":"JVBERi0="}`

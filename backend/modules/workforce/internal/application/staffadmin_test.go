@@ -110,7 +110,7 @@ func (s *fakeStore) SoftDeleteStaffDocument(_ context.Context, id, _ int64, _ ti
 	return 0, domain.OperationStats{}, nil
 }
 
-func (s *fakeStore) CompleteStaffDocumentFileCleanupByFilename(context.Context, string, time.Time) (domain.OperationStats, error) {
+func (s *fakeStore) CompleteStaffDocumentFileCleanupByFilename(context.Context, string) (domain.OperationStats, error) {
 	s.log.add("complete cleanup intent")
 	return domain.OperationStats{}, nil
 }

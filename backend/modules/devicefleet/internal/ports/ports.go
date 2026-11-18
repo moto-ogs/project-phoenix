@@ -10,7 +10,14 @@ import (
 
 // DeviceStore is the owner's persistence port over iot.devices.
 type DeviceStore interface {
-	Create(context.Context, devicefleet.CreateDevice) (devicefleet.Device, domain.OperationStats, error)
+	// Create inserts one device. With a slot limit it inserts only while the
+	// school's slot-occupying live devices stay below it and reports
+	// devicefleet.ErrDeviceSlotsFull otherwise; the caller holds the
+	// school's Geräteplatz lock. A taken device ID is ErrDuplicateDeviceID.
+	Create(ctx context.Context, input devicefleet.CreateDevice, slotLimit *int) (devicefleet.Device, domain.OperationStats, error)
+	// CountSlotDevices counts the live devices of the school in context that
+	// occupy a Geräteplatz.
+	CountSlotDevices(context.Context) (int, domain.OperationStats, error)
 	Update(context.Context, domain.UpdateDevice) (devicefleet.Device, domain.OperationStats, error)
 	UpdateColumns(context.Context, domain.UpdateDevice, []string) (int64, domain.OperationStats, error)
 	UpdateColumnsReturning(context.Context, domain.UpdateDevice, []string) (devicefleet.Device, domain.OperationStats, error)
@@ -41,6 +48,14 @@ type DisplayStore interface {
 	// only ever run inside the admin transaction supplied by AdminScope: the
 	// token is the sole auth signal and no tenant is known yet.
 	FindByTokenHash(context.Context, string) (domain.Display, bool, domain.OperationStats, error)
+}
+
+// LifecycleEventStore is the owner's persistence port over
+// audit.device_lifecycle_events (#2321). found=false means the caller cannot
+// see the device.
+type LifecycleEventStore interface {
+	Insert(context.Context, devicefleet.RecordLifecycleEvent, time.Time) (bool, domain.OperationStats, error)
+	List(context.Context, int64) ([]devicefleet.LifecycleEvent, bool, domain.OperationStats, error)
 }
 
 // UnregisteredTagScanStore is the owner's persistence port over
@@ -85,6 +100,15 @@ type PresenceReader interface {
 type RoomDirectory interface {
 	ListRoomsByID(ctx context.Context, ids []int64) ([]domain.Room, error)
 	ListRooms(ctx context.Context) ([]domain.Room, error)
+}
+
+// DeviceSlotLimits reads the Geräteplätze of the school in context on the
+// caller's transaction (#2312). Lock first takes the school's Geräteplatz
+// lock, which a limit change holds too. Limited is false while no limit is
+// set. The root binds Organisation & Tenancy's named read.
+type DeviceSlotLimits interface {
+	LockDeviceSlotLimit(ctx context.Context) (limit int, limited bool, err error)
+	DeviceSlotLimit(ctx context.Context) (limit int, limited bool, err error)
 }
 
 // TenantFacts answers the pre-tenant questions the dashboard asks while it

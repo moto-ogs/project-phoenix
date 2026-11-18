@@ -30,6 +30,7 @@ import type {
 } from "~/components/messaging/team-chat-frame-parts";
 import { Button } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 import { formErrorMessage } from "~/components/ui/form-error";
 import {
   FormErrorAlert,
@@ -61,7 +62,7 @@ const logger = createLogger({ component: "TeamChatThread" });
 
 const DISABLED_TITLE = "Der Team-Chat ist ausgeschaltet";
 const DISABLED_DESCRIPTION =
-  "Ihre Schule hat den Team-Chat ausgeschaltet. Wenden Sie sich an die OGS-Leitung, wenn Sie ihn nutzen möchten.";
+  "Deine Schule hat den Team-Chat ausgeschaltet. Wende dich an die OGS-Leitung, wenn du ihn nutzen möchtest.";
 
 export type {
   TeamChatThreadBack,
@@ -381,15 +382,23 @@ export function TeamChatThread({
   // Gruppen zusätzlich die Mitgliederzahl.
   // Gezählt wird, was angekommen ist, nicht die Blase auf dem Weg (#5011).
   const sentCount = confirmedThread?.messages.length ?? 0;
-  const messageCount = `${sentCount} ${
-    sentCount === 1 ? "Nachricht" : "Nachrichten"
-  }`;
-  const stats = group
-    ? `${messageCount} · ${members.length} ${members.length === 1 ? "Mitglied" : "Mitglieder"}`
-    : messageCount;
+  const messageLabel = sentCount === 1 ? "Nachricht" : "Nachrichten";
+  const stats = group ? (
+    <TenantPageStats
+      items={[
+        { value: sentCount, label: messageLabel },
+        {
+          value: members.length,
+          label: members.length === 1 ? "Mitglied" : "Mitglieder",
+        },
+      ]}
+    />
+  ) : (
+    `${sentCount} ${messageLabel}`
+  );
   const audience = group
     ? "Nur die Mitglieder sehen diese Nachrichten. Wer neu dazukommt, sieht sie ab dem Beitritt."
-    : "Nur Sie beide sehen diese Nachrichten.";
+    : "Nur ihr beide seht diese Nachrichten.";
 
   const actions =
     group && thread && !showSkeleton ? (
@@ -471,7 +480,7 @@ export function TeamChatThread({
           ) : (
             <EmptyState
               title="Noch keine Nachrichten"
-              description="Schreiben Sie die erste Nachricht in dieser Unterhaltung."
+              description="Schreibe die erste Nachricht in dieser Unterhaltung."
             />
           )}
         </div>
@@ -483,7 +492,7 @@ export function TeamChatThread({
         {readOnlyThread ? (
           <Alert
             type="info"
-            message="Diese Person gehört nicht mehr zu Ihrer Schule. Sie können den Verlauf lesen, aber nicht mehr schreiben."
+            message="Diese Person gehört nicht mehr zu deiner Schule. Du kannst den Verlauf lesen, aber nicht mehr schreiben."
           />
         ) : chatEnabled ? (
           <MessageComposer
@@ -504,7 +513,7 @@ export function TeamChatThread({
         ) : (
           <Alert
             type="info"
-            message="Der Team-Chat ist ausgeschaltet. Sie können hier nicht schreiben."
+            message="Der Team-Chat ist ausgeschaltet. Du kannst hier nicht schreiben."
           />
         )}
       </div>

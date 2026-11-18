@@ -23,6 +23,7 @@ import { Alert } from "~/components/ui/alert";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { hasPermission } from "~/lib/auth-utils";
+import { useInvalidateFamily } from "~/lib/swr";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   fetchCareNumberRange,
@@ -47,9 +48,9 @@ const BILLING_RIGHT = "traeger_billing:manage";
 const ONLINE_MANDATE_KEY = "parent_billing.online_mandate";
 const SETTINGS_RIGHT = "traeger_settings:manage";
 
-const INFO = "Hier stehen die Vorgaben für Ihre Abrechnung.";
+const INFO = "Hier stehen die Vorgaben für deine Abrechnung.";
 const CONTRIBUTION_INFO =
-  "So entsteht der Ferienbeitrag: Jede gebuchte Woche kostet den Preis ihres Zeitmodells. Den Preis legen Sie im Ferienzeitraum fest. Danach gelten die Regeln auf dieser Seite, in dieser Reihenfolge. Beim Bestätigen einer Anmeldung wird der Beitrag festgehalten. Spätere Änderungen gelten nur für neue Bestätigungen.";
+  "So entsteht der Ferienbeitrag: Jede gebuchte Woche kostet den Preis ihres Zeitmodells. Den Preis legst du im Ferienzeitraum fest. Danach gelten die Regeln auf dieser Seite, in dieser Reihenfolge. Beim Bestätigen einer Anmeldung wird der Beitrag festgehalten. Spätere Änderungen gelten nur für neue Bestätigungen.";
 
 interface BillingDefaults {
   readonly rules: ContributionRule[];
@@ -172,17 +173,25 @@ export default function TraegerAbrechnungsvorgabenPage() {
   const { data: session } = useSession();
   const canBill = hasPermission(session ?? null, BILLING_RIGHT);
   const canEditBank = hasPermission(session ?? null, SETTINGS_RIGHT);
+  const invalidateFamily = useInvalidateFamily();
   const master = useTraegerMasterData("die Liste der Bankverbindungen");
   const billing = useBillingDefaults(canBill);
   const settings = useTraegerSettingsSchema();
   const afterBankWrite = useRefreshAfterWrite(
     "die Anzeige der Bankverbindungen",
-    master.read,
+    async () => {
+      void invalidateFamily(traegerKeys.requiredDetails());
+      await master.read();
+    },
   );
   const afterBillingWrite = useRefreshAfterWrite(
     "die Anzeige der Abrechnungsvorgaben",
     billing.read,
   );
+  const afterRequiredDetailsBillingWrite = useCallback(async () => {
+    void invalidateFamily(traegerKeys.requiredDetails());
+    await afterBillingWrite.refresh();
+  }, [afterBillingWrite, invalidateFamily]);
   const onlineMandate = settings.data?.tabs
     .flatMap((tab) => tab.categories)
     .flatMap((category) => category.items)
@@ -215,7 +224,7 @@ export default function TraegerAbrechnungsvorgabenPage() {
           {canEditBank ? null : (
             <Alert
               type="info"
-              message="Die Bankverbindungen können Sie nur ansehen. Ändern kann, wer im Träger-Büro die Rolle „Verwaltung“ hat."
+              message="Die Bankverbindungen kannst du nur ansehen. Ändern kann, wer im Träger-Büro die Rolle „Verwaltung“ hat."
             />
           )}
           {canBill ? null : (
@@ -242,16 +251,16 @@ export default function TraegerAbrechnungsvorgabenPage() {
             onlineMandate={
               typeof onlineMandate === "boolean" ? onlineMandate : null
             }
-            onChanged={afterBillingWrite.refresh}
+            onChanged={afterRequiredDetailsBillingWrite}
           />
           <NumberRangeCard
             numberRange={billing.data.numberRange}
-            onChanged={afterBillingWrite.refresh}
+            onChanged={afterRequiredDetailsBillingWrite}
           />
           <NumberRangeCard
             service="care"
             numberRange={billing.data.careNumberRange}
-            onChanged={afterBillingWrite.refresh}
+            onChanged={afterRequiredDetailsBillingWrite}
           />
           <ContributionRulesCard
             kind="sibling"

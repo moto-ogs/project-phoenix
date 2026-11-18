@@ -31,7 +31,7 @@ const logger = createLogger({ component: "ContributionRuleModal" });
  * the card and the dialog say it with the same words.
  */
 export const EXEMPTION_RULE_SCOPE =
-  "Die Regel gilt für alle Familien mit Leistungsbezug. Welche Familie befreit ist, wählen Sie beim Bestätigen der Anmeldung.";
+  "Die Regel gilt für alle Familien mit Leistungsbezug. Welche Familie befreit ist, wählst du beim Bestätigen der Anmeldung.";
 
 /** Which rule the modal writes: a new one of a kind or an existing one. */
 export type ContributionRuleEdit =
@@ -132,7 +132,7 @@ export function ContributionRuleModal({
   const input = (current: Draft): ContributionRuleInput | null => {
     const fields: Record<string, string> = {};
     if (!current.validFrom)
-      fields.valid_from = "Bitte geben Sie an, ab wann die Regel gilt.";
+      fields.valid_from = "Bitte gib an, ab wann die Regel gilt.";
     let basisPoints: number | null = null;
     let cents: number | null = null;
     if (sibling) {
@@ -140,17 +140,17 @@ export function ContributionRuleModal({
         basisPoints = percentToBasisPoints(current.value);
         if (basisPoints === null)
           fields.discount_basis_points =
-            "Bitte geben Sie einen Anteil zwischen 0,01 und 100 an.";
+            "Bitte gib einen Anteil zwischen 0,01 und 100 an.";
       } else {
         cents = euroInputToCents(current.value);
         if (cents === null || cents <= 0)
-          fields.discount_cents = "Bitte geben Sie einen Betrag wie 10,00 an.";
+          fields.discount_cents = "Bitte gib einen Betrag wie 10,00 an.";
       }
     } else if (!current.note.trim()) {
-      fields.note = "Bitte geben Sie den Vermerk an.";
+      fields.note = "Bitte gib den Vermerk an.";
     }
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", fields);
+      formErrors.invalid("Bitte prüfe deine Angaben.", fields);
       return null;
     }
     return {

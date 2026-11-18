@@ -41,6 +41,8 @@ export const tenantAdminKeys = {
   emailCodeFactor: () => "email-code-factor-status",
   /** The school's login image and whether this account may change it. */
   loginImage: () => "settings-login-image",
+  /** The school's contact address, the proposal for enrollment recipients (#7176). */
+  schoolContactEmail: () => "settings-school-contact-email",
   /** Schools the signed-in account can switch to (`listAvailableTenants`). */
   availableTenants: () => "account-available-tenants",
   /** Every Schuljahreswechsel of the school (`listGradeTransitions`, #405). */
@@ -69,6 +71,13 @@ export const tenantAdminKeys = {
   activities: () => "database-activities-list",
   /** Every device of the Datenverwaltung (first 500). */
   devices: () => "database-devices-list",
+  /** Prefix of every device history (#2321). */
+  deviceHistoryFamily: "database-device-history-",
+  /** The history of one device (`fetchDeviceHistory`, #2321). */
+  deviceHistory: (id: string) =>
+    `database-device-history-${encodeURIComponent(id)}`,
+  /** The school's Geräteplätze and how many its devices occupy (#2312). */
+  deviceSlots: () => "database-devices-slots",
   /**
    * Every child of the Datenverwaltung with arrival times and pending
    * withdrawals; the SSE hook refreshes every key containing this name.

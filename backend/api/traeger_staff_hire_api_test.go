@@ -217,6 +217,75 @@ func TestTraegerStaffHireCreatesRecordContractAndEmployments(t *testing.T) {
 		assert.Equal(t, 1, checks(), "a confirmed hire shows nobody of the check and logs no further entry")
 	})
 
+	t.Run("the same name without a birthday or the same address is asked about too", func(t *testing.T) {
+		// #7378: school staff often has no birthday, and a person under
+		// „Ohne Akte“ may carry another spelling of the name but the address.
+		ctx := context.Background()
+		nameOnly := testpkg.CreateTestStaffForTenant(t, db, north, "Mira", "Yilmaz")
+		byMasterData := testpkg.CreateTestStaffForTenant(t, db, south, "Mira", "Yilmaz-Berg")
+		_, err := db.ExecContext(ctx, `INSERT INTO users.staff_master_data (tenant_id, staff_id, email) VALUES (?, ?, 'Mira.Y@Example.org')`, south, byMasterData.ID)
+		require.NoError(t, err)
+		byAccount, account := testpkg.CreateTestStaffWithAccountForTenant(t, db, south, "Miriam", "Berg")
+		testpkg.EnsureAccountTenant(t, db, account.ID, south)
+		byInvitation := testpkg.CreateTestStaffForTenant(t, db, north, "M.", "Yilmaz")
+		testpkg.InsertTestInvitationToken(t, db, &testpkg.InvitationTokenFixture{
+			TenantID: north, Email: "invited." + account.Email, Token: "hire-check-" + strconv.FormatInt(byInvitation.ID, 10),
+			RoleID: testpkg.GetOrCreateTestRole(t, db, "user").ID, ExpiresAt: today.Add(72 * time.Hour), PersonID: &byInvitation.PersonID,
+		})
+		body := func(email string) map[string]any {
+			b := hireBody("Yilmaz", hireSite(north, 240, 240, 240, 240, 240))
+			b["first_name"], b["email"] = "Mira", email
+			return b
+		}
+		refusalOf := func(email string) map[int64][]any {
+			rec := traegerJSON(t, router, office.token, http.MethodPost, staffHirePath, body(email))
+			assertStaffRefusal(t, rec, http.StatusConflict, "workforce.traeger_staff_hire_duplicate")
+			var refusal contractRefusal
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &refusal), rec.Body.String())
+			reasons := map[int64][]any{}
+			for _, raw := range refusal.Details["matches"].([]any) {
+				match := raw.(map[string]any)
+				if match["kind"] == "school" {
+					reasons[int64(match["staff_id"].(float64))] = match["reasons"].([]any)
+				}
+			}
+			return reasons
+		}
+
+		assert.Equal(t, map[int64][]any{nameOnly.ID: {"name"}, byMasterData.ID: {"email"}}, refusalOf(" MIRA.y@example.org "),
+			"the same name without a birthday, and the address in the school's master data, are asked about")
+		assert.Equal(t, map[int64][]any{nameOnly.ID: {"name"}, byAccount.ID: {"email"}}, refusalOf(account.Email),
+			"the address a person signs in with is asked about")
+		assert.Equal(t, map[int64][]any{nameOnly.ID: {"name"}, byInvitation.ID: {"email"}}, refusalOf("invited."+account.Email),
+			"the address a person is invited at is asked about")
+
+		// A person with a record whose Einsatzort reaches the address is the
+		// record's match: Lena Brandt was hired with this address above.
+		rec := traegerJSON(t, router, office.token, http.MethodPost, staffHirePath, body("lena.brandt@example.org"))
+		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.traeger_staff_hire_duplicate")
+		var refusal contractRefusal
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &refusal), rec.Body.String())
+		var records []map[string]any
+		for _, raw := range refusal.Details["matches"].([]any) {
+			if match := raw.(map[string]any); match["kind"] == "record" {
+				records = append(records, match)
+			}
+		}
+		require.Len(t, records, 1, rec.Body.String())
+		assert.Equal(t, "Brandt", records[0]["last_name"])
+		assert.Equal(t, []any{"email"}, records[0]["reasons"], "the record of a person the address reaches is asked about")
+		brandt := hiredPeople(t, db, north, "Brandt")[0].StaffID
+		assert.Equal(t, 1, staffSchoolValue(t, db, `SELECT COUNT(*) FROM audit.data_access_log
+			WHERE tenant_id = ? AND actor_role = 'traeger' AND metadata->>'view' = 'staff_hire_check'
+			AND metadata->'staff_ids' @> to_jsonb(ARRAY[?::bigint])`, north, brandt),
+			"the school whose master data gave the reason logs the access")
+
+		_, err = db.ExecContext(ctx, `UPDATE users.persons SET birthday = DATE '1991-01-01' WHERE id = ?`, nameOnly.PersonID)
+		require.NoError(t, err)
+		rec = traegerJSON(t, router, office.token, http.MethodPost, staffHirePath, body("mira.neu@example.org"))
+		require.Equal(t, http.StatusCreated, rec.Code, "a different birthday tells two people apart: %s", rec.Body.String())
+	})
+
 	t.Run("no role without the right and no session of a school hires", func(t *testing.T) {
 		overviewOnly := newTraegerOffice(t, db, portal, "Träger Übersicht Einstellung", identityaccess.TraegerRoleReadOnly)
 		staffRelease(t, db, overviewOnly.organization)

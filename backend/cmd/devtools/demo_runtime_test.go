@@ -19,7 +19,7 @@ func TestDemoReadsWebAttributionFromSchoolStayWithoutRoomVisit(t *testing.T) {
 	today := demoSnapshotDay()
 	arrival := today.BerlinMidnight().Add(8 * time.Hour)
 	testpkg.CreateTestAttendanceForDate(t, db, student.ID, staff.ID, web.ID, today, arrival, nil)
-	runtime, err := NewDemoRuntime(testpkg.NewDatabase(t, db), demoSnapshotClock(arrival.Add(time.Minute)), newSeedCommandAdapter, t.TempDir())
+	runtime, err := NewDemoRuntime(testpkg.NewDatabase(t, db), demoSnapshotClock(arrival.Add(time.Minute)), newSeedCommandAdapter, t.TempDir(), func(string) string { return "" })
 	require.NoError(t, err)
 	visits, err := runtime.LatestDemoVisits(testpkg.Ctx(t), web.ID, today.AddDays(-1).String(), today.String())
 	require.NoError(t, err)
@@ -42,7 +42,7 @@ func TestDemoReadsWebCheckoutOfPhysicalSchoolStay(t *testing.T) {
 	stay := testpkg.CreateTestAttendanceForDate(t, db, student.ID, staff.ID, physical.ID, today, departure.Add(-time.Hour), nil)
 	// Both web checkout endpoints record the staff but no physical device.
 	testpkg.CheckOutTestAttendanceByStaff(t, db, student.ID, stay.Date, departure, staff.ID)
-	runtime, err := NewDemoRuntime(testpkg.NewDatabase(t, db), demoSnapshotClock(departure.Add(time.Minute)), newSeedCommandAdapter, t.TempDir())
+	runtime, err := NewDemoRuntime(testpkg.NewDatabase(t, db), demoSnapshotClock(departure.Add(time.Minute)), newSeedCommandAdapter, t.TempDir(), func(string) string { return "" })
 	require.NoError(t, err)
 	visits, err := runtime.LatestDemoVisits(testpkg.Ctx(t), web.ID, today.AddDays(-1).String(), today.String())
 	require.NoError(t, err)
@@ -69,9 +69,19 @@ func TestDemoQueueExpiryUsesTheRestrictedLogin(t *testing.T) {
 	require.NoError(t, demo.NewRaw("SELECT pg_has_role(current_user, 'phoenix_admin', 'MEMBER')").Scan(t.Context(), &member))
 	require.False(t, member)
 	database := testpkg.NewDemoDatabase(t, demo)
-	runtime, err := NewDemoRuntime(database, time.Now, newSeedCommandAdapter, t.TempDir())
+	runtime, err := NewDemoRuntime(database, time.Now, newSeedCommandAdapter, t.TempDir(), func(string) string { return "" })
 	require.NoError(t, err)
 	_, _, err = runtime.ExpireDemoAccesses(t.Context())
 	require.NoError(t, err)
 	testpkg.AssertRestrictedDemoUnit(t, demo)
+}
+
+func TestDemoRuntimeUsesEffectiveUploadConfig(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	config := map[string]string{"UPLOADS_BACKEND": "s3"}
+	_, err := NewDemoRuntime(testpkg.NewDatabase(t, db), time.Now, newSeedCommandAdapter, t.TempDir(), func(key string) string {
+		return config[key]
+	})
+	require.ErrorContains(t, err, "UPLOADS_S3_ENDPOINT")
 }

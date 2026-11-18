@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -114,16 +116,21 @@ func deviceErrorRenderer(err error) (render.Renderer, bool) {
 	var operatorDeviceNotFound *organizationtenancy.OperatorDeviceNotFoundError
 	var deviceInUse *organizationtenancy.DeviceInUseError
 	var deviceProtected *organizationtenancy.DeviceProtectedError
+	var deviceRemovalBlocked *organizationtenancy.DeviceRemovalBlockedError
 	var deviceTransferProtected *organizationtenancy.DeviceTransferProtectedError
 	var deviceTransferBlocked *organizationtenancy.DeviceTransferBlockedError
 	var deviceTransferOrganizationMismatch *organizationtenancy.DeviceTransferOrganizationMismatchError
 	var deviceTransferSameSchool *organizationtenancy.DeviceTransferSameSchoolError
+	var deviceSlotsFull *organizationtenancy.DeviceSlotsFullError
+	var deviceSlotsBelowOccupied *organizationtenancy.DeviceSlotsBelowOccupiedError
 
 	switch {
 	case errors.As(err, &operatorDeviceNotFound):
 		return common.OperatorRejection(http.StatusNotFound, common.CodeProvisioningDeviceNotFound, "Device not found"), true
 	case errors.As(err, &deviceInUse):
 		return common.OperatorRejection(http.StatusConflict, common.CodeProvisioningDeviceInUse, "Device is still referenced by attendance or session records and cannot be deleted"), true
+	case errors.As(err, &deviceRemovalBlocked):
+		return common.OperatorRejectionWithDetails(http.StatusConflict, common.CodeProvisioningDeviceActiveSession, "Device has an active session and cannot be removed", deviceRemovalBlockedDetails(deviceRemovalBlocked)), true
 	case errors.As(err, &deviceProtected):
 		return common.OperatorRejection(http.StatusForbidden, common.CodeProvisioningDeviceProtected, "This system device cannot be deleted"), true
 	case errors.As(err, &deviceTransferProtected):
@@ -141,9 +148,31 @@ func deviceErrorRenderer(err error) (render.Renderer, bool) {
 		return common.OperatorRejection(http.StatusForbidden, common.CodeProvisioningDeviceOtherOrganization, "Device can only be transferred within its organization"), true
 	case errors.As(err, &deviceTransferSameSchool):
 		return common.OperatorRejection(http.StatusConflict, common.CodeProvisioningDeviceSameSchool, "Device already belongs to the target school"), true
+	case errors.As(err, &deviceSlotsFull):
+		return common.OperatorRejectionWithDetails(http.StatusConflict, common.CodeProvisioningDeviceSlotsFull, "Every device slot of the school is occupied",
+			map[string]any{"device_slots": deviceSlotsFull.DeviceSlots}), true
+	case errors.As(err, &deviceSlotsBelowOccupied):
+		return common.OperatorRejectionWithDetails(http.StatusConflict, common.CodeProvisioningDeviceSlotsBelowOccupied, "The school has more registered devices than the requested device slots",
+			map[string]any{"device_slots": deviceSlotsBelowOccupied.Requested, "occupied": deviceSlotsBelowOccupied.Occupied}), true
 	default:
 		return nil, false
 	}
+}
+
+// deviceRemovalBlockedDetails names the open session the operator has to
+// end before the removal.
+func deviceRemovalBlockedDetails(blocked *organizationtenancy.DeviceRemovalBlockedError) map[string]any {
+	details := map[string]any{
+		"session_id": strconv.FormatInt(blocked.SessionID, 10),
+		"started_at": blocked.StartedAt.Format(time.RFC3339),
+	}
+	if blocked.ActivityName != nil {
+		details["activity_name"] = *blocked.ActivityName
+	}
+	if blocked.RoomName != nil {
+		details["room_name"] = *blocked.RoomName
+	}
+	return details
 }
 
 // provisioningConflictRenderer answers a collision with the code of the

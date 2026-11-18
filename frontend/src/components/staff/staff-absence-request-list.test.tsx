@@ -183,7 +183,7 @@ describe("StaffAbsenceRequestList", () => {
     expect(screen.getByText("Mail zur Entscheidung")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Die Mail kam nicht an. Sagen Sie der Person direkt Bescheid.",
+        "Die Mail kam nicht an. Sage der Person direkt Bescheid.",
       ),
     ).toBeInTheDocument();
   });

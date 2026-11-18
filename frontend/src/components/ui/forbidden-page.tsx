@@ -22,11 +22,11 @@ interface ForbiddenPageProps {
  * kein roter Alarmkasten — und ein Satz dazu, wer das ändern kann.
  */
 /** Was fehlt, in einer Zeile. Der Satz darunter sagt, wer es ändern kann. */
-const HEADLINE = "Ihnen fehlt eine Berechtigung";
+const HEADLINE = "Dir fehlt eine Berechtigung";
 
 export function ForbiddenPage({
   title = "Kein Zugriff",
-  message = "Bitte wenden Sie sich an Ihre Leitung.",
+  message = "Bitte wende dich an deine Leitung.",
   embedded = false,
 }: ForbiddenPageProps) {
   const icon = <LockKeyIcon className="h-12 w-12" aria-hidden="true" />;

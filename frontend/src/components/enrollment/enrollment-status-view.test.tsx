@@ -162,7 +162,7 @@ describe("EnrollmentStatusView", () => {
     render(<EnrollmentStatusView token="tok" justSubmitted />);
 
     expect(
-      await screen.findByText("Danke. Ihre Anmeldung wurde übermittelt."),
+      await screen.findByText("Danke. Deine Anmeldung wurde übermittelt."),
     ).toBeInTheDocument();
     expect(screen.getByText("Lina Muster")).toBeInTheDocument();
 
@@ -184,7 +184,7 @@ describe("EnrollmentStatusView", () => {
     });
     await waitFor(() => {
       expect(toastSuccess).toHaveBeenCalledWith(
-        "Ihre Änderungen sind gespeichert.",
+        "Deine Änderungen sind gespeichert.",
       );
     });
     expect(mockFetchStatus).toHaveBeenCalledTimes(2);
@@ -507,10 +507,10 @@ describe("EnrollmentStatusView", () => {
       screen.getByText("Noch kein Zugang zur Eltern-App"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Öffnen Sie die E-Mail „Einladung zum Eltern-Portal“."),
+      screen.getByText("Öffne die E-Mail „Einladung zum Eltern-Portal“."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Bitte melden Sie sich bei der OGS\.$/),
+      screen.getByText(/Bitte melde dich bei der OGS\.$/),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: "Zur Eltern-App" }),
@@ -570,13 +570,11 @@ describe("EnrollmentStatusView", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Bitte melden Sie sich bei der OGS. Die OGS hilft Ihnen weiter.",
+        "Bitte melde dich bei der OGS. Die OGS hilft dir weiter.",
       ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(
-        "Öffnen Sie die E-Mail „Einladung zum Eltern-Portal“.",
-      ),
+      screen.queryByText("Öffne die E-Mail „Einladung zum Eltern-Portal“."),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: "Zur Eltern-App" }),
@@ -1372,7 +1370,7 @@ describe("EnrollmentStatusView renewal terms (#6456)", () => {
     });
     fireEvent.click(confirm);
     expect(
-      await screen.findByText("Bitte stimmen Sie hier zu."),
+      await screen.findByText("Bitte stimme hier zu."),
     ).toBeInTheDocument();
     expect(mockConfirmRenewal).not.toHaveBeenCalled();
 
@@ -1575,7 +1573,7 @@ describe("EnrollmentStatusView renewal terms (#6456)", () => {
     await waitFor(() => expect(confirm).toBeEnabled());
     fireEvent.click(confirm);
     expect(
-      await screen.findByText("Bitte stimmen Sie hier zu."),
+      await screen.findByText("Bitte stimme hier zu."),
     ).toBeInTheDocument();
     expect(mockConfirmRenewal).toHaveBeenCalledTimes(1);
   });
@@ -1596,7 +1594,7 @@ describe("EnrollmentStatusView renewal terms (#6456)", () => {
     expect(
       await screen.findByText(/Die Betreuung läuft weiter\./),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/Sie müssen nichts weiter tun/)).toBeNull();
+    expect(screen.queryByText(/Du musst nichts weiter tun/)).toBeNull();
     fireEvent.click(
       screen.getByRole("checkbox", {
         name: /Ich stimme den Vertragsbedingungen zu\./,
@@ -1607,12 +1605,12 @@ describe("EnrollmentStatusView renewal terms (#6456)", () => {
     );
     await waitFor(() => {
       expect(toastSuccess).toHaveBeenCalledWith(
-        "Ihre Zustimmung ist gespeichert.",
+        "Deine Zustimmung ist gespeichert.",
       );
     });
     expect(
       await screen.findByText(
-        /Den Bedingungen haben Sie am 08\.09\.2026 zugestimmt\./,
+        /Den Bedingungen hast du am 08\.09\.2026 zugestimmt\./,
       ),
     ).toBeInTheDocument();
     expect(
@@ -1635,7 +1633,7 @@ describe("EnrollmentStatusView renewal terms (#6456)", () => {
     render(<EnrollmentStatusView token="tok" />);
 
     expect(
-      await screen.findByText(/Sie müssen nichts weiter tun\./),
+      await screen.findByText(/Du musst nichts weiter tun\./),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Vertragsbedingungen bestätigen" }),
@@ -1806,7 +1804,7 @@ describe("EnrollmentStatusView renewal adjust (#2251)", () => {
     expect(screen.getByText(/Name getippt: Mara Muster/)).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Wenn Sie die Anmeldung ändern, unterschreiben Sie sie neu.",
+        "Wenn du die Anmeldung änderst, unterschreibst du sie neu.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Nachweis als PDF" }));

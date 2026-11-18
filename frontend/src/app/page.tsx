@@ -29,7 +29,7 @@ export default function RootPage() {
   const [selectedSlug, setSelectedSlug] = useState("");
   const [isNavigating, setIsNavigating] = useState(false);
 
-  // oxlint-disable-next-line swr/no-effect-load -- sessionless school picker on the root domain; useSWRAuth fetches only with a session and ~/lib/swr has no public reader
+  // oxlint-disable-next-line swr/no-effect-load -- sessionless school picker on the root domain; the shared cache reads only with a session, by design
   useEffect(() => {
     void listAllTenants()
       .then((result) => {
@@ -63,7 +63,7 @@ export default function RootPage() {
   return (
     <AuthShell
       title="Willkommen"
-      subtitle="Wählen Sie Ihre Einrichtung aus."
+      subtitle="Wähle deine Einrichtung aus."
       variant="tenant-select"
       brand={<MotoIconBrand />}
       footer={
@@ -80,7 +80,7 @@ export default function RootPage() {
     >
       <div className="space-y-6">
         {!loading && listStatus === "error" ? (
-          <LoadErrorAlert error="Backend nicht erreichbar. Bitte versuchen Sie es später erneut." />
+          <LoadErrorAlert error="Backend nicht erreichbar. Bitte versuche es später erneut." />
         ) : !loading && tenants.length === 0 ? (
           <EmptyState
             variant="compact"

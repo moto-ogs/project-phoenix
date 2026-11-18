@@ -1,5 +1,5 @@
 import "server-only";
-import { unstable_cache } from "next/cache";
+import { revalidateTag } from "next/cache";
 import type { TenantSettings } from "~/lib/tenant-api";
 
 /** The backend's answer to `/auth/tenant/resolve?slug=…` (snake_case). */
@@ -53,31 +53,92 @@ export class TenantResolveStatusError extends Error {
   }
 }
 
+const TENANT_CACHE_TTL_MS = 60_000;
+const TENANT_CACHE_LIMIT = 1_000;
+const CACHE = Symbol.for("moto.tenant-resolve-cache");
+
+type TenantLookup =
+  { ok: true; data: TenantResolveResponse } | { ok: false; status: number };
+
+interface TenantCacheEntry {
+  lookup: Promise<TenantLookup>;
+  expiresAt: number;
+}
+
+// The layout and the settings routes may carry separate copies of this module.
+function tenantCache(): Map<string, TenantCacheEntry> {
+  const state = globalThis as typeof globalThis & {
+    [CACHE]?: Map<string, TenantCacheEntry>;
+  };
+  return (state[CACHE] ??= new Map());
+}
+
+async function loadTenant(
+  slug: string,
+  forwardHeaders: Record<string, string>,
+): Promise<TenantLookup> {
+  const { getServerApiUrl } = await import("~/lib/server-api-url");
+  const res = await fetch(
+    `${getServerApiUrl()}/auth/tenant/resolve?slug=${encodeURIComponent(slug)}`,
+    { headers: forwardHeaders, cache: "no-store" },
+  );
+  if (!res.ok) return { ok: false, status: res.status };
+  const { data } = (await res.json()) as { data: TenantResolveResponse };
+  return { ok: true, data };
+}
+
+export function invalidateTenantResolve(slug: string): void {
+  tenantCache().delete(slug);
+  revalidateTag(`tenant-${slug}`, { expire: 0 });
+}
+
 /**
- * The lookup is cached per slug for all visitors and invalidated by
- * revalidateTag(`tenant-${slug}`). Its key holds the slug only, so the
- * client headers travel in the closure, not in the key: a miss asks the
- * backend under the IP of the visitor who caused it, a hit asks nobody.
- * fetch() itself cannot do this, because Next keys its data cache by the
- * request headers, which would split the cache per client IP. Only a 200 is
- * stored; any other status throws and stays uncached.
+ * Each replica caches successful lookups by school slug. The visitor who
+ * starts the lookup supplies the forwarding headers. Other visitors reuse it.
  */
-export function resolveTenantCached(
+export async function resolveTenantCached(
   slug: string,
   forwardHeaders: Record<string, string>,
 ): Promise<TenantResolveResponse> {
-  return unstable_cache(
-    async () => {
-      const { getServerApiUrl } = await import("~/lib/server-api-url");
-      const res = await fetch(
-        `${getServerApiUrl()}/auth/tenant/resolve?slug=${encodeURIComponent(slug)}`,
-        { headers: forwardHeaders, cache: "no-store" },
-      );
-      if (!res.ok) throw new TenantResolveStatusError(res.status);
-      const json = (await res.json()) as { data: TenantResolveResponse };
-      return json.data;
-    },
-    ["tenant-resolve", slug],
-    { revalidate: 300, tags: [`tenant-${slug}`] },
-  )();
+  const result = await lookupTenant(slug, forwardHeaders);
+  // Route bundles have separate error classes even though they share data.
+  if (!result.ok) throw new TenantResolveStatusError(result.status);
+  return result.data;
+}
+
+function lookupTenant(
+  slug: string,
+  forwardHeaders: Record<string, string>,
+): Promise<TenantLookup> {
+  const cache = tenantCache();
+  const now = Date.now();
+  const cached = cache.get(slug);
+  if (cached && cached.expiresAt > now) return cached.lookup;
+
+  const entry: TenantCacheEntry = {
+    expiresAt: Infinity,
+    lookup: loadTenant(slug, forwardHeaders).then(
+      (result) => {
+        if (result.ok) {
+          // Updating the entry in place cannot restore it after invalidation.
+          entry.expiresAt = now + TENANT_CACHE_TTL_MS;
+        } else if (cache.get(slug) === entry) {
+          cache.delete(slug);
+        }
+        return result;
+      },
+      (error: unknown) => {
+        if (cache.get(slug) === entry) cache.delete(slug);
+        throw error;
+      },
+    ),
+  };
+
+  cache.delete(slug);
+  if (cache.size >= TENANT_CACHE_LIMIT) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
+  cache.set(slug, entry);
+  return entry.lookup;
 }

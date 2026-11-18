@@ -22,7 +22,7 @@ import {
   billingTabs,
 } from "~/components/traeger/billing-family-format";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
-import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -279,10 +279,19 @@ export default function TraegerKostentraegerPage() {
     },
   ];
 
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/care-cost-shares/export", format),
+    scope:
+      "Alle Anteile, ohne Suche und Filter. Jeder Download wird protokolliert.",
+    fallbackName: "kostentraeger-anteile",
+    errorObject: "die Anteile der Kostenträger",
+    unavailable: !data || data.contracts.length === 0,
+  });
   return (
     <TenantPage
       title={billingAreaTitle("kostentraeger")}
-      info={`Hier tragen Sie ein, welcher Kostenträger einen Teil des Monatsbeitrags eines Kindes bezahlt, zum Beispiel Bildung und Teilhabe oder das Jugendamt. Die Familie bekommt dann nur den Rest in Rechnung. moto speichert nur Art, Anteil, Gültigkeit und das Aktenzeichen, keinen Bescheid. Jedes Öffnen dieser Seite steht im Zugriffsprotokoll. Die Stellen selbst legen Sie unter Einstellungen → Abrechnungsvorgaben an.`}
+      info={`Hier trägst du ein, welcher Kostenträger einen Teil des Monatsbeitrags eines Kindes bezahlt, zum Beispiel Bildung und Teilhabe oder das Jugendamt. Die Familie bekommt dann nur den Rest in Rechnung. moto speichert nur Art, Anteil, Gültigkeit und das Aktenzeichen, keinen Bescheid. Jedes Öffnen dieser Seite steht im Zugriffsprotokoll. Die Stellen selbst legst du unter Einstellungen → Abrechnungsvorgaben an.`}
       stats={
         data && contracts.length > 0 ? (
           <TenantPageStats
@@ -301,19 +310,7 @@ export default function TraegerKostentraegerPage() {
         ) : null
       }
       statsLoading={loading}
-      actions={
-        <TraegerListExportMenu
-          download={(format) =>
-            downloadTraegerList("/api/traeger/care-cost-shares/export", format)
-          }
-          scope="Alle Anteile, ohne Suche und Filter"
-          ariaLabel="Anteile der Kostenträger herunterladen"
-          tooltip="Zeigt die Formate für alle Kinder, ohne Suche und Filter. Jeder Download wird protokolliert."
-          fallbackName="kostentraeger-anteile"
-          errorObject="die Anteile der Kostenträger"
-          unavailable={!data || data.contracts.length === 0}
-        />
-      }
+      overflowMenu={exportItems}
       search={{
         value: search,
         onChange: setSearch,
@@ -362,19 +359,19 @@ export default function TraegerKostentraegerPage() {
         <EmptyState
           icon={<HandCoins className="h-12 w-12" aria-hidden="true" />}
           title="Noch kein Vertrag."
-          description="Anteile tragen Sie für Kinder mit Betreuungsvertrag ein."
+          description="Anteile trägst du für Kinder mit Betreuungsvertrag ein."
         />
       ) : null}
       {data && contracts.length > 0 && activeBearers === 0 ? (
         <Alert
           type="info"
-          message="Legen Sie zuerst die Kostenträger an, zum Beispiel das Jugendamt oder die Stelle für Bildung und Teilhabe."
+          message="Lege zuerst die Kostenträger an, zum Beispiel das Jugendamt oder die Stelle für Bildung und Teilhabe."
           action={
             <ButtonLink
               href={traegerPath("/traeger/einstellungen/abrechnung")}
               variant="surface"
               size="compact"
-              tooltip="Öffnet die Einstellungen der Abrechnung, dort legen Sie Kostenträger an."
+              tooltip="Öffnet die Einstellungen der Abrechnung, dort legst du Kostenträger an."
             >
               Kostenträger anlegen
             </ButtonLink>
@@ -386,8 +383,8 @@ export default function TraegerKostentraegerPage() {
           type="warning"
           message={
             data.expiring === 1
-              ? `Ein Bescheid endet in den nächsten ${data.warningDays} Tagen. Fragen Sie den neuen Bescheid an und tragen Sie den Anteil danach neu ein. Sonst zahlt die Familie ab dem nächsten Monat den ganzen Beitrag.`
-              : `${data.expiring} Bescheide enden in den nächsten ${data.warningDays} Tagen. Fragen Sie die neuen Bescheide an und tragen Sie die Anteile danach neu ein. Sonst zahlen die Familien ab dem nächsten Monat den ganzen Beitrag.`
+              ? `Ein Bescheid endet in den nächsten ${data.warningDays} Tagen. Frage den neuen Bescheid an und trage den Anteil danach neu ein. Sonst zahlt die Familie ab dem nächsten Monat den ganzen Beitrag.`
+              : `${data.expiring} Bescheide enden in den nächsten ${data.warningDays} Tagen. Frage die neuen Bescheide an und trage die Anteile danach neu ein. Sonst zahlen die Familien ab dem nächsten Monat den ganzen Beitrag.`
           }
           action={
             show === "expiring" ? undefined : (
@@ -415,7 +412,7 @@ export default function TraegerKostentraegerPage() {
           emptyState={
             <EmptyState
               title="Kein Kind passt zur Auswahl."
-              description="Ändern Sie die Suche oder zeigen Sie alle Kinder."
+              description="Ändere die Suche oder zeige alle Kinder."
               action={
                 <Button
                   type="button"

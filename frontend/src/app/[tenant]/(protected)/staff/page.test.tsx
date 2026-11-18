@@ -253,9 +253,11 @@ describe("StaffPage", () => {
     expect(mutate).toHaveBeenCalled();
     // Without loaded staff there is nothing to count: "0 Personen" would
     // read as a school without staff (#2514).
+    // Die Statuszeile setzt Wert und Label in eigene Elemente (#7402).
     expect(screen.queryByText(/0 Personen/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/0 anwesend/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/0 abwesend/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Personen")).not.toBeInTheDocument();
+    expect(screen.queryByText("anwesend")).not.toBeInTheDocument();
+    expect(screen.queryByText("abwesend")).not.toBeInTheDocument();
   });
 
   it("shows empty state when no staff match filters", async () => {
@@ -345,7 +347,7 @@ describe("StaffPage", () => {
         screen.getByText("In moto eingetragen vom 02.09.2024 bis 31.07.2026."),
       ).toBeInTheDocument();
       expect(
-        screen.getByText(/Öffnen Sie eine Karte für die Angaben von damals/),
+        screen.getByText(/Öffne eine Karte für die Angaben von damals/),
       ).toBeInTheDocument();
       expect(screen.getByText("1 ehemalige Person")).toBeInTheDocument();
       expect(

@@ -45,8 +45,8 @@ export function RosterDeviationTodos({
       title="Regeltermine prüfen"
       message={
         count === 1
-          ? "1 Regeltermin weicht von den Anmeldungen ab. Prüfen Sie die Kinderliste."
-          : `${count} Regeltermine weichen von den Anmeldungen ab. Prüfen Sie die Kinderlisten.`
+          ? "1 Regeltermin weicht von den Anmeldungen ab. Prüfe die Kinderliste."
+          : `${count} Regeltermine weichen von den Anmeldungen ab. Prüfe die Kinderlisten.`
       }
       action={
         <ButtonLink

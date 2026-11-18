@@ -42,7 +42,7 @@ describe("care facility term (#6042)", () => {
       useCareTermTranslations("enrollmentForm"),
     );
     expect(result.current("care.noOfferingsForGrade", { grade: 3 })).toBe(
-      "Für die 3. Klasse gibt es hier keine passenden Betreuungsangebote. Bei Fragen wenden Sie sich bitte an die Ganztag Nord.",
+      "Für die 3. Klasse gibt es hier keine passenden Betreuungsangebote. Bei Fragen wende dich bitte an die Ganztag Nord.",
     );
   });
 

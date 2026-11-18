@@ -6,7 +6,10 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
+	"github.com/moto-ogs/project-phoenix/modules/appointments"
 	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
+	"github.com/moto-ogs/project-phoenix/modules/classday"
+	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
 	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
@@ -14,14 +17,21 @@ import (
 	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
 	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
+	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
+	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
+	workforceModule "github.com/moto-ogs/project-phoenix/modules/workforce"
+	absencetypesHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/absencetypes"
+	staffShiftsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/staffshifts"
+	timeTrackingHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
+	workforceTraegerStaff "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+	worktimemodelsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/worktimemodels"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
 )
 
-// ContractDocument builds the model of the frontend/backend contract from
-// the typed registrations of every owner (ADR 0270). The mounts repeat the
-// ones in the serve mounts; the catalog check fails when they drift apart.
-func ContractDocument() (contract.Document, error) {
+// contractRegistrations lists every typed registration under its mount and
+// refuses one the route catalog does not know.
+func contractRegistrations() ([]contract.Registration, error) {
 	mounts := []struct {
 		prefix string
 		routes []common.RouteContract
@@ -32,22 +42,32 @@ func ContractDocument() (contract.Document, error) {
 		{"/api/students", careStudentsHTTP.StudentWriteContracts(projectionStudentsHTTP.StudentResponse{})},
 		{"/parent", parentAPI.MeRouteContracts()},
 		{"/api/notifications", notificationRouteContracts(common.PortalTenant)},
+		{"/school/class-day", classdayHTTP.RouteContracts()},
 		{"/school/notifications", notificationRouteContracts(common.PortalSchool)},
 		{"/api/parent-announcements", announcementAPI.RouteContracts(common.PortalTenant)},
 		{"/school/parent-letters", announcementAPI.RouteContracts(common.PortalSchool)},
 		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
+		{"/api/time-tracking", timeTrackingRouteContracts()},
+		{"/api/work-time-models", worktimemodelsHTTP.RouteContracts()},
+		// Class Day owns the child sheet the supervision route answers with.
+		{"/school/calendar", calendarAPI.SchoolRouteContracts()},
+		{"/school/supervisions", timetableHTTP.SchoolSupervisionRouteContracts(classday.SupervisionStudentSheet{})},
 		{"/school/staff-messages", staffMessagingAPI.RouteContracts(common.PortalSchool)},
 		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
+		{"/operator/devices", provisioningOperatorAPI.DeviceRouteContracts()},
+		{"/operator/schools", provisioningOperatorAPI.SchoolDeviceSlotRouteContracts()},
 		{"/traeger/master-data", organizationTenancyTraeger.MasterDataRouteContracts()},
 		{"/traeger/documents", organizationTenancyTraeger.DocumentRouteContracts()},
 		{"/traeger/report-templates", organizationTenancyTraeger.ReportTemplateRouteContracts()},
 		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
-		{"/traeger/notifications", traegerNotificationRouteContracts()},
+		{"/traeger/notifications", schoolFeedRouteContracts(common.PortalTraeger)},
+		{"/traeger/staff-records", workforceTraegerStaff.RecordRouteContracts()},
 		{"/caterer", catererPortalHTTP.RouteContracts()},
+		{"/caterer/notifications", schoolFeedRouteContracts(common.PortalCaterer)},
 	}
 	catalog, err := RouteCatalog()
 	if err != nil {
-		return contract.Document{}, err
+		return nil, err
 	}
 	known := make(map[string]bool, len(catalog))
 	for _, route := range catalog {
@@ -58,10 +78,21 @@ func ContractDocument() (contract.Document, error) {
 		for _, route := range mount.routes {
 			registration := contractRegistration(mount.prefix, route)
 			if !known[registration.Method+" "+registration.Pattern] {
-				return contract.Document{}, fmt.Errorf("typed route %s %s is not in the route catalog", registration.Method, registration.Pattern)
+				return nil, fmt.Errorf("typed route %s %s is not in the route catalog", registration.Method, registration.Pattern)
 			}
 			registrations = append(registrations, registration)
 		}
+	}
+	return registrations, nil
+}
+
+// ContractDocument builds the model of the frontend/backend contract from
+// the typed registrations of every owner (ADR 0270). The mounts repeat the
+// ones in the serve mounts; the catalog check fails when they drift apart.
+func ContractDocument() (contract.Document, error) {
+	registrations, err := contractRegistrations()
+	if err != nil {
+		return contract.Document{}, err
 	}
 	options := contract.Legacy(map[reflect.Type]string{
 		reflect.TypeFor[common.ID]():     contract.KindID,
@@ -73,7 +104,14 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[careStudentsHTTP.StudentRequest]():       contract.ReadsFields,
 		reflect.TypeFor[careStudentsHTTP.UpdateStudentRequest](): contract.ReadsFields,
 		reflect.TypeFor[careStudentsHTTP.CompanionEntry]():       contract.ReadsLaxIDs,
+		// The absence bodies take absence_type_id as a number or a decimal string.
+		reflect.TypeFor[workforceModule.CreateAbsenceRequest](): contract.ReadsLaxIDs,
+		reflect.TypeFor[workforceModule.UpdateAbsenceRequest](): contract.ReadsLaxIDs,
+		// A corrected break names its id as a number or a decimal string.
+		reflect.TypeFor[workforceModule.BreakDurationUpdate](): contract.ReadsLaxIDs,
 	}
+	// Appointments keeps its own day type.
+	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date]()}
 	return contract.Build(registrations, options)
 }
 
@@ -109,14 +147,15 @@ func notificationRouteContracts(portal common.PortalScope) []common.RouteContrac
 	)
 }
 
-// traegerNotificationRouteContracts registers the bell of the Träger-Portal
-// (#7146), with patterns relative to its /traeger/notifications mount.
-func traegerNotificationRouteContracts() []common.RouteContract {
+// schoolFeedRouteContracts registers the bell of a portal across schools,
+// the Träger-Portal's (#7146) or the caterer portal's (#7147), with patterns
+// relative to its /notifications mount.
+func schoolFeedRouteContracts(portal common.PortalScope) []common.RouteContract {
 	types := notificationsHTTP.RouteContractTypes()
-	portals := []common.PortalScope{common.PortalTraeger}
+	portals := []common.PortalScope{portal}
 	page := []common.QueryParam{{Name: "limit", Kind: common.QueryInt}, {Name: "cursor", Kind: common.QueryString}}
 	return []common.RouteContract{
-		{Method: "GET", Pattern: "/feed/", Portals: portals, Query: page, Response: types.TraegerFeedPage},
+		{Method: "GET", Pattern: "/feed/", Portals: portals, Query: page, Response: types.SchoolFeedPage},
 		{Method: "GET", Pattern: "/feed/unread-count", Portals: portals, Response: types.FeedCount},
 		{Method: "POST", Pattern: "/feed/read-all", Portals: portals, Response: types.FeedCount},
 		{Method: "POST", Pattern: "/feed/{id}/read", Portals: portals, Response: types.FeedCount},
@@ -142,4 +181,10 @@ func contractRegistration(prefix string, route common.RouteContract) contract.Re
 		registration.Enums = append(registration.Enums, contract.EnumSpec{Name: enum.Name, Type: enum.Type, Fields: enum.Fields, Values: enum.Values})
 	}
 	return registration
+}
+
+// timeTrackingRouteContracts names the row types the root's adapters render
+// for the planned shifts and the allowances of the own time tracking.
+func timeTrackingRouteContracts() []common.RouteContract {
+	return timeTrackingHTTP.RouteContracts([]staffShiftsHTTP.ShiftResponse{}, []absencetypesHTTP.OwnAllowanceResponse{})
 }

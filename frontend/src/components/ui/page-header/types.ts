@@ -236,6 +236,11 @@ interface OverflowMenuSeparator {
 interface OverflowMenuHeader {
   readonly kind: "header";
   readonly label: string;
+  /**
+   * One line under the label, in normal case, that holds for every entry of
+   * the group: „Nur OGS Am Bach“ under „Herunterladen“.
+   */
+  readonly description?: string;
 }
 
 /** Single-select row with a checkmark shown when active (role="menuitemradio"). */

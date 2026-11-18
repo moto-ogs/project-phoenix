@@ -41,7 +41,7 @@ import { CollectionGrid } from "~/components/ui/collection-grid";
 import { Alert } from "~/components/ui/alert";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { Modal } from "~/components/ui/modal";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { ForbiddenPage } from "~/components/ui/forbidden-page";
 import { errorAlertActions } from "~/components/ui/form-error-alert";
 import { useApiLoadError } from "~/contexts/ToastContext";
@@ -2988,29 +2988,28 @@ function SearchPageContent() {
   // list too — selectedIds may still hold students a live update removed,
   // and a count the bar shows must never exceed what a bulk action executes.
   // Statuszeile unter dem Seitentitel, allein aus der bereits geladenen
-  // Kinderliste: Gesamtzahl, wie viele zuhause sind, wie viele krank. Ohne
+  // Kinderliste: Gesamtzahl, wie viele in der OGS sind, wie viele krank. Ohne
   // geladene Liste für das gewählte Datum steht keine "0 Kinder" neben dem
   // Ladefehler (#2517).
+  // Höchstens drei Angaben trägt die Statuszeile (#7402). Krank bleibt: die
+  // Zahl ist sicherheitsrelevant und steht sonst nirgends ohne Weiteres. In
+  // der Schule, im Unterricht und zuhause zählt die Liste selbst: gruppiert
+  // „Nach Status“ steht die Zahl an jeder Gruppe.
   const studentSummary = useMemo(() => {
     if (!rowsLoaded) return null;
     const total = students.length;
     if (!isToday) {
       return `${total} ${total === 1 ? "Kind" : "Kinder"}`;
     }
-    // Wie im Dashboard: Zuhause ist jedes Kind, das weder anwesend noch krank
-    // oder entschuldigt ist und auch nicht mehr in der Schule erwartet wird
-    // (#3260). Ohne eingecheckten Aufenthaltsort ist es deshalb zuhause, auch
-    // wenn der Status noch unbekannt ist. Ein eingechecktes Kind zählt „in der
-    // OGS“, auch wenn es krank gemeldet ist (Ort vor Status, #6371).
+    // Ein eingechecktes Kind zählt „in der OGS“, auch wenn es krank gemeldet
+    // ist (Ort vor Status, #6371). Entschuldigt oder auf Klassenfahrt zählt
+    // weder krank noch in der OGS.
     let sick = 0;
     // In der OGS: in einem Raum, auf dem Schulhof oder unterwegs. Ohne diese
-    // Zahl stünde unter „Meine Aufsicht“ „7 Kinder · 0 in der Schule ·
-    // 0 zuhause“, obwohl alle sieben im Raum sind (#1321); die frühere
-    // Gruppenseite zeigte sie als „X von Y da“.
+    // Zahl stünde unter „Meine Aufsicht“ „7 Kinder, 0 krank“, obwohl alle
+    // sieben im Raum sind (#1321); die frühere Gruppenseite zeigte sie als
+    // „X von Y da“.
     let inCare = 0;
-    let atSchool = 0;
-    let inClass = 0;
-    let atHome = 0;
     for (const student of students) {
       const dayStatus = countedDayStatus(student);
       if (dayStatus === "sick") {
@@ -3029,14 +3028,6 @@ function SearchPageContent() {
       ) {
         continue;
       }
-      if (status === LOCATION_STATUSES.AT_SCHOOL) {
-        atSchool += 1;
-        continue;
-      }
-      if (status === LOCATION_STATUSES.IN_CLASS) {
-        inClass += 1;
-        continue;
-      }
       if (
         status === LOCATION_STATUSES.PRESENT ||
         status === LOCATION_STATUSES.UNPLANNED_PRESENT ||
@@ -3044,13 +3035,17 @@ function SearchPageContent() {
         status === LOCATION_STATUSES.TRANSIT
       ) {
         inCare += 1;
-        continue;
-      }
-      if (HOME_STATUSES.has(status)) {
-        atHome += 1;
       }
     }
-    return `${total} ${total === 1 ? "Kind" : "Kinder"} · ${inCare} in der OGS · ${atSchool} in der Schule${inClass > 0 ? ` · ${inClass} im Unterricht` : ""} · ${atHome} zuhause · ${sick} krank`;
+    return (
+      <TenantPageStats
+        items={[
+          { value: total, label: total === 1 ? "Kind" : "Kinder" },
+          { value: inCare, label: "in der OGS" },
+          { value: sick, label: "krank" },
+        ]}
+      />
+    );
   }, [isToday, students, rowsLoaded]);
 
   const selectedStudentsForBulk = useMemo(
@@ -3481,7 +3476,7 @@ function SearchPageContent() {
           if (loadingStalled) {
             return {
               message:
-                "Die Kinder laden gerade sehr lange. Bitte laden Sie die Liste noch einmal.",
+                "Die Kinder laden gerade sehr lange. Bitte lade die Liste noch einmal.",
               action: reloadAction,
             };
           }
@@ -3503,7 +3498,7 @@ function SearchPageContent() {
                 ),
                 title: "Keine Kinder gefunden",
                 description:
-                  "Zu Suche und Filtern passt kein Kind. Setzen Sie die Filter zurück, um alle Kinder zu sehen.",
+                  "Zu Suche und Filtern passt kein Kind. Setze die Filter zurück, um alle Kinder zu sehen.",
                 action: (
                   <Button
                     type="button"

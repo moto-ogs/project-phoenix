@@ -54,31 +54,31 @@ const ROLE_OPTIONS: readonly RoleOption[] = [
   {
     role: "caregiver",
     label: "Betreuungskraft",
-    description: "Sie betreuen Kinder in der OGS.",
+    description: "Du betreust Kinder in der OGS.",
     icon: HeartHandshake,
   },
   {
     role: "lead",
     label: "Leitung",
-    description: "Sie leiten die OGS und das Team.",
+    description: "Du leitest die OGS und das Team.",
     icon: Users,
   },
   {
     role: "parent",
     label: "Elternteil",
-    description: "Ihr Kind wird in der OGS betreut.",
+    description: "Dein Kind wird in der OGS betreut.",
     icon: UserRound,
   },
   {
     role: "teacher",
     label: "Lehrkraft",
-    description: "Sie arbeiten mit moto schule.",
+    description: "Du arbeitest mit moto schule.",
     icon: GraduationCap,
   },
   {
     role: "traeger",
     label: "Träger-Büro",
-    description: "Sie arbeiten für den Träger mehrerer OGS.",
+    description: "Du arbeitest für den Träger mehrerer OGS.",
     icon: Building2,
   },
 ];
@@ -95,7 +95,7 @@ interface SchoolQuestion<TValue> {
 
 const NFC_QUESTION: SchoolQuestion<boolean | null> = {
   id: "nfc",
-  question: "Nutzt Ihre OGS ein NFC-Tablet?",
+  question: "Nutzt deine OGS ein NFC-Tablet?",
   hint: "Am Tablet melden sich Kinder mit einem Armband an.",
   options: [
     { value: true, label: "Ja" },
@@ -106,7 +106,7 @@ const NFC_QUESTION: SchoolQuestion<boolean | null> = {
 
 const GROUP_QUESTION: SchoolQuestion<HelpGroupMode> = {
   id: "group",
-  question: "Arbeitet Ihre OGS mit festen Gruppen?",
+  question: "Arbeitet deine OGS mit festen Gruppen?",
   options: [
     { value: "fixed_groups", label: "Feste Gruppen" },
     { value: "open_care", label: "Offene Betreuung" },
@@ -116,7 +116,7 @@ const GROUP_QUESTION: SchoolQuestion<HelpGroupMode> = {
 
 const PRESENCE_QUESTION: SchoolQuestion<HelpPresenceMode> = {
   id: "presence",
-  question: "Wie hält Ihre OGS die Anwesenheit fest?",
+  question: "Wie hält deine OGS die Anwesenheit fest?",
   options: [
     { value: "detailed", label: "Mit Ort des Kindes" },
     { value: "binary", label: "Nur da oder nicht da" },
@@ -227,12 +227,12 @@ export function HelpEntry({
         {showSchoolStep ? (
           <>
             <h1 className="text-3xl font-semibold tracking-tight text-balance text-gray-950 sm:text-4xl">
-              Wie arbeitet Ihre OGS?
+              Wie arbeitet deine OGS?
             </h1>
             <p className="mt-3 text-sm text-gray-600">Schritt 2 von 2</p>
             <p className="mt-3 text-base text-gray-600">
-              So zeigen wir Ihnen nur die Schritte, die bei Ihnen vorkommen.
-              Wissen Sie etwas nicht? Wählen Sie „Weiß ich nicht“.
+              So zeigen wir dir nur die Schritte, die bei dir vorkommen. Weißt
+              du etwas nicht? Wähle „Weiß ich nicht“.
             </p>
 
             {/* Ohne weisse Karte: die weissen Antwort-Kacheln heben sich vom
@@ -268,7 +268,7 @@ export function HelpEntry({
                     presenceMode: presenceMode ?? "unknown",
                   })
                 }
-                tooltip="Zeigt die Anleitung passend zu Ihren Antworten."
+                tooltip="Zeigt die Anleitung passend zu deinen Antworten."
               >
                 Zur Anleitung
               </Button>
@@ -284,7 +284,7 @@ export function HelpEntry({
                     presenceMode: "unknown",
                   })
                 }
-                tooltip="Zeigt die Anleitung mit allen Wegen, ohne Ihre Antworten."
+                tooltip="Zeigt die Anleitung mit allen Wegen, ohne deine Antworten."
               >
                 Überspringen
               </Button>
@@ -294,7 +294,7 @@ export function HelpEntry({
                 size="md"
                 className="ms-auto"
                 onClick={() => setRole(null)}
-                noTooltip="Führt nur zurück zur Frage, wer Sie sind."
+                noTooltip="Führt nur zurück zur Frage, wer du bist."
               >
                 Zurück
               </Button>
@@ -307,7 +307,7 @@ export function HelpEntry({
             </h1>
             <p className="mt-3 text-sm text-gray-600">Schritt 1 von 2</p>
             <p className="mt-3 text-base text-gray-600">
-              Wählen Sie aus, was auf Sie zutrifft. Sie sehen danach nur Ihre
+              Wähle aus, was auf dich zutrifft. Du siehst danach nur deine
               Themen.
             </p>
 

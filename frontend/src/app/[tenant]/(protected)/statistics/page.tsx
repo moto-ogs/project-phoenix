@@ -40,7 +40,7 @@ import { SectionCard } from "~/components/ui/section-card";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { Skeleton } from "~/components/ui/skeleton";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { CareTimeOverrunsSection } from "~/components/statistics/care-time-overruns-section";
 import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
 import {
@@ -117,7 +117,7 @@ const COURSE_VIEW_ITEMS: readonly { value: CourseView; label: string }[] = [
 
 /** Fehlendes Recht ist ein Zustand mit eigener Seite, kein Ladefehler. */
 const FORBIDDEN_MESSAGE =
-  "Ihr Konto darf die Statistik nicht sehen. Bitte wenden Sie sich an Ihre Administration.";
+  "Dein Konto darf die Statistik nicht sehen. Bitte wende dich an deine Administration.";
 
 function addDays(d: Date, days: number): Date {
   const r = new Date(d);
@@ -842,13 +842,27 @@ export default function StatisticsPage() {
   // Telefon eine Zeile, die nichts sagte.
   // Im Kursbereich zählen Kurse und Kinder mit Kursteilnahme; Betreuungstage
   // wären hier die falsche Zahl zur falschen Tabelle.
-  let statusLine: string;
+  let statusLine: ReactNode;
   if (!data) {
     statusLine = formatStatusDate(todayISO);
   } else if (view === "courses") {
-    statusLine = `${data.courses.length} Kurse · ${data.course_totals.student_count} Kinder`;
+    statusLine = (
+      <TenantPageStats
+        items={[
+          { value: data.courses.length, label: "Kurse" },
+          { value: data.course_totals.student_count, label: "Kinder" },
+        ]}
+      />
+    );
   } else {
-    statusLine = `${data.care_days} Betreuungstage · ${data.totals.student_count} Kinder`;
+    statusLine = (
+      <TenantPageStats
+        items={[
+          { value: data.care_days, label: "Betreuungstage" },
+          { value: data.totals.student_count, label: "Kinder" },
+        ]}
+      />
+    );
   }
 
   // Kennzahlen unter der Kopfkarte: eine große Quote, drei Nebenwerte. Der
@@ -1148,7 +1162,7 @@ export default function StatisticsPage() {
               (courseDataAllBeforeWindow ? (
                 <EmptyState
                   title="Keine Kurstermine für diesen Zeitraum"
-                  description={`Termine werden ${data.course_data_days} Tage aufbewahrt. Wählen Sie einen Zeitraum ab ${formatDate(data.course_data_from)}.`}
+                  description={`Termine werden ${data.course_data_days} Tage aufbewahrt. Wähle einen Zeitraum ab ${formatDate(data.course_data_from)}.`}
                 />
               ) : (
                 <>
@@ -1198,12 +1212,12 @@ export default function StatisticsPage() {
               (data.room_history_disabled ? (
                 <EmptyState
                   title="Raumhistorie ist ausgeschaltet"
-                  description="Raumstatistiken brauchen das eingeschaltete Anwesenheitsprotokoll. Ihre Administration kann es unter Einstellungen > Datenschutz einschalten."
+                  description="Raumstatistiken brauchen das eingeschaltete Anwesenheitsprotokoll. Deine Administration kann es unter Einstellungen > Datenschutz einschalten."
                 />
               ) : roomDataAllBeforeWindow ? (
                 <EmptyState
                   title="Keine Raumdaten für diesen Zeitraum"
-                  description={`Wählen Sie einen Zeitraum ab ${formatDate(data.room_data_from)}.`}
+                  description={`Wähle einen Zeitraum ab ${formatDate(data.room_data_from)}.`}
                 />
               ) : (
                 <>

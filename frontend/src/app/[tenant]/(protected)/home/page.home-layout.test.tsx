@@ -53,7 +53,9 @@ vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({ data: mockSession, status: "authenticated" })),
 }));
 
-vi.mock("~/lib/auth-utils", () => ({
+vi.mock("~/lib/auth-utils", async (importOriginal) => ({
+  getGreetingName: (await importOriginal<typeof import("~/lib/auth-utils")>())
+    .getGreetingName,
   isAdmin: vi.fn(() => true),
   hasEffectiveAdminScope: vi.fn(() => true),
   hasPermission: vi.fn(() => true),
@@ -80,6 +82,9 @@ vi.mock("~/lib/usercontext-context", () => ({
   ),
 }));
 
+vi.mock("~/components/devices/device-pin-warning", () => ({
+  DevicePinWarning: () => <div data-testid="device-pin-warning" />,
+}));
 vi.mock("~/components/enrollment/phase-expiry-warnings", () => ({
   PhaseExpiryWarnings: () => <div data-testid="phase-expiry-warnings" />,
 }));

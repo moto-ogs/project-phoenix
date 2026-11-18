@@ -140,8 +140,9 @@ func NewDeviceFleet(db transactionruntime.Database, now func() time.Time, online
 		DB:                  db.Pool(),
 		Rooms:               rooms,
 		OnlineWindowMinutes: minutes, Now: now,
-		APIKeys: DeviceAPIKeys{},
-		Observe: func(devicefleetCompose.Observation) {},
+		DeviceSlots: organizationCompose.NewDeviceSlotLimits(),
+		APIKeys:     DeviceAPIKeys{},
+		Observe:     func(devicefleetCompose.Observation) {},
 	})
 }
 

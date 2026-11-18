@@ -100,7 +100,7 @@ describe("Entscheidung korrigieren", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Entscheidung korrigieren" }),
     );
-    fireEvent.change(screen.getByLabelText(/Warum korrigieren Sie\?/), {
+    fireEvent.change(screen.getByLabelText(/Warum korrigierst du\?/), {
       target: { value: "Falsche Uhrzeit" },
     });
     fireEvent.click(
@@ -155,7 +155,7 @@ describe("Entscheidung korrigieren", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Entscheidung korrigieren" }),
     );
-    fireEvent.change(screen.getByLabelText(/Warum korrigieren Sie\?/), {
+    fireEvent.change(screen.getByLabelText(/Warum korrigierst du\?/), {
       target: { value: "Falsch entschieden" },
     });
     fireEvent.click(
@@ -191,14 +191,14 @@ describe("Entscheidung korrigieren", () => {
       screen.getByRole("button", { name: "Korrektur speichern" }),
     );
     expect(
-      screen.getByText("Bitte tragen Sie ein, warum Sie korrigieren."),
+      screen.getByText("Bitte trage ein, warum du korrigierst."),
     ).toBeVisible();
-    const reasonField = screen.getByLabelText(/Warum korrigieren Sie\?/);
+    const reasonField = screen.getByLabelText(/Warum korrigierst du\?/);
     expect(reasonField).toHaveAttribute("aria-invalid", "true");
     await waitFor(() => expect(reasonField).toHaveFocus());
     expect(mockCorrect).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText(/Warum korrigieren Sie\?/), {
+    fireEvent.change(screen.getByLabelText(/Warum korrigierst du\?/), {
       target: { value: "Falsches Kind" },
     });
     fireEvent.click(

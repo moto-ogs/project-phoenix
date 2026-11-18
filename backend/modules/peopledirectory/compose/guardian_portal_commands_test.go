@@ -30,13 +30,14 @@ type storedGuardianProfile struct {
 	AccountID              *int64  `bun:"account_id"`
 	PortalLocale           *string `bun:"portal_locale"`
 	Notes                  *string `bun:"notes"`
+	Salutation             *string `bun:"salutation"`
 }
 
 func readGuardianProfile(t *testing.T, db *bun.DB, id int64) storedGuardianProfile {
 	t.Helper()
 	var row storedGuardianProfile
 	require.NoError(t, db.NewRaw(`SELECT tenant_id, first_name, last_name, email, address_street, address_city,
-		address_postal_code, preferred_contact_method, language_preference, has_account, account_id, portal_locale, notes
+		address_postal_code, preferred_contact_method, language_preference, has_account, account_id, portal_locale, notes, salutation
 		FROM users.guardian_profiles WHERE id = ?`, id).Scan(context.Background(), &row))
 	return row
 }
@@ -143,6 +144,31 @@ func TestGuardianContactWritesNormalizeLikeEveryGuardianWrite(t *testing.T) {
 	require.NoError(t, db.NewRaw(`SELECT nextval('users.guardian_profiles_id_seq')`).Scan(context.Background(), &missing))
 	err = module.UpdateGuardianContact(ctx, missing, peopledirectory.GuardianContactRecord{FirstName: "A", LastName: "B"})
 	require.ErrorIs(t, err, peopledirectory.ErrGuardianNotFound)
+}
+
+// The chosen form of address (#7362) is part of the contact slice: a known
+// value is stored, an empty one clears it and anything else is refused.
+func TestGuardianContactStoresTheChosenSalutation(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module := buildModule(t, db)
+	ctx := testpkg.Ctx(t)
+
+	id, err := module.CreateGuardianContact(ctx, peopledirectory.GuardianContactRecord{FirstName: "Karin", LastName: "Klein"})
+	require.NoError(t, err)
+	assert.Nil(t, readGuardianProfile(t, db, id).Salutation, "nobody has a form of address until they choose one")
+
+	record := peopledirectory.GuardianContactRecord{FirstName: "Karin", LastName: "Klein", Salutation: textPtr("ms")}
+	require.NoError(t, module.UpdateGuardianContact(ctx, id, record))
+	require.NotNil(t, readGuardianProfile(t, db, id).Salutation)
+	assert.Equal(t, "ms", *readGuardianProfile(t, db, id).Salutation)
+
+	record.Salutation = textPtr("")
+	require.NoError(t, module.UpdateGuardianContact(ctx, id, record))
+	assert.Nil(t, readGuardianProfile(t, db, id).Salutation, "an empty value clears the choice")
+
+	record.Salutation = textPtr("Frau")
+	require.ErrorIs(t, module.UpdateGuardianContact(ctx, id, record), peopledirectory.ErrInvalidGuardian)
 }
 
 func TestGuardianContactEmailConflictStaysDetectable(t *testing.T) {

@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "6a171468f6ce8605ef7939103eeb53ca077764076d489099c225841d7b3071e1",
+  "catalogSHA256": "8cb986069532660a02db79705561608ed1fdbb9906e918b4ad0852304debf952",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -47,8 +47,8 @@
     }
   ],
   "commonSpecifications": "Für diese Art von Dienst gibt es noch keine gemeinsamen Spezifikationen oder harmonisierten Normen im Unionsrepositorium nach Art. 35 Data Act. Deshalb geben wir die Daten in den oben genannten offenen Standards zurück (Art. 30 Abs. 5 Data Act).",
-  "timeEstimate": "Unverbindliche Schätzung: Ein Paket erstellen und prüfen wir voraussichtlich innerhalb von 10 Arbeitstagen nach Ihrem Auftrag. Bei vielen gespeicherten Dateien kann es länger dauern. Maßgeblich sind die Fristen in Ihrem Vertrag.",
-  "retrieval": "Wir erstellen und prüfen das Paket. Danach können Sie oder ein von Ihnen benannter neuer Anbieter es kostenlos über HTTPS abrufen: GET /public/data-return/package/archive mit einem kurzlebigen Token, das wir für genau dieses Paket ausgeben. Die Schnittstelle beschreibt /public/data-return/openapi.json (OpenAPI 3.1).",
+  "timeEstimate": "Unverbindliche Schätzung: Ein Paket erstellen und prüfen wir voraussichtlich innerhalb von 10 Arbeitstagen nach deinem Auftrag. Bei vielen gespeicherten Dateien kann es länger dauern. Maßgeblich sind die Fristen in deinem Vertrag.",
+  "retrieval": "Wir erstellen und prüfen das Paket. Danach kannst du oder ein von dir benannter neuer Anbieter es kostenlos über HTTPS abrufen: GET /public/data-return/package/archive mit einem kurzlebigen Token, das wir für genau dieses Paket ausgeben. Die Schnittstelle beschreibt /public/data-return/openapi.json (OpenAPI 3.1).",
   "packages": [
     {
       "kind": "school",
@@ -1771,6 +1771,12 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -1862,6 +1868,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -2351,6 +2363,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -2524,6 +2542,18 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
+        },
+        {
+          "name": "audit_reopen_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -2641,6 +2671,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -2816,6 +2852,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -4593,6 +4635,90 @@
       ]
     },
     {
+      "name": "audit.device_lifecycle_events",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "tenant_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "device_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "action",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "actor_kind",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "actor_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "actor_operator_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "changes",
+          "type": "jsonb",
+          "udt": "jsonb",
+          "nullable": false
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "actor_account_id",
+          "targetTable": "auth.accounts",
+          "targetColumn": "id"
+        },
+        {
+          "column": "actor_operator_id",
+          "targetTable": "platform.operators",
+          "targetColumn": "id"
+        },
+        {
+          "column": "device_id",
+          "targetTable": "iot.devices",
+          "targetColumn": "id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "platform.schools",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school"
+      ]
+    },
+    {
       "name": "audit.deviation_events",
       "columns": [
         {
@@ -5434,6 +5560,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -6120,6 +6252,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -6439,6 +6577,12 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -18939,6 +19083,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "start_number",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -18988,6 +19138,69 @@
         }
       ],
       "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "platform.organizations",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "parent_billing.number_range_starts",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "service",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "year",
+          "type": "smallint",
+          "udt": "int2",
+          "nullable": false
+        },
+        {
+          "name": "next_number",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "actor_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "actor_account_id",
+          "targetTable": "auth.accounts",
+          "targetColumn": "id"
+        },
         {
           "column": "organization_id",
           "targetTable": "platform.organizations",
@@ -19719,6 +19932,12 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "account_holder",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -19746,7 +19965,10 @@
       "packages": [
         "school",
         "organization"
-      ]
+      ],
+      "excludedColumns": {
+        "account_holder_sealed": "Frozen account holder opened for the Träger return; ciphertext is never exported."
+      }
     },
     {
       "name": "parent_billing.run_letters",
@@ -22488,6 +22710,12 @@
           "type": "character varying",
           "udt": "varchar",
           "nullable": true
+        },
+        {
+          "name": "account_holder",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -22515,7 +22743,10 @@
       "packages": [
         "school",
         "organization"
-      ]
+      ],
+      "excludedColumns": {
+        "account_holder_sealed": "Frozen account holder opened for the Träger return; ciphertext is never exported."
+      }
     },
     {
       "name": "parent_billing.care_meal_positions",
@@ -26749,6 +26980,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": true
+        },
+        {
+          "name": "delivery_state_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -27306,6 +27543,12 @@
           "type": "integer",
           "udt": "int4",
           "nullable": false
+        },
+        {
+          "name": "device_slots",
+          "type": "integer",
+          "udt": "int4",
+          "nullable": true
         },
         {
           "name": "exported_settings",
@@ -32416,6 +32659,12 @@
           "name": "emails_stopped_at",
           "type": "timestamp with time zone",
           "udt": "timestamptz",
+          "nullable": true
+        },
+        {
+          "name": "salutation",
+          "type": "text",
+          "udt": "text",
           "nullable": true
         }
       ],
@@ -39078,6 +39327,11 @@
       "name": "auth.permissions",
       "classification": "excludeInternal",
       "reason": "Global permission vocabulary, not customer records; relevant role meaning must accompany returned data."
+    },
+    {
+      "name": "auth.request_rate_limits",
+      "classification": "excludeInternal",
+      "reason": "Internal anti-abuse state has no tenant key and is not customer export content."
     },
     {
       "name": "calendar.school_vacations",

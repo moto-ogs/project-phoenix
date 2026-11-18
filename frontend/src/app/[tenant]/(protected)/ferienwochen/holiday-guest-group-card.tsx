@@ -29,8 +29,8 @@ function transferMessage(guests: number, ownChildren: number): string {
   if (ownChildren > 0) {
     parts.push(
       ownChildren === 1
-        ? "1 Kind Ihrer OGS ist eingeplant."
-        : `${ownChildren} Kinder Ihrer OGS sind eingeplant.`,
+        ? "1 Kind deiner OGS ist eingeplant."
+        : `${ownChildren} Kinder deiner OGS sind eingeplant.`,
     );
   }
   return parts.length > 0
@@ -115,7 +115,7 @@ export function HolidayGuestGroupCard({
   return (
     <SectionCard
       title="Feriengruppe"
-      description="Feriengäste sind Kinder anderer Schulen und Kinder ohne Schule beim Träger. In der Feriengruppe melden Sie die Kinder an und ab. Sie sehen Betreuung, Notfall, Abholung, Gesundheit und die Angaben, die der Träger freigibt. Kinder Ihrer OGS bleiben in ihrer Gruppe."
+      description="Feriengäste sind Kinder anderer Schulen und Kinder ohne Schule beim Träger. In der Feriengruppe meldest du die Kinder an und ab. Du siehst Betreuung, Notfall, Abholung, Gesundheit und die Angaben, die der Träger freigibt. Kinder deiner OGS bleiben in ihrer Gruppe."
     >
       <div className="flex flex-col gap-4">
         <p className="text-sm text-gray-700">{status}</p>
@@ -140,7 +140,7 @@ export function HolidayGuestGroupCard({
               variant="primary"
               disabled={!groupId || saving}
               disabledReason={
-                groupId ? undefined : "Wählen Sie zuerst eine Gruppe aus."
+                groupId ? undefined : "Wähle zuerst eine Gruppe aus."
               }
               tooltip="Setzt die Feriengäste der Woche in diese Gruppe und in den Check-in."
               onClick={() => void assign()}

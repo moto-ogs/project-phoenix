@@ -51,6 +51,7 @@ import {
 } from "~/lib/traeger-payment-text";
 import { textTooLong } from "~/lib/text-length";
 import { Switch } from "~/components/ui/switch";
+import { ENROLLMENT_ENABLED_KEY } from "~/lib/enrollment-privacy-notice";
 import { NumberField } from "./fields/number-field";
 import { SettingsTimeField } from "./fields/time-field";
 import { DateField } from "./fields/date-field";
@@ -136,8 +137,7 @@ const DESTRUCTIVE_SWITCH_OFF: Record<string, DestructiveSwitchOff> = {
         {mode === "reset" && <p>Der Standard ist ausgeschaltet.</p>}
       </>
     ),
-    gateLabel:
-      "Geben Sie LÖSCHEN ein, um ältere Raumbesuche endgültig zu löschen.",
+    gateLabel: "Gib LÖSCHEN ein, um ältere Raumbesuche endgültig zu löschen.",
   },
   // #7208: Ausschalten löscht die Fotos und beendet jede Foto-Einwilligung.
   // Nach dem Wiedereinschalten braucht jedes Foto eine neue Einwilligung.
@@ -159,7 +159,7 @@ const DESTRUCTIVE_SWITCH_OFF: Record<string, DestructiveSwitchOff> = {
           <SwitchOffConsequence
             icon={<RefreshCcw aria-hidden="true" />}
             tone="neutral"
-            text="Schalten Sie Fotos wieder ein, braucht jedes Foto eine neue Einwilligung."
+            text="Schaltest du Fotos wieder ein, braucht jedes Foto eine neue Einwilligung."
           />
         </InsetPanel>
         <p className="mt-3">
@@ -168,8 +168,7 @@ const DESTRUCTIVE_SWITCH_OFF: Record<string, DestructiveSwitchOff> = {
         </p>
       </>
     ),
-    gateLabel:
-      "Geben Sie LÖSCHEN ein, um alle Kinderfotos endgültig zu löschen.",
+    gateLabel: "Gib LÖSCHEN ein, um alle Kinderfotos endgültig zu löschen.",
     confirmTooltip:
       "Schaltet Kinderfotos aus. Löscht alle Fotos sofort, die Einwilligungen enden.",
   },
@@ -201,16 +200,16 @@ function operatorManagedNote(key: string, audience: SettingsAudience): string {
   if (MODULE_SETTING_KEYS.includes(key)) {
     return audience === "operator"
       ? "Gebuchtes Modul aus dem Vertrag. Die Schule sieht es, kann es aber nicht ändern."
-      : "Welche Module Ihre Schule hat, steht im Vertrag mit moto. Für eine Änderung wenden Sie sich an das moto-Team.";
+      : "Welche Module deine Schule hat, steht im Vertrag mit moto. Für eine Änderung wende dich an das moto-Team.";
   }
   if (key.endsWith("retention_days")) {
     return audience === "operator"
       ? "Löschfrist aus dem Vertrag. Die Schule sieht sie, kann sie aber nicht ändern."
-      : "Diese Frist legt moto mit Ihrer Schule fest. Für eine Änderung wenden Sie sich an moto.";
+      : "Diese Frist legt moto mit deiner Schule fest. Für eine Änderung wende dich an moto.";
   }
   return audience === "operator"
     ? "Legt das moto-Team mit der Schule fest. Die Schule sieht es, kann es aber nicht ändern."
-    : "Das legt moto mit Ihrer Schule fest. Für eine Änderung wenden Sie sich an moto.";
+    : "Das legt moto mit deiner Schule fest. Für eine Änderung wende dich an moto.";
 }
 
 function toStr(v: unknown): string {
@@ -289,7 +288,7 @@ function careFacilityTermProblem(
   pattern: string | undefined,
 ): string | null {
   const text = typeof value === "string" ? value : "";
-  if (text.trim() === "") return "Bitte geben Sie einen Namen ein.";
+  if (text.trim() === "") return "Bitte gib einen Namen ein.";
   if (!pattern) return null;
   let accepted: RegExp;
   try {
@@ -461,6 +460,12 @@ interface SettingsFieldProps {
   readonly onReset: (key: string) => Promise<void>;
   readonly onSchemaRefresh?: () => void;
   readonly onBookingAuthorityEnable?: () => Promise<void>;
+  /**
+   * Switching the online enrollment on opens the page's activation dialog
+   * instead of saving at once (#7176): it checks the privacy notice and asks
+   * for the notification recipients.
+   */
+  readonly onEnrollmentEnable?: () => void;
   // audience controls the "auch von {other side} änderbar" hint shown
   // on shared settings and the origin of a value (default, Träger, school).
   // Defaults to "admin" (tenant settings page); "traeger" is the Träger
@@ -513,6 +518,7 @@ export function SettingsField({
   onReset,
   onSchemaRefresh,
   onBookingAuthorityEnable,
+  onEnrollmentEnable,
   audience = "admin",
   revealFn,
   labelLevel = 4,
@@ -865,7 +871,7 @@ export function SettingsField({
       if (prerequisite) {
         if (!prerequisite.writable) {
           setHint(
-            "Dafür muss zuerst die andere Einstellung geändert werden. Bitte wenden Sie sich an die OGS-Leitung.",
+            "Dafür muss zuerst die andere Einstellung geändert werden. Bitte wende dich an die OGS-Leitung.",
           );
           return;
         }
@@ -905,6 +911,14 @@ export function SettingsField({
         await onBookingAuthorityEnable();
         return;
       }
+      if (
+        setting.key === ENROLLMENT_ENABLED_KEY &&
+        value === true &&
+        onEnrollmentEnable
+      ) {
+        onEnrollmentEnable();
+        return;
+      }
       await saveOrConfirm(value);
     },
     [
@@ -920,6 +934,7 @@ export function SettingsField({
       legalActivationTextKey,
       legalActivationTextSetting?.value,
       onBookingAuthorityEnable,
+      onEnrollmentEnable,
       setting.key,
     ],
   );
@@ -943,7 +958,7 @@ export function SettingsField({
       activationErrors.invalid(
         isAGBActivation
           ? selectedAGBSourceError(legalActivationMode)
-          : "Bitte tragen Sie zuerst einen Text ein.",
+          : "Bitte trage zuerst einen Text ein.",
       );
       return;
     }
@@ -1365,7 +1380,7 @@ export function SettingsField({
             aria-label="Zurücksetzen"
             tooltip={
               restoresTraegerValue
-                ? "Übernimmt wieder den Wert, den Ihr Träger vorgibt."
+                ? "Übernimmt wieder den Wert, den dein Träger vorgibt."
                 : resetSwitchesOffDestructively ||
                     shortenedRetentionDays(
                       setting,
@@ -1451,12 +1466,12 @@ export function SettingsField({
         confirmVariant="danger"
       >
         <p className="text-sm text-gray-600">
-          Ihr Text wird gelöscht und gleich gespeichert. Danach gilt wieder der
+          Dein Text wird gelöscht und gleich gespeichert. Danach gilt wieder der
           Standard.
         </p>
         {typeof localValue === "string" && localValue.trim() ? (
           <p className="mt-2 text-sm text-gray-900">
-            Ihr Text beginnt mit: „{firstLine(localValue)}“
+            Dein Text beginnt mit: „{firstLine(localValue)}“
           </p>
         ) : null}
       </ConfirmationModal>
@@ -1742,8 +1757,8 @@ function hasEnrollmentLegalAGBSourceContent(
 
 function selectedAGBSourceError(mode: LegalAGBDisplayMode): string {
   return mode === ENROLLMENT_LEGAL_AGB_DISPLAY_MODE_PDF
-    ? "Bitte laden Sie zuerst eine PDF-Datei hoch."
-    : "Bitte tragen Sie zuerst einen AGB-Text ein.";
+    ? "Bitte lade zuerst eine PDF-Datei hoch."
+    : "Bitte trage zuerst einen AGB-Text ein.";
 }
 
 function publicLegalDocumentURL(storedURL: string): string {
@@ -2004,8 +2019,8 @@ function getEnrollmentLegalStoredTextStatus(
 
 function uploadHint(hasDocument: boolean) {
   return hasDocument
-    ? "Ersetzt die gespeicherte PDF durch eine Datei von Ihrem Gerät."
-    : "Lädt eine PDF von Ihrem Gerät hoch.";
+    ? "Ersetzt die gespeicherte PDF durch eine Datei von deinem Gerät."
+    : "Lädt eine PDF von deinem Gerät hoch.";
 }
 
 function renderEnrollmentLegalTextEditor(
@@ -2092,10 +2107,10 @@ const LEGAL_DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
 /** Check before sending: the backend takes a PDF of at most 10 MB. */
 function legalDocumentFileProblem(file: File): string | null {
   if (file.type !== "application/pdf") {
-    return "Bitte wählen Sie eine PDF-Datei.";
+    return "Bitte wähle eine PDF-Datei.";
   }
   if (file.size > LEGAL_DOCUMENT_MAX_BYTES) {
-    return "Die PDF-Datei ist zu groß. Bitte wählen Sie eine Datei bis 10 MB.";
+    return "Die PDF-Datei ist zu groß. Bitte wähle eine Datei bis 10 MB.";
   }
   return null;
 }

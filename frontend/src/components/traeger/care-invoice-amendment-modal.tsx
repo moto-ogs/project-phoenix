@@ -135,22 +135,21 @@ function draftInput(
   fields: Fields,
 ): { input: DraftChange } | { errors: FieldErrors } {
   const errors: FieldErrors = {};
-  if (!fields.reason.trim()) errors.reason = "Bitte nennen Sie einen Grund.";
+  if (!fields.reason.trim()) errors.reason = "Bitte nenne einen Grund.";
   let input: DraftChange | null = null;
   switch (draft.kind) {
     case "amount": {
       const cents = euroInputToCents(fields.total);
       if (cents === null)
-        errors.total = "Bitte geben Sie einen Betrag ein, zum Beispiel 70,00.";
+        errors.total = "Bitte gib einen Betrag ein, zum Beispiel 70,00.";
       else input = { kind: "amount", totalCents: cents };
       break;
     }
     case "add_position": {
       const cents = euroInputToCents(fields.amount);
-      if (!fields.label.trim())
-        errors.label = "Bitte benennen Sie die Position.";
+      if (!fields.label.trim()) errors.label = "Bitte benenne die Position.";
       if (cents === null || cents === 0)
-        errors.amount = "Bitte geben Sie einen Betrag über 0 ein.";
+        errors.amount = "Bitte gib einen Betrag über 0 ein.";
       else
         input = {
           kind: "add_position",
@@ -161,11 +160,11 @@ function draftInput(
     }
     case "recipient":
       if (!fields.firstName.trim())
-        errors.firstName = "Bitte geben Sie den Vornamen ein.";
+        errors.firstName = "Bitte gib den Vornamen ein.";
       if (!fields.lastName.trim())
-        errors.lastName = "Bitte geben Sie den Nachnamen ein.";
+        errors.lastName = "Bitte gib den Nachnamen ein.";
       if (!/^\S+@\S+\.\S+$/.test(fields.email.trim()))
-        errors.email = "Bitte geben Sie eine gültige E-Mail-Adresse ein.";
+        errors.email = "Bitte gib eine gültige E-Mail-Adresse ein.";
       input = {
         kind: "recipient",
         recipient: {
@@ -178,12 +177,11 @@ function draftInput(
       break;
     case "address":
       if (!fields.street.trim())
-        errors[ADDRESS_FIELD.street] =
-          "Bitte geben Sie Straße und Hausnummer ein.";
+        errors[ADDRESS_FIELD.street] = "Bitte gib Straße und Hausnummer ein.";
       if (!/^\d{5}$/.test(fields.postalCode.trim()))
-        errors[ADDRESS_FIELD.postalCode] = "Bitte geben Sie fünf Ziffern ein.";
+        errors[ADDRESS_FIELD.postalCode] = "Bitte gib fünf Ziffern ein.";
       if (!fields.city.trim())
-        errors[ADDRESS_FIELD.city] = "Bitte geben Sie den Ort ein.";
+        errors[ADDRESS_FIELD.city] = "Bitte gib den Ort ein.";
       input = {
         kind: "address",
         address: {
@@ -251,7 +249,7 @@ export function CareInvoiceAmendmentModal({
     formErrors.clear();
     const result = draftInput(draft, fields);
     if ("errors" in result) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", result.errors);
+      formErrors.invalid("Bitte prüfe deine Angaben.", result.errors);
       return;
     }
     await save.run(async (op) => {
@@ -444,8 +442,8 @@ function DraftFields({
             onChange={set("email")}
           />
           <p className="text-sm text-gray-600 sm:col-span-2">
-            Gilt nur für diese Rechnung. Für alle Rechnungen der Familie ändern
-            Sie „Empfänger und Zahlung“.
+            Gilt nur für diese Rechnung. Für alle Rechnungen der Familie änderst
+            du „Empfänger und Zahlung“.
           </p>
         </div>
       );

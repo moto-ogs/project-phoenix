@@ -2,8 +2,8 @@
 
 // Ein Dokument des Trägers (#4692): für wen es freigegeben ist, eine neue
 // Freigabe und das Zurücknehmen einer Freigabe. Zurückgenommen sehen Eltern
-// und Schulen das Dokument sofort nicht mehr. Das Menü im Kopf löscht das
-// Dokument mit allen Freigaben (#5993).
+// und Schulen das Dokument sofort nicht mehr. Das Menü im Kopf lädt es herunter
+// und löscht es mit allen Freigaben (#5993, #7405).
 
 import {
   DownloadSimpleIcon,
@@ -28,15 +28,16 @@ import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { Button } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { EmptyState } from "~/components/ui/empty-state";
+import { EXPORT_BUSY_LABELS } from "~/components/ui/export-formats";
 import { FramedList } from "~/components/ui/framed-list";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import {
   useApiErrorDisplay,
   useApiFormError,
@@ -162,19 +163,22 @@ export default function TraegerDocumentPage() {
       backLabel="Zurück zu den Dokumenten"
       stats={
         document ? (
-          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="truncate">{document.fileName}</span>
-            <span aria-hidden="true">·</span>
-            <span>{documentFileFacts(document)}</span>
-            <span aria-hidden="true">·</span>
-            <span>hochgeladen am {formatBerlinDate(document.createdAt)}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {document.reads === 0
-                ? "noch nicht geöffnet"
-                : `${document.reads}-mal geöffnet`}
-            </span>
-          </span>
+          <TenantPageStats
+            items={[
+              {
+                label: `${document.fileName} (${documentFileFacts(document)})`,
+              },
+              {
+                label: `hochgeladen am ${formatBerlinDate(document.createdAt)}`,
+              },
+              {
+                label:
+                  document.reads === 0
+                    ? "noch nicht geöffnet"
+                    : `${document.reads}-mal geöffnet`,
+              },
+            ]}
+          />
         ) : null
       }
       statsLoading={isLoading}
@@ -185,62 +189,63 @@ export default function TraegerDocumentPage() {
           ? {
               title: "Dieses Dokument gibt es nicht.",
               description:
-                "Vielleicht gehört es zu einem anderen Träger. Gehen Sie zurück zu den Dokumenten.",
+                "Vielleicht gehört es zu einem anderen Träger. Gehe zurück zu den Dokumenten.",
             }
           : null
       }
       actions={
-        document ? (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              className="gap-2"
-              tooltip="Speichert das Dokument als Datei auf Ihrem Gerät."
-              onClick={() => void download()}
-              isLoading={downloading}
-              loadingText="Wird geladen …"
-            >
-              <DownloadSimpleIcon className="h-4 w-4" aria-hidden="true" />
-              Herunterladen
-            </Button>
-            {canManage && (
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                className="gap-2"
-                tooltip="Öffnet die Freigabe für Schulen oder Eltern, Eltern bekommen dann eine Nachricht."
-                onClick={() => setReleasing(true)}
-              >
-                <ShareNetworkIcon className="h-4 w-4" aria-hidden="true" />
-                Freigeben
-              </Button>
-            )}
-            {/* Without the school names the dialog could not name the
-                schools that lose the document; the page shows their failed
-                load with a retry instead. */}
-            {canManage && schools !== null && (
-              <OverflowMenu
-                ariaLabel="Weitere Aktionen zum Dokument"
-                items={[
-                  {
-                    label: "Dokument löschen",
-                    description:
-                      "moto fragt vorher nach, dann enden alle Freigaben und die Datei ist weg.",
-                    icon: <TrashIcon className="size-4" aria-hidden="true" />,
-                    destructive: true,
-                    onClick: () => {
-                      deleteErrors.clear();
-                      setConfirmingDelete(true);
-                    },
-                  },
-                ]}
-              />
-            )}
-          </>
+        document && canManage ? (
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            className="gap-2"
+            tooltip="Öffnet die Freigabe für Schulen oder Eltern, Eltern bekommen dann eine Nachricht."
+            onClick={() => setReleasing(true)}
+          >
+            <ShareNetworkIcon className="h-4 w-4" aria-hidden="true" />
+            Freigeben
+          </Button>
         ) : null
+      }
+      overflowMenu={
+        document
+          ? [
+              {
+                // The menu closes on the click; the entry says the file is
+                // still coming when it is opened again.
+                label: downloading
+                  ? EXPORT_BUSY_LABELS.download
+                  : "Herunterladen",
+                description:
+                  "Speichert das Dokument als Datei auf deinem Gerät.",
+                icon: (
+                  <DownloadSimpleIcon className="size-4" aria-hidden="true" />
+                ),
+                disabled: downloading,
+                onClick: () => void download(),
+              },
+              // Without the school names the dialog could not name the
+              // schools that lose the document; the page shows their failed
+              // load with a retry instead.
+              ...(canManage && schools !== null
+                ? [
+                    { kind: "separator" as const },
+                    {
+                      label: "Dokument löschen",
+                      description:
+                        "moto fragt vorher nach, dann enden alle Freigaben und die Datei ist weg.",
+                      icon: <TrashIcon className="size-4" aria-hidden="true" />,
+                      destructive: true,
+                      onClick: () => {
+                        deleteErrors.clear();
+                        setConfirmingDelete(true);
+                      },
+                    },
+                  ]
+                : []),
+            ]
+          : undefined
       }
       overlays={
         document ? (
@@ -281,7 +286,7 @@ export default function TraegerDocumentPage() {
                       )
                     : ""}{" "}
                   Das Dokument selbst bleibt hier gespeichert. Ganz löschen
-                  können Sie es über das Menü oben.
+                  kannst du es über das Menü oben.
                 </>
               }
               confirmLabel="Zurücknehmen"
@@ -356,7 +361,7 @@ export default function TraegerDocumentPage() {
                 mode: "textConfirm",
                 expected: "LÖSCHEN",
                 inputId: "confirm-delete-traeger-document",
-                label: "Tippen Sie zur Bestätigung LÖSCHEN ein:",
+                label: "Tippe zur Bestätigung LÖSCHEN ein:",
                 placeholder: "LÖSCHEN",
               }}
               confirmLabel="Endgültig löschen"
@@ -385,7 +390,7 @@ export default function TraegerDocumentPage() {
               title="Noch nicht freigegeben."
               description={
                 canManage
-                  ? "Noch sieht niemand dieses Dokument. Geben Sie es oben frei: für Eltern oder für Schulen."
+                  ? "Noch sieht niemand dieses Dokument. Gib es oben frei: für Eltern oder für Schulen."
                   : "Noch sieht niemand dieses Dokument. Freigeben kann, wer die Rolle „Dokumente“ hat."
               }
             />
@@ -413,7 +418,7 @@ export default function TraegerDocumentPage() {
                     </div>
                   </div>
                   {canManage ? (
-                    <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
+                    <ResponsiveRowActions leading={20}>
                       <Button
                         type="button"
                         variant="outline_danger"
@@ -427,7 +432,7 @@ export default function TraegerDocumentPage() {
                       >
                         Zurücknehmen
                       </Button>
-                    </div>
+                    </ResponsiveRowActions>
                   ) : null}
                 </ResponsiveActionRow>
               ))}

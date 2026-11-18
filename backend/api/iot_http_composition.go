@@ -3,12 +3,14 @@ package api
 import (
 	"context"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	iotCore "github.com/moto-ogs/project-phoenix/api/iot"
 	iotCompose "github.com/moto-ogs/project-phoenix/api/iot/compose"
+	customMiddleware "github.com/moto-ogs/project-phoenix/middleware"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth"
 	devicesAPI "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
@@ -78,17 +80,37 @@ func bindIoTHostSessionEnd(end sessionsAPI.EndSession) iotCompose.EndSession {
 }
 
 // NewIoTAdministration mounts the same native Device Fleet resource in its
-// JWT/tenant group; now is the root's clock.
-func NewIoTAdministration(administration devicefleet.Administration, now func() time.Time) iotCompose.Administration {
+// JWT/tenant group: sessions guard removal against an open kiosk session,
+// logger records removal outcomes, history keeps the Gerätelebenszyklus and
+// names the staff in it, now is the root's clock.
+func NewIoTAdministration(administration devicefleet.Administration, history devicefleet.LifecycleHistory, names DeviceActorDirectory, sessions DeviceRemovalSessions, logger *slog.Logger, now func() time.Time) iotCompose.Administration {
 	return func(r chi.Router, withTx iotCompose.Middleware) {
-		devicesResource := devicesAPI.NewResource(administration, iotDevicesRuntime(now))
+		runtime := iotDevicesRuntime(history, names, sessions, logger, now)
+		if administration != nil {
+			// The composed owner serves the Geräteplatz read beside its
+			// facade (ADR 0178); a test double has none.
+			runtime.DeviceSlots, _ = administration.Fleet().(devicefleet.DeviceSlotQuery)
+		}
+		devicesResource := devicesAPI.NewResource(administration, runtime)
 		r.With(withTx).Mount("/", devicesResource.Router())
 	}
 }
 
 // NewIoTErrorReporter builds the same native report handler with its route logger.
-func NewIoTErrorReporter(relay iotCore.ErrorReportRelay) iotCompose.ErrorReports {
+func NewIoTErrorReporter(relay iotCore.ErrorReportRelay, quota iotCore.ErrorReportQuota) iotCompose.ErrorReports {
 	return func(logger *slog.Logger) iotCompose.ErrorReporter {
-		return iotCore.NewErrorReports(relay, iotErrorReportsRuntime(), logger)
+		return iotCore.NewErrorReports(relay, iotErrorReportsRuntime(), quota, logger)
 	}
+}
+
+func deviceErrorReportQuota(limits customMiddleware.RateLimitStore) iotCore.ErrorReportQuota {
+	return func(ctx context.Context, id int64) (bool, error) {
+		const perMinute = iotCore.ErrorReportsPerMinute
+		settle, err := limits.Admit(ctx, deviceErrorReportRateKey(id), perMinute, perMinute, false)
+		return settle != nil, err
+	}
+}
+
+func deviceErrorReportRateKey(id int64) string {
+	return "iot-error-report:" + strconv.FormatInt(id, 10)
 }

@@ -86,22 +86,22 @@ export function accidentReportDraftErrors(
 ): Record<string, string> {
   const errors: Record<string, string> = {};
   if (!instantFromLocal(draft.occurredAt)) {
-    errors.occurredAt = "Bitte geben Sie Tag und Uhrzeit des Unfalls an.";
+    errors.occurredAt = "Bitte gib Tag und Uhrzeit des Unfalls an.";
   }
   if (!draft.location.trim()) {
-    errors.location = "Bitte geben Sie den Unfallort an.";
+    errors.location = "Bitte gib den Unfallort an.";
   }
   if (!draft.description.trim()) {
-    errors.description = "Bitte beschreiben Sie, was passiert ist.";
+    errors.description = "Bitte beschreibe, was passiert ist.";
   }
   if (!draft.injuryKind.trim()) {
-    errors.injuryKind = "Bitte geben Sie die Art der Verletzung an.";
+    errors.injuryKind = "Bitte gib die Art der Verletzung an.";
   }
   if (draft.doctorVisited && !draft.doctor.trim()) {
-    errors.doctor = "Bitte geben Sie Arztpraxis oder Krankenhaus an.";
+    errors.doctor = "Bitte gib Arztpraxis oder Krankenhaus an.";
   }
   if (!draft.supervisor.trim()) {
-    errors.supervisor = "Bitte geben Sie die Aufsichtsperson an.";
+    errors.supervisor = "Bitte gib die Aufsichtsperson an.";
   }
   return errors;
 }
@@ -170,7 +170,7 @@ export function AccidentReportFormFields({
       <Textarea
         name="description"
         label="Was ist passiert?"
-        placeholder="Beschreiben Sie den Hergang: Ort, Tätigkeit und wie es zum Unfall kam."
+        placeholder="Beschreibe den Hergang: Ort, Tätigkeit und wie es zum Unfall kam."
         value={draft.description}
         onChange={(e) => set("description", e.target.value)}
         error={fieldError("description")}

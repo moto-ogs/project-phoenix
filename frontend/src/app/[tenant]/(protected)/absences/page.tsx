@@ -12,7 +12,7 @@ import type { DateRange } from "react-day-picker";
 import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DateRangePicker } from "~/components/ui/date-range-picker";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import type { FilterConfig } from "~/components/ui/page-header/types";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
@@ -277,11 +277,21 @@ export default function AbsencesPage() {
 
   // Statuszeile unter dem Titel: gezählte Einträge der aktuellen Seite und der
   // gewählte Zeitraum. Der Ladezustand gehört separat in die Kopfkarte.
-  const statusLine = entries
-    ? `${entries.length} ${entries.length === 1 ? "Eintrag" : "Einträge"}${
-        displayedPage > 1 || hasMore ? ` auf Seite ${displayedPage}` : ""
-      } · ${formatDate(effectiveFromIso!)} bis ${formatDate(effectiveToIso!)}`
-    : null;
+  const statusLine = entries ? (
+    <TenantPageStats
+      items={[
+        {
+          value: entries.length,
+          label: `${entries.length === 1 ? "Eintrag" : "Einträge"}${
+            displayedPage > 1 || hasMore ? ` auf Seite ${displayedPage}` : ""
+          }`,
+        },
+        {
+          label: `${formatDate(effectiveFromIso!)} bis ${formatDate(effectiveToIso!)}`,
+        },
+      ]}
+    />
+  ) : null;
 
   const isEmpty =
     !swrError &&
@@ -322,7 +332,7 @@ export default function AbsencesPage() {
             ? {
                 title: "Keine Abwesenheit gefunden",
                 description:
-                  "Zu Suche und Filtern passt kein Eintrag. Setzen Sie die Filter zurück, um alle Einträge zu sehen.",
+                  "Zu Suche und Filtern passt kein Eintrag. Setze die Filter zurück, um alle Einträge zu sehen.",
                 action: (
                   <Button
                     type="button"
@@ -338,7 +348,7 @@ export default function AbsencesPage() {
             : {
                 title: "Keine Abwesenheit eingetragen",
                 description:
-                  "Im gewählten Zeitraum fehlt für alle Kinder ein Eintrag. Tragen Sie eine Krankmeldung beim Kind ein, oder wählen Sie oben einen anderen Zeitraum.",
+                  "Im gewählten Zeitraum fehlt für alle Kinder ein Eintrag. Trage eine Krankmeldung beim Kind ein, oder wähle oben einen anderen Zeitraum.",
               }
           : null
       }
@@ -363,7 +373,7 @@ export default function AbsencesPage() {
                 disabled={displayedPage === 1 || isValidating}
                 disabledReason={
                   displayedPage === 1
-                    ? "Sie sehen schon die erste Seite."
+                    ? "Du siehst schon die erste Seite."
                     : undefined
                 }
                 tooltip="Zeigt die vorherigen Abwesenheitstage."

@@ -63,9 +63,9 @@ Einladung länger offen, als Go sie zeigte.
    daraus und braucht keine Uhr mehr.
 4. Die Wächter der Funktion bleiben unverändert: Schule der Transaktion,
    Adresse des Kontos, offene Einladung.
-5. Auf der Uhr von Identity & Access bleibt die Belieferung
-   (`auth.caterer_schools.started_at`, `ended_at`): Kein Wächter der Datenbank
-   vergleicht sie.
+5. Die Belieferung (`auth.caterer_schools.started_at`, `ended_at`) blieb
+   zunächst auf der Uhr von Identity & Access. Seit #7147 gilt der Nachtrag
+   zur Caterer-Glocke.
 
 ## Folgen
 
@@ -147,3 +147,30 @@ Laufzeit und die Gültigkeit in der Mail.
 Einladungen ablaufen, während eine andere Transaktion sie sperrt.
 `TestGetStudentGuardians_OpenInvitationPendingOnTheDatabaseClock` hält die
 Elternliste.
+
+## Nachtrag 2026-11-18: Rollback der Adressbindung
+
+Beim Rollback von 1.15.865 kann eine ältere Anwendung den Einladungsablauf
+auf ihrer eigenen Uhr prüfen. Down setzt den Ablauf einer unverbrauchten
+Einladung mit abweichender Empfängeradresse höchstens auf den Unix-Epoch.
+Auf Freigabe wartende Anfragen erhalten später einen neuen Link. Die
+Änderung gehört in Down von 1.15.865, da erst dieser Schritt die
+Empfängerbindung entfernt. [#7383](https://github.com/moto-ogs/project-phoenix/issues/7383)
+
+`api.NewAuthTestModule` ist für Elterneinladungsmails auf der echten Uhr
+vorgesehen. Tests, die die Uhr bewegen und die Mail lesen, verwenden
+`api.NewTestIdentityAccessWithConfig`. Dieser Testaufbau verwendet den
+Produktionspfad mit derselben Uhr für Ausstellung und Zustellung.
+`TestAuthTestModuleGuardianMailStatesTheLifetimeOnTheRealClock` und
+`assertGuardianInvitationOnTheDatabaseClock` prüfen beide Fälle. So kann
+der gemeinsame Testhelfer seine eingefrorenen Bindungen behalten.
+
+## Nachtrag 2026-11-18: Die Glocke prüft die Belieferung auf der Datenbankuhr
+
+Seit #7147 geben die Datenbankfunktionen der Caterer-Glocke eine
+Belieferung erst ab `started_at <= statement_timestamp()` frei. Identity &
+Access stempelt Anfang und Ende deshalb mit derselben Datenbankuhr.
+`databaseClock` übernimmt beide Stempel im bestehenden SQL-Uhrenbudget.
+Für eine gespeicherte Belieferung mit zukünftigem Beginn endet der
+Zeitraum frühestens am gespeicherten Beginn. Die Glocke blendet die
+Belieferung aus, sobald ein Ende gespeichert ist.

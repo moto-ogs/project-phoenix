@@ -25,7 +25,6 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
-import { FramedList } from "~/components/ui/framed-list";
 import { IconTile } from "~/components/ui/icon-tile";
 import { Input } from "~/components/ui/input";
 import { ListRowLink } from "~/components/ui/list-row-link";
@@ -98,7 +97,7 @@ function destinationChanged(recipient: ExportRecipient, draft: Draft) {
 }
 
 const PASSWORD_AGAIN =
-  "Bitte geben Sie das Passwort noch einmal ein. moto schickt es nur an die Adresse, für die Sie es eingegeben haben.";
+  "Bitte gib das Passwort noch einmal ein. moto schickt es nur an die Adresse, für die du es eingegeben hast.";
 
 /** The card with address and password; notices on the page jump here (#7054). */
 export const EXPORT_RECIPIENT_ACCESS_ID = "export-recipient-access";
@@ -149,9 +148,9 @@ export function ExportRecipientFormCard({
     const port = Number(draft.port);
     const fields: Record<string, string> = {};
     if (!draft.name.trim())
-      fields.name = "Bitte geben Sie dem Empfänger einen Namen.";
+      fields.name = "Bitte gib dem Empfänger einen Namen.";
     if (!Number.isInteger(port) || port < 1 || port > 65535)
-      fields.port = "Bitte geben Sie eine Zahl zwischen 1 und 65535 ein.";
+      fields.port = "Bitte gib eine Zahl zwischen 1 und 65535 ein.";
     if (
       recipient?.passwordSet &&
       !draft.password &&
@@ -159,7 +158,7 @@ export function ExportRecipientFormCard({
     )
       fields.password = PASSWORD_AGAIN;
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Angaben.", fields);
+      formErrors.invalid("Bitte prüfe die markierten Angaben.", fields);
       return;
     }
     setSaving(true);
@@ -211,14 +210,14 @@ export function ExportRecipientFormCard({
   const formats = recipient?.formats ?? [];
   const deleteDescription =
     formats.length > 0
-      ? `moto löscht Adresse, Benutzername und Passwort. ${formatsText(formats)} können Sie danach nur herunterladen, bis Sie sie einem anderen Empfänger zuordnen. Der Verlauf der Übergaben bleibt.`
+      ? `moto löscht Adresse, Benutzername und Passwort. ${formatsText(formats)} kannst du danach nur herunterladen, bis du sie einem anderen Empfänger zuordnest. Der Verlauf der Übergaben bleibt.`
       : "moto löscht Adresse, Benutzername und Passwort. Der Empfänger bekommt keine Datei, nichts geht auf den Download zurück. Der Verlauf der Übergaben bleibt.";
 
   return (
     <SectionCard
       id={EXPORT_RECIPIENT_ACCESS_ID}
       title="Zugang zum Empfänger"
-      description="Diese Angaben bekommen Sie von der Stelle, die die Dateien annimmt, zum Beispiel von Ihrer Kämmerei."
+      description="Diese Angaben bekommst du von der Stelle, die die Dateien annimmt, zum Beispiel von deiner Kämmerei."
       icon={KeyRound}
       footer={
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -243,7 +242,7 @@ export function ExportRecipientFormCard({
             isLoading={saving}
             loadingText="Speichert…"
             disabled={!changed && recipient !== null}
-            disabledReason="Sie haben noch nichts geändert."
+            disabledReason="Du hast noch nichts geändert."
             noTooltip="Ein reines Speichern ohne Folgen."
           >
             {recipient ? "Speichern" : "Empfänger anlegen"}
@@ -334,7 +333,7 @@ export function ExportRecipientFormCard({
           name="host_key_fingerprint"
           label="Fingerabdruck"
           placeholder="SHA256:…"
-          hint="Beginnt mit SHA256:. Fragen Sie beim Empfänger nach dem Fingerabdruck für den RSA-Schlüssel. Passt er nicht, übergibt moto nichts."
+          hint="Beginnt mit SHA256:. Frage beim Empfänger nach dem Fingerabdruck für den RSA-Schlüssel. Passt er nicht, übergibt moto nichts."
           spellCheck={false}
           className="font-mono"
           value={draft.hostKeyFingerprint}
@@ -434,7 +433,7 @@ export function ExportFormatAssignmentCard({
   return (
     <SectionCard
       title="Welche Datei geht wohin"
-      description="Jede Datei geht an genau einen Empfänger. Ohne Empfänger laden Sie sie herunter."
+      description="Jede Datei geht an genau einen Empfänger. Ohne Empfänger lädst du sie herunter."
       icon={ArrowRightLeft}
       footer={
         <EditActions
@@ -496,7 +495,7 @@ export function ExportRecipientListCard({
   return (
     <SectionCard
       title="Empfänger"
-      description="Jeder Empfänger hat seinen eigenen Zugang. Öffnen Sie einen Empfänger, um ihn zu ändern."
+      description="Jeder Empfänger hat seinen eigenen Zugang. Öffne einen Empfänger, um ihn zu ändern."
       icon={Inbox}
       flush={recipients.length > 0}
     >
@@ -504,46 +503,50 @@ export function ExportRecipientListCard({
         <EmptyState
           variant="compact"
           title="Noch kein Empfänger."
-          description="Fügen Sie oben einen Empfänger hinzu, zum Beispiel Ihre Kämmerei."
+          description="Füge oben einen Empfänger hinzu, zum Beispiel deine Kämmerei."
         />
       ) : (
-        <FramedList className="rounded-none border-0">
+        // The flush card is the frame: the rows run to its edge (#7407).
+        <ul className="divide-y divide-gray-100">
           {recipients.map((recipient) => {
             const status = recipientStatus(recipient);
             return (
-              <ListRowLink
-                key={recipient.id}
-                href={traegerPath(exportRecipientPath(recipient.id))}
-                icon={
-                  <IconTile
-                    icon={<Inbox aria-hidden />}
-                    size="sm"
-                    className="max-sm:hidden"
-                  />
-                }
-                title={recipient.name}
-                subtitle={
-                  <>
-                    <span className="block">
-                      {recipient.host
-                        ? destinationText(
-                            recipient.host,
-                            recipient.remoteDirectory,
-                          )
-                        : "Noch keine Adresse"}
-                    </span>
-                    <span className="block text-gray-500">
-                      {recipient.formats.length > 0
-                        ? `Bekommt: ${formatsText(recipient.formats)}`
-                        : "Bekommt noch keine Datei"}
-                    </span>
-                  </>
-                }
-                badge={<StatusBadge label={status.label} tone={status.tone} />}
-              />
+              <li key={recipient.id}>
+                <ListRowLink
+                  href={traegerPath(exportRecipientPath(recipient.id))}
+                  icon={
+                    <IconTile
+                      icon={<Inbox aria-hidden />}
+                      size="sm"
+                      className="max-sm:hidden"
+                    />
+                  }
+                  title={recipient.name}
+                  subtitle={
+                    <>
+                      <span className="block">
+                        {recipient.host
+                          ? destinationText(
+                              recipient.host,
+                              recipient.remoteDirectory,
+                            )
+                          : "Noch keine Adresse"}
+                      </span>
+                      <span className="block text-gray-500">
+                        {recipient.formats.length > 0
+                          ? `Bekommt: ${formatsText(recipient.formats)}`
+                          : "Bekommt noch keine Datei"}
+                      </span>
+                    </>
+                  }
+                  badge={
+                    <StatusBadge label={status.label} tone={status.tone} />
+                  }
+                />
+              </li>
             );
           })}
-        </FramedList>
+        </ul>
       )}
     </SectionCard>
   );
@@ -650,7 +653,7 @@ export function ExportHandoverHistoryCard({
         emptyState={
           <EmptyState
             title="Noch keine Übergabe."
-            description="Übergeben Sie eine Datei bei den Exporten. Sie steht dann hier."
+            description="Übergib eine Datei bei den Exporten. Sie steht dann hier."
           />
         }
       />

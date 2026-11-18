@@ -84,14 +84,14 @@ export function useWorkingTimeConfirmation(): WorkingTimeConfirmationState {
       title="Trotzdem so planen?"
       confirmText="Trotzdem planen"
       confirmVariant="warning"
-      confirmTooltip="Speichert die Schicht mit Ihrer Begründung im Änderungsprotokoll."
+      confirmTooltip="Speichert die Schicht mit deiner Begründung im Änderungsprotokoll."
       isConfirmDisabled={reasonMissing}
-      confirmDisabledReason="Bitte schreiben Sie zuerst eine Begründung."
+      confirmDisabledReason="Bitte schreibe zuerst eine Begründung."
       isBackdropDismissDisabled
     >
       <div className="space-y-4">
         <p className="text-sm text-gray-700">
-          Die Schicht verletzt eine Arbeitszeitregel Ihres Trägers. moto zählt
+          Die Schicht verletzt eine Arbeitszeitregel deines Trägers. moto zählt
           dabei alle Einsatzorte der Person.
         </p>
         <ul className="list-disc space-y-2 pl-5 text-sm text-gray-900">
@@ -115,7 +115,7 @@ export function useWorkingTimeConfirmation(): WorkingTimeConfirmationState {
         ) : null}
         <p className="text-sm text-gray-600">
           moto prüft die Regeln als Hilfe. Ob die Planung erlaubt ist,
-          entscheiden Sie.
+          entscheidest du.
         </p>
       </div>
     </ConfirmationModal>

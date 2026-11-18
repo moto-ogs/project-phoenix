@@ -42,6 +42,13 @@ func (d schedulerTenantDirectory) PublishSchoolNames(ctx context.Context) (int, 
 	return d.schoolNames(schools), nil
 }
 
+// HoldLiveSchool holds the school of the running tenant transaction under a
+// share lock (#6305, #7478) and reports whether it is active and not deleted.
+func (d schedulerTenantDirectory) HoldLiveSchool(ctx context.Context, tenantID int64) (bool, error) {
+	school, found, err := lookupSchoolForShare(ctx, d.schools, tenantID)
+	return found && school.Active && !school.IsDeleted(), err
+}
+
 func (d schedulerTenantDirectory) ListActiveTenantIDs(ctx context.Context) ([]int64, error) {
 	schools, err := d.schools.ListActiveSchools(ctx)
 	return schoolIDs(schools), err

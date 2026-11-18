@@ -151,7 +151,7 @@ describe("ExportDialog", () => {
 
     expect(
       await screen.findByText(
-        "Das Druckfenster ging nicht auf. Bitte erlauben Sie neue Fenster für moto.",
+        "Das Druckfenster ging nicht auf. Bitte erlaube neue Fenster für moto.",
       ),
     ).toBeInTheDocument();
     expect(onPrint).not.toHaveBeenCalled();

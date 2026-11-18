@@ -53,6 +53,7 @@
   "companion_note_required": "Lütfen çocuğun eve kiminle gittiğini belirtin.",
   "complete_withdrawal_confirmation_required": "{object} henüz kayıttan çıkarılamaz. Lütfen {confirmation} ile onaylayın.",
   "consent_required": "Lütfen tüm zorunlu onayları verin.",
+  "health_consent_required": "Sağlık bilgisi girdiniz. Sağlık bilgileri için onay kutusunu işaretleyin veya bu alanları boş bırakın.",
   "renewal_terms_required": "Lütfen yeni dönemin koşullarını onaylayın.",
   "renewal_terms_changed": "Koşullar az önce değişti. Lütfen tekrar okuyun ve ardından onaylayın.",
   "correction_reason_required": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",

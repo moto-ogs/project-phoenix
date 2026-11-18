@@ -51,7 +51,7 @@ func (rs *StaffAdminResource) setVacationOpening(w http.ResponseWriter, r *http.
 	}
 	decidedBy, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	var req setVacationOpeningRequest
@@ -98,7 +98,7 @@ func (rs *StaffAdminResource) deleteVacationOpening(w http.ResponseWriter, r *ht
 	}
 	deletedBy, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	if err := rs.StaffAbsenceService.DeleteVacationOpening(r.Context(), staffID, deletedBy, year); err != nil {

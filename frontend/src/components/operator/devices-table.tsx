@@ -7,6 +7,8 @@ import {
   getDeviceTypeDisplayName,
   getDeviceStatusDisplayName,
   formatLastSeen,
+  isDeviceBlocked,
+  isSystemDevice,
 } from "~/lib/iot-helpers";
 import { DataTable } from "~/components/ui/data-table";
 import type { DataTableColumn } from "~/components/ui/data-table";
@@ -14,7 +16,14 @@ import {
   OverflowMenu,
   type OverflowMenuEntry,
 } from "~/components/ui/page-header/OverflowMenu";
-import { ArrowRightLeft, KeyRound, Trash2 } from "lucide-react";
+import {
+  ArrowRightLeft,
+  History,
+  KeyRound,
+  Lock,
+  LockOpen,
+  Trash2,
+} from "lucide-react";
 import {
   StatusBadge,
   type StatusBadgeTone,
@@ -26,6 +35,10 @@ function DeviceStatusBadge({
   status,
   isOnline,
 }: Readonly<{ status: string; isOnline: boolean }>) {
+  // A blocked device is refused whatever its last connection says (#2317).
+  if (isDeviceBlocked({ status })) {
+    return <StatusBadge tone="red" compact label="Gesperrt" />;
+  }
   if (isOnline) {
     return <StatusBadge tone="green" compact label="Online" />;
   }
@@ -50,7 +63,11 @@ interface DevicesTableProps {
   isLoading?: boolean;
   onSetKey?: (device: OperatorDevice) => void;
   onTransfer?: (device: OperatorDevice) => void;
+  /** Blocks (true) or unblocks (false) a device (#2317). */
+  onSetBlocked?: (device: OperatorDevice, blocked: boolean) => void;
   onDelete?: (device: OperatorDevice) => void;
+  /** Opens the device's history (#2321). */
+  onShowHistory?: (device: OperatorDevice) => void;
 }
 
 export function DevicesTable({
@@ -59,7 +76,9 @@ export function DevicesTable({
   isLoading = false,
   onSetKey,
   onTransfer,
+  onSetBlocked,
   onDelete,
+  onShowHistory,
 }: Readonly<DevicesTableProps>) {
   const columns = useMemo<DataTableColumn<OperatorDevice>[]>(() => {
     const cols: DataTableColumn<OperatorDevice>[] = [];
@@ -138,12 +157,20 @@ export function DevicesTable({
       },
     );
 
-    if (onSetKey || onTransfer || onDelete) {
+    if (onSetKey || onTransfer || onSetBlocked || onDelete || onShowHistory) {
       cols.push({
         key: "actions",
         header: "Aktionen",
         render: (row) => {
           const items: OverflowMenuEntry[] = [];
+          if (onShowHistory) {
+            items.push({
+              label: "Verlauf",
+              description: "Zeigt, wer das Gerät wann geändert hat.",
+              icon: <History className="h-4 w-4" aria-hidden="true" />,
+              onClick: () => onShowHistory(row),
+            });
+          }
           if (onTransfer) {
             items.push({
               label: "Schule wechseln",
@@ -158,10 +185,25 @@ export function DevicesTable({
               onClick: () => onSetKey(row),
             });
           }
+          if (onSetBlocked && !isSystemDevice(row)) {
+            const blocked = isDeviceBlocked(row);
+            items.push({
+              label: blocked ? "Entsperren" : "Sperren",
+              description: blocked
+                ? "Gibt dem Gerät sofort wieder Zugang."
+                : "Weist den Kiosk sofort ab. Gerät, Raum und Verlauf bleiben.",
+              icon: blocked ? (
+                <LockOpen className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Lock className="h-4 w-4" aria-hidden="true" />
+              ),
+              onClick: () => onSetBlocked(row, !blocked),
+            });
+          }
           if (onDelete) {
             if (items.length > 0) items.push({ kind: "separator" });
             items.push({
-              label: "Löschen",
+              label: "Entfernen",
               icon: <Trash2 className="h-4 w-4" aria-hidden="true" />,
               destructive: true,
               onClick: () => onDelete(row),
@@ -179,7 +221,7 @@ export function DevicesTable({
     }
 
     return cols;
-  }, [showSchool, onSetKey, onTransfer, onDelete]);
+  }, [showSchool, onSetKey, onTransfer, onSetBlocked, onDelete, onShowHistory]);
 
   return (
     <DataTable

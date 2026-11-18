@@ -8,6 +8,7 @@
   "device_inactive": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
   "device_pin_invalid": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
   "device_pin_required": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
+  "device_slots_full": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "invalid_rfid_tag": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "invalid_staff_clock_request": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "invalid_staff_clock_state": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
@@ -33,5 +34,6 @@
   "student_already_active": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "student_not_present": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "wc_needs_staff": "Nie udało się przetworzyć: {object}. Spróbuj ponownie później.",
-  "wc_not_configured": "Nie udało się przetworzyć: {object}. Spróbuj ponownie później."
+  "wc_not_configured": "Nie udało się przetworzyć: {object}. Spróbuj ponownie później.",
+  "device_in_active_session": "Nie udało się zmienić: {object}. Sprawdź aktualny stan."
 }

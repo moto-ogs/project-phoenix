@@ -102,14 +102,10 @@ export function FamilyChildrenModal({
       fieldErrors.valid_until = "Das Ende liegt vor dem Beginn.";
     }
     if (Object.keys(fieldErrors).length > 0) {
-      formErrors.invalid(
-        "Bitte prüfen Sie die markierten Felder.",
-        fieldErrors,
-      );
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fieldErrors);
       return;
     }
-    const contract = family.count?.contractId ?? family.children[0]?.contractId;
-    if (!contract) return;
+    const contract = family.count?.contractId ?? family.contractId;
     await save.run(async (op) => {
       try {
         const result = await confirmFamilyChildren({

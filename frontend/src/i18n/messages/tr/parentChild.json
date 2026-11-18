@@ -55,7 +55,7 @@
     "photoViaCareDescription": "Fotoğraf iznini geri çekmek için {careTerm} ile iletişime geçin.",
     "items": {
       "agb": "Genel şartlar ve koşullar",
-      "data_processing": "Gizlilik bilgilendirmesi okundu",
+      "data_processing": "Gizlilik bilgilendirmesi verildi",
       "email_contact": "E-posta ile iletişime izin verildi",
       "photo": "Fotoğraf izni"
     },

@@ -43,7 +43,7 @@ import { createLogger } from "~/lib/logger";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import { displayEmail, isDemoBuild } from "~/lib/demo-build";
 import { ConfirmationModal, Modal } from "~/components/ui/modal";
@@ -82,6 +82,11 @@ import { enrollmentsConcept } from "~/lib/concepts/enrollments";
 import { peopleConcept } from "~/lib/concepts/people";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import {
+  SALUTATIONS,
+  type Salutation,
+  salutationTitle,
+} from "~/lib/salutation";
 
 const logger = createLogger({ component: "GuardiansPanel" });
 
@@ -185,9 +190,7 @@ export default function GuardiansPanel({
     guardiansGuard.refusal !== undefined ||
     accountsGuard.refusal !== undefined ||
     [guardiansResource.error, accountsResource.error].some(
-      (error) =>
-        error instanceof ApiError &&
-        (error.status === 401 || error.status === 403),
+      (error) => error instanceof ApiError && isAccessRefusal(error),
     );
   const guardians: ChildGuardian[] = accessRefused
     ? []
@@ -325,16 +328,19 @@ export default function GuardiansPanel({
       savedSuffix: t("guardians.savedButStale"),
     });
 
-  // A dialog calls this after its write went through.
+  // A dialog calls this after its write went through. The own name also
+  // feeds the greeting, which reads the account profile.
+  const invalidate = useInvalidateMatching();
   const handleSaved = useCallback(
     async (text: string) => {
       setAddMode(null);
       setEditingContact(null);
       setEditingPickup(null);
       setMessage(text);
+      void invalidate((key) => key === parentKeys.profile());
       await refreshAfterWrite();
     },
-    [refreshAfterWrite],
+    [invalidate, refreshAfterWrite],
   );
 
   const accountById = new Map(
@@ -1147,6 +1153,11 @@ function ContactModal({
   const tPermission = useCareTermTranslations("parentPickupPermission");
   const [firstName, setFirstName] = useState(guardian?.first_name ?? "");
   const [lastName, setLastName] = useState(guardian?.last_name ?? "");
+  // Die Anrede wählt jede Person nur für sich selbst (#7362).
+  const ownProfile = mode === "edit" && guardian?.is_self === true;
+  const [salutation, setSalutation] = useState<Salutation | "">(
+    guardian?.salutation ?? "",
+  );
   const [email, setEmail] = useState(guardian?.email ?? "");
   const [street, setStreet] = useState(guardian?.address_street ?? "");
   const [city, setCity] = useState(guardian?.address_city ?? "");
@@ -1238,6 +1249,7 @@ function ContactModal({
     const payload: GuardianContactPayload = {
       first_name: firstName.trim(),
       last_name: lastName.trim(),
+      ...(ownProfile ? { salutation } : {}),
       email: email.trim() || null,
       address_street: street.trim() || null,
       address_city: city.trim() || null,
@@ -1434,6 +1446,22 @@ function ContactModal({
               </InsetPanel>
             ) : null}
           </div>
+        ) : null}
+        {ownProfile ? (
+          <CustomSelect
+            id="guardian-edit-salutation"
+            label={t("guardians.salutationLabel")}
+            hint={t("guardians.salutationHint")}
+            value={salutation}
+            options={[
+              { value: "", label: t("guardians.salutationNone") },
+              ...SALUTATIONS.map((value) => ({
+                value,
+                label: salutationTitle(value),
+              })),
+            ]}
+            onChange={(value) => setSalutation(value as Salutation | "")}
+          />
         ) : null}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input

@@ -111,7 +111,7 @@ describe("ParentAuthGuard", () => {
     );
 
     expect(
-      screen.getByText(/Ihre Schule nutzt das Elternportal zurzeit nicht/),
+      screen.getByText(/Deine Schule nutzt das Elternportal zurzeit nicht/),
     ).toBeInTheDocument();
     expect(screen.queryByText("Elternbereich")).not.toBeInTheDocument();
   });
@@ -130,7 +130,7 @@ describe("ParentAuthGuard", () => {
     );
 
     expect(
-      screen.getByText(/Ihre Schule nutzt das Elternportal zurzeit nicht/),
+      screen.getByText(/Deine Schule nutzt das Elternportal zurzeit nicht/),
     ).toBeInTheDocument();
     expect(screen.queryByText("Elternbereich")).not.toBeInTheDocument();
   });
@@ -154,7 +154,7 @@ describe("ParentAuthGuard", () => {
     );
 
     expect(
-      screen.getByText(/Ihre Schule nutzt das Elternportal zurzeit nicht/),
+      screen.getByText(/Deine Schule nutzt das Elternportal zurzeit nicht/),
     ).toBeInTheDocument();
     expect(screen.queryByText("Elternbereich")).not.toBeInTheDocument();
   });

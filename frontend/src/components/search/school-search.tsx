@@ -508,7 +508,7 @@ export function SchoolSearchDialog({
         description={
           isPhone && scope && !scope.contacts
             ? "Telefonnummern finden nur Konten, die Kontaktdaten sehen dürfen."
-            : `Suchen Sie nach ${scope?.contacts ? "Name, Klasse, Gruppe, Notiz, Telefonnummer, E-Mail, Seite oder Einstellung" : "Name, Klasse, Gruppe, Seite oder Einstellung"}.`
+            : `Suche nach ${scope?.contacts ? "Name, Klasse, Gruppe, Notiz, Telefonnummer, E-Mail, Seite oder Einstellung" : "Name, Klasse, Gruppe, Seite oder Einstellung"}.`
         }
       />
     );

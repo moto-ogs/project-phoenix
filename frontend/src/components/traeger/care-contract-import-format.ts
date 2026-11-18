@@ -38,6 +38,7 @@ export const CONTRACT_IMPORT_GROUPS: readonly {
       "party_last_name",
       "party_email",
       "debtor_number",
+      "family_children",
     ],
   },
 ];
@@ -64,6 +65,7 @@ export const CONTRACT_IMPORT_FIELD_LABELS: Record<ContractImportField, string> =
     party_last_name: "Nachname der Eltern",
     party_email: "E-Mail der Eltern",
     debtor_number: "Debitorennummer",
+    family_children: "Kinder in der Familie",
   };
 
 export const CONTRACT_IMPORT_FIELD_HINTS: Partial<
@@ -79,6 +81,8 @@ export const CONTRACT_IMPORT_FIELD_HINTS: Partial<
     "Die Person, die den Vertrag unterschrieben hat. Ohne Spalte hat der Vertrag keinen Vertragspartner.",
   party_email:
     "Nötig für Rechnungen per Mail. Geschwister erkennt moto nur über dieselbe Adresse.",
+  family_children:
+    "Alle Kinder der Familie, auch Geschwister ohne Vertrag. Gilt als bestätigt ab Vertragsbeginn.",
 };
 
 export const CONTRACT_IMPORT_STATUS: Record<
@@ -162,10 +166,11 @@ const INVALID_TEXT: Partial<Record<ContractImportField, string>> = {
   concluded_on: "„Abgeschlossen am“ ist kein Datum. Beispiel: 15.06.2026.",
   weekdays: "Die Wochentage sind nicht lesbar. Beispiel: Mo-Do oder Mo, Mi.",
   party_email: "Die E-Mail-Adresse ist nicht gültig.",
+  family_children: "„Kinder in der Familie“ ist keine ganze Zahl von 1 bis 20.",
 };
 
 const UNKNOWN_TEXT: Partial<Record<ContractImportField, string>> = {
-  school: "Diese Schule gehört nicht zu Ihrem Träger.",
+  school: "Diese Schule gehört nicht zu deinem Träger.",
   module: "Dieses Modul gibt es an der Schule nicht.",
 };
 
@@ -244,13 +249,66 @@ export function contractImportDebtorText(
     case "rows_differ":
       return "Debitorennummer: In der Datei stehen verschiedene Nummern für denselben Zahler. moto übernimmt keine.";
     case "invalid":
-      return "Debitorennummer passt nicht zu Ihrem Nummernformat.";
+      return "Debitorennummer passt nicht zu deinem Nummernformat.";
     default:
       return null;
   }
 }
 
-export type ContractImportFilter = "all" | "ready" | "problems" | "duplicate";
+/** Was der Import mit der Kinderzahl der Familie einer Zeile macht. */
+export function contractImportFamilyChildrenText(
+  row: ContractImportRow,
+): string | null {
+  const children =
+    row.familyChildren === 1 ? "1 Kind" : `${row.familyChildren ?? 0} Kinder`;
+  switch (row.familyChildrenStatus) {
+    case "new":
+      return `Kinderzahl der Familie: ${children}, bestätigt ab Vertragsbeginn.`;
+    case "same":
+      return `Kinderzahl der Familie: ${children} ist schon bestätigt.`;
+    case "differs":
+      return "Kinderzahl der Familie: In moto ist schon eine andere Zahl bestätigt. moto ändert sie nicht.";
+    case "rows_differ":
+      return "Kinderzahl der Familie: In der Datei stehen verschiedene Zahlen für dieselbe Familie. moto übernimmt keine.";
+    default:
+      return null;
+  }
+}
+
+export type ContractImportFilter =
+  "all" | "ready" | "no_email" | "problems" | "duplicate";
+
+/** Ob moto die Zeile übernimmt oder übernommen hat. */
+function takenOver(row: ContractImportRow): boolean {
+  return row.status === "ready" || row.status === "imported";
+}
+
+/**
+ * Ob moto die Zeile mit Eltern, aber ohne deren Mail-Adresse übernimmt oder
+ * übernommen hat. Eine solche Familie kennt moto nur über ihren Vertrag
+ * (ADR 0232 Punkt 7): keine Mail, keine Eltern-App, Geschwister getrennt.
+ * Zeilen, die draußen bleiben, bekommen keinen Vertrag und zählen nicht.
+ * Eine Zeile ganz ohne Eltern (`no_party`) hat ihren eigenen Hinweis und
+ * eine andere Folge (Punkt 9): Ihr fehlt der Rechnungsempfänger, nicht nur
+ * die Adresse.
+ */
+export function takenOverWithoutEmail(row: ContractImportRow): boolean {
+  return (
+    takenOver(row) && row.partyEmail === "" && !row.hints.includes("no_party")
+  );
+}
+
+/** Verträge, die moto ohne Mail-Adresse der Eltern übernimmt. */
+export function contractsWithoutEmail(result: ContractImportResult): number {
+  return result.rows.filter(takenOverWithoutEmail).length;
+}
+
+/** Was einer Familie ohne Mail-Adresse fehlt (Entscheidung in #7360). */
+export const WITHOUT_EMAIL_CONSEQUENCES = [
+  "Keine Mail von moto. Rechnungen gibt es nur auf Papier.",
+  "Kein Zugang zur Eltern-App.",
+  "Geschwister bleiben getrennte Familien.",
+] as const;
 
 /** Ob eine Zeile zum gewählten Filter gehört. */
 export function matchesContractImportFilter(
@@ -261,7 +319,9 @@ export function matchesContractImportFilter(
     case "all":
       return true;
     case "ready":
-      return row.status === "ready" || row.status === "imported";
+      return takenOver(row);
+    case "no_email":
+      return takenOverWithoutEmail(row);
     case "problems":
       return row.status === "conflict" || row.status === "invalid";
     default:
@@ -283,7 +343,7 @@ export function rowsWithoutConditions(result: ContractImportResult): number {
 
 /** Eine Beispieldatei mit den Spalten, die moto von selbst erkennt. */
 export const CONTRACT_IMPORT_SAMPLE = [
-  "Vorname Kind;Nachname Kind;Geburtsdatum;Schule;Modul;Wochentage;Vertragsbeginn;Vertragsende;Vorname Eltern;Nachname Eltern;E-Mail;Debitorennummer",
-  "Mia;Beispiel;03.05.2018;Grundschule Nord;OGS bis 16 Uhr;Mo-Do;01.08.2026;;Eva;Beispiel;eva.beispiel@example.org;70001",
-  "Ben;Muster;11.11.2019;Grundschule Nord;OGS bis 14 Uhr;;01.08.2026;31.01.2027;Jan;Muster;jan.muster@example.org;70002",
+  "Vorname Kind;Nachname Kind;Geburtsdatum;Schule;Modul;Wochentage;Vertragsbeginn;Vertragsende;Vorname Eltern;Nachname Eltern;E-Mail;Debitorennummer;Kinder in der Familie",
+  "Mia;Beispiel;03.05.2018;Grundschule Nord;OGS bis 16 Uhr;Mo-Do;01.08.2026;;Eva;Beispiel;eva.beispiel@example.org;70001;2",
+  "Ben;Muster;11.11.2019;Grundschule Nord;OGS bis 14 Uhr;;01.08.2026;31.01.2027;Jan;Muster;jan.muster@example.org;70002;1",
 ].join("\r\n");

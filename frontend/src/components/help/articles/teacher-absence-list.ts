@@ -16,13 +16,13 @@ export function teacherAbsenceListTopic(): HelpTopic {
     audience: "teacher",
     icon: "ClipboardList",
     steps: [
-      "Öffnen Sie `Fehlzeiten`.",
-      "Wählen Sie die Klasse.",
-      "Prüfen Sie `Von` und `Bis`. Vorgewählt ist das laufende Halbjahr.",
-      "Lesen Sie je Kind die Fehltage, davon entschuldigt und unentschuldigt.",
-      "Wählen Sie bei Bedarf `Exportieren`. Wählen Sie `PDF` oder `Excel`.",
+      "Öffne `Fehlzeiten`.",
+      "Wähle die Klasse.",
+      "Prüfe `Von` und `Bis`. Vorgewählt ist das laufende Halbjahr.",
+      "Lies je Kind die Fehltage, davon entschuldigt und unentschuldigt.",
+      "Wähle bei Bedarf `Exportieren`. Wähle `PDF` oder `Excel`.",
     ],
-    result: "Sie sehen die Fehltage jedes Kindes im gewählten Zeitraum.",
+    result: "Du siehst die Fehltage jedes Kindes im gewählten Zeitraum.",
     notes: [
       "Gezählt werden die Anwesenheit am Vormittag und die Meldungen.",
       "Krank oder entschuldigt gemeldet zählt als entschuldigt. Auch eine Meldung der Schulverwaltung zählt.",
@@ -38,7 +38,7 @@ export function teacherAbsenceListTopic(): HelpTopic {
       "Kinder ohne eigenen Eintrag in moto stehen noch nicht in der Liste.",
     ],
     troubleshootingDetails: [
-      "Viele Tage `Nicht erfasst`? Dann fehlt die Anwesenheit am Vormittag. Tragen Sie sie jeden Morgen ein.",
+      "Viele Tage `Nicht erfasst`? Dann fehlt die Anwesenheit am Vormittag. Trage sie jeden Morgen ein.",
       "`Unvollständiger Zeitraum`? Ältere Anwesenheit oder Meldungen können bereits gelöscht sein. Die Liste und der Export zählen erst ab dem angegebenen Datum.",
     ],
     related: [

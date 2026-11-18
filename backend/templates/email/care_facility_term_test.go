@@ -40,9 +40,9 @@ func TestSchoolBrandTemplate_CareFacilityTerm(t *testing.T) {
 	chosen["CareFacilityBadge"] = "GTS"
 	out := render(chosen)
 	assert.True(t, strings.Contains(out, `<div class="school-logo-fallback">GTS</div>`), "logo stand-in names GTS")
-	assert.True(t, strings.Contains(out, `<p class="school-name">Ihre GTS</p>`), "name stand-in names GTS")
+	assert.True(t, strings.Contains(out, `<p class="school-name">Deine GTS</p>`), "name stand-in names GTS")
 	assert.False(t, strings.Contains(out, ">OGS<"), "no OGS stand-in left")
-	assert.False(t, strings.Contains(out, "Ihre OGS"), "no OGS name stand-in left")
+	assert.False(t, strings.Contains(out, "Deine OGS"), "no OGS name stand-in left")
 
 	escaped := base()
 	escaped["CareFacilityTerm"] = "<b>GTS</b>"
@@ -55,9 +55,9 @@ func TestSchoolBrandTemplate_CareFacilityTerm(t *testing.T) {
 	long["CareFacilityBadge"] = "BAD"
 	out = render(long)
 	assert.True(t, strings.Contains(out, `<div class="school-logo-fallback">BAD</div>`), "badge stays short")
-	assert.True(t, strings.Contains(out, `<p class="school-name">Ihre Betreuung an der Schule am Markt</p>`), "full name as text")
+	assert.True(t, strings.Contains(out, `<p class="school-name">Deine Betreuung an der Schule am Markt</p>`), "full name as text")
 
 	unchanged := render(base())
 	assert.True(t, strings.Contains(unchanged, `<div class="school-logo-fallback">OGS</div>`), "default logo stand-in")
-	assert.True(t, strings.Contains(unchanged, `<p class="school-name">Ihre OGS</p>`), "default name stand-in")
+	assert.True(t, strings.Contains(unchanged, `<p class="school-name">Deine OGS</p>`), "default name stand-in")
 }

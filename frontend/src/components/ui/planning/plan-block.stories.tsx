@@ -51,6 +51,15 @@ export const Cancelled: Story = {
   },
 };
 
+export const Suggested: Story = {
+  args: {
+    status: "suggested",
+    size: "compact",
+    timeRange: "5 h",
+    label: "Vorschlag",
+  },
+};
+
 export const Selected: Story = {
   args: {
     selected: true,

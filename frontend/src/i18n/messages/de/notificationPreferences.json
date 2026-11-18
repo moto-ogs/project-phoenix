@@ -1,12 +1,12 @@
 {
   "title": "Benachrichtigungen",
-  "description": "Bleiben Sie über Nachrichten und wichtige Änderungen zu Ihrem Kind informiert.",
+  "description": "Bleibe über Nachrichten und wichtige Änderungen zu deinem Kind informiert.",
   "allEnabled": "Alle aktiviert",
   "enableAll": "Alle aktivieren",
   "enablingAll": "Wird aktiviert ...",
   "disableAll": "Alle deaktivieren",
-  "tenantDisabled": "Ihre Schule hat Benachrichtigungen derzeit deaktiviert. Ihre Auswahl wird gespeichert und gilt, sobald die Schule sie wieder einschaltet.",
-  "typeUnavailable": "Von Ihrer Schule derzeit deaktiviert.",
+  "tenantDisabled": "Deine Schule hat Benachrichtigungen derzeit deaktiviert. Deine Auswahl wird gespeichert und gilt, sobald die Schule sie wieder einschaltet.",
+  "typeUnavailable": "Von deiner Schule derzeit deaktiviert.",
   "groups": {
     "kinder": "Kinder",
     "mitteilungen": "Mitteilungen",
@@ -19,23 +19,27 @@
     },
     "parent_message": {
       "label": "Neue Nachricht der {careTerm}",
-      "description": "Wenn die {careTerm} Ihnen zu einem Kind schreibt."
+      "description": "Wenn die {careTerm} dir zu einem Kind schreibt."
     },
     "parent_appointment": {
       "label": "Neuer oder geänderter Termin",
-      "description": "Wenn ein Termin für Sie angelegt, geändert oder abgesagt wird."
+      "description": "Wenn ein Termin für dich angelegt, geändert oder abgesagt wird."
     },
     "parent_appointment_reminder": {
       "label": "Terminerinnerung",
-      "description": "Kurz vor einem Termin, zu dem Sie eingeladen sind. Nicht bei Terminen, die Sie abgesagt haben."
+      "description": "Kurz vor einem Termin, zu dem du eingeladen bist. Nicht bei Terminen, die du abgesagt hast."
     },
     "parent_request_decided": {
-      "label": "Entscheidung über Ihre Anfrage",
-      "description": "Wenn die {careTerm} über eine Ihrer Anfragen entschieden hat."
+      "label": "Entscheidung über deine Anfrage",
+      "description": "Wenn die {careTerm} über eine deiner Anfragen entschieden hat."
+    },
+    "meal_plan_changed": {
+      "label": "Speiseplan geändert",
+      "description": "Wenn sich das Essen an einem Tag ändert, an dem dein Kind ein Essen gebucht hat. Der Hinweis im Elternportal kommt immer. Die Mitteilung aufs Handy kommt nur, wenn du sie einschaltest."
     },
     "parent_care_cancelled": {
       "label": "Betreuung fällt aus",
-      "description": "Wenn die {careTerm} einen Betreuungstermin Ihres Kindes absagt."
+      "description": "Wenn die {careTerm} einen Betreuungstermin deines Kindes absagt."
     },
     "parent_school_closing_day_changed": {
       "label": "Schließtage",
@@ -43,7 +47,7 @@
     },
     "parent_billing_document": {
       "label": "Neues Dokument vom Träger",
-      "description": "Wenn der Träger Ihnen ein Dokument schickt oder freigibt, zum Beispiel einen Vertrag."
+      "description": "Wenn der Träger dir ein Dokument schickt oder freigibt, zum Beispiel einen Vertrag."
     }
   },
   "errorObjectList": "die Liste der Benachrichtigungen",
@@ -51,5 +55,5 @@
   "errorObjectEnableAll": "das Einschalten aller Benachrichtigungen",
   "errorObjectDisableAll": "das Ausschalten aller Benachrichtigungen",
   "enableAllTooltip": "Schaltet alle Benachrichtigungen auf einmal ein.",
-  "disableAllTooltip": "Schaltet sofort alle Benachrichtigungen von moto für Sie aus."
+  "disableAllTooltip": "Schaltet sofort alle Benachrichtigungen von moto für dich aus."
 }

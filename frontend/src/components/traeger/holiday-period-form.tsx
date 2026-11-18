@@ -6,14 +6,14 @@
 
 import { Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ISODateInput } from "~/components/ui/date-picker";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
-import NavigationLink from "~/components/ui/navigation-link";
 import { SectionCard } from "~/components/ui/section-card";
+import { SectionLabel } from "~/components/ui/section-label";
 import { SwitchRow } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError } from "~/contexts/ToastContext";
@@ -46,7 +46,7 @@ import type { TraegerCalendar } from "~/lib/traeger-closing-days";
 const logger = createLogger({ component: "HolidayPeriodForm" });
 
 const INVALID_DATE_TEXT =
-  "Bitte geben Sie ein gültiges Datum im Format TT.MM.JJJJ ein.";
+  "Bitte gib ein gültiges Datum im Format TT.MM.JJJJ ein.";
 
 /**
  * Date fields whose typed text is no valid date. The draft keeps the last
@@ -168,7 +168,7 @@ export function HolidayPeriodForm({
       ...invalidDateFields(invalidDates, draft),
     };
     if (Object.keys(errors).length > 0) {
-      errorPath.invalid("Bitte prüfen Sie die markierten Felder.", errors);
+      errorPath.invalid("Bitte prüfe die markierten Felder.", errors);
       return;
     }
     errorPath.clear();
@@ -215,12 +215,10 @@ export function HolidayPeriodForm({
       >
         {/* Locked while saving: the answer replaces the draft, so an edit made
             meanwhile would be lost. */}
-        {/* pb-4: the last control („Woche hinzufügen“) ends above the
-            sticky save bar, not under its edge. */}
-        <fieldset disabled={saving} className="min-w-0 space-y-6 pb-4">
+        <fieldset disabled={saving} className="min-w-0 space-y-6">
           <div className="space-y-4">
             <Input
-              controlSize="touch"
+              controlSize="compact"
               name="name"
               label="Name des Ferienzeitraums"
               required
@@ -291,16 +289,22 @@ export function HolidayPeriodForm({
               label="Ferienwunsch aus der OGS-Anmeldung berücksichtigen"
               description={
                 <>
-                  Kinder Ihrer Schulen ohne Ferienwunsch warten hinter den
-                  anderen. Was ohne Ferienwunsch gilt, legen Sie in den{" "}
-                  <NavigationLink
+                  Kinder deiner Schulen ohne Ferienwunsch warten hinter den
+                  anderen. Was ohne Ferienwunsch gilt, legst du in den{" "}
+                  {/* In a form a link opens a new tab, so the unsaved
+                      draft stays (Bauart 1 R9). */}
+                  <ButtonLink
                     href={traegerPath(
                       `/traeger/einstellungen?bereich=${TRAEGER_HOLIDAY_TAB}`,
                     )}
-                    className="font-medium text-gray-900 underline underline-offset-2"
+                    newTab
+                    variant="link"
+                    // In running text the link stays recognisable at rest.
+                    className="underline underline-offset-2"
+                    tooltip="Öffnet die Einstellungen der Ferien in einem neuen Tab."
                   >
                     Einstellungen
-                  </NavigationLink>{" "}
+                  </ButtonLink>{" "}
                   fest. Feriengäste sind nicht betroffen.
                 </>
               }
@@ -314,7 +318,7 @@ export function HolidayPeriodForm({
               label="Hinweise für Eltern"
               rows={3}
               maxLength={2000}
-              placeholder="Zum Beispiel: Mittagessen gibt es vor Ort. Oder: Bitte geben Sie ein Lunchpaket mit."
+              placeholder="Zum Beispiel: Mittagessen gibt es vor Ort. Oder: Bitte gebt ein Lunchpaket mit."
               value={draft.notes}
               error={fieldError("notes") ?? undefined}
               onChange={(event) =>
@@ -336,11 +340,11 @@ export function HolidayPeriodForm({
 
           <div className="space-y-4 border-t border-gray-200 pt-6">
             <div>
-              <h3 className="text-sm font-semibold text-gray-600">Wochen</h3>
+              <SectionLabel as="h3">Wochen</SectionLabel>
               <p className="text-sm text-gray-600">
-                Jede Woche findet an einer Schule Ihres Trägers statt. Wollen
-                Sie dieselben Tage an mehreren Schulen anbieten? Legen Sie dafür
-                je Schule eine Woche an. Eltern wählen dann eine Schule.
+                Jede Woche findet an einer Schule deines Trägers statt. Willst
+                du dieselben Tage an mehreren Schulen anbieten? Lege dafür je
+                Schule eine Woche an. Eltern wählen dann eine Schule.
               </p>
               {/* What a booked time model allows is said only where one
                   exists: a new period has none. */}
@@ -350,14 +354,14 @@ export function HolidayPeriodForm({
                 {draft.weeks.some((week) =>
                   week.timeModels.some((model) => model.protected),
                 )
-                  ? " Ein gebuchtes Zeitmodell archivieren Sie: die Buchungen bleiben. Ein ungebuchtes entfernen Sie mit „×“."
+                  ? " Ein gebuchtes Zeitmodell archivierst du: die Buchungen bleiben. Ein ungebuchtes entfernst du mit „×“."
                   : ""}
                 {draft.weeks.some((week) =>
                   week.timeModels.some(
                     (model) => model.protected && !model.archived,
                   ),
                 )
-                  ? " Ein neuer Preis eines gebuchten Zeitmodells gilt für Anmeldungen, die Sie danach bestätigen. Bestätigte behalten ihren Betrag."
+                  ? " Ein neuer Preis eines gebuchten Zeitmodells gilt für Anmeldungen, die du danach bestätigst. Bestätigte behalten ihren Betrag."
                   : ""}
               </p>
             </div>

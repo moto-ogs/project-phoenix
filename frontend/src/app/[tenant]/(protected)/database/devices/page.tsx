@@ -10,6 +10,9 @@ import {
   useState,
 } from "react";
 import { useSession } from "next-auth/react";
+import { hasPermission } from "~/lib/auth-utils";
+import { DeviceSlotStatus } from "~/components/devices/device-slot-status";
+import { deviceSlotsFull, fetchDeviceSlots } from "~/lib/device-slots";
 import { redirect, useSearchParams } from "next/navigation";
 import { DatabaseCreateAction } from "~/components/database/database-create-action";
 import { DatabaseGroupingToggle } from "~/components/database/database-grouping-toggle";
@@ -26,25 +29,42 @@ import type {
 } from "~/components/ui/page-header/types";
 import { createCrudService } from "@/lib/database/service-factory";
 import { devicesConfig } from "@/components/database/configs/devices.config";
-import { getDeviceTypeDisplayName, type Device } from "@/lib/iot-helpers";
+import {
+  getDeviceTypeDisplayName,
+  isDeviceBlocked,
+  type Device,
+} from "@/lib/iot-helpers";
+import { setDeviceBlocked } from "~/lib/device-blocking-api";
 import { DevicesMasterDetail } from "@/components/devices/devices-master-detail";
+import {
+  DeviceRemovalSummary,
+  isDeviceAlreadyRemoved,
+} from "~/components/devices/device-removal-summary";
 import { DatabaseFormModal } from "~/components/database/database-form-modal";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
-import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import {
+  useApiErrorDisplay,
+  useApiFormError,
+  useToast,
+} from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { BELOW_MD, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useDeleteConfirmation } from "~/hooks/useDeleteConfirmation";
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { ModuleRouteGuard } from "~/components/tenant/module-route-guard";
 import { devicesConcept } from "~/lib/concepts/devices";
 import { foldForSearch } from "~/lib/search-fold";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 const logger = createLogger({ component: "DatabaseDevicesPage" });
 
 type DevicesGroupingMode = "none" | "type" | "room";
+
+/** How often a page that shows every Geräteplatz taken asks again. */
+const FULL_DEVICE_SLOTS_POLL_MS = 30_000;
 
 const DEVICES_GROUPING_DEFAULT: DevicesGroupingMode = "type";
 
@@ -94,6 +114,8 @@ function DevicesPageContent() {
   } = useDeleteConfirmation();
 
   const { success: toastSuccess } = useToast();
+  const { show: showActionError } = useApiErrorDisplay();
+  const [blockPending, setBlockPending] = useState(false);
   // Schreibfehler bleiben im jeweiligen Dialog (#2517).
   const createErrors = useApiFormError();
   const deleteErrors = useApiFormError();
@@ -106,15 +128,26 @@ function DevicesPageContent() {
     if (showCreateModal) clearCreateErrors();
   }, [showCreateModal, clearCreateErrors]);
 
-  const { status } = useSession({
+  const { data: session, status } = useSession({
     required: true,
     onUnauthenticated() {
       redirect("/");
     },
   });
+  // Ansehen braucht devices:read, jede Verwaltung devices:manage (#2312).
+  const canManage = hasPermission(session, "devices:manage");
 
   const service = useMemo(() => createCrudService(devicesConfig), []);
   const tenantMutate = useTenantMutate();
+  const invalidateFamily = useInvalidateFamily();
+  // A write changes the device and adds to its history (#2321).
+  const refreshDevices = useCallback(async () => {
+    await Promise.all([
+      tenantMutate(tenantAdminKeys.devices()),
+      tenantMutate(tenantAdminKeys.deviceSlots()),
+      invalidateFamily(tenantAdminKeys.deviceHistoryFamily),
+    ]);
+  }, [tenantMutate, invalidateFamily]);
 
   const {
     data: devicesData,
@@ -126,6 +159,25 @@ function DevicesPageContent() {
     return Array.isArray(data.data) ? data.data : [];
   });
 
+  // Geräteplätze der Schule (#2312). Ein Fehler blendet nur die Zeile aus;
+  // das Backend prüft die Grenze beim Anlegen ohnehin selbst.
+  // moto may raise the limit while the page stays open: every return to
+  // the page, and every half minute while all places are taken, asks again,
+  // so registering unlocks without a reload. The interval is a number that
+  // changes with the answer, so SWR starts its timer once the first answer
+  // shows all places taken.
+  const [pollDeviceSlots, setPollDeviceSlots] = useState(false);
+  const { data: deviceSlots } = useSWRAuth(
+    tenantAdminKeys.deviceSlots(),
+    fetchDeviceSlots,
+    {
+      revalidateOnFocus: true,
+      focusThrottleInterval: 0,
+      refreshInterval: pollDeviceSlots ? FULL_DEVICE_SLOTS_POLL_MS : 0,
+      onSuccess: (slots) => setPollDeviceSlots(deviceSlotsFull(slots)),
+    },
+  );
+  const slotsFull = deviceSlots ? deviceSlotsFull(deviceSlots) : false;
   const error = useSwrLoadError(devicesError, "die Liste der Geräte", () =>
     mutateDevices(),
   );
@@ -141,8 +193,24 @@ function DevicesPageContent() {
   // Statuszeile des Seitenkopfs aus der bereits geladenen Geräteliste.
   const statusLine = useMemo(() => {
     const devices = devicesData ?? [];
-    const online = devices.filter((d) => d.is_online).length;
-    return `${formatCount(devices.length)} ${devices.length === 1 ? "Gerät" : "Geräte"} · ${formatCount(online)} online`;
+    const online = devices.filter(
+      (d) => d.is_online && !isDeviceBlocked(d),
+    ).length;
+    const blocked = devices.filter(isDeviceBlocked).length;
+    return (
+      <TenantPageStats
+        items={[
+          {
+            value: formatCount(devices.length),
+            label: devices.length === 1 ? "Gerät" : "Geräte",
+          },
+          { value: formatCount(online), label: "online" },
+          ...(blocked > 0
+            ? [{ value: formatCount(blocked), label: "gesperrt" }]
+            : []),
+        ]}
+      />
+    );
   }, [devicesData]);
 
   const filters: FilterConfig[] = useMemo(() => [], []);
@@ -258,9 +326,9 @@ function DevicesPageContent() {
       setShowCreateModal(false);
       setCreatedDevice(created);
       handleSelectDevice(created.id);
-      await tenantMutate(tenantAdminKeys.devices());
+      await refreshDevices();
     },
-    [service, handleSelectDevice, tenantMutate, toastSuccess],
+    [service, handleSelectDevice, refreshDevices, toastSuccess],
   );
 
   const handleUpdateDevice = useCallback(
@@ -277,45 +345,102 @@ function DevicesPageContent() {
       toastSuccess(
         `Das Gerät „${updatedDevice.name ?? updatedDevice.device_id}“ ist gespeichert.`,
       );
-      await tenantMutate(tenantAdminKeys.devices());
+      await refreshDevices();
     },
-    [selectedDevice, service, tenantMutate, toastSuccess],
+    [selectedDevice, service, refreshDevices, toastSuccess],
+  );
+
+  // Gerätesperre (#2317): sofort wirksam und sofort umkehrbar, darum ohne
+  // Rückfrage; der Toast nach dem Sperren bietet „Rückgängig“.
+  const handleSetBlocked = useCallback(
+    async function setBlocked(device: Device, blocked: boolean) {
+      const title = device.name ?? device.device_id;
+      setBlockPending(true);
+      try {
+        await setDeviceBlocked(device.device_id, blocked);
+      } catch (err) {
+        logger.warn("device_block_failed", {
+          device_id: device.id,
+          blocked,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        void showActionError(err, {
+          object: blocked
+            ? "das Sperren des Geräts"
+            : "das Entsperren des Geräts",
+          retry: () => void setBlocked(device, blocked),
+        });
+        return;
+      } finally {
+        setBlockPending(false);
+      }
+      if (blocked) {
+        const message = `Das Gerät „${title}“ ist gesperrt. Es kann sich erst wieder anmelden, wenn du es entsperrst.`;
+        // Undo restores access, so it is offered only when the device had it.
+        toastSuccess(
+          message,
+          device.status === "active"
+            ? {
+                action: {
+                  label: "Rückgängig",
+                  tooltip: "Entsperrt das Gerät sofort wieder.",
+                  onClick: () => void setBlocked(device, false),
+                },
+              }
+            : undefined,
+        );
+      } else {
+        toastSuccess(
+          `Das Gerät „${title}“ ist entsperrt und kann sich wieder anmelden.`,
+        );
+      }
+      await refreshDevices();
+    },
+    [showActionError, refreshDevices, toastSuccess],
   );
 
   const handleDeleteDevice = useCallback(async () => {
     if (!selectedDevice) return;
+    const title = selectedDevice.name ?? selectedDevice.device_id;
     setDeletePending(true);
     deleteErrors.clear();
     try {
-      const deleted = await service.remove(selectedDevice.id);
-      if (!deleted) return;
+      const removed = await service.remove(selectedDevice.id);
+      if (!removed) return;
       toastSuccess(
-        `Das Gerät „${selectedDevice.name ?? selectedDevice.device_id}“ ist gelöscht.`,
+        `Das Gerät „${title}“ ist entfernt. Sein Platz ist wieder frei.`,
       );
-      handleDeleteCancel();
-      setCreatedDevice(null);
-      handleSelectDevice(null);
-      await tenantMutate(tenantAdminKeys.devices());
     } catch (err) {
-      logger.warn("device_delete_failed", {
+      logger.warn("device_remove_failed", {
         device_id: selectedDevice.id,
         error: err instanceof Error ? err.message : String(err),
       });
-      // Der Bestätigungsdialog bleibt offen und nennt den Grund.
-      void deleteErrors.show(err, {
-        object: "das Löschen des Geräts",
-        retry: () => latestDeleteRef.current(),
-      });
+      if (!isDeviceAlreadyRemoved(err)) {
+        // Der Bestätigungsdialog bleibt offen und nennt den Grund, etwa
+        // eine laufende Sitzung am Gerät.
+        void deleteErrors.show(err, {
+          object: "das Entfernen des Geräts",
+          retry: () => latestDeleteRef.current(),
+        });
+        return;
+      }
+      // Das Gerät ist eben schon gegangen (entfernt oder an eine andere
+      // Schule übertragen): die Liste lädt neu.
+      toastSuccess(`Das Gerät „${title}“ ist hier nicht mehr verfügbar.`);
     } finally {
       setDeletePending(false);
     }
+    handleDeleteCancel();
+    setCreatedDevice(null);
+    handleSelectDevice(null);
+    await refreshDevices();
   }, [
     selectedDevice,
     service,
     toastSuccess,
     handleDeleteCancel,
     handleSelectDevice,
-    tenantMutate,
+    refreshDevices,
     deleteErrors,
   ]);
 
@@ -338,8 +463,10 @@ function DevicesPageContent() {
                 ? "Keine Geräte gefunden"
                 : "Keine Geräte vorhanden",
               description: searchTerm
-                ? "Versuchen Sie einen anderen Suchbegriff."
-                : "Registrieren Sie das erste Gerät, um Karten zu lesen.",
+                ? "Versuche einen anderen Suchbegriff."
+                : canManage
+                  ? "Registriere das erste Gerät, um Karten zu lesen."
+                  : "Deine Schule hat noch kein Gerät registriert.",
               icon: (
                 <MotoDuotoneIcon
                   icon={devicesConcept.icon}
@@ -367,18 +494,19 @@ function DevicesPageContent() {
               isOpen={showDeleteConfirmModal}
               onClose={handleDeleteCancel}
               onConfirm={() => void handleDeleteDevice()}
-              title="Gerät löschen?"
+              title="Gerät entfernen?"
               description={
-                <>
-                  Möchten Sie das Gerät{" "}
-                  <span className="font-medium">
-                    {selectedDevice.name ?? selectedDevice.device_id}
-                  </span>{" "}
-                  wirklich löschen? Diese Aktion kann nicht rückgängig gemacht
-                  werden.
-                </>
+                <DeviceRemovalSummary
+                  title={selectedDevice.name ?? selectedDevice.device_id}
+                  deviceId={selectedDevice.device_id}
+                  context={selectedDevice.room_name}
+                  footnote="Läuft am Gerät gerade eine Sitzung, beende sie zuerst."
+                />
               }
-              gate={{ mode: "twoStep" }}
+              gate={{ mode: "twoStep", firstStepLabel: "Ja, entfernen" }}
+              confirmLabel="Gerät entfernen"
+              confirmTooltip="Entfernt das Gerät sofort. Bisherige Anwesenheiten bleiben."
+              loadingLabel="Wird entfernt…"
               loading={deletePending}
               error={deleteErrors.error}
             />
@@ -388,7 +516,12 @@ function DevicesPageContent() {
       className="flex w-full flex-col"
       intro={{
         title: "Geräte",
-        description: statusLine,
+        description: (
+          <>
+            {statusLine}
+            <DeviceSlotStatus slots={deviceSlots} />
+          </>
+        ),
         actions: (
           <div className="flex items-center gap-2">
             {!isMobile ? (
@@ -398,11 +531,16 @@ function DevicesPageContent() {
                 onChange={handleGroupingChange}
               />
             ) : null}
-            <DatabaseCreateAction
-              label="Gerät"
-              ariaLabel="Gerät registrieren"
-              onClick={() => setShowCreateModal(true)}
-            />
+            {canManage ? (
+              <DatabaseCreateAction
+                label="Gerät"
+                ariaLabel="Gerät registrieren"
+                onClick={() => setShowCreateModal(true)}
+                tooltip="Öffnet ein leeres Formular für ein neues Gerät."
+                disabled={slotsFull}
+                disabledReason="Alle Geräteplätze sind belegt. Entferne ein Gerät oder melde dich beim moto-Team."
+              />
+            ) : null}
           </div>
         ),
       }}
@@ -439,6 +577,12 @@ function DevicesPageContent() {
             onSelect={handleSelectDevice}
             onSaveDevice={handleUpdateDevice}
             onDeleteClick={handleDeleteClick}
+            onSetBlocked={(blocked) => {
+              if (selectedDevice)
+                void handleSetBlocked(selectedDevice, blocked);
+            }}
+            blockPending={blockPending}
+            canManage={canManage}
           />
         </div>
       ) : null}

@@ -27,6 +27,7 @@ type Notices struct {
 	notices   NoticeStore
 	templates carecontract.NoticeTemplates
 	post      carecontract.NoticePost
+	sender    carecontract.TraegerSender
 	// addressees reads who may still receive the notice of a decided end;
 	// nil where only the parents portal declares.
 	addressees carecontract.NoticeAddressees
@@ -44,6 +45,9 @@ var _ carecontract.Notices = (*Notices)(nil)
 type NoticePorts struct {
 	Templates carecontract.NoticeTemplates
 	Post      carecontract.NoticePost
+	// Sender reads the complete letterhead before the office's recording of
+	// a received letter is confirmed; the parents' button does not need it.
+	Sender carecontract.TraegerSender
 	// Addressees is required for the office's decided end, unused by the
 	// parents portal.
 	Addressees carecontract.NoticeAddressees
@@ -55,11 +59,11 @@ type NoticePorts struct {
 // Träger-Büro, may be nil for the parents portal alone.
 func NewNotices(store ContractStore, notices NoticeStore, noticePorts NoticePorts, clock Clock, office *Contracts) *Notices {
 	requireClock(clock, "notices")
-	if store == nil || notices == nil || noticePorts.Templates == nil || noticePorts.Post == nil || noticePorts.Holidays == nil {
-		panic("care contract: the store, the notice store, the templates, the post and the school holidays are required")
+	if store == nil || notices == nil || noticePorts.Templates == nil || noticePorts.Post == nil || noticePorts.Sender == nil || noticePorts.Holidays == nil {
+		panic("care contract: the store, the notice store, the templates, the post, the sender and the school holidays are required")
 	}
 	return &Notices{store: store, notices: notices, templates: noticePorts.Templates, post: noticePorts.Post,
-		addressees: noticePorts.Addressees, clock: clock, office: office, periods: withdrawalPeriods{holidays: noticePorts.Holidays}}
+		sender: noticePorts.Sender, addressees: noticePorts.Addressees, clock: clock, office: office, periods: withdrawalPeriods{holidays: noticePorts.Holidays}}
 }
 
 func (n *Notices) requireOffice() error {
@@ -344,6 +348,9 @@ func (n *Notices) confirm(ctx context.Context, record ContractRecord, d declarat
 			return err
 		}
 	}
+	if err := n.requireOfficeLetterhead(ctx, d); err != nil {
+		return err
+	}
 	traeger := strings.TrimSpace(firstText(d.traeger, record.Version.Terms.ContractPartner))
 	template, err := n.templates.NoticeTemplate(ctx, d.organizationID, templateKind(*notice))
 	if err != nil {
@@ -377,12 +384,36 @@ func (n *Notices) confirm(ctx context.Context, record ContractRecord, d declarat
 	return trailContract(ctx, n.store, d.organizationID, d.accountID, record, action, details)
 }
 
-// noticeTrail is the trail entry of a declaration: its kind, channel and
+// requireOfficeLetterhead refuses the office's recording of a received
+// letter while the Träger has no complete letterhead: the office names the
+// Träger in the confirmation from its first line and can repair it and
+// record again (#7177). The parents' button never waits for it: their
+// confirmation names the Träger's organization, and a withdrawal or
+// termination by the button must not depend on the Träger's settings
+// (§ 312k BGB), nor may the withdrawal period run out meanwhile.
+func (n *Notices) requireOfficeLetterhead(ctx context.Context, d declaration) error {
+	if d.channel != carecontract.NoticeChannelOffice {
+		return nil
+	}
+	letterhead, err := n.sender.TraegerLetterhead(ctx, d.organizationID)
+	if err != nil {
+		return fmt.Errorf("care contract: letterhead: %w", err)
+	}
+	if letterheadMissing(letterhead) {
+		return carecontract.ErrLetterheadMissing
+	}
+	return nil
+}
+
+// noticeTrailis the trail entry of a declaration: its kind, channel and
 // days, and the mail that confirmed it. The reason stays with the
 // declaration; the trail names only the kind.
 func noticeTrail(notice ports.NewNotice, channel string, versionID, noticeID, outboxID int64) (string, map[string]any) {
 	details := map[string]any{"notice_id": noticeID, "channel": channel, "received_on": notice.ReceivedOn.String(),
-		"version_id": versionID, "outbox_id": outboxID}
+		"version_id": versionID}
+	if outboxID > 0 {
+		details["outbox_id"] = outboxID
+	}
 	if notice.DispatchedOn != nil {
 		details["dispatched_on"] = notice.DispatchedOn.String()
 	}

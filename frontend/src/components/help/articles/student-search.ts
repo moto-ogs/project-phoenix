@@ -7,28 +7,28 @@ export function studentSearchTopic(
 ): HelpTopic {
   const currentStatusStep =
     presenceMode === "detailed"
-      ? "Prüfen Sie oben den Aufenthaltsort sowie die heutige Ankunft und Abholung."
+      ? "Prüfe oben den Aufenthaltsort sowie die heutige Ankunft und Abholung."
       : presenceMode === "binary"
-        ? "Prüfen Sie oben die Anwesenheit sowie die heutige Ankunft und Abholung."
-        : "Prüfen Sie oben die Anwesenheit sowie die heutige Ankunft und Abholung.";
+        ? "Prüfe oben die Anwesenheit sowie die heutige Ankunft und Abholung."
+        : "Prüfe oben die Anwesenheit sowie die heutige Ankunft und Abholung.";
 
   const presenceDifference =
     presenceMode === "binary"
-      ? "Bei einfacher Anwesenheit sehen Sie keinen Raum. Sie sehen nur, ob das Kind da ist."
+      ? "Bei einfacher Anwesenheit siehst du keinen Raum. Du siehst nur, ob das Kind da ist."
       : null;
   // #5026: ohne Räume (Binärmodus) gibt es keine Zuweisung.
   const transitNotes =
     presenceMode === "binary"
       ? []
       : [
-          "Filtern Sie nach `Unterwegs`? Oder gruppieren Sie `Nach Status` oder `Nach Raum`? Dann steht oben die Karte `Unterwegs`. Mit `Zuweisen` setzen Sie diese Kinder in einen Raum. Die Karte sehen Sie nur, wenn Sie Kinder einem Raum zuweisen dürfen.",
+          "Filterst du nach `Unterwegs`? Oder gruppierst du `Nach Status` oder `Nach Raum`? Dann steht oben die Karte `Unterwegs`. Mit `Zuweisen` setzt du diese Kinder in einen Raum. Die Karte siehst du nur, wenn du Kinder einem Raum zuweisen darfst.",
         ];
 
   return {
     id: HELP_TOPICS.studentSearch,
     title: "Ein Kind finden und Angaben ansehen",
     question: "Wie finde ich ein Kind und seine Angaben?",
-    summary: "Finden Sie ein Kind. Öffnen Sie danach die benötigten Angaben.",
+    summary: "Finde ein Kind. Öffne danach die benötigten Angaben.",
     group: "kinder",
     audience: ["caregiver", "lead"],
     icon: "Search",
@@ -37,25 +37,25 @@ export function studentSearchTopic(
       {
         title: "Ein Kind finden",
         steps: [
-          "Öffnen Sie `Alle Kinder`.",
-          "Geben Sie in `Name suchen...` den Namen ein.",
-          "Sie können auch nur einen Namensteil eingeben.",
+          "Öffne `Alle Kinder`.",
+          "Gib in `Name suchen...` den Namen ein.",
+          "Du kannst auch nur einen Namensteil eingeben.",
           // Der Filter traegt kein sichtbares Wort, nur ein Symbol mit drei
           // Reglern (FilterButton, aria-label "Filter").
-          "Zu viele Treffer? Wählen Sie rechts neben der Suche das Filtersymbol.",
+          "Zu viele Treffer? Wähle rechts neben der Suche das Filtersymbol.",
           // Ohne feste Gruppen gibt es auch keinen Gruppenfilter.
           groupMode === "open_care"
-            ? "Wählen Sie zum Beispiel eine Klasse."
-            : "Wählen Sie zum Beispiel eine Klasse oder Gruppe.",
+            ? "Wähle zum Beispiel eine Klasse."
+            : "Wähle zum Beispiel eine Klasse oder Gruppe.",
           // Der Klick auf den eigenen Menüeintrag leert Suche und Filter
           // (#3374). Am Handy heißt der Eintrag unten "Suchen".
-          "Neue Suche? Wählen Sie im Menü `Alle Kinder` oder unten `Suchen`. Suche und Filter sind dann leer.",
+          "Neue Suche? Wähle im Menü `Alle Kinder` oder unten `Suchen`. Suche und Filter sind dann leer.",
         ],
       },
       {
         title: "Angaben ansehen",
         steps: [
-          "Wählen Sie die Karte des Kindes.",
+          "Wähle die Karte des Kindes.",
           currentStatusStep,
           // #4761: die Zeilen stehen unter `Heutige Ankunft` und `Heutige
           // Abholung`, sobald das Kind an- oder abgemeldet ist.
@@ -68,30 +68,30 @@ export function studentSearchTopic(
         title: "Den passenden Bereich wählen",
         ordered: false,
         steps: [
-          "Wählen Sie `Stammdaten` für persönliche Angaben.",
-          "Wählen Sie `Nachrichten` für den Nachrichtenaustausch mit den Eltern.",
-          "Wählen Sie `Erziehungsberechtigte` für Kontaktangaben.",
-          "Wählen Sie `Betreuungsplan` für den geplanten Tages- oder Wochenablauf.",
-          "Wählen Sie `Betreuungszeiten` für regelmäßige Ankunfts- und Abholzeiten.",
+          "Wähle `Stammdaten` für persönliche Angaben.",
+          "Wähle `Nachrichten` für den Nachrichtenaustausch mit den Eltern.",
+          "Wähle `Erziehungsberechtigte` für Kontaktangaben.",
+          "Wähle `Betreuungsplan` für den geplanten Tages- oder Wochenablauf.",
+          "Wähle `Betreuungszeiten` für regelmäßige Ankunfts- und Abholzeiten.",
           // Live geprueft: mit Betreuer-Rechten fehlt der Reiter ganz. Er
           // bleibt trotzdem in der Liste -- die Leitung liest denselben
           // Artikel und sieht ihn (canViewEnrollments = `config:manage`).
-          "Wählen Sie `Anmeldungen` für Angaben aus der Halbjahresanmeldung. Diesen Reiter sieht nur die Leitung. Über `Herunterladen` wählen Sie dort `PDF`, `Word` oder `Excel`.",
-          "Wählen Sie `Dokumente` für Dateien zum Kind.",
-          "Wählen Sie `Änderungsprotokoll` für Änderungen an den Angaben.",
-          "Wählen Sie `Historie` für Anwesenheit, Feedback und weitere Verläufe.",
+          "Wähle `Anmeldungen` für Angaben aus der Halbjahresanmeldung. Diesen Reiter sieht nur die Leitung. Über `Herunterladen` wählst du dort `PDF`, `Word` oder `Excel`.",
+          "Wähle `Dokumente` für Dateien zum Kind.",
+          "Wähle `Änderungsprotokoll` für Änderungen an den Angaben.",
+          "Wähle `Historie` für Anwesenheit, Feedback und weitere Verläufe.",
         ],
       },
       {
         title: "Ein Anwesenheitsprotokoll herunterladen",
         steps: [
-          "Öffnen Sie beim Kind `Historie` und danach `Anwesenheitsprotokoll`.",
+          "Öffne beim Kind `Historie` und danach `Anwesenheitsprotokoll`.",
           // #4761: Tabelle und Export nennen dieselben Angaben.
           "Bei jedem Tag steht, wer das Kind an- und abgemeldet hat. Die Datei enthält dazu die Spalten `Angemeldet von` und `Abgemeldet von`.",
-          "Wählen Sie im Drei-Punkte-Menü `Exportieren`.",
-          "Wählen Sie unter `Von` und `Bis` den Zeitraum.",
+          "Wähle im Drei-Punkte-Menü `Exportieren`.",
+          "Wähle unter `Von` und `Bis` den Zeitraum.",
           "Möglich sind nur die sichtbaren Tage bis heute.",
-          "Wählen Sie das Format und danach `Herunterladen`.",
+          "Wähle das Format und danach `Herunterladen`.",
         ],
       },
       {
@@ -101,11 +101,11 @@ export function studentSearchTopic(
         description:
           "Die Liste zeigt dieselben Angaben wie die Karten, ein Kind pro Zeile.",
         steps: [
-          "Wählen Sie oben rechts das Listensymbol (drei Striche). Mit dem Kachelsymbol (vier Kästchen) kommen die Karten zurück.",
-          "Spalten ein- oder ausblenden? Öffnen Sie oben rechts das Menü mit den drei Punkten. Wählen Sie unter `Spalten in der Liste` die Spalten.",
-          "Auf dem Handy zeigt die Liste je Kind eine Zeile. Was unter dem Namen steht, wählen Sie im Menü mit den drei Punkten unter `In der Zeile zeigen`, zum Beispiel `Gehzeit` oder `Gruppe`.",
-          "Kreuzen Sie links in der Zeile Kinder an. Oben erscheint eine Leiste mit `Exportieren`, `Anmelden` und `Abmelden`.",
-          "Wählen Sie `Aufheben`, um alle Kreuze zu entfernen.",
+          "Wähle oben rechts das Listensymbol (drei Striche). Mit dem Kachelsymbol (vier Kästchen) kommen die Karten zurück.",
+          "Spalten ein- oder ausblenden? Öffne oben rechts das Menü mit den drei Punkten. Wähle unter `Spalten in der Liste` die Spalten.",
+          "Auf dem Handy zeigt die Liste je Kind eine Zeile. Was unter dem Namen steht, wählst du im Menü mit den drei Punkten unter `In der Zeile zeigen`, zum Beispiel `Gehzeit` oder `Gruppe`.",
+          "Kreuze links in der Zeile Kinder an. Oben erscheint eine Leiste mit `Exportieren`, `Anmelden` und `Abmelden`.",
+          "Wähle `Aufheben`, um alle Kreuze zu entfernen.",
         ],
       },
       {
@@ -115,23 +115,23 @@ export function studentSearchTopic(
         // (#7012).
         title: "Nach Angaben aus der Anmeldung filtern",
         steps: [
-          "Wählen Sie rechts neben der Suche das Filtersymbol.",
-          "Wählen Sie unter `Anmeldung` bei `Angabe aus der Anmeldung` eine Antwort, zum Beispiel eine Frage mit `Ja`.",
-          "Bei Fragen mit freiem Text, Zahl oder Datum wählen Sie `Angabe vorhanden`. Dann sehen Sie alle Kinder, bei denen die Eltern etwas eingetragen haben. Auch „keine“ zählt als Angabe.",
-          "Haben die Eltern nur wenige verschiedene Antworten gegeben, steht jede Antwort darunter, zum Beispiel `keine`. So sehen Sie, wie viele Kinder welche Antwort haben.",
+          "Wähle rechts neben der Suche das Filtersymbol.",
+          "Wähle unter `Anmeldung` bei `Angabe aus der Anmeldung` eine Antwort, zum Beispiel eine Frage mit `Ja`.",
+          "Bei Fragen mit freiem Text, Zahl oder Datum wählst du `Angabe vorhanden`. Dann siehst du alle Kinder, bei denen die Eltern etwas eingetragen haben. Auch „keine“ zählt als Angabe.",
+          "Haben die Eltern nur wenige verschiedene Antworten gegeben, steht jede Antwort darunter, zum Beispiel `keine`. So siehst du, wie viele Kinder welche Antwort haben.",
           "Die Zahl in Klammern nennt, wie viele Kinder die Liste dann zeigt. Kinder, die die Schule verlassen haben, zählen nicht.",
           "`Alle Angaben` hebt den Filter wieder auf.",
         ],
       },
     ],
     result:
-      "Sie sehen jetzt die Angaben des Kindes. Über dem Namen steht `Zurück zur Kinderübersicht`. Damit kommen Sie zur Liste zurück.",
+      "Du siehst jetzt die Angaben des Kindes. Über dem Namen steht `Zurück zur Kinderübersicht`. Damit kommst du zur Liste zurück.",
     differences: [
-      "Haben Sie einen anderen Tag gewählt? Dann sehen Sie die geplante Anwesenheit. Ein aktueller Aufenthaltsort wird nicht gezeigt.",
-      "Ansicht und Spalten bleiben auf diesem Gerät so, wie Sie sie gewählt haben.",
+      "Hast du einen anderen Tag gewählt? Dann siehst du die geplante Anwesenheit. Ein aktueller Aufenthaltsort wird nicht gezeigt.",
+      "Ansicht und Spalten bleiben auf diesem Gerät so, wie du sie gewählt hast.",
       // Einstellung „Kinder nur über ‚Alle Kinder‘ finden“ (#1321).
-      "Fehlen `Gruppen` und `Aktuelle Aufsicht` in der Navigation? Dann wählen Sie in `Alle Kinder` oben `Meine Gruppe` oder `Meine Aufsicht`.",
-      "Einige Bereiche brauchen zusätzliche Rechte: `Betreuungsplan`, `Dokumente` und `Änderungsprotokoll`. Fehlt ein Bereich? Fragen Sie Ihre Leitung.",
+      "Fehlen `Gruppen` und `Aktuelle Aufsicht` in der Navigation? Dann wähle in `Alle Kinder` oben `Meine Gruppe` oder `Meine Aufsicht`.",
+      "Einige Bereiche brauchen zusätzliche Rechte: `Betreuungsplan`, `Dokumente` und `Änderungsprotokoll`. Fehlt ein Bereich? Frage deine Leitung.",
       "Fehlt im Filter `Anmeldung`? Den Filter sehen nur Mitarbeitende, die auch die Angaben aus der Anmeldung beim Kind sehen. Er erscheint erst, wenn Eltern in der Online-Anmeldung eigene Fragen der Schule beantwortet haben.",
       ...(presenceDifference ? [presenceDifference] : []),
     ],

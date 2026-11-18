@@ -196,7 +196,7 @@ describe("CoursesSection", () => {
 
     expect(
       await screen.findByText(
-        "Sie haben schon eine offene Anfrage zur Betreuung. Bitte warten Sie die Antwort ab.",
+        "Du hast schon eine offene Anfrage zur Betreuung. Bitte warte die Antwort ab.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -239,7 +239,7 @@ describe("CoursesSection", () => {
 
     expect(
       await screen.findByText(
-        "Sie können keine Anfrage senden. Bitte fragen Sie die OGS.",
+        "Du kannst keine Anfrage senden. Bitte frage die OGS.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -254,7 +254,7 @@ describe("CoursesSection", () => {
 
     expect(
       await screen.findByText(
-        "Die Betreuung ist beendet. Bitte fragen Sie die OGS.",
+        "Die Betreuung ist beendet. Bitte frage die OGS.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -271,7 +271,7 @@ describe("CoursesSection", () => {
 
     expect(
       await screen.findByText(
-        "Kurse können Sie anfragen, sobald Ihr Kind angemeldet ist.",
+        "Kurse kannst du anfragen, sobald dein Kind angemeldet ist.",
       ),
     ).toBeInTheDocument();
   });
@@ -335,6 +335,6 @@ describe("CoursesSection", () => {
     expect(
       await screen.findByText(deMessages.parentMasterData.errorNoEnrollment),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/lehnen Sie/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Bitte lehne/)).not.toBeInTheDocument();
   });
 });

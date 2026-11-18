@@ -3,6 +3,7 @@ package devices
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -87,7 +88,7 @@ func (rs *Resource) getDevice(w http.ResponseWriter, r *http.Request) {
 // getDeviceByDeviceID handles getting a device by its device ID
 func (rs *Resource) getDeviceByDeviceID(w http.ResponseWriter, r *http.Request) {
 	// Get device ID from URL
-	deviceID := chi.URLParam(r, "deviceId")
+	deviceID := deviceIDParam(r)
 	if deviceID == "" {
 		rs.runtime.Failure(w, r, http.StatusBadRequest, errors.New(errMsgDeviceIDRequired), "")
 		return
@@ -128,7 +129,8 @@ func (rs *Resource) createDevice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create device
-	if err := rs.IoTService.CreateDevice(r.Context(), device); err != nil {
+	// The creation records itself in the device's history (#2321).
+	if err := rs.IoTService.CreateDevice(rs.recordingContext(r), device); err != nil {
 		rs.renderError(w, r, err)
 		return
 	}
@@ -165,14 +167,16 @@ func (rs *Resource) updateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get existing device
-	device, err := rs.IoTService.GetDeviceByID(r.Context(), id)
+	// Lock the live row first: the audit and the history entry then describe
+	// the committed row (#2317, #2321); deviceForEdit says why.
+	device, err := rs.deviceForEdit(r, id)
 	if err != nil {
 		rs.renderError(w, r, err)
 		return
 	}
 
 	// Update fields
+	previousStatus := device.Status
 	device.DeviceID = req.DeviceID
 	device.DeviceType = req.DeviceType
 	device.Name = req.Name
@@ -182,9 +186,14 @@ func (rs *Resource) updateDevice(w http.ResponseWriter, r *http.Request) {
 	device.Status = devicefleet.DeviceStatus(req.Status)
 
 	// Update device
-	if err := rs.IoTService.UpdateDevice(r.Context(), device); err != nil {
+	// The edit records its material changes in the device's history (#2321).
+	if err := rs.IoTService.UpdateDevice(rs.recordingContext(r), device); err != nil {
 		rs.renderError(w, r, err)
 		return
+	}
+
+	if req.Status != "" && device.Status != previousStatus {
+		rs.runtime.AuditStatusChange(r, StatusAudit{DeviceRowID: device.ID, DeviceID: device.DeviceID, From: previousStatus, To: device.Status})
 	}
 
 	// The owner write already returned the locked stored row. Refresh the
@@ -203,57 +212,163 @@ func (rs *Resource) updateDevice(w http.ResponseWriter, r *http.Request) {
 	rs.runtime.Success(w, r, http.StatusOK, newDeviceResponse(r.Context(), rs.IoTService, updatedDevice), "Device updated successfully")
 }
 
-// deleteDevice handles deleting a device
+// deleteDevice removes a device from the fleet (#2319): the row stays as
+// archived history, access ends and its Geräteplatz is released. An open
+// kiosk session blocks the removal and stays untouched.
 func (rs *Resource) deleteDevice(w http.ResponseWriter, r *http.Request) {
-	// Parse ID from URL
 	id, err := rs.runtime.ParseID(r, "id")
 	if err != nil {
 		rs.runtime.Failure(w, r, http.StatusBadRequest, errors.New(errMsgInvalidDeviceID), "")
 		return
 	}
-
-	// Delete device
-	if err := rs.IoTService.DeleteDevice(r.Context(), id); err != nil {
-		if rs.runtime.ConstraintViolation(err) {
-			rs.runtime.Failure(w, r, http.StatusConflict, errors.New("gerät kann nicht gelöscht werden: Gerät wird aktuell von einer aktiven Gruppe verwendet"), "")
-			return
-		}
+	device, session, err := rs.removalPreflight(r, id)
+	if errors.Is(err, devicefleet.ErrAdministrationDeviceProtected) {
+		rs.runtime.AuditRemoval(r, RemovalAudit{DeviceRowID: device.ID, DeviceID: device.DeviceID, Outcome: RemovalOutcomeProtected})
+	}
+	if err != nil {
 		rs.renderError(w, r, err)
 		return
 	}
-
-	rs.runtime.Success(w, r, http.StatusOK, nil, "Device deleted successfully")
+	if session != nil {
+		rs.runtime.AuditRemoval(r, RemovalAudit{DeviceRowID: device.ID, DeviceID: device.DeviceID, Outcome: RemovalOutcomeActiveSession, SessionID: &session.ID})
+		rs.runtime.ConflictWithDetails(w, r, errors.New("device has an active session and cannot be removed"), codeDeviceInActiveSession, map[string]any{
+			"session_id": strconv.FormatInt(session.ID, 10),
+			"room_id":    strconv.FormatInt(session.RoomID, 10),
+			"started_at": session.StartedAt.Format(time.RFC3339),
+		})
+		return
+	}
+	if err := rs.IoTService.DeleteDevice(r.Context(), id); err != nil {
+		rs.renderError(w, r, err)
+		return
+	}
+	if err := rs.recordLifecycle(r, device.ID, devicefleet.LifecycleRemoved, nil); err != nil {
+		rs.runtime.Failure(w, r, http.StatusInternalServerError, err, "")
+		return
+	}
+	rs.runtime.AuditRemoval(r, RemovalAudit{DeviceRowID: device.ID, DeviceID: device.DeviceID, Outcome: RemovalOutcomeRemoved})
+	rs.runtime.Success(w, r, http.StatusOK, nil, "Device removed successfully")
 }
 
-// updateDeviceStatus handles updating the status of a device
+// removalPreflight locks the live device row and reads its open kiosk
+// session. The lock comes first: a session start locks the same row
+// (devicescanbinding lifecycleStore.Start), so a start and a removal never
+// interleave. An already removed device is not found, so a repeated removal
+// changes nothing and releases no second Geräteplatz.
+func (rs *Resource) removalPreflight(r *http.Request, id int64) (devicefleet.Device, *RemovalSession, error) {
+	device, err := rs.IoTService.Fleet().FindDeviceForUpdate(r.Context(), id)
+	if errors.Is(err, devicefleet.ErrDeviceNotFound) {
+		return devicefleet.Device{}, nil, &devicefleet.AdministrationError{Op: "DeleteDevice", Err: devicefleet.ErrAdministrationDeviceNotFound}
+	}
+	if err != nil {
+		return devicefleet.Device{}, nil, err
+	}
+	if device.DeviceID == devicefleet.WebManualDeviceID {
+		return device, nil, &devicefleet.AdministrationError{Op: "DeleteDevice", Err: devicefleet.ErrAdministrationDeviceProtected}
+	}
+	session, err := rs.runtime.ActiveSession(r.Context(), device.ID)
+	return device, session, err
+}
+
+// deviceIDParam reads the hardware device ID from the path. Chi routes on
+// the escaped path when the client escaped a character such as the colon of
+// a MAC address; only then is the parameter still escaped and unescaped
+// here once. An invalid escape yields an empty ID, which the handlers reject.
+func deviceIDParam(r *http.Request) string {
+	id := chi.URLParam(r, "deviceId")
+	if r.URL.RawPath == "" {
+		return id
+	}
+	unescaped, err := url.PathUnescape(id)
+	if err != nil {
+		return ""
+	}
+	return unescaped
+}
+
+// updateDeviceStatus sets the status of a live device. "inactive" blocks
+// it (Gerätesperre, #2317): device authentication then refuses its kiosk
+// with iot.device_inactive, while the device keeps its row, room, history,
+// credential and Geräteplatz. "active" unblocks it with the same
+// credential. The row stays locked from the read to the write; setting the
+// status the device already has changes nothing and records no audit entry.
 func (rs *Resource) updateDeviceStatus(w http.ResponseWriter, r *http.Request) {
-	// Get device ID from URL
-	deviceID := chi.URLParam(r, "deviceId")
+	deviceID := deviceIDParam(r)
 	if deviceID == "" {
 		rs.runtime.Failure(w, r, http.StatusBadRequest, errors.New(errMsgDeviceIDRequired), "")
 		return
 	}
-
-	// Parse request
 	req := &DeviceStatusRequest{}
 	if err := render.Bind(r, req); err != nil {
 		rs.runtime.Failure(w, r, http.StatusBadRequest, err, "")
 		return
 	}
-
-	// Update device status
-	if err := rs.IoTService.UpdateDeviceStatus(r.Context(), deviceID, devicefleet.DeviceStatus(req.Status)); err != nil {
+	device, err := rs.lockDeviceByDeviceID(r, deviceID)
+	if err != nil {
 		rs.renderError(w, r, err)
 		return
 	}
-
+	status := devicefleet.DeviceStatus(req.Status)
+	if device.Status != status {
+		if err := rs.IoTService.UpdateDeviceStatus(r.Context(), deviceID, status); err != nil {
+			rs.renderError(w, r, err)
+			return
+		}
+		rs.runtime.AuditStatusChange(r, StatusAudit{DeviceRowID: device.ID, DeviceID: device.DeviceID, From: device.Status, To: status})
+		if err := rs.recordLifecycle(r, device.ID, statusLifecycleAction(status), statusChange(device.Status, status)); err != nil {
+			rs.runtime.Failure(w, r, http.StatusInternalServerError, err, "")
+			return
+		}
+	}
 	rs.runtime.Success(w, r, http.StatusOK, nil, "Device status updated successfully")
+}
+
+// lockDeviceByDeviceID finds the school's live device by its hardware ID
+// and locks its row for the status write. The manual web check-in device is
+// protected.
+func (rs *Resource) lockDeviceByDeviceID(r *http.Request, deviceID string) (devicefleet.Device, error) {
+	found, err := rs.IoTService.GetDeviceByDeviceID(r.Context(), deviceID)
+	if err != nil {
+		return devicefleet.Device{}, err
+	}
+	if found.DeviceID == devicefleet.WebManualDeviceID {
+		return devicefleet.Device{}, &devicefleet.AdministrationError{Op: "UpdateDeviceStatus", Err: devicefleet.ErrAdministrationDeviceProtected}
+	}
+	device, err := rs.lockLiveDevice(r, "UpdateDeviceStatus", found.ID)
+	if err == nil && device.DeviceID != found.DeviceID {
+		// Renamed between the lookup and the lock: the hardware ID now names
+		// no device this lock holds.
+		return devicefleet.Device{}, &devicefleet.AdministrationError{Op: "UpdateDeviceStatus", Err: devicefleet.ErrAdministrationDeviceNotFound}
+	}
+	return device, err
+}
+
+// deviceForEdit reads the device an edit changes and locks its live row in
+// the same statement. A block committed meanwhile is not overwritten
+// unnoticed (#2317), and a removal committed while the edit waited answers
+// 404 without a history entry from the snapshot before it (#2321).
+func (rs *Resource) deviceForEdit(r *http.Request, id int64) (*devicefleet.Device, error) {
+	device, err := rs.lockLiveDevice(r, "UpdateDevice", id)
+	if err != nil {
+		return nil, err
+	}
+	return &device, nil
+}
+
+// lockLiveDevice locks the school's live device row for a write; a removed
+// or foreign device is not found.
+func (rs *Resource) lockLiveDevice(r *http.Request, op string, id int64) (devicefleet.Device, error) {
+	device, err := rs.IoTService.Fleet().FindDeviceForUpdate(r.Context(), id)
+	if errors.Is(err, devicefleet.ErrDeviceNotFound) {
+		return devicefleet.Device{}, &devicefleet.AdministrationError{Op: op, Err: devicefleet.ErrAdministrationDeviceNotFound}
+	}
+	return device, err
 }
 
 // pingDevice handles pinging a device to update its last seen time
 func (rs *Resource) pingDevice(w http.ResponseWriter, r *http.Request) {
 	// Get device ID from URL
-	deviceID := chi.URLParam(r, "deviceId")
+	deviceID := deviceIDParam(r)
 	if deviceID == "" {
 		rs.runtime.Failure(w, r, http.StatusBadRequest, errors.New(errMsgDeviceIDRequired), "")
 		return

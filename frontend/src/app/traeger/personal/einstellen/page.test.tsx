@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, within, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
@@ -9,6 +9,10 @@ import TraegerStaffHirePage from "./page";
 const api = vi.hoisted(() => ({
   fetchStaffOverview: vi.fn(),
   hireStaff: vi.fn(),
+}));
+const address = vi.hoisted(() => ({ search: "" }));
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(address.search),
 }));
 // The page reads through the shared cache.
 vi.unmock("swr");
@@ -83,6 +87,7 @@ async function fillToReview() {
 describe("TraegerStaffHirePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    address.search = "";
     api.fetchStaffOverview.mockResolvedValue(OVERVIEW);
     api.hireStaff.mockResolvedValue(HIRED);
   });
@@ -186,29 +191,70 @@ describe("TraegerStaffHirePage", () => {
         code: "workforce.traeger_staff_hire_duplicate",
         details: {
           matches: [
-            { kind: "record", staff_record_id: 4 },
-            { kind: "school", school_id: 2, school_name: "OGS Süd" },
+            {
+              kind: "record",
+              staff_record_id: 4,
+              first_name: "Lena",
+              last_name: "Brandt",
+              reasons: ["name_birthday"],
+            },
+            {
+              kind: "school",
+              school_id: 2,
+              school_name: "OGS Süd",
+              staff_id: 17,
+              first_name: "Lena",
+              last_name: "Brandt-Ok",
+              reasons: ["name", "email"],
+            },
           ],
         },
       }),
     );
     await fillToReview();
     fireEvent.click(screen.getByRole("button", { name: "Person einstellen" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "Gibt es diese Person schon?",
+    });
     expect(
-      await screen.findByRole("heading", {
-        name: "Gibt es diese Person schon?",
+      within(dialog).getByText(
+        "moto hat 2 Personen gefunden, die Lena Brandt sein könnten:",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("Gleicher Name und Geburtsdatum"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("OGS Süd · noch ohne Akte"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("Gleicher Name, Geburtsdatum fehlt"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("Gleiche E-Mail-Adresse"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        /Wähle bei ihr „Akte anlegen“ oder „Akte öffnen“\./,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("link", {
+        name: "Akte von Lena Brandt öffnen, neuer Tab",
       }),
-    ).toBeInTheDocument();
+    ).toHaveAttribute("href", "/traeger/personal/4");
+    // #7378: the person at the school gets its record under „Ohne Akte“.
     expect(
-      screen.getByText(/An der Schule OGS Süd arbeitet die Person schon/),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Akte öffnen/ })).toHaveAttribute(
+      within(dialog).getByRole("link", {
+        name: "Akte für Lena Brandt-Ok anlegen",
+      }),
+    ).toHaveAttribute(
       "href",
-      "/traeger/personal/4",
+      "/traeger/personal?tab=ohne-akte&schule=2&person=17",
     );
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Trotzdem einstellen" }),
+      within(dialog).getByRole("button", { name: "Trotzdem einstellen" }),
     );
     await screen.findByRole("heading", {
       name: "Lena Brandt ist eingestellt.",
@@ -253,9 +299,39 @@ describe("TraegerStaffHirePage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Zu den Personalakten/ }),
-    ).toHaveAttribute("href", "/traeger/personal");
+    ).toHaveAttribute("href", "/traeger/personal?tab=ohne-akte");
     expect(
       screen.queryByRole("button", { name: /Person einstellen/ }),
     ).toBeNull();
+  });
+
+  // #7377: Abbrechen führt auf den Reiter der Personalakten zurück, von dem
+  // man kam; ohne Angabe auf die Personalakten selbst.
+  it("cancels back to the tab of the Personalakten it came from", async () => {
+    address.search = "from=ohne-akte";
+    const view = renderPage();
+    await screen.findByRole("heading", { name: "Person" });
+    expect(screen.getByRole("link", { name: "Abbrechen" })).toHaveAttribute(
+      "href",
+      "/traeger/personal?tab=ohne-akte",
+    );
+
+    view.unmount();
+    address.search = "from=/fremd";
+    renderPage();
+    await screen.findByRole("heading", { name: "Person" });
+    expect(screen.getByRole("link", { name: "Abbrechen" })).toHaveAttribute(
+      "href",
+      "/traeger/personal",
+    );
+  });
+
+  it("opens the new record with the tab of the Personalakten it came from", async () => {
+    address.search = "from=akten";
+    await fillToReview();
+    fireEvent.click(screen.getByRole("button", { name: "Person einstellen" }));
+    expect(
+      await screen.findByRole("link", { name: "Akte öffnen" }),
+    ).toHaveAttribute("href", "/traeger/personal/9?from=akten");
   });
 });

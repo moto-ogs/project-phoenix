@@ -24,6 +24,7 @@ import { Button } from "~/components/ui/button";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -148,7 +149,7 @@ export function TraegerHolidayClosureNotices({
   } = useNoticeList(rows, isSending);
   const title = "Eltern noch nicht informiert";
   const description =
-    "Schulhinweise brauchen einen Klick von Ihnen oder der Schule. Fehlgeschlagene E-Mails können Sie erneut senden.";
+    "Schulhinweise brauchen einen Klick von dir oder der Schule. Fehlgeschlagene E-Mails kannst du erneut senden.";
   const intro =
     suggested.length > 0 || retryableMails > 0 || unknownMails > 0 ? (
       <div className="space-y-2 text-sm">
@@ -163,8 +164,7 @@ export function TraegerHolidayClosureNotices({
         {unknownMails > 0 ? (
           <p>
             Bei {unknownMails} E-Mail{unknownMails === 1 ? "" : "s"} ist das
-            Ergebnis unbekannt. Bitte lassen Sie den Versand vom moto-Team
-            prüfen.
+            Ergebnis unbekannt. Bitte lass den Versand vom moto-Team prüfen.
           </p>
         ) : null}
         {suggested.length > 0 ? (
@@ -258,7 +258,7 @@ export function TraegerHolidayClosureNotices({
           ) : null}
         </div>
         {notice.canNotify ? (
-          <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
+          <ResponsiveRowActions>
             <Button
               type="button"
               variant="surface"
@@ -270,7 +270,7 @@ export function TraegerHolidayClosureNotices({
               <Mail className="h-4 w-4" aria-hidden="true" />
               Eltern informieren
             </Button>
-          </div>
+          </ResponsiveRowActions>
         ) : null}
       </ResponsiveActionRow>
     );

@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.number_ranges",
+  "max": 5,
+  "exact": true,
+  "description": "modules/parentbilling — GET /traeger/number-ranges (#7358, ADR 0119\naddendum 2026-11-17): the Träger binding of the Träger transaction, the\npatterns, the counters, the start values and the names of the colleagues\nwho set one. Flat in the number of start values.",
+  "route": "GET /traeger/number-ranges/"
+}

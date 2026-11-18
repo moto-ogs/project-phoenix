@@ -359,7 +359,7 @@ describe("PersonalizationTab", () => {
 
     render(<PersonalizationTab />);
     await waitFor(() => {
-      expect(screen.getByText(/Laden Sie ein eigenes Bild hoch/)).toBeDefined();
+      expect(screen.getByText(/Lade ein eigenes Bild hoch/)).toBeDefined();
     });
   });
 
@@ -383,7 +383,7 @@ describe("PersonalizationTab", () => {
 
     await waitFor(() => {
       expect(mockShowMessage).toHaveBeenCalledWith(
-        "Das Bild ist zu groß. Bitte wählen Sie ein Bild bis 2 MB.",
+        "Das Bild ist zu groß. Bitte wähle ein Bild bis 2 MB.",
       );
     });
     // Should NOT have called fetch for upload
@@ -410,7 +410,7 @@ describe("PersonalizationTab", () => {
 
     await waitFor(() => {
       expect(mockShowMessage).toHaveBeenCalledWith(
-        "Bitte wählen Sie ein Bild im Format JPG, PNG oder WebP.",
+        "Bitte wähle ein Bild im Format JPG, PNG oder WebP.",
       );
     });
     expect(globalThis.fetch).not.toHaveBeenCalled();

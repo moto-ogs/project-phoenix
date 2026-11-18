@@ -30,7 +30,7 @@ import {
   StatusBadge,
   type StatusBadgeTone,
 } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { formatChatDateTime } from "~/lib/date-helpers";
@@ -71,6 +71,7 @@ import { ProgressBar } from "~/components/ui/progress-bar";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import {
   fetchSFTPStatus,
@@ -377,11 +378,25 @@ export default function PayrollPage() {
   const duplicates = status ? duplicateLohnartNumbers(status) : [];
 
   // Statuszeile: die Zahlen, die die Seite ohnehin laedt.
-  const statusLine = status
-    ? `${status.configuredCategories} von ${status.totalCategories} Lohnarten zugeordnet · DATEV-Mandant ${
-        status.lodasHeaderComplete ? "vollständig" : "unvollständig"
-      } · ${status.staffWithoutPersonnelNumber} von ${status.staffTotal} ohne Personalnummer`
-    : null;
+  const statusLine = status ? (
+    <TenantPageStats
+      items={[
+        {
+          value: `${status.configuredCategories} von ${status.totalCategories}`,
+          label: "Lohnarten zugeordnet",
+        },
+        {
+          label: `DATEV-Mandant ${
+            status.lodasHeaderComplete ? "vollständig" : "unvollständig"
+          }`,
+        },
+        {
+          value: `${status.staffWithoutPersonnelNumber} von ${status.staffTotal}`,
+          label: "ohne Personalnummer",
+        },
+      ]}
+    />
+  ) : null;
 
   return (
     <TenantPage
@@ -642,9 +657,7 @@ function ReadinessRow({ item }: { readonly item: ReadinessItem }) {
         </div>
       </div>
       {item.action ? (
-        <div className="flex w-full flex-col gap-2 pl-8 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end sm:pl-0">
-          {item.action}
-        </div>
+        <ResponsiveRowActions leading={20}>{item.action}</ResponsiveRowActions>
       ) : null}
     </ResponsiveActionRow>
   );
@@ -935,7 +948,7 @@ function LohnbueroCard({
         <SwitchRow
           framed={false}
           label="Automatisch nach dem Monatsabschluss senden"
-          description="Schließen Sie einen Monat nach dem Wiederöffnen erneut ab, geht die Datei noch einmal raus. Ihr Name enthält dann „korrektur“."
+          description="Schließt du einen Monat nach dem Wiederöffnen erneut ab, geht die Datei noch einmal raus. Ihr Name enthält dann „korrektur“."
           checked={current.auto}
           onCheckedChange={(next) => change("auto", next)}
         />
@@ -986,7 +999,7 @@ function LohnbueroCard({
               error={
                 emailValid
                   ? undefined
-                  : "Bitte geben Sie eine vollständige E-Mail-Adresse ein."
+                  : "Bitte gib eine vollständige E-Mail-Adresse ein."
               }
             />
             <p className="text-xs text-gray-500">
@@ -1004,7 +1017,7 @@ function LohnbueroCard({
         {emailMissing && (
           <Alert
             type="warning"
-            message="Tragen Sie die E-Mail-Adresse des Lohnbüros ein. Ohne sie sendet moto nichts."
+            message="Trage die E-Mail-Adresse des Lohnbüros ein. Ohne sie sendet moto nichts."
           />
         )}
         {sftpHint && (
@@ -1064,7 +1077,7 @@ function LohnbueroCard({
 // Neu senden lässt sich der Link nicht: die Adresse steht oben in dieser
 // Karte, die Datei gibt es im Export der Zeitkonten.
 const LINK_MAIL_NEXT_STEP =
-  "Prüfen Sie oben die E-Mail-Adresse des Lohnbüros. Die Monatsdatei finden Sie unter Mitarbeiter im Reiter Zeitkonten bei „Exportieren“.";
+  "Prüfe oben die E-Mail-Adresse des Lohnbüros. Die Monatsdatei findest du unter Mitarbeiter im Reiter Zeitkonten bei „Exportieren“.";
 
 function dispatchStateBadge(dispatch: PayrollDispatchView): {
   label: string;
@@ -1438,14 +1451,14 @@ function WageTypesCard({
   return (
     <SectionCard
       title="Eigene Lohnarten"
-      description="Lohnarten Ihres Lohnbüros für Zuschläge und eigene Abwesenheitsarten, zusätzlich zu den festen Lohnarten oben. Änderungen werden sofort gespeichert."
+      description="Lohnarten deines Lohnbüros für Zuschläge und eigene Abwesenheitsarten, zusätzlich zu den festen Lohnarten oben. Änderungen werden sofort gespeichert."
       action={
         <Button
           type="button"
           variant="outline"
           size="compact"
           onClick={onCreate}
-          tooltip="Öffnet ein Fenster für eine neue Lohnart Ihres Lohnbüros."
+          tooltip="Öffnet ein Fenster für eine neue Lohnart deines Lohnbüros."
         >
           Lohnart anlegen
         </Button>
@@ -1454,7 +1467,7 @@ function WageTypesCard({
       {wageTypes.length === 0 ? (
         <EmptyState
           title="Noch keine eigene Lohnart"
-          description="Legen Sie eine an, wenn Ihr Lohnbüro Zuschläge oder eine eigene Abwesenheitsart mit einer eigenen Nummer bucht."
+          description="Lege eine an, wenn dein Lohnbüro Zuschläge oder eine eigene Abwesenheitsart mit einer eigenen Nummer bucht."
         />
       ) : (
         <DataTable
@@ -1660,7 +1673,7 @@ function SurchargeRulesCard({
           size="compact"
           onClick={onCreate}
           disabled={noWageType}
-          disabledReason="Legen Sie zuerst oben eine eigene Lohnart an."
+          disabledReason="Lege zuerst oben eine eigene Lohnart an."
           tooltip="Öffnet ein Fenster für eine neue Zuschlagsregel."
         >
           Zuschlagsregel anlegen
@@ -1669,8 +1682,8 @@ function SurchargeRulesCard({
     >
       {noWageType ? (
         <p className="text-sm text-gray-700">
-          Ein Zuschlag wird auf eine eigene Lohnart gebucht. Legen Sie zuerst
-          oben eine Lohnart an.
+          Ein Zuschlag wird auf eine eigene Lohnart gebucht. Lege zuerst oben
+          eine Lohnart an.
         </p>
       ) : rules.surchargeRules.length === 0 ? (
         <EmptyState
@@ -1868,7 +1881,7 @@ function AbsenceTypeWageTypesCard({
       {rules.absenceTypes.length === 0 ? (
         <EmptyState
           title="Noch keine eigene Abwesenheitsart"
-          description="Eigene Abwesenheitsarten legen Sie in der Datenverwaltung an."
+          description="Eigene Abwesenheitsarten legst du in der Datenverwaltung an."
           action={
             <NavigationLink
               href="/database/absence-types"

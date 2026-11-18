@@ -195,7 +195,7 @@ export function ExportDialog<F extends ExportFileFormat>({
               if (format) run.download(format);
             }}
             disabled={busy !== null || blocked || !format}
-            tooltip="Speichert die Liste im gewählten Format auf Ihrem Gerät."
+            tooltip="Speichert die Liste im gewählten Format auf deinem Gerät."
           >
             <Download className="h-4 w-4" aria-hidden />
             {busy === "download"

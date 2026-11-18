@@ -341,7 +341,7 @@ describe("TraegerErasureOrderSection", () => {
       await screen.findByText(/ohne Hinweis auf die Unterlagen erfasst/),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Tragen Sie Hinweis und Wahl hier nach/),
+      screen.getByText(/Trage Hinweis und Wahl hier nach/),
     ).toBeInTheDocument();
   });
 
@@ -579,7 +579,7 @@ describe("TraegerErasureOrderSection", () => {
 
     expect(
       await screen.findByText(
-        "Die Anzeige des Löschauftrags ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Anzeige des Löschauftrags ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/^Den Löschauftrag/)).toBeNull();

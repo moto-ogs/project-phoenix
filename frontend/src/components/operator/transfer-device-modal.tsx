@@ -13,6 +13,10 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import {
+  formatDeviceSessionMessage,
+  formatDeviceTimestamp,
+} from "~/lib/operator/device-session-message";
 import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
 import { useSWRAuth } from "~/lib/swr";
 import { operatorKeys } from "~/lib/swr/operator-keys";
@@ -44,13 +48,6 @@ interface TransferDeviceContentProps {
   readonly onRefreshStatus: () => Promise<void>;
 }
 
-function formatTimestamp(value: string): string {
-  return new Intl.DateTimeFormat("de-DE", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
 function getTransferDestinations(
   device: OperatorDevice | null,
   schools: readonly School[],
@@ -72,17 +69,9 @@ function getTransferDestinations(
 
 function formatOnlineMessage(status: DeviceTransferStatus): string {
   const lastSeen = status.lastSeen
-    ? ` (zuletzt gesehen ${formatTimestamp(status.lastSeen)})`
+    ? ` (zuletzt gesehen ${formatDeviceTimestamp(status.lastSeen)})`
     : "";
   return `Das Gerät ist online${lastSeen}. Schalte es aus und warte mindestens fünf Minuten.`;
-}
-
-function formatSessionMessage(
-  session: NonNullable<DeviceTransferStatus["activeSession"]>,
-): string {
-  const activity = session.activityName ? ` · ${session.activityName}` : "";
-  const room = session.roomName ? ` · ${session.roomName}` : "";
-  return `Offene Sitzung seit ${formatTimestamp(session.startedAt)}${activity}${room}. Beende die Sitzung vor dem Verschieben.`;
 }
 
 function useDeviceTransferStatus(
@@ -177,7 +166,10 @@ function TransferDeviceContent({
       {status?.activeSession ? (
         <Alert
           type="warning"
-          message={formatSessionMessage(status.activeSession)}
+          message={formatDeviceSessionMessage(
+            status.activeSession,
+            "Beende die Sitzung vor dem Verschieben.",
+          )}
           action={statusRetry}
         />
       ) : null}

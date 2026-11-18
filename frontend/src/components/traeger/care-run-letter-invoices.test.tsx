@@ -238,7 +238,7 @@ describe("CareRunLetterInvoices (#4684)", () => {
     );
     expect(
       screen.getAllByText(
-        "Zum Drucken heruntergeladen. Geben Sie der Familie das Storno-Schreiben.",
+        "Zum Drucken heruntergeladen. Gib der Familie das Storno-Schreiben.",
       ).length,
     ).toBeGreaterThan(0);
     expect(
@@ -256,7 +256,7 @@ describe("CareRunLetterInvoices (#4684)", () => {
     );
     expect(screen.getAllByText("Ohne E-Mail").length).toBeGreaterThan(0);
     expect(
-      screen.getAllByText("Bitte drucken Sie das Schreiben.").length,
+      screen.getAllByText("Bitte drucke das Schreiben.").length,
     ).toBeGreaterThan(0);
     const menu = within(openMenu(/Aktionen für die Rechnung von Mia/));
     expect(

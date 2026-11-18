@@ -272,7 +272,7 @@ describe("MasterDataReviewItem", () => {
     fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
 
     await expectErrorToast(
-      /Die Anfrage konnte nicht bearbeitet werden\. Bitte versuchen Sie es später erneut\./,
+      /Die Anfrage konnte nicht bearbeitet werden\. Bitte versuche es später erneut\./,
     );
     expect(onDecided).not.toHaveBeenCalled();
     expect(screen.getByText("Lara Beispiel")).toBeInTheDocument();

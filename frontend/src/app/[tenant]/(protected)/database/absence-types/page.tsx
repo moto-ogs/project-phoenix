@@ -5,6 +5,7 @@
 // Auswahlfelds „Art der Abwesenheit", das aus zwei Dialogen der Zeiterfassung
 // aufging. Das Feld ist jetzt reine Auswahl und verlinkt hierher.
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { Suspense, useCallback, useLayoutEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -31,6 +32,7 @@ import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 const CACHE_KEY = tenantAdminKeys.absenceTypes();
 
@@ -79,7 +81,7 @@ function TraegerKeptSummary({
         </DataField>
       </DataGrid>
       <p className="text-xs text-gray-600">
-        Name, Kontingent und Verfall legt Ihr Träger fest. Die Tage je Person
+        Name, Kontingent und Verfall legt dein Träger fest. Die Tage je Person
         stehen in der Personalakte beim Träger.
       </p>
     </InsetPanel>
@@ -144,7 +146,7 @@ function sections(type: AbsenceType | null): SectionConfig[] {
           type: "checkbox",
           colSpan: 2,
           helperText:
-            "Die Tage je Person tragen Sie unter Mitarbeiter im Reiter Abwesenheiten ein. Mehr als dort steht, lässt sich nicht eintragen.",
+            "Die Tage je Person trägst du unter Mitarbeiter im Reiter Abwesenheiten ein. Mehr als dort steht, lässt sich nicht eintragen.",
         },
         {
           name: "carryoverUntil",
@@ -194,26 +196,35 @@ const config: CatalogConfig<AbsenceType> = {
   title: "Abwesenheitsarten",
   singular: "Abwesenheitsart",
   purpose:
-    "Eigene Arten wie Regenerationstag, zusätzlich zu Urlaub, Krank, Fortbildung, Sonstige und Freizeitausgleich. Arten mit „Vom Träger“ legt Ihr Träger fest; Ihre Schule darf nur für ihre Einsätze abweichen.",
+    "Eigene Arten wie Regenerationstag, zusätzlich zu Urlaub, Krank, Fortbildung, Sonstige und Freizeitausgleich. Arten mit „Vom Träger“ legt dein Träger fest; deine Schule darf nur für ihre Einsätze abweichen.",
   searchPlaceholder: "Abwesenheitsart suchen…",
   emptyDescription:
-    "Legen Sie eine eigene Art an, zum Beispiel Regenerationstag oder Krank-Urlaubstag. Urlaub, Krank, Fortbildung, Sonstige und Freizeitausgleich gibt es immer.",
+    "Lege eine eigene Art an, zum Beispiel Regenerationstag oder Krank-Urlaubstag. Urlaub, Krank, Fortbildung, Sonstige und Freizeitausgleich gibt es immer.",
   stats: (types) => {
     const inactive = types.filter(
       (type) => !type.isActive || !type.offered,
     ).length;
     const active = types.length - inactive;
     const fromTraeger = types.filter((type) => type.keptByTraeger).length;
-    const parts =
+    const items: { value: string; label: string }[] =
       inactive > 0
         ? [
-            `${formatCount(active)} in der Auswahl`,
-            `${formatCount(inactive)} ausgeschaltet`,
+            { value: formatCount(active), label: "in der Auswahl" },
+            { value: formatCount(inactive), label: "ausgeschaltet" },
           ]
-        : [`${formatCount(active)} ${active === 1 ? "Art" : "Arten"}`];
+        : [
+            {
+              value: formatCount(active),
+              label: active === 1 ? "Art" : "Arten",
+            },
+          ];
     // Arten des Trägers (#4710) zählen mit, aber erkennbar.
-    if (fromTraeger > 0) parts.push(`${formatCount(fromTraeger)} vom Träger`);
-    return parts.join(" · ");
+    if (fromTraeger > 0) {
+      items.push({ value: formatCount(fromTraeger), label: "vom Träger" });
+    }
+    const [only] = items;
+    if (items.length === 1 && only) return `${only.value} ${only.label}`;
+    return <TenantPageStats items={items} />;
   },
   toRow: (type) => ({
     name: type.name,
@@ -268,7 +279,7 @@ const config: CatalogConfig<AbsenceType> = {
     loadingLabel: "Wird aus der Auswahl genommen …",
     describe: (type) =>
       type.keptByTraeger
-        ? `„${type.name}“ ist eine Art Ihres Trägers. Ihre Schule bietet sie dann nicht mehr an, andere Schulen schon. Eingetragene Abwesenheiten behalten den Namen.`
+        ? `„${type.name}“ ist eine Art deines Trägers. Deine Schule bietet sie dann nicht mehr an, andere Schulen schon. Eingetragene Abwesenheiten behalten den Namen.`
         : `„${type.name}“ steht bei neuen Abwesenheiten nicht mehr zur Auswahl. Bereits eingetragene Abwesenheiten behalten den Namen.`,
     run: (type) =>
       absenceTypeService.updateAbsenceType(
@@ -304,8 +315,7 @@ function AbsenceTypesPageContent() {
     absenceTypeService.getAbsenceTypes(),
   );
   const accessRefused =
-    swrError instanceof ApiError &&
-    (swrError.status === 401 || swrError.status === 403);
+    swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
   useLayoutEffect(() => {
     if (!accessRefused) return;

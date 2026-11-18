@@ -1,162 +1,6 @@
 {
   "entries": [
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "reason": "Read-only newly exposed target: workforce reaches api/common.UploadStorage.Open (tenant-runtime) through api/common.UploadStorage.Open. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.UploadFiles.Open (delivery-platform) through api/common.UploadStorage.Open. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.Open",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.UploadFiles.Open (delivery-platform) through modules/delivery/objects.UploadFiles.Open. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "reason": "Read-only newly exposed target: workforce reaches api/common.UploadStorage.PublicDir (tenant-runtime) through api/common.UploadStorage.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.UploadFiles.PublicDir (delivery-platform) through api/common.UploadStorage.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.UploadFiles.PublicDir (delivery-platform) through modules/delivery/objects.UploadFiles.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "classification": "platform",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "reason": "Platform protocol participation (mutation): workforce reaches api/common.UploadStorage.RemoveUpload (tenant-runtime) through api/common.UploadStorage.RemoveUpload. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "classification": "platform",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/delivery/objects.UploadFiles.RemoveUpload (delivery-platform) through api/common.UploadStorage.RemoveUpload. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.RemoveUpload",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.RemoveUpload",
-      "classification": "platform",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.RemoveUpload",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/delivery/objects.UploadFiles.RemoveUpload (delivery-platform) through modules/delivery/objects.UploadFiles.RemoveUpload. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.RemoveUpload",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "classification": "platform",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "reason": "Platform protocol participation (mutation): workforce reaches api/common.UploadStorage.SaveNamed (tenant-runtime) through api/common.UploadStorage.SaveNamed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "classification": "platform",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/delivery/objects.UploadFiles.SaveNamed (delivery-platform) through api/common.UploadStorage.SaveNamed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.SaveNamed",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.SaveNamed",
-      "classification": "platform",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.SaveNamed",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/delivery/objects.UploadFiles.SaveNamed (delivery-platform) through modules/delivery/objects.UploadFiles.SaveNamed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.SaveNamed",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "reason": "Read-only newly exposed target: workforce reaches api/common.UploadStorage.StoredPath (tenant-runtime) through api/common.UploadStorage.StoredPath. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.UploadFiles.StoredPath (delivery-platform) through api/common.UploadStorage.StoredPath. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.StoredPath",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.StoredPath",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.StoredPath",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.UploadFiles.StoredPath (delivery-platform) through modules/delivery/objects.UploadFiles.StoredPath. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.StoredPath",
-      "target_owner": "delivery-platform"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/planexport.service.ExportBetreuungsplan",
       "classification": "query",
       "effect": "query",
@@ -5908,13 +5752,25 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollSchools.School",
-      "classification": "query",
-      "effect": "query",
+      "classification": "leaf",
+      "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollSchools.School",
-      "reason": "Read or pure value helper reached by the payroll dispatch (#4805): workforce reaches modules/organizationtenancy.Capability.FindSchool (organization-tenancy) through roots/owners.payrollSchools.School. No persistent, lock or scope effect at this terminal.",
+      "reason": "Owner-provided locking read/gate, never labelled query: payroll notices and Nachweis reminders hold their school in its tenant transaction, as a sign-in does (#6305), so a demo retirement waits for their mails or they read the school as retired (#7478). Target modules/organizationtenancy.Capability.FindSchoolForShare; modules/organizationtenancy.Capability (supplied contract method).",
       "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchool",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchoolForShare",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollSchools.School",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollSchools.School",
+      "reason": "Owner-provided locking read/gate, never labelled query: payroll notices and Nachweis reminders hold their school in its tenant transaction, as a sign-in does (#6305), so a demo retirement waits for their mails or they read the school as retired (#7478). Target modules/organizationtenancy.Query.FindSchoolForShare; modules/organizationtenancy.Query (supplied contract method).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchoolForShare",
       "target_owner": "organization-tenancy"
     },
     {
@@ -5922,19 +5778,9 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollSchools.School",
-      "reason": "Read or pure value helper reached by the payroll dispatch (#4805): workforce reaches modules/organizationtenancy.Query.FindSchool (organization-tenancy) through roots/owners.payrollSchools.School. No persistent, lock or scope effect at this terminal.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted: a retired school gets no payroll notice or Nachweis reminder (#7478).",
       "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchool",
-      "target_owner": "organization-tenancy"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollSchools.School",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollSchools.School",
-      "reason": "Read or pure value helper reached by the payroll dispatch (#4805): workforce reaches modules/organizationtenancy.SchoolQuery.FindSchool (organization-tenancy) through roots/owners.payrollSchools.School. No persistent, lock or scope effect at this terminal.",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolQuery.FindSchool",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
     },
     {
@@ -8234,7 +8080,27 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.PersonByAccountID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.FindByAccountID; modules/peopledirectory/ports/person_directory_port.go:23. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.IsPersonNotFound; modules/peopledirectory/ports/person_directory.go:46. Pure error classifier for #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.IsPersonNotFound",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffDirectoryCapability.PersonByAccountID",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.PersonByAccountID",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.IsRepositoryNoRows; modules/peopledirectory/ports/repository_vocabulary.go:347. Pure error classifier for #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.IsRepositoryNoRows",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffDirectoryCapability.PersonByAccountID",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.PersonByAccountID",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.FindByAccountID; modules/peopledirectory/ports/person_directory_port.go:23. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.FindByAccountID",
       "target_owner": "people-directory"
@@ -8267,7 +8133,27 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.ResolveStaffIDByAccountID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.ResolveStaffIDByAccountID; modules/peopledirectory/ports/person_directory_port.go:37. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.IsPersonNotFound; modules/peopledirectory/ports/person_directory.go:46. Pure error classifier for #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.IsPersonNotFound",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffDirectoryCapability.ResolveStaffIDByAccountID",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.ResolveStaffIDByAccountID",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.IsRepositoryNoRows; modules/peopledirectory/ports/repository_vocabulary.go:347. Pure error classifier for #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.IsRepositoryNoRows",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffDirectoryCapability.ResolveStaffIDByAccountID",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.ResolveStaffIDByAccountID",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.ResolveStaffIDByAccountID; modules/peopledirectory/ports/person_directory_port.go:37. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.ResolveStaffIDByAccountID",
       "target_owner": "people-directory"
@@ -8380,7 +8266,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
-      "reason": "E1 #5892: SetTenantID decorates only the returned membership DTO (peopledirectory/record_metadata.go). It neither writes a row nor changes transaction scope; the narrow subject/name lookup remains read-only.",
+      "reason": "E1 #5892: SetTenantID decorates only the returned membership DTO (peopledirectory/record_metadata.go). It neither writes a row nor changes transaction scope; the narrow subject/name lookup remains read-only. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -8390,7 +8276,27 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.IsPersonNotFound; modules/peopledirectory/ports/person_directory.go:46. Pure error classifier for #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.IsPersonNotFound",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffDirectoryCapability.StaffByPersonID",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.IsRepositoryNoRows; modules/peopledirectory/ports/repository_vocabulary.go:347. Pure error classifier for #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.IsRepositoryNoRows",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffDirectoryCapability.StaffByPersonID",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.StaffRows",
       "target_owner": "people-directory"
@@ -8400,7 +8306,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindMembershipByPersonID",
       "target_owner": "people-directory"
@@ -8410,7 +8316,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaffByPerson",
       "target_owner": "school-membership"
@@ -8420,7 +8326,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -8430,7 +8336,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaffByPerson",
       "target_owner": "school-membership"
@@ -8440,7 +8346,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDirectory.StaffByPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. Re-reviewed for #7306: the binding now only adds workforce.ErrNoStaffProfile to a missing person or staff row; this target keeps its effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"
@@ -9067,33 +8973,25 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDocumentUploads.PublicDir",
-      "reason": "Read-only newly exposed target: workforce reaches api/common.UploadStorage.PublicDir (tenant-runtime) through api/common.UploadStorage.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.RemovePrivate",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDocumentObjectRemover.RemovePrivate",
+      "reason": "Remove only the named staff document; Workforce retains the durable cleanup intent until the object is gone.",
       "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api/common.UploadStorage.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDocumentUploads.PublicDir",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.UploadFiles.PublicDir (delivery-platform) through api/common.UploadStorage.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.RemovePrivate",
       "target_owner": "delivery-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDocumentUploads.PublicDir",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.UploadFiles.PublicDir (delivery-platform) through modules/delivery/objects.UploadFiles.PublicDir. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.RemovePrivate",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDocumentObjectRemover.RemovePrivate",
+      "reason": "Remove the validated document name in the current tenant namespace through the configured byte backend. The durable Workforce cleanup intent remains until successful removal.",
       "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.PublicDir",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.RemovePrivate",
       "target_owner": "delivery-platform"
     },
     {
@@ -10528,6 +10426,16 @@
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListOrganizations",
       "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolEmailQuery.FindSchoolEmailIdentities",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerSchoolEmails.FindSchoolEmailIdentities",
+      "reason": "Reviewed read: the check of a Träger hire reads which accounts and unused invitations of the school of the tenant transaction carry the hired person's address (#7378, ADR 0254 addendum of 18.11.2026); it writes nothing.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolEmailQuery.FindSchoolEmailIdentities",
+      "target_owner": "identity-access"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerSchoolEmployments.SchoolEmployments",
@@ -17265,44 +17173,35 @@
       "target_owner": "shift-plan-sync"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.OpenPrivate",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.OpenPrivate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.PrivateUploads.OpenPrivate (delivery-platform) through modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate. No persistent, lock or scope effect; opens sealed objects of #3840 (ADR 0098).",
+      "reason": "Read object bytes after Workforce has authorized the document; Delivery opens sealed bytes without changing storage.",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.OpenPrivate",
       "target_owner": "delivery-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.OpenPrivate",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.SealedPrivateUploadsBackend (delivery-platform) through modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate. No persistent, lock or scope effect; opens sealed objects of #3840 (ADR 0098).",
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.RemovePrivate",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.RemovePrivate",
+      "reason": "Remove the validated document name in the current tenant namespace through the configured byte backend. The durable Workforce cleanup intent remains until successful removal.",
       "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.SealedPrivateUploadsBackend",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.RemovePrivate",
       "target_owner": "delivery-platform"
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.SaveSealed",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.SaveSealed",
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/delivery/objects.PrivateUploads.SaveSealed (delivery-platform) through modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Sealed write of #3840.",
+      "reason": "Write the staff document under its existing tenant key with the category's sealing ring. Workforce retains the cleanup intent when the write or metadata transaction fails.",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.SaveSealed",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.SaveSealed",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed",
-      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.SealedPrivateUploadsBackend (delivery-platform) through modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed. No persistent, lock or scope effect; opens sealed objects of #3840 (ADR 0098).",
-      "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.SealedPrivateUploadsBackend",
       "target_owner": "delivery-platform"
     },
     {

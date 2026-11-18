@@ -65,7 +65,9 @@ type Config struct {
 	// day (#4764).
 	PlannedCareDays     ports.PlannedCareDays
 	AttendanceIntervals ports.AttendanceIntervals
-	Logger              *slog.Logger
+	// DemoHistory reports the demo's booked weekdays separately from its live simulation.
+	DemoHistory bool
+	Logger      *slog.Logger
 	// Now is the composition's clock and is required.
 	Now func() time.Time
 }
@@ -78,6 +80,9 @@ type service struct {
 func NewService(cfg Config) studentpresence.StatisticsReports {
 	if cfg.Now == nil {
 		panic("studentpresence statistics: the clock is required")
+	}
+	if cfg.DemoHistory && cfg.PlannedCareDays == nil {
+		panic("studentpresence statistics: demo history requires planned care days")
 	}
 	if cfg.Logger == nil {
 		cfg.Logger = slog.Default()
@@ -154,6 +159,12 @@ func (s *service) compute(ctx context.Context, filters studentpresence.Statistic
 			return nil, err
 		}
 	}
+	if s.cfg.DemoHistory && filters.Wants(studentpresence.StatisticsSectionAttendance) {
+		inputs.planned, err = s.loadPlannedCareDays(ctx, reportStudentIDs(students), filters.From, filters.To)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	report := &studentpresence.StatisticsReport{
 		From: filters.From,
@@ -162,7 +173,7 @@ func (s *service) compute(ctx context.Context, filters studentpresence.Statistic
 	// Without the attendance section the rows carry identity only (zero care
 	// days, zero counters) and serve as the shared population; they are not
 	// put on the wire, where they would read as "every child was absent".
-	studentRows := buildStudentRows(students, inputs.careDays, inputs.attendance, inputs.statusDays, today)
+	studentRows := buildStudentRows(students, inputs, today)
 	if filters.Wants(studentpresence.StatisticsSectionAttendance) {
 		report.CareDays = len(inputs.careDays)
 		report.ExcludedDays = inputs.excluded
@@ -201,6 +212,7 @@ type attendanceInputs struct {
 	excluded   studentpresence.StatisticsExcludedDays
 	attendance []ports.AttendanceDay
 	statusDays []ports.StatusDay
+	planned    map[int64]map[calendar.Date]ports.PlannedCareDay
 }
 
 func (s *service) loadAttendanceInputs(ctx context.Context, from, to calendar.Date) (attendanceInputs, error) {
@@ -298,19 +310,19 @@ type dayKey struct {
 	date      calendar.Date
 }
 
-func buildStudentRows(students []*ports.StatisticsStudent, careDays map[calendar.Date]bool, attendance []ports.AttendanceDay, statusDays []ports.StatusDay, today calendar.Date) []studentpresence.StatisticsStudentRow {
-	present := make(map[dayKey]bool, len(attendance))
-	for _, row := range attendance {
+func buildStudentRows(students []*ports.StatisticsStudent, inputs attendanceInputs, today calendar.Date) []studentpresence.StatisticsStudentRow {
+	present := make(map[dayKey]bool, len(inputs.attendance))
+	for _, row := range inputs.attendance {
 		present[dayKey{row.StudentID, row.Date}] = true
 	}
-	status := classifyStatusDays(statusDays)
+	status := classifyStatusDays(inputs.statusDays)
 
 	rows := make([]studentpresence.StatisticsStudentRow, 0, len(students))
 	for _, st := range students {
 		if st == nil || st.EnrolledOn == nil {
 			continue
 		}
-		rows = append(rows, buildStudentRow(st, careDays, present, status, today))
+		rows = append(rows, buildStudentRow(st, inputs.careDays, inputs.planned[st.ID], present, status, today))
 	}
 	sort.SliceStable(rows, func(i, j int) bool {
 		if c := compareStudentName(rows[i].LastName, rows[i].FirstName, rows[j].LastName, rows[j].FirstName); c != 0 {
@@ -340,7 +352,7 @@ func classifyStatusDays(statusDays []ports.StatusDay) map[dayKey]string {
 }
 
 // buildStudentRow counts one child's care days inside their enrollment.
-func buildStudentRow(st *ports.StatisticsStudent, careDays map[calendar.Date]bool, present map[dayKey]bool, status map[dayKey]string, today calendar.Date) studentpresence.StatisticsStudentRow {
+func buildStudentRow(st *ports.StatisticsStudent, careDays map[calendar.Date]bool, plan map[calendar.Date]ports.PlannedCareDay, present map[dayKey]bool, status map[dayKey]string, today calendar.Date) studentpresence.StatisticsStudentRow {
 	row := studentpresence.StatisticsStudentRow{
 		StudentID:   st.ID,
 		SchoolClass: st.SchoolClass,
@@ -351,6 +363,9 @@ func buildStudentRow(st *ports.StatisticsStudent, careDays map[calendar.Date]boo
 	row.LastName = st.LastName
 	for day := range careDays {
 		if !st.EnrolledOn(day, today) {
+			continue
+		}
+		if booked, ok := plan[day]; ok && !booked.Expected && !booked.NoPlan {
 			continue
 		}
 		row.CareDays++

@@ -18,6 +18,7 @@ import { DataField, DataGrid } from "~/components/ui/data-field";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import {
@@ -234,7 +235,7 @@ export function CareContractVersions({
           <StatusBadge label={`${versions.length} Versionen`} tone="gray" />
         ) : null
       }
-      description="Geben Sie oder die Schule eine Änderung der Betreuung frei, entsteht eine neue Version. Frühere Versionen bleiben hier lesbar."
+      description="Gibst du oder die Schule eine Änderung der Betreuung frei, entsteht eine neue Version. Frühere Versionen bleiben hier lesbar."
     >
       <ResponsiveActionList>
         {ordered.map((version, index) => {
@@ -251,7 +252,7 @@ export function CareContractVersions({
             <ResponsiveActionRow
               key={version.number}
               align="start"
-              className="block gap-[normal] py-4"
+              className="gap-3 py-4 sm:gap-[normal]"
             >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -297,7 +298,7 @@ export function CareContractVersions({
                   </DataGrid>
                 </div>
               </div>
-              <div className="mt-3 flex sm:mt-0 sm:justify-end">
+              <ResponsiveRowActions>
                 <Button
                   type="button"
                   variant="surface"
@@ -310,7 +311,7 @@ export function CareContractVersions({
                   <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />
                   {loading === version.number ? "Wird geladen …" : "PDF"}
                 </Button>
-              </div>
+              </ResponsiveRowActions>
             </ResponsiveActionRow>
           );
         })}

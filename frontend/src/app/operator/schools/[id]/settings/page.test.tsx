@@ -221,7 +221,7 @@ describe("OperatorSchoolSettingsPage", () => {
     );
     expect(
       screen.getByText(
-        "Sie bearbeiten diese Einstellungen als Operator stellvertretend für die Schule.",
+        "Du bearbeitest diese Einstellungen als Operator stellvertretend für die Schule.",
       ),
     ).toBeDefined();
   });

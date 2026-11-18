@@ -110,7 +110,7 @@ export default function AnfragenPage() {
   // oder die ganze Seite (#2517): der Fehler steht vor Ort, mit Wiederholen.
   const accessError = useSwrLoadError(
     requestAccess.error,
-    "die Prüfung Ihrer Freigaben",
+    "die Prüfung deiner Freigaben",
     () => requestAccess.refresh(),
   );
   const showElternTab = requestAccess.canOpenParentRequestsTab;
@@ -479,7 +479,7 @@ export default function AnfragenPage() {
               {
                 label: "Neue Anfragen abonnieren",
                 description:
-                  "Zeigt Ihren persönlichen Link für neue Elternanfragen",
+                  "Zeigt deinen persönlichen Link für neue Elternanfragen",
                 onClick: () => setRequestFeedOpen(true),
               },
             ]

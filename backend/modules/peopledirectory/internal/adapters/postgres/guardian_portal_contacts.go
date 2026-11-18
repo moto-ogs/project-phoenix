@@ -31,11 +31,12 @@ func (s *GuardianStore) ListPortalContacts(ctx context.Context, guardianIDs, stu
 		AccountID           int64
 		FirstName, LastName string
 		Email, PortalLocale *string
+		Salutation          *string
 		StudentID           *int64
 		PortalPermission    json.RawMessage `bun:"portal_permission,type:jsonb"`
 	}
 	query := db.NewSelect().TableExpr("users.guardian_profiles AS gp").
-		ColumnExpr("gp.id AS guardian_profile_id, gp.tenant_id, gp.account_id, gp.first_name, gp.last_name, gp.email, gp.portal_locale, sg.student_id, sg.permissions -> 'parent_portal.access' AS portal_permission").
+		ColumnExpr("gp.id AS guardian_profile_id, gp.tenant_id, gp.account_id, gp.first_name, gp.last_name, gp.salutation, gp.email, gp.portal_locale, sg.student_id, sg.permissions -> 'parent_portal.access' AS portal_permission").
 		Join("LEFT JOIN (?) AS sg ON sg.guardian_profile_id = gp.id AND sg.tenant_id = gp.tenant_id", s.links.GuardianLinkRows(db, scope.TenantID)).
 		Where("gp.account_id IS NOT NULL").
 		WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
@@ -54,6 +55,7 @@ func (s *GuardianStore) ListPortalContacts(ctx context.Context, guardianIDs, stu
 		result = append(result, peopledirectory.GuardianPortalContact{
 			GuardianProfileID: row.GuardianProfileID, TenantID: row.TenantID, AccountID: row.AccountID,
 			FirstName: row.FirstName, LastName: row.LastName, Email: row.Email, PortalLocale: row.PortalLocale,
+			Salutation:       row.Salutation,
 			StudentID:        row.StudentID,
 			PortalPermission: row.PortalPermission,
 		})

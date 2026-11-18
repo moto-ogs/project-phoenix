@@ -1,4 +1,8 @@
 import { operatorFetch } from "./api-helpers";
+import {
+  mapDeviceHistoryEntry,
+  type DeviceHistoryEntry,
+} from "~/lib/device-history";
 import type {
   BackendOrganization,
   BackendOrganizationSummary,
@@ -378,6 +382,43 @@ class OperatorProvisioningService {
       `/api/operator/provisioning/devices/${encodeURIComponent(deviceId)}/transfer-status`,
     );
     return mapDeviceTransferStatus(result);
+  }
+
+  /**
+   * The history of one device across the schools it went through, newest
+   * first (#2321). Each entry names its school; staff stay unnamed.
+   */
+  async listDeviceHistory(deviceId: string): Promise<DeviceHistoryEntry[]> {
+    const result = await operatorFetch<
+      Parameters<typeof mapDeviceHistoryEntry>[0][] | null
+    >(`/api/operator/devices/${encodeURIComponent(deviceId)}/history`);
+    return (result ?? []).map(mapDeviceHistoryEntry);
+  }
+
+  /**
+   * Blocks or unblocks a device (Gerätesperre, #2317). The route answers
+   * without data; the caller reloads the device list.
+   */
+  async setDeviceBlocked(deviceId: string, blocked: boolean): Promise<void> {
+    await operatorFetch<null>(
+      `/api/operator/devices/${encodeURIComponent(deviceId)}/${blocked ? "block" : "unblock"}`,
+      { method: "POST" },
+    );
+  }
+
+  /**
+   * Setzt die Geräteplätze einer Schule (#2312); null entfernt die Grenze.
+   * Eine Zahl unter den registrierten Geräten lehnt das Backend ab
+   * (provisioning.device_slots_below_occupied).
+   */
+  async setSchoolDeviceSlots(
+    schoolId: string,
+    deviceSlots: number | null,
+  ): Promise<void> {
+    await operatorFetch<null>(
+      `/api/operator/schools/${encodeURIComponent(schoolId)}/device-slots`,
+      { method: "PUT", body: { device_slots: deviceSlots } },
+    );
   }
 
   async transferDevice(

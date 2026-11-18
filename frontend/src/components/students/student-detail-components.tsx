@@ -470,14 +470,12 @@ export function StudentHeaderStats({
   return (
     <span className="block">
       {student.group_name || student.school_class ? (
-        <span className="inline-flex flex-wrap items-center gap-2">
+        // Klasse und Gruppe mit Abstand, ohne Trennpunkt (#5684, #7402).
+        <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
           {student.school_class ? (
             <span className="truncate">
               {schoolClassLabel(student.school_class)}
             </span>
-          ) : null}
-          {student.school_class && student.group_name ? (
-            <span aria-hidden="true">·</span>
           ) : null}
           {student.group_name ? (
             <span className="inline-flex items-center gap-2">
@@ -777,7 +775,7 @@ function SupervisorItem({
               size="md"
               className="mt-3"
               onClick={handleEmailClick}
-              tooltip="Öffnet Ihr Mailprogramm mit einer neuen Mail an diese Person."
+              tooltip="Öffnet dein Mailprogramm mit einer neuen Mail an diese Person."
             >
               <EmailIcon />
               Kontakt aufnehmen
@@ -1171,7 +1169,7 @@ export function StudentHistorySection({
               ? "Nur für Gruppenbetreuer"
               : attendanceLogEnabled
                 ? "Anwesenheit je Betreuungsangebot und besuchte Räume"
-                : "Für Ihre Schule deaktiviert"
+                : "Für deine Schule deaktiviert"
           }
           disabled={attendanceDisabled}
           onClick={
@@ -1188,7 +1186,7 @@ export function StudentHistorySection({
               ? "Nur für Gruppenbetreuer"
               : feedbackEnabled
                 ? "Feedback und Bewertungen"
-                : "Für Ihre Schule deaktiviert"
+                : "Für deine Schule deaktiviert"
           }
           disabled={feedbackDisabled}
           onClick={

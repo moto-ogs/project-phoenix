@@ -104,7 +104,7 @@ describe("roomsConfig", () => {
     const floorField = fields.find((f) => f.name === "floor");
 
     const validation = floorField?.validation?.("invalid");
-    expect(validation).toBe("Bitte geben Sie eine gültige Etage ein");
+    expect(validation).toBe("Bitte gib eine gültige Etage ein");
   });
 
   it("accepts valid floor value", () => {

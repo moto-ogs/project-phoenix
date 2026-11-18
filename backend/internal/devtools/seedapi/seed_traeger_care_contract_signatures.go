@@ -23,7 +23,10 @@ func (seedTraegerCareContractSignaturesStep) Name() string {
 }
 
 // seedPaperContractPDF stands in for the scan of a signed paper contract.
-var seedPaperContractPDF = []byte("%PDF-1.4\n% Betreuungsvertrag, auf Papier unterschrieben (Demo)\n%%EOF\n")
+var seedPaperContractPDF = seedTraegerDocumentPDF([]string{
+	"Betreuungsvertrag", "Beispiel aus der moto-Demo",
+	"Unterschrift auf Papier im Träger-Büro erfasst.",
+})
 
 func (seedTraegerCareContractSignaturesStep) Run(ctx context.Context, rt *Runtime) error {
 	if rt == nil || rt.Client == nil || rt.Bootstrap == nil || rt.Bootstrap.AdminEmail == "" || rt.Bootstrap.AdminPassword == "" {
@@ -33,9 +36,16 @@ func (seedTraegerCareContractSignaturesStep) Run(ctx context.Context, rt *Runtim
 	if err != nil {
 		return err
 	}
-	paper, err := seedPaperContract(rt.Client, auth, rt.Bootstrap.SchoolID)
+	paper, err := seedPaperContracts(rt.Client, auth, rt.Bootstrap.SchoolID, 1)
 	if err != nil {
 		return err
+	}
+	for _, schoolID := range rt.demoNeighbourIDs {
+		count, err := seedPaperContracts(rt.Client, auth, schoolID, 2)
+		if err != nil {
+			return err
+		}
+		paper += count
 	}
 	if err := seedSendContractsToParents(rt, auth); err != nil {
 		return err
@@ -48,10 +58,9 @@ func (seedTraegerCareContractSignaturesStep) Run(ctx context.Context, rt *Runtim
 	return nil
 }
 
-// seedPaperContract records the last draft of the school as signed on paper,
-// unless the school has an active contract already. Every demo school hangs
-// under one Träger, so both reads belong to the seeded school (#6621).
-func seedPaperContract(client *Client, auth AuthRef, school int64) (int, error) {
+// seedPaperContracts records signatures on the school's drafts until it
+// has enough active examples. Both reads are scoped to that school (#6621).
+func seedPaperContracts(client *Client, auth AuthRef, school int64, minimum int) (int, error) {
 	raw, err := client.GetWithAuth(auth, fmt.Sprintf("/traeger/contracts/?status=aktiv&school_id=%d", school))
 	if err != nil {
 		return 0, fmt.Errorf("read the active contracts: %w", err)
@@ -65,7 +74,8 @@ func seedPaperContract(client *Client, auth AuthRef, school int64) (int, error) 
 	if err := json.Unmarshal(raw, &active); err != nil {
 		return 0, fmt.Errorf("read the active contracts: %w", err)
 	}
-	if len(active.Data.Contracts) > 0 {
+	missing := minimum - len(active.Data.Contracts)
+	if missing <= 0 {
 		return 0, nil
 	}
 	raw, err = client.GetWithAuth(auth, fmt.Sprintf("/traeger/contracts/?status=entwurf&school_id=%d", school))
@@ -83,14 +93,13 @@ func seedPaperContract(client *Client, auth AuthRef, school int64) (int, error) 
 	if err := json.Unmarshal(raw, &drafts); err != nil {
 		return 0, fmt.Errorf("read the drafts: %w", err)
 	}
-	if len(drafts.Data.Contracts) == 0 {
-		return 0, nil
+	count := min(missing, len(drafts.Data.Contracts))
+	for _, draft := range drafts.Data.Contracts[len(drafts.Data.Contracts)-count:] {
+		if err := seedPaperContractSignature(client, auth, draft.ID, draft.PartyName); err != nil {
+			return 0, err
+		}
 	}
-	draft := drafts.Data.Contracts[len(drafts.Data.Contracts)-1]
-	if err := seedPaperContractSignature(client, auth, draft.ID, draft.PartyName); err != nil {
-		return 0, err
-	}
-	return 1, nil
+	return count, nil
 }
 
 func seedPaperContractSignature(client *Client, auth AuthRef, id int64, signer string) error {

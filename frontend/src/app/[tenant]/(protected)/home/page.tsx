@@ -24,13 +24,14 @@ import { BookingLeftoverTodos } from "~/components/home/booking-leftover-todos";
 import { RosterDeviationTodos } from "~/components/home/roster-deviation-todos";
 import { SchoolVacationHintsCore } from "~/components/timetable/school-vacation-hints-core";
 import { PhaseExpiryWarnings } from "~/components/enrollment/phase-expiry-warnings";
+import { DevicePinWarning } from "~/components/devices/device-pin-warning";
 import { Button } from "~/components/ui/button";
 import { ICON_ONLY } from "~/components/ui/control-geometry";
 import { EmptyState } from "~/components/ui/empty-state";
 import { errorAlertActions } from "~/components/ui/form-error-alert";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import { leadsSchool } from "~/lib/auth-utils";
+import { getGreetingName, leadsSchool } from "~/lib/auth-utils";
 import { fetchBirthdayOverviewClient } from "~/lib/birthdays-api";
 import type { BirthdayOverview } from "~/lib/birthdays-api";
 import { fetchDashboardAnalyticsClient } from "~/lib/dashboard-api";
@@ -420,11 +421,12 @@ function HomeContent() {
   }
 
   const editing = draft !== null;
-  const firstName = session?.user?.name?.trim().split(/\s+/)[0];
+  const firstName = getGreetingName(session);
   const greeting = useTimeBasedGreeting();
-  // Die Route der Hinweise verlangt config:manage; die Leitung der Schule
-  // hält es, ob Admin oder eigene Leitungsrolle (#3469).
-  const canReadPhaseExpiryWarnings = leadsSchool(session);
+  // Die Hinweise zum Phasenende (#3469) und zur Geräte-PIN (#7175) verlangen
+  // config:manage; die Leitung der Schule hält es, ob Admin oder eigene
+  // Leitungsrolle.
+  const showsLeadershipNotices = leadsSchool(session);
   // Nur das Datum: die Zahlen des Tages trägt die Jetzt-Zone darunter, und
   // die Kennzahlen stehen als Kacheln auf der Fläche. Dieselbe Zahl dreimal
   // auf einem Bildschirm sagt nicht mehr als einmal.
@@ -476,7 +478,7 @@ function HomeContent() {
               size="md"
               disabled={saving}
               onClick={cancelEditing}
-              tooltip="Verwirft Ihre Änderungen an der Startseite."
+              tooltip="Verwirft deine Änderungen an der Startseite."
             >
               Abbrechen
             </Button>
@@ -486,7 +488,7 @@ function HomeContent() {
               size="md"
               disabled={saving}
               onClick={save}
-              tooltip="Speichert die neue Anordnung Ihrer Startseite."
+              tooltip="Speichert die neue Anordnung deiner Startseite."
             >
               Fertig
             </Button>
@@ -522,7 +524,11 @@ function HomeContent() {
         )
       }
     >
-      {canReadPhaseExpiryWarnings && !editing ? <PhaseExpiryWarnings /> : null}
+      {showsLeadershipNotices && !editing ? <PhaseExpiryWarnings /> : null}
+
+      {/* Geräte-PIN (#7175): ohne eigene PIN fallen die Tablets aus oder
+          bleiben leicht zu öffnen. Der Hinweis bleibt, bis die PIN steht. */}
+      {showsLeadershipNotices && !editing ? <DevicePinWarning /> : null}
 
       {/* Spätere Abholzeit ohne Termin (#3261): eine Aufgabe, keine
           Kennzahl, deshalb fest über dem Brett wie die Hinweise davor. */}
@@ -558,11 +564,11 @@ function HomeContent() {
 
       {placements.length === 0 && !editing ? (
         <EmptyState
-          title="Ihre Startseite ist leer"
+          title="Deine Startseite ist leer"
           description={
             saved.available.length === 0
-              ? "Für Ihre Berechtigungen gibt es hier noch keine Bausteine. Ihre Leitung kann Ihnen weitere Bereiche freischalten."
-              : "Sie haben alle Bausteine entfernt."
+              ? "Für deine Berechtigungen gibt es hier noch keine Bausteine. Deine Leitung kann dir weitere Bereiche freischalten."
+              : "Du hast alle Bausteine entfernt."
           }
           action={
             saved.available.length > 0 ? (

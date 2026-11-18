@@ -252,7 +252,7 @@ describe("OperatorAnnouncementsPage", () => {
 
     expect(
       screen.getByText(
-        "Keine Ankündigungen. Erstellen Sie eine neue Ankündigung, um Nutzer zu informieren.",
+        "Keine Ankündigungen. Erstelle eine neue Ankündigung, um Nutzer zu informieren.",
       ),
     ).toBeInTheDocument();
     expect(

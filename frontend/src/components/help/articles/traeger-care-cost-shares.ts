@@ -8,29 +8,29 @@ export function traegerCareCostSharesTopic(): HelpTopic {
     question:
       "Wie trage ich ein, dass Bildung und Teilhabe oder das Jugendamt mitzahlt?",
     summary:
-      "Sie tragen je Kind ein, wer wie viel vom Monatsbeitrag übernimmt. Die Familie bekommt nur den Rest in Rechnung. Den Teil des Kostenträgers laden Sie als eigene Liste herunter.",
+      "Du trägst je Kind ein, wer wie viel vom Monatsbeitrag übernimmt. Die Familie bekommt nur den Rest in Rechnung. Den Teil des Kostenträgers lädst du als eigene Liste herunter.",
     group: "anmeldeverwaltung",
     audience: "traeger",
     icon: "HandCoins",
     requirements: [
-      "Ihre Rolle im Träger-Büro ist Abrechnung.",
+      "Deine Rolle im Träger-Büro ist Abrechnung.",
       "Der Kostenträger steht unter `Einstellungen` und `Abrechnungsvorgaben`.",
-      "Sie haben den Bescheid geprüft.",
+      "Du hast den Bescheid geprüft.",
     ],
     steps: [],
     instructionGroups: [
       {
         title: "Anteil eintragen",
         steps: [
-          "Wählen Sie `Familien und Zahlung` und dann den Reiter `Kostenübernahmen`.",
-          "Wählen Sie beim Kind das Menü und dann `Anteil eintragen`.",
-          "Wählen Sie bei `Wer zahlt mit?` die Art: `Bildung und Teilhabe`, `Jugendamt` oder `Sonstiger Zuschuss`.",
-          "Wählen Sie den `Kostenträger`.",
-          "Wählen Sie bei `Wofür zahlt er?`: `Betreuung`, `Mensa` oder `Betreuung und Mensa`. Bei Bildung und Teilhabe ist `Mensa` schon gewählt.",
-          "Wählen Sie `Prozent vom Beitrag` oder `Fester Betrag im Monat`. Tragen Sie die Zahl ein.",
-          "Tragen Sie bei `Bescheid` nur das Aktenzeichen oder das Datum ein.",
-          "Wählen Sie, ab wann und bis wann der Bescheid gilt.",
-          "Wählen Sie `Anteil speichern`.",
+          "Wähle `Familien und Zahlung` und dann den Reiter `Kostenübernahmen`.",
+          "Wähle beim Kind das Menü und dann `Anteil eintragen`.",
+          "Wähle bei `Wer zahlt mit?` die Art: `Bildung und Teilhabe`, `Jugendamt` oder `Sonstiger Zuschuss`.",
+          "Wähle den `Kostenträger`.",
+          "Wähle bei `Wofür zahlt er?`: `Betreuung`, `Mensa` oder `Betreuung und Mensa`. Bei Bildung und Teilhabe ist `Mensa` schon gewählt.",
+          "Wähle `Prozent vom Beitrag` oder `Fester Betrag im Monat`. Trage die Zahl ein.",
+          "Trage bei `Bescheid` nur das Aktenzeichen oder das Datum ein.",
+          "Wähle, ab wann und bis wann der Bescheid gilt.",
+          "Wähle `Anteil speichern`.",
         ],
       },
       {
@@ -38,9 +38,9 @@ export function traegerCareCostSharesTopic(): HelpTopic {
         description:
           "30 Tage vor dem Ende zeigt die Seite einen Hinweis. Der Anteil bekommt den Vermerk `Endet am`.",
         steps: [
-          "Wählen Sie im Hinweis `Nur diese zeigen`.",
-          "Fragen Sie bei der Familie den neuen Bescheid an.",
-          "Wählen Sie beim Kind `Anteil eintragen` und tragen Sie den neuen Zeitraum ein.",
+          "Wähle im Hinweis `Nur diese zeigen`.",
+          "Frage bei der Familie den neuen Bescheid an.",
+          "Wähle beim Kind `Anteil eintragen` und trage den neuen Zeitraum ein.",
         ],
       },
       {
@@ -48,17 +48,17 @@ export function traegerCareCostSharesTopic(): HelpTopic {
         description:
           "Im Monatslauf zeigt die Karte `Kostenträger`, wie viel jede Stelle übernimmt.",
         steps: [
-          "Öffnen Sie den Monatslauf unter `Monatsbeiträge`.",
-          "Wählen Sie in der Karte `Kostenträger` das Menü der Zeile.",
-          "Wählen Sie PDF, Excel oder CSV.",
-          "Schicken Sie die Liste an den Kostenträger.",
+          "Öffne den Monatslauf unter `Monatsbeiträge`.",
+          "Wähle in der Karte `Kostenträger` das Menü der Zeile.",
+          "Wähle PDF, Excel oder CSV.",
+          "Schicke die Liste an den Kostenträger.",
         ],
       },
       {
         title: "Alle Anteile herunterladen",
         steps: [
-          "Wählen Sie `Familien und Zahlung` und dann den Reiter `Kostenübernahmen`.",
-          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Kinder, ohne Suche und Filter.",
+          "Wähle `Familien und Zahlung` und dann den Reiter `Kostenübernahmen`.",
+          "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Kinder, ohne Suche und Filter.",
           "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
         ],
       },
@@ -74,7 +74,7 @@ export function traegerCareCostSharesTopic(): HelpTopic {
       "Ein stornierter Beitrag steht in der Liste, zählt aber nicht zur Summe.",
     ],
     notes: [
-      "moto speichert nur Art, Anteil, Zeitraum und Aktenzeichen. Den Bescheid behalten Sie.",
+      "moto speichert nur Art, Anteil, Zeitraum und Aktenzeichen. Den Bescheid behältst du.",
       "Jedes Öffnen des Reiters `Kostenübernahmen` steht im Zugriffsprotokoll.",
     ],
     related: [

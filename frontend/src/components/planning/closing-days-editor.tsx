@@ -200,7 +200,7 @@ export function ClosingDaysEditor({
                   tone="blue"
                   size="xs"
                   className="ml-2 align-middle"
-                  title="Diesen Schließtag hat Ihr Träger geplant. Ändern kann ihn nur das Träger-Büro."
+                  title="Diesen Schließtag hat dein Träger geplant. Ändern kann ihn nur das Träger-Büro."
                 />
               ) : null}
             </p>
@@ -287,7 +287,7 @@ export function ClosingDaysEditor({
       <EmptyState
         icon={<ConceptIconTile concept={closingDaysConcept} size="page" />}
         title="Noch keine Schließtage"
-        description="Hinterlegen Sie die Schließtage des Schuljahres, damit die Zeiterfassung an diesen Tagen kein Soll ansetzt."
+        description="Hinterlege die Schließtage des Schuljahres, damit die Zeiterfassung an diesen Tagen kein Soll ansetzt."
       />
     );
   } else if (!failedWithoutData || awaitingErrorText) {
@@ -342,8 +342,8 @@ export function ClosingDaysEditor({
           affectedHostedWeeks.length > 0 ? (
             <Alert
               type="warning"
-              title="In dieser Zeit sind Ferienwochen bei Ihnen gebucht"
-              message="Die Buchungen bleiben bestehen. Nach dem Speichern können Sie die Eltern auf dieser Seite informieren."
+              title="In dieser Zeit sind Ferienwochen bei dir gebucht"
+              message="Die Buchungen bleiben bestehen. Nach dem Speichern kannst du die Eltern auf dieser Seite informieren."
               details={
                 <ul className="mt-2 space-y-1 text-sm">
                   {affectedHostedWeeks.map((week) => (

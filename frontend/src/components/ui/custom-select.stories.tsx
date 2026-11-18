@@ -86,7 +86,7 @@ export const WithLabelHintAndError: Story = {
     label: "Gruppe",
     required: true,
     hint: "Die Gruppe, in der das Kind betreut wird.",
-    error: "Bitte wählen Sie eine Gruppe.",
+    error: "Bitte wähle eine Gruppe.",
   },
 };
 

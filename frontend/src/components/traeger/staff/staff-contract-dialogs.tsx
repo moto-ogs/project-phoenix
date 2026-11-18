@@ -321,7 +321,7 @@ function PoolSwitch({
   return (
     <SwitchRow
       label="Vertretungspool"
-      description="Die Person springt an allen Ihren Schulen ein. Jede Schule sieht sie und kann sie blocken."
+      description="Die Person springt an allen deinen Schulen ein. Jede Schule sieht sie und kann sie blocken."
       checked={checked}
       onCheckedChange={onChange}
     />
@@ -363,14 +363,11 @@ export function CreateContractDialog({
         inputs === null
           ? HOURS_ERROR
           : inputs.length === 0
-            ? "Tragen Sie für mindestens eine Schule Stunden ein."
+            ? "Trage für mindestens eine Schule Stunden ein."
             : undefined,
     };
     if (inputs === null || fields.starts_on || fields.ends_on || fields.sites) {
-      errors.invalid(
-        "Bitte prüfen Sie die markierten Felder.",
-        fieldErrors(fields),
-      );
+      errors.invalid("Bitte prüfe die markierten Felder.", fieldErrors(fields));
       return;
     }
     void run(
@@ -411,6 +408,7 @@ export function CreateContractDialog({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <ISODatePicker
             id="contract-starts-on"
+            monthYearNavigation
             label="Erster Tag"
             error={errors.fieldError("starts_on")}
             value={startsOn}
@@ -419,6 +417,7 @@ export function CreateContractDialog({
           />
           <ISODatePicker
             id="contract-ends-on"
+            monthYearNavigation
             label="Letzter Tag"
             hint="Leer lassen, wenn der Vertrag unbefristet ist."
             error={errors.fieldError("ends_on")}
@@ -501,14 +500,11 @@ export function ChangeSollDialog({
         inputs === null
           ? HOURS_ERROR
           : inputs.length === 0
-            ? "Ändern Sie die Stunden mindestens einer Schule."
+            ? "Ändere die Stunden mindestens einer Schule."
             : undefined,
     };
     if (inputs === null || fields.valid_from || fields.sites) {
-      errors.invalid(
-        "Bitte prüfen Sie die markierten Felder.",
-        fieldErrors(fields),
-      );
+      errors.invalid("Bitte prüfe die markierten Felder.", fieldErrors(fields));
       return;
     }
     void run(
@@ -540,6 +536,7 @@ export function ChangeSollDialog({
       <div className="space-y-5">
         <ISODatePicker
           id="contract-soll-valid-from"
+          monthYearNavigation
           label="Gilt ab"
           hint={
             earliest
@@ -599,10 +596,7 @@ export function HolidayWeeksDialog({
       weekday_minutes: minutes === null ? HOURS_ERROR : undefined,
     };
     if (!site || minutes === null || fields.from_week || fields.to_week) {
-      errors.invalid(
-        "Bitte prüfen Sie die markierten Felder.",
-        fieldErrors(fields),
-      );
+      errors.invalid("Bitte prüfe die markierten Felder.", fieldErrors(fields));
       return;
     }
     void run(
@@ -666,6 +660,7 @@ export function HolidayWeeksDialog({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <ISODatePicker
             id="holiday-week-from"
+            monthYearNavigation
             label="Erste Woche"
             hint="Ein Tag reicht, es zählt die ganze Woche."
             error={errors.fieldError("from_week")}
@@ -676,6 +671,7 @@ export function HolidayWeeksDialog({
           />
           <ISODatePicker
             id="holiday-week-to"
+            monthYearNavigation
             label="Letzte Woche"
             hint="Leer lassen für eine Woche."
             error={errors.fieldError("to_week")}
@@ -731,7 +727,7 @@ export function ContractTermsDialog({
 
   const submit = () => {
     if (endsOn && endsOn < contract.startsOn) {
-      errors.invalid("Bitte prüfen Sie die markierten Felder.", {
+      errors.invalid("Bitte prüfe die markierten Felder.", {
         ends_on: "Der letzte Tag liegt vor dem ersten Tag.",
       });
       return;
@@ -771,6 +767,7 @@ export function ContractTermsDialog({
         <KindChoice value={kind} onChange={setKind} />
         <ISODatePicker
           id="contract-terms-ends-on"
+          monthYearNavigation
           label="Letzter Tag"
           hint={`Leer lassen, wenn der Vertrag unbefristet ist.${
             earliest

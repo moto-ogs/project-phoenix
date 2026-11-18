@@ -278,16 +278,19 @@ func (r *PushSubscriptionRepository) DeleteUnboundByAccountForPortal(ctx context
 	}
 }
 
-// ListSessionLinks names every subscription with the session facts it was
+// ListSessionLinks pages through subscriptions by ID with the session facts each was
 // registered under, across schools. Whether a session still backs it is
 // Identity & Access's decision on its own session clock, not this query's.
-func (r *PushSubscriptionRepository) ListSessionLinks(ctx context.Context) ([]deliveryModels.SessionLink, error) {
+func (r *PushSubscriptionRepository) ListSessionLinks(ctx context.Context, afterID int64, limit int) ([]deliveryModels.SessionLink, error) {
 	if !tenant.IsAdminTx(ctx) {
 		return nil, errAdminTxRequired
 	}
 	db, err := r.database(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if limit <= 0 {
+		return nil, nil
 	}
 	var links []deliveryModels.SessionLink
 	err = db.NewSelect().
@@ -297,7 +300,9 @@ func (r *PushSubscriptionRepository) ListSessionLinks(ctx context.Context) ([]de
 		ColumnExpr(`"push_subscription".tenant_id`).
 		ColumnExpr(`"push_subscription".portal`).
 		ColumnExpr(`"push_subscription".token_family_id`).
+		Where(`"push_subscription".id > ?`, afterID).
 		OrderExpr(`"push_subscription".id`).
+		Limit(int64(limit)).
 		Scan(ctx, &links)
 	if err != nil {
 		return nil, &databaseError{Op: "list push subscription session links", Err: translateNotFound(err)}
@@ -329,15 +334,24 @@ func (r *PushSubscriptionRepository) DeleteSessionLinks(ctx context.Context, lin
 		ids[i], accounts[i], tenants[i] = link.SubscriptionID, link.AccountID, link.TenantID
 		portals[i], families[i] = link.Portal, link.TokenFamilyID
 	}
+	// Re-registration takes the subscription row first and then the
+	// account's FK lock. Cleanup already holds the account lock, so leave
+	// a subscription row held by a registration for the next sweep.
 	_, err = db.NewRaw(`
+		WITH matched AS MATERIALIZED (
+			SELECT "push_subscription".id
+			FROM iot.push_subscriptions AS "push_subscription"
+			JOIN unnest(?::BIGINT[], ?::BIGINT[], ?::BIGINT[], ?::TEXT[], ?::TEXT[])
+				AS "link"(subscription_id, account_id, tenant_id, portal, token_family_id)
+				ON "push_subscription".id = "link".subscription_id
+				AND "push_subscription".account_id = "link".account_id
+				AND "push_subscription".tenant_id = "link".tenant_id
+				AND "push_subscription".portal = "link".portal
+				AND "push_subscription".token_family_id = "link".token_family_id
+			FOR UPDATE OF "push_subscription" SKIP LOCKED
+		)
 		DELETE FROM iot.push_subscriptions AS "push_subscription"
-		USING unnest(?::BIGINT[], ?::BIGINT[], ?::BIGINT[], ?::TEXT[], ?::TEXT[])
-			AS "link"(subscription_id, account_id, tenant_id, portal, token_family_id)
-		WHERE "push_subscription".id = "link".subscription_id
-			AND "push_subscription".account_id = "link".account_id
-			AND "push_subscription".tenant_id = "link".tenant_id
-			AND "push_subscription".portal = "link".portal
-			AND "push_subscription".token_family_id = "link".token_family_id`,
+		USING matched WHERE "push_subscription".id = matched.id`,
 		pgdialect.Array(ids), pgdialect.Array(accounts), pgdialect.Array(tenants),
 		pgdialect.Array(portals), pgdialect.Array(families)).
 		Exec(ctx)

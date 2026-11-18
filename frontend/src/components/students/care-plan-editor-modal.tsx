@@ -254,15 +254,15 @@ export function CarePlanEditorModal({
     errors.clear();
 
     if (arrivalMode === "time" && !TIME_PATTERN.test(arrivalTime)) {
-      errors.invalid("Bitte geben Sie eine gültige Ankunftszeit ein.");
+      errors.invalid("Bitte gib eine gültige Ankunftszeit ein.");
       return;
     }
     if (pickupMode === "time" && !TIME_PATTERN.test(pickupTime)) {
-      errors.invalid("Bitte geben Sie eine gültige Abholzeit ein.");
+      errors.invalid("Bitte gib eine gültige Abholzeit ein.");
       return;
     }
     if (!arrivalChanged && !pickupChanged && !departureChanged) {
-      errors.invalid("Bitte ändern Sie zuerst eine Zeit oder die Abholart.");
+      errors.invalid("Bitte ändere zuerst eine Zeit oder die Abholart.");
       return;
     }
     if (overwritesParent) {
@@ -873,7 +873,7 @@ function NoteList({
           disabledReason={
             draft.trim()
               ? undefined
-              : "Schreiben Sie zuerst einen Hinweis in das Feld."
+              : "Schreibe zuerst einen Hinweis in das Feld."
           }
           onClick={() => void runMutation(onCreate, () => setDraft(""))}
         >
@@ -929,9 +929,9 @@ function NoteEditor({
         disabled={!trimmedContent || !hasChanges || isMutationPending}
         disabledReason={
           !trimmedContent
-            ? "Schreiben Sie zuerst einen Text in das Feld."
+            ? "Schreibe zuerst einen Text in das Feld."
             : !hasChanges
-              ? "Ändern Sie zuerst den Text des Hinweises."
+              ? "Ändere zuerst den Text des Hinweises."
               : undefined
         }
         onClick={() =>

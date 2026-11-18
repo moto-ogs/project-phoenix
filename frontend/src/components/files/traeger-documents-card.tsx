@@ -17,6 +17,7 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
@@ -88,7 +89,7 @@ export function TraegerDocumentsCard({
     <SectionCard
       title="Vom Träger"
       concept={documentsConcept}
-      description="Diese Dokumente hat Ihr Träger für Ihre Schule oder für die Eltern Ihrer Schule freigegeben. Ändern kann sie nur der Träger."
+      description="Diese Dokumente hat dein Träger für deine Schule oder für die Eltern deiner Schule freigegeben. Ändern kann sie nur der Träger."
       titleBadge={
         documents.length > 0 ? (
           <span className="text-sm text-gray-500 tabular-nums">
@@ -124,7 +125,7 @@ export function TraegerDocumentsCard({
                   </p>
                 </div>
               </div>
-              <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
+              <ResponsiveRowActions leading={20}>
                 <Button
                   type="button"
                   variant="surface"
@@ -133,12 +134,12 @@ export function TraegerDocumentsCard({
                   aria-label={`Herunterladen: ${document.title}`}
                   disabled={busyId === document.id}
                   onClick={() => void download(document)}
-                  tooltip="Speichert das Dokument des Trägers auf Ihrem Gerät."
+                  tooltip="Speichert das Dokument des Trägers auf deinem Gerät."
                 >
                   <DownloadSimpleIcon className="h-4 w-4" aria-hidden="true" />
                   Herunterladen
                 </Button>
-              </div>
+              </ResponsiveRowActions>
             </ResponsiveActionRow>
           ))}
         </ResponsiveActionList>

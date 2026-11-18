@@ -118,7 +118,7 @@ func (s *service) remindSurveyGuardians(ctx context.Context, survey *communicati
 	if len(recipients) == 0 {
 		return 0, nil
 	}
-	intro := fmt.Sprintf("die Umfrage der Schule läuft noch bis zum %s. Sie finden sie im Eltern-Portal.",
+	intro := fmt.Sprintf("die Umfrage der Schule läuft noch bis zum %s. Du findest sie im Eltern-Portal.",
 		survey.ClosesAt.In(calendar.Berlin).Format("02.01.2006"))
 	emailed, err := s.enqueueReminderEmails(ctx, a, recipients, pollReminderEmailKicker, intro, s.parentsURL)
 	if err != nil {
@@ -146,9 +146,9 @@ func surveyMailSpec(a *StaffParentAnnouncement, spec mailSpec) mailSpec {
 		return spec
 	}
 	spec.kicker = surveyEmailKicker
-	intro := "die Schule bittet Sie um Ihre Meinung. Die Umfrage finden Sie im Eltern-Portal."
+	intro := "die Schule bittet dich um deine Meinung. Die Umfrage findest du im Eltern-Portal."
 	if a.ExpiresAt != nil {
-		intro = fmt.Sprintf("die Schule bittet Sie bis zum %s um Ihre Meinung. Die Umfrage finden Sie im Eltern-Portal.",
+		intro = fmt.Sprintf("die Schule bittet dich bis zum %s um deine Meinung. Die Umfrage findest du im Eltern-Portal.",
 			a.ExpiresAt.In(calendar.Berlin).Format("02.01.2006"))
 	}
 	spec.intro = func(string) string { return intro }

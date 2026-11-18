@@ -14,6 +14,7 @@ import { Button, ButtonLink } from "~/components/ui/button";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { formatDate } from "~/lib/date-helpers";
@@ -115,7 +116,7 @@ export function CourseWaitlistOverview({
           />
         ) : undefined
       }
-      description="Kinder, die auf einen Platz in einer AG warten. Die älteste Anfrage ist zuerst dran. Wird ein Platz frei, geben Sie die Anfrage des ersten Kindes frei."
+      description="Kinder, die auf einen Platz in einer AG warten. Die älteste Anfrage ist zuerst dran. Wird ein Platz frei, gib die Anfrage des ersten Kindes frei."
       collapsible
     >
       <div className="divide-y divide-gray-100">
@@ -177,7 +178,7 @@ function CourseWaitlistBlock({
                 Angefragt am {formatDate(entry.submittedAt)}
               </p>
             </div>
-            <div className="flex w-full min-[480px]:w-auto sm:justify-end">
+            <ResponsiveRowActions>
               <Button
                 type="button"
                 variant="surface"
@@ -188,7 +189,7 @@ function CourseWaitlistBlock({
               >
                 Zur Anfrage
               </Button>
-            </div>
+            </ResponsiveRowActions>
           </ResponsiveActionRow>
         ))}
       </ResponsiveActionList>
@@ -284,7 +285,7 @@ export function CourseWaitlistSummary({
       {waitlist.slotFreeForNext && (
         <Alert
           type="info"
-          message={`${freeSlotSentence(waitlist)} Geben Sie die Anfrage unter „Anfragen“ frei.`}
+          message={`${freeSlotSentence(waitlist)} Gib die Anfrage unter „Anfragen“ frei.`}
           action={
             requestsHref ? (
               <ButtonLink

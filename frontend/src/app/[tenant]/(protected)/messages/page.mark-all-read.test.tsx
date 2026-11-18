@@ -79,6 +79,8 @@ vi.mock("~/components/ui/tenant-page", async () => {
   const { OverflowMenu } =
     await import("~/components/ui/page-header/OverflowMenu");
   return {
+    // Die Attrappe zeigt keine Statuszeile; die Paare braucht hier niemand.
+    TenantPageStats: () => null,
     TenantPage: ({
       overflowMenu,
       children,
@@ -143,7 +145,7 @@ describe("Alle als gelesen markieren", () => {
 
     await waitFor(() =>
       expect(mockToastSuccess).toHaveBeenCalledWith(
-        "Alle Nachrichten sind für Sie als gelesen markiert.",
+        "Alle Nachrichten sind für dich als gelesen markiert.",
       ),
     );
     expect(mockMarkAllMessagesRead).toHaveBeenCalledTimes(1);
@@ -288,7 +290,7 @@ describe("Alle als gelesen markieren", () => {
     fireEvent.click(screen.getByRole("button", { name: /Wiederholen/ }));
     await waitFor(() =>
       expect(mockToastSuccess).toHaveBeenCalledWith(
-        "Alle Nachrichten sind für Sie als gelesen markiert.",
+        "Alle Nachrichten sind für dich als gelesen markiert.",
       ),
     );
     expect(mockMarkAllMessagesRead).toHaveBeenCalledTimes(2);

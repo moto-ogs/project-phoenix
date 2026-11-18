@@ -107,7 +107,7 @@ var paymentErrorMessages = []struct {
 	sentinel error
 	message  string
 }{
-	{peopledirectory.ErrGuardianIBANInvalid, "Die IBAN ist nicht gültig. Bitte prüfen Sie die Eingabe."},
+	{peopledirectory.ErrGuardianIBANInvalid, "Die IBAN ist nicht gültig. Bitte prüfe die Eingabe."},
 	{peopledirectory.ErrGuardianAccountHolderTooLong, "Der Name des Kontoinhabers ist zu lang."},
 	{peopledirectory.ErrGuardianNotLinkedToStudent, "Diese Person ist bei diesem Kind nicht als erziehungsberechtigt eingetragen."},
 	{peopledirectory.ErrGuardianStudentRequired, "Das Kind konnte nicht zugeordnet werden."},
@@ -139,7 +139,7 @@ func (rs *GuardianResource) renderPaymentError(w http.ResponseWriter, r *http.Re
 		}
 	}
 	if errors.Is(err, peopledirectory.ErrGuardianPaymentInvalid) {
-		rs.failMessage(w, r, FailureInvalidRequest, "Die Eingabe ist nicht gültig. Bitte prüfen Sie die Felder.")
+		rs.failMessage(w, r, FailureInvalidRequest, "Die Eingabe ist nicht gültig. Bitte prüfe die Felder.")
 		return
 	}
 	rs.fail(w, r, FailureInternal, err)

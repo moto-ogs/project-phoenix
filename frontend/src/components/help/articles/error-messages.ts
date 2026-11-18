@@ -7,7 +7,7 @@ export function errorMessagesTopic(): HelpTopic {
     title: "Fehlermeldungen verstehen",
     question: "Was kann ich bei einer Fehlermeldung tun?",
     summary:
-      "Hier finden Sie den nächsten Schritt, wenn moto einen Fehler meldet.",
+      "Hier findest du den nächsten Schritt, wenn moto einen Fehler meldet.",
     group: "probleme",
     audience: "all",
     icon: "ListChecks",
@@ -16,36 +16,36 @@ export function errorMessagesTopic(): HelpTopic {
       {
         title: "Eingabe prüfen",
         steps: [
-          "Prüfen Sie die markierten Felder.",
-          "Verbessern Sie die Angaben und versuchen Sie es erneut.",
+          "Prüfe die markierten Felder.",
+          "Verbessere die Angaben und versuche es erneut.",
         ],
       },
       {
         title: "Zugriff prüfen",
         steps: [
-          "Melden Sie sich erneut an, falls moto Sie dazu auffordert.",
-          "Fehlt Ihnen weiterhin der Zugriff? Fragen Sie Ihre Ansprechperson.",
+          "Melde dich erneut an, falls moto dich dazu auffordert.",
+          "Fehlt dir weiterhin der Zugriff? Frage deine Ansprechperson.",
         ],
       },
       {
         title: "Vorgang nicht möglich",
         steps: [
-          "Lesen Sie, warum moto den Vorgang nicht ausführen kann.",
-          "Ändern Sie die Angaben oder fragen Sie Ihre Ansprechperson.",
+          "Lies, warum moto den Vorgang nicht ausführen kann.",
+          "Ändere die Angaben oder frage deine Ansprechperson.",
         ],
       },
       {
         title: "Gerade nicht erreichbar",
         steps: [
-          "Prüfen Sie Ihre Internetverbindung.",
-          "Tippen Sie auf `Wiederholen`, wenn der Knopf zu sehen ist.",
+          "Prüfe deine Internetverbindung.",
+          "Tippe auf `Wiederholen`, wenn der Knopf zu sehen ist.",
         ],
       },
       {
         title: "Unerwarteter Fehler",
         steps: [
-          "Tippen Sie auf `Wiederholen`, wenn der Knopf zu sehen ist.",
-          "Klappt es weiter nicht? Tippen Sie auf die Vorgangskennung und nennen Sie sie dem moto-Team.",
+          "Tippe auf `Wiederholen`, wenn der Knopf zu sehen ist.",
+          "Klappt es weiter nicht? Tippe auf die Vorgangskennung und nenne sie dem moto-Team.",
         ],
       },
     ],

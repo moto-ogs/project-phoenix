@@ -27,7 +27,7 @@ import {
 import { runSchoolsLabel } from "~/components/traeger/care-review-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import {
-  TraegerListExportMenu,
+  useTraegerListExportItems,
   traegerExportScope,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
@@ -186,10 +186,18 @@ export default function TraegerMonatsbeitraegePage() {
   );
   const noPrices = data !== null && data.tariffs.tariffs.length === 0;
 
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/care-billing-runs/export", format),
+    scope: traegerExportScope(),
+    fallbackName: "monatsbeitraege",
+    errorObject: "die Monatsläufe",
+    unavailable: runs.length === 0,
+  });
   return (
     <TenantPage
       title={billingAreaTitle("monatsbeitraege")}
-      info="Hier rechnen Sie die Betreuung Monat für Monat ab. Der Beitrag ist die Summe der gebuchten Wochentage im Vertrag, mit den Preisen aus der Preisliste. Sie wählen Monat und Schulen, prüfen die Vorschau und geben den Lauf dann frei."
+      info="Hier rechnest du die Betreuung Monat für Monat ab. Der Beitrag ist die Summe der gebuchten Wochentage im Vertrag, mit den Preisen aus der Preisliste. Du wählst Monat und Schulen, prüfst die Vorschau und gibst den Lauf dann frei."
       stats={
         runs.length > 0 ? (
           <TenantPageStats
@@ -206,21 +214,9 @@ export default function TraegerMonatsbeitraegePage() {
       }
       statsLoading={loading}
       tabs={billingTabs("monatsbeitraege")}
+      overflowMenu={exportItems}
       actions={
         <>
-          <TraegerListExportMenu
-            download={(format) =>
-              downloadTraegerList(
-                "/api/traeger/care-billing-runs/export",
-                format,
-              )
-            }
-            scope={traegerExportScope()}
-            ariaLabel="Monatsläufe herunterladen"
-            fallbackName="monatsbeitraege"
-            errorObject="die Monatsläufe"
-            unavailable={runs.length === 0}
-          />
           <Button
             type="button"
             variant="primary"
@@ -265,7 +261,7 @@ export default function TraegerMonatsbeitraegePage() {
                   href={traegerPath("/traeger/abrechnung/preise")}
                   variant="surface"
                   size="compact"
-                  tooltip="Öffnet die Preisliste, dort tragen Sie die Preise ein."
+                  tooltip="Öffnet die Preisliste, dort trägst du die Preise ein."
                 >
                   Preisliste öffnen
                 </ButtonLink>
@@ -286,7 +282,7 @@ export default function TraegerMonatsbeitraegePage() {
                   <CalendarRange className="h-12 w-12" aria-hidden="true" />
                 }
                 title="Noch kein Monatslauf."
-                description={`Starten Sie oben einen Lauf, zum Beispiel für ${formatMonth(data.list.suggestedMonth)}.`}
+                description={`Starte oben einen Lauf, zum Beispiel für ${formatMonth(data.list.suggestedMonth)}.`}
               />
             }
           />

@@ -245,7 +245,10 @@ func (c *CareBilling) spanInput(ctx context.Context, organizationID int64, from,
 	if in.tariffs, in.lists, err = c.store.CarePriceLists(ctx, organizationID); err != nil {
 		return in, err
 	}
-	if in.recipients, err = c.contracts.Recipients(ctx, organizationID, contracts); err != nil {
+	if in.familyCounts, err = c.store.FamilyChildCounts(ctx, organizationID); err != nil {
+		return in, err
+	}
+	if in.recipients, err = c.contracts.Recipients(ctx, organizationID, familyRecipientContracts(contracts, in.familyCounts)); err != nil {
 		return in, fmt.Errorf("parent billing: read the contract parties: %w", err)
 	}
 	if in.rules, err = c.store.ListContributionRules(ctx, organizationID, parentbilling.ServiceCare); err != nil {
@@ -257,8 +260,7 @@ func (c *CareBilling) spanInput(ctx context.Context, organizationID int64, from,
 	if in.costShares, err = c.store.CareCostShares(ctx, organizationID, contracts); err != nil {
 		return in, err
 	}
-	in.familyCounts, err = c.store.FamilyChildCounts(ctx, organizationID)
-	return in, err
+	return in, nil
 }
 
 // clipVersions keeps the versions in force within a month, clipped to it,

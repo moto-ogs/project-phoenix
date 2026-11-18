@@ -14,6 +14,10 @@ import { PROXY_ROUTES } from "~/test/proxy-routes.table";
  * can differ. Those live in
  * capability-local JSON files under `src/test/proxy-routes/` fragments. The loader
  * rejects duplicate identities; a new pure proxy route without an expectation fails.
+ *
+ * The register only shrinks (#2352): `scripts/check-proxy-routes.mjs` fails a
+ * pull request that adds a row. A backend route is registered in the contract
+ * and answered by the portal's catalog proxy instead of a new route file.
  */
 
 type Portal =

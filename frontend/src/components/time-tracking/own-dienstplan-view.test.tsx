@@ -23,6 +23,7 @@ const state = vi.hoisted(() => ({
   aheadError: undefined as Error | undefined,
   projection: undefined as ReadonlyMap<string, DayProjection> | undefined,
   projectionError: undefined as Error | undefined,
+  hasOwnStaff: true,
   permissionReady: true,
   // Ohne time_tracking:own erklärt die Seite den Zustand (#7148).
   permissionDenied: false,
@@ -74,6 +75,10 @@ vi.mock("~/lib/swr", () => ({
       mutate: state.mutate,
     };
   },
+}));
+// Personalprofil in dieser Schule laut Nutzerkontext (#7306).
+vi.mock("~/lib/hooks/use-user-context", () => ({
+  useHasOwnStaff: () => state.hasOwnStaff,
 }));
 vi.mock("~/lib/hooks/use-berlin-today", () => ({
   useBerlinToday: () => "2026-09-09",
@@ -164,6 +169,7 @@ describe("OwnDienstplanView", () => {
     state.aheadError = undefined;
     state.projection = undefined;
     state.projectionError = undefined;
+    state.hasOwnStaff = true;
     state.permissionReady = true;
     state.permissionDenied = false;
     state.zeiterfassungBooked = true;
@@ -203,7 +209,7 @@ describe("OwnDienstplanView", () => {
     // 4 h + 3 h + 4 h geplant (die ausgefallene Schicht zählt nicht), Soll
     // 5 × 4 h.
     const stats = screen.getByText("geplant").parentElement?.parentElement;
-    expect(stats?.textContent).toBe("11 hgeplant·20 hSoll·−9 hDifferenz");
+    expect(stats?.textContent).toBe("11 h geplant, 20 h Soll, −9 h Differenz");
 
     // Lesend: kein Anlegen, kein Bearbeiten.
     expect(
@@ -305,7 +311,7 @@ describe("OwnDienstplanView", () => {
       screen.getByText("Keine Schichten in dieser Woche"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Ihre Schichten plant die Leitung im Dienstplan/),
+      screen.getByText(/Deine Schichten plant die Leitung im Dienstplan/),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Zur nächsten Schicht" }),
@@ -342,7 +348,7 @@ describe("OwnDienstplanView", () => {
 
     expect(
       screen.getByText(
-        "Ihre nächste Schicht nach dieser Woche ist am Dienstag, 29. September 2026.",
+        "Deine nächste Schicht nach dieser Woche ist am Dienstag, 29. September 2026.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(
@@ -359,7 +365,7 @@ describe("OwnDienstplanView", () => {
 
     expect(
       screen.getByText(
-        /Auch in den 8 Wochen danach ist keine Schicht eingetragen\. Ihre Schichten plant die Leitung\. Fragen Sie dort nach/,
+        /Auch in den 8 Wochen danach ist keine Schicht eingetragen\. Deine Schichten plant die Leitung\. Frage dort nach/,
       ),
     ).toBeInTheDocument();
     expect(
@@ -393,7 +399,7 @@ describe("OwnDienstplanView", () => {
 
     expect(
       await screen.findByText(
-        "Die Suche nach der nächsten Schicht ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Suche nach der nächsten Schicht ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     // Die aktuelle Woche ist bereits bestätigt leer und bleibt sichtbar.
@@ -432,17 +438,18 @@ describe("OwnDienstplanView", () => {
     expect(screen.queryByText("geplant")).not.toBeInTheDocument();
   });
 
-  // Ein Hinweis der Glocke führt mit ?d= hierher (#7148). Ohne eigenen
-  // Dienstplan erklärt die Seite das, statt still umzuleiten.
-  it("explains a missing own duty roster instead of redirecting", () => {
+  // Ein Hinweis der Glocke führt mit ?d= hierher (#7148). Die fehlende
+  // Berechtigung erklärt die Seite auch dann, wenn kein Personalprofil da ist.
+  it("explains missing permission before a missing staff profile", () => {
     state.permissionDenied = true;
+    state.hasOwnStaff = false;
     state.day = "2026-11-20";
 
     render(<OwnDienstplanView />);
 
     // Anker: die Erklärung des fehlenden Zugriffs steht da.
     expect(
-      screen.getByText(/Sie haben keinen Zugriff auf einen eigenen Dienstplan/),
+      screen.getByText(/Du hast keinen Zugriff auf einen eigenen Dienstplan/),
     ).toBeInTheDocument();
     // This file renders without the tenant slug (real tenant context).
     expect(
@@ -451,34 +458,63 @@ describe("OwnDienstplanView", () => {
     expect(state.keys).toEqual([]);
   });
 
-  it("offers a retry when the shifts fail to load", () => {
-    state.shiftsError = new Error("boom");
+  // Ladefehler laufen über den gemeinsamen Fehlerpfad (Regel 3 in
+  // error-path.md): Katalogtext des Codes und „Wiederholen“ (#7306).
+  it("offers a retry when the shifts fail to load", async () => {
+    state.shiftsError = new ApiError("unavailable", 503);
 
     render(<OwnDienstplanView />);
 
     expect(
-      screen.getByText(/Ihr Dienstplan konnte nicht geladen werden/),
+      await screen.findByText(
+        "Die Liste deiner Schichten ist gerade nicht erreichbar. Bitte versuche es erneut.",
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText("geplant")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Erneut laden" }));
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     expect(state.mutate).toHaveBeenCalled();
   });
 
-  it("keeps the shifts visible and offers a retry when the Soll fails to load", () => {
+  it("keeps the shifts visible and offers a retry when the Soll fails to load", async () => {
     state.shifts = [shift()];
-    state.projectionError = new Error("boom");
+    state.projectionError = new ApiError("unavailable", 503);
 
     render(<OwnDienstplanView />);
 
     expect(
-      screen.getByText(/Ihr Soll für diese Woche konnte nicht geladen werden/),
+      await screen.findByText(
+        "Das Soll dieser Woche ist gerade nicht erreichbar. Bitte versuche es erneut.",
+      ),
     ).toBeInTheDocument();
     expect(screen.getByTestId("own-week-hours-card")).toHaveTextContent(
       "Gesamt4 h",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Erneut laden" }));
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     expect(state.mutateProjection).toHaveBeenCalled();
     expect(state.mutate).not.toHaveBeenCalled();
+  });
+
+  it("explains a missing staff profile before loading anything (#7306)", () => {
+    state.hasOwnStaff = false;
+
+    render(<OwnDienstplanView />);
+
+    expect(screen.getByText(/Kein eigenes Personalprofil/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Zur Startseite" }),
+    ).toHaveAttribute("href", "/home");
+    expect(state.keys).toEqual([]);
+  });
+
+  it("shows the staff profile hint instead of an error when the server refuses (#7306)", () => {
+    state.shiftsError = new ApiError("no staff profile", 403, {
+      code: "workforce.no_staff_profile",
+    });
+
+    render(<OwnDienstplanView />);
+
+    expect(screen.getByText(/Kein eigenes Personalprofil/)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("navigates by week through the d parameter", () => {

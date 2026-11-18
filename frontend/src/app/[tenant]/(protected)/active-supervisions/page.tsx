@@ -19,7 +19,11 @@ import { BinaryModeGuard } from "~/components/tenant/binary-mode-guard";
 import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import { Alert } from "~/components/ui/alert";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { TenantPage, TenantPageListSearch } from "~/components/ui/tenant-page";
+import {
+  TenantPage,
+  TenantPageListSearch,
+  TenantPageStats,
+} from "~/components/ui/tenant-page";
 import {
   OverflowMenu,
   type OverflowMenuEntry,
@@ -417,10 +421,23 @@ function MeinRaumPageContent() {
   );
   const supervisionSummary = supervisionName ? (
     <SupervisionHeadFacts
-      childCount={[
-        formatChildCount(supervisionCount, supervisionOccupancy.limit),
-        ...(supervisionOverbookedHint ? [OVERBOOKED_LABEL] : []),
-      ].join(" · ")}
+      childCount={
+        supervisionOverbookedHint ? (
+          <TenantPageStats
+            items={[
+              {
+                label: formatChildCount(
+                  supervisionCount,
+                  supervisionOccupancy.limit,
+                ),
+              },
+              { label: OVERBOOKED_LABEL },
+            ]}
+          />
+        ) : (
+          formatChildCount(supervisionCount, supervisionOccupancy.limit)
+        )
+      }
       roomName={headFacts.roomName}
       supervisorNames={headFacts.supervisorNames}
     />
@@ -479,7 +496,7 @@ function MeinRaumPageContent() {
         variant="outline"
         size="md"
         onClick={() => schulhof.setShowReleaseModal(true)}
-        tooltip="Beendet Ihre Aufsicht auf dem Schulhof. moto fragt vorher nach."
+        tooltip="Beendet deine Aufsicht auf dem Schulhof. moto fragt vorher nach."
       >
         Aufsicht abgeben
       </Button>
@@ -597,7 +614,7 @@ function MeinRaumPageContent() {
   // Betreuer stehen in der Zeile darunter (#5035).
   const foreignSupervisionBadge =
     currentRoom && !currentOpenRoom && !currentRoom.isCurrentUserSupervising ? (
-      <StatusBadge label="Nicht Ihre Aufsicht" tone="gray" />
+      <StatusBadge label="Nicht deine Aufsicht" tone="gray" />
     ) : null;
 
   // „Beaufsichtigen" steht als Kopf-Aktion dort, wo sonst „Aufsicht abgeben"
@@ -612,7 +629,7 @@ function MeinRaumPageContent() {
         disabled={superviseDisabled}
         disabledReason={
           spontaneousStartBlockedReason
-            ? "Den Schulhof können Sie nur montags bis freitags beaufsichtigen."
+            ? "Den Schulhof kannst du nur montags bis freitags beaufsichtigen."
             : undefined
         }
         onToggle={() => schulhof.handleToggleSchulhof().catch(() => undefined)}
@@ -918,7 +935,7 @@ function MeinRaumPageContent() {
           ? {
               icon: <MotoConceptIcon concept={roomsConcept} size={48} />,
               title: "Keine aktive Raum-Aufsicht",
-              description: `Sie sind aktuell in keinem Raum als Live-Aktivität registriert. Starten Sie eine Aktivität ${
+              description: `Du bist aktuell in keinem Raum als Live-Aktivität registriert. Starte eine Aktivität ${
                 nfcEnabled ? "an einem Terminal" : "in der Web-App"
               }, um Live-Raumdaten einzusehen.`,
             }

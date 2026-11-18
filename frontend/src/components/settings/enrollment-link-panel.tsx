@@ -49,17 +49,17 @@ export function EnrollmentLinkPanel({ tab }: Props) {
       headingLevel={3}
       title="Anmeldelink für Eltern"
       concept={enrollmentsConcept}
-      description="Teilen Sie diesen Link mit Eltern, damit sie ihre Kinder anmelden können. Jeder mit dem Link kann ihn öffnen. Eltern brauchen dafür kein Konto."
+      description="Teile diesen Link mit Eltern, damit sie ihre Kinder anmelden können. Jeder mit dem Link kann ihn öffnen. Eltern brauchen dafür kein Konto."
     >
       <CopyField
         value={enrollUrl}
         monospace
-        copyHint="Kopiert den Link, damit Sie ihn an Eltern weitergeben können."
+        copyHint="Kopiert den Link, damit du ihn an Eltern weitergeben kannst."
         onCopyFailed={() =>
           // Kein API-Fehler: der Browser hat das Kopieren verweigert. Der
           // Link steht daneben und lässt sich von Hand markieren.
           showMessage(
-            "Der Link konnte nicht kopiert werden. Bitte markieren und kopieren Sie ihn selbst.",
+            "Der Link konnte nicht kopiert werden. Bitte markiere und kopiere ihn selbst.",
           )
         }
         action={

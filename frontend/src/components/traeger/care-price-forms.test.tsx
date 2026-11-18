@@ -192,7 +192,7 @@ describe("CarePriceListModal", () => {
       ),
     ).toHaveLength(2);
     expect(
-      screen.getAllByText(/Legen Sie diese unter „Ermäßigungen“ an/),
+      screen.getAllByText(/Lege diese unter „Ermäßigungen“ an/),
     ).toHaveLength(2);
   });
 

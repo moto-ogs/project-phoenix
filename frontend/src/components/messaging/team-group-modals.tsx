@@ -140,13 +140,13 @@ export function NewTeamGroupModal({
   const submit = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      formError.invalid("Bitte geben Sie dem Gruppenchat einen Namen.", {
-        "group-name": "Bitte geben Sie einen Namen ein.",
+      formError.invalid("Bitte gib dem Gruppenchat einen Namen.", {
+        "group-name": "Bitte gib einen Namen ein.",
       });
       return;
     }
     if (selected.size === 0) {
-      formError.invalid("Bitte wählen Sie mindestens eine Person aus.");
+      formError.invalid("Bitte wähle mindestens eine Person aus.");
       return;
     }
     await save.run(async (op) => {
@@ -208,7 +208,7 @@ export function NewTeamGroupModal({
             Mitglieder{selected.size > 0 ? ` (${selected.size} gewählt)` : ""}
           </p>
           <p className="text-sm text-gray-500">
-            Sie sind automatisch dabei. Lehrkräfte lesen in „moto schule“ mit.
+            Du bist automatisch dabei. Lehrkräfte lesen in „moto schule“ mit.
           </p>
         </div>
         <PeoplePicker
@@ -246,7 +246,7 @@ export function AddGroupMembersModal({
 
   const submit = async () => {
     if (selected.size === 0) {
-      formError.invalid("Bitte wählen Sie mindestens eine Person aus.");
+      formError.invalid("Bitte wähle mindestens eine Person aus.");
       return;
     }
     await save.run(async (op) => {

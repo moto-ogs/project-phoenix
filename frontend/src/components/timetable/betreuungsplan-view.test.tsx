@@ -1699,7 +1699,7 @@ describe("BetreuungsplanView", () => {
       expect(urlParams().has("verbinden")).toBe(false),
     );
     expect(mockShowMessage).toHaveBeenCalledWith(
-      "moto findet für „Yoga“ kein passendes Angebot. Wählen Sie es selbst: „Bearbeiten“, dann „Personal und Kinder“.",
+      "moto findet für „Yoga“ kein passendes Angebot. Wähle es selbst: „Bearbeiten“, dann „Personal und Kinder“.",
     );
     // Anker: die Serienansicht bleibt stehen, ohne Dialog und ohne Editor.
     expect(screen.getByText("create-template")).toBeVisible();
@@ -1805,13 +1805,13 @@ describe("BetreuungsplanView", () => {
     );
   });
 
-  it("formuliert die leeren Tageszustände für Planende in der Sie-Form", () => {
+  it("formuliert die leeren Tageszustände für Planende in der Du-Form", () => {
     setUrl("view=tag&d=2026-05-06");
     setupSWR({ instances: [] });
     const { unmount } = render(<BetreuungsplanView />);
 
     expect(screen.getByTestId("grid-empty-state")).toHaveTextContent(
-      "Planen Sie Angebote als Regeltermin oder legen Sie einen einzelnen Termin an.",
+      "Plane Angebote als Regeltermin oder lege einen einzelnen Termin an.",
     );
     unmount();
 
@@ -1822,7 +1822,7 @@ describe("BetreuungsplanView", () => {
     render(<BetreuungsplanView />);
 
     expect(screen.getByTestId("grid-empty-state")).toHaveTextContent(
-      "Legen Sie zuerst einen aktiven Planungszeitraum an.",
+      "Lege zuerst einen aktiven Planungszeitraum an.",
     );
   });
 
@@ -2441,7 +2441,8 @@ describe("BetreuungsplanView", () => {
     // Kein leerer Plan, der aussieht, als sei nichts geplant, und keine
     // Zahl in der Statuszeile, die nie geladen wurde.
     expect(screen.queryByText("week-grid")).not.toBeInTheDocument();
-    expect(screen.queryByText("0 Termine")).not.toBeInTheDocument();
+    // Wert und Wort der Statuszeile stehen in eigenen Elementen.
+    expect(document.body).not.toHaveTextContent(/0\s*Termine/);
     expect(mockToastError).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
@@ -3308,14 +3309,14 @@ describe("BetreuungsplanView", () => {
       periods: [period],
       title: "Diese Woche hat noch keine Termine",
       description:
-        "Planen Sie Angebote als Regeltermin oder legen Sie einen einzelnen Termin an.",
+        "Plane Angebote als Regeltermin oder lege einen einzelnen Termin an.",
       disabledDates: "",
     },
     {
       name: "nicht abgedeckt",
       periods: [laterPeriod],
       title: "Diese Woche hat keinen Planungszeitraum",
-      description: "Legen Sie zuerst einen aktiven Planungszeitraum an.",
+      description: "Lege zuerst einen aktiven Planungszeitraum an.",
       disabledDates: "2026-05-04,2026-05-05,2026-05-06,2026-05-07,2026-05-08",
     },
     {
@@ -3323,7 +3324,7 @@ describe("BetreuungsplanView", () => {
       periods: [{ ...period, startDate: "2026-05-06" }],
       title: "Diese Woche hat noch keine Termine",
       description:
-        "Einige Tage sind nicht planbar. An den anderen Tagen können Sie Termine planen.",
+        "Einige Tage sind nicht planbar. An den anderen Tagen kannst du Termine planen.",
       disabledDates: "2026-05-04,2026-05-05",
     },
     {
@@ -3331,7 +3332,7 @@ describe("BetreuungsplanView", () => {
       periods: [{ ...period, endDate: "2026-05-06" }],
       title: "Diese Woche hat noch keine Termine",
       description:
-        "Einige Tage sind nicht planbar. An den anderen Tagen können Sie Termine planen.",
+        "Einige Tage sind nicht planbar. An den anderen Tagen kannst du Termine planen.",
       disabledDates: "2026-05-07,2026-05-08",
     },
   ])(
@@ -3366,7 +3367,7 @@ describe("BetreuungsplanView", () => {
     render(<BetreuungsplanView />);
 
     expect(screen.getByTestId("grid-empty-state")).toHaveTextContent(
-      "Für diese Woche ist noch nichts geplant. Geplant wird von den Admins Ihrer Schule.",
+      "Für diese Woche ist noch nichts geplant. Geplant wird von den Admins deiner Schule.",
     );
   });
 

@@ -13,8 +13,8 @@ export function transferGroupTopic(groupMode: HelpGroupMode): HelpTopic {
       audience: ["caregiver", "lead"],
       icon: "ArrowsLeftRight",
       steps: [
-        "Sie müssen keine Gruppe übergeben.",
-        "Öffnen Sie `Alle Kinder`, um mit den Kindern der OGS zu arbeiten.",
+        "Du musst keine Gruppe übergeben.",
+        "Öffne `Alle Kinder`, um mit den Kindern der OGS zu arbeiten.",
       ],
       result:
         "Alle Betreuungskräfte arbeiten ohne feste Gruppenzuordnung mit der gemeinsamen Kinderliste.",
@@ -31,9 +31,9 @@ export function transferGroupTopic(groupMode: HelpGroupMode): HelpTopic {
       audience: ["caregiver", "lead"],
       icon: "ArrowsLeftRight",
       steps: [
-        "Prüfen Sie, ob `Gruppen` in der Seitenleiste steht.",
-        "Ist der Bereich vorhanden? Öffnen Sie Ihre Gruppe und das Menü mit den drei Punkten.",
-        "Fehlt der Bereich? Dann müssen Sie keine feste Gruppe übergeben.",
+        "Prüfe, ob `Gruppen` in der Seitenleiste steht.",
+        "Ist der Bereich vorhanden? Öffne deine Gruppe und das Menü mit den drei Punkten.",
+        "Fehlt der Bereich? Dann musst du keine feste Gruppe übergeben.",
       ],
       result: "Eine andere Betreuungskraft erhält Zugriff bis zum Tagesende.",
       related: [HELP_TOPICS.ownGroups, HELP_TOPICS.missingChildOrGroup],
@@ -45,46 +45,46 @@ export function transferGroupTopic(groupMode: HelpGroupMode): HelpTopic {
     title: "Meine Gruppe vorübergehend übergeben",
     question: "Wie übergebe ich meine Gruppe vorübergehend?",
     summary:
-      "Geben Sie einer anderen Betreuungskraft bis zum Tagesende Zugriff auf Ihre Gruppe.",
+      "Gib einer anderen Betreuungskraft bis zum Tagesende Zugriff auf deine Gruppe.",
     group: "gruppen",
     audience: ["caregiver", "lead"],
     icon: "ArrowsLeftRight",
-    requirements: ["Sie sind dieser Gruppe fest zugeordnet."],
+    requirements: ["Du bist dieser Gruppe fest zugeordnet."],
     steps: [],
     instructionGroups: [
       {
         title: "Gruppe übergeben",
         steps: [
-          "Öffnen Sie Ihre Gruppe unter `Gruppen`.",
-          "Öffnen Sie oben rechts das Menü mit den drei Punkten.",
-          "Wählen Sie `Gruppe übergeben`.",
-          "Wählen Sie unter `Übergeben an:` im Feld `Fachkraft auswählen...` die Person aus.",
-          "Wählen Sie `Übergeben`.",
+          "Öffne deine Gruppe unter `Gruppen`.",
+          "Öffne oben rechts das Menü mit den drei Punkten.",
+          "Wähle `Gruppe übergeben`.",
+          "Wähle unter `Übergeben an:` im Feld `Fachkraft auswählen...` die Person aus.",
+          "Wähle `Übergeben`.",
         ],
       },
       {
         title: "Eine Übergabe früher beenden",
         description:
-          "Eine Übergabe gilt nur für heute. Sie können sie auch vorher beenden.",
+          "Eine Übergabe gilt nur für heute. Du kannst sie auch vorher beenden.",
         steps: [
-          "Öffnen Sie oben rechts das Menü mit den drei Punkten.",
-          "Wählen Sie `Gruppe übergeben`.",
-          "Wählen Sie unter `Aktuell übergeben an:` neben der Person `Zurücknehmen`.",
-          "Bestätigen Sie mit `Übergabe zurücknehmen`.",
+          "Öffne oben rechts das Menü mit den drei Punkten.",
+          "Wähle `Gruppe übergeben`.",
+          "Wähle unter `Aktuell übergeben an:` neben der Person `Zurücknehmen`.",
+          "Bestätige mit `Übergabe zurücknehmen`.",
         ],
       },
     ],
     result:
-      "Die andere Betreuungskraft sieht die Gruppe bis zum Ende des Tages unter `Gruppen`, markiert mit `Vertretung`. Sie behalten selbst den Zugriff.",
+      "Die andere Betreuungskraft sieht die Gruppe bis zum Ende des Tages unter `Gruppen`, markiert mit `Vertretung`. Du behältst selbst den Zugriff.",
     notes: [
-      "Sie können die Gruppe an mehrere Betreuungskräfte übergeben. Wiederholen Sie dafür die Schritte.",
+      "Du kannst die Gruppe an mehrere Betreuungskräfte übergeben. Wiederhole dafür die Schritte.",
       "Alle Übergaben stehen im Fenster unter `Aktuell übergeben an:`.",
     ],
     troubleshootingDetails: [
-      "Fehlt der Eintrag `Gruppe übergeben` im Menü? Dann betreuen Sie die Gruppe nur als Vertretung. Eine Vertretung kann die Gruppe nicht weitergeben.",
-      "Steht dort `Keine pädagogische Fachkraft verfügbar`? Dann gibt es niemanden zum Übergeben. Fragen Sie Ihre Leitung.",
+      "Fehlt der Eintrag `Gruppe übergeben` im Menü? Dann betreust du die Gruppe nur als Vertretung. Eine Vertretung kann die Gruppe nicht weitergeben.",
+      "Steht dort `Keine pädagogische Fachkraft verfügbar`? Dann gibt es niemanden zum Übergeben. Frage deine Leitung.",
       // Einstellung „Kinder nur über ‚Alle Kinder‘ finden“ (#1321).
-      "Fehlt `Gruppen` in der Navigation? Öffnen Sie `Alle Kinder`. Wählen Sie im Menü mit den drei Punkten `Zur Gruppenseite`.",
+      "Fehlt `Gruppen` in der Navigation? Öffne `Alle Kinder`. Wähle im Menü mit den drei Punkten `Zur Gruppenseite`.",
     ],
     related: [HELP_TOPICS.ownGroups, HELP_TOPICS.missingChildOrGroup],
   };

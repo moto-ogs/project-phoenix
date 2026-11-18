@@ -183,13 +183,13 @@ export function validateSurveyDraft(
     perQuestion: {},
   };
 
-  if (!draft.title.trim()) errors.title = "Bitte geben Sie einen Titel ein.";
+  if (!draft.title.trim()) errors.title = "Bitte gib einen Titel ein.";
 
   const closesAt = draftClosesAt(draft);
   if (!draft.closesDay) {
-    errors.closesAt = "Bitte wählen Sie, bis wann man teilnehmen kann.";
+    errors.closesAt = "Bitte wähle, bis wann man teilnehmen kann.";
   } else if (!closesAt) {
-    errors.closesAt = "Bitte geben Sie die Uhrzeit im Format 18:00 ein.";
+    errors.closesAt = "Bitte gib die Uhrzeit im Format 18:00 ein.";
   } else {
     const instant = new Date(closesAt).getTime();
     if (instant <= now.getTime()) {
@@ -200,28 +200,27 @@ export function validateSurveyDraft(
   }
 
   if (draft.audience === "parents" && draft.targets.length === 0) {
-    errors.targets = "Bitte wählen Sie, welche Eltern antworten sollen.";
+    errors.targets = "Bitte wähle, welche Eltern antworten sollen.";
   }
 
   if (draft.questions.length === 0) {
-    errors.questions = "Bitte legen Sie mindestens eine Frage an.";
+    errors.questions = "Bitte lege mindestens eine Frage an.";
   } else if (draft.questions.length > SURVEY_MAX_QUESTIONS) {
     errors.questions = `Höchstens ${SURVEY_MAX_QUESTIONS} Fragen sind möglich.`;
   }
 
   for (const question of draft.questions) {
     const own: SurveyQuestionErrors = {};
-    if (!question.prompt.trim()) own.prompt = "Bitte geben Sie die Frage ein.";
+    if (!question.prompt.trim()) own.prompt = "Bitte gib die Frage ein.";
     if (question.kind === "single" || question.kind === "multiple") {
       const labels = question.options.map((option) => option.trim());
       const filled = labels.filter(Boolean);
       if (filled.length < SURVEY_MIN_OPTIONS) {
-        own.options = `Bitte geben Sie mindestens ${SURVEY_MIN_OPTIONS} Antworten ein.`;
+        own.options = `Bitte gib mindestens ${SURVEY_MIN_OPTIONS} Antworten ein.`;
       } else if (filled.length > SURVEY_MAX_OPTIONS) {
         own.options = `Höchstens ${SURVEY_MAX_OPTIONS} Antworten sind möglich.`;
       } else if (filled.length !== labels.length) {
-        own.options =
-          "Bitte füllen Sie jede Antwort aus oder entfernen Sie sie.";
+        own.options = "Bitte fülle jede Antwort aus oder entferne sie.";
       } else if (
         new Set(filled.map((label) => label.toLowerCase())).size !==
         filled.length

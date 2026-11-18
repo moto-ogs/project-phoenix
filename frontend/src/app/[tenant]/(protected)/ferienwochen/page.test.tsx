@@ -21,6 +21,15 @@ import { setTestClock } from "~/test/clock";
 
 vi.unmock("swr");
 
+/**
+ * Findet die Statuszeile aus genau diesen Angaben. Die Angaben stehen ohne
+ * Trennpunkt nebeneinander, Zahl und Wort in eigenen Elementen.
+ */
+function statusLine(...parts: string[]) {
+  return (_: string, element: Element | null) =>
+    element?.tagName === "SPAN" && element.textContent === parts.join(", ");
+}
+
 const {
   weeksMock,
   participantsMock,
@@ -220,7 +229,9 @@ describe("FerienwochenPage", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Sommerferien 2026 · 14.09. bis 18.09.2026 · 2 Kinder"),
+      screen.getByText(
+        statusLine("Sommerferien 2026", "14.09. bis 18.09.2026", "2 Kinder"),
+      ),
     ).toBeInTheDocument();
     expect(participantsMock).toHaveBeenCalledWith("51");
   });
@@ -296,7 +307,7 @@ describe("FerienwochenPage", () => {
     expect(within(children).getByText("15.09.2026")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Nur zur Information. Anmeldungen prüft und bestätigt der Träger. Dazu kommen Antworten der Eltern, die der Träger für Sie freigibt.",
+        "Nur zur Information. Anmeldungen prüft und bestätigt der Träger. Dazu kommen Antworten der Eltern, die der Träger für dich freigibt.",
       ),
     ).toBeInTheDocument();
   });
@@ -380,7 +391,7 @@ describe("FerienwochenPage", () => {
 
     expect(
       await screen.findByText(
-        "Sommerferien 2026 · 21.09. bis 25.09.2026 · 2 Kinder",
+        statusLine("Sommerferien 2026", "21.09. bis 25.09.2026", "2 Kinder"),
       ),
     ).toBeInTheDocument();
     expect(participantsMock).toHaveBeenCalledWith("52");
@@ -402,7 +413,7 @@ describe("FerienwochenPage", () => {
     // Anker: die Überschrift nennt schon die gewählte Woche.
     expect(
       await screen.findByText(
-        "Sommerferien 2026 · 21.09. bis 25.09.2026 · 1 Kind",
+        statusLine("Sommerferien 2026", "21.09. bis 25.09.2026", "1 Kind"),
       ),
     ).toBeInTheDocument();
     expect(participantsMock).toHaveBeenCalledWith("52");
@@ -432,7 +443,9 @@ describe("FerienwochenPage", () => {
     // Anker: das verbliebene Kind steht noch in der Liste.
     await waitFor(() =>
       expect(
-        screen.getByText("Sommerferien 2026 · 14.09. bis 18.09.2026 · 1 Kind"),
+        screen.getByText(
+          statusLine("Sommerferien 2026", "14.09. bis 18.09.2026", "1 Kind"),
+        ),
       ).toBeInTheDocument(),
     );
     expect(
@@ -447,7 +460,7 @@ describe("FerienwochenPage", () => {
 
     expect(
       await screen.findByText(
-        "Ihre OGS richtet gerade keine Ferienwoche aus. Die Ferienwochen plant der Träger. Kein Kind Ihrer OGS ist gerade für die Ferienwoche einer anderen OGS bestätigt. Sobald der Träger eine solche Anmeldung bestätigt, steht das Kind hier.",
+        "Deine OGS richtet gerade keine Ferienwoche aus. Die Ferienwochen plant der Träger. Kein Kind deiner OGS ist gerade für die Ferienwoche einer anderen OGS bestätigt. Sobald der Träger eine solche Anmeldung bestätigt, steht das Kind hier.",
       ),
     ).toBeInTheDocument();
   });
@@ -459,7 +472,7 @@ describe("FerienwochenPage", () => {
 
     expect(
       await screen.findByText(
-        "Ihre OGS richtet gerade keine Ferienwoche aus. Die Ferienwochen plant der Träger. Kein Kind Ihrer OGS ist gerade für die Ferienwoche einer anderen OGS bestätigt. Sobald der Träger eine solche Anmeldung bestätigt, steht das Kind hier.",
+        "Deine OGS richtet gerade keine Ferienwoche aus. Die Ferienwochen plant der Träger. Kein Kind deiner OGS ist gerade für die Ferienwoche einer anderen OGS bestätigt. Sobald der Träger eine solche Anmeldung bestätigt, steht das Kind hier.",
       ),
     ).toBeInTheDocument();
     expect(participantsMock).not.toHaveBeenCalled();
@@ -515,9 +528,7 @@ describe("FerienwochenPage", () => {
     ).toBeInTheDocument();
     const take = screen.getByRole("button", { name: "Feriengäste übernehmen" });
     expect(take).toHaveAttribute("aria-disabled", "true");
-    expect(take).toHaveAccessibleDescription(
-      "Wählen Sie zuerst eine Gruppe aus.",
-    );
+    expect(take).toHaveAccessibleDescription("Wähle zuerst eine Gruppe aus.");
     await waitFor(() =>
       expect(
         screen.getByRole("combobox", { name: "Gruppe für die Feriengäste" }),
@@ -586,14 +597,12 @@ describe("FerienwochenPage", () => {
     // Anker: die Statuszeile nennt schon die zweite Woche.
     expect(
       await screen.findByText(
-        "Sommerferien 2026 · 21.09. bis 25.09.2026 · 2 Kinder",
+        statusLine("Sommerferien 2026", "21.09. bis 25.09.2026", "2 Kinder"),
       ),
     ).toBeInTheDocument();
     const take = screen.getByRole("button", { name: "Feriengäste übernehmen" });
     expect(take).toHaveAttribute("aria-disabled", "true");
-    expect(take).toHaveAccessibleDescription(
-      "Wählen Sie zuerst eine Gruppe aus.",
-    );
+    expect(take).toHaveAccessibleDescription("Wähle zuerst eine Gruppe aus.");
     expect(assignMock).not.toHaveBeenCalled();
   });
 
@@ -633,7 +642,7 @@ describe("FerienwochenPage", () => {
 
     renderPage();
 
-    expect(await screen.findByText("Kinder Ihrer OGS")).toBeInTheDocument();
+    expect(await screen.findByText("Kinder deiner OGS")).toBeInTheDocument();
     expect(
       screen.getByText(
         "1 Kind ist eingeplant. Der Check-in erwartet es an den gebuchten Tagen.",
@@ -693,7 +702,7 @@ describe("FerienwochenPage", () => {
 
     expect(
       await screen.findByText(
-        "1 Feriengast in der Gruppe. 2 Kinder Ihrer OGS sind eingeplant.",
+        "1 Feriengast in der Gruppe. 2 Kinder deiner OGS sind eingeplant.",
       ),
     ).toBeInTheDocument();
   });
@@ -736,7 +745,7 @@ describe("FerienwochenPage", () => {
 
       renderPage();
 
-      await screen.findByText("Ihre Kinder in Ferienwochen anderer OGS");
+      await screen.findByText("Deine Kinder in Ferienwochen anderer OGS");
       const table = tableWith("Betreut von");
       expect(within(table).getByText("Beispiel, Tom")).toBeInTheDocument();
       expect(within(table).getAllByText("GS Bissendorf")).toHaveLength(2);
@@ -750,7 +759,9 @@ describe("FerienwochenPage", () => {
       ).toHaveAttribute("href", "/test-tenant/students/42");
       expect(within(table).getByText("Nicht zugeordnet")).toBeInTheDocument();
       expect(
-        screen.getByText("2 Kinder bei anderen OGS · 2 Ferienwochen"),
+        screen.getByText(
+          statusLine("2 Kinder bei anderen OGS", "2 Ferienwochen"),
+        ),
       ).toBeInTheDocument();
       expect(screen.queryByRole("tab")).not.toBeInTheDocument();
       expect(participantsMock).not.toHaveBeenCalled();
@@ -773,14 +784,16 @@ describe("FerienwochenPage", () => {
 
       renderPage();
 
-      await screen.findByText("Ihre Kinder in Ferienwochen anderer OGS");
+      await screen.findByText("Deine Kinder in Ferienwochen anderer OGS");
       const table = tableWith("Betreut von");
       expect(within(table).getByText("Ab 10.09.")).toBeInTheDocument();
       expect(within(table).getByText("Ab 12.10.")).toBeInTheDocument();
       expect(within(table).getByText("Vorbei")).toBeInTheDocument();
       expect(within(table).queryByText("Läuft gerade")).not.toBeInTheDocument();
       expect(
-        screen.getByText("2 Kinder bei anderen OGS · 2 Ferienwochen"),
+        screen.getByText(
+          statusLine("2 Kinder bei anderen OGS", "2 Ferienwochen"),
+        ),
       ).toBeInTheDocument();
     });
 
@@ -817,12 +830,12 @@ describe("FerienwochenPage", () => {
 
       expect(
         await screen.findByText(
-          "Kein Kind Ihrer OGS ist für eine andere OGS bestätigt",
+          "Kein Kind deiner OGS ist für eine andere OGS bestätigt",
         ),
       ).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Hier stehen Kinder Ihrer OGS, deren Anmeldung der Träger für eine andere OGS bestätigt hat.",
+          "Hier stehen Kinder deiner OGS, deren Anmeldung der Träger für eine andere OGS bestätigt hat.",
           { exact: false },
         ),
       ).toBeInTheDocument();
@@ -838,7 +851,7 @@ describe("FerienwochenPage", () => {
         await screen.findByText("die Kinder bei anderen OGS", { exact: false }),
       ).toBeInTheDocument();
       expect(
-        screen.queryByText("Ihre OGS richtet gerade keine Ferienwoche aus"),
+        screen.queryByText("Deine OGS richtet gerade keine Ferienwoche aus"),
       ).not.toBeInTheDocument();
     });
   });

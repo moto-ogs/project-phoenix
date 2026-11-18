@@ -48,9 +48,10 @@ import {
 import { StatusBadge } from "~/components/ui/status-badge";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { Textarea } from "~/components/ui/textarea";
+import { AdminLegalEvidence } from "~/components/enrollment/admin-legal-evidence";
 import { AdminEnrollmentSignature } from "~/components/enrollment/admin-enrollment-signature";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { berlinTodayISO } from "~/lib/date-helpers";
@@ -536,15 +537,21 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
   ).length;
   const hasRestorableChildren = withdrawnChildCount > 0;
 
-  // Statuszeile des Seitenkopfs aus der bereits geladenen Anmeldung.
-  const statusLine = [
-    `${data.children.length} ${data.children.length === 1 ? "Kind" : "Kinder"}`,
-    `${childStats.open} offen`,
-    `${childStats.approved} bestätigt`,
-    data.phase_name,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  // Statuszeile des Seitenkopfs aus der bereits geladenen Anmeldung. Die
+  // Phase steht nicht darin: die Zeile trägt höchstens drei Angaben, und die
+  // Zusammenfassung wie die Seitenleiste nennen die Phase schon.
+  const statusLine = (
+    <TenantPageStats
+      items={[
+        {
+          value: data.children.length,
+          label: data.children.length === 1 ? "Kind" : "Kinder",
+        },
+        { value: childStats.open, label: "offen" },
+        { value: childStats.approved, label: "bestätigt" },
+      ]}
+    />
+  );
 
   return (
     <TenantPage
@@ -709,6 +716,8 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
             <EnrollmentSummary data={data} submittedAt={submittedAt} />
 
             <RequestExtraSection request={data} />
+
+            <AdminLegalEvidence entries={data.legal_blocks_snapshot} />
 
             {data.signature ? (
               <AdminEnrollmentSignature
@@ -960,7 +969,7 @@ function ChildInformationCard({
           <Alert
             type="warning"
             announce="off"
-            message="Beim Schuljahreswechsel war das Kinderkontingent voll. Darum wurde dieses Kind nicht automatisch verlängert. Bitte entscheiden Sie selbst."
+            message="Beim Schuljahreswechsel war das Kinderkontingent voll. Darum wurde dieses Kind nicht automatisch verlängert. Bitte entscheide selbst."
           />
         ) : null}
         {terminal ? null : (
@@ -1305,7 +1314,7 @@ function summarizeChildren(children: AdminRequestChild[]) {
 // A mounted page must recheck the plan before reporting an overdue failure.
 function weeklyPlanMessage(on: string, today: string): string {
   if (on < today) {
-    return `Abholzeiten, Betreuungstage und Heimweg aus dieser Anmeldung sollten ab ${formatPlainDate(on)} gelten. moto konnte sie noch nicht übernehmen. Darum gelten noch die bisherigen. moto versucht es jede Stunde neu. Bleibt dieser Hinweis, melden Sie sich bitte beim moto-Team.`;
+    return `Abholzeiten, Betreuungstage und Heimweg aus dieser Anmeldung sollten ab ${formatPlainDate(on)} gelten. moto konnte sie noch nicht übernehmen. Darum gelten noch die bisherigen. moto versucht es jede Stunde neu. Bleibt dieser Hinweis, melde dich bitte beim moto-Team.`;
   }
   return on === today
     ? "Abholzeiten, Betreuungstage und Heimweg aus dieser Anmeldung gelten ab heute. moto übernimmt sie im Lauf des Tages."

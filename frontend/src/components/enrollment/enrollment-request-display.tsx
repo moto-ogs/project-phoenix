@@ -43,9 +43,10 @@ export function formatPlainDate(value: string): string {
 
 const CONSENT_LABELS: Record<string, string> = {
   agb: "AGB der Schule",
-  data_processing: "Datenverarbeitung (DSGVO)",
+  data_processing: "Datenschutzinformation erhalten",
   email_contact: "E-Mail-Kontakt",
   photo: "Fotos bei Schulveranstaltungen",
+  health_data: "Einwilligung Gesundheitsangaben",
 };
 
 export function RequestExtraSection({
@@ -157,7 +158,7 @@ export function ChildOfferings({
         type="warning"
         announce="off"
         title="Betreuungsangebote"
-        message="Die gebuchten Angebote konnten nicht geladen werden. Bitte die Seite neu laden, bevor Sie über dieses Kind entscheiden."
+        message="Die gebuchten Angebote konnten nicht geladen werden. Bitte die Seite neu laden, bevor du über dieses Kind entscheidest."
         className="mt-3"
       />
     );

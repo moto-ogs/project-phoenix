@@ -12,6 +12,7 @@ import { Wallet } from "lucide-react";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { ButtonLink } from "~/components/ui/button";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
@@ -554,7 +555,7 @@ export function CareUnpricedCard({
                     .join(", ")}
                 </p>
               </div>
-              <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
+              <ResponsiveRowActions>
                 <ButtonLink
                   href={traegerPath(
                     `/traeger/abrechnung/preise?schule=${encodeURIComponent(first.schoolId)}`,
@@ -566,7 +567,7 @@ export function CareUnpricedCard({
                 >
                   Preis eintragen
                 </ButtonLink>
-              </div>
+              </ResponsiveRowActions>
             </ResponsiveActionRow>
           );
         })}
@@ -667,8 +668,8 @@ export function CareDuplicatesCard({
       }
       description={
         released
-          ? "Diese Kinder haben zwei gültige Verträge für dasselbe Modul am selben Tag. Sie sind in diesem Lauf nicht abgerechnet. Beenden oder ändern Sie einen der Verträge. Danach rechnet ein neuer Monatslauf das Kind für diesen Monat ab."
-          : "Diese Kinder haben zwei gültige Verträge für dasselbe Modul am selben Tag. Die Freigabe rechnet sie nicht ab, alle anderen Kinder schon. Beenden oder ändern Sie einen der Verträge. Danach rechnet ein neuer Monatslauf das Kind ab."
+          ? "Diese Kinder haben zwei gültige Verträge für dasselbe Modul am selben Tag. Sie sind in diesem Lauf nicht abgerechnet. Beende oder ändere einen der Verträge. Danach rechnet ein neuer Monatslauf das Kind für diesen Monat ab."
+          : "Diese Kinder haben zwei gültige Verträge für dasselbe Modul am selben Tag. Die Freigabe rechnet sie nicht ab, alle anderen Kinder schon. Beende oder ändere einen der Verträge. Danach rechnet ein neuer Monatslauf das Kind ab."
       }
     >
       <ResponsiveActionList>
@@ -685,7 +686,7 @@ export function CareDuplicatesCard({
                   {booked || "In diesem Lauf nicht abgerechnet."}
                 </p>
               </div>
-              <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
+              <ResponsiveRowActions>
                 {contracts.map((contract, index) => {
                   const label =
                     contracts.length === 1 ? "Vertrag" : `Vertrag ${index + 1}`;
@@ -704,7 +705,7 @@ export function CareDuplicatesCard({
                     </ButtonLink>
                   );
                 })}
-              </div>
+              </ResponsiveRowActions>
             </ResponsiveActionRow>
           );
         })}

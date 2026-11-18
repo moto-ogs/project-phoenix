@@ -406,9 +406,7 @@ describe("AdminEnrollmentChangeRequestDetail", () => {
       "Begründung (freiwillig, Pflicht bei Ablehnung)",
     );
     expect(field).toHaveAttribute("aria-invalid", "true");
-    expect(
-      screen.getByText("Bitte begründen Sie die Ablehnung."),
-    ).toBeVisible();
+    expect(screen.getByText("Bitte begründe die Ablehnung.")).toBeVisible();
     expect(mocks.rejectEnrollmentChangeRequest).not.toHaveBeenCalled();
   });
 

@@ -90,10 +90,13 @@ export function isValidISODate(s: string): boolean {
 
 /**
  * A typed German date "TT.MM.JJJJ" as "YYYY-MM-DD", or null when the text is
- * not complete or names no real day (31.02.).
+ * not complete or names no real day (31.02.). Eight digits "TTMMJJJJ" count
+ * too: a phone's number pad, which date fields open, may have no period.
  */
 export function parseGermanDate(value: string): string | null {
-  const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(value);
+  const match =
+    /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(value) ??
+    /^(\d{2})(\d{2})(\d{4})$/.exec(value);
   if (!match) return null;
   const isoDate = `${match[3]}-${match[2]}-${match[1]}`;
   return isValidISODate(isoDate) ? isoDate : null;

@@ -125,10 +125,10 @@ var errorRules = []common.ErrorRule{
 		return common.ErrorForbiddenMessageWithCode("Der Team-Chat ist für diese Schule nicht eingeschaltet.", common.CodeCommunicationStaffMessagingDisabled)
 	}},
 	{Target: communication.ErrStaffMessageRecipientNotAvailable, Render: func(_ error) render.Renderer {
-		return common.ErrorConflictMessage("Sie können hier keine Dateien senden.")
+		return common.ErrorConflictMessage("Du kannst hier keine Dateien senden.")
 	}},
 	{Target: communication.ErrStaffMessagingNoActor, Render: func(_ error) render.Renderer {
-		return common.ErrorForbiddenMessage("Bitte melden Sie sich erneut an.")
+		return common.ErrorForbiddenMessage("Bitte melde dich erneut an.")
 	}},
 }
 

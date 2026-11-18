@@ -51,7 +51,6 @@ import { runDueDatesText } from "~/components/traeger/billing-payment-format";
 import { HolidayDebitHintsCard } from "~/components/traeger/care-run-review-lazy";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { formatDateRange } from "~/components/traeger/holiday-period-format";
-import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -116,10 +115,10 @@ function releaseBlockReason(run: BillingRunDetail): string | undefined {
       : "Der Lauf hat keine Rechnung zum Freigeben.";
   }
   if (run.legalRemedyMissing) {
-    return "Tragen Sie zuerst die Rechtsbehelfsbelehrung in der Vorlage „Bescheid“ ein.";
+    return "Trage zuerst die Rechtsbehelfsbelehrung in der Vorlage „Bescheid“ ein.";
   }
   if (!run.numberRangeSet) {
-    return "Legen Sie zuerst das Muster der Rechnungsnummern fest.";
+    return "Lege zuerst das Muster der Rechnungsnummern fest.";
   }
   return undefined;
 }
@@ -142,9 +141,9 @@ function invoicesWithoutDebtorNumber(count: number): string {
 function paymentTextWarning(run: BillingRunDetail): string {
   const where =
     run.missingDebtorNumbers > 0
-      ? "Tragen Sie die Nummern vor dem Freigeben bei den Anmeldungen ein."
-      : "Tragen Sie die Nummern vor dem Freigeben bei den Anmeldungen ein. Das Feld dafür erscheint, wenn in den Einstellungen unter „Allgemein“ im Bereich „Ferienbetreuung“ „Debitorennummer beim Bestätigen abfragen“ an ist.";
-  return `${invoicesWithoutDebtorNumber(run.paymentTextMissingDebtorNumbers)} Ihr Zahlungstext nennt aber die Debitorennummer. Nach dem Freigeben können Sie sie nicht mehr eintragen. Schreiben gehen dann nur ohne den Platzhalter im Zahlungstext. ${where}`;
+      ? "Trage die Nummern vor dem Freigeben bei den Anmeldungen ein."
+      : "Trage die Nummern vor dem Freigeben bei den Anmeldungen ein. Das Feld dafür erscheint, wenn in den Einstellungen unter „Allgemein“ im Bereich „Ferienbetreuung“ „Debitorennummer beim Bestätigen abfragen“ an ist.";
+  return `${invoicesWithoutDebtorNumber(run.paymentTextMissingDebtorNumbers)} Dein Zahlungstext nennt aber die Debitorennummer. Nach dem Freigeben kannst du sie nicht mehr eintragen. Schreiben gehen dann nur ohne den Platzhalter im Zahlungstext. ${where}`;
 }
 
 /**
@@ -252,7 +251,7 @@ export default function TraegerBillingRunPage() {
       void invalidate(traegerKeys.billingRuns());
       setConfirmingDiscard(false);
       success(
-        `Der Lauf ist verworfen. Für ${run.periodName} können Sie einen neuen Lauf starten.`,
+        `Der Lauf ist verworfen. Für ${run.periodName} kannst du einen neuen Lauf starten.`,
       );
     } catch (err) {
       logger.error("traeger_billing_run_discard_failed", {
@@ -382,79 +381,76 @@ export default function TraegerBillingRunPage() {
       backHref={traegerPath("/traeger/abrechnung")}
       backLabel="Zurück zu den Abrechnungsläufen"
       stats={
-        run ? (
-          <HolidayHeadFacts>
-            <StatusBadge
-              label={BILLING_RUN_STATUS_LABELS[run.status]}
-              tone={BILLING_RUN_STATUS_TONES[run.status]}
-            />
-            {discarded ? (
-              <span>
-                Verworfen am{" "}
-                {run.discardedAt ? formatDate(run.discardedAt) : "–"}
-              </span>
-            ) : null}
-          </HolidayHeadFacts>
-        ) : null
+        run && discarded
+          ? `Verworfen am ${run.discardedAt ? formatDate(run.discardedAt) : "–"}`
+          : null
       }
       statsLoading={loading}
       // The cross-link stands with the actions, as „Zur Abrechnung“ does on
       // the registrations; the status line carries only facts.
       actions={
-        (run && canOpenPeriod) || preview || discarded ? (
-          <>
-            {run && canOpenPeriod ? (
-              <ButtonLink
-                href={traegerPath(
-                  `/traeger/ferien/${encodeURIComponent(run.holidayPeriodId)}`,
-                )}
-                variant="outline"
-                size="md"
-                tooltip="Öffnet den Ferienzeitraum, zu dem dieser Lauf gehört."
-              >
-                <MotoConceptIcon
-                  concept={holidayWeeksConcept}
-                  size={18}
-                  className="mr-2"
-                />
-                Zum Ferienzeitraum
-              </ButtonLink>
-            ) : null}
-            {empty ? (
-              <Button
-                type="button"
-                variant="outline_danger"
-                size="md"
-                tooltip="moto fragt vorher nach, dann ist der Ferienzeitraum frei für einen neuen Lauf."
-                onClick={() => setConfirmingDiscard(true)}
-              >
-                Leeren Lauf verwerfen
-              </Button>
-            ) : discarded ? (
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                tooltip="Öffnet den offenen Lauf dieses Ferienzeitraums oder startet einen neuen."
-                onClick={() => void reissue()}
-              >
-                Neuen Lauf starten
-              </Button>
-            ) : preview ? (
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                disabled={!canRelease}
-                disabledReason={releaseBlockReason(run)}
-                tooltip="moto fragt vorher nach, dann sind alle Rechnungen mit Nummer festgeschrieben."
-                onClick={() => setConfirmingRelease(true)}
-              >
-                Lauf freigeben
-              </Button>
-            ) : null}
-          </>
-        ) : undefined
+        <>
+          {run ? (
+            <StatusBadge
+              label={BILLING_RUN_STATUS_LABELS[run.status]}
+              tone={BILLING_RUN_STATUS_TONES[run.status]}
+            />
+          ) : null}
+          {(run && canOpenPeriod) || preview || discarded ? (
+            <>
+              {run && canOpenPeriod ? (
+                <ButtonLink
+                  href={traegerPath(
+                    `/traeger/ferien/${encodeURIComponent(run.holidayPeriodId)}`,
+                  )}
+                  variant="outline"
+                  size="md"
+                  tooltip="Öffnet den Ferienzeitraum, zu dem dieser Lauf gehört."
+                >
+                  <MotoConceptIcon
+                    concept={holidayWeeksConcept}
+                    size={18}
+                    className="mr-2"
+                  />
+                  Zum Ferienzeitraum
+                </ButtonLink>
+              ) : null}
+              {empty ? (
+                <Button
+                  type="button"
+                  variant="outline_danger"
+                  size="md"
+                  tooltip="moto fragt vorher nach, dann ist der Ferienzeitraum frei für einen neuen Lauf."
+                  onClick={() => setConfirmingDiscard(true)}
+                >
+                  Leeren Lauf verwerfen
+                </Button>
+              ) : discarded ? (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  tooltip="Öffnet den offenen Lauf dieses Ferienzeitraums oder startet einen neuen."
+                  onClick={() => void reissue()}
+                >
+                  Neuen Lauf starten
+                </Button>
+              ) : preview ? (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  disabled={!canRelease}
+                  disabledReason={releaseBlockReason(run)}
+                  tooltip="moto fragt vorher nach, dann sind alle Rechnungen mit Nummer festgeschrieben."
+                  onClick={() => setConfirmingRelease(true)}
+                >
+                  Lauf freigeben
+                </Button>
+              ) : null}
+            </>
+          ) : undefined}
+        </>
       }
       error={loadError}
       loading={loading}
@@ -476,8 +472,8 @@ export default function TraegerBillingRunPage() {
                 „Verworfen“ in der Liste.
               </p>
               <p>
-                Danach ist der Ferienzeitraum frei. Sie können sofort einen
-                neuen Lauf starten.
+                Danach ist der Ferienzeitraum frei. Du kannst sofort einen neuen
+                Lauf starten.
               </p>
             </div>
           </ConfirmationModal>
@@ -527,7 +523,7 @@ export default function TraegerBillingRunPage() {
                 <Alert
                   type="warning"
                   className="mt-3"
-                  message={`${invoicesWithoutDebtorNumber(paymentTextGaps)} Ihr Zahlungstext nennt aber die Debitorennummer. Nach dem Freigeben können Sie sie nicht mehr eintragen. Schreiben gehen dann nur ohne den Platzhalter im Zahlungstext.`}
+                  message={`${invoicesWithoutDebtorNumber(paymentTextGaps)} Dein Zahlungstext nennt aber die Debitorennummer. Nach dem Freigeben kannst du sie nicht mehr eintragen. Schreiben gehen dann nur ohne den Platzhalter im Zahlungstext.`}
                 />
               ) : null}
               <ReleaseOpenPoints points={openPoints} />
@@ -554,8 +550,8 @@ export default function TraegerBillingRunPage() {
             }
             description={
               discarded
-                ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für ${run.periodName} können Sie einen neuen Lauf starten.`
-                : `Für ${run.periodName} gibt es keine bestätigte Anmeldung ohne Rechnung. Sie können den Lauf verwerfen. Danach ist der Ferienzeitraum frei für einen neuen Lauf.`
+                ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für ${run.periodName} kannst du einen neuen Lauf starten.`
+                : `Für ${run.periodName} gibt es keine bestätigte Anmeldung ohne Rechnung. Du kannst den Lauf verwerfen. Danach ist der Ferienzeitraum frei für einen neuen Lauf.`
             }
             className="py-6"
           />
@@ -667,7 +663,7 @@ export default function TraegerBillingRunPage() {
             <Alert
               type="warning"
               title="Rechtsbehelfsbelehrung fehlt"
-              message="Dieser Lauf stellt Gebührenbescheide aus. In der Vorlage „Gebührenbescheid“ fehlt die Rechtsbehelfsbelehrung. Wer die Rolle „Verwaltung“ hat, muss sie eintragen. Danach können Sie freigeben."
+              message="Dieser Lauf stellt Gebührenbescheide aus. In der Vorlage „Gebührenbescheid“ fehlt die Rechtsbehelfsbelehrung. Wer die Rolle „Verwaltung“ hat, muss sie eintragen. Danach kannst du freigeben."
               action={
                 <ButtonLink
                   href={traegerPath(
@@ -685,7 +681,7 @@ export default function TraegerBillingRunPage() {
           {preview && !run.numberRangeSet ? (
             <Alert
               type="warning"
-              message="Bevor Sie freigeben: Legen Sie das Muster der Rechnungsnummern fest."
+              message="Bevor du freigibst: Lege das Muster der Rechnungsnummern fest."
               action={
                 <ButtonLink
                   href={traegerPath("/traeger/einstellungen/abrechnung")}
@@ -719,8 +715,8 @@ export default function TraegerBillingRunPage() {
               type="warning"
               message={
                 run.missingDebtorNumbers === 1
-                  ? "1 Anmeldung hat noch keine Debitorennummer. Tragen Sie sie vor dem Freigeben ein."
-                  : `${run.missingDebtorNumbers} Anmeldungen haben noch keine Debitorennummer. Tragen Sie sie vor dem Freigeben ein.`
+                  ? "1 Anmeldung hat noch keine Debitorennummer. Trage sie vor dem Freigeben ein."
+                  : `${run.missingDebtorNumbers} Anmeldungen haben noch keine Debitorennummer. Trage sie vor dem Freigeben ein.`
               }
             />
           ) : null}

@@ -46,6 +46,11 @@ const meta: Meta<typeof DevicesMasterDetail> = {
   parameters: {
     layout: "fullscreen",
   },
+  args: {
+    onSetBlocked: () => {},
+    blockPending: false,
+    canManage: true,
+  },
 };
 
 export default meta;
@@ -68,6 +73,18 @@ export const OnlineDeviceSelected: Story = {
     groupDefinitions,
     selectedId: "1",
     selectedDevice: devices[0] ?? null,
+    onSelect: () => {},
+    onSaveDevice: async () => undefined,
+    onDeleteClick: () => {},
+  },
+};
+
+/** A blocked device (#2317): red pill, notice and „Entsperren“. */
+export const BlockedDeviceSelected: Story = {
+  args: {
+    groupDefinitions,
+    selectedId: "1",
+    selectedDevice: devices[0] ? { ...devices[0], status: "inactive" } : null,
     onSelect: () => {},
     onSaveDevice: async () => undefined,
     onDeleteClick: () => {},

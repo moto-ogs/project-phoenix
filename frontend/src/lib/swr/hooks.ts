@@ -23,6 +23,7 @@ import useSWR, {
   type SWRResponse,
   type MutatorOptions,
 } from "swr";
+import { SWRGlobalState, cache as defaultSWRCache } from "swr/_internal";
 import {
   useCallback,
   useEffect,
@@ -33,18 +34,17 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useSession } from "next-auth/react";
-import {
-  liftAllRefusals,
-  liftRefusal,
-  markRefused,
-  refusalFor,
-  subscribeRefusals,
-} from "~/lib/resource-refusals";
 import { swrConfig, immutableConfig } from "./config";
+import { createLogger } from "~/lib/logger";
 import {
   isAccessRefusal,
   isReadRefusal,
+  liftAllRefusals,
+  liftRefusal,
+  markRefused,
   noteShownDataRefusal,
+  refusalFor,
+  subscribeRefusals,
 } from "~/lib/access-refusal";
 import {
   DiscardedAnswer,
@@ -327,9 +327,31 @@ function mutationOptions(options: unknown): unknown {
     : options;
 }
 
+const logger = createLogger({ component: "useSWRAuth" });
+
+/**
+ * Safari reports `undefined is not a function` when SWR's mutate finds no
+ * state for the cache it is bound to (#2459). Not reproduced locally; this
+ * records whether the hook's cache was registered at that moment. The
+ * error still reaches the caller.
+ */
+function reportMutateTypeError<V>(cache: Cache, result: Promise<V>): void {
+  Promise.resolve(result).catch((error: unknown) => {
+    if (!(error instanceof TypeError)) return;
+    logger.warn("swr_mutate_type_error", {
+      error: error.message,
+      cache_registered: SWRGlobalState.has(cache),
+      default_cache: cache === defaultSWRCache,
+      default_cache_registered: SWRGlobalState.has(defaultSWRCache),
+      visibility: document.visibilityState,
+    });
+  });
+}
+
 /** A bound mutate of `key` whose writes go through the generation lock. */
 function lockBoundMutate<T>(
   key: string | null,
+  cache: Cache,
   mutate: ReturnType<typeof useSWRConfig>["mutate"],
   dataGeneration: number,
 ): SWRResponse<T>["mutate"] {
@@ -349,7 +371,11 @@ function lockBoundMutate<T>(
     // `throwOnError`: populateCache or optimisticData would write past the
     // lock.
     if (args[0] === undefined) {
-      if (args.length === 0) return currentResult(key, mutate(key));
+      if (args.length === 0) {
+        const revalidation = mutate(key);
+        reportMutateTypeError(cache, revalidation);
+        return currentResult(key, revalidation);
+      }
       const clear = copyAllowed(
         typeof args[1] === "boolean"
           ? { revalidate: args[1] }
@@ -357,14 +383,18 @@ function lockBoundMutate<T>(
         clearOptionKeys,
         "clear",
       );
-      return currentResult(key, mutate(key, undefined, clear as never));
+      const cleared = mutate(key, undefined, clear as never);
+      reportMutateTypeError(cache, cleared);
+      return currentResult(key, cleared);
     }
     const [locked, lockedOptions, run] = lockMutation(
       key,
       args[0],
       mutationOptions(args[1]),
     );
-    return runResult(run, mutate(key, locked as never, lockedOptions as never));
+    const written = mutate(key, locked as never, lockedOptions as never);
+    reportMutateTypeError(cache, written);
+    return runResult(run, written);
   }) as SWRResponse<T>["mutate"];
 }
 
@@ -512,24 +542,33 @@ function useScopedSWR<T, E>(
 
   const mutationGeneration = fullKey === null ? 0 : dataGenerationOf(fullKey);
   const mutate = useMemo(
-    () => lockBoundMutate<T>(fullKey, cacheMutate, mutationGeneration),
-    [fullKey, cacheMutate, mutationGeneration],
+    () => lockBoundMutate<T>(fullKey, cache, cacheMutate, mutationGeneration),
+    [fullKey, cache, cacheMutate, mutationGeneration],
   );
   // The refused answer leaves the cache itself, so no cache read and no
   // later render can show it; the refusal stays in its own store.
   const withdraw = refused && raw !== undefined;
   useEffect(() => {
-    if (!withdraw) return;
-    // Counted here too: this effect can run before SWR calls onError, and
-    // then the cache no longer holds the data that callback looks for.
-    if (isAccessRefusal(ownError ?? refusal)) noteShownDataRefusal();
-    // SWR calls onError only for the hook that started the request and still
-    // reads its key. A refusal known from the cache alone is recorded here,
-    // before the removal clears that error.
-    if (fullKey !== null && isReadRefusal(ownError))
+    if (!withdraw || fullKey === null) return;
+    // The render that asked for this is over: a read may have succeeded
+    // since. Only a refusal that still stands withdraws anything.
+    const refusedNow =
+      isReadRefusal(ownError) && cache.get(fullKey)?.error === ownError;
+    if (!refusedNow && refusalFor(fullKey) === undefined) return;
+    if (refusedNow) {
+      // Counted here too: this effect can run before SWR calls onError, and
+      // then the cache no longer holds the data that callback looks for. A
+      // refusal already in force is not counted again when another view
+      // writes the key: no shown data was refused then.
+      noteShownDataRefusal();
+      // SWR calls onError only for the hook that started the request and
+      // still reads its key. A refusal known from the cache alone is
+      // recorded here, before the removal clears that error.
       markRefused(fullKey, ownError);
+    }
     void mutate(undefined, { revalidate: false });
-  }, [withdraw, mutate, fullKey, ownError, refusal]);
+    // `raw` too: a value another view writes under a refusal goes as well.
+  }, [withdraw, raw, mutate, fullKey, ownError, refusal, cache]);
   return {
     data: refused ? undefined : data,
     error,

@@ -50,8 +50,12 @@ Gerenderte Reihenfolge, fest, nicht verhandelbar:
    `p-*`/`px-*` auf der Wurzel, kein `<main>`, kein `space-y-*` auf der Wurzel,
    keine eigene `<h1>`. Alles davon liefert `TenantPage` bzw. die Shell.
 3. **Statuszeile = echte Daten**, die die Seite ohnehin lädt:
-   „116 Kinder · 107 zuhause · 9 krank", „29.07.2026 bis 27.08.2026 ·
-   22 Betreuungstage". Für Wert-Label-Paare gibt es `TenantPageStats`.
+   „116 Kinder", „107 zuhause", „9 krank"; „29.07.2026 bis 27.08.2026",
+   „22 Betreuungstage". Mehrere Angaben stehen in `TenantPageStats`: Wert und
+   Label als Paar, die Paare mit Abstand, ohne Trennpunkt „·“ (#5684); eine
+   Angabe ohne Zahl lässt `value` weg. Eine einzelne Angabe darf ein String
+   sein („Stand 14:05 Uhr“). Ein Status steht nicht in der Zeile, sondern als
+   `StatusBadge` in `actions` neben der Kopfaktion.
    Kein Erklärsatz, keine Marketingzeile. Beim Laden `statsLoading`.
    **Höchstens drei Paare** — `TenantPageStats` schneidet dahinter ab. Die
    Statuszeile ist eine Orientierung; was mehr sagen will, ist eine Fläche
@@ -211,7 +215,7 @@ lg:flex-col`), sonst wächst nur die Hülle und die Fläche bleibt kurz.
     Infos" — wohin die Kachel führt, sagt ihr `aria-label`. In Tabellen
     steht „Nachname, Vorname" (alphabetisch sortierbar), auf Kacheln
     „Vorname Nachname".
-12. **Texte**: Sie-Form, echte Umlaute, keine Gender-Doppelpunkte, `…` statt
+12. **Texte**: Du-Form, echte Umlaute, keine Gender-Doppelpunkte, `…` statt
     `...`, „…" als Anführungszeichen. Bindestrich nie als Gedankenstrich.
 13. **Verhalten bleibt gleich.** Diese Umstellung ist Layout, keine fachliche
     Änderung. Keine Berechtigungsprüfung, kein Datenabruf, keine Sortierung

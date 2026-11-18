@@ -15,7 +15,7 @@ import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
@@ -102,13 +102,18 @@ export default function TraegerCatalogPreviewPage() {
       info="Die Vorschau zeigt je Schule, was das Übertragen ändert. Erst mit „Freigeben und übertragen“ ändert sich etwas in den Schulen. Neue Preise gelten ab Monatsbeginn; ausgestellte Verträge und Rechnungen bleiben, wie sie sind."
       stats={
         preview && !rollout ? (
-          <span>
-            {preview.schools.length === 1
-              ? "1 Schule"
-              : `${preview.schools.length} Schulen`}
-            {" · "}
-            {ready === 1 ? "1 übernimmt" : `${ready} übernehmen`}
-          </span>
+          <TenantPageStats
+            items={[
+              {
+                value: preview.schools.length,
+                label: preview.schools.length === 1 ? "Schule" : "Schulen",
+              },
+              {
+                value: ready,
+                label: ready === 1 ? "übernimmt" : "übernehmen",
+              },
+            ]}
+          />
         ) : null
       }
       statsLoading={loading && !rollout}
@@ -142,7 +147,7 @@ export default function TraegerCatalogPreviewPage() {
               disabled={!preview || loading || preview.schools.length === 0}
               disabledReason={
                 preview && !loading && preview.schools.length === 0
-                  ? "Wählen Sie zuerst in der Anmeldephase die Schulen aus."
+                  ? "Wähle zuerst in der Anmeldephase die Schulen aus."
                   : undefined
               }
               tooltip="Überträgt die Anmeldephase sofort an die Schulen der Vorschau."
@@ -165,7 +170,7 @@ export default function TraegerCatalogPreviewPage() {
           <SectionCard>
             <EmptyState
               title="Keine Schule bekommt etwas."
-              description="Wählen Sie in der Anmeldephase bei „Schulen“ aus, wer sie bekommt."
+              description="Wähle in der Anmeldephase bei „Schulen“ aus, wer sie bekommt."
             />
           </SectionCard>
         ) : (

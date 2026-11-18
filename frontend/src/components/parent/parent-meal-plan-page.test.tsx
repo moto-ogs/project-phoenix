@@ -93,7 +93,10 @@ vi.mock("~/lib/hooks/use-berlin-today", () => ({
   useBerlinToday: () => mocks.today,
 }));
 
-import { ParentMealPlanPage } from "./parent-meal-plan-page";
+import {
+  ParentMealPlanPage,
+  weekOffsetFromParam,
+} from "./parent-meal-plan-page";
 
 describe("ParentMealPlanPage", () => {
   beforeEach(() => {
@@ -216,7 +219,7 @@ describe("ParentMealPlanPage", () => {
 
     await waitFor(() => {
       expectWeekArrowUsable(previousWeek);
-      expectWeekArrowBlocked(nextWeek);
+      expectWeekArrowUsable(nextWeek);
       expect(mocks.getChildMealPlan).toHaveBeenLastCalledWith(
         "child-1",
         "2026-08-17",
@@ -224,6 +227,88 @@ describe("ParentMealPlanPage", () => {
       expect(weekStatus).toHaveTextContent(/KW 34\s*· Nächste Woche/);
       expect(weekStatus).toHaveTextContent("17.08. bis 21.08.2026");
     });
+  });
+
+  // Ein Hinweis zum geänderten Speiseplan öffnet seine Woche (#7145).
+  it("opens the week a notice links to", async () => {
+    const { rerender } = render(
+      <ParentMealPlanPage initialWeek="2026-08-17" />,
+    );
+
+    const weekStatus = within(
+      await screen.findByRole("navigation", { name: "Kalenderwoche wechseln" }),
+    ).getByRole("status");
+    await waitFor(() => {
+      expect(mocks.getChildMealPlan).toHaveBeenLastCalledWith(
+        "child-1",
+        "2026-08-17",
+      );
+      expect(weekStatus).toHaveTextContent(/KW 34\s*· Nächste Woche/);
+    });
+
+    rerender(<ParentMealPlanPage />);
+
+    await waitFor(() => {
+      expect(mocks.getChildMealPlan).toHaveBeenLastCalledWith(
+        "child-1",
+        "2026-08-10",
+      );
+      expect(weekStatus).toHaveTextContent(/KW 33\s*· Diese Woche/);
+    });
+  });
+
+  it("opens the meal plan at the school a notice links to", async () => {
+    mocks.listMyChildren.mockResolvedValue([
+      {
+        student_id: "child-1",
+        tenant_id: "school-1",
+        first_name: "Mia",
+        last_name: "Muster",
+        school_name: "OGS Am Berg",
+      },
+      {
+        student_id: "child-2",
+        tenant_id: "school-2",
+        first_name: "Noah",
+        last_name: "Beispiel",
+        school_name: "OGS Am Park",
+      },
+    ]);
+
+    render(
+      <ParentMealPlanPage initialSchool="school-2" initialWeek="2026-08-17" />,
+    );
+
+    await waitFor(() =>
+      expect(mocks.getChildMealPlan).toHaveBeenLastCalledWith(
+        "child-2",
+        "2026-08-17",
+      ),
+    );
+  });
+
+  it("loads the meal plan for a notice link three weeks ahead", async () => {
+    render(<ParentMealPlanPage initialWeek="2026-08-31" />);
+
+    await waitFor(() =>
+      expect(mocks.getChildMealPlan).toHaveBeenLastCalledWith(
+        "child-1",
+        "2026-08-31",
+      ),
+    );
+  });
+
+  it("maps a linked week to a reachable week of the page", () => {
+    expect(weekOffsetFromParam("2026-08-12", "2026-08-10")).toBe(0);
+    expect(weekOffsetFromParam("2026-08-12", "2026-08-17")).toBe(1);
+    expect(weekOffsetFromParam("2026-08-12", "2026-08-19")).toBe(1);
+    // Vergangen, zu weit entfernte oder ungültige Wochen öffnen die aktuelle.
+    expect(weekOffsetFromParam("2026-08-12", "2026-08-03")).toBe(0);
+    expect(weekOffsetFromParam("2026-08-12", "2026-08-31")).toBe(3);
+    expect(weekOffsetFromParam("2026-08-12", "2026-09-07")).toBe(0);
+    expect(weekOffsetFromParam("2026-08-12", "kw34")).toBe(0);
+    expect(weekOffsetFromParam("2026-08-12", "2026-08-32")).toBe(0);
+    expect(weekOffsetFromParam("2026-08-12", undefined)).toBe(0);
   });
 
   describe("opening week with meal registration", () => {
@@ -563,7 +648,7 @@ describe("ParentMealPlanPage", () => {
     const childSelect = screen.getByRole("combobox", { name: "Kind" });
     expect(
       await screen.findByText(
-        "Bis wann Sie ändern können, steht bei jedem Tag.",
+        "Bis wann du ändern kannst, steht bei jedem Tag.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Montag und Mittwoch")).toBeInTheDocument();
@@ -571,7 +656,7 @@ describe("ParentMealPlanPage", () => {
     expect(screen.getByText("mit Salat")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Eine bestätigte Krankmeldung oder Abwesenheit bis zur Frist eines Tages meldet Ihr Kind vom Essen ab. Danach bleibt das Essen bestellt.",
+        "Eine bestätigte Krankmeldung oder Abwesenheit bis zur Frist eines Tages meldet dein Kind vom Essen ab. Danach bleibt das Essen bestellt.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -588,7 +673,7 @@ describe("ParentMealPlanPage", () => {
     );
     expect(
       screen.getByText(
-        "Speichern oder abbrechen, bevor Sie ein anderes Kind oder eine andere Woche wählen.",
+        "Speichern oder abbrechen, bevor du ein anderes Kind oder eine andere Woche wählst.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("checkbox", { name: "Dienstag" }));
@@ -623,7 +708,7 @@ describe("ParentMealPlanPage", () => {
     );
     expect(
       screen.getByText(
-        "Speichern oder abbrechen, bevor Sie ein anderes Kind oder eine andere Woche wählen.",
+        "Speichern oder abbrechen, bevor du ein anderes Kind oder eine andere Woche wählst.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Anmelden" }));
@@ -832,12 +917,12 @@ describe("ParentMealPlanPage", () => {
 
     expect(
       await screen.findByText(
-        "Bis wann Sie ändern können, steht bei jedem Tag.",
+        "Bis wann du ändern kannst, steht bei jedem Tag.",
       ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Eine bestätigte Krankmeldung oder Abwesenheit bis zur Frist eines Tages meldet Ihr Kind vom Essen ab. Danach bleibt das Essen bestellt.",
+        "Eine bestätigte Krankmeldung oder Abwesenheit bis zur Frist eines Tages meldet dein Kind vom Essen ab. Danach bleibt das Essen bestellt.",
       ),
     ).toBeInTheDocument();
   });
@@ -945,7 +1030,7 @@ describe("ParentMealPlanPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByText(
-        "Für Ihre Schule ist der Speiseplan derzeit nicht freigeschaltet.",
+        "Für deine Schule ist der Speiseplan derzeit nicht freigeschaltet.",
       ),
     ).not.toBeInTheDocument();
 
@@ -967,7 +1052,7 @@ describe("ParentMealPlanPage", () => {
 
     expect(
       await screen.findByText(
-        "Für Ihre Schule ist der Speiseplan derzeit nicht freigeschaltet.",
+        "Für deine Schule ist der Speiseplan derzeit nicht freigeschaltet.",
       ),
     ).toBeInTheDocument();
   });
@@ -1000,8 +1085,8 @@ describe("ParentMealPlanPage", () => {
   });
 
   const SUBTITLE_WITH_REGISTRATION =
-    "Hier sehen Sie, wann Ihr Kind mitisst und was es gibt.";
-  const SUBTITLE_MEALS_ONLY = "Hier sehen Sie, was es zu essen gibt.";
+    "Hier siehst du, wann dein Kind mitisst und was es gibt.";
+  const SUBTITLE_MEALS_ONLY = "Hier siehst du, was es zu essen gibt.";
   const MEAL_PLAN_ENTRY = {
     date: "2026-08-12",
     position: 0,
@@ -1118,7 +1203,7 @@ describe("ParentMealPlanPage", () => {
     view = render(<ParentMealPlanPage key="disabled-school" />);
     expect(
       await screen.findByText(
-        "Für Ihre Schule ist der Speiseplan derzeit nicht freigeschaltet.",
+        "Für deine Schule ist der Speiseplan derzeit nicht freigeschaltet.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(SUBTITLE_MEALS_ONLY)).not.toBeInTheDocument();
@@ -1440,7 +1525,7 @@ describe("ParentMealPlanPage", () => {
 
       expect(
         await screen.findByText(
-          "Eine bestätigte Krankmeldung oder Abwesenheit bis zum Essenstag meldet Ihr Kind vom Essen ab.",
+          "Eine bestätigte Krankmeldung oder Abwesenheit bis zum Essenstag meldet dein Kind vom Essen ab.",
         ),
       ).toBeInTheDocument();
     });
@@ -1467,7 +1552,7 @@ describe("ParentMealPlanPage", () => {
       const dialog = await screen.findByRole("dialog");
       expect(
         within(dialog).getByText(
-          "Mia Muster wird an allen Tagen dieser Woche abgemeldet, die Sie noch ändern können.",
+          "Mia Muster wird an allen Tagen dieser Woche abgemeldet, die du noch ändern kannst.",
         ),
       ).toBeInTheDocument();
       fireEvent.click(within(dialog).getByRole("button", { name: "Abmelden" }));
@@ -1598,7 +1683,7 @@ describe("ParentMealPlanPage", () => {
       render(<ParentMealPlanPage />);
 
       expect(
-        await screen.findByText("Abgemeldet, weil Ihr Kind fehlt"),
+        await screen.findByText("Abgemeldet, weil dein Kind fehlt"),
       ).toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: "Woche anmelden" }),
@@ -1729,7 +1814,7 @@ describe("ParentMealPlanPage", () => {
       render(<ParentMealPlanPage />);
 
       expect(
-        await screen.findByText("Abgemeldet, weil Ihr Kind fehlt"),
+        await screen.findByText("Abgemeldet, weil dein Kind fehlt"),
       ).toBeInTheDocument();
       expect(
         screen.getByText("An diesem Tag ist die OGS zu"),
@@ -1747,7 +1832,7 @@ describe("ParentMealPlanPage", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("steps back to next week when the other school has no registration", async () => {
+    it("keeps the selected week when the other school has no registration", async () => {
       mocks.listMyChildren.mockResolvedValue([
         {
           student_id: "child-1",
@@ -1797,11 +1882,11 @@ describe("ParentMealPlanPage", () => {
           within(
             screen.getByRole("navigation", { name: "Kalenderwoche wechseln" }),
           ).getByRole("status"),
-        ).toHaveTextContent(/Nächste Woche/),
+        ).toHaveTextContent(/In 2 Wochen/),
       );
     });
 
-    it("reaches four weeks and loads the meal plan only for the first two", async () => {
+    it("reaches four weeks and loads the meal plan for each week", async () => {
       mocks.getMealParticipation.mockResolvedValue(plan());
 
       render(<ParentMealPlanPage />);
@@ -1821,12 +1906,11 @@ describe("ParentMealPlanPage", () => {
       await waitFor(() => expectWeekArrowBlocked(nextWeek));
       fireEvent.click(nextWeek);
       expect(weekStatus).toHaveTextContent(/In 3 Wochen/);
-      expect(screen.getAllByText("Speiseplan folgt")).toHaveLength(5);
-      expect(mocks.getChildMealPlan).not.toHaveBeenCalledWith(
+      expect(mocks.getChildMealPlan).toHaveBeenCalledWith(
         "child-1",
         "2026-08-24",
       );
-      expect(mocks.getChildMealPlan).not.toHaveBeenCalledWith(
+      expect(mocks.getChildMealPlan).toHaveBeenCalledWith(
         "child-1",
         "2026-08-31",
       );

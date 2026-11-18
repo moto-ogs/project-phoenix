@@ -44,7 +44,7 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 				testpkg.OwnTenant(t)
 				db, fleet := composeDeviceFleet(t)
 				var transactionStamp time.Time
-				runtime := testRuntime()
+				runtime := testRuntime(fleet)
 				success := runtime.Success
 				runtime.Success = func(w http.ResponseWriter, r *http.Request, status int, data any, message string) {
 					raw, present := testpkg.TransactionFromContext(r.Context())
@@ -72,7 +72,7 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 						roomID, roomName = &room.ID, &room.Name
 					}
 					var before devicefleet.Device
-					method, path, permission, status := http.MethodPost, "/", "iot:manage", http.StatusCreated
+					method, path, permission, status := http.MethodPost, "/", "devices:manage", http.StatusCreated
 					if scenario != "create-no-room" {
 						seen := time.Now().Truncate(time.Microsecond)
 						require.NoError(t, testpkg.WithinTenantContext(t, testpkg.Ctx(t), db, testpkg.Tenant(t), func(ctx context.Context) error {
@@ -80,7 +80,7 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 							before, err = fleet.CreateDevice(ctx, devicefleet.CreateDevice{DeviceID: id, DeviceType: "sensor", Name: new("Before"), Status: devicefleet.DeviceStatusOffline, LastSeen: &seen, RoomID: roomID})
 							return err
 						}))
-						method, path, permission, status = http.MethodPut, fmt.Sprintf("/%d", before.ID), "iot:update", http.StatusOK
+						method, path, permission, status = http.MethodPut, fmt.Sprintf("/%d", before.ID), "devices:manage", http.StatusOK
 					}
 					name := "After"
 					body := map[string]any{"device_id": id, "device_type": "terminal", "name": name, "status": "active", "registered_by_id": person.ID}
@@ -151,7 +151,9 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 					require.Zero(t, countDeviceWriteBudgetSelects(queries.Statements, "users.persons"), "valid registrar uses PostgreSQL FK checks, not an extra client read")
 					rooms := 0
 					if roomID != nil {
-						rooms = 4
+						// The edit names a status, so it reads the device under
+						// its row lock without the room (#2317).
+						rooms = 3
 					}
 					require.Equal(t, rooms, countDeviceWriteBudgetSelects(queries.Statements, "facilities.rooms"))
 					switch scenario {

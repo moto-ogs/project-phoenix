@@ -59,6 +59,8 @@ function row(
     repeatsLine: null,
     debtorNumber: "70001",
     debtorNumberStatus: "new",
+    familyChildren: null,
+    familyChildrenStatus: "",
     ...overrides,
   };
 }
@@ -85,6 +87,7 @@ function preview(
         party_last_name: "Zahler",
         party_email: "",
         debtor_number: "",
+        family_children: "",
       },
       schoolId: "1",
       moduleName: "OGS bis 16 Uhr",
@@ -102,6 +105,7 @@ function preview(
       { id: "2", name: "Grundschule Süd", modules: [] },
     ],
     debtorNumberScope: "payer",
+    familyChildrenAllowed: false,
     fingerprint: "preview-1",
     applied: false,
     counts: {
@@ -112,6 +116,7 @@ function preview(
       imported: 0,
       debtorNumbers: 1,
       debtorConflicts: 0,
+      familyChildren: 0,
     },
     rows: [
       row(2),
@@ -166,10 +171,12 @@ describe("Vertragsimport", () => {
     expect(
       screen.getAllByText("Debitorennummer 70001 wird eingetragen.").length,
     ).toBeGreaterThan(0);
+    // Anker: the preview with its rows is on screen.
     expect(
       screen.getAllByText("Das Kind hat an dieser Schule schon einen Vertrag.")
         .length,
     ).toBeGreaterThan(0);
+    expect(screen.queryByText(/ohne Mail-Adresse$/)).not.toBeInTheDocument();
 
     const applied = preview({
       applied: true,
@@ -218,6 +225,41 @@ describe("Vertragsimport", () => {
     await waitFor(() => expect(readCandidates).toHaveBeenCalledTimes(2));
   });
 
+  it("offers the children of the family only to an account that bills", async () => {
+    await choose();
+    // The folded card counts the fields it offers: 13 without the number.
+    expect(
+      screen.getByText(/4 von 13 Feldern sind zugeordnet/),
+    ).toBeInTheDocument();
+  });
+
+  it("names what happens with the children of the family of a row", async () => {
+    await choose(
+      preview({
+        familyChildrenAllowed: true,
+        mapping: {
+          ...preview().mapping,
+          columns: { ...preview().mapping.columns, family_children: "Kinder" },
+        },
+        rows: [row(2, { familyChildren: 2, familyChildrenStatus: "new" })],
+      }),
+    );
+    expect(
+      screen.getByText(/5 von 14 Feldern sind zugeordnet/),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Spalten zuordnen ausklappen" }),
+    );
+    expect(
+      screen.getByRole("combobox", { name: /Kinder in der Familie/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(
+        "Kinderzahl der Familie: 2 Kinder, bestätigt ab Vertragsbeginn.",
+      ).length,
+    ).toBeGreaterThan(0);
+  });
+
   it("asks for the school and the module of a file without those columns", async () => {
     await choose(
       preview({
@@ -233,7 +275,7 @@ describe("Vertragsimport", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Ordnen Sie alle Pflichtfelder zu. Dann zeigt moto die Zeilen.",
+        "Ordne alle Pflichtfelder zu. Dann zeigt moto die Zeilen.",
       ),
     ).toBeInTheDocument();
     // Anker: the mapping is on screen, so the preview could show.
@@ -300,6 +342,118 @@ describe("Vertragsimport", () => {
     expect(
       screen.getByRole("button", { name: "0 Verträge übernehmen" }),
     ).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("warns about contracts without a parent's address and still takes them over", async () => {
+    const base = preview();
+    const withoutEmail = preview({
+      mapping: {
+        ...base.mapping,
+        columns: { ...base.mapping.columns, party_email: "E-Mail" },
+      },
+      counts: { ...base.counts, ready: 4, duplicate: 1 },
+      rows: [
+        row(2),
+        row(3, {
+          childFirstName: "Ben",
+          partyEmail: "",
+          familyChildren: 2,
+          familyChildrenStatus: "new",
+        }),
+        row(4, {
+          childFirstName: "Lea",
+          partyName: "Jan Beispiel",
+          partyEmail: "",
+        }),
+        // No parent at all: its own hint, not counted as a family without mail.
+        row(6, {
+          childFirstName: "Ole",
+          partyName: "",
+          partyEmail: "",
+          hints: ["no_party"],
+        }),
+        // Left out: no contract, so no family without mail.
+        row(5, {
+          status: "duplicate",
+          childFirstName: "Tom",
+          partyEmail: "",
+          debtorNumberStatus: "",
+        }),
+      ],
+    });
+    await choose(withoutEmail);
+
+    expect(
+      screen.getByText("2 Verträge ohne Mail-Adresse"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Keine Mail von moto. Rechnungen gibt es nur auf Papier.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Kein Zugang zur Eltern-App.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Geschwister bleiben getrennte Familien."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Hast du die Adressen? Dann trage sie in die Datei ein. Lade die Datei danach noch einmal.",
+      ),
+    ).toBeInTheDocument();
+    // A warning, not a block: every ready row is taken over.
+    expect(
+      screen.getByRole("button", { name: "4 Verträge übernehmen" }),
+    ).not.toHaveAttribute("aria-disabled", "true");
+
+    const onlyWithout = screen.getByRole("button", {
+      name: "Ohne Mail 2",
+    });
+    fireEvent.click(onlyWithout);
+    expect(onlyWithout).toHaveAttribute("aria-pressed", "true");
+    // Anker: the filter shows a row without an address.
+    expect(screen.getAllByText("Ben Beispiel").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Mia Beispiel")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tom Beispiel")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ole Beispiel")).not.toBeInTheDocument();
+
+    api.applyContractImport.mockResolvedValueOnce({
+      ...withoutEmail,
+      applied: true,
+      counts: {
+        ...withoutEmail.counts,
+        ready: 0,
+        imported: 4,
+        familyChildren: 1,
+      },
+      rows: withoutEmail.rows.map((r) =>
+        r.status === "ready" ? { ...r, status: "imported" as const } : r,
+      ),
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "4 Verträge übernehmen" }),
+    );
+    await screen.findByText("4 Verträge übernommen");
+    expect(screen.getByText(/1 Kinderzahl bestätigt/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /2 Verträge ohne Mail-Adresse: Diesen Familien gibst du die Rechnungen auf Papier\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("points to the address column when no column is mapped to it", async () => {
+    await choose(
+      preview({
+        counts: { ...preview().counts, ready: 1, duplicate: 0 },
+        rows: [row(2, { partyEmail: "" })],
+      }),
+    );
+    expect(screen.getByText("1 Vertrag ohne Mail-Adresse")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Hat deine Datei eine Spalte mit Mail-Adressen? Ordne sie oben bei „E-Mail der Eltern“ zu.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("reads the file again when the preview changed before the import", async () => {

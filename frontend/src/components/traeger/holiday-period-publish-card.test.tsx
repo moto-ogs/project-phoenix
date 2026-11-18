@@ -91,7 +91,7 @@ describe("HolidayPeriodPublishCard", () => {
       screen.getByRole("button", { name: "Veröffentlichen" }),
     ).toHaveAttribute("aria-disabled", "true");
     expect(
-      screen.getByText("Bitte speichern Sie zuerst Ihre Änderungen.", {
+      screen.getByText("Bitte speichere zuerst deine Änderungen.", {
         selector: "p",
       }),
     ).toBeInTheDocument();

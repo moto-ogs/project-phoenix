@@ -82,13 +82,13 @@ export function describeRosterMaintenance(
     const invalid = invalidSourceSentence(state.invalidOfferingNames);
     if (invalid) sentences.push(invalid);
     if (state.dynamicTargets) sentences.push(TARGETS_SENTENCE);
-    sentences.push("Weitere Kinder müssen Sie selbst ergänzen.");
+    sentences.push("Weitere Kinder musst du selbst ergänzen.");
   } else {
     sentences.push(
-      "An- und Abmeldungen werden hier nicht übernommen. Kinder pflegen Sie selbst.",
+      "An- und Abmeldungen werden hier nicht übernommen. Kinder pflegst du selbst.",
     );
     if (state.careOfferingsDisabled) {
-      sentences.push("Betreuungsangebote sind an Ihrer Schule ausgeschaltet.");
+      sentences.push("Betreuungsangebote sind an deiner Schule ausgeschaltet.");
     } else {
       const inactive = inactiveSentence(state.inactiveOfferingNames);
       if (inactive) sentences.push(inactive);

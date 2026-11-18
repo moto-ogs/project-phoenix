@@ -15,7 +15,7 @@ export const DEMO_PRIVACY_URL = "https://moto-ogs.de/datenschutz";
 // Every demo session is recorded (#3603). The visitor reads that on every
 // screen of the way in, before the first click inside the demo school.
 export const DEMO_RECORDING_NOTICE =
-  "Um moto zu verbessern, werten wir aus, wie die Demo genutzt wird. Was Sie eintippen, sehen wir dabei nicht.";
+  "Um moto zu verbessern, werten wir aus, wie die Demo genutzt wird. Was du eintippst, sehen wir dabei nicht.";
 export const DEMO_RECORDING_PRIVACY_LINK = "Mehr zum Datenschutz";
 
 // Kept in its own light module so screens outside the demo flow can ask
@@ -56,7 +56,7 @@ export const DEMO_ROLES: readonly {
     // The visitor is also the parent of one child of the school (#3468), so
     // their name stands at that child's guardians in every role (#5033).
     description:
-      "Die Eltern-App für Ihr eigenes Kind an der Schule: Abholung, Krankmeldung, Nachrichten.",
+      "Die Eltern-App für dein eigenes Kind an der Schule: Abholung, Krankmeldung, Nachrichten.",
   },
   {
     role: "traeger",
@@ -100,8 +100,8 @@ export function demoRoleLabel(role: DemoRole): string {
   return DEMO_ROLES.find((entry) => entry.role === role)?.label ?? role;
 }
 
-export const DEMO_ROLE_CHOICE_TITLE = "Wie möchten Sie moto ansehen?";
-export const DEMO_ROLE_CHOICE_HINT = "Sie können das später oben wechseln.";
+export const DEMO_ROLE_CHOICE_TITLE = "Wie möchtest du moto ansehen?";
+export const DEMO_ROLE_CHOICE_HINT = "Du kannst das später oben wechseln.";
 
 /**
  * What a visitor of the public demo sees on the way in.
@@ -114,9 +114,9 @@ export type DemoEntryPhase =
 // (#3463) say the same thing in the same words.
 export const DEMO_ENTRY_OPENING = "Demo wird geöffnet …";
 
-/** Heading of the setup screen; without a name it speaks of "Ihre Demo". */
+/** Heading of the setup screen; without a name it speaks of "deine Demo". */
 export function demoSetupTitle(schoolName?: string): string {
-  return `Wir richten ${schoolName?.trim() ? schoolName.trim() : "Ihre Demo"} für Sie ein`;
+  return `Wir richten ${schoolName?.trim() ? schoolName.trim() : "deine Demo"} für dich ein`;
 }
 
 // What a seed does, in the visitor's words (#3464). The status only says
@@ -162,16 +162,16 @@ export const DEMO_ENTRY_PROBLEMS: Record<
   invalid: {
     title: "Dieser Link funktioniert nicht mehr",
     description:
-      "Ein Demo-Link gilt 14 Tage. Auf unserer Website bekommen Sie sofort einen neuen.",
+      "Ein Demo-Link gilt 14 Tage. Auf unserer Website bekommst du sofort einen neuen.",
   },
   failed: {
     title: "Das hat leider nicht geklappt",
-    description: "Bitte versuchen Sie es gleich noch einmal.",
+    description: "Bitte versuche es gleich noch einmal.",
   },
   unavailable: {
     title: "Das hat leider nicht geklappt",
     description:
-      "Die Demo konnte nicht vorbereitet werden. Auf unserer Website bekommen Sie sofort einen neuen Link.",
+      "Die Demo konnte nicht vorbereitet werden. Auf unserer Website bekommst du sofort einen neuen Link.",
   },
 };
 
@@ -295,7 +295,7 @@ export function demoLinkFragment(link: DemoLink): string {
 export const DEMO_RESTART_LABEL = "Demo neu anfangen";
 export const DEMO_RESTART_TITLE = "Demo neu anfangen?";
 export const DEMO_RESTART_TEXT =
-  "Sie bekommen eine neue Demo-Schule mit frischen Daten. Alles, was Sie bisher geändert haben, geht verloren. Der Link aus Ihrer E-Mail gilt weiter.";
+  "Du bekommst eine neue Demo-Schule mit frischen Daten. Alles, was du bisher geändert hast, geht verloren. Der Link aus deiner E-Mail gilt weiter.";
 export const DEMO_RESTART_CONFIRM = "Neu anfangen";
 export const DEMO_RESTART_RUNNING = "Wird vorbereitet …";
 

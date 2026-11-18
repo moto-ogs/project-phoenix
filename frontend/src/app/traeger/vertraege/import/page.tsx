@@ -12,6 +12,7 @@ import { useCallback, useRef, useState } from "react";
 import {
   CONTRACT_IMPORT_SAMPLE,
   contractCountLabel,
+  contractsWithoutEmail,
   rowsWithoutConditions,
 } from "~/components/traeger/care-contract-import-format";
 import { CareContractImportLogCard } from "~/components/traeger/care-contract-import-log-card";
@@ -49,7 +50,7 @@ const logger = createLogger({ component: "TraegerContractImportPage" });
 const STEPS = ["Datei wählen", "Spalten zuordnen", "Prüfen und übernehmen"];
 
 const INFO =
-  "Hier übernehmen Sie Kinder und Verträge, die Sie schon in einem anderen Programm haben. Jeder Vertrag gilt sofort als abgeschlossen, Eltern bekommen keine Mail. Die Datei bewahrt moto nicht auf.";
+  "Hier übernimmst du Kinder und Verträge, die du schon in einem anderen Programm hast. Jeder Vertrag gilt sofort als abgeschlossen, Eltern bekommen keine Mail. Die Datei bewahrt moto nicht auf.";
 
 const VERTRAEGE = "/traeger/vertraege";
 const BEDINGUNGEN = "/traeger/vertraege/bedingungen";
@@ -71,7 +72,19 @@ function doneDescription(done: ContractImportResult): string {
         : `${counts.debtorNumbers} Debitorennummern eingetragen`,
     );
   }
-  return `${parts.join(", ")}. Sie finden die Verträge unter Verträge mit dem Stand „Aktiv“.`;
+  if (counts.familyChildren > 0) {
+    parts.push(
+      counts.familyChildren === 1
+        ? "1 Kinderzahl bestätigt"
+        : `${counts.familyChildren} Kinderzahlen bestätigt`,
+    );
+  }
+  const withoutEmail = contractsWithoutEmail(done);
+  const paper =
+    withoutEmail > 0
+      ? ` ${contractCountLabel(withoutEmail)} ohne Mail-Adresse: Diesen Familien gibst du die Rechnungen auf Papier.`
+      : "";
+  return `${parts.join(", ")}.${paper} Du findest die Verträge unter Verträge mit dem Stand „Aktiv“.`;
 }
 
 export default function TraegerContractImportPage() {
@@ -124,7 +137,7 @@ export default function TraegerContractImportPage() {
   const choose = (chosen: File) => {
     if (!/\.(csv|txt)$/i.test(chosen.name)) {
       showMessage(
-        "Bitte wählen Sie eine CSV-Datei. Eine Excel-Datei speichern Sie vorher als CSV.",
+        "Bitte wähle eine CSV-Datei. Eine Excel-Datei speichere vorher als CSV.",
       );
       return;
     }
@@ -303,6 +316,7 @@ export default function TraegerContractImportPage() {
                 unmapped={result.unmapped}
                 schools={result.schools}
                 debtorNumberScope={result.debtorNumberScope}
+                familyChildrenAllowed={result.familyChildrenAllowed}
                 disabled={applying}
                 onChange={remap}
               />
@@ -313,7 +327,7 @@ export default function TraegerContractImportPage() {
                 message={
                   reading
                     ? "Die Datei wird geprüft …"
-                    : "Die Datei ist noch nicht geprüft. Bitte prüfen Sie erneut."
+                    : "Die Datei ist noch nicht geprüft. Bitte prüfe erneut."
                 }
                 action={
                   !reading ? (
@@ -334,7 +348,7 @@ export default function TraegerContractImportPage() {
               <Alert
                 type="warning"
                 title="Zuerst die Vertragsbedingungen eintragen"
-                message={`${withoutConditions === 1 ? "1 Zeile nennt" : `${withoutConditions} Zeilen nennen`} ein Modul ohne Vertragsbedingungen. Tragen Sie Laufzeit und Kündigungsfrist ein und prüfen Sie die Datei danach erneut.`}
+                message={`${withoutConditions === 1 ? "1 Zeile nennt" : `${withoutConditions} Zeilen nennen`} ein Modul ohne Vertragsbedingungen. Trage Laufzeit und Kündigungsfrist ein und prüfe die Datei danach erneut.`}
                 action={
                   <ButtonLink
                     href={traegerPath(BEDINGUNGEN)}
@@ -358,7 +372,7 @@ export default function TraegerContractImportPage() {
             {result && result.unmapped.length > 0 ? (
               <Alert
                 type="info"
-                message="Ordnen Sie alle Pflichtfelder zu. Dann zeigt moto die Zeilen."
+                message="Ordne alle Pflichtfelder zu. Dann zeigt moto die Zeilen."
               />
             ) : null}
           </>

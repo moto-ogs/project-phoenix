@@ -124,7 +124,7 @@ func (p *Provisioning) schoolSummaries(ctx context.Context, organizationID *int6
 			Settings: row.Settings, KontenCount: row.AccountCount,
 			GeraeteCount: devices[row.ID], PersonenCount: persons[row.ID],
 			ChildQuotaBundles: row.ChildQuotaBundles, ChildQuotaBundleSize: row.ChildQuotaBundleSize,
-			ChildQuotaCount: childQuota[row.ID],
+			ChildQuotaCount: childQuota[row.ID], DeviceSlots: row.DeviceSlots,
 		})
 	}
 	return result, nil

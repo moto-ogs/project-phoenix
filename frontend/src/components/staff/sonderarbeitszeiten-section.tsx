@@ -258,7 +258,7 @@ export function SonderarbeitszeitenSection({
     if (!draft) return;
     const { fields, hours } = validateDraft(draft);
     if (hours === null || fields.start_date || fields.end_date) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", fields);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fields);
       return;
     }
     await save.run(async (op) => {

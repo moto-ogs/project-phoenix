@@ -8,6 +8,7 @@
   "device_inactive": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
   "device_pin_invalid": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
   "device_pin_required": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
+  "device_slots_full": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "invalid_rfid_tag": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "invalid_staff_clock_request": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "invalid_staff_clock_state": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
@@ -33,5 +34,6 @@
   "student_already_active": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "student_not_present": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "wc_needs_staff": "{object} işlenemedi. Daha sonra yeniden deneyin.",
-  "wc_not_configured": "{object} işlenemedi. Daha sonra yeniden deneyin."
+  "wc_not_configured": "{object} işlenemedi. Daha sonra yeniden deneyin.",
+  "device_in_active_session": "{object} değiştirilemedi. Güncel durumu kontrol edin."
 }

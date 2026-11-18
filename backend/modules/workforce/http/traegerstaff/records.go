@@ -61,6 +61,7 @@ func (rs *RecordsResource) TraegerRouter(protectedTraegerRoutes func(chi.Router,
 		staff.Get("/{id}", rs.record)
 		staff.Delete("/{id}", rs.dissolve)
 		staff.Put("/{id}/personnel-number", rs.personnelNumber)
+		staff.Put("/{id}/person", rs.person)
 		staff.Get("/{id}/financial", rs.financial)
 		staff.Post("/{id}/financial/reveal", rs.revealFinancial)
 		staff.Put("/{id}/financial", rs.updateFinancial)
@@ -218,6 +219,36 @@ func (rs *RecordsResource) personnelNumber(w http.ResponseWriter, r *http.Reques
 	common.Respond(w, r, http.StatusOK, detail, "Personnel number updated successfully")
 }
 
+// PersonRequest corrects name and birthday of a record (#7379); a birthday
+// of null or "" clears it.
+type PersonRequest struct {
+	FirstName string  `json:"first_name"`
+	LastName  string  `json:"last_name"`
+	Birthday  *string `json:"birthday" contract:"date"`
+}
+
+func (req *PersonRequest) Bind(*http.Request) error { return nil }
+
+func (rs *RecordsResource) person(w http.ResponseWriter, r *http.Request) {
+	session, id, ok := actorAndRecord(w, r)
+	if !ok {
+		return
+	}
+	req := &PersonRequest{}
+	if err := render.Bind(r, req); err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeWorkforceStammdatenInvalid))
+		return
+	}
+	err := rs.records.UpdatePerson(r.Context(), session, id, workforce.TraegerStaffPerson{
+		FirstName: req.FirstName, LastName: req.LastName, Birthday: req.Birthday,
+	})
+	if err != nil {
+		renderError(w, r, err)
+		return
+	}
+	common.Respond(w, r, http.StatusOK, nil, "Staff record person updated successfully")
+}
+
 func (rs *RecordsResource) financial(w http.ResponseWriter, r *http.Request) {
 	rs.serveFinancial(w, r, false)
 }
@@ -273,6 +304,10 @@ func (rs *RecordsResource) updateFinancial(w http.ResponseWriter, r *http.Reques
 func renderError(w http.ResponseWriter, r *http.Request, err error) {
 	if link, ok := errors.AsType[*workforce.TraegerStaffLinkError](err); ok {
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceTraegerStaffLinkInvalid, link.Field))
+		return
+	}
+	if person, ok := errors.AsType[*workforce.TraegerStaffPersonError](err); ok {
+		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceStammdatenInvalid, person.Field))
 		return
 	}
 	common.RenderError(w, r, recordErrors(err))

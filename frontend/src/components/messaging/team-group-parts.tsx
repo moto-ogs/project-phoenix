@@ -218,7 +218,7 @@ export function GroupMembersPanel({
                 <span className="flex min-w-0 items-baseline gap-2">
                   <span className="truncate text-sm font-medium text-gray-900">
                     {member.name}
-                    {me && " (Sie)"}
+                    {me && " (du)"}
                   </span>
                   {roleLabel && (
                     <span className="flex-shrink-0 text-xs text-gray-500">
@@ -258,13 +258,13 @@ export function GroupMembersPanel({
           type="button"
           variant="outline_danger"
           size="md"
-          tooltip="Nimmt Sie aus dem Gruppenchat, moto fragt vorher nach."
+          tooltip="Nimmt dich aus dem Gruppenchat, moto fragt vorher nach."
           onClick={() => setLeaving(true)}
         >
           Gruppenchat verlassen
         </Button>
         <p className="mt-2 text-sm text-gray-500">
-          Danach sehen Sie den Gruppenchat und seine Nachrichten nicht mehr.
+          Danach siehst du den Gruppenchat und seine Nachrichten nicht mehr.
         </p>
       </div>
 
@@ -304,13 +304,13 @@ export function GroupMembersPanel({
         title="Gruppenchat verlassen?"
         confirmText="Verlassen"
         confirmVariant="danger"
-        confirmTooltip="Nimmt Sie sofort aus dem Gruppenchat."
+        confirmTooltip="Nimmt dich sofort aus dem Gruppenchat."
         isConfirmLoading={busy}
         loadingText="Chat wird verlassen …"
       >
         <p className="text-sm text-gray-700">
-          Sie sehen „{thread.group_name}“ und seine Nachrichten danach nicht
-          mehr. Wer den Gruppenchat verwaltet, kann Sie wieder hinzufügen.
+          Du siehst „{thread.group_name}“ und seine Nachrichten danach nicht
+          mehr. Wer den Gruppenchat verwaltet, kann dich wieder hinzufügen.
         </p>
       </ConfirmationModal>
     </div>
@@ -339,8 +339,8 @@ function GroupNameForm({
   const save = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      formError.invalid("Bitte geben Sie dem Gruppenchat einen Namen.", {
-        "group-name": "Bitte geben Sie einen Namen ein.",
+      formError.invalid("Bitte gib dem Gruppenchat einen Namen.", {
+        "group-name": "Bitte gib einen Namen ein.",
       });
       return;
     }

@@ -170,9 +170,19 @@ type DailyList struct {
 	Others []DailyParticipant
 }
 
+// ReplaceDay sets the dishes of a day. AccountID is the account that saves
+// them; it never hears about its own change (#7145).
 type ReplaceDay struct {
-	Date   Date
-	Dishes []Dish
+	Date      Date
+	Dishes    []Dish
+	AccountID int64
+}
+
+// ClearDay removes the dishes of a day. AccountID is the account that
+// removes them.
+type ClearDay struct {
+	Date      Date
+	AccountID int64
 }
 
 // Fault is a refused Meal Plan request. Code names it; Detail, when set, is
@@ -215,7 +225,7 @@ type Menu interface {
 	Available(context.Context) (bool, error)
 	Week(context.Context, Date) ([]Entry, error)
 	ReplaceDay(context.Context, ReplaceDay) error
-	ClearDay(context.Context, Date) error
+	ClearDay(context.Context, ClearDay) error
 }
 
 // Registration is the children's meal registration, by their parents and by

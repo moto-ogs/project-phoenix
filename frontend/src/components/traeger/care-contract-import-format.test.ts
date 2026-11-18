@@ -3,10 +3,12 @@ import type { ContractImportRow } from "~/lib/traeger-care-contract-import-api";
 import { formatConclusion } from "./care-contract-format";
 import {
   contractImportDebtorText,
+  contractImportFamilyChildrenText,
   contractImportPeriod,
   contractImportProblemText,
   contractImportWeekdays,
   matchesContractImportFilter,
+  takenOverWithoutEmail,
 } from "./care-contract-import-format";
 
 const row: ContractImportRow = {
@@ -28,6 +30,8 @@ const row: ContractImportRow = {
   repeatsLine: null,
   debtorNumber: "",
   debtorNumberStatus: "",
+  familyChildren: null,
+  familyChildrenStatus: "",
 };
 
 describe("care contract import format", () => {
@@ -84,6 +88,32 @@ describe("care contract import format", () => {
     );
   });
 
+  it("says what happens with the number of the family's children", () => {
+    expect(contractImportFamilyChildrenText(row)).toBeNull();
+    expect(
+      contractImportFamilyChildrenText({
+        ...row,
+        familyChildren: 2,
+        familyChildrenStatus: "new",
+      }),
+    ).toBe("Kinderzahl der Familie: 2 Kinder, bestätigt ab Vertragsbeginn.");
+    expect(
+      contractImportFamilyChildrenText({
+        ...row,
+        familyChildren: 3,
+        familyChildrenStatus: "differs",
+      }),
+    ).toBe(
+      "Kinderzahl der Familie: In moto ist schon eine andere Zahl bestätigt. moto ändert sie nicht.",
+    );
+    expect(
+      contractImportProblemText(
+        { field: "family_children", code: "invalid" },
+        row,
+      ),
+    ).toBe("„Kinder in der Familie“ ist keine ganze Zahl von 1 bis 20.");
+  });
+
   it("sorts rows into the filters", () => {
     expect(matchesContractImportFilter(row, "ready")).toBe(true);
     expect(
@@ -95,5 +125,24 @@ describe("care contract import format", () => {
     expect(
       matchesContractImportFilter({ ...row, status: "duplicate" }, "duplicate"),
     ).toBe(true);
+  });
+
+  it("counts only contracts moto takes over without a parent's address", () => {
+    expect(takenOverWithoutEmail(row)).toBe(true);
+    expect(takenOverWithoutEmail({ ...row, status: "imported" })).toBe(true);
+    expect(
+      takenOverWithoutEmail({ ...row, partyEmail: "eva@example.org" }),
+    ).toBe(false);
+    // A row moto leaves out gets no contract, so no family without mail.
+    expect(takenOverWithoutEmail({ ...row, status: "duplicate" })).toBe(false);
+    expect(takenOverWithoutEmail({ ...row, status: "invalid" })).toBe(false);
+    // Without any parent the row has its own hint: no recipient at all.
+    expect(
+      takenOverWithoutEmail({ ...row, partyName: "", hints: ["no_party"] }),
+    ).toBe(false);
+    expect(matchesContractImportFilter(row, "no_email")).toBe(true);
+    expect(
+      matchesContractImportFilter({ ...row, status: "invalid" }, "no_email"),
+    ).toBe(false);
   });
 });

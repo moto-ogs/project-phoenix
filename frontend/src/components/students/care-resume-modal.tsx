@@ -120,8 +120,8 @@ export function CareResumeModal({
             disabled={saving || !newStart || !checked}
             disabledReason={
               !newStart
-                ? "Wählen Sie zuerst den neuen Beginn."
-                : "Bestätigen Sie zuerst, dass Sie alles geprüft haben."
+                ? "Wähle zuerst den neuen Beginn."
+                : "Bestätige zuerst, dass du alles geprüft hast."
             }
             onClick={() => void handleResume()}
           >

@@ -30,10 +30,11 @@ const deletionTypeTimetableRetention = "timetable_retention"
 func TestFlowF_GDPRCleanup(t *testing.T) {
 	t.Parallel()
 
-	today := calendar.NewDate(2030, 8, 30)
+	ownerDay := calendar.NewDate(2030, 8, 30)
 	s := setupTimetableScenarioModule(t, func() time.Time {
-		return today.BerlinMidnight().Add(12 * time.Hour)
+		return ownerDay.BerlinMidnight().Add(12 * time.Hour)
 	})
+	today := calendar.DateFromTime(testpkg.DatabaseNow(t, s.db))
 
 	// --- Fixtures: students, room, old + fresh instances -------------------
 	room := testpkg.CreateTestRoom(t, s.db, "FlowF-Room")
@@ -101,10 +102,13 @@ func TestFlowF_GDPRCleanup(t *testing.T) {
 	assert.Equal(t, 30, preview.RetentionDays)
 
 	// --- Run the actual cleanup -------------------------------------------
+	beforeCleanup := calendar.DateFromTime(testpkg.DatabaseNow(t, s.db)).AddDays(-30)
 	result := runInTenantTx(t, s, func(ctx context.Context) (any, error) {
 		return s.cleanupTimetable(ctx)
 	}).(*timetable.TimetableCleanupResult)
 
+	afterCleanup := calendar.DateFromTime(testpkg.DatabaseNow(t, s.db)).AddDays(-30)
+	assert.Contains(t, []calendar.Date{beforeCleanup, afterCleanup}, result.CutoffDate)
 	assert.True(t, result.Success)
 	assert.Equal(t, 1, result.InstancesDeleted, "exactly one old instance deleted")
 	assert.Equal(t, 1, result.ExceptionsDeleted, "exactly one old exception deleted")
@@ -128,7 +132,7 @@ func TestFlowF_GDPRCleanup(t *testing.T) {
 	assert.Equal(t, 1, recordsDeleted, "studA had one expired slot")
 	assert.Equal(t, "system", deletedBy)
 	assert.EqualValues(t, 30, metadata["retention_days"])
-	assert.Equal(t, today.AddDays(-30).String(), metadata["cutoff_date"])
+	assert.Equal(t, result.CutoffDate.String(), metadata["cutoff_date"])
 	assert.Equal(t, []any{float64(oldInstance.ID)}, metadata["instance_ids_sample"])
 
 	// --- Idempotency: second run deletes nothing --------------------------

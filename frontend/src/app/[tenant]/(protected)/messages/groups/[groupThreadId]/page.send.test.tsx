@@ -58,6 +58,8 @@ vi.mock("~/lib/hooks/use-messages-activity", () => ({
 // The scaffold by its contract: the page error where the thread is missing,
 // otherwise the content.
 vi.mock("~/components/ui/tenant-page", () => ({
+  // Die Attrappe zeigt keine Statuszeile; die Paare braucht hier niemand.
+  TenantPageStats: () => null,
   TenantPage: ({
     error,
     children,

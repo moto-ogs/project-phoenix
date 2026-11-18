@@ -170,7 +170,7 @@ export function useEarlyCheckoutDialog(
       }
     >
       <p className="text-sm text-gray-600">
-        Möchten Sie{" "}
+        Möchtest du{" "}
         <span className="font-medium text-gray-900">{target?.studentName}</span>{" "}
         jetzt abmelden?
         {target?.room ? (

@@ -263,17 +263,17 @@ export function VacationRequestModal({
   const balanceMessage = exceedsBalance
     ? `Das sind ${overBalanceDays} ${
         overBalanceDays === 1 ? "Tag" : "Tage"
-      } mehr, als Sie noch haben. Bitte sprechen Sie mit der OGS-Leitung.`
+      } mehr, als du noch hast. Bitte sprich mit der OGS-Leitung.`
     : null;
 
   const handleSubmit = async () => {
     if (!range?.from || !range.to) {
-      formErrors.invalid("Bitte wählen Sie einen Zeitraum.");
+      formErrors.invalid("Bitte wähle einen Zeitraum.");
       return;
     }
     if (workingDays === 0) {
       formErrors.invalid(
-        "Der Zeitraum enthält keine Arbeitstage. Bitte wählen Sie andere Tage.",
+        "Der Zeitraum enthält keine Arbeitstage. Bitte wähle andere Tage.",
       );
       return;
     }
@@ -473,7 +473,7 @@ export function VacationRequestModal({
                   </span>
                 </>
               ) : (
-                <span>Bitte wählen Sie einen Zeitraum</span>
+                <span>Bitte wähle einen Zeitraum</span>
               )}
             </div>
             <div className="flex flex-col-reverse gap-2 sm:flex-row">
@@ -507,11 +507,11 @@ export function VacationRequestModal({
                   save.pending
                     ? undefined
                     : !range?.from || !range.to
-                      ? "Wählen Sie zuerst einen Zeitraum."
+                      ? "Wähle zuerst einen Zeitraum."
                       : workingDays === 0
                         ? "Der Zeitraum enthält keine Arbeitstage."
                         : exceedsBalance
-                          ? "Sie haben nicht mehr genug Urlaubstage."
+                          ? "Du hast nicht mehr genug Urlaubstage."
                           : overlapMessage
                             ? "Der Zeitraum überschneidet sich mit anderem Urlaub."
                             : undefined

@@ -6,8 +6,7 @@
 // frühere Datei wiederholt.
 
 import { Download, RotateCcw } from "lucide-react";
-import { type ReactNode, useState } from "react";
-import { DATEV_READINESS_ID } from "~/components/traeger/finance-export-datev";
+import { useState } from "react";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { HandoverBadge } from "~/components/traeger/finance-export-handover";
 import {
@@ -16,8 +15,18 @@ import {
   exportedAtLabel,
 } from "~/components/traeger/finance-export-format";
 import { Button } from "~/components/ui/button";
-import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
-import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
+import { SpinnerIcon } from "~/components/ui/icons";
+import { ScreenReaderStatus } from "~/components/ui/screen-reader-status";
+import {
+  OverflowMenu,
+  type OverflowMenuEntry,
+  type OverflowMenuItem,
+} from "~/components/ui/page-header/OverflowMenu";
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableMoreAction,
+} from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { formatBerlinDate, formatDate } from "~/lib/date-helpers";
@@ -84,11 +93,6 @@ function LastFile({
   );
 }
 
-/** The id of the line that says why a run has no new DATEV booking. */
-function datevStateId(run: ExportRun): string {
-  return `datev-state-${run.pathKind}-${run.runId}`;
-}
-
 function bookingsLabel(count: number): string {
   return count === 1 ? "1 neue Buchung" : `${count} neue Buchungen`;
 }
@@ -128,86 +132,109 @@ function DatevState({
   return (
     <span className="min-w-0">
       <span className="block">{badge}</span>
-      <span
-        id={datevStateId(run)}
-        className="mt-1 block text-sm text-gray-500 md:whitespace-nowrap"
-      >
+      <span className="mt-1 block text-sm text-gray-500 md:whitespace-nowrap">
         {line}
       </span>
     </span>
   );
 }
 
-/** The DATEV download of a run and its menu with „Alle Buchungen erneut“. */
-function DatevActions({
+/**
+ * The download entries of a run under „Herunterladen“: the Sollstellung, the
+ * DATEV file while it has new bookings and „Alle Buchungen erneut“ for a lost
+ * DATEV file. A DATEV file that is not possible stays out of the menu; the
+ * column „DATEV-Datei“ and the notice above the list say why.
+ */
+function downloadItems(
+  run: ExportRun,
+  state: DatevRunState | undefined,
+  ready: boolean,
+  { onDownload, onRepeat }: RunTableActions,
+): OverflowMenuItem[] {
+  const items: OverflowMenuItem[] = [
+    {
+      label: "Sollstellung",
+      description:
+        "Lädt alle Rechnungen des Laufs als CSV-Datei mit neuer Dateinummer herunter.",
+      icon: <Download className="h-4 w-4" aria-hidden />,
+      onClick: () => onDownload("sollstellung", run),
+    },
+  ];
+  if (ready && state?.newBookings !== 0) {
+    items.push({
+      label: "DATEV-Datei",
+      description: state
+        ? `Lädt ${bookingsLabel(state.newBookings)} als DATEV-Datei (CSV) mit neuer Dateinummer herunter.`
+        : "Lädt die neuen Buchungen als DATEV-Datei (CSV) mit neuer Dateinummer herunter.",
+      icon: <Download className="h-4 w-4" aria-hidden />,
+      onClick: () => onDownload("datev", run),
+    });
+  }
+  if (ready && state && state.fiscalYears.length > 0 && run.lastDatev) {
+    items.push({
+      label: "Alle Buchungen erneut",
+      description:
+        "Lädt alle Buchungen erneut, nur für eine verlorene Datei. moto fragt vorher nach.",
+      icon: <RotateCcw className="h-4 w-4" aria-hidden />,
+      onClick: () => onRepeat(run),
+    });
+  }
+  return items;
+}
+
+/**
+ * The one menu of a run (#7407): „Herunterladen“ with its files and
+ * „Übergabe“ to the recipients. While a file of the run is made, the row says
+ * so beside the menu.
+ */
+function RunActions({
   run,
   state,
   ready,
-  downloading,
-  onDownload,
-  onRepeat,
+  actions,
 }: Readonly<{
   run: ExportRun;
   state: DatevRunState | undefined;
   ready: boolean;
-  downloading: string | null;
-  onDownload: (format: RunFileFormat, run: ExportRun) => void;
-  onRepeat: (run: ExportRun) => void;
+  actions: RunTableActions;
 }>) {
-  const nothingNew = state?.newBookings === 0;
-  let describedBy: string | undefined;
-  if (!ready) describedBy = DATEV_READINESS_ID;
-  else if (nothingNew) describedBy = datevStateId(run);
-  let blockedReason: string | undefined;
-  if (!ready) {
-    blockedReason = "Tragen Sie zuerst die fehlenden DATEV-Werte ein.";
-  } else if (nothingNew) {
-    blockedReason =
-      state.fiscalYears.length > 0 && run.lastDatev
-        ? "Es gibt keine neue Buchung; eine verlorene Datei holen Sie über das Menü."
-        : "Dieser Lauf hat keine Rechnung mit Betrag, also keine Buchung.";
-  }
+  const handover = actions.handoverItems?.(run) ?? [];
+  const items: OverflowMenuEntry[] = [
+    { kind: "header", label: "Herunterladen" },
+    ...downloadItems(run, state, ready, actions),
+    ...(handover.length > 0
+      ? [{ kind: "header" as const, label: "Übergabe" }, ...handover]
+      : []),
+  ];
+  const making =
+    actions.downloading === runFileKey("sollstellung", run) ||
+    actions.downloading === runFileKey("datev", run);
+  const handingOver = actions.handingOver?.(run) ?? false;
+  let progress = "";
+  if (making) progress = "Wird erstellt …";
+  else if (handingOver) progress = "Wird übergeben …";
   return (
-    <>
-      <Button
-        type="button"
-        variant="surface"
-        size="compact"
-        isLoading={downloading === runFileKey("datev", run)}
-        loadingText="Wird erstellt"
-        disabled={downloading !== null || !ready || nothingNew}
-        disabledReason={blockedReason}
-        tooltip="Lädt die neuen Buchungen als DATEV-Datei (CSV) mit neuer Dateinummer herunter."
-        aria-describedby={describedBy}
-        aria-label={
-          state && state.newBookings > 0
-            ? `${bookingsLabel(state.newBookings)} von ${run.label} als DATEV-Datei herunterladen`
-            : `DATEV-Datei von ${run.label} herunterladen`
-        }
-        onClick={() => onDownload("datev", run)}
-      >
-        <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />
-        DATEV
-      </Button>
-      {ready && state && state.fiscalYears.length > 0 && run.lastDatev ? (
-        <OverflowMenu
-          ariaLabel={`Weitere DATEV-Aktionen für ${run.label}`}
-          disabled={downloading !== null}
-          items={[
-            {
-              label: "Alle Buchungen erneut",
-              description:
-                "Lädt alle Buchungen erneut, nur für eine verlorene Datei. moto fragt vorher nach.",
-              icon: <RotateCcw className="h-4 w-4" aria-hidden />,
-              onClick: () => onRepeat(run),
-            },
-          ]}
-        />
-      ) : ready ? (
-        // Keeps the DATEV buttons of every row in one column.
-        <span aria-hidden="true" className="w-9 shrink-0 max-sm:hidden" />
+    <span className="flex items-center justify-end gap-2 whitespace-nowrap max-sm:justify-start">
+      {/* Mounted in every row, so the change of its text is announced. */}
+      <ScreenReaderStatus
+        message={progress ? `${run.label}: ${progress}` : ""}
+      />
+      {progress ? (
+        <span
+          aria-hidden="true"
+          className="flex items-center gap-1.5 text-sm text-gray-600"
+        >
+          <SpinnerIcon />
+          {progress}
+        </span>
       ) : null}
-    </>
+      <OverflowMenu
+        ariaLabel={`Dateien von ${run.label} herunterladen oder übergeben`}
+        disabled={actions.busy}
+        disabledReason="Gerade wird eine Datei erstellt oder übergeben. Warte, bis das fertig ist."
+        items={items}
+      />
+    </span>
   );
 }
 
@@ -216,17 +243,16 @@ interface RunTableActions {
   readonly datev: DatevRunStates & { readonly settingsReady: boolean };
   readonly onDownload: (format: RunFileFormat, run: ExportRun) => void;
   readonly onRepeat: (run: ExportRun) => void;
-  /** Further actions of a run, such as its handover (ADR 0218). */
-  readonly renderRunActions?: (run: ExportRun) => ReactNode;
+  /** The handover entries of a run (ADR 0218), under „Übergabe“. */
+  readonly handoverItems?: (run: ExportRun) => readonly OverflowMenuItem[];
+  /** Whether a file of the run is on its way to a recipient. */
+  readonly handingOver?: (run: ExportRun) => boolean;
+  /** A download or handover runs; the menus wait for it. */
+  readonly busy: boolean;
 }
 
-function runColumns({
-  downloading,
-  datev,
-  onDownload,
-  onRepeat,
-  renderRunActions,
-}: RunTableActions): DataTableColumn<ExportRun>[] {
+function runColumns(actions: RunTableActions): DataTableColumn<ExportRun>[] {
+  const { datev } = actions;
   const datevReady = datev.settingsReady;
   const stateOf = (run: ExportRun) =>
     datev.ready ? datev.runs.get(datevRunKey(run)) : undefined;
@@ -275,37 +301,19 @@ function runColumns({
       ),
     },
     {
-      key: "download",
-      header: "Datei",
+      // „actions“ keeps the menu pinned at the right edge (DataTable).
+      key: "actions",
+      header: "Dateien",
       headerSrOnly: true,
       align: "right",
       stackedLabel: false,
       render: (run) => (
-        <span className="flex flex-wrap justify-end gap-2 whitespace-nowrap max-sm:justify-start">
-          <Button
-            type="button"
-            variant="surface"
-            size="compact"
-            isLoading={downloading === runFileKey("sollstellung", run)}
-            loadingText="Wird erstellt"
-            disabled={downloading !== null}
-            aria-label={`Sollstellung von ${run.label} herunterladen`}
-            tooltip="Lädt alle Rechnungen des Laufs als CSV-Datei mit neuer Dateinummer herunter."
-            onClick={() => onDownload("sollstellung", run)}
-          >
-            <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />
-            Sollstellung
-          </Button>
-          <DatevActions
-            run={run}
-            state={stateOf(run)}
-            ready={datevReady}
-            downloading={downloading}
-            onDownload={onDownload}
-            onRepeat={onRepeat}
-          />
-          {renderRunActions?.(run)}
-        </span>
+        <RunActions
+          run={run}
+          state={stateOf(run)}
+          ready={datevReady}
+          actions={actions}
+        />
       ),
     },
   ];
@@ -314,18 +322,26 @@ function runColumns({
 /** The released runs with their last files and their downloads. */
 export function ExportRunsTable({
   runs,
+  moreAction,
   ...actions
-}: Readonly<{ runs: readonly ExportRun[] } & RunTableActions>) {
+}: Readonly<
+  {
+    runs: readonly ExportRun[];
+    /** Older runs the server holds beyond the pages read so far. */
+    moreAction?: DataTableMoreAction;
+  } & RunTableActions
+>) {
   return (
     <DataTable
       columns={runColumns(actions)}
       rows={[...runs]}
+      moreAction={moreAction}
       getRowKey={(run) => `${run.pathKind}/${run.runId}`}
       stackedOnMobile
       emptyState={
         <EmptyState
           title="Noch kein ausgestellter Lauf."
-          description="Läufe stehen hier, sobald Sie Rechnungen ausgestellt haben."
+          description="Läufe stehen hier, sobald du Rechnungen ausgestellt hast."
         />
       }
     />
@@ -528,11 +544,17 @@ const PROTOCOL_COLUMNS: DataTableColumn<ExportProtocolEntry>[] = [
 /** Every file that left moto, newest first. */
 export function ExportProtocolTable({
   entries,
-}: Readonly<{ entries: readonly ExportProtocolEntry[] }>) {
+  moreAction,
+}: Readonly<{
+  entries: readonly ExportProtocolEntry[];
+  /** Older files the server holds beyond the pages read so far. */
+  moreAction?: DataTableMoreAction;
+}>) {
   return (
     <DataTable
       columns={PROTOCOL_COLUMNS}
       rows={[...entries]}
+      moreAction={moreAction}
       getRowKey={(entry) => entry.id}
       defaultSortKey="number"
       defaultSortDirection="desc"

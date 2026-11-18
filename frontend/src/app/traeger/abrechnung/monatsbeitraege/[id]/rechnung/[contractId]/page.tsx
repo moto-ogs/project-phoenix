@@ -25,7 +25,7 @@ import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
 import { useErrorFixLink } from "~/components/ui/error-fix-slot";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
@@ -161,17 +161,19 @@ function CareInvoiceAmendPage() {
       backLabel="Zurück zum Monatslauf"
       stats={
         run && invoice ? (
-          <span>
-            {service === "meal" ? "Mensa" : "Monatsbeitrag"}{" "}
-            {formatMonth(run.billingMonth)} · {invoice.schoolName} ·{" "}
-            <span className="tabular-nums">
-              {formatEuro(invoice.totalCents)}
-            </span>
-          </span>
+          <TenantPageStats
+            items={[
+              {
+                label: `${service === "meal" ? "Mensa" : "Monatsbeitrag"} ${formatMonth(run.billingMonth)}`,
+              },
+              { label: invoice.schoolName },
+              { value: formatEuro(invoice.totalCents), label: "" },
+            ]}
+          />
         ) : null
       }
       statsLoading={!run && !loadError}
-      info="Hier ändern Sie eine einzelne Rechnung vor dem Ausstellen. Die Änderung gilt nur für diese Rechnung in diesem Lauf. Nach dem Ausstellen geht eine Korrektur nur noch mit Storno und neuer Rechnung."
+      info="Hier änderst du eine einzelne Rechnung vor dem Ausstellen. Die Änderung gilt nur für diese Rechnung in diesem Lauf. Nach dem Ausstellen geht eine Korrektur nur noch mit Storno und neuer Rechnung."
       actions={
         menu.length > 0 ? (
           <OverflowMenu
@@ -201,13 +203,13 @@ function CareInvoiceAmendPage() {
           {!open ? (
             <Alert
               type="info"
-              message="Diese Rechnung ist ausgestellt und ändert sich nicht mehr. Für eine Korrektur stornieren Sie sie. Der nächste Lauf des Monats stellt sie neu aus und übernimmt die Änderungen."
+              message="Diese Rechnung ist ausgestellt und ändert sich nicht mehr. Für eine Korrektur stornierst du sie. Der nächste Lauf des Monats stellt sie neu aus und übernimmt die Änderungen."
               action={
                 <ButtonLink
                   href={`${runHref}/schreiben`}
                   variant="surface"
                   size="compact"
-                  tooltip="Öffnet die Schreiben des Laufs, dort stornieren Sie Rechnungen."
+                  tooltip="Öffnet die Schreiben des Laufs, dort stornierst du Rechnungen."
                 >
                   Zu den Schreiben
                 </ButtonLink>
@@ -220,21 +222,21 @@ function CareInvoiceAmendPage() {
               type="warning"
               message={
                 conflicts === 1
-                  ? "Eine Änderung passt nicht mehr zur Rechnung. Nehmen Sie sie zurück. Erst dann können Sie den Lauf freigeben."
-                  : `${conflicts} Änderungen passen nicht mehr zur Rechnung. Nehmen Sie sie zurück. Erst dann können Sie den Lauf freigeben.`
+                  ? "Eine Änderung passt nicht mehr zur Rechnung. Nimm sie zurück. Erst dann kannst du den Lauf freigeben."
+                  : `${conflicts} Änderungen passen nicht mehr zur Rechnung. Nimm sie zurück. Erst dann kannst du den Lauf freigeben.`
               }
             />
           ) : null}
           {invoice.exclusion ? (
             <Alert
               type="info"
-              message={`Diese Rechnung ist ausgeschlossen. Grund: ${invoice.exclusion.reason}. Ihre Änderungen gelten, wenn Sie sie wieder aufnehmen.`}
+              message={`Diese Rechnung ist ausgeschlossen. Grund: ${invoice.exclusion.reason}. Deine Änderungen gelten, wenn du sie wieder aufnimmst.`}
             />
           ) : null}
           {allOff ? (
             <Alert
               type="info"
-              message="Ihr Träger hat das Ändern einzelner Rechnungen ausgeschaltet. Es lässt sich in den Einstellungen unter „Monatsbeitrag“ einschalten. Das darf, wer das Recht „Einstellungen“ hat."
+              message="Dein Träger hat das Ändern einzelner Rechnungen ausgeschaltet. Es lässt sich in den Einstellungen unter „Monatsbeitrag“ einschalten. Das darf, wer das Recht „Einstellungen“ hat."
               action={amendmentSettingsLink}
               actionLayout="responsive"
             />
@@ -259,7 +261,7 @@ function CareInvoiceAmendPage() {
               ) : null}
               {someOff ? (
                 <p className="px-1 text-sm text-gray-600">
-                  Weitere Änderungen schaltet Ihr Träger in den Einstellungen
+                  Weitere Änderungen schaltet dein Träger in den Einstellungen
                   der Abrechnung ein.
                 </p>
               ) : null}

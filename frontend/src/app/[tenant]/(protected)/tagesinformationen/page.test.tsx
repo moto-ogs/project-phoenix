@@ -93,8 +93,10 @@ describe("Tagesinformationen: Statuszeile bei Ladefehler (#2517)", () => {
         catalogText("general.unavailable", "die Liste aller Hinweise"),
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/0 heute/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/0 insgesamt/)).not.toBeInTheDocument();
+    // Mit zwei Zahlen setzt die Statuszeile Zahl und Wort in eigene
+    // Elemente (#7402); beide Formen dürfen fehlen.
+    expect(screen.queryByText(/^(\d+ )?heute$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^(\d+ )?insgesamt$/)).not.toBeInTheDocument();
   });
 
   it("keeps the count of the list that did load", async () => {
@@ -138,7 +140,7 @@ describe("Tagesinformationen: Hinweis aus der Glocke (#7143)", () => {
     renderPage();
 
     expect(
-      screen.getByRole("heading", { name: "Aus Ihren Benachrichtigungen" }),
+      screen.getByRole("heading", { name: "Aus deinen Benachrichtigungen" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Sommerfest")).toBeInTheDocument();
     expect(screen.getByText("Bitte Kuchen mitbringen.")).toBeInTheDocument();
@@ -150,7 +152,7 @@ describe("Tagesinformationen: Hinweis aus der Glocke (#7143)", () => {
     renderPage();
 
     expect(
-      screen.queryByRole("heading", { name: "Aus Ihren Benachrichtigungen" }),
+      screen.queryByRole("heading", { name: "Aus deinen Benachrichtigungen" }),
     ).not.toBeInTheDocument();
     expect(screen.getAllByText("Sommerfest")).toHaveLength(1);
   });

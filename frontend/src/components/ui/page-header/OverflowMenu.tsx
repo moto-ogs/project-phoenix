@@ -467,6 +467,9 @@ export function OverflowMenu({
       aria-label={triggerAriaLabel}
       aria-haspopup="menu"
       aria-expanded={isOpen}
+      // Das Menü hängt am `body`; die Karte des Auslösers hebt sich dafür
+      // nicht an, sonst deckt sie den Kopf des Menüs zu (globals.css).
+      data-portaled-layer=""
       aria-controls={isOpen ? menuId : undefined}
       className={
         triggerButton
@@ -534,6 +537,11 @@ export function OverflowMenu({
                       <p className="text-xs font-semibold tracking-wider text-gray-500 uppercase">
                         {entry.label}
                       </p>
+                      {entry.description ? (
+                        <p className="mt-0.5 text-xs text-gray-500">
+                          {entry.description}
+                        </p>
+                      ) : null}
                     </div>
                   );
                 }

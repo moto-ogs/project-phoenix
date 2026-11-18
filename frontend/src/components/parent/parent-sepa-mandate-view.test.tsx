@@ -232,7 +232,7 @@ describe("ParentSepaMandateView", () => {
     mocks.fetch.mockResolvedValue({ ...open, enabled: false });
     renderView();
     expect(
-      await screen.findByText(/Fragen Sie den Träger nach einem Formular/),
+      await screen.findByText(/Frage den Träger nach einem Formular/),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Weiter" }),
@@ -249,7 +249,7 @@ describe("ParentSepaMandateView", () => {
     fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
     expect(
       await screen.findByText(
-        "Diese IBAN stimmt nicht. Bitte prüfen Sie jede Ziffer.",
+        "Diese IBAN stimmt nicht. Bitte prüfe jede Ziffer.",
       ),
     ).toBeInTheDocument();
     expect(mocks.preview).not.toHaveBeenCalled();
@@ -278,10 +278,10 @@ describe("ParentSepaMandateView", () => {
       }),
     );
     fireEvent.click(grant);
-    expect(await screen.findByText("Ihr Mandat")).toBeInTheDocument();
+    expect(await screen.findByText("Dein Mandat")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Sie erlauben Ihrem Träger, Beiträge von diesem Konto abzubuchen. Wie Sie bezahlen, steht auf Ihrer Rechnung.",
+        "Du erlaubst deinem Träger, Beiträge von diesem Konto abzubuchen. Wie du bezahlst, steht auf deiner Rechnung.",
       ),
     ).toBeInTheDocument();
     expect(mocks.grant).toHaveBeenCalledWith(
@@ -361,7 +361,9 @@ describe("ParentSepaMandateView", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Mandat erteilen" }));
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "Ihr Mandat" })).toHaveFocus(),
+      expect(
+        screen.getByRole("heading", { name: "Dein Mandat" }),
+      ).toHaveFocus(),
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Mandat widerrufen" }));

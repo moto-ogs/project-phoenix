@@ -20,6 +20,7 @@ import {
 } from "~/lib/enrollment-form-schema-api";
 import type { PublicCareOffering } from "~/lib/enrollment-submission-api";
 import type { CareOfferingSelectionMode } from "~/lib/enrollment-phase-api";
+import { HEALTH_CONSENT_KEY } from "~/lib/enrollment-legal-blocks";
 import { selectionGroupLabel } from "~/lib/enrollment-translations";
 import type { SignatureValue } from "~/components/ui/signature-pad";
 import { fileValueMissing } from "./enrollment-file-upload";
@@ -288,7 +289,38 @@ function dataFieldErrors(
       errors[formFieldName.consent(block.key)] = tr("errors.consentRequired");
     }
   }
+  if (healthAnswerWithoutConsent(values, rules)) {
+    errors[formFieldName.consent(HEALTH_CONSENT_KEY)] = tr(
+      "errors.healthConsent",
+    );
+  }
   return errors;
+}
+
+/**
+ * Health answers need the health consent; the enrollment itself never does
+ * (Art. 9 Abs. 2 lit. a, Art. 7 Abs. 4 DSGVO, #2787). The backend checks the
+ * same in validateHealthConsent.
+ */
+function healthAnswerWithoutConsent(
+  values: EnrollmentFormValues,
+  rules: EnrollmentFormRules,
+): boolean {
+  if (values.legalConsents[HEALTH_CONSENT_KEY] === true) return false;
+  if (!rules.legalBlocks.some((block) => block.key === HEALTH_CONSENT_KEY)) {
+    return false;
+  }
+  const healthFields = (rules.schema?.fields ?? []).filter(
+    (field) => field.target === "student.health_info",
+  );
+  return values.children.some(
+    (child) =>
+      !child.locked &&
+      healthFields.some((field) => {
+        const answer = child.custom[field.key];
+        return typeof answer === "string" && answer.trim() !== "";
+      }),
+  );
 }
 
 function childFieldErrors(
@@ -514,7 +546,13 @@ export function pickupTimeMarks(
 }
 
 function requiresAnswer(field: FormField): boolean {
-  return field.type !== "information" && field.required === true;
+  // Health information stays voluntary, also in forms saved as required
+  // before #2787.
+  return (
+    field.type !== "information" &&
+    field.required === true &&
+    field.target !== "student.health_info"
+  );
 }
 
 function customValueMissing(

@@ -7,28 +7,28 @@ export function teacherNoClassesTopic(): HelpTopic {
     id: HELP_TOPICS.teacherNoClasses,
     title: "Mir wird keine Klasse angezeigt",
     question: "Warum sehe ich meine Klasse nicht?",
-    summary: "Die OGS muss Ihnen die Klassen erst zuweisen.",
+    summary: "Die OGS muss dir die Klassen erst zuweisen.",
     group: "probleme",
     audience: "teacher",
     icon: "Search",
     steps: [
-      "Lesen Sie, ob dort `Keine Klassen zugewiesen` steht.",
-      "Schreiben Sie der OGS und nennen Sie Ihre Klassen.",
-      "Nennen Sie die Klassen genau so, wie sie an der Schule heißen.",
+      "Lies, ob dort `Keine Klassen zugewiesen` steht.",
+      "Schreibe der OGS und nenne deine Klassen.",
+      "Nenne die Klassen genau so, wie sie an der Schule heißen.",
     ],
     result:
-      "Nach der Zuweisung erscheinen Ihre Klassen in der `Klassenansicht`.",
+      "Nach der Zuweisung erscheinen deine Klassen in der `Klassenansicht`.",
     notes: [
-      "Die Zuweisung macht die OGS in Ihrer Personalakte.",
+      "Die Zuweisung macht die OGS in deiner Personalakte.",
       "Die Schreibweise muss zur Klasse der Kinder passen. Groß- und Kleinschreibung spielt keine Rolle.",
     ],
     differences: [
-      "Mit der Rolle `Schulverwaltung` sehen Sie alle Klassen der Schule. Dafür braucht es keine Zuweisung.",
-      "Sie sehen eine Klasse, aber keine Kinder? Dann ist die Klasse anders geschrieben als bei den Kindern.",
+      "Mit der Rolle `Schulverwaltung` siehst du alle Klassen der Schule. Dafür braucht es keine Zuweisung.",
+      "Du siehst eine Klasse, aber keine Kinder? Dann ist die Klasse anders geschrieben als bei den Kindern.",
       "Nach einem Schuljahreswechsel wandern die Klassen automatisch mit.",
     ],
     troubleshootingDetails: [
-      "Es steht `Kein Schultag`? Dann ist heute kein Unterricht. Prüfen Sie einen anderen Tag.",
+      "Es steht `Kein Schultag`? Dann ist heute kein Unterricht. Prüfe einen anderen Tag.",
     ],
     related: [
       HELP_TOPICS.teacherClassDay,

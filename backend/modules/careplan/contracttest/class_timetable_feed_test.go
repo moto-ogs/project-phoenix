@@ -241,7 +241,7 @@ func TestClassTimetableFeedReachesThePeopleOfTheClassOnly(t *testing.T) {
 	assert.Equal(t, "parent_class_timetable_changed", entries[0].Type)
 	assert.Equal(t, "Klasse 1a hat am Di. 11.06. um 11:30 Uhr Schluss.", entries[0].Body)
 	assert.Equal(t, "/children", entries[0].DeepLink)
-	assert.Equal(t, []string{"Stundenplan geändert | Der Unterrichtsschluss in der Klasse Ihres Kindes ändert sich. Mehr dazu in moto."},
+	assert.Equal(t, []string{"Stundenplan geändert | Der Unterrichtsschluss in der Klasse deines Kindes ändert sich. Mehr dazu in moto."},
 		f.pushes(t, family.AccountID, "parent_class_timetable_changed"), "the lock screen names no class")
 	assert.Empty(t, f.familyFeed(t, otherFamily), "a family of another class gets nothing")
 

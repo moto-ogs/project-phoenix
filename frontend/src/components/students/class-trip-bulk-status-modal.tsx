@@ -124,10 +124,10 @@ export function ClassTripBulkStatusModal({
   const blockReason =
     chosenIds.length === 0
       ? schoolReport
-        ? "Wählen Sie zuerst mindestens ein Kind aus."
+        ? "Wähle zuerst mindestens ein Kind aus."
         : "In dieser Klasse sind keine Kinder."
       : !from || !to
-        ? "Wählen Sie zuerst den Zeitraum."
+        ? "Wähle zuerst den Zeitraum."
         : to < from
           ? "Das Ende darf nicht vor dem Beginn liegen."
           : undefined;
@@ -135,7 +135,7 @@ export function ClassTripBulkStatusModal({
   const handleSubmit = async () => {
     formErrors.clear();
     if (!from || !to || to < from) {
-      formErrors.invalid("Bitte wählen Sie einen gültigen Zeitraum.");
+      formErrors.invalid("Bitte wähle einen gültigen Zeitraum.");
       return;
     }
 
@@ -145,7 +145,7 @@ export function ClassTripBulkStatusModal({
       trimmedReturnTime &&
       !/^\d{2}:\d{2}$/.test(trimmedReturnTime)
     ) {
-      formErrors.invalid("Bitte geben Sie die Rückkehrzeit wie 13:30 ein.");
+      formErrors.invalid("Bitte gib die Rückkehrzeit wie 13:30 ein.");
       return;
     }
 

@@ -6,8 +6,7 @@
 
 import { HolidayCriteriaEditor } from "~/components/traeger/holiday-criteria-editor";
 import { useTraegerHolidayCriteria } from "~/components/traeger/use-traeger-resources";
-import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { traegerPath } from "~/lib/traeger-url";
 
 export default function TraegerHolidayCriteriaPage() {
@@ -24,21 +23,22 @@ export default function TraegerHolidayCriteriaPage() {
         <p>
           Die Kriterien gelten für alle Ferien, die ihre Plätze nach Kriterien
           vergeben. Eltern beantworten jede Frage mit Ja oder Nein. moto
-          sortiert die Anmeldungen damit vor. Das ist nur ein Vorschlag. Ihr
+          sortiert die Anmeldungen damit vor. Das ist nur ein Vorschlag. Dein
           Büro entscheidet über jeden Platz. Eltern sehen nie die Angaben
           anderer Familien.
         </p>
       }
       stats={
         criteria ? (
-          <HolidayHeadFacts>
-            <span>
-              {criteria.length === 1
-                ? "1 Kriterium"
-                : `${criteria.length} Kriterien`}
-            </span>
-            <span>{active} eingeschaltet</span>
-          </HolidayHeadFacts>
+          <TenantPageStats
+            items={[
+              {
+                value: criteria.length,
+                label: criteria.length === 1 ? "Kriterium" : "Kriterien",
+              },
+              { value: active, label: "eingeschaltet" },
+            ]}
+          />
         ) : null
       }
       statsLoading={!criteria && !loadError}

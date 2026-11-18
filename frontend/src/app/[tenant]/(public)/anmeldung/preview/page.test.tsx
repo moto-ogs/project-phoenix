@@ -1,11 +1,13 @@
 import type { Session } from "next-auth";
 import { Suspense } from "react";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { TEST_CLOCK_INSTANT } from "~/test/clock";
 import { SessionProvider } from "next-auth/react";
 import { SWRConfig } from "~/lib/swr/testing";
+import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 
 // The preview reads through real SWR under a staff session, a fresh cache
 // per render.
@@ -16,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   redirect: vi.fn(),
   fetchEnrollmentPreviewBootstrap: vi.fn(),
   listPhases: vi.fn(),
+  fetchPublicLegalTexts: vi.fn(),
   formProps: [] as Record<string, unknown>[],
 }));
 
@@ -35,6 +38,7 @@ vi.mock("~/lib/tenant-context", () => ({
 
 vi.mock("~/lib/enrollment-form-schema-api", () => ({
   fetchEnrollmentPreviewBootstrap: mocks.fetchEnrollmentPreviewBootstrap,
+  fetchPublicLegalTexts: mocks.fetchPublicLegalTexts,
   schemaToPublicFormSchema: (schema: unknown) => schema,
 }));
 
@@ -105,6 +109,18 @@ async function renderPage(session: Session | null = staffSession) {
 }
 
 const schema = { id: "80", name: "Anmeldung Ganztag", fields: [] };
+const schoolLegalTexts = { blocks: [], agb: "", dsgvo: "" };
+const ownLegalBlock = {
+  key: "custom_photo_trip",
+  kind: "consent",
+  title: "Fotoausflug",
+  label: "Mein Kind darf beim Ausflug fotografiert werden.",
+  text: "Details zum Fotoausflug",
+  required: true,
+  enabled: true,
+  sort_order: 10,
+  source: "custom",
+};
 
 function phase(overrides: Record<string, unknown> = {}) {
   return {
@@ -140,6 +156,56 @@ describe("EnrollmentPreviewPage", () => {
     mocks.fetchEnrollmentPreviewBootstrap.mockReset();
     mocks.listPhases.mockReset();
     mocks.listPhases.mockResolvedValue([]);
+    mocks.fetchPublicLegalTexts.mockReset();
+    mocks.fetchPublicLegalTexts.mockResolvedValue(schoolLegalTexts);
+  });
+
+  it("hands the school's legal texts to a template without blocks of its own", async () => {
+    mocks.search = new URLSearchParams("schemaId=80");
+    mocks.fetchEnrollmentPreviewBootstrap.mockResolvedValue({ schema });
+    await renderPage();
+
+    expect(await screen.findByText("Elternformular")).toBeInTheDocument();
+    expect(mocks.fetchPublicLegalTexts).toHaveBeenCalledWith("demo");
+    expect(mocks.formProps.at(-1)?.previewLegalTexts).toBe(schoolLegalTexts);
+  });
+
+  it("reads no school legal texts for a template with blocks of its own", async () => {
+    mocks.search = new URLSearchParams("schemaId=80");
+    mocks.fetchEnrollmentPreviewBootstrap.mockResolvedValue({
+      schema: { ...schema, legal_blocks: [ownLegalBlock] },
+    });
+    await renderPage();
+
+    expect(await screen.findByText("Elternformular")).toBeInTheDocument();
+    expect(mocks.fetchPublicLegalTexts).not.toHaveBeenCalled();
+  });
+
+  it("stops the preview when the school's legal texts fail, then retries", async () => {
+    // A real load failure must replace the form, so it never shows consent
+    // without the configured documents.
+    mocks.search = new URLSearchParams("schemaId=80");
+    mocks.fetchEnrollmentPreviewBootstrap.mockResolvedValue({ schema });
+    mocks.fetchPublicLegalTexts.mockReset();
+    mocks.fetchPublicLegalTexts
+      .mockRejectedValueOnce(
+        new ApiError("legal texts request failed: 500", 500),
+      )
+      .mockResolvedValueOnce(schoolLegalTexts);
+    await renderPage();
+
+    // The backend sentence never reaches the reader.
+    expect(
+      await screen.findByText(catalogText("general.server", "die Vorschau")),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("legal texts request failed: 500"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Elternformular")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+
+    expect(await screen.findByText("Elternformular")).toBeInTheDocument();
   });
 
   it("redirects an unauthenticated base preview to the school's login without reading protected data", async () => {
@@ -308,7 +374,7 @@ describe("EnrollmentPreviewPage", () => {
     ).toBeGreaterThan(0);
     expect(
       screen.getByText(
-        "Wählen Sie unter Anmeldephasen bei dieser Phase „Aktivieren“.",
+        "Wähle unter Anmeldephasen bei dieser Phase „Aktivieren“.",
         { exact: false },
       ),
     ).toBeVisible();
@@ -501,7 +567,7 @@ describe("EnrollmentPreviewPage", () => {
       ).toBeVisible();
       expect(
         screen.getByText(
-          "Schalten Sie unter „Einstellungen“ > „Anmeldung“ die „Online-Anmeldung“ ein.",
+          "Schalte unter „Einstellungen“ > „Anmeldung“ die „Online-Anmeldung“ ein.",
           { exact: false },
         ),
       ).toBeVisible();

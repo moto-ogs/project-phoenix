@@ -100,13 +100,16 @@ describe("PlanLegend", () => {
         entries={[
           { key: "absent", label: "Abwesend", variant: "hatched" },
           { key: "cancelled", label: "Fällt aus", variant: "cancelled" },
+          { key: "suggested", label: "Vorschlag", variant: "suggested" },
         ]}
       />,
     );
 
-    expect(container.querySelectorAll("svg")).toHaveLength(2);
+    expect(container.querySelectorAll("svg")).toHaveLength(3);
+    expect(container.querySelector("rect[stroke-dasharray]")).not.toBeNull();
     expect(container.innerHTML).not.toContain("repeating-linear-gradient");
     expect(screen.getByText("Abwesend")).toBeInTheDocument();
     expect(screen.getByText("Fällt aus")).toBeInTheDocument();
+    expect(screen.getByText("Vorschlag")).toBeInTheDocument();
   });
 });

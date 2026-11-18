@@ -115,7 +115,7 @@ func (rs *StaffAdminResource) createBalanceAdjustment(w http.ResponseWriter, r *
 	}
 	decidedBy, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	var req createBalanceAdjustmentRequest
@@ -159,7 +159,7 @@ func (rs *StaffAdminResource) deleteBalanceAdjustment(w http.ResponseWriter, r *
 	}
 	deletedBy, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	if err := rs.BalanceAdjustService.DeleteAdjustment(r.Context(), staffID, adjustmentID, deletedBy); err != nil {
@@ -191,7 +191,7 @@ func (rs *StaffAdminResource) createOpeningBalance(w http.ResponseWriter, r *htt
 	}
 	decidedBy, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	var req openingBalanceRequest
@@ -229,7 +229,7 @@ func (rs *StaffAdminResource) resetStaffBalance(w http.ResponseWriter, r *http.R
 	}
 	decidedBy, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	var req resetBalanceRequest

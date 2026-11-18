@@ -195,8 +195,8 @@ export function SickReportModal({
         disabled={submitting || !dateStart || (!halfDay && !dateEnd)}
         disabledReason={
           !dateStart
-            ? "Wählen Sie zuerst den ersten Tag aus."
-            : "Wählen Sie zuerst den letzten Tag aus."
+            ? "Wähle zuerst den ersten Tag aus."
+            : "Wähle zuerst den letzten Tag aus."
         }
         tooltip={
           halfDay
@@ -230,7 +230,7 @@ export function SickReportModal({
             }
           />
           <p className="text-gray-600">
-            Offene Betreuungsblöcke besetzen Sie in der Vertretung neu.
+            Offene Betreuungsblöcke besetzt du in der Vertretung neu.
           </p>
         </div>
       ) : (

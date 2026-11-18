@@ -197,7 +197,7 @@ export function StaffPoolSlideOver({
             {pool && !canManage && (
               <Alert
                 type="info"
-                message="Sie haben nur Leserechte für den Betreuungsplan. Personal kann nur mit Verwaltungsrechten verschoben oder zugewiesen werden."
+                message="Du hast nur Leserechte für den Betreuungsplan. Personal kann nur mit Verwaltungsrechten verschoben oder zugewiesen werden."
               />
             )}
             {pool && (

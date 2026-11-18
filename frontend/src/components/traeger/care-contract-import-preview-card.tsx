@@ -3,9 +3,12 @@
 // Vorschau des Vertragsimports (#4723): jede Zeile der Datei mit ihrem Stand,
 // dem Kind, der Betreuung, den Eltern und dem, was sie aufhält. Übernommen
 // werden nur die bereiten Zeilen; ein Kind mit laufendem Vertrag bekommt
-// keinen zweiten.
+// keinen zweiten. Eine Zeile ohne Mail-Adresse der Eltern hält nichts auf,
+// aber die Vorschau zählt sie und sagt, was der Familie dann fehlt (#7360).
 
+import { MailX } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -23,11 +26,15 @@ import {
   contractCountLabel,
   contractImportChild,
   contractImportDebtorText,
+  contractImportFamilyChildrenText,
   contractImportHintText,
   contractImportPeriod,
   contractImportProblemText,
   contractImportWeekdays,
+  contractsWithoutEmail,
   matchesContractImportFilter,
+  takenOverWithoutEmail,
+  WITHOUT_EMAIL_CONSEQUENCES,
 } from "./care-contract-import-format";
 
 const IMPORT_PAGE_SIZE = 50;
@@ -52,6 +59,8 @@ function NotesCell({ row }: Readonly<{ row: ContractImportRow }>) {
   );
   const debtor = contractImportDebtorText(row);
   if (debtor) lines.push(debtor);
+  const familyChildren = contractImportFamilyChildrenText(row);
+  if (familyChildren) lines.push(familyChildren);
   if (lines.length === 0) return <span className="text-gray-500">–</span>;
   return (
     <ul className="space-y-0.5 text-sm text-gray-700">
@@ -62,6 +71,67 @@ function NotesCell({ row }: Readonly<{ row: ContractImportRow }>) {
   );
 }
 
+/**
+ * Warnt vor Verträgen ohne Mail-Adresse der Eltern. Keine Sperre: Der
+ * Product Owner hat am 18.11.2026 entschieden, dass der Import für diese
+ * Zeilen offen bleibt (#7360, ADR 0232 Punkt 7). Der nächste Schritt hängt
+ * davon ab, ob die Datei überhaupt eine Spalte für die Adresse hat.
+ */
+function WithoutEmailAlert({
+  count,
+  emailColumnMapped,
+}: Readonly<{ count: number; emailColumnMapped: boolean }>) {
+  return (
+    <Alert
+      type="warning"
+      // The preview re-renders with every new mapping; a polite note is
+      // enough for a warning that blocks nothing.
+      announce="polite"
+      icon={<MailX className="h-5 w-5" />}
+      title={`${contractCountLabel(count)} ohne Mail-Adresse`}
+      message="Du kannst sie trotzdem übernehmen. Für diese Familien gilt dann:"
+      details={
+        <>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5">
+            {WITHOUT_EMAIL_CONSEQUENCES.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+          <p className="mt-2 font-medium">
+            {emailColumnMapped
+              ? "Hast du die Adressen? Dann trage sie in die Datei ein. Lade die Datei danach noch einmal."
+              : "Hat deine Datei eine Spalte mit Mail-Adressen? Ordne sie oben bei „E-Mail der Eltern“ zu."}
+          </p>
+        </>
+      }
+    />
+  );
+}
+
+function PartyCell({ row }: Readonly<{ row: ContractImportRow }>) {
+  return (
+    <span className="block min-w-0">
+      <span className="block wrap-anywhere text-gray-900">
+        {row.partyName || "–"}
+      </span>
+      {row.partyEmail ? (
+        <span className="block text-xs wrap-anywhere text-gray-500">
+          {row.partyEmail}
+        </span>
+      ) : takenOverWithoutEmail(row) ? (
+        // The rows the warning above counts, findable at a glance. A row
+        // moto leaves out shows nothing here: it gets no contract.
+        <StatusBadge
+          tone="warning"
+          size="xs"
+          label="Ohne Mail-Adresse"
+          className="mt-0.5"
+        />
+      ) : null}
+    </span>
+  );
+}
+
 function footerText(result: ContractImportResult): string {
   const { counts } = result;
   const left = counts.conflict + counts.invalid;
@@ -69,7 +139,7 @@ function footerText(result: ContractImportResult): string {
     return "Alle Kinder der Datei haben schon ihren Vertrag.";
   }
   if (left > 0) {
-    return `${left === 1 ? "1 Zeile bleibt" : `${left} Zeilen bleiben`} draußen. Korrigieren Sie die Datei und laden Sie sie noch einmal.`;
+    return `${left === 1 ? "1 Zeile bleibt" : `${left} Zeilen bleiben`} draußen. Korrigiere die Datei und lade sie noch einmal.`;
   }
   return "Die Verträge gelten sofort als abgeschlossen. Eltern bekommen keine Mail.";
 }
@@ -85,8 +155,13 @@ export function CareContractImportPreviewCard({
   disabled?: boolean;
   onApply: () => void;
 }>) {
-  const [filter, setFilter] = useState<ContractImportFilter>("all");
+  const [chosenFilter, setFilter] = useState<ContractImportFilter>("all");
   const counts = result.counts;
+  const withoutEmail = contractsWithoutEmail(result);
+  // A new mapping may bring the addresses: the filter for rows without one
+  // then has no segment left and falls back to every row.
+  const filter =
+    chosenFilter === "no_email" && withoutEmail === 0 ? "all" : chosenFilter;
   const shown = useMemo(
     () => result.rows.filter((row) => matchesContractImportFilter(row, filter)),
     [result.rows, filter],
@@ -94,6 +169,13 @@ export function CareContractImportPreviewCard({
   const filters: { value: ContractImportFilter; label: string }[] = [
     { value: "all", label: `Alle ${result.rows.length}` },
     { value: "ready", label: `Bereit ${counts.ready + counts.imported}` },
+    ...(withoutEmail > 0
+      ? [
+          // Short, so the five segments fit a phone; the warning above
+          // names the full term.
+          { value: "no_email" as const, label: `Ohne Mail ${withoutEmail}` },
+        ]
+      : []),
     { value: "problems", label: `Fehler ${counts.conflict + counts.invalid}` },
     { value: "duplicate", label: `Vorhanden ${counts.duplicate}` },
   ];
@@ -164,16 +246,7 @@ export function CareContractImportPreviewCard({
     {
       key: "party",
       header: "Eltern",
-      render: (row) => (
-        <span className="block min-w-0">
-          <span className="block wrap-anywhere text-gray-900">
-            {row.partyName || "–"}
-          </span>
-          <span className="block text-xs wrap-anywhere text-gray-500">
-            {row.partyEmail || "ohne E-Mail"}
-          </span>
-        </span>
-      ),
+      render: (row) => <PartyCell row={row} />,
     },
     {
       key: "notes",
@@ -188,7 +261,7 @@ export function CareContractImportPreviewCard({
       description={
         disabled
           ? "Die Vorschau zeigt den letzten geprüften Stand. Übernehmen ist erst nach der Prüfung möglich."
-          : "So würde moto jede Zeile übernehmen. Gespeichert wird erst, wenn Sie übernehmen."
+          : "So würde moto jede Zeile übernehmen. Gespeichert wird erst, wenn du übernimmst."
       }
       footer={
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -213,6 +286,14 @@ export function CareContractImportPreviewCard({
         </div>
       }
     >
+      {withoutEmail > 0 ? (
+        <div className="mb-4">
+          <WithoutEmailAlert
+            count={withoutEmail}
+            emailColumnMapped={result.mapping.columns.party_email !== ""}
+          />
+        </div>
+      ) : null}
       <div className="mb-4">
         <SegmentedControl
           ariaLabel="Zeilen zeigen"

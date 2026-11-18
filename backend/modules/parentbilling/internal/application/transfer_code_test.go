@@ -36,7 +36,7 @@ func TestTransferCodeFollowsEPC069(t *testing.T) {
 		{Label: "Verwendungszweck", Value: "FE-2026-0007"},
 	}, code.Facts)
 	assert.Equal(t, "Bezahlen per QR-Code", code.Heading)
-	assert.Equal(t, "Scannen Sie den Code mit Ihrer Banking-App und überweisen Sie.",
+	assert.Equal(t, "Scannt den Code mit eurer Banking-App und überweist.",
 		code.Text)
 }
 

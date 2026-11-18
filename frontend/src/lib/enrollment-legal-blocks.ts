@@ -5,6 +5,7 @@
  * in backend/modules/enrollment/form_schema.go (FormLegalBlock.Validate).
  */
 import type {
+  FormField,
   FormLegalBlock,
   LegalBlockDisplayMode,
   PublicLegalTexts,
@@ -15,6 +16,70 @@ export const LEGAL_BLOCK_DISPLAY_MODE_TEXT =
   "text" satisfies LegalBlockDisplayMode;
 export const LEGAL_BLOCK_DISPLAY_MODE_PDF =
   "pdf" satisfies LegalBlockDisplayMode;
+
+/**
+ * The Datenschutzinformation is provided, not confirmed: the parent ticks
+ * nothing, the request's legal snapshot proves the wording shown (Art. 12,
+ * 13 DSGVO; DSK-Beschluss vom 05.09.2018; #2787). The backend keeps the same
+ * sentence in backend/modules/enrollment/legal_block_rules.go.
+ */
+export const PRIVACY_NOTICE_LABEL =
+  "Hier findest du die Datenschutzinformation der Schule.";
+const LEGACY_PRIVACY_NOTICE_LABEL =
+  "Ich habe die Datenschutzinformation der Schule zur Kenntnis genommen.";
+
+/**
+ * What a parent also confirms by ticking a consent with
+ * `guardian_agreement` (§ 1629 Abs. 1 BGB; OLG Düsseldorf 1 UF 74/21 for
+ * photos on the internet). Same sentence as GuardianAgreementLabel in the
+ * backend; the parent form shows its translation (`legal.guardianAgreement`).
+ */
+export const GUARDIAN_AGREEMENT_LABEL =
+  "Ich handle dabei im Einvernehmen mit allen anderen sorgeberechtigten Personen meines Kindes.";
+
+/** The consent moto adds to a form that asks for health information. */
+export const HEALTH_CONSENT_KEY = "health_data";
+
+/** Does the form ask for the child's health information? */
+export function asksForHealthInformation(
+  fields: readonly Pick<FormField, "target">[] | undefined,
+): boolean {
+  return (fields ?? []).some((field) => field.target === "student.health_info");
+}
+
+/** Does a parent tick this block? Notices only inform. */
+export function legalBlockHasCheckbox(kind: FormLegalBlock["kind"]): boolean {
+  return kind !== "notice" && kind !== "privacy_notice";
+}
+
+/**
+ * A block under the rules of #2787, also when its template was saved
+ * before: a privacy notice has no checkbox, only a consent asks for the
+ * custodians' agreement.
+ */
+export function withDecidedLegalRules<
+  T extends Pick<FormLegalBlock, "kind" | "label" | "required"> & {
+    guardian_agreement?: boolean;
+  },
+>(block: T): T {
+  const label =
+    block.kind === "privacy_notice" &&
+    block.label.trim() === LEGACY_PRIVACY_NOTICE_LABEL
+      ? PRIVACY_NOTICE_LABEL
+      : block.label;
+  const required = block.kind === "privacy_notice" ? false : block.required;
+  const dropAgreement =
+    block.kind !== "consent" && block.guardian_agreement === true;
+  if (label === block.label && required === block.required && !dropAgreement) {
+    return block;
+  }
+  return {
+    ...block,
+    label,
+    required,
+    ...(dropAgreement ? { guardian_agreement: false } : {}),
+  };
+}
 
 export const STANDARD_LEGAL_BLOCKS: FormLegalBlock[] = [
   {
@@ -33,10 +98,9 @@ export const STANDARD_LEGAL_BLOCKS: FormLegalBlock[] = [
     key: "data_processing",
     kind: "privacy_notice",
     title: "Datenschutzinformation",
-    label:
-      "Ich habe die Datenschutzinformation der Schule zur Kenntnis genommen.",
+    label: PRIVACY_NOTICE_LABEL,
     text: "",
-    required: true,
+    required: false,
     enabled: false,
     sort_order: 20,
     source: "standard",
@@ -98,7 +162,6 @@ export function checkboxLegalBlockKindFor(
   block: FormLegalBlock,
 ): FormLegalBlock["kind"] {
   if (block.key === "agb") return "terms";
-  if (block.key === "data_processing") return "privacy_notice";
   return customCheckboxKind(block.required);
 }
 
@@ -162,6 +225,8 @@ export function hasStandardLegalBlockOverride(
     block.label !== standardBlock.label ||
     block.text !== standardBlock.text ||
     block.required !== standardBlock.required ||
+    (block.guardian_agreement ?? false) !==
+      (standardBlock.guardian_agreement ?? false) ||
     legalBlockDisplayMode(block) !== legalBlockDisplayMode(standardBlock) ||
     (block.document_url ?? "") !== (standardBlock.document_url ?? "") ||
     JSON.stringify(block.attachments ?? []) !==
@@ -295,14 +360,16 @@ export function legalBlocksForTemplate(
   standardBlocks: FormLegalBlock[],
 ): FormLegalBlock[] {
   if (!savedBlocks || savedBlocks.length === 0) return standardBlocks;
-  const savedByKey = new Map(savedBlocks.map((block) => [block.key, block]));
+  const savedByKey = new Map(
+    savedBlocks.map((block) => [block.key, withDecidedLegalRules(block)]),
+  );
   const mergedStandardBlocks = standardBlocks.map(
     (standard) => savedByKey.get(standard.key) ?? standard,
   );
   const standardKeys = new Set(standardBlocks.map((block) => block.key));
-  const customBlocks = savedBlocks.filter(
-    (block) => !isStandardLegalBlock(block, standardKeys),
-  );
+  const customBlocks = savedBlocks
+    .filter((block) => !isStandardLegalBlock(block, standardKeys))
+    .map(withDecidedLegalRules);
   return [...mergedStandardBlocks, ...customBlocks];
 }
 
@@ -329,9 +396,11 @@ export function prepareLegalBlocksForSave(
       label: block.label.trim(),
       text: block.text.trim(),
       required:
-        kind === "notice" || kind === "consent"
+        !legalBlockHasCheckbox(kind) || kind === "consent"
           ? false
           : Boolean(block.required),
+      guardian_agreement:
+        kind === "consent" ? block.guardian_agreement === true : false,
       enabled: Boolean(block.enabled),
       sort_order: index * 10 + 10,
       source: standard ? "standard" : "custom",

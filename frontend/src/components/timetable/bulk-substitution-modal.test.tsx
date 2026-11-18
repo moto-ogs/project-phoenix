@@ -269,7 +269,7 @@ describe("BulkSubstitutionModal", () => {
     const save = screen.getByRole("button", { name: "Speichern" });
     expect(save).toHaveAttribute("aria-disabled", "true");
     expect(save).toHaveAccessibleDescription(
-      "Wählen Sie zuerst die abwesende Person aus.",
+      "Wähle zuerst die abwesende Person aus.",
     );
   });
 
@@ -427,7 +427,7 @@ describe("BulkSubstitutionModal", () => {
     const save = screen.getByRole("button", { name: "Speichern" });
     expect(save).toHaveAttribute("aria-disabled", "true");
     expect(save).toHaveAccessibleDescription(
-      "Wählen Sie einen kürzeren Zeitraum, höchstens acht Wochen.",
+      "Wähle einen kürzeren Zeitraum, höchstens acht Wochen.",
     );
   });
 
@@ -453,7 +453,7 @@ describe("BulkSubstitutionModal", () => {
     });
     expect(tooMany).toHaveAttribute("aria-disabled", "true");
     expect(tooMany).toHaveAccessibleDescription(
-      "Wählen Sie höchstens 31 Tage auf einmal aus.",
+      "Wähle höchstens 31 Tage auf einmal aus.",
     );
 
     // Einen Tag abwählen → 31 gewählte Tage sind wieder speicherbar.
@@ -565,7 +565,7 @@ describe("BulkSubstitutionModal", () => {
     });
     expect(save).toHaveAttribute("aria-disabled", "true");
     expect(save).toHaveAccessibleDescription(
-      "Laden Sie zuerst die Termine im Zeitraum neu.",
+      "Lade zuerst die Termine im Zeitraum neu.",
     );
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     expect(mockSwrState.mutate).toHaveBeenCalledTimes(1);
@@ -689,7 +689,7 @@ describe("BulkSubstitutionModal", () => {
 
     await waitFor(() =>
       expect(mockToastWarning).toHaveBeenCalledWith(
-        "Bitte prüfen Sie eine mögliche Zeitüberschneidung.",
+        "Bitte prüfe eine mögliche Zeitüberschneidung.",
         { duration: 0 },
       ),
     );

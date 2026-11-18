@@ -34,7 +34,7 @@
     {{if .Waitlisted}}
     <div class="highlight-box" style="margin-top: 24px;">
         <p style="margin: 0; font-size: 14px;"><strong>Warteliste</strong></p>
-        <p style="margin: 8px 0 0 0; font-size: 14px;">Wird in einer Woche ein Platz frei, bekommt ihn das nächste Kind auf der Warteliste. Wir schreiben Ihnen dann eine E-Mail.</p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">Wird in einer Woche ein Platz frei, bekommt ihn das nächste Kind auf der Warteliste. Wir schreiben dir dann eine E-Mail.</p>
     </div>
     {{end}}
     {{else}}
@@ -42,7 +42,7 @@
 
     <p>Guten Tag {{.GuardianName}},</p>
 
-    <p>für <strong>{{.PeriodName}}</strong>{{if .SchoolName}} bei <strong>{{.SchoolName}}</strong>{{end}} ist ein Platz frei geworden. Ihr Kind war auf der Warteliste und hat den Platz jetzt bekommen.</p>
+    <p>für <strong>{{.PeriodName}}</strong>{{if .SchoolName}} bei <strong>{{.SchoolName}}</strong>{{end}} ist ein Platz frei geworden. Dein Kind war auf der Warteliste und hat den Platz jetzt bekommen.</p>
 
     {{range .Children}}
     <div class="highlight-box">
@@ -57,13 +57,13 @@
     {{end}}
 
     <div class="highlight-box" style="margin-top: 24px;">
-        <p style="margin: 0; font-size: 14px;"><strong>Was heißt das für Sie?</strong></p>
-        <p style="margin: 8px 0 0 0; font-size: 14px;">Sie müssen nichts tun. {{if .Allocated}}In den Wochen mit Platz ist Ihr Kind angemeldet.{{else}}Ihr Kind ist in diesen Wochen angemeldet.{{end}}</p>
+        <p style="margin: 0; font-size: 14px;"><strong>Was heißt das für dich?</strong></p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">Du musst nichts tun. {{if .Allocated}}In den Wochen mit Platz ist dein Kind angemeldet.{{else}}Dein Kind ist in diesen Wochen angemeldet.{{end}}</p>
         {{if .Binding}}<p style="margin: 8px 0 0 0; font-size: 14px;">Die Anmeldung ist verbindlich. Das gilt auch für diesen Platz.</p>{{end}}
-        <p style="margin: 8px 0 0 0; font-size: 14px;">Können Sie den Platz nicht nutzen? Dann sagen Sie bitte dem Träger schnell Bescheid. So bekommt ein anderes Kind den Platz.</p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">Kannst du den Platz nicht nutzen? Dann sage bitte dem Träger schnell Bescheid. So bekommt ein anderes Kind den Platz.</p>
     </div>
 
-    <p class="security-note">Bitte antworten Sie nicht auf diese E-Mail. Bei Fragen wenden Sie sich an den Träger{{if .SchoolName}} ({{.SchoolName}}){{end}}.</p>
+    <p class="security-note">Bitte antworte nicht auf diese E-Mail. Bei Fragen wende dich an den Träger{{if .SchoolName}} ({{.SchoolName}}){{end}}.</p>
 </div>
 
 {{template "footer" .}}

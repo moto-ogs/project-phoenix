@@ -46,7 +46,6 @@ import (
 	settingsValues "github.com/moto-ogs/project-phoenix/modules/settings"
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
-	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	arrivalTimetable "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
@@ -58,6 +57,7 @@ import (
 
 	reminder "github.com/moto-ogs/project-phoenix/workflows/reminderdelivery"
 	"github.com/moto-ogs/project-phoenix/workflows/studentdeletion"
+	"github.com/spf13/viper"
 )
 
 // workerRetentionOf builds the nightly cleanup's retention: the student and
@@ -110,41 +110,41 @@ func workerRetentionOf(
 		return workerRetention{}, err
 	}
 	steps = append(steps, surveyRetentionSteps(settings, surveys)...)
-	attendance, err := presenceCompose.New(presenceCompose.Dependencies{DB: db.Pool(), Observe: presenceCompose.FailureLogger()})
+	attendance, err := newAttendanceRetention(db, now)
 	if err != nil {
-		return workerRetention{}, fmt.Errorf("compose worker attendance retention: %w", err)
+		return workerRetention{}, err
 	}
-	return newWorkerRetention(audit, settings, students, staff, steps, attendance, newGuardianRetention(db, identity))
+	guardians, err := newGuardianRetention(db, identity, now)
+	if err != nil {
+		return workerRetention{}, err
+	}
+	return newWorkerRetention(audit, settings, students, staff, steps, attendance, guardians)
 }
 
 // workerDocumentSweeps build the Worker's recovery passes over the staff and
 // child document objects (#2745): Workforce's personnel documents and Care
 // Plan's child documents, each over File Storage's object removal.
-func workerDocumentSweeps(db transactionruntime.Database, logger *slog.Logger, users peoplePorts.PersonDirectory, staffAdmin *workforceModule.StaffAdmin, timeTracking *workforceCompose.TimeTracking, documents carePlanModule.StudentDocuments) (schedulerPorts.StaffDocumentFileCleaner, schedulerPorts.StudentDocumentFileCleaner, error) {
+func workerDocumentSweeps(db transactionruntime.Database, logger *slog.Logger, users peoplePorts.PersonDirectory, staffAdmin *workforceModule.StaffAdmin, timeTracking *workforceCompose.TimeTracking, documents carePlanModule.StudentDocuments, uploads nativeUploads.UploadFiles) (schedulerPorts.StaffDocumentFileCleaner, schedulerPorts.StudentDocumentFileCleaner, error) {
 	cleanup, err := workforceCompose.NewDocumentCleanup(db.Pool(), nil)
 	if err != nil {
 		return nil, nil, err
 	}
-	staffLogger := logger.With("handler", "staff")
-	staff, err := workforceCompose.NewStaffDocumentFileRecovery(NewWorkforceAdminCapabilities(users, staffAdmin, timeTracking).Documents, cleanup, nativeUploads.UploadFiles{}, staffLogger)
+	backend, err := uploads.Private(nativeUploads.FileKeys{})
 	if err != nil {
 		return nil, nil, err
 	}
-	students, err := carePlanModule.NewStudentDocumentFileCleanup(documents, studentDocumentFileRemoval, logger.With("handler", "students"))
+	staffLogger := logger.With("handler", "staff")
+	staff, err := workforceCompose.NewStaffDocumentFileRecovery(NewWorkforceAdminCapabilities(users, staffAdmin, timeTracking).Documents, cleanup, backend, staffLogger)
+	if err != nil {
+		return nil, nil, err
+	}
+	students, err := carePlanModule.NewStudentDocumentFileCleanup(documents, func(kind string, store carePlanModule.StudentDocuments, log *slog.Logger) (carePlanModule.StudentDocumentFileRemover, error) {
+		return filestorageCompose.NewDocumentCoordinator(kind, backend, store, log).Remove, nil
+	}, logger.With("handler", "students"))
 	if err != nil {
 		return nil, nil, err
 	}
 	return staff, students, nil
-}
-
-// studentDocumentFileRemoval opens File Storage's removal of stored child
-// document objects; the storage backend is looked up on each pass.
-func studentDocumentFileRemoval(kind string, documents carePlanModule.StudentDocuments, logger *slog.Logger) (carePlanModule.StudentDocumentFileRemover, error) {
-	backend, err := nativeUploads.PrivateUploadsBackend()
-	if err != nil {
-		return nil, err
-	}
-	return filestorageCompose.NewDocumentCoordinator(kind, backend, documents, logger).Remove, nil
 }
 
 // rolloverDeadlines runs Enrollment's rollover deadline job for the Worker,
@@ -209,12 +209,15 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 	AccountID(context.Context) int64
 	Permissions(context.Context) []string
 }, timetableSession timetablePorts.RequestSession, principal func(context.Context) studentpresence.RequestPrincipal, withStaff func(context.Context, int64, int64) context.Context, documentPermissions carePlanCompose.StudentDocumentPermissions, buildAnalytics func(ProductEventTracker, settingsValues.TenantReader, bool) ProductEventTracker, schoolNames func(ProductEventTracker) SchoolNamesPublisher, plannedExits PlannedStaffExitsBuilder, dayLog WeekProtocolDayLogBuilder, careContracts CareContractConclusionBuilder) (schedulerPorts.Worker, error) {
+	appUploads, objects, err := BuildUploadFiles(context.Background(), viper.GetString)
+	if err != nil {
+		return nil, err
+	}
 	unit := db.UnitOfWork()
 	communicationCompose.InstrumentMessageQueries(db.Pool(), false)
 	renderer := lists.NewRendererService()
 	var (
 		tokens           TokenAdapter
-		objects          filestorageCompose.ObjectBackend
 		audit            AuditOwner
 		mailSender       email.Mailer
 		mailDispatcher   email.Dispatcher
@@ -297,12 +300,8 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		outbox           *deliveryModule.Worker
 		staffGroups      schoolstructure.StaffGroupQuery
 	)
-	err := RunRootSteps(
+	err = RunRootSteps(
 		func() (err error) { tokens, err = tokensFor(); return },
-		func() (err error) {
-			objects, err = nativeUploads.PrivateUploadsBackend()
-			return StepError("resolve uploads backend", err)
-		},
 		func() (err error) { audit, err = BuildAuditOwner(db, env); return },
 		func() (err error) {
 			mailSender, mailDispatcher, mailFrom, pushVAPID, err = BuildMailTransport(env)
@@ -328,7 +327,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		},
 		func() (err error) { guardian, err = BuildGuardianService(db, people, audit, env); return },
 		func() error {
-			unlinker := peopledirectory.NewPhotoUnlinker(env.Logger.With("component", "student-photo-unlinker"), "public", nativeUploads.UploadFiles{})
+			unlinker := peopledirectory.NewPhotoUnlinker(env.Logger.With("component", "student-photo-unlinker"), "public", appUploads)
 			photoRuntime = BuildStudentPhotoRuntime(db, env, settings.Service, hub, audit, unlinker, func(ctx context.Context) int64 { claims, _ := tokens.Claims(ctx); return claims.AccountReferenceID() })
 			return nil
 		},
@@ -388,7 +387,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		func() (err error) {
 			mailIdentity = TenantMailIdentity(organizations, settings.Service, env)
 			portalReads = NewParentPortalReads(db, persons, peopleIdentity, env.Now, organizations)
-			identity, caller, err = BuildIdentityAccess(db, unit, env, tokens, organizations, persons, membership, settings.Service,
+			identity, caller, err = BuildIdentityAccess(db, unit, env, tokens, appUploads, organizations, persons, membership, settings.Service,
 				audit, operatorAuditLog, mailSender, mailDispatcher, mailFrom, delivery.Runtime, mailIdentity, delivery.Enqueuer(), people, portalReads.ParentEnrollmentRequest,
 				structure.Groups, staffGroups, arrivalTimetable.NewCallerActivityGroups(timetableRepos.Timetable),
 				presence.SessionRecords, presence.Presence, workTime, calendar)
@@ -418,7 +417,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		},
 		func() (err error) {
 			announcements, err = BuildParentAnnouncements(env, settings.Service, delivery.Outbox, DeliveryModuleOf(delivery), delivery.Runtime.EmailOutcomes,
-				notifications, messaging, purger, BuildParentLetters(persons, groups, schedules, audit, tokens))
+				notifications, messaging, purger, BuildParentLetters(persons, groups, schedules, audit, tokens, appUploads))
 			return
 		},
 		func() error {
@@ -491,7 +490,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		},
 		func() error {
 			flows = BuildEnrollmentFlows(db, env, enrollment, notices, decisions, phases, offerings, timetableRows, consent, identity, people, structure,
-				carePlan, carePlanRows, schedules, membership, organizations, audit, settings.Service, delivery.Enqueuer())
+				carePlan, carePlanRows, schedules, membership, organizations, audit, settings.Service, delivery.Enqueuer(), appUploads)
 			reviewPolicy = NewParentRequestReviewPolicy(caller.Caller().ParentRequestReviews)
 			return nil
 		},
@@ -553,7 +552,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 	if err != nil {
 		return nil, err
 	}
-	return NewWorker(db, env.Logger, env.Now, tracer, hub, settings.Service, audit.Command, audit.Persistence.DataAccessLog, deviceFleet, carePlan, persons, people,
+	return NewWorker(db, env.Logger, env.Now, appUploads, tracer, hub, settings.Service, audit.Command, audit.Persistence.DataAccessLog, deviceFleet, carePlan, persons, people,
 		organizations, identity, facilities, timetableRepos, workTime, staffAdmin, workforce, active, reports, lifecycle, days,
 		materialization, schedules, requests.Documents, services, persons.Owner, studentAudit, notices, flows, studentDeletion, feedback, calendarApp,
 		notifications, deliveryDevices.PWAUsage, chat.StaffMessaging, outbox, reminders, fileStore, announcements, mealPlan, schoolNames(tracker), plannedExits, dayLog, env.HealthData, CareContractRemindersJob(db.UnitOfWork(), organizations, settings.Traeger, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, env.Links.ParentsURL, env.Now), careContracts(organizations, settings, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, audit.Persistence.DataAccessLog, NewCareContractSchoolHolidays(settings.Service, calendar), env.Links.ParentsURL), HolidayClosureNotificationsJob(db.UnitOfWork(), NewHolidaySchoolCalendar(settings.Service, calendar, organizations), calendar, organizations, HolidayClosureMail{Delivery: delivery.Runtime.Module, TraegerMails: delivery.Runtime.TraegerMails}, env.Logger, env.Now))
@@ -574,5 +573,5 @@ func workerMealPlan(db transactionruntime.Database, settings SettingsOwner, peop
 	if err != nil {
 		return nil, err
 	}
-	return BuildServeMealPlan(db, mealPlanSettings, NewStudentRootReads(people.Students), persons, calendar)
+	return BuildServeMealPlan(db, mealPlanSettings, NewStudentRootReads(people.Students), persons, calendar, nil)
 }
