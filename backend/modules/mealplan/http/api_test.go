@@ -101,8 +101,8 @@ func (e engine) ReplaceDay(context.Context, mealplanModule.ReplaceDay) error {
 	}
 	return nil
 }
-func (e engine) ClearDay(context.Context, mealplanModule.Date) error { return nil }
-func (e engine) RegistrationAvailable(context.Context) (bool, error) { return e.available, nil }
+func (e engine) ClearDay(context.Context, mealplanModule.ClearDay) error { return nil }
+func (e engine) RegistrationAvailable(context.Context) (bool, error)     { return e.available, nil }
 func (e engine) Participation(context.Context, int64, mealplanModule.Date, mealplanModule.Date) (mealplanModule.ParticipationPlan, error) {
 	return mealplanModule.ParticipationPlan{}, nil
 }

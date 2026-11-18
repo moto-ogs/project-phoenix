@@ -12,6 +12,7 @@ import { routes as students } from "./students.generated";
 import { routes as traegerBillingFamilies } from "./traeger-billing-families.generated";
 import { routes as traegerDocuments } from "./traeger-documents.generated";
 import { routes as traegerMasterData } from "./traeger-master-data.generated";
+import { routes as traegerNotifications } from "./traeger-notifications.generated";
 import { routes as traegerReportTemplates } from "./traeger-report-templates.generated";
 
 /** The registered routes of each portal, by the scope of its session token. */
@@ -35,6 +36,10 @@ export const portalRoutes = {
     traegerMasterData["PUT /traeger/master-data/bank-accounts/{id}"],
     traegerMasterData["PUT /traeger/master-data/contact"],
     traegerMasterData["PUT /traeger/master-data/withdrawal-contact"],
+    traegerNotifications["GET /traeger/notifications/feed/"],
+    traegerNotifications["GET /traeger/notifications/feed/unread-count"],
+    traegerNotifications["POST /traeger/notifications/feed/read-all"],
+    traegerNotifications["POST /traeger/notifications/feed/{id}/read"],
     traegerReportTemplates["DELETE /traeger/report-templates/{id}"],
     traegerReportTemplates["GET /traeger/report-templates/"],
     traegerReportTemplates["POST /traeger/report-templates/"],

@@ -36,4 +36,7 @@ type Record struct {
 	DepartureDays            map[string]string
 	BusDays                  map[string]bool
 	PickupDays               map[string]bool
+	// WithoutCarePlace is School Membership's mark of a child without an
+	// OGS place (#4803).
+	WithoutCarePlace bool
 }

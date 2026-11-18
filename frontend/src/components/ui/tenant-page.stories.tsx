@@ -457,3 +457,16 @@ export const WithTabs: Story = {
     children: pageContent,
   },
 };
+
+/**
+ * Reiter mit Suchzeile darunter: Die Grundlinie trennt Reiter und Suche.
+ * Ohne Suchzeile (`WithTabs`) schließen die Reiter die Kopfkarte ab (#7303).
+ */
+export const WithTabsAndSearch: Story = {
+  args: {
+    title: "Schule",
+    tabs: { value: "groups", onChange: fn(), items: tabItems },
+    search: { value: "", onChange: fn(), placeholder: "Gruppe suchen" },
+    children: pageContent,
+  },
+};

@@ -58,12 +58,20 @@ evidence: [rollout and recovery](../operations/geraete-zugang-3841.md).
 
 ### Device PIN resolution (slice 3841-b)
 
-The school setting `security.ogs_device_pin` is authoritative, including its
-unchanged registry default. Settings read errors and explicit empty values reject
+The school setting `security.ogs_device_pin` is authoritative. Its registry
+default is empty (#7175): a school without a PIN of its own cannot sign in at
+the tablet until an admin sets one. Settings read errors and empty values reject
 PIN-protected requests with the existing `401 / iot.device_pin_invalid` envelope;
 no `OGS_DEVICE_PIN` fallback exists. Missing resolver wiring fails at construction.
 Device-only routes remain PIN-free. Already deployed kiosks handle the same code
 and headers, so no wire transition or compatibility-removal slice is needed.
+Migration `20261118010000` stored the former default 1234 for every NFC school
+without a PIN, so no tablet stopped on that deployment. Writes refuse PINs
+that are easy to guess (`settings.device_pin_too_simple`), and
+`GET /api/settings/device-pin-status` (`config:manage`) tells the tenant portal
+to show its notice while NFC-Anwesenheit is booked and the PIN is empty or
+easy to guess. A kiosk signed in with the old PIN reads
+`iot.device_pin_invalid` after the change and asks for the new one.
 
 ### Kiosk error codes
 

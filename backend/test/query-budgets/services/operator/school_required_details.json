@@ -1,0 +1,6 @@
+{
+  "scenario": "services.operator.school_required_details",
+  "max": 5,
+  "exact": true,
+  "description": "services — the required details of every undeleted school (#7174), organizationtenancy\nProvisioning.ListSchoolRequiredDetails: BEGIN, admin role, the school rows, one settings batch read of\nemail.reply_to_address for all schools, COMMIT. Flat in the number of schools."
+}

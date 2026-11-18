@@ -316,6 +316,22 @@ type SchoolSummary struct {
 	ChildQuotaCount      int  `json:"child_quota_count"`
 }
 
+// SchoolRequiredDetailsProvisioning reports what each school still lacks
+// (#7174). The operator provisioning serves it beside its facade.
+type SchoolRequiredDetailsProvisioning interface {
+	ListSchoolRequiredDetails(ctx context.Context) ([]SchoolRequiredDetails, error)
+}
+
+// SchoolRequiredDetails names the required details one undeleted school is
+// missing, so the operator can complete them (#7174).
+type SchoolRequiredDetails struct {
+	SchoolID int64 `json:"school_id"`
+	// ReplyAddressMissing reports that neither email.reply_to_address nor
+	// the contact address yields a usable reply address, so replies from
+	// parents bounce (#1936).
+	ReplyAddressMissing bool `json:"reply_address_missing"`
+}
+
 // PWAPortalUsage is one portal's slice of a school's PWA standalone usage.
 type PWAPortalUsage struct {
 	StandaloneUsers int `json:"standalone_users"`

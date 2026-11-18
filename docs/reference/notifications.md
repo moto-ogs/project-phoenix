@@ -312,6 +312,16 @@ The request account is excluded. Feed and push apply while a changed day lies
 within 14 days, feed only later, and neither applies if every day is past or
 only the reason changed. The default-on push uses `FilterNotOptedOut`; the
 shared `notifications.school_closing_day_enabled` switch stops feed and push.
+The active members of the school's Träger (`platform.organization_accounts`,
+active account) read the same notice in the bell of the Träger-Portal
+(`traeger_school_closing_day_changed`, #7146, ADR 0287): one entry per member
+in the school it is about, linked to `/traeger/schulen/<id>`, without push
+and without live signal, under the same school switch. The request account is
+excluded here too. `GET /traeger/notifications/feed` lists the entries of all
+schools of the session's Träger with `school_id` and `school_name`; it reads
+in one administrative unit whose statements keep only the Träger's schools
+while the account is an active member. The bell reloads its count on every
+page change and every minute.
 
 A block that moves to another room (#7141) comes from Timetable's edit of a
 planned block (`UpdatePlanned`, also its series conversion): only a change
@@ -380,6 +390,20 @@ The first parent producer is Communication's cancellation notice
 (`parent_care_cancelled`, #2601): the one notice the person cancelling sends
 to the families writes the feed next to its push and its news entry; there is
 no second message. The family's switch decides only the push.
+
+A changed meal plan (`meal_plan_changed`, #7145) reaches the guardians of the
+children with a meal booked on the changed day, as the daily list counts
+them after absences, who hold `parent_portal.access` for one of them, without
+the person who changed it. Meal Plan writes it in the unit that saves the
+menu, only when a day that already had a menu changes: a first menu for an
+empty day, an unchanged save and a past day tell nobody, and neither does a
+school without meal registration. The object is the week
+(`meal_plan_week`, its Monday as `YYYYMMDD`), so changes to one week within
+ten minutes update the unread entry without a second push. Feed and push
+within 14 days, feed only later. The push is off by default (`FilterOptedIn`),
+in the guardian's language and without child or dish; the entry names the
+week and links to `/meal-plan?week=<Monday>`. The school switch is
+`notifications.meal_plan_changed_enabled`.
 
 ### Web Push (#2003)
 

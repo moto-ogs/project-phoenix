@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/application/emailbranding"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/application/locales"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // ParentDeliveryPolicy exposes the canonical language, branding and notification
@@ -25,6 +26,12 @@ func (ParentDeliveryPolicy) ParentAnnouncementCopy(locale, kind string) (string,
 }
 func (ParentDeliveryPolicy) ParentBillingDocumentCopy(locale string) (string, string) {
 	return locales.ParentBillingDocumentCopy(locale)
+}
+func (ParentDeliveryPolicy) ParentMealPlanChangedCopy(locale string) (string, string) {
+	return locales.ParentMealPlanChangedCopy(locale)
+}
+func (ParentDeliveryPolicy) ParentMealPlanChangedFeedCopy(locale string, monday calendar.Date) (string, string) {
+	return locales.ParentMealPlanChangedFeedCopy(locale, monday)
 }
 func (ParentDeliveryPolicy) IsNotificationsDisabled(err error) bool {
 	return errors.Is(err, ErrNotificationsDisabled)

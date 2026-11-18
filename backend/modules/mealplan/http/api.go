@@ -180,7 +180,7 @@ func (rs *Resource) setDay(w http.ResponseWriter, r *http.Request) {
 		}
 		dishes = append(dishes, mealplanModule.Dish{Dish: dish.Dish, Note: dish.Note, Allergens: allergens})
 	}
-	if err := rs.module.ReplaceDay(r.Context(), mealplanModule.ReplaceDay{Date: parsed, Dishes: dishes}); err != nil {
+	if err := rs.module.ReplaceDay(r.Context(), mealplanModule.ReplaceDay{Date: parsed, Dishes: dishes, AccountID: rs.runtime.CurrentAccountID(r.Context())}); err != nil {
 		rs.runtime.ModuleFailure(w, r, err, "failed to save meal")
 		return
 	}
@@ -194,7 +194,7 @@ func (rs *Resource) deleteDay(w http.ResponseWriter, r *http.Request) {
 		rs.runtime.InvalidRequest(w, r, errors.New("date must be in YYYY-MM-DD format"))
 		return
 	}
-	if err := rs.module.ClearDay(r.Context(), parsed); err != nil {
+	if err := rs.module.ClearDay(r.Context(), mealplanModule.ClearDay{Date: parsed, AccountID: rs.runtime.CurrentAccountID(r.Context())}); err != nil {
 		rs.runtime.ModuleFailure(w, r, err, "failed to delete meal")
 		return
 	}

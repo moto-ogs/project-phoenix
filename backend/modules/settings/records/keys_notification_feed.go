@@ -16,6 +16,11 @@ const KeyNotificationsStaffingChangedEnabled = "notifications.staffing_changed_e
 // is written then.
 const KeyNotificationsStaffNoticePublishedEnabled = "notifications.staff_notice_published_enabled"
 
+// KeyNotificationsMealPlanChangedEnabled lets a school switch off the notice
+// to the families with a meal booking that the meal plan changed (#7145):
+// neither feed entry nor push is written then.
+const KeyNotificationsMealPlanChangedEnabled = "notifications.meal_plan_changed_enabled"
+
 // KeyNotificationsInstanceRoomChangedEnabled lets a school switch off the
 // notices about an appointment or offering that moves to another room
 // (#7141): neither feed entry nor push is written then, for the staff of the

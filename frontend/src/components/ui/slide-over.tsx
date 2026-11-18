@@ -60,6 +60,7 @@ import { CloseIcon } from "./close-icon";
 import { ICON_ONLY } from "./control-geometry";
 import { DialogActions, DialogErrorSlot } from "./dialog-parts";
 import { useBusyFocus } from "./hooks/useBusyFocus";
+import { InOverlayContext } from "./in-overlay";
 import { useSheetAboveKeyboard } from "./hooks/useSheetAboveKeyboard";
 import type { FormModalPending } from "./use-form-modal-pending";
 import type { FormErrorInput } from "./form-error";
@@ -368,7 +369,9 @@ const SlideOverContent = React.forwardRef<
               className="mx-auto mt-3 h-1 w-12 shrink-0 rounded-full bg-gray-300"
             />
           )}
-          {children}
+          <InOverlayContext.Provider value={true}>
+            {children}
+          </InOverlayContext.Provider>
         </DrawerPrimitive.Content>
       </SlideOverPortal>
     );

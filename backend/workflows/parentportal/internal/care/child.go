@@ -23,6 +23,11 @@ var (
 	// care day; reading what happened before stays open, which is why this is
 	// checked per write path and not in ResolvePermittedChild itself.
 	ErrChildCareEnded = errors.New("parent: care for this child has ended")
+	// ErrChildWithoutCarePlace means the child belongs to its class but has
+	// no OGS place (#4803, ADR 0282). The family keeps the school's
+	// functions (sick notes, letters, parent-teacher conferences, master
+	// data); every OGS function for the child, read or write, is refused.
+	ErrChildWithoutCarePlace = errors.New("parent: child has no OGS place")
 )
 
 // ResolveOwnedChild validates the account is a guardian of the student
@@ -217,6 +222,7 @@ func (s *Service) permittedChild(adminCtx context.Context, accountID, studentID 
 		StudentName:         strings.TrimSpace(child.FirstName + " " + child.LastName),
 		SchoolName:          child.SchoolName,
 		CareEnded:           child.CareEnded(s.todayDate()),
+		WithoutCarePlace:    child.WithoutCarePlace,
 	}, nil
 }
 
@@ -238,6 +244,9 @@ type Child struct {
 	SchoolName  string
 	// CareEnded mirrors the child's enrollment interval as of today (#2487).
 	CareEnded bool
+	// WithoutCarePlace marks a child of the class without an OGS place
+	// (#4803, ADR 0282).
+	WithoutCarePlace bool
 }
 
 // RequireCareRunning refuses a write for a child whose care has ended. Reads
@@ -251,6 +260,29 @@ func (c *Child) RequireCareRunning() error {
 		return ErrChildCareEnded
 	}
 	return nil
+}
+
+// RequireCarePlace refuses an OGS function for a child without an OGS place
+// (#4803). It is the read gate of the OGS routes: unlike CareEnded, which
+// keeps what happened readable, such a child never had OGS data to read.
+func (c *Child) RequireCarePlace() error {
+	if c == nil {
+		return ErrChildNotLinked
+	}
+	if c.WithoutCarePlace {
+		return ErrChildWithoutCarePlace
+	}
+	return nil
+}
+
+// RequireOGSCareRunning is the write gate of an OGS function: the child has
+// an OGS place (#4803) and its care has not ended (#2487). School functions
+// such as the sick note keep RequireCareRunning.
+func (c *Child) RequireOGSCareRunning() error {
+	if err := c.RequireCarePlace(); err != nil {
+		return err
+	}
+	return c.RequireCareRunning()
 }
 
 // HasPermission reports whether the guardian relationship grants permission.

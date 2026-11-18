@@ -15,6 +15,8 @@ export interface NotificationFeedEntryWire {
   created_at: string;
   updated_at: string;
   read_at: string | null;
+  /** Nur im Träger-Portal (#7146): die Schule des Eintrags. */
+  school_name?: string;
 }
 
 export interface NotificationFeedPageWire {
@@ -35,6 +37,11 @@ export interface NotificationFeedEntry {
   updatedAt: string;
   /** Null, solange der Eintrag ungelesen ist. */
   readAt: string | null;
+  /**
+   * Die Schule des Eintrags, wo eine Glocke mehrere Schulen zeigt
+   * (Träger-Portal, #7146); sonst null.
+   */
+  schoolName?: string | null;
 }
 
 export interface NotificationFeedPage {
@@ -55,6 +62,7 @@ export function mapNotificationFeedEntry(
     createdAt: wire.created_at,
     updatedAt: wire.updated_at,
     readAt: wire.read_at ?? null,
+    ...(wire.school_name ? { schoolName: wire.school_name } : {}),
   };
 }
 
@@ -76,6 +84,7 @@ export function mapNotificationFeedPage(
 export const NOTIFICATION_FEED_ANALYTICS_TYPES = [
   "instance_cancelled",
   "parent_care_cancelled",
+  "meal_plan_changed",
   "school_closing_day_changed",
   "parent_school_closing_day_changed",
   "staffing_changed",

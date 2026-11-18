@@ -158,6 +158,14 @@ describe("StudentRecordActions", () => {
     expect(menuItem("Löschen")).toBeVisible();
   });
 
+  // #4803: ein Kind ohne OGS-Platz hat keine OGS-Betreuung zu beenden.
+  it("offers no care exit for a child without an OGS place", () => {
+    renderWith({ ...RUNNING, without_care_place: true });
+    openMenu();
+    expect(menuItem("Löschen")).toBeVisible();
+    expect(menuItem(/Betreuung beenden/)).toBeNull();
+  });
+
   it("switches to change and cancel once an exit is planned", () => {
     renderWith(PLANNED);
     openMenu();

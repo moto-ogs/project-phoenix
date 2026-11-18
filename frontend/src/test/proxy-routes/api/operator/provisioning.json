@@ -116,6 +116,9 @@
   "api/operator/provisioning/schools/[id]/settings/schema": [
     "GET operator /operator/schools/id%2F1/settings/schema"
   ],
+  "api/operator/provisioning/schools/required-details": [
+    "GET operator /operator/schools/required-details"
+  ],
   "api/operator/provisioning/schools/summaries": [
     "GET operator /operator/schools/summaries"
   ],

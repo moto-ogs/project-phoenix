@@ -168,7 +168,7 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 	{
 		Key:             config.KeyNotificationsSchoolClosingDayEnabled,
 		Label:           "Benachrichtigung bei Schließtagen",
-		Description:     "Wird ein Schließtag eingetragen, geändert oder gelöscht, steht das bei den Benachrichtigungen aller Mitarbeitenden, Lehrkräfte und Eltern. Liegt der Tag in den nächsten 14 Tagen, kommt auch eine Mitteilung aufs Handy. Jede Person kann sie selbst ausschalten.",
+		Description:     "Wird ein Schließtag eingetragen, geändert oder gelöscht, steht das bei den Benachrichtigungen aller Mitarbeitenden, Lehrkräfte, Eltern und im Träger-Büro. Liegt der Tag in den nächsten 14 Tagen, bekommen Mitarbeitende, Lehrkräfte und Eltern auch eine Mitteilung aufs Handy. Jede Person kann sie selbst ausschalten.",
 		Type:            config.FieldBoolean,
 		Default:         true,
 		ReadPermission:  "config:read",
@@ -176,5 +176,17 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 		Tab:             "operations",
 		Category:        "benachrichtigungen",
 		SortOrder:       10,
+	},
+	{
+		Key:             config.KeyNotificationsMealPlanChangedEnabled,
+		Label:           "Hinweis an Eltern bei geändertem Speiseplan",
+		Description:     "Ändert sich der Speiseplan für einen Tag, bekommen die Eltern einen Hinweis im Elternportal, wenn ihr Kind an dem Tag ein Essen gebucht hat. Eine Mitteilung aufs Handy bekommt nur, wer sie selbst einschaltet.",
+		Type:            config.FieldBoolean,
+		Default:         true,
+		ReadPermission:  "config:read",
+		WritePermission: "config:update",
+		Tab:             "operations",
+		Category:        "benachrichtigungen",
+		SortOrder:       11,
 	},
 }

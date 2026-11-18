@@ -40,13 +40,18 @@ type Service struct {
 	tx        ports.Transaction
 	observe   ports.Observer
 	now       func() time.Time
+	// notices tells the families about a changed menu (#7145); nil tells
+	// nobody, as in the worker, which never changes the menu.
+	notices mealplan.MenuChangeNotices
 }
 
-func New(store ports.Store, directory ports.Directory, calendar ports.Calendar, settings ports.Settings, tx ports.Transaction, observe ports.Observer, now func() time.Time) *Service {
+// New composes the Meal Plan. notices tells the families about a changed
+// menu (#7145); nil tells nobody.
+func New(store ports.Store, directory ports.Directory, calendar ports.Calendar, settings ports.Settings, tx ports.Transaction, observe ports.Observer, now func() time.Time, notices mealplan.MenuChangeNotices) *Service {
 	if store == nil || directory == nil || calendar == nil || settings == nil || tx == nil || observe == nil || now == nil {
 		panic("meal plan application: all dependencies are required")
 	}
-	return &Service{store: store, directory: directory, calendar: calendar, settings: settings, tx: tx, observe: observe, now: now}
+	return &Service{store: store, directory: directory, calendar: calendar, settings: settings, tx: tx, observe: observe, now: now, notices: notices}
 }
 
 func (s *Service) registrationAvailable(ctx context.Context) (available bool, err error) {
@@ -358,39 +363,45 @@ func (s *Service) dailyParticipants(ctx context.Context, date, through domain.Da
 		if rulesErr != nil {
 			return domain.OperationStats{}, rulesErr
 		}
-		deadline := rules.FreezeAt(date)
-		list = domain.DailyList{Date: date, CutoffTime: deadline.In(calendarZone).Format("15:04"), Deadline: deadline, Participants: []domain.DailyParticipant{}}
-		days, calendar, stats, calendarErr := s.participantCalendar(txCtx, date, through, prepared)
-		loaded = calendar
-		list.Closed = days.Closed[date]
-		if calendarErr != nil || list.Closed {
-			return stats, calendarErr
-		}
-		cutoff := rules.AbsenceCutoff(date)
-		candidates, candidateStats, findErr := s.directory.FindDailyCandidates(txCtx, date)
-		stats = addStats(stats, candidateStats)
-		if findErr != nil {
-			return stats, findErr
-		}
-		studentIDs := make([]int64, 0, len(candidates))
-		for _, candidate := range candidates {
-			studentIDs = append(studentIDs, candidate.StudentID)
-		}
-		participation, participationStats, findErr := s.store.FindDailyParticipation(txCtx, studentIDs, date, cutoff)
-		stats = addStats(stats, participationStats)
-		if findErr != nil {
-			return stats, findErr
-		}
-		for _, candidate := range candidates {
-			state := participation[candidate.StudentID]
-			day := dayState{holiday: days.Holiday[date], scheduled: state.Regular, override: state.Override, absences: state.Absences}
-			list.Add(domain.DailyParticipant(candidate), resolveDay(day, cutoff).participating)
-		}
-		domain.SortDailyParticipants(list.Participants)
-		domain.SortDailyParticipants(list.Others)
-		return stats, nil
+		var stats domain.OperationStats
+		list, loaded, stats, err = s.dailyListIn(txCtx, rules, date, through, prepared)
+		return stats, err
 	})
 	return list, loaded, err
+}
+
+// dailyListIn resolves who eats on the day inside the caller's unit of work.
+func (s *Service) dailyListIn(txCtx context.Context, rules domain.OrderingRules, date, through domain.Date, prepared *domain.CalendarDays) (domain.DailyList, *domain.CalendarDays, domain.OperationStats, error) {
+	deadline := rules.FreezeAt(date)
+	list := domain.DailyList{Date: date, CutoffTime: deadline.In(calendarZone).Format("15:04"), Deadline: deadline, Participants: []domain.DailyParticipant{}}
+	days, loaded, stats, err := s.participantCalendar(txCtx, date, through, prepared)
+	list.Closed = days.Closed[date]
+	if err != nil || list.Closed {
+		return list, loaded, stats, err
+	}
+	cutoff := rules.AbsenceCutoff(date)
+	candidates, candidateStats, err := s.directory.FindDailyCandidates(txCtx, date)
+	stats = addStats(stats, candidateStats)
+	if err != nil {
+		return list, loaded, stats, err
+	}
+	studentIDs := make([]int64, 0, len(candidates))
+	for _, candidate := range candidates {
+		studentIDs = append(studentIDs, candidate.StudentID)
+	}
+	participation, participationStats, err := s.store.FindDailyParticipation(txCtx, studentIDs, date, cutoff)
+	stats = addStats(stats, participationStats)
+	if err != nil {
+		return list, loaded, stats, err
+	}
+	for _, candidate := range candidates {
+		state := participation[candidate.StudentID]
+		day := dayState{holiday: days.Holiday[date], scheduled: state.Regular, override: state.Override, absences: state.Absences}
+		list.Add(domain.DailyParticipant(candidate), resolveDay(day, cutoff).participating)
+	}
+	domain.SortDailyParticipants(list.Participants)
+	domain.SortDailyParticipants(list.Others)
+	return list, loaded, stats, nil
 }
 
 func addStats(left, right domain.OperationStats) domain.OperationStats {
@@ -421,21 +432,37 @@ func (s *Service) weekEntries(ctx context.Context, monday domain.Date) (entries 
 	return entries, err
 }
 
-func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealplan.Dish) error {
-	return s.run(ctx, "replace_day", func(txCtx context.Context) (domain.OperationStats, error) {
+// replace sets the dishes of a day; no dishes clear it. A change of a day
+// that already had a menu tells the families with a meal booked on it in the
+// same unit of work (#7145).
+func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealplan.Dish, actorAccountID int64) error {
+	operation := "replace_day"
+	if len(dishes) == 0 {
+		operation = "clear_day"
+	}
+	return s.run(ctx, operation, func(txCtx context.Context) (domain.OperationStats, error) {
 		if err := s.requireEnabled(txCtx); err != nil {
 			return domain.OperationStats{}, err
 		}
-		return s.store.ReplaceDay(txCtx, date, dishes)
-	})
-}
-
-func (s *Service) clear(ctx context.Context, date domain.Date) error {
-	return s.run(ctx, "clear_day", func(txCtx context.Context) (domain.OperationStats, error) {
-		if err := s.requireEnabled(txCtx); err != nil {
-			return domain.OperationStats{}, err
+		var stats domain.OperationStats
+		var before []domain.Entry
+		if s.notices != nil {
+			var err error
+			if before, stats, err = s.store.FindWeek(txCtx, date, date); err != nil {
+				return stats, err
+			}
 		}
-		return s.store.ClearDay(txCtx, date)
+		write := func() (domain.OperationStats, error) { return s.store.ReplaceDay(txCtx, date, dishes) }
+		if len(dishes) == 0 {
+			write = func() (domain.OperationStats, error) { return s.store.ClearDay(txCtx, date) }
+		}
+		written, err := write()
+		stats = addStats(stats, written)
+		if err != nil {
+			return stats, err
+		}
+		noticed, err := s.noticeMenuChange(txCtx, date, before, dishes, actorAccountID)
+		return addStats(stats, noticed), err
 	})
 }
 

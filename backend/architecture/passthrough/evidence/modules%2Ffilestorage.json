@@ -23,6 +23,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (c *Coordinator) SaveSealed(ctx context.Context, tenantID int64, storedName string, source io.Reader, ring string) (int64, error) {\n\treturn c.Backend.SaveSealed(ctx, c.Kind, tenantID, storedName, source, ring)\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/filestorage/internal/adapters/documents/Coordinator.SaveSealed",
+      "owner": "modules/filestorage"
+    },
+    {
+      "build": "production",
       "evidence": "func (s *DocumentStore[R]) ListByOwner(ctx context.Context, ownerID int64) ([]domain.Document, domain.OperationStats, error) {\n\treturn s.list(ctx, \"list\", func(query *bun.SelectQuery) *bun.SelectQuery {\n\t\treturn s.table.whereOwner(query, ownerID).Where(`\"document\".deleted_at IS NULL`).OrderExpr(`\"document\".created_at DESC, \"document\".id DESC`)\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "modules/filestorage/internal/adapters/postgres/DocumentStore[R].ListByOwner",

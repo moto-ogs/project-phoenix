@@ -840,6 +840,35 @@ describe("filterAnalyticsEvent", () => {
     expect(leaked?.properties).not.toHaveProperty("deep_link");
   });
 
+  // Reiter auf „Alle Kinder“ (#5046): Art des Reiters ja, Raum oder Name nie.
+  it("keeps the tab event of Alle Kinder with an allowlisted scope only", () => {
+    for (const scope of ["all", "groups", "room"]) {
+      const result = filterAnalyticsEvent(
+        ogs,
+        capture("child_scope_tab_selected", {
+          school_id: "42",
+          child_scope: scope,
+        }),
+      );
+      expect(result?.event).toBe("child_scope_tab_selected");
+      expect(result?.properties.child_scope).toBe(scope);
+    }
+
+    const leaked = filterAnalyticsEvent(
+      ogs,
+      capture("child_scope_tab_selected", {
+        school_id: "42",
+        child_scope: "room:42",
+        room_name: "Werkraum",
+        label: "Aufsicht Werkraum",
+      }),
+    );
+    expect(leaked?.event).toBe("child_scope_tab_selected");
+    expect(leaked?.properties).not.toHaveProperty("child_scope");
+    expect(leaked?.properties).not.toHaveProperty("room_name");
+    expect(leaked?.properties).not.toHaveProperty("label");
+  });
+
   it("drops a free-text role or a non-numeric school", () => {
     const result = filterAnalyticsEvent(
       ogs,

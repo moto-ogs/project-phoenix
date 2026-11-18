@@ -140,9 +140,10 @@ func (s *Service) holidayRegistrationOffers(ctx context.Context, children []*Chi
 
 // registrableChild reports whether the account may register the child for
 // a holiday period: its relationship grants the registration tied to an
-// existing child and the child's care has not ended (#4662).
+// existing child, the child has an OGS place (#4803) and its care has not
+// ended (#4662).
 func registrableChild(child *ChildSummary, today calendar.Date) bool {
-	return child != nil && !child.CareEnded(today) && childHasPermission(child, GuardianPermissionEnrollmentSubmit)
+	return child != nil && !child.WithoutCarePlace && !child.CareEnded(today) && childHasPermission(child, GuardianPermissionEnrollmentSubmit)
 }
 
 // registrableChildrenBySchool groups the registrable children by school, in

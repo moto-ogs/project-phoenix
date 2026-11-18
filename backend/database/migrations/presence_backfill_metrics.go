@@ -10,9 +10,11 @@ import (
 	"github.com/uptrace/bun"
 )
 
+const backfillLockMonitorAcquireTimeout = 5 * time.Second
+
 // monitorBackfillLocks is shared by the Presence and Staff storage copies.
 func monitorBackfillLocks(ctx context.Context, db *bun.DB, pid int) (func() (time.Duration, error), time.Duration, error) {
-	acquireCtx, acquireCancel := context.WithTimeout(ctx, time.Second)
+	acquireCtx, acquireCancel := context.WithTimeout(ctx, backfillLockMonitorAcquireTimeout)
 	started := time.Now()
 	conn, err := db.Conn(acquireCtx)
 	acquireCancel()

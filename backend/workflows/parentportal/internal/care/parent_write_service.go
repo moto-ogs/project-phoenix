@@ -14,9 +14,9 @@ var (
 	// child's tenant, so the parents portal must hide the meal plan section.
 	ErrMealPlanDisabled = errors.New("parent: meal plan disabled for this school")
 	// ErrMealPlanWeekOutOfRange means the requested week is outside the window
-	// parents may view (the current and next work week). Staff may plan
+	// parents may view (the current and following three work weeks). Staff may plan
 	// arbitrary future weeks on the staff page, but those are drafts; the
-	// parents portal only ever exposes this week and next, so a request for any
+	// parents portal only ever exposes those weeks, so a request for any
 	// other week is refused rather than leaking an unpublished menu.
 	ErrMealPlanWeekOutOfRange      = errors.New("parent: meal plan week is outside the viewable range")
 	ErrMealRegistrationDisabled    = errors.New("parent: meal registration disabled for this school")

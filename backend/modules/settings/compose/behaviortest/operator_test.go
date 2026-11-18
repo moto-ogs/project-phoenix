@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/settings"
+	config "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/uptrace/bun"
 )
@@ -239,4 +240,35 @@ func TestOperatorSchoolSettings_PresenceModeGuard(t *testing.T) {
 	value, err = schoolSettings.Reveal(ctx, schoolID, settings.KeyPresenceMode)
 	require.NoError(t, err)
 	assert.Equal(t, presenceModeBinary, value)
+}
+
+func TestOperatorSchoolSettings_MorningModuleResetReplaysHookAndRollsBack(t *testing.T) {
+	t.Parallel()
+	db, module := setupOperatorSettingsModule(t)
+	ctx, schoolID, actor := testpkg.Ctx(t), testpkg.Tenant(t), changedBy(t, db)
+	var values []any
+	reject := false
+	schoolSettings := module.OperatorSchoolSettingsWith(api.OperatorSchoolSettingsTestOptions{
+		OnValueSet: func(_ context.Context, _ int64, key string, value any) (func(), error) {
+			require.Equal(t, config.KeyModuleUnterrichtVormittag, key)
+			values = append(values, value)
+			if reject {
+				return nil, errors.New("conversion failed")
+			}
+			return nil, nil
+		},
+	})
+	require.NoError(t, schoolSettings.SetValue(ctx, schoolID, config.KeyModuleUnterrichtVormittag, false, actor, false))
+	values = nil
+	reject = true
+	require.Error(t, schoolSettings.ResetValue(ctx, schoolID, config.KeyModuleUnterrichtVormittag, actor))
+	value, err := schoolSettings.Reveal(ctx, schoolID, config.KeyModuleUnterrichtVormittag)
+	require.NoError(t, err)
+	assert.Equal(t, false, value, "a failed conversion keeps the morning module disabled")
+	reject = false
+	require.NoError(t, schoolSettings.ResetValue(ctx, schoolID, config.KeyModuleUnterrichtVormittag, actor))
+	assert.Equal(t, []any{true, true}, values)
+	value, err = schoolSettings.Reveal(ctx, schoolID, config.KeyModuleUnterrichtVormittag)
+	require.NoError(t, err)
+	assert.Equal(t, true, value)
 }

@@ -180,6 +180,13 @@ export interface TenantInfo {
    */
   weekendFollowsFriday?: boolean;
   /**
+   * The school keeps children of a class without an OGS place as children of
+   * their own (operations.children_without_care_place with Unterricht am
+   * Vormittag booked, #4803). „+ Kind“ then creates them and the class list
+   * holds no entries. Missing metadata is off.
+   */
+  childrenWithoutCarePlace?: boolean;
+  /**
    * Staff find children through „Alle Kinder" alone
    * (operations.child_search_only_navigation, #1321): „Meine Gruppe" and
    * „Aktuelle Aufsicht" leave the navigation and become tabs there. Missing
@@ -250,6 +257,7 @@ interface TenantResolveResponse {
   early_checkout_note_enabled?: boolean;
   early_checkout_note_tolerance_minutes?: number;
   weekend_follows_friday?: boolean;
+  children_without_care_place?: boolean;
   child_search_only_navigation?: boolean;
   simple_staff_navigation?: boolean;
   care_facility_term?: string;
@@ -413,6 +421,7 @@ export async function resolveTenant(slug: string): Promise<TenantInfo | null> {
         data.early_checkout_note_tolerance_minutes,
       ),
       weekendFollowsFriday: data.weekend_follows_friday === true,
+      childrenWithoutCarePlace: data.children_without_care_place === true,
       childSearchOnlyNavigation: data.child_search_only_navigation === true,
       simpleStaffNavigation: data.simple_staff_navigation === true,
       careFacilityTerm: normalizeCareFacilityTerm(data.care_facility_term),

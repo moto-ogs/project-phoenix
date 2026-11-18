@@ -36,6 +36,11 @@ import {
   type FormSchema,
 } from "~/lib/enrollment-form-schema-api";
 import { fetchSettingsSchema } from "~/lib/settings-api";
+import {
+  enrollmentPrivacyNotice,
+  type EnrollmentPrivacyNoticeState,
+} from "~/lib/enrollment-privacy-notice";
+import { EnrollmentPrivacyNoticeWarning } from "./enrollment-privacy-notice-warning";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import type { FormErrorInput } from "~/components/ui/form-error";
 import { useSettingsSchema } from "~/lib/hooks/use-settings-schema";
@@ -141,6 +146,10 @@ export function AdminEnrollmentsList({
   const settingsData = settingsRead.data;
   const enrollmentEnabled =
     settingsData === undefined ? null : readEnrollmentEnabled(settingsData);
+  const privacyNotice: EnrollmentPrivacyNoticeState | null =
+    settingsData === undefined
+      ? null
+      : enrollmentPrivacyNotice(settingsData?.tabs);
   const careOfferingStats = useMemo<CareOfferingStats>(() => {
     const activePhaseIds = new Set(
       phases.filter((phase) => phase.is_active).map((phase) => phase.id),
@@ -235,6 +244,7 @@ export function AdminEnrollmentsList({
 
   return (
     <div className="space-y-4">
+      <EnrollmentPrivacyNoticeWarning state={privacyNotice} />
       <EnrollmentSetupGuide
         enrollmentEnabled={enrollmentEnabled}
         phaseCount={phases.length}

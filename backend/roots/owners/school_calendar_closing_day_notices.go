@@ -21,6 +21,9 @@ const (
 	closingDayStaffLink  = "/calendar"
 	closingDaySchoolLink = "/school/kalender"
 	closingDayParentLink = "/parents/calendar"
+	// The Träger-Portal shows no calendar of a school's own closing days; its
+	// entry opens the view of the school it is about (#7146).
+	closingDayTraegerLink = "/traeger/schulen/%d"
 )
 
 // schoolCalendarClosingDayNotices binds School Calendar's notice about a
@@ -28,10 +31,15 @@ const (
 // OGS portal and in moto schule, and every family with parent_portal.access
 // for a child of the school, gets a feed entry, without the person who made
 // the change. A push follows for whoever did not switch the type off while a
-// day of the change lies within the push window School Calendar decided.
+// day of the change lies within the push window School Calendar decided. The
+// members of the school's Träger read the same notice in the bell of the
+// Träger-Portal, without push (#7146).
 type schoolCalendarClosingDayNotices struct {
-	audience    deliveryContract.SchoolAudience
-	notifier    staffPushRouter
+	audience deliveryContract.SchoolAudience
+	notifier staffPushRouter
+	// traeger writes the entry of the bell of the Träger-Portal (#7146); nil
+	// leaves the Träger-Büro out.
+	traeger     deliveryContract.TraegerFeedNotifier
 	preferences closingDayPreferences
 	actor       func(context.Context) int64
 	now         func() time.Time
@@ -54,7 +62,7 @@ func NewSchoolCalendarClosingDayNotices(notifications DeliveryNotifications, act
 	}
 	return schoolCalendarClosingDayNotices{
 		audience: notifications.SchoolAudience, notifier: notifications.Notifier, preferences: notifications.Preferences,
-		actor: actor, now: time.Now,
+		traeger: notifications.TraegerNotices, actor: actor, now: time.Now,
 	}
 }
 
@@ -87,6 +95,9 @@ func (n schoolCalendarClosingDayNotices) NotifyClosingDayChanged(ctx context.Con
 		RelatedType: "closing_day", RelatedID: notice.ClosingDayID, Title: title, Body: body,
 	}
 	if err := n.notifyStaff(ctx, tenantID, key, event, staff, school, notice.Push); err != nil {
+		return err
+	}
+	if err := n.notifyTraeger(ctx, tenantID, notice.ClosingDayID, title, body, withoutAccount(audience.TraegerAccountIDs, actor)); err != nil {
 		return err
 	}
 	guardians := withoutAccount(audience.GuardianAccountIDs, actor)
@@ -132,6 +143,27 @@ func (n schoolCalendarClosingDayNotices) notifyStaff(ctx context.Context, tenant
 		if err := n.send(ctx, schoolEvent, school, push); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// notifyTraeger writes the notice into the bell of the Träger-Portal of the
+// school's Träger (#7146). The bell names the school beside the entry, so the
+// text stays the school's own.
+func (n schoolCalendarClosingDayNotices) notifyTraeger(ctx context.Context, tenantID, closingDayID int64, title, body string, members []int64) error {
+	if n.traeger == nil || len(members) == 0 {
+		return nil
+	}
+	err := n.traeger.NotifyTraeger(ctx, deliveryContract.TraegerFeedEvent{
+		Type: deliveryContract.NotificationTraegerSchoolClosingDayChanged, TenantID: tenantID, AccountIDs: members,
+		Title: title, Body: body, DeepLink: fmt.Sprintf(closingDayTraegerLink, tenantID),
+		RelatedType: "closing_day", RelatedID: closingDayID,
+	})
+	if errors.Is(err, deliveryCompose.ErrNotificationsDisabled) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("closing day notice: Träger: %w", err)
 	}
 	return nil
 }

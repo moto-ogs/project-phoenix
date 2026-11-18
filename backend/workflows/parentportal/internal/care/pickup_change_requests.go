@@ -50,7 +50,7 @@ func (s *Service) EditPickupChange(ctx context.Context, accountID, studentID, re
 	if err != nil {
 		return nil, err
 	}
-	if err := child.RequireCareRunning(); err != nil {
+	if err := child.RequireOGSCareRunning(); err != nil {
 		return nil, err
 	}
 	if err := s.checkDayDepartureModeAllowed(ctx, child.TenantID, edit.Date, edit.DepartureMode); err != nil {
@@ -253,7 +253,7 @@ func (s *Service) checkPickupChangeSubmittable(ctx context.Context, child *Child
 	}
 	// A child whose care at this school has ended keeps read access to
 	// what happened, but nothing new can be submitted for them (#2487).
-	if err := child.RequireCareRunning(); err != nil {
+	if err := child.RequireOGSCareRunning(); err != nil {
 		return false, "", err
 	}
 	today, err := s.checkPickupChangeAllowed(ctx, child.TenantID, date)

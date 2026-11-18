@@ -113,7 +113,9 @@
   "phase_not_eligible": "Bu kayıt hesabınız için açık değil. Lütfen veli uygulamasına giriş yapın veya okula sorun.",
   "phase_not_found": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "phase_school_classes_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "phase_service_end_too_far": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "phase_service_period_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "phase_service_period_too_long": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "phase_window_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "pickup_time_not_allowed": "Lütfen yalnızca listedeki alma saatlerini seçin. İşaretli saat artık yok.",
   "request_duplicate": "Bu çocuk için bu kayıt döneminde zaten bir kayıt var.",
@@ -178,5 +180,6 @@
   "traeger_school_outside": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "traeger_catalog_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "traeger_preview_stale": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
-  "traeger_copy_rejected": "{object} değiştirilemedi. Güncel durumu kontrol edin."
+  "traeger_copy_rejected": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "without_care_place_school_year_only": "OGS yeri olmayan bir çocuk, yerini okul yılı kaydıyla alır."
 }

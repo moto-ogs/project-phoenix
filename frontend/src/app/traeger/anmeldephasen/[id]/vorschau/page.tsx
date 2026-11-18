@@ -169,9 +169,17 @@ export default function TraegerCatalogPreviewPage() {
             />
           </SectionCard>
         ) : (
-          preview.schools.map((plan) => (
-            <SchoolPlanCard key={plan.schoolId} plan={plan} schools={schools} />
-          ))
+          // Equal school cards in a grid: grids do not grow (TenantPage body
+          // rule), so the last school keeps its height like its siblings.
+          <div className="compact:gap-4 grid gap-6 max-sm:gap-3">
+            {preview.schools.map((plan) => (
+              <SchoolPlanCard
+                key={plan.schoolId}
+                plan={plan}
+                schools={schools}
+              />
+            ))}
+          </div>
         )
       ) : null}
     </TenantPage>

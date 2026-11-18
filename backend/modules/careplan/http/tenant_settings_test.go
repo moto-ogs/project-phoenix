@@ -37,6 +37,10 @@ func TestTenantSettingKeysMatchTheRegistry(t *testing.T) {
 	assert.Equal(t, settings.KeyFeedbackEnabled, keys.FeedbackEnabled)
 	assert.Equal(t, settings.StudentAbsenceEditScopeAllStaff, keys.StudentAbsenceEditScopeAllStaff)
 	assert.Equal(t, settings.ClassArrivalExceptionEditorsAllStaff, keys.ClassArrivalExceptionEditorsAllStaff)
+	unterricht, ok := settings.LookupModule(settings.ModuleUnterrichtVormittag)
+	assert.True(t, ok)
+	assert.Equal(t, unterricht.SettingKey, keys.ModuleUnterrichtVormittag)
+	assert.Equal(t, settings.KeyChildrenWithoutCarePlace, keys.ChildrenWithoutCarePlace)
 	assert.Equal(t, settings.SchoolPeriodCount, keys.SchoolPeriodCount)
 	for period := 1; period <= keys.SchoolPeriodCount; period++ {
 		assert.Equal(t, settings.SchoolPeriodEndKey(period), keys.SchoolPeriodEnd(period))

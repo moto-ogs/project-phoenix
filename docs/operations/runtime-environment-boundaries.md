@@ -18,7 +18,8 @@ The groups below explain why each set exists.
 | PostgreSQL | `POSTGRES_PASSWORD` and `TZ` only. Database administration stays inside this boundary. | PostgreSQL image startup; existing backup/restore commands |
 | Migration job | Privileged `DB_DSN`, pool sizing, `APP_ENV`, `TZ`, `PHOENIX_AUTH_PASSWORD`, admin/operator bootstrap credentials, and `HEALTH_DATA_KEYS`, with which migration `001015725` seals the existing health information of the holiday registrations and migration `001015730` the children's health field (#5472). No HTTP signing, SMTP, device or push secrets. | `backend/cmd/migrate.go`; migrations `001006002`, `001011003`, `001014001`, `001015725`, `001015730` |
 | Bank rekey job | Privileged `DB_DSN`, pool sizing, `APP_ENV`, `TZ`, `BANK_DATA_KEYS` and explicit `BANK_DATA_LEGACY_KEYS` only. No health, HTTP or bootstrap credentials, ports or mounts. Explicit `maintenance` profile, same pinned image as server. | `backend/cmd/bank_data_rekey.go`; [ADR 0183 rollout](../adr/0183-bankdaten-haben-einen-eigenen-schluesselring-und-einen-wiederholbaren-rekey.md#manueller-rollout-ohne-ausfall) |
-| Tenant export (local, restored copy) | Privileged `DB_DSN`, pool sizing, `BANK_DATA_KEYS` plus, until its rekey is done, `BANK_DATA_LEGACY_KEYS`, and `HEALTH_DATA_KEYS` of the source installation, so the return opens IBAN and account holder of SEPA mandates and debits, the confirmed mandate text, IBAN and account holder of guardians, IBAN, tax ID and social security number of staff and of the Träger staff records with their change history, the PAIN.008 files of the Träger package, and the health information (#3838, #6328, #6412). Without either ring the export refuses. Keys only through SOPS into the process environment; no HTTP or bootstrap credentials. | `backend/cmd/tenant.go`; [runbook](auskunft-und-rueckgabe.md) |
+| Upload seal job | Privileged `DB_DSN`, pool sizing, `APP_ENV`, `TZ`, `HEALTH_DATA_KEYS`, `BANK_DATA_KEYS` and explicit `BANK_DATA_LEGACY_KEYS`, plus exactly the server's uploads volume. It seals the stored sick notes, payslips and child health documents per school and re-seals them on the active keys (ADR 0289). No HTTP or bootstrap credentials, no ports. Explicit `maintenance` profile, same pinned image as server. | `backend/cmd/upload_seal.go`; [ADR 0289 rollout](../adr/0289-atteste-au-bescheinigungen-und-lohnabrechnungen-liegen-versiegelt-im-dateispeicher.md#ablauf-je-umgebung-staging-demo-produktion) |
+| Tenant export (local, restored copy) | Privileged `DB_DSN`, pool sizing, `BANK_DATA_KEYS` plus, until its rekey is done, `BANK_DATA_LEGACY_KEYS`, and `HEALTH_DATA_KEYS` of the source installation, so the return opens IBAN and account holder of SEPA mandates and debits, the confirmed mandate text, IBAN and account holder of guardians, IBAN, tax ID and social security number of staff and of the Träger staff records with their change history, the PAIN.008 files of the Träger package, the health information and the sealed uploads (sick notes, payslips, child health documents, ADR 0289) (#3838, #6328, #6412). Without either ring the export refuses. Keys only through SOPS into the process environment; no HTTP or bootstrap credentials. | `backend/cmd/tenant.go`; [runbook](auskunft-und-rueckgabe.md) |
 | Demo sidecar only | Privileged `DB_DSN`, pool sizing, `APP_ENV`, `TZ`, operator bootstrap credentials, device PIN and `SENTRY_DSN` for orders that fail for good. No JWT signing, SMTP or frontend secrets; no filesystem state beyond a tmpfs heartbeat file. The environment and target-host guards reject staging, production and public hosts. | `backend/cmd/devtools/demo.go`, `demo-runtime` in `environments/demo.compose.yml`, [standing demo operations](standing-demo.md) |
 | Backup and restore | `pg_dump`, `pg_dumpall`, `psql`, and `pg_restore` execute inside PostgreSQL over its Unix socket. They need no backend or frontend environment. Globals dumps contain role credentials and remain protected backup artifacts. | `scripts/deploy-remote.sh`, `scripts/restore-db.sh` |
 
@@ -27,7 +28,7 @@ The serving backend receives a credential-free endpoint:
 production and `sslmode=disable` in staging. These match the tracked Compose
 topology and encrypted maintenance DSN endpoints. `GetServeDSN` adds only
 `PHOENIX_AUTH_PASSWORD`, using URL encoding. The privileged SOPS `DB_DSN`
-is passed only to the one-shot `migrate` and `bank-data-rekey` services.
+is passed only to the one-shot `migrate`, `bank-data-rekey` and `upload-seal` services.
 Bank keys must be provisioned via SOPS before merge; see ADR 0183.
 
 Local development still combines migration and hot reload in its existing
@@ -71,7 +72,10 @@ enabled by the deployment service.
    `maintenance` profile excludes the job from normal `up`; explicitly running
    the service enables it. CI pins all backend service images to the same SHA. The separate
    `bank-data-rekey` maintenance job receives the bank rings with the privileged
-   DSN; the exact all-organization invocation is in ADR 0183.
+   DSN; the exact all-organization invocation is in ADR 0183. The
+   `upload-seal` maintenance job receives the privileged DSN, the health and
+   bank rings and exactly the server's uploads volume; it seals the stored
+   sick notes, payslips and child health documents per school (ADR 0289).
 2. Run `scripts/env-check.sh`. It checks SOPS key parity, example keys, parsed
    Compose allowlists, credential-free serve DSNs, and fail-fast bindings.
    `python3 scripts/check-runtime-env.py --revision HEAD` can test a historical

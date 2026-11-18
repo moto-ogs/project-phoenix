@@ -67,6 +67,8 @@ func TestTraegerLevelKeysOfVersionOne(t *testing.T) {
 		// The SEPA mandate in the parents portal (#4696).
 		config.KeyParentBillingOnlineMandate,
 		config.KeyParentBillingPaymentText, config.KeyParentBillingSiblingRank,
+		// Whether the letters print the GiroCode (#5624).
+		config.KeyParentBillingPrintTransferQR,
 		// The Einsatzplanung and its working-time rules (#4708).
 		config.KeyStaffPlanningCheckBreaks, config.KeyStaffPlanningEnabled,
 		config.KeyStaffPlanningMaxDailyHours, config.KeyStaffPlanningMinRestHours,

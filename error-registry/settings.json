@@ -29,6 +29,18 @@
       "legacy": "settings.booking_authority_blocked"
     },
     {
+      "code": "settings.device_pin_too_simple",
+      "class": "input",
+      "parameters": [],
+      "legacy": "settings.device_pin_too_simple"
+    },
+    {
+      "code": "settings.enrollment_privacy_notice_missing",
+      "class": "input",
+      "parameters": [],
+      "legacy": "settings.enrollment_privacy_notice_missing"
+    },
+    {
       "code": "settings.invalid_value",
       "class": "input",
       "parameters": [],

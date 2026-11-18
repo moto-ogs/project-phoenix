@@ -12,7 +12,10 @@ import (
 
 func (s *Service) ListPickupChangeRequests(ctx context.Context, accountID, studentID int64) ([]carerequests.Request, error) {
 	var rows []carerequests.Request
-	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess, func(*Child) error {
+	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess, func(child *Child) error {
+		if err := child.RequireCarePlace(); err != nil {
+			return err
+		}
 		if s.CareRequests == nil {
 			return errors.New("parent: pickup change request service not configured")
 		}

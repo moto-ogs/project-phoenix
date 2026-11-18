@@ -199,4 +199,23 @@ describe("TraegerStaffProofsPage", () => {
       expect(api.mapSchoolProofKind).toHaveBeenCalledWith("1", "41", "7"),
     );
   });
+
+  // #7304: the school cards sit in one grid, so the last one keeps its height.
+  it("puts the school cards into one grid", async () => {
+    api.fetchSchoolProofKinds.mockResolvedValue([
+      SCHOOLS[0]!,
+      { ...SCHOOLS[0]!, schoolId: "2", schoolName: "OGS Süd" },
+    ]);
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole("tab", { name: "Arten der Schulen" }),
+    );
+    await screen.findByText("OGS Nord", { selector: "h2" });
+    const cards = ["OGS Nord", "OGS Süd"].map((name) =>
+      screen.getByText(name, { selector: "h2" }).closest("section"),
+    );
+    const grid = cards[0]?.parentElement;
+    expect(grid).toHaveClass("grid");
+    for (const card of cards) expect(card?.parentElement).toBe(grid);
+  });
 });
