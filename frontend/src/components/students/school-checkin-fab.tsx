@@ -8,6 +8,7 @@ import { useAttendanceWebEnabled } from "~/lib/tenant-context";
 import { useFloatingFabOffset } from "~/lib/hooks/use-floating-fab-offset";
 import { Button } from "~/components/ui/button";
 import { SpinnerIcon } from "~/components/ui/icons";
+import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
 interface SchoolCheckinFabBaseProps {
   /** Whether the page is currently in check-in/out mode. */
@@ -92,7 +93,7 @@ export function SchoolCheckinFab({
         // ~4.75rem visible (pill + paddings) + its own safe-area-inset.
         // Offset = 5.5rem (nav + breathing gap) + safe-area so the FAB
         // visually floats above the nav with a clear separator.
-        "fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-40"
+        `fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-40 ${FIXED_LAYER_SHIFT}`
       : "relative z-0";
 
   const animationProps = reduceMotion

@@ -6,7 +6,6 @@
 // eine Vertragsänderung führt im nächsten Lauf zum Änderungsbescheid. Jedes
 // Öffnen steht im Protokoll des Laufs.
 
-import { ArchiveX, Inbox } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -22,18 +21,19 @@ import {
   rateCountLabel,
 } from "~/components/traeger/care-notice-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
+import { EmptyRunCard } from "~/components/traeger/empty-run-card";
 import {
-  TraegerListExportMenu,
   traegerExportScope,
+  useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
-import { DataField, DataGrid } from "~/components/ui/data-field";
+import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
+import { DataField } from "~/components/ui/data-field";
 import { EmptyState } from "~/components/ui/empty-state";
 import { ConfirmationModal } from "~/components/ui/modal";
-import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
@@ -41,6 +41,7 @@ import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import { useInvalidateFamily } from "~/lib/swr";
+import { billingConcept } from "~/lib/concepts/billing";
 import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import {
@@ -223,12 +224,25 @@ export default function TraegerCareNoticeRunPage() {
   const empty = run ? isEmptyNoticeRun(run) : false;
   const changes =
     run?.notices.filter((notice) => notice.kind === "change") ?? [];
+  const issued = run?.status === "released" && run.previewCount > 0;
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList(
+        `/api/traeger/care-notice-runs/${runId}/export`,
+        format,
+      ),
+    scope: traegerExportScope(),
+    fallbackName: `jahresbescheide-${run?.year ?? ""}`,
+    errorObject: "die Bescheide",
+    unavailable: !run || run.notices.length === 0,
+  });
   const canRelease =
     preview &&
     (run.previewCount === 0 || (run.numberRangeSet && !run.legalRemedyMissing));
 
   return (
     <TenantPage
+      leading={<ConceptIconTile concept={billingConcept} size="page" />}
       title={run ? `Jahresbescheide ${run.year}` : "Jahreslauf"}
       back
       backHref={traegerPath("/traeger/abrechnung/jahresbescheide")}
@@ -262,6 +276,26 @@ export default function TraegerCareNoticeRunPage() {
         ) : null
       }
       statsLoading={loading}
+      overflowMenu={
+        run
+          ? [
+              ...(issued
+                ? [
+                    {
+                      label: "Lastschrift der Raten",
+                      description:
+                        "Öffnet die Lastschrift der Raten mit der Datei für deine Bank",
+                      href: traegerPath(
+                        `/traeger/abrechnung/jahresbescheide/${run.id}/lastschrift`,
+                      ),
+                      onClick: () => undefined,
+                    },
+                  ]
+                : []),
+              ...exportItems,
+            ]
+          : undefined
+      }
       actions={
         <>
           {run ? (
@@ -272,22 +306,6 @@ export default function TraegerCareNoticeRunPage() {
                   : NOTICE_RUN_STATUS_LABELS[run.status]
               }
               tone={NOTICE_RUN_STATUS_TONES[run.status]}
-            />
-          ) : null}
-          {run ? (
-            <TraegerListExportMenu
-              download={(format) =>
-                downloadTraegerList(
-                  `/api/traeger/care-notice-runs/${run.id}/export`,
-                  format,
-                )
-              }
-              scope={traegerExportScope()}
-              ariaLabel="Bescheide herunterladen"
-              tooltip="Zeigt die Formate für alle Bescheide des Laufs. Jeder Download wird protokolliert."
-              fallbackName={`jahresbescheide-${run.year}`}
-              errorObject="die Bescheide"
-              unavailable={run.notices.length === 0}
             />
           ) : null}
           {empty ? (
@@ -318,31 +336,20 @@ export default function TraegerCareNoticeRunPage() {
                 ? "Jahreslauf abschließen"
                 : "Bescheide ausstellen"}
             </Button>
-          ) : run?.status === "released" && run.previewCount > 0 ? (
-            // The PAIN.008 file of the installments (#4697) and the delivery of
-            // the stored originals (#6347) have pages of their own.
-            <div className="flex flex-wrap gap-2">
-              <ButtonLink
-                href={traegerPath(
-                  `/traeger/abrechnung/jahresbescheide/${run.id}/lastschrift`,
-                )}
-                variant="outline"
-                size="md"
-                tooltip="Öffnet die Lastschrift der Raten mit der Datei für deine Bank."
-              >
-                Lastschrift der Raten
-              </ButtonLink>
-              <ButtonLink
-                href={traegerPath(
-                  `/traeger/abrechnung/jahresbescheide/${run.id}/versand`,
-                )}
-                variant="primary"
-                size="md"
-                tooltip="Öffnet den Versand, dort sendest du die Bescheide an die Familien."
-              >
-                An Familien senden
-              </ButtonLink>
-            </div>
+          ) : issued ? (
+            // The delivery of the stored originals (#6347) has a page of its
+            // own; the direct debit of the installments (#4697) stands in the
+            // page menu.
+            <ButtonLink
+              href={traegerPath(
+                `/traeger/abrechnung/jahresbescheide/${run.id}/versand`,
+              )}
+              variant="primary"
+              size="md"
+              tooltip="Öffnet den Versand, dort sendest du die Bescheide an die Familien."
+            >
+              An Familien senden
+            </ButtonLink>
           ) : null}
         </>
       }
@@ -415,49 +422,26 @@ export default function TraegerCareNoticeRunPage() {
       }
     >
       {run && (discarded || empty) ? (
-        <SectionCard title="Jahreslauf">
-          <EmptyState
-            tone="neutral"
-            icon={
-              discarded ? (
-                <ArchiveX className="h-7 w-7" aria-hidden="true" />
-              ) : (
-                <Inbox className="h-7 w-7" aria-hidden="true" />
-              )
-            }
-            title={
-              discarded
-                ? "Dieser Lauf ist verworfen"
-                : "Dieser Lauf hat nichts abzurechnen"
-            }
-            description={
-              discarded
-                ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für das Jahr ${run.year} kannst du einen neuen Lauf starten.`
-                : `Für das Jahr ${run.year} gibt es keinen Bescheid. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist das Jahr frei für einen neuen Lauf.`
-            }
-            className="py-6"
-          />
-          <div className="mt-2 border-t border-gray-100 pt-5">
-            <DataGrid columns={2}>
-              <DataField label="Zeitraum">
-                {noticePeriod(run.periodFrom, run.periodUntil)}
-              </DataField>
-              <DataField label="Schulen">
-                {run.schoolIds.length === 1
-                  ? "1 Schule"
-                  : `${run.schoolIds.length} Schulen`}
-              </DataField>
-              <DataField label="Gestartet am">
-                {formatDate(run.createdAt)}
-              </DataField>
-              {discarded ? (
-                <DataField label="Verworfen am">
-                  {run.discardedAt ? formatDate(run.discardedAt) : "–"}
-                </DataField>
-              ) : null}
-            </DataGrid>
-          </div>
-        </SectionCard>
+        <EmptyRunCard
+          title="Jahreslauf"
+          discarded={discarded}
+          description={
+            discarded
+              ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für das Jahr ${run.year} kannst du einen neuen Lauf starten.`
+              : `Für das Jahr ${run.year} gibt es keinen Bescheid. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist das Jahr frei für einen neuen Lauf.`
+          }
+          createdAt={run.createdAt}
+          discardedAt={run.discardedAt}
+        >
+          <DataField label="Zeitraum">
+            {noticePeriod(run.periodFrom, run.periodUntil)}
+          </DataField>
+          <DataField label="Schulen">
+            {run.schoolIds.length === 1
+              ? "1 Schule"
+              : `${run.schoolIds.length} Schulen`}
+          </DataField>
+        </EmptyRunCard>
       ) : run ? (
         <>
           {preview && run.previewCount > 0 && run.legalRemedyMissing ? (

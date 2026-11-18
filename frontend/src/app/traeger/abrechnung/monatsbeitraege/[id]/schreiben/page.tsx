@@ -29,7 +29,6 @@ import { useRefusalGuard } from "~/components/traeger/use-traeger-confirmed-reso
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
-import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
@@ -320,6 +319,15 @@ export default function TraegerCareRunLettersPage() {
       statsLoading={loading}
       error={loadError}
       loading={loading}
+      empty={
+        run && !released
+          ? {
+              title: "Noch nicht freigegeben",
+              description:
+                "Schreiben gibt es erst, wenn der Monatslauf freigegeben ist. Gib ihn auf der Seite des Laufs frei.",
+            }
+          : null
+      }
       overlays={
         run && released ? (
           <>
@@ -351,12 +359,6 @@ export default function TraegerCareRunLettersPage() {
         ) : null
       }
     >
-      {run && !released ? (
-        <SectionCard
-          title="Noch nicht freigegeben"
-          description="Schreiben gibt es erst, wenn der Monatslauf freigegeben ist. Gib ihn auf der Seite des Laufs frei."
-        />
-      ) : null}
       {run && released ? (
         <>
           <CareLettersCard

@@ -55,9 +55,8 @@ func ValidatePushEndpoint(endpoint string) error {
 
 // PushSubscription is one browser/device registration for Web Push
 // (RFC 8030). endpoint/p256dh/auth come verbatim from the browser's
-// PushSubscription JSON. One account can hold many rows (multiple devices);
-// a guardian linked to several schools holds one row per school for the
-// same endpoint.
+// PushSubscription JSON. A parent device has no school in storage; school
+// delivery projects it into the school where the recipient is authorized.
 type PushSubscription struct {
 	ID            int64     `json:"id"`
 	CreatedAt     time.Time `json:"created_at"`

@@ -28,8 +28,7 @@ func (rs *Resource) getPushPublicKey(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, PushPublicKeyResponse{PublicKey: key}, "")
 }
 
-// subscribePush registers the parent's device across every school the
-// account is actively linked to.
+// subscribePush registers a device for the authenticated parent account.
 func (rs *Resource) subscribePush(w http.ResponseWriter, r *http.Request) {
 	claims := sessiontoken.ClaimsFromCtx(r.Context())
 	if claims.ID == 0 {

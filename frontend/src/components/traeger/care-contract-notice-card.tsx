@@ -7,18 +7,21 @@
 // zeigt die Karte das Vertragsende und die Bestätigung, wie sie verschickt
 // wurde.
 
-import { CalendarX2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { JumpButton } from "~/components/ui/jump-button";
+import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import type { CareContractStatus } from "~/lib/traeger-care-contracts-api";
 import { TERMINATION_KIND_LABELS } from "./care-contract-format";
+import {
+  CONTRACT_NOTICE_SECTION_ID,
+  ContractSectionJump,
+} from "./care-contract-detail-tabs";
 import type { ContractNoticeOptions } from "~/lib/care-contract-notices";
 import { fetchContractNoticeOptions } from "~/lib/care-contract-notices-api";
 import {
@@ -70,18 +73,15 @@ const CHANNEL_LABELS = {
   traeger_buero: "Vom Träger-Büro eingetragen",
 } as const;
 
-/** The card's `id`, so notices on the contract page lead to it (#7054). */
-const CONTRACT_NOTICE_SECTION_ID = "vertrag-beenden";
-
 /** For a notice elsewhere on the contract page that names this card. */
 export function NoticeCardJump() {
   return (
-    <JumpButton
+    <ContractSectionJump
       targetId={CONTRACT_NOTICE_SECTION_ID}
       tooltip="Springt zur Kündigung der Eltern."
     >
       Zu „Vertrag beenden“
-    </JumpButton>
+    </ContractSectionJump>
   );
 }
 
@@ -128,34 +128,30 @@ export function CareContractNoticeCard({
   return (
     <SectionCard
       id={CONTRACT_NOTICE_SECTION_ID}
-      icon={CalendarX2}
       title="Vertrag beenden"
       description={
         endPending
-          ? "Die Eltern haben außerordentlich gekündigt. Prüfe ihren Grund."
+          ? endPendingDescription(options?.reinterpretedEndsOn ?? null)
           : notice
             ? "So haben die Eltern den Vertrag beendet."
-            : "Kündigung oder Widerruf der Eltern."
+            : options && active
+              ? "Kündigung oder Widerruf der Eltern. Kommt eine Kündigung per Mail oder Brief, trägst du sie hier ein. In der Eltern-App kündigen Eltern selbst."
+              : "Kündigung oder Widerruf der Eltern."
       }
       loading={options === null && !error}
       loadingRows={3}
       footer={
         options && active && !notice ? (
-          <div className="space-y-2">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Button
               type="button"
               variant="outline"
               size="md"
-              className="w-full"
               tooltip="Öffnet ein Fenster für eine Kündigung per Mail oder Brief."
               onClick={() => setOpen(true)}
             >
               Kündigung eintragen
             </Button>
-            <p className="text-center text-sm text-gray-500">
-              Für eine Kündigung per Mail oder Brief. In der Eltern-App kündigen
-              Eltern selbst.
-            </p>
           </div>
         ) : endPending ? (
           <EndDecisionActions
@@ -216,9 +212,17 @@ export function CareContractNoticeCard({
 }
 
 /**
- * The two ways the office decides an extraordinary termination, each with
- * what follows from it. Both reach the parents in Textform.
+ * What the two decisions on an extraordinary termination mean. Both reach
+ * the parents in Textform.
  */
+function endPendingDescription(reinterpretedEndsOn: string | null): string {
+  const reinterpreted = reinterpretedEndsOn
+    ? `Erkennst du ihn nicht an, gilt die Kündigung als ordentliche Kündigung zum ${formatDate(reinterpretedEndsOn)}.`
+    : "Erkennst du ihn nicht an, gilt die Kündigung als ordentliche Kündigung.";
+  return `Die Eltern haben außerordentlich gekündigt. Prüfe ihren Grund. Erkennst du ihn an, wählst du den letzten Tag. ${reinterpreted} Die Eltern bekommen deine Entscheidung per E-Mail und in der Eltern-App.`;
+}
+
+/** The two ways the office decides an extraordinary termination. */
 function EndDecisionActions({
   reinterpretedEndsOn,
   onSetEnd,
@@ -229,44 +233,27 @@ function EndDecisionActions({
   onReject: () => void;
 }>) {
   return (
-    <div className="space-y-4">
-      <div className="space-y-1.5">
-        <Button
-          type="button"
-          variant="primary"
-          size="md"
-          className="w-full"
-          tooltip="Öffnet ein Fenster, um den letzten Tag des Vertrags zu wählen."
-          onClick={onSetEnd}
-        >
-          Vertragsende festlegen
-        </Button>
-        <p className="text-center text-sm text-gray-500">
-          Du erkennst den Grund an und wählst den letzten Tag.
-        </p>
-      </div>
-      <div className="space-y-1.5">
-        <Button
-          type="button"
-          variant="outline"
-          size="md"
-          className="w-full"
-          onClick={onReject}
-          disabled={!reinterpretedEndsOn}
-          disabledReason="Das neue Vertragsende fehlt noch. Bitte lade die Seite neu."
-          tooltip="Benachrichtigt die Eltern über das neue Vertragsende, moto fragt vorher nach."
-        >
-          Grund nicht anerkennen
-        </Button>
-        <p className="text-center text-sm text-gray-500">
-          {reinterpretedEndsOn
-            ? `Dann gilt sie als ordentliche Kündigung zum ${formatDate(reinterpretedEndsOn)}.`
-            : "Dann gilt sie als ordentliche Kündigung."}
-        </p>
-      </div>
-      <p className="border-t border-gray-100 pt-3 text-center text-sm text-gray-500">
-        Die Eltern bekommen deine Entscheidung per E-Mail und in der Eltern-App.
-      </p>
+    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+      <Button
+        type="button"
+        variant="outline"
+        size="md"
+        onClick={onReject}
+        disabled={!reinterpretedEndsOn}
+        disabledReason="Das neue Vertragsende fehlt noch. Bitte lade die Seite neu."
+        tooltip="Benachrichtigt die Eltern über das neue Vertragsende, moto fragt vorher nach."
+      >
+        Grund nicht anerkennen
+      </Button>
+      <Button
+        type="button"
+        variant="primary"
+        size="md"
+        tooltip="Öffnet ein Fenster, um den letzten Tag des Vertrags zu wählen."
+        onClick={onSetEnd}
+      >
+        Vertragsende festlegen
+      </Button>
     </div>
   );
 }
@@ -404,9 +391,11 @@ function NoticeFacts({
         />
       ) : null}
       {notice.endNoticeText ? (
-        <figure
+        <InsetPanel
+          as="figure"
+          tone="white"
+          padding="md"
           aria-label={endNoticeCaption}
-          className="moto-content-surface rounded-xl border p-4"
         >
           <figcaption className="mb-2 text-sm font-medium text-gray-900">
             {endNoticeCaption}
@@ -414,11 +403,13 @@ function NoticeFacts({
           <p className="text-sm wrap-anywhere whitespace-pre-line text-gray-700">
             {notice.endNoticeText}
           </p>
-        </figure>
+        </InsetPanel>
       ) : null}
-      <figure
+      <InsetPanel
+        as="figure"
+        tone="white"
+        padding="md"
         aria-label="Bestätigung, wie sie verschickt wurde"
-        className="moto-content-surface rounded-xl border p-4"
       >
         <figcaption className="mb-2 text-sm font-medium text-gray-900">
           Bestätigung, wie sie verschickt wurde
@@ -426,7 +417,7 @@ function NoticeFacts({
         <p className="text-sm wrap-anywhere whitespace-pre-line text-gray-700">
           {notice.confirmationText}
         </p>
-      </figure>
+      </InsetPanel>
     </div>
   );
 }

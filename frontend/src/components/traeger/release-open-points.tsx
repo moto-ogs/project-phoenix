@@ -6,7 +6,11 @@ export function familiesLabel(count: number): string {
   return count === 1 ? "1 Familie" : `${count} Familien`;
 }
 
-/** One open point; its action is the way to fix it before releasing. */
+/**
+ * One open point; its action is the way to fix it before releasing. It
+ * leads out of the release question, so it is a `ButtonLink` with
+ * `variant="surface" size="compact" newTab` (`ui/jump-button`).
+ */
 export interface OpenPoint {
   readonly text: string;
   readonly action?: ReactNode;
@@ -41,10 +45,8 @@ export function ReleaseOpenPoints({
           {items.map((point) => (
             <li key={point.text}>
               <span>{point.text}</span>
-              {/* -ml-2.5 takes back the button's padding: its label starts
-                  where the point's text starts. */}
               {point.action ? (
-                <span className="-ml-2.5 block">{point.action}</span>
+                <span className="mt-1.5 block">{point.action}</span>
               ) : null}
             </li>
           ))}

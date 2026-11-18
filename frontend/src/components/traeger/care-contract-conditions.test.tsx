@@ -1,7 +1,14 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { OfferingTemplate } from "~/lib/traeger-care-contracts-api";
+import { usePhoneViewport } from "~/test/helpers/viewport";
 
 const { api } = vi.hoisted(() => ({
   api: { saveContractTemplate: vi.fn() },
@@ -51,6 +58,8 @@ describe("CareContractConditions", () => {
               },
             },
           ]}
+          selectedKey={null}
+          onSelect={vi.fn()}
           onSaved={vi.fn()}
         />
       </ToastProvider>,
@@ -71,7 +80,12 @@ describe("CareContractConditions", () => {
     api.saveContractTemplate.mockResolvedValue(OPEN);
     render(
       <ToastProvider>
-        <CareContractConditions offerings={[OPEN]} onSaved={onSaved} />
+        <CareContractConditions
+          offerings={[OPEN]}
+          selectedKey={null}
+          onSelect={vi.fn()}
+          onSaved={onSaved}
+        />
       </ToastProvider>,
     );
     fireEvent.click(screen.getByRole("combobox", { name: "Laufzeit" }));
@@ -102,7 +116,12 @@ describe("CareContractConditions", () => {
     );
     render(
       <ToastProvider>
-        <CareContractConditions offerings={[OPEN]} onSaved={onSaved} />
+        <CareContractConditions
+          offerings={[OPEN]}
+          selectedKey={null}
+          onSelect={vi.fn()}
+          onSaved={onSaved}
+        />
       </ToastProvider>,
     );
 
@@ -143,5 +162,124 @@ describe("CareContractConditions", () => {
       ),
     );
     expect(onSaved).toHaveBeenCalled();
+  });
+
+  it("opens the offering of the address and writes a new choice there", () => {
+    const onSelect = vi.fn();
+    const other: OfferingTemplate = {
+      ...OPEN,
+      offeringId: "6",
+      offeringName: "Frühbetreuung",
+    };
+    render(
+      <ToastProvider>
+        <CareContractConditions
+          offerings={[OPEN, other]}
+          selectedKey="3-6"
+          onSelect={onSelect}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    // The chosen row is marked, and its conditions stand beside the list.
+    expect(
+      screen.getByRole("button", { name: /Frühbetreuung/ }),
+    ).toHaveAttribute("aria-current", "true");
+    expect(
+      screen.getByRole("button", { name: "Bedingungen speichern" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Offene Ganztagsschule/ }),
+    );
+    expect(onSelect).toHaveBeenCalledWith("3-5");
+  });
+
+  it("asks before a choice drops unsaved conditions", async () => {
+    const onSelect = vi.fn();
+    const other: OfferingTemplate = {
+      ...OPEN,
+      offeringId: "6",
+      offeringName: "Frühbetreuung",
+    };
+    render(
+      <ToastProvider>
+        <CareContractConditions
+          offerings={[OPEN, other]}
+          selectedKey="3-5"
+          onSelect={onSelect}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    fireEvent.change(screen.getByLabelText("Vertragspartner"), {
+      target: { value: "Anderer Träger" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Frühbetreuung/ }));
+    expect(onSelect).not.toHaveBeenCalled();
+    // The form's own „Änderungen verwerfen“ resets; the dialog's confirms.
+    const dialog = await screen.findByRole("dialog", {
+      name: "Änderungen verwerfen?",
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Änderungen verwerfen" }),
+    );
+    expect(onSelect).toHaveBeenCalledWith("3-6");
+  });
+
+  it("writes the first offering without conditions into the address once", () => {
+    const onSelect = vi.fn();
+    const done: OfferingTemplate = {
+      ...OPEN,
+      offeringId: "4",
+      offeringName: "Frühbetreuung",
+      template: {
+        id: "7",
+        updatedAt: "2026-09-09T10:00:00Z",
+        termKind: "school_year",
+        termMonths: null,
+        noticeMonths: 1,
+        noticeTo: "month_end",
+        contractPartner: "",
+        specialTermination: false,
+        specialTerminationNote: "",
+        statuteRequired: false,
+        statuteTitle: "",
+        statuteUrl: "",
+      },
+    };
+    render(
+      <ToastProvider>
+        <CareContractConditions
+          offerings={[done, OPEN]}
+          selectedKey={null}
+          onSelect={onSelect}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    // From then on the address holds the choice: saving it, which changes
+    // which offering lacks conditions, cannot move the form elsewhere.
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith("3-5");
+  });
+
+  describe("on a phone", () => {
+    usePhoneViewport();
+
+    it("chooses no offering itself, so no drawer opens unasked", () => {
+      const onSelect = vi.fn();
+      render(
+        <ToastProvider>
+          <CareContractConditions
+            offerings={[OPEN]}
+            selectedKey={null}
+            onSelect={onSelect}
+            onSaved={vi.fn()}
+          />
+        </ToastProvider>,
+      );
+      expect(onSelect).not.toHaveBeenCalled();
+    });
   });
 });

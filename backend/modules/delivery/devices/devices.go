@@ -7,7 +7,7 @@ import (
 )
 
 // PushSubscriptions manages only the authenticated parent's devices.
-// The root preserves Delivery's atomic fan-out across active school mappings.
+// A parent device is registered once, regardless of school mappings.
 type PushSubscriptions interface {
 	PublicKey() (string, error)
 	SubscribeParent(context.Context, int64, PushSubscriptionInput) error

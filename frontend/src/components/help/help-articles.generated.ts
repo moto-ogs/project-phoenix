@@ -11306,7 +11306,7 @@ export const traegerBillingRunTopic =
             "Hat der Zeitraum genau einen Lauf, öffnet sich dieser Lauf. Sonst siehst du die Abrechnung nur mit den Läufen dieses Zeitraums.",
             "Den Filter `Ferienzeitraum` entfernst du mit dem Kreuz. Dann siehst du wieder alle Läufe.",
             "Hat der Zeitraum noch keinen Lauf, wähle `Lauf starten`. Der Zeitraum ist schon gewählt.",
-            "Im Lauf führt `Zum Ferienzeitraum` unter dem Titel zurück zur Planung.",
+            "Im Lauf führt das Menü mit den drei Punkten neben dem Titel mit `Zum Ferienzeitraum` zurück zur Planung.",
           ],
         },
         {
@@ -11367,12 +11367,12 @@ export const traegerBillingRunTopic =
           description:
             "Jede Familie bekommt ihr Schreiben als PDF im Anhang einer Mail. Hat die Familie ein Konto in der Eltern-App mit derselben Mail-Adresse, liegt es auch dort unter `Dokumente`. Familien ohne E-Mail gibst du das gedruckte Schreiben.",
           steps: [
-            "Wähle im freigegebenen Lauf bei `Versand per Mail` den Knopf `An alle Familien senden`. moto schickt nur Mails, die noch nicht gesendet sind.",
+            "Wähle im freigegebenen Lauf bei `Versand per Mail` den Knopf `An alle senden`. moto fragt vorher nach und schickt nur Mails, die noch nicht gesendet sind.",
             "Neben jeder Familie steht, was aus der Mail geworden ist. `Gesendet` heißt: Die Mail ist raus. `Zugestellt` heißt: Sie ist angekommen. `Nicht angekommen` und `Nicht zustellbar` heißen: Die Mail kam nicht an. `Als unerwünscht gemeldet` heißt: Die Mail kam an. Die Familie hat sie danach als unerwünscht gemeldet.",
             "Bei `Verzögert` kommt die Mail später an. Warte dann. `Erneut senden` steht erst danach wieder bereit. Spätestens bei `Überfällig` kannst du neu senden.",
             "Bei `Nicht gesendet` und `Abgemeldet` zählt, ob die Sperre noch besteht. Besteht sie, fehlt `Erneut senden`, und der Hinweis sagt, was zu tun ist. Drucke das Schreiben dann und gib es der Familie. Ist sie weg, kannst du neu senden.",
-            "Wähle bei dieser Familie `Erneut senden`. Mit `Senden` schickst du das Schreiben an eine einzelne Familie.",
-            "Wähle `Alle Schreiben drucken`. Du bekommst alle Schreiben des Laufs in einer Datei.",
+            "Wähle bei dieser Familie im Menü mit den drei Punkten `Erneut senden`. Mit `Senden` dort schickst du das Schreiben an eine einzelne Familie.",
+            "Wähle `Drucken` und dann `Alle Schreiben drucken`. Du bekommst alle Schreiben des Laufs in einer Datei.",
           ],
         },
         {
@@ -11485,7 +11485,7 @@ export const traegerBillingRunTopic =
       differences: [
         "Du siehst in der Navigation kein `Abrechnungsläufe`? Deine Rolle ist nicht Abrechnung. Frage im Träger-Büro nach dieser Rolle.",
         "Im Ferienzeitraum fehlt `Zur Abrechnung`? Der Zeitraum ist noch ein Entwurf, oder deine Rolle ist nicht Abrechnung.",
-        "Im Lauf fehlt `Zum Ferienzeitraum`? Deine Rolle darf die Ferienbetreuung nicht öffnen.",
+        "Im Menü des Laufs fehlt `Zum Ferienzeitraum`? Deine Rolle darf die Ferienbetreuung nicht öffnen.",
         "`Lauf freigeben` lässt sich nicht wählen? Es fehlt das Muster der Rechnungsnummern, oder der Lauf hat keine Rechnung.",
         "Statt `Lauf freigeben` steht `Leeren Lauf verwerfen`? Der Lauf hat nichts abzurechnen. Verwirf ihn, dann ist der Ferienzeitraum frei.",
         "Du siehst oben in der Karte `Rechnungen` kein Menü mit den drei Punkten? Der Lauf ist noch nicht freigegeben.",
@@ -11547,7 +11547,7 @@ export const traegerBillingTermsTopic =
             "Ein Lauf kann ein festes Datum haben, bis zu dem alle Familien zahlen. Das geht nur vor der Freigabe.",
           steps: [
             "Öffne den Lauf unter `Abrechnungsläufe`, im Reiter `Monatsbeiträge` oder `Ferien`.",
-            "Beim Monatslauf wählst du in der Karte `Monatslauf` beim Feld `Fällig` den Knopf `Ändern`. Beim Ferienlauf wählst du `Fälligkeiten ändern`. Es öffnet sich eine eigene Seite.",
+            "Wähle im Monatslauf in der Karte `Monatslauf`, im Ferienlauf in der Karte `Abrechnungslauf` den Knopf `Fälligkeiten bearbeiten`. Es öffnet sich eine eigene Seite.",
             "Wähle je Zahlungsweg ein Datum. Ohne Datum gilt das Zahlungsziel der Leistung.",
             "Wähle `Speichern`. Du kommst zurück zum Lauf. Bei `Fällig` steht jetzt das Datum.",
           ],
@@ -11724,7 +11724,7 @@ export const traegerCareContractsTopic =
           steps: [
             "Wähle in der Navigation `Verträge`.",
             "Wähle oben den Reiter `Vertragsbedingungen`.",
-            "Wähle links ein Angebot. `Fehlt` heißt: Für dieses Angebot gibt es noch keine Bedingungen.",
+            "Wähle links ein Angebot. `Fehlt` heißt: Für dieses Angebot gibt es noch keine Bedingungen. Auf dem Handy öffnen sich die Bedingungen über der Liste.",
             "Wähle die `Laufzeit`, die `Frist in Monaten` und wann die `Kündigung wirkt`.",
             "Erlaube bei Bedarf eine `Sonderkündigung`. Sie endet immer zum Halbjahr, also am 31. Januar oder 31. Juli. Es gilt dieselbe `Frist in Monaten`. Schreibe bei `In welchen Fällen?`, wann sie möglich ist. Ein anderes Datum in diesem Text ändert den Termin nicht. Ausnahmen klärst du wie bisher im Büro. Vertrag und Text für das Anmeldeformular nennen den Termin.",
             "Müssen die Eltern eine Satzung anerkennen? Setze den Haken bei `Satzung`. Trage den Namen und, wenn vorhanden, den Link ein.",
@@ -11769,7 +11769,7 @@ export const traegerCareContractsTopic =
           description:
             "Die Eltern unterschreiben in der Eltern-App oder über den Link in der Mail. Sie zeichnen mit dem Finger oder tippen ihren Namen.",
           steps: [
-            "Öffne den Vertrag. Die Karte `Unterschrift` zeigt `Wartet auf Eltern` oder `Unterschrieben`.",
+            "Öffne den Vertrag und den Reiter `Unterschrift und Versand`. Die Karte `Unterschrift` zeigt `Wartet auf Eltern` oder `Unterschrieben`.",
             "Nach der Unterschrift ist der Vertrag `Aktiv`. Die Karte zeigt, wer wann auf welchem Weg unterschrieben hat, die Widerrufsfrist und die gespeicherte Unterschrift.",
             "Die Eltern bekommen eine Bestätigung mit dem Vertrag und der Widerrufsbelehrung per Mail.",
           ],
@@ -11781,7 +11781,7 @@ export const traegerCareContractsTopic =
           steps: [
             "Wähle oben `PDF herunterladen` und drucke den Vertrag.",
             "Die Eltern unterschreiben ihn. Scanne den unterschriebenen Vertrag als PDF.",
-            "Wähle auf der Vertragsseite in der Karte `Unterschrift` den Knopf `Papiervertrag erfassen`.",
+            "Wähle auf der Vertragsseite im Reiter `Unterschrift und Versand` in der Karte `Unterschrift` den Knopf `Papiervertrag erfassen`.",
             "Prüfe `Unterschrieben von` und `Unterschrieben am`. Wähle mit `PDF wählen` die Datei.",
             "Wähle `Vertrag abschließen`. Der Vertrag ist dann `Aktiv`. Mit `Papiervertrag laden` holst du das PDF später wieder.",
           ],
@@ -11793,7 +11793,7 @@ export const traegerCareContractsTopic =
           steps: [
             "Wähle in der Navigation `Verträge`.",
             "Wähle bei Bedarf einen Status, einen Betreuungsort oder suche.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Datei enthält alle Verträge zu deiner Auswahl. Jeder Download steht im Zugriffsprotokoll der Schulen.",
           ],
         },
@@ -11804,7 +11804,7 @@ export const traegerCareContractsTopic =
           steps: [
             "Trage zuerst die `Vertragsbedingungen` für jedes Modul ein. Ohne Bedingungen übernimmt moto keinen Vertrag für das Modul.",
             "Speichere die Kinder im anderen Programm als CSV-Datei. Die erste Zeile enthält die Überschriften, jede weitere Zeile ein Kind.",
-            "Wähle in der Navigation `Verträge` und oben `Verträge importieren`.",
+            "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Verträge importieren`.",
             "Du kennst den Aufbau noch nicht? Wähle `Beispieldatei`. Sie zeigt alle Spalten, die moto von selbst erkennt.",
             "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
             "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Pflicht sind Vorname und Nachname des Kindes.",
@@ -11822,7 +11822,7 @@ export const traegerCareContractsTopic =
           title: "Änderungswunsch der Eltern freigeben",
           steps: [
             "Die Eltern beantragen in der Eltern-App andere Tage oder Module. Du oder die Schule entscheidet.",
-            "Wähle in der Liste das Kind. Rechts steht die Karte `Änderungswunsch der Eltern`.",
+            "Wähle in der Liste das Kind. Im Reiter `Unterschrift und Versand` steht die Karte `Änderungswunsch der Eltern`. Wartet ein Wunsch, zeigt der Reiter eine Zahl.",
             "Je Modul siehst du die bisherige und die gewünschte Buchung. Bei festen Tagen steht dort `Gebucht (feste Tage)`.",
             "Module, die gleich bleiben, stehen darunter bei `Bleibt gebucht`.",
             "Wähle `Freigeben`. Prüfe `Gilt ab` und die angezeigten Änderungen. Wähle noch einmal `Freigeben`.",
@@ -11835,7 +11835,7 @@ export const traegerCareContractsTopic =
           steps: [
             "Nach einer Freigabe durch dich oder die Schule bekommt der aktive Vertrag nach wenigen Minuten eine neue Version. Sie gilt ab dem freigegebenen Tag.",
             "Wähle in der Liste das Kind. Oben steht, ab wann die neue Version gilt.",
-            "Unter `Versionen` siehst du jede Version mit ihren Tagen. `Geändert` markiert die Wochentage, die anders sind als vorher.",
+            "Im Reiter `Versionen` siehst du jede Version mit ihren Tagen. `Geändert` markiert die Wochentage, die anders sind als vorher.",
             "Mit `PDF` lädst du eine Version als PDF.",
           ],
         },
@@ -11844,7 +11844,7 @@ export const traegerCareContractsTopic =
           steps: [
             "Eltern kündigen selbst in der Eltern-App. Dann steht die Kündigung von allein beim Vertrag. Du musst nichts tun.",
             "Kam eine Kündigung per Mail oder Brief? Wähle in der Liste das Kind.",
-            "Rechts steht die Karte `Vertrag beenden`. Sie zeigt den Kündigungstermin und die Absendefrist für einen Widerruf.",
+            "Im Reiter `Kündigung` steht die Karte `Vertrag beenden`. Sie zeigt den Kündigungstermin und die Absendefrist für einen Widerruf.",
             "Wähle `Kündigung eintragen`.",
             "Wähle bei `Eingegangen am` den Tag, an dem die Mail oder der Brief ankam.",
             "Die Auswahl gilt für diesen Eingangstag, auch bei älteren Erklärungen. Wähle `Kündigung` oder `Widerruf`. Bei einer Kündigung wählst du den Termin oder `Außerordentlich, aus wichtigem Grund` und trägst den Grund der Eltern ein.",
@@ -11857,10 +11857,10 @@ export const traegerCareContractsTopic =
       result:
         "Die Eltern bekommen den Vertrag als PDF per Mail. Haben sie ein Konto in der Eltern-App, liegt er dort auch unter `Dokumente`. Wer dort `Neues Dokument vom Träger` eingeschaltet hat, bekommt dazu eine Nachricht aufs Handy. Gilt der Vertrag bei der Annahme, ist sein Status `Aktiv`. Sonst wird er `Versendet`: Der Versand ist beauftragt. Ob die Mail gesendet wurde, siehst du unter `Versand`.",
       notes: [
-        "Ein importierter Vertrag beginnt frühestens mit dem Schuljahr seines Moduls. Er endet auch mit diesem Schuljahr, wenn das Modul ein Ende hat und die Datei kein früheres nennt. Lief der Vertrag schon vorher, steht der frühere Tag unter `Abgeschlossen`. Der Vertrag ist mit keinem Kind aus den `Kinderdaten` der Schule verknüpft: moto gleicht Kinder nicht über den Namen ab. Unter `Versionen` steht bei ihm `Aus einer Datei importiert`.",
+        "Ein importierter Vertrag beginnt frühestens mit dem Schuljahr seines Moduls. Er endet auch mit diesem Schuljahr, wenn das Modul ein Ende hat und die Datei kein früheres nennt. Lief der Vertrag schon vorher, steht der frühere Tag unter `Abgeschlossen`. Der Vertrag ist mit keinem Kind aus den `Kinderdaten` der Schule verknüpft: moto gleicht Kinder nicht über den Namen ab. Im Reiter `Versionen` steht bei ihm `Aus einer Datei importiert`.",
         "Die Suche und die Filter gelten für alle Verträge. Mit `Weitere Verträge laden` zeigst du ältere Treffer an.",
         "Beim ersten Senden hält moto das PDF fest. Änderst du danach Bedingungen oder Brieftext, bleibt der versendete Vertrag gleich.",
-        "Unter `Versand` siehst du, ob die Mail gesendet wurde. Mit `Versand aktualisieren` prüfst du den neuen Stand. Mit `Erneut senden` geht dasselbe PDF noch einmal an die Eltern; moto fragt vorher. Bei einem aktiven Vertrag steht `Erneut senden` im Menü mit den drei Punkten oben rechts. Eine zweite Nachricht aufs Handy gibt es dabei nicht. Nur eine korrigierte Mail-Adresse bekommt eine eigene Nachricht.",
+        "Im Reiter `Unterschrift und Versand` siehst du in der Karte `Versand`, ob die Mail gesendet wurde. Mit `Versand aktualisieren` prüfst du den neuen Stand. Mit `Erneut senden` geht dasselbe PDF noch einmal an die Eltern; moto fragt vorher. Bei einem aktiven Vertrag steht `Erneut senden` im Menü mit den drei Punkten oben rechts. Eine zweite Nachricht aufs Handy gibt es dabei nicht. Nur eine korrigierte Mail-Adresse bekommt eine eigene Nachricht.",
         "Neben jedem Versand steht, was aus der Mail geworden ist: wie bei der Abrechnung. Der Hinweis oben nennt den Grund und den nächsten Schritt. Bei `Verzögert` wartest du. Hat die Schule die Mails gestoppt, kläre das mit der Schule. Bei `Gesperrt` klärt das der moto-Support. Solange das gilt, ist `Erneut senden` aus.",
         "Den Brieftext des Vertrags änderst du unter `Einstellungen` → `Briefkopf und Vorlagen` bei der Vorlage `Vertrag`.",
         "Mit `PDF herunterladen` bekommst du den Vertrag zum Drucken, etwa für Familien ohne Mail.",
@@ -11906,7 +11906,7 @@ export const traegerCareContractsTopic =
         "Ein Kind zeigt `Bedingungen der Module weichen ab`? Das Kind hat mehrere Module gebucht, und deren Vertragsbedingungen sind verschieden. Ein Vertrag hat eine Laufzeit und eine Frist. Gleiche die Bedingungen der Module an.",
         "Eine Endzeit fehlt? Das Modul hat für diesen Tag keine Gehzeit. Die Schule trägt sie beim Angebot ein.",
         "Ein Entwurf ist falsch? Wähle auf seiner Seite oben `Entwurf verwerfen`. Danach erstellst du ihn neu. Einen versendeten Vertrag kannst du nicht verwerfen.",
-        "Der Versand zeigt `Nicht angekommen`? Prüfe die Adresse mit der Schule. Trage auf der Vertragsseite unter `Versand` die `Neue Versandadresse` ein. Wähle `An diese Adresse senden`. Das geht auch bei aktiven Verträgen. Das PDF, der Abschluss, die Vertragspartei und bisherige Versanddaten bleiben gleich. Spätere Wiederholungen nutzen die letzte Versandadresse.",
+        "Der Versand zeigt `Nicht angekommen`? Prüfe die Adresse mit der Schule. Trage auf der Vertragsseite im Reiter `Unterschrift und Versand` unter `Versand` die `Neue Versandadresse` ein. Wähle `An diese Adresse senden`. Das geht auch bei aktiven Verträgen. Das PDF, der Abschluss, die Vertragspartei und bisherige Versanddaten bleiben gleich. Spätere Wiederholungen nutzen die letzte Versandadresse.",
         "Der Name des Vertragspartners fehlt? Ergänze den Briefkopf. Oder verwirf den Entwurf und erstelle ihn mit eingetragenem Vertragspartner neu.",
         "Die Eltern sagen, der Link gilt nicht mehr? Er war schon benutzt oder ist abgelaufen. Wähle `Erneut senden`. Die Eltern bekommen einen neuen Link. Oder sie unterschreiben in der Eltern-App unter `Dokumente`.",
         "Die Karte `Unterschrift` meldet, die Prüfsumme stimmt nicht? Der gespeicherte Nachweis wurde verändert. Melde das dem moto-Team.",
@@ -12148,7 +12148,7 @@ export const traegerCareMonthsTopic =
             "Die Rechnung steht jetzt unter `Ausgeschlossen`. Sie zählt nicht zur Summe und bekommt bei der Freigabe keine Nummer. Die andere Rechnung des Kindes bleibt im Lauf.",
             "Mit `Wieder aufnehmen` nimmst du genau diese Rechnung zurück in den Lauf.",
             "Sind alle Rechnungen ausgeschlossen, wähle trotzdem `Lauf freigeben`. Der Lauf schließt ohne Rechnungen und gibt die Schulen wieder frei. Die Gründe bleiben im Verlauf. Ein neuer Lauf kann diese Kinder abrechnen.",
-            "Das Rechnungsdatum änderst du bei `Rechnungsdatum` mit `Ändern`.",
+            "Das Rechnungsdatum änderst du bei `Rechnungsdatum` mit `Bearbeiten`.",
           ],
         },
         {
@@ -12345,7 +12345,7 @@ export const traegerCareNoticesTopic =
             "Die Jahresläufe, die Bescheide eines Laufs und den Versand lädst du als Datei herunter.",
           steps: [
             "Wähle `Abrechnungsläufe` und dann den Reiter `Jahresbescheide`. Für die Bescheide öffnest du einen Jahreslauf, für den Versand dort `An Familien senden`.",
-            "Bei den Jahresläufen wählst du oben rechts das Menü mit den drei Punkten, sonst den Knopf `Herunterladen`. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
+            "In der Liste der Jahresläufe, im Jahreslauf und im Versand wählst du oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Bescheide und der Versand enthalten personenbezogene Daten. Jeder Download wird protokolliert.",
           ],
         },
@@ -14673,7 +14673,7 @@ export const traegerSepaDebitFileTopic =
             "Für Raten aus dem Jahresbescheid gibt es eine Datei je Monat.",
           steps: [
             "Wähle `Abrechnung`, dann den Reiter `Jahresbescheide`, und öffne den freigegebenen Lauf.",
-            "Wähle oben rechts `Lastschrift der Raten`.",
+            "Wähle oben rechts das Menü mit den drei Punkten und dann `Lastschrift der Raten`.",
             "Wähle bei `Raten fällig im` den Monat.",
             "Lade die Datei herunter und reiche sie ein wie oben.",
           ],

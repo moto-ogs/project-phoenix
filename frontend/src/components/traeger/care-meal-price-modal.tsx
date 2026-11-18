@@ -166,7 +166,7 @@ export function CareMealPriceModal({
           <p className="text-sm text-gray-600">{MODE_HINTS[mode]}</p>
         </div>
         <Input
-          controlSize="touch"
+          controlSize="compact"
           id="care-meal-amount"
           name="amount_cents"
           label={
