@@ -83,7 +83,7 @@ export function defaultGranularity(windowDays: number): UtilizationGranularity {
 }
 
 /** Tage von `from` bis `to`, negativ rückwärts. */
-export function daysBetween(from: string, to: string): number {
+function daysBetween(from: string, to: string): number {
   return Math.round(
     (parseISODate(to).getTime() - parseISODate(from).getTime()) / 86_400_000,
   );
