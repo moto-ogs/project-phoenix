@@ -21,7 +21,8 @@ const TRAEGER_DIR = path.join(SRC_DIR, "app", "traeger");
 
 /**
  * Listen und Berichte mit Download. „page“: Die Seite selbst nutzt
- * `TraegerListExportMenu` oder `TRAEGER_LIST_FORMAT_OPTIONS`. Sonst nennt der
+ * `TraegerListExportMenu`, `useTraegerListExportItems` oder
+ * `TRAEGER_LIST_FORMAT_OPTIONS`. Sonst nennt der
  * Wert die Komponente unter `src/`, die den Download der Liste trägt.
  */
 const LIST_EXPORTS: Readonly<Record<string, string>> = {
@@ -140,10 +141,14 @@ const pages = collectPages(TRAEGER_DIR).map((file) => {
   return { route: `/${route}`, source: readFileSync(file, "utf8") };
 });
 
-/** The shared menu or its format entries: PDF, Excel and CSV. */
+/**
+ * The shared menu, its page-menu entries (`useTraegerListExportItems`, #7403)
+ * or its format entries: PDF, Excel and CSV.
+ */
 function offersEveryFormat(source: string): boolean {
   return (
     source.includes("<TraegerListExportMenu") ||
+    source.includes("useTraegerListExportItems(") ||
     source.includes("TRAEGER_LIST_FORMAT_OPTIONS") ||
     /exportFormatOptions\(\[\s*"pdf",\s*"xlsx",\s*"csv",?\s*\]\)/.test(source)
   );

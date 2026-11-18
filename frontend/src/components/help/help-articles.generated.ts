@@ -14901,7 +14901,7 @@ export const traegerSharedDocumentsTopic =
           description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
           steps: [
             "Wähle in der Navigation `Dokumente`.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Datei enthält alle Dokumente und für wen sie freigegeben sind.",
           ],
         },
@@ -14936,7 +14936,7 @@ export const traegerSharedDocumentsTopic =
         "Auch nach dem Löschen bleibt im Nachweis, wer das Dokument wann freigegeben, geöffnet und gelöscht hat.",
       ],
       differences: [
-        "Du siehst `Dokument hochladen`, `Freigeben` und das Menü zum Löschen nicht? Dir fehlt die Rolle `Dokumente`. Du kannst die Dokumente nur ansehen und herunterladen. Die Rolle gibt dir eine Person mit der Rolle `Leitung` unter `Einstellungen` bei `Mitglieder und Rollen`.",
+        "Du siehst `Dokument hochladen`, `Freigeben` und `Dokument löschen` nicht? Dir fehlt die Rolle `Dokumente`. Du kannst die Dokumente nur ansehen und herunterladen. Die Rolle gibt dir eine Person mit der Rolle `Leitung` unter `Einstellungen` bei `Mitglieder und Rollen`.",
       ],
       troubleshootingDetails: [
         "moto nimmt die Datei nicht an? Prüfe Art und Größe. Eine umbenannte Datei erkennt moto am Inhalt.",
@@ -15246,7 +15246,7 @@ export const traegerStaffProofsTopic =
           steps: [
             "Wähle in der Navigation `Personalnachweise`.",
             "Im Reiter `Ablaufliste` siehst du alle offenen Nachweise. Das Dringendste steht oben.",
-            "Wähle oben rechts `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Nachweise.",
+            "Öffne rechts neben der Suche das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Nachweise.",
           ],
         },
         {
