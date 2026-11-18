@@ -319,7 +319,7 @@ export function useTimetableActions(
   const syncRoster = useCallback(async () => {
     const instanceId = activeTimetableInstanceIdRef.current;
     try {
-      await mutateRoster();
+      await Promise.all([mutateRoster(), mutateDashboard()]);
     } catch (err) {
       if (activeTimetableInstanceIdRef.current !== instanceId) return;
       logger.warn("timetable_roster_sync_retry_failed", {
@@ -327,7 +327,12 @@ export function useTimetableActions(
       });
       showRosterSyncError(err);
     }
-  }, [activeTimetableInstanceIdRef, mutateRoster, showRosterSyncError]);
+  }, [
+    activeTimetableInstanceIdRef,
+    mutateDashboard,
+    mutateRoster,
+    showRosterSyncError,
+  ]);
 
   const handleStartPlannedInstance = useCallback(
     async (instance: PlannedTimetableInstance) => {
@@ -716,12 +721,17 @@ export function useTimetableActions(
         }
         if (activeTimetableInstanceIdRef.current !== instanceId) return;
         if (notices.length > 0) setMoveNotice(notices.join(" "));
-        if (nextRoster) {
-          await mutateRoster(nextRoster, { revalidate: false });
-        } else {
-          await mutateRoster();
+        try {
+          if (nextRoster) {
+            await mutateRoster(nextRoster, { revalidate: false });
+          } else {
+            await mutateRoster();
+          }
+          await mutateDashboard();
+        } catch (err) {
+          if (activeTimetableInstanceIdRef.current !== instanceId) return;
+          showRosterSyncError(err);
         }
-        await mutateDashboard();
         if (activeTimetableInstanceIdRef.current !== instanceId) return;
       } catch (err) {
         if (activeTimetableInstanceIdRef.current !== instanceId) return;
@@ -746,6 +756,7 @@ export function useTimetableActions(
       mutateRoster,
       reloadAfterDenial,
       showActionError,
+      showRosterSyncError,
     ],
   );
 
@@ -765,7 +776,12 @@ export function useTimetableActions(
         if (activeTimetableInstanceIdRef.current !== instanceId) return false;
         setMoveNotice(moveNoticeFromRoster(rosterResult, studentId));
         setAddStudentSearch("");
-        await mutateRoster(rosterResult, { revalidate: false });
+        try {
+          await mutateRoster(rosterResult, { revalidate: false });
+        } catch (err) {
+          if (activeTimetableInstanceIdRef.current !== instanceId) return true;
+          showRosterSyncError(err);
+        }
         return true;
       } catch (err) {
         if (activeTimetableInstanceIdRef.current !== instanceId) return false;
@@ -789,6 +805,7 @@ export function useTimetableActions(
       mutateRoster,
       reloadAfterDenial,
       showAddStudentError,
+      showRosterSyncError,
     ],
   );
 
@@ -808,7 +825,12 @@ export function useTimetableActions(
           studentIds,
         );
         if (activeTimetableInstanceIdRef.current !== instanceId) return false;
-        await mutateRoster(rosterResult, { revalidate: false });
+        try {
+          await mutateRoster(rosterResult, { revalidate: false });
+        } catch (err) {
+          if (activeTimetableInstanceIdRef.current !== instanceId) return true;
+          showRosterSyncError(err);
+        }
         return true;
       } catch (err) {
         for (const studentId of studentIds) {
@@ -834,6 +856,7 @@ export function useTimetableActions(
       mutateRoster,
       reloadAfterDenial,
       showAddStudentError,
+      showRosterSyncError,
     ],
   );
 
