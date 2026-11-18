@@ -3,23 +3,54 @@ import { z } from "zod";
 import {
   calendarDate,
   instant,
+  int64String,
   object,
+  openEnum,
   requestBody,
   safeInt,
   success,
+  type OpenEnum,
 } from "./runtime";
+
+export const BILLING_KEY_DAY_SCOPE_VALUES = ["organization", "school"] as const;
+export type BillingKeyDayScope = (typeof BILLING_KEY_DAY_SCOPE_VALUES)[number];
+
+/** Go: operator.billingKeyDayOverrideResponse */
+export interface billingKeyDayOverrideResponse {
+  scope: OpenEnum<BillingKeyDayScope>;
+  id: string;
+  organization_id: string;
+  name: string;
+  organization_name: string;
+  key_day: number;
+  next_key_date: string;
+  updated_at: string;
+}
+
+export const billingKeyDayOverrideResponseSchema: z.ZodType<billingKeyDayOverrideResponse, unknown> = object<billingKeyDayOverrideResponse>({
+  scope: openEnum<BillingKeyDayScope>(),
+  id: int64String,
+  organization_id: int64String,
+  name: z.string(),
+  organization_name: z.string(),
+  key_day: safeInt,
+  next_key_date: calendarDate,
+  updated_at: instant,
+});
 
 /** Go: operator.billingKeyDayResponse */
 export interface billingKeyDayResponse {
   key_day: number;
   next_key_date: string;
   updated_at: string;
+  overrides: billingKeyDayOverrideResponse[] | null;
 }
 
 export const billingKeyDayResponseSchema: z.ZodType<billingKeyDayResponse, unknown> = object<billingKeyDayResponse>({
   key_day: safeInt,
   next_key_date: calendarDate,
   updated_at: instant,
+  overrides: z.array(billingKeyDayOverrideResponseSchema).nullable(),
 });
 
 /** Go: operator.updateBillingKeyDayRequest */
@@ -28,6 +59,18 @@ export interface updateBillingKeyDayRequest {
 }
 
 export const routes = {
+  "DELETE /operator/billing/key-day-overrides/organizations/{organizationId}": {
+    method: "DELETE",
+    pattern: "/operator/billing/key-day-overrides/organizations/{organizationId}",
+    portals: ["platform"],
+    response: success(billingKeyDayResponseSchema),
+  },
+  "DELETE /operator/billing/key-day-overrides/schools/{schoolId}": {
+    method: "DELETE",
+    pattern: "/operator/billing/key-day-overrides/schools/{schoolId}",
+    portals: ["platform"],
+    response: success(billingKeyDayResponseSchema),
+  },
   "GET /operator/billing/key-day": {
     method: "GET",
     pattern: "/operator/billing/key-day",
@@ -37,6 +80,20 @@ export const routes = {
   "PUT /operator/billing/key-day": {
     method: "PUT",
     pattern: "/operator/billing/key-day",
+    portals: ["platform"],
+    request: requestBody<updateBillingKeyDayRequest>(),
+    response: success(billingKeyDayResponseSchema),
+  },
+  "PUT /operator/billing/key-day-overrides/organizations/{organizationId}": {
+    method: "PUT",
+    pattern: "/operator/billing/key-day-overrides/organizations/{organizationId}",
+    portals: ["platform"],
+    request: requestBody<updateBillingKeyDayRequest>(),
+    response: success(billingKeyDayResponseSchema),
+  },
+  "PUT /operator/billing/key-day-overrides/schools/{schoolId}": {
+    method: "PUT",
+    pattern: "/operator/billing/key-day-overrides/schools/{schoolId}",
     portals: ["platform"],
     request: requestBody<updateBillingKeyDayRequest>(),
     response: success(billingKeyDayResponseSchema),

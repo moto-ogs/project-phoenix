@@ -128,13 +128,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (rs *BillingResource) UpdateKeyDay(w http.ResponseWriter, r *http.Request) {\n\treq := \u0026updateBillingKeyDayRequest{}\n\tif err := render.Bind(r, req); err != nil {\n\t\tcommon.RenderError(w, r, common.OperatorInvalidRequest(err))\n\t\treturn\n\t}\n\toperatorID := int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)\n\tkeyDay, err := rs.service.SetBillingKeyDay(r.Context(), *req.KeyDay, operatorID)\n\tif err != nil {\n\t\tcommon.RenderError(w, r, rs.billingError(r, err))\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusOK, toBillingKeyDayResponse(keyDay), \"Billing key day updated successfully\")\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/organizationtenancy/inbound/operator/BillingResource.UpdateKeyDay",
-      "owner": "modules/organizationtenancy"
-    },
-    {
-      "build": "production",
       "evidence": "func (rs *ProvisioningResource) DeleteDevice(w http.ResponseWriter, r *http.Request) {\n\tdeviceID, ok := common.ParseInt64IDWithError(w, r, \"id\", invalidDeviceIDMessage)\n\tif !ok {\n\t\treturn\n\t}\n\toperatorID := int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)\n\terr := rs.service.DeleteDevice(r.Context(), deviceID, operatorID, common.ParseClientIP(r))\n\tif err != nil {\n\t\tcommon.RenderError(w, r, ProvisioningErrorRenderer(err))\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusOK, nil, \"Device deleted successfully\")\n}",
       "form": "unclassified-evidence",
       "id": "modules/organizationtenancy/inbound/operator/ProvisioningResource.DeleteDevice",

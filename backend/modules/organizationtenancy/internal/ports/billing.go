@@ -19,13 +19,20 @@ type BillingStore interface {
 	UseReadCommitted(context.Context) error
 	BillingSettings(context.Context) (domain.BillingSettings, error)
 	UpdateBillingKeyDay(ctx context.Context, keyDay int, operatorID int64) (domain.BillingSettings, error)
-	// SchoolsMissingBillingPeriod lists the non-deleted schools that existed
-	// on keyDate and have no captured row for its month yet.
-	SchoolsMissingBillingPeriod(ctx context.Context, keyDate string) ([]domain.BillingSchool, error)
+	// SchoolsMissingBillingPeriod lists the non-deleted schools created by
+	// the end of the month that starts on period (YYYY-MM-01) and have no
+	// captured row for it yet, with the levels of their key day (#7301).
+	SchoolsMissingBillingPeriod(ctx context.Context, period string) ([]domain.BillingSchool, error)
 	// InsertBillingKeyDateCounts writes the rows and skips a school whose
 	// month is already captured. It returns the number of rows written.
 	InsertBillingKeyDateCounts(ctx context.Context, counts []domain.BillingKeyDateCount) (int, error)
 	ListBillingKeyDateCounts(context.Context) ([]domain.BillingKeyDateCount, error)
+	// ListBillingKeyDayOverrides lists every live Träger and school with an
+	// own key day (#7301).
+	ListBillingKeyDayOverrides(context.Context) ([]domain.BillingKeyDayOverride, error)
+	// SetBillingKeyDayOverride sets (day not nil) or resets (day nil) the own
+	// key day of a Träger or school and reports whether it is live.
+	SetBillingKeyDayOverride(ctx context.Context, target domain.BillingKeyDayTarget, day *int, operatorID int64) (bool, error)
 }
 
 // BillingCounts are the live figures of every school, each answered by its

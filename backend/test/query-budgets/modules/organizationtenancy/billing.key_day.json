@@ -1,0 +1,6 @@
+{
+  "scenario": "modules.organizationtenancy.billing.key_day",
+  "max": 2,
+  "exact": true,
+  "description": "modules — the key day of the operator billing report (#2791),\norganizationtenancy BillingReport.BillingKeyDay: the setting of every school\nand one read of the own key days of Träger and schools with their names\n(#7301). Flat in the number of overrides."
+}

@@ -81,7 +81,68 @@ describe("operator billing api", () => {
       keyDay: 10,
       nextKeyDate: "2026-10-10",
       updatedAt: "2026-09-22T10:00:00Z",
+      overrides: [],
     });
+  });
+
+  it("sets a school's own key day with PUT and resets a Träger's with DELETE (#7301)", async () => {
+    const override = {
+      scope: "school",
+      id: "9007199254740993",
+      organization_id: "4",
+      name: "OGS Am Bach",
+      organization_name: "Träger Nord",
+      key_day: 5,
+      next_key_date: "2026-12-05",
+      updated_at: "2026-11-10T09:00:00Z",
+    };
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        key_day: 15,
+        next_key_date: "2026-11-15",
+        updated_at: "2026-11-01T08:00:00Z",
+        overrides: [override],
+      }),
+    );
+    const updated = await operatorBillingService.setKeyDayOverride(
+      "school",
+      "9007199254740993",
+      5,
+    );
+    expect(updated.overrides).toEqual([
+      {
+        scope: "school",
+        id: "9007199254740993",
+        organizationId: "4",
+        name: "OGS Am Bach",
+        organizationName: "Träger Nord",
+        keyDay: 5,
+        nextKeyDate: "2026-12-05",
+        updatedAt: "2026-11-10T09:00:00Z",
+      },
+    ]);
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/operator/billing/key-day-overrides/schools/9007199254740993",
+      expect.objectContaining({ method: "PUT", body: '{"key_day":5}' }),
+    );
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        key_day: 15,
+        next_key_date: "2026-11-15",
+        updated_at: "2026-11-01T08:00:00Z",
+        overrides: null,
+      }),
+    );
+    const reset = await operatorBillingService.resetKeyDayOverride(
+      "organization",
+      "4",
+    );
+    expect(reset.overrides).toEqual([]);
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/operator/billing/key-day-overrides/organizations/4",
+      expect.objectContaining({ method: "DELETE" }),
+    );
   });
 
   it("treats a missing list as no captured months", async () => {

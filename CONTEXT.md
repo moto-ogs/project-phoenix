@@ -1043,11 +1043,15 @@ _Vermeiden_: „Kind ohne OGS-Platz" für einen Eintrag ohne Datensatz.
 
 Die **Stichtagszahl** ist die Zahl, nach der moto einer Schule im Monat
 berechnet wird: die **aktiv verwalteten Kinder** und die **aktiven Terminals**
-am **Stichtag**. Der Stichtag ist ein Tag im Monat (1. bis 28.), einer für alle
-Schulen; der Betreiber legt ihn fest. Die Zahl wird am Stichtag ab 6 Uhr
+am **Stichtag**. Der Stichtag ist ein Tag im Monat (1. bis 28.). Der
+Betreiber legt einen Standard für alle Schulen fest und kann einem Träger oder
+einer Schule einen **eigenen Stichtag** geben, wenn ihr Vertrag einen anderen
+Tag nennt; der Tag der Schule geht dem ihres Trägers vor (#7301). Die Zahl wird am Stichtag ab 6 Uhr
 einmal festgehalten und danach nie geändert, auch wenn sich Kinder oder Geräte
 später ändern. Lief die Erfassung am Stichtag nicht, holt sie sie im selben
-Monat nach und nennt den tatsächlichen Zeitpunkt. Nur der Betreiber sieht die
+Monat nach und nennt den tatsächlichen Zeitpunkt. Ein geänderter Stichtag gilt
+nie rückwirkend: Ist der neue Tag im laufenden Monat schon erreicht, bekommt eine
+Schule ohne Zahlen für diesen Monat keine mehr. Nur der Betreiber sieht die
 Zahlen; Träger-Büro und Schule sehen sie nicht (#7301). Die eigenen Stichtage
 des Trägers (Stichtagsbericht) zählen Kinder nach derselben Regel, sind aber
 keine Stichtagszahl.

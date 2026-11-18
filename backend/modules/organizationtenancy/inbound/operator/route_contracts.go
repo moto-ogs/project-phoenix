@@ -7,10 +7,20 @@ import "github.com/moto-ogs/project-phoenix/api/common"
 func BillingRouteContracts() []common.RouteContract {
 	operator := []common.PortalScope{common.PortalOperator}
 	return []common.RouteContract{
-		{Method: "GET", Pattern: "/key-day", Portals: operator, Response: billingKeyDayResponse{}},
-		{Method: "PUT", Pattern: "/key-day", Portals: operator, Request: updateBillingKeyDayRequest{}, Response: billingKeyDayResponse{}},
+		{Method: "GET", Pattern: "/key-day", Portals: operator, Response: billingKeyDayResponse{}, Enums: overrideScopes},
+		{Method: "PUT", Pattern: "/key-day", Portals: operator, Request: updateBillingKeyDayRequest{}, Response: billingKeyDayResponse{}, Enums: overrideScopes},
+		{Method: "PUT", Pattern: "/key-day-overrides/organizations/{organizationId}", Portals: operator, Request: updateBillingKeyDayRequest{}, Response: billingKeyDayResponse{}, Enums: overrideScopes},
+		{Method: "DELETE", Pattern: "/key-day-overrides/organizations/{organizationId}", Portals: operator, Response: billingKeyDayResponse{}, Enums: overrideScopes},
+		{Method: "PUT", Pattern: "/key-day-overrides/schools/{schoolId}", Portals: operator, Request: updateBillingKeyDayRequest{}, Response: billingKeyDayResponse{}, Enums: overrideScopes},
+		{Method: "DELETE", Pattern: "/key-day-overrides/schools/{schoolId}", Portals: operator, Response: billingKeyDayResponse{}, Enums: overrideScopes},
 	}
 }
+
+// overrideScopes closes the scope of an own key day (#7301).
+var overrideScopes = []common.EnumContract{{
+	Name: "BillingKeyDayScope", Fields: []string{"billingKeyDayOverrideResponse.scope"},
+	Values: []string{BillingKeyDayScopeOrganization, BillingKeyDayScopeSchool},
+}}
 
 // DeviceRouteContracts types the operator's device block routes
 // (Gerätesperre, #2317), which answer without data, and the device history

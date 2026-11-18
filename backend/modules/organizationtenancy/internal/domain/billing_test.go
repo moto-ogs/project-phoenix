@@ -72,3 +72,38 @@ func TestBillingPeriod(t *testing.T) {
 		assert.Empty(t, BillingPeriod(invalid), invalid)
 	}
 }
+
+func TestEffectiveBillingKeyDay(t *testing.T) {
+	t.Parallel()
+	five, twenty := 5, 20
+	settings := BillingSettings{KeyDay: 15, UpdatedAt: local(2026, time.January, 1, 9, 0)}
+	traeger := BillingKeyDayLevel{Present: true, Day: &five, UpdatedAt: local(2026, time.March, 1, 9, 0)}
+	school := BillingKeyDayLevel{Present: true, Day: &twenty, UpdatedAt: local(2026, time.February, 1, 9, 0)}
+	reset := BillingKeyDayLevel{Present: true, UpdatedAt: local(2026, time.April, 1, 9, 0)}
+
+	cases := []struct {
+		name        string
+		school, org BillingKeyDayLevel
+		day         int
+		changedAt   time.Time
+	}{
+		{"no override: the standard", BillingKeyDayLevel{}, BillingKeyDayLevel{}, 15, settings.UpdatedAt},
+		{"the Träger's day", BillingKeyDayLevel{}, traeger, 5, traeger.UpdatedAt},
+		{"the school's day wins and ignores later Träger changes", school, traeger, 20, school.UpdatedAt},
+		{"a reset school follows its Träger from the later change", reset, traeger, 5, reset.UpdatedAt},
+		{"a reset Träger follows the standard from its reset", BillingKeyDayLevel{}, reset, 15, reset.UpdatedAt},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			day, changedAt := EffectiveBillingKeyDay(settings, tc.school, tc.org)
+			assert.Equal(t, tc.day, day)
+			assert.Equal(t, tc.changedAt, changedAt)
+		})
+	}
+}
+
+func TestBillingPeriodOf(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, "2026-11-01", BillingPeriodOf(local(2026, time.November, 18, 9, 0)))
+}
