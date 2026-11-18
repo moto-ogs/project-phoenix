@@ -268,7 +268,7 @@ function DebtorNumberField({
             name="debtor_number"
             label="Debitorennummer"
             autoComplete="off"
-            controlSize="compact"
+            controlSize="touch"
             inputMode={format.digitsOnly ? "numeric" : undefined}
             maxLength={DEBTOR_NUMBER_MAX_LENGTH}
             value={value}
@@ -807,7 +807,7 @@ function useHolidayRegistrationStatus({
         size="md"
         isLoading={running === "confirm"}
         loadingText="Bestätigt …"
-        disabled={confirmBlocked}
+        disabled={cardShown && confirmBlocked}
         tooltip={
           cardShown
             ? "Bestätigt die Anmeldung und schickt den Eltern sofort die Zusage per E-Mail."
@@ -927,7 +927,7 @@ function useHolidayRegistrationStatus({
                   name="debtor_number"
                   label="Debitorennummer"
                   autoComplete="off"
-                  controlSize="compact"
+                  controlSize="touch"
                   inputMode={
                     debtorNumberFormat.digitsOnly ? "numeric" : undefined
                   }

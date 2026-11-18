@@ -120,7 +120,7 @@ export function ChildDebtorNumberInputs({
             label={childName(child)}
             required={required}
             autoComplete="off"
-            controlSize="compact"
+            controlSize="touch"
             inputMode={format.digitsOnly ? "numeric" : undefined}
             maxLength={DEBTOR_NUMBER_MAX_LENGTH}
             value={values[child.childId] ?? ""}
