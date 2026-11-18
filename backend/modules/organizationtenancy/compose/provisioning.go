@@ -96,7 +96,7 @@ func NewProvisioning(dependencies ProvisioningDependencies, dashboard organizati
 	if err != nil {
 		return organizationtenancy.OperatorProvisioning{}, err
 	}
-	return organizationtenancy.OperatorProvisioning{Provisioning: provisioning, ErasureOrderRecords: provisioning, RequiredDetails: provisioning}, nil
+	return organizationtenancy.OperatorProvisioning{Provisioning: provisioning, ErasureOrderRecords: provisioning, RequiredDetails: provisioning, DeviceBlocking: provisioning, DeviceHistory: provisioning}, nil
 }
 
 // BelegRetentionAudit answers the operator audit of the Beleg retention

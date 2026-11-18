@@ -39,6 +39,7 @@ import { TenantPage } from "~/components/ui/tenant-page";
 import { AccountsTable } from "~/components/operator/accounts-table";
 import { DevicesTable } from "~/components/operator/devices-table";
 import { DeleteDeviceModal } from "~/components/operator/delete-device-modal";
+import { useDeviceBlocking } from "~/components/operator/use-device-blocking";
 import { TransferDeviceModal } from "~/components/operator/transfer-device-modal";
 import { DeletePersonModal } from "~/components/operator/delete-person-modal";
 import { PersonsTable } from "~/components/operator/persons-table";
@@ -428,6 +429,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
   const devicesAfterWrite = useRefreshAfterWrite("die Anzeige der Geräte", () =>
     Promise.all([mutateSchoolDevices(), refreshSchoolDetail()]),
   );
+  const setDeviceBlocked = useDeviceBlocking(devicesAfterWrite.refresh);
   const personsAfterWrite = useRefreshAfterWrite(
     "die Anzeige der Personen",
     () => Promise.all([mutateSchoolPersons(), refreshSchoolDetail()]),
@@ -1006,6 +1008,9 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
               isLoading={devicesLoading}
               onSetKey={setSetKeyDevice}
               onTransfer={setTransferDevice}
+              onSetBlocked={(device, blocked) =>
+                void setDeviceBlocked(device, blocked)
+              }
               onDelete={setDeleteDevice}
             />
           )}

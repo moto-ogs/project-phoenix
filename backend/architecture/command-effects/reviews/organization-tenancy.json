@@ -643,6 +643,16 @@
       "target_owner": "device-fleet"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningDevices.ListDeviceLifecycle",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.ProvisioningDevices.ListDeviceLifecycle",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/devicefleet.LifecycleHistory.ListLifecycleEvents reads one device's history in the operator's administrative unit (#2321). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet.LifecycleHistory.ListLifecycleEvents",
+      "target_owner": "device-fleet"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningDevices.ListDevicesByTenant",
       "classification": "query",
       "effect": "query",
@@ -650,6 +660,27 @@
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/devicefleet.Capability.ListDevicesByTenant; modules/devicefleet.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
       "source_owner": "organization-tenancy",
       "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet.Capability.ListDevicesByTenant",
+      "target_owner": "device-fleet"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningDevices.RecordDeviceLifecycle",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.ProvisioningDevices.RecordDeviceLifecycle",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/devicefleet.LifecycleChanges builds the before/after values of a history entry (#2321). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet.LifecycleChanges",
+      "target_owner": "device-fleet"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningDevices.RecordDeviceLifecycle",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.ProvisioningDevices.RecordDeviceLifecycle",
+      "reason": "ADR 0067 participating leaf command. Target modules/devicefleet.LifecycleHistory.RecordLifecycleEvent appends one row to Device Fleet's own audit.device_lifecycle_events (#2321) inside the caller's administrative unit, after the device write it describes and under that device's row lock; it reads only the device row it names, takes no further lock and starts no transaction. A failed append fails the operator command, so device change and history entry commit together.",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet.LifecycleHistory.RecordLifecycleEvent",
       "target_owner": "device-fleet"
     },
     {

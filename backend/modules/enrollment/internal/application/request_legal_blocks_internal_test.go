@@ -46,7 +46,8 @@ func TestBuildTemplateLegalBlocks_FiltersDisabledAndKeepsCustomKeys(t *testing.T
 
 	require.Len(t, blocks, 2)
 	assert.Equal(t, enrollmentNative.ConsentKeyDataProcessing, blocks[0].Key)
-	assert.True(t, blocks[0].Required)
+	// A privacy notice saved with a checkbox before #2787 renders without one.
+	assert.False(t, blocks[0].Required)
 	assert.Equal(t, "custom_pool", blocks[1].Key)
 	assert.False(t, blocks[1].Required)
 }
@@ -90,7 +91,8 @@ func TestResolveRequiredConsents_UsesTemplateLegalBlocks(t *testing.T) {
 	blocks, err := svc.resolveSubmissionLegalBlocks(context.Background(), schema)
 
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{enrollmentNative.ConsentKeyDataProcessing, "custom_pool"}, requiredConsentKeys(blocks))
+	// The privacy notice is provided, not confirmed (#2787).
+	assert.ElementsMatch(t, []string{"custom_pool"}, requiredConsentKeys(blocks))
 }
 
 func TestBuildLegalBlocks_RequiresEnabledTogglesForEveryStandardBlock(t *testing.T) {
@@ -199,7 +201,7 @@ func TestResolveRequiredConsents_AllDisabledTemplateFallsBackToSettings(t *testi
 
 	// A template whose blocks are ALL disabled must behave like a template
 	// without blocks: the tenant-wide settings contract stays in force, so
-	// the DSGVO acknowledgment cannot be erased by an empty snapshot.
+	// the Datenschutzinformation cannot be erased by an empty snapshot.
 	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{legal: LegalSettings{
 		DSGVO:        "DSGVO Text",
 		DSGVOEnabled: true,
@@ -219,7 +221,9 @@ func TestResolveRequiredConsents_AllDisabledTemplateFallsBackToSettings(t *testi
 	blocks, err := svc.resolveSubmissionLegalBlocks(context.Background(), schema)
 
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{enrollmentNative.ConsentKeyDataProcessing}, requiredConsentKeys(blocks))
+	require.Len(t, blocks, 1)
+	assert.Equal(t, enrollmentNative.ConsentKeyDataProcessing, blocks[0].Key)
+	assert.Equal(t, "DSGVO Text", blocks[0].Text)
 }
 
 func TestBuildTemplateLegalBlocks_SortsBySortOrder(t *testing.T) {

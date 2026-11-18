@@ -45,11 +45,15 @@ func setupGroupFixture(t *testing.T) groupFixture {
 	t.Helper()
 	db, module, setSetting := setupStaffMessagingModule(t)
 	resource := staffmessaging.NewResource(module.StaffMessaging)
+	// Both routers sit under their production prefix, so an answer names
+	// the portal's own route.
 	schoolRouter := chi.NewRouter()
-	schoolRouter.Mount("/staff-messages", resource.SchoolRouter(rootAPI.ProtectedSchoolRoutes))
+	schoolRouter.Mount("/school/staff-messages", resource.SchoolRouter(rootAPI.ProtectedSchoolRoutes))
+	tenantRouter := chi.NewRouter()
+	tenantRouter.Mount("/api/staff-messages", resource.Router(rootAPI.ProtectedTenantRoutes))
 	tenantID, _ := testpkg.CreateTestTenant(t, db)
 	require.NoError(t, setSetting(testpkg.TenantContext(tenantID), settings.KeyStaffMessagingEnabled, true))
-	return groupFixture{db: db, tenantRouter: resource.Router(rootAPI.ProtectedTenantRoutes), schoolRouter: schoolRouter, tenantID: tenantID}
+	return groupFixture{db: db, tenantRouter: tenantRouter, schoolRouter: schoolRouter, tenantID: tenantID}
 }
 
 // person creates a colleague of the fixture school. kind is "staff",
@@ -85,11 +89,11 @@ func assignAdminRole(t *testing.T, db *bun.DB, accountID, tenantID int64) {
 
 func (f groupFixture) do(t *testing.T, who groupPerson, method, path, body string) *httptest.ResponseRecorder {
 	t.Helper()
-	router := f.tenantRouter
+	router, prefix := f.tenantRouter, "/api/staff-messages"
 	if who.claims.Scope == tenant.ScopeSchool {
-		router = f.schoolRouter
-		path = "/staff-messages" + path
+		router, prefix = f.schoolRouter, "/school/staff-messages"
 	}
+	path = prefix + path
 	var reader *strings.Reader
 	if body == "" {
 		reader = strings.NewReader("")

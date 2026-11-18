@@ -35,7 +35,7 @@ describe("StudentConsentsReadOnly", () => {
     expect(screen.getByText("Hinterlegt am 20.08.2026")).toBeInTheDocument();
     expect(screen.getByText("Widerrufen am 31.08.2026")).toBeInTheDocument();
     expect(
-      screen.queryByText("Datenschutz zur Kenntnis genommen"),
+      screen.queryByText("Datenschutzinformation erhalten"),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();

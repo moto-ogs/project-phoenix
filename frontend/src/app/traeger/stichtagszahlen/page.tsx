@@ -32,8 +32,8 @@ import {
   selectKeyDateMonth,
 } from "~/components/traeger/key-date-counts-model";
 import {
-  TraegerListExportMenu,
   traegerExportScope,
+  useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerKeyDateCounts } from "~/components/traeger/use-traeger-key-date-counts";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
@@ -132,7 +132,7 @@ function schoolColumns(
             {row.school.name}
           </NavigationLink>
           {row.school.city ? (
-            <span className="block text-xs text-gray-500 max-md:hidden">
+            <span className="block text-sm text-gray-500 max-md:hidden">
               {row.school.city}
             </span>
           ) : null}
@@ -290,7 +290,7 @@ function MonthFigures({
 }>) {
   const missing = schoolCount - month.schools;
   return (
-    <div className="grid grid-cols-2 gap-4 max-sm:gap-3 lg:grid-cols-3">
+    <div className="grid gap-4 max-sm:gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <StatCard
         label="Aktive Kinder"
         value={month.activeStudents ?? EMPTY_VALUE}
@@ -315,19 +315,17 @@ function MonthFigures({
         icon={<MotoConceptIcon concept={devicesConcept} />}
         tone="neutral"
       />
-      <div className="col-span-2 lg:col-span-1">
-        <StatCard
-          label="Schulen mit Zahlen"
-          value={`${month.schools} von ${schoolCount}`}
-          hint={
-            missing > 0
-              ? `${missing === 1 ? "Eine Schule hat" : `${missing} Schulen haben`} zu diesem Stichtag keine Zahlen.`
-              : "Für jede Schule gibt es Zahlen zu diesem Stichtag."
-          }
-          icon={<MotoConceptIcon concept={schoolsConcept} />}
-          tone="neutral"
-        />
-      </div>
+      <StatCard
+        label="Schulen mit Zahlen"
+        value={`${month.schools} von ${schoolCount}`}
+        hint={
+          missing > 0
+            ? `${missing === 1 ? "Eine Schule hat" : `${missing} Schulen haben`} zu diesem Stichtag keine Zahlen.`
+            : "Für jede Schule gibt es Zahlen zu diesem Stichtag."
+        }
+        icon={<MotoConceptIcon concept={schoolsConcept} />}
+        tone="neutral"
+      />
     </div>
   );
 }
@@ -384,6 +382,19 @@ export default function TraegerKeyDateCountsPage() {
   const older = months[selectedIndex + 1];
   const newer = selectedIndex > 0 ? months[selectedIndex - 1] : undefined;
 
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList(
+        "/api/traeger/schools/key-date-counts/export",
+        format,
+        { school: schoolId },
+      ),
+    scope: traegerExportScope(chosenSchool?.name),
+    fallbackName: "stichtagszahlen",
+    errorObject: "die Stichtagszahlen",
+    unavailable: !counts || months.length === 0,
+  });
+
   return (
     <TenantPage
       title="Stichtagszahlen"
@@ -392,27 +403,12 @@ export default function TraegerKeyDateCountsPage() {
           Nach diesen Zahlen berechnet moto jede Schule im Monat. moto hält sie
           am Stichtag einmal fest. Danach ändern sie sich nicht mehr. Das
           moto-Team sieht in seinem Bericht genau dieselben Zahlen. Ein Klick
-          auf einen Monat unten zeigt seine Zahlen. Mit „Herunterladen“ bekommst
-          du alle Monate als PDF, Excel oder CSV, für alle Schulen oder die
-          gewählte Schule.
+          auf einen Monat unten zeigt seine Zahlen. Im Drei-Punkte-Menü unter
+          „Herunterladen“ bekommst du alle Monate als PDF, Excel oder CSV, für
+          alle Schulen oder die gewählte Schule.
         </>
       }
-      actions={
-        <TraegerListExportMenu
-          download={(format) =>
-            downloadTraegerList(
-              "/api/traeger/schools/key-date-counts/export",
-              format,
-              { school: schoolId },
-            )
-          }
-          scope={traegerExportScope(chosenSchool?.name)}
-          ariaLabel="Stichtagszahlen herunterladen"
-          fallbackName="stichtagszahlen"
-          errorObject="die Stichtagszahlen"
-          unavailable={!counts || months.length === 0}
-        />
-      }
+      overflowMenu={exportItems}
       stats={
         counts ? (
           <TenantPageStats

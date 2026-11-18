@@ -83,7 +83,7 @@ export function defaultGranularity(windowDays: number): UtilizationGranularity {
 }
 
 /** Tage von `from` bis `to`, negativ rückwärts. */
-export function daysBetween(from: string, to: string): number {
+function daysBetween(from: string, to: string): number {
   return Math.round(
     (parseISODate(to).getTime() - parseISODate(from).getTime()) / 86_400_000,
   );
@@ -92,6 +92,28 @@ export function daysBetween(from: string, to: string): number {
 /** Kalendertage von `from` bis `to`, beide mitgezählt. */
 export function windowLength(window: UtilizationWindow): number {
   return daysBetween(window.from, window.to) + 1;
+}
+
+/**
+ * Das Fenster um seine eigene Länge davor (`-1`) oder danach (`1`), für die
+ * Pfeile eines Zeitraums. Es hält seine Länge und bleibt zwischen `min` und
+ * `max`; `null`, wenn es dort schon anstößt.
+ */
+export function shiftWindow(
+  window: UtilizationWindow,
+  direction: -1 | 1,
+  bounds: Readonly<{ min?: string; max: string }>,
+): UtilizationWindow | null {
+  let delta = direction * windowLength(window);
+  delta = Math.min(delta, daysBetween(window.to, bounds.max));
+  if (bounds.min !== undefined) {
+    delta = Math.max(delta, daysBetween(window.from, bounds.min));
+  }
+  if (delta === 0 || Math.sign(delta) !== direction) return null;
+  return {
+    from: shiftDays(window.from, delta),
+    to: shiftDays(window.to, delta),
+  };
 }
 
 export interface UtilizationBucket {

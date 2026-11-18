@@ -55,7 +55,7 @@
     "photoViaCareDescription": "To withdraw photo consent, contact the {careTerm}.",
     "items": {
       "agb": "General terms and conditions",
-      "data_processing": "Privacy information acknowledged",
+      "data_processing": "Privacy information provided",
       "email_contact": "Contact by email allowed",
       "photo": "Photo consent"
     },

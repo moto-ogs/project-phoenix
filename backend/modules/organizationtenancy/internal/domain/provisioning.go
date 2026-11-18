@@ -15,6 +15,8 @@ const (
 	AuditActionDelete       = "delete"
 	AuditActionRotateAPIKey = "rotate_api_key"
 	AuditActionTransfer     = "transfer"
+	AuditActionBlock        = "block"
+	AuditActionUnblock      = "unblock"
 	AuditActionSoftDelete   = "soft_delete"
 	AuditActionRestore      = "restore"
 	AuditActionGrant        = "grant"
@@ -223,6 +225,18 @@ type NewDevice struct {
 	APIKeyHash   *string
 	MaskedAPIKey string
 }
+
+// The lifecycle changes an operator makes to a device (#2321); Device
+// Fleet keeps them in the device's history.
+const (
+	DeviceLifecycleCreated        = "created"
+	DeviceLifecycleBlocked        = "blocked"
+	DeviceLifecycleUnblocked      = "unblocked"
+	DeviceLifecycleKeyRotated     = "key_rotated"
+	DeviceLifecycleRemoved        = "removed"
+	DeviceLifecycleTransferredOut = "transferred_out"
+	DeviceLifecycleTransferredIn  = "transferred_in"
+)
 
 // DeviceSession is the open kiosk session of a device.
 type DeviceSession struct {

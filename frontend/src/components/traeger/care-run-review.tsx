@@ -16,6 +16,7 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
@@ -191,7 +192,7 @@ export function CareExcludedCard({
                 </p>
               ) : null}
             </div>
-            <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
+            <ResponsiveRowActions>
               <Button
                 type="button"
                 variant="surface"
@@ -205,7 +206,7 @@ export function CareExcludedCard({
               >
                 Wieder aufnehmen
               </Button>
-            </div>
+            </ResponsiveRowActions>
           </ResponsiveActionRow>
         ))}
       </ResponsiveActionList>
@@ -381,7 +382,7 @@ function DebitHintsCard({
             {/* The mandate stays one click away also when only the date is
                 too early: the central „Fälligkeiten bearbeiten“ fixes the date,
                 this link checks the family's mandate. */}
-            <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
+            <ResponsiveRowActions>
               <ButtonLink
                 href={traegerPath(item.href)}
                 variant="surface"
@@ -395,7 +396,7 @@ function DebitHintsCard({
               >
                 {mandateAction(item)}
               </ButtonLink>
-            </div>
+            </ResponsiveRowActions>
           </ResponsiveActionRow>
         );
         const openRows = shown.filter((hint) => !isTransfer(hint));

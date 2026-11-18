@@ -71,6 +71,11 @@ export const tenantAdminKeys = {
   activities: () => "database-activities-list",
   /** Every device of the Datenverwaltung (first 500). */
   devices: () => "database-devices-list",
+  /** Prefix of every device history (#2321). */
+  deviceHistoryFamily: "database-device-history-",
+  /** The history of one device (`fetchDeviceHistory`, #2321). */
+  deviceHistory: (id: string) =>
+    `database-device-history-${encodeURIComponent(id)}`,
   /**
    * Every child of the Datenverwaltung with arrival times and pending
    * withdrawals; the SSE hook refreshes every key containing this name.

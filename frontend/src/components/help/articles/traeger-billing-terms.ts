@@ -21,7 +21,7 @@ export function traegerBillingTermsTopic(): HelpTopic {
         steps: [
           "Wähle unten in der Navigation `Einstellungen` und dann `Abrechnungsvorgaben`.",
           "In der Karte `Zahlung und Rechnungen` steht je Leistung eine Zeile: `Monatsbeitrag Betreuung`, `Mittagessen` und `Ferienbetreuung`.",
-          "Wähle die Zeile der Leistung. Oder wähle das Menü mit den drei Punkten und dann `Ändern`.",
+          "Wähle die Zeile der Leistung. Oder wähle das Menü mit den drei Punkten und dann `Bearbeiten`.",
           "Wähle den `Zahlungsweg`: `Überweisung` oder `Lastschrift`.",
           "Trage das `Zahlungsziel in Tagen` ein. Das sind die Tage nach dem Rechnungsdatum.",
           "Beim Mittagessen wählst du bei `Rechnung`: `Auf der Rechnung der Betreuung` oder `Eigene Rechnung`.",

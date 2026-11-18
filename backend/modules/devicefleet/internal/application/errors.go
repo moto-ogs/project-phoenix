@@ -28,6 +28,7 @@ func publicError(err error) error {
 	for _, sentinel := range []error{
 		devicefleet.ErrUnregisteredTagScanNotFound, devicefleet.ErrUnregisteredTagScanResolved,
 		devicefleet.ErrInvalidUnregisteredTagScan, devicefleet.ErrTenantRequired,
+		devicefleet.ErrInvalidLifecycleEvent,
 	} {
 		if errors.Is(err, sentinel) {
 			return sentinel

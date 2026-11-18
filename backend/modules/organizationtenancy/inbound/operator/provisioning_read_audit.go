@@ -45,6 +45,8 @@ func operatorReadTarget(w http.ResponseWriter, r *http.Request, access *organiza
 	case organizationtenancy.ReadUnregisteredTagScans:
 		// POST /{id}/resolve changes one scan; the list route names none.
 		return optionalRouteID(w, r, "id", "invalid scan ID", &access.TagScanID)
+	case organizationtenancy.ReadDeviceHistory:
+		return routeID(w, r, "id", "invalid device ID", &access.DeviceID)
 	default:
 		return true
 	}

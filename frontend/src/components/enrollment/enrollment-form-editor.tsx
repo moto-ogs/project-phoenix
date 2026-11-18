@@ -85,6 +85,7 @@ import {
 } from "~/lib/enrollment-form-schema-api";
 import {
   STANDARD_LEGAL_BLOCKS,
+  asksForHealthInformation,
   draftDocumentURLsInLegalBlocks,
   legalBlocksForTemplate,
   legalBlocksSignature,
@@ -813,6 +814,7 @@ export function EnrollmentFormEditor({
                 <LegalBlocksSection
                   blocks={legalBlocks}
                   standardBlocks={standardLegalBlocks}
+                  asksForHealthInformation={asksForHealthInformation(fields)}
                   onChange={setLegalBlocks}
                   disabled={locked}
                 />

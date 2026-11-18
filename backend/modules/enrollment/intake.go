@@ -206,6 +206,9 @@ type LegalBlock struct {
 	// Translations holds only translations that still match the German
 	// text, without their source (#3377).
 	Translations Translations `json:"translations,omitempty"`
+	// GuardianAgreement: ticking the consent also confirms
+	// GuardianAgreementLabel.
+	GuardianAgreement bool `json:"guardian_agreement,omitempty"`
 }
 
 // EnrolleeAudienceAccess carries a caller's per-audience form-load

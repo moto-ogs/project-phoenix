@@ -26,7 +26,12 @@ import type {
 } from "~/components/ui/page-header/types";
 import { createCrudService } from "@/lib/database/service-factory";
 import { devicesConfig } from "@/components/database/configs/devices.config";
-import { getDeviceTypeDisplayName, type Device } from "@/lib/iot-helpers";
+import {
+  getDeviceTypeDisplayName,
+  isDeviceBlocked,
+  type Device,
+} from "@/lib/iot-helpers";
+import { setDeviceBlocked } from "~/lib/device-blocking-api";
 import { DevicesMasterDetail } from "@/components/devices/devices-master-detail";
 import {
   DeviceRemovalSummary,
@@ -34,13 +39,17 @@ import {
 } from "~/components/devices/device-removal-summary";
 import { DatabaseFormModal } from "~/components/database/database-form-modal";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
-import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import {
+  useApiErrorDisplay,
+  useApiFormError,
+  useToast,
+} from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { BELOW_MD, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useDeleteConfirmation } from "~/hooks/useDeleteConfirmation";
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { ModuleRouteGuard } from "~/components/tenant/module-route-guard";
 import { devicesConcept } from "~/lib/concepts/devices";
@@ -99,6 +108,8 @@ function DevicesPageContent() {
   } = useDeleteConfirmation();
 
   const { success: toastSuccess } = useToast();
+  const { show: showActionError } = useApiErrorDisplay();
+  const [blockPending, setBlockPending] = useState(false);
   // Schreibfehler bleiben im jeweiligen Dialog (#2517).
   const createErrors = useApiFormError();
   const deleteErrors = useApiFormError();
@@ -120,6 +131,14 @@ function DevicesPageContent() {
 
   const service = useMemo(() => createCrudService(devicesConfig), []);
   const tenantMutate = useTenantMutate();
+  const invalidateFamily = useInvalidateFamily();
+  // A write changes the device and adds to its history (#2321).
+  const refreshDevices = useCallback(async () => {
+    await Promise.all([
+      tenantMutate(tenantAdminKeys.devices()),
+      invalidateFamily(tenantAdminKeys.deviceHistoryFamily),
+    ]);
+  }, [tenantMutate, invalidateFamily]);
 
   const {
     data: devicesData,
@@ -146,7 +165,10 @@ function DevicesPageContent() {
   // Statuszeile des Seitenkopfs aus der bereits geladenen Geräteliste.
   const statusLine = useMemo(() => {
     const devices = devicesData ?? [];
-    const online = devices.filter((d) => d.is_online).length;
+    const online = devices.filter(
+      (d) => d.is_online && !isDeviceBlocked(d),
+    ).length;
+    const blocked = devices.filter(isDeviceBlocked).length;
     return (
       <TenantPageStats
         items={[
@@ -155,6 +177,9 @@ function DevicesPageContent() {
             label: devices.length === 1 ? "Gerät" : "Geräte",
           },
           { value: formatCount(online), label: "online" },
+          ...(blocked > 0
+            ? [{ value: formatCount(blocked), label: "gesperrt" }]
+            : []),
         ]}
       />
     );
@@ -292,9 +317,58 @@ function DevicesPageContent() {
       toastSuccess(
         `Das Gerät „${updatedDevice.name ?? updatedDevice.device_id}“ ist gespeichert.`,
       );
-      await tenantMutate(tenantAdminKeys.devices());
+      await refreshDevices();
     },
-    [selectedDevice, service, tenantMutate, toastSuccess],
+    [selectedDevice, service, refreshDevices, toastSuccess],
+  );
+
+  // Gerätesperre (#2317): sofort wirksam und sofort umkehrbar, darum ohne
+  // Rückfrage; der Toast nach dem Sperren bietet „Rückgängig“.
+  const handleSetBlocked = useCallback(
+    async function setBlocked(device: Device, blocked: boolean) {
+      const title = device.name ?? device.device_id;
+      setBlockPending(true);
+      try {
+        await setDeviceBlocked(device.device_id, blocked);
+      } catch (err) {
+        logger.warn("device_block_failed", {
+          device_id: device.id,
+          blocked,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        void showActionError(err, {
+          object: blocked
+            ? "das Sperren des Geräts"
+            : "das Entsperren des Geräts",
+          retry: () => void setBlocked(device, blocked),
+        });
+        return;
+      } finally {
+        setBlockPending(false);
+      }
+      if (blocked) {
+        const message = `Das Gerät „${title}“ ist gesperrt. Es kann sich erst wieder anmelden, wenn du es entsperrst.`;
+        // Undo restores access, so it is offered only when the device had it.
+        toastSuccess(
+          message,
+          device.status === "active"
+            ? {
+                action: {
+                  label: "Rückgängig",
+                  tooltip: "Entsperrt das Gerät sofort wieder.",
+                  onClick: () => void setBlocked(device, false),
+                },
+              }
+            : undefined,
+        );
+      } else {
+        toastSuccess(
+          `Das Gerät „${title}“ ist entsperrt und kann sich wieder anmelden.`,
+        );
+      }
+      await refreshDevices();
+    },
+    [showActionError, refreshDevices, toastSuccess],
   );
 
   const handleDeleteDevice = useCallback(async () => {
@@ -463,6 +537,11 @@ function DevicesPageContent() {
             onSelect={handleSelectDevice}
             onSaveDevice={handleUpdateDevice}
             onDeleteClick={handleDeleteClick}
+            onSetBlocked={(blocked) => {
+              if (selectedDevice)
+                void handleSetBlocked(selectedDevice, blocked);
+            }}
+            blockPending={blockPending}
           />
         </div>
       ) : null}

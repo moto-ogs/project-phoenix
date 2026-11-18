@@ -63,6 +63,18 @@ beforeEach(() => {
   );
 });
 
+// „Bei der Bank eingereicht“ waits in the card menu (#7407).
+const CARD_MENU = "Weitere Aktionen zur Lastschriftdatei";
+
+async function confirmSubmitted() {
+  fireEvent.click(screen.getByRole("button", { name: CARD_MENU }));
+  const entry = screen.getByRole("menuitem", {
+    name: /Bei der Bank eingereicht/,
+  });
+  await waitFor(() => expect(entry).toBeEnabled());
+  fireEvent.click(entry);
+}
+
 it("offers the handover of the debit file without the right to read the recipient", async () => {
   handoverApi.fetchExportRecipients.mockRejectedValue(
     new ApiError("forbidden", 403, { code: "general.forbidden" }),
@@ -90,9 +102,7 @@ it("confirms the downloaded file rather than the stale overview", async () => {
     await screen.findByRole("button", { name: "Datei herunterladen" }),
   );
   await waitFor(() => expect(api.downloadSepaDebitFile).toHaveBeenCalled());
-  fireEvent.click(
-    screen.getByRole("button", { name: "Bei der Bank eingereicht" }),
-  );
+  await confirmSubmitted();
   fireEvent.click(
     await screen.findByRole("button", { name: "Ja, eingereicht" }),
   );
@@ -111,9 +121,12 @@ it("requires a downloaded file before confirmation", async () => {
       <SepaDebitCard kind="care-runs" runId="42" />
     </TraegerResourceTestProvider>,
   );
-  expect(
-    await screen.findByRole("button", { name: "Bei der Bank eingereicht" }),
-  ).toHaveAttribute("aria-disabled", "true");
+  fireEvent.click(await screen.findByRole("button", { name: CARD_MENU }));
+  const entry = screen.getByRole("menuitem", {
+    name: /Bei der Bank eingereicht/,
+  });
+  expect(entry).toBeDisabled();
+  expect(entry).toHaveTextContent("Lade zuerst die Datei herunter.");
 });
 
 it("confirms the message ID of a file named with its file number (#4693)", async () => {
@@ -130,9 +143,7 @@ it("confirms the message ID of a file named with its file number (#4693)", async
     await screen.findByRole("button", { name: "Datei herunterladen" }),
   );
   await waitFor(() => expect(api.downloadSepaDebitFile).toHaveBeenCalled());
-  fireEvent.click(
-    screen.getByRole("button", { name: "Bei der Bank eingereicht" }),
-  );
+  await confirmSubmitted();
   fireEvent.click(
     await screen.findByRole("button", { name: "Ja, eingereicht" }),
   );

@@ -31,12 +31,16 @@ import type {
   TraegerPlanningSchool,
   TraegerPlanningShift,
 } from "~/lib/traeger-planning-api";
+import { formatPlannedHours } from "~/lib/shift-helpers";
 import { describeWorkingTimeWarning } from "~/lib/working-time";
 
 import {
   plannedOfSoll,
   sollTone,
+  suggestionSentence,
   warningsOfDay,
+  type ContractSuggestion,
+  weekSuggestions,
   type PlanningDay,
 } from "./planning-format";
 
@@ -48,7 +52,14 @@ interface PlanningWeekGridProps {
   readonly todayIso: string;
   /** `false`: der Träger plant außerhalb von moto, keine neuen Schichten. */
   readonly canPlan: boolean;
+  /** Höchstzeit am Tag aus den Regeln; 0 ohne Grenze. */
+  readonly maxDailyMinutes: number;
   readonly onPlan: (person: TraegerPlanningPerson, date: string) => void;
+  /** Übernimmt einen Vorschlag aus dem Arbeitsvertrag in den Dialog (#7381). */
+  readonly onPlanSuggestion: (
+    person: TraegerPlanningPerson,
+    suggestion: ContractSuggestion,
+  ) => void;
   readonly onOpenShift: (
     person: TraegerPlanningPerson,
     shift: TraegerPlanningShift,
@@ -126,7 +137,9 @@ export function PlanningWeekGrid({
   colors,
   todayIso,
   canPlan,
+  maxDailyMinutes,
   onPlan,
+  onPlanSuggestion,
   onOpenShift,
 }: PlanningWeekGridProps) {
   const scrollHintId = useId();
@@ -161,6 +174,21 @@ export function PlanningWeekGrid({
     return result;
   }, [people]);
 
+  // Die Vorschläge rechnen die Woche einer Person einmal von vorn durch,
+  // damit sie zusammen nie über das Soll der Woche führen.
+  const suggestionsByPerson = useMemo(
+    () =>
+      new Map(
+        canPlan
+          ? people.map((person) => [
+              person.recordId,
+              weekSuggestions(person, todayIso, maxDailyMinutes),
+            ])
+          : [],
+      ),
+    [canPlan, maxDailyMinutes, people, todayIso],
+  );
+
   const usedSchools = useMemo(() => {
     const used = new Set(
       people.flatMap((person) => person.sites.map((site) => site.schoolId)),
@@ -175,6 +203,15 @@ export function PlanningWeekGrid({
         label: school.name,
         color: colors.get(school.id),
       })),
+      ...(canPlan
+        ? [
+            {
+              key: "suggested",
+              label: "Vorschlag aus dem Arbeitsvertrag",
+              variant: "suggested" as const,
+            },
+          ]
+        : []),
       {
         key: "warning",
         label: "Hinweis zu Arbeitszeit",
@@ -182,7 +219,7 @@ export function PlanningWeekGrid({
         variant: "dot" as const,
       },
     ],
-    [colors, usedSchools],
+    [canPlan, colors, usedSchools],
   );
 
   const planLabel = (
@@ -249,16 +286,45 @@ export function PlanningWeekGrid({
     );
   };
 
+  // Ein Vorschlag aus dem Arbeitsvertrag: gestrichelt, ohne Farbfläche,
+  // damit er nie wie eine geplante Schicht aussieht. Ein Klick öffnet den
+  // Dialog mit Einsatzort und Zeiten; geplant ist erst nach „Planen“.
+  const renderSuggestion = (
+    person: TraegerPlanningPerson,
+    suggestion: ContractSuggestion,
+  ) => (
+    <PlanBlock
+      key={`suggestion-${suggestion.schoolId}`}
+      size="compact"
+      status="suggested"
+      timeRange={formatPlannedHours(suggestion.minutes)}
+      label="Vorschlag"
+      color={colors.get(suggestion.schoolId)}
+      compactDetail={
+        <span className="block truncate text-xs text-gray-600">
+          {suggestion.schoolName}
+        </span>
+      }
+      title={`${suggestionSentence(suggestion, { askToCheck: false })} Öffnet „Schicht planen“ mit ${suggestion.startTime}–${suggestion.endTime}.`}
+      onClick={() => onPlanSuggestion(person, suggestion)}
+      details={`${suggestion.schoolName}, aus dem Arbeitsvertrag, noch nicht geplant, Schicht planen`}
+    />
+  );
+
   const renderCell = (
     person: TraegerPlanningPerson,
     column: ResourceGridColumn,
   ): ReactNode => {
-    const shifts = shiftsByPersonDay.get(`${person.recordId}|${column.key}`);
-    if (!shifts || shifts.length === 0) return null;
+    const shifts =
+      shiftsByPersonDay.get(`${person.recordId}|${column.key}`) ?? [];
+    const suggestions =
+      suggestionsByPerson.get(person.recordId)?.get(column.key) ?? [];
+    if (shifts.length === 0 && suggestions.length === 0) return null;
     const warned = warningsOfDay(person.warnings, column.key).length > 0;
     return (
       <div className="flex flex-col gap-1">
         {shifts.map((shift) => renderShift(person, shift, warned))}
+        {suggestions.map((suggestion) => renderSuggestion(person, suggestion))}
         {canPlan ? (
           <PlanAddButton
             label={planLabel(person, column)}

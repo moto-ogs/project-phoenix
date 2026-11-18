@@ -42,6 +42,65 @@ test('complete snapshot restores all components and the saved deployment state',
   assert.equal(readFileSync(join(f.cwd, '.env'), 'utf8'), 'MODE=old\n');
 });
 
+// A Docker error while reading the server's settings must not pass for local
+// mode: an S3 server still mounts its old volume, which would be snapshotted.
+test('snapshot fails when the server upload settings cannot be read', t => {
+  const f = fixture(t);
+  const result = f.run('release-backup.sh', ['create', f.bundle], { RELEASE_TEST_FAIL: 'server-env' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Cannot read the upload settings of the serving container/);
+  assert(!existsSync(join(f.bundle, 'complete')));
+});
+
+test('a failed bucket copy leaves no plaintext copy of the bucket behind', t => {
+  const f = fixture(t);
+  const result = f.run('release-backup.sh', ['create', f.bundle], { RELEASE_TEST_BUCKET: 'uploads', RELEASE_TEST_FAIL: 'bucket-copy' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Copying the upload bucket failed/);
+  assert(existsSync(f.bundle));
+  assert(!existsSync(join(f.bundle, 'uploads-tree')));
+  assert(!existsSync(join(f.bundle, 'complete')));
+});
+
+test('restore rejects the same bucket name at another endpoint before changing anything', t => {
+  const f = fixture(t);
+  const created = f.run('release-backup.sh', ['create', f.bundle], { RELEASE_TEST_BUCKET: 'uploads' });
+  assert.equal(created.status, 0, created.stdout + created.stderr);
+  writeFileSync(f.log, '');
+  const result = f.run('restore-db.sh', [f.bundle], {
+    RELEASE_TEST_BUCKET: 'uploads', RELEASE_TEST_ENDPOINT: 'https://other.example.test',
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Snapshot holds another upload endpoint than the server uses/);
+  assert.doesNotMatch(f.calls(), /compose stop|DROP DATABASE| sync /);
+  assert.equal(readFileSync(join(f.cwd, '.env'), 'utf8'), 'MODE=old\n');
+});
+
+for (const damage of ['missing', 'corrupt']) {
+  test(`${damage} upload endpoint metadata blocks restore before writes`, t => {
+    const f = fixture(t);
+    const created = f.run('release-backup.sh', ['create', f.bundle], { RELEASE_TEST_BUCKET: 'uploads' });
+    assert.equal(created.status, 0, created.stdout + created.stderr);
+    if (damage === 'missing') rmSync(join(f.bundle, 'uploads-endpoint'));
+    else writeFileSync(join(f.bundle, 'uploads-endpoint'), 'https://other.example.test\n');
+    writeFileSync(f.log, '');
+    const result = f.run('restore-db.sh', [f.bundle], { RELEASE_TEST_BUCKET: 'uploads' });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /(?:Missing backup component|Backup checksum mismatch): uploads-endpoint/);
+    assert.doesNotMatch(f.calls(), /compose stop|DROP DATABASE| sync /);
+  });
+}
+
+test('release restore works when the upload bucket rejects canned ACLs', t => {
+  const f = fixture(t);
+  const extra = { RELEASE_TEST_BUCKET: 'uploads', RELEASE_TEST_FAIL: 'acl-disabled' };
+  const created = f.run('release-backup.sh', ['create', f.bundle], extra);
+  assert.equal(created.status, 0, created.stdout + created.stderr);
+  const result = f.run('restore-db.sh', [f.bundle], extra);
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(f.calls(), / sync \/tree uploads:uploads --checksum/);
+});
+
 test('demo deploy pins its backend and frontend images and can restore its own snapshot', t => {
   const f = fixture(t, 'demo');
   writeFileSync(join(f.cwd, 'docker-compose.yml.new'),

@@ -22,6 +22,9 @@ type Options struct {
 	// and no entry stops the generator; the root names them like the
 	// identifier types.
 	Readers map[reflect.Type]string
+	// Dates names the day types beside calendar.Date that travel as
+	// "YYYY-MM-DD" and render their zero value as null. The root names them.
+	Dates []reflect.Type
 }
 
 const (
@@ -67,6 +70,21 @@ type EnumSpec struct {
 // legacyNumericIDs names the fields that still travel as numbers on the
 // wire, as "package.Type.GoField".
 var legacyNumericIDs = []string{
+	"appointments.Appointment.ID",
+	"appointments.Appointment.OrganizerStaffID",
+	"appointments.Appointment.TenantID",
+	"appointments.AppointmentRecipient.AppointmentID",
+	"appointments.AppointmentRecipient.GuardianProfileID",
+	"appointments.AppointmentRecipient.ID",
+	"appointments.AppointmentRecipient.StaffID",
+	"appointments.AppointmentRecipient.TenantID",
+	"appointments.AppointmentTarget.AppointmentID",
+	"appointments.AppointmentTarget.ID",
+	"appointments.AppointmentTarget.TargetID",
+	"appointments.AppointmentTarget.TenantID",
+	"appointments.RecurrenceRule.AppointmentID",
+	"appointments.RecurrenceRule.ID",
+	"appointments.RecurrenceRule.TenantID",
 	"careplanhttp.StudentRequest.GroupID",
 	"careplanhttp.UpdateStudentRequest.GroupID",
 	"classday.AbsenceListChild.StudentID",
@@ -127,6 +145,13 @@ var legacyNumericIDs = []string{
 	"timetablehttp.startOperationResponse.ActiveGroupID",
 	"timetablehttp.startOperationResponse.InstanceID",
 	"traeger.ReportDistrictRequest.SchoolID",
+	"worktimemodels.AssignRequest.StaffIDs",
+	"worktimemodels.AssignResponse.AssignedStaffIDs",
+	"worktimemodels.AssignResponse.UnchangedStaffIDs",
+	"worktimemodels.DeletedResponse.ID",
+	"worktimemodels.ModelResponse.ID",
+	"worktimemodels.StaffFactResponse.StaffID",
+	"worktimemodels.StaffFactResponse.WorkTimeModelID",
 }
 
 // Legacy returns the registers of the routes registered today, with the

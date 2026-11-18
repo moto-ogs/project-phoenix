@@ -31,7 +31,7 @@ func setupDevicesModule(t *testing.T) *testContext {
 
 	db, fleet := composeDeviceFleet(t)
 
-	resource := devices.NewResource(devicefleet.NewAdministration(fleet, time.Now), testRuntime())
+	resource := devices.NewResource(devicefleet.NewAdministration(fleet, time.Now), testRuntime(fleet))
 
 	return &testContext{
 		db:       db,
@@ -209,9 +209,8 @@ func TestGetDeviceByDeviceID_NotFound(t *testing.T) {
 
 	rr := testutil.ExecuteRequest(router, req)
 
-	// NOTE: The service returns 500 instead of 404 for "not found" scenarios.
-	// This is a service-layer issue where sql.ErrNoRows is not translated properly.
-	testutil.AssertErrorResponse(t, rr, http.StatusInternalServerError)
+	// An unknown device ID is not found (#2317 fixed the former 500).
+	testutil.AssertErrorResponse(t, rr, http.StatusNotFound)
 }
 
 // =============================================================================
@@ -597,9 +596,8 @@ func TestPingDevice_NotFound(t *testing.T) {
 
 	rr := testutil.ExecuteRequest(router, req)
 
-	// NOTE: The service returns 500 instead of 404 for "not found" scenarios.
-	// This is a service-layer issue where sql.ErrNoRows is not translated properly.
-	testutil.AssertErrorResponse(t, rr, http.StatusInternalServerError)
+	// An unknown device ID is not found (#2317 fixed the former 500).
+	testutil.AssertErrorResponse(t, rr, http.StatusNotFound)
 }
 
 // =============================================================================

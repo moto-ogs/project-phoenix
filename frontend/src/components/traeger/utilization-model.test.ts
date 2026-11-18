@@ -8,6 +8,7 @@ import {
   offeringRows,
   roomRows,
   schoolRows,
+  shiftWindow,
   utilizationBuckets,
   utilizationFigures,
   utilizationPresets,
@@ -249,5 +250,40 @@ describe("utilizationSeries", () => {
     );
     expect(series[0]).toMatchObject({ places: 30, belegt: null, kinder: null });
     expect(series[2]).toMatchObject({ belegt: 15, kinder: 20 });
+  });
+});
+
+describe("shiftWindow", () => {
+  const week = { from: "2026-09-01", to: "2026-09-07" };
+
+  it("moves a window by its own length", () => {
+    expect(shiftWindow(week, -1, { max: "2026-09-30" })).toEqual({
+      from: "2026-08-25",
+      to: "2026-08-31",
+    });
+    expect(shiftWindow(week, 1, { max: "2026-09-30" })).toEqual({
+      from: "2026-09-08",
+      to: "2026-09-14",
+    });
+  });
+
+  it("stops at the last allowed day and keeps the length", () => {
+    expect(shiftWindow(week, 1, { max: "2026-09-10" })).toEqual({
+      from: "2026-09-04",
+      to: "2026-09-10",
+    });
+  });
+
+  it("stops at the first allowed day and keeps the length", () => {
+    expect(
+      shiftWindow(week, -1, { min: "2026-08-29", max: "2026-09-30" }),
+    ).toEqual({ from: "2026-08-29", to: "2026-09-04" });
+  });
+
+  it("returns null when the window already touches the bound", () => {
+    expect(shiftWindow(week, 1, { max: "2026-09-07" })).toBeNull();
+    expect(
+      shiftWindow(week, -1, { min: "2026-09-01", max: "2026-09-30" }),
+    ).toBeNull();
   });
 });

@@ -24,7 +24,9 @@ import { OrgSchoolFilter } from "../provisioning/provisioning-tables-shared";
 import { useOrgSchoolFilter } from "../provisioning/use-org-school-filter";
 import { DevicesTable } from "~/components/operator/devices-table";
 import { DeleteDeviceModal } from "~/components/operator/delete-device-modal";
+import { useDeviceBlocking } from "~/components/operator/use-device-blocking";
 import { TransferDeviceModal } from "~/components/operator/transfer-device-modal";
+import { DeviceHistorySlideOver } from "~/components/operator/device-history-slide-over";
 import { StatusBadge } from "~/components/ui/status-badge";
 
 function OperatorDevicesPageContent() {
@@ -50,6 +52,9 @@ function OperatorDevicesPageContent() {
     null,
   );
   const [deleteDevice, setDeleteDevice] = useState<OperatorDevice | null>(null);
+  const [historyDevice, setHistoryDevice] = useState<OperatorDevice | null>(
+    null,
+  );
 
   const refreshFamily = useTenantMutateMatching(
     operatorProvisioningKeys.deviceFamilies,
@@ -149,6 +154,7 @@ function OperatorDevicesPageContent() {
     "die Anzeige der Geräte",
     refreshDevices,
   );
+  const setDeviceBlocked = useDeviceBlocking(devicesAfterWrite.refresh);
 
   const accessRefused = urlSchoolId
     ? schoolDevicesAccessRefused
@@ -161,6 +167,7 @@ function OperatorDevicesPageContent() {
     setSetKeyDevice(null);
     setTransferDevice(null);
     setDeleteDevice(null);
+    setHistoryDevice(null);
   }, [accessRefused]);
 
   const count = selectedSchool
@@ -231,6 +238,10 @@ function OperatorDevicesPageContent() {
             onClose={() => setDeleteDevice(null)}
             onDeleted={devicesAfterWrite.refresh}
           />
+          <DeviceHistorySlideOver
+            device={historyDevice}
+            onClose={() => setHistoryDevice(null)}
+          />
         </>
       }
     >
@@ -256,7 +267,11 @@ function OperatorDevicesPageContent() {
               isLoading={orgDevicesLoading}
               onSetKey={setSetKeyDevice}
               onTransfer={setTransferDevice}
+              onSetBlocked={(device, blocked) =>
+                void setDeviceBlocked(device, blocked)
+              }
               onDelete={setDeleteDevice}
+              onShowHistory={setHistoryDevice}
             />
           )}
         </>
@@ -279,7 +294,11 @@ function OperatorDevicesPageContent() {
               isLoading={allDevicesLoading}
               onSetKey={setSetKeyDevice}
               onTransfer={setTransferDevice}
+              onSetBlocked={(device, blocked) =>
+                void setDeviceBlocked(device, blocked)
+              }
               onDelete={setDeleteDevice}
+              onShowHistory={setHistoryDevice}
             />
           )}
         </>
@@ -320,7 +339,11 @@ function OperatorDevicesPageContent() {
               isLoading={schoolDevicesLoading}
               onSetKey={setSetKeyDevice}
               onTransfer={setTransferDevice}
+              onSetBlocked={(device, blocked) =>
+                void setDeviceBlocked(device, blocked)
+              }
               onDelete={setDeleteDevice}
+              onShowHistory={setHistoryDevice}
             />
           )}
         </>

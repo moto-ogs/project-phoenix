@@ -169,155 +169,153 @@ export default function TraegerKinderzahlImportPage() {
       backHref={traegerPath(KINDERZAHL)}
       backLabel="Zurück zur Kinderzahl"
     >
-      <div className="flex flex-col gap-6">
-        {done ? (
+      {done ? (
+        <SectionCard>
+          <EmptyState
+            tone="success"
+            icon={<CheckCircle aria-hidden className="size-6" />}
+            title={`${numberCountLabel(done.counts.imported)} übernommen`}
+            description={doneDescription(done)}
+            action={
+              <div className="flex flex-wrap justify-center gap-3">
+                <ButtonLink
+                  href={traegerPath(KINDERZAHL)}
+                  variant="primary"
+                  size="md"
+                  tooltip="Öffnet die Liste der Familien mit ihrer Kinderzahl."
+                >
+                  Zur Kinderzahl
+                </ButtonLink>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  onClick={restart}
+                  disabled={applying}
+                  tooltip="Startet das Nachtragen mit einer anderen Datei."
+                >
+                  Weitere Datei laden
+                </Button>
+              </div>
+            }
+          />
+        </SectionCard>
+      ) : (
+        <>
           <SectionCard>
-            <EmptyState
-              tone="success"
-              icon={<CheckCircle aria-hidden className="size-6" />}
-              title={`${numberCountLabel(done.counts.imported)} übernommen`}
-              description={doneDescription(done)}
+            <WizardStepper steps={STEPS} current={step} />
+          </SectionCard>
+          {file ? (
+            <SectionCard
+              title="Datei"
+              description={
+                // A long file name without spaces breaks anywhere instead
+                // of running past the card on a phone.
+                <span className="wrap-anywhere">
+                  {result
+                    ? `${file.name} · ${importFormatLabel(result.encoding, result.delimiter)} · ${result.headers.length} Spalten`
+                    : file.name}
+                </span>
+              }
               action={
-                <div className="flex flex-wrap justify-center gap-3">
-                  <ButtonLink
-                    href={traegerPath(KINDERZAHL)}
-                    variant="primary"
-                    size="md"
-                    tooltip="Öffnet die Liste der Familien mit ihrer Kinderzahl."
-                  >
-                    Zur Kinderzahl
-                  </ButtonLink>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="md"
-                    onClick={restart}
-                    disabled={applying}
-                    tooltip="Startet das Nachtragen mit einer anderen Datei."
-                  >
-                    Weitere Datei laden
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  onClick={restart}
+                  disabled={applying}
+                  tooltip="Verwirft die gelesene Datei, ohne etwas zu übernehmen."
+                >
+                  Andere Datei
+                </Button>
               }
             />
-          </SectionCard>
-        ) : (
-          <>
-            <SectionCard>
-              <WizardStepper steps={STEPS} current={step} />
+          ) : (
+            <SectionCard
+              title="Datei wählen"
+              description="Eine CSV-Datei mit einer Zeile je Kind und Überschriften in der ersten Zeile."
+              action={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  tooltip="Speichert eine Beispieldatei mit allen Spalten, die moto von selbst erkennt."
+                  onClick={() =>
+                    downloadBlob(
+                      new Blob(["﻿", FAMILY_IMPORT_SAMPLE], {
+                        type: "text/csv;charset=utf-8",
+                      }),
+                      "kinderzahl-beispiel.csv",
+                    )
+                  }
+                >
+                  <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Beispieldatei
+                </Button>
+              }
+            >
+              <Dropzone
+                accept=".csv,.txt,text/csv,text/plain"
+                legend="CSV-Datei mit Kindern und der Kinderzahl ihrer Familie"
+                label="CSV-Datei hierher ziehen"
+                dragLabel="Datei hier loslassen"
+                buttonLabel="Datei wählen"
+                hint="Bis 2 MB. Getrennt mit Semikolon oder Komma, aus Excel, OGS Connect oder einem anderen Programm."
+                loading={reading}
+                loadingLabel="Datei wird gelesen …"
+                onFile={choose}
+              />
             </SectionCard>
-            {file ? (
-              <SectionCard
-                title="Datei"
-                description={
-                  // A long file name without spaces breaks anywhere instead
-                  // of running past the card on a phone.
-                  <span className="wrap-anywhere">
-                    {result
-                      ? `${file.name} · ${importFormatLabel(result.encoding, result.delimiter)} · ${result.headers.length} Spalten`
-                      : file.name}
-                  </span>
-                }
-                action={
+          )}
+          {result ? (
+            <FamilyChildrenImportMappingCard
+              headers={result.headers}
+              mapping={result.mapping}
+              unmapped={result.unmapped}
+              schools={result.schools}
+              disabled={applying}
+              onChange={remap}
+            />
+          ) : null}
+          {file && !verified ? (
+            <Alert
+              type="info"
+              message={
+                reading
+                  ? "Die Datei wird geprüft …"
+                  : "Die Datei ist noch nicht geprüft. Bitte prüfe erneut."
+              }
+              action={
+                !reading ? (
                   <Button
                     type="button"
                     variant="outline"
                     size="md"
-                    onClick={restart}
-                    disabled={applying}
-                    tooltip="Verwirft die gelesene Datei, ohne etwas zu übernehmen."
+                    tooltip="Liest die Datei noch einmal und prüft jede Zeile."
+                    onClick={() => void read(file, result?.mapping ?? null)}
                   >
-                    Andere Datei
+                    Erneut prüfen
                   </Button>
-                }
-              />
-            ) : (
-              <SectionCard
-                title="Datei wählen"
-                description="Eine CSV-Datei mit einer Zeile je Kind und Überschriften in der ersten Zeile."
-                action={
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="md"
-                    tooltip="Speichert eine Beispieldatei mit allen Spalten, die moto von selbst erkennt."
-                    onClick={() =>
-                      downloadBlob(
-                        new Blob(["﻿", FAMILY_IMPORT_SAMPLE], {
-                          type: "text/csv;charset=utf-8",
-                        }),
-                        "kinderzahl-beispiel.csv",
-                      )
-                    }
-                  >
-                    <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-                    Beispieldatei
-                  </Button>
-                }
-              >
-                <Dropzone
-                  accept=".csv,.txt,text/csv,text/plain"
-                  legend="CSV-Datei mit Kindern und der Kinderzahl ihrer Familie"
-                  label="CSV-Datei hierher ziehen"
-                  dragLabel="Datei hier loslassen"
-                  buttonLabel="Datei wählen"
-                  hint="Bis 2 MB. Getrennt mit Semikolon oder Komma, aus Excel, OGS Connect oder einem anderen Programm."
-                  loading={reading}
-                  loadingLabel="Datei wird gelesen …"
-                  onFile={choose}
-                />
-              </SectionCard>
-            )}
-            {result ? (
-              <FamilyChildrenImportMappingCard
-                headers={result.headers}
-                mapping={result.mapping}
-                unmapped={result.unmapped}
-                schools={result.schools}
-                disabled={applying}
-                onChange={remap}
-              />
-            ) : null}
-            {file && !verified ? (
-              <Alert
-                type="info"
-                message={
-                  reading
-                    ? "Die Datei wird geprüft …"
-                    : "Die Datei ist noch nicht geprüft. Bitte prüfe erneut."
-                }
-                action={
-                  !reading ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="md"
-                      tooltip="Liest die Datei noch einmal und prüft jede Zeile."
-                      onClick={() => void read(file, result?.mapping ?? null)}
-                    >
-                      Erneut prüfen
-                    </Button>
-                  ) : undefined
-                }
-              />
-            ) : null}
-            {result && result.unmapped.length === 0 ? (
-              <FamilyChildrenImportPreviewCard
-                result={result}
-                applying={applying}
-                disabled={!verified}
-                onApply={() => void apply()}
-              />
-            ) : null}
-            {result && result.unmapped.length > 0 ? (
-              <Alert
-                type="info"
-                message="Ordne alle Pflichtfelder zu. Dann zeigt moto die Zeilen."
-              />
-            ) : null}
-          </>
-        )}
-      </div>
+                ) : undefined
+              }
+            />
+          ) : null}
+          {result && result.unmapped.length === 0 ? (
+            <FamilyChildrenImportPreviewCard
+              result={result}
+              applying={applying}
+              disabled={!verified}
+              onApply={() => void apply()}
+            />
+          ) : null}
+          {result && result.unmapped.length > 0 ? (
+            <Alert
+              type="info"
+              message="Ordne alle Pflichtfelder zu. Dann zeigt moto die Zeilen."
+            />
+          ) : null}
+        </>
+      )}
     </TenantPage>
   );
 }

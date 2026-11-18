@@ -43,6 +43,14 @@ type DisplayStore interface {
 	FindByTokenHash(context.Context, string) (domain.Display, bool, domain.OperationStats, error)
 }
 
+// LifecycleEventStore is the owner's persistence port over
+// audit.device_lifecycle_events (#2321). found=false means the caller cannot
+// see the device.
+type LifecycleEventStore interface {
+	Insert(context.Context, devicefleet.RecordLifecycleEvent, time.Time) (bool, domain.OperationStats, error)
+	List(context.Context, int64) ([]devicefleet.LifecycleEvent, bool, domain.OperationStats, error)
+}
+
 // UnregisteredTagScanStore is the owner's persistence port over
 // audit.unregistered_tag_scans.
 type UnregisteredTagScanStore interface {

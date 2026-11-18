@@ -20,6 +20,12 @@ func NewResource(iotService devicefleet.Administration, runtime Runtime) *Resour
 	if runtime.ActiveSession == nil || runtime.ConflictWithDetails == nil || runtime.AuditRemoval == nil {
 		panic("device routes: the removal guard, its conflict answer and its audit are required")
 	}
+	if runtime.AuditStatusChange == nil {
+		panic("device routes: the status change audit is required")
+	}
+	if runtime.History == nil || runtime.Actor == nil || runtime.ActorNames == nil {
+		panic("device routes: the device history and the acting account are required")
+	}
 	return &Resource{
 		IoTService: iotService,
 		runtime:    runtime,
@@ -36,6 +42,7 @@ func (rs *Resource) Router() chi.Router {
 	// Read operations require iot:read permission
 	r.With(rs.runtime.Permission("iot:read")).Get("/", rs.listDevices)
 	r.With(rs.runtime.Permission("iot:read")).Get("/{id}", rs.getDevice)
+	r.With(rs.runtime.Permission("iot:read")).Get("/{id}/history", rs.getDeviceHistory)
 	r.With(rs.runtime.Permission("iot:read")).Get("/device/{deviceId}", rs.getDeviceByDeviceID)
 	r.With(rs.runtime.Permission("iot:read")).Get("/type/{type}", rs.getDevicesByType)
 	r.With(rs.runtime.Permission("iot:read")).Get("/status/{status}", rs.getDevicesByStatus)

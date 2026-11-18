@@ -13,6 +13,7 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -435,7 +436,7 @@ export function CareAmendmentHistoryCard({
                   ) : null}
                 </div>
                 {editable && active ? (
-                  <div className="flex w-full min-[480px]:w-auto sm:justify-end">
+                  <ResponsiveRowActions>
                     <Button
                       type="button"
                       variant="surface"
@@ -446,7 +447,7 @@ export function CareAmendmentHistoryCard({
                     >
                       Zurücknehmen
                     </Button>
-                  </div>
+                  </ResponsiveRowActions>
                 ) : null}
               </ResponsiveActionRow>
             );

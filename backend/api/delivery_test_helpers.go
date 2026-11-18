@@ -80,7 +80,7 @@ type DeliveryTestModule struct {
 // module-booking middleware are outside this route-sized test root.
 func (m DeliveryTestModule) NotificationPreferenceRouterForTests() chi.Router {
 	router := chi.NewRouter()
-	notifications := NewNotificationHTTP(nil, nil, m.NotificationPreferences, m.Feed)
+	notifications := NewNotificationHTTP(nil, m.PushSubscriptions, m.NotificationPreferences, m.Feed)
 	router.Mount("/api/notifications", notifications.Router())
 	router.Mount("/school/notifications", notifications.SchoolRouter())
 	parents := parentAPI.NewResource(parentAPI.ResourceConfig{

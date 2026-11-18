@@ -56,7 +56,7 @@ export function traegerSepaDebitFileTopic(): HelpTopic {
         description:
           "Bestätige erst, wenn deine Bank die Datei angenommen hat.",
         steps: [
-          "Wähle in der Karte `Lastschrift` den Knopf `Bei der Bank eingereicht`.",
+          "Wähle in der Karte `Lastschrift` das Menü mit den drei Punkten und dann `Bei der Bank eingereicht`.",
           "Wähle `Ja, eingereicht`.",
         ],
       },

@@ -34,6 +34,7 @@ const {
   mockListOrganizationDevices,
   mockListAllDevices,
   mockDeleteDevice,
+  mockSetDeviceBlocked,
   mockSearchParamsGet,
   mockReplace,
 } = vi.hoisted(() => ({
@@ -47,6 +48,7 @@ const {
   mockListOrganizationDevices: vi.fn(),
   mockListAllDevices: vi.fn(),
   mockDeleteDevice: vi.fn(),
+  mockSetDeviceBlocked: vi.fn(),
   mockSearchParamsGet: vi.fn((_key: string): string | null => null),
   mockReplace: vi.fn(),
 }));
@@ -92,6 +94,7 @@ vi.mock("~/lib/operator/provisioning-api", async () => {
       listOrganizationDevices: mockListOrganizationDevices,
       listAllDevices: mockListAllDevices,
       deleteDevice: mockDeleteDevice,
+      setDeviceBlocked: mockSetDeviceBlocked,
     },
   };
 });
@@ -100,6 +103,9 @@ vi.mock("~/lib/iot-helpers", () => ({
   getDeviceTypeDisplayName: (type: string) => `type:${type}`,
   getDeviceStatusDisplayName: (status: string) => `status:${status}`,
   formatLastSeen: (lastSeen: string) => `formatted:${lastSeen}`,
+  isDeviceBlocked: (device: { status: string }) => device.status === "inactive",
+  isSystemDevice: (device: { deviceId: string }) =>
+    device.deviceId === "WEB-MANUAL-001",
   DEVICE_TYPE_OPTIONS: { terminal: "Terminal", info_point: "Info-Point" },
 }));
 
@@ -530,6 +536,112 @@ describe("OperatorDevicesPage", () => {
         screen.getByText("Das passiert beim Entfernen"),
       ).toBeInTheDocument();
     });
+  });
+
+  // --- History (#2321) ---
+
+  it("opens the device history from its menu, with schools and without staff names", async () => {
+    withDefaultSWR({ allDevices: [mockDevice] });
+    const base = mockUseSWR.getMockImplementation()!;
+    mockUseSWR.mockImplementation((key: unknown) =>
+      key === `operator-device-history-${mockDevice.id}`
+        ? {
+            data: [
+              {
+                id: "1",
+                action: "blocked",
+                actorKind: "school_staff",
+                actorName: null,
+                changes: {},
+                occurredAt: "2026-03-18T09:00:00Z",
+                schoolName: "Alte Schule",
+              },
+              {
+                id: "2",
+                action: "transferred_in",
+                actorKind: "operator",
+                actorName: null,
+                changes: {},
+                occurredAt: "2026-03-20T09:00:00Z",
+                schoolName: "Test School",
+              },
+            ],
+            isLoading: false,
+            mutate: () => undefined,
+          }
+        : base(key),
+    );
+
+    render(<OperatorDevicesPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Aktionen für/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /^Verlauf/ }));
+
+    expect(await screen.findByText("Gesperrt")).toBeInTheDocument();
+    expect(
+      screen.getByText("Von anderer Schule übernommen"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/^Personal der Schule · Alte Schule/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/^moto-Support · Test School/)).toBeInTheDocument();
+  });
+
+  // --- Block (#2317) ---
+
+  it("blocks a device from its menu and offers to undo it", async () => {
+    withDefaultSWR({ allDevices: [mockDevice] });
+    mockSetDeviceBlocked.mockResolvedValue({
+      ...mockDevice,
+      status: "inactive",
+    });
+
+    render(<OperatorDevicesPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Aktionen für/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /^Sperren/ }));
+
+    expect(
+      await screen.findByText(/ist gesperrt\. Der Kiosk wird abgewiesen/),
+    ).toBeInTheDocument();
+    expect(mockSetDeviceBlocked).toHaveBeenCalledWith(mockDevice.id, true);
+
+    fireEvent.click(screen.getByRole("button", { name: /Rückgängig/ }));
+
+    await waitFor(() => {
+      expect(mockSetDeviceBlocked).toHaveBeenLastCalledWith(
+        mockDevice.id,
+        false,
+      );
+    });
+  });
+
+  it("shows a blocked device as blocked even while it was online", () => {
+    withDefaultSWR({
+      allDevices: [{ ...mockDevice, status: "inactive", isOnline: true }],
+    });
+
+    render(<OperatorDevicesPage />);
+
+    expect(screen.getByText("Gesperrt")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Aktionen für/ }));
+    expect(
+      screen.getByRole("menuitem", { name: /^Entsperren/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers no block for the protected manual web device", () => {
+    withDefaultSWR({
+      allDevices: [{ ...mockDevice, deviceId: "WEB-MANUAL-001" }],
+    });
+
+    render(<OperatorDevicesPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Aktionen für/ }));
+    expect(
+      screen.getByRole("menuitem", { name: /^Entfernen/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /^Sperren/ })).toBeNull();
   });
 
   // --- Columns and headers ---

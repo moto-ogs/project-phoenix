@@ -642,6 +642,79 @@ export const resentResponseSchema: z.ZodType<resentResponse, unknown> = z.object
   resent_count: safeInt,
 });
 
+/** Go: portal.Event */
+export interface Event {
+  id: string;
+  source: string;
+  appointment_id?: string;
+  occurrence_date?: string;
+  timetable_id?: string;
+  activity_type?: string;
+  student_id?: string;
+  student_name?: string;
+  tenant_id?: string;
+  school_name?: string;
+  title: string;
+  description?: string;
+  location?: string;
+  start_date: string;
+  end_date: string;
+  start_time: string;
+  end_time: string;
+  all_day: boolean;
+  cancelled: boolean;
+  recurring: boolean;
+  delivery_mode?: string;
+  response_status?: string;
+  series_response_status?: string;
+  has_occurrence_answers?: boolean;
+  recipient_id?: string;
+  organizer_staff_id?: string;
+  can_respond: boolean;
+  can_edit: boolean;
+  can_view_overview: boolean;
+  school_event_type?: string;
+}
+
+export const EventSchema: z.ZodType<Event, unknown> = z.object({
+  id: z.string(),
+  source: z.string(),
+  appointment_id: z.string().optional(),
+  occurrence_date: z.string().optional(),
+  timetable_id: z.string().optional(),
+  activity_type: z.string().optional(),
+  student_id: z.string().optional(),
+  student_name: z.string().optional(),
+  tenant_id: z.string().optional(),
+  school_name: z.string().optional(),
+  title: z.string(),
+  description: z.string().optional(),
+  location: z.string().optional(),
+  start_date: z.string(),
+  end_date: z.string(),
+  start_time: z.string(),
+  end_time: z.string(),
+  all_day: z.boolean(),
+  cancelled: z.boolean(),
+  recurring: z.boolean(),
+  delivery_mode: z.string().optional(),
+  response_status: z.string().optional(),
+  series_response_status: z.string().optional(),
+  has_occurrence_answers: z.boolean().optional(),
+  recipient_id: z.string().optional(),
+  organizer_staff_id: z.string().optional(),
+  can_respond: z.boolean(),
+  can_edit: z.boolean(),
+  can_view_overview: z.boolean(),
+  school_event_type: z.string().optional(),
+});
+
+/** Go: portal.InvitationAnswer */
+export interface InvitationAnswer {
+  status?: string;
+  occurrence_date?: string | null;
+}
+
 /** Go: staffmessaging.InboxThreadResponse */
 export interface InboxThreadResponse {
   thread_id: string;

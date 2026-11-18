@@ -192,6 +192,11 @@ func (r *TraegerProofReminders) sendAtSchool(ctx context.Context, schoolID int64
 		if err != nil {
 			return err
 		}
+		// A retired Einsatzort gets nothing (#7478); its proofs are claimed
+		// with the other schools', as the school does not come back.
+		if to.school.Retired {
+			return nil
+		}
 		today := r.staff.today().String()
 		for _, item := range due {
 			staffID := linkAt(item.links, schoolID)
