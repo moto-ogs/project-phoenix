@@ -28,7 +28,7 @@ func New(ctx context.Context, endpoint, region, bucket, accessKey, secretKey str
 		address.RawQuery != "" || address.Fragment != "" || (address.Path != "" && address.Path != "/") {
 		return nil, errors.New("storage: invalid UPLOADS_S3_ENDPOINT")
 	}
-	if address.Scheme != "https" && !(address.Scheme == "http" && isLoopback(address.Hostname())) {
+	if address.Scheme != "https" && (address.Scheme != "http" || !isLoopback(address.Hostname())) {
 		return nil, errors.New("storage: UPLOADS_S3_ENDPOINT requires HTTPS outside loopback")
 	}
 	client, err := minio.New(address.Host, &minio.Options{

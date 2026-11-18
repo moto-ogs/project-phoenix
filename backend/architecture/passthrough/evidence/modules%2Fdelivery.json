@@ -44,7 +44,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Backend) TenantObjects(ctx context.Context, kind, layout string, tenantID int64, remove bool) (int64, error) {\n\tprefix, err := contract.TenantObjectPrefix(kind, layout, tenantID)\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\tif err := s.requireUnversionedBucket(ctx); err != nil {\n\t\treturn 0, err\n\t}\n\tlist := s.client.ListObjectsIter(ctx, s.bucket, minio.ListObjectsOptions{Prefix: prefix, Recursive: true})\n\tif !remove {\n\t\treturn countObjects(list)\n\t}\n\treturn s.removeObjects(ctx, list)\n}",
+      "evidence": "func (s *Backend) TenantObjects(ctx context.Context, kind, layout string, tenantID int64, remove bool) (int64, error) {\n\tprefix, err := contract.TenantObjectPrefix(kind, layout, tenantID)\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\tif err := s.requireUnversionedBucket(ctx); err != nil {\n\t\treturn 0, err\n\t}\n\tlist := s.client.ListObjectsIter(ctx, s.bucket, minio.ListObjectsOptions{Prefix: prefix, Recursive: true})\n\tif !remove {\n\t\treturn countObjects(ctx, list)\n\t}\n\treturn s.removeObjects(ctx, list)\n}",
       "form": "unclassified-evidence",
       "id": "modules/delivery/internal/adapters/s3objects/Backend.TenantObjects",
       "owner": "modules/delivery"

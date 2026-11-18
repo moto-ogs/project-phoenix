@@ -88,12 +88,12 @@ type DemoRuntime struct {
 // expiry of demo accesses reads (#3470). uploadsRoot is the uploads directory
 // of the demo server, from which the files of retired demo schools are
 // removed (#5544).
-func NewDemoRuntime(db transactionruntime.Database, now func() time.Time, seedAdapter func(string, bool) seedCommandAdapter, uploadsRoot string, config objects.UploadStorageConfig) (*DemoRuntime, error) {
+func NewDemoRuntime(db transactionruntime.Database, now func() time.Time, seedAdapter func(string, bool) seedCommandAdapter, uploadsRoot string, readConfig func(string) string) (*DemoRuntime, error) {
 	schools, err := organizationcompose.NewDemoSchools(db.Pool())
 	if err != nil {
 		return nil, err
 	}
-	expiry, erasure, err := newDemoCleanup(db, now, uploadsRoot, config)
+	expiry, erasure, err := newDemoCleanup(db, now, uploadsRoot, objects.UploadStorageConfigFrom(readConfig))
 	if err != nil {
 		return nil, err
 	}

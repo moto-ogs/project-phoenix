@@ -18,7 +18,6 @@ import (
 
 	seedapi "github.com/moto-ogs/project-phoenix/internal/devtools/seedapi"
 	"github.com/moto-ogs/project-phoenix/internal/devtools/simulate"
-	"github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -69,7 +68,7 @@ var demoCmd = &cobra.Command{
 			defer func() { _ = inbox.Close() }()
 			adapterFactory = demoSeedAdapterFactory(inbox.FetchCode)
 		}
-		schools, err := NewDemoRuntime(db, time.Now, adapterFactory, uploadsRoot, objects.UploadStorageConfigFrom(viper.GetString))
+		schools, err := NewDemoRuntime(db, time.Now, adapterFactory, uploadsRoot, viper.GetString)
 		if err != nil {
 			return err
 		}

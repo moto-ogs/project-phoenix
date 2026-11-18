@@ -19,22 +19,22 @@ func (s *Backend) TenantObjects(ctx context.Context, kind, layout string, tenant
 	}
 	list := s.client.ListObjectsIter(ctx, s.bucket, minio.ListObjectsOptions{Prefix: prefix, Recursive: true})
 	if !remove {
-		return countObjects(list)
+		return countObjects(ctx, list)
 	}
 	return s.removeObjects(ctx, list)
 }
 
 var errS3Inventory = errors.New("storage: S3 inventory failed")
 
-func countObjects(list iter.Seq[minio.ObjectInfo]) (int64, error) {
+func countObjects(ctx context.Context, list iter.Seq[minio.ObjectInfo]) (int64, error) {
 	var count int64
 	for object := range list {
 		if object.Err != nil {
-			return count, errS3Inventory
+			return count, errors.Join(errS3Inventory, ctx.Err())
 		}
 		count++
 	}
-	return count, nil
+	return count, ctx.Err()
 }
 
 func (s *Backend) removeObjects(ctx context.Context, list iter.Seq[minio.ObjectInfo]) (int64, error) {
