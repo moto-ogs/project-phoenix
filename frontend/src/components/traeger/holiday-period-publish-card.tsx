@@ -22,7 +22,7 @@ import { QrCodeButton } from "~/components/qr-code/qr-code-button";
 const logger = createLogger({ component: "HolidayPeriodPublish" });
 
 /** What keeps a draft from being published, or `null`. */
-export function holidayPublishBlocker(
+function holidayPublishBlocker(
   period: HolidayPeriod,
   unsavedChanges: boolean,
 ): string | null {
