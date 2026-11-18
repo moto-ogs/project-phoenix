@@ -29,6 +29,9 @@ type (
 	SupervisionStaffDirectory = ports.SupervisionStaffDirectory
 	RecordErrors              = ports.RecordErrors
 	CrossTenantStudent        = ports.CrossTenantStudent
+	// SessionRow is a room session as the caller-context routes render it
+	// (SessionRows); the root names it in their contract.
+	SessionRow = ports.ActiveGroup
 )
 
 // SessionRecordDependencies wire the session and supervision records.

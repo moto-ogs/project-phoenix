@@ -11,7 +11,6 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 )
@@ -84,8 +83,7 @@ func (res *Resource) respond(w http.ResponseWriter, r *http.Request, data any, e
 		common.RenderError(w, r, ErrorRenderer(err))
 		return
 	}
-	render.Status(r, http.StatusOK)
-	common.RenderError(w, r, common.NewResponse(data, message))
+	common.Respond(w, r, http.StatusOK, data, message)
 }
 
 func (res *Resource) getCurrentUser(w http.ResponseWriter, r *http.Request) {

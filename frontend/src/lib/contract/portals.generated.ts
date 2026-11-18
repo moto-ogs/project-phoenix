@@ -9,6 +9,7 @@ import { routes as enrollment } from "./enrollment.generated";
 import { routes as files } from "./files.generated";
 import { routes as guardians } from "./guardians.generated";
 import { routes as holidayClosureNotices } from "./holiday-closure-notices.generated";
+import { routes as me } from "./me.generated";
 import { routes as mealBillingMonths } from "./meal-billing-months.generated";
 import { routes as mealCaterer } from "./meal-caterer.generated";
 import { routes as mealPlan } from "./meal-plan.generated";
@@ -664,6 +665,11 @@ export const portalRoutes = {
     guardians["PUT /api/guardians/{id}/phone-numbers/{phoneId}"],
     holidayClosureNotices["GET /api/holiday-closure-notices/"],
     holidayClosureNotices["POST /api/holiday-closure-notices/{id}/notify"],
+    me["GET /api/me/groups/"],
+    me["GET /api/me/groups/supervised"],
+    me["GET /api/me/profile"],
+    me["GET /api/me/staff"],
+    me["PUT /api/me/profile"],
     mealBillingMonths["GET /api/meal-billing-months/"],
     mealBillingMonths["GET /api/meal-billing-months/{month}"],
     mealBillingMonths["POST /api/meal-billing-months/{month}/release"],

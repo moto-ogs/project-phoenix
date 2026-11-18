@@ -98,12 +98,17 @@ const refuse = (res, body) => {
   res.writeHead(401, { "Content-Type": "application/problem+json" });
   res.end(JSON.stringify(body));
 };
+// The shape of GET /api/me/profile in the contract: the catalog proxy checks
+// the answer (#2352).
 const profile = {
   id: 1,
   first_name: "Test",
   last_name: "Fixture",
   email: "fixture@example.invalid",
-  settings: {},
+  username: null,
+  last_login: null,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
 };
 const api = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${apiPort}`);

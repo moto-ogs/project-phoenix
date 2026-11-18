@@ -1086,6 +1086,57 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/me/groups/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "CallerGroupRow"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/me/groups/supervised",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ActiveGroup"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/me/profile",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ProfileResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/me/staff",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "nullable": true,
+        "ref": "Staff"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/meal-billing-months/",
       "portals": [
         "tenant"
@@ -11400,6 +11451,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/me/profile",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ProfileUpdateRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ProfileResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/meal-plan/participation/{studentId}/days/{date}",
       "portals": [
         "tenant"
@@ -14309,6 +14375,117 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ActiveGroup",
+      "go_type": "ports.ActiveGroup",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "last_activity",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "timeout_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "group_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "device_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "actual_group",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "SessionActivity"
+          }
+        },
+        {
+          "name": "device",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "SessionDevice"
+          }
+        },
+        {
+          "name": "room",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "SessionRoom"
+          }
+        },
+        {
+          "name": "supervisors",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "nullable": true,
+              "ref": "GroupSupervisor"
+            }
           }
         }
       ]
@@ -20085,6 +20262,63 @@
           "name": "status",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CallerGroupRow",
+      "go_type": "owners.CallerGroupRow",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "room",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "GroupRoom"
+          }
+        },
+        {
+          "name": "via_substitution",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -30819,6 +31053,85 @@
       ]
     },
     {
+      "name": "DirectoryPersonSnapshot",
+      "go_type": "peopledirectory.DirectoryPersonSnapshot",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "birthday",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "tag_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "account",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "PersonAccountSnapshot"
+          }
+        },
+        {
+          "name": "rfid_card",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "PersonRFIDSnapshot"
+          }
+        }
+      ]
+    },
+    {
       "name": "DocumentKindOverview",
       "go_type": "parentbilling.DocumentKindOverview",
       "fields": [
@@ -33284,6 +33597,149 @@
           "name": "recipient_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupRoom",
+      "go_type": "domain.GroupRoom",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "building",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "floor",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "capacity",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "category",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupSupervisor",
+      "go_type": "ports.GroupSupervisor",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "group_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "role",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "staff",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "SessionStaff"
+          }
+        },
+        {
+          "name": "active_group",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ActiveGroup"
           }
         }
       ]
@@ -47073,6 +47529,105 @@
       ]
     },
     {
+      "name": "PersonAccountSnapshot",
+      "go_type": "peopledirectory.PersonAccountSnapshot",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "username",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "avatar",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_password_otp",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "last_login",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PersonRFIDSnapshot",
+      "go_type": "peopledirectory.PersonRFIDSnapshot",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "active",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "PersonRequest",
       "go_type": "traegerstaff.PersonRequest",
       "request": true,
@@ -48869,6 +49424,129 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ProfileResponse",
+      "go_type": "me.ProfileResponse",
+      "fields": [
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "username",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "last_login",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "avatar",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "rfid_card",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bio",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "settings",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ProfileUpdateRequest",
+      "go_type": "me.ProfileUpdateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "username",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "bio",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
           }
         }
       ]
@@ -55036,6 +55714,331 @@
       ]
     },
     {
+      "name": "SessionActivity",
+      "go_type": "ports.SessionActivity",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "max_participants",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "required_staff",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "is_open",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "category_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "planning_track_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "planned_room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_by",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "education_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "list_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_template",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_system",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "archived_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "target_group_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source_care_offering_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "source_grade_levels",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "source_school_classes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "SessionActivityCategory"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SessionActivityCategory",
+      "go_type": "ports.SessionActivityCategory",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_system",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "shift_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "archived_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SessionDevice",
+      "go_type": "ports.SessionDevice",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "device_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "device_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_seen",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "SessionResponse",
       "go_type": "timetracking.SessionResponse",
       "fields": [
@@ -55130,6 +56133,230 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SessionRoom",
+      "go_type": "studentpresence.SessionRoom",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "building",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "floor",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "capacity",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "category",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_system",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_open_room",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SessionStaff",
+      "go_type": "ports.SessionStaff",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "person_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "staff_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "employment_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "work_time_model_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "rotation_anchor_date",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "birthday_display_opt_out",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "person",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "SessionStaffPerson"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SessionStaffPerson",
+      "go_type": "ports.SessionStaffPerson",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "birthday",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "tag_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
           }
         }
       ]
@@ -56703,6 +57930,84 @@
           "schema": {
             "kind": "instant",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Staff",
+      "go_type": "peopledirectory.Staff",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "person_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "staff_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "employment_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "work_time_model_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "rotation_anchor_date",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "birthday_display_opt_out",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "person",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "DirectoryPersonSnapshot"
           }
         }
       ]

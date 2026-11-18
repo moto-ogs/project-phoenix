@@ -227,8 +227,9 @@ func (r *CallerRows) TeacherRow(ctx context.Context, teacherID int64) (any, erro
 	return r.teachers.FindByID(ctx, teacherID)
 }
 
-// callerGroupRow is an educational group with the caller's access path.
-type callerGroupRow struct {
+// CallerGroupRow is an educational group with the caller's access path, as
+// the /api/me/groups route renders it.
+type CallerGroupRow struct {
 	*educationRepo.Group
 	ViaSubstitution bool `json:"via_substitution"`
 }
@@ -239,7 +240,7 @@ func (r *CallerRows) EducationalGroupRows(ctx context.Context, groups []identity
 	return r.educationalGroupRows(ctx, groups)
 }
 
-func (r *CallerRows) educationalGroupRows(ctx context.Context, groups []identityaccess.CallerGroup) ([]*callerGroupRow, error) {
+func (r *CallerRows) educationalGroupRows(ctx context.Context, groups []identityaccess.CallerGroup) ([]*CallerGroupRow, error) {
 	ids := make([]int64, 0, len(groups))
 	via := make(map[int64]bool, len(groups))
 	for _, group := range groups {
@@ -250,9 +251,9 @@ func (r *CallerRows) educationalGroupRows(ctx context.Context, groups []identity
 	if err != nil {
 		return nil, err
 	}
-	result := make([]*callerGroupRow, 0, len(rows))
+	result := make([]*CallerGroupRow, 0, len(rows))
 	for _, row := range rows {
-		result = append(result, &callerGroupRow{Group: row, ViaSubstitution: via[row.ID]})
+		result = append(result, &CallerGroupRow{Group: row, ViaSubstitution: via[row.ID]})
 	}
 	return result, nil
 }
@@ -292,7 +293,7 @@ func (r *CallerRows) StudentRows(ctx context.Context, ids []int64) (any, error) 
 // groups and the current staff member carry the rows SessionRows and
 // StaffRow load, like the routes that render them alone.
 type callerNavigationRow struct {
-	EducationalGroups   []*callerGroupRow `json:"educational_groups"`
+	EducationalGroups   []*CallerGroupRow `json:"educational_groups"`
 	SupervisedGroups    any               `json:"supervised_groups"`
 	CurrentStaff        any               `json:"current_staff"`
 	Incomplete          bool              `json:"incomplete"`
@@ -307,7 +308,7 @@ func (r *CallerRows) NavigationRow(ctx context.Context, navigation identityacces
 	groups, err := r.educationalGroupRows(ctx, navigation.Groups)
 	if err != nil {
 		r.logger.Warn("navigation context groups unavailable", slog.String("error", err.Error()))
-		groups = []*callerGroupRow{}
+		groups = []*CallerGroupRow{}
 		row.UnavailableSections = append(row.UnavailableSections, "educational_groups")
 	}
 	row.EducationalGroups = groups

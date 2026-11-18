@@ -172,6 +172,9 @@ type tsWriter struct {
 	helpers   map[string]bool
 	typeOrder []string
 	enumOrder []string
+	// pending names the types of the file not written yet: a reference to one
+	// of them closes a cycle and is read lazily.
+	pending map[string]bool
 }
 
 // visit orders the types so that a schema exists before its first use.
@@ -201,8 +204,13 @@ func (w *tsWriter) file(routes []Route, shared *tsWriter) string {
 	for _, name := range w.enumOrder {
 		fmt.Fprintf(&body, "\nexport const %s = [%s] as const;\nexport type %s = (typeof %s)[number];\n", enumConst(name), quoted(w.enums[name].Values), name, enumConst(name))
 	}
+	w.pending = make(map[string]bool, len(w.typeOrder))
+	for _, name := range w.typeOrder {
+		w.pending[name] = true
+	}
 	for _, name := range w.typeOrder {
 		w.object(&body, w.byName[name])
+		delete(w.pending, name)
 	}
 	for _, route := range routes {
 		w.query(&body, route)
@@ -460,6 +468,11 @@ func (w *tsWriter) zod(s Schema) string {
 		z = "z.unknown()"
 	case KindRef:
 		z = s.Ref + "Schema"
+		if w.pending[s.Ref] {
+			// A type that refers back to itself or to a type of its cycle
+			// reads that schema once it exists.
+			z = "z.lazy(() => " + z + ")"
+		}
 	}
 	if s.Nullable {
 		z += ".nullable()"

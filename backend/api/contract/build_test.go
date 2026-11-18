@@ -3,6 +3,7 @@ package contract
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -489,4 +490,29 @@ func TestARawValueAndAValueReaderTravelAsWhatTheyHold(t *testing.T) {
 
 	_, err = Build([]Registration{post(presenceBody{})}, Options{Identifiers: identifiers, NumericIDs: options.NumericIDs})
 	require.ErrorContains(t, err, "has its own UnmarshalJSON", "without an entry the wrapper stops the generator")
+}
+
+// session and supervisor refer to each other, as a room session and its
+// supervisions do.
+type session struct {
+	Name        string        `json:"name"`
+	Supervisors []*supervisor `json:"supervisors,omitempty"`
+}
+
+type supervisor struct {
+	Role    string   `json:"role"`
+	Session *session `json:"session,omitempty"`
+}
+
+func TestATypeOfACycleReadsTheLaterSchemaLazily(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{get("/api/rows/sessions", []session{})}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+	source := files["rows.generated.ts"]
+	first, second := strings.Index(source, "export const supervisorSchema"), strings.Index(source, "export const sessionSchema")
+	require.True(t, first >= 0 && second > first, source)
+	assert.Contains(t, source, "  session: z.lazy(() => sessionSchema).optional(),")
+	assert.Contains(t, source, "  supervisors: z.array(supervisorSchema.nullable()).optional(),")
 }
