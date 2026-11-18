@@ -56,6 +56,11 @@ const INFO = (
       Ruhezeit, Pausen und das Soll aus dem Arbeitsvertrag. Zwei Schichten zur
       selben Zeit an zwei Schulen gehen nicht.
     </p>
+    <p>
+      Gestrichelt steht ein Vorschlag aus dem Arbeitsvertrag: die Stunden des
+      Tages an einer Schule, an der noch keine Schicht steht. Wähle ihn, prüfe
+      Beginn und Ende und wähle „Planen“.
+    </p>
   </div>
 );
 
@@ -246,6 +251,14 @@ export default function TraegerStaffPlanningPage() {
           todayIso={today}
           canPlan={canPlan}
           onPlan={(person, date) => setTarget({ kind: "create", person, date })}
+          onPlanSuggestion={(person, suggestion) =>
+            setTarget({
+              kind: "create",
+              person,
+              date: suggestion.date,
+              suggestion,
+            })
+          }
           onOpenShift={(person, shift) =>
             setTarget({ kind: "edit", person, shift })
           }

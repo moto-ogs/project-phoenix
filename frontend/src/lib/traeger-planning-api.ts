@@ -69,7 +69,19 @@ export interface TraegerPlanningPerson {
   readonly plannedMinutes: number;
   /** Soll der Woche aus den Arbeitsverträgen; `null` ohne Vertrag. */
   readonly sollMinutes: number | null;
+  /**
+   * Das Soll der Woche je Schule und Tag, ohne Feiertage und Schließtage der
+   * Schule: die Vorlage für die Schichten (#7381).
+   */
+  readonly sollDays: readonly TraegerPlanningSollDay[];
   readonly warnings: readonly WorkingTimeWarning[];
+}
+
+interface TraegerPlanningSollDay {
+  readonly schoolId: string;
+  /** "YYYY-MM-DD" */
+  readonly date: string;
+  readonly minutes: number;
 }
 
 export interface TraegerPlanningSchool {
@@ -138,6 +150,8 @@ interface BackendPerson {
   shifts: BackendShift[] | null;
   planned_minutes: number;
   soll_minutes: number | null;
+  soll_days?:
+    { school_id: number | string; date: string; minutes: number }[] | null;
   warnings: unknown;
 }
 
@@ -206,6 +220,11 @@ function mapPlanningWeek(week: BackendWeek): TraegerPlanningWeek {
       shifts: (person.shifts ?? []).map(mapPlanningShift),
       plannedMinutes: person.planned_minutes,
       sollMinutes: person.soll_minutes,
+      sollDays: (person.soll_days ?? []).map((day) => ({
+        schoolId: String(day.school_id),
+        date: day.date.slice(0, 10),
+        minutes: day.minutes,
+      })),
       warnings: mapWorkingTimeWarnings(person.warnings),
     })),
   };

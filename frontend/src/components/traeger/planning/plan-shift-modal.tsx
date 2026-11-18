@@ -22,6 +22,7 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { formatPlannedHours } from "~/lib/shift-helpers";
 import {
   changeTraegerShift,
   planTraegerShift,
@@ -29,6 +30,8 @@ import {
   type TraegerPlanningPerson,
   type TraegerPlanningShift,
 } from "~/lib/traeger-planning-api";
+
+import type { ContractSuggestion } from "./planning-format";
 
 const logger = createLogger({ component: "PlanShiftModal" });
 
@@ -43,6 +46,8 @@ export type PlanShiftTarget =
       readonly kind: "create";
       readonly person: TraegerPlanningPerson;
       readonly date: string;
+      /** Vorschlag aus dem Arbeitsvertrag (#7381): Einsatzort und Zeiten. */
+      readonly suggestion?: ContractSuggestion;
     }
   | {
       readonly kind: "edit";
@@ -69,6 +74,17 @@ function draftOf(target: PlanShiftTarget): Draft {
       endTime: shift.endTime,
       breakMinutes: String(shift.breakMinutes),
       notes: shift.notes,
+    };
+  }
+  const { suggestion } = target;
+  if (suggestion) {
+    return {
+      schoolId: suggestion.schoolId,
+      date: target.date,
+      startTime: suggestion.startTime,
+      endTime: suggestion.endTime,
+      breakMinutes: String(suggestion.breakMinutes),
+      notes: "",
     };
   }
   return {
@@ -267,6 +283,9 @@ export function PlanShiftModal({
             <span className="font-medium text-gray-900">{name}</span>
             {editing && target.shift.fromSeries
               ? ". Die Schicht gehört zu einer Serie der Schule. Die Änderung gilt nur für diesen Tag."
+              : null}
+            {!editing && target.suggestion
+              ? `. Laut Arbeitsvertrag ${formatPlannedHours(target.suggestion.minutes)} an ${target.suggestion.schoolName}. Prüfe Beginn und Ende.`
               : null}
           </p>
           {editing ? (

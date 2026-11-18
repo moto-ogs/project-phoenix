@@ -31,12 +31,15 @@ import type {
   TraegerPlanningSchool,
   TraegerPlanningShift,
 } from "~/lib/traeger-planning-api";
+import { formatPlannedHours } from "~/lib/shift-helpers";
 import { describeWorkingTimeWarning } from "~/lib/working-time";
 
 import {
+  contractSuggestions,
   plannedOfSoll,
   sollTone,
   warningsOfDay,
+  type ContractSuggestion,
   type PlanningDay,
 } from "./planning-format";
 
@@ -49,6 +52,11 @@ interface PlanningWeekGridProps {
   /** `false`: der Träger plant außerhalb von moto, keine neuen Schichten. */
   readonly canPlan: boolean;
   readonly onPlan: (person: TraegerPlanningPerson, date: string) => void;
+  /** Übernimmt einen Vorschlag aus dem Arbeitsvertrag in den Dialog (#7381). */
+  readonly onPlanSuggestion: (
+    person: TraegerPlanningPerson,
+    suggestion: ContractSuggestion,
+  ) => void;
   readonly onOpenShift: (
     person: TraegerPlanningPerson,
     shift: TraegerPlanningShift,
@@ -127,6 +135,7 @@ export function PlanningWeekGrid({
   todayIso,
   canPlan,
   onPlan,
+  onPlanSuggestion,
   onOpenShift,
 }: PlanningWeekGridProps) {
   const scrollHintId = useId();
@@ -249,16 +258,46 @@ export function PlanningWeekGrid({
     );
   };
 
+  // Ein Vorschlag aus dem Arbeitsvertrag: gestrichelt, ohne Farbfläche,
+  // damit er nie wie eine geplante Schicht aussieht. Ein Klick öffnet den
+  // Dialog mit Einsatzort und Zeiten; geplant ist erst nach „Planen“.
+  const renderSuggestion = (
+    person: TraegerPlanningPerson,
+    suggestion: ContractSuggestion,
+  ) => (
+    <PlanBlock
+      key={`suggestion-${suggestion.schoolId}`}
+      size="compact"
+      status="suggested"
+      timeRange={formatPlannedHours(suggestion.minutes)}
+      label="Vorschlag"
+      color={colors.get(suggestion.schoolId)}
+      compactDetail={
+        <span className="block truncate text-xs text-gray-600">
+          {suggestion.schoolName} · laut Vertrag
+        </span>
+      }
+      title={`Laut Arbeitsvertrag ${formatPlannedHours(suggestion.minutes)} an ${suggestion.schoolName}. Öffnet „Schicht planen“ mit ${suggestion.startTime}–${suggestion.endTime}.`}
+      onClick={() => onPlanSuggestion(person, suggestion)}
+      details={`${suggestion.schoolName}, aus dem Arbeitsvertrag, noch nicht geplant, Schicht planen`}
+    />
+  );
+
   const renderCell = (
     person: TraegerPlanningPerson,
     column: ResourceGridColumn,
   ): ReactNode => {
-    const shifts = shiftsByPersonDay.get(`${person.recordId}|${column.key}`);
-    if (!shifts || shifts.length === 0) return null;
+    const shifts =
+      shiftsByPersonDay.get(`${person.recordId}|${column.key}`) ?? [];
+    const suggestions = canPlan
+      ? contractSuggestions(person, column.key, todayIso)
+      : [];
+    if (shifts.length === 0 && suggestions.length === 0) return null;
     const warned = warningsOfDay(person.warnings, column.key).length > 0;
     return (
       <div className="flex flex-col gap-1">
         {shifts.map((shift) => renderShift(person, shift, warned))}
+        {suggestions.map((suggestion) => renderSuggestion(person, suggestion))}
         {canPlan ? (
           <PlanAddButton
             label={planLabel(person, column)}

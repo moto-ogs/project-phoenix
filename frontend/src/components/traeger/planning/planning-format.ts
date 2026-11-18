@@ -130,3 +130,81 @@ export function warningsOfDay(
     (warning) => warning.kind !== "above_soll" && warning.date === date,
   );
 }
+
+/** Beginn eines Vorschlags, wenn die Person an der Schule diese Woche noch keine Schicht hat. */
+const SUGGESTION_DEFAULT_START = "08:00";
+
+/** Ein Vorschlag aus dem Arbeitsvertrag für einen Tag an einer Schule (#7381). */
+export interface ContractSuggestion {
+  readonly schoolId: string;
+  readonly schoolName: string;
+  /** "YYYY-MM-DD" */
+  readonly date: string;
+  /** Soll des Tages an dieser Schule, netto. */
+  readonly minutes: number;
+  /** "HH:MM" */
+  readonly startTime: string;
+  /** "HH:MM" */
+  readonly endTime: string;
+  readonly breakMinutes: number;
+}
+
+/** Gesetzliche Pause zur Arbeitszeit: über 6 h 30 Min., über 9 h 45 Min. */
+function requiredBreak(minutes: number): number {
+  if (minutes > 9 * 60) return 45;
+  if (minutes > 6 * 60) return 30;
+  return 0;
+}
+
+function clockToMinutes(clock: string): number {
+  const [hours, minutes] = clock.split(":");
+  return Number(hours) * 60 + Number(minutes);
+}
+
+function minutesToClock(total: number): string {
+  const hours = Math.floor(total / 60);
+  const minutes = total % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+const LAST_MINUTE = 23 * 60 + 59;
+
+/**
+ * Die Vorschläge des Vertrags für einen Tag: je Schule mit Soll, an der die
+ * Person an diesem Tag noch keine Schicht hat. Vergangene Tage bekommen
+ * keinen Vorschlag. Der Beginn ist der Beginn der ersten Schicht der Person
+ * an dieser Schule in der Woche, sonst 08:00; das Ende folgt aus Soll und
+ * gesetzlicher Pause.
+ */
+export function contractSuggestions(
+  person: TraegerPlanningPerson,
+  date: string,
+  todayIso: string,
+): ContractSuggestion[] {
+  if (date < todayIso) return [];
+  const active = person.shifts.filter((shift) => !shift.cancelled);
+  return person.sollDays.flatMap((day) => {
+    if (day.date !== date || day.minutes <= 0) return [];
+    const site = person.sites.find((entry) => entry.schoolId === day.schoolId);
+    if (!site) return [];
+    const atSchool = active.filter((shift) => shift.schoolId === day.schoolId);
+    if (atSchool.some((shift) => shift.date === date)) return [];
+    const startTime = atSchool[0]?.startTime ?? SUGGESTION_DEFAULT_START;
+    const breakMinutes = requiredBreak(day.minutes);
+    const end = Math.min(
+      clockToMinutes(startTime) + day.minutes + breakMinutes,
+      LAST_MINUTE,
+    );
+    return [
+      {
+        schoolId: day.schoolId,
+        schoolName: site.schoolName,
+        date,
+        minutes: day.minutes,
+        startTime,
+        endTime: minutesToClock(end),
+        breakMinutes,
+      },
+    ];
+  });
+}

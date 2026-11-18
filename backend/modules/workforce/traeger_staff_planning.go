@@ -68,14 +68,26 @@ type TraegerPlanningShift struct {
 // its shifts, the planned net minutes and the Soll of the week, and every
 // working-time warning of the week.
 type TraegerPlanningPerson struct {
-	RecordID       int64                     `json:"staff_record_id"`
-	FirstName      string                    `json:"first_name"`
-	LastName       string                    `json:"last_name"`
-	Sites          []TraegerPlanningSite     `json:"sites"`
-	Shifts         []TraegerPlanningShift    `json:"shifts"`
-	PlannedMinutes int                       `json:"planned_minutes"`
-	SollMinutes    *int                      `json:"soll_minutes"`
-	Warnings       []ShiftWorkingTimeWarning `json:"warnings"`
+	RecordID       int64                  `json:"staff_record_id"`
+	FirstName      string                 `json:"first_name"`
+	LastName       string                 `json:"last_name"`
+	Sites          []TraegerPlanningSite  `json:"sites"`
+	Shifts         []TraegerPlanningShift `json:"shifts"`
+	PlannedMinutes int                    `json:"planned_minutes"`
+	SollMinutes    *int                   `json:"soll_minutes"`
+	// SollDays splits the Soll of the week by school and day (#7381): the
+	// contract as a template for the shifts of the week.
+	SollDays []TraegerPlanningSollDay  `json:"soll_days"`
+	Warnings []ShiftWorkingTimeWarning `json:"warnings"`
+}
+
+// TraegerPlanningSollDay is the Soll of a Personalakte at one school on one
+// day of the week from its Arbeitsvertrag, without the school's holidays and
+// closing days.
+type TraegerPlanningSollDay struct {
+	SchoolID int64         `json:"school_id"`
+	Date     calendar.Date `json:"date"`
+	Minutes  int           `json:"minutes"`
 }
 
 // TraegerPlanningWeek is the week plan of the Träger: Monday to Sunday.

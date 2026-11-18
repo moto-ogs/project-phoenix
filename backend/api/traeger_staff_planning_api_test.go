@@ -72,7 +72,12 @@ type planningWeekBody struct {
 		} `json:"shifts"`
 		PlannedMinutes int  `json:"planned_minutes"`
 		SollMinutes    *int `json:"soll_minutes"`
-		Warnings       []struct {
+		SollDays       []struct {
+			SchoolID int64  `json:"school_id"`
+			Date     string `json:"date"`
+			Minutes  int    `json:"minutes"`
+		} `json:"soll_days"`
+		Warnings []struct {
 			Kind string `json:"kind"`
 		} `json:"warnings"`
 	} `json:"people"`
@@ -229,6 +234,13 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 		assert.Equal(t, 300+270+300, mira.PlannedMinutes)
 		require.NotNil(t, mira.SollMinutes)
 		assert.Equal(t, 4*300+240, *mira.SollMinutes)
+		require.Len(t, mira.SollDays, 5, "the contract is the template of the week: one day per school with Soll")
+		assert.Equal(t, north, mira.SollDays[0].SchoolID)
+		assert.Equal(t, "2026-11-23", mira.SollDays[0].Date)
+		assert.Equal(t, 300, mira.SollDays[0].Minutes)
+		assert.Equal(t, south, mira.SollDays[4].SchoolID)
+		assert.Equal(t, "2026-11-27", mira.SollDays[4].Date)
+		assert.Equal(t, 240, mira.SollDays[4].Minutes)
 		require.Len(t, mira.Warnings, 1)
 		assert.Equal(t, "break_too_short", mira.Warnings[0].Kind)
 		entries := staffAccessEntries(t, db, office.organization, "traeger_staff_records")

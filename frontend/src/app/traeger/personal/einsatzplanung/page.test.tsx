@@ -73,6 +73,12 @@ const MIRA: TraegerPlanningPerson = {
   ],
   plannedMinutes: 510,
   sollMinutes: 1200,
+  // Monday and Tuesday lie before today; Thursday at Nord is still open.
+  sollDays: [
+    { schoolId: "1", date: "2026-09-07", minutes: 300 },
+    { schoolId: "1", date: "2026-09-08", minutes: 300 },
+    { schoolId: "1", date: "2026-09-10", minutes: 420 },
+  ],
   warnings: [
     {
       kind: "rest_period",
@@ -214,6 +220,43 @@ describe("TraegerStaffPlanningPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("suggests the open contract day and plans it after a check (#7381)", async () => {
+    api.planTraegerShift.mockResolvedValueOnce(MIRA.shifts[0]);
+    renderPage();
+    const suggestion = await screen.findByRole("button", {
+      name: /^7 h Vorschlag OGS Nord · laut Vertrag ?, OGS Nord, aus dem Arbeitsvertrag, noch nicht geplant, Schicht planen$/,
+    });
+    expect(
+      screen.getAllByRole("button", { name: /aus dem Arbeitsvertrag/ }),
+    ).toHaveLength(1);
+
+    fireEvent.click(suggestion);
+    const dialog = await screen.findByRole("dialog", {
+      name: "Schicht planen",
+    });
+    expect(
+      within(dialog).getByText(
+        /Laut Arbeitsvertrag 7 h an OGS Nord\. Prüfe Beginn und Ende\./,
+      ),
+    ).toBeInTheDocument();
+    // Begins like her Monday at Nord; 7 h need 30 minutes of break.
+    expect(within(dialog).getByLabelText(/Beginn/)).toHaveValue("11:30");
+    expect(within(dialog).getByLabelText(/Ende/)).toHaveValue("19:00");
+    expect(within(dialog).getByLabelText(/Pause/)).toHaveValue(30);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Planen" }));
+
+    await vi.waitFor(() =>
+      expect(api.planTraegerShift).toHaveBeenCalledTimes(1),
+    );
+    expect(api.planTraegerShift.mock.calls[0]?.[1]).toMatchObject({
+      schoolId: "1",
+      date: "2026-09-10",
+      startTime: "11:30",
+      endTime: "19:00",
+      breakMinutes: 30,
+    });
+  });
+
   it("offers no new shift while the Träger plans outside moto", async () => {
     api.fetchTraegerPlanningWeek.mockResolvedValue({
       ...WEEK,
@@ -225,6 +268,9 @@ describe("TraegerStaffPlanningPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /^Schicht planen,/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /aus dem Arbeitsvertrag/ }),
     ).not.toBeInTheDocument();
     expect(
       // Named by what the block shows, then the hidden details (#7112).
