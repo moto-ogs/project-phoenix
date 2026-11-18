@@ -145,6 +145,13 @@ var legacyNumericIDs = []string{
 	"timetablehttp.startOperationResponse.ActiveGroupID",
 	"timetablehttp.startOperationResponse.InstanceID",
 	"traeger.ReportDistrictRequest.SchoolID",
+	"worktimemodels.AssignRequest.StaffIDs",
+	"worktimemodels.AssignResponse.AssignedStaffIDs",
+	"worktimemodels.AssignResponse.UnchangedStaffIDs",
+	"worktimemodels.DeletedResponse.ID",
+	"worktimemodels.ModelResponse.ID",
+	"worktimemodels.StaffFactResponse.StaffID",
+	"worktimemodels.StaffFactResponse.WorkTimeModelID",
 }
 
 // Legacy returns the registers of the routes registered today, with the

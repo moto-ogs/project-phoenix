@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	staffmessaging "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
@@ -36,7 +37,9 @@ func setupAttachmentFixture(t *testing.T) groupFixture {
 	db, module, setSetting := setupStaffMessagingModule(t)
 	tenantID, _ := testpkg.CreateTestTenant(t, db)
 	require.NoError(t, setSetting(testpkg.TenantContext(tenantID), settings.KeyStaffMessagingEnabled, true))
-	return groupFixture{db: db, tenantRouter: module.TenantStaffMessagingRouterWithAttachmentsForTests(), tenantID: tenantID}
+	tenantRouter := chi.NewRouter()
+	tenantRouter.Mount("/api/staff-messages", module.TenantStaffMessagingRouterWithAttachmentsForTests())
+	return groupFixture{db: db, tenantRouter: tenantRouter, tenantID: tenantID}
 }
 
 func testPNG(t *testing.T, width, height int) []byte {
@@ -57,7 +60,7 @@ func (f groupFixture) upload(t *testing.T, who groupPerson, filename string, con
 	_, err = part.Write(content)
 	require.NoError(t, err)
 	require.NoError(t, writer.Close())
-	req := httptest.NewRequest(http.MethodPost, "/attachments", &body)
+	req := httptest.NewRequest(http.MethodPost, "/api/staff-messages/attachments", &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	return testutil.ExecuteWithAuth(t, f.tenantRouter, req, who.claims)
 }
