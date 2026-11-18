@@ -33,7 +33,10 @@ func (l *AccountLifecycle) approveInvitation(ctx context.Context, invitationID, 
 	if err := l.approveInvitationStudentLink(ctx, invitation, profile); err != nil {
 		return err
 	}
-	now := l.sessions.now()
+	now, err := l.invitationTime(ctx)
+	if err != nil {
+		return failed(opGuardianInviteApprove, err)
+	}
 	invitation.ApprovalStatus = domain.GuardianInvitationApprovalApproved
 	invitation.ApprovedBy = &approverAccountID
 	invitation.ApprovedAt = &now
@@ -100,7 +103,10 @@ func (l *AccountLifecycle) rejectInvitation(ctx context.Context, invitationID, a
 			return failed(opGuardianInviteReject, err)
 		}
 	}
-	now := l.sessions.now()
+	now, err := l.invitationTime(ctx)
+	if err != nil {
+		return failed(opGuardianInviteReject, err)
+	}
 	invitation.ApprovalStatus = domain.GuardianInvitationApprovalRejected
 	invitation.ApprovedBy = &approverAccountID
 	invitation.ApprovedAt = &now

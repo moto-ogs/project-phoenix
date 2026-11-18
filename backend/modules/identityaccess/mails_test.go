@@ -68,6 +68,10 @@ func TestGuardianInvitationExpiryAndMail(t *testing.T) {
 	now := time.Date(2026, time.November, 16, 9, 0, 0, 0, time.UTC)
 	invitation := identityaccess.GuardianInvitationMailOf(recipient, "", "tok", now.Add(10*time.Minute), now, "")
 	assert.Equal(t, 1, invitation.ExpiryHours)
+	// The mail reads its clock a moment after the expiry was derived; a link
+	// issued for 48 hours still advertises 48, a part hour still counts down.
+	assert.Equal(t, 48, identityaccess.GuardianInvitationMailOf(recipient, "", "tok", now.Add(48*time.Hour), now.Add(3*time.Millisecond), "").ExpiryHours)
+	assert.Equal(t, 47, identityaccess.GuardianInvitationMailOf(recipient, "", "tok", now.Add(47*time.Hour+30*time.Minute), now, "").ExpiryHours)
 	assert.Equal(t, "http://localhost:3000/accept-guardian-invite/tok", invitation.InvitationURL)
 	assert.Equal(t, "kim@example.test", invitation.Recipient)
 

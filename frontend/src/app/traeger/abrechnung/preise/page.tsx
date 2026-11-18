@@ -221,8 +221,11 @@ function PriceListPage() {
           description="Preise gibt es für die Schulen Ihres Trägers."
         />
       ) : null}
-      {data
-        ? schools.map((school) => {
+      {/* Equal school cards in a grid: grids do not grow (TenantPage body
+          rule), so the last school keeps its height like its siblings. */}
+      {data && schools.length > 0 ? (
+        <div className="compact:gap-4 grid gap-6 max-sm:gap-3">
+          {schools.map((school) => {
             const selectedMonth = shownMonth(school.id);
             const currentStand = standAt(
               priceStands(data, school.id),
@@ -269,8 +272,9 @@ function PriceListPage() {
                 />
               </div>
             );
-          })
-        : null}
+          })}
+        </div>
+      ) : null}
     </TenantPage>
   );
 }

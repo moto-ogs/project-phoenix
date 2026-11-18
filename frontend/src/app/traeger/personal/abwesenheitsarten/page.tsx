@@ -447,8 +447,11 @@ export default function TraegerAbsenceTypesPage() {
         </SectionCard>
       ) : null}
 
-      {list && released
-        ? list.types.map((type) => (
+      {/* Equal absence type cards in a grid: grids do not grow (TenantPage
+          body rule), so the last type keeps its height like its siblings. */}
+      {list && released && list.types.length > 0 ? (
+        <div className="compact:gap-4 grid gap-6 max-sm:gap-3">
+          {list.types.map((type) => (
             <AbsenceTypeCard
               key={type.id}
               type={type}
@@ -457,8 +460,9 @@ export default function TraegerAbsenceTypesPage() {
                 success(message);
               }}
             />
-          ))
-        : null}
+          ))}
+        </div>
+      ) : null}
     </TenantPage>
   );
 }

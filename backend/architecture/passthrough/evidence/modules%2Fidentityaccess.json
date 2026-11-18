@@ -996,14 +996,14 @@
     },
     {
       "build": "production",
-      "evidence": "func (r GuardianInvitationReads) ListOpenGuardianInvitations(ctx context.Context, guardianProfileIDs []int64) ([]identityaccess.GuardianInvitation, error) {\n\tvar invitations []domain.GuardianInvitation\n\terr := r.run(ctx, func(txCtx context.Context) error {\n\t\tvar err error\n\t\tinvitations, err = r.invitations.ListOpenGuardianInvitations(txCtx, guardianProfileIDs, r.now())\n\t\treturn err\n\t})\n\treturn guardianInvitationList(invitations, err)\n}",
+      "evidence": "func (r GuardianInvitationReads) ListOpenGuardianInvitations(ctx context.Context, guardianProfileIDs []int64) ([]identityaccess.GuardianInvitation, error) {\n\tvar invitations []domain.GuardianInvitation\n\terr := r.run(ctx, func(txCtx context.Context) error {\n\t\tvar err error\n\t\tinvitations, err = r.invitations.ListOpenGuardianInvitations(txCtx, guardianProfileIDs)\n\t\treturn err\n\t})\n\treturn guardianInvitationList(invitations, err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/GuardianInvitationReads.ListOpenGuardianInvitations",
       "owner": "modules/identityaccess"
     },
     {
       "build": "production",
-      "evidence": "func (r GuardianInvitationReads) ListRedeemableGuardianInvitations(ctx context.Context) ([]identityaccess.GuardianInvitation, error) {\n\tvar invitations []domain.GuardianInvitation\n\terr := r.run(ctx, func(txCtx context.Context) error {\n\t\tvar err error\n\t\tinvitations, err = r.invitations.ListRedeemableGuardianInvitations(txCtx, r.now())\n\t\treturn err\n\t})\n\treturn guardianInvitationList(invitations, err)\n}",
+      "evidence": "func (r GuardianInvitationReads) ListRedeemableGuardianInvitations(ctx context.Context) ([]identityaccess.GuardianInvitation, error) {\n\tvar invitations []domain.GuardianInvitation\n\terr := r.run(ctx, func(txCtx context.Context) error {\n\t\tvar err error\n\t\tinvitations, err = r.invitations.ListRedeemableGuardianInvitations(txCtx)\n\t\treturn err\n\t})\n\treturn guardianInvitationList(invitations, err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/GuardianInvitationReads.ListRedeemableGuardianInvitations",
       "owner": "modules/identityaccess"
