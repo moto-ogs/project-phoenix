@@ -137,13 +137,21 @@ function TraegerVertragView() {
   // holds; an address that changes otherwise (back, a link) wins.
   const addressedTab = parseContractDetailTab(searchParams?.get("tab"));
   const [clicked, setClicked] = useState<{
+    contractId: string;
     tab: ContractDetailTab;
     from: ContractDetailTab;
   } | null>(null);
   const activeTab =
-    clicked && clicked.from === addressedTab ? clicked.tab : addressedTab;
+    clicked && clicked.contractId === id && clicked.from === addressedTab
+      ? clicked.tab
+      : addressedTab;
+  useEffect(() => {
+    // The optimistic tab only bridges the router update. Once the address or
+    // contract changes, it must not override a later browser navigation.
+    setClicked(null);
+  }, [addressedTab, id]);
   const openTab = (next: ContractDetailTab) => {
-    setClicked({ tab: next, from: addressedTab });
+    setClicked({ contractId: id, tab: next, from: addressedTab });
     const query = new URLSearchParams(searchParams?.toString());
     if (next === "vertrag") query.delete("tab");
     else query.set("tab", next);

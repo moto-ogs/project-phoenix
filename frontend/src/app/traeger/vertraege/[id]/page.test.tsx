@@ -741,7 +741,7 @@ describe("TraegerVertragPage", () => {
     expect(api.resendCareContract).not.toHaveBeenCalled();
   });
 
-  it("follows the address after a click once it names another tab", async () => {
+  it("follows the address after a tab click and browser navigation", async () => {
     const view = render(
       <TraegerResourceTestProvider>
         <TraegerVertragPage />
@@ -756,7 +756,31 @@ describe("TraegerVertragPage", () => {
       scroll: false,
     });
 
-    // Back in the browser, or a link to another tab of the same contract.
+    // The router catches up. This also clears the optimistic click state.
+    mockSearch = "tab=versionen";
+    view.rerender(
+      <TraegerResourceTestProvider>
+        <TraegerVertragPage />
+      </TraegerResourceTestProvider>,
+    );
+    expect(screen.getByRole("tab", { name: "Versionen" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    // Browser back must now use the address instead of the stale click.
+    mockSearch = "";
+    view.rerender(
+      <TraegerResourceTestProvider>
+        <TraegerVertragPage />
+      </TraegerResourceTestProvider>,
+    );
+    expect(screen.getByRole("tab", { name: "Vertrag" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    // A link to another tab of the same contract wins too.
     mockSearch = "tab=kuendigung";
     view.rerender(
       <TraegerResourceTestProvider>
