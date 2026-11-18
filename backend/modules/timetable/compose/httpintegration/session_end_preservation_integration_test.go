@@ -53,27 +53,36 @@ func TestSessionEndPreservesAttendanceAndStaffAcrossTenants(t *testing.T) {
 		"active.activity_sessions", "active.activity_session_attendance",
 		"active.attendance", "active.visits", "active.groups", "active.group_supervisors",
 	}
-	snapshot := func(tenantID int64) map[string][]string {
-		rows := make(map[string][]string, len(tables))
+	queries := make(testpkg.SnapshotQueries, len(tables))
+	for _, table := range tables {
+		queries[table] = `SELECT COALESCE(json_agg(row_to_json(r) ORDER BY r.id), '[]'::json)
+			FROM ` + table + ` AS r WHERE r.tenant_id = $1`
+	}
+	readSnapshot := queries.Prepare(t, db)
+	snapshot := func(tenantID int64) map[string]string {
+		t.Helper()
+		rows, err := readSnapshot(context.Background(), tenantID)
+		require.NoError(t, err)
 		for _, table := range tables {
-			var values []string
-			require.NoError(t, db.NewRaw("SELECT row_to_json(snapshot)::text FROM "+table+" AS snapshot WHERE tenant_id = ? ORDER BY id", tenantID).Scan(context.Background(), &values))
-			require.NotEmpty(t, values, "fixture must populate %s", table)
-			rows[table] = values
+			require.Contains(t, rows, table)
+			require.NotEqual(t, "[]", rows[table], "fixture must populate %s", table)
 		}
 		return rows
 	}
 	ownBefore, foreignBefore := snapshot(own.tenantID), snapshot(foreign.tenantID)
 	// Probe actual least-privilege RLS in both directions over populated rows.
+	countQueries := make(testpkg.SnapshotQueries, len(tables))
+	for _, table := range tables {
+		countQueries[table] = `SELECT count(*) FROM ` + table + ` WHERE tenant_id = ?0`
+	}
 	for _, pair := range [][2]int64{{own.tenantID, foreign.tenantID}, {foreign.tenantID, own.tenantID}} {
 		ctx := testpkg.ContextForTenant(testpkg.Ctx(t), pair[0])
 		require.NoError(t, testpkg.WithTenantTx(t, ctx, db, pair[0], func(txCtx context.Context, tx bun.Tx) error {
+			ownCounts := countQueries.ReadCounts(t, txCtx, tx, pair[0])
+			foreignCounts := countQueries.ReadCounts(t, txCtx, tx, pair[1])
 			for _, table := range tables {
-				var visible int
-				require.NoError(t, tx.NewRaw("SELECT count(*) FROM "+table+" WHERE tenant_id = ?", pair[0]).Scan(txCtx, &visible))
-				require.Positive(t, visible, "own rows in %s must be visible", table)
-				require.NoError(t, tx.NewRaw("SELECT count(*) FROM "+table+" WHERE tenant_id = ?", pair[1]).Scan(txCtx, &visible))
-				require.Zero(t, visible, "foreign rows in %s must be hidden", table)
+				require.Positive(t, ownCounts[table], "own rows in %s must be visible", table)
+				require.Zero(t, foreignCounts[table], "foreign rows in %s must be hidden", table)
 			}
 			return nil
 		}))

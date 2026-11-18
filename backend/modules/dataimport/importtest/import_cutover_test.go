@@ -31,18 +31,26 @@ type importCounts struct {
 
 func countImportRows(t *testing.T, db *bun.DB, tenantID int64) importCounts {
 	t.Helper()
-	ctx := context.Background()
-	count := func(table string) int {
-		var n int
-		require.NoError(t, db.NewSelect().TableExpr(table).ColumnExpr("count(*)").Where("tenant_id = ?", tenantID).Scan(ctx, &n))
-		return n
-	}
-	return importCounts{
-		persons: count("users.persons"), students: count("users.student_profiles"), guardians: count("users.guardian_profiles"),
-		links: count("users.student_guardian_relationships"), phones: count("users.guardian_phone_numbers"), consents: count("users.privacy_consents"),
-		arrivals: count("schedule.student_arrival_schedules"), pickups: count("schedule.student_pickup_schedules"),
-		audits: count("audit.data_imports"), consentHistory: count("audit.student_consent_changes"),
-	}
+	return readImportCounts(t, context.Background(), db, tenantID)
+}
+
+func readImportCounts(t *testing.T, ctx context.Context, db bun.IDB, tenantID int64) importCounts {
+	t.Helper()
+	var counts importCounts
+	require.NoError(t, db.NewRaw(`SELECT
+		(SELECT count(*) FROM users.persons WHERE tenant_id = ?0),
+		(SELECT count(*) FROM users.student_profiles WHERE tenant_id = ?0),
+		(SELECT count(*) FROM users.guardian_profiles WHERE tenant_id = ?0),
+		(SELECT count(*) FROM users.student_guardian_relationships WHERE tenant_id = ?0),
+		(SELECT count(*) FROM users.guardian_phone_numbers WHERE tenant_id = ?0),
+		(SELECT count(*) FROM users.privacy_consents WHERE tenant_id = ?0),
+		(SELECT count(*) FROM schedule.student_arrival_schedules WHERE tenant_id = ?0),
+		(SELECT count(*) FROM schedule.student_pickup_schedules WHERE tenant_id = ?0),
+		(SELECT count(*) FROM audit.data_imports WHERE tenant_id = ?0),
+		(SELECT count(*) FROM audit.student_consent_changes WHERE tenant_id = ?0)`, tenantID).Scan(ctx,
+		&counts.persons, &counts.students, &counts.guardians, &counts.links, &counts.phones, &counts.consents,
+		&counts.arrivals, &counts.pickups, &counts.audits, &counts.consentHistory))
+	return counts
 }
 
 // importer carries the two identities an import run needs: the staff row
@@ -462,17 +470,7 @@ func countImportRowsInTx(t *testing.T, ctx context.Context, tenantID int64) impo
 	require.True(t, ok)
 	tx, ok := raw.(bun.Tx)
 	require.True(t, ok)
-	count := func(table string) int {
-		var n int
-		require.NoError(t, tx.NewSelect().TableExpr(table).ColumnExpr("count(*)").Where("tenant_id = ?", tenantID).Scan(ctx, &n))
-		return n
-	}
-	return importCounts{
-		persons: count("users.persons"), students: count("users.student_profiles"), guardians: count("users.guardian_profiles"),
-		links: count("users.student_guardian_relationships"), phones: count("users.guardian_phone_numbers"), consents: count("users.privacy_consents"),
-		arrivals: count("schedule.student_arrival_schedules"), pickups: count("schedule.student_pickup_schedules"),
-		audits: count("audit.data_imports"), consentHistory: count("audit.student_consent_changes"),
-	}
+	return readImportCounts(t, ctx, tx, tenantID)
 }
 
 // The staff import files a full Stammdatensatz through the owners: People

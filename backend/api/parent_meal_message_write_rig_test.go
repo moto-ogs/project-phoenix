@@ -643,13 +643,11 @@ func conversation(studentID int64) writeCall {
 // rowCounts counts the school's rows per table.
 func (r mealWriteRig) rowCounts(t *testing.T, tenantID int64) map[string]int {
 	t.Helper()
-	out := make(map[string]int, len(mealWriteTables))
+	queries := make(testpkg.SnapshotQueries, len(mealWriteTables))
 	for _, table := range mealWriteTables {
-		var n int
-		require.NoError(t, r.super.NewRaw(fmt.Sprintf(`SELECT count(*) FROM %s WHERE tenant_id = ?`, table), tenantID).Scan(context.Background(), &n))
-		out[table] = n
+		queries[table] = `SELECT count(*) FROM ` + table + ` WHERE tenant_id = ?0`
 	}
-	return out
+	return queries.ReadCounts(t, context.Background(), r.super, tenantID)
 }
 
 // identityColumns name the school, child, accounts, rows and instants,

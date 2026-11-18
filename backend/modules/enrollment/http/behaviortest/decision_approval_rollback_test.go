@@ -82,7 +82,7 @@ func (f approvalOutboxFunc) EnqueueMail(ctx context.Context, request TestMail) e
 
 func approvalOwnerSnapshot(t *testing.T, ctx context.Context, db bun.IDB, tenantID int64) map[string]string {
 	t.Helper()
-	result := map[string]string{}
+	queries := testpkg.SnapshotQueries{}
 	for _, table := range []string{
 		"enrollment.requests", "enrollment.request_children", "enrollment.request_child_offering_selections", "enrollment.care_offering_bookings",
 		"users.persons", "users.student_profiles", "users.student_school_memberships", "users.student_care_profiles", "users.guardian_profiles", "users.student_guardian_relationships",
@@ -91,10 +91,10 @@ func approvalOwnerSnapshot(t *testing.T, ctx context.Context, db bun.IDB, tenant
 		"schedule.student_pickup_schedules", "schedule.student_arrival_schedules",
 		"auth.account_tenants", "auth.account_roles",
 	} {
-		var rows string
-		require.NoError(t, db.NewRaw("SELECT COALESCE(jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text), '[]'::jsonb)::text FROM "+table+" r WHERE tenant_id = ?", tenantID).Scan(ctx, &rows))
-		result[table] = rows
+		queries[table] = testpkg.TableSnapshotQuery(db, table, "r.tenant_id = ?0")
 	}
+	result, err := queries.Read(ctx, db, tenantID)
+	require.NoError(t, err)
 	return result
 }
 func TestDecisionService_ApprovalRollsBackEveryOwnerAfterMaterialization(t *testing.T) {
