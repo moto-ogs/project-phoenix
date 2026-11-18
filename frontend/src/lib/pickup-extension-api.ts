@@ -34,15 +34,15 @@ export interface PickupExtension {
 }
 
 interface BackendPickupExtensionBlock {
-  id: number;
+  id: number | string;
   title: string;
   start_time: string;
   end_time: string;
 }
 
 interface BackendPickupExtension {
-  id: number;
-  student_id: number;
+  id: number | string;
+  student_id: number | string;
   student_name: string;
   kind: PickupExtensionKind;
   date?: string;

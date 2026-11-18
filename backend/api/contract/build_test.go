@@ -420,3 +420,49 @@ func TestTypeScriptImportsOpenEnumForASharedRequest(t *testing.T) {
 		assert.NotContains(t, files[name], "type OpenEnum", name)
 	}
 }
+
+// stored hands on JSON its owner stored without reading it.
+type stored struct {
+	Old json.RawMessage `json:"old,omitempty"`
+	Raw json.RawMessage `json:"raw"`
+}
+
+// presence tells an absent key from null, as the template writes do.
+type presence struct {
+	Set   bool
+	Value *int64
+}
+
+func (p *presence) UnmarshalJSON(data []byte) error {
+	p.Set = true
+	return json.Unmarshal(data, &p.Value)
+}
+
+type presenceBody struct {
+	Track presence `json:"track_id"`
+}
+
+func TestARawValueAndAValueReaderTravelAsWhatTheyHold(t *testing.T) {
+	t.Parallel()
+	options := Options{
+		Identifiers: identifiers,
+		NumericIDs:  []string{"contract.presence.Value"},
+		Readers:     map[reflect.Type]string{reflect.TypeFor[presence](): ReadsValue},
+	}
+	doc, err := Build([]Registration{get("/api/stored/", stored{}), post(presenceBody{})}, options)
+	require.NoError(t, err)
+	fields := fieldsOf(t, doc, "stored")
+	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["raw"].Schema, "any JSON value, null included")
+	assert.Equal(t, Schema{Kind: KindJSON}, fields["old"].Schema, "omitempty leaves an empty value out")
+	assert.True(t, fields["old"].Optional)
+	assert.Equal(t, Schema{Kind: KindLegacyID, Nullable: true}, fieldsOf(t, doc, "presenceBody")["track_id"].Schema, "the wrapper reads its Value")
+
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+	assert.Contains(t, files["stored.generated.ts"], "  raw: unknown | null;")
+	assert.Contains(t, files["stored.generated.ts"], "raw: z.unknown().nullable(),")
+	assert.Contains(t, files["rows.generated.ts"], "  track_id?: number | null;")
+
+	_, err = Build([]Registration{post(presenceBody{})}, Options{Identifiers: identifiers, NumericIDs: options.NumericIDs})
+	require.ErrorContains(t, err, "has its own UnmarshalJSON", "without an entry the wrapper stops the generator")
+}

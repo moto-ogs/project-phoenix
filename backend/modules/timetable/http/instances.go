@@ -221,10 +221,7 @@ func (rs *Resource) cancelInstance(w http.ResponseWriter, r *http.Request) {
 	var reason *string
 	var notice *GuardianNoticeRequest
 	if r.Body != nil {
-		var body struct {
-			Reason         *string                `json:"reason,omitempty"`
-			GuardianNotice *GuardianNoticeRequest `json:"guardian_notice,omitempty"`
-		}
+		var body CancelInstanceRequest
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && !errors.Is(err, io.EOF) {
 			common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid JSON body")))
 			return

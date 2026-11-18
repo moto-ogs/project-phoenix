@@ -411,6 +411,8 @@ func (w *tsWriter) tsType(s Schema, request bool) string {
 		t = elem + "[]"
 	case KindMap:
 		t = "Record<string, " + w.tsType(*s.Elem, request) + ">"
+	case KindJSON:
+		t = "unknown"
 	case KindRef:
 		t = s.Ref
 	}
@@ -451,6 +453,8 @@ func (w *tsWriter) zod(s Schema) string {
 		z = "z.array(" + w.zod(*s.Elem) + ")"
 	case KindMap:
 		z = "z.record(z.string(), " + w.zod(*s.Elem) + ")"
+	case KindJSON:
+		z = "z.unknown()"
 	case KindRef:
 		z = s.Ref + "Schema"
 	}

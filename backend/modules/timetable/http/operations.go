@@ -112,7 +112,7 @@ func (rs *Resource) operationsPlannedNow(w http.ResponseWriter, r *http.Request)
 	if opts.IncludeRoster && !canViewOperationPickupTimes(r.Context()) {
 		redactOperationPlannedPickupTimes(result)
 	}
-	common.Respond(w, r, http.StatusOK, map[string]any{"instances": result}, "Planned timetable instances retrieved")
+	common.Respond(w, r, http.StatusOK, PlannedNowResponse{Instances: result}, "Planned timetable instances retrieved")
 }
 
 func parsePlannedNowOptions(w http.ResponseWriter, r *http.Request) (timetable.PlannedNowOptions, bool) {

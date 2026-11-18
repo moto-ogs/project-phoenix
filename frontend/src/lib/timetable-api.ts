@@ -673,7 +673,7 @@ class TimetableService {
   }
 
   /**
-   * GET /api/timetable/conflict-check — advisory pre-save conflict check
+   * GET /api/timetable/conflicts — advisory pre-save conflict check
    * for a date/time window. Optional resource params are omitted when
    * empty so the backend only checks what the caller asked about.
    */
@@ -699,14 +699,11 @@ class TimetableService {
       query.set("exclude_activity_group_id", params.excludeActivityGroupId);
     }
 
-    const response = await transportFetch(
-      `/api/timetable/conflict-check?${query}`,
-      {
-        method: "GET",
-        headers: { Accept: "application/json" },
-        credentials: "include",
-      },
-    );
+    const response = await transportFetch(`/api/timetable/conflicts?${query}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      credentials: "include",
+    });
     const raw = await unwrap<BackendConflictCheckResult>(response);
     return mapConflictCheckResult(raw);
   }

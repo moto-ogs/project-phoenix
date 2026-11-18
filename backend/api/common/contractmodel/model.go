@@ -20,6 +20,7 @@ const (
 	KindArray    = "array"
 	KindMap      = "map"
 	KindRef      = "ref"
+	KindJSON     = "json" // any JSON value the owner stores and hands on unread
 )
 
 // Schema is one value on the wire.

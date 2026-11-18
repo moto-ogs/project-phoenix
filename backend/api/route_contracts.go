@@ -46,6 +46,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/api/work-time-models", worktimemodelsHTTP.RouteContracts()},
 		// Class Day owns the child sheet the supervision route answers with.
 		{"/school/calendar", calendarAPI.SchoolRouteContracts()},
+		{"/api/timetable", timetableHTTP.RouteContracts()},
 		{"/school/supervisions", timetableHTTP.SchoolSupervisionRouteContracts(classday.SupervisionStudentSheet{})},
 		{"/school/staff-messages", staffMessagingAPI.RouteContracts(common.PortalSchool)},
 		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
@@ -98,6 +99,15 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[careStudentsHTTP.StudentRequest]():       contract.ReadsFields,
 		reflect.TypeFor[careStudentsHTTP.UpdateStudentRequest](): contract.ReadsFields,
 		reflect.TypeFor[careStudentsHTTP.CompanionEntry]():       contract.ReadsLaxIDs,
+		// A presence is an object or, from older clients, a bare staff id.
+		reflect.TypeFor[timetableHTTP.DeviationPresence](): contract.ReadsFields,
+		// The template writes tell an absent key from null.
+		reflect.TypeFor[timetableHTTP.NullableInt]():         contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableInt64]():       contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableIntSlice]():    contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableInt64Slice]():  contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableStringSlice](): contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableStr]():         contract.ReadsValue,
 	}
 	// Appointments keeps its own day type.
 	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date]()}
