@@ -5691,6 +5691,11 @@ describe("EnrollmentForm signature (#4786)", () => {
       );
       await renderForm();
       await waitForLoaded();
+      expect(
+        screen.getByText(
+          "Freiwillig. Wenn du etwas einträgst, setze unten das Häkchen bei den Gesundheitsangaben.",
+        ),
+      ).toBeInTheDocument();
       await fillRequiredFields();
       fireEvent.change(screen.getByLabelText("Gesundheitsangaben"), {
         target: { value: "Nussallergie" },

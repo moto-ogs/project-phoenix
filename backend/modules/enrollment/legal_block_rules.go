@@ -55,9 +55,9 @@ func PublicLegalBlock(block LegalBlock) LegalBlock {
 	return block
 }
 
-// healthConsentSortOrder places the health consent after the four
-// standard blocks and before most own blocks.
-const healthConsentSortOrder = 45
+// healthConsentSortOrder places the health consent after the photo
+// consent and before the e-mail notice and most own blocks.
+const healthConsentSortOrder = 35
 
 // HealthConsentBlock is the consent moto adds to a form that asks for
 // health information. Health data are a special category (Art. 9 Abs. 1
@@ -70,9 +70,8 @@ func HealthConsentBlock() LegalBlock {
 		Key:   ConsentKeyHealthData,
 		Kind:  LegalBlockKindConsent,
 		Title: "Gesundheitsangaben",
-		Label: "Ich bin einverstanden, dass die Schule die Gesundheitsangaben speichert, die ich in diesem Formular eintrage. " +
-			"Die Betreuungskräfte sehen sie, damit sie mein Kind sicher betreuen können. " +
-			"Die Einwilligung ist freiwillig. Ich kann sie jederzeit bei der Schule widerrufen.",
+		Label: "Die Schule darf die Gesundheitsangaben meines Kindes speichern, damit die Betreuungskräfte es sicher betreuen. " +
+			"Die Einwilligung ist freiwillig. Ich kann sie jederzeit widerrufen.",
 		Text: "Gesundheitsangaben sind zum Beispiel Allergien, Unverträglichkeiten oder Erkrankungen, die bei der Betreuung wichtig sind.\n\n" +
 			"Du musst sie nicht angeben. Ohne Einwilligung lässt du die Felder für Gesundheitsangaben leer. Die Anmeldung geht trotzdem.\n\n" +
 			"Wenn du die Einwilligung widerrufst, löscht die Schule die Gesundheitsangaben.\n\n" +

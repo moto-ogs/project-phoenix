@@ -307,6 +307,7 @@
     "details": "Tam metni okumak için açar."
   },
   "legal": {
-    "guardianAgreement": "Çocuğumun velayetine sahip diğer tüm kişilerle mutabakat içinde hareket ediyorum."
+    "guardianAgreement": "Çocuğumun velayetine sahip diğer tüm kişilerle mutabakat içinde hareket ediyorum.",
+    "healthFieldHint": "İsteğe bağlı. Bir şey yazarsanız aşağıda sağlık bilgileri (Gesundheitsangaben) kutusunu işaretleyin."
   }
 }

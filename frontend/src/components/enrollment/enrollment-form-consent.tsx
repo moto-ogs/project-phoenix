@@ -68,8 +68,13 @@ export function EnrollmentConsent({
   return (
     <ConsentCheckbox
       name={name}
-      label={
-        guardianAgreement ? `${label} ${tr("legal.guardianAgreement")}` : label
+      label={label}
+      description={
+        guardianAgreement ? (
+          <span className="font-medium text-gray-800">
+            {tr("legal.guardianAgreement")}
+          </span>
+        ) : undefined
       }
       checked={checked}
       onChange={onChange}

@@ -835,7 +835,7 @@ export function FieldEditorRow({
                         checked={false}
                         onChange={() => undefined}
                         label="Pflichtfrage"
-                        hint="Gesundheitsangaben sind immer freiwillig. Wer etwas einträgt, setzt dazu das Häkchen bei der Einwilligung für Gesundheitsangaben. moto zeigt sie im Formular automatisch an."
+                        hint="Immer freiwillig. Das Formular fragt dazu die Einwilligung der Eltern ab."
                         disabled
                       />
                     ) : (

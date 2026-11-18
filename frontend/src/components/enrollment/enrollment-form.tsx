@@ -34,6 +34,7 @@ import { SectionLabel } from "~/components/ui/section-label";
 import { Input } from "~/components/ui/input";
 import { useTenant } from "~/lib/tenant-context";
 import {
+  HEALTH_CONSENT_KEY,
   legalBlockHasCheckbox,
   withDecidedLegalRules,
 } from "~/lib/enrollment-legal-blocks";
@@ -400,6 +401,9 @@ export function EnrollmentForm({
         contentLocale,
       ),
     [config.legalTexts, contentLocale],
+  );
+  const asksHealthConsent = legalBlocks.some(
+    (block) => block.key === HEALTH_CONSENT_KEY,
   );
   // The holiday care question is a fixed field of the form (#4703), not a
   // custom field: its answer has its own column and counts for the
@@ -1730,7 +1734,7 @@ export function EnrollmentForm({
                       const departure =
                         f.target === "student.allowed_departure_modes";
                       const noteName = formFieldName.childCompanionNote(i);
-                      return (
+                      const input = (
                         <CustomFieldInput
                           key={f.key}
                           field={f}
@@ -1773,6 +1777,22 @@ export function EnrollmentForm({
                           }
                           tr={tr}
                         />
+                      );
+                      // Health answers need the health consent below
+                      // (#2787); say so where the parent types them.
+                      if (
+                        f.target !== "student.health_info" ||
+                        !asksHealthConsent
+                      ) {
+                        return input;
+                      }
+                      return (
+                        <div key={f.key} className="space-y-1.5">
+                          {input}
+                          <p className="text-sm leading-5 text-gray-600">
+                            {tr("legal.healthFieldHint")}
+                          </p>
+                        </div>
                       );
                     })}
               </div>

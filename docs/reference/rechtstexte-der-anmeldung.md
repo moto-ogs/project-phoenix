@@ -62,7 +62,7 @@ das Foto heraus.
 ## Einwilligung für Gesundheitsangaben
 
 Fragt eine Vorlage ein Feld mit dem Ziel `student.health_info` ab, fügt moto
-die Zeile `health_data` hinzu (`consent`, Reihenfolge 45, Text fest in
+die Zeile `health_data` hinzu (`consent`, Reihenfolge 35, Text fest in
 `HealthConsentBlock`). Gesundheitsangaben sind besondere Daten (Art. 9
 Abs. 1 DSGVO); weder der Betreuungsvertrag noch die Datenschutzinformation
 sind dafür eine Grundlage. Deshalb gilt die ausdrückliche Einwilligung

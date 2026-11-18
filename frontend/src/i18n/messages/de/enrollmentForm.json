@@ -307,6 +307,7 @@
     "details": "Öffnet den ganzen Text zum Lesen."
   },
   "legal": {
-    "guardianAgreement": "Ich handle dabei im Einvernehmen mit allen anderen sorgeberechtigten Personen meines Kindes."
+    "guardianAgreement": "Ich handle dabei im Einvernehmen mit allen anderen sorgeberechtigten Personen meines Kindes.",
+    "healthFieldHint": "Freiwillig. Wenn du etwas einträgst, setze unten das Häkchen bei den Gesundheitsangaben."
   }
 }

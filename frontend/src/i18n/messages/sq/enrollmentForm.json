@@ -307,6 +307,7 @@
     "details": "Hap tekstin e plotë për ta lexuar."
   },
   "legal": {
-    "guardianAgreement": "Veproj në marrëveshje me të gjithë personat e tjerë që kanë kujdestarinë prindërore të fëmijës tim."
+    "guardianAgreement": "Veproj në marrëveshje me të gjithë personat e tjerë që kanë kujdestarinë prindërore të fëmijës tim.",
+    "healthFieldHint": "Vullnetare. Nëse shënoni diçka, shënoni më poshtë kutinë për të dhënat shëndetësore (Gesundheitsangaben)."
   }
 }

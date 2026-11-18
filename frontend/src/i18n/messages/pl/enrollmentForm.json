@@ -307,6 +307,7 @@
     "details": "Otwiera pełny tekst do przeczytania."
   },
   "legal": {
-    "guardianAgreement": "Działam w porozumieniu ze wszystkimi pozostałymi osobami sprawującymi władzę rodzicielską nad moim dzieckiem."
+    "guardianAgreement": "Działam w porozumieniu ze wszystkimi pozostałymi osobami sprawującymi władzę rodzicielską nad moim dzieckiem.",
+    "healthFieldHint": "Dobrowolne. Jeśli coś wpiszesz, zaznacz poniżej pole przy informacjach o zdrowiu (Gesundheitsangaben)."
   }
 }
