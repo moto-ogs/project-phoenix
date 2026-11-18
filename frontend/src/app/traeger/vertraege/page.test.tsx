@@ -458,13 +458,13 @@ describe("TraegerVertraegePage", () => {
         "Der Vertrag entsteht in wenigen Minuten von selbst.",
       ),
     ).toHaveLength(1);
-    // Changed conditions name the real state and the next step.
+    // Consent that does not match the current terms names what is known and the next step.
     expect(
-      screen.getByText("Bedingungen nach der Anmeldung geändert"),
+      screen.getByText("Zustimmung passt nicht zum Vertrag"),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Sie haben die Bedingungen nach der Anmeldung geändert\. Die Eltern haben ihnen nicht zugestimmt\./,
+        /Die Eltern haben anderen Bedingungen zugestimmt als den aktuellen\. Es entsteht kein Vertrag\./,
       ),
     ).toBeInTheDocument();
     expect(

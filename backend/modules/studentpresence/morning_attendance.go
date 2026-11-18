@@ -83,3 +83,19 @@ type MorningAbsenceGuard interface {
 
 // ErrMorningAttendanceNotAbsent means the teacher has corrected the mark.
 var ErrMorningAttendanceNotAbsent = errors.New("child is no longer marked absent")
+
+// ClassListEntryMarkMove names the student a class-list entry became.
+type ClassListEntryMarkMove struct {
+	ClassListEntryID int64
+	StudentID        int64
+}
+
+// ClassListMarkTransfer moves the morning marks of class-list entries onto
+// the student records they became (#4803, ADR 0282) before the entries are
+// deleted, so the class keeps its mornings. Where the student already has a
+// mark of the same date, the student's own mark stays and the entry's goes.
+// It is a leaf command for the data import's conversion and stays outside
+// Capability and Owner.
+type ClassListMarkTransfer interface {
+	TransferClassListEntryMarks(ctx context.Context, moves []ClassListEntryMarkMove) error
+}

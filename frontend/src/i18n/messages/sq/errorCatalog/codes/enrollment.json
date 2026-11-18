@@ -180,5 +180,6 @@
   "traeger_school_outside": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "traeger_catalog_invalid": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "traeger_preview_stale": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
-  "traeger_copy_rejected": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale."
+  "traeger_copy_rejected": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "without_care_place_school_year_only": "Një fëmijë pa vend në OGS e merr vendin me një regjistrim për vitin shkollor."
 }

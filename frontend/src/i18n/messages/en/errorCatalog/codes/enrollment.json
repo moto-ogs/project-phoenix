@@ -180,5 +180,6 @@
   "traeger_school_outside": "{object} could not be saved. Please check your entries.",
   "traeger_catalog_invalid": "{object} could not be saved. Please check your entries.",
   "traeger_preview_stale": "{object} could not be changed. Please check its current status.",
-  "traeger_copy_rejected": "{object} could not be changed. Please check its current status."
+  "traeger_copy_rejected": "{object} could not be changed. Please check its current status.",
+  "without_care_place_school_year_only": "A child without an OGS place gets its place through an enrollment for the school year."
 }

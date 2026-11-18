@@ -15,6 +15,8 @@ func MapError(err error) error {
 		return peopledirectory.ErrStudentNotFound
 	case errors.Is(err, domain.ErrStudentLockBusy):
 		return fmt.Errorf("%w: %w", peopledirectory.ErrStudentLockBusy, err)
+	case errors.Is(err, domain.ErrWithoutCarePlaceGroup):
+		return peopledirectory.ErrWithoutCarePlaceGroup
 	case errors.Is(err, domain.ErrCompanionWouldLoseDeparture):
 		return peopledirectory.ErrCompanionWouldLoseDeparture
 	case errors.Is(err, domain.ErrCompanionLockBusy):

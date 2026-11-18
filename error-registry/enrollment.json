@@ -247,6 +247,12 @@
       "legacy": "enrollment.child_already_enrolled"
     },
     {
+      "code": "enrollment.without_care_place_school_year_only",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "enrollment.without_care_place_school_year_only"
+    },
+    {
       "code": "enrollment.child_already_requested",
       "class": "business_rejection",
       "parameters": [],

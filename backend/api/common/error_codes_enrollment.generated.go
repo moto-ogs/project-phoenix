@@ -183,6 +183,7 @@ const CodeEnrollmentUploadRateLimited = "enrollment.upload_rate_limited"
 const CodeEnrollmentWaitlistDisabled = "enrollment.waitlist_disabled"
 const CodeEnrollmentWindowClosed = "enrollment.window_closed"
 const CodeEnrollmentWithdrawNotAllowed = "enrollment.withdraw_not_allowed"
+const CodeEnrollmentWithoutCarePlaceSchoolYearOnly = "enrollment.without_care_place_school_year_only"
 
 var errorCodeClassesEnrollment = []errorCodeClass{
 	{CodeEnrollmentApprovalCareOfferingDayConflict, "business_rejection"},
@@ -367,6 +368,7 @@ var errorCodeClassesEnrollment = []errorCodeClass{
 	{CodeEnrollmentWaitlistDisabled, "business_rejection"},
 	{CodeEnrollmentWindowClosed, "business_rejection"},
 	{CodeEnrollmentWithdrawNotAllowed, "permission"},
+	{CodeEnrollmentWithoutCarePlaceSchoolYearOnly, "business_rejection"},
 }
 
 func init() {

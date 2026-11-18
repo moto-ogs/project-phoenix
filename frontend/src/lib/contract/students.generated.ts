@@ -132,6 +132,7 @@ export interface StudentResponse {
   email_contact_accepted_at?: string;
   care_ends_on?: string;
   care_ended?: boolean;
+  without_care_place?: boolean;
   care_exit_recorded?: boolean;
   has_full_access: boolean;
   created_at: string;
@@ -195,6 +196,7 @@ export const StudentResponseSchema: z.ZodType<StudentResponse, unknown> = z.obje
   email_contact_accepted_at: instant.optional(),
   care_ends_on: calendarDate.optional(),
   care_ended: z.boolean().optional(),
+  without_care_place: z.boolean().optional(),
   care_exit_recorded: z.boolean().optional(),
   has_full_access: z.boolean(),
   created_at: instant,
@@ -404,6 +406,7 @@ export interface StudentDetailResponse {
   email_contact_accepted_at?: string;
   care_ends_on?: string;
   care_ended?: boolean;
+  without_care_place?: boolean;
   care_exit_recorded?: boolean;
   created_at: string;
   updated_at: string;
@@ -477,6 +480,7 @@ export const StudentDetailResponseSchema: z.ZodType<StudentDetailResponse, unkno
   email_contact_accepted_at: instant.optional(),
   care_ends_on: calendarDate.optional(),
   care_ended: z.boolean().optional(),
+  without_care_place: z.boolean().optional(),
   care_exit_recorded: z.boolean().optional(),
   created_at: instant,
   updated_at: instant,
@@ -559,6 +563,7 @@ export interface StudentRequest {
   guardians?: NewStudentGuardian[] | null;
   arrival_schedules?: ArrivalScheduleRequestItem[] | null;
   pickup_schedules?: PickupScheduleRequest[] | null;
+  without_care_place?: boolean;
 }
 
 /** Go: careplanhttp.CompanionEntry */

@@ -44,6 +44,7 @@ export function classListEntriesTopic(): HelpTopic {
       "Schreiben Sie die Klasse genau wie bei den regulären Kindern.",
     ],
     differences: [
+      "Oben steht, dass Ihre Schule Kinder ohne OGS-Platz als eigene Kinder führt, und `+ Eintrag` fehlt? Dann hat das moto-Team das eingeschaltet. Die Einträge sind dabei zu Kindern geworden. Neue Kinder legen Sie in den `Kinderdaten` mit `Ohne OGS-Platz` an. Ein `Sammelimport` legt sie ebenfalls als Kinder an.",
       "Ein Eintrag trägt `Mögliche Dublette`? Dann gibt es ein reguläres Kind mit demselben Namen in derselben Klasse.",
       "Ein Eintrag trägt `In moto angelegt`? Dann ist es ein reguläres Kind. Gepflegt wird es unter `Kinderdaten`.",
     ],

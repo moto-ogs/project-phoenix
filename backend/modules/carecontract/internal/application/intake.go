@@ -467,7 +467,7 @@ func (in *Intake) SaveTemplate(ctx context.Context, reviewer carecontract.Review
 			return err
 		}
 		return trail(txCtx, in.store, reviewer.OrganizationID, reviewer.AccountID, 0, schoolID, ActionTemplate,
-			map[string]any{"care_offering_id": offeringID, "template_id": saved.ID})
+			versionDetails(offeringID, saved.ID, saved.TemplateInput))
 	})
 	if err != nil {
 		return carecontract.OfferingTemplate{}, err
@@ -577,13 +577,14 @@ func (in *Intake) offerings(ctx context.Context, ids []int64) ([]carecontract.Of
 	return in.applications.NamePhases(ctx, offerings)
 }
 
-// indexTemplates holds the conditions of every offering and when they last
-// changed.
+// indexTemplates holds the conditions of every offering and their saved
+// versions.
 func indexTemplates(rows []TemplateRow) (templateIndex, templateChanges) {
 	templates, changed := make(templateIndex, len(rows)), make(templateChanges, len(rows))
 	for _, row := range rows {
 		key := [2]int64{row.SchoolID, row.OfferingID}
-		templates[key], changed[key] = row.Template.TemplateInput, row.Template.UpdatedAt
+		templates[key] = row.Template.TemplateInput
+		changed[key] = templateHistory{updatedAt: row.Template.UpdatedAt, versions: row.Versions, complete: row.VersionsComplete}
 	}
 	return templates, changed
 }

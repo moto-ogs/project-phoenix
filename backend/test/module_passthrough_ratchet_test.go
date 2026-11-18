@@ -285,7 +285,9 @@ const modulePassthroughApplicationSegment = "/internal/application/"
 // room move leaves updated_at to the database trigger (-1, ADR 0268).
 // Lowered by #4496: revoking a caterer invitation also stops its unsent
 // mail instead of forwarding (-1).
-const modulePassthroughOwnerBudgetTotal = 1394
+// Raised by ADR 0283: Student Presence's mark transfer of the class-list
+// conversion, which validates the moves before its store call (+1).
+const modulePassthroughOwnerBudgetTotal = 1395
 
 // modulePassthroughOwnerBudgets is the register: module directory →
 // pass-throughs measured in its application layer and its compositions
@@ -353,7 +355,8 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0168: the first complete attendance day, which checks
 	// the window and takes the later of its cutoff and the retention mark
 	// (+1).
-	"modules/studentpresence": 123,
+	// Raised by ADR 0283: the mark transfer of the class-list conversion (+1).
+	"modules/studentpresence": 124,
 	// Raised by ADR 0230: the assignments of several staff members in a date
 	// range, one read for the absence plan gaps (+1).
 	"modules/timetable": 204,
