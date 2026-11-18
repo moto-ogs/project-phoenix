@@ -981,7 +981,8 @@ describe("VertretungView", () => {
       "",
       "/acme/vertretung?d=2026-07-15&block=42",
     );
-    // Das Speichern berührt drei Termine, vertreten werden zwei.
+    // Die Anfrage nennt zwei Termine und das Speichern berührt drei, neu
+    // vertreten wird einer: gezählt wird aus der Antwort.
     mockApplyScheduleSubstitution.mockResolvedValueOnce({
       instanceId: "42",
       cancelled: false,
@@ -997,7 +998,7 @@ describe("VertretungView", () => {
           instanceId: "43",
           title: "Lernzeit",
           startTime: "14:00",
-          action: "substituted",
+          action: "already_on_instance",
         },
         {
           instanceId: "44",
@@ -1014,7 +1015,7 @@ describe("VertretungView", () => {
 
     await waitFor(() =>
       expect(mockToastSuccess).toHaveBeenCalledWith(
-        "Bea Neu vertritt Anna Alt in 2 Terminen.",
+        "Bea Neu vertritt Anna Alt in 1 Termin.",
       ),
     );
   });

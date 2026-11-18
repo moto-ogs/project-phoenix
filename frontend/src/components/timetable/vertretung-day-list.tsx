@@ -259,20 +259,21 @@ export function rowStaffing(row: ClassifiedRow): {
   needsAssignment: boolean;
 } {
   const { planned, present } = row.triple;
+  // Nur ein Dienst hat eine Mindestbesetzung, die über die Einteilung
+  // hinausgehen kann (Backend: DutyMinimumStaff). Sie gilt in jedem Zustand,
+  // damit ein quittierter Dienst denselben Bruch zeigt wie zuvor als Lücke.
+  const minimum =
+    row.instance.activityType === "duty" ? row.instance.requiredStaffCount : 0;
+  const total = Math.max(minimum, planned);
   if (row.coverageState !== "gap") {
     return {
       current: present,
-      total: planned,
+      total,
       missing: 0,
       canFill: false,
       needsAssignment: false,
     };
   }
-  // Nur ein Dienst hat eine Mindestbesetzung, die über die Einteilung
-  // hinausgehen kann (Backend: DutyMinimumStaff).
-  const minimum =
-    row.instance.activityType === "duty" ? row.instance.requiredStaffCount : 0;
-  const total = Math.max(minimum, planned);
   // Fehlt eine eingeteilte Person, lässt sie sich hier vertreten. Reicht die
   // Einteilung selbst nicht, hilft nur der Betreuungsplan; beides kann
   // zugleich gelten.
@@ -519,7 +520,6 @@ function VertretungDayListRow({
     isCancelled,
     ackMatch,
     absentPlannedRows,
-    triple,
     coverageState,
   } = row;
   // "Ganzer Tag" blendet ungestörte Positionen gedämpft grau ein, ohne
@@ -531,7 +531,9 @@ function VertretungDayListRow({
   // niemanden zu vertreten. Die Zeile sagt das und verspricht kein
   // „Besetzen“.
   const staffing = rowStaffing(row);
-  const nobodyPlanned = isOpenGap && triple.planned === 0;
+  // Ohne Einteilung und ohne Mindestbesetzung gibt es keinen Bruch zu
+  // zeigen; ein Dienst mit Mindestbesetzung nennt ihn auch dann.
+  const nobodyPlanned = isOpenGap && staffing.total === 0;
   const canFill = staffing.canFill;
   // Zu wenig eingeteilt: der Weg führt in den Betreuungsplan, auch wenn
   // zusätzlich eine eingeteilte Person fehlt.

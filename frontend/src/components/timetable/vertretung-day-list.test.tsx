@@ -735,6 +735,65 @@ describe("VertretungDayList", () => {
     ).toBeInTheDocument();
   });
 
+  it("zeigt bei einem Dienst ohne Einteilung den Bruch zur Mindestbesetzung, auch wenn er quittiert ist", () => {
+    const duty = makeInstance({
+      id: "82",
+      title: "Busaufsicht",
+      startTime: "16:00",
+      endTime: "16:30",
+      activityType: "duty",
+      requiredStaffCount: 3,
+      staff: [],
+    });
+    const gap = makeGap({
+      instanceId: "82",
+      title: "Busaufsicht",
+      startTime: "16:00",
+      endTime: "16:30",
+      assignedStaffCount: 0,
+      absentStaffCount: 0,
+      presentStaffCount: 0,
+      plannedStaffCount: 0,
+    });
+    const { rerender } = render(
+      <VertretungDayList
+        title="Termine am Mi 09.09."
+        instances={[duty]}
+        gaps={[gap]}
+        acknowledged={[]}
+        gapsAvailable
+        staffNames={staffNames}
+        mode="stoerungen"
+        canManage
+        onEdit={vi.fn()}
+        carePlanHrefFor={(dateISO) => `/acme/betreuungsplan?d=${dateISO}`}
+      />,
+    );
+    const row = () => screen.getByTestId("vertretung-day-list-row-82");
+    expect(within(row()).getByText("0 von 3 da")).toBeInTheDocument();
+    expect(within(row()).getByText("3 Personen fehlen")).toBeInTheDocument();
+    expect(
+      within(row()).getByRole("link", { name: "Im Betreuungsplan einteilen" }),
+    ).toBeInTheDocument();
+
+    // Quittiert bleibt derselbe Bruch stehen.
+    rerender(
+      <VertretungDayList
+        title="Termine am Mi 09.09."
+        instances={[duty]}
+        gaps={[]}
+        acknowledged={[gap]}
+        gapsAvailable
+        staffNames={staffNames}
+        mode="stoerungen"
+        canManage
+        onEdit={vi.fn()}
+      />,
+    );
+    expect(within(row()).getByText("0 von 3 da")).toBeInTheDocument();
+    expect(within(row()).getByText("bewusst unbesetzt")).toBeInTheDocument();
+  });
+
   it("nennt den Knopf eines vergangenen oder abgesagten Termins 'Details', wie der Editor ihn zeigt", () => {
     render(
       <VertretungDayList
