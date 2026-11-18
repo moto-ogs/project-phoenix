@@ -491,7 +491,13 @@ function StaffRecordContent() {
     >
       {record ? (
         <>
-          <StaffPersonCard record={record} onSaved={replace} />
+          <StaffPersonCard
+            record={record}
+            onSaved={() => {
+              refreshOverview();
+              return mutate();
+            }}
+          />
 
           <div className="grid gap-6 lg:grid-cols-2">
             <PersonnelNumberCard record={record} onSaved={replace} />

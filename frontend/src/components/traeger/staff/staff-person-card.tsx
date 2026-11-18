@@ -11,13 +11,17 @@ import { Button } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { ISODateInput } from "~/components/ui/date-picker";
 import { EditActions } from "~/components/ui/edit-actions";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { staffConcept } from "~/lib/concepts/staff";
 import { formatDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import {
   updateStaffPerson,
@@ -57,7 +61,8 @@ export function StaffPersonCard({
   onSaved,
 }: Readonly<{
   record: StaffRecordDetail;
-  onSaved: (record: StaffRecordDetail) => void;
+  /** Loads the corrected record; the card closes once it is there. */
+  onSaved: () => Promise<unknown>;
 }>) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<StaffPersonInput>(() => draftOf(record));
@@ -72,6 +77,7 @@ export function StaffPersonCard({
   const errors = useApiFormError(formRef);
   const { success } = useToast();
   const today = useBerlinToday();
+  const afterWrite = useRefreshAfterWrite("die Person", onSaved);
 
   const startEdit = () => {
     setDraft(draftOf(record));
@@ -113,19 +119,24 @@ export function StaffPersonCard({
     }
     setSaving(true);
     try {
-      const saved = await updateStaffPerson(record.id, next);
-      setEditing(false);
-      success(
-        "Die Angaben zur Person sind gespeichert. Der Verlauf zeigt die alten Werte.",
-      );
-      onSaved(saved);
+      await updateStaffPerson(record.id, next);
     } catch (err) {
       logger.error("traeger_staff_person_save_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
       void errors.show(err, { object: "die Person" });
-    } finally {
       setSaving(false);
+      return;
+    }
+    // Saved. The card closes once the corrected record is loaded; a failed
+    // reload says the change is saved and offers to load it again.
+    const fresh = await afterWrite.refresh();
+    setSaving(false);
+    setEditing(false);
+    if (fresh) {
+      success(
+        "Die Angaben zur Person sind gespeichert. Der Verlauf zeigt die alten Werte.",
+      );
     }
   };
 
@@ -212,20 +223,25 @@ export function StaffPersonCard({
           </div>
         </form>
       ) : (
-        <DataGrid columns={4}>
-          <DataField label={STAFF_FIELD_LABELS.first_name}>
-            {record.firstName}
-          </DataField>
-          <DataField label={STAFF_FIELD_LABELS.last_name}>
-            {record.lastName}
-          </DataField>
-          <DataField label={STAFF_FIELD_LABELS.birthday}>
-            {record.birthday ? formatDate(record.birthday) : "Nicht hinterlegt"}
-          </DataField>
-          <DataField label="Schulen">
-            {schoolCount(record.employments.length)}
-          </DataField>
-        </DataGrid>
+        <>
+          <LoadErrorAlert error={afterWrite.error} className="mb-4" />
+          <DataGrid columns={4}>
+            <DataField label={STAFF_FIELD_LABELS.first_name}>
+              {record.firstName}
+            </DataField>
+            <DataField label={STAFF_FIELD_LABELS.last_name}>
+              {record.lastName}
+            </DataField>
+            <DataField label={STAFF_FIELD_LABELS.birthday}>
+              {record.birthday
+                ? formatDate(record.birthday)
+                : "Nicht hinterlegt"}
+            </DataField>
+            <DataField label="Schulen">
+              {schoolCount(record.employments.length)}
+            </DataField>
+          </DataGrid>
+        </>
       )}
     </SectionCard>
   );

@@ -17,6 +17,7 @@ import { routes as traegerDocuments } from "./traeger-documents.generated";
 import { routes as traegerMasterData } from "./traeger-master-data.generated";
 import { routes as traegerNotifications } from "./traeger-notifications.generated";
 import { routes as traegerReportTemplates } from "./traeger-report-templates.generated";
+import { routes as traegerStaffRecords } from "./traeger-staff-records.generated";
 
 /** The registered routes of each portal, by the scope of its session token. */
 export const portalRoutes = {
@@ -51,6 +52,7 @@ export const portalRoutes = {
     traegerReportTemplates["GET /traeger/report-templates/"],
     traegerReportTemplates["POST /traeger/report-templates/"],
     traegerReportTemplates["PUT /traeger/report-templates/{id}"],
+    traegerStaffRecords["PUT /traeger/staff-records/{id}/person"],
   ],
   parent: [
     parentMe["GET /parent/me/enrollable-schools"],

@@ -312,8 +312,9 @@ type TraegerStaffRecords interface {
 	Link(ctx context.Context, actor TraegerStaffActor, request TraegerStaffLinkRequest) (TraegerStaffRecordDetail, error)
 	UpdatePersonnelNumber(ctx context.Context, actor TraegerStaffActor, recordID int64, value *string) (TraegerStaffRecordDetail, error)
 	// UpdatePerson corrects name and birthday of the record (#7379); the
-	// schools keep their own person rows.
-	UpdatePerson(ctx context.Context, actor TraegerStaffActor, recordID int64, person TraegerStaffPerson) (TraegerStaffRecordDetail, error)
+	// schools keep their own person rows. It answers no record: a reader
+	// loads it again, which writes the read into the access log.
+	UpdatePerson(ctx context.Context, actor TraegerStaffActor, recordID int64, person TraegerStaffPerson) error
 	Financial(ctx context.Context, actor TraegerStaffActor, recordID int64, reveal bool) (TraegerStaffFinancial, error)
 	UpdateFinancial(ctx context.Context, actor TraegerStaffActor, recordID int64, input StammdatenFinancialInput) error
 	Dissolve(ctx context.Context, actor TraegerStaffActor, recordID int64) error

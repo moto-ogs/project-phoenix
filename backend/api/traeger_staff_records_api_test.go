@@ -440,6 +440,17 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 	// record; the trail keeps the old values, the schools keep their own.
 	t.Run("name and birthday are corrected in the record and stand in its trail", func(t *testing.T) {
 		path := fmt.Sprintf("/traeger/staff-records/%d/person", record.ID)
+		// The correction answers no record; the reader loads it again.
+		save := func(body map[string]any) staffRecordBody {
+			t.Helper()
+			rec := traegerJSON(t, router, office.token, http.MethodPut, path, body)
+			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+			raw := decode[json.RawMessage](t, rec)
+			assert.True(t, len(raw) == 0 || string(raw) == "null", "the correction answers no record: %s", raw)
+			rec = traegerJSON(t, router, office.token, http.MethodGet, fmt.Sprintf("/traeger/staff-records/%d", record.ID), nil)
+			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+			return decode[staffRecordBody](t, rec)
+		}
 		rec := traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"first_name": " ", "last_name": "Sommer-Berg", "birthday": nil})
 		assertStaffRefusal(t, rec, http.StatusBadRequest, "workforce.stammdaten_invalid")
 		require.Len(t, refusalOf(t, rec).Errors, 1)
@@ -448,9 +459,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		assertStaffRefusal(t, rec, http.StatusBadRequest, "workforce.stammdaten_invalid")
 		assert.Equal(t, "birthday", refusalOf(t, rec).Errors[0].Field, "a birthday that has not come yet is refused")
 
-		rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"first_name": " Myra ", "last_name": "Sommer-Berg", "birthday": "1990-04-12"})
-		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		corrected := decode[staffRecordBody](t, rec)
+		corrected := save(map[string]any{"first_name": " Myra ", "last_name": "Sommer-Berg", "birthday": "1990-04-12"})
 		assert.Equal(t, "Myra", corrected.FirstName)
 		assert.Equal(t, "Sommer-Berg", corrected.LastName)
 		assert.Equal(t, "1990-04-12", corrected.Birthday)
@@ -467,13 +476,10 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 			"the school keeps its own person")
 
 		before := len(corrected.Changes)
-		rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"first_name": "Myra", "last_name": "Sommer-Berg", "birthday": "1990-04-12"})
-		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		assert.Len(t, decode[staffRecordBody](t, rec).Changes, before, "saving the same values writes nothing")
+		assert.Len(t, save(map[string]any{"first_name": "Myra", "last_name": "Sommer-Berg", "birthday": "1990-04-12"}).Changes, before,
+			"saving the same values writes nothing")
 
-		rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"first_name": "Myra", "last_name": "Sommer-Berg", "birthday": nil})
-		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		cleared := decode[staffRecordBody](t, rec)
+		cleared := save(map[string]any{"first_name": "Myra", "last_name": "Sommer-Berg", "birthday": nil})
 		assert.Empty(t, cleared.Birthday)
 		require.NotEmpty(t, cleared.Changes)
 		assert.Equal(t, workforce.TraegerStaffChangeRemoved, cleared.Changes[0].Kind, "an emptied birthday is removed, not replaced")

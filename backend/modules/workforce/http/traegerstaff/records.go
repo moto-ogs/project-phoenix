@@ -219,34 +219,34 @@ func (rs *RecordsResource) personnelNumber(w http.ResponseWriter, r *http.Reques
 	common.Respond(w, r, http.StatusOK, detail, "Personnel number updated successfully")
 }
 
-// personRequest corrects name and birthday of a record (#7379); a birthday
+// PersonRequest corrects name and birthday of a record (#7379); a birthday
 // of null or "" clears it.
-type personRequest struct {
+type PersonRequest struct {
 	FirstName string  `json:"first_name"`
 	LastName  string  `json:"last_name"`
-	Birthday  *string `json:"birthday"`
+	Birthday  *string `json:"birthday" contract:"date"`
 }
 
-func (req *personRequest) Bind(*http.Request) error { return nil }
+func (req *PersonRequest) Bind(*http.Request) error { return nil }
 
 func (rs *RecordsResource) person(w http.ResponseWriter, r *http.Request) {
 	session, id, ok := actorAndRecord(w, r)
 	if !ok {
 		return
 	}
-	req := &personRequest{}
+	req := &PersonRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeWorkforceStammdatenInvalid))
 		return
 	}
-	detail, err := rs.records.UpdatePerson(r.Context(), session, id, workforce.TraegerStaffPerson{
+	err := rs.records.UpdatePerson(r.Context(), session, id, workforce.TraegerStaffPerson{
 		FirstName: req.FirstName, LastName: req.LastName, Birthday: req.Birthday,
 	})
 	if err != nil {
 		renderError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, detail, "Staff record person updated successfully")
+	common.Respond(w, r, http.StatusOK, nil, "Staff record person updated successfully")
 }
 
 func (rs *RecordsResource) financial(w http.ResponseWriter, r *http.Request) {

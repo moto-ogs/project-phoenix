@@ -15,15 +15,15 @@ import (
 // schools keep their own person rows (ADR 0089 section 3): the correction
 // reaches the Träger's lists, exports, the proposals and the duplicate check
 // of a hire.
-func (t *TraegerStaff) UpdatePerson(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64, input workforce.TraegerStaffPerson) (workforce.TraegerStaffRecordDetail, error) {
+func (t *TraegerStaff) UpdatePerson(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64, input workforce.TraegerStaffPerson) error {
 	person, err := domain.NormalizeStaffPerson(domain.StaffPerson{
 		FirstName: input.FirstName, LastName: input.LastName, Birthday: domain.Deref(input.Birthday),
 	}, calendar.Date(t.clock.Today()))
 	if refused, ok := errors.AsType[*domain.StaffPersonError](err); ok {
-		return workforce.TraegerStaffRecordDetail{}, &workforce.TraegerStaffPersonError{Field: refused.Field, Cause: err}
+		return &workforce.TraegerStaffPersonError{Field: refused.Field, Cause: err}
 	}
 	if err != nil {
-		return workforce.TraegerStaffRecordDetail{}, publicTraegerStaffError(err)
+		return publicTraegerStaffError(err)
 	}
 	err = t.released(ctx, actor, func(ctx context.Context) error {
 		locked, err := t.store.FindStaffRecord(ctx, actor.OrganizationID, recordID, true)
@@ -49,8 +49,5 @@ func (t *TraegerStaff) UpdatePerson(ctx context.Context, actor workforce.Traeger
 		}
 		return t.store.AppendStaffChanges(ctx, actor.OrganizationID, trail)
 	})
-	if err != nil {
-		return workforce.TraegerStaffRecordDetail{}, publicTraegerStaffError(err)
-	}
-	return t.Record(ctx, actor, recordID)
+	return publicTraegerStaffError(err)
 }

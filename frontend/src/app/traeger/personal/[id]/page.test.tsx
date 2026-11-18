@@ -302,9 +302,9 @@ describe("TraegerStaffRecordPage", () => {
 
   // #7379: Name und Geburtstag korrigiert die Personalverwaltung in der Akte.
   it("corrects name and birthday and refuses an empty name", async () => {
-    let answer: (record: StaffRecordDetail) => void = () => undefined;
+    let answer: () => void = () => undefined;
     api.updateStaffPerson.mockReturnValue(
-      new Promise<StaffRecordDetail>((resolve) => {
+      new Promise<void>((resolve) => {
         answer = resolve;
       }),
     );
@@ -366,7 +366,9 @@ describe("TraegerStaffRecordPage", () => {
     );
     // While saving, nothing typed can get lost.
     expect(firstName).toBeDisabled();
-    answer(saved);
+    // The correction answers no record: the page loads it again.
+    api.fetchStaffRecord.mockResolvedValue(saved);
+    answer();
     expect(await within(card!).findByText("12.04.1990")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 1, name: "Myra Sommer-Berg" }),
