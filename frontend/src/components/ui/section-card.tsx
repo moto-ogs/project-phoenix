@@ -228,12 +228,16 @@ export function SectionCollapseHead({
 }
 
 /**
- * Unter `lg` liegt unten die Navigation, der Fuß klebt direkt auf ihrer
- * Oberkante (Leiste 86 px über dem Rand). Mit Abstand liefe der Inhalt
- * zwischen Fuß und Leiste sichtbar weiter.
+ * Unter `lg` liegt unten die Navigation. Der Fuß schwebt dort als eigene
+ * Leiste darüber (eigener Rand und Schatten) wie `StickyActionBar`, statt
+ * als Kartenstreifen den Text mittendrin abzuschneiden. Ab `lg` bleibt er
+ * der graue Kartenfuß und klebt am unteren Rand.
  */
-const STICKY_FOOTER =
-  "sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-0";
+const STICKY_FOOTER = cn(
+  "sticky bottom-[calc(6rem+env(safe-area-inset-bottom))] lg:bottom-0",
+  "max-lg:rounded-2xl max-lg:border max-lg:border-gray-200 max-lg:bg-white max-lg:shadow-lg",
+  "lg:rounded-b-2xl lg:bg-gray-50",
+);
 
 /**
  * The canonical content section of the calm design language the app converged
@@ -565,8 +569,7 @@ export function SectionCard({
           className={cn(
             "border-t border-gray-100 bg-gray-50/70 py-3",
             ZONE_PADDING_X,
-            stickyFooter &&
-              `${STICKY_FOOTER} ${Z_LAYER.raised} rounded-b-2xl bg-gray-50`,
+            stickyFooter && `${STICKY_FOOTER} ${Z_LAYER.raised}`,
           )}
         >
           {footer}
