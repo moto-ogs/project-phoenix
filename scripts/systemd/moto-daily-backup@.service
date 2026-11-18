@@ -1,0 +1,31 @@
+[Unit]
+Description=moto encrypted daily disaster recovery backup (%i)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+OnFailure=moto-backup-failure@%i.service
+
+[Service]
+Type=oneshot
+# Instance = deployment (production, staging); Alloy maps it to env.
+SyslogIdentifier=moto-daily-backup-%i
+StandardOutput=journal
+StandardError=journal
+User=root
+UMask=0077
+LimitCORE=0
+EnvironmentFile=/etc/moto-backup/%i.env
+RuntimeDirectory=moto-backup-%i
+RuntimeDirectoryMode=0700
+StateDirectory=moto-backup-cipher-%i
+StateDirectoryMode=0700
+# One host-wide lock serializes all instances: their plaintext shares RAM.
+# Root-only /run, not world-writable /run/lock, so no user can block it.
+ExecStart=/usr/bin/flock /run/moto-daily-backup.lock /usr/local/lib/moto-backup/daily-backup.sh
+TimeoutStartSec=6h
+KillMode=control-group
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=full
+# The deployment directory must remain writable for .release-operation.lock.
+# Set PATH in the instance env file to the pinned tool directory plus system bins.
