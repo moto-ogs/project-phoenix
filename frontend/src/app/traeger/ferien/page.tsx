@@ -17,8 +17,8 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import {
-  TraegerListExportMenu,
   traegerExportScope,
+  useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import type { HolidayPeriod } from "~/lib/traeger-api";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
@@ -76,6 +76,17 @@ export default function TraegerHolidayPeriodsPage() {
 
   const newHref = traegerPath("/traeger/ferien/neu");
 
+  // Herunterladen und der Weg zu den Kriterien stehen im Drei-Punkte-Menü;
+  // sichtbar bleibt nur „Ferienzeitraum anlegen“ (#7411).
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/holiday-periods/export", format),
+    scope: traegerExportScope(),
+    fallbackName: "ferienzeitraeume",
+    errorObject: "die Ferienzeiträume",
+    unavailable: periods.length === 0,
+  });
+
   const published = periods.filter(
     (period) => period.status === "published",
   ).length;
@@ -100,39 +111,28 @@ export default function TraegerHolidayPeriodsPage() {
       }
       statsLoading={loading}
       error={loadError}
+      overflowMenu={[
+        {
+          label: "Kriterien der Platzvergabe",
+          description: HOLIDAY_CRITERIA_HINT,
+          icon: <ListChecks className="h-4 w-4" aria-hidden="true" />,
+          href: traegerPath("/traeger/ferien/kriterien"),
+          onClick: () => undefined,
+        },
+        { kind: "separator" },
+        ...exportItems,
+      ]}
       actions={
-        <>
-          <TraegerListExportMenu
-            download={(format) =>
-              downloadTraegerList("/api/traeger/holiday-periods/export", format)
-            }
-            scope={traegerExportScope()}
-            ariaLabel="Ferienzeiträume herunterladen"
-            fallbackName="ferienzeitraeume"
-            errorObject="die Ferienzeiträume"
-            unavailable={periods.length === 0}
-          />
-          <ButtonLink
-            href={traegerPath("/traeger/ferien/kriterien")}
-            variant="outline"
-            size="md"
-            tooltip={HOLIDAY_CRITERIA_HINT}
-            className="gap-2"
-          >
-            <ListChecks className="h-4 w-4" aria-hidden="true" />
-            Kriterien der Platzvergabe
-          </ButtonLink>
-          <ButtonLink
-            href={newHref}
-            variant="primary"
-            size="md"
-            tooltip="Öffnet einen neuen Ferienzeitraum als Entwurf, Eltern sehen ihn noch nicht."
-            className="gap-2"
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Ferienzeitraum anlegen
-          </ButtonLink>
-        </>
+        <ButtonLink
+          href={newHref}
+          variant="primary"
+          size="md"
+          tooltip="Öffnet einen neuen Ferienzeitraum als Entwurf, Eltern sehen ihn noch nicht."
+          className="gap-2"
+        >
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          Ferienzeitraum anlegen
+        </ButtonLink>
       }
     >
       <DataTable

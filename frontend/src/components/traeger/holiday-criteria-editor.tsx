@@ -35,7 +35,6 @@ import {
   MAX_HOLIDAY_CRITERIA,
   saveHolidayCriteria,
 } from "~/lib/traeger-holiday-allocation-api";
-import { criterionTone } from "./holiday-allocation-model";
 import {
   CRITERION_TEMPLATES,
   type CriterionDraft,
@@ -67,7 +66,7 @@ function ParentPreview({ draft }: Readonly<{ draft: CriterionDraft }>) {
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <StatusBadge tone="outline" size="xs" label="Ja" />
         <StatusBadge tone="outline" size="xs" label="Nein" />
-        <span className="text-xs text-gray-600">
+        <span className="text-sm text-gray-600">
           {draft.scope === "family"
             ? "Einmal für die Familie. Pflichtfrage."
             : "Für jedes Kind einzeln. Pflichtfrage."}
@@ -114,19 +113,17 @@ function CriterionRow({
           tone={draft.active ? "inverse" : "neutral"}
         />
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-          <h3 className="text-sm font-semibold wrap-anywhere text-gray-900">
+          <SectionLabel as="h3" className="wrap-anywhere">
             <span className="sr-only">Priorität {position}: </span>
             {label}
-          </h3>
-          {draft.active ? (
-            <StatusBadge
-              tone={criterionTone(position)}
-              size="xs"
-              label={`Priorität ${position}`}
-            />
-          ) : (
-            <StatusBadge tone="gray" size="xs" label="Ausgeschaltet" />
-          )}
+          </SectionLabel>
+          {/* Neutral: the rank number in front ties the criterion to the
+              chips at a child; colour means status only (#7411). */}
+          <StatusBadge
+            tone="gray"
+            size="xs"
+            label={draft.active ? `Priorität ${position}` : "Ausgeschaltet"}
+          />
         </div>
         <div className="flex items-center gap-1">
           <Button
@@ -224,7 +221,7 @@ function CriterionRow({
           />
           <FieldErrorHint id={`${scopeId}-error`} message={scopeError} />
           {draft.answered ? (
-            <p className="text-xs text-gray-600">
+            <p className="text-sm text-gray-600">
               Eltern haben schon geantwortet. Darum bleibt das so.
             </p>
           ) : null}
@@ -304,7 +301,9 @@ export function HolidayCriteriaEditor({
       ref={formRef}
       noValidate
       aria-label="Kriterien der Platzvergabe"
-      className="flex flex-col gap-6"
+      // A flex column only so the one card grows to the bottom edge; the
+      // page body sets the spacing (#7411).
+      className="flex flex-col"
       onSubmit={(event) => {
         event.preventDefault();
         void save();

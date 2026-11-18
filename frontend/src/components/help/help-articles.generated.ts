@@ -13282,7 +13282,7 @@ export const traegerHolidayAllocationTopic =
           title: "Kriterien festlegen",
           steps: [
             "Wähle in der Navigation `Ferienbetreuung`.",
-            "Wähle oben `Kriterien der Platzvergabe`.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle `Kriterien der Platzvergabe`.",
             "Wähle eine Vorlage oder `Eigenes Kriterium`.",
             "Gib den Namen und die `Frage an die Eltern` ein. Wähle bei `Gilt für`, ob die Frage für die Familie oder für jedes Kind gilt.",
             "Bringe die Kriterien mit den Pfeilen in die richtige Reihenfolge. Das oberste Kriterium zählt am meisten.",
@@ -13301,7 +13301,7 @@ export const traegerHolidayAllocationTopic =
           title: "Plätze vergeben",
           steps: [
             "Öffne den Ferienzeitraum und wähle den Reiter `Vergabe`.",
-            "Je Woche stehen die offenen Anmeldungen in der Reihenfolge des Vorschlags. Die Linie zeigt, wo die freien Plätze enden.",
+            "Je Woche stehen die offenen Anmeldungen in der Reihenfolge des Vorschlags. Die Zeile mit „ab hier schlägt moto die Warteliste vor“ zeigt, wo die freien Plätze enden.",
             "Wähle bei einem Kind `Platz geben` oder `Auf die Warteliste`. Weicht das vom Vorschlag ab, schreibe eine `Begründung`.",
             "Oder wähle bei der Woche `Vorschlag übernehmen`. Mit mehreren Wochen gibt es oben `Vorschlag für alle Wochen übernehmen`.",
             "Bestätige im Fenster.",
@@ -13312,7 +13312,7 @@ export const traegerHolidayAllocationTopic =
           description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
           steps: [
             "Öffne den Ferienzeitraum und wähle den Reiter `Vergabe`.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Datei enthält die offenen Anmeldungen im Vorschlag und alle Entscheidungen deines Büros.",
           ],
         },
@@ -13643,7 +13643,7 @@ export const traegerHolidayPeriodTopic =
           description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
           steps: [
             "Wähle in der Navigation `Ferienbetreuung`.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Datei enthält alle Ferienzeiträume mit Anmeldung, Wochen, Schulen und Status.",
           ],
         },
@@ -13720,7 +13720,7 @@ export const traegerHolidayPlacesTopic =
             "Wähle in der Navigation `Ferienbetreuung`.",
             "Öffne den Ferienzeitraum.",
             "Wähle den Reiter `Plätze`.",
-            "Wähle bei der Woche `Plätze ändern`.",
+            "Wähle bei der Woche `Plätze bearbeiten`.",
             "Schalte `Plätze begrenzen` ein und stelle die Zahl ein.",
             "Wähle `Plätze speichern`.",
           ],
@@ -13739,7 +13739,7 @@ export const traegerHolidayPlacesTopic =
           description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
           steps: [
             "Öffne den Ferienzeitraum und wähle den Reiter `Plätze`.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Datei enthält je Woche die Plätze und die Kinder auf der Warteliste.",
           ],
         },
@@ -13811,7 +13811,7 @@ export const traegerHolidayRegistrationReviewTopic =
             "Wähle in der Navigation `Ferienbetreuung`.",
             "Öffne den Ferienzeitraum.",
             "Wähle den Reiter `Anmeldungen`.",
-            "Filtere nach Status, `Schule`, `Woche` oder `Zeitmodell`. Unter `Schule` findest du auch `Feriengäste`.",
+            "Wähle `Filter` und filtere nach `Status`, `Schule`, `Woche` oder `Zeitmodell`. Unter `Schule` findest du auch `Feriengäste`.",
             "Wähle eine Anmeldung, um sie zu öffnen.",
           ],
         },
@@ -13837,7 +13837,7 @@ export const traegerHolidayRegistrationReviewTopic =
           description:
             "moto bestätigt nur Anmeldungen, die keine Angabe mehr brauchen. Die Familie bezahlt dann den Beitrag. Bei offenen Anmeldungen prüfst du zuerst den Grund.",
           steps: [
-            "Filtere nach dem Status `Eingegangen`.",
+            "Wähle `Filter` und unter `Status` `Eingegangen`.",
             "Setze einen Haken bei jeder Anmeldung. Mit dem Haken in der Kopfzeile wählst du alle aus.",
             "Wähle oben `Ausgewählte bestätigen`.",
             "Das Fenster zeigt unter `Wird bestätigt`, welche Anmeldungen moto bestätigt. Darunter steht, welche offen bleiben und warum.",
@@ -13912,7 +13912,7 @@ export const traegerHolidayRegistrationReviewTopic =
           title: "Exportieren",
           steps: [
             "Stelle die Filter ein, zum Beispiel eine Schule.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die PDF ist zum Ausdrucken. Sie enthält Kind, Woche, Zeitmodell, Mittagessen und Telefon. Adresse, E-Mail und die Antworten im Formular stehen nur in Excel und CSV.",
           ],
         },
@@ -13920,7 +13920,7 @@ export const traegerHolidayRegistrationReviewTopic =
           title: "Anmeldungen als PDF aufbewahren",
           steps: [
             "Über der Liste steht, wann moto die Anmeldungen löscht.",
-            "Wähle `Herunterladen` und dann `Alle als PDF (ZIP)`. Du bekommst eine ZIP-Datei mit einem PDF je Anmeldung.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `Alle als PDF (ZIP)`. Du bekommst eine ZIP-Datei mit einem PDF je Anmeldung.",
             "Hast du Filter eingestellt? Dann heißt der Eintrag `Gefilterte als PDF (ZIP)`. Die ZIP-Datei enthält nur die gefilterten Anmeldungen.",
             "Für eine einzelne Anmeldung öffnest du die Anmeldung. Wähle `Herunterladen` und dann `PDF`.",
             "Speichere die Dateien bei deinem Träger. Für diese Kopien bist du selbst verantwortlich.",

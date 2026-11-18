@@ -93,7 +93,7 @@ function waitingLabel(count: number): string {
 }
 
 /**
- * Eine Woche mit Belegung und Warteliste. „Plätze ändern“ schaltet die Karte
+ * Eine Woche mit Belegung und Warteliste. „Plätze bearbeiten“ schaltet die Karte
  * selbst in den Bearbeiten-Zustand; die Plätze werden in ihr festgelegt.
  */
 export function HolidayWeekPlacesCard({
@@ -128,12 +128,12 @@ export function HolidayWeekPlacesCard({
           <Button
             type="button"
             variant="outline"
-            size="compact"
+            size="md"
             onClick={onEdit}
-            aria-label={`Plätze für die Woche ${title} ändern`}
-            tooltip="Öffnet die Zahl der Plätze dieser Woche zum Ändern."
+            aria-label={`Plätze für die Woche ${title} bearbeiten`}
+            tooltip="Öffnet die Zahl der Plätze dieser Woche zum Bearbeiten."
           >
-            Plätze ändern
+            Plätze bearbeiten
           </Button>
         )
       }
@@ -213,11 +213,11 @@ export function HolidayDayPlacesGrid({
                 key={day.date}
                 aria-label={`${holidayWeekdayLong(day.date)}, ${holidayDayDate(day.date)}: buchbar`}
               >
+                {/* Neutral: green means „anwesend“ in moto (#7411). */}
                 <StatCard
                   label={`${holidayWeekdayShort(day.date)} ${holidayDayDate(day.date)}`}
-                  value="✓"
-                  hint="buchbar"
-                  tone="green"
+                  value="buchbar"
+                  tone="gray"
                 />
               </li>
             );

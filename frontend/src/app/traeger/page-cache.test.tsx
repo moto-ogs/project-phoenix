@@ -66,21 +66,20 @@ vi.mock("~/components/traeger/holiday-period-form", () => ({
   ),
 }));
 vi.mock("~/components/traeger/holiday-period-publish-card", () => ({
-  HolidayPeriodPublishCard: ({
+  // Publishing is the head action, the card shows the parents' link (#7411).
+  HolidayPeriodPublishCard: () => <p>Confirmed actions</p>,
+  HolidayPeriodPublishButton: ({
     onPublished,
     period = HOLIDAY_PERIOD,
   }: {
     onPublished: (next: HolidayPeriod) => void;
     period: HolidayPeriod;
   }) => (
-    <>
-      <p>Confirmed actions</p>
-      <button
-        onClick={() => onPublished({ ...period, name: "Published period" })}
-      >
-        Publish answer
-      </button>
-    </>
+    <button
+      onClick={() => onPublished({ ...period, name: "Published period" })}
+    >
+      Publish answer
+    </button>
   ),
 }));
 
