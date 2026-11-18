@@ -16,6 +16,7 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { SectionCard } from "~/components/ui/section-card";
+import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
@@ -122,7 +123,15 @@ const COLUMNS: DataTableColumn<CountRow>[] = [
     header: "Erfasst am",
     render: (row) =>
       row.kind === "pending" ? (
-        <span className="text-gray-500">noch nicht erfasst</span>
+        row.keyDate < berlinTodayISO() ? (
+          <StatusBadge
+            tone="warning"
+            label="Zahlen fehlen"
+            title="Der Stichtag ist vorbei und moto hat noch keine Zahlen. Lief die Erfassung nicht, holt moto sie in diesem Monat nach."
+          />
+        ) : (
+          <span className="text-gray-500">noch nicht erfasst</span>
+        )
       ) : capturedLate(row.count) ? (
         <span title="Die Zahlen wurden nach dem Stichtag erfasst, weil die Erfassung am Stichtag nicht lief.">
           {recordedLabel(row.count)} · nachträglich
