@@ -86,7 +86,7 @@ export default function TraegerStaffImportPage() {
 }
 
 function StaffImportContent() {
-  const { backHref } = useStaffOverviewReturn();
+  const { from, backHref } = useStaffOverviewReturn();
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<StaffImportResult | null>(null);
   const [verified, setVerified] = useState(false);
@@ -247,7 +247,7 @@ function StaffImportContent() {
                 action={
                   <div className="flex flex-wrap justify-center gap-3">
                     <ButtonLink
-                      href={staffOverviewHref(null)}
+                      href={staffOverviewHref(from)}
                       variant="primary"
                       size="md"
                       tooltip="Öffnet die Personalakten."

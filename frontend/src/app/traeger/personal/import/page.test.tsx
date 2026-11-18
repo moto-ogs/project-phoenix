@@ -180,6 +180,28 @@ describe("TraegerStaffImportPage", () => {
     ).toHaveAttribute("href", "/traeger/personal");
   });
 
+  it("returns to the originating tab after importing", async () => {
+    address.search = "from=akten";
+    await choose();
+    api.applyStaffImport.mockResolvedValueOnce({
+      ...preview,
+      applied: true,
+      counts: { ...preview.counts, new: 0, complete: 0, imported: 2 },
+      rows: preview.rows.map((entry) =>
+        entry.status === "conflict" ? entry : { ...entry, status: "imported" },
+      ),
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "2 Zeilen übernehmen" }),
+    );
+
+    await screen.findByText("Übernommen: 1 neue Akte, 1 ergänzt");
+    expect(
+      screen.getByRole("link", { name: "Zu den Personalakten" }),
+    ).toHaveAttribute("href", "/traeger/personal?tab=akten");
+  });
+
   // #7377: Zurück führt auf den Reiter der Personalakten, von dem man kam.
   it("leads back to the tab of the Personalakten it came from", () => {
     address.search = "from=akten";
