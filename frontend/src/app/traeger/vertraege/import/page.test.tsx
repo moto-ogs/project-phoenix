@@ -349,7 +349,7 @@ describe("Vertragsimport", () => {
     ).not.toHaveAttribute("aria-disabled", "true");
 
     const onlyWithout = screen.getByRole("button", {
-      name: "Ohne Mail-Adresse 2",
+      name: "Ohne Mail 2",
     });
     fireEvent.click(onlyWithout);
     expect(onlyWithout).toHaveAttribute("aria-pressed", "true");

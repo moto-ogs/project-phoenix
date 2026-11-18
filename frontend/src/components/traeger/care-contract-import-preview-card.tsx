@@ -168,10 +168,9 @@ export function CareContractImportPreviewCard({
     { value: "ready", label: `Bereit ${counts.ready + counts.imported}` },
     ...(withoutEmail > 0
       ? [
-          {
-            value: "no_email" as const,
-            label: `Ohne Mail-Adresse ${withoutEmail}`,
-          },
+          // Short, so the five segments fit a phone; the warning above
+          // names the full term.
+          { value: "no_email" as const, label: `Ohne Mail ${withoutEmail}` },
         ]
       : []),
     { value: "problems", label: `Fehler ${counts.conflict + counts.invalid}` },
