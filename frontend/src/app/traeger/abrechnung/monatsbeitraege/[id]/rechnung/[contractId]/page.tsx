@@ -8,7 +8,7 @@
 
 import { ChevronDown } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { formatMonth } from "~/components/traeger/care-billing-format";
 import {
   type CareAmendmentDraft,
@@ -20,21 +20,22 @@ import {
 } from "~/components/traeger/care-invoice-amendments";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { InvoiceExportHistoryCard } from "~/components/traeger/invoice-export-history-card";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
+import { useErrorFixLink } from "~/components/ui/error-fix-slot";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { TenantPage } from "~/components/ui/tenant-page";
-import { useApiLoadError, useToast } from "~/contexts/ToastContext";
+import { useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
-import { createLogger } from "~/lib/logger";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import {
   type CareInvoice,
   type CareRunDetail,
   fetchCareRun,
 } from "~/lib/traeger-care-billing-api";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerCareInvoiceAmendPage" });
 
 function invoiceOf(
   run: CareRunDetail,
@@ -54,37 +55,35 @@ function CareInvoiceAmendPage() {
   const runId = params?.id ?? "";
   const contractId = params?.contractId ?? "";
   const service = search?.get("leistung") === "mensa" ? "meal" : "care";
-  const [run, setRun] = useState<CareRunDetail | null>(null);
+  const {
+    data: run,
+    error: runError,
+    mutate,
+    reload,
+  } = useTraegerResource(
+    runId ? traegerBillingRunKeys.careRun(runId) : null,
+    () => fetchCareRun(runId),
+    "die Rechnung",
+  );
   const [draft, setDraft] = useState<CareAmendmentDraft | null>(null);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const { success } = useToast();
   const runHref = traegerPath(`/traeger/abrechnung/monatsbeitraege/${runId}`);
-
-  const load = useCallback(async () => {
-    try {
-      const loaded = await fetchCareRun(runId);
-      if (!invoiceOf(loaded, contractId, service)) {
-        throw new ApiError("Die Rechnung gehört nicht zu diesem Lauf.", 404);
-      }
-      setRun(loaded);
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_care_invoice_amend_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Rechnung",
-        retry: () => void load(),
-      });
-    }
-  }, [runId, contractId, service, showLoadError, clearLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // The switches stand under „Monatsbeitrag“, not on the page
+  // Abrechnungsvorgaben; only with the settings right (#7092).
+  const amendmentSettingsLink = useErrorFixLink(
+    "parent_billing.care_amendment_disabled",
+  );
 
   const invoice = run ? invoiceOf(run, contractId, service) : null;
+  const missing = useMemo(
+    () =>
+      run && !invoice
+        ? new ApiError("Die Rechnung gehört nicht zu diesem Lauf.", 404)
+        : null,
+    [run, invoice],
+  );
+  const missingError = useSwrLoadError(missing, "die Rechnung", reload);
+  const loadError = runError ?? missingError;
   const open = run?.status === "calculated";
   const amendable = run?.amendable;
   const childName = invoice
@@ -171,7 +170,7 @@ function CareInvoiceAmendPage() {
           </span>
         ) : null
       }
-      statsLoading={!run && !pageLoad.error}
+      statsLoading={!run && !loadError}
       info="Hier ändern Sie eine einzelne Rechnung vor dem Ausstellen. Die Änderung gilt nur für diese Rechnung in diesem Lauf. Nach dem Ausstellen geht eine Korrektur nur noch mit Storno und neuer Rechnung."
       actions={
         menu.length > 0 ? (
@@ -194,8 +193,8 @@ function CareInvoiceAmendPage() {
           />
         ) : null
       }
-      error={pageLoad.error}
-      loading={!pageLoad.error && !invoice}
+      error={loadError}
+      loading={!loadError && !invoice}
     >
       {run && invoice ? (
         <>
@@ -235,17 +234,8 @@ function CareInvoiceAmendPage() {
           {allOff ? (
             <Alert
               type="info"
-              message="Ihr Träger hat das Ändern einzelner Rechnungen ausgeschaltet. Sie können es in den Einstellungen der Abrechnung einschalten."
-              action={
-                <ButtonLink
-                  href={traegerPath("/traeger/einstellungen/abrechnung")}
-                  variant="surface"
-                  size="compact"
-                  tooltip="Öffnet die Einstellungen der Abrechnung, dort schalten Sie das Ändern ein."
-                >
-                  Zu den Einstellungen
-                </ButtonLink>
-              }
+              message="Ihr Träger hat das Ändern einzelner Rechnungen ausgeschaltet. Es lässt sich in den Einstellungen unter „Monatsbeitrag“ einschalten. Das darf, wer das Recht „Einstellungen“ hat."
+              action={amendmentSettingsLink}
               actionLayout="responsive"
             />
           ) : null}
@@ -283,7 +273,7 @@ function CareInvoiceAmendPage() {
               onClose={() => setDraft(null)}
               onSaved={(next) => {
                 setDraft(null);
-                setRun(next);
+                void mutate(next, { revalidate: false });
                 success("Die Rechnung ist geändert.");
               }}
             />

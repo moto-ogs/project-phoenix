@@ -6,7 +6,7 @@
 // Seite „Nachweise“.
 
 import { Tags } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   billingAreaTitle,
   billingTabs,
@@ -14,21 +14,18 @@ import {
 import { formatMonth, monthOf } from "~/components/traeger/care-billing-format";
 import { CareRuleModal } from "~/components/traeger/care-rule-modal";
 import { CareRulesCard } from "~/components/traeger/care-rules-card";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { EmptyState } from "~/components/ui/empty-state";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 import {
   CARE_RULE_KINDS,
   type CareRule,
   type CareRuleKind,
-  type CareRuleSet,
   deleteCareRule,
   fetchCareRules,
 } from "~/lib/traeger-care-reductions-api";
@@ -37,43 +34,31 @@ const logger = createLogger({ component: "TraegerErmaessigungenPage" });
 
 export default function TraegerErmaessigungenPage() {
   const currentMonth = monthOf(berlinTodayISO());
-  const [data, setData] = useState<CareRuleSet | null>(null);
+  const {
+    data,
+    loading,
+    error: loadError,
+    mutate,
+  } = useTraegerResource(
+    traegerBillingKeys.careRules(),
+    fetchCareRules,
+    "die Übersicht der Ermäßigungen",
+  );
   const [editing, setEditing] = useState<{
     kind: CareRuleKind;
     rule: CareRule | null;
   } | null>(null);
   const [deleting, setDeleting] = useState<CareRule | null>(null);
   const [busy, setBusy] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const deleteErrors = useApiFormError();
   const { success } = useToast();
-
-  const load = useCallback(async () => {
-    try {
-      setData(await fetchCareRules());
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_care_rules_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Übersicht der Ermäßigungen",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const remove = async () => {
     if (!deleting) return;
     setBusy(true);
     deleteErrors.clear();
     try {
-      setData(await deleteCareRule(deleting.id));
+      await mutate(await deleteCareRule(deleting.id), { revalidate: false });
       success(`Die Regel „${deleting.name}“ ist gelöscht.`);
       setDeleting(null);
     } catch (err) {
@@ -114,10 +99,10 @@ export default function TraegerErmaessigungenPage() {
           />
         ) : null
       }
-      statsLoading={!data && !pageLoad.error}
+      statsLoading={loading}
       tabs={billingTabs("ermaessigungen")}
-      error={pageLoad.error}
-      loading={!pageLoad.error && !data}
+      error={loadError}
+      loading={loading}
       overlays={
         data ? (
           <>
@@ -127,7 +112,7 @@ export default function TraegerErmaessigungenPage() {
               currentMonth={currentMonth}
               onClose={() => setEditing(null)}
               onSaved={(next) => {
-                setData(next);
+                void mutate(next, { revalidate: false });
                 setEditing(null);
               }}
             />
@@ -161,8 +146,11 @@ export default function TraegerErmaessigungenPage() {
           description="Ermäßigungen gibt es für die Schulen Ihres Trägers."
         />
       ) : null}
-      {data && data.schools.length > 0
-        ? CARE_RULE_KINDS.map((kind) => (
+      {/* Equal rule cards in a grid: grids do not grow (TenantPage body
+          rule), so the last kind keeps its height like its siblings. */}
+      {data && data.schools.length > 0 ? (
+        <div className="compact:gap-4 grid gap-6 max-sm:gap-3">
+          {CARE_RULE_KINDS.map((kind) => (
             <CareRulesCard
               key={kind}
               kind={kind}
@@ -172,8 +160,9 @@ export default function TraegerErmaessigungenPage() {
               onEdit={(rule) => setEditing({ kind, rule })}
               onDelete={setDeleting}
             />
-          ))
-        : null}
+          ))}
+        </div>
+      ) : null}
     </TenantPage>
   );
 }

@@ -11,7 +11,7 @@ import {
 import { redirect } from "next/navigation";
 import { useSession } from "next-auth/react";
 
-import { Printer, Settings2 } from "lucide-react";
+import { Printer, Settings2, UsersRound } from "lucide-react";
 
 import { PlanExportModal } from "~/components/planning/plan-export-modal";
 import { CalendarPeriodModal } from "~/components/timetable/calendar-period-modal";
@@ -33,7 +33,10 @@ import { Button, ButtonLink } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
 import { TenantPage } from "~/components/ui/tenant-page";
-import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
+import {
+  OverflowMenu,
+  type OverflowMenuEntry,
+} from "~/components/ui/page-header/OverflowMenu";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { useApiLoadError } from "~/contexts/ToastContext";
 import { hasEffectiveAdminScope, hasPermission } from "~/lib/auth-utils";
@@ -49,6 +52,7 @@ import { createLogger } from "~/lib/logger";
 import type { StaffScheduleStaff, StaffShift } from "~/lib/shift-helpers";
 import { startOfWeek } from "~/lib/staff-metrics-helpers";
 import { useSWRAuth } from "~/lib/swr";
+import { databaseKeys } from "~/lib/swr/portal-keys";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import {
@@ -155,7 +159,7 @@ function DienstplanContent() {
     mutate: mutatePeriods,
   } = useSWRAuth(
     sessionStatus === "authenticated" && canEdit
-      ? "database-calendar-periods-list"
+      ? databaseKeys.calendarPeriods()
       : null,
     () => calendarPeriodService.list(),
   );
@@ -580,16 +584,36 @@ function DienstplanContent() {
               dem Bildschirm steht -- deshalb hier und nicht auf der zentralen
               Exportseite. Im Menü, weil neben dem Titel eine sichtbare Aktion
               steht und nicht zwei. */}
-          {canExportPlan && (
+          {/* Die Springer des Trägers (#4709) liegen auf einer Unterseite des
+              Dienstplans; das Menü führt im selben Fenster dorthin. Blocken
+              darf, wer Schichten plant (time_tracking:manage). */}
+          {(canEdit || canExportPlan) && (
             <OverflowMenu
               items={[
-                {
-                  label: "Drucken oder exportieren",
-                  icon: <Printer className="h-4 w-4" aria-hidden />,
-                  description:
-                    "Öffnet ein Fenster, um den Plan zu drucken oder zu speichern.",
-                  onClick: () => setExportOpen(true),
-                },
+                ...(canEdit
+                  ? [
+                      {
+                        label: "Springer des Trägers",
+                        icon: <UsersRound className="h-4 w-4" aria-hidden />,
+                        description:
+                          "Zeigt die Springer Ihres Trägers. Dort blocken Sie eine Person.",
+                        href: tenantPath("/dienstplan/springer"),
+                        // Nur Navigation: OverflowMenu verlangt onClick auch bei href.
+                        onClick: () => undefined,
+                      } satisfies OverflowMenuEntry,
+                    ]
+                  : []),
+                ...(canExportPlan
+                  ? [
+                      {
+                        label: "Drucken oder exportieren",
+                        icon: <Printer className="h-4 w-4" aria-hidden />,
+                        description:
+                          "Öffnet ein Fenster, um den Plan zu drucken oder zu speichern.",
+                        onClick: () => setExportOpen(true),
+                      } satisfies OverflowMenuEntry,
+                    ]
+                  : []),
               ]}
               ariaLabel="Weitere Aktionen"
             />

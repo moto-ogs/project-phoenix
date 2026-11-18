@@ -110,7 +110,9 @@ möglichen Datensatzinhalten in Logs oder Ausgaben übernehmen.
 
 - `platform.school_erasure_preview(school_id, operator_id)` liefert nur
   Anzahlen je Planzieltabelle, prüft aktive Operator-ID und Schulwurzel und
-  schreibt keinen Auftrag. Statische Selektoren entsprechen dem DB-Plan.
+  schreibt keinen Auftrag. Ziele und Selektoren liest sie zur Laufzeit aus
+  `platform.school_erasure_plan()` (#7210); eine neue Plantabelle braucht
+  keine eigene Zeile in der Vorschau.
 - `platform.school_erasure_schools(organization_id, operator_id, reference)`
   liefert Schul-IDs des Trägers sowie bereits gelöschte Schulen desselben
   Vorgangs für die Wiederaufnahme. Kein Löschen der Trägerwurzel.
@@ -132,7 +134,14 @@ möglichen Datensatzinhalten in Logs oder Ausgaben übernehmen.
   löscht nach Ablauf der Schonfrist einen deaktivierten Träger ohne Schulen.
   Die FKs von `platform.organization_accounts`,
   `auth.organization_account_roles` und `auth.tokens` (Träger-Sitzungen)
-  laufen mit. Im selben Schritt entstehen der Operator-Audit-Eintrag `erase`
+  laufen mit, ebenso die aller Träger-Tabellen. Ein Nachweis zum
+  Monatsbeitrag verweist auf seine Beitragsregel
+  (`fk_care_evidences_rule`, `NO ACTION DEFERRABLE INITIALLY IMMEDIATE`) und
+  geht mit seinem Vertrag. Die Funktion prüft diesen Schlüssel erst nach der
+  ganzen Kaskade (`SET CONSTRAINTS … DEFERRED`, danach `IMMEDIATE`); sonst
+  hinge das Ergebnis davon ab, ob die Kaskade die Regeln vor den Verträgen
+  erreicht (#7248). Eine einzelne Regel mit Nachweis bleibt unlöschbar.
+  Im selben Schritt entstehen der Operator-Audit-Eintrag `erase`
   und der Abschluss des Auftrags mit Anzahlen; ein erneuter Aufruf liefert den
   Nachweis. `platform.billing_key_date_counts` bleibt wie bei Schulen erhalten.
 - `platform.delete_expired_organization_erasure_orders()` entfernt
@@ -268,7 +277,11 @@ keine Daten betroffener Personen; kein Export an Dritte.
 über `platform.capture_billing_key_date_counts(...)`, einen eng berechtigten
 `SECURITY DEFINER`-Schreiber mit unverändertem Insert-once-Verhalten. So
 erhält der Operator auch nicht die von `ON CONFLICT` benötigten Basistabellen-
-Leserechte. Migration und passendes Backend müssen gemeinsam ausgerollt werden;
+Leserechte. Auf die Sequenz `platform.billing_key_date_counts_id_seq` hat
+keine Laufzeitrolle ein Recht (Migration `20261116091743`, #7210): Der
+Schreiber zieht die IDs mit den Rechten seines Eigentümers, und ein `setval`
+des Operators könnte die nächste Erfassung mit einer gehaltenen Zeile
+kollidieren lassen. Migration und passendes Backend müssen gemeinsam ausgerollt werden;
 das alte Backend kann mit diesen eingeschränkten Rechten nicht arbeiten.
 Der reguläre Abrechnungsleser und die Prüfung
 bereits erfasster Perioden nutzen ausschließlich die `security_barrier`-View

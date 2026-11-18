@@ -82,6 +82,9 @@ type DemoSessions interface {
 	IssueDemoParentTokens(ctx context.Context, accountID int64, ipAddress, userAgent string) (string, string, error)
 	// RevokeTokensByTenantID ends every session of a hidden demo school (#3470).
 	RevokeTokensByTenantID(ctx context.Context, tenantID int64) (int, error)
+	// IssueDemoTraegerTokens mints the Träger-Portal session of the demo role
+	// Träger-Büro at the school's own Demo-Träger (ADR 0271).
+	IssueDemoTraegerTokens(ctx context.Context, accountID, organizationID int64, ipAddress, userAgent string) (string, string, error)
 }
 
 // DemoAdminTx runs fn inside an administrative transaction.

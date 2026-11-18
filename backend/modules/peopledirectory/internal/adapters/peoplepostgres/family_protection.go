@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/uptrace/bun"
 
@@ -14,28 +15,30 @@ const familyProtectionTable = "users.student_family_protection_events"
 
 type FamilyProtectionEventRepository struct {
 	runtime Runtime
+	now     func() time.Time // stamps created_at (ADR 0281)
 }
 
-func NewFamilyProtectionEventRepository(runtime Runtime) ports.FamilyProtectionRecords {
-	return nativeFamilyProtectionRecords{FamilyProtectionEventRepository: &FamilyProtectionEventRepository{runtime: requireRuntime(runtime)}}
+func NewFamilyProtectionEventRepository(runtime Runtime, now func() time.Time) ports.FamilyProtectionRecords {
+	return nativeFamilyProtectionRecords{FamilyProtectionEventRepository: &FamilyProtectionEventRepository{runtime: requireRuntime(runtime), now: requireClock(now)}}
 }
 
-// Create overrides the generic insert so created_at uses clock_timestamp().
+// Create overrides the generic insert so created_at is the owner's instant.
 // Sharing and protection events live in separate tables, and visibility compares
-// their real creation order even when both are written in one transaction.
+// their creation order, so both ledgers stamp on the same clock (ADR 0281).
 func (r *FamilyProtectionEventRepository) Create(ctx context.Context, event *userModels.FamilyProtectionEvent) error {
 	if event == nil {
 		return fmt.Errorf("family protection event cannot be nil")
 	}
 	ensureTenantID(ctx, r.runtime, event)
+	at := r.now()
 	ambientDB1, databaseErr1 := r.runtime.DB(ctx)
 	if databaseErr1 != nil {
 		return databaseErr1
 	}
 	if _, err := ambientDB1.NewInsert().Model(event).
 		ModelTableExpr(familyProtectionTable).
-		Value("created_at", "clock_timestamp()").
-		Value("updated_at", "clock_timestamp()").
+		Value("created_at", "?", at).
+		Value("updated_at", "?", at).
 		Exec(ctx); err != nil {
 		return &ports.DatabaseError{Op: "create family protection event", Err: translateNotFound(err)}
 	}

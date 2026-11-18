@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/pgdialect"
 )
 
 // morningAttendanceRow is one row of active.morning_attendance (#4790).
@@ -23,8 +24,8 @@ type morningAttendanceRow struct {
 	ClassListEntryID  int64      `bun:"class_list_entry_id,nullzero"`
 	Status            string     `bun:"status,notnull"`
 	RecordedByStaffID int64      `bun:"recorded_by_staff_id,nullzero"`
-	CreatedAt         time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt         time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt         time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 func (s *Store) ListMorningAttendance(ctx context.Context, from, to ports.Date, studentIDs, classListEntryIDs []int64) ([]studentpresence.MorningAttendanceEntry, ports.Stats, error) {
@@ -155,4 +156,43 @@ func (s *Store) LockMorningAttendance(ctx context.Context, studentID int64, date
 		return "", stats, nil
 	}
 	return row.Status, stats, err
+}
+
+// TransferClassListEntryMarks moves the marks of class-list entries onto the
+// students they became (#4803): first the entry marks of dates the student
+// already holds a mark for go, then the rest change their subject.
+func (s *Store) TransferClassListEntryMarks(ctx context.Context, moves []studentpresence.ClassListEntryMarkMove) (ports.Stats, error) {
+	db, tenantID, err := s.database(ctx)
+	if err != nil {
+		return ports.Stats{}, err
+	}
+	entryIDs, studentIDs := make([]int64, len(moves)), make([]int64, len(moves))
+	for i, move := range moves {
+		entryIDs[i], studentIDs[i] = move.ClassListEntryID, move.StudentID
+	}
+	pairs := bun.SafeQuery(`SELECT * FROM unnest(?::bigint[], ?::bigint[]) AS pair(entry_id, student_id)`,
+		pgdialect.Array(entryIDs), pgdialect.Array(studentIDs))
+	started := time.Now()
+	stats := ports.Stats{Queries: 2}
+	dropped, err := db.NewRaw(`DELETE FROM active.morning_attendance AS entry_mark
+ USING (?) AS pair
+ WHERE entry_mark.tenant_id = ? AND entry_mark.class_list_entry_id = pair.entry_id
+   AND EXISTS (SELECT 1 FROM active.morning_attendance AS own
+     WHERE own.tenant_id = entry_mark.tenant_id AND own.student_id = pair.student_id AND own.date = entry_mark.date)`,
+		pairs, tenantID).Exec(ctx)
+	if err != nil {
+		return stats, fmt.Errorf("drop class list entry marks already held by the student: %w", err)
+	}
+	moved, err := db.NewRaw(`UPDATE active.morning_attendance AS mark
+ SET student_id = pair.student_id, class_list_entry_id = NULL
+ FROM (?) AS pair
+ WHERE mark.tenant_id = ? AND mark.class_list_entry_id = pair.entry_id`, pairs, tenantID).Exec(ctx)
+	stats.StatementDuration = time.Since(started)
+	if err != nil {
+		return stats, fmt.Errorf("move class list entry marks to their students: %w", err)
+	}
+	droppedRows, _ := dropped.RowsAffected()
+	movedRows, _ := moved.RowsAffected()
+	stats.Rows = droppedRows + movedRows
+	return stats, nil
 }

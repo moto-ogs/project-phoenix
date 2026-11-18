@@ -26,7 +26,7 @@ import { TenantPage } from "~/components/ui/tenant-page";
 import type { HolidayPeriod } from "~/lib/traeger-api";
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
 import { useTenantMutateMatching } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { traegerPath } from "~/lib/traeger-url";
 
 export default function TraegerHolidayPeriodPage() {

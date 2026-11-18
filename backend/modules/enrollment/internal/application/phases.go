@@ -52,9 +52,11 @@ type PhaseDependencies struct {
 	// without it TraegerCopies reports no copy commands.
 	TraegerCopies TraegerPhaseCopyStore
 	Logger        *slog.Logger
-	// Today returns the current calendar day; tests inject a fixed date so
-	// resync/detach boundaries stay deterministic. Nil falls back to
-	// calendar.TodayDate.
+	// Now is the clock of the public enrollment window (ADR 0239); nil is
+	// the real clock. Today returns the current calendar day; tests inject
+	// a fixed date so resync/detach boundaries stay deterministic. Nil is
+	// Now's Berlin day.
+	Now   func() time.Time
 	Today func() calendar.Date
 }
 
@@ -84,6 +86,12 @@ func newPhases(deps PhaseDependencies) *Phases {
 	if logger == nil {
 		logger = slog.Default()
 	}
+	if deps.Now == nil {
+		panic("enrollment phases: the clock is required")
+	}
+	if deps.Today == nil {
+		deps.Today = calendar.CalendarDateClock(deps.Now)
+	}
 	return &Phases{PhaseList: deps.Records, deps: deps, logger: logger}
 }
 
@@ -107,10 +115,7 @@ func NewResyncingPhases(deps PhaseDependencies) (*Phases, error) {
 }
 
 func (s *Phases) todayDate() calendar.Date {
-	if s.deps.Today != nil {
-		return s.deps.Today()
-	}
-	return calendar.TodayDate()
+	return s.deps.Today()
 }
 
 func (s *Phases) notFound(err error) bool {
@@ -175,7 +180,7 @@ func (s *Phases) translatePhaseWriteError(err error) error {
 // at now; a zero now means the current instant.
 func (s *Phases) ListPublicOpen(ctx context.Context, now time.Time) ([]*enrollment.Phase, error) {
 	if now.IsZero() {
-		now = time.Now()
+		now = s.deps.Now()
 	}
 	return s.deps.Records.PublicOpenPhases(ctx, now)
 }
@@ -222,11 +227,23 @@ func (s *Phases) validatePhaseWrite(ctx context.Context, phase *enrollment.Phase
 	return s.validateFormSchemaLink(ctx, phase)
 }
 
+// validateServicePeriodBounds checks the upper bounds of the service period
+// against the school's today (#5658).
+func (s *Phases) validateServicePeriodBounds(phase *enrollment.Phase) error {
+	if err := enrollment.ValidateServicePeriodBounds(phase.ServiceStartDate, phase.ServiceEndDate, s.todayDate()); err != nil {
+		return fmt.Errorf("%w: %w", enrollment.ErrInvalidPhase, err)
+	}
+	return nil
+}
+
 func (s *Phases) create(ctx context.Context, phase *enrollment.Phase) (*enrollment.Phase, error) {
 	if phase == nil {
 		return nil, fmt.Errorf("%w: phase is required", enrollment.ErrInvalidPhase)
 	}
 	if err := s.validatePhaseWrite(ctx, phase); err != nil {
+		return nil, err
+	}
+	if err := s.validateServicePeriodBounds(phase); err != nil {
 		return nil, err
 	}
 	if err := s.deps.Records.InsertPhase(ctx, phase); err != nil {
@@ -297,7 +314,9 @@ func (s *Phases) update(ctx context.Context, phase *enrollment.Phase) (enrollmen
 // changed, so Update can resync offering-sourced templates after the write
 // (#2147 review). The recurrence lock is taken before the existing row is
 // read and stays held for the whole update transaction. It returns the
-// stored phase, so the update can tell where its window was.
+// stored phase, so the update can tell where its window was. A changed window
+// must also stay within the service period bounds (#5658); this is the one
+// place an update compares its window with the stored row.
 func (s *Phases) validateCareOfferingPhaseUpdate(ctx context.Context, phase *enrollment.Phase) (*enrollment.Phase, bool, error) {
 	locked, err := enrollment.NewPhaseBoundsReader(s.deps.Records, s.deps.LockTemplateRecurrence).LockedPhase(ctx, phase.ID)
 	if errors.Is(err, enrollment.ErrPhaseBoundsLock) {
@@ -310,8 +329,13 @@ func (s *Phases) validateCareOfferingPhaseUpdate(ctx context.Context, phase *enr
 		}
 		return nil, false, fmt.Errorf("load phase for care-offering validation: %w", err)
 	}
-	if existing.ServiceStartDate == phase.ServiceStartDate && existing.ServiceEndDate == phase.ServiceEndDate {
+	if !enrollment.ServicePeriodChanged(existing.ServiceStartDate, existing.ServiceEndDate, phase.ServiceStartDate, phase.ServiceEndDate) {
 		return existing, false, nil
+	}
+	// The upper bounds apply to a moved period only: a stored phase beyond
+	// them stays editable while its period stays as it is (#5658).
+	if err := s.validateServicePeriodBounds(phase); err != nil {
+		return nil, false, err
 	}
 	if s.deps.ValidateCareOfferingPhaseChange != nil {
 		if err := s.deps.ValidateCareOfferingPhaseChange(ctx, phase.ID, phase); err != nil {

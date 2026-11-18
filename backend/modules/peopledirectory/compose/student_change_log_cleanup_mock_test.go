@@ -24,6 +24,10 @@ func (*trackingStudentChangeLogStore) DeleteOlderThan(context.Context, time.Time
 	return 0, nil
 }
 
+func (*trackingStudentChangeLogStore) DatabaseTime(context.Context) (time.Time, error) {
+	return time.Now(), nil
+}
+
 func TestStudentChangeLogCleanup_StopsWhenRetentionResolutionFails(t *testing.T) {
 	t.Parallel()
 

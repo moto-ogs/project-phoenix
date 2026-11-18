@@ -121,11 +121,20 @@ export function ExportRecipientFormCard({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const previousRecipient = useRef(recipient);
   const formErrors = useApiFormError(formRef);
   const deleteErrors = useApiFormError();
   const { success } = useToast();
 
-  useEffect(() => setDraft(draftOf(recipient)), [recipient]);
+  useEffect(() => {
+    const previousDraft = draftOf(previousRecipient.current);
+    previousRecipient.current = recipient;
+    setDraft((current) => {
+      return JSON.stringify(current) === JSON.stringify(previousDraft)
+        ? draftOf(recipient)
+        : current;
+    });
+  }, [recipient]);
 
   const set = (patch: Partial<Draft>) =>
     setDraft((current) => ({ ...current, ...patch }));
@@ -632,7 +641,6 @@ export function ExportHandoverHistoryCard({
       title="Letzte Übergaben"
       description="Jeder Versuch steht hier, auch wenn die Datei nicht angekommen ist. moto versucht nichts von selbst noch einmal."
       icon={Send}
-      flush
     >
       <DataTable
         columns={handoverColumns(showRecipient)}

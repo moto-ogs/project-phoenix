@@ -663,7 +663,7 @@ func TestCollectCustomFields_NewestSchemaLabelWins(t *testing.T) {
 func TestBuildPhaseExportFile_RejectsUnsupportedFormat(t *testing.T) {
 	t.Parallel()
 
-	if _, err := buildPhaseExportFile(nil, sampleExport(), "csv", ""); err == nil {
+	if _, err := buildPhaseExportFile(nil, sampleExport(), "csv", "", time.Time{}); err == nil {
 		t.Error("csv must be rejected on the phase export endpoint")
 	}
 }
@@ -1007,7 +1007,7 @@ func TestBuildCareUsageExportFile_DOCX(t *testing.T) {
 		},
 	}
 
-	file, err := buildCareUsageExportFile(newTestDocumentRenderer(), report, lists.FormatDOCX)
+	file, err := buildCareUsageExportFile(newTestDocumentRenderer(), report, lists.FormatDOCX, time.Time{})
 	if err != nil {
 		t.Fatalf("buildCareUsageExportFile: %v", err)
 	}
@@ -1119,6 +1119,7 @@ func TestExportPhaseRegistrations_StreamsPDFAndForwardsActor(t *testing.T) {
 
 	mock := &mockDecisionService{exportResult: sampleExport()}
 	rs := &Resource{
+		Now:               resourceTestClock,
 		Failures:          DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation},
 		DecisionService:   mock,
 		ListExportService: newTestDocumentRenderer(),
@@ -1175,6 +1176,7 @@ func TestExportPhaseRegistrations_StreamsXLSX(t *testing.T) {
 
 	mock := &mockDecisionService{exportResult: sampleExport()}
 	rs := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, DecisionService: mock, ListExportService: newTestDocumentRenderer()}
 	router := buildExportRouter(rs, routetest.Claims{
 		ID:    exportTestActorID,
@@ -1202,6 +1204,7 @@ func TestExportPhaseRegistrations_StreamsDOCX(t *testing.T) {
 
 	mock := &mockDecisionService{exportResult: sampleExport()}
 	rs := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, DecisionService: mock, ListExportService: newTestDocumentRenderer()}
 	router := buildExportRouter(rs, routetest.Claims{
 		ID:    exportTestActorID,
@@ -1244,6 +1247,7 @@ func TestExportPhaseRegistrations_ServiceErrorIs500(t *testing.T) {
 
 	mock := &mockDecisionService{exportErr: context.DeadlineExceeded}
 	rs := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, DecisionService: mock, ListExportService: newTestDocumentRenderer()}
 	router := buildExportRouter(rs, routetest.Claims{
 		ID:    exportTestActorID,
@@ -1266,6 +1270,7 @@ func TestExportStudentEnrollmentRequests_StudentNotFoundIs404(t *testing.T) {
 
 	mock := &mockDecisionService{exportStudentErr: capability.ErrDecisionStudentNotFound}
 	rs := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, DecisionService: mock, ListExportService: newTestDocumentRenderer()}
 	router := buildExportRouter(rs, routetest.Claims{
 		ID:    exportTestActorID,
@@ -1288,6 +1293,7 @@ func TestExportPhaseRegistrations_InvalidPhaseIDIs400(t *testing.T) {
 	t.Parallel()
 
 	rs := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, DecisionService: &mockDecisionService{}, ListExportService: newTestDocumentRenderer()}
 	router := buildExportRouter(rs, routetest.Claims{
 		ID:    exportTestActorID,

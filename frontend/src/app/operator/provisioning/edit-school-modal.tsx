@@ -7,7 +7,11 @@ import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
 import { isValidSlug } from "~/lib/operator/provisioning-helpers";
-import type { Organization, School } from "~/lib/operator/provisioning-helpers";
+import type {
+  Organization,
+  School,
+  SchoolRequiredDetails,
+} from "~/lib/operator/provisioning-helpers";
 import { createLogger } from "~/lib/logger";
 import { CustomSelect } from "~/components/ui/custom-select";
 import {
@@ -26,6 +30,7 @@ export function EditSchoolModal({
   school,
   organizations,
   onUpdated,
+  requiredDetails,
 }: {
   readonly isOpen: boolean;
   readonly onClose: () => void;
@@ -34,6 +39,8 @@ export function EditSchoolModal({
   /** Reloads the school and the portal caches of the given subdomains;
    *  never rejects (#6652). */
   readonly onUpdated: RefreshAfterWrite<[subdomains: readonly string[]]>;
+  /** Marks a school whose parent replies have no address (#7174). */
+  readonly requiredDetails?: SchoolRequiredDetails;
 }) {
   const [schoolOrgId, setSchoolOrgId] = useState("");
   const [schoolName, setSchoolName] = useState("");
@@ -66,9 +73,11 @@ export function EditSchoolModal({
     }
   }, [isOpen, school, clearError]);
 
-  // Legacy schools may keep an empty address while other fields are edited.
-  const contactEmailRequired = Boolean(school?.email);
-
+  // The warning holds while the stored address is unchanged: a stored but
+  // unusable address bounces as much as a missing one.
+  const replyAddressMissing =
+    requiredDetails?.replyAddressMissing === true &&
+    schoolEmail.trim() === (school?.email ?? "").trim();
   const handleUpdate = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -83,12 +92,7 @@ export function EditSchoolModal({
         });
         return;
       }
-      if (
-        !schoolName.trim() ||
-        !schoolSlug.trim() ||
-        !schoolSubdomain.trim() ||
-        (contactEmailRequired && !schoolEmail.trim())
-      )
+      if (!schoolName.trim() || !schoolSlug.trim() || !schoolSubdomain.trim())
         return;
       if (!isValidSlug(schoolSlug)) {
         const hint =
@@ -149,7 +153,6 @@ export function EditSchoolModal({
       schoolZip,
       schoolPhone,
       schoolEmail,
-      contactEmailRequired,
       schoolHidden,
       onClose,
       onUpdated,
@@ -183,8 +186,7 @@ export function EditSchoolModal({
               !schoolOrgId ||
               !schoolName.trim() ||
               !schoolSlug.trim() ||
-              !schoolSubdomain.trim() ||
-              (contactEmailRequired && !schoolEmail.trim())
+              !schoolSubdomain.trim()
             }
             variant="primary"
             size="md"
@@ -336,14 +338,17 @@ export function EditSchoolModal({
                   value={schoolEmail}
                   onChange={(e) => setSchoolEmail(e.target.value)}
                   maxLength={255}
-                  required={contactEmailRequired}
                   label="E-Mail"
                   error={formErrors.fieldError("email")}
                   controlSize="compact"
                 />
-                <p className="mt-1 text-xs text-gray-500">
-                  Antworten von Eltern gehen an diese Adresse.
-                </p>
+                {replyAddressMissing ? (
+                  <FieldWarning message="Adresse fehlt. Antworten von Eltern kommen bei der Schule nicht an." />
+                ) : (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Antworten von Eltern gehen an diese Adresse.
+                  </p>
+                )}
               </div>
             </div>
           </div>

@@ -22,11 +22,25 @@ import (
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-type Store struct{}
+// Store reads the current version of a contract on the Berlin day of the
+// owner's clock (ADR 0239).
+type Store struct{ today func() calendar.Date }
 
 var _ ports.Store = (*Store)(nil)
 
-func NewStore() *Store { return &Store{} }
+// NewStore builds the store on today, the composition's day clock. A store
+// of a composition that reads no current version (the billing reads, the
+// office's change decisions) may pass nil; its Contract and ListContracts
+// then fail.
+func NewStore(today func() calendar.Date) *Store { return &Store{today: today} }
+
+// day is the day the current version is picked on.
+func (s Store) day() (calendar.Date, error) {
+	if s.today == nil {
+		return "", errors.New("care contract postgres: the day clock is required to read the current version")
+	}
+	return s.today(), nil
+}
 
 // traegerDB returns the Träger transaction of organizationID. A school,
 // administrative or foreign Träger transaction is refused.
@@ -80,14 +94,37 @@ func (Store) Templates(ctx context.Context, organizationID int64) ([]ports.Templ
 	if err != nil {
 		return nil, err
 	}
-	var rows []templateRow
-	if err := db.NewRaw(`SELECT `+templateColumns+` FROM care_contract.contract_templates
-		WHERE organization_id = ? ORDER BY school_id, care_offering_id`, organizationID).Scan(ctx, &rows); err != nil {
+	var rows []struct {
+		templateRow
+		Versions         []string `bun:"versions,array"`
+		VersionsComplete bool     `bun:"versions_complete"`
+	}
+	// The trail holds the conditions texts of every saved version of a template
+	// (ports.VersionsDetail). A save before they were recorded left an entry
+	// without them: that template's history is incomplete. The Träger's
+	// template entries are grouped by template once and joined, so the read
+	// stays one pass over the trail however many templates there are.
+	// Binds: ?0 the detail, ?1 the template action, ?2 the Träger.
+	if err := db.NewRaw(`SELECT t.id, t.school_id, t.care_offering_id, t.term_kind, t.term_months,
+			t.notice_months, t.notice_to, t.special_termination, t.special_termination_note,
+			t.statute_required, t.statute_title, t.statute_url, t.contract_partner, t.updated_at,
+			COALESCE(h.versions, '{}') AS versions, COALESCE(h.complete, false) AS versions_complete
+		FROM care_contract.contract_templates AS t
+		LEFT JOIN (SELECT e.details->>'template_id' AS template_id,
+				COALESCE(array_agg(DISTINCT v.version ORDER BY v.version) FILTER (WHERE v.version IS NOT NULL), '{}') AS versions,
+				bool_and(jsonb_typeof(e.details->?0) IS NOT DISTINCT FROM 'array') AS complete
+			FROM care_contract.contract_events AS e
+			LEFT JOIN LATERAL jsonb_array_elements_text(CASE jsonb_typeof(e.details->?0) WHEN 'array' THEN e.details->?0 ELSE '[]' END) AS v(version) ON true
+			WHERE e.organization_id = ?2 AND e.contract_id IS NULL AND e.action = ?1
+			GROUP BY e.details->>'template_id') AS h ON h.template_id = t.id::text
+		WHERE t.organization_id = ?2 ORDER BY t.school_id, t.care_offering_id`,
+		ports.VersionsDetail, ports.ActionTemplate, organizationID).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("care contract postgres: templates: %w", err)
 	}
 	result := make([]ports.TemplateRow, len(rows))
 	for i, row := range rows {
-		result[i] = ports.TemplateRow{SchoolID: row.SchoolID, OfferingID: row.CareOfferingID, Template: row.template()}
+		result[i] = ports.TemplateRow{SchoolID: row.SchoolID, OfferingID: row.CareOfferingID, Template: row.template(),
+			Versions: row.Versions, VersionsComplete: row.VersionsComplete}
 	}
 	return result, nil
 }
@@ -208,7 +245,7 @@ const moduleNamesSQL = `ARRAY(SELECT s.module_name FROM care_contract.contract_v
 		ORDER BY MIN(array_position(ARRAY['mon','tue','wed','thu','fri','sat','sun']::text[], s.weekday::text)), s.module_name)`
 
 // summarySQL reads a contract with its current version (currentVersionOrderSQL) and its first
-// party; the filter follows.
+// party; the filter follows. Bind order: today twice, then organization_id.
 const summarySQL = `SELECT c.id, c.status, c.school_id, c.student_id, c.created_at, c.sent_at, c.concluded_at, c.conclusion_method,
 	c.ends_on, c.early_start_requested,
 	v.school_name, v.child_first_name, v.child_last_name, ` + moduleNamesSQL + ` AS module_names, v.effective_from,
@@ -280,8 +317,12 @@ func accountRef(accountID int64) *int64 {
 }
 
 // ListContracts lists the contracts of the filter, newest first.
-func (Store) ListContracts(ctx context.Context, organizationID int64, filter carecontract.ContractFilter) ([]carecontract.ContractSummary, error) {
+func (s Store) ListContracts(ctx context.Context, organizationID int64, filter carecontract.ContractFilter) ([]carecontract.ContractSummary, error) {
 	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	today, err := s.day()
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +331,7 @@ func (Store) ListContracts(ctx context.Context, organizationID int64, filter car
 		search = "%" + likeEscape(filter.Search) + "%"
 	}
 	var rows []summaryRow
-	if err := db.NewRaw(listContractsSQL, organizationID, filter.Status, filter.Status, filter.SchoolID, filter.SchoolID,
+	if err := db.NewRaw(listContractsSQL, today, today, organizationID, filter.Status, filter.Status, filter.SchoolID, filter.SchoolID,
 		search, search, filter.Limit+1, filter.Offset).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("care contract postgres: list contracts: %w", err)
 	}

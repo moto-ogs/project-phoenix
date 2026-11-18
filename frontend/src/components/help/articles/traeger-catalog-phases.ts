@@ -41,6 +41,15 @@ export function traegerCatalogPhasesTopic(): HelpTopic {
         ],
       },
       {
+        title: "Liste herunterladen",
+        description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+        steps: [
+          "Wählen Sie in der Navigation `Anmeldephasen`.",
+          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Die Datei enthält alle Anmeldephasen mit Leistungszeitraum, Schulen und Stand.",
+        ],
+      },
+      {
         title: "Vorschau ansehen und übertragen",
         steps: [
           "Öffnen Sie die Anmeldephase.",
@@ -58,6 +67,7 @@ export function traegerCatalogPhasesTopic(): HelpTopic {
       "Neue Preise gelten in der Schule ab dem nächsten Monatsbeginn. Ausgestellte Verträge und Rechnungen bleiben, wie sie sind.",
       "Eine Schule darf eine Kopie nicht löschen. Entfernen geht nur hier mit `Zurückziehen`. Danach übertragen Sie noch einmal.",
       "Hat ein Kind ein zurückgezogenes Angebot schon gebucht, schaltet moto es in der Schule nur aus.",
+      "Eine Phase dauert höchstens 2 Jahre. Ihr Ende liegt höchstens 5 Jahre in der Zukunft. Ältere Phasen außerhalb dieser Grenzen bleiben, wie sie sind, solange Sie Beginn und Ende nicht ändern.",
       "Sie ziehen das Ende einer Anmeldephase vor? Dann nennt die Vorschau je Schule, wie viele Kinder länger betreut werden. moto beendet keine Betreuung. Sagen Sie der Schule Bescheid.",
     ],
     differences: [

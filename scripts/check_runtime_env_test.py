@@ -72,5 +72,38 @@ class BankRekeyServiceTest(unittest.TestCase):
                 CHECK.check_bank_rekey_service(self.service(**change))
 
 
+class UploadSealServiceTest(unittest.TestCase):
+    UPLOADS = {"type": "volume", "source": "uploads", "target": "/app/public/uploads"}
+
+    def service(self, **changes):
+        job = {
+            "image": "backend:immutable-test-sha",
+            "profiles": ["maintenance"],
+            "command": ["./main", "upload-seal", "--uploads", "/app/public/uploads"],
+            "environment": {"DB_DSN": "${DB_DSN:?DB_DSN is required}"},
+            "volumes": [self.UPLOADS],
+        }
+        job.update(changes)
+        server = {"image": "backend:immutable-test-sha", "volumes": [self.UPLOADS, {"type": "volume", "source": "data-return", "target": "/app/data-return"}]}
+        return {"upload-seal": job, "server": server}
+
+    def test_accepts_explicit_pinned_maintenance_job_with_the_uploads_volume(self):
+        CHECK.check_upload_seal_service(self.service())
+
+    def test_rejects_wrong_authority_lifecycle_or_mounts(self):
+        for change in (
+            {"profiles": []},
+            {"command": ["./main", "serve"]},
+            {"image": "backend:different-release"},
+            {"environment": {"DB_DSN": "postgres://phoenix_auth@postgres/postgres"}},
+            {"ports": ["8080:8080"]},
+            {"volumes": []},
+            {"volumes": [self.UPLOADS, {"type": "volume", "source": "data-return", "target": "/app/data-return"}]},
+            {"volumes": [{"type": "bind", "source": ".env", "target": "/app/public/uploads"}]},
+        ):
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                CHECK.check_upload_seal_service(self.service(**change))
+
+
 if __name__ == "__main__":
     unittest.main()

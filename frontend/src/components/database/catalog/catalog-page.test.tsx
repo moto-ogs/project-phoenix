@@ -56,10 +56,6 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   }),
 }));
 
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: () => false,
-}));
-
 interface Sorte {
   readonly id: string;
   readonly name: string;

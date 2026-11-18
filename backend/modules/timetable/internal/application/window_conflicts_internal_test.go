@@ -103,7 +103,7 @@ func detectWindowConflicts(inputs []windowConflictInput) map[int64][]timetable.I
 		}
 		blocks = append(blocks, block)
 	}
-	detection := &conflictDetection{deps: ports.ConflictDetectionDependencies{ContentHash: testContentHash}}
+	detection := &conflictDetection{deps: ports.ConflictDetectionDependencies{ContentHash: testContentHash, Now: internalTestNow}}
 	return detection.DetectWindowConflicts(blocks)
 }
 

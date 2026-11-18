@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { ApiError } from "~/lib/api-error";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as baseRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NewsCard, NewsDetailModal, isOpenPoll } from "./news-components";
@@ -9,6 +14,13 @@ import * as parentApi from "~/lib/parent-api";
 import { catalogText } from "~/test/error-catalog-text";
 import * as dateHelpers from "~/lib/date-helpers";
 import { BELOW_SM } from "~/lib/hooks/use-media-query";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
+
+// The detail view reads its attachments through the shared parent cache.
+const render: typeof baseRender = ((ui: React.ReactElement) =>
+  baseRender(ui, { wrapper: ParentResourceTestProvider })) as typeof baseRender;
 
 // Poll (Umfrage, #1371) behaviour in the parent portal: the feed card only
 // flags that an answer is due. The detail view is where it is given, one row
@@ -1089,5 +1101,78 @@ describe("NewsDetailModal errors", () => {
         ),
       ).not.toBeInTheDocument(),
     );
+  });
+});
+
+describe("Elternbrief per child (#4813)", () => {
+  it("shows each own child's letter and switches between siblings", () => {
+    render(
+      <NewsDetailModal
+        item={announcement({
+          delivery_mode: "letter",
+          requires_acknowledgement: true,
+          body: "Liebe Eltern von Lina, Lina ist in der Gruppe Füchse.",
+          letters: [
+            {
+              student_id: "10",
+              first_name: "Lina",
+              last_name: "Muster",
+              body: "Liebe Eltern von Lina, Lina ist in der Gruppe Füchse.",
+            },
+            {
+              student_id: "11",
+              first_name: "Ben",
+              last_name: "Muster",
+              body: "Liebe Eltern von Ben, Ben ist in der Gruppe Igel.",
+            },
+          ],
+        })}
+        onClose={vi.fn()}
+        onUpdated={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText("Liebe Eltern von Lina, Lina ist in der Gruppe Füchse."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Jedes Ihrer Kinder hat einen eigenen Brief."),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Ben" }));
+
+    expect(
+      screen.getByText("Liebe Eltern von Ben, Ben ist in der Gruppe Igel."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "Liebe Eltern von Lina, Lina ist in der Gruppe Füchse.",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows a single child's letter without a switch", () => {
+    render(
+      <NewsDetailModal
+        item={announcement({
+          delivery_mode: "letter",
+          body: "Liebe Eltern von Emil.",
+          letters: [
+            {
+              student_id: "12",
+              first_name: "Emil",
+              last_name: "Weber",
+              body: "Liebe Eltern von Emil.",
+            },
+          ],
+        })}
+        onClose={vi.fn()}
+        onUpdated={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Liebe Eltern von Emil.")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Jedes Ihrer Kinder hat einen eigenen Brief."),
+    ).not.toBeInTheDocument();
   });
 });

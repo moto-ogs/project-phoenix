@@ -128,21 +128,25 @@ type ChildResponse struct {
 	// whether to show a card as read-only. The exit REASON is deliberately not
 	// part of this response: it is a staff-internal note behind users:delete.
 	CareEnded bool `json:"care_ended"`
+	// WithoutCarePlace says the child belongs to its class but has no OGS
+	// place (#4803, ADR 0282): the portal shows no OGS function for it.
+	WithoutCarePlace bool `json:"without_care_place,omitempty"`
 }
 
-func toChildResponse(c *parentService.ChildSummary) ChildResponse {
+func toChildResponse(c *parentService.ChildSummary, today timezone.Date) ChildResponse {
 	return ChildResponse{
-		StudentID:     strconv.FormatInt(c.StudentID, 10),
-		TenantID:      strconv.FormatInt(c.TenantID, 10),
-		FirstName:     c.FirstName,
-		LastName:      c.LastName,
-		SchoolClass:   c.SchoolClass,
-		Status:        c.Status,
-		EnrolledFrom:  parentResponseDatePointer(c.EnrolledFrom),
-		EnrolledUntil: parentResponseDatePointer(c.EnrolledUntil),
-		SchoolName:    c.SchoolName,
-		SchoolSlug:    c.SchoolSlug,
-		CareEnded:     c.CareEnded(timezone.TodayDate()),
+		StudentID:        strconv.FormatInt(c.StudentID, 10),
+		TenantID:         strconv.FormatInt(c.TenantID, 10),
+		FirstName:        c.FirstName,
+		LastName:         c.LastName,
+		SchoolClass:      c.SchoolClass,
+		Status:           c.Status,
+		EnrolledFrom:     parentResponseDatePointer(c.EnrolledFrom),
+		EnrolledUntil:    parentResponseDatePointer(c.EnrolledUntil),
+		SchoolName:       c.SchoolName,
+		SchoolSlug:       c.SchoolSlug,
+		CareEnded:        c.CareEnded(today),
+		WithoutCarePlace: c.WithoutCarePlace,
 	}
 }
 
@@ -176,31 +180,33 @@ func (rs *Resource) listMyChildren(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	today := timezone.DateFromTime(rs.Now())
 	out := make([]ChildResponse, 0, len(children))
 	for _, c := range children {
-		out = append(out, toChildResponse(c))
+		out = append(out, toChildResponse(c, today))
 	}
 
 	common.Respond(w, r, http.StatusOK, out, "Children retrieved")
 }
 
 // EnrollablePhaseResponse is the wire shape for /me/enrollable-schools.
-// Mirrors the workflow enrollable-phase projection but stringifies int64 ids.
+// Mirrors the workflow enrollable-phase projection; identifiers travel as
+// strings (common.ID).
 type EnrollablePhaseResponse struct {
-	SchoolID   string `json:"school_id"`
-	SchoolName string `json:"school_name"`
-	SchoolSlug string `json:"school_slug"`
+	SchoolID   common.ID `json:"school_id"`
+	SchoolName string    `json:"school_name"`
+	SchoolSlug string    `json:"school_slug"`
 	// SchoolSubdomain is the identifier the picker must put in enrollment
 	// links: both /auth/tenant/resolve and /api/parent/enrollments/{tenantSlug}/*
 	// resolve tenants by subdomain (#1663).
-	SchoolSubdomain string `json:"school_subdomain"`
-	PhaseID         string `json:"phase_id"`
-	PhaseName       string `json:"phase_name"`
+	SchoolSubdomain string    `json:"school_subdomain"`
+	PhaseID         common.ID `json:"phase_id"`
+	PhaseName       string    `json:"phase_name"`
 	// PhaseNameTranslations maps locale → translated phase name (#3377).
 	PhaseNameTranslations map[string]string `json:"phase_name_translations,omitempty"`
 	PhaseKind             string            `json:"phase_kind"`
-	ServiceStartDate      careplan.Date     `json:"service_start_date"`
-	ServiceEndDate        careplan.Date     `json:"service_end_date"`
+	ServiceStartDate      careplan.Date     `json:"service_start_date" contract:"date"`
+	ServiceEndDate        careplan.Date     `json:"service_end_date" contract:"date"`
 	EnrollmentOpenAt      *time.Time        `json:"enrollment_open_at,omitempty"`
 	EnrollmentCloseAt     *time.Time        `json:"enrollment_close_at,omitempty"`
 	AlreadyLinked         bool              `json:"already_linked"`
@@ -227,11 +233,11 @@ func (rs *Resource) listEnrollableSchools(w http.ResponseWriter, r *http.Request
 	out := make([]EnrollablePhaseResponse, 0, len(phases))
 	for _, p := range phases {
 		out = append(out, EnrollablePhaseResponse{
-			SchoolID:              strconv.FormatInt(p.SchoolID, 10),
+			SchoolID:              common.ID(p.SchoolID),
 			SchoolName:            p.SchoolName,
 			SchoolSlug:            p.SchoolSlug,
 			SchoolSubdomain:       p.SchoolSubdomain,
-			PhaseID:               strconv.FormatInt(p.PhaseID, 10),
+			PhaseID:               common.ID(p.PhaseID),
 			PhaseName:             p.PhaseName,
 			PhaseNameTranslations: p.PhaseNameTranslations,
 			PhaseKind:             p.PhaseKind,

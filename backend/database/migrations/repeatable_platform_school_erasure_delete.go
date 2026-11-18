@@ -248,6 +248,7 @@ AS $function$
    SELECT count(*) INTO v_count FROM users.survey_questions AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.survey_questions AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.survey_questions', v_count);
    SELECT count(*) INTO v_count FROM users.surveys AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.surveys AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.surveys', v_count);
    SELECT count(*) INTO v_count FROM users.parent_announcement_declaration_versions AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.parent_announcement_declaration_versions AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.parent_announcement_declaration_versions', v_count);
+   SELECT count(*) INTO v_count FROM users.parent_announcement_letter_copies AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.parent_announcement_letter_copies AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.parent_announcement_letter_copies', v_count);
    SELECT count(*) INTO v_count FROM users.parent_announcement_reads AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.parent_announcement_reads AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.parent_announcement_reads', v_count);
    SELECT count(*) INTO v_count FROM users.parent_announcement_responses AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.parent_announcement_responses AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.parent_announcement_responses', v_count);
    SELECT count(*) INTO v_count FROM users.parent_announcement_options AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.parent_announcement_options AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.parent_announcement_options', v_count);
@@ -266,7 +267,6 @@ AS $function$
    SELECT count(*) INTO v_count FROM users.parent_request_share_events AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.parent_request_share_events AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.parent_request_share_events', v_count);
    SELECT count(*) INTO v_count FROM users.privacy_consents AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.privacy_consents AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.privacy_consents', v_count);
    SELECT count(*) INTO v_count FROM users.profiles AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.profiles AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.profiles', v_count);
-   SELECT count(*) INTO v_count FROM users.rfid_cards AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.rfid_cards AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.rfid_cards', v_count);
    SELECT count(*) INTO v_count FROM users.staff_document_file_cleanup AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.staff_document_file_cleanup AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.staff_document_file_cleanup', v_count);
    SELECT count(*) INTO v_count FROM users.staff_documents AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.staff_documents AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.staff_documents', v_count);
    SELECT count(*) INTO v_count FROM users.staff_employment_profiles AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.staff_employment_profiles AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.staff_employment_profiles', v_count);
@@ -303,6 +303,10 @@ AS $function$
    SELECT count(*) INTO v_count FROM users.teachers AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.teachers AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.teachers', v_count);
    SELECT count(*) INTO v_count FROM users.staff_school_memberships AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.staff_school_memberships AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.staff_school_memberships', v_count);
    SELECT count(*) INTO v_count FROM users.persons AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.persons AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.persons', v_count);
+   -- Only a person's tag references a card, with (tenant_id, tag_id) ON
+   -- DELETE SET NULL, which would null the person's tenant as well: the cards
+   -- go after the persons (#6193).
+   SELECT count(*) INTO v_count FROM users.rfid_cards AS r WHERE r.tenant_id = p_school_id; DELETE FROM users.rfid_cards AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('users.rfid_cards', v_count);
    SELECT count(*) INTO v_count FROM platform.schools AS r WHERE r.id = p_school_id; DELETE FROM platform.schools AS r WHERE r.id = p_school_id; v_counts := v_counts || jsonb_build_object('platform.schools', v_count);
    PERFORM platform.school_erasure_assert_empty(p_school_id,v_child_keys);
    RETURN v_counts;

@@ -47,8 +47,11 @@ type AccountSession struct {
 	RotatedAt            *time.Time
 	ReplacementTokenHash *string
 	RecoveryProofHash    []byte
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	// OutsideAccessWindow: the account is only a Springer at the session's
+	// school and no window is open now (ADR 0251). Only the family lookup reads it.
+	OutsideAccessWindow bool
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 // Validate normalizes an empty portal scope to unknown and rejects a session
@@ -133,4 +136,15 @@ func (s AccountSession) KeptAtSchool() bool {
 	}
 	portal, ok := PortalOfPersisted(s.PortalScope)
 	return !ok || portal.KeptAtSchool()
+}
+
+// PushSubscriptionLink is a push subscription's session facts: account,
+// school, push portal and refresh-token family (empty when bound to no
+// family). SubscriptionID only identifies it in the liveness answer.
+type PushSubscriptionLink struct {
+	SubscriptionID int64
+	AccountID      int64
+	TenantID       int64
+	Portal         string
+	TokenFamilyID  string
 }

@@ -17,8 +17,8 @@ type companionEdgeRow struct {
 	bun.BaseModel `bun:"table:student_companions,alias:student_companion"`
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	StudentLowID  int64     `bun:"student_low_id,notnull"`
 	StudentHighID int64     `bun:"student_high_id,notnull"`
 	Weekday       int       `bun:"weekday,notnull"`

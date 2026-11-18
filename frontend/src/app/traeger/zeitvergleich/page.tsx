@@ -5,17 +5,20 @@
 // Ein- und Auschecken (Soll und Ist, ADR 0139). Die Zahlen je Schule sieht
 // jede Rolle mit „Berichte lesen“, die Kinder mit Namen nur „Verträge
 // verwalten“; jedes Lesen der Namen steht im Zugriffsprotokoll der Schule.
+// Beide Tabellen gibt es als PDF, Excel und CSV, für den Monat und die
+// gewählte Schule (#4718); der Download der Namen braucht dasselbe Recht.
 
 import {
   type MouseEvent,
   type ReactNode,
-  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import { useSession } from "next-auth/react";
+import { FreshPerTraeger } from "~/components/traeger/fresh-per-traeger";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { CalendarOff, CircleCheck, CircleDashed } from "lucide-react";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -27,8 +30,12 @@ import { ProgressBar } from "~/components/ui/progress-bar";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useApiLoadError } from "~/contexts/ToastContext";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { hasPermission } from "~/lib/auth-utils";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { calendarConcept } from "~/lib/concepts/calendar";
 import { careTimesConcept } from "~/lib/concepts/careTimes";
 import { childrenConcept } from "~/lib/concepts/children";
@@ -36,8 +43,8 @@ import { formatDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { getAccessibleTextColor } from "~/lib/kit-palette";
-import { createLogger } from "~/lib/logger";
 import { schoolClassLabel } from "~/lib/school-class-label";
+import { traegerReportKeys } from "~/lib/swr/traeger-report-keys";
 import {
   fetchOverrunChildren,
   fetchOverrunSummary,
@@ -51,8 +58,6 @@ import {
   type SchoolOverruns,
 } from "~/lib/traeger-care-time-overruns-api";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerZeitvergleichPage" });
 
 const ALL_SCHOOLS = "all";
 /** So viele Monate zurück lässt sich die Auswertung wählen. */
@@ -414,10 +419,16 @@ function Figures({ evaluation }: Readonly<{ evaluation: OverrunEvaluation }>) {
 }
 
 export default function TraegerZeitvergleichPage() {
-  const { data: session, status } = useSession();
+  return (
+    <FreshPerTraeger>
+      <TraegerZeitvergleichContent />
+    </FreshPerTraeger>
+  );
+}
+
+function TraegerZeitvergleichContent() {
+  const { data: session } = useSession();
   const canSeeNames = hasPermission(session ?? null, OVERRUN_NAMES_RIGHT);
-  // The Träger of the session: another tab can switch it under this page.
-  const orgId = session?.user?.orgId;
   // Stays mounted across midnight: the window ends today, and the current
   // month follows the calendar while the person is looking at it.
   const today = useBerlinToday();
@@ -430,59 +441,42 @@ export default function TraegerZeitvergleichPage() {
     setMonth((current) => (current === before ? monthOf(today) : current));
   }, [today]);
   const [schoolId, setSchoolId] = useState(ALL_SCHOOLS);
-  const [evaluation, setEvaluation] = useState<OverrunEvaluation | null>(null);
-  const [schools, setSchools] = useState<readonly SchoolOverruns[]>([]);
-  const request = useRef(0);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const range = useMemo(() => monthWindow(month, today), [month, today]);
 
-  const load = useCallback(async () => {
-    // Without a Träger in the session there is nothing to read; a new
-    // Träger is a new read.
-    if (orgId === undefined) return;
-    const current = ++request.current;
-    setEvaluation(null);
-    try {
-      const query = {
-        ...range,
-        schoolId: schoolId === ALL_SCHOOLS ? undefined : schoolId,
-      };
-      const result = canSeeNames
-        ? await fetchOverrunChildren(query)
-        : await fetchOverrunSummary(query);
-      if (current !== request.current) return;
-      setEvaluation(result);
-      if (schoolId === ALL_SCHOOLS) setSchools(result.schools);
-      clearLoadError();
-    } catch (err) {
-      if (current !== request.current) return;
-      logger.error("traeger_care_time_overruns_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Auswertung",
-        retry: () => void load(),
-      });
-    }
-  }, [range, schoolId, canSeeNames, orgId, clearLoadError, showLoadError]);
-
-  // A switch of the Träger drops everything the previous one showed and
-  // every answer still on its way for it, before the new read starts.
-  const shownOrgId = useRef(orgId);
-  useEffect(() => {
-    if (shownOrgId.current === orgId) return;
-    shownOrgId.current = orgId;
-    request.current++;
-    setEvaluation(null);
-    setSchools([]);
-    setSchoolId(ALL_SCHOOLS);
-  }, [orgId]);
-
-  useEffect(() => {
-    if (status === "loading") return;
-    void load();
-  }, [load, status]);
+  const chosenSchool = schoolId === ALL_SCHOOLS ? undefined : schoolId;
+  // With names the read stands in the access log of every school it shows:
+  // one read per opening and filter, none on reconnect.
+  const {
+    data: evaluation,
+    loading,
+    error: loadError,
+  } = useFreshTraegerResource(
+    traegerReportKeys.careTimeOverruns(
+      range.from,
+      range.to,
+      chosenSchool ?? null,
+      canSeeNames,
+    ),
+    () => {
+      const query = { ...range, schoolId: chosenSchool };
+      return canSeeNames
+        ? fetchOverrunChildren(query)
+        : fetchOverrunSummary(query);
+    },
+    "die Auswertung",
+  );
+  // The school choice keeps the schools of the last evaluation over all
+  // schools of this Träger: reading it again for a chosen school would open
+  // the names of every school once more, and that read stands in their
+  // access logs.
+  const [schools, setSchools] = useState<readonly SchoolOverruns[]>([]);
+  if (
+    chosenSchool === undefined &&
+    evaluation &&
+    evaluation.schools !== schools
+  ) {
+    setSchools(evaluation.schools);
+  }
 
   const index = months.indexOf(month);
   const older = months[index + 1];
@@ -494,6 +488,15 @@ export default function TraegerZeitvergleichPage() {
   const columns = useMemo(
     () => schoolColumns(range.from, range.to, maxMinutes),
     [range.from, range.to, maxMinutes],
+  );
+
+  const exportParams = {
+    from: range.from,
+    to: range.to,
+    school_id: schoolId === ALL_SCHOOLS ? undefined : schoolId,
+  };
+  const exportScope = traegerExportScope(
+    schools.find((school) => school.schoolId === schoolId)?.schoolName,
   );
 
   return (
@@ -519,14 +522,15 @@ export default function TraegerZeitvergleichPage() {
           />
         ) : null
       }
-      statsLoading={!evaluation && !pageLoad.error}
-      error={pageLoad.error}
+      statsLoading={loading}
+      error={loadError}
       searchSlot={
         <PlanningContextBar
           withoutContextRow
           navigationInGroup
           navigationSlot={
             <CustomSelect
+              embedded
               ariaLabel="Monat"
               value={month}
               onChange={setMonth}
@@ -569,13 +573,29 @@ export default function TraegerZeitvergleichPage() {
           title: "Je Schule",
           count: evaluation?.schools.length,
           level: 2,
+          action: (
+            <TraegerListExportMenu
+              download={(format) =>
+                downloadTraegerList(
+                  "/api/traeger/care-time-overruns/export",
+                  format,
+                  exportParams,
+                )
+              }
+              scope={exportScope}
+              ariaLabel="Zahlen je Schule herunterladen"
+              fallbackName={`laenger-als-gebucht-${range.from}-bis-${range.to}`}
+              errorObject="die Zahlen je Schule"
+              unavailable={!evaluation}
+            />
+          ),
         }}
         columns={columns}
         rows={[...(evaluation?.schools ?? [])]}
         getRowKey={(school) => school.schoolId}
         defaultSortKey="extra"
         defaultSortDirection="desc"
-        isLoading={!evaluation && !pageLoad.error}
+        isLoading={loading}
         loadingRowCount={3}
         stackedOnMobile
       />
@@ -585,13 +605,30 @@ export default function TraegerZeitvergleichPage() {
             title: "Kinder",
             count: evaluation?.children.length,
             level: 2,
+            action: (
+              <TraegerListExportMenu
+                download={(format) =>
+                  downloadTraegerList(
+                    "/api/traeger/care-time-overruns/children/export",
+                    format,
+                    exportParams,
+                  )
+                }
+                scope={exportScope}
+                ariaLabel="Kinder herunterladen"
+                tooltip="Zeigt die Formate. Jeder Download der Namen steht im Zugriffsprotokoll der Schule."
+                fallbackName={`laenger-als-gebucht-kinder-${range.from}-bis-${range.to}`}
+                errorObject="die Kinder"
+                unavailable={!evaluation}
+              />
+            ),
           }}
           columns={CHILD_COLUMNS}
           rows={[...(evaluation?.children ?? [])]}
           getRowKey={(child) => `${child.schoolId}-${child.studentId}`}
           defaultSortKey="extra"
           defaultSortDirection="desc"
-          isLoading={!evaluation && !pageLoad.error}
+          isLoading={loading}
           loadingRowCount={3}
           stackedOnMobile
           emptyState={<ChildrenEmptyState evaluation={evaluation} />}

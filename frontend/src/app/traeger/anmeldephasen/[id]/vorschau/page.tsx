@@ -4,28 +4,24 @@
 // (#4704, ADR 0195): erst hier ändert sich etwas in den Schulen.
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   RolloutResultCard,
   SchoolPlanCard,
 } from "~/components/traeger/catalog-preview";
 import { useTraegerCatalogPhase } from "~/components/traeger/use-traeger-catalog";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { useInvalidateFamily } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
-  type TraegerCatalogPreview,
   type TraegerRollout,
   previewTraegerPhase,
   rolloutTraegerPhase,
@@ -41,40 +37,34 @@ export default function TraegerCatalogPreviewPage() {
   const id = params?.id ?? "";
   const { data: phase } = useTraegerCatalogPhase(id);
   const { schools, error: schoolsError } = useTraegerSchools();
-  const [preview, setPreview] = useState<TraegerCatalogPreview | null>(null);
+  const {
+    data: preview,
+    loading: previewLoading,
+    error: previewError,
+    mutate,
+  } = useTraegerResource(
+    id ? traegerKeys.catalogPhasePreview(id) : null,
+    () => previewTraegerPhase(id),
+    "die Vorschau",
+  );
   const [rollout, setRollout] = useState<TraegerRollout | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [recomputing, setRecomputing] = useState(false);
+  const loading = previewLoading || recomputing;
   const [rollingOut, setRollingOut] = useState(false);
-  const previewError = useApiLoadError();
-  const { show: showPreviewError, clear: clearPreviewError } = previewError;
   const { show } = useApiErrorDisplay();
   const { success } = useToast();
   const invalidate = useInvalidateFamily();
   const phaseHref = traegerPath(`/traeger/anmeldephasen/${id}`);
 
-  const loadPreview = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    clearPreviewError();
+  // A failure shows as the load error of the preview.
+  const loadPreview = async () => {
+    setRecomputing(true);
     try {
-      setPreview(await previewTraegerPhase(id));
-    } catch (err) {
-      logger.error("traeger_catalog_preview_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      setPreview(null);
-      void showPreviewError(err, {
-        object: "die Vorschau",
-        retry: () => void loadPreview(),
-      });
+      await mutate();
     } finally {
-      setLoading(false);
+      setRecomputing(false);
     }
-  }, [id, clearPreviewError, showPreviewError]);
-
-  useEffect(() => {
-    void loadPreview();
-  }, [loadPreview]);
+  };
 
   const release = async () => {
     if (!preview) return;
@@ -164,7 +154,7 @@ export default function TraegerCatalogPreviewPage() {
           </>
         )
       }
-      error={previewError.error ?? schoolsError}
+      error={previewError ?? schoolsError}
       loading={(loading && !preview && !rollout) || !schools}
     >
       {schools && rollout ? (
@@ -179,9 +169,17 @@ export default function TraegerCatalogPreviewPage() {
             />
           </SectionCard>
         ) : (
-          preview.schools.map((plan) => (
-            <SchoolPlanCard key={plan.schoolId} plan={plan} schools={schools} />
-          ))
+          // Equal school cards in a grid: grids do not grow (TenantPage body
+          // rule), so the last school keeps its height like its siblings.
+          <div className="compact:gap-4 grid gap-6 max-sm:gap-3">
+            {preview.schools.map((plan) => (
+              <SchoolPlanCard
+                key={plan.schoolId}
+                plan={plan}
+                schools={schools}
+              />
+            ))}
+          </div>
         )
       ) : null}
     </TenantPage>

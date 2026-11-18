@@ -431,7 +431,9 @@ describe("Modal", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("keeps the obscured page blurred behind the shared backdrop", async () => {
+  // The backdrop dims and blurs the page through the shared overlay blur
+  // (`.moto-overlay-blur`), never through a blur utility of its own.
+  it("dims and blurs the page through the shared overlay blur", async () => {
     render(
       <TestWrapper>
         <Modal isOpen={true} onClose={vi.fn()} title="Test">
@@ -444,9 +446,18 @@ describe("Modal", () => {
       vi.advanceTimersByTime(20);
     });
 
-    expect(
-      screen.getByRole("button", { name: /hintergrund.*schließen/i }),
-    ).toHaveClass("backdrop-blur-sm");
+    const backdrop = screen.getByRole("button", {
+      name: /hintergrund.*schließen/i,
+    });
+    expect(backdrop).toHaveClass(
+      "bg-black/40",
+      "moto-overlay-blur",
+      "opacity-100",
+    );
+    // A blur utility would be on from the first frame of the motion.
+    expect(backdrop.className).not.toMatch(/backdrop-blur/);
+    // Nor does the panel blur what lies behind it while it scales in.
+    expect(screen.getByRole("dialog").style.backdropFilter).toBe("");
   });
 
   it("should call onClose when Escape key is pressed", async () => {
@@ -1217,7 +1228,7 @@ describe("ConfirmationModal", () => {
 
     expect(
       screen.getByRole("button", { name: /hintergrund.*schließen/i }),
-    ).toHaveClass("bg-black/40", "backdrop-blur-sm");
+    ).toHaveClass("bg-black/40");
   });
 
   it("renders an opted-in modal as a bottom-anchored dialog without Vaul on phones", async () => {

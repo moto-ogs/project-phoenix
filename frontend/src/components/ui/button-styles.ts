@@ -132,8 +132,9 @@ export function buttonStyles({
     // Teil einer gerahmten Knopfgruppe (Zeitnavigation der Planungsleiste,
     // #6182): kein eigener Radius, füllt die Höhe der Gruppe, sonst `ghost`.
     // Ein Symbol-Segment bleibt quadratisch: mit Polster und Trennlinie würde
-    // es 1 px breiter als hoch.
-    segment: `h-full rounded-none px-3 data-icon-only:px-0 ${GHOST}`,
+    // es 1 px breiter als hoch. Der Fokusring liegt innen: Die Gruppe
+    // schneidet mit `overflow-hidden` alles außerhalb ab (#7300).
+    segment: `h-full rounded-none px-3 data-icon-only:px-0 focus-visible:ring-inset ${GHOST}`,
     // Einklapp-Knopf im Kopf einer Karte (#6182): wie `ghost`, tönt aber
     // auch, wenn die Maus über dem übrigen Kopf liegt, weil der ganze Kopf
     // schaltet (`SectionCollapseHead`, #5021).

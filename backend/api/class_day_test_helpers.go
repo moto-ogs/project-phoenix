@@ -42,6 +42,8 @@ type ClassDayTestModule struct {
 	// Unreported records the notices about children missing without a
 	// report (#4791) instead of handing them to Delivery.
 	Unreported *RecordingUnreportedNotifier
+	// Today is the module's day clock the HTTP resource reads.
+	Today func() calendar.Date
 }
 
 // RecordingUnreportedNotifier keeps every notice about children missing
@@ -84,7 +86,7 @@ func NewClassDayTestModuleWithRealtime(db transactionruntime.Database, unit tena
 	if err != nil {
 		return ClassDayTestModule{}, err
 	}
-	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return ClassDayTestModule{}, err
 	}
@@ -130,7 +132,7 @@ func NewClassDayTestModuleWithRealtime(db transactionruntime.Database, unit tena
 		},
 	}, reports, rCare.StudentStatusDay, r.Student, r.Person, r.StudentGuardian, rAudit.DataAccessLog, activeSettings.Settings,
 		hub, slog.Default())
-	return ClassDayTestModule{ClassDay: classDay, Unreported: unreported}, nil
+	return ClassDayTestModule{ClassDay: classDay, Unreported: unreported, Today: calendar.CalendarDateClock(clocks...)}, nil
 }
 
 // classDayTestMorning is the morning attendance seam with the absence
@@ -139,12 +141,13 @@ func classDayTestMorning(db transactionruntime.Database, hub *realtime.Hub, peop
 	command *auditCompose.Command, presence studentpresence.Owner, unreported *RecordingUnreportedNotifier, settings ActiveSettings, participation careplan.HistoricalCareParticipation, reports enrollmentOwner.Reports, clocks []func() time.Time,
 ) classdayCompose.MorningAttendanceDependencies {
 	audits := owners.NewTestAuditPersistence(db, command)
-	morning := withClassDayAbsenceReports(classdayCompose.MorningAttendanceDependencies{Store: presence, Now: classDayTestClock(clocks)},
+	morning := withClassDayAbsenceReports(classdayCompose.MorningAttendanceDependencies{Store: presence, Now: clockOrNow(clocks)},
 		presenceStudentsHTTP.NewSchoolAbsenceReports(presenceStudentsHTTP.ResourceConfig{
 			Broadcaster: hub, Logger: slog.Default(), PeopleDirectory: people, StudentStatusDayService: classDayTestStatusDays(db, rCare, clocks),
+			Now: clockOrNow(clocks),
 		}, presence), audits.StudentFieldEdit, unreported)
 	// The absence list (#4793), bound like buildClassDayViews binds it.
-	schoolDays, err := owners.BuildSchoolCalendarRecords(db, func(schoolCalendarCompose.Observation) {}, settings.Settings)
+	schoolDays, err := owners.BuildSchoolCalendarRecords(db, func(schoolCalendarCompose.Observation) {}, settings.Settings, nil)
 	mustActiveTestModule(err)
 	return withClassDayAbsenceList(morning, presence, rCare.StudentStatusDay, schoolDays, audits.DataAccessLog, lists.NewRenderer(), settings.Settings, participation, people)
 }
@@ -157,6 +160,7 @@ func classDayTestReports(
 ) enrollmentOwner.Reports {
 	rMembership := NewSchoolMembershipSuiteRepositories(db)
 	return owners.NewEnrollmentReports(owners.EnrollmentReportSources{
+		Now:   time.Now,
 		Owner: r.Enrollment(), Offerings: enrollmentCompose.NewCareOfferingRecords(rCare.CarePlan), AccessLog: rAudit.DataAccessLog,
 		Students: r.Student, Persons: r.Person, Groups: schoolStructureCompose.NewGroupNames(owners.NewSchoolStructureSuiteRepositories(db).Group), StudentGuardians: r.StudentGuardian,
 		Companions: owners.NewStudentCompanionRepository(rCare.CarePlan), ClassListEntries: owners.NewClassListEntryRosterReader(rMembership.Membership),
@@ -169,7 +173,7 @@ func classDayTestReports(
 func classDayTestTrips(db transactionruntime.Database, hub *realtime.Hub, people *peopleCompose.Directory, rCare owners.TimetableCarePlanRows, clocks []func() time.Time) classdayCompose.ClassTripStatusDays {
 	return NewClassDayTripStatusDays(presenceStudentsHTTP.NewSchoolClassTrips(presenceStudentsHTTP.ResourceConfig{
 		Broadcaster: hub, Logger: slog.Default(), PeopleDirectory: people,
-		StudentStatusDayService: classDayTestStatusDays(db, rCare, clocks),
+		StudentStatusDayService: classDayTestStatusDays(db, rCare, clocks), Now: clockOrNow(clocks),
 	}))
 }
 
@@ -181,16 +185,8 @@ func classDayTestStatusDays(db transactionruntime.Database, rCare owners.Timetab
 
 // clockOrNow is the first clock a test passed, or the wall clock.
 func clockOrNow(clocks []func() time.Time) func() time.Time {
-	if clock := classDayTestClock(clocks); clock != nil {
-		return clock
-	}
-	return time.Now
-}
-
-// classDayTestClock is the first clock a test passed, nil for the wall clock.
-func classDayTestClock(clocks []func() time.Time) func() time.Time {
-	if len(clocks) == 0 {
-		return nil
+	if len(clocks) == 0 || clocks[0] == nil {
+		return time.Now
 	}
 	return clocks[0]
 }

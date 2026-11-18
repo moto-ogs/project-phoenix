@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { AuthShell, MotoBrand } from "~/components/auth/auth-shell";
 import { Alert } from "~/components/ui/alert";
@@ -21,9 +21,8 @@ export function PayrollDownloadContent({ link }: { readonly link: string }) {
   const [state, setState] = useState<DownloadState>("idle");
   const formRef = useRef<HTMLDivElement>(null);
   const { error, show, clear } = useApiFormError(formRef);
-  const retryRef = useRef<() => void>(() => undefined);
 
-  const download = useCallback(async () => {
+  const download = async () => {
     setState("loading");
     clear();
     try {
@@ -43,14 +42,10 @@ export function PayrollDownloadContent({ link }: { readonly link: string }) {
       // Wiederholen, denn ein verbrauchter Link öffnet sich nicht wieder.
       void show(err, {
         object: "die Datei",
-        ...(gone ? {} : { retry: () => retryRef.current() }),
+        ...(gone ? {} : { retry: () => void download() }),
       });
     }
-  }, [clear, link, show]);
-
-  useLayoutEffect(() => {
-    retryRef.current = () => void download();
-  });
+  };
 
   return (
     <AuthShell

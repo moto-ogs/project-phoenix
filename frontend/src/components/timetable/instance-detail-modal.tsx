@@ -41,6 +41,7 @@ import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { ConfirmationModal } from "~/components/ui/modal";
 import {
   SlideOver,
+  SlideOverBody,
   SlideOverContent,
   SlideOverFooter,
   SlideOverHeader,
@@ -73,9 +74,11 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import {
   canCompleteInstance,
+  canReinstateInstance,
   completeAvailableClock,
 } from "~/lib/timetable-lifecycle";
 import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableService } from "~/lib/timetable-api";
 import type { InstanceParticipantNames } from "~/lib/timetable-api";
 import type { RosterDeviation } from "~/lib/roster-deviation";
@@ -117,7 +120,8 @@ import { supervisionConcept } from "~/lib/concepts/supervision";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
-export type LifecycleAction = "start" | "complete" | "cancel" | "reopen";
+export type LifecycleAction =
+  "start" | "complete" | "cancel" | "reopen" | "reinstate";
 
 /** Extras a lifecycle action can carry; today only the cancel notice (#2601). */
 export interface LifecycleActionOptions {
@@ -125,7 +129,7 @@ export interface LifecycleActionOptions {
 }
 
 // Löschen läuft über ConfirmDeleteModal (#3110), nicht über diese Liste.
-type PendingConfirmAction = "complete" | "cancel" | "reopen";
+type PendingConfirmAction = "complete" | "cancel" | "reopen" | "reinstate";
 
 const CONFIRM_DIALOGS: Record<
   PendingConfirmAction,
@@ -146,7 +150,7 @@ const CONFIRM_DIALOGS: Record<
   },
   cancel: {
     title: "Termin absagen?",
-    body: "Der Termin wird im Plan als abgesagt markiert. Das kann nicht rückgängig gemacht werden.",
+    body: "Der Termin wird im Plan als abgesagt markiert. Bis zum Ende des Termins können Sie die Absage zurücknehmen.",
     confirmText: "Absagen",
   },
   reopen: {
@@ -155,6 +159,15 @@ const CONFIRM_DIALOGS: Record<
     confirmText: "Wieder öffnen",
     confirmTooltip:
       "Öffnet den Termin wieder, Aufsicht und Anwesenheiten kommen zurück.",
+  },
+  // #7151: Eltern hörten von der Absage vielleicht per Nachricht; von der
+  // Rücknahme nicht. Das steht deshalb in der Rückfrage.
+  reinstate: {
+    title: "Absage zurücknehmen?",
+    body: "Der Termin findet wieder statt. Das eingeplante Personal bekommt einen Hinweis in moto. Eltern bekommen keine Nachricht.",
+    confirmText: "Zurücknehmen",
+    confirmTooltip:
+      "Plant den Termin wieder ein, das Personal bekommt einen Hinweis.",
   },
 };
 
@@ -298,7 +311,7 @@ function SeriesRosterMaintenance({
   const { data } = useSWRAuth(
     known || !periodId
       ? null
-      : `timetable-template-roster-maintenance-${templateId}-${periodId}`,
+      : tenantDailyKeys.templateRosterMaintenance(templateId, periodId),
     () => timetableService.getTemplate(templateId, periodId ?? ""),
   );
   const state = known ?? data?.rosterMaintenance;
@@ -500,7 +513,7 @@ function ParticipantNamesLoader({
   children: (names: InstanceParticipantNames) => React.ReactNode;
 }>) {
   const { data, error, mutate } = useSWRAuth(
-    `timetable-participants-${instanceId}`,
+    tenantDailyKeys.instanceParticipants(instanceId),
     () => timetableService.getInstanceParticipants(instanceId),
   );
   const loadError = useSwrLoadError(error, "die Liste der Teilnehmenden", () =>
@@ -1026,6 +1039,23 @@ export function InstanceDetailModal({
               <CircleX className="h-4 w-4" />
               Diese Aktivität wurde abgesagt.
             </span>
+            {canManage && canReinstateInstance(instance, now) && (
+              <Button
+                variant="outline"
+                size="md"
+                type="button"
+                onClick={() => setPendingConfirm("reinstate")}
+                isLoading={pendingAction === "reinstate"}
+                loadingText="Nehme zurück …"
+                disabled={pendingAction !== null}
+                tooltip="Plant den Termin wieder ein, moto fragt vorher nach."
+              >
+                <span className="inline-flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4" />
+                  Absage zurücknehmen
+                </span>
+              </Button>
+            )}
             {onDeleteCancelled && (
               <Button
                 variant="outline_danger"
@@ -1071,7 +1101,7 @@ export function InstanceDetailModal({
           <SlideOverHeader>
             <SlideOverTitle>{instance.title}</SlideOverTitle>
           </SlideOverHeader>
-          <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
+          <SlideOverBody className="space-y-5">
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <InstanceStatusBadge status={instance.status} />
@@ -1267,7 +1297,7 @@ export function InstanceDetailModal({
                 )}
               </>
             )}
-          </div>
+          </SlideOverBody>
           <SlideOverFooter>{footer}</SlideOverFooter>
         </SlideOverContent>
       </SlideOver>
@@ -1303,7 +1333,7 @@ export function InstanceDetailModal({
           <div className="space-y-3">
             <p className="text-sm leading-relaxed text-gray-600">
               {pendingConfirm === "cancel" && instance?.status === "active"
-                ? "Die laufende Betreuung wird gestoppt und der Termin als abgesagt markiert. Das kann nicht rückgängig gemacht werden."
+                ? "Die laufende Betreuung wird gestoppt und der Termin als abgesagt markiert. Bis zum Ende des Termins können Sie die Absage zurücknehmen."
                 : CONFIRM_DIALOGS[pendingConfirm].body}
             </p>
             {pendingConfirm === "cancel" && (
@@ -1716,7 +1746,7 @@ interface SectionProps {
 function Section({ title, children }: SectionProps) {
   return (
     <div className="space-y-2">
-      <SectionLabel as="h4">{title}</SectionLabel>
+      <SectionLabel as="h3">{title}</SectionLabel>
       <div className="space-y-1.5">{children}</div>
     </div>
   );

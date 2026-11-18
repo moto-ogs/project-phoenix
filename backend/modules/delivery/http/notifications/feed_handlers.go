@@ -29,13 +29,13 @@ type FeedPage struct {
 	UnreadCount int
 }
 
-// FeedService serves the caller's own notification feed in the school of the
-// session (#7148).
+// FeedService serves the caller's own notification feed in the school and the
+// portal of the session (#7148, #7139).
 type FeedService interface {
-	Page(ctx context.Context, tenantID, accountID int64, cursor string, limit int) (FeedPage, error)
-	UnreadCount(ctx context.Context, tenantID, accountID int64) (int, error)
-	MarkRead(ctx context.Context, tenantID, accountID, entryID int64) (int, error)
-	MarkAllRead(ctx context.Context, tenantID, accountID int64) (int, error)
+	Page(ctx context.Context, tenantID, accountID int64, portal, cursor string, limit int) (FeedPage, error)
+	UnreadCount(ctx context.Context, tenantID, accountID int64, portal string) (int, error)
+	MarkRead(ctx context.Context, tenantID, accountID int64, portal string, entryID int64) (int, error)
+	MarkAllRead(ctx context.Context, tenantID, accountID int64, portal string) (int, error)
 	IsNotFound(error) bool
 	IsInvalidCursor(error) bool
 }
@@ -61,7 +61,9 @@ type feedCountResponse struct {
 	UnreadCount int `json:"unread_count"`
 }
 
-// registerFeedRoutes mounts the feed in the request's tenant transaction.
+// registerFeedRoutes mounts the feed in the request's tenant transaction. The
+// staff portal and moto schule mount the same routes; the request's portal
+// decides which entries the session sees.
 func (rs *Resource) registerFeedRoutes(r chi.Router, withTx Middleware) {
 	r.With(withTx).Route("/feed", func(r chi.Router) {
 		r.Get("/", rs.listFeed)
@@ -104,7 +106,7 @@ func (rs *Resource) listFeed(w http.ResponseWriter, r *http.Request) {
 		}
 		limit = parsed
 	}
-	page, err := rs.FeedService.Page(r.Context(), tenantID, accountID, r.URL.Query().Get("cursor"), limit)
+	page, err := rs.FeedService.Page(r.Context(), tenantID, accountID, requestPortal(r), r.URL.Query().Get("cursor"), limit)
 	if err != nil {
 		if rs.FeedService.IsInvalidCursor(err) {
 			rs.Runtime.Invalid(w, r, err)
@@ -128,7 +130,7 @@ func (rs *Resource) feedUnreadCount(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	count, err := rs.FeedService.UnreadCount(r.Context(), tenantID, accountID)
+	count, err := rs.FeedService.UnreadCount(r.Context(), tenantID, accountID, requestPortal(r))
 	if err != nil {
 		rs.Runtime.Internal(w, r, err)
 		return
@@ -146,7 +148,7 @@ func (rs *Resource) markFeedEntryRead(w http.ResponseWriter, r *http.Request) {
 		rs.Runtime.Invalid(w, r, errors.New("invalid notification feed entry id"))
 		return
 	}
-	count, err := rs.FeedService.MarkRead(r.Context(), tenantID, accountID, entryID)
+	count, err := rs.FeedService.MarkRead(r.Context(), tenantID, accountID, requestPortal(r), entryID)
 	if err != nil {
 		if rs.FeedService.IsNotFound(err) {
 			rs.Runtime.NotFound(w, r, err)
@@ -163,7 +165,7 @@ func (rs *Resource) markAllFeedRead(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	count, err := rs.FeedService.MarkAllRead(r.Context(), tenantID, accountID)
+	count, err := rs.FeedService.MarkAllRead(r.Context(), tenantID, accountID, requestPortal(r))
 	if err != nil {
 		rs.Runtime.Internal(w, r, err)
 		return

@@ -16,7 +16,8 @@ export function traegerOccupancyTopic(): HelpTopic {
       "Wählen Sie in der Navigation `Belegung`.",
       "Lesen Sie oben die Summe für alle Schulen und die freien Plätze.",
       "Wählen Sie einen Reiter: `Schulen`, `Gruppen` oder `Betreuungsformen`.",
-      "Wählen Sie `Herunterladen` und dann `CSV`, um alle Zahlen als Tabelle zu speichern.",
+      "Wählen Sie bei Bedarf oben eine Schule.",
+      "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Mit einer gewählten Schule enthält die Datei nur diese Schule.",
     ],
     result:
       "Sie sehen für jede Schule, wie viele Kinder in welcher Gruppe sind und welches Betreuungsangebot sie heute gebucht haben. Sie sehen auch, wo noch Plätze frei sind.",

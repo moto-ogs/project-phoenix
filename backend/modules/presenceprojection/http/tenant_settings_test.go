@@ -2,6 +2,7 @@ package presenceprojectionhttp
 
 import (
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -9,5 +10,5 @@ import (
 
 func TestRouteRegistrationRequiresTenantSettings(t *testing.T) {
 	t.Parallel()
-	assert.Panics(t, func() { NewResource(ResourceConfig{}).Register(chi.NewRouter(), nil) })
+	assert.Panics(t, func() { NewResource(ResourceConfig{Now: time.Now}).Register(chi.NewRouter(), nil) })
 }

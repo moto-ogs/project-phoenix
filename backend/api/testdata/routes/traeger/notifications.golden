@@ -1,0 +1,4 @@
+GET /traeger/notifications/feed/
+GET /traeger/notifications/feed/unread-count
+POST /traeger/notifications/feed/read-all
+POST /traeger/notifications/feed/{id}/read

@@ -14,12 +14,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import StudentDetailPage from "./page";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
-import { SWRConfig } from "swr";
+import { SWRConfig } from "~/lib/swr/testing";
 import { useSession } from "next-auth/react";
 import { getDayData as getArrivalDayData } from "~/lib/arrival-schedule-helpers";
 import { getDayData as getPickupDayData } from "~/lib/pickup-schedule-helpers";
 import { useWeekendFollowsFriday } from "~/lib/tenant-context";
-import { setTestClock } from "~/test/clock";
+import {
+  setTestClock,
+  TEST_CLOCK_INSTANT,
+  TEST_CLOCK_TODAY,
+} from "~/test/clock";
 import { fetchStudentPickupData } from "~/lib/pickup-schedule-api";
 
 const { mockSWRMutate, mockScopedMutate, MockStudentStatusDayConflictError } =
@@ -39,7 +43,7 @@ const { mockSWRMutate, mockScopedMutate, MockStudentStatusDayConflictError } =
     },
   }));
 vi.mock("swr", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("swr")>();
+  const actual = await importOriginal<typeof import("~/lib/swr/testing")>();
   return {
     ...actual,
     mutate: mockScopedMutate,
@@ -528,6 +532,37 @@ vi.mock("~/lib/student-notes-api", async (importOriginal) => {
   vi.spyOn(actual.studentNotesService, "listActivities").mockResolvedValue([]);
   return actual;
 });
+
+// The child has no holiday-week registration and no recorded care times.
+vi.mock("~/lib/holiday-host-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/holiday-host-api")>()),
+  fetchHolidayStudentRegistrations: vi.fn(async () => []),
+  fetchHolidayStudentHealth: vi.fn(async () => []),
+}));
+
+vi.mock("~/lib/care-times", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/care-times")>()),
+  fetchStudentCareTimes: vi.fn(
+    async (studentId: string, from: string, to: string) => ({
+      student_id: studentId,
+      from,
+      to,
+      data_from: from,
+      tolerance_minutes: 0,
+      summary: {
+        overrun_count: 0,
+        overrun_days: 0,
+        unbooked_days: 0,
+        absent_days: 0,
+        extra_minutes: 0,
+        planned_minutes: 0,
+        actual_minutes: 0,
+        deviation_minutes: 0,
+      },
+      days: [],
+    }),
+  ),
+}));
 
 // Mock pickup schedule API
 vi.mock("~/lib/pickup-schedule-api", () => ({
@@ -2356,14 +2391,14 @@ describe("StudentDetailPage", () => {
           {
             id: "7",
             student_id: "1",
-            date: "2026-09-09",
+            date: TEST_CLOCK_TODAY,
             status: "excused",
             label: "Entschuldigt",
-            reported_at: "2026-09-09T06:30:00Z",
+            reported_at: TEST_CLOCK_INSTANT.toISOString(),
             cleared_at: null,
             source: "parent",
-            created_at: "2026-09-09T06:30:00Z",
-            updated_at: "2026-09-09T06:30:00Z",
+            created_at: TEST_CLOCK_INSTANT.toISOString(),
+            updated_at: TEST_CLOCK_INSTANT.toISOString(),
           },
         ]);
         renderExcusedToday();

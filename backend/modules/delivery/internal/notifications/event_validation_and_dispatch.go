@@ -78,7 +78,7 @@ func validate(event Event) error {
 // recipients, so a feed event elsewhere is refused rather than pushed to the
 // whole audience without its entries.
 func validateOutsideFeed(event Event) error {
-	if event.Feed != nil {
+	if def, known := GetType(event.Type); event.Feed != nil || (known && def.Feed) {
 		return errors.New("notification feed events are delivered by Notify only")
 	}
 	return validate(event)
@@ -156,7 +156,7 @@ func (r *router) withinActiveWindow(ctx context.Context, tenantID int64) (bool, 
 		return true, nil
 	}
 
-	now := calendar.Now()
+	now := r.clock().In(calendar.Berlin)
 	nowMin := now.Hour()*60 + now.Minute()
 	return withinWindow(nowMin, start, end), nil
 }

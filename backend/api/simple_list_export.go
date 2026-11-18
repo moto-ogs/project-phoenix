@@ -8,8 +8,10 @@ import (
 )
 
 type SimpleListColumn struct {
-	ID    string
-	Label string
+	// Numeric marks a count or decimal; empty values remain empty in Excel.
+	Numeric bool
+	ID      string
+	Label   string
 }
 
 type SimpleListDocument struct {
@@ -35,7 +37,7 @@ func NewSimpleListRenderer() SimpleListRenderer {
 	return func(input SimpleListDocument, format, filename string) (SimpleListFile, error) {
 		columns := make([]lists.Column, 0, len(input.Columns))
 		for _, column := range input.Columns {
-			columns = append(columns, lists.Column{ID: lists.ColumnID(column.ID), Label: column.Label})
+			columns = append(columns, lists.Column{ID: lists.ColumnID(column.ID), Label: column.Label, Numeric: column.Numeric})
 		}
 		rows := make([]lists.Row, 0, len(input.Rows))
 		for rowIndex, inputRow := range input.Rows {

@@ -1,7 +1,14 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render as renderUi,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { StaffTimeExportModal } from "./staff-time-export-modal";
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 import {
   fetchDatevExportReport,
@@ -12,6 +19,26 @@ import {
   transferExportViaSFTP,
   type SFTPStatus,
 } from "~/lib/sftp-export-api";
+
+vi.unmock("swr");
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1" }, expires: "2099-01-01" },
+  }),
+}));
+
+function FreshCache({ children }: { children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+function render(ui: ReactElement) {
+  return renderUi(ui, { wrapper: FreshCache });
+}
 
 vi.mock("~/lib/datev-export-api", async (importOriginal) => {
   const original =

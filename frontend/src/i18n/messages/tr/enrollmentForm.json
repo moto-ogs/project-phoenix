@@ -14,7 +14,7 @@
   "legalGermanNotice": "Bu yasal metinlerin bağlayıcı sürümü Almancadır.",
   "previewError": "Bu bir ön izlemedir. Bu görünümden kayıt gönderilmez.",
   "missingPhase": "Bu kayıt için kayıt dönemi eksik.",
-  "fixMarked": "Lütfen kırmızıyla işaretli alanları düzeltin.",
+  "fixMarked": "Bazı alanların altında bir uyarı var. Lütfen bu alanları düzeltin.",
   "consentSummary": "Lütfen gerekli tüm onayları verin.",
   "sections": {
     "guardianKicker": "1. adım",
@@ -137,6 +137,20 @@
     "photoTitle": "Fotoğraf İzni"
   },
   "captchaMisconfigured": "Online kayıt şu anda mümkün değil. Bu sizin hatanız değil. Lütfen {careTerm} ile iletişime geçin.",
+  "captchaHelp": {
+    "hint": "Güvenlik kontrolü yüklenmiyor veya takılı mı kaldı?",
+    "restart": "Kontrolü yeniden başlat",
+    "restartTooltip": "Kontrolü yeniden yükler, bilgileriniz korunur.",
+    "failedTitle": "Güvenlik kontrolü yüklenmiyor",
+    "failedText": "Kontrolü çoğu zaman bir reklam engelleyici engeller. Şunları yapabilirsiniz:",
+    "failedStepBlocker": "Bu sayfa için reklam engelleyiciyi kapatın.",
+    "failedStepRestart": "„Kontrolü yeniden başlat“ seçeneğini seçin.",
+    "failedStepBrowser": "Hâlâ olmuyor mu? Bağlantıyı kopyalayın ve başka bir tarayıcıda açın, örneğin Chrome. Bilgilerinizi orada yeniden girin.",
+    "copyLink": "Bağlantıyı kopyala",
+    "copyLinkTooltip": "Bu sayfanın adresini başka bir tarayıcı için kopyalar.",
+    "linkCopied": "Bağlantı kopyalandı",
+    "copyFailed": "Burada kopyalama çalışmıyor. Bağlantı şu:"
+  },
   "structured": {
     "yes": "Evet",
     "no": "Hayır",

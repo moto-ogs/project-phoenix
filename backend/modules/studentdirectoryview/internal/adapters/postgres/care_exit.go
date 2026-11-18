@@ -65,7 +65,9 @@ func ListEndedCare(ctx context.Context, db bun.IDB, tenantID int64, asOfDay stri
 			Where(`"student".tenant_id = ?`, tenantID).
 			Where(`"membership".enrolled_until IS NOT NULL`).
 			Where(`"membership".enrolled_until < ?`, asOf).
-			Where(`"membership".status <> 'alumnus'`)
+			Where(`"membership".status <> 'alumnus'`).
+			// A child without an OGS place (#4803) never had OGS care to end.
+			Where(`NOT "membership".without_care_place`)
 		if search := strings.TrimSpace(filter.Search); search != "" {
 			// LIKE metacharacters match literally, also the fullwidth ones
 			// unaccent turns into them (#5791).

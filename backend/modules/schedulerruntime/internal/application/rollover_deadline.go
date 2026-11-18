@@ -46,7 +46,7 @@ func (s *Scheduler) checkAndRunRolloverDeadline(ctx context.Context, task *Sched
 	ctx, cancel := s.taskContext(ctx, 30*time.Minute)
 	defer cancel()
 
-	now := time.Now()
+	now := s.clock()
 	s.forEachTenantSettings(ctx, "rollover-deadline", func(tenantCtx context.Context, tenantID int64) error {
 		_, err := s.rolloverDeadlineRunner.RunDeadlineWorker(tenantCtx, now)
 		if err != nil {

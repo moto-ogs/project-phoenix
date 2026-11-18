@@ -102,7 +102,7 @@ function SectionCardConceptIcon({
 }
 
 /** What the collapse toggle does in each state (#6744). */
-export interface SectionCollapseTooltip {
+interface SectionCollapseTooltip {
   /** While collapsed: what a click shows. */
   readonly expand: string;
   /** While open: what a click hides. */
@@ -239,8 +239,9 @@ const STICKY_FOOTER =
  *
  * Use this instead of hand-rolling `<section className="rounded-2xl border …">`
  * with a local header component. It is the only card head in the kit (#5581):
- * `concept` draws the concept icon tile, `flush` lets a table or list run to
- * the card edge, `footer` adds a bottom zone, `padding="none"` drops the
+ * `concept` draws the concept icon tile, `flush` lets a frameless list run to
+ * the card edge (never a `DataTable`: it brings its own frame, #7303),
+ * `footer` adds a bottom zone, `padding="none"` drops the
  * surface padding for content that brings its own rows, and `loading` shows
  * field-shaped bars under the real head.
  *
@@ -349,8 +350,9 @@ export function SectionCard({
   className?: string;
   overflow?: "hidden" | "visible";
   /**
-   * Rumpf ohne Seiten- und Unterrand: eine Tabelle oder Liste mit eigener
-   * Zellpolsterung läuft bis an die Kartenkante. Der Kopf behält sein Polster.
+   * Rumpf ohne Seiten- und Unterrand: eine Liste ohne eigenen Rahmen läuft
+   * bis an die Kartenkante. Der Kopf behält sein Polster. Nicht für
+   * `DataTable`: deren Rahmen läge auf dem Kartenrahmen (#7303).
    */
   flush?: boolean;
   /**
@@ -560,7 +562,7 @@ export function SectionCard({
             "border-t border-gray-100 bg-gray-50/70 py-3",
             ZONE_PADDING_X,
             stickyFooter &&
-              `${STICKY_FOOTER} ${Z_LAYER.raised} rounded-b-2xl bg-gray-50/95 backdrop-blur-sm`,
+              `${STICKY_FOOTER} ${Z_LAYER.raised} rounded-b-2xl bg-gray-50`,
           )}
         >
           {footer}

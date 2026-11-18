@@ -9,6 +9,7 @@ import type { SettingsSchema } from "./settings-api";
 import { filenameFromDisposition } from "./file-download";
 import { portalAuthPath } from "./portal-paths";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
+import type { TraegerListFormat } from "./traeger-list-export";
 import { type TraegerRole, traegerRoles } from "./traeger-roles";
 
 export interface TraegerSchool {
@@ -1156,9 +1157,12 @@ export async function fetchTraegerAccessLogPeople(
 /** The CSV export of a filter, with the file name the backend chose. */
 export async function downloadTraegerAccessLog(
   filter: TraegerAccessLogFilter,
+  format: TraegerListFormat,
 ): Promise<{ readonly blob: Blob; readonly filename: string | null }> {
+  const query = new URLSearchParams(traegerAccessLogQuery(filter));
+  query.set("format", format);
   const response = await transportFetch(
-    `/api/traeger/access-log/export?${traegerAccessLogQuery(filter)}`,
+    `/api/traeger/access-log/export?${query.toString()}`,
     { credentials: "include", cache: "no-store" },
   );
   if (!response.ok) {
@@ -1303,7 +1307,7 @@ interface BackendTraegerLogo {
 }
 
 interface BackendTraegerBankAccount {
-  id: number;
+  id: string | number;
   label: string;
   account_holder: string;
   iban: string;

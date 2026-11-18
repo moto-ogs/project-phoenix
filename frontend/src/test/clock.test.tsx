@@ -14,6 +14,7 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import {
   TEST_CLOCK_INSTANT,
   TEST_CLOCK_TODAY,
+  testClockDay,
   isTestClockFrozen,
   releaseFakeTimers,
   setTestClock,
@@ -133,6 +134,21 @@ describe("deterministic test clock", () => {
       setTimeout(() => resolve(true), 1);
     });
     expect(ticked).toBe(true);
+  });
+});
+
+describe("days relative to the test clock", () => {
+  it("counts calendar days from TEST_CLOCK_TODAY across months and years", () => {
+    const dayMs = 24 * 60 * 60 * 1000;
+    const utcMidnight = (iso: string) => Date.parse(`${iso}T00:00:00Z`);
+
+    expect(testClockDay()).toBe(TEST_CLOCK_TODAY);
+    for (const days of [-400, -31, -1, 1, 31, 400]) {
+      expect(testClockDay(days)).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(
+        utcMidnight(testClockDay(days)) - utcMidnight(TEST_CLOCK_TODAY),
+      ).toBe(days * dayMs);
+    }
   });
 });
 

@@ -123,9 +123,9 @@ func (s arrivalBaselineSource) OfferingRows(ctx context.Context, links []*carepl
 }
 
 // NewPickupBaselines projects the pickup baselines from the stored schedules,
-// the approved bookings and the booking mode.
-func NewPickupBaselines(records carePlanPorts.PickupBaselineRecords, links careplan.ApprovedBookingReader, authoritative func(context.Context) (bool, error)) careplan.PickupBaselineReader {
-	return NewPickupBaselineQueries(pickupBaselineSource{links, records, authoritative})
+// the approved bookings and the booking mode on the composition's day.
+func NewPickupBaselines(records carePlanPorts.PickupBaselineRecords, links careplan.ApprovedBookingReader, authoritative func(context.Context) (bool, error), today func() calendar.Date) careplan.PickupBaselineReader {
+	return NewPickupBaselineQueries(pickupBaselineSource{links, records, authoritative}, today)
 }
 
 // pickupBaselineSource reads the booking rows straight from the approved
@@ -243,12 +243,11 @@ func (a pickupApprovalExceptions) SaveDeparture(ctx context.Context, value carep
 	return row.ID, err
 }
 
-func (a pickupApprovalExceptions) CreateNote(ctx context.Context, value careplan.PickupNote) (int64, error) {
+func (a pickupApprovalExceptions) CreateNote(ctx context.Context, value careplan.PickupNote) (careplan.PickupNote, error) {
 	if value.StudentID <= 0 || value.NoteDate == "" || strings.TrimSpace(value.Content) == "" {
-		return 0, carerequests.ErrInvalidPayload
+		return careplan.PickupNote{}, carerequests.ErrInvalidPayload
 	}
-	row, err := a.records.CreatePickupNote(ctx, value)
-	return row.ID, err
+	return a.records.CreatePickupNote(ctx, value)
 }
 
 // NewPickupExcusalRows serves the pointer-based excusal rows from records.

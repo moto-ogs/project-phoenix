@@ -2,8 +2,10 @@ package audit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/auditlog/classlist"
 	"github.com/moto-ogs/project-phoenix/modules/auditlog/consents"
@@ -13,11 +15,16 @@ import (
 )
 
 // Appender is the only Audit persistence adapter allowed to insert ledger
-// rows. Read repositories stay table-specific.
-type Appender struct{ runtime Runtime }
+// rows. Read repositories stay table-specific. now is the Audit clock; it
+// stamps only the work session edits (stampRecordedAt). A repository that
+// appends only ledgers the database stamps passes nil.
+type Appender struct {
+	runtime Runtime
+	now     func() time.Time
+}
 
-func NewAppender(runtime Runtime) *Appender {
-	return &Appender{runtime: requireRuntime(runtime)}
+func NewAppender(runtime Runtime, now func() time.Time) *Appender {
+	return &Appender{runtime: requireRuntime(runtime), now: now}
 }
 
 func (a *Appender) Append(ctx context.Context, event any) error {
@@ -29,8 +36,8 @@ func (a *Appender) Append(ctx context.Context, event any) error {
 	return wrapDatabase("append "+table, err)
 }
 
-// AppendAll inserts class-list entry changes, consent changes or data
-// deletions in one statement with the same columns as Append; any other event
+// AppendAll inserts class-list entry changes, consent changes (either shape)
+// or data deletions in one statement with the same columns as Append; any other event
 // type, or a mix, is appended one by one.
 func (a *Appender) AppendAll(ctx context.Context, events []any) error {
 	if len(events) == 0 {
@@ -46,6 +53,13 @@ func (a *Appender) AppendAll(ctx context.Context, events []any) error {
 		return wrapDatabase("append audit.class_list_entry_changes", err)
 	case *consents.ConsentChange:
 		db, rows, err := prepareAll(ctx, a, events, consentChangeRow)
+		if err != nil || rows == nil {
+			return err
+		}
+		_, err = db.NewInsert().Model(&rows).ModelTableExpr("audit.student_consent_changes").Exec(ctx)
+		return wrapDatabase("append audit.student_consent_changes", err)
+	case *auditModels.StudentConsentChange:
+		db, rows, err := prepareAll(ctx, a, events, func(value *auditModels.StudentConsentChange) *auditModels.StudentConsentChange { return value })
 		if err != nil || rows == nil {
 			return err
 		}
@@ -122,6 +136,9 @@ func (a *Appender) prepare(ctx context.Context, event any) (bun.IDB, error) {
 	})
 	if !ok {
 		return nil, fmt.Errorf("audit event %T is not tenant scoped", event)
+	}
+	if err := a.stampRecordedAt(event); err != nil {
+		return nil, err
 	}
 	if err := validateEvent(event); err != nil {
 		return nil, err
@@ -236,6 +253,73 @@ func importEventRow(value *auditImports.DataImport) *auditModels.DataImport {
 		row.Metadata["import_checkpoint"] = value.Checkpoint
 	}
 	return row
+}
+
+// stampRecordedAt decides the clock of the event's time. The ledgers a
+// security-definer retention function guards on the database clock, and the
+// change ledgers the access trail orders against them, are stamped by their
+// column default in every writer, so a time the producer set is dropped
+// (ADR 0281, Nachtrag); bun reads the stamp back. Their producers set no
+// time or the instant of their own clock. The consent changes keep the time
+// the producer set: a grant records when the consent was given, which an
+// import of past consents dates back; without a time the column default
+// stamps them. The work session edits, deleted with their session, take the
+// Audit clock when they come without a time. The ledgers without a school
+// are stamped by the database too.
+func (a *Appender) stampRecordedAt(event any) error {
+	for _, stamp := range databaseStamps(event) {
+		*stamp = time.Time{}
+	}
+	edit, ok := event.(*auditModels.WorkSessionEdit)
+	if !ok || !edit.CreatedAt.IsZero() {
+		return nil
+	}
+	if a.now == nil {
+		return errors.New("audit appender: clock is required to stamp the event")
+	}
+	edit.CreatedAt = a.now()
+	return nil
+}
+
+// databaseStamps names the time columns of a ledger the database stamps.
+func databaseStamps(event any) []*time.Time {
+	switch value := event.(type) {
+	case *auditModels.AuthEvent:
+		return []*time.Time{&value.CreatedAt}
+	case *auditModels.DataDeletion:
+		return []*time.Time{&value.DeletedAt}
+	case *auditModels.StudentFieldEdit:
+		return []*time.Time{&value.CreatedAt}
+	case *auditModels.DataAccessLog:
+		return []*time.Time{&value.AccessedAt}
+	case *auditModels.StudentDeletion:
+		return []*time.Time{&value.DeletedAt}
+	case *auditModels.EnrollmentDeletion:
+		return []*time.Time{&value.DeletedAt}
+	case *auditModels.EnrollmentRestoration:
+		return []*time.Time{&value.RestoredAt}
+	case *auditModels.FileEvent:
+		return []*time.Time{&value.CreatedAt, &value.UpdatedAt}
+	case *auditModels.SubstitutionChange:
+		return []*time.Time{&value.CreatedAt, &value.UpdatedAt}
+	case *auditModels.ClassListEntryChange:
+		return []*time.Time{&value.OccurredAt}
+	case *classlist.ClassListEntryChange:
+		return []*time.Time{&value.OccurredAt}
+	case *auditModels.StaffMasterDataChange:
+		return []*time.Time{&value.OccurredAt}
+	case *auditModels.PersonnelNumberChange:
+		return []*time.Time{&value.OccurredAt}
+	case *auditModels.GuardianFinancialChange:
+		return []*time.Time{&value.OccurredAt}
+	case *auditModels.TimeTrackingDeletion:
+		return []*time.Time{&value.OccurredAt}
+	case *auditModels.GuardianChange:
+		return []*time.Time{&value.ChangedAt}
+	case *auditModels.AttendanceCorrection:
+		return []*time.Time{&value.CreatedAt, &value.UpdatedAt}
+	}
+	return nil
 }
 
 func validateEvent(event any) error {

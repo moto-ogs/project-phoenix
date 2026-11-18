@@ -132,11 +132,11 @@ type Event struct {
 	// the push and in-app hint channels then skip it.
 	feedOnly bool
 
-	// Portal names the portal that asked for the event. It is only consulted
-	// for TypeTest (#2208): the test notification proves the setup of the
-	// portal the person is standing in, so it must not fan out into the other
-	// staff portal. Empty means PortalStaff. Catalogue types ignore it — where
-	// they are delivered is decided by the catalogue, not by the producer.
+	// Portal narrows a staff event to one portal. It normally belongs only to
+	// TypeTest (#2208), which proves the setup of the portal the person is
+	// standing in. A catalogue type may use PortalSchool when an audience has
+	// access only in moto schule; the catalogue must still offer the type
+	// there. Empty means both portals the catalogue offers the type in.
 	Portal string
 }
 
@@ -226,9 +226,15 @@ type router struct {
 	channels []Channel
 	logger   *slog.Logger
 	observe  DeliveryObserver
+	// clock tells whether an event falls in the school's delivery window.
+	clock func() time.Time
 	// feedReader is the notification feed (#7148): its store and clock, and
 	// the read side the router serves; nil rejects feed events.
 	*feedReader
+	// guardian serves the feed of the parents portal (#7140).
+	guardian *guardianFeed
+	// traeger serves the bell of the Träger-Portal (#7146).
+	traeger *traegerFeed
 }
 
 // DeliveryObserver records one synchronous transport outcome. All arguments
@@ -239,18 +245,22 @@ type DeliveryObserver func(transport, template, caller string, duration time.Dur
 // the one type exempt from the delivery window.
 const TypeTest = "test"
 
-// NewService builds the channel router. Channels are fixed at wiring time.
+// NewService builds the channel router. Channels are fixed at wiring time;
+// now, the composition's clock, tells the delivery window and is required.
 // It returns Notifier so wiring can reach NotifyBatch; the value stays
 // assignable to Service for consumers that only notify one audience.
-func NewService(settings RouterSettings, logger *slog.Logger, channels ...Channel) Notifier {
-	return &router{settings: settings, channels: channels, logger: logger}
+func NewService(settings RouterSettings, logger *slog.Logger, now func() time.Time, channels ...Channel) Notifier {
+	if now == nil {
+		panic("notification router: the composition's clock is required")
+	}
+	return &router{settings: settings, channels: channels, logger: logger, clock: now}
 }
 
 // NewServiceWithDeliveryObserver builds the production router with runtime
 // evidence for fail-closed sends. NewService remains the small test and local
 // adapter constructor.
-func NewServiceWithDeliveryObserver(settings RouterSettings, logger *slog.Logger, observe DeliveryObserver, channels ...Channel) Notifier {
-	service := NewService(settings, logger, channels...).(*router)
+func NewServiceWithDeliveryObserver(settings RouterSettings, logger *slog.Logger, observe DeliveryObserver, now func() time.Time, channels ...Channel) Notifier {
+	service := NewService(settings, logger, now, channels...).(*router)
 	service.observe = observe
 	return service
 }
@@ -261,7 +271,7 @@ func NewServiceWithDeliveryObserver(settings RouterSettings, logger *slog.Logger
 // feed (contract.NotificationFeed); the SSE channel signals its changes. A
 // nil store leaves the feed out.
 func NewServiceWithFeed(settings RouterSettings, logger *slog.Logger, observe DeliveryObserver, feed deliveryPorts.FeedStore, now func() time.Time, channels ...Channel) Notifier {
-	service := NewServiceWithDeliveryObserver(settings, logger, observe, channels...).(*router)
+	service := NewServiceWithDeliveryObserver(settings, logger, observe, now, channels...).(*router)
 	if feed == nil {
 		return service
 	}
@@ -269,6 +279,10 @@ func NewServiceWithFeed(settings RouterSettings, logger *slog.Logger, observe De
 	for _, channel := range channels {
 		if signal, ok := channel.(feedSignalChannel); ok {
 			service.signal = signal.signalFeed
+		}
+		if sse, ok := channel.(*sseChannel); ok {
+			service.guardian = newGuardianFeed(sse, feed, logger, now)
+			service.traeger = newTraegerFeed(sse, feed, now)
 		}
 	}
 	return service
@@ -283,6 +297,9 @@ func (r *router) getLogger() *slog.Logger {
 
 func (r *router) Notify(ctx context.Context, event Event) error {
 	if err := validate(event); err != nil {
+		return err
+	}
+	if err := requireFeedDelivery(event); err != nil {
 		return err
 	}
 	if event.Priority == "" {

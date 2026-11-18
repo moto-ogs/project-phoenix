@@ -7,11 +7,15 @@ name: Demo uptime
 # It stays silent until the repository variable DEMO_MONITOR_ENABLED is "true",
 # so it does not fail before the demo answers. Scheduled runs can be delayed by
 # several minutes under GitHub load, so this is a safety net, not monitoring
-# with a guaranteed interval. Tighten the schedule for event days if needed.
+# with a guaranteed interval. Hourly: every ten minutes cost 95 runner minutes
+# a day (14.11.2026). Tighten the schedule for event days if needed.
+#
+# After a red run, the next green run posts a recovery notice, so the channel
+# shows when the alarm is over without someone opening the Actions tab.
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -26,6 +30,9 @@ jobs:
     name: Probe the public demo
     if: github.event_name == 'workflow_dispatch' || vars.DEMO_MONITOR_ENABLED == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      # Reads the previous run's result for the recovery notice.
+      actions: read
     # Healthy maximum: 6 s; three failed probes can consume 255 s of
     # requests/retry delays before the failure notification can run.
     timeout-minutes: 5
@@ -89,3 +96,42 @@ jobs:
           fi
           printf '{"text":":rotating_light: Demo nicht erreichbar (%s) — %s"}' "$DETAIL" "$RUN_URL" \
             | curl -sS -X POST -H 'Content-Type: application/json' --data @- "$WEBHOOK" > /dev/null
+
+      # Only a green run after a sent alarm notifies. It walks back to the last
+      # run that told the channel something: a green run (nothing open) or a red
+      # run whose alarm step ran. Red runs without an alarm (timeout, failed
+      # start) and skipped or cancelled runs are passed over.
+      # A failing notice must not turn this run red: the next green run would
+      # then report a recovery from an outage that never happened.
+      - name: Notify Slack on recovery
+        if: success()
+        continue-on-error: true
+        env:
+          WEBHOOK: ${{ secrets.SLACK_DEPLOY_WEBHOOK }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo 'no Slack webhook configured, skipping'
+            exit 0
+          fi
+          alarmed=''
+          for run in $(gh run list --workflow demo-uptime.yml --status completed --limit 20 \
+            --json databaseId,conclusion --jq '.[] | "\(.databaseId):\(.conclusion)"'); do
+            case "${run#*:}" in
+              success) break ;;
+              failure|timed_out)
+                alarm="$(gh run view "${run%%:*}" --json jobs \
+                  --jq '[.jobs[].steps[] | select(.name == "Notify Slack") | .conclusion][0] // ""')"
+                if [ "$alarm" = success ]; then alarmed="${run%%:*}"; break; fi
+                ;;
+            esac
+          done
+          if [ -z "$alarmed" ]; then
+            echo 'no open alarm, no recovery to report'
+            exit 0
+          fi
+          printf '{"text":":white_check_mark: Demo wieder erreichbar — %s"}' "$RUN_URL" \
+            | curl -sS -X POST -H 'Content-Type: application/json' --data @- "$WEBHOOK" > /dev/null
+          echo "recovery after the alarm of run $alarmed reported"

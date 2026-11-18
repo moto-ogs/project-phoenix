@@ -3,6 +3,8 @@
 package api
 
 import (
+	"time"
+
 	"log/slog"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -25,7 +27,7 @@ import (
 // its production bootstrap. Each accepts only the module under test.
 func newStaffTestResource(module schoolmembership.Capability, svc StaffTestModule, work WorkforceTestModule, identity identityaccess.Owner, appEnv string, db transactionruntime.Database, logger *slog.Logger) *staffHTTP.Resource {
 	capabilities := owners.NewWorkforceAdminCapabilities(svc.Users, work.StaffAdmin, work.TimeTracking)
-	admin := newStaffAdminResource(capabilities, work.SickReports, nil, nil, nil, work.PayrollDispatch, nil, work.PayrollRules, svc.Users.StaffRows(), db, logger)
+	admin := newStaffAdminResource(capabilities, work.SickReports, nil, nil, nil, work.PayrollDispatch, nil, work.PayrollRules, svc.Users.StaffRows(), db, TestUploadFileKeys(), logger)
 	resource, err := newStaffResource(module, svc.PeopleDirectory, identity, appEnv, func(hooks StaffMembershipHooks) StaffMembershipRuntime {
 		return svc.NewStaffMembershipRuntime(db, logger, hooks)
 	}, admin, logger)
@@ -35,17 +37,17 @@ func newStaffTestResource(module schoolmembership.Capability, svc StaffTestModul
 	return resource
 }
 
-func newCareScheduleTestRouter(db transactionruntime.Database, module StudentTestModule, live ActiveTestModule, liveSettings ActiveSettings, liveCaller *owners.CallerRows) (chi.Router, error) {
+func newCareScheduleTestRouter(db transactionruntime.Database, module StudentTestModule, live ActiveTestModule, liveSettings ActiveSettings, liveCaller *owners.CallerRows, now func() time.Time) (chi.Router, error) {
 	parent, err := NewParentCareScheduleTestService(db, module, live, liveSettings)
 	if err != nil {
 		return nil, err
 	}
 	students := NewCareHTTPUnitResource(careStudentsHTTP.ResourceConfig{
 		CareRequestService: module.CareRequests, UserContextService: liveCaller,
-		SettingsService: liveSettings.Settings, Logger: slog.Default(),
+		SettingsService: liveSettings.Settings, Logger: slog.Default(), Now: now,
 	})
 	router := chi.NewRouter()
-	router.Mount("/parent", parentAPI.NewResource(parentAPI.ResourceConfig{Parent: parent}).Router(ParentSessionChain))
+	router.Mount("/parent", parentAPI.NewResource(parentAPI.ResourceConfig{Now: time.Now, Parent: parent}).Router(ParentSessionChain))
 	router.Mount("/api/students", students.Router(ProtectedTenantRoutes))
 	return router, nil
 }

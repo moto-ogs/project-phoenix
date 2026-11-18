@@ -4,6 +4,7 @@ import {
   formatKeyDateChange,
   formatKeyDateMonth,
   keyDateChange,
+  keyDateSchoolFigures,
   selectKeyDateMonth,
 } from "./key-date-counts-model";
 
@@ -60,6 +61,9 @@ describe("key-date figures", () => {
     expect(formatKeyDateChange(-2)).toBe("−2");
     expect(formatKeyDateChange(0)).toBe("±0");
     expect(keyDateChange(5, undefined)).toBeNull();
+    expect(keyDateChange(null, 10)).toBeNull();
+    expect(keyDateChange(10, null)).toBeNull();
+    expect(keyDateChange(0, 0)).toBe(0);
     expect(formatKeyDateMonth("2026-10-01")).toBe("Oktober 2026");
   });
 
@@ -77,5 +81,57 @@ describe("key-date figures", () => {
     expect(capturedLate({ ...base, recordedAt: "2026-10-15T22:30:00Z" })).toBe(
       true,
     );
+  });
+});
+
+describe("keyDateSchoolFigures", () => {
+  it("does not compare a school with a missing capture", () => {
+    const count = school.counts[0]!;
+    const all = {
+      ...october,
+      activeStudents: 40,
+      activeTerminals: 4,
+      schools: 3,
+    };
+    const before = {
+      ...september,
+      activeStudents: 38,
+      activeTerminals: 4,
+      schools: 3,
+    };
+    expect(
+      keyDateSchoolFigures({ school, count, previous: null }, all, before),
+    ).toEqual({
+      month: { ...october, activeStudents: 10, activeTerminals: 1, schools: 1 },
+      previous: null,
+    });
+    expect(
+      keyDateSchoolFigures(
+        {
+          school,
+          count: null,
+          previous: {
+            ...count,
+            period: september.period,
+            keyDate: september.keyDate,
+          },
+        },
+        all,
+        before,
+      ),
+    ).toEqual({
+      month: {
+        ...october,
+        activeStudents: null,
+        activeTerminals: null,
+        schools: 0,
+      },
+      previous: {
+        ...september,
+        activeStudents: 10,
+        activeTerminals: 1,
+        schools: 1,
+      },
+    });
   });
 });

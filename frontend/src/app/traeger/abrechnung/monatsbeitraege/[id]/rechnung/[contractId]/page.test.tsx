@@ -1,12 +1,14 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   CareAmendment,
   CareInvoice,
   CareRunDetail,
 } from "~/lib/traeger-care-billing-api";
+
+vi.unmock("swr");
 
 // The page of one invoice in the review of a monthly run (#6197): it shows
 // the invoice as the release issues it with every change, the history with
@@ -22,6 +24,12 @@ vi.mock("~/lib/traeger-care-billing-api", async (original) => ({
   ...api,
 }));
 vi.mock("~/lib/traeger-care-amendments-api", () => amend);
+// The history of an issued invoice (#4693) is tested on its own.
+vi.mock("~/lib/traeger-finance-exports-api", async (original) => ({
+  ...(await original<typeof import("~/lib/traeger-finance-exports-api")>()),
+  fetchInvoiceHistory: () =>
+    Promise.resolve({ number: "MB-2026-0007", steps: [] }),
+}));
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "7", contractId: "22" }),
   useSearchParams: () => new URLSearchParams(),
@@ -192,9 +200,9 @@ function run(change: Partial<CareRunDetail> = {}): CareRunDetail {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerCareInvoiceAmendPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

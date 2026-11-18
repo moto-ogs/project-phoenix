@@ -6,6 +6,7 @@ import "github.com/moto-ogs/project-phoenix/workflows/parentportal/internal/mess
 // workflow's own values, so a field cannot be lost between two copies (#4604).
 type (
 	AnnouncementFeedItem     = messaging.AnnouncementFeedItem
+	AnnouncementLetter       = messaging.AnnouncementLetter
 	AnnouncementFeedScope    = messaging.AnnouncementFeedScope
 	AnnouncementPollChild    = messaging.AnnouncementPollChild
 	ParentAnnouncement       = messaging.ParentAnnouncement

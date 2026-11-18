@@ -159,7 +159,7 @@ func TestTenantBatchesRetryDefaultCommandOnNextTickAfterRollback(t *testing.T) {
 	var lastRun sync.Map
 	var executed, skipped int
 	command := TenantCommandFunc(func(ctx context.Context, tenantID int64) error {
-		if wasRunToday(&lastRun, tenantID) {
+		if scheduler.wasRunToday(&lastRun, tenantID) {
 			skipped++
 			return nil
 		}
@@ -177,7 +177,7 @@ func TestTenantBatchesRetryDefaultCommandOnNextTickAfterRollback(t *testing.T) {
 	assert.Zero(t, failed.Outcomes[0].Retries)
 	assert.ErrorIs(t, failed.Err, retryErr)
 	assert.NoError(t, succeeded.Err)
-	assert.True(t, wasRunToday(&lastRun, 35))
+	assert.True(t, scheduler.wasRunToday(&lastRun, 35))
 }
 
 func TestTenantBatchesObserveBacklogWithoutCompletedBatch(t *testing.T) {
@@ -313,7 +313,7 @@ func newTenantBatchTestSchedulerWithTenantRunner(
 	retryable func(error) bool,
 ) *Scheduler {
 	t.Helper()
-	return newScheduler(ports.WorkerDependencies{
+	return newScheduler(ports.WorkerDependencies{Now: time.Now,
 		Logger:        slog.New(slog.DiscardHandler),
 		TenantRuntime: scriptedTenantRuntime(withinTenant, retryable),
 		Tracer: ports.WorkerTracer{

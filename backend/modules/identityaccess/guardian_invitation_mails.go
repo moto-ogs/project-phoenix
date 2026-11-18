@@ -70,11 +70,14 @@ func guardianMail(recipient GuardianMailRecipient, origin, linkPath, schoolName 
 }
 
 // GuardianInvitationMailOf is the mail carrying the accept link. expiresAt
-// becomes the "valid for N hours" the mail states, floored at one hour so a
-// link that is about to expire never advertises zero.
-func GuardianInvitationMailOf(recipient GuardianMailRecipient, origin, token string, expiresAt time.Time, schoolName string) GuardianMail {
+// becomes the "valid for N hours" the mail states, counted from now and
+// floored at one hour so a link that is about to expire never advertises zero.
+// The remaining time is rounded to the minute first: now is read a moment
+// after the expiry was derived, and a link issued for 48 hours must not
+// advertise 47 (#7295).
+func GuardianInvitationMailOf(recipient GuardianMailRecipient, origin, token string, expiresAt, now time.Time, schoolName string) GuardianMail {
 	mail := guardianMail(recipient, origin, "/accept-guardian-invite/"+token, schoolName)
-	mail.ExpiryHours = max(int(time.Until(expiresAt)/time.Hour), 1)
+	mail.ExpiryHours = max(int(expiresAt.Sub(now).Round(time.Minute)/time.Hour), 1)
 	return mail
 }
 

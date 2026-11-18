@@ -3,6 +3,7 @@ package enrollmenthttp_test
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	api "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -39,7 +40,7 @@ type (
 
 // Owner compositions the suites drive.
 var (
-	NewTestModule                     = enrollmentCompose.New
+	NewTestModule                     = func() capability.Owner { return enrollmentCompose.NewClocked(time.Now) }
 	NewTestPhases                     = enrollmentTest.NewPhases
 	NewTestPhaseExpirySnapshots       = enrollmentTest.NewPhaseExpirySnapshots
 	NewTestPhaseExpiryWarnings        = enrollmentTest.NewPhaseExpiryWarnings

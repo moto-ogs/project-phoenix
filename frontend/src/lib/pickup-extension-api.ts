@@ -6,8 +6,6 @@ import { apiErrorFromBody, transportFetch } from "./api-error";
  * Calls the Next.js proxy routes under /api/timetable/pickup-extensions.
  */
 
-export const PICKUP_EXTENSIONS_SWR_KEY = "pickup-extensions";
-
 type PickupExtensionKind = "day" | "weekday";
 
 interface PickupExtensionBlock {

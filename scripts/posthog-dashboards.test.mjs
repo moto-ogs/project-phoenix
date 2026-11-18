@@ -29,11 +29,20 @@ test('defines one dashboard per product surface plus the two across schools', ()
     'Nutzungsanalyse: OGS-App',
     'Nutzungsanalyse: Eltern-App',
     'Nutzungsanalyse: Schul-App',
+    'Nutzungsanalyse: Caterer-Portal',
     'Nutzungsanalyse: Schule im Verlauf',
     'Nutzungsanalyse: Demo',
   ]);
   const names = insights.map((insight) => insight.name);
   assert.equal(new Set(names).size, names.length, 'insight names are the sync key and must be unique');
+});
+
+test('every insight description fits PostHog\'s limit of 400 characters', () => {
+  // The API rejects a longer insight description only on write; --check and
+  // --dry-run never send it, so the sync after a merge would fail.
+  for (const insight of insights) {
+    assert.ok((insight.description ?? '').length <= 400, `${insight.name}: ${(insight.description ?? "").length} characters`);
+  }
 });
 
 test('every insight filters on production or the demo, never staging', () => {
@@ -57,15 +66,19 @@ test('every insight filters on production or the demo, never staging', () => {
   }
 });
 
-test('school insights count Monday to Friday without the public holidays of NRW, the demo every day', () => {
+test('school insights count Monday to Friday without the public holidays of NRW, the demo and the caterer every day', () => {
   for (const insight of insights) {
     const source = insight.query.source;
     const filters = source.kind === 'HogQLQuery'
       ? source.query.split(ON_WORKDAY).length - 1
       : source.properties.values.filter((group) => group.values.some((value) => value.key === ON_WORKDAY)).length;
     const scans = source.kind === 'HogQLQuery' ? source.query.match(/\bfrom (events|heatmaps)\b/g).length : 1;
-    assert.equal(filters, insight.deployment === 'production' ? scans : 0, insight.name);
+    assert.equal(filters, insight.deployment === 'production' && !insight.everyDay ? scans : 0, insight.name);
   }
+  // Only the caterer, an outside party that also plans on weekends, counts every day.
+  const everyDay = definitions.filter((d) => d.insights.some((insight) => insight.everyDay));
+  assert.deepEqual(everyDay.map((d) => d.name), ['Nutzungsanalyse: Caterer-Portal']);
+  assert.ok(everyDay[0].insights.every((insight) => insight.everyDay), 'every caterer tile counts every day');
   const holidays = publicHolidays([2026, 2027]);
   assert.equal(holidays.length, 22);
   for (const day of ['2026-04-03', '2026-04-06', '2026-05-14', '2026-05-25', '2026-06-04', '2026-10-03', '2026-11-01', '2026-12-25', '2027-03-29']) {
@@ -147,6 +160,20 @@ test('feature areas have unique names, each event belongs to one area, and the k
   assert.match(expression, /startsWith\(event, 'demo_'\)/, 'the demo funnel events are no feature use');
 });
 
+test('the Alle Kinder tile counts tab changes per tab kind, and browser clicks are no feature use', () => {
+  const tile = insights.find((insight) => insight.name === 'OGS-App: Welcher Reiter auf „Alle Kinder“?');
+  const query = tile.query.source.query;
+  assert.match(query, /event = 'child_scope_tab_selected'/);
+  assert.match(query, /properties\.surface = 'ogs'/);
+  for (const value of ['all', 'groups', 'room']) assert.match(query, new RegExp(`properties\\.child_scope = '${value}'`), value);
+  assert.ok(readBrowserEvents().includes('child_scope_tab_selected'), 'the browser filter lets the event through');
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  for (const event of ['child_scope_tab_selected', 'notification_bell_opened', 'notification_feed_entry_clicked', 'notification_feed_all_read']) {
+    assert.match(noFeature, new RegExp(`'${event}'`), `${event} is no feature use`);
+  }
+});
+
 test('the rarely used page lists name every route template of their portal', () => {
   const ogs = insights.find((insight) => insight.name.startsWith('OGS-App: Welche Seiten öffnet'));
   const parents = insights.find((insight) => insight.name.startsWith('Eltern-App: Welche Seiten öffnet'));
@@ -187,6 +214,85 @@ test('every portal of a school has its own page, action, and friction tables', (
       assert.match(tile.query.source.query, new RegExp(`properties\\.surface = '${surface}'`), tile.name);
     }
     assert.ok(tiles.some((insight) => insight.name.startsWith(`${dashboard}: Wo klicken`)), dashboard);
+  }
+});
+
+test('the caterer portal counts its core actions per school, since its browser sends nothing', () => {
+  const tiles = definitions.find((d) => d.name === 'Nutzungsanalyse: Caterer-Portal').insights;
+  const actions = tiles.find((insight) => insight.name === 'Caterer-Portal: Was tun Caterer?');
+  assert.match(actions.query.source.query, /properties\.surface = 'caterer'/);
+  assert.match(actions.query.source.query, /uniq\(concat\(toString\(properties\.school_id\), toString\(toDate\(timestamp\)\)\)\) as `Tage je Schule`/);
+  const queries = JSON.stringify(tiles.map((insight) => insight.query));
+  assert.ok(tiles.every((insight) => !/Seite|klicken/.test(insight.name)), 'the caterer portal has no page views');
+  for (const event of ['caterer_invited', 'caterer_invite_accepted', 'caterer_supply_ended', 'meal_order_confirmed']) {
+    assert.match(queries, new RegExp(`\\b${event}\\b`), event);
+  }
+  // The school's own link actions are a feature area; the caterer's own saves are no use by the school.
+  assert.deepEqual(FEATURES.find((f) => f.name === 'Caterer-Anbindung').events, ['caterer_invited', 'caterer_supply_ended']);
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  for (const event of ['caterer_invite_accepted', 'meal_order_confirmed']) {
+    assert.ok(FEATURES.every((f) => !f.events?.includes(event)), event);
+    assert.match(noFeature, new RegExp(`'${event}'`), `${event} is no feature use`);
+  }
+});
+
+test('the caterer never makes its school look active, and its idempotent writes count once per school and day', () => {
+  const school = definitions.filter((d) => d.name !== 'Nutzungsanalyse: Caterer-Portal' && !d.name.includes('Demo'));
+  const notCaterer = "coalesce(properties.surface, '') != 'caterer'";
+  let checked = 0;
+  for (const insight of school.flatMap((d) => d.insights)) {
+    const query = JSON.stringify(insight.query);
+    // A scan of the schools' events (schoolDays, schoolFeatureEvents) or a
+    // school's feature area filters its rows with SCHOOL_EVENT itself; ACTIVE_USE
+    // in a column would not keep caterer rows out of the scan.
+    if (/as Schule\b|school_id[^"]*'Sonstiges'/.test(query)) {
+      checked++;
+      assert.ok(query.includes(`isNotNull(properties.school_id) and ${notCaterer}`), `${insight.name}: the school scan leaves out the caterer`);
+    } else if (/event != 'login_failed'/.test(query)) {
+      checked++;
+      assert.ok(query.includes(notCaterer), `${insight.name}: a caterer action is no use by the school`);
+    } else {
+      continue;
+    }
+    // Every events scan of a HogQL query that reads school_id leaves the caterer out itself.
+    const source = insight.query.source;
+    if (source.kind !== 'HogQLQuery') continue;
+    for (const scan of source.query.split(/\bfrom events\b/).slice(1)) {
+      const where = scan.split(/\bfrom events\b|\bgroup by\b|\) as /)[0];
+      if (where.includes('school_id')) assert.ok(where.includes(notCaterer), `${insight.name}: an events scan counts the caterer`);
+    }
+  }
+  assert.ok(checked >= 10, `${checked} school activity insights`);
+  // Every other insight that reads school_id is bound to a school portal or to
+  // events no caterer sends (kiosk bookings, a login with a school).
+  const fixedSurface = /properties\.surface = '(ogs|parents|school)'/;
+  const attendance = "event in ('student_checked_in', 'student_checked_out')";
+  // featureExpression() names every portal itself; only a filter outside it binds the query.
+  const features = JSON.stringify(featureExpression()).slice(1, -1);
+  for (const insight of school.flatMap((d) => d.insights)) {
+    const query = JSON.stringify(insight.query).replaceAll(features, '');
+    if (!query.includes('school_id') || query.includes(notCaterer) || fixedSurface.test(query)) continue;
+    const source = insight.query.source;
+    assert.equal(source.kind, 'TrendsQuery', `${insight.name}: reads school_id without leaving out the caterer`);
+    for (const step of source.series) {
+      assert.ok(step.event === 'login_success' || step.properties?.some((p) => p.key === attendance),
+        `${insight.name}: reads school_id without leaving out the caterer`);
+    }
+  }
+  const tiles = definitions.find((d) => d.name === 'Nutzungsanalyse: Caterer-Portal').insights;
+  const perSchool = tiles.find((insight) => insight.name.endsWith('je Schule (30 Tage)')).query.source.query;
+  assert.match(perSchool, /uniq\(Tag\) as `Tage mit Bestätigung`/);
+  assert.match(perSchool, /toDate\(timestamp\) as Tag/);
+  assert.doesNotMatch(perSchool, /count\(\)/, 'repeated confirmations count once per day');
+  assert.match(perSchool, /\ngroup by Schule\n/, 'two schools of the same name stay apart');
+  assert.match(perSchool, /properties\.surface = 'caterer'/);
+  // Only the table, keyed by school ID, splits by school; a name breakdown would merge namesakes.
+  assert.ok(tiles.every((insight) => insight.query.source.breakdownFilter === undefined), 'no caterer chart breaks down by school name');
+  for (const insight of tiles.filter((tile) => tile.query.kind === 'InsightVizNode')) {
+    for (const step of insight.query.source.series) {
+      assert.equal(step.math_hogql, 'uniq(concat(toString(properties.school_id), toString(toDate(timestamp))))', `${insight.name} ${step.event}`);
+    }
   }
 });
 

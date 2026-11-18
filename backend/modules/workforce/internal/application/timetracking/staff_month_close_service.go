@@ -101,7 +101,8 @@ type staffMonthCloseService struct {
 	// traeger names the staff members a contract of the Träger covers in a
 	// month (#4711); nil in bare unit fixtures, where nobody has one.
 	traeger TraegerMonthStaff
-	// now is the clock of the Träger's close; the constructor wires time.Now.
+	// now is the clock of the close and the reopening, the composition's
+	// (ADR 0239); a close reached without it fails (requireClock).
 	now func() time.Time
 }
 
@@ -119,7 +120,6 @@ func NewStaffMonthCloseService(
 		staffLister:  staffLister,
 		settings:     settings,
 		logger:       logger,
-		now:          time.Now,
 	}
 	for _, opt := range opts {
 		opt(service)
@@ -164,7 +164,7 @@ func (s *staffMonthCloseService) validateCloseRequest(ctx context.Context, year,
 		return monthKey{}, "", fmt.Errorf("%w: a reason is required", ErrMonthCloseInvalid)
 	}
 	key := monthKey{Year: year, Month: month}
-	if !calendarMonthHasEnded(key, calendar.TodayDate()) {
+	if !calendarMonthHasEnded(key, calendar.DateFromTime(requireClock(s.now)())) {
 		return monthKey{}, "", fmt.Errorf(
 			"%w: %04d-%02d is not over yet",
 			ErrMonthNotClosable, year, month,
@@ -218,7 +218,7 @@ func (s *staffMonthCloseService) CloseMonth(ctx context.Context, closedBy int64,
 		return nil, err
 	}
 	result := &MonthCloseResult{Year: year, Month: month, TraegerStaff: traegerStaff}
-	closedAt := time.Now()
+	closedAt := requireClock(s.now)()
 	closer := monthCloser{staffID: closedBy, source: SnapshotSourceAdmin}
 	for _, staffID := range staffIDs {
 		snapshot, alreadyClosed, err := s.closeStaffMonth(ctx, staffID, closer, key, trimmedReason, closedAt, payrollRules, closedMonths[staffID])
@@ -397,7 +397,7 @@ func (s *staffMonthCloseService) reopenStaffMonth(ctx context.Context, staffID, 
 		return err
 	}
 
-	now := time.Now()
+	now := requireClock(s.now)()
 	snapshot.ReopenedAt = &now
 	if byTraeger {
 		snapshot.ReopenedByAccountID = &reopenedBy

@@ -23,21 +23,36 @@ const (
 	catererPayloadExpiryDays  = "expiry_days"
 )
 
+// IdentityMailOutbox is the outbox the Identity & Access mails use: it also
+// stops the unsent mails of one entity in the caller's tenant transaction,
+// as for a revoked caterer invitation (#4496).
+type IdentityMailOutbox interface {
+	MailResultOutbox
+	CancelPendingByRelatedEntity(ctx context.Context, relatedType string, relatedID int64, reason string) (int64, error)
+}
+
 // CatererInvitationDelivery queues a school's invitation to its caterer in
 // the outbox (ADR 0077) and reads what became of those mails (#5960). The
-// link points at the caterer portal; the school never sees it.
-func CatererInvitationDelivery(schools schoolFinder, outbox MailResultOutbox, outcomes deliveryRuntime.EmailOutcomes, catererURL string) (identityPorts.CatererInvitationDelivery, error) {
+// link points at the caterer portal; the school never sees it. A revoked
+// invitation's unsent mail is stopped in the same outbox (#4496).
+func CatererInvitationDelivery(schools schoolFinder, outbox IdentityMailOutbox, outcomes deliveryRuntime.EmailOutcomes, catererURL string, now func() time.Time) (identityPorts.CatererInvitationDelivery, error) {
 	if schools == nil || outbox == nil || outcomes == nil {
 		return nil, errors.New("identity access composition: the caterer invitation needs the school directory, the e-mail outbox and the mail outcomes")
 	}
-	return catererInvitationDelivery{schools: schools, outbox: outbox, outcomes: outcomes, catererURL: catererURL}, nil
+	if now == nil {
+		now = time.Now
+	}
+	return catererInvitationDelivery{schools: schools, outbox: outbox, outcomes: outcomes, catererURL: catererURL, now: now}, nil
 }
 
 type catererInvitationDelivery struct {
 	schools    schoolFinder
-	outbox     MailResultOutbox
+	outbox     IdentityMailOutbox
 	outcomes   deliveryRuntime.EmailOutcomes
 	catererURL string
+	// now counts the days the mail states, on the clock the root binds for
+	// Identity & Access, which hands expiresAt on that clock (ADR 0285).
+	now func() time.Time
 }
 
 // CatererInvitationMailStates reads the last mail of each invitation in one
@@ -75,7 +90,7 @@ func (d catererInvitationDelivery) EnqueueCatererInvitation(ctx context.Context,
 	if school, found, err := LookupSchool(ctx, d.schools, schoolID); err == nil && found && !school.IsDeleted() {
 		schoolName = school.Name
 	}
-	mail := identityaccess.CatererInvitationMailOf(recipient, catererName, schoolName, d.catererURL, schoolID, token, expiresAt)
+	mail := identityaccess.CatererInvitationMailOf(recipient, catererName, schoolName, d.catererURL, schoolID, token, expiresAt, d.now())
 	_, err := d.outbox.EnqueueOutboxWithResult(ctx, deliveryCompose.MailEnqueueRequest{
 		Kind: identityaccess.MailKindCatererInvitation,
 		Payload: map[string]any{
@@ -86,6 +101,13 @@ func (d catererInvitationDelivery) EnqueueCatererInvitation(ctx context.Context,
 		RelatedEntityType: identityaccess.MailRelatedCatererInvitation,
 		RelatedEntityID:   invitationID,
 	})
+	return err
+}
+
+// CancelCatererInvitation stops the invitation's mail that the worker has
+// not handed to the provider yet; the cancelled row stays for the mail state.
+func (d catererInvitationDelivery) CancelCatererInvitation(ctx context.Context, invitationID int64) error {
+	_, err := d.outbox.CancelPendingByRelatedEntity(ctx, identityaccess.MailRelatedCatererInvitation, invitationID, "caterer invitation revoked")
 	return err
 }
 

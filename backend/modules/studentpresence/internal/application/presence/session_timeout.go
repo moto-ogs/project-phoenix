@@ -177,9 +177,10 @@ func (s *service) ValidateSessionTimeout(ctx context.Context, deviceID int64, ti
 		return &ActiveError{Op: "ValidateSessionTimeout", Err: fmt.Errorf("invalid timeout minutes: %d", timeoutMinutes)}
 	}
 
-	// Check if session is actually timed out based on inactivity
+	// Check if session is actually timed out based on inactivity, on the
+	// service clock that stamped its last activity.
 	timeoutDuration := time.Duration(timeoutMinutes) * time.Minute
-	inactivityDuration := time.Since(session.LastActivity)
+	inactivityDuration := SessionInactivityDuration(session, s.now())
 
 	if inactivityDuration < timeoutDuration {
 		return &ActiveError{Op: "ValidateSessionTimeout", Err: fmt.Errorf("session not yet timed out: %v remaining", timeoutDuration-inactivityDuration)}
@@ -209,7 +210,7 @@ func (s *service) GetSessionTimeoutInfo(ctx context.Context, deviceID int64) (*S
 		}
 	}
 
-	now := time.Now()
+	now := s.now()
 	info := &SessionTimeoutInfo{
 		SessionID:          session.ID,
 		ActivityID:         session.GroupID,

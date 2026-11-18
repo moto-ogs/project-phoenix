@@ -705,13 +705,18 @@ export async function fetchDeclarationStatus(
   return data;
 }
 
-/** Download address of the Einverständnis report (PDF) or history (CSV). */
+/**
+ * Download address of the Einverständnis report (PDF) or history (CSV). With
+ * a child the proof holds only that child (Kinderakte, #4814).
+ */
 function declarationExportUrl(
   id: string,
   format: "csv" | "pdf",
   base: string,
+  studentId?: string,
 ): string {
-  return `${base}/${encodeURIComponent(id)}/declaration-export?format=${format}`;
+  const child = studentId ? `&student_id=${encodeURIComponent(studentId)}` : "";
+  return `${base}/${encodeURIComponent(id)}/declaration-export?format=${format}${child}`;
 }
 
 /**
@@ -723,8 +728,11 @@ export async function downloadDeclarationExport(
   id: string,
   format: "csv" | "pdf",
   base = BASE,
+  studentId?: string,
 ): Promise<void> {
-  const response = await transportFetch(declarationExportUrl(id, format, base));
+  const response = await transportFetch(
+    declarationExportUrl(id, format, base, studentId),
+  );
   if (!response.ok) {
     await throwApiError(response, "Die Datei konnte nicht erstellt werden");
   }
@@ -733,6 +741,55 @@ export async function downloadDeclarationExport(
     blob,
     filenameFromDisposition(response) ?? `erklaerung-${id}.${format}`,
   );
+}
+
+/* --- Kinderakte (#4814) ---------------------------------------------------- */
+
+/** One Elternbrief that reached the child, with the child's confirmation. */
+export interface StudentParentLetter {
+  announcement_id: string;
+  title: string;
+  published_at: string;
+  /** False when no guardian of the child has a parent account. */
+  can_confirm: boolean;
+  acknowledged_at: string | null;
+  acknowledged_by: string;
+}
+
+/** One Einverständnis of the child with its state on the current version. */
+export interface StudentParentDeclaration {
+  announcement_id: string;
+  title: string;
+  published_at: string;
+  deadline: string | null;
+  version_no: number;
+  state: DeclarationChildState;
+  signers: DeclarationSigner[];
+}
+
+/** The letters and declarations of one child, newest first. */
+export interface StudentParentRecords {
+  letters: StudentParentLetter[];
+  declarations: StudentParentDeclaration[];
+}
+
+/**
+ * What the school sent one child's family and what the family declared, read
+ * from the Elternbriefe and Einverständnisse themselves. The backend writes
+ * every read to the access log.
+ */
+export async function fetchStudentParentRecords(
+  studentId: string,
+): Promise<StudentParentRecords> {
+  const data = await request<StudentParentRecords>(
+    `${BASE}/students/${encodeURIComponent(studentId)}`,
+    undefined,
+    "Elternbriefe und Einverständnisse konnten nicht geladen werden",
+  );
+  return {
+    letters: data?.letters ?? [],
+    declarations: data?.declarations ?? [],
+  };
 }
 
 /** Re-queue only the mails that failed. Separate from remindUnanswered. */
@@ -839,4 +896,79 @@ export function announcementAttachmentDownloadUrl(
   attachmentId: string,
 ): string {
   return `${ATTACHMENTS_BASE}/${encodeURIComponent(announcementId)}/${encodeURIComponent(attachmentId)}/download`;
+}
+
+// --- Serienbriefe (#4813) ----------------------------------------------------
+
+/** A value an Elternbrief can name for each child, written {{name}}. */
+export interface LetterPlaceholder {
+  name: string;
+  label: string;
+  example: string;
+}
+
+/** The letter text filled with one child's values, before it is sent. */
+export interface LetterPreview {
+  body: string;
+  child: {
+    student_id: string;
+    first_name: string;
+    last_name: string;
+    school_class: string;
+  };
+}
+
+/** The fixed list of placeholders a letter may name. */
+export async function fetchLetterPlaceholders(
+  base = BASE,
+): Promise<LetterPlaceholder[]> {
+  const data = await request<LetterPlaceholder[]>(
+    `${base}/letter-placeholders`,
+    undefined,
+    "Die Platzhalter konnten nicht geladen werden",
+  );
+  return data ?? [];
+}
+
+/**
+ * Fills a letter text for one child of the school. Reads the child's data,
+ * so the backend writes the access to the data access log.
+ */
+export async function previewLetter(
+  body: string,
+  studentId: string,
+  base = BASE,
+): Promise<LetterPreview> {
+  const data = await request<LetterPreview>(
+    `${base}/letter-preview`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body, student_id: studentId }),
+    },
+    "Die Vorschau konnte nicht erstellt werden",
+  );
+  if (!data) throw missingBody("Die Vorschau konnte nicht erstellt werden");
+  return data;
+}
+
+/**
+ * Downloads every letter of a published Elternbrief as one PDF to print, one
+ * letter per child, under the file name the backend chose.
+ */
+export async function downloadLetterPrint(
+  id: string,
+  base = BASE,
+): Promise<void> {
+  const response = await transportFetch(
+    `${base}/${encodeURIComponent(id)}/letters-pdf`,
+  );
+  if (!response.ok) {
+    await throwApiError(response, "Die Briefe konnten nicht erstellt werden");
+  }
+  const blob = await response.blob();
+  downloadBlob(
+    blob,
+    filenameFromDisposition(response) ?? `elternbriefe-${id}.pdf`,
+  );
 }

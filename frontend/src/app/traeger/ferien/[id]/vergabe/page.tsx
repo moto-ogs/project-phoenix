@@ -30,7 +30,12 @@ import {
   holidayPeriodTabs,
 } from "~/components/traeger/holiday-period-head";
 import { schoolNames } from "~/components/traeger/holiday-registration-format";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -39,12 +44,9 @@ import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { focusStepHeading } from "~/components/ui/use-step-focus";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   decideHolidayAllocation,
   fetchHolidayAllocation,
@@ -52,6 +54,7 @@ import {
   type HolidayAllocationWeek,
   MAX_ALLOCATION_DECISIONS,
 } from "~/lib/traeger-holiday-allocation-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerHolidayAllocationPage" });
@@ -69,7 +72,20 @@ export default function TraegerHolidayAllocationPage() {
   } = useTraegerHolidayPeriod(id);
   const { schools } = useTraegerSchools();
   const names = useMemo(() => schoolNames(schools), [schools]);
-  const [board, setBoard] = useState<HolidayAllocationBoard | null>(null);
+  const byCriteria = period?.allocationMode === "criteria";
+  // A period by arrival has no allocation list; the page says so instead.
+  const {
+    data: board,
+    error: boardError,
+    mutate,
+    reload,
+  } = useTraegerResource(
+    byCriteria && id ? traegerKeys.holidayAllocation(id) : null,
+    () => fetchHolidayAllocation(id),
+    "die Vergabe",
+  );
+  const setBoard = (next: HolidayAllocationBoard) =>
+    mutate(next, { revalidate: false });
   const [target, setTarget] = useState<AllocationDecisionTarget | null>(null);
   const [proposalScope, setProposalScope] = useState<ProposalScope | null>(
     null,
@@ -94,31 +110,8 @@ export default function TraegerHolidayAllocationPage() {
         ),
     );
   }, [board]);
-  const boardLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = boardLoad;
   const actionErrors = useApiErrorDisplay();
   const toast = useToast();
-  const byCriteria = period?.allocationMode === "criteria";
-
-  const load = useCallback(async () => {
-    try {
-      setBoard(await fetchHolidayAllocation(id));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_holiday_allocation_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Vergabe",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, id, showLoadError]);
-
-  useEffect(() => {
-    // A period by arrival has no allocation list; the page says so instead.
-    if (byCriteria) void load();
-  }, [byCriteria, load]);
 
   const weeks = useMemo(() => (board ? openWeeks(board) : []), [board]);
   const pendingTotal = weeks.reduce(
@@ -139,9 +132,9 @@ export default function TraegerHolidayAllocationPage() {
       setTarget(null);
       setProposalScope(null);
       void actionErrors.show(err, { object: "die Vergabe" });
-      void load();
+      reload();
     },
-    [actionErrors, load],
+    [actionErrors, reload],
   );
 
   const decideOne = async (reason: string) => {
@@ -155,7 +148,7 @@ export default function TraegerHolidayAllocationPage() {
       },
     ]);
     focusAfterDecision.current = target.week.weekId;
-    setBoard(next);
+    void setBoard(next);
     setTarget(null);
     toast.success(
       target.placement === "placed"
@@ -182,7 +175,7 @@ export default function TraegerHolidayAllocationPage() {
         );
         const next = await decideHolidayAllocation(id, choices);
         // Preserve completed batches even when a later batch needs review.
-        setBoard(next);
+        void setBoard(next);
       }
       focusAfterDecision.current =
         proposalScope === "all" || proposalScope === null
@@ -201,14 +194,14 @@ export default function TraegerHolidayAllocationPage() {
       } else {
         setProposalScope(null);
         void actionErrors.show(err, { object: "der Vorschlag" });
-        void load();
+        reload();
       }
     } finally {
       setTaking(false);
     }
   };
 
-  const loadError = boardLoad.error ?? periodError;
+  const loadError = boardError ?? periodError;
   const loading = !loadError && (!period || (byCriteria && !board));
   const busy = taking || target !== null;
 
@@ -252,17 +245,36 @@ export default function TraegerHolidayAllocationPage() {
         period?.allocationMode,
       )}
       actions={
-        weeks.length > 1 ? (
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            disabled={busy}
-            tooltip="moto fragt vorher nach, dann vergibt es die Plätze und schreibt den Eltern."
-            onClick={() => setProposalScope("all")}
-          >
-            Vorschlag für alle Wochen übernehmen
-          </Button>
+        byCriteria ? (
+          <>
+            <TraegerListExportMenu
+              download={(format) =>
+                downloadTraegerList(
+                  `/api/traeger/holiday-periods/${id}/allocation/export`,
+                  format,
+                )
+              }
+              scope={traegerExportScope()}
+              ariaLabel="Vergabe herunterladen"
+              fallbackName="vergabe"
+              errorObject="die Vergabe"
+              unavailable={
+                !board || (weeks.length === 0 && board.decisions.length === 0)
+              }
+            />
+            {weeks.length > 1 ? (
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                disabled={busy}
+                tooltip="moto fragt vorher nach, dann vergibt es die Plätze und schreibt den Eltern."
+                onClick={() => setProposalScope("all")}
+              >
+                Vorschlag für alle Wochen übernehmen
+              </Button>
+            ) : null}
+          </>
         ) : null
       }
       error={loadError}

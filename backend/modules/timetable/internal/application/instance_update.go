@@ -52,6 +52,7 @@ func (s *InstanceLifecycleService) UpdatePlanned(ctx context.Context, instanceID
 	if err := s.lockEditedRoster(ctx, instance.ID, req); err != nil {
 		return nil, err
 	}
+	previousRoomID := instance.RoomID
 	if err := s.updateLifecycleColumns(ctx, instance, applyPlannedEdit(instance, req)...); err != nil {
 		return nil, &ports.ScheduleError{Op: "update instance", Err: duplicateTemplateInstance(err)}
 	}
@@ -68,6 +69,9 @@ func (s *InstanceLifecycleService) UpdatePlanned(ctx context.Context, instanceID
 	if err := s.clearStaleAckIfStaffed(ctx, instance, actorAccountID); err != nil {
 		return nil, err
 	}
+	if err := s.noticeRoomChange(ctx, instance, previousRoomID, origSlot.Date, actorAccountID); err != nil {
+		return nil, err
+	}
 	s.broadcastPlannedInstanceChanged(ctx, "instance_update")
 	return LifecycleInstanceOf(instance), nil
 }
@@ -80,7 +84,7 @@ func (s *InstanceLifecycleService) UpdatePlanned(ctx context.Context, instanceID
 // while it waits for another.
 func (s *InstanceLifecycleService) lockEditedRoster(ctx context.Context, instanceID int64, req timetable.UpdateInstanceInput) error {
 	ids := domain.UniquePositiveIDs(req.StaffIDs)
-	if !req.Date.Before(calendar.TodayDate()) {
+	if !req.Date.Before(calendar.DateFromTime(s.now())) {
 		prior, err := staffOfInstance(ctx, s.deps.InstanceStaffRepo, instanceID)
 		if err != nil {
 			return &ports.ScheduleError{Op: "update instance: load existing staff", Err: err}

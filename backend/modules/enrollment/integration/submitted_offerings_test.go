@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
@@ -19,7 +20,7 @@ func TestSubmittedOfferingChoicesAreImmutableAndRetryable(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	phaseID, _, childID := testpkg.CreateAuditAdjustmentChain(t, db)
 	offering := testpkg.CreateTestCareOffering(t, db, phaseID, "Submitted choice")
-	module := enrollmentCompose.New()
+	module := enrollmentCompose.NewClocked(time.Now)
 	ctx := testpkg.Ctx(t)
 	choices := []enrollment.SubmittedOfferingChoice{{CareOfferingID: offering.ID, SelectedDays: []string{"mon", "wed"}, Notes: new("original")}}
 	require.NoError(t, testpkg.TenantCommand2(t, ctx, db, module.RecordSubmittedOfferingChoices, childID, choices))
@@ -45,7 +46,7 @@ func TestSubmittedOfferingChoiceBatchRollsBackAndRetries(t *testing.T) {
 	phaseID, _, childID := testpkg.CreateAuditAdjustmentChain(t, db)
 	first := testpkg.CreateTestCareOffering(t, db, phaseID, "First choice")
 	second := testpkg.CreateTestCareOffering(t, db, phaseID, "Second choice")
-	module := enrollmentCompose.New()
+	module := enrollmentCompose.NewClocked(time.Now)
 	ctx := testpkg.Ctx(t)
 	original := enrollment.SubmittedOfferingChoice{CareOfferingID: second.ID, Notes: new("submitted")}
 	require.NoError(t, testpkg.TenantCommand2(t, ctx, db, module.RecordSubmittedOfferingChoices, childID, []enrollment.SubmittedOfferingChoice{original}))
@@ -76,7 +77,7 @@ func TestSubmittedOfferingChoiceBatchRollsBackAndRetries(t *testing.T) {
 func TestSubmittedOfferingChoicesEnforceTwoTenantIsolation(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := enrollmentCompose.New()
+	module := enrollmentCompose.NewClocked(time.Now)
 	type school struct {
 		ctx                 context.Context
 		childID, offeringID int64
@@ -114,7 +115,7 @@ func TestSubmittedOfferingReadbackStatements(t *testing.T) {
 		offering := testpkg.CreateTestCareOffering(t, db, phaseID, fmt.Sprintf("Readback %d", i))
 		choices[i] = enrollment.SubmittedOfferingChoice{CareOfferingID: offering.ID, SelectedDays: []string{"mon"}, Notes: new("unchanged")}
 	}
-	module := enrollmentCompose.New()
+	module := enrollmentCompose.NewClocked(time.Now)
 	counter := testpkg.CaptureQueries(t, db)
 	for _, retry := range []bool{false, true} {
 		counter.Reset()

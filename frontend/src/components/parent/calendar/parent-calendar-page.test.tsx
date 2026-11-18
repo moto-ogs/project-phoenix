@@ -17,7 +17,10 @@ import { toISODate } from "~/lib/date-helpers";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { ParentCalendarPage } from "./parent-calendar-page";
+
+vi.unmock("swr");
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
@@ -79,7 +82,12 @@ function calendarResponse(events: ReturnType<typeof event>[]) {
 }
 
 function renderPage() {
-  return render(<ParentCalendarPage />, { wrapper: ToastProvider });
+  return render(
+    <ParentResourceTestProvider>
+      <ParentCalendarPage />
+    </ParentResourceTestProvider>,
+    { wrapper: ToastProvider },
+  );
 }
 
 beforeEach(() => {
@@ -254,7 +262,7 @@ describe("ParentCalendarPage", () => {
 
     const row = await screen.findByRole("article", { name: "Elternabend" });
     const listTrigger = within(row).getByRole("button", {
-      name: /Elternabend, 18:00/,
+      name: /um 18:00 - 20:00 Uhr Elternabend/,
     });
     fireEvent.click(listTrigger);
 
@@ -278,7 +286,7 @@ describe("ParentCalendarPage", () => {
 
     const monthTrigger = within(
       screen.getByTestId("parent-calendar-month-grid"),
-    ).getByRole("button", { name: /Elternabend, 18:00/ });
+    ).getByRole("button", { name: /^Elternabend ?, 18:00 - 20:00/ });
     fireEvent.click(monthTrigger);
     expect(
       screen.getByRole("dialog", { name: "Elternabend" }),
@@ -305,7 +313,9 @@ describe("ParentCalendarPage", () => {
     const row = await screen.findByRole("article", { name: "Elternabend" });
     await waitFor(() => expect(window.matchMedia).toHaveBeenCalled());
     fireEvent.click(
-      within(row).getByRole("button", { name: /Elternabend, 18:00/ }),
+      within(row).getByRole("button", {
+        name: /um 18:00 - 20:00 Uhr Elternabend/,
+      }),
     );
 
     expect(
@@ -331,7 +341,7 @@ describe("ParentCalendarPage", () => {
     const monthGrid = await screen.findByTestId("parent-calendar-month-grid");
     fireEvent.click(
       within(monthGrid).getByRole("button", {
-        name: /Elternabend, 18:00 - 20:00, Antwort erforderlich/,
+        name: /^Elternabend ?, 18:00 - 20:00, Antwort erforderlich$/,
       }),
     );
     const dialog = screen.getByRole("dialog", { name: "Elternabend" });
@@ -384,7 +394,9 @@ describe("ParentCalendarPage", () => {
 
     const monthGrid = screen.getByTestId("parent-calendar-month-grid");
     fireEvent.click(
-      within(monthGrid).getByRole("button", { name: /Elternabend, 18:00/ }),
+      within(monthGrid).getByRole("button", {
+        name: /^Elternabend ?, 18:00 - 20:00/,
+      }),
     );
     const dialog = screen.getByRole("dialog", { name: "Elternabend" });
     const responses = await within(dialog).findByRole("region", {
@@ -478,7 +490,9 @@ describe("ParentCalendarPage", () => {
 
     const rows = await screen.findAllByRole("article", { name: "Elternabend" });
     fireEvent.click(
-      within(rows[1]!).getByRole("button", { name: /Elternabend, 18:00/ }),
+      within(rows[1]!).getByRole("button", {
+        name: /um 18:00 - 20:00 Uhr Elternabend/,
+      }),
     );
     const dialog = screen.getByRole("dialog", { name: "Elternabend" });
     fireEvent.click(
@@ -569,7 +583,7 @@ describe("ParentCalendarPage", () => {
     expect(acceptButton.parentElement).toHaveClass("ms-auto", "flex");
     expect(declineButton).toHaveClass("rounded-lg", "px-4", "py-2", "text-sm");
     const monthEvent = screen.getByRole("button", {
-      name: /Elternabend, 18:00 - 20:00, Antwort erforderlich/,
+      name: /^Elternabend ?, 18:00 - 20:00, Antwort erforderlich$/,
     });
     expect(monthEvent).toHaveClass(
       "!rounded-l-none",
@@ -646,7 +660,9 @@ describe("ParentCalendarPage", () => {
     ).not.toBeInTheDocument();
 
     fireEvent.click(
-      within(declinedRow).getByRole("button", { name: /Elternabend, 18:00/ }),
+      within(declinedRow).getByRole("button", {
+        name: /um 18:00 - 20:00 Uhr Elternabend/,
+      }),
     );
     const dialog = screen.getByRole("dialog", { name: "Elternabend" });
     expect(
@@ -745,7 +761,7 @@ describe("ParentCalendarPage", () => {
     const monthGrid = await screen.findByTestId("parent-calendar-month-grid");
     fireEvent.click(
       within(monthGrid).getByRole("button", {
-        name: /Elternabend, 18:00 - 20:00, Antwort erforderlich/,
+        name: /^Elternabend ?, 18:00 - 20:00, Antwort erforderlich$/,
       }),
     );
     const dialog = screen.getByRole("dialog", { name: "Elternabend" });

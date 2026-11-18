@@ -51,6 +51,8 @@ func (a parentAnnouncementDeliveryAdapter) ListForEntity(ctx context.Context, te
 // parentAnnouncements promotes the service's retention unchanged.
 type parentAnnouncements struct {
 	communication.ParentAnnouncementRetention
+	communication.ParentLetterCapability
+	communication.StudentParentRecordCapability
 	service StaffService
 }
 
@@ -342,7 +344,7 @@ func mapParentAnnouncementError(err error) error {
 }
 
 func NewParentAnnouncementFacade(service StaffService) communication.ParentAnnouncementCapability {
-	return &parentAnnouncements{ParentAnnouncementRetention: service, service: service}
+	return &parentAnnouncements{ParentAnnouncementRetention: service, ParentLetterCapability: service, StudentParentRecordCapability: service, service: service}
 }
 func NewParentAnnouncementDeliveryAdapter(recorder ParentAnnouncementDeliveryRecorder) DeliveryRecorder {
 	return parentAnnouncementDeliveryAdapter{ParentAnnouncementDeliveryRecorder: recorder}

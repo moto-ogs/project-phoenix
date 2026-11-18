@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import type { PickupChangeNotice } from "~/lib/pickup-change-notices-api";
 import type { StudentNoteTeamNotice } from "~/lib/student-notes-api";
+import { testClockDay } from "~/test/clock";
 
 const mockNotes = vi.fn();
 const mockPickups = vi.fn();
@@ -36,7 +37,7 @@ function pickup(over: Partial<PickupChangeNotice> = {}): PickupChangeNotice {
     requestId: "21",
     studentId: "8",
     studentFirstName: "Noa",
-    date: "2026-09-10",
+    date: testClockDay(1),
     pickupTime: "15:00",
     withdrawn: false,
     informedAt: "2026-09-09T11:00:00Z",
@@ -68,7 +69,7 @@ describe("StaffNewsButton", () => {
           requestId: "22",
           studentId: "9",
           studentFirstName: "Ida",
-          date: "2026-09-11",
+          date: testClockDay(2),
           pickupTime: "",
           withdrawn: true,
         }),
@@ -76,7 +77,9 @@ describe("StaffNewsButton", () => {
     });
     render(<StaffNewsButton />);
 
-    const button = screen.getByRole("button", { name: "Neu für Sie (3)" });
+    const button = screen.getByRole("button", {
+      name: "Neu für Sie 3 ungelesen",
+    });
     expect(screen.getByText("3")).toBeInTheDocument();
     fireEvent.click(button);
 

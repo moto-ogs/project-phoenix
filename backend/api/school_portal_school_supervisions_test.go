@@ -45,7 +45,7 @@ func setupSupervisionFixture(t *testing.T) (*bun.DB, *schoolportal.Resource, int
 	// provisioning service gives every real school.
 	testpkg.EnsureWebManualDevice(t, db)
 
-	classDayResource := classdayhttp.NewResource(resource.ClassDay.(*classdayhttp.Resource).ClassDay, nil)
+	classDayResource := classdayhttp.NewResource(resource.ClassDay.(*classdayhttp.Resource).ClassDay, nil, calendar.CalendarDateClock(clock))
 	router := NewSchoolPortalHTTP(resource.AuthService, resource.MFAService, resource.Resets, classDayResource, newSchoolTimetableResource(db, resource, clock), nil, nil, nil, nil).Router(SchoolSessionChain, ProtectedSchoolRoutes)
 
 	return db, resource, tenantID, router, sessiontoken.AppClaims{

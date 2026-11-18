@@ -6,7 +6,10 @@ import { HolidayRegistrationLegal } from "./holiday-registration-legal";
 // dem Absenden steht eine Zusammenfassung, danach die Eingangsbestätigung.
 // Eltern mit Elternkonto wählen ihre bekannten Kinder aus (#4662).
 
-import { Turnstile } from "@marsidev/react-turnstile";
+import {
+  SecurityCheck,
+  securityCheckCopy,
+} from "~/components/captcha/security-check";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
@@ -105,7 +108,6 @@ export function HolidayRegistrationForm({
 }>) {
   const t = useTranslations("holidayRegistration");
   const formRef = useRef<HTMLFormElement>(null);
-  const errorPath = useApiFormError(formRef);
   const [draft, setDraft] = useState<RegistrationDraft>(() =>
     registrationFromFamily(family),
   );
@@ -116,10 +118,13 @@ export function HolidayRegistrationForm({
     readonly HolidayReceiptPlacement[]
   >([]);
   const [statusToken, setStatusToken] = useState("");
-  const fieldError = (name: string) => errorPath.fieldError(name) ?? undefined;
   const accountFieldsetRef = useRef<HTMLFieldSetElement>(null);
   // Each step takes the place of the last one: its heading takes the focus.
   const stepRef = useStepFocus<HTMLDivElement>(step);
+  // After the step focus: a failed send returns to the form, and the first
+  // invalid field takes the focus from the heading in the same commit.
+  const errorPath = useApiFormError(formRef);
+  const fieldError = (name: string) => errorPath.fieldError(name) ?? undefined;
   const [accountError, setAccountError] = useState<string | undefined>();
   const asksForAccount = parentAccount === "ask";
   const invalidate = useInvalidateMatching();
@@ -300,12 +305,11 @@ export function HolidayRegistrationForm({
           canSubmit={captchaToken !== ""}
           securityCheck={
             offer.captchaSiteKey ? (
-              <Turnstile
+              <SecurityCheck
                 siteKey={offer.captchaSiteKey}
-                options={{ theme: "light" }}
-                onSuccess={setCaptchaToken}
-                onExpire={() => setCaptchaToken("")}
-                onError={() => setCaptchaToken("")}
+                token={captchaToken}
+                onToken={setCaptchaToken}
+                copy={securityCheckCopy((key) => t(`captchaHelp.${key}`))}
               />
             ) : (
               <p className="text-sm text-gray-700">{t("captchaMissing")}</p>

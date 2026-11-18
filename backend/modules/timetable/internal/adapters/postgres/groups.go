@@ -20,8 +20,8 @@ type groupRow struct {
 	bun.BaseModel    `bun:"table:activities.groups,alias:group"`
 	ID               int64      `bun:"id,pk,autoincrement"`
 	TenantID         int64      `bun:"tenant_id,notnull"`
-	CreatedAt        time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt        time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt        time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time  `bun:"updated_at,nullzero,notnull"`
 	Name             string     `bun:"name"`
 	MaxParticipants  int        `bun:"max_participants,nullzero"`
 	RequiredStaff    *int       `bun:"required_staff"`
@@ -63,8 +63,8 @@ type groupRow struct {
 type groupTargetRow struct {
 	ID                 int64     `bun:"id,pk,autoincrement"`
 	TenantID           int64     `bun:"tenant_id"`
-	CreatedAt          time.Time `bun:"created_at,nullzero,default:current_timestamp"`
-	UpdatedAt          time.Time `bun:"updated_at,nullzero,default:current_timestamp"`
+	CreatedAt          time.Time `bun:"created_at,nullzero"`
+	UpdatedAt          time.Time `bun:"updated_at,nullzero"`
 	ActivityGroupID    int64     `bun:"activity_group_id"`
 	TargetGroupType    string    `bun:"target_group_type"`
 	TargetGradeLevel   *int16    `bun:"target_grade_level"`
@@ -327,7 +327,7 @@ func (s *Store) UpdateTemplate(ctx context.Context, id int64, fields timetable.T
 	if err != nil {
 		return 0, domain.OperationStats{}, err
 	}
-	query := templateUpdateQuery(db, tenantID, id, fields, offeringIDs, grades, classes)
+	query := templateUpdateQuery(db, tenantID, id, fields, offeringIDs, grades, classes, s.currentTime())
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	result, err := query.Exec(ctx)
@@ -344,7 +344,7 @@ func (s *Store) ArchiveTemplate(ctx context.Context, id int64) (int64, domain.Op
 	if err != nil {
 		return 0, domain.OperationStats{}, err
 	}
-	now := time.Now()
+	now := s.currentTime()
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	result, err := db.NewUpdate().Table("activities.groups").Set("archived_at = ?", now).
@@ -379,7 +379,7 @@ func (s *Store) UpdateGroupOfferingSource(ctx context.Context, id int64, fields 
 	started := time.Now()
 	result, err := db.NewUpdate().Table("activities.groups").Set("source_care_offering_ids = ?", offeringIDs).
 		Set("source_grade_levels = ?", grades).Set("source_school_classes = ?", classes).
-		Set("updated_at = ?", time.Now()).Where("tenant_id = ?", tenantID).Where("id = ?", id).Exec(ctx)
+		Set("updated_at = ?", s.currentTime()).Where("tenant_id = ?", tenantID).Where("id = ?", id).Exec(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return stats, classifyWriteError("update group offering source", err, &stats)
@@ -401,17 +401,17 @@ func (s *Store) UpdateTemplateRosterReview(ctx context.Context, id int64, update
 	stats := domain.OperationStats{}
 	var rows int64
 	if update.Source != nil {
-		if rows, err = connectTemplateOfferingSource(ctx, db, tenantID, id, *update.Source, &stats); err != nil || rows == 0 {
+		if rows, err = connectTemplateOfferingSource(ctx, db, tenantID, id, *update.Source, s.currentTime(), &stats); err != nil || rows == 0 {
 			return rows, stats, err
 		}
 	}
 	if update.ManualRosterConfirmed != nil {
-		rows, err = setSeriesManualRosterConfirmed(ctx, db, tenantID, id, *update.ManualRosterConfirmed, &stats)
+		rows, err = setSeriesManualRosterConfirmed(ctx, db, tenantID, id, *update.ManualRosterConfirmed, s.currentTime(), &stats)
 	}
 	return rows, stats, err
 }
 
-func connectTemplateOfferingSource(ctx context.Context, db bun.IDB, tenantID, id int64, source timetable.OfferingSourceInput, stats *domain.OperationStats) (int64, error) {
+func connectTemplateOfferingSource(ctx context.Context, db bun.IDB, tenantID, id int64, source timetable.OfferingSourceInput, now time.Time, stats *domain.OperationStats) (int64, error) {
 	offeringIDs, err := jsonText(source.CareOfferingIDs)
 	if err != nil {
 		return 0, fmt.Errorf("timetable postgres: encode source care offering IDs: %w", err)
@@ -430,7 +430,7 @@ func connectTemplateOfferingSource(ctx context.Context, db bun.IDB, tenantID, id
 		Set("target_group_type = ?", timetable.TargetGroupTypeOffering).
 		Set("target_grade_level = NULL").Set("target_school_class = NULL").
 		Set("source_care_offering_ids = ?", offeringIDs).Set("source_grade_levels = ?", grades).
-		Set("source_school_classes = ?", classes).Set("updated_at = ?", time.Now()).
+		Set("source_school_classes = ?", classes).Set("updated_at = ?", now).
 		Where("tenant_id = ?", tenantID).Where("id = ?", id).
 		Where("is_template = TRUE").Where("archived_at IS NULL").Exec(ctx)
 	stats.StatementDuration += time.Since(started)
@@ -440,7 +440,7 @@ func connectTemplateOfferingSource(ctx context.Context, db bun.IDB, tenantID, id
 	return rowsAffected(result, "connected template offering sources", stats)
 }
 
-func setSeriesManualRosterConfirmed(ctx context.Context, db bun.IDB, tenantID, id int64, confirmed bool, stats *domain.OperationStats) (int64, error) {
+func setSeriesManualRosterConfirmed(ctx context.Context, db bun.IDB, tenantID, id int64, confirmed bool, now time.Time, stats *domain.OperationStats) (int64, error) {
 	stats.Queries++
 	started := time.Now()
 	result, err := db.NewRaw(`
@@ -451,7 +451,7 @@ func setSeriesManualRosterConfirmed(ctx context.Context, db bun.IDB, tenantID, i
 			AND segment.is_template = TRUE AND segment.archived_at IS NULL
 			AND series_root.tenant_id = segment.tenant_id
 			AND series_root.id = COALESCE(segment.series_root_id, segment.id)`,
-		confirmed, time.Now(), tenantID, id,
+		confirmed, now, tenantID, id,
 	).Exec(ctx)
 	stats.StatementDuration += time.Since(started)
 	if err != nil {
@@ -460,7 +460,7 @@ func setSeriesManualRosterConfirmed(ctx context.Context, db bun.IDB, tenantID, i
 	return rowsAffected(result, "series manual roster flags", stats)
 }
 
-func templateUpdateQuery(db bun.IDB, tenantID, id int64, fields timetable.TemplateUpdate, offeringIDs, grades, classes any) *bun.UpdateQuery {
+func templateUpdateQuery(db bun.IDB, tenantID, id int64, fields timetable.TemplateUpdate, offeringIDs, grades, classes any, now time.Time) *bun.UpdateQuery {
 	query := db.NewUpdate().Table("activities.groups").Set("name = ?", fields.Name).Set("type = ?", fields.Type).
 		Set("category_id = ?", fields.CategoryID).Set("planned_room_id = NULLIF(?, 0)", fields.RoomID).
 		Set("education_group_id = ?", fields.EducationGroupID).Set("required_staff = ?", fields.RequiredStaff).
@@ -468,7 +468,7 @@ func templateUpdateQuery(db bun.IDB, tenantID, id int64, fields timetable.Templa
 		Set("target_grade_level = ?", fields.TargetGradeLevel).Set("target_school_class = ?", fields.TargetSchoolClass).
 		Set("source_care_offering_ids = ?", offeringIDs).Set("source_grade_levels = ?", grades).
 		Set("source_school_classes = ?", classes).Set("list_kind = ?", fields.ListKind).
-		Set("notes = ?", fields.Notes).Set("updated_at = ?", time.Now()).
+		Set("notes = ?", fields.Notes).Set("updated_at = ?", now).
 		Where("tenant_id = ?", tenantID).Where("id = ?", id).Where("is_template = TRUE").Where("archived_at IS NULL")
 	if fields.PlanningTrackIDProvided {
 		query = query.Set("planning_track_id = ?", fields.PlanningTrackID)

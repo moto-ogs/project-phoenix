@@ -29,6 +29,18 @@ vi.mock("~/lib/hooks/use-school-staff-notices-pending", () => ({
   useSchoolStaffNoticesPending: () => ({ pendingCount: 0 }),
 }));
 
+// Die Glocke (#7139) liest Sitzung und Feed; hier nur ihr Platz in der Hülle.
+vi.mock("./school-notification-feed", () => ({
+  SchoolNotificationFeedProvider: ({
+    children,
+  }: {
+    children: React.ReactNode;
+  }) => children,
+}));
+vi.mock("~/components/dashboard/header/reminders-bell", () => ({
+  NotificationFeedBell: () => null,
+}));
+
 beforeEach(() => {
   mockUseSchoolTeamChatUnread.mockClear();
 });

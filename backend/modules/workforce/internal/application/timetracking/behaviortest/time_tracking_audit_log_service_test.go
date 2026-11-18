@@ -159,15 +159,20 @@ func newAuditLogFixture(t *testing.T) *auditLogFixture {
 	// tombstone write is covered end to end.
 	adjustSvc := timetracking.NewStaffBalanceAdjustmentService(workTime, nil, wtmIntSettings{accountStart: "2025-01-01"}, nil, timetracking.WithAdjustmentUnitOfWork(testpkg.RunInTenantTransaction),
 
-		timetracking.WithAdjustmentDeletionAudit(owners.NewTimeTrackingDeletionAudit(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).TimeTrackingDeletion)))
+		timetracking.WithAdjustmentDeletionAudit(owners.NewTimeTrackingDeletionAudit(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).TimeTrackingDeletion)), timetracking.WithAdjustmentClock(testNow))
 	require.NoError(t, adjustSvc.DeleteAdjustment(ctx, staffB.ID, doomed.ID, admin.ID))
 
 	return &auditLogFixture{
 		tenantID: tenantID, staffA: staffA.ID, staffB: staffB.ID, admin: admin.ID,
 		repos: repos, db: db, ctx: ctx,
-		svc: timetracking.NewTimeTrackingAuditLogService(owners.NewTimeTrackingAuditReader(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).TimeTrackingAuditLog), owners.StaffDisplayNames(reposPeople.Staff), workforceRetentionFixture{}),
+		svc: timetracking.NewTimeTrackingAuditLogService(owners.NewTimeTrackingAuditReader(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).TimeTrackingAuditLog), owners.StaffDisplayNames(reposPeople.Staff), workforceRetentionFixture{}, auditLogToday),
 	}
 }
+
+// auditLogToday pins the feed's day after the fixture's trails: the 730-day
+// window then keeps every event the fixture writes in August and September
+// 2025, whatever the day of the run.
+func auditLogToday() calendar.Date { return calendar.NewDate(2025, time.September, 15) }
 
 func eventsBySource(events []*timetracking.AuditLogEvent) map[string][]*timetracking.AuditLogEvent {
 	m := map[string][]*timetracking.AuditLogEvent{}
@@ -302,19 +307,17 @@ func TestTimeTrackingAuditLog_Filters(t *testing.T) {
 		day := calendar.NewDate(2025, time.September, 3)
 		finalFraction := time.Date(2025, time.September, 3, 23, 59, 59, 500_000_000, calendar.Berlin)
 		nextMidnight := day.AddDays(1).BerlinMidnight()
+		// The column default stamps occurred_at (ADR 0281, Nachtrag), so the
+		// protocol rows of a past day are seeded with their time.
 		for sourceID, occurredAt := range map[int64]time.Time{
 			9001: finalFraction,
 			9002: nextMidnight,
 		} {
-			require.NoError(t, testpkg.TenantCommand1(t, f.ctx, testpkg.SetupTestDB(t), owners.NewTimeTrackingDeletionAudit(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, f.db), nil).TimeTrackingDeletion).Create, &timetracking.TimeTrackingDeletionEvent{
-				StaffID:    f.staffA,
-				Source:     "absence",
-				SourceID:   sourceID,
-				DeletedBy:  f.admin,
-				Payload:    json.RawMessage(`{"test":true}`),
-				Note:       "Datumsgrenze",
-				OccurredAt: occurredAt,
-			}))
+			_, err := f.db.ExecContext(f.ctx, `INSERT INTO audit.time_tracking_deletions
+				(tenant_id, staff_id, source, source_id, deleted_by, payload, note, occurred_at)
+				VALUES (?, ?, 'absence', ?, ?, '{"test":true}'::jsonb, 'Datumsgrenze', ?)`,
+				f.tenantID, f.staffA, sourceID, f.admin, occurredAt)
+			require.NoError(t, err)
 		}
 
 		page, err := testpkg.TenantQuery1(t, f.ctx, f.db, f.svc.ListAuditLog, timetracking.AuditLogListRequest{
@@ -372,7 +375,7 @@ func TestAuditLogRejectsUnreadableRetention(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	failure := errors.New("audit retention unavailable")
-	service := timetracking.NewTimeTrackingAuditLogService(owners.NewTimeTrackingAuditReader(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).TimeTrackingAuditLog), nil, unreadableWorkforceRetention{failure: failure})
+	service := timetracking.NewTimeTrackingAuditLogService(owners.NewTimeTrackingAuditReader(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).TimeTrackingAuditLog), nil, unreadableWorkforceRetention{failure: failure}, auditLogToday)
 	page, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), db, service.ListAuditLog, timetracking.AuditLogListRequest{})
 	require.ErrorIs(t, err, failure)
 	assert.Nil(t, page)
@@ -380,7 +383,7 @@ func TestAuditLogRejectsUnreadableRetention(t *testing.T) {
 
 func TestAuditLogRejectsMissingSettings(t *testing.T) {
 	t.Parallel()
-	require.PanicsWithValue(t, "time tracking audit log: settings are required", func() {
-		timetracking.NewTimeTrackingAuditLogService(nil, nil, nil)
+	require.PanicsWithValue(t, "time tracking audit log: settings and the school day clock are required", func() {
+		timetracking.NewTimeTrackingAuditLogService(nil, nil, nil, nil)
 	})
 }

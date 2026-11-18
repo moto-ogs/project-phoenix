@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -37,7 +38,7 @@ func TestHolidaySchoolCalendarNamesEachHostSchoolsDaysWithoutCare(t *testing.T) 
 
 	settings, err := owners.NewSettingsTestModule(database, unit)
 	require.NoError(t, err)
-	records, err := owners.BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings)
+	records, err := owners.BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings, nil)
 	require.NoError(t, err)
 	ctx := tenant.WithUnitOfWork(context.Background(), unit)
 
@@ -109,7 +110,7 @@ func TestHolidaySchoolCalendarNamesEachHostSchoolsDaysWithoutCare(t *testing.T) 
 	}})
 	require.NoError(t, err)
 	testpkg.OwnTraegerHolidayPeriods(t, db, org)
-	periods := enrollmentCompose.NewHolidayPeriods(nil, source)
+	periods := enrollmentCompose.NewHolidayPeriods(func() time.Time { return calendar.NewDate(2026, 11, 16).BerlinMidnight().Add(10 * time.Hour) }, source)
 	input := enrollment.HolidayPeriodInput{
 		Name: "Sommer", RegistrationOpensOn: calendar.NewDate(2026, 1, 1), RegistrationClosesOn: calendar.NewDate(2026, 5, 1),
 	}

@@ -19,7 +19,11 @@ import {
 } from "react";
 import { useLocale } from "next-intl";
 import { Check, Lock, Plus } from "lucide-react";
-import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+import type { TurnstileInstance } from "@marsidev/react-turnstile";
+import {
+  SecurityCheck,
+  securityCheckCopy,
+} from "~/components/captcha/security-check";
 import { DateOfBirthPicker } from "~/components/enrollment/date-of-birth-picker";
 import { Button } from "~/components/ui/button";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
@@ -505,6 +509,7 @@ export function EnrollmentForm({
   // Preview: no phase, so only the legal texts load; the offerings come from
   // the staff page (#6044) or stay empty. A real load failure stops the form
   // instead of collecting consent without the texts.
+  // oxlint-disable-next-line swr/no-effect-load -- template preview only: seeds the draft state of a form that sessionless public pages share; a shared-cache read belongs in the preview page, which would hand the legal texts in
   useEffect(() => {
     if (prefetchedData !== undefined) return;
     let cancelled = false;
@@ -1914,13 +1919,12 @@ export function EnrollmentForm({
             <h2 id="captcha-heading" className="sr-only">
               Sicherheitsprüfung
             </h2>
-            <Turnstile
-              ref={captchaRef}
+            <SecurityCheck
+              instanceRef={captchaRef}
               siteKey={captchaConfig.site_key}
-              options={{ theme: "light" }}
-              onSuccess={(token: string) => setCaptchaToken(token)}
-              onExpire={() => setCaptchaToken("")}
-              onError={() => setCaptchaToken("")}
+              token={captchaToken}
+              onToken={setCaptchaToken}
+              copy={securityCheckCopy((key) => tr(`captchaHelp.${key}`))}
             />
             <input type="hidden" name="captcha_token" value={captchaToken} />
           </section>

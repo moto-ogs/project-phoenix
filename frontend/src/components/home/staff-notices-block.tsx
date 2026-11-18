@@ -3,17 +3,18 @@
 import { useSession } from "next-auth/react";
 
 import { TodayNoticeList } from "~/components/staff-notices/today-notice-list";
-import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Skeleton } from "~/components/ui/skeleton";
-import { HomeCard, HomeCardIcon } from "~/components/home/home-card";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
-  fetchTodaysNotices,
-  staffNoticesTodayKey,
-} from "~/lib/staff-notices-api";
+  HomeCard,
+  HomeCardEmpty,
+  HomeCardIcon,
+} from "~/components/home/home-card";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { fetchTodaysNotices } from "~/lib/staff-notices-api";
 import type { StaffNotice } from "~/lib/staff-notices-api";
 import { useSWRAuth } from "~/lib/swr";
+import { staffNoticeKeys } from "~/lib/swr/staff-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import {
   HomeCardLink,
@@ -45,7 +46,7 @@ export function StaffNoticesBlock() {
     isLoading,
     mutate,
   } = useSWRAuth<StaffNotice[]>(
-    staffNoticesTodayKey(accountId),
+    staffNoticeKeys.today(accountId),
     fetchTodaysNotices,
     {
       revalidateOnFocus: false,
@@ -93,8 +94,7 @@ export function StaffNoticesBlock() {
         }
         if (!notices || notices.length === 0) {
           return (
-            <EmptyState
-              className="py-4"
+            <HomeCardEmpty
               title="Heute gibt es keine Hinweise"
               description="Neue Hinweise der Leitung erscheinen hier."
             />

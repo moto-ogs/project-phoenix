@@ -1,8 +1,30 @@
-import { act, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  render as renderPlain,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ReactElement, ReactNode } from "react";
 import type { SchoolSearchResult } from "~/lib/school-search";
+import { SWRConfig } from "~/lib/swr/testing";
+
+// The search reads through the shared cache; each render gets its own.
+vi.unmock("swr");
+
+function Providers({ children }: { readonly children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+function render(ui: ReactElement) {
+  return renderPlain(ui, { wrapper: Providers });
+}
 
 const {
   mockUseSession,
@@ -10,6 +32,7 @@ const {
   mockSearchSchool,
   mockShowLoadError,
   mockClearLoadError,
+  mockUseSettingsSchema,
   loadError,
 } = vi.hoisted(() => ({
   mockUseSession: vi.fn(),
@@ -17,6 +40,7 @@ const {
   mockSearchSchool: vi.fn(),
   mockShowLoadError: vi.fn(),
   mockClearLoadError: vi.fn(),
+  mockUseSettingsSchema: vi.fn(),
   loadError: { current: null as null | { message: string } },
 }));
 
@@ -30,6 +54,20 @@ vi.mock("~/lib/tenant-router", () => ({
 }));
 vi.mock("~/lib/hooks/use-module-navigation", () => ({
   useModuleNavigation: () => ({ page: () => "open", section: () => "open" }),
+}));
+vi.mock("~/lib/hooks/use-change-request-access", () => ({
+  useChangeRequestAccess: () => ({ canOpenRequestsPage: false }),
+}));
+vi.mock("~/lib/hooks/use-school-switches", () => ({
+  useSchoolParentNewsEnabled: () => false,
+}));
+vi.mock("~/lib/hooks/use-settings-schema", () => ({
+  useSettingsSchema: (enabled: boolean) => mockUseSettingsSchema(enabled),
+}));
+// The help path has its own test (school-search-help.test.ts).
+vi.mock("./school-search-help", () => ({
+  loadHelpIndex: async () => [],
+  helpEntriesOf: () => [],
 }));
 vi.mock("~/contexts/ToastContext", () => ({
   useApiLoadError: () => ({
@@ -68,6 +106,33 @@ const EMPTY: SchoolSearchResult = {
   scope: FULL_SCOPE,
 };
 
+const SETTINGS_SCHEMA = {
+  tabs: [
+    {
+      key: "gdpr",
+      label: "gdpr",
+      categories: [
+        {
+          key: "datenbereinigung",
+          label: "datenbereinigung",
+          items: [
+            {
+              key: "gdpr.retention_days",
+              label: "Aufbewahrungsfrist",
+              description: "Nach so vielen Tagen löscht moto Besuchsdaten.",
+              type: "int",
+              default: 30,
+              value: 30,
+              writable: true,
+              visible: true,
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
 function child(id: string, firstName: string, lastName: string) {
   return {
     id,
@@ -80,7 +145,7 @@ function child(id: string, firstName: string, lastName: string) {
 
 function signIn(permissions: string[]) {
   mockUseSession.mockReturnValue({
-    data: { user: { token: "t", roles: [], permissions } },
+    data: { user: { id: "1", token: "t", roles: [], permissions } },
     status: "authenticated",
   });
 }
@@ -100,6 +165,9 @@ describe("SchoolSearchDialog", () => {
     vi.clearAllMocks();
     loadError.current = null;
     mockSearchSchool.mockResolvedValue(EMPTY);
+    mockUseSettingsSchema.mockImplementation((enabled: boolean) => ({
+      data: enabled ? SETTINGS_SCHEMA : undefined,
+    }));
   });
 
   it("offers the pages the account may open before anything is typed", () => {
@@ -144,10 +212,7 @@ describe("SchoolSearchDialog", () => {
     await screen.findByRole("option", {
       name: "Sabine Sonnenberg, +49 170 1234567, Elternteil von Mia Sonnenberg (Klasse 3a)",
     });
-    expect(mockSearchSchool).toHaveBeenLastCalledWith(
-      "0170 1234567",
-      expect.any(AbortSignal),
-    );
+    expect(mockSearchSchool).toHaveBeenLastCalledWith("0170 1234567");
     // The typed text never lands in a URL (ADR 0231).
     expect(document.querySelector('a[href*="0170"]')).toBeNull();
 
@@ -255,10 +320,7 @@ describe("SchoolSearchDialog", () => {
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 260));
     });
-    expect(mockSearchSchool).toHaveBeenLastCalledWith(
-      "Müller",
-      expect.any(AbortSignal),
-    );
+    expect(mockSearchSchool).toHaveBeenLastCalledWith("Müller");
     expect(mockPush).not.toHaveBeenCalled();
     await act(async () => {
       answer({ ...EMPTY, children: [child("12", "Ole", "Müller")] });
@@ -296,7 +358,9 @@ describe("SchoolSearchDialog", () => {
     render(<SchoolSearchDialog isOpen onClose={vi.fn()} />);
     await typeQuery("Mia");
     expect(
-      await screen.findByText("Kinder, Räume, Gruppen und Seiten"),
+      await screen.findByText(
+        "Kinder, Räume, Gruppen, Seiten, Einstellungen und Hilfe",
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Telefonnummern/)).not.toBeInTheDocument();
   });
@@ -311,6 +375,57 @@ describe("SchoolSearchDialog", () => {
     );
     expect(
       screen.queryByRole("option", { name: "Alle Kinder" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("finds a sub-page of a section and names where it stands", async () => {
+    signIn(["admin:*"]);
+    const onClose = vi.fn();
+    render(<SchoolSearchDialog isOpen onClose={onClose} />);
+    // Without input only the pages with their own entry stand there.
+    expect(
+      screen.queryByRole("option", { name: /Kinderdaten/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Alle Kinder" }),
+    ).toBeInTheDocument();
+
+    const user = await typeQuery("kinderdat");
+    const pages = screen.getByRole("group", { name: "Seiten" });
+    within(pages).getByRole("option", {
+      name: "Kinderdaten, Datenverwaltung",
+    });
+    await user.keyboard("{Enter}");
+    expect(mockPush).toHaveBeenCalledWith("/database/students");
+  });
+
+  it("finds a single setting and opens it marked in its area", async () => {
+    signIn(["config:manage"]);
+    render(<SchoolSearchDialog isOpen onClose={vi.fn()} />);
+    const user = await typeQuery("aufbewahrung");
+    const settings = screen.getByRole("group", { name: "Einstellungen" });
+    await user.click(
+      within(settings).getByRole("option", {
+        name: "Aufbewahrungsfrist, Datenschutz · Automatisch löschen",
+      }),
+    );
+    expect(mockPush).toHaveBeenCalledWith(
+      "/settings?tab=gdpr&highlight=gdpr.retention_days",
+    );
+  });
+
+  it("loads no school settings for an account that may not read them", async () => {
+    signIn(["users:read"]);
+    render(<SchoolSearchDialog isOpen onClose={vi.fn()} />);
+    expect(mockUseSettingsSchema).toHaveBeenCalledWith(false);
+    await typeQuery("passw");
+    // The own profile is searchable for everybody.
+    const settings = screen.getByRole("group", { name: "Einstellungen" });
+    expect(
+      within(settings).getByRole("option", { name: "Passwort, Mein Profil" }),
+    ).toBeInTheDocument();
+    expect(
+      within(settings).queryByRole("option", { name: /Datenschutz/ }),
     ).not.toBeInTheDocument();
   });
 });

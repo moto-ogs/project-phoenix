@@ -6,11 +6,10 @@
 // behält sein PDF und lässt sich erneut senden. Ein abgeschlossener Vertrag
 // (#4680) zeigt, wann und wie er zustande kam; erneut senden lässt er sich mit demselben PDF.
 
-import { isRefusal } from "~/components/traeger/use-traeger-confirmed-resource";
 import { SepaMandateStatusCard } from "~/components/traeger/sepa-mandate-status-card";
 import { ChevronDown, Download, RotateCw, Send, Trash2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CONTRACT_STATUS_LABELS,
   contractStatusTone,
@@ -33,6 +32,7 @@ import {
   plannedVersion,
 } from "~/components/traeger/care-contract-versions";
 import { CareContractSignatureCard } from "~/components/traeger/care-contract-signature-card";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { EmailText } from "~/components/traeger/email-text";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -43,7 +43,7 @@ import {
 } from "~/components/ui/page-header/OverflowMenu";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { ConfirmationModal } from "~/components/ui/modal";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { Input } from "~/components/ui/input";
 import {
   FormErrorAlert,
@@ -59,7 +59,6 @@ import { TenantPage } from "~/components/ui/tenant-page";
 import {
   useApiErrorDisplay,
   useApiFormError,
-  useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
 import { careContractsConcept } from "~/lib/concepts/careContracts";
@@ -75,6 +74,8 @@ import { downloadBlob } from "~/lib/file-download";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
 import {
   type CareContractDetail,
   discardCareContract,
@@ -94,16 +95,26 @@ export default function TraegerVertragPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? "";
   const router = useRouter();
-  const latestRead = useRef(0);
-  const [contract, setContract] = useState<CareContractDetail | null>(null);
+  const {
+    data: contract,
+    loading,
+    error: loadError,
+    refused,
+    mutate,
+    reload,
+    readCallbacks,
+  } = useFreshTraegerResource(
+    id ? traegerContractKeys.contract(id) : null,
+    () => fetchCareContract(id),
+    "der Vertrag",
+  );
+  const invalidateFamily = useInvalidateFamily();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [confirmingSend, setConfirmingSend] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const actionError = useApiErrorDisplay();
   const discardErrors = useApiFormError();
   const recipientForm = useRef<HTMLFormElement>(null);
@@ -112,86 +123,80 @@ export default function TraegerVertragPage() {
   const { success, warning } = useToast();
   const today = useBerlinToday();
 
-  // Reads the contract and sets it; rejects on a failure. The reload after a
-  // send uses it directly, so a failure there keeps the contract (#6652).
-  const readContract = useCallback(async () => {
-    const request = ++latestRead.current;
-    try {
-      const next = await fetchCareContract(id);
-      if (request === latestRead.current) setContract(next);
-    } catch (error) {
-      if (request !== latestRead.current) return;
-      if (isRefusal(error)) {
-        setContract(null);
-        setPdfUrl(null);
-        setRecipientEmail("");
-        setConfirmDiscard(false);
-      }
-      throw error;
+  // A refusal takes the contract away, and with it what was typed for it.
+  const [wasRefused, setWasRefused] = useState(refused);
+  if (refused !== wasRefused) {
+    setWasRefused(refused);
+    if (refused) {
+      setRecipientEmail("");
+      setConfirmDiscard(false);
     }
-  }, [id]);
-
-  const load = useCallback(async () => {
-    try {
-      await readContract();
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_care_contract_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "der Vertrag",
-        retry: () => void load(),
-      });
-    }
-  }, [readContract, clearLoadError, showLoadError]);
+  }
 
   // A new Berlin day can put another version in force: read the contract
   // again, so booked care, contribution and PDF follow it (#4681).
+  const readOnDay = useRef(today);
   useEffect(() => {
-    void load();
-  }, [load, today]);
+    if (readOnDay.current === today) return;
+    readOnDay.current = today;
+    reload();
+  }, [today, reload]);
 
   // Reload after a send: a failure there is a load error above the contract,
-  // not a failed send (#6652).
+  // not a failed send (#6652). The list shows the new state too.
   const afterSend = useRefreshAfterWrite(
     "die Anzeige des Vertrags",
-    readContract,
+    async () => {
+      void invalidateFamily(traegerContractKeys.listFamily);
+      await mutate(
+        fetchCareContract(id).then(
+          (data) => {
+            readCallbacks.onSuccess();
+            return data;
+          },
+          (err: unknown) => {
+            readCallbacks.onError(err);
+            throw err;
+          },
+        ),
+        { revalidate: false },
+      );
+    },
   );
 
-  // The preview follows the stored PDF once the contract is sent.
-  const frozen = contract?.documentFrozen;
-  const loaded = contract !== null;
-  const versionInForce = contract?.version.number;
+  // After a write on a card: the contract, and the list with its state.
+  const afterCardWrite = async () => {
+    void invalidateFamily(traegerContractKeys.listFamily);
+    await mutate();
+  };
+
+  // The preview follows the stored PDF once the contract is sent. It is
+  // optional: the download button offers the PDF and reports its own error.
+  const { data: pdf } = useFreshTraegerResource(
+    contract
+      ? traegerContractKeys.contractPdf(
+          id,
+          contract.version.number,
+          contract.documentFrozen,
+        )
+      : null,
+    () => downloadCareContract(id),
+    "die Vorschau",
+  );
   useEffect(() => {
-    if (!loaded) return;
-    let url: string | null = null;
-    let cancelled = false;
-    downloadCareContract(id)
-      .then((file) => {
-        if (cancelled) return;
-        url = URL.createObjectURL(file.blob);
-        setPdfUrl(url);
-      })
-      .catch((err: unknown) => {
-        // The preview is optional; the button below still offers the PDF and
-        // reports its own error.
-        logger.warn("traeger_care_contract_preview_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-    return () => {
-      cancelled = true;
-      if (url) URL.revokeObjectURL(url);
-    };
-    // `frozen` and the version in force are no inputs of the effect: a new
-    // PDF exists only after the first send or when another version holds.
-  }, [id, frozen, loaded, versionInForce]);
+    if (!pdf) {
+      setPdfUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(pdf.blob);
+    setPdfUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [pdf]);
 
   const refreshDelivery = async () => {
     setRefreshing(true);
     try {
-      await load();
+      await mutate();
     } finally {
       setRefreshing(false);
     }
@@ -262,6 +267,9 @@ export default function TraegerVertragPage() {
     setDiscarding(true);
     try {
       await discardCareContract(id);
+      // The child waits for a contract again.
+      void invalidateFamily(traegerContractKeys.listFamily);
+      void invalidateFamily(traegerContractKeys.candidates());
       success("Der Entwurf ist verworfen.");
       router.push(LIST_HREF);
     } catch (err) {
@@ -372,7 +380,7 @@ export default function TraegerVertragPage() {
           </span>
         ) : null
       }
-      statsLoading={!contract && !pageLoad.error}
+      statsLoading={loading}
       actions={
         contract ? (
           <>
@@ -435,8 +443,14 @@ export default function TraegerVertragPage() {
           </>
         ) : null
       }
-      error={contract ? pageLoad.error : (afterSend.error ?? pageLoad.error)}
-      loading={!pageLoad.error && !afterSend.error && !contract}
+      error={
+        refused
+          ? loadError
+          : contract
+            ? loadError
+            : (afterSend.error ?? loadError)
+      }
+      loading={loading && !afterSend.error}
       overlays={
         <>
           {/* Sending mails the parents at once and cannot be taken back,
@@ -496,7 +510,10 @@ export default function TraegerVertragPage() {
               }
             />
           ) : null}
-          <CareContractSignatureCard contract={contract} onChanged={load} />
+          <CareContractSignatureCard
+            contract={contract}
+            onChanged={afterCardWrite}
+          />
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="flex flex-col gap-6 lg:col-span-2">
               <SectionCard
@@ -743,7 +760,7 @@ export default function TraegerVertragPage() {
               {contract.status === "aktiv" ? (
                 <CareContractChangeCard
                   contractId={contract.id}
-                  onDecided={() => void load()}
+                  onDecided={() => void afterCardWrite()}
                 />
               ) : null}
               {contract.concluded ? (
@@ -751,7 +768,7 @@ export default function TraegerVertragPage() {
                   contractId={contract.id}
                   status={contract.status}
                   concludedAt={contract.concluded.at}
-                  onChanged={() => void load()}
+                  onChanged={() => void afterCardWrite()}
                 />
               ) : null}
             </div>

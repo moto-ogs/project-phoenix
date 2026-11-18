@@ -6,6 +6,7 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 
+import { useNotificationFeedPortal } from "~/lib/notification-feed-portal";
 import { useTenantSafe } from "~/lib/tenant-context";
 
 /** Abzeichen an Glocke und „Mehr“: zwei Ziffern sind das Höchste, „9+“. */
@@ -44,9 +45,14 @@ export function useNotificationsSheetOpen(): boolean {
   return useSyncExternalStore(subscribe, readOpen, readServer);
 }
 
-/** Die Schule der Sitzung für die Nutzungsanalyse; null ohne Schule. */
+/**
+ * Die Schule der Sitzung für die Nutzungsanalyse; null ohne Schule. moto
+ * schule nennt sie über den Portal-Kontext der Glocke (#7139).
+ */
 export function useAnalyticsSchoolId(): string | null {
-  return useTenantSafe()?.tenant?.tenantId?.toString() ?? null;
+  const portalSchoolId = useNotificationFeedPortal().analyticsSchoolId;
+  const tenantSchoolId = useTenantSafe()?.tenant?.tenantId?.toString() ?? null;
+  return portalSchoolId === undefined ? tenantSchoolId : portalSchoolId;
 }
 
 /**
@@ -61,6 +67,16 @@ export function useOpenNotificationsSheet(): () => void {
     }
     setSheetOpen(true);
   }, [schoolId]);
+}
+
+/** Öffnet das Blatt ohne Nutzungsanalyse der Schule (Elternportal, #7140). */
+export function openNotificationsSheet() {
+  setSheetOpen(true);
+}
+
+/** Ob das Blatt offen ist, außerhalb von React (Tests, Auslöser). */
+export function isNotificationsSheetOpen(): boolean {
+  return sheetOpen;
 }
 
 export function closeNotificationsSheet() {

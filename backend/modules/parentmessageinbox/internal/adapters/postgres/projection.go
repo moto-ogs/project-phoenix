@@ -320,7 +320,10 @@ func (p *Projection) ListThreadsForGuardianTenants(ctx context.Context, accountI
 		Where("t.guardian_account_id = ?", accountID).
 		Where("t.tenant_id IN (?)", bun.List(tenantIDs)).
 		Where(threadHasMessages).
-		Where(guardianStillLinked, p.guardianLinks(db))
+		Where(guardianStillLinked, p.guardianLinks(db)).
+		// A child without an OGS place has no chat with the OGS (#4803): the
+		// list matches the badge and the conversation, which refuse it.
+		Where("NOT sm.without_care_place")
 	if err := query.Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("list guardian threads cross-tenant: %w", err)
 	}
@@ -405,6 +408,8 @@ func withVisibleChildAndCursor(q *bun.SelectQuery, accountID int64) *bun.SelectQ
 
 // UnreadMessageCountForGuardianTenants counts the guardian's unread staff
 // MESSAGES across the given schools in one query — the parent-portal badge.
+// Children without an OGS place cannot open their individual chat, so its
+// messages must not contribute to the badge.
 // Cross-tenant: it runs under an admin transaction.
 func (p *Projection) UnreadMessageCountForGuardianTenants(ctx context.Context, accountID int64, tenantIDs []int64) (int, error) {
 	if len(tenantIDs) == 0 {
@@ -415,6 +420,7 @@ func (p *Projection) UnreadMessageCountForGuardianTenants(ctx context.Context, a
 		return 0, err
 	}
 	count, err := unreadMessageCountSelect(db.NewSelect(), accountID, false).
+		Where("NOT sm.without_care_place").
 		Where("t.guardian_account_id = ?", accountID).
 		Where("t.tenant_id IN (?)", bun.List(tenantIDs)).
 		Where(guardianStillLinked, p.guardianLinks(db)).

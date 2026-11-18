@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api"
 
@@ -23,7 +24,7 @@ func TestOfferingStorageOwnerCommandsRollbackAtEveryBoundary(t *testing.T) {
 			testpkg.OwnTenant(t)
 			phaseID, _, childID := testpkg.CreateAuditAdjustmentChain(t, db)
 			offering := testpkg.CreateTestCareOffering(t, db, phaseID, "Atomic offering")
-			choices, bookings := api.NewParentPortalEnrollments().Enrollment, carePlanTest.NewOfferingBookings()
+			choices, bookings := api.NewParentPortalEnrollments().Enrollment, carePlanTest.NewOfferingBookings(time.Now)
 			ctx := testpkg.Ctx(t)
 			injected := errors.New("failure after owner command")
 			run := func(fail bool) error {

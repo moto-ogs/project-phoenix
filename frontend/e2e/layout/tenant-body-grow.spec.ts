@@ -160,6 +160,39 @@ test("cards inside a grid keep their content height", async ({ page }) => {
   expect(last.y + last.height).toBeLessThan(shell.y + shell.height - 200);
 });
 
+// Gleichartige Karten (Schulen auf der Preise- und der Mensa-Seite) stehen im
+// Raster der Mensa-Seite: auch die letzte Karte ist so hoch wie die anderen,
+// der Abstand bleibt 24 px, kompakt 16 px, mobil 12 px (#7304).
+test("equal cards in a grid: the last card is as tall as the others", async ({
+  page,
+}) => {
+  await render(
+    page,
+    tenantPage(`
+      <div class="compact:gap-4 grid gap-6 max-sm:gap-3">
+        <div><section data-testid="first" class="${PLAIN_CARD}">Noch keine Preise.</section></div>
+        <div><section data-testid="second" class="${PLAIN_CARD}">Noch keine Preise.</section></div>
+        <div><section data-testid="last" class="${PLAIN_CARD}">Noch keine Preise.</section></div>
+      </div>`),
+  );
+
+  for (const { viewport, gap } of [
+    { viewport: { width: 1440, height: 1000 }, gap: 24 },
+    { viewport: { width: 1280, height: 720 }, gap: 16 },
+    { viewport: { width: 375, height: 812 }, gap: 12 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const shell = await box(page, "shell");
+    const first = await box(page, "first");
+    const second = await box(page, "second");
+    const last = await box(page, "last");
+    expect(last.height).toBe(first.height);
+    expect(Math.round(second.y - (first.y + first.height))).toBe(gap);
+    expect(Math.round(last.y - (second.y + second.height))).toBe(gap);
+    expect(last.y + last.height).toBeLessThan(shell.y + shell.height - 200);
+  }
+});
+
 test("a card inside a table row leaves the table's columns intact", async ({
   page,
 }) => {

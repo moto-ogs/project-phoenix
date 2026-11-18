@@ -33,7 +33,7 @@ type sepaMandateConsentRow struct {
 	DebtorStreet     string    `bun:"debtor_street"`
 	DebtorPostalCode string    `bun:"debtor_postal_code"`
 	DebtorCity       string    `bun:"debtor_city"`
-	ConfirmedAt      time.Time `bun:"confirmed_at,nullzero,default:current_timestamp"`
+	ConfirmedAt      time.Time `bun:"confirmed_at,nullzero"`
 }
 
 // InsertSEPAMandateConsent stores the proof of an online mandate.

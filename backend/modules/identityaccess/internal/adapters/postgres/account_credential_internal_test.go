@@ -36,6 +36,17 @@ func TestInitialCredentialWriteLeavesAnExistingPasswordAlone(t *testing.T) {
 	assert.Zero(t, generation)
 }
 
+// An initial write without a password would set no column: it is refused
+// before any statement runs (#7295).
+func TestInitialCredentialWriteNamesAPassword(t *testing.T) {
+	t.Parallel()
+	store := lockingStore(testpkg.SetupTestDB(t), 0)
+	written, stats, err := store.WriteAccountCredential(context.Background(), 1, domain.CredentialWrite{Initial: true})
+	require.EqualError(t, err, "identity access postgres: write account credential: an initial credential write names a password")
+	assert.False(t, written)
+	assert.Zero(t, stats.Queries)
+}
+
 // An account created without a password takes its first one and keeps its
 // generation.
 func TestInitialCredentialWriteSetsTheFirstPassword(t *testing.T) {

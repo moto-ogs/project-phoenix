@@ -152,8 +152,10 @@ func (s *surveyService) submit(ctx context.Context, survey *communication.Survey
 	return nil
 }
 
-// notifyStaff pushes a staff survey to the staff audience that opted into
-// survey notifications. narrow, if set, picks who of the audience is asked.
+// notifyStaff tells the staff audience about a staff survey: everyone gets
+// a feed entry, a push goes to whoever opted into survey notifications
+// (#7137). narrow, if set, picks who of the audience is asked. It reports
+// how many people were told.
 func (s *surveyService) notifyStaff(ctx context.Context, survey *communication.Survey, keyFormat string, reminder bool, narrow func([]int64) []int64) (int, error) {
 	n := s.announcements.notifier
 	if n == nil {
@@ -173,12 +175,9 @@ func (s *surveyService) notifyStaff(ctx context.Context, survey *communication.S
 	if len(accountIDs) == 0 || s.announcements.preferences == nil {
 		return 0, nil
 	}
-	accountIDs, err = s.announcements.preferences.FilterOptedIn(ctx, TypeStaffSurvey, accountIDs)
+	push, err := s.announcements.preferences.FilterOptedIn(ctx, TypeStaffSurvey, accountIDs)
 	if err != nil {
 		return 0, fmt.Errorf("survey: filter opted-in staff: %w", err)
-	}
-	if len(accountIDs) == 0 {
-		return 0, nil
 	}
 	title, body := "Neue Umfrage", fmt.Sprintf("Bitte nehmen Sie an der Umfrage „%s“ teil.", survey.Title)
 	if reminder {
@@ -190,6 +189,7 @@ func (s *surveyService) notifyStaff(ctx context.Context, survey *communication.S
 		RelatedType: "staff_survey", RelatedID: survey.ID,
 		Title: title, Body: body, DeepLink: staffSurveyDeepLink, Priority: PriorityNormal,
 		Audience: NotificationAudience{TenantID: survey.TenantID, Scope: ScopeStaff, StaffAccountIDs: accountIDs},
+		Feed:     &communication.NotificationFeed{PushAccountIDs: push},
 	}.Public())
 	if s.announcements.deliveryPolicy.IsNotificationsDisabled(err) || s.announcements.deliveryPolicy.IsOutsideActiveWindow(err) {
 		return 0, nil
@@ -209,7 +209,7 @@ func (s *surveyService) DeleteExpiredSurveys(ctx context.Context, audience strin
 	if retentionDays <= 0 {
 		return 0, fmt.Errorf("survey: retention window must be positive, got %d", retentionDays)
 	}
-	expired, err := s.store.ExpiredSurveys(ctx, audience, surveyRetentionCutoff(s.now(), retentionDays))
+	expired, err := s.store.ExpiredSurveys(ctx, audience, surveyRetentionCutoff(s.now(), retentionDays), retentionDays)
 	if err != nil {
 		return 0, err
 	}

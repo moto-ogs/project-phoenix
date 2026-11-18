@@ -24,6 +24,13 @@ func (s *ledgerStore) record(ledger string, cutoff time.Time) (int64, error) {
 	return 2, nil
 }
 
+// DatabaseTime is the clock the ledgers are stamped and guarded on; the
+// cutoffs count back from it, not from the Audit clock (ADR 0281,
+// Nachtrag).
+func (s *ledgerStore) DatabaseTime(context.Context) (time.Time, error) {
+	return retentionTestNow, nil
+}
+
 func (s *ledgerStore) DeleteExpiredAuthEvents(_ context.Context, cutoff time.Time) (int64, error) {
 	return s.record("auth", cutoff)
 }
@@ -40,12 +47,22 @@ func (s *ledgerStore) DeleteExpiredProtocol(_ context.Context, kind string, cuto
 	return s.record(kind, cutoff)
 }
 
+// retentionTestNow is the fixed database time the retention windows count
+// back from, so the cutoffs do not depend on the day the tests run.
+var retentionTestNow = time.Date(2026, time.November, 2, 9, 30, 0, 0, time.UTC)
+
+func retentionTestClock() time.Time { return retentionTestNow }
+
+// auditClockYearsAhead is an Audit clock years after the database time: the
+// ledger cutoffs ignore it.
+func auditClockYearsAhead() time.Time { return retentionTestNow.AddDate(5, 0, 0) }
+
 func TestCommandDeletesTheAuditLedgersInsideTheirFixedWindows(t *testing.T) {
 	t.Parallel()
 	store := &ledgerStore{}
-	command, err := NewCommand(store, func(AppendObservation) {})
+	command, err := NewCommand(store, func(AppendObservation) {}, auditClockYearsAhead)
 	require.NoError(t, err)
-	before := time.Now()
+	before := retentionTestNow
 
 	deleted, days, err := command.DeleteExpiredAuthEvents(context.Background())
 	require.NoError(t, err)
@@ -57,7 +74,7 @@ func TestCommandDeletesTheAuditLedgersInsideTheirFixedWindows(t *testing.T) {
 
 	_, _, err = command.DeleteExpiredDataAccessLog(context.Background())
 	require.NoError(t, err)
-	berlin := time.Now().In(calendar.Berlin)
+	berlin := retentionTestNow.In(calendar.Berlin)
 	assert.Equal(t, time.Date(berlin.Year()-1, time.January, 1, 0, 0, 0, 0, calendar.Berlin), store.cutoffs["access"],
 		"an access stays until the end of the following year")
 
@@ -68,7 +85,7 @@ func TestCommandDeletesTheAuditLedgersInsideTheirFixedWindows(t *testing.T) {
 
 func TestCommandWithoutLedgerStoreRefusesLedgerRetention(t *testing.T) {
 	t.Parallel()
-	command, err := NewCommand(&commandStore{}, func(AppendObservation) {})
+	command, err := NewCommand(&commandStore{}, func(AppendObservation) {}, retentionTestClock)
 	require.NoError(t, err)
 
 	_, _, err = command.DeleteExpiredAuthEvents(context.Background())
@@ -78,7 +95,7 @@ func TestCommandWithoutLedgerStoreRefusesLedgerRetention(t *testing.T) {
 func TestCommandLogsRetentionWithoutSubject(t *testing.T) {
 	t.Parallel()
 	store := &commandStore{}
-	command, err := NewCommand(store, func(AppendObservation) {})
+	command, err := NewCommand(store, func(AppendObservation) {}, retentionTestClock)
 	require.NoError(t, err)
 
 	require.NoError(t, command.LogRetention(context.Background(), auditModels.DeletionTypeParentMessageRetention, 3, 365))
@@ -119,7 +136,7 @@ func (s *operatorLedgerStore) DeleteExpiredOperatorAuditLog(context.Context) (in
 func TestCommandDeletesTheOperatorLedgerAtTheFollowingYearCutoff(t *testing.T) {
 	t.Parallel()
 	store := &operatorLedgerStore{}
-	command, err := NewCommand(store, func(AppendObservation) {})
+	command, err := NewCommand(store, func(AppendObservation) {}, retentionTestClock)
 	require.NoError(t, err)
 
 	deleted, err := command.DeleteExpiredOperatorAuditLog(context.Background())
@@ -127,7 +144,7 @@ func TestCommandDeletesTheOperatorLedgerAtTheFollowingYearCutoff(t *testing.T) {
 	assert.Equal(t, 4, deleted)
 	assert.True(t, store.called)
 
-	plain, err := NewCommand(&commandStore{}, func(AppendObservation) {})
+	plain, err := NewCommand(&commandStore{}, func(AppendObservation) {}, retentionTestClock)
 	require.NoError(t, err)
 	_, err = plain.DeleteExpiredOperatorAuditLog(context.Background())
 	require.ErrorContains(t, err, "operator ledger retention store")
@@ -136,9 +153,9 @@ func TestCommandDeletesTheOperatorLedgerAtTheFollowingYearCutoff(t *testing.T) {
 func TestCommandDeletesTheProtocolsInsideTheirFixedWindows(t *testing.T) {
 	t.Parallel()
 	store := &ledgerStore{}
-	command, err := NewCommand(store, func(AppendObservation) {})
+	command, err := NewCommand(store, func(AppendObservation) {}, auditClockYearsAhead)
 	require.NoError(t, err)
-	before := time.Now()
+	before := retentionTestNow
 
 	for _, kind := range ProtocolRetentionKinds {
 		deleted, _, err := command.DeleteExpiredProtocol(context.Background(), kind)
@@ -146,7 +163,7 @@ func TestCommandDeletesTheProtocolsInsideTheirFixedWindows(t *testing.T) {
 		assert.Equal(t, 2, deleted)
 	}
 
-	berlin := time.Now().In(calendar.Berlin)
+	berlin := retentionTestNow.In(calendar.Berlin)
 	lastYearStart := time.Date(berlin.Year()-1, time.January, 1, 0, 0, 0, 0, calendar.Berlin)
 	for _, kind := range []string{
 		auditModels.DeletionTypeClassListChangeRetention,

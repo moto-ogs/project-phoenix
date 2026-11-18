@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -438,6 +439,7 @@ func TestDecisionService_ApplyDueWeeklyPlans_BroadcastsAfterSuccessfulApply(t *t
 	repos, care, _, schedules, _, _ := testRepositories(t, r.env.db)
 	studentEnrollment := testStudentEnrollment(r.env.db)
 	owner := newTestDecisions(enrollmentCompose.DecisionDependencies{
+		Now:      time.Now,
 		Requests: repos.Enrollment(), Children: repos.Enrollment(), Schemas: repos.Enrollment(),
 		People: owners.EnrollmentDecisionPeopleDirectory(
 			repos.Person, repos.Staff, repos.Student, repos.StudentGuardian, repos.GuardianProfile, repos.GuardianPhoneNumber, studentEnrollment,
@@ -764,4 +766,26 @@ func TestDecisionService_RevokedParentChangeRequestCannotReplaceApprovedPlan(t *
 	require.NotNil(t, child.WeeklyPlanOn, "the refusal keeps the school's approved plan")
 	assert.Empty(t, env.guardianLinks(t, r.studentID))
 	r.assertApprovedPlanAppliesAtStart(t, env, accountID)
+}
+
+// TestDecisionService_ApplyDueWeeklyPlans_WaitsForTheHeldPlace keeps a due
+// weekly plan while the child's place waits for the Kinderkontingent (#4803
+// review): a child without an OGS place gets no OGS times or way home, and
+// the plan applies once the place is granted.
+func TestDecisionService_ApplyDueWeeklyPlans_WaitsForTheHeldPlace(t *testing.T) {
+	t.Parallel()
+
+	r := setupFutureRenewal(t)
+	r.approve(t)
+	running := r.pickups(t)
+	testpkg.MarkTestStudentWithoutCarePlace(t, r.env.db, r.studentID)
+
+	assert.Zero(t, r.applyDue(t, r.start), "the plan waits for the place")
+	assert.Equal(t, running, r.pickups(t), "no approved pickup times while the place waits")
+
+	_, err := r.env.db.ExecContext(testpkg.Ctx(t), `UPDATE users.student_school_memberships SET without_care_place = false
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), r.studentID)
+	require.NoError(t, err)
+	assert.Equal(t, 1, r.applyDue(t, r.start), "the plan applies with the place")
+	assert.Equal(t, "15:10", r.pickups(t)[timetable.WeekdayMonday])
 }

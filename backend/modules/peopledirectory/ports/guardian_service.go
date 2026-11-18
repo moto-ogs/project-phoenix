@@ -29,6 +29,9 @@ type GuardianInvitationRecord struct {
 	// RecipientEmail is the normalized address the link was issued for, or
 	// "" for a legacy link without a recorded recipient (#6294).
 	RecipientEmail string
+	// Expired reports whether the link ran out, judged by the owner on the
+	// clock that stamps it.
+	Expired bool
 }
 
 // GuardianInvitations is the consumer-owned port over the Identity & Access
@@ -74,6 +77,11 @@ type GuardianServiceDependencies struct {
 	// RolePresets assigns a relationship's role and the parent-portal
 	// permissions it grants.
 	RolePresets GuardianRolePresets
+
+	// Now is the root's clock: an invitation is open until it, and the
+	// payment access trail is stamped with it. The composition binds the
+	// real one when it is nil.
+	Now func() time.Time
 }
 
 // GuardianTransactions runs the guardian writes in the request's tenant

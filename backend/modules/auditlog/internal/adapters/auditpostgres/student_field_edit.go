@@ -17,11 +17,12 @@ const (
 // StudentFieldEditRepository implements audit.StudentFieldEditRepository.
 type StudentFieldEditRepository struct {
 	runtime Runtime
+	now     func() time.Time
 }
 
 // NewStudentFieldEditRepository creates a new StudentFieldEditRepository.
-func NewStudentFieldEditRepository(runtime Runtime) audit.StudentFieldEditRepository {
-	return &StudentFieldEditRepository{runtime: requireRuntime(runtime)}
+func NewStudentFieldEditRepository(runtime Runtime, now func() time.Time) audit.StudentFieldEditRepository {
+	return &StudentFieldEditRepository{runtime: requireRuntime(runtime), now: now}
 }
 
 // CreateBatch inserts multiple student field edit audit records.
@@ -30,7 +31,7 @@ func (r *StudentFieldEditRepository) CreateBatch(ctx context.Context, edits []*a
 		return nil
 	}
 
-	appender := NewAppender(r.runtime)
+	appender := NewAppender(r.runtime, r.now)
 	for _, edit := range edits {
 		if edit == nil {
 			return fmt.Errorf("edit cannot be nil")
@@ -111,4 +112,10 @@ func (r *StudentFieldEditRepository) DeleteOlderThan(ctx context.Context, cutoff
 		return 0, wrapDatabase("delete expired student field edits", err)
 	}
 	return deleted, nil
+}
+
+// DatabaseTime reads the clock the column default stamps the edits with and
+// audit.delete_expired_student_field_edits guards its window on.
+func (r *StudentFieldEditRepository) DatabaseTime(ctx context.Context) (time.Time, error) {
+	return readDatabaseTime(ctx, r.runtime)
 }

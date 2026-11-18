@@ -121,6 +121,8 @@ worktree's own frontend and never tests another checkout's server on 3000.
 If the port already serves a frontend started from another checkout, the
 Playwright config stops with that checkout's path (`e2e/own-server.ts`, local
 runs with `lsof` only).
+`test:e2e` starts `next dev`; `E2E_FRONTEND_SERVER=start` serves an existing
+`pnpm run build` with `next start` instead, as `.github/workflows/e2e.yml` does.
 
 ### Browser for Playwright
 
@@ -133,6 +135,15 @@ Chrome is missing or older than `MIN_CHROME_VERSION`. Locally keep Chrome
 updated; CI runs `pnpm exec playwright install --with-deps --force chrome`
 because the runner images ship an outdated Chrome. Keep the sandbox on, also
 after a Playwright upgrade.
+Chrome and Chromium cannot start inside the Codex macOS sandbox (Seatbelt
+denies WindowServer, LaunchServices and Chrome's Mach rendezvous;
+openai/codex#21292). `.claude/rules/browser.rules` (Codex execpolicy, loaded
+through the `.codex/rules` symlink of a trusted checkout) runs the browser
+scripts, `pnpm exec playwright test` and `agent-browser` outside the sandbox.
+Call them plain: a redirect, `&&` chain or env assignment matches no rule.
+Under `CODEX_SANDBOX=seatbelt` on macOS, every Playwright config and
+`vitest.storybook.config.ts` stop at load, before a dev server starts. Do not
+switch to `--single-process` or turn Chrome's own sandbox off instead.
 
 ### Synthetic network E2E suites
 
@@ -299,14 +310,18 @@ it is not an adoption or harmless handoff step. `--dry-run` lists them first.
 Fixed-name caches and networks and the [test servers](#test-database) stay.
 Never prune or remove another worktree's networks or volumes to make setup succeed.
 
-For **tests only**, no app setup or sibling is needed: supply `TEST_DB_DSN`
-through a private process environment, pointing to a local test server, then
-run the relevant tests through `scripts/run-go-toolchain.sh`. Do not write the
-DSN into tracked files or print it. The test lifecycle uses the tracked
+For **tests only**, no app setup or sibling is needed: the repository test
+wrappers resolve `TEST_DB_DSN` from the private process environment or root
+`.env`. When neither exists (for example, a detached pipeline worktree), they
+create a temporary credentialed loopback test server on a random port and
+keep its DSN only in the wrapper process. This fallback starts no Compose
+project or bridge network and removes its marked server when the wrapper exits.
+Direct `go test` still needs an explicit DSN. Do not write a test DSN into
+tracked files or print it. For a configured DSN, the lifecycle uses the tracked
 `docker-compose.example.yml` and derives its project and port from that DSN;
-it does not need a copied `.env` or `docker-compose.yml`. Starting a new test
-server still needs Docker address space. Use only a test server, never the app
-database; servers on the same port are shared, not owned by one worktree.
+it does not need a copied `.env` or `docker-compose.yml`. Use only a test
+server, never the app database; servers on the same port are shared, not owned
+by one worktree.
 
 #### Local env and Compose drift
 
@@ -642,7 +657,7 @@ refusal a human has to resolve registers that same check next to its `Up`.
 All encrypted files must have identical keys and match `.env.example` except
 the script's dev-only whitelist. The shared `.env` supplies Compose interpolation
 only. Each service receives an explicit environment allowlist; only the explicit
-maintenance jobs `migrate` and `bank-data-rekey` receive the privileged DSN. Read [runtime environment boundaries](../operations/runtime-environment-boundaries.md)
+maintenance jobs `migrate`, `bank-data-rekey` and `upload-seal` receive the privileged DSN. Read [runtime environment boundaries](../operations/runtime-environment-boundaries.md)
 before changing deployment environments or maintenance jobs.
 
 CI uses `SOPS_AGE_KEY`, `STAGING_SSH_*`, `PRODUCTION_SSH_*`, and `DEMO_SSH_*` secrets;

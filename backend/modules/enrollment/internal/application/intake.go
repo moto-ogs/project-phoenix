@@ -269,6 +269,9 @@ type IntakeDependencies struct {
 	ParentsURL  string
 	Runtime     Runtime
 	Logger      *slog.Logger
+	// Now is the clock of windows, token expiries and the stamps the intake
+	// writes (ADR 0239); nil is the real clock.
+	Now func() time.Time
 }
 
 // Intake is Enrollment's parent-facing intake. It implements the public
@@ -293,6 +296,9 @@ func NewIntake(deps IntakeDependencies) *Intake {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
+	if deps.Now == nil {
+		panic("enrollment intake: the clock is required")
+	}
 	deps.FrontendURL = strings.TrimRight(strings.TrimSpace(deps.FrontendURL), "/")
 	deps.ParentsURL = strings.TrimRight(strings.TrimSpace(deps.ParentsURL), "/")
 	if deps.ParentsURL == "" {
@@ -302,6 +308,11 @@ func NewIntake(deps IntakeDependencies) *Intake {
 }
 
 func (s *Intake) logger() *slog.Logger { return s.deps.Logger }
+
+func (s *Intake) now() time.Time { return s.deps.Now() }
+
+// today is the Berlin school day of the intake's clock.
+func (s *Intake) today() calendar.Date { return calendar.DateFromTime(s.deps.Now()) }
 
 func (s *Intake) intakePhase(ctx context.Context, id int64) (*enrollmentNative.Phase, error) {
 	return s.deps.Catalog.Phase(ctx, id)

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -75,7 +76,7 @@ func newTraegerFixture(t *testing.T, policy sftp.AddressPolicy) traegerFixture {
 	if policy == nil {
 		policy = sftptest.AllowLoopbackPolicy{}
 	}
-	transfers, err := NewTraegerTransfers(contextCipher{}, nil, sftp.WithAddressPolicy(policy))
+	transfers, err := NewTraegerTransfers(contextCipher{}, time.Now, nil, sftp.WithAddressPolicy(policy))
 	require.NoError(t, err)
 	return traegerFixture{db: db, ctx: ctx, transfers: transfers, server: sftptest.Start(t), dir: t.TempDir(),
 		org: newOrg("traeger"), other: newOrg("other")}
@@ -358,7 +359,7 @@ func TestTraegerStoreFiltersTheTraegerBelowRowLevelSecurity(t *testing.T) {
 	var settled []exporttransfer.Outcome
 	_, err := f.transfers.Transfer(f.ctx, financeRequest(f.other, "other-1.csv", &settled))
 	require.NoError(t, err)
-	store := traegerStore()
+	store := traegerStore(time.Now)
 	err = tenant.WithinTraeger(f.ctx, f.org, func(ctx context.Context) error {
 		require.NoError(t, testpkg.WithoutRequestRole(ctx))
 		rows, err := store.List(ctx, f.org, 0, 50)
@@ -419,7 +420,7 @@ func TestTraegerStoreRefusesAForeignTransaction(t *testing.T) {
 	t.Parallel()
 	f := newTraegerFixture(t, nil)
 	id := f.save(t, f.org)
-	store := traegerStore()
+	store := traegerStore(nil)
 	err := tenant.WithinTraeger(f.ctx, f.other, func(ctx context.Context) error {
 		_, _, err := store.Recipient(ctx, f.org, id)
 		return err

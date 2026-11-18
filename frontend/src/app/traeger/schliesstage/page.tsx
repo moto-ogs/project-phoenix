@@ -21,9 +21,13 @@ import {
   ClosingDayHolidayImpact,
   familiesLabel,
 } from "~/components/traeger/closing-day-holiday-impact";
-import { metadataLoadError } from "~/components/traeger/metadata-load-error";
 import { TraegerHolidayClosureNotices } from "~/components/traeger/traeger-holiday-closure-notices";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { useClosingDayHolidayImpact } from "~/components/traeger/use-closing-day-holiday-impact";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ClosingDayModal } from "~/components/planning/closing-day-modal";
 import { TraegerYearCalendar } from "~/components/traeger/traeger-year-calendar";
 import { Button } from "~/components/ui/button";
@@ -43,10 +47,8 @@ import { calendarConcept } from "~/lib/concepts/calendar";
 import { closingDaysConcept } from "~/lib/concepts/closingDays";
 import { sendingRefreshInterval } from "~/lib/holiday-closure-notices";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   createTraegerClosingDay,
   updateTraegerClosingDay,
@@ -55,6 +57,7 @@ import {
   fetchTraegerCalendar,
   type TraegerClosingDay,
 } from "~/lib/traeger-closing-days";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 
 const logger = createLogger({ component: "TraegerClosingDaysPage" });
 
@@ -73,21 +76,16 @@ export default function TraegerClosingDaysPage() {
   const from = `${year}-01-01`;
   const to = `${year}-12-31`;
 
-  const response = useSWRAuth(
-    session?.user.scope === "org" ? traegerKeys.closingDays(from, to) : null,
+  const {
+    data,
+    loading: calendarLoading,
+    error: loadError,
+    mutate,
+  } = useTraegerResource(
+    traegerKeys.closingDays(from, to),
     () => fetchTraegerCalendar(from, to),
-    { keepPreviousData: true },
-  );
-  const { data, isLoading, mutate } = response;
-  const swrError = useSwrLoadError(
-    response.error,
     "die Schließtage und Feiertage",
-    response.mutate,
-  );
-  const loadError = metadataLoadError(
-    swrError,
-    data !== undefined,
-    response.error,
+    { keepPreviousData: true },
   );
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -101,21 +99,15 @@ export default function TraegerClosingDaysPage() {
   // Elternhinweise zu Schließtagen, die Schulen in gebuchte Ferienwochen
   // gelegt haben (#6434, ADR 0196). Solange einer gesendet wird, lädt die
   // Liste regelmäßig neu.
-  const pendingResponse = useSWRAuth(
-    session?.user.scope === "org" && canManage
-      ? traegerKeys.holidayClosures()
-      : null,
+  const pendingResponse = useTraegerResource(
+    canManage ? traegerKeys.holidayClosures() : null,
     fetchPendingHolidayClosures,
+    "die offenen Hinweise an Eltern",
     {
       refreshInterval: (latest) => sendingRefreshInterval(latest?.notices),
     },
   );
   const pending = pendingResponse.data;
-  const pendingLoadError = useSwrLoadError(
-    pendingResponse.error,
-    "die offenen Hinweise an Eltern",
-    pendingResponse.mutate,
-  );
   const holiday = useClosingDayHolidayImpact(modalOpen, editing);
   // Beim Löschen zeigt der Dialog die Tage, die wieder öffnen (#6457).
   const deleteHoliday = useClosingDayHolidayImpact(
@@ -304,7 +296,7 @@ export default function TraegerClosingDaysPage() {
           />
         ) : null
       }
-      statsLoading={isLoading && !data}
+      statsLoading={calendarLoading}
       error={loadError}
       searchSlot={
         <SegmentedControl
@@ -315,24 +307,39 @@ export default function TraegerClosingDaysPage() {
         />
       }
       actions={
-        canManage ? (
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            onClick={beginCreate}
-            disabled={schools.length === 0}
-            tooltip="Plant einen Schließtag für eine oder alle Schulen und informiert betroffene Familien."
-            disabledReason={
-              data
-                ? "Ihrem Träger ist noch keine Schule zugeordnet. Das übernimmt das moto-Team."
-                : undefined
+        <>
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerList("/api/traeger/closing-days/export", format, {
+                from,
+                to,
+              })
             }
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Schließtag anlegen
-          </Button>
-        ) : null
+            scope={traegerExportScope()}
+            ariaLabel={`Schließtage ${year} herunterladen`}
+            fallbackName={`schliesstage-${year}`}
+            errorObject="die Schließtage"
+            unavailable={closingDays.length === 0}
+          />
+          {canManage ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              onClick={beginCreate}
+              disabled={schools.length === 0}
+              tooltip="Plant einen Schließtag für eine oder alle Schulen und informiert betroffene Familien."
+              disabledReason={
+                data
+                  ? "Ihrem Träger ist noch keine Schule zugeordnet. Das übernimmt das moto-Team."
+                  : undefined
+              }
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Schließtag anlegen
+            </Button>
+          ) : null}
+        </>
       }
       overlays={
         <>
@@ -426,8 +433,8 @@ export default function TraegerClosingDaysPage() {
       <div className="flex flex-col gap-6">
         {canManage ? (
           <TraegerHolidayClosureNotices
-            pending={pending}
-            loadError={pending ? null : pendingLoadError}
+            pending={pending ?? undefined}
+            loadError={pending ? null : pendingResponse.error}
             schoolName={schoolName}
             reload={pendingResponse.mutate}
           />
@@ -436,7 +443,7 @@ export default function TraegerClosingDaysPage() {
           title="Schließtage des Trägers"
           concept={closingDaysConcept}
           description="An diesen Tagen ist die OGS der genannten Schulen zu."
-          loading={isLoading && !data}
+          loading={calendarLoading}
         >
           {closingDays.length === 0 ? (
             <EmptyState
@@ -466,7 +473,7 @@ export default function TraegerClosingDaysPage() {
           title={`Jahresübersicht ${year}`}
           concept={calendarConcept}
           description="Feiertage und Schließtage aller Schulen auf einen Blick."
-          loading={isLoading && !data}
+          loading={calendarLoading}
         >
           <TraegerYearCalendar year={year} marks={marks} todayISO={today} />
         </SectionCard>
@@ -475,7 +482,7 @@ export default function TraegerClosingDaysPage() {
           title="Feiertage nach Bundesland"
           concept={calendarConcept}
           description="Nur zur Information. Stimmt das Bundesland einer Schule nicht, schreiben Sie dem moto-Team."
-          loading={isLoading && !data}
+          loading={calendarLoading}
         >
           <div
             className={

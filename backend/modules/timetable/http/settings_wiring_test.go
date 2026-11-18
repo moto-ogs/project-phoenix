@@ -19,7 +19,7 @@ func TestTimetableResourceRejectsMissingSettings(t *testing.T) {
 
 func TestOperationCapabilitiesRejectsUnreadableFeaturePolicy(t *testing.T) {
 	t.Parallel()
-	resource := NewResource(Dependencies{SettingsService: &settingsDouble{ResolveBoolFn: func(context.Context, string) (bool, error) {
+	resource := newResourceForTest(Dependencies{SettingsService: &settingsDouble{ResolveBoolFn: func(context.Context, string) (bool, error) {
 		return false, errors.New("private spontaneous activity policy failure")
 	}}})
 	response := httptest.NewRecorder()

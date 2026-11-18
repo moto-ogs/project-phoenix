@@ -45,7 +45,7 @@ func (f *fakeNoticeRepo) FindByID(_ context.Context, id int64) (*scheduleModels.
 	return nil, nil
 }
 func (f *fakeNoticeRepo) Delete(context.Context, int64) error { return nil }
-func (f *fakeNoticeRepo) DeleteEndedBefore(context.Context, calendar.Date) (int, error) {
+func (f *fakeNoticeRepo) DeleteEndedBefore(context.Context, calendar.Date, int) (int, error) {
 	return 0, nil
 }
 func (f *fakeNoticeRepo) List(context.Context, bool) ([]*scheduleModels.StaffNotice, error) {
@@ -119,7 +119,7 @@ func TestStaffNoticeTodayFiltersByWeekday(t *testing.T) {
 	everyDay := newNotice(t, 13, nil, 0)
 
 	repo := &fakeNoticeRepo{notices: []*scheduleModels.StaffNotice{monTue, fridayOnly, everyDay}}
-	svc := newStaffNotices(repo, StaffNoticeDependencies{})
+	svc := newStaffNotices(repo, StaffNoticeDependencies{CurrentDate: staffNoticeTestToday})
 
 	views, err := svc.StaffNoticesOn(ctx, 42, tuesday.String(), scheduleModels.StaffNoticeAudienceStaff)
 	require.NoError(t, err)
@@ -136,7 +136,7 @@ func TestStaffNoticeTodaySkipsPeriodLookupWithoutWeekPattern(t *testing.T) {
 	ctx := context.Background()
 	periods := &fakePeriodRepo{}
 	repo := &fakeNoticeRepo{notices: []*scheduleModels.StaffNotice{newNotice(t, 21, nil, 0)}}
-	svc := newStaffNotices(repo, StaffNoticeDependencies{Periods: periods})
+	svc := newStaffNotices(repo, StaffNoticeDependencies{Periods: periods, CurrentDate: staffNoticeTestToday})
 
 	_, err := svc.StaffNoticesOn(ctx, 42, "2026-08-04", scheduleModels.StaffNoticeAudienceStaff)
 	require.NoError(t, err)
@@ -172,7 +172,7 @@ func TestStaffNoticeTodayHonoursWeekPattern(t *testing.T) {
 	weekA := newNotice(t, 31, nil, scheduleModels.WeekPatternA)
 	weekB := newNotice(t, 32, nil, scheduleModels.WeekPatternB)
 	repo := &fakeNoticeRepo{notices: []*scheduleModels.StaffNotice{weekA, weekB}}
-	svc := newStaffNotices(repo, StaffNoticeDependencies{Periods: periods})
+	svc := newStaffNotices(repo, StaffNoticeDependencies{Periods: periods, CurrentDate: staffNoticeTestToday})
 
 	inWeekA, err := svc.StaffNoticesOn(ctx, 42, "2026-08-05", scheduleModels.StaffNoticeAudienceStaff)
 	require.NoError(t, err)
@@ -195,7 +195,7 @@ func TestStaffNoticeTodayKeepsNoticeWithoutWeekCycle(t *testing.T) {
 	repo := &fakeNoticeRepo{notices: []*scheduleModels.StaffNotice{
 		newNotice(t, 41, nil, scheduleModels.WeekPatternB),
 	}}
-	svc := newStaffNotices(repo, StaffNoticeDependencies{Periods: periods})
+	svc := newStaffNotices(repo, StaffNoticeDependencies{Periods: periods, CurrentDate: staffNoticeTestToday})
 
 	views, err := svc.StaffNoticesOn(ctx, 42, "2026-08-05", scheduleModels.StaffNoticeAudienceStaff)
 	require.NoError(t, err)
@@ -211,7 +211,7 @@ func TestStaffNoticeTodayAttachesOwnAcknowledgement(t *testing.T) {
 		own:     map[int64]time.Time{51: stamp},
 		counts:  map[int64]int{51: 4},
 	}
-	svc := newStaffNotices(repo, StaffNoticeDependencies{})
+	svc := newStaffNotices(repo, StaffNoticeDependencies{CurrentDate: staffNoticeTestToday})
 
 	views, err := svc.StaffNoticesOn(ctx, 42, "2026-08-04", scheduleModels.StaffNoticeAudienceStaff)
 	require.NoError(t, err)
@@ -228,7 +228,7 @@ func TestStaffNoticeListAttachesAcknowledgementCounts(t *testing.T) {
 		notices: []*scheduleModels.StaffNotice{newNotice(t, 52, nil, 0)},
 		counts:  map[int64]int{52: 4},
 	}
-	svc := newStaffNotices(repo, StaffNoticeDependencies{})
+	svc := newStaffNotices(repo, StaffNoticeDependencies{CurrentDate: staffNoticeTestToday})
 
 	views, err := svc.ListStaffNotices(context.Background(), 42, true)
 	require.NoError(t, err)
@@ -242,7 +242,7 @@ func TestStaffNoticeAcknowledgeRejectsNoticeThatDoesNotAskForIt(t *testing.T) {
 	ctx := context.Background()
 	notice := newNotice(t, 61, nil, 0)
 	repo := &fakeNoticeRepo{notices: []*scheduleModels.StaffNotice{notice}}
-	svc := newStaffNotices(repo, StaffNoticeDependencies{})
+	svc := newStaffNotices(repo, StaffNoticeDependencies{CurrentDate: staffNoticeTestToday})
 
 	err := svc.AcknowledgeStaffNotice(ctx, 61, 42, scheduleModels.StaffNoticeAudienceStaff)
 	assert.ErrorIs(t, err, timetable.ErrStaffNoticeInvalid)
@@ -255,7 +255,7 @@ func TestStaffNoticeAcknowledgeRejectsNoticeThatDoesNotAskForIt(t *testing.T) {
 
 func TestStaffNoticeAcknowledgeUnknownNotice(t *testing.T) {
 	t.Parallel()
-	svc := newStaffNotices(&fakeNoticeRepo{}, StaffNoticeDependencies{})
+	svc := newStaffNotices(&fakeNoticeRepo{}, StaffNoticeDependencies{CurrentDate: staffNoticeTestToday})
 	assert.ErrorIs(t, svc.AcknowledgeStaffNotice(context.Background(), 999, 42, scheduleModels.StaffNoticeAudienceStaff), timetable.ErrStaffNoticeNotFound)
 }
 
@@ -354,7 +354,7 @@ func TestStaffNoticeCreateRejectsInvalidInput(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	repo := &fakeNoticeRepo{}
-	svc := newStaffNotices(repo, StaffNoticeDependencies{})
+	svc := newStaffNotices(repo, StaffNoticeDependencies{CurrentDate: staffNoticeTestToday})
 
 	_, err := svc.CreateStaffNotice(ctx, 42, timetable.StaffNoticeInput{
 		Title:     "   ",
@@ -371,7 +371,7 @@ func TestStaffNoticeCreateNormalizesWeekdays(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	repo := &fakeNoticeRepo{}
-	svc := newStaffNotices(repo, StaffNoticeDependencies{})
+	svc := newStaffNotices(repo, StaffNoticeDependencies{CurrentDate: staffNoticeTestToday})
 
 	_, err := svc.CreateStaffNotice(ctx, 42, timetable.StaffNoticeInput{
 		Title:     "Turnhalle",
@@ -388,7 +388,7 @@ func TestStaffNoticeCreateNormalizesWeekdays(t *testing.T) {
 
 func TestStaffNoticeCreateRejectsUnknownWeekday(t *testing.T) {
 	t.Parallel()
-	svc := newStaffNotices(&fakeNoticeRepo{}, StaffNoticeDependencies{})
+	svc := newStaffNotices(&fakeNoticeRepo{}, StaffNoticeDependencies{CurrentDate: staffNoticeTestToday})
 	_, err := svc.CreateStaffNotice(context.Background(), 42, timetable.StaffNoticeInput{
 		Title:     "Kaputt",
 		ValidFrom: "2026-08-01",
@@ -404,7 +404,7 @@ func TestStaffNoticeCreateRejectsUnknownWeekday(t *testing.T) {
 func TestStaffNoticeCreateAcknowledgesForTheAuthor(t *testing.T) {
 	t.Parallel()
 	repo := &fakeNoticeRepo{}
-	svc := newStaffNotices(repo, StaffNoticeDependencies{})
+	svc := newStaffNotices(repo, StaffNoticeDependencies{CurrentDate: staffNoticeTestToday})
 
 	_, err := svc.CreateStaffNotice(context.Background(), 42, timetable.StaffNoticeInput{
 		Title:                   "Räumungsübung",
@@ -420,7 +420,7 @@ func TestStaffNoticeCreateAcknowledgesForTheAuthor(t *testing.T) {
 func TestStaffNoticeCreateWithoutAcknowledgementStampsNothing(t *testing.T) {
 	t.Parallel()
 	repo := &fakeNoticeRepo{}
-	svc := newStaffNotices(repo, StaffNoticeDependencies{})
+	svc := newStaffNotices(repo, StaffNoticeDependencies{CurrentDate: staffNoticeTestToday})
 
 	_, err := svc.CreateStaffNotice(context.Background(), 42, timetable.StaffNoticeInput{
 		Title:     "Nur zur Information",
@@ -437,9 +437,9 @@ func TestStaffNoticeUpdateAcknowledgesForTheAuthor(t *testing.T) {
 	notice := newNotice(t, 61, nil, 0)
 	notice.CreatedBy = 7
 	repo := &fakeNoticeRepo{notices: []*scheduleModels.StaffNotice{notice}}
-	svc := newStaffNotices(repo, StaffNoticeDependencies{})
+	svc := newStaffNotices(repo, StaffNoticeDependencies{CurrentDate: staffNoticeTestToday})
 
-	_, err := svc.UpdateStaffNotice(context.Background(), 61, timetable.StaffNoticeInput{
+	_, err := svc.UpdateStaffNotice(context.Background(), 61, 0, timetable.StaffNoticeInput{
 		Title:                   "Hinweis",
 		ValidFrom:               "2026-08-01",
 		RequiresAcknowledgement: true,
@@ -495,7 +495,7 @@ func TestStaffNoticeTodayFiltersByReader(t *testing.T) {
 		newNoticeFor(t, 72, scheduleModels.StaffNoticeAudienceStaff),
 		newNoticeFor(t, 73, scheduleModels.StaffNoticeAudienceLehrkraft),
 	}}
-	svc := newStaffNotices(repo, StaffNoticeDependencies{})
+	svc := newStaffNotices(repo, StaffNoticeDependencies{CurrentDate: staffNoticeTestToday})
 
 	ids := func(views []timetable.StaffNoticeView) []int64 {
 		out := make([]int64, 0, len(views))
@@ -550,7 +550,7 @@ func TestStaffNoticeAcknowledgersResolvesNames(t *testing.T) {
 		},
 	}
 	names := &fakeNoticeNames{names: map[int64]string{7: "Anna Beispiel"}}
-	svc := newStaffNotices(repo, StaffNoticeDependencies{Names: names.lookup})
+	svc := newStaffNotices(repo, StaffNoticeDependencies{Names: names.lookup, CurrentDate: staffNoticeTestToday})
 
 	rows, err := svc.StaffNoticeAcknowledgers(ctx, 91)
 	require.NoError(t, err)
@@ -575,7 +575,7 @@ func TestStaffNoticeAcknowledgersWithoutNameLookup(t *testing.T) {
 		notices: []*scheduleModels.StaffNotice{newNoticeFor(t, 93, scheduleModels.StaffNoticeAudienceAll)},
 		ackRows: []*scheduleModels.StaffNoticeAck{{NoticeID: 93, AccountID: 7, AcknowledgedAt: time.Date(2026, 8, 4, 10, 0, 0, 0, time.UTC)}},
 	}
-	svc := newStaffNotices(repo, StaffNoticeDependencies{})
+	svc := newStaffNotices(repo, StaffNoticeDependencies{CurrentDate: staffNoticeTestToday})
 
 	rows, err := svc.StaffNoticeAcknowledgers(context.Background(), 93)
 	require.NoError(t, err)
@@ -587,7 +587,7 @@ func TestStaffNoticeCreateAudience(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	repo := &fakeNoticeRepo{}
-	svc := newStaffNotices(repo, StaffNoticeDependencies{})
+	svc := newStaffNotices(repo, StaffNoticeDependencies{CurrentDate: staffNoticeTestToday})
 
 	created, err := svc.CreateStaffNotice(ctx, 42, timetable.StaffNoticeInput{
 		Title: "Ohne Zielgruppe", ValidFrom: "2026-08-01", Active: true,
@@ -608,3 +608,7 @@ func TestStaffNoticeCreateAudience(t *testing.T) {
 	})
 	assert.ErrorIs(t, err, timetable.ErrStaffNoticeInvalid)
 }
+
+// staffNoticeTestToday pins the notices' school day to the day these unit
+// tests last ran on the wall clock.
+func staffNoticeTestToday() calendar.Date { return calendar.NewDate(2026, 11, 16) }

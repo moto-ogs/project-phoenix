@@ -92,11 +92,12 @@ export function CompactStudentCard({
         key={studentId}
         type="button"
         onClick={onClick}
-        aria-label={`${firstName} ${lastName} - Profil öffnen`}
         data-testid={`compact-student-card-${studentId}`}
         className={`group moto-hover-elevated flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-150 focus:outline-none focus-visible:outline-2 focus-visible:outline-gray-600 ${chromeClass} ${className}`}
       >
         {content}
+        {/* Named by its content, name first (WCAG 2.5.3, #7112). */}
+        <span className="sr-only">, Profil öffnen</span>
       </button>
     );
   }

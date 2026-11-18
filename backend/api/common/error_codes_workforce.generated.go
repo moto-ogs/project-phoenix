@@ -39,6 +39,11 @@ const CodeWorkforcePayrollWageTypeInUse = "workforce.payroll_wage_type_in_use"
 const CodeWorkforcePayrollWageTypeNameTaken = "workforce.payroll_wage_type_name_taken"
 const CodeWorkforcePersonnelNumberInvalid = "workforce.personnel_number_invalid"
 const CodeWorkforcePersonnelNumberTaken = "workforce.personnel_number_taken"
+const CodeWorkforcePoolBlockInvalid = "workforce.pool_block_invalid"
+const CodeWorkforcePoolBlockNotFound = "workforce.pool_block_not_found"
+const CodeWorkforcePoolBlockTaken = "workforce.pool_block_taken"
+const CodeWorkforcePoolSpringerBusy = "workforce.pool_springer_busy"
+const CodeWorkforcePoolSpringerNotFound = "workforce.pool_springer_not_found"
 const CodeWorkforceQualificationTypeNameTaken = "workforce.qualification_type_name_taken"
 const CodeWorkforceQualificationTypeNotFound = "workforce.qualification_type_not_found"
 const CodeWorkforceRebookingBeforeVacationOpening = "workforce.rebooking_before_vacation_opening"
@@ -94,6 +99,7 @@ const CodeWorkforceTraegerHolidayWeekSchoolOverride = "workforce.traeger_holiday
 const CodeWorkforceTraegerMonthClosedBySchool = "workforce.traeger_month_closed_by_school"
 const CodeWorkforceTraegerMonthLaterClosed = "workforce.traeger_month_later_closed"
 const CodeWorkforceTraegerMonthNotKept = "workforce.traeger_month_not_kept"
+const CodeWorkforceTraegerPayrollNotReady = "workforce.traeger_payroll_not_ready"
 const CodeWorkforceTraegerPlanningShiftNotFound = "workforce.traeger_planning_shift_not_found"
 const CodeWorkforceTraegerPlanningSiteInvalid = "workforce.traeger_planning_site_invalid"
 const CodeWorkforceTraegerProofInvalid = "workforce.traeger_proof_invalid"
@@ -102,6 +108,9 @@ const CodeWorkforceTraegerProofNotFound = "workforce.traeger_proof_not_found"
 const CodeWorkforceTraegerProofTypeNameTaken = "workforce.traeger_proof_type_name_taken"
 const CodeWorkforceTraegerProofTypeNotFound = "workforce.traeger_proof_type_not_found"
 const CodeWorkforceTraegerStaffAlreadyLinked = "workforce.traeger_staff_already_linked"
+const CodeWorkforceTraegerStaffHireDuplicate = "workforce.traeger_staff_hire_duplicate"
+const CodeWorkforceTraegerStaffHireIncomplete = "workforce.traeger_staff_hire_incomplete"
+const CodeWorkforceTraegerStaffHireInvalid = "workforce.traeger_staff_hire_invalid"
 const CodeWorkforceTraegerStaffImportChanged = "workforce.traeger_staff_import_changed"
 const CodeWorkforceTraegerStaffImportFileInvalid = "workforce.traeger_staff_import_file_invalid"
 const CodeWorkforceTraegerStaffImportFileTooLarge = "workforce.traeger_staff_import_file_too_large"
@@ -161,6 +170,11 @@ var errorCodeClassesWorkforce = []errorCodeClass{
 	{CodeWorkforcePayrollWageTypeNameTaken, "business_rejection"},
 	{CodeWorkforcePersonnelNumberInvalid, "input"},
 	{CodeWorkforcePersonnelNumberTaken, "business_rejection"},
+	{CodeWorkforcePoolBlockInvalid, "input"},
+	{CodeWorkforcePoolBlockNotFound, "input"},
+	{CodeWorkforcePoolBlockTaken, "business_rejection"},
+	{CodeWorkforcePoolSpringerBusy, "business_rejection"},
+	{CodeWorkforcePoolSpringerNotFound, "input"},
 	{CodeWorkforceQualificationTypeNameTaken, "business_rejection"},
 	{CodeWorkforceQualificationTypeNotFound, "business_rejection"},
 	{CodeWorkforceRebookingBeforeVacationOpening, "business_rejection"},
@@ -216,6 +230,7 @@ var errorCodeClassesWorkforce = []errorCodeClass{
 	{CodeWorkforceTraegerMonthClosedBySchool, "business_rejection"},
 	{CodeWorkforceTraegerMonthLaterClosed, "business_rejection"},
 	{CodeWorkforceTraegerMonthNotKept, "business_rejection"},
+	{CodeWorkforceTraegerPayrollNotReady, "business_rejection"},
 	{CodeWorkforceTraegerPlanningShiftNotFound, "input"},
 	{CodeWorkforceTraegerPlanningSiteInvalid, "input"},
 	{CodeWorkforceTraegerProofInvalid, "input"},
@@ -224,6 +239,9 @@ var errorCodeClassesWorkforce = []errorCodeClass{
 	{CodeWorkforceTraegerProofTypeNameTaken, "business_rejection"},
 	{CodeWorkforceTraegerProofTypeNotFound, "input"},
 	{CodeWorkforceTraegerStaffAlreadyLinked, "business_rejection"},
+	{CodeWorkforceTraegerStaffHireDuplicate, "business_rejection"},
+	{CodeWorkforceTraegerStaffHireIncomplete, "business_rejection"},
+	{CodeWorkforceTraegerStaffHireInvalid, "input"},
 	{CodeWorkforceTraegerStaffImportChanged, "business_rejection"},
 	{CodeWorkforceTraegerStaffImportFileInvalid, "input"},
 	{CodeWorkforceTraegerStaffImportFileTooLarge, "input"},

@@ -178,6 +178,11 @@ func (p *postDouble) ContractMailStates(context.Context, int64, int64) ([]careco
 	return nil, nil
 }
 
+// publicContractToday is the fixed day of the intake's candidates, a
+// Wednesday before the short module ends on 2028-01-31 (#7104): on a later
+// day the intake rightly leaves the ended module out.
+func publicContractToday() calendar.Date { return calendar.NewDate(2026, time.November, 18) }
+
 func TestPublicCareContractBooksModulesPerWeekdayInOneDraftAndFreezesItsPDFAtTheFirstSend(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
@@ -191,7 +196,7 @@ func TestPublicCareContractBooksModulesPerWeekdayInOneDraftAndFreezesItsPDFAtThe
 	accesses := 0
 	school := schoolDouble{school: carecontract.School{ID: testpkg.UniqueTestTenantID(t), Name: "OGS Am Lindenhof"},
 		child: testpkg.UniqueTestTenantID(t), offering: testpkg.UniqueTestTenantID(t), accesses: &accesses}
-	intake := compose.NewIntake(compose.IntakePorts{Schools: school, Applications: school, Bookings: school, Access: school, Runtime: runtimeDouble{}, Modes: school, Mail: noMailBlocks{}, Letterheads: letterheadDouble{}, Families: familyNumbersDouble{}})
+	intake := compose.NewIntake(compose.IntakePorts{Schools: school, Applications: school, Bookings: school, Access: school, Runtime: runtimeDouble{}, Modes: school, Mail: noMailBlocks{}, Letterheads: letterheadDouble{}, Families: familyNumbersDouble{}}, publicContractToday)
 
 	shortLast := calendar.NewDate(2028, 1, 31)
 	candidates, err := intake.Candidates(ctx, reviewer, 0)
@@ -245,11 +250,11 @@ func TestPublicCareContractBooksModulesPerWeekdayInOneDraftAndFreezesItsPDFAtThe
 	school.reads = &reads
 	ports := compose.ContractPorts{Holidays: holidaysDouble{}, Letterheads: letterheadDouble{}, Post: post, Runtime: runtimeDouble{}, Access: school,
 		Ledger: ledgerDouble{}, Links: carecontract.SigningLinks{Tokens: &tokenDouble{}, ParentsURL: "http://parents.localhost", Fingerprint: sha256Hex}}
-	contracts := compose.NewContracts(ports)
+	contracts := compose.NewContracts(ports, time.Now)
 	id := created.Created[0].ID
 	// Missing identity cannot freeze an anonymous PDF or enqueue a mail.
 	ports.Letterheads = letterheadDouble{missing: true}
-	unnamed := compose.NewContracts(ports)
+	unnamed := compose.NewContracts(ports, time.Now)
 	_, previewErr := unnamed.ContractDocument(ctx, reviewer, id)
 	var invalid *carecontract.ValidationError
 	assert.ErrorAs(t, previewErr, &invalid)

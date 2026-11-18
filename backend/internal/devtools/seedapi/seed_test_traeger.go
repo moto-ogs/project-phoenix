@@ -24,6 +24,7 @@ func (seedTestTraegerStep) Run(_ context.Context, rt *Runtime) error {
 	defer rt.Client.BindAuth(previousAuth)
 	raw, err := rt.Client.Post("/operator/organizations/test-traeger", map[string]any{
 		"name": "Test-Träger", "slug": seedTestTraegerSlug, "school_count": 3, "contact_email": rt.Bootstrap.AdminEmail,
+		"federal_state": "DE-NW",
 	})
 	if isConflictError(err) {
 		fmt.Println("  Test-Träger: already present")

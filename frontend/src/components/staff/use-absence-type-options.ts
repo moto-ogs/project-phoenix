@@ -14,6 +14,7 @@ import { absenceTypeService, type AbsenceType } from "~/lib/absence-type-api";
 import { customOptionValue } from "~/lib/absence-type-select";
 import { createLogger } from "~/lib/logger";
 import { useSWRAuth } from "~/lib/swr";
+import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
 
 const logger = createLogger({ component: "AbsenceTypeOptions" });
 
@@ -67,7 +68,7 @@ export function useAbsenceTypeOptions(
   currentValue?: string,
 ): UseAbsenceTypeOptionsResult {
   const { data: custom = [] } = useSWRAuth<AbsenceType[]>(
-    "staff-absence-types",
+    staffAbsenceKeys.types(),
     absenceTypeService.getAbsenceTypes.bind(absenceTypeService),
     {
       onError: (err) => {

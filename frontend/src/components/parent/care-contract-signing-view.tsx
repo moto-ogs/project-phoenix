@@ -14,7 +14,7 @@ import { useSignaturePadLabels } from "~/components/parent/news/signature-pad-la
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { ConsentCheckbox } from "~/components/ui/consent-checkbox";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import {
   FormErrorAlert,
   LoadErrorAlert,
@@ -46,6 +46,8 @@ import {
   formatDate,
 } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import type { SignatureValue } from "~/lib/signature";
 
 const logger = createLogger({ component: "ContractSigningView" });
@@ -74,6 +76,7 @@ export function ContractSigningView({
   const [source] = useState(initialSource);
   const [view, setView] = useState<SigningView | null>(null);
   const [gone, setGone] = useState(false);
+  const invalidateFamily = useInvalidateFamily();
   const loadError = useApiLoadError();
   const { show: showLoadError, clear: clearLoadError } = loadError;
   const signed = view
@@ -104,6 +107,7 @@ export function ContractSigningView({
     }
   }, [source, clearLoadError, showLoadError, t]);
 
+  // oxlint-disable-next-line swr/no-effect-load -- one path serves the sessionless mail link and the inbox; the link has no session for useSWRAuth
   useEffect(() => {
     void load();
   }, [load]);
@@ -141,7 +145,16 @@ export function ContractSigningView({
       <BookedCare view={view} />
       <ContractDocument source={source} view={view} />
       <WithdrawalNotice view={view} />
-      <SignForm source={source} view={view} onSigned={setView} />
+      <SignForm
+        source={source}
+        view={view}
+        onSigned={(next) => {
+          setView(next);
+          // Signed in the parents portal: the documents inbox shows it.
+          if (source.kind === "inbox")
+            void invalidateFamily(parentInboxKeys.documents());
+        }}
+      />
     </div>
   );
 }
@@ -237,6 +250,7 @@ function ContractDocument({
   const url = useObjectUrl(blob);
   const documentUrl = signingDocumentUrl(source);
 
+  // oxlint-disable-next-line swr/no-effect-load -- loads the PDF as a blob for an object URL preview, also for the sessionless mail link
   useEffect(() => {
     let cancelled = false;
     transportFetch(documentUrl, { method: "GET", cache: "no-store" })

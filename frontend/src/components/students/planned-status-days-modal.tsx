@@ -35,7 +35,10 @@ import {
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { studentKeys } from "~/lib/swr/portal-keys";
 import {
   SegmentedControl,
   type SegmentedControlItem,
@@ -47,12 +50,16 @@ import {
   berlinTodayISO,
 } from "~/lib/date-helpers";
 import {
+  fetchStudentStatusDays,
   StudentStatusDayConflictError,
   type StudentStatusDay,
   type StudentStatusKind,
 } from "~/lib/student-status-days-api";
-import type { CarePlanDay } from "~/lib/student-care-plan-api";
-import type { StudentPartialAbsence } from "~/lib/student-partial-absences-api";
+import { fetchStudentCarePlanDay } from "~/lib/student-care-plan-api";
+import {
+  fetchStudentPartialAbsences,
+  type StudentPartialAbsence,
+} from "~/lib/student-partial-absences-api";
 import { excusedConcept } from "~/lib/concepts/excused";
 import { classTripConcept } from "~/lib/concepts/classTrip";
 import { sickConcept } from "~/lib/concepts/sick";
@@ -67,6 +74,8 @@ export interface PlannedStatusSubmitOptions {
 
 interface PlannedStatusDaysModalProps {
   readonly isOpen: boolean;
+  /** The child whose days the panel checks and plans. */
+  readonly studentId: string;
   readonly status: StudentStatusKind;
   readonly studentName: string;
   readonly isSubmitting: boolean;
@@ -80,14 +89,9 @@ interface PlannedStatusDaysModalProps {
    *  absence-only staffer is not offered a save that would 403. */
   readonly canPlanPartialExcusal?: boolean;
   readonly onClose: () => void;
-  readonly loadExistingDays: (
-    from: string,
-    to: string,
-  ) => Promise<StudentStatusDay[]>;
-  readonly loadPartialAbsences?: (
-    from: string,
-    to: string,
-  ) => Promise<StudentPartialAbsence[]>;
+  /** Reports each range the panel checks, so the caller can widen the
+   *  window of `existingDays` / `existingPartialAbsences` to it. */
+  readonly onCheckRange?: (from: string, to: string) => void;
   /**
    * Saves the days and resolves once they are saved; the panel then closes
    * itself through `onClose`, only while it is still the same session.
@@ -99,7 +103,6 @@ interface PlannedStatusDaysModalProps {
   ) => Promise<void>;
   readonly onDeleteStatusDay?: (statusDayId: string) => Promise<void>;
   readonly canDeleteStatusDay?: (day: StudentStatusDay) => boolean;
-  readonly loadCarePlanDay?: (date: string) => Promise<CarePlanDay>;
   readonly onSubmitPartialAbsence?: (
     partialAbsenceId: string | null,
     date: string,
@@ -126,6 +129,7 @@ const EXCUSAL_SCOPE_ITEMS: readonly SegmentedControlItem<ExcusalScope>[] = [
 
 export function PlannedStatusDaysModal({
   isOpen,
+  studentId,
   status,
   studentName,
   isSubmitting,
@@ -134,12 +138,10 @@ export function PlannedStatusDaysModal({
   existingPartialAbsences = EMPTY_PARTIAL_ABSENCES,
   canPlanPartialExcusal = true,
   onClose,
-  loadExistingDays,
-  loadPartialAbsences,
+  onCheckRange,
   onSubmit,
   onDeleteStatusDay,
   canDeleteStatusDay,
-  loadCarePlanDay,
   onSubmitPartialAbsence,
   onDeletePartialAbsence,
 }: PlannedStatusDaysModalProps) {
@@ -159,31 +161,23 @@ export function PlannedStatusDaysModal({
   const reportInvalid = submitErrors.invalid;
   // „Wiederholen“ sendet den aktuellen Entwurf, nicht den vom Fehler.
   const latestSubmitRef = useRef<() => Promise<void>>(async () => undefined);
-  // Failed check of existing entries: shown in place, saving stays blocked.
-  const conflictLoad = useApiLoadError();
-  const showConflictLoadError = conflictLoad.show;
-  const clearConflictLoadError = conflictLoad.clear;
-  const conflictCheckFailed = conflictLoad.error !== null;
   // Failed removal of a partial excusal: shown in its confirmation dialog.
   const partialDeleteErrors = useApiFormError();
   // Failed removal of a planned status day: shown in its confirmation dialog.
   const statusDayDeleteErrors = useApiFormError();
   const clearStatusDayDeleteError = statusDayDeleteErrors.clear;
   const clearPartialDeleteError = partialDeleteErrors.clear;
-  const [checkedExistingDays, setCheckedExistingDays] = useState<
-    StudentStatusDay[]
-  >([]);
-  // Partial excusals found by the same check. A manual one blocks a full-day
-  // status on its day, so those days are named and left out (#5698).
-  const [checkedPartialAbsences, setCheckedPartialAbsences] = useState<
-    StudentPartialAbsence[]
-  >([]);
+  // Rows this panel removed: the check of the selection drops them at once,
+  // before its next read answers.
+  const [removedStatusDayIds, setRemovedStatusDayIds] = useState<
+    ReadonlySet<string>
+  >(() => new Set());
+  const [removedPartialAbsenceIds, setRemovedPartialAbsenceIds] = useState<
+    ReadonlySet<string>
+  >(() => new Set());
   // The person chose to replace the partial excusals on the selection with
   // this full-day status (#5698). Nothing is replaced without this choice.
   const [replacePartial, setReplacePartial] = useState(false);
-  const [checkedSelectionKey, setCheckedSelectionKey] = useState("");
-  const [conflictCheckRevision, setConflictCheckRevision] = useState(0);
-  const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
   const [reason, setReason] = useState("");
   const [excusalScope, setExcusalScope] = useState<ExcusalScope>("full_day");
   const [fromTime, setFromTime] = useState("");
@@ -197,8 +191,6 @@ export function PlannedStatusDaysModal({
     readonly date: string;
     readonly status: StudentStatusKind;
   } | null>(null);
-  const [carePlanDay, setCarePlanDay] = useState<CarePlanDay | null>(null);
-  const [isLoadingCarePlan, setIsLoadingCarePlan] = useState(false);
   const isSick = status === "sick";
   const isClassTrip = status === "class_trip";
   const statusNoun = isSick
@@ -322,8 +314,128 @@ export function PlannedStatusDaysModal({
       candidateDateKeys[candidateDateKeys.length - 1] ?? "",
     );
   const hasSelectionTooWide = hasRangeTooLong || hasIndividualSelectionTooWide;
+  const hasInvalidRangeOrder =
+    rangeStart !== "" && rangeEnd !== "" && rangeEnd < rangeStart;
+  // The existing entries of the selected span, read fresh for every span and
+  // every opening: a save decides against this answer, never against one an
+  // earlier opening left in the cache.
+  const checkFrom = candidateDateKeys[0] ?? "";
+  const checkTo = candidateDateKeys[candidateDateKeys.length - 1] ?? "";
+  const hasCheckRange =
+    isOpen &&
+    checkFrom !== "" &&
+    checkTo !== "" &&
+    !hasInvalidRangeOrder &&
+    !hasSelectionTooWide;
+  const existingDaysCheck = useFreshSWR(
+    hasCheckRange
+      ? studentKeys.statusDays(studentId, checkFrom, checkTo)
+      : null,
+    () => fetchStudentStatusDays(studentId, checkFrom, checkTo),
+  );
+  // The partial-excusal read needs users:read. For a full-day status it
+  // only names a blocking day early: without it the save still answers
+  // with the partial-absence conflict, so a failed read must not block.
+  const partialAbsencesCheck = useFreshSWR(
+    hasCheckRange
+      ? studentKeys.partialAbsences(studentId, checkFrom, checkTo)
+      : null,
+    () => fetchStudentPartialAbsences(studentId, checkFrom, checkTo),
+  );
+  const conflictCheckError =
+    existingDaysCheck.error ??
+    (isPartialExcusal ? partialAbsencesCheck.error : undefined);
+  // Failed check of existing entries: shown in place, saving stays blocked.
+  const conflictCheckFailed = hasCheckRange && conflictCheckError !== undefined;
+  const conflictCheckAnswered =
+    existingDaysCheck.data !== undefined &&
+    (partialAbsencesCheck.data !== undefined ||
+      (!isPartialExcusal && partialAbsencesCheck.error !== undefined));
+  const isCheckingConflicts =
+    hasCheckRange &&
+    !conflictCheckFailed &&
+    (!conflictCheckAnswered ||
+      existingDaysCheck.isValidating ||
+      (partialAbsencesCheck.data !== undefined &&
+        partialAbsencesCheck.isValidating));
   const checkedCurrentSelection =
-    selectionKey !== "" && checkedSelectionKey === selectionKey;
+    hasCheckRange &&
+    !conflictCheckFailed &&
+    conflictCheckAnswered &&
+    !isCheckingConflicts;
+  const refreshExistingDaysCheck = existingDaysCheck.mutate;
+  const refreshPartialAbsencesCheck = partialAbsencesCheck.mutate;
+  const recheckConflicts = useCallback(() => {
+    void refreshExistingDaysCheck();
+    void refreshPartialAbsencesCheck();
+  }, [refreshExistingDaysCheck, refreshPartialAbsencesCheck]);
+  const shownConflictLoadError = useSwrLoadError(
+    conflictCheckFailed ? conflictCheckError : undefined,
+    "die Prüfung der vorhandenen Einträge",
+    recheckConflicts,
+  );
+  const conflictLoadError = conflictCheckFailed ? shownConflictLoadError : null;
+  const checkedExistingDays = useMemo(
+    () =>
+      (existingDaysCheck.data ?? EMPTY_STATUS_DAYS).filter(
+        (day) => !removedStatusDayIds.has(day.id),
+      ),
+    [existingDaysCheck.data, removedStatusDayIds],
+  );
+  // Partial excusals found by the same check. A manual one blocks a full-day
+  // status on its day, so those days are named and left out (#5698).
+  const checkedPartialAbsences = useMemo(
+    () =>
+      (partialAbsencesCheck.data ?? EMPTY_PARTIAL_ABSENCES).filter(
+        (absence) => !removedPartialAbsenceIds.has(absence.id),
+      ),
+    [partialAbsencesCheck.data, removedPartialAbsenceIds],
+  );
+  // The caller widens its own window of existing entries to each checked span.
+  useEffect(() => {
+    if (hasCheckRange) onCheckRange?.(checkFrom, checkTo);
+  }, [checkFrom, checkTo, hasCheckRange, onCheckRange]);
+  // A delete or external refresh of the caller's rows checks the span again
+  // instead of leaving the checked rows stale.
+  const checkedFingerprintRef = useRef(existingDaysFingerprint);
+  useEffect(() => {
+    if (checkedFingerprintRef.current === existingDaysFingerprint) return;
+    checkedFingerprintRef.current = existingDaysFingerprint;
+    if (hasCheckRange) recheckConflicts();
+  }, [existingDaysFingerprint, hasCheckRange, recheckConflicts]);
+  // An existing partial excusal on the single chosen day opens for editing,
+  // from the caller's window or from this check.
+  const checkedPartialAbsence =
+    checkedCurrentSelection &&
+    isPartialExcusal &&
+    candidateDateKeys.length === 1
+      ? checkedPartialAbsences.find((absence) => absence.date === checkFrom)
+      : undefined;
+  useEffect(() => {
+    if (!checkedPartialAbsence) return;
+    if (checkedPartialAbsence.id === editingPartialAbsenceId) return;
+    setEditingPartialAbsenceId(checkedPartialAbsence.id);
+    setFromTime(checkedPartialAbsence.fromTime);
+    setReason(checkedPartialAbsence.reason ?? "");
+  }, [checkedPartialAbsence, editingPartialAbsenceId]);
+  // Best-effort only: the timetable care-plan endpoint needs schedules:read.
+  // Staff who may edit the student but lack that permission must still save
+  // a partial excusal; overlapping-block warnings are skipped when the plan
+  // cannot be loaded.
+  const carePlanDate =
+    isOpen && isPartialExcusal && candidateDateKeys.length === 1
+      ? checkFrom
+      : "";
+  const carePlanRead = useSWRAuth(
+    carePlanDate ? studentKeys.carePlanDay(studentId, carePlanDate) : null,
+    () => fetchStudentCarePlanDay(studentId, carePlanDate),
+    { keepPreviousData: false, shouldRetryOnError: false },
+  );
+  const carePlanDay = carePlanRead.error ? null : (carePlanRead.data ?? null);
+  const isLoadingCarePlan =
+    carePlanDate !== "" &&
+    carePlanRead.data === undefined &&
+    carePlanRead.error === undefined;
   const candidateExistingDayByDate = useMemo(() => {
     const days = new Map(activeExistingDayByDate);
     if (checkedCurrentSelection) {
@@ -440,8 +552,6 @@ export function PlannedStatusDaysModal({
     ],
   );
   const blockedDayCount = candidateDateKeys.length - selectableDateKeys.length;
-  const hasInvalidRangeOrder =
-    rangeStart !== "" && rangeEnd !== "" && rangeEnd < rangeStart;
   const overlappingInstances = useMemo(() => {
     if (!carePlanDay || !fromTime) return [];
     return carePlanDay.instances.filter(
@@ -459,10 +569,9 @@ export function PlannedStatusDaysModal({
       setRangeStart(prefillClassTrip && isClassTrip ? todayKey : "");
       setRangeEnd(prefillClassTrip && isClassTrip ? todayKey : "");
       setSelectedDates([]);
-      setCheckedExistingDays([]);
+      setRemovedStatusDayIds(new Set());
+      setRemovedPartialAbsenceIds(new Set());
       setReplacePartial(false);
-      setCheckedSelectionKey("");
-      clearConflictLoadError();
       setReason("");
       setExcusalScope("full_day");
       setFromTime("");
@@ -471,10 +580,8 @@ export function PlannedStatusDaysModal({
       clearPartialDeleteError();
       setStatusDayPendingDeletion(null);
       clearStatusDayDeleteError();
-      setCarePlanDay(null);
     },
     [
-      clearConflictLoadError,
       clearPartialDeleteError,
       clearStatusDayDeleteError,
       clearSubmitError,
@@ -487,118 +594,6 @@ export function PlannedStatusDaysModal({
       resetForm(true);
     }
   }, [isOpen, resetForm]);
-
-  useEffect(() => {
-    const date = isPartialExcusal ? candidateDateKeys[0] : undefined;
-    if (!date || candidateDateKeys.length !== 1 || !loadCarePlanDay) {
-      setCarePlanDay(null);
-      setIsLoadingCarePlan(false);
-      return;
-    }
-    let current = true;
-    setIsLoadingCarePlan(true);
-    void loadCarePlanDay(date)
-      .then((day) => {
-        if (current) setCarePlanDay(day);
-      })
-      .catch(() => {
-        // Best-effort only: the timetable care-plan endpoint needs
-        // schedules:read. Staff who may edit the student but lack that
-        // permission must still save a partial excusal; overlapping-block
-        // warnings are skipped when the plan cannot be loaded.
-        if (current) setCarePlanDay(null);
-      })
-      .finally(() => {
-        if (current) setIsLoadingCarePlan(false);
-      });
-    return () => {
-      current = false;
-    };
-  }, [candidateDateKeys, isPartialExcusal, loadCarePlanDay]);
-
-  useEffect(() => {
-    const firstCandidate = candidateDateKeys[0];
-    const lastCandidate = candidateDateKeys[candidateDateKeys.length - 1];
-    if (
-      !isOpen ||
-      !firstCandidate ||
-      !lastCandidate ||
-      hasInvalidRangeOrder ||
-      hasSelectionTooWide
-    ) {
-      setCheckedExistingDays([]);
-      setCheckedPartialAbsences([]);
-      setCheckedSelectionKey("");
-      clearConflictLoadError();
-      setIsCheckingConflicts(false);
-      return;
-    }
-
-    let isCurrent = true;
-    setCheckedSelectionKey("");
-    clearConflictLoadError();
-    setIsCheckingConflicts(true);
-
-    // The partial-excusal read needs users:read. For a full-day status it
-    // only names a blocking day early: without it the save still answers
-    // with the partial-absence conflict, so a failed read must not block.
-    const partialLookup = !loadPartialAbsences
-      ? Promise.resolve(EMPTY_PARTIAL_ABSENCES)
-      : isPartialExcusal
-        ? loadPartialAbsences(firstCandidate, lastCandidate)
-        : loadPartialAbsences(firstCandidate, lastCandidate).catch(
-            () => EMPTY_PARTIAL_ABSENCES,
-          );
-    void Promise.all([
-      loadExistingDays(firstCandidate, lastCandidate),
-      partialLookup,
-    ])
-      .then(([days, partials]) => {
-        if (!isCurrent) return;
-        setCheckedExistingDays(days);
-        setCheckedPartialAbsences(partials);
-        if (isPartialExcusal && candidateDateKeys.length === 1) {
-          const existing = partials.find(
-            (absence) => absence.date === firstCandidate,
-          );
-          if (existing) {
-            setEditingPartialAbsenceId(existing.id);
-            setFromTime(existing.fromTime);
-            setReason(existing.reason ?? "");
-          }
-        }
-        setCheckedSelectionKey(selectionKey);
-      })
-      .catch((error: unknown) => {
-        if (!isCurrent) return;
-        setCheckedExistingDays([]);
-        setCheckedPartialAbsences([]);
-        void showConflictLoadError(error, {
-          object: "die Prüfung der vorhandenen Einträge",
-          retry: () => setConflictCheckRevision((current) => current + 1),
-        });
-      })
-      .finally(() => {
-        if (isCurrent) setIsCheckingConflicts(false);
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [
-    candidateDateKeys,
-    conflictCheckRevision,
-    existingDaysFingerprint,
-    hasInvalidRangeOrder,
-    hasSelectionTooWide,
-    isOpen,
-    isPartialExcusal,
-    loadExistingDays,
-    loadPartialAbsences,
-    selectionKey,
-    clearConflictLoadError,
-    showConflictLoadError,
-  ]);
 
   const setSortedDates = (dates: Date[]) => {
     const sourceDates = isPartialExcusal ? dates.slice(-1) : dates;
@@ -663,7 +658,6 @@ export function PlannedStatusDaysModal({
     setEditingPartialAbsenceId(null);
     setPartialAbsencePendingDeletion(null);
     clearPartialDeleteError();
-    setCarePlanDay(null);
   };
 
   const handleEditPartialAbsence = (absence: StudentPartialAbsence) => {
@@ -687,10 +681,6 @@ export function PlannedStatusDaysModal({
   const handleSelectionModeChange = (next: SelectionMode) => {
     setSelectionMode(next);
     clearSubmitError();
-    setCheckedExistingDays([]);
-    setCheckedPartialAbsences([]);
-    setCheckedSelectionKey("");
-    clearConflictLoadError();
     if (next === "range") {
       setSelectedDates([]);
     } else {
@@ -730,9 +720,7 @@ export function PlannedStatusDaysModal({
       }
       if (!op.isCurrent()) return;
       setStatusDayPendingDeletion(null);
-      setCheckedExistingDays((current) =>
-        current.filter((day) => day.id !== statusDayId),
-      );
+      setRemovedStatusDayIds((current) => new Set(current).add(statusDayId));
     });
   };
 
@@ -755,8 +743,8 @@ export function PlannedStatusDaysModal({
       // Protokolliert; eine späte Ablehnung zeigt kein neuerer Vorgang.
       if (!op.isCurrent()) return;
       setPartialAbsencePendingDeletion(null);
-      setCheckedPartialAbsences((current) =>
-        current.filter((absence) => absence.id !== partialAbsenceId),
+      setRemovedPartialAbsenceIds((current) =>
+        new Set(current).add(partialAbsenceId),
       );
       if (editingPartialAbsenceId === partialAbsenceId) {
         setSelectedDates([]);
@@ -806,7 +794,7 @@ export function PlannedStatusDaysModal({
             object: "die Entschuldigung",
             retry: () => void latestSubmitRef.current(),
           });
-          setConflictCheckRevision((current) => current + 1);
+          recheckConflicts();
           return;
         }
         // Closing belongs to this session: a late answer must not close a
@@ -853,7 +841,7 @@ export function PlannedStatusDaysModal({
         }
         // Keep every input intact and refresh conflicts in case the write lost
         // a concurrent race.
-        setConflictCheckRevision((current) => current + 1);
+        recheckConflicts();
         return;
       }
       if (!op.isCurrent()) return;
@@ -1079,7 +1067,6 @@ export function PlannedStatusDaysModal({
                         onChangeDates={setSortedDates}
                         disabledDates={disabledDates}
                         placeholder="Tage auswählen"
-                        dropdownPlacement="down"
                         calendarLayout="inline"
                       />
                     )}
@@ -1194,7 +1181,7 @@ export function PlannedStatusDaysModal({
                   message="Vorhandene Status-Tage werden geprüft…"
                 />
               ) : null}
-              <LoadErrorAlert error={conflictLoad.error} />
+              <LoadErrorAlert error={conflictLoadError} />
               {hasIndividualSelectionTooWide ? (
                 <Alert
                   type="warning"

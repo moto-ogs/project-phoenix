@@ -105,6 +105,10 @@ type CreateSchool struct {
 	Zip            string
 	Phone          string
 	Email          string
+	// FederalState is the school's Bundesland as an ISO 3166-2 code
+	// ("DE-BW"). It has no default: holidays, school vacations and the
+	// Arbeitszeit-Soll follow it, so the operator names it on creation.
+	FederalState string
 }
 
 type UpdateSchool struct {
@@ -134,16 +138,24 @@ func NormalizeCreateSchool(input *CreateSchool) error {
 	if err := ValidateSchool(input.OrganizationID, input.Name, input.Slug, input.Subdomain, input.Email); err != nil {
 		return err
 	}
-	return ValidateSchoolContactEmail(input.Email)
+	if err := ValidateSchoolContactEmail(input.Email); err != nil {
+		return err
+	}
+	input.FederalState = strings.TrimSpace(input.FederalState)
+	if input.FederalState == "" {
+		return invalidSchool("federal state is required")
+	}
+	return nil
 }
 
-// ValidateSchoolContactEmail checks the contact address a school must have.
-// Mail is sent from a central noreply address, so replies from parents reach
-// the school only through this address, and moto must not receive them
-// (#2872). It is required and must be a bare mailbox address.
+// ValidateSchoolContactEmail checks the contact address of a school. Mail is
+// sent from a central noreply address, so replies from parents reach the
+// school only through this address, and moto must not receive them (#2872).
+// The address is optional: not every school has one when it is set up. A
+// given address must be a bare mailbox address.
 func ValidateSchoolContactEmail(email string) error {
 	if email == "" {
-		return invalidSchool("email is required")
+		return nil
 	}
 	if len(email) > MaxEmailLength {
 		return invalidSchool("email must not exceed 255 characters")
@@ -153,6 +165,16 @@ func ValidateSchoolContactEmail(email string) error {
 		return invalidSchool("email must be a valid address")
 	}
 	return nil
+}
+
+// UsableReplyAddress reports whether value is an address the mail identity
+// writes as Reply-To: a bare mailbox after trimming (#1936). Contact data and
+// the reply setting can predate the current validation, so the school list
+// applies the same rule to mark a school whose replies bounce (#7174).
+func UsableReplyAddress(value string) bool {
+	value = strings.TrimSpace(value)
+	parsed, err := mail.ParseAddress(value)
+	return err == nil && parsed.Address == value
 }
 
 // ValidateSchool checks the shared school fields after normalization.

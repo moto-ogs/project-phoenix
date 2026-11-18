@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -13,14 +12,17 @@ import (
 
 func (s *Service) ListPickupChangeRequests(ctx context.Context, accountID, studentID int64) ([]carerequests.Request, error) {
 	var rows []carerequests.Request
-	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess, func(*Child) error {
+	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess, func(child *Child) error {
+		if err := child.RequireCarePlace(); err != nil {
+			return err
+		}
 		if s.CareRequests == nil {
 			return errors.New("parent: pickup change request service not configured")
 		}
 		return nil
 	}, func(txCtx context.Context, _ *Child) error {
 		var listErr error
-		rows, listErr = s.CareRequests.ListPickupChangeRequests(txCtx, studentID, time.Now().AddDate(0, -2, 0))
+		rows, listErr = s.CareRequests.ListPickupChangeRequests(txCtx, studentID, s.now().AddDate(0, -2, 0))
 		if listErr != nil {
 			return fmt.Errorf("parent: list pickup change requests: %w", listErr)
 		}

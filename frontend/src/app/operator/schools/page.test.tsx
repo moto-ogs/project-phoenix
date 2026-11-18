@@ -25,6 +25,7 @@ const {
   mockUseSWR,
   mockMutateOrgs,
   mockMutateSchools,
+  mockMutateRequiredDetails,
   mockListOrganizations,
   mockListSchools,
   mockCreateSchool,
@@ -39,6 +40,7 @@ const {
   mockUseSWR: vi.fn(),
   mockMutateOrgs: vi.fn(),
   mockMutateSchools: vi.fn(),
+  mockMutateRequiredDetails: vi.fn(),
   mockListOrganizations: vi.fn(),
   mockListSchools: vi.fn(),
   mockCreateSchool: vi.fn(),
@@ -118,6 +120,25 @@ vi.mock("~/components/ui/modal", () => ({
     ) : null,
 }));
 
+// The filter row as plain selects, like the announcements test.
+vi.mock("~/components/ui/tenant-page-search-row", () => ({
+  TenantPageSearchRow: ({ filters }: any) =>
+    filters?.map((f: any) => (
+      <select
+        key={f.id}
+        data-testid={`filter-${f.id}`}
+        value={f.value}
+        onChange={(e) => f.onChange(e.target.value)}
+      >
+        {f.options.map((opt: any) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    )),
+}));
+
 vi.mock("~/components/ui/skeleton", () => ({
   Skeleton: ({ className }: any) => (
     <div data-testid="skeleton" className={className} />
@@ -147,8 +168,15 @@ function withDefaultSWR(overrides: SWROverrides = {}) {
     useSWRMock: mockUseSWR,
     mutateOrgs: mockMutateOrgs,
     mutateSchools: mockMutateSchools,
+    mutateRequiredDetails: mockMutateRequiredDetails,
     ...overrides,
   });
+}
+
+// The Bundesland has no default (#7174): every new school names it.
+function chooseFederalState() {
+  fireEvent.click(screen.getByLabelText(/^Bundesland/));
+  fireEvent.click(screen.getByRole("option", { name: "Nordrhein-Westfalen" }));
 }
 
 describe("OperatorSchoolsPage", () => {
@@ -160,6 +188,7 @@ describe("OperatorSchoolsPage", () => {
     });
     mockMutateOrgs.mockResolvedValue(undefined);
     mockMutateSchools.mockResolvedValue([mockSchool]);
+    mockMutateRequiredDetails.mockResolvedValue(undefined);
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ status: "ok" })),
     );
@@ -217,6 +246,55 @@ describe("OperatorSchoolsPage", () => {
     expect(screen.queryByText("Verborgen")).not.toBeInTheDocument();
   });
 
+  // --- Pflichtangaben (#7174) ---
+
+  it("marks schools without a reply address and filters them", async () => {
+    const complete = {
+      ...mockSchool,
+      id: "2",
+      name: "Complete School",
+      slug: "complete-school",
+      subdomain: "complete-school",
+    };
+    withDefaultSWR({
+      schools: [mockSchool, complete],
+      requiredDetails: [
+        { schoolId: "10", replyAddressMissing: true },
+        { schoolId: "2", replyAddressMissing: false },
+      ],
+    });
+
+    render(<OperatorSchoolsPage />);
+
+    expect(screen.getByText("Antwortadresse fehlt")).toBeInTheDocument();
+    expect(screen.getByText("Vollständig")).toBeInTheDocument();
+    expect(screen.getByText("mit fehlenden Angaben")).toBeInTheDocument();
+    expect(screen.getByText("Complete School")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId("filter-pflichtangaben"), {
+      target: { value: "missing" },
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByText("Complete School")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText("Test School")).toBeInTheDocument();
+  });
+
+  it("shows a failed load of the required details above the list", async () => {
+    withDefaultSWR({ requiredDetailsError: new ApiError("down", 503) });
+
+    render(<OperatorSchoolsPage />);
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die fehlenden Pflichtangaben"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Test School")).toBeInTheDocument();
+    expect(screen.queryByTestId("filter-pflichtangaben")).toBeNull();
+  });
+
   // --- Create ---
 
   it("opens create school modal", async () => {
@@ -266,6 +344,7 @@ describe("OperatorSchoolsPage", () => {
     fireEvent.change(screen.getByLabelText(/E-Mail/), {
       target: { value: "info@school.de" },
     });
+    chooseFederalState();
 
     fireEvent.click(screen.getByText("Erstellen"));
 
@@ -281,6 +360,7 @@ describe("OperatorSchoolsPage", () => {
           zip: "10115",
           phone: "030123",
           email: "info@school.de",
+          federal_state: "DE-NW",
         }),
       );
       expect(mockMutateSchools).toHaveBeenCalled();
@@ -312,6 +392,8 @@ describe("OperatorSchoolsPage", () => {
     fireEvent.change(screen.getByLabelText(/E-Mail/), {
       target: { value: "info@new-school.example" },
     });
+
+    chooseFederalState();
     fireEvent.click(screen.getByText("Erstellen"));
 
     await waitFor(() => {
@@ -350,6 +432,8 @@ describe("OperatorSchoolsPage", () => {
     fireEvent.change(screen.getByLabelText(/E-Mail/), {
       target: { value: "info@new-school.example" },
     });
+
+    chooseFederalState();
     fireEvent.click(screen.getByText("Erstellen"));
 
     await waitFor(() => {
@@ -390,6 +474,8 @@ describe("OperatorSchoolsPage", () => {
     fireEvent.change(screen.getByLabelText(/E-Mail/), {
       target: { value: "info@new-school.example" },
     });
+
+    chooseFederalState();
     fireEvent.click(screen.getByText("Erstellen"));
 
     expect(
@@ -430,6 +516,8 @@ describe("OperatorSchoolsPage", () => {
     fireEvent.change(screen.getByLabelText(/E-Mail/), {
       target: { value: "info@new-school.example" },
     });
+
+    chooseFederalState();
     fireEvent.click(screen.getByText("Erstellen"));
 
     expect(
@@ -468,6 +556,8 @@ describe("OperatorSchoolsPage", () => {
     fireEvent.change(screen.getByLabelText(/E-Mail/), {
       target: { value: "info@new-school.example" },
     });
+
+    chooseFederalState();
     fireEvent.click(screen.getByText("Erstellen"));
 
     await waitFor(() => {
@@ -629,6 +719,7 @@ describe("OperatorSchoolsPage", () => {
     await waitFor(() => {
       expect(mockRestoreSchool).toHaveBeenCalledWith("20");
       expect(mockMutateSchools).toHaveBeenCalled();
+      expect(mockMutateRequiredDetails).toHaveBeenCalled();
     });
   });
 

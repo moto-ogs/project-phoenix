@@ -45,6 +45,18 @@ vi.mock("~/env.client", () => ({
 }));
 
 import TraegerArrivalPickupPage from "./page";
+import { testClockDay } from "~/test/clock";
+
+/** The last four weeks up to yesterday, relative to the test clock. */
+const FROM = testClockDay(-28);
+const TO = testClockDay(-1);
+const LINDEN_FIRST_DAY = testClockDay(-14);
+
+/** "YYYY-MM-DD" as "DD.MM.YYYY". */
+function german(day: string): string {
+  const [year, month, date] = day.split("-");
+  return `${date}.${month}.${year}`;
+}
 
 /** 07:00 to 08:00 and 15:00 to 15:30, enough for the tests. */
 function weekday(
@@ -65,8 +77,8 @@ function weekday(
 }
 
 const TIMES: TraegerArrivalPickupTimes = {
-  from: "2026-08-12",
-  to: "2026-09-08",
+  from: FROM,
+  to: TO,
   slotMinutes: 30,
   firstMinute: 420,
   lastMinute: 900,
@@ -80,7 +92,7 @@ const TIMES: TraegerArrivalPickupTimes = {
       slug: "am-bach",
       subdomain: "am-bach",
       city: "Bissendorf",
-      firstDay: "2026-08-12",
+      firstDay: FROM,
       weekdays: [weekday(1, 4, [3, 10], 7), weekday(2, 4, [2, 6], 20)],
     },
     {
@@ -89,7 +101,7 @@ const TIMES: TraegerArrivalPickupTimes = {
       slug: "lindenweg",
       subdomain: "lindenweg",
       city: "Melle",
-      firstDay: "2026-08-26",
+      firstDay: LINDEN_FIRST_DAY,
       weekdays: [weekday(1, 2, [0, 2.5], 2), weekday(2, 2, [0, 2], 1.5)],
     },
   ],
@@ -132,8 +144,8 @@ describe("TraegerArrivalPickupPage", () => {
       name: "Ankunft je Wochentag und halbe Stunde",
     });
     expect(mockFetch).toHaveBeenCalledWith({
-      from: "2026-08-12",
-      to: "2026-09-08",
+      from: FROM,
+      to: TO,
     });
     expect(
       screen.getByText("Im Schnitt 12,5 Kinder von 07:30 bis 08:00 Uhr."),
@@ -146,7 +158,9 @@ describe("TraegerArrivalPickupPage", () => {
       .getByText("So viele Kinder kommen an einem normalen Tag an.")
       .closest(".relative");
     expect(perDay).toHaveTextContent(/^Kinder am Tag13So viele/);
-    expect(screen.getByText("12.08.2026 bis 08.09.2026")).toBeInTheDocument();
+    expect(
+      screen.getByText(`${german(FROM)} bis ${german(TO)}`),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Schulen")).not.toBeInTheDocument();
 
     expect(
@@ -173,7 +187,9 @@ describe("TraegerArrivalPickupPage", () => {
       await screen.findByRole("heading", { name: /Je Schule/ }),
     ).toBeInTheDocument();
     const linden = screen.getByText("OGS Lindenweg").closest("tr")!;
-    expect(within(linden).getByText("ab 26.08.2026")).toBeInTheDocument();
+    expect(
+      within(linden).getByText(`ab ${german(LINDEN_FIRST_DAY)}`),
+    ).toBeInTheDocument();
 
     fireEvent.click(linden);
 
@@ -223,7 +239,7 @@ describe("TraegerArrivalPickupPage", () => {
     const blob = new Blob(["Von;Bis"]);
     mockDownload.mockResolvedValue({
       blob,
-      filename: "ankunft-und-abholung-2026-08-12-bis-2026-09-08.csv",
+      filename: `ankunft-und-abholung-${FROM}-bis-${TO}.csv`,
     });
     renderPage();
     await screen.findByRole("table", {
@@ -240,12 +256,31 @@ describe("TraegerArrivalPickupPage", () => {
     await vi.waitFor(() =>
       expect(mockDownloadBlob).toHaveBeenCalledWith(
         blob,
-        "ankunft-und-abholung-2026-08-12-bis-2026-09-08.csv",
+        `ankunft-und-abholung-${FROM}-bis-${TO}.csv`,
       ),
     );
-    expect(mockDownload).toHaveBeenCalledWith({
-      from: "2026-08-12",
-      to: "2026-09-08",
-    });
+    expect(mockDownload).toHaveBeenCalledWith(
+      { from: FROM, to: TO },
+      "csv",
+      undefined,
+    );
+
+    // #4718: the same menu offers the PDF and Excel of every school.
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Ankunft und Abholung herunterladen",
+      }),
+    );
+    expect(
+      await screen.findByRole("menuitem", { name: "Excel" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("menuitem", { name: "PDF" }));
+    await vi.waitFor(() =>
+      expect(mockDownload).toHaveBeenLastCalledWith(
+        { from: FROM, to: TO },
+        "pdf",
+        undefined,
+      ),
+    );
   });
 });

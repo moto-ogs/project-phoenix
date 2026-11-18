@@ -12,12 +12,15 @@ import { OpenRequestsBlock } from "~/components/home/open-requests-block";
 import { RemindersBlock } from "~/components/home/reminders-block";
 import { StaffNoticesBlock } from "~/components/home/staff-notices-block";
 import { StaffTodayBlock } from "~/components/home/staff-today-block";
-import { EmptyState } from "~/components/ui/empty-state";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import { ListRow } from "~/components/ui/list-row";
 import { SkeletonRows } from "~/components/ui/skeleton";
-import { HomeCard, HomeCardIcon } from "~/components/home/home-card";
+import {
+  HomeCard,
+  HomeCardEmpty,
+  HomeCardIcon,
+} from "~/components/home/home-card";
 import {
   HomeCardLink,
   HomeMoreRow,
@@ -150,7 +153,7 @@ function RecentActivityCard({ data }: { readonly data: HomeBlockData }) {
       {data.analyticsLoading ? (
         <SkeletonRows />
       ) : !activities || activities.length === 0 ? (
-        <EmptyState className="py-4" title="Keine aktuellen Bewegungen" />
+        <HomeCardEmpty title="Keine aktuellen Bewegungen" />
       ) : (
         <div className="space-y-2">
           {shown.map((activity, idx) => {
@@ -204,7 +207,7 @@ function CurrentActivitiesCard({ data }: { readonly data: HomeBlockData }) {
       {data.analyticsLoading ? (
         <SkeletonRows />
       ) : !activities || activities.length === 0 ? (
-        <EmptyState className="py-4" title="Keine laufenden Aktivitäten" />
+        <HomeCardEmpty title="Keine laufenden Aktivitäten" />
       ) : (
         <div className="space-y-2">
           {shown.map((activity) => (
@@ -278,14 +281,13 @@ function ActiveGroupsCard({ data }: { readonly data: HomeBlockData }) {
       {data.analyticsLoading ? (
         <SkeletonRows />
       ) : !groups || groups.length === 0 ? (
-        <EmptyState className="py-4" title="Es läuft gerade nichts" />
+        <HomeCardEmpty title="Es läuft gerade nichts" />
       ) : (
         <div className="space-y-2">
           {shown.map((group) => (
             <ListRow
               key={`${group.type}-${group.name}`}
               href={data.tenantPath("/ogs-groups")}
-              aria-label={`${group.name}, ${GROUP_STATUS_LABEL[group.status] ?? UNKNOWN_STATUS_LABEL}: Betreuung öffnen`}
             >
               <p className="min-w-0 flex-1 truncate text-sm">
                 <span className="font-medium text-gray-900">{group.name}</span>
@@ -313,6 +315,9 @@ function ActiveGroupsCard({ data }: { readonly data: HomeBlockData }) {
                 size="lg"
                 decorative
               />
+              {/* Named by its visible text first (WCAG 2.5.3, #7112); the
+                  status the dot shows and the target follow hidden. */}
+              <span className="sr-only">{`, ${GROUP_STATUS_LABEL[group.status] ?? UNKNOWN_STATUS_LABEL}: Betreuung öffnen`}</span>
             </ListRow>
           ))}
           <HomeMoreRow

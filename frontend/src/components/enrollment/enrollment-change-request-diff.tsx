@@ -1,11 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  DataField,
-  DataGrid,
-  InfoSection,
-} from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import { InfoSection } from "~/components/ui/info-section";
 import {
   DEFAULT_ENROLLMENT_CHANGE_REQUEST_DIFF_COPY,
   buildEnrollmentChangeRequestDiffGroups,

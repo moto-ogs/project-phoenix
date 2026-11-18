@@ -46,6 +46,7 @@ var unmappedDateColumns = map[string]string{
 	"workforce.staff_contracts.ends_on":                 "#4706: Workforce binds and scans *calendar.Date, never time.Time",
 	"workforce.staff_contract_targets.valid_from":       "#4706: Workforce binds and scans calendar.Date, never time.Time",
 	"workforce.staff_contract_holiday_weeks.week_start": "#4706: Workforce binds and scans calendar.Date, never time.Time",
+	"workforce.staff_pool_blocks.date":                  "#4709: Workforce binds and scans calendar.Date, never time.Time",
 	// #4701: the booked days of a holiday booking are a DATE[] written from
 	// calendar.Date text as an array literal and read back as ::text into
 	// calendar.Date values; no time.Time ever reaches the column.
@@ -95,7 +96,8 @@ var unmappedDateColumns = map[string]string{
 	// ADR 0166: School Membership writes the first-care bound in raw SQL
 	// from calendar.Date values; People Directory's projection row reads it
 	// as *calendar.Date. No table-bound model maps the column.
-	"users.student_school_memberships.first_care_from": "ADR 0166: written from calendar.Date, read by the People Directory projection as *calendar.Date",
+	"users.student_school_memberships.first_care_from":   "ADR 0166: written from calendar.Date, read by the People Directory projection as *calendar.Date",
+	"users.student_school_memberships.class_member_from": "ADR 0282: written in SQL from the row's own dates when a place is granted, read by the People Directory class-name read as *calendar.Date",
 	// ADR 0180: the care gap of a returning child, kept the same way.
 	"users.student_school_memberships.care_paused_after": "ADR 0180: written from calendar.Date, read by the People Directory projection as *calendar.Date",
 	"users.student_school_memberships.care_resumed_from": "ADR 0180: written from calendar.Date, read by the People Directory projection as *calendar.Date",

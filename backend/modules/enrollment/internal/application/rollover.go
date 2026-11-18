@@ -104,6 +104,9 @@ type RolloverDependencies struct {
 	Random  func([]byte) error
 	Runtime Runtime
 	Logger  *slog.Logger
+	// Now is the clock of the new request's stamps and token expiry
+	// (ADR 0239); nil is the real clock.
+	Now func() time.Time
 }
 
 // Rollovers creates a new phase from a source phase, carrying every approved
@@ -122,6 +125,9 @@ var _ enrollment.Rollovers = (*Rollovers)(nil)
 func NewRollovers(deps RolloverDependencies) *Rollovers {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
+	}
+	if deps.Now == nil {
+		panic("enrollment rollovers: the clock is required")
 	}
 	return &Rollovers{deps: deps}
 }
@@ -156,6 +162,9 @@ type rolloverRequestInput struct {
 //  8. Enqueue one email per new request via the outbox
 func (s *Rollovers) CreatePhaseFromSource(ctx context.Context, req enrollment.CreatePhaseFromSourceRequest) (*enrollment.RolloverResult, error) {
 	if err := validateCreateRequest(req); err != nil {
+		return nil, err
+	}
+	if err := validateRolloverServicePeriodBounds(req, calendar.DateFromTime(s.deps.Now())); err != nil {
 		return nil, err
 	}
 	tenantID := s.deps.Runtime.TenantID(ctx)
@@ -363,6 +372,15 @@ func rolloverPhaseFromSource(req enrollment.CreatePhaseFromSourceRequest, source
 		RolloverDeadline:          &deadline,
 		RolloverBumpsGrade:        req.RolloverBumpsGrade,
 	}
+}
+
+// validateRolloverServicePeriodBounds applies the upper bounds of a service
+// period to the new phase; today is the school's calendar day (#5658).
+func validateRolloverServicePeriodBounds(req enrollment.CreatePhaseFromSourceRequest, today calendar.Date) error {
+	if err := enrollment.ValidateServicePeriodBounds(enrollment.Date(req.ServiceStartDate), enrollment.Date(req.ServiceEndDate), today); err != nil {
+		return fmt.Errorf("%w: %w", enrollment.ErrRolloverInvalidRequest, err)
+	}
+	return nil
 }
 
 func validateCreateRequest(req enrollment.CreatePhaseFromSourceRequest) error {

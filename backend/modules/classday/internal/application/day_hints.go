@@ -16,7 +16,7 @@ import (
 // StudentNoteDependencies are the People Directory note seams of moto
 // schule. The Lehrkraft's day hint (#4795): without DayHints the day-hint
 // capabilities answer classday.ErrDayHintsNotConfigured and the day report
-// carries no hints; Today defaults to the Berlin calendar day. The notes the
+// carries no hints; Today defaults to the Berlin day of the composition's Now. The notes the
 // OGS released for the school (#4797): People Directory's SharedNotes and
 // School Structure's ClassTeachers; without both the shared-notes capability
 // answers classday.ErrSharedNotesNotConfigured and no class offers the view.
@@ -155,17 +155,10 @@ func (h dayHints) todayOnly(date classday.Date) (calendar.Date, error) {
 	if err != nil {
 		return "", err
 	}
-	if day != h.currentDay() {
+	if day != h.today() {
 		return "", classday.ErrDayHintNotToday
 	}
 	return day, nil
-}
-
-func (h dayHints) currentDay() calendar.Date {
-	if h.today != nil {
-		return h.today()
-	}
-	return calendar.TodayDate()
 }
 
 // classStudentIDs returns the children of the class with an OGS record on the
@@ -180,7 +173,7 @@ func (h dayHints) classStudentIDs(ctx context.Context, schoolClass string, day c
 	}
 	ids := make([]int64, 0, len(roster.Rows))
 	for _, row := range roster.Rows {
-		if !row.ListEntry && row.StudentID > 0 {
+		if !row.NoCare() && row.StudentID > 0 {
 			ids = append(ids, row.StudentID)
 		}
 	}
@@ -196,7 +189,7 @@ func (h dayHints) attachDayHints(ctx context.Context, report *classday.DayReport
 	}
 	// A hint is written for today only, and only when the school opened it.
 	// The HTTP adapter adds the caller's permission to this verdict.
-	if day == h.currentDay() {
+	if day == h.today() {
 		open, err := h.scopeOpen(ctx)
 		if err != nil {
 			return err
@@ -215,13 +208,14 @@ func (h dayHints) attachDayHints(ctx context.Context, report *classday.DayReport
 	return nil
 }
 
-// reportStudentRows indexes the rows of children with an OGS record; a
-// class-list-only entry has no note card and therefore no hint.
+// reportStudentRows indexes the rows of children with OGS care; a
+// class-list-only entry and a child without an OGS place (#4803) have no
+// note card and therefore no hint.
 func reportStudentRows(report *classday.DayReport) (map[int64]int, []int64) {
 	rowIndex := make(map[int64]int, len(report.Rows))
 	studentIDs := make([]int64, 0, len(report.Rows))
 	for index, row := range report.Rows {
-		if row.ListEntry || row.StudentID <= 0 {
+		if row.NoCare() || row.StudentID <= 0 {
 			continue
 		}
 		rowIndex[row.StudentID] = index

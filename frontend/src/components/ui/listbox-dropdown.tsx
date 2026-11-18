@@ -21,6 +21,7 @@ import {
   selectTriggerClassName,
   type SelectTriggerSize,
 } from "./select-trigger-styles";
+import { CONTROL_PART } from "./control-geometry";
 
 import { CheckboxIndicator } from "./checkbox";
 import { MODAL_SCOPE_SELECTOR, SCROLL_AREA_PROPS } from "./overlay-stack";
@@ -91,7 +92,7 @@ export function ListboxTriggerContent({
           // On the red tint of an invalid trigger gray-500 falls just below
           // 4.5:1; the placeholder darkens there only.
           placeholderShown
-            ? "text-gray-500 [[aria-invalid=true]_&]:text-gray-600"
+            ? "text-gray-500 [[data-invalid]_&]:text-gray-600"
             : "text-gray-900",
         )}
       >
@@ -174,7 +175,14 @@ interface ListboxDropdownProps<K extends string> {
    */
   readonly selectedValues?: readonly K[];
   readonly id?: string;
+  /**
+   * Name of the field. A `combobox` trigger takes it as its name. A `button`
+   * trigger names itself by its visible text (WCAG 2.5.3, #7112): the default
+   * content adds this name after the value as visually hidden text, and a
+   * `renderTrigger` must show (or visually hide) it in its own content.
+   */
   readonly ariaLabel?: string;
+  /** Like `ariaLabel`; a `button` trigger reads its value first, then this. */
   readonly ariaLabelledBy?: string;
   /**
    * Name of the option list when the trigger names itself by its value (a
@@ -199,6 +207,8 @@ interface ListboxDropdownProps<K extends string> {
   readonly className?: string;
   /** Field height: 40 px (`compact`) by default, `dense` 36 px for dense rows. */
   readonly size?: ListboxDropdownSize;
+  /** Between the arrows of a framed group, see `selectTriggerClassName`. */
+  readonly embedded?: boolean;
   /**
    * Kit-internal only: the caller draws the whole trigger itself (the filter
    * chip of `DesktopFilters`). Outside `src/components/ui` the field look is
@@ -243,21 +253,10 @@ interface ListboxDropdownProps<K extends string> {
   readonly searchValue?: string;
   readonly onSearchChange?: (value: string) => void;
   readonly searchPlaceholder?: string;
-  /** Keys the search field does not use itself (Enter and the like). */
-  readonly onSearchKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
   /** Slot between the search field and the option list. */
   readonly menuHeader?: ReactNode;
-  /** Slot under the option list, e.g. a row that adds the typed name. */
-  readonly menuFooter?: ReactNode;
   /** Content shown inside the listbox when filtering leaves no options. */
   readonly emptyState?: ReactNode;
-  /**
-   * Controls rendered next to an option, OUTSIDE its button — a button inside
-   * a button is invalid, and the row must stay one option to a screen reader.
-   */
-  readonly renderOptionActions?: (
-    option: ListboxDropdownOption<K>,
-  ) => ReactNode;
   /**
    * Visual content for an option (next to the checkbox in multi mode). The
    * option keeps its standard role and accessible name from
@@ -376,6 +375,7 @@ export function ListboxDropdown<K extends string>({
   containerNodeRef,
   className = "",
   size,
+  embedded = false,
   unstyledTrigger = false,
   menuClassName = "",
   menuAlign = "start",
@@ -392,17 +392,16 @@ export function ListboxDropdown<K extends string>({
   searchValue,
   onSearchChange,
   searchPlaceholder = "Suchen",
-  onSearchKeyDown,
   menuHeader,
-  menuFooter,
   emptyState,
-  renderOptionActions,
   renderOption,
 }: ListboxDropdownProps<K>) {
   const menuLayer = useMenuLayer();
   const menuZIndex = menuZIndexProp ?? menuLayer;
   const generatedListboxId = useId();
   const listboxId = id ? `${id}-listbox` : generatedListboxId;
+  const triggerContentId = `${listboxId}-value`;
+  const isCombobox = triggerRole === "combobox";
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   // The outermost portaled node: the option list itself, or the panel wrapping
@@ -813,8 +812,7 @@ export function ListboxDropdown<K extends string>({
     setFocusIndex((prev) => nextEnabledIndex(options, prev, direction));
   };
 
-  const hasPanel =
-    searchable || menuHeader !== undefined || menuFooter !== undefined;
+  const hasPanel = searchable || menuHeader !== undefined;
 
   const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -837,9 +835,7 @@ export function ListboxDropdown<K extends string>({
       event.stopPropagation();
       event.nativeEvent.stopImmediatePropagation();
       closeAndReturnFocus();
-      return;
     }
-    onSearchKeyDown?.(event);
   };
 
   const handlePanelKeyDownCapture = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -954,15 +950,10 @@ export function ListboxDropdown<K extends string>({
           ? selectedValueSet.has(option.value)
           : option.value === value;
         const isFocused = index === focusIndex;
-        const actions = renderOptionActions?.(option);
         return (
           // The option role lives on the inner button; the list item
           // is pure structure and must not surface in the a11y tree.
-          <li
-            key={option.value}
-            role="presentation"
-            className={actions ? "flex items-center gap-1" : undefined}
-          >
+          <li key={option.value} role="presentation">
             <button
               ref={(el) => {
                 optionRefs.current[index] = el;
@@ -993,7 +984,6 @@ export function ListboxDropdown<K extends string>({
                   : isActive || isFocused
                     ? OPTION_ACTIVE_CLASS
                     : OPTION_IDLE_CLASS,
-                actions && "min-w-0 flex-1",
               )}
             >
               {isMulti ? (
@@ -1007,16 +997,15 @@ export function ListboxDropdown<K extends string>({
                   )}
                 </>
               ) : (
-                // The label must be able to shrink and clip whether or not the
-                // row carries actions: as a bare flex child its min-width stays
-                // auto, so one long custom name widens the option past the menu
-                // and scrolls the list sideways on narrow viewports.
+                // The label must be able to shrink and clip: as a bare flex
+                // child its min-width stays auto, so one long custom name
+                // widens the option past the menu and scrolls the list sideways
+                // on narrow viewports.
                 (renderOption?.(option, isActive) ?? (
                   <OptionLabel option={option} />
                 ))
               )}
             </button>
-            {actions}
           </li>
         );
       })}
@@ -1065,13 +1054,26 @@ export function ListboxDropdown<K extends string>({
             ? `${listboxId}-option-${focusIndex}`
             : undefined
         }
-        aria-label={ariaLabel}
-        aria-labelledby={ariaLabelledBy}
+        // A combobox takes the field's name and announces its value apart.
+        // A button is named by its content, so the visible value leads the
+        // name instead of being replaced by the label (WCAG 2.5.3, #7112).
+        aria-label={isCombobox ? ariaLabel : undefined}
+        aria-labelledby={
+          isCombobox
+            ? ariaLabelledBy
+            : ariaLabelledBy && !renderTrigger
+              ? `${triggerContentId} ${ariaLabelledBy}`
+              : undefined
+        }
         aria-describedby={ariaDescribedBy}
-        aria-required={required || undefined}
-        aria-invalid={invalid || undefined}
-        role={triggerRole === "combobox" ? "combobox" : undefined}
+        // aria-required / aria-invalid are not allowed on a button (axe
+        // aria-allowed-attr); its error reaches it through aria-describedby.
+        aria-required={(isCombobox && required) || undefined}
+        aria-invalid={(isCombobox && invalid) || undefined}
+        data-invalid={invalid || undefined}
+        role={isCombobox ? "combobox" : undefined}
         disabled={disabled}
+        {...(embedded && CONTROL_PART)}
         className={
           unstyledTrigger
             ? className
@@ -1079,6 +1081,7 @@ export function ListboxDropdown<K extends string>({
                 size: size ?? "compact",
                 invalid,
                 disabled,
+                embedded,
                 className,
               })
         }
@@ -1087,11 +1090,26 @@ export function ListboxDropdown<K extends string>({
         {renderTrigger ? (
           renderTrigger({ selectedLabel, open })
         ) : (
-          <ListboxTriggerContent
-            label={selectedLabel}
-            placeholderShown={selectedOption === undefined}
-            open={open}
-          />
+          <>
+            {!isCombobox && ariaLabelledBy ? (
+              <span id={triggerContentId} className="contents">
+                <ListboxTriggerContent
+                  label={selectedLabel}
+                  placeholderShown={selectedOption === undefined}
+                  open={open}
+                />
+              </span>
+            ) : (
+              <ListboxTriggerContent
+                label={selectedLabel}
+                placeholderShown={selectedOption === undefined}
+                open={open}
+              />
+            )}
+            {!isCombobox && ariaLabel ? (
+              <span className="sr-only">{`, ${ariaLabel}`}</span>
+            ) : null}
+          </>
         )}
       </button>
       {open && portalContainer
@@ -1141,7 +1159,6 @@ export function ListboxDropdown<K extends string>({
                 ) : null}
                 {menuHeader}
                 {optionList}
-                {menuFooter}
               </div>
             ) : (
               optionList

@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BookingLeftover } from "~/lib/booking-leftover";
+import { testClockDay } from "~/test/clock";
 
 const state = vi.hoisted(() => ({
   leftovers: [] as unknown[],
@@ -21,8 +22,9 @@ vi.mock("~/lib/swr", () => ({
           id: "4",
           name: "Schuljahr",
           isActive: true,
-          startDate: "2026-08-01",
-          endDate: "2027-07-31",
+          // The school year around the test day.
+          startDate: testClockDay(-40),
+          endDate: testClockDay(325),
         },
       ],
     };
@@ -42,9 +44,9 @@ function leftover(studentId: string, kept = false): BookingLeftover {
     studentId,
     studentName: `Kind ${studentId}`,
     weekdays: [3],
-    bookingEndedOn: "2026-09-07",
+    bookingEndedOn: testClockDay(-2),
     until: null,
-    from: "2026-09-10",
+    from: testClockDay(1),
     kept,
   };
 }

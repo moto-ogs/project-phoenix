@@ -15,6 +15,7 @@ import (
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // StaffGrowthTestRouter reuses the fully composed directory resource, including
@@ -34,7 +35,7 @@ func StaffGrowthTestRouter(database transactionruntime.Database, unit tenant.Uni
 	}
 	schedules := owners.MustNewWorkforce(database)
 	capabilities := owners.NewWorkforceAdminCapabilities(svc.Users, work.StaffAdmin, work.TimeTracking)
-	admin := newStaffAdminResource(capabilities, work.SickReports, schedules, nil, nil, work.PayrollDispatch, nil, work.PayrollRules, svc.Users.StaffRows(), database, slog.Default())
+	admin := newStaffAdminResource(capabilities, work.SickReports, schedules, nil, nil, work.PayrollDispatch, nil, work.PayrollRules, svc.Users.StaffRows(), database, TestUploadFileKeys(), slog.Default())
 	resource, err := newStaffResource(membership, svc.PeopleDirectory, identity.Auth, "", func(hooks StaffMembershipHooks) StaffMembershipRuntime {
 		return svc.NewStaffMembershipRuntime(database, slog.Default(), hooks)
 	}, admin, slog.Default())
@@ -63,7 +64,7 @@ func StaffShiftGrowthTestRouter(database transactionruntime.Database) (http.Hand
 	planning, err := workforceCompose.NewShiftPlanning(workforceCompose.ShiftPlanningDependencies{
 		Workforce: NewAbsenceTypeTestCapability(database), Staff: owners.NewPlanStaffDirectory(owners.MustNewMembershipTestRepositories(database).Staff), CalendarPeriods: calendar.SchoolCalendar(),
 		Instances: timetableCompose.NewTimetableInstanceReads(timetable.ActivityInstance.Reads), InstanceStaff: timetableCompose.NewTimetableInstanceStaffReads(timetable.InstanceStaff),
-		Rooms: facilitiesCompose.NewRoomNameDirectory(rooms.Room), ActivityGroups: timetableCompose.NewTimetableGroupReads(timetable.Timetable), DB: database.Pool(),
+		Rooms: facilitiesCompose.NewRoomNameDirectory(rooms.Room), ActivityGroups: timetableCompose.NewTimetableGroupReads(timetable.Timetable), DB: database.Pool(), Today: timezone.TodayDate,
 	})
 	if err != nil {
 		return nil, err

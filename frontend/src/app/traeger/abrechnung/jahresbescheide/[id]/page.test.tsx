@@ -6,11 +6,13 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   CareNotice,
   CareNoticeRunDetail,
 } from "~/lib/traeger-care-notices-api";
+
+vi.unmock("swr");
 
 const { api, push } = vi.hoisted(() => ({
   api: {
@@ -30,7 +32,21 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 import TraegerCareNoticeRunPage from "./page";
+
+const fetchExportRuns = vi.fn<() => Promise<unknown[]>>();
+
+/** The released runs the exports page lists. */
+function ExportRuns() {
+  const { data } = useTraegerResource(
+    traegerBillingKeys.exportRuns(),
+    fetchExportRuns,
+    "die Exporte",
+  );
+  return data ? <p>{`Läufe im Export: ${data.length}`}</p> : null;
+}
 
 // The child of MK-007: 12,00 € and 20,00 € a month from September to
 // December, four rates of 32,00 €.
@@ -106,9 +122,9 @@ function run(
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerCareNoticeRunPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -204,6 +220,30 @@ describe("TraegerCareNoticeRunPage", () => {
     expect(
       screen.queryByRole("button", { name: "Bescheide ausstellen" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("refreshes the exports list after the release", async () => {
+    api.fetchCareNoticeRun.mockResolvedValue(run());
+    api.releaseCareNoticeRun.mockResolvedValue(
+      run({ status: "released", issuedOn: "2025-09-24" }),
+    );
+    fetchExportRuns.mockReset().mockResolvedValue([]);
+    render(
+      <TraegerResourceTestProvider>
+        <TraegerCareNoticeRunPage />
+        <ExportRuns />
+      </TraegerResourceTestProvider>,
+    );
+    expect(await screen.findByText("Läufe im Export: 0")).toBeInTheDocument();
+    fetchExportRuns.mockResolvedValue([{ runId: "4" }]);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Bescheide ausstellen" }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Ausstellen" }));
+
+    expect(await screen.findByText("Läufe im Export: 1")).toBeInTheDocument();
+    expect(fetchExportRuns).toHaveBeenCalledTimes(2);
   });
 
   it("says why a run of unchanged contracts issues nothing", async () => {

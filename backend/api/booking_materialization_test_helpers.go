@@ -78,7 +78,8 @@ func NewAnnouncingBookingMaterialization(db transactionruntime.Database, unit te
 }
 
 func newBookingMaterializationTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, options BookingMaterializationTestOptions, broadcaster realtime.Broadcaster) (BookingMaterializationTestModule, error) {
-	auditCommand, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	options = bookingTestDay(options)
+	auditCommand, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return BookingMaterializationTestModule{}, err
 	}
@@ -108,7 +109,7 @@ func newBookingMaterializationTestModule(db transactionruntime.Database, unit te
 	approved := enrollmentCompose.NewApprovedOfferingProjection(repos.Enrollment(), owners.OfferingStudents{Query: people})
 	pickup, err := careplanCompose.NewPickupBaselines(students.CarePlan, approved, func(ctx context.Context) (bool, error) {
 		return settings.ResolveBool(ctx, configModels.KeyEnrollmentBookingsAuthoritative)
-	})
+	}, options.Today)
 	if err != nil {
 		return BookingMaterializationTestModule{}, err
 	}
@@ -195,6 +196,15 @@ func bookingTestCatalog(db transactionruntime.Database, r owners.TimetableTestRe
 	return newTestCareOfferingCatalog(db, r, settings, CareOfferingCatalogTestOptions{
 		LockRecurrence: options.LockRecurrence, Today: options.Today,
 	})
+}
+
+// bookingTestDay lets a suite that pins no day materialize on the real one,
+// as the root does.
+func bookingTestDay(options BookingMaterializationTestOptions) BookingMaterializationTestOptions {
+	if options.Today == nil {
+		options.Today = calendar.TodayDate
+	}
+	return options
 }
 
 // BookingMaterializationOption replaces one collaborator of the booking

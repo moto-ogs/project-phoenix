@@ -54,6 +54,9 @@ type UnregisteredTagScanStore interface {
 	// DeleteExpired removes the caller tenant's scans older than cutoff through
 	// the audit retention function and reports the deleted count.
 	DeleteExpired(context.Context, time.Time) (int64, domain.OperationStats, error)
+	// DatabaseTime reads the clock that stamps the scans and guards their
+	// retention window.
+	DatabaseTime(context.Context) (time.Time, error)
 }
 
 // DashboardSources supplies the cross-owner facts the info-point aggregate

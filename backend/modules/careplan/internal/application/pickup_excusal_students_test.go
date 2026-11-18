@@ -46,7 +46,7 @@ func (noUpcomingExceptions) FindUpcomingByStudentID(context.Context, int64, cale
 func TestResyncFutureExceptionsRunsEveryStudentInOneUnitOfWork(t *testing.T) {
 	t.Parallel()
 	locker := &recordingExcusalLocker{}
-	syncer := NewPickupAutoExcusal(noUpcomingExceptions{}, nil, nil, nil, nil, locker, nil)
+	syncer := NewPickupAutoExcusal(noUpcomingExceptions{}, nil, nil, nil, nil, locker, func() calendar.Date { return calendar.Date(fakeToday) })
 
 	require.NoError(t, syncer.ResyncFutureExceptions(context.Background(), []int64{7, 3}))
 

@@ -114,7 +114,7 @@ func mfaLeasedMailFixture(t *testing.T, send mfaOutboxTransport) (*bun.DB, conte
 	database := testpkg.NewDatabase(t, db)
 	runtime, err := deliveryCompose.NewModule(deliveryCompose.ModuleDependencies{DB: db, People: owners.EnrollmentFlowGuardianDirectory{}, Observe: func(deliveryContract.Observation) {}})
 	require.NoError(t, err)
-	provider := &deliveryCompose.MailPushProvider{Registry: deliveryCompose.NewEmailTemplateRegistry(map[string]deliveryCompose.MailRenderer{owners.TransactionalMailKind: owners.TransactionalMailRenderer{Logger: slog.Default()}}), Mailer: send, Logger: slog.Default(), Tenants: deliveryCompose.NewTenantTransactions(db)}
+	provider := &deliveryCompose.MailPushProvider{Registry: deliveryCompose.NewEmailTemplateRegistry(map[string]deliveryCompose.MailRenderer{owners.TransactionalMailKind: owners.TransactionalMailRenderer{Logger: slog.Default()}}), Mailer: send, Logger: slog.Default(), Tenants: deliveryCompose.NewTenantTransactions(db), Now: runtime.Now}
 	worker, err := deliveryCompose.NewWorker(runtime, provider)
 	require.NoError(t, err)
 	mail, err := owners.NewMFAMailer(database, runtime, send, email.Email{}, "", slog.Default(), []time.Duration{time.Millisecond})

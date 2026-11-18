@@ -18,6 +18,8 @@
   "showPassword": "Показати пароль",
   "hidePassword": "Сховати пароль",
   "requirementsTitle": "Вимоги до пароля",
+  "requirementMet": "виконано",
+  "requirementUnmet": "ще не виконано",
   "submitting": "Приймаємо...",
   "submit": "Прийняти запрошення",
   "passwordRules": {

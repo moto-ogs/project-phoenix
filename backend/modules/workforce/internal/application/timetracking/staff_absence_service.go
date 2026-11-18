@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -281,7 +282,7 @@ type StaffAbsenceService interface {
 }
 
 func (s *staffAbsenceService) GetTodayAbsenceMap(ctx context.Context) (map[int64]string, error) {
-	values, err := s.absenceRepo.StaffAbsenceMapForDate(ctx, calendar.TodayDate().String())
+	values, err := s.absenceRepo.StaffAbsenceMapForDate(ctx, s.today().String())
 	if err != nil {
 		return nil, rowReadError("get effective absences for date", err, nil)
 	}
@@ -292,7 +293,7 @@ func (s *staffAbsenceService) GetTodayAbsenceLabelMap(ctx context.Context) (map[
 	if s.absenceTypes == nil {
 		return map[int64]string{}, nil
 	}
-	typeIDs, err := s.absenceRepo.StaffAbsenceTypeIDMapForDate(ctx, calendar.TodayDate().String())
+	typeIDs, err := s.absenceRepo.StaffAbsenceTypeIDMapForDate(ctx, s.today().String())
 	err = rowReadError("get effective absences for date", err, nil)
 	if err != nil {
 		return nil, err
@@ -348,8 +349,10 @@ type staffAbsenceService struct {
 	snapshotRepo absenceMonthSnapshotReader
 	// logger is supplied by the factory (WithAbsenceLogger); nil falls back to
 	// slog.Default() via getLogger, like the other active services.
-	logger    *slog.Logger
+	logger *slog.Logger
+	// todayFunc and nowFunc are the clock of the composition (ADR 0239).
 	todayFunc func() calendar.Date
+	nowFunc   func() time.Time
 }
 
 func (s *staffAbsenceService) getLogger() *slog.Logger {
@@ -360,10 +363,11 @@ func (s *staffAbsenceService) getLogger() *slog.Logger {
 }
 
 func (s *staffAbsenceService) today() calendar.Date {
-	if s.todayFunc != nil {
-		return s.todayFunc()
-	}
-	return calendar.TodayDate()
+	return dayOf(s.todayFunc, s.nowFunc)()
+}
+
+func (s *staffAbsenceService) now() time.Time {
+	return requireClock(s.nowFunc)()
 }
 
 // resolveAbsenceTypeSelection validates a requested Abwesenheitsart and returns

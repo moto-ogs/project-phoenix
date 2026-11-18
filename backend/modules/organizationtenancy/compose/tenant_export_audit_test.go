@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/compose"
@@ -98,7 +99,7 @@ func newTraegerExporter(t *testing.T, db *bun.DB, files *sepaFilesFake, audit *e
 	t.Helper()
 	exporter, err := compose.NewTraegerTenantExporter(db, organizationtenancy.TenantExportDependencies{
 		Fingerprints: organizationtenancy.ExportFingerprints{Bytes: testpkg.ContentFingerprint, Reader: testpkg.ReaderContentFingerprint},
-		Sealed:       openedSealedFields{}, Projected: projectedFields{}, SEPADebitFiles: files, Audit: audit})
+		Sealed:       openedSealedFields{}, Projected: projectedFields{}, SEPADebitFiles: files, Objects: plainExportObjects{}, Audit: audit, Now: time.Now})
 	require.NoError(t, err)
 	return exporter
 }
@@ -168,7 +169,7 @@ func TestTenantExportOrganizationWithoutPAIN008FilesOrAuditNeverCompletes(t *tes
 	require.NoError(t, db.NewRaw(`SELECT organization_id FROM platform.schools WHERE id = ?`, school).Scan(t.Context(), &organization))
 	fingerprints := organizationtenancy.ExportFingerprints{Bytes: testpkg.ContentFingerprint, Reader: testpkg.ReaderContentFingerprint}
 
-	plain, err := compose.NewTenantExporter(db, fingerprints, openedSealedFields{}, projectedFields{}, &exportAuditFake{})
+	plain, err := compose.NewTenantExporter(db, fingerprints, openedSealedFields{}, projectedFields{}, plainExportObjects{}, &exportAuditFake{})
 	require.NoError(t, err)
 	out := filepath.Join(t.TempDir(), "export")
 	require.Error(t, plain.Export(t.Context(), organizationtenancy.TenantExportOptions{OrganizationID: organization, OperatorID: 42, Output: out, Uploads: t.TempDir()}),
@@ -260,11 +261,11 @@ func TestTenantExportSchoolIsAuditedLikeTheTraegerPackage(t *testing.T) {
 	const name = "Synthetisch-Auditkind"
 	testpkg.CreateTestStudentForTenant(t, db, school, name, "Rueckgabe", "1a")
 	fingerprints := organizationtenancy.ExportFingerprints{Bytes: testpkg.ContentFingerprint, Reader: testpkg.ReaderContentFingerprint}
-	_, err := compose.NewTenantExporter(db, fingerprints, openedSealedFields{}, projectedFields{}, nil)
+	_, err := compose.NewTenantExporter(db, fingerprints, openedSealedFields{}, projectedFields{}, plainExportObjects{}, nil)
 	require.Error(t, err, "a school package needs its operator audit")
 
 	export := func(audit *exportAuditFake, operator int64) (string, error) {
-		exporter, err := compose.NewTenantExporter(db, fingerprints, openedSealedFields{}, projectedFields{}, audit)
+		exporter, err := compose.NewTenantExporter(db, fingerprints, openedSealedFields{}, projectedFields{}, plainExportObjects{}, audit)
 		require.NoError(t, err)
 		out := filepath.Join(t.TempDir(), "export")
 		audit.onBegin = func() { require.NoDirExists(t, out, "the attempt is recorded before any file is written") }

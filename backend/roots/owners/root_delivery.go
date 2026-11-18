@@ -30,6 +30,7 @@ import (
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -50,6 +51,16 @@ type DeliveryNotifications struct {
 	UnreportedAbsences deliveryContract.UnreportedAbsenceNotifier
 	// Feed serves an account its own notification feed (#7148).
 	Feed deliveryContract.NotificationFeed
+	// GuardianFeed serves a guardian account its feed across the schools of
+	// the family in the parents portal (#7140).
+	GuardianFeed deliveryContract.GuardianNotificationFeed
+	// SchoolAudience names the accounts and families a notice to the whole
+	// school reaches (#7144).
+	SchoolAudience deliveryContract.SchoolAudience
+	// TraegerNotices writes a notice into the bell of the Träger-Portal, and
+	// TraegerFeed serves that bell across the schools of a Träger (#7146).
+	TraegerNotices deliveryContract.TraegerFeedNotifier
+	TraegerFeed    deliveryContract.TraegerNotificationFeed
 }
 
 // BuildDeliveryNotifications binds the notification router over the realtime
@@ -82,9 +93,9 @@ func BuildDeliveryNotifications(
 		clock = time.Now
 	}
 	notifier := deliveryCompose.NewNotifier(settings, logger.With("service", "notifications"), deliveryCompose.NotificationDeliveryObserver(env.Observe.Delivery), delivery.Runtime.Store, clock, sse, push)
-	feed, ok := notifier.(deliveryContract.NotificationFeed)
-	if !ok {
-		return DeliveryNotifications{}, fmt.Errorf("notification router does not serve the notification feed")
+	feeds, err := deliveryFeeds(notifier)
+	if err != nil {
+		return DeliveryNotifications{}, err
 	}
 	preferences, err := deliveryCompose.NewTenantPreferenceService(unit, consent, DeliveryPreferenceSettings(settings), db.Pool(), identity, securityruntime.HasPermission)
 	if err != nil {
@@ -92,23 +103,19 @@ func BuildDeliveryNotifications(
 	}
 	recipients := deliveryCompose.NewStaffRecipientResolver(preferences, deliveryStudentGroups{students: people.Students},
 		structure.Groups, people.Staff, identity, settings,
-		deliveryOnDutyStaff{presence: workTime})
+		deliveryOnDutyStaff{presence: workTime}, timezone.CalendarDateClock(clock))
 	schoolClasses := deliveryContract.SchoolClassRecipients{
 		Reach:   deliverySchoolClassReach{students: people.Students, assignments: assignments, staff: people.Staff},
 		Consent: preferences, Subscribers: consent, Accounts: identity, Permissions: securityruntime.HasPermission,
 		Office: deliverySchoolOffice{staff: people.Staff},
 	}
-	absences, err := deliveryCompose.NewTenantAbsenceNotifier(unit, notifier, recipients, db.Pool(), logger.With("producer", "absence_notifications"), schoolClasses)
+	absences, err := deliveryCompose.NewTenantAbsenceNotifier(unit, notifier, recipients, db.Pool(), logger.With("producer", "absence_notifications"), schoolClasses, timezone.CalendarDateClock(clock))
 	if err != nil {
 		return DeliveryNotifications{}, err
 	}
-	unreported, ok := absences.(deliveryContract.UnreportedAbsenceNotifier)
-	if !ok {
-		return DeliveryNotifications{}, fmt.Errorf("absence notifier does not send the notice about children missing without a report")
-	}
-	responsible, ok := recipients.(deliveryContract.ResponsibleStaff)
-	if !ok {
-		return DeliveryNotifications{}, fmt.Errorf("staff recipients do not name the staff responsible for a child")
+	unreported, responsible, schoolAudience, err := deliveryCapabilities(absences, recipients, notifier)
+	if err != nil {
+		return DeliveryNotifications{}, err
 	}
 	return DeliveryNotifications{
 		UnreportedAbsences: unreported,
@@ -118,7 +125,11 @@ func BuildDeliveryNotifications(
 			messaging.ParentMessageThread, BindParentMessageLeadership(people.Staff, identity), db.Pool(), logger.With("producer", "staff_parent_message_notifications")),
 		AbsenceNotifier:  absences,
 		ResponsibleStaff: responsible,
-		Feed:             feed,
+		Feed:             feeds.staff,
+		GuardianFeed:     feeds.guardian,
+		SchoolAudience:   schoolAudience,
+		TraegerNotices:   feeds.traegerNotices,
+		TraegerFeed:      feeds.traeger,
 	}, nil
 }
 
@@ -163,7 +174,7 @@ func buildDeliveryWorker(
 		carecontract.MailKindNotice: careContractNoticeMailRenderer(careContractCompose.NewNoticeMailRenderer(), defaultFrom),
 	}
 	enrollmentKinds := []string{}
-	for kind, renderer := range enrollmentMailRenderers(enrollmentCompose.NewMailRenderers(newHolidayAcceptanceAccounts(accounts, env.Links.ParentsURL), env.Links.ParentsURL), defaultFrom) {
+	for kind, renderer := range enrollmentMailRenderers(enrollmentCompose.NewMailRenderers(newHolidayAcceptanceAccounts(accounts, env.Links.ParentsURL), env.Links.ParentsURL, env.Today), defaultFrom) {
 		renderers[kind] = renderer
 		enrollmentKinds = append(enrollmentKinds, kind)
 	}
@@ -196,9 +207,58 @@ func buildDeliveryWorker(
 		PushObjects:    pushObjects,
 		DeferredPush:   deferredPushes(reminderRecovery(db, reminders), documents),
 		Deliverable:    moduleGate.deliverable,
+		Now:            clockOrReal(env.Now), // the clock of delivery.Runtime
 	})
 	if err != nil {
 		return nil, fmt.Errorf("initialize delivery module: %w", err)
 	}
 	return worker, nil
+}
+
+// deliveryCapabilities are the further contracts of the composed Delivery:
+// the notice about children missing without a report, the staff responsible
+// for a child and the audience of the whole school (#7144).
+func deliveryCapabilities(absences, recipients any, notifier deliveryCompose.Notifier) (deliveryContract.UnreportedAbsenceNotifier, deliveryContract.ResponsibleStaff, deliveryContract.SchoolAudience, error) {
+	unreported, ok := absences.(deliveryContract.UnreportedAbsenceNotifier)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("absence notifier does not send the notice about children missing without a report")
+	}
+	responsible, ok := recipients.(deliveryContract.ResponsibleStaff)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("staff recipients do not name the staff responsible for a child")
+	}
+	audience, ok := notifier.(deliveryContract.SchoolAudience)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("notification router does not name the audience of the whole school")
+	}
+	return unreported, responsible, audience, nil
+}
+
+// deliveryFeedSides are the sides of the router's notification feed: the
+// feed of a staff account in its school (#7148), the feed of a guardian
+// across the family's schools (#7140), and the write and read side of the
+// bell of the Träger-Portal (#7146).
+type deliveryFeedSides struct {
+	staff          deliveryContract.NotificationFeed
+	guardian       deliveryContract.GuardianNotificationFeed
+	traegerNotices deliveryContract.TraegerFeedNotifier
+	traeger        deliveryContract.TraegerNotificationFeed
+}
+
+func deliveryFeeds(notifier deliveryCompose.Notifier) (deliveryFeedSides, error) {
+	feed, ok := notifier.(deliveryContract.NotificationFeed)
+	guardians, served := notifier.(interface {
+		GuardianFeed() deliveryContract.GuardianNotificationFeed
+	})
+	if !ok || !served || guardians.GuardianFeed() == nil {
+		return deliveryFeedSides{}, fmt.Errorf("notification router does not serve the notification feeds")
+	}
+	notices, writes := notifier.(deliveryContract.TraegerFeedNotifier)
+	traeger, reads := notifier.(interface {
+		TraegerFeed() deliveryContract.TraegerNotificationFeed
+	})
+	if !writes || !reads || traeger.TraegerFeed() == nil {
+		return deliveryFeedSides{}, fmt.Errorf("notification router does not serve the Träger bell")
+	}
+	return deliveryFeedSides{staff: feed, guardian: guardians.GuardianFeed(), traegerNotices: notices, traeger: traeger.TraegerFeed()}, nil
 }

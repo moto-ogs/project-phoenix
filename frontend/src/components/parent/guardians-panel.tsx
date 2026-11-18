@@ -36,9 +36,15 @@ import {
   updateGuardianContact,
   updateGuardianRelationship,
 } from "~/lib/parent-api";
+import { useRefusalGuard } from "~/components/traeger/use-traeger-confirmed-resource";
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { ApiError } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import { displayEmail, isDemoBuild } from "~/lib/demo-build";
 import { ConfirmationModal, Modal } from "~/components/ui/modal";
 import { CustomSelect } from "~/components/ui/custom-select";
@@ -51,11 +57,7 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import {
-  useApiErrorDisplay,
-  useApiFormError,
-  useApiLoadError,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
 import { ParentSection } from "~/components/parent/shell/parent-section";
 import { ParentSectionSkeleton } from "~/components/parent/parent-page";
 import {
@@ -125,7 +127,13 @@ interface GuardiansPanelProps {
   readonly canRemove: boolean;
   readonly canAddContact?: boolean;
   readonly canManagePickup?: boolean;
+  readonly canManageEmergencyContact?: boolean;
+  /** Kind ohne OGS-Platz (#4803): es gibt keine Abholerlaubnis-Anfragen. */
+  readonly withoutCarePlace?: boolean;
 }
+
+const NO_PICKUP_PERMISSION_REQUESTS: Promise<PickupPermissionRequest[]> =
+  Promise.resolve([]);
 
 export default function GuardiansPanel({
   studentId,
@@ -133,19 +141,63 @@ export default function GuardiansPanel({
   canRemove,
   canAddContact = false,
   canManagePickup = false,
+  canManageEmergencyContact = canManagePickup,
+  withoutCarePlace = false,
 }: GuardiansPanelProps) {
   const t = useCareTermTranslations("parentChildDetail");
   const visibilityT = useCareTermTranslations("parentVisibility");
   const tPermission = useCareTermTranslations("parentPickupPermission");
-  const [guardians, setGuardians] = useState<ChildGuardian[]>([]);
-  const [accounts, setAccounts] = useState<RelatedAccount[]>([]);
-  // Offene Abholerlaubnis-Anfragen je Kontakt (#4780).
-  const [permissionRequests, setPermissionRequests] = useState<
-    PickupPermissionRequest[]
-  >([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [accessRefused, setAccessRefused] = useState(false);
-  const latestRequest = useRef(0);
+  const guardiansGuard = useRefusalGuard(parentKeys.guardians(studentId));
+  const accountsGuard = useRefusalGuard(parentKeys.relatedAccounts(studentId));
+  const guardiansResource = useSWRAuth(
+    parentKeys.guardians(studentId),
+    () => listChildGuardians(studentId),
+    {
+      ...PARENT_RESOURCE_OPTIONS,
+      onSuccess: guardiansGuard.callbacks.onSuccess,
+      onError: (error) => {
+        if (isAccessRefusal(error)) guardiansGuard.callbacks.onError(error);
+      },
+    },
+  );
+  const accountsResource = useSWRAuth(
+    parentKeys.relatedAccounts(studentId),
+    () => listRelatedAccounts(studentId),
+    {
+      ...PARENT_RESOURCE_OPTIONS,
+      onSuccess: accountsGuard.callbacks.onSuccess,
+      onError: (error) => {
+        if (isAccessRefusal(error)) accountsGuard.callbacks.onError(error);
+      },
+    },
+  );
+  // Offene Abholerlaubnis-Anfragen je Kontakt (#4780). Ohne die Liste fehlt
+  // nur der Hinweis „Wartet auf die OGS“; die Kontakte bleiben vollständig.
+  // Kind ohne OGS-Platz (#4803): es gibt keine Abholerlaubnis-Anfragen.
+  const requestsResource = useSWRAuth(
+    withoutCarePlace ? null : parentKeys.pickupPermissionRequests(studentId),
+    () => listPickupPermissionRequests(studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  // Contacts and accounts project each other's data and actions: a refusal
+  // of either withdraws both.
+  const accessRefused =
+    guardiansGuard.refusal !== undefined ||
+    accountsGuard.refusal !== undefined ||
+    [guardiansResource.error, accountsResource.error].some(
+      (error) =>
+        error instanceof ApiError &&
+        (error.status === 401 || error.status === 403),
+    );
+  const guardians: ChildGuardian[] = accessRefused
+    ? []
+    : (guardiansResource.data ?? []);
+  const accounts: RelatedAccount[] = accessRefused
+    ? []
+    : (accountsResource.data ?? []);
+  const permissionRequests: PickupPermissionRequest[] = accessRefused
+    ? []
+    : (requestsResource.data ?? []);
   const [editingContact, setEditingContact] = useState<ChildGuardian | null>(
     null,
   );
@@ -161,16 +213,32 @@ export default function GuardiansPanel({
     fieldError: inviteFieldError,
     clear: clearInviteError,
   } = useApiFormError(inviteFormRef);
-  const {
-    error: guardiansLoadError,
-    show: showGuardiansLoadError,
-    clear: clearGuardiansLoadError,
-  } = useApiLoadError();
-  const {
-    error: accountsLoadError,
-    show: showAccountsLoadError,
-    clear: clearAccountsLoadError,
-  } = useApiLoadError();
+  // A retry shows the loading state again, not the error it repeats.
+  const presented = (
+    resource: typeof guardiansResource | typeof accountsResource,
+  ) => ({
+    data: accessRefused ? undefined : resource.data,
+    error:
+      guardiansGuard.refusal ??
+      accountsGuard.refusal ??
+      (resource.data === undefined && resource.isValidating
+        ? undefined
+        : resource.error),
+  });
+  const { error: guardiansLoadError } = useSwrResourceLoadError(
+    [presented(guardiansResource)],
+    t("guardians.errorObjectContacts"),
+    () => guardiansResource.mutate(),
+  );
+  const { error: accountsLoadError } = useSwrResourceLoadError(
+    [presented(accountsResource)],
+    t("guardians.errorObjectAccounts"),
+    () => accountsResource.mutate(),
+  );
+  const isLoading = [guardiansResource, accountsResource].some(
+    (resource) =>
+      resource.data === undefined && (!resource.error || resource.isValidating),
+  );
   const { show: showActionError } = useApiErrorDisplay();
   const [busy, setBusy] = useState(false);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
@@ -184,165 +252,73 @@ export default function GuardiansPanel({
   // error path (#2518).
   const [message, setMessage] = useState<string | null>(null);
 
-  const discardRefusedAccess = useCallback((failures: unknown[]) => {
-    const refusal = failures.find(
-      (error) =>
-        error instanceof ApiError &&
-        (error.status === 401 || error.status === 403),
-    );
-    if (!refusal) return;
-    // Contacts and accounts project each other's data and actions.
-    setAccessRefused(true);
-    setGuardians([]);
-    setAccounts([]);
-    setPermissionRequests([]);
+  useEffect(() => {
+    if (!accessRefused) return;
     setEditingContact(null);
     setEditingPickup(null);
     setAddMode(null);
     setUpgradePrompt(null);
     setConfirmRemoveId(null);
-    return refusal;
-  }, []);
+  }, [accessRefused]);
 
-  const load = useCallback(async () => {
-    const request = ++latestRequest.current;
-    setIsLoading(true);
-    clearGuardiansLoadError();
-    clearAccountsLoadError();
-    // Both lists load side by side; each section reports its own failure, so
-    // a failed account list never shows up as "no accounts connected".
-    const [guardianResult, accountResult, requestResult] =
-      await Promise.allSettled([
-        listChildGuardians(studentId),
-        listRelatedAccounts(studentId),
-        listPickupPermissionRequests(studentId),
-      ]);
-    if (request !== latestRequest.current) return;
-    const refused = discardRefusedAccess(
-      [guardianResult, accountResult].flatMap((result) =>
-        result.status === "rejected" ? [result.reason as unknown] : [],
-      ),
-    );
-    if (
-      guardianResult.status === "fulfilled" &&
-      accountResult.status === "fulfilled"
-    ) {
-      setAccessRefused(false);
-    }
-    // Ohne die Liste fehlt nur der Hinweis „Wartet auf die OGS“; die
-    // Kontakte bleiben vollständig.
-    if (requestResult.status === "fulfilled" && !refused) {
-      setPermissionRequests(requestResult.value);
-    } else if (requestResult.status === "rejected") {
-      logger.warn("pickup_permission_requests_load_failed", {
-        error:
-          requestResult.reason instanceof Error
-            ? requestResult.reason.message
-            : String(requestResult.reason),
-      });
-    }
-    if (guardianResult.status === "fulfilled") {
-      if (!refused) setGuardians(guardianResult.value);
-    } else {
-      logger.error("guardians_load_failed", {
-        error:
-          guardianResult.reason instanceof Error
-            ? guardianResult.reason.message
-            : String(guardianResult.reason),
-      });
-      void showGuardiansLoadError(guardianResult.reason, {
-        object: t("guardians.errorObjectContacts"),
-        retry: () => void loadRef.current(),
-      });
-    }
-    if (accountResult.status === "fulfilled") {
-      if (!refused) setAccounts(accountResult.value);
-    } else {
-      logger.error("related_accounts_load_failed", {
-        error:
-          accountResult.reason instanceof Error
-            ? accountResult.reason.message
-            : String(accountResult.reason),
-      });
-      void showAccountsLoadError(accountResult.reason, {
-        object: t("guardians.errorObjectAccounts"),
-        retry: () => void loadRef.current(),
-      });
-    }
-    setIsLoading(false);
-  }, [
-    clearAccountsLoadError,
-    clearGuardiansLoadError,
-    discardRefusedAccess,
-    showAccountsLoadError,
-    showGuardiansLoadError,
-    studentId,
-    t,
-  ]);
-  // The retry runs the latest load, not the one of the failed attempt.
-  const loadRef = useRef(load);
-  useLayoutEffect(() => {
-    loadRef.current = load;
-  });
-
-  const invalidateRequest = useCallback(() => {
-    latestRequest.current++;
-  }, []);
+  const { data: cachedGuardians, mutate: clearGuardians } = guardiansResource;
+  const { data: cachedAccounts, mutate: clearAccounts } = accountsResource;
+  const { data: cachedRequests, mutate: clearRequests } = requestsResource;
+  const wasRefused = useRef(false);
   useEffect(() => {
-    void load();
-    return invalidateRequest;
-  }, [load, invalidateRequest]);
-
-  // The reload after a confirmed write (#6652) only reads and sets: the shown
-  // contacts and accounts stay while it runs, and a failure rejects, so the
-  // hook reports it as a load error that says the change is saved.
-  const readGuardians = useCallback(async () => {
-    const request = ++latestRequest.current;
-    const [nextGuardians, nextAccounts, nextRequests] =
-      await Promise.allSettled([
-        listChildGuardians(studentId),
-        listRelatedAccounts(studentId),
-        listPickupPermissionRequests(studentId),
-      ]);
-    if (request !== latestRequest.current) return;
-    setIsLoading(false);
-    const failures = [nextGuardians, nextAccounts].flatMap((result) =>
-      result.status === "rejected" ? [result.reason as unknown] : [],
-    );
-    const refusal = discardRefusedAccess(failures);
-    if (refusal) throw refusal;
-    if (
-      nextGuardians.status === "fulfilled" &&
-      nextAccounts.status === "fulfilled"
-    ) {
-      setAccessRefused(false);
+    if (!accessRefused) {
+      if (wasRefused.current) {
+        if (cachedGuardians === undefined) void clearGuardians();
+        if (cachedAccounts === undefined) void clearAccounts();
+        if (cachedRequests === undefined) void clearRequests();
+      }
+      wasRefused.current = false;
+      return;
     }
-    if (nextGuardians.status === "fulfilled") {
-      clearGuardiansLoadError();
-      setGuardians(nextGuardians.value);
-    }
-    if (nextAccounts.status === "fulfilled") {
-      clearAccountsLoadError();
-      setAccounts(nextAccounts.value);
-    }
-    if (nextRequests.status === "fulfilled") {
-      setPermissionRequests(nextRequests.value);
-    } else {
-      // Wie beim Erstabruf fehlt nur der optionale Hinweis auf offene Anfragen.
-      logger.warn("pickup_permission_requests_load_failed", {
-        error:
-          nextRequests.reason instanceof Error
-            ? nextRequests.reason.message
-            : String(nextRequests.reason),
-      });
-    }
-    if (nextGuardians.status === "rejected") throw nextGuardians.reason;
-    if (nextAccounts.status === "rejected") throw nextAccounts.reason;
+    wasRefused.current = true;
+    if (cachedGuardians !== undefined)
+      void clearGuardians(undefined, { revalidate: false });
+    if (cachedAccounts !== undefined)
+      void clearAccounts(undefined, { revalidate: false });
+    if (cachedRequests !== undefined)
+      void clearRequests(undefined, { revalidate: false });
   }, [
-    clearAccountsLoadError,
-    clearGuardiansLoadError,
-    discardRefusedAccess,
+    accessRefused,
+    cachedGuardians,
+    cachedAccounts,
+    cachedRequests,
+    clearGuardians,
+    clearAccounts,
+    clearRequests,
+  ]);
+
+  // The reload after a confirmed write (#6652) keeps the shown lists while it
+  // runs; a failed or refused list rejects, so the hook reports it.
+  const { mutate: mutateGuardians } = guardiansResource;
+  const { mutate: mutateAccounts } = accountsResource;
+  const { mutate: mutateRequests } = requestsResource;
+  const readGuardians = useCallback(async () => {
+    await Promise.all([
+      mutateGuardians(listChildGuardians(studentId), { revalidate: false }),
+      mutateAccounts(listRelatedAccounts(studentId), { revalidate: false }),
+      // Wie beim Erstabruf fehlt nur der optionale Hinweis auf offene Anfragen.
+      mutateRequests(
+        withoutCarePlace
+          ? NO_PICKUP_PERMISSION_REQUESTS
+          : listPickupPermissionRequests(studentId),
+        { revalidate: false },
+      ).catch((err: unknown) => {
+        logger.warn("pickup_permission_requests_load_failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }),
+    ]);
+  }, [
+    mutateAccounts,
+    mutateGuardians,
+    mutateRequests,
     studentId,
+    withoutCarePlace,
   ]);
   const { error: reloadError, refresh: refreshAfterWrite } =
     useRefreshAfterWrite(t("guardians.reloadObject"), readGuardians, {
@@ -533,6 +509,7 @@ export default function GuardiansPanel({
             <GuardianRow
               key={g.guardian_profile_id}
               guardian={g}
+              withoutCarePlace={withoutCarePlace}
               access={accountById.get(g.guardian_profile_id)}
               pendingPermission={pendingByGuardian.get(g.guardian_profile_id)}
               canInvite={canInvite}
@@ -626,6 +603,7 @@ export default function GuardiansPanel({
         <PickupModal
           studentId={studentId}
           guardian={editingPickup}
+          withoutCarePlace={withoutCarePlace}
           pendingPermission={pendingByGuardian.get(
             editingPickup.guardian_profile_id,
           )}
@@ -644,7 +622,9 @@ export default function GuardiansPanel({
         <ContactModal
           mode="create"
           studentId={studentId}
-          canManagePickup={canManagePickup}
+          canManagePickup={canManagePickup && !withoutCarePlace}
+          canManageEmergencyContact={canManageEmergencyContact}
+          withoutCarePlace={withoutCarePlace}
           onClose={() => setAddMode(null)}
           onSaved={(requested) =>
             handleSaved(
@@ -861,6 +841,7 @@ function ConnectedAccountRow({
 
 function GuardianRow({
   guardian: g,
+  withoutCarePlace = false,
   access,
   pendingPermission,
   canInvite,
@@ -870,6 +851,7 @@ function GuardianRow({
   onGrantAccess,
 }: Readonly<{
   guardian: ChildGuardian;
+  withoutCarePlace?: boolean;
   access?: RelatedAccount;
   pendingPermission?: PickupPermissionRequest;
   canInvite: boolean;
@@ -1064,21 +1046,26 @@ function GuardianRow({
                 caller may edit the note OR manage pickup. A note-only editor
                 (e.g. their own row, where flags are never theirs to set) still
                 reaches the note. The label/icon reflect which capability applies. */}
-            {(g.can_edit_contact || g.can_manage_pickup) && (
+            {((!withoutCarePlace && g.can_edit_contact) ||
+              g.can_manage_pickup) && (
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 onClick={onEditPickup}
                 tooltip={
-                  g.can_manage_pickup
-                    ? t("guardians.managePickupTooltip")
-                    : t("guardians.pickupNotesTooltip")
+                  withoutCarePlace
+                    ? t("guardians.emergencyDescription")
+                    : g.can_manage_pickup
+                      ? t("guardians.managePickupTooltip")
+                      : t("guardians.pickupNotesTooltip")
                 }
                 aria-label={
-                  g.can_manage_pickup
-                    ? t("guardians.managePickup")
-                    : t("guardians.pickupNotes")
+                  withoutCarePlace
+                    ? t("guardians.emergencyLabel")
+                    : g.can_manage_pickup
+                      ? t("guardians.managePickup")
+                      : t("guardians.pickupNotes")
                 }
               >
                 {g.can_manage_pickup ? (
@@ -1140,14 +1127,18 @@ function ContactModal({
   mode,
   studentId,
   guardian,
+  withoutCarePlace = false,
   canManagePickup = false,
+  canManageEmergencyContact = canManagePickup,
   onClose,
   onSaved,
 }: Readonly<{
   mode: "create" | "edit";
   studentId: string;
   guardian?: ChildGuardian;
+  withoutCarePlace?: boolean;
   canManagePickup?: boolean;
+  canManageEmergencyContact?: boolean;
   onClose: () => void;
   /** requested: eine Abholerlaubnis ging als Anfrage an die OGS (#4780). */
   onSaved: (requested: boolean) => void;
@@ -1273,8 +1264,8 @@ function ContactModal({
                 ),
               }
             : {}),
-          is_emergency_contact: canManagePickup && isEmergency,
-          pickup_notes: pickupNotes.trim() || null,
+          is_emergency_contact: canManageEmergencyContact && isEmergency,
+          pickup_notes: withoutCarePlace ? null : pickupNotes.trim() || null,
         };
         await createGuardianContact(studentId, createPayload);
       } else if (guardian) {
@@ -1367,73 +1358,79 @@ function ContactModal({
                 }
               />
             </div>
-            {canManagePickup ? (
+            {canManagePickup || canManageEmergencyContact ? (
               <InsetPanel className="space-y-3">
-                <label
-                  htmlFor="new-contact-can-pickup"
-                  className="flex items-start gap-3"
-                >
-                  <Checkbox
-                    id="new-contact-can-pickup"
-                    checked={canPickup}
-                    onChange={(event) => setCanPickup(event.target.checked)}
-                  />
-                  <span className="text-sm">
-                    <span className="font-medium text-gray-900">
-                      {t("guardians.canPickupLabel")}
-                    </span>
-                    <span className="mt-0.5 block text-gray-500">
-                      {t("guardians.canPickupDescription")}
-                    </span>
-                  </span>
-                </label>
-                {canPickup ? (
-                  <div className="space-y-3 pl-8">
-                    <PickupWeekdaysField
-                      value={pickupWeekdays}
-                      onChange={(next) => {
-                        setPickupWeekdays(next);
-                        setPickupSignature(null);
-                      }}
-                      disabled={busy}
-                    />
-                    <p className="text-sm text-gray-600">
-                      {tPermission("waitsForOgs")}
-                    </p>
-                    {pickupStatement && (
-                      <PickupSignatureField
-                        id={CONTACT_SIGNATURE_FIELD}
-                        statement={pickupStatement}
-                        value={pickupSignature}
-                        onChange={setPickupSignature}
-                        disabled={busy}
-                        error={fieldError(CONTACT_SIGNATURE_FIELD)}
+                {canManagePickup && (
+                  <>
+                    <label
+                      htmlFor="new-contact-can-pickup"
+                      className="flex items-start gap-3"
+                    >
+                      <Checkbox
+                        id="new-contact-can-pickup"
+                        checked={canPickup}
+                        onChange={(event) => setCanPickup(event.target.checked)}
                       />
-                    )}
-                    <PickupSignatureStatementLoadError
-                      error={pickupSignatureStatement.error}
-                      retry={pickupSignatureStatement.retry}
+                      <span className="text-sm">
+                        <span className="font-medium text-gray-900">
+                          {t("guardians.canPickupLabel")}
+                        </span>
+                        <span className="mt-0.5 block text-gray-500">
+                          {t("guardians.canPickupDescription")}
+                        </span>
+                      </span>
+                    </label>
+                    {canPickup ? (
+                      <div className="space-y-3 pl-8">
+                        <PickupWeekdaysField
+                          value={pickupWeekdays}
+                          onChange={(next) => {
+                            setPickupWeekdays(next);
+                            setPickupSignature(null);
+                          }}
+                          disabled={busy}
+                        />
+                        <p className="text-sm text-gray-600">
+                          {tPermission("waitsForOgs")}
+                        </p>
+                        {pickupStatement && (
+                          <PickupSignatureField
+                            id={CONTACT_SIGNATURE_FIELD}
+                            statement={pickupStatement}
+                            value={pickupSignature}
+                            onChange={setPickupSignature}
+                            disabled={busy}
+                            error={fieldError(CONTACT_SIGNATURE_FIELD)}
+                          />
+                        )}
+                        <PickupSignatureStatementLoadError
+                          error={pickupSignatureStatement.error}
+                          retry={pickupSignatureStatement.retry}
+                        />
+                      </div>
+                    ) : null}
+                  </>
+                )}
+                {canManageEmergencyContact && (
+                  <label
+                    htmlFor="new-contact-emergency"
+                    className="flex items-start gap-3"
+                  >
+                    <Checkbox
+                      id="new-contact-emergency"
+                      checked={isEmergency}
+                      onChange={(event) => setIsEmergency(event.target.checked)}
                     />
-                  </div>
-                ) : null}
-                <label
-                  htmlFor="new-contact-emergency"
-                  className="flex items-start gap-3"
-                >
-                  <Checkbox
-                    id="new-contact-emergency"
-                    checked={isEmergency}
-                    onChange={(event) => setIsEmergency(event.target.checked)}
-                  />
-                  <span className="text-sm">
-                    <span className="font-medium text-gray-900">
-                      {t("guardians.emergencyLabel")}
+                    <span className="text-sm">
+                      <span className="font-medium text-gray-900">
+                        {t("guardians.emergencyLabel")}
+                      </span>
+                      <span className="mt-0.5 block text-gray-500">
+                        {t("guardians.emergencyDescription")}
+                      </span>
                     </span>
-                    <span className="mt-0.5 block text-gray-500">
-                      {t("guardians.emergencyDescription")}
-                    </span>
-                  </span>
-                </label>
+                  </label>
+                )}
               </InsetPanel>
             ) : null}
           </div>
@@ -1557,7 +1554,7 @@ function ContactModal({
             </Button>
           )}
         </div>
-        {mode === "create" ? (
+        {mode === "create" && !withoutCarePlace ? (
           <Textarea
             id="new-contact-pickup-notes"
             label={t("guardians.pickupNotes")}
@@ -1577,12 +1574,14 @@ function ContactModal({
 function PickupModal({
   studentId,
   guardian: g,
+  withoutCarePlace = false,
   pendingPermission,
   onClose,
   onSaved,
 }: Readonly<{
   studentId: string;
   guardian: ChildGuardian;
+  withoutCarePlace?: boolean;
   pendingPermission?: PickupPermissionRequest;
   onClose: () => void;
   /** requested: die Abholerlaubnis ging als Anfrage an die OGS (#4780). */
@@ -1604,9 +1603,10 @@ function PickupModal({
   // Erteilen und andere Tage sind eine unterschriebene Anfrage an die OGS;
   // Wegnehmen gilt sofort (#4780).
   const grants =
+    !withoutCarePlace &&
     canPickup &&
     (!g.can_pickup || !sameWeekdays(weekdays, g.pickup_weekdays ?? []));
-  const revokes = g.can_pickup && !canPickup;
+  const revokes = !withoutCarePlace && g.can_pickup && !canPickup;
   const pickupSignatureStatement = usePickupSignatureStatement(
     studentId,
     grants
@@ -1650,7 +1650,10 @@ function PickupModal({
     // otherwise valid flag-only edit (#1667 review).
     const normalizedNotes = notes.trim();
     const originalNotes = (g.pickup_notes ?? "").trim();
-    const noteChanged = g.can_edit_contact && normalizedNotes !== originalNotes;
+    const noteChanged =
+      !withoutCarePlace &&
+      g.can_edit_contact &&
+      normalizedNotes !== originalNotes;
     const payload: GuardianRelationshipPayload = {
       ...(revokes ? { can_pickup: false } : {}),
       ...(isEmergency !== g.is_emergency_contact
@@ -1704,9 +1707,11 @@ function PickupModal({
       isOpen
       onClose={onClose}
       title={
-        g.can_manage_pickup
-          ? t("guardians.pickupTitle")
-          : t("guardians.pickupNotes")
+        withoutCarePlace
+          ? t("guardians.emergencyLabel")
+          : g.can_manage_pickup
+            ? t("guardians.pickupTitle")
+            : t("guardians.pickupNotes")
       }
       closeLabel={t("guardians.close")}
       mobileSheet
@@ -1752,68 +1757,72 @@ function PickupModal({
             (a note-only editor sees just the note field below). */}
         {g.can_manage_pickup && (
           <>
-            <label
-              htmlFor="guardian-can-pickup"
-              className="flex items-start gap-3"
-            >
-              <Checkbox
-                id="guardian-can-pickup"
-                checked={canPickup}
-                disabled={Boolean(pendingPermission)}
-                onChange={(e) => setCanPickup(e.target.checked)}
-              />
-              <span className="text-sm">
-                <span className="font-medium text-gray-900">
-                  {t("guardians.canPickupLabel")}
-                </span>
-                <span className="mt-0.5 block text-gray-500">
-                  {t("guardians.canPickupDescription")}
-                </span>
-              </span>
-            </label>
-            {pendingPermission ? (
-              <Alert
-                type="info"
-                message={`${tPermission("pending", {
-                  days:
-                    pendingPermission.weekdays.length > 0
-                      ? weekdayList(pendingPermission.weekdays)
-                      : tPermission("days.all"),
-                })}. ${tPermission("waitsForOgs")}`}
-              />
-            ) : canPickup ? (
-              <div className="space-y-3 pl-8">
-                <PickupWeekdaysField
-                  value={weekdays}
-                  onChange={(next) => {
-                    setWeekdays(next);
-                    setSignature(null);
-                  }}
-                  disabled={busy}
-                />
-                {grants ? (
-                  <>
-                    <p className="text-sm text-gray-600">
-                      {tPermission("waitsForOgs")}
-                    </p>
-                    {pickupStatement && (
-                      <PickupSignatureField
-                        id={PICKUP_SIGNATURE_FIELD}
-                        statement={pickupStatement}
-                        value={signature}
-                        onChange={setSignature}
-                        disabled={busy}
-                        error={fieldError(PICKUP_SIGNATURE_FIELD)}
-                      />
-                    )}
-                    <PickupSignatureStatementLoadError
-                      error={pickupSignatureStatement.error}
-                      retry={pickupSignatureStatement.retry}
+            {!withoutCarePlace && (
+              <>
+                <label
+                  htmlFor="guardian-can-pickup"
+                  className="flex items-start gap-3"
+                >
+                  <Checkbox
+                    id="guardian-can-pickup"
+                    checked={canPickup}
+                    disabled={Boolean(pendingPermission)}
+                    onChange={(e) => setCanPickup(e.target.checked)}
+                  />
+                  <span className="text-sm">
+                    <span className="font-medium text-gray-900">
+                      {t("guardians.canPickupLabel")}
+                    </span>
+                    <span className="mt-0.5 block text-gray-500">
+                      {t("guardians.canPickupDescription")}
+                    </span>
+                  </span>
+                </label>
+                {pendingPermission ? (
+                  <Alert
+                    type="info"
+                    message={`${tPermission("pending", {
+                      days:
+                        pendingPermission.weekdays.length > 0
+                          ? weekdayList(pendingPermission.weekdays)
+                          : tPermission("days.all"),
+                    })}. ${tPermission("waitsForOgs")}`}
+                  />
+                ) : canPickup ? (
+                  <div className="space-y-3 pl-8">
+                    <PickupWeekdaysField
+                      value={weekdays}
+                      onChange={(next) => {
+                        setWeekdays(next);
+                        setSignature(null);
+                      }}
+                      disabled={busy}
                     />
-                  </>
+                    {grants ? (
+                      <>
+                        <p className="text-sm text-gray-600">
+                          {tPermission("waitsForOgs")}
+                        </p>
+                        {pickupStatement && (
+                          <PickupSignatureField
+                            id={PICKUP_SIGNATURE_FIELD}
+                            statement={pickupStatement}
+                            value={signature}
+                            onChange={setSignature}
+                            disabled={busy}
+                            error={fieldError(PICKUP_SIGNATURE_FIELD)}
+                          />
+                        )}
+                        <PickupSignatureStatementLoadError
+                          error={pickupSignatureStatement.error}
+                          retry={pickupSignatureStatement.retry}
+                        />
+                      </>
+                    ) : null}
+                  </div>
                 ) : null}
-              </div>
-            ) : null}
+              </>
+            )}
             <label
               htmlFor="guardian-emergency"
               className="flex items-start gap-3"
@@ -1838,7 +1847,7 @@ function PickupModal({
             guardian whose contact they may also edit, so gate it on
             can_edit_contact. A pickup-manage-only caller sees just the flags
             above; the backend rejects a note edit on a contact-locked guardian. */}
-        {g.can_edit_contact && (
+        {!withoutCarePlace && g.can_edit_contact && (
           <Textarea
             id="pickup-notes"
             label={t("guardians.pickupNotes")}

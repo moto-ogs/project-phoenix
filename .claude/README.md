@@ -19,8 +19,10 @@ load its references only when their task trigger matches.
 | Real-time contract | `docs/agents/realtime.md` for producers, streaming, and client refetches |
 
 Codex instruction discovery uses `AGENTS.md`; a `.codex/rules` symlink alone
-is not proof that a runtime loaded every rule. The entry points explicitly
-require relevant references, independently of automatic loading. Check the
+is not proof that a runtime loaded every rule. Codex reads `*.rules` files
+there as command execpolicy (`browser.rules`); Claude Code ignores them. The
+entry points explicitly require relevant references, independently of
+automatic loading. Check the
 active session's catalog and loaded instructions when diagnosing discovery.
 
 In Claude Code, rules without `paths:` frontmatter are always-on; only

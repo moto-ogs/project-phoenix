@@ -42,6 +42,14 @@ func setupGuardianService(t *testing.T, db *bun.DB) peoplePorts.GuardianService 
 	return serviceFactoryServices.Guardian
 }
 
+// setupGuardianServiceAt is setupGuardianService with the root's clock pinned
+// to at, for the guardian service and the invitation reads alike.
+func setupGuardianServiceAt(t *testing.T, db *bun.DB, at time.Time) peoplePorts.GuardianService {
+	serviceFactoryServices, _, err := api.NewTestPeopleServices(testpkg.NewDatabase(t, db), slog.Default(), func() time.Time { return at })
+	require.NoError(t, err, "Failed to create service factory")
+	return serviceFactoryServices.Guardian
+}
+
 // =============================================================================
 // CreateGuardian Tests
 // =============================================================================
@@ -749,7 +757,7 @@ func TestGuardianService_GetStudentGuardians(t *testing.T) {
 			Token:             fmt.Sprintf("pending-token-%d", time.Now().UnixNano()),
 			GuardianProfileID: guardian.ID,
 			CreatedBy:         inviter.ID,
-			ExpiresAt:         time.Now().Add(48 * time.Hour),
+			ExpiresAt:         testpkg.DatabaseNow(t, db).Add(48 * time.Hour),
 			ApprovalStatus:    "not_required",
 		}
 		invitation.TenantID = testpkg.Tenant(t)
@@ -1565,14 +1573,14 @@ func TestGuardianService_GetPendingInvitations(t *testing.T) {
 		Token:             fmt.Sprintf("pending-list-%d", time.Now().UnixNano()),
 		GuardianProfileID: guardian.ID,
 		CreatedBy:         inviter.ID,
-		ExpiresAt:         time.Now().Add(48 * time.Hour),
+		ExpiresAt:         testpkg.DatabaseNow(t, db).Add(48 * time.Hour),
 	})
-	spent := time.Now().Add(-time.Hour)
+	spent := testpkg.DatabaseNow(t, db).Add(-time.Hour)
 	testpkg.InsertTestGuardianInvitation(t, db, &testpkg.GuardianInvitation{
 		Token:             fmt.Sprintf("pending-list-accepted-%d", time.Now().UnixNano()),
 		GuardianProfileID: guardian.ID,
 		CreatedBy:         inviter.ID,
-		ExpiresAt:         time.Now().Add(48 * time.Hour),
+		ExpiresAt:         testpkg.DatabaseNow(t, db).Add(48 * time.Hour),
 		AcceptedAt:        &spent,
 	})
 
@@ -2200,7 +2208,10 @@ func TestGetStudentGuardians_NonOpenInvitationsNotPending(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
-	service := setupGuardianService(t, db)
+	// The invitation lives on the database clock (ADR 0285, Nachtrag), so
+	// the fixtures date it from the database time.
+	at := testpkg.DatabaseNow(t, db)
+	service := setupGuardianServiceAt(t, db, at)
 	ctx := testpkg.Ctx(t)
 	inviter := testpkg.CreateTestAccount(t, db, "inv-states")
 
@@ -2208,8 +2219,8 @@ func TestGetStudentGuardians_NonOpenInvitationsNotPending(t *testing.T) {
 		name   string
 		mutate func(*testpkg.GuardianInvitation)
 	}{
-		{"accepted", func(i *testpkg.GuardianInvitation) { now := time.Now(); i.AcceptedAt = &now }},
-		{"expired", func(i *testpkg.GuardianInvitation) { i.ExpiresAt = time.Now().Add(-time.Hour) }},
+		{"accepted", func(i *testpkg.GuardianInvitation) { accepted := at; i.AcceptedAt = &accepted }},
+		{"expired", func(i *testpkg.GuardianInvitation) { i.ExpiresAt = at.Add(-time.Hour) }},
 		{"rejected", func(i *testpkg.GuardianInvitation) {
 			i.ApprovalStatus = "rejected"
 		}},
@@ -2228,7 +2239,8 @@ func TestGetStudentGuardians_NonOpenInvitationsNotPending(t *testing.T) {
 				Token:             fmt.Sprintf("state-%s-%d", c.name, time.Now().UnixNano()),
 				GuardianProfileID: guardian.ID,
 				CreatedBy:         inviter.ID,
-				ExpiresAt:         time.Now().Add(48 * time.Hour),
+				CreatedAt:         at.Add(-2 * time.Hour),
+				ExpiresAt:         at.Add(48 * time.Hour),
 				ApprovalStatus:    "not_required",
 			}
 			c.mutate(inv)
@@ -2241,6 +2253,35 @@ func TestGetStudentGuardians_NonOpenInvitationsNotPending(t *testing.T) {
 			assert.False(t, res[0].InvitationPending, c.name+" invitation must not count as pending")
 		})
 	}
+}
+
+// The guardian list takes the expiry Identity & Access judged on the
+// database clock (ADR 0285, Nachtrag), not its own clock: with the root's
+// clock years ahead, an invitation open on the database clock still shows
+// as pending.
+func TestGetStudentGuardians_OpenInvitationPendingOnTheDatabaseClock(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+	service := setupGuardianServiceAt(t, db, time.Date(2031, time.June, 2, 12, 0, 0, 0, time.UTC))
+	ctx := testpkg.Ctx(t)
+	inviter := testpkg.CreateTestAccount(t, db, "inv-db-clock")
+	guardian := testpkg.CreateTestGuardianProfile(t, db, "inv-db-clock")
+	student := testpkg.CreateTestStudent(t, db, "Inv", "Clock", "1a")
+	_, err := testpkg.TenantQuery1(t, ctx, db, service.LinkGuardianToStudent, peoplePorts.StudentGuardianCreateRequest{
+		StudentID: student.ID, GuardianProfileID: guardian.ID, RelationshipType: "parent",
+	})
+	require.NoError(t, err)
+	databaseNow := testpkg.DatabaseNow(t, db)
+	testpkg.InsertTestGuardianInvitation(t, db, &testpkg.GuardianInvitation{
+		Token: fmt.Sprintf("db-clock-%d", time.Now().UnixNano()), GuardianProfileID: guardian.ID, CreatedBy: inviter.ID,
+		CreatedAt: databaseNow, ExpiresAt: databaseNow.Add(48 * time.Hour), ApprovalStatus: "not_required",
+	})
+
+	res, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentGuardians, student.ID)
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	assert.True(t, res[0].InvitationPending, "an invitation open on the database clock is pending")
 }
 
 // TestGuardianService_ContactWritersShareProfileLock is the serialization guard
@@ -2364,7 +2405,7 @@ func TestGetStudentGuardians_AccountHolderPendingUpgradeApproval(t *testing.T) {
 		Token:             fmt.Sprintf("acct-pending-%d", time.Now().UnixNano()),
 		GuardianProfileID: guardian.ID,
 		CreatedBy:         account.ID,
-		ExpiresAt:         time.Now().Add(48 * time.Hour),
+		ExpiresAt:         testpkg.DatabaseNow(t, db).Add(48 * time.Hour),
 		StudentID:         &siblingID,
 		ApprovalStatus:    "pending",
 		RoleUpgrade:       true,

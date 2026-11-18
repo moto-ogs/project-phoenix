@@ -10,11 +10,13 @@ import (
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// timetableStaffCancellationNotices binds Timetable's notice about a
-// cancelled block (#7148) to Delivery's notification feed: every planned
+// timetableStaffCancellationNotices binds Timetable's notices about a
+// cancelled block (#7148) and its reinstatement (#7151) to Delivery's
+// notification feed: every planned
 // person gets a feed entry, and a push follows for whoever did not switch the
 // type off while the block lies within the push window Timetable decided.
 type timetableStaffCancellationNotices struct {
@@ -34,6 +36,20 @@ func NewTimetableStaffCancellationNotices(notifications DeliveryNotifications) t
 }
 
 func (n timetableStaffCancellationNotices) NotifyInstanceCancelled(ctx context.Context, notice timetablePorts.StaffCancellationNotice) error {
+	title, body, link := staffCancellationCopy(notice, "Termin abgesagt", "fällt aus")
+	return n.notify(ctx, deliveryContract.NotificationInstanceCancelled, notice, title, body, link)
+}
+
+// NotifyInstanceReinstated tells the planned staff that a cancellation was
+// taken back (#7151). The push follows the person's switch for
+// cancellations: who does not want to hear of a cancellation on the phone
+// does not hear of its reinstatement there either.
+func (n timetableStaffCancellationNotices) NotifyInstanceReinstated(ctx context.Context, notice timetablePorts.StaffCancellationNotice) error {
+	title, body, link := staffCancellationCopy(notice, "Termin findet doch statt", "findet doch statt")
+	return n.notify(ctx, deliveryContract.NotificationInstanceReinstated, notice, title, body, link)
+}
+
+func (n timetableStaffCancellationNotices) notify(ctx context.Context, notificationType string, notice timetablePorts.StaffCancellationNotice, title, body, link string) error {
 	if len(notice.AccountIDs) == 0 {
 		return nil
 	}
@@ -44,14 +60,13 @@ func (n timetableStaffCancellationNotices) NotifyInstanceCancelled(ctx context.C
 			return fmt.Errorf("staff cancellation notice: filter recipients: %w", err)
 		}
 	}
-	title, body, link := staffCancellationCopy(notice)
 	err := n.notifier.Notify(ctx, deliveryCompose.NotificationEvent{
-		Type: deliveryContract.NotificationInstanceCancelled,
-		// A block is cancelled once; the moment keeps a later cancellation
-		// after a reinstatement a notice of its own.
-		IdempotencyKey: fmt.Sprintf("instance_cancelled:%d:%d", notice.InstanceID, n.now().UnixNano()),
+		Type: notificationType,
+		// A block is cancelled and reinstated again and again; the moment
+		// keeps each change a notice of its own.
+		IdempotencyKey: fmt.Sprintf("%s:%d:%d", notificationType, notice.InstanceID, n.now().UnixNano()),
 		RelatedType:    "activity_instance", RelatedID: notice.InstanceID,
-		Title: title, Body: body, DeepLink: link,
+		Title: title, Body: body, DeepLink: link, SchoolDeepLink: staffCancellationSchoolLink,
 		Audience: deliveryCompose.NotificationAudience{
 			TenantID: tenant.FromContext(ctx), Scope: deliveryCompose.NotificationAudienceScope("staff"), StaffAccountIDs: notice.AccountIDs,
 		},
@@ -66,22 +81,37 @@ func (n timetableStaffCancellationNotices) NotifyInstanceCancelled(ctx context.C
 	return nil
 }
 
+// staffCancellationSchoolLink leads a Lehrkraft in moto schule to her
+// Aufsichten (#7139), the blocks she is planned for. The page shows today;
+// the text of the notice names the day of a later block.
+const staffCancellationSchoolLink = "/school/aufsichten"
+
 // staffCancellationWeekdays are the short German weekday names, Sunday first.
 var staffCancellationWeekdays = [...]string{"So.", "Mo.", "Di.", "Mi.", "Do.", "Fr.", "Sa."}
 
 // staffCancellationCopy is the display-safe text of the notice: the block's
-// name and when it was planned, never a child. The link leads to the
-// person's own Dienstplan on that day.
-func staffCancellationCopy(notice timetablePorts.StaffCancellationNotice) (title, body, link string) {
-	name := strings.TrimSpace(notice.Title)
-	when := staffCancellationWeekdays[notice.Date.Weekday()] + " " + notice.Date.Format("02.01.")
-	if notice.StartTime.IsZero() {
-		body = fmt.Sprintf("„%s“ am %s fällt aus.", name, when)
-	} else {
-		body = fmt.Sprintf("„%s“ am %s um %s Uhr fällt aus.", name, when, notice.StartTime.Format("15:04"))
+// name, when it was planned and what happens to it, never a child. The link
+// leads to the person's own Dienstplan on that day.
+func staffCancellationCopy(notice timetablePorts.StaffCancellationNotice, title, outcome string) (string, string, string) {
+	body := fmt.Sprintf("%s am %s %s.", blockNoticeSubject(notice.Title), blockNoticeWhen(notice.Date, notice.StartTime), outcome)
+	return title, body, "/mein-dienstplan?d=" + notice.Date.String()
+}
+
+// blockNoticeSubject names a block in a notice: its quoted title, or
+// "Ein Termin" without one.
+func blockNoticeSubject(title string) string {
+	if name := strings.TrimSpace(title); name != "" {
+		return "„" + name + "“"
 	}
-	if name == "" {
-		body = strings.Replace(body, "„“", "Ein Termin", 1)
+	return "Ein Termin"
+}
+
+// blockNoticeWhen is the day of a block in a notice, with its start time
+// when it has one: "Di. 17.11. um 15:00 Uhr".
+func blockNoticeWhen(date calendar.Date, start time.Time) string {
+	when := staffCancellationWeekdays[date.Weekday()] + " " + date.Format("02.01.")
+	if !start.IsZero() {
+		when += " um " + start.Format("15:04") + " Uhr"
 	}
-	return "Termin abgesagt", body, "/mein-dienstplan?d=" + notice.Date.String()
+	return when
 }

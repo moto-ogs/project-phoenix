@@ -137,7 +137,7 @@ func (r *AccountMFARecords) IncrementMFAAttempts(ctx context.Context, accountID 
  mfa_locked_until = CASE WHEN mfa_attempts + 1 >= ? THEN ? ELSE mfa_locked_until END
  WHERE id = ? AND personal_data_erased_at IS NULL
  RETURNING mfa_attempts AS attempts, mfa_locked_until AS locked_until`,
-		threshold, time.Now().Add(duration), accountID).Scan(ctx, &lockout)
+		threshold, r.store.now().Add(duration), accountID).Scan(ctx, &lockout)
 	return lockout, err
 }
 
@@ -175,12 +175,12 @@ func (r *AccountMFARecords) CreateCredential(ctx context.Context, credential dom
 	if err != nil {
 		return err
 	}
-	var enrolledAt *time.Time
-	if !credential.EnrolledAt.IsZero() {
-		enrolledAt = &credential.EnrolledAt
+	enrolledAt := credential.EnrolledAt
+	if enrolledAt.IsZero() {
+		enrolledAt = r.store.now()
 	}
 	_, err = db.NewRaw(`INSERT INTO auth.mfa_credentials (account_id, method, enrolled_at, last_used_at)
- VALUES (?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?)`, credential.AccountID, credential.Method, enrolledAt, credential.LastUsedAt).Exec(ctx)
+ VALUES (?, ?, ?, ?)`, credential.AccountID, credential.Method, enrolledAt, credential.LastUsedAt).Exec(ctx)
 	return err
 }
 

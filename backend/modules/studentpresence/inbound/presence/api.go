@@ -44,7 +44,7 @@ func NewResource(operations PresenceOperations, personService People, educationS
 	if runtime.WithStaff == nil {
 		panic("active API: staff attribution is required")
 	}
-	if runtime.TenantID == nil || runtime.MarkRollback == nil {
+	if runtime.TenantID == nil || runtime.MarkRollback == nil || runtime.Now == nil {
 		panic("active API: tenant request runtime is required")
 	}
 	if authorization.Visit == nil {

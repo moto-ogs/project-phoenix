@@ -21,7 +21,7 @@ type DataImport struct {
 	StartedAt    time.Time  `bun:"started_at,notnull" json:"started_at"`                 // Import start time
 	CompletedAt  *time.Time `bun:"completed_at" json:"completed_at"`                     // Import completion time
 	Metadata     JSONBMap   `bun:"metadata,type:jsonb,default:'{}'" json:"metadata"`     // Error details, bulk actions, etc.
-	CreatedAt    time.Time  `bun:"created_at,notnull,default:now()" json:"created_at"`
+	CreatedAt    time.Time  `bun:"created_at,nullzero,notnull" json:"created_at"`
 }
 
 // JSONBMap is a simple map type for JSONB columns

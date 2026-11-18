@@ -25,16 +25,16 @@ import type { Activity } from "@/lib/activity-helpers";
 import { ActivitiesMasterDetail } from "@/components/activities/activities-master-detail";
 import { DatabaseFormModal } from "~/components/database/database-form-modal";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+  useSwrLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { useDeleteConfirmation } from "~/hooks/useDeleteConfirmation";
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { createLogger } from "~/lib/logger";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { ModuleRouteGuard } from "~/components/tenant/module-route-guard";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { foldForSearch } from "~/lib/search-fold";
@@ -60,10 +60,6 @@ function ActivitiesPageContent() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedActivityDetail, setSelectedActivityDetail] =
-    useState<Activity | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailReload, setDetailReload] = useState(0);
   const [formResetCounter, setFormResetCounter] = useState(0);
 
   const {
@@ -75,8 +71,6 @@ function ActivitiesPageContent() {
   const { success: toastSuccess } = useToast();
   // Ladefehler des Details im Detailbereich, Schreibfehler im jeweiligen
   // Dialog (#2517).
-  const detailLoad = useApiLoadError();
-  const { show: showDetailLoadError, clear: clearDetailLoadError } = detailLoad;
   const createErrors = useApiFormError();
   const deleteErrors = useApiFormError();
   const [deletePending, setDeletePending] = useState(false);
@@ -102,7 +96,7 @@ function ActivitiesPageContent() {
     isLoading: swrLoading,
     error: activitiesError,
     mutate: mutateActivities,
-  } = useSWRAuth("database-activities-list", async () => {
+  } = useSWRAuth(tenantAdminKeys.activities(), async () => {
     const data = await service.getList({ page: 1, pageSize: 500 });
     return Array.isArray(data.data) ? data.data : [];
   });
@@ -205,10 +199,24 @@ function ActivitiesPageContent() {
     [filteredActivities, selectedId],
   );
 
-  const selectedActivity =
-    selectedActivityDetail?.id === selectedActivitySummary?.id
-      ? selectedActivityDetail
-      : selectedActivitySummary;
+  const detailId = selectedActivitySummary?.id ?? null;
+  const {
+    data: selectedActivityDetail,
+    error: detailError,
+    mutate: reloadDetail,
+  } = useSWRAuth(
+    detailId ? tenantAdminKeys.activity(detailId) : null,
+    () => service.getOne(detailId!),
+    { keepPreviousData: false },
+  );
+  const detailLoad = useSwrResourceLoadError(
+    [{ data: selectedActivityDetail, error: detailError }],
+    "die Aktivität",
+    () => reloadDetail(),
+  );
+  const detailLoading =
+    detailId !== null && !selectedActivityDetail && !detailError;
+  const selectedActivity = selectedActivityDetail ?? selectedActivitySummary;
 
   const handleSelectActivity = useCallback(
     (id: string | null) => {
@@ -216,63 +224,6 @@ function ActivitiesPageContent() {
     },
     [updateUrlParams],
   );
-
-  useEffect(() => {
-    if (!selectedId || !selectedActivitySummary) {
-      setSelectedActivityDetail(null);
-      setDetailLoading(false);
-      clearDetailLoadError();
-      return;
-    }
-
-    setSelectedActivityDetail((current) =>
-      current?.id === selectedActivitySummary.id
-        ? current
-        : selectedActivitySummary,
-    );
-
-    let cancelled = false;
-    setDetailLoading(true);
-    clearDetailLoadError();
-
-    void service
-      .getOne(selectedActivitySummary.id)
-      .then((fresh) => {
-        if (!cancelled) {
-          setSelectedActivityDetail(fresh);
-        }
-      })
-      .catch((fetchError: unknown) => {
-        logger.error("failed to fetch activity detail", {
-          activity_id: selectedActivitySummary.id,
-          error:
-            fetchError instanceof Error
-              ? fetchError.message
-              : String(fetchError),
-        });
-        if (cancelled) return;
-        void showDetailLoadError(fetchError, {
-          object: "die Aktivität",
-          retry: () => setDetailReload((value) => value + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setDetailLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    selectedId,
-    selectedActivitySummary,
-    service,
-    detailReload,
-    clearDetailLoadError,
-    showDetailLoadError,
-  ]);
 
   const handleCreateActivity = useCallback(
     async (data: Partial<Activity>) => {
@@ -283,7 +234,7 @@ function ActivitiesPageContent() {
       const created = await service.create(payload);
       toastSuccess(`Die Aktivität „${created.name}“ ist angelegt.`);
       setShowCreateModal(false);
-      await tenantMutate("database-activities-list");
+      await tenantMutate(tenantAdminKeys.activities());
     },
     [service, tenantMutate, toastSuccess],
   );
@@ -299,13 +250,13 @@ function ActivitiesPageContent() {
       toastSuccess(
         `Die Aktivität „${data.name ?? selectedActivity.name}“ ist gespeichert.`,
       );
-      // Das Speichern ist gelungen; das frische Detail lädt der Detailbereich
-      // nach und zeigt einen Ladefehler dort, nicht im Formular.
-      setDetailReload((value) => value + 1);
+      // Das Speichern ist gelungen; ein Fehler beim Nachladen des Details
+      // gehört nicht ins Formular.
+      void reloadDetail();
       setFormResetCounter((current) => current + 1);
-      await tenantMutate("database-activities-list");
+      await tenantMutate(tenantAdminKeys.activities());
     },
-    [selectedActivity, service, tenantMutate, toastSuccess],
+    [selectedActivity, service, tenantMutate, toastSuccess, reloadDetail],
   );
 
   const handleDeleteActivity = useCallback(async () => {
@@ -317,10 +268,9 @@ function ActivitiesPageContent() {
       if (!deleted) return;
       toastSuccess(`Die Aktivität „${selectedActivity.name}“ ist gelöscht.`);
       handleDeleteCancel();
-      setSelectedActivityDetail(null);
       setFormResetCounter(0);
       handleSelectActivity(null);
-      await tenantMutate("database-activities-list");
+      await tenantMutate(tenantAdminKeys.activities());
     } catch (err) {
       logger.warn("activity_delete_failed", {
         activity_id: selectedActivity.id,

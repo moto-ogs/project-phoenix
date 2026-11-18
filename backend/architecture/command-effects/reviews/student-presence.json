@@ -10243,6 +10243,39 @@
       "target_owner": ""
     },
     {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.TransferClassListEntryMarks",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.ClassListMarkTransfer.TransferClassListEntryMarks",
+      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.TransferClassListEntryMarks. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); the class-list conversion's mark transfer (#4803, ADR 0283).",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.TransferClassListEntryMarks",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.ClassListMarkTransfer.TransferClassListEntryMarks",
+      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application.Service.TransferClassListEntryMarks (#4803, ADR 0282).",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0283",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.TransferClassListEntryMarks",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.ClassListMarkTransfer.TransferClassListEntryMarks",
+      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by the class-list conversion's mark transfer (#4803, ADR 0283); the existing observation callback is unchanged.",
+      "source_owner": "student-presence",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
+      "target_owner": ""
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RequireAbsentMorningAttendance",
       "classification": "query",
       "effect": "query",
@@ -26714,13 +26747,13 @@
       "target_owner": "audit-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StatisticsAuditLog.SeenStatisticsAccessSince",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StatisticsAuditLog.SeenStatisticsAccessWithin",
       "classification": "query",
       "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.StatisticsAccessLog.SeenStatisticsAccessSince",
-      "reason": "Read-only newly exposed target: student-presence reaches modules/auditlog/records.DataAccessLogRepository.ExistsSince (audit-platform) through roots/owners.StatisticsAuditLog.SeenStatisticsAccessSince. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.StatisticsAccessLog.SeenStatisticsAccessWithin",
+      "reason": "Read-only newly exposed target: student-presence reaches modules/auditlog/records.DataAccessLogRepository.ExistsWithin (audit-platform) through roots/owners.StatisticsAuditLog.SeenStatisticsAccessWithin, the renamed deduplication that bounds on the database clock (ADR 0281, Nachtrag, #7295). No persistent, lock or scope effect.",
       "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.ExistsSince",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.ExistsWithin",
       "target_owner": "audit-platform"
     },
     {
@@ -28169,6 +28202,16 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.SupervisedRoomsOn",
       "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.SupervisedRoomsOn. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.TransferClassListEntryMarks",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.TransferClassListEntryMarks",
+      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/adapters/postgres.Store.TransferClassListEntryMarks (#4803, ADR 0282).",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"

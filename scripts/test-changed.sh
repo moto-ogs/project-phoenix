@@ -14,6 +14,11 @@ cd "$repo_root"
 # shellcheck source=scripts/go-test-workspace.sh
 source "$repo_root/scripts/go-test-workspace.sh"
 
+# Keep concurrent package binaries from multiplying runtime workers across
+# overlapping worktrees. This matches scripts/test-backend.sh and the shared
+# local test budget; -parallel remains the deliberate per-binary test budget.
+export GOMAXPROCS=1
+
 FAST=false
 if [ "${1:-}" = --fast ]; then
   FAST=true
@@ -103,6 +108,11 @@ if [ "${#affected[@]}" -gt 0 ]; then
       [ "$status" -eq 0 ]; then
       status=1
     fi
+    if [ -n "${TEST_DB_DSN:-}" ] &&
+      ! (cd "$repo_root/backend" && go run ./internal/testdb/cmd/bootstrap --stop-ephemeral) &&
+      [ "$status" -eq 0 ]; then
+      status=1
+    fi
     [ -n "${PHX_TEST_RUN_LOCK:-}" ] && rm -f "$PHX_TEST_RUN_LOCK"
     rm -f "$backend_go_log"
     if ! cleanup_go_test_workspace && [ "$status" -eq 0 ]; then status=1; fi
@@ -115,6 +125,10 @@ if [ "${#affected[@]}" -gt 0 ]; then
   source "$repo_root/scripts/test-run-id.sh"
   trap backend_sweep EXIT
   prepare_go_test_workspace
+  # Keep configured test servers authoritative. A detached worktree without
+  # runtime configuration gets a private local server from the test lifecycle.
+  TEST_DB_DSN=$(cd backend && go run ./internal/testdb/cmd/bootstrap --resolve-dsn)
+  export TEST_DB_DSN
   # Handshake einmal pro Lauf statt einmal pro Binary. Jedes Binary liest
   # PHX_TEST_TEMPLATE, die Variable ist Teil des Go-Test-Cache-Keys und muss
   # deshalb zwischen beiden Wrappern uebereinstimmen (test-backend.sh setzt

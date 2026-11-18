@@ -20,7 +20,7 @@ import {
   carryoverRuleLabel,
   formatDayCount,
 } from "~/lib/absence-helpers";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import type { SectionConfig } from "~/lib/database/types";
 import { formatCount } from "~/lib/format-utils";
@@ -29,9 +29,10 @@ import { STALE_DATA_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 
-const CACHE_KEY = "database-absence-types";
+const CACHE_KEY = tenantAdminKeys.absenceTypes();
 
 // Ein per API gesetzter Tag, der kein Monatsende ist, bleibt wählbar.
 function carryoverOptions(type: AbsenceType | null) {

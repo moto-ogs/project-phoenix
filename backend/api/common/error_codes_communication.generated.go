@@ -11,6 +11,9 @@ const CodeCommunicationDeclarationHasSubmissions = "communication.declaration_ha
 const CodeCommunicationGroupThreadClosed = "communication.group_thread_closed"
 const CodeCommunicationGroupThreadNoRecipients = "communication.group_thread_no_recipients"
 const CodeCommunicationLeadershipMessagesUnavailable = "communication.leadership_messages_unavailable"
+const CodeCommunicationLetterPlaceholderLetterOnly = "communication.letter_placeholder_letter_only"
+const CodeCommunicationLetterPlaceholderUnknown = "communication.letter_placeholder_unknown"
+const CodeCommunicationLetterPrintNotLetter = "communication.letter_print_not_letter"
 const CodeCommunicationMessageSendConflict = "communication.message_send_conflict"
 const CodeCommunicationNotificationsDisabled = "communication.notifications_disabled"
 const CodeCommunicationParentMessagingDisabled = "communication.parent_messaging_disabled"
@@ -41,6 +44,9 @@ var errorCodeClassesCommunication = []errorCodeClass{
 	{CodeCommunicationGroupThreadClosed, "business_rejection"},
 	{CodeCommunicationGroupThreadNoRecipients, "business_rejection"},
 	{CodeCommunicationLeadershipMessagesUnavailable, "permission"},
+	{CodeCommunicationLetterPlaceholderLetterOnly, "input"},
+	{CodeCommunicationLetterPlaceholderUnknown, "input"},
+	{CodeCommunicationLetterPrintNotLetter, "business_rejection"},
 	{CodeCommunicationMessageSendConflict, "business_rejection"},
 	{CodeCommunicationNotificationsDisabled, "business_rejection"},
 	{CodeCommunicationParentMessagingDisabled, "permission"},

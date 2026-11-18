@@ -3,23 +3,25 @@ package audit
 import (
 	"context"
 	"fmt"
+	"time"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 )
 
 type StudentDeletionRepository struct {
 	runtime Runtime
+	now     func() time.Time
 }
 
-func NewStudentDeletionRepository(runtime Runtime) auditModels.StudentDeletionRepository {
-	return &StudentDeletionRepository{runtime: requireRuntime(runtime)}
+func NewStudentDeletionRepository(runtime Runtime, now func() time.Time) auditModels.StudentDeletionRepository {
+	return &StudentDeletionRepository{runtime: requireRuntime(runtime), now: now}
 }
 
 func (r *StudentDeletionRepository) Create(ctx context.Context, event *auditModels.StudentDeletion) error {
 	if event == nil {
 		return fmt.Errorf("student deletion audit event is required")
 	}
-	return NewAppender(r.runtime).Append(ctx, event)
+	return NewAppender(r.runtime, r.now).Append(ctx, event)
 }
 
 func (r *StudentDeletionRepository) CountStudentReferences(ctx context.Context, studentID int64) (int, error) {

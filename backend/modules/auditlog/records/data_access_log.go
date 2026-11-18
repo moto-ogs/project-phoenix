@@ -46,7 +46,27 @@ const (
 	// lifting the block on the address (#5934). StudentID stays NULL; metadata
 	// carries guardian_profile_id and action, never the address.
 	ResourceTypeGuardianEmailStop = "guardian_email_stop"
-	ResourceTypeGuardianEmailLift = "guardian_email_lift"
+	// ResourceTypeParentLetterPreview records a letter text filled with one
+	// child's values before it is sent (#4813). StudentID names the child.
+	ResourceTypeParentLetterPreview = "parent_letter_preview"
+	// ResourceTypeParentLetterPrint records the download of every letter of
+	// an Elternbrief as one PDF (#4813). StudentID stays NULL; metadata
+	// carries announcement_id and child_count.
+	ResourceTypeParentLetterPrint = "parent_letter_print"
+	// ResourceTypeParentLetterPublish records the read of every reached
+	// child's values when a letter naming each child is published (#4813).
+	// StudentID stays NULL; metadata carries announcement_id and child_count.
+	ResourceTypeParentLetterPublish = "parent_letter_publish"
+	// ResourceTypeStudentParentRecords records opening the letters and
+	// declarations of one child in its Dokumente tab (#4814). StudentID
+	// names the child.
+	ResourceTypeStudentParentRecords = "student_parent_records"
+	// ResourceTypeParentDeclarationProof records the download of a
+	// declaration's proof (#4814). StudentID names the child when the proof
+	// holds only that child; metadata carries announcement_id and
+	// child_count.
+	ResourceTypeParentDeclarationProof = "parent_declaration_proof"
+	ResourceTypeGuardianEmailLift      = "guardian_email_lift"
 	// ResourceTypeGuardianFinancialView records serving the MASKED bank
 	// details of one guardian (#2608). StudentID stays NULL; metadata carries
 	// guardian_profile_id.
@@ -216,6 +236,11 @@ const (
 	// (#4705): written at every Einsatzort of the record before a value
 	// leaves. Metadata as for ResourceTypeTraegerStaffRecords.
 	ResourceTypeTraegerStaffFinancial = "traeger_staff_financial"
+	// ResourceTypeTraegerStaffPool records a school reading the Springer
+	// of its Träger in the Vertretungspool (#4709, ADR 0089 section 9):
+	// name, status of the Nachweise and blocked times. StudentID is NULL;
+	// metadata carries the staff_record_ids and the row count.
+	ResourceTypeTraegerStaffPool = "traeger_staff_pool"
 )
 
 // DataAccessLog is an append-only record of a staff member viewing sensitive
@@ -231,7 +256,7 @@ type DataAccessLog struct {
 	StudentID      *int64    `bun:"student_id" json:"student_id,omitempty"`
 	RangeStart     time.Time `bun:"range_start,notnull" json:"range_start"`
 	RangeEnd       time.Time `bun:"range_end,notnull" json:"range_end"`
-	AccessedAt     time.Time `bun:"accessed_at,notnull,default:now()" json:"accessed_at"`
+	AccessedAt     time.Time `bun:"accessed_at,nullzero,notnull" json:"accessed_at"`
 	// Metadata holds event-specific context (migration 1.15.101).
 	// Mirrors the metadata column on the sibling audit tables.
 	Metadata map[string]interface{} `bun:"metadata,type:jsonb" json:"metadata,omitempty"`

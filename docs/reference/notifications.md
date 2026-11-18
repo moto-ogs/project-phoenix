@@ -130,7 +130,12 @@ For example, an aggregate derived from an admin-wide view must use
 ## Consent (per account, per type)
 
 Nothing is delivered to a person who did not ask for it. The rule is
-mechanical: **no row means off**.
+mechanical: **no row means off**, except for a type registered `DefaultOn`:
+a notice that is the person's own task or about their own planned blocks
+(staff types with a `Permission`, #4791, #7148) or about the family's own
+children when that is what the type exists for (`parent_room_changed`,
+#7141). Such a type reads as on until the person stores an "off", and
+"switch everything off" stores that "off" in every portal.
 
 - **Catalogue** — `modules/delivery/internal/notifications/types.go`. One `TypeDefinition` per
   notification a person can agree to: key, German label and description (the
@@ -184,7 +189,7 @@ mechanical: **no row means off**.
 |---|---|---|
 | SSE / in-app | active | `realtime.Broadcaster` → SSE event `notification` → toast |
 | Web Push | active (#2003/#2657) | leased `platform.push_outbox` → `webpush-go` (VAPID) → browser push service → service worker notification |
-| Feed | active (#7148, staff portal) | `platform.notification_feed_entries` in the producer's transaction → bell in the header; SSE `notification_feed_changed` (no content) |
+| Feed | active (#7148 staff portal, #7139 moto schule, #7140 parents portal; room changes #7141, class timetable #7142) | `platform.notification_feed_entries` in the producer's transaction → bell in the header; SSE `notification_feed_changed` (no content) |
 | E-Mail | future | wrap `email.Mailer` + audience→address resolution as a `Channel` |
 
 E-mail is still not a `Channel`: features that mail enqueue through the same
@@ -216,10 +221,21 @@ caller's transaction. Rules, all applied by the router:
 - Reading: `GET /api/notifications/feed/` (pages, `next_cursor`,
   `unread_count`), `GET /feed/unread-count`, `POST /feed/{id}/read`,
   `POST /feed/read-all`, all in the request's tenant transaction. The reader
-  must still be an active staff member of the school
-  (`platform.delivery_realtime_recipients`).
-- `notification_feed_changed` reaches every staff session of the account for
-  a new or updated entry (after the commit) and for a read-state change. The
+  must still be an active member of the school with a role of the portal
+  (`platform.delivery_realtime_recipients`: `has_staff_role` in the staff
+  portal, `has_school_role` in moto schule).
+- moto schule (#7139) mounts the same routes under `/school/notifications/feed`.
+  It reads the same entries of the account, narrowed to the types its
+  catalogue offers (`OfferedInPortal`: school-only types and staff types with
+  `SchoolPortal`) plus a reversal that replaces such an entry; read state is
+  shared between both portals. Its link is
+  `school_deep_link` (the event's `SchoolDeepLink`, written for types the
+  school portal shows), else `/school`. A type with
+  `SchoolPortalWithoutPermission` is offered there without its `Permission`:
+  a Lehrkraft holds no OGS right but can be planned for a block.
+- `notification_feed_changed` reaches every session of the account in the
+  staff portal and in moto schule for a new or updated entry (after the
+  commit) and for a read-state change. The
   latter is sent once the change is written, possibly just before the commit;
   clients reload with a delay and reconcile by polling.
 - Retention: 30 days after the last update (nightly `delivery_retention`); the
@@ -229,7 +245,151 @@ The first producer is Timetable's cancellation of a single block
 (`instance_cancelled`): the block's staff rows without absent people and
 without the person who cancelled; feed and push from today up to 14 days
 ahead, feed only later, nothing for the past. A bulk cancellation of a
-period writes no entries per block.
+period writes no entries per block. In moto schule the entry links to
+`/school/aufsichten`, and the push reaches the account's school devices by
+the Web Push rules of that portal.
+
+Staffing changes (#7136) come from every write of the Timetable staffing:
+the single Vertretungsplan save, the Sammel-Vertretung, and the plan cascade
+of an absence (sick report, its reconciliation and the Dienstplan-Abgleich
+`SyncAbsencePlan`). Each story is one notice per person and kind
+(substituted, absent, present again, substitute removed), whatever the number
+of days. `staffing_changed` reaches the substitute and the absent person and
+links to their own Dienstplan; `group_staffing_changed` reaches the teachers
+assigned to the OGS groups of the affected blocks (`education.group_teacher`,
+groups as the Betreuungsplan's group filter names them) and links to
+`/vertretung?d=…&block=…`. The person who made the change gets nothing; the
+text names no reason. Both types sit under the heading
+„Dienstplan und Vertretung“ (`dienstplan`), push by default and share the
+school switch `notifications.staffing_changed_enabled`. Bundling object: the
+story itself (`staffing_story`, a random id per story), so an independently
+visible change never overwrites another unread entry in the same operation; the
+staffing rows do not record which substitution a later removal undoes, so a
+removal is an entry of its own. Withdrawing or shortening an absence tells the
+same people that the person is there again.
+
+A colleague's absence also reaches the rest of the team of the affected
+groups (`team_member_absent`, #7138). The team of a group on a day is who
+"my groups" names: the assigned teachers and whoever holds the group by a
+Gruppenübergabe (`education.group_substitution` mit Zieltyp
+`group_handover`) covering that day. Whoever
+already receives a staffing notice about the same absence or return in the
+same operation gets no team entry; the teachers therefore usually hear it as
+`group_staffing_changed`. Neither the absent person nor the person who made
+the change gets one. Uncovered and substituted blocks of one person in one
+operation are one absence: one entry per operation, „… ist an 3 Tagen
+(17.–19.11.) nicht da.“ A cover entered later for someone already marked
+absent (a sick report, then its cover) is no new absence. A return reads
+„… ist … doch da.“ Bundling object: the person and the first day
+(`staffing_team_day`). A Krankmeldung instead uses its stable absence ID
+(`staffing_team_absence`), so its return also updates the unread absence entry
+when it affects a later day. Another manual absence on another day stays an
+entry of its own. The type sits under „Dienstplan und Vertretung“,
+pushes by default within the same 14-day window, shares the school switch
+and links to `/tagesplan?d=…` of the first day, since a handover holder
+usually lacks the `schedules:manage` right the Vertretungsplan needs.
+
+A new Hinweis der Leitung (`staff_notice_published`, #7143) reaches the
+readers of the Tagesinformationen in the OGS portal: the school's staff whose
+account holds `users:read`, without the person who saved it. It is written
+when a saved notice newly reaches them: created active, switched on again or
+its audience widened to include them; never for another edit. A notice only for the Lehrkräfte of moto schule writes no
+entries until the school portal has its feed (#7139). Feed and push while the
+notice starts within 14 days, feed only later, nothing once it has ended. The
+push is off by default (`FilterOptedIn`); the school switch is
+`notifications.staff_notice_published_enabled`. The link
+`/tagesinformationen?hinweis=<id>` opens the notice through
+`GET /api/staff-notices/{id}`, also before it applies.
+
+A planned, changed or cancelled closing day of the school
+(`school_closing_day_changed` and `parent_school_closing_day_changed`, #7144)
+reaches every active OGS-portal and moto-schule account and every guardian
+with `parent_portal.access` for a child of the school. School Calendar writes
+the notice in the closing-day transaction through
+`schoolcalendar.ClosingDayNotices`; Delivery's `SchoolAudience` supplies the
+audience and the guardian feed checks the child access again on every read.
+The request account is excluded. Feed and push apply while a changed day lies
+within 14 days, feed only later, and neither applies if every day is past or
+only the reason changed. The default-on push uses `FilterNotOptedOut`; the
+shared `notifications.school_closing_day_enabled` switch stops feed and push.
+The active members of the school's Träger (`platform.organization_accounts`,
+active account) read the same notice in the bell of the Träger-Portal
+(`traeger_school_closing_day_changed`, #7146, ADR 0287): one entry per member
+in the school it is about, linked to `/traeger/schulen/<id>`, without push
+and without live signal, under the same school switch. The request account is
+excluded here too. `GET /traeger/notifications/feed` lists the entries of all
+schools of the session's Träger with `school_id` and `school_name`; it reads
+in one administrative unit whose statements keep only the Träger's schools
+while the account is an active member. The bell reloads its count on every
+page change and every minute.
+
+A block that moves to another room (#7141) comes from Timetable's edit of a
+planned block (`UpdatePlanned`, also its series conversion): only a change
+from one room to another counts, not a first room or a removed one. The
+staff of the block after the edit, without absent people and without the
+person who made the change, get a feed entry, in moto schule too
+(`/school/aufsichten`); their link is the own Dienstplan on that day. The
+guardians who hold `parent_portal.access` for one of the booked children
+(People Directory's `GuardianPortalContacts`) get the same entry in the
+parents portal, linked to `/children`. Its text names the block, its day and
+both rooms, never a child; the families' push keeps a lock-screen copy in
+their portal language without block, room or child. The day decides the
+type: a move for today or tomorrow is `instance_room_changed` /
+`parent_room_changed`, on by default (`FilterNotOptedOut`); a later move is
+`instance_room_changed_later` / `parent_room_changed_later`, pushed within
+14 days only for who switched it on (`FilterOptedIn`), feed only beyond;
+nothing for the past. All four share the school switch
+`notifications.instance_room_changed_enabled`. Bundling object: the block
+(`activity_instance`), so a second move within ten minutes updates the
+unread entry. A room changed on the series replans its future blocks and
+tells nobody; a parent type that is on by default reads as on in the
+parents portal until the family switches it off.
+
+A changed Stundenplan of a class (#7142) comes from Care Plan's writes of the
+class's Unterrichtsschluss: a weekly save that changes at least one
+weekday's time (the first day ahead it takes effect on decides the lead
+time), and setting, changing or taking back a class-wide change on one day.
+A save that changes nothing tells nobody. The people of the class are the
+staff assigned to it (`education.class_teachers`), the teachers of the OGS
+groups of its children and the guardians with `parent_portal.access` to a
+child of the class (the parent audience projection's `class` target); the
+account of the request gets nothing. Staff get `class_timetable_changed`
+(link `/tagesplan?d=…`, in moto schule `/school/klasse?klasse=…&tag=…`),
+families `parent_class_timetable_changed` (link `/children`, the lock-screen
+push names no class). Push: today or tomorrow by default
+(`FilterNotOptedOut`), 2 to 14 days ahead only for staff who switched on
+`class_timetable_changed_ahead`, a preference-only type no event carries;
+families push only with their own yes, within 14 days. Later changes reach
+the feed only. Bundling object: the class (`school_class`, a hash of its
+normalized name, since a class has no row), so the many saves of the
+Stundenplanpflege stay one unread entry per class. The text never carries
+the reason of a day's change. All three share the school switch
+`notifications.class_timetable_changed_enabled`.
+
+#### Parents portal (#7140)
+
+A guardian-scoped event with `Feed` and `Audience.StudentIDs` writes one
+entry per guardian account of its audience, with the children it is about
+(`student_ids`). Only parent types (`PortalParent`) reach the feed of a
+guardian; staff types such as substitutions or Dienstplan changes never do.
+
+- Reading: `GET /parent/me/notifications/feed/` and the same three routes
+  below it, across every school of the family in one administrative
+  transaction. Every read checks again that the account is an active guardian
+  member of the entry's school and still holds `parent_portal.access` for at
+  least one of its children (`platform.delivery_realtime_recipients`). Losing
+  the right hides the entries; nothing is deleted. A staff session never
+  reads an entry of a guardian, and a guardian never one of staff.
+- `Feed.Title`/`Feed.Body` carry the entry's text when it may say more than
+  the push: the entry is read only after login, the push keeps its
+  lock-screen copy without child data.
+- `notification_feed_changed` reaches the account's parents-portal sessions
+  (`BroadcastToGuardian`), once per school whose entries changed.
+
+The first parent producer is Communication's cancellation notice
+(`parent_care_cancelled`, #2601): the one notice the person cancelling sends
+to the families writes the feed next to its push and its news entry; there is
+no second message. The family's switch decides only the push.
 
 ### Web Push (#2003)
 

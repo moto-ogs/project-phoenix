@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 var (
@@ -50,6 +51,9 @@ type Student struct {
 	Excused       *bool      `json:"excused,omitempty"`
 	ExcusedSince  *time.Time `json:"excused_since,omitempty"`
 	PhotoPath     *string    `json:"photo_path,omitempty"`
+	// WithoutCarePlace marks a child of the class without an OGS place
+	// (#4803, ADR 0282). Not on the wire of this projection.
+	WithoutCarePlace bool `json:"-"`
 }
 
 // StudentName is the display identity of one student. Keeping this projection
@@ -58,6 +62,14 @@ type StudentName struct {
 	StudentID int64  `json:"student_id"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
+	// SchoolMemberOnly is set by the class read for a child without an OGS
+	// place (#4803): a child of the class from SchoolMemberFrom to
+	// SchoolMemberUntil (nil: no end), whatever the care participation says.
+	// A child that left the school counts only with a dated end. Not on the
+	// wire.
+	SchoolMemberOnly  bool           `json:"-"`
+	SchoolMemberFrom  *calendar.Date `json:"-"`
+	SchoolMemberUntil *calendar.Date `json:"-"`
 }
 
 func (s Student) IsAlumnus() bool { return s.Status == StudentStatusAlumnus }

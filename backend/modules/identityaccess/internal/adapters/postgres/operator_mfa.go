@@ -18,10 +18,10 @@ type operatorMFACredentialRow struct {
 	ID            int64      `bun:"id,pk,autoincrement"`
 	OperatorID    int64      `bun:"operator_id,notnull"`
 	Method        string     `bun:"method,notnull"`
-	EnrolledAt    time.Time  `bun:"enrolled_at,nullzero,notnull,default:current_timestamp"`
+	EnrolledAt    time.Time  `bun:"enrolled_at,nullzero,notnull"`
 	LastUsedAt    *time.Time `bun:"last_used_at"`
-	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 func (r operatorMFACredentialRow) toDomain() domain.OperatorMFACredential {
@@ -40,8 +40,8 @@ type operatorMFAChallengeRow struct {
 	ExpiresAt     time.Time  `bun:"expires_at,notnull"`
 	ConsumedAt    *time.Time `bun:"consumed_at"`
 	IPAddress     net.IP     `bun:"ip_address,type:inet,nullzero"`
-	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull"`
 	// CredentialGeneration is written explicitly: the column default 0 marks
 	// a code from before the binding (#6308).
 	CredentialGeneration int64 `bun:"credential_generation,notnull"`
@@ -65,8 +65,8 @@ type operatorTrustedDeviceRow struct {
 	ExpiresAt     time.Time  `bun:"expires_at,notnull"`
 	LastUsedAt    *time.Time `bun:"last_used_at"`
 	RevokedAt     *time.Time `bun:"revoked_at"`
-	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull"`
 	// CredentialGeneration is written explicitly: the column default 0 marks
 	// a device from before the binding (#6308).
 	CredentialGeneration int64 `bun:"credential_generation,notnull"`
@@ -159,9 +159,13 @@ func (s *Store) InsertOperatorMFAChallenge(ctx context.Context, challenge domain
 	if err != nil {
 		return domain.OperatorMFAChallenge{}, domain.OperationStats{}, err
 	}
+	// The owner's clock stamps the row: the resend limit counts codes
+	// created since a window computed on that clock.
+	now := s.now()
 	row := operatorMFAChallengeRow{
 		OperatorID: challenge.OperatorID, CodeHash: challenge.CodeHash, ExpiresAt: challenge.ExpiresAt,
 		ConsumedAt: challenge.ConsumedAt, IPAddress: challenge.IPAddress, CredentialGeneration: challenge.CredentialGeneration,
+		CreatedAt: now, UpdatedAt: now,
 	}
 	started := time.Now()
 	result, err := db.NewInsert().Model(&row).Returning("*").Exec(ctx)

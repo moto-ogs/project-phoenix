@@ -4,6 +4,7 @@ package enrollmenthttp
 import (
 	"context"
 	"net/http"
+	"time"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 
@@ -53,6 +54,10 @@ type Resource struct {
 	// status page (#6335). Set as a field after construction; without it the
 	// routes answer 500.
 	FamilyChildren capability.IntakeFamilyChildren
+	// Now is the clock of the public enrollment window, the expiry
+	// warnings and the generation time of the exports and proofs
+	// (ADR 0239, ADR 0275). NewResource requires it; a test may replace it.
+	Now func() time.Time
 	// transactions is set by NewResource: the route steps then run in the
 	// tenant and administrative transactions of the shared tenant runtime.
 	// The bare Resource a route unit test builds runs runInTenantTx on the
@@ -61,6 +66,9 @@ type Resource struct {
 	legalDocumentRefs    legalDocumentReferenceRepository
 	runInTenantTxForTest func(r *http.Request, fn func(ctx context.Context) error) error
 }
+
+// now reads the resource's clock.
+func (rs *Resource) now() time.Time { return rs.Now() }
 
 // NewResource constructs the enrollment API resource.
 func NewResource(
@@ -78,6 +86,7 @@ func NewResource(
 	schoolService SchoolDirectory,
 	uploads common.UploadStorage,
 	failures DatabaseFailures,
+	now func() time.Time,
 	legalDocumentRefs ...legalDocumentReferenceRepository,
 ) *Resource {
 	if uploads == nil {
@@ -86,7 +95,11 @@ func NewResource(
 	if failures.Transient == nil || failures.Constraint == nil {
 		panic("enrollment resource: database failure classifiers are required")
 	}
+	if now == nil {
+		panic("enrollment resource: the clock is required")
+	}
 	rs := &Resource{
+		Now:                  now,
 		Failures:             failures,
 		uploads:              uploads,
 		FormSchemaService:    formSchemaSvc,

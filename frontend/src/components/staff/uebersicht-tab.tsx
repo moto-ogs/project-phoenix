@@ -41,6 +41,8 @@ import {
 import { useAccountBalance } from "~/lib/hooks/use-account-balance";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
+import { timeTrackingKeys } from "~/lib/swr/portal-keys";
+import { staffAbsenceKeys, staffTimeKeys } from "~/lib/swr/staff-keys";
 import { timeTrackingService } from "~/lib/time-tracking-api";
 import {
   balanceSessionEnd,
@@ -96,8 +98,9 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
   const todayISO = useBerlinToday();
   const today = useMemo(() => parseISODate(todayISO), [todayISO]);
 
-  const { data: timeTrackingConfig } = useSWRAuth("time-tracking-config", () =>
-    timeTrackingService.getConfig(),
+  const { data: timeTrackingConfig } = useSWRAuth(
+    timeTrackingKeys.config(),
+    () => timeTrackingService.getConfig(),
   );
 
   const accountAnchor = useMemo(() => {
@@ -118,7 +121,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
     error: sessionsError,
     mutate: mutateSessions,
   } = useSWRAuth<StaffHistorySession[]>(
-    `staff-history-account-${staffId}-${accountHistoryStartKey}-${yearEndKey}`,
+    staffTimeKeys.historyAccount(staffId, accountHistoryStartKey, yearEndKey),
     () =>
       staffHistoryService.getHistory(
         staffId,
@@ -132,7 +135,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
     error: absencesError,
     mutate: mutateAbsences,
   } = useSWRAuth<StaffAbsenceRow[]>(
-    `staff-absences-account-${staffId}-${accountStartKey}-${yearEndKey}`,
+    staffAbsenceKeys.accountList(staffId, accountStartKey, yearEndKey),
     () => staffAbsenceService.getAbsences(staffId, accountStartKey, yearEndKey),
   );
   // Stundenkonto-Buchungen (#1420) — Teil der Saldo-Wahrheit: sie fliessen in
@@ -144,7 +147,11 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
     error: adjustmentsError,
     mutate: mutateAdjustments,
   } = useSWRAuth<BalanceAdjustment[]>(
-    `staff-balance-adjustments-${staffId}-${accountStartKey}-${adjustmentHistoryEndKey}`,
+    staffTimeKeys.balanceAdjustments(
+      staffId,
+      accountStartKey,
+      adjustmentHistoryEndKey,
+    ),
     () =>
       staffBalanceAdjustmentService.list(
         staffId,
@@ -154,9 +161,9 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
   );
   const refreshStundenkonto = useTenantMutateMatching([
     `staff-month-summary-${staffId}-`,
-    `staff-balance-adjustments-${staffId}-`,
-    `staff-history-account-${staffId}-`,
-    `staff-absences-account-${staffId}-`,
+    staffTimeKeys.balanceAdjustmentsFamily(staffId),
+    staffTimeKeys.historyAccountFamily(staffId),
+    staffAbsenceKeys.accountListFamily(staffId),
   ]);
 
   // The server's per-day projection for the whole account range — the days
@@ -173,7 +180,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
     error: targetsError,
     mutate: mutateTargets,
   } = useSWRAuth<ProjectionByDay>(
-    `staff-schedule-targets-${staffId}-account-${accountStartKey}-${yearEndKey}`,
+    staffTimeKeys.scheduleTargetsAccount(staffId, accountStartKey, yearEndKey),
     () =>
       staffMonthSummaryService.getDailyProjectionRange(
         staffId,
@@ -345,12 +352,16 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
         onChanged={refreshStundenkonto}
       />
 
-      {/* B — Zwei Charts side-by-side */}
+      {/* B — Zwei Charts side-by-side. Beide Karten sind so hoch wie die
+          höhere: fehlt einer das Diagramm, füllt ihr Platzhalter die Fläche,
+          statt oben zu kleben. */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {/* B1 — Tagesvergleich Ist/Soll */}
         <SectionCard
           title="Tagesvergleich Ist / Soll"
           headingLevel={3}
+          className="flex flex-col"
+          bodyClassName="compact:mt-3 mt-4 flex flex-1 flex-col"
           action={
             <DateRangePicker
               value={clampedDailyRange}
@@ -364,6 +375,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
           {!hasTimeTrendData || dailyTrendData.length < 2 ? (
             <EmptyState
               variant="dashed"
+              className="flex-1 justify-center"
               title={
                 hasTimeTrendData
                   ? "Noch zu wenige Werktage erfasst — sobald ein zweiter Tag dazukommt, erscheint der Vergleich."
@@ -379,6 +391,8 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
         <SectionCard
           title="Saldo-Verlauf"
           headingLevel={3}
+          className="flex flex-col"
+          bodyClassName="compact:mt-3 mt-4 flex flex-1 flex-col"
           action={
             <DateRangePicker
               value={clampedSaldoRange}
@@ -392,6 +406,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
           {!hasBalanceTrendData || weeklyTrendData.length < 2 ? (
             <EmptyState
               variant="dashed"
+              className="flex-1 justify-center"
               title={
                 hasBalanceTrendData
                   ? "Noch zu wenige Wochen für einen Verlauf — sobald eine zweite Woche dazukommt, erscheint der Saldo."

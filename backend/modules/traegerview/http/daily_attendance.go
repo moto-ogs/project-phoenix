@@ -1,8 +1,6 @@
 package traegerviewhttp
 
 import (
-	"bytes"
-	"encoding/csv"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,7 +9,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // dailyAttendance answers GET /traeger/schools/daily-attendance: the daily
@@ -30,10 +27,15 @@ func (rs *Resource) dailyAttendance(w http.ResponseWriter, r *http.Request) {
 }
 
 // dailyAttendanceExport answers GET /traeger/schools/daily-attendance/export:
-// the report as CSV, one row per child and day without name or ID. The
-// projection writes the export to the access log of every school with rows
-// before the file leaves.
+// the report as PDF, Excel or CSV (format=, CSV without one; #4718), one row
+// per child and day without name or ID. The projection writes the export to
+// the access log of every school with rows before the file leaves.
 func (rs *Resource) dailyAttendanceExport(w http.ResponseWriter, r *http.Request) {
+	format, err := common.ParseListFormat(r)
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
 	viewer, from, to, ok := dailyAttendanceRequest(w, r)
 	if !ok {
 		return
@@ -42,16 +44,7 @@ func (rs *Resource) dailyAttendanceExport(w http.ResponseWriter, r *http.Request
 	if renderDailyAttendanceError(w, r, err) {
 		return
 	}
-	data, err := dailyAttendanceCSV(export)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", textnorm.ContentDisposition("attachment", fmt.Sprintf("tagesmeldung-mv-%s-bis-%s.csv", export.From, export.To)))
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(data)
+	common.WriteList(w, r, rs.lists, format, dailyAttendanceTable(export))
 }
 
 // dailyAttendanceRequest reads the session's Träger and account and the
@@ -97,21 +90,17 @@ var dailyAttendanceStatus = map[string]string{
 	traegerview.AttendanceClassTrip: "Klassenfahrt",
 }
 
-// dailyAttendanceCSV writes the general mapping until the state publishes
+// dailyAttendanceTable is the general mapping until the state publishes
 // its format (KiföAVO M-V): one row per child and day with the school, its
 // town, the day, a running number of the day at that school, the status,
 // arrival, pickup (Berlin wall clock) and the stay in minutes. The running
 // number counts rows, it identifies no child across days.
-func dailyAttendanceCSV(export traegerview.DailyAttendanceExport) ([]byte, error) {
+func dailyAttendanceTable(export traegerview.DailyAttendanceExport) common.ListTable {
 	schools := make(map[int64]traegerview.School, len(export.Schools))
 	for _, school := range export.Schools {
 		schools[school.ID] = school
 	}
-	var buf bytes.Buffer
-	buf.WriteString("\xEF\xBB\xBF")
-	writer := csv.NewWriter(&buf)
-	writer.Comma = ';'
-	rows := [][]string{{"Einrichtung", "Ort", "Datum", "Lfd. Nr.", "Status", "Ankunft", "Abholung", "Anwesenheit in Minuten"}}
+	rows := make([][]string, 0, len(export.Records))
 	number, last := 0, struct {
 		school int64
 		date   calendar.Date
@@ -122,7 +111,7 @@ func dailyAttendanceCSV(export traegerview.DailyAttendanceExport) ([]byte, error
 		}
 		number++
 		school := schools[record.SchoolID]
-		row := []string{csvSafe(school.Name), csvSafe(school.City), record.Date.Format("02.01.2006"), strconv.Itoa(number), dailyAttendanceStatus[record.Status], "", "", ""}
+		row := []string{school.Name, school.City, record.Date.Format("02.01.2006"), strconv.Itoa(number), dailyAttendanceStatus[record.Status], "", "", ""}
 		if record.ArrivedAt != nil {
 			row[5] = record.ArrivedAt.In(calendar.Berlin).Format("15:04")
 		}
@@ -134,8 +123,15 @@ func dailyAttendanceCSV(export traegerview.DailyAttendanceExport) ([]byte, error
 		}
 		rows = append(rows, row)
 	}
-	if err := writer.WriteAll(rows); err != nil {
-		return nil, err
+	from, to := export.From.Format("02.01.2006"), export.To.Format("02.01.2006")
+	return common.ListTable{
+		Title: "Tagesmeldung Mecklenburg-Vorpommern", Subtitle: from + " bis " + to,
+		Filters: []string{common.ListSchoolLabel(""), common.ListPeriodLabel(from, to)},
+		Columns: []common.ListColumn{
+			{ID: "school", Label: "Einrichtung"}, {ID: "city", Label: "Ort"}, {ID: "day", Label: "Datum"},
+			{ID: "number", Label: "Lfd. Nr."}, {ID: "status", Label: "Status"}, {ID: "arrival", Label: "Ankunft"},
+			{ID: "pickup", Label: "Abholung"}, {ID: "minutes", Label: "Anwesenheit in Minuten", Numeric: true},
+		},
+		Rows: rows, Filename: fmt.Sprintf("tagesmeldung-mv-%s-bis-%s", export.From, export.To),
 	}
-	return buf.Bytes(), nil
 }

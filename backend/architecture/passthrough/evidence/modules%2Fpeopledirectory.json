@@ -1220,13 +1220,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) DeleteExpiredChildlessGuardians(ctx context.Context, retentionDays int, openInvitations peopledirectory.OpenGuardianInvitations) (int, error) {\n\tif retentionDays \u003c= 0 {\n\t\treturn 0, fmt.Errorf(\"%w, got %d\", peopledirectory.ErrGuardianRetentionWindow, retentionDays)\n\t}\n\tcutoff := calendar.TodayDate().AddDays(-retentionDays).BerlinMidnight()\n\treturn s.guardianLifecycle.DeleteChildlessGuardiansBefore(ctx, cutoff, openInvitations)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/Service.DeleteExpiredChildlessGuardians",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *Service) DeleteGuardianPhoneRecord(ctx context.Context, phoneID int64) error {\n\tif phoneID \u003c= 0 {\n\t\treturn invalidGuardian(\"phone ID is required\")\n\t}\n\treturn mapGuardianPortalError(s.guardianRows.DeletePhone(ctx, phoneID))\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/Service.DeleteGuardianPhoneRecord",
@@ -1727,13 +1720,6 @@
       "evidence": "func (r *StudentRecords) FindActiveDueForDeactivation(ctx context.Context, asOf owner0.Date) ([]*peopleModule.StudentState, error) {\n\tif _, err := owner0.ParseDate(asOf.String()); err != nil {\n\t\treturn nil, RetainedStudentReadError(\"find active due for deactivation\", \u0026peopleModule.InvalidStudentError{Reason: \"the day must be a calendar date in YYYY-MM-DD format\"})\n\t}\n\treturn r.listRecords(ctx, \"find active due for deactivation\", func() ([]domain.StudentRecord, error) {\n\t\treturn r.directory.ListRecordsDueForStatus(ctx, string(peopleModule.StudentStatusActive), peopleModule.StudentBoundCareEnd, asOf.String())\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/StudentRecords.FindActiveDueForDeactivation",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r *StudentRecords) FindAllWithGroups(ctx context.Context) ([]*peopleModule.StudentRosterEntry, error) {\n\treturn r.roster(ctx, \"find all with groups\", func() ([]domain.StudentRosterEntry, error) {\n\t\treturn r.directory.ListRoster(ctx, owner0.TodayDate().String())\n\t})\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/StudentRecords.FindAllWithGroups",
       "owner": "modules/peopledirectory"
     },
     {

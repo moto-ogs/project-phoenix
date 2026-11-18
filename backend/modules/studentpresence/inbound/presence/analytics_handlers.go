@@ -3,7 +3,6 @@ package presence
 import (
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
@@ -42,7 +41,7 @@ func (rs *Resource) getDashboardAnalytics(w http.ResponseWriter, r *http.Request
 		StudentsInHomeRoom:   analytics.StudentsInHomeRoom,
 		RecentActivity:       make([]RecentActivityItem, 0),
 		CurrentActivities:    make([]CurrentActivityItem, 0),
-		LastUpdated:          time.Now(),
+		LastUpdated:          rs.now(),
 	}
 
 	// Map recent activity

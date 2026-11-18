@@ -157,6 +157,7 @@ func NewMFAMailer(db transactionruntime.Database, runtime *deliveryCompose.Runti
 	provider := &deliveryCompose.MailPushProvider{
 		Registry: deliveryCompose.NewEmailTemplateRegistry(map[string]deliveryCompose.MailRenderer{TransactionalMailKind: TransactionalMailRenderer{Logger: logger}}),
 		Mailer:   transport, Logger: logger, Tenants: deliveryCompose.NewTenantTransactions(db.Pool()),
+		Now: runtime.Now,
 	}
 	worker, err := deliveryCompose.NewWorker(runtime, provider)
 	if err != nil {
@@ -300,7 +301,7 @@ func (l operatorActionLog) RecordOperatorAction(ctx context.Context, entry ident
 	}()
 	row := &auditModels.OperatorAuditEntry{
 		OperatorID: entry.OperatorID, Action: entry.Action, ResourceType: entry.ResourceType,
-		ResourceID: entry.ResourceID, RequestIP: securityruntime.ParseClientAddress(entry.IPAddress), CreatedAt: time.Now(),
+		ResourceID: entry.ResourceID, RequestIP: securityruntime.ParseClientAddress(entry.IPAddress),
 	}
 	if changes, encodeErr := entry.MFAAuditChanges(); encodeErr != nil {
 		l.logger.Warn("failed to encode operator mfa audit changes",

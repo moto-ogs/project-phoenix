@@ -56,9 +56,14 @@ import type {
 import {
   useApiErrorDisplay,
   useApiFormError,
-  useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
+import {
+  useSwrLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { formErrorMessage } from "~/components/ui/form-error";
 import {
   FormErrorAlert,
@@ -147,6 +152,8 @@ const EMAIL_CHANGE_COPY: Record<
   },
 };
 
+const NO_GUARDIANS: GuardianWithRelationship[] = [];
+
 interface StudentGuardianManagerProps {
   readonly studentId: string;
   readonly readOnly?: boolean;
@@ -158,20 +165,32 @@ export default function StudentGuardianManager({
   readOnly = false,
   onUpdate,
 }: StudentGuardianManagerProps) {
-  const [guardians, setGuardians] = useState<GuardianWithRelationship[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const guardiansResource = useSWRAuth(
+    tenantContactKeys.studentGuardians(studentId),
+    () => fetchStudentGuardians(studentId),
+    { keepPreviousData: false },
+  );
+  const guardians = guardiansResource.data ?? NO_GUARDIANS;
   // Ladefehler stehen vor Ort, mit Wiederholen (#2517); nie als Leerzustand.
-  const [loadFailed, setLoadFailed] = useState(false);
-  const loadError = useApiLoadError();
-  const showLoadError = loadError.show;
-  const clearLoadError = loadError.clear;
-  const latestLoadRef = useRef<() => void>(() => undefined);
-  const [emailStates, setEmailStates] = useState<
-    Record<string, GuardianEmailState> | undefined
-  >(undefined);
-  const emailStatesLoad = useApiLoadError();
-  const showEmailStatesError = emailStatesLoad.show;
-  const clearEmailStatesError = emailStatesLoad.clear;
+  const loadError = useSwrResourceLoadError(
+    [guardiansResource],
+    "die Liste der Erziehungsberechtigten",
+    () => guardiansResource.mutate(),
+  );
+  // The mail state comes on its own: without it the list still shows who to
+  // call, and the failure stands above the list with its own retry.
+  const emailStatesResource = useSWRAuth(
+    tenantContactKeys.studentGuardianEmailStates(studentId),
+    () => fetchStudentGuardianEmailStates(studentId),
+    { keepPreviousData: false },
+  );
+  const emailStates: Record<string, GuardianEmailState> | undefined =
+    emailStatesResource.data;
+  const emailStatesLoadError = useSwrLoadError(
+    emailStatesResource.error,
+    "der Stand der E-Mails",
+    () => emailStatesResource.mutate(),
+  );
   // Stopping and freeing an address change what reaches a family: ask once.
   const [emailBlockChange, setEmailBlockChange] = useState<{
     guardian: GuardianWithRelationship;
@@ -244,64 +263,25 @@ export default function StudentGuardianManager({
     };
   }, []);
 
-  // The mail state comes on its own: without it the list still shows who to
-  // call, and the failure stands above the list with its own retry.
+  const { mutate: mutateGuardians } = guardiansResource;
+  const { mutate: mutateEmailStates } = emailStatesResource;
   // Rejects on failure: after a write the caller shows it as a reload of a
-  // saved change (#6652).
-  const fetchEmailStates = useCallback(async () => {
-    setEmailStates(await fetchStudentGuardianEmailStates(studentId));
-    clearEmailStatesError();
-  }, [studentId, clearEmailStatesError]);
-  const loadEmailStates = useCallback(async () => {
-    try {
-      await fetchEmailStates();
-    } catch (err) {
-      logger.error("guardian_email_status_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-        student_id: studentId,
-      });
-      void showEmailStatesError(err, {
-        object: "der Stand der E-Mails",
-        retry: () => void loadEmailStates(),
-      });
-    }
-  }, [studentId, fetchEmailStates, showEmailStatesError]);
-
-  // Load guardians
-  // Rejects on failure; the list stays as it was.
+  // saved change (#6652). A mutation drops an answer to a request that
+  // started before it.
+  const fetchEmailStates = useCallback(
+    () =>
+      mutateEmailStates(fetchStudentGuardianEmailStates(studentId), {
+        revalidate: false,
+      }),
+    [studentId, mutateEmailStates],
+  );
+  // Rejects on failure; the list stays as it was. The mail state follows.
   const fetchGuardians = useCallback(async () => {
-    const data = await fetchStudentGuardians(studentId);
-    setGuardians(data);
-    setLoadFailed(false);
-    clearLoadError();
-    void loadEmailStates();
-  }, [studentId, clearLoadError, loadEmailStates]);
-  // Never rejects: a failed load shows its error where the list belongs.
-  const loadGuardians = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      await fetchGuardians();
-    } catch (err) {
-      logger.error("guardians_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-        student_id: studentId,
-      });
-      setLoadFailed(true);
-      void showLoadError(err, {
-        object: "die Liste der Erziehungsberechtigten",
-        retry: () => latestLoadRef.current(),
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [studentId, showLoadError, fetchGuardians]);
-  useLayoutEffect(() => {
-    latestLoadRef.current = () => void loadGuardians();
-  });
-
-  useEffect(() => {
-    void loadGuardians();
-  }, [loadGuardians]);
+    await mutateGuardians(fetchStudentGuardians(studentId), {
+      revalidate: false,
+    });
+    void mutateEmailStates();
+  }, [studentId, mutateGuardians, mutateEmailStates]);
   // Nachladen nach dem Schreiben: ein Fehler dabei steht über der Liste und
   // ist kein Fehler der Aktion; die bestätigte Liste bleibt stehen (#6652).
   const guardiansAfterWrite = useRefreshAfterWrite(
@@ -796,9 +776,9 @@ export default function StudentGuardianManager({
   // During refreshes, keep UI mounted to preserve modal state
   // Bis der Katalogtext des Ladefehlers da ist, bleibt der Ladekreis stehen,
   // nie eine leere Liste.
-  const failedWithoutData = loadFailed && guardians.length === 0;
+  const failedWithoutData = loadError.failure !== undefined;
   if (
-    (isLoading && guardians.length === 0) ||
+    (guardiansResource.data === undefined && !guardiansResource.error) ||
     (failedWithoutData && formErrorMessage(loadError.error) === null)
   ) {
     return <Loading message="Bezugspersonen werden geladen …" />;
@@ -896,7 +876,7 @@ export default function StudentGuardianManager({
 
       {/* Guardian List */}
       <div className="space-y-3">
-        <LoadErrorAlert error={emailStatesLoad.error} className="mb-3" />
+        <LoadErrorAlert error={emailStatesLoadError} className="mb-3" />
         <GuardianList
           guardians={guardians}
           onEdit={readOnly ? undefined : handleOpenEditModal}
@@ -930,7 +910,10 @@ export default function StudentGuardianManager({
             studentId={studentId}
             guardians={guardians}
             readOnly={readOnly}
-            onChanged={() => void loadGuardians()}
+            onChanged={() => {
+              void mutateGuardians();
+              void mutateEmailStates();
+            }}
           />
         </div>
       )}

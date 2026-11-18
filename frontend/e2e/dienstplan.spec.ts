@@ -1,6 +1,7 @@
 import { type APIRequestContext, type Page } from "@playwright/test";
 
 import { expect, test } from "./a11y/scan";
+import { runToday, setBrowserDay } from "./clock";
 import {
   loginToTenant,
   MISSING_SEED_ACCESS,
@@ -9,11 +10,7 @@ import {
   tenantBase as base,
   waitForAnimations,
 } from "./tenant-session";
-import {
-  berlinTodayISO,
-  parseISODate,
-  toISODate,
-} from "../src/lib/date-helpers";
+import { parseISODate, toISODate } from "../src/lib/date-helpers";
 import { getWeekNumber } from "../src/lib/time-tracking-helpers";
 
 // /dienstplan-Bereich (ResourceGrid-Wochenraster, Halbjahres-Sicht,
@@ -38,7 +35,7 @@ import { getWeekNumber } from "../src/lib/time-tracking-helpers";
 // aktiv, deshalb NIE auf `load`/`networkidle` warten, sondern auf konkrete
 // Selektoren mit `domcontentloaded`.
 
-const TODAY = berlinTodayISO();
+const TODAY = runToday();
 
 // Großzügiges Budget für Zusicherungen hinter einem SWR-Refetch gegen den
 // Next-Dev-Server (Grid nach Save, Halbjahres-Spalten).
@@ -606,9 +603,8 @@ test.describe("Dienstplan UI-Flow", () => {
       // Browsers deshalb der folgende Montag (#4027); Schicht und Krankmeldung
       // tragen dieses Datum, das Backend braucht dafür nicht denselben Tag.
       const day = schoolDayOnOrAfter(TODAY);
-      // 23:30 UTC on the previous date is 00:30 CET / 01:30 CEST on `day`.
-      // Freeze Date only, not UI/network timers. Backend still sees real TODAY.
-      await page.clock.setFixedTime(new Date(`${day}T00:30:00+01:00`));
+      // Nur das Heute des Browsers; das Backend bleibt auf TODAY.
+      await setBrowserDay(page, day);
       if (!access) return;
       // Flow 6a wechselt auf /vertretung — der erste Kompiliervorgang dieser Route
       // im Next-Dev-Server kann kalt spürbar dauern, daher großzügiges Budget.

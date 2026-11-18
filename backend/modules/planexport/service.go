@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	listexport "github.com/moto-ogs/project-phoenix/modules/documentrendering/records"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -27,8 +26,12 @@ type service struct {
 	logger *slog.Logger
 }
 
-// NewService creates the plan export service over the bound ports.
+// NewService creates the plan export service over the bound ports. Now,
+// the clock of the sheet's creation time, is required.
 func NewService(deps Dependencies, logger *slog.Logger) Service {
+	if deps.Now == nil {
+		panic("plan export: the clock is required")
+	}
 	return &service{deps: deps, logger: logger}
 }
 
@@ -137,7 +140,7 @@ func (s *service) document(
 	return listexport.Document{
 		Title:       title,
 		Subtitle:    rangeSubtitle(weeks),
-		GeneratedAt: time.Now(),
+		GeneratedAt: s.deps.Now(),
 		Filters:     documentFilters(params, legend),
 		Columns:     columnsFor(rowLabel, weeks),
 		Rows:        rows,

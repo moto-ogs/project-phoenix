@@ -15,8 +15,8 @@ import (
 type guardianRow struct {
 	bun.BaseModel          `bun:"table:guardian_profiles,alias:guardian_profile"`
 	ID                     int64     `bun:"id,pk,autoincrement"`
-	CreatedAt              time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt              time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt              time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt              time.Time `bun:"updated_at,nullzero,notnull"`
 	TenantID               int64     `bun:"tenant_id,notnull"`
 	FirstName              string    `bun:"first_name"`
 	LastName               string    `bun:"last_name"`
@@ -60,6 +60,9 @@ type GuardianStore struct {
 	database    Database
 	memberships PortalMembershipQuery
 	links       GuardianLinks
+	// now stamps childless_since of a new profile (#4043), the clock the
+	// retention run counts from, never the column's NOW() default.
+	now func() time.Time
 }
 
 // GuardianLinks is People Directory's reader port onto the guardian link
@@ -77,11 +80,14 @@ type GuardianLinks interface {
 // guardian link projection.
 var errGuardianLinksUnbound = errors.New("people directory postgres: the guardian link projection is required")
 
-func NewGuardianStore(database Database, memberships PortalMembershipQuery, links GuardianLinks) *GuardianStore {
+func NewGuardianStore(database Database, memberships PortalMembershipQuery, links GuardianLinks, now func() time.Time) *GuardianStore {
 	if database == nil {
 		panic("people directory postgres: database runtime is required")
 	}
-	return &GuardianStore{database: database, memberships: memberships, links: links}
+	if now == nil {
+		panic("people directory postgres: clock is required")
+	}
+	return &GuardianStore{database: database, memberships: memberships, links: links, now: now}
 }
 
 // ListLinksByAccounts joins the two owned tables once: every link of every

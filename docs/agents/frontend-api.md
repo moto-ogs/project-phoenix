@@ -296,6 +296,103 @@ Inspect the domain's existing mapper, such as
 [room response mapping](../../frontend/src/lib/room-helpers.ts), rather than
 copying a generic mapper. Preserve nullability and date-vs-instant semantics.
 
+### Generated contract (ADR 0270)
+
+A backend route that is registered in Go has generated TypeScript types and
+zod decoders in `lib/contract/<resource>.generated.ts`. Never edit these files
+or write a `Backend*` interface for a registered route.
+
+- Register a route in its owner's `http` role (`StudentRouteContracts` in
+  `backend/modules/presenceprojection/http/student_contracts.go` is the
+  example) and add its mount in `backend/api/route_contracts.go`.
+- Regenerate with `scripts/run-go-toolchain.sh go -C backend run . gencontract`.
+  `TestTheCommittedContractIsCurrent` (`backend/cmd`) and the backend quality
+  job fail on a stale file.
+- Read a registered route with `contractGet` (`lib/contract/client.server.ts`).
+  It returns the decoded value or a typed failure with status, registry code
+  and request ID; rethrow `error.cause` so the handler boundary forwards the
+  backend error unchanged. An answer outside the contract is a 502, never an
+  empty value.
+- Write to a registered route with `contractWrite` (same file): it takes the
+  generated route entry, checks the body against the route's request type at
+  compile time and decodes the answer like `contractGet`. A request type has
+  only optional fields, because Go reads an absent key as the zero value;
+  what is required stays Go's `Bind` and reaches the client through the error
+  contract.
+- A portal other than `tenant` uses its own route wrapper with the same
+  helpers; the route entry names its portals.
+- Identifiers leave the decoder as strings. A registered enum is typed as its
+  known values but decodes any string; narrow it with `knownEnum`.
+- A day is a `calendar.Date`, an instant a `time.Time`. A string field that
+  carries a day or a wall-clock time says so in its tag: `contract:"date"`
+  (`YYYY-MM-DD`) or `contract:"clock"` (`HH:MM`); the decoder then rejects
+  another form. Closed value sets are registered in `Enums`.
+- A new identifier is a `common.ID`, a count an `int`; the generator rejects a
+  bare `int64` and a response shape that depends on a query parameter.
+- In a request type an identifier is a `string`, except a field Go still
+  reads only as a JSON number (`NumericIDs`): that one is a `number`. A
+  request type with its own `UnmarshalJSON` needs an entry in `Readers`
+  (`backend/api/route_contracts.go`), or the generator stops.
+- Removing or renaming a registered field or route needs one release as
+  deprecated (`DeprecatedFields`, `Deprecated`);
+  `scripts/check-contract-compat.mjs <base>` fails otherwise.
+
+#### Portal proxy (#2352)
+
+A registered route without behavior of its own in the BFF needs no route
+file. Each portal has one proxy, a catch-all route built by the `catalogProxy`
+of its route wrapper (`lib/contract/catalog-proxy.server.ts`):
+
+| Portal | Proxy route under `app/api/` | BFF path → backend | `portalRoutes` key |
+|---|---|---|---|
+| Staff (tenant) | `[...path]` | `/api/x` → `/api/x` | `tenant` |
+| Parents | `parent/[...path]` | `/api/parent/x` → `/parent/x` | `parent` |
+| moto schule | `school/[...path]` | `/api/school/x` → `/school/x` | `school` |
+| Träger | `traeger/[...path]` | `/api/traeger/x` → `/traeger/x` | `org` |
+| Caterer | `caterer/[...path]` | `/api/caterer/x` → `/caterer/x` | `caterer` |
+| Operator | `operator/[...path]` | `/api/operator/x` → `/operator/x` | `platform` |
+
+The key is the scope claim of the portal's session token
+(`common.PortalScope`).
+
+- The allowlist is `portalRoutes.<key>` in the generated
+  `lib/contract/portals.generated.ts`: the routes whose registration names
+  the portal. A path outside it is a 404 before the session is read and
+  before any backend call.
+- Only the registered query parameters are forwarded, every path segment is
+  encoded again, and the answer is checked against the route's decoder.
+  Session, the single 401 renewal, body limit, `Idempotency-Key` and the
+  response envelope come from the portal's handlers (`makePortalHandlers`).
+- The BFF path must equal the backend path below the portal's prefix. A
+  route whose BFF path differs (`/api/operator/provisioning/schools` for
+  `/operator/schools`) moves its callers to the backend's path first.
+- Next prefers an existing route file over the proxy. Keep a file only for
+  what is specific to the browser: portal policy, session handling, files,
+  uploads, login/MFA, the SSE pipe, or an aggregation without a Go view.
+- To move a pure proxy route: register its Go route for the portal,
+  regenerate, delete the route file and its row in
+  `src/test/proxy-routes/**`. A file is deleted only when every method it
+  exports is registered. `TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal`
+  (`backend/api`) fails when the route does not run behind that portal's
+  scope middleware.
+- A route file with a dynamic segment wins over the proxy too:
+  `billing-families/[id]` answers `billing-families/debtor-number-format`.
+  Such a registered route keeps a literal route file that hands the request
+  to `catalogProxy` (see that Träger route);
+  `app/api/catalog-route-selection.test.ts` fails when one is missing.
+- Not served by a proxy: a route with response variants
+  (`GET /api/students/`).
+- A Go type two resources answer with (the staff portal and moto schule
+  mount the same notification feed) is written once, in
+  `lib/contract/shared.generated.ts`, and imported by both resource files.
+- A route that answers 204 or the envelope without data registers
+  `NoData: true` in place of a response type. Its decoder (`noData`) takes
+  exactly those two answers, and the BFF answers `data: null` (a DELETE: 204).
+- An identifier in `NumericIDs` leaves the proxy as a string, whatever Go
+  sends. A client type for such a route reads `string`, never `number`.
+
+The registered routes are the entries of `portals.generated.ts`.
+
 ### Auth Token Flow
 
 Login (per portal — see `docs/agents/contracts.md`) returns access + refresh tokens with configured lifetimes; NextAuth stores them in the session; route handlers extract the token and forward it as `Authorization: Bearer`; refresh happens automatically on expiry. MFA can insert a challenge step between credentials and session. Invitation/password-reset token flows live at `app/invite/`, `app/[tenant]/(public)/invite/`, `app/reset-password/`, with API clients in `lib/invitation-api.ts` / `lib/invitation-helpers.ts` — use these instead of hitting backend routes directly.

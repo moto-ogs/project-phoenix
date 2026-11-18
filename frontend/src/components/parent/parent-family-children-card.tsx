@@ -82,6 +82,7 @@ export function ParentFamilyChildrenCard({
     }
   }, [source, clearLoadError, showLoadError, t]);
 
+  // oxlint-disable-next-line swr/no-effect-load -- one path serves the sessionless mail link, the enrollment token and the inbox; the token sources have no session for useSWRAuth
   useEffect(() => {
     void load();
   }, [load]);

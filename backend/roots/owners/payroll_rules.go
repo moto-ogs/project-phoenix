@@ -19,7 +19,7 @@ type payrollRuleAudit struct {
 }
 
 // NewPayrollRuleAudit writes over the settings runtime of the caller's
-// transaction.
+// transaction; the column default stamps each entry (ADR 0281).
 func NewPayrollRuleAudit(db transactionruntime.Database) workforceModule.PayrollRuleAudit {
 	return payrollRuleAudit{audit: settingsCompose.NewSettingAuditRepository(settingsCompose.NewTenantSettingsRuntime(db.Pool(), nil))}
 }

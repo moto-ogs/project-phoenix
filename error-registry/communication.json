@@ -171,6 +171,26 @@
       "class": "business_rejection",
       "parameters": [],
       "legacy": "communication.message_send_conflict"
+    },
+    {
+      "code": "communication.letter_placeholder_letter_only",
+      "class": "input",
+      "parameters": [],
+      "legacy": "communication.letter_placeholder_letter_only"
+    },
+    {
+      "code": "communication.letter_placeholder_unknown",
+      "class": "input",
+      "parameters": [
+        "placeholders"
+      ],
+      "legacy": "communication.letter_placeholder_unknown"
+    },
+    {
+      "code": "communication.letter_print_not_letter",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "communication.letter_print_not_letter"
     }
   ]
 }

@@ -14,6 +14,9 @@ type Resource struct {
 
 // NewResource creates a new Devices resource
 func NewResource(iotService devicefleet.Administration, runtime Runtime) *Resource {
+	if runtime.Now == nil {
+		panic("device routes: the clock is required")
+	}
 	return &Resource{
 		IoTService: iotService,
 		runtime:    runtime,

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,7 +32,7 @@ func TestOperatorAuditSensitiveResponseRoutesFailClosed(t *testing.T) {
 	organizationID, schoolID := provisionTestSchool(t, db, service, operatorID, "audit-response")
 	module, lifecycle, err := NewOperatorSettingsTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
 	require.NoError(t, err)
-	resource := provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service})
+	resource := provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, RequiredDetails: service.RequiredDetails})
 	router := chi.NewRouter()
 	mountOperatorProvisioningRoutes(router, resource, nil)
 	demoPresenceHistoryCalls := 0
@@ -42,15 +44,21 @@ func TestOperatorAuditSensitiveResponseRoutesFailClosed(t *testing.T) {
 		values: settingsAPI.NewSettingsResource(settingsAPI.SettingsConfig{
 			Settings: module.OperatorSchoolSettings(module.SettingsSideEffects.Dispatch), OperatorID: operatorIDFromSession,
 		}),
-		bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle),
+		bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle, calendar.TodayDate),
 	}, demoPresenceHistory)
 	(operatorIdentityRoutes{account: identityAPI.NewResource(identity, provisioningAPI.ProvisioningErrorRenderer)}).mountAccountTenantAccessRoutes(router, resource)
 	// The mounted scan reader/writer must never be invoked if its audit fails.
 	scanCalls := 0
-	scans := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		scanCalls++
-		w.WriteHeader(http.StatusOK)
-	})
+	scans := func(routeMiddleware ...func(http.Handler) http.Handler) chi.Router {
+		handler := func(w http.ResponseWriter, _ *http.Request) {
+			scanCalls++
+			w.WriteHeader(http.StatusOK)
+		}
+		r := chi.NewRouter()
+		r.With(routeMiddleware...).Get("/", handler)
+		r.With(routeMiddleware...).Post("/{id}/resolve", handler)
+		return r
+	}
 	mountOperatorTagScanRoutes(router, scans, resource)
 	school := fmt.Sprintf("/schools/%d", schoolID)
 	access := fmt.Sprintf("/accounts/%d/tenants", account.ID)
@@ -66,6 +74,7 @@ func TestOperatorAuditSensitiveResponseRoutesFailClosed(t *testing.T) {
 	for _, tc := range []struct{ path, view string }{
 		{"/schools/", "schools"},
 		{"/schools/summaries", "school_summaries"},
+		{"/schools/required-details", "school_required_details"},
 		{fmt.Sprintf("/organizations/%d/schools", organizationID), "organization_schools"},
 		{school + "/settings/schema", "school_settings_schema"},
 		{school + "/settings/values/" + operatorBookingsAuthoritativeKey + "/reveal", "school_setting_reveal"},
@@ -108,7 +117,28 @@ func TestOperatorAuditSensitiveResponseRoutesFailClosed(t *testing.T) {
 	assert.Equal(t, "198.51.100.47", demoEntries[0].RequestIP)
 	assert.JSONEq(t, fmt.Sprintf(`{"view":"demo_presence_history","school_id":%d}`, schoolID), string(demoEntries[0].Changes))
 	assert.Equal(t, 1, demoPresenceHistoryCalls)
-	require.Equal(t, 1, scanCalls)
+	// A change of one school access or one scan names that object (#7212).
+	request(http.MethodPut, access+fmt.Sprintf("/%d", schoolID))
+	require.Equal(t, http.StatusOK, request(http.MethodPost, "/unregistered-tag-scans/77/resolve").Code)
+	for _, tc := range []struct {
+		view, resourceType string
+		resourceID         int64
+		changes            string
+	}{
+		{"account_tenants", "account", account.ID, fmt.Sprintf(`{"view":"account_tenants","school_id":%d}`, schoolID)},
+		{"unregistered_tag_scans", "unregistered_tag_scan", 77, `{"view":"unregistered_tag_scans"}`},
+	} {
+		var entries []struct {
+			ResourceType string
+			Changes      json.RawMessage
+		}
+		require.NoError(t, db.NewRaw(`SELECT resource_type, changes FROM platform.operator_audit_log
+			WHERE operator_id = ? AND action = 'view' AND changes->>'view' = ? AND resource_id = ?`, operatorID, tc.view, tc.resourceID).Scan(ctx, &entries))
+		require.Len(t, entries, 1, tc.view)
+		assert.Equal(t, tc.resourceType, entries[0].ResourceType)
+		assert.JSONEq(t, tc.changes, string(entries[0].Changes))
+	}
+	require.Equal(t, 2, scanCalls)
 	scanCalls = 0
 	_, err = db.ExecContext(ctx, `CREATE FUNCTION platform.reject_operator_audit() RETURNS trigger LANGUAGE plpgsql AS $$
 	BEGIN RAISE EXCEPTION 'injected audit failure'; END $$;

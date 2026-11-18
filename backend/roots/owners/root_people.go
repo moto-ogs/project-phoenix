@@ -2,6 +2,7 @@ package owners
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
@@ -66,18 +67,18 @@ type TimetableCareRows struct {
 
 // BuildPeopleRows builds the retained People Directory and School
 // Membership rows over the owners and the Identity & Access reads the rows
-// filter through (#4007).
+// filter through (#4007). now is the root's clock (nil: the real one).
 func BuildPeopleRows(
-	db transactionruntime.Database, observeIdentity IdentityAccessObserver, groups schoolstructure.Query, rooms facilitiesModule.Query,
+	db transactionruntime.Database, observeIdentity IdentityAccessObserver, now func() time.Time, groups schoolstructure.Query, rooms facilitiesModule.Query,
 	membership schoolmembership.Capability, workTime workforce.Capability,
 ) (PeopleRows, identityaccess.Owner) {
-	identity := NewPeopleIdentityAccess(db, observeIdentity)
+	identity := newPeopleIdentityAccess(db, observeIdentity, now)
 	personRepository := NewPersonRepository(db)
 	staff, teachers, _, _, _, _ := newMembershipAdapters(db, personRepository, identity, membership, rooms, workTime)
 	return PeopleRows{Repositories: peopleCompose.Repositories{
-		Persons: personRepository, Students: NewStudentRepository(db, membership, groups),
+		Persons: personRepository, Students: NewStudentRepository(db, membership, groups, now),
 		StudentGuardians: newStudentGuardianRepository(db, identity, observeIdentity),
-		GuardianProfiles: NewGuardianProfileRepository(db), Staff: staff, Teachers: teachers,
+		GuardianProfiles: NewGuardianProfileRepository(db, now), Staff: staff, Teachers: teachers,
 	}}, identity
 }
 
@@ -101,9 +102,9 @@ func BuildStructureRows(
 
 // BuildPresencePeopleReads binds Student Presence's student, visitor and
 // school reads to the People Directory, School Structure and Organisation &
-// Tenancy.
-func BuildPresencePeopleReads(db transactionruntime.Database, logger *slog.Logger, persons peopledirectory.Capability, groups schoolstructure.Query, organizations organizationtenancy.Query, people PeopleRows) PresencePeopleReads {
-	presence := NewLoggedStudentPresence(db, logger)
+// Tenancy, on the root's clock now.
+func BuildPresencePeopleReads(db transactionruntime.Database, logger *slog.Logger, persons peopledirectory.Capability, groups schoolstructure.Query, organizations organizationtenancy.Query, people PeopleRows, now func() time.Time) PresencePeopleReads {
+	presence := NewLoggedStudentPresence(db, logger, now)
 	return PresencePeopleReads{
 		StudentDisplay:      StudentDisplayProjection{Students: persons, Groups: groups},
 		CrossTenantStudents: NewCrossTenantQuery(presence, persons, groups),

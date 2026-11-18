@@ -80,7 +80,7 @@ func (s *service) processSchoolCheckinBatch(
 		return nil, err
 	}
 
-	outcomes, actionable, actionableStudents := schoolCheckinCandidates(writeOrder, locked, calendar.TodayDate())
+	outcomes, actionable, actionableStudents := schoolCheckinCandidates(writeOrder, locked, s.todayDate())
 
 	// ONE instant for the whole batch, taken AFTER the row locks: every
 	// competing attendance opener locks the student row first, so any
@@ -163,7 +163,7 @@ func schoolCheckinCandidates(
 	actionableStudents := make([]*StudentRecord, 0, len(writeOrder))
 	for _, studentID := range writeOrder {
 		student := locked[studentID]
-		if student == nil || student.IsAlumnus() || student.CareEndedOn(today) {
+		if student == nil || student.OGSAdmissionRefused(today) != nil {
 			outcomes[studentID] = SchoolCheckinBatchItem{StudentID: studentID}
 			continue
 		}

@@ -222,7 +222,7 @@ func fullDemoWorkflow(seeder *Seeder) Workflow {
 		steps = append(steps, parentRequestsSeedStep{seeder: seeder}, seedEnrollmentPlacementStep{}, seedEnrollmentIncomeProofStep{}, seedEnrollmentSignatureStep{}, seedOfferingRosterStep{seeder: seeder}, seedBookingLeftoverStep{seeder: seeder}, seedFamilyAppAccountsStep{seeder: seeder})
 	}
 	steps = append(steps,
-		seedParentEngagementStep{}, seedAnalyticsConsentStep{}, seedSchoolLifeStep{},
+		seedParentEngagementStep{}, seedParentCancellationNoticeStep{}, seedRoomChangeNoticeStep{}, seedAnalyticsConsentStep{}, seedSchoolLifeStep{},
 		// After the parents: it orders lunch for the children they registered.
 		seedMealOrdersStep{seeder: seeder}, seedEmailStopStep{},
 	)
@@ -260,10 +260,11 @@ func fullDemoWorkflow(seeder *Seeder) Workflow {
 			seedEnrollmentBookingsProfileStep{seeder: seeder},
 		)
 	}
-	steps = append(append(steps, seedStaffPersonMergeStep{}), traegerSteps(seeder)...)
+	// Neighbour schools (ADR 0271) before the Träger steps, which act on all.
+	steps = append(append(steps, seedStaffPersonMergeStep{}, seedDemoNeighbourSchoolsStep{seeder: seeder}), traegerSteps(seeder)...)
 	if !seeder.options.DeferHistory {
 		// Erst jetzt sind alle Kinder der Schule angelegt (#5031).
-		steps = append(steps, seedPresenceHistoryStep{seeder: seeder}, seedFeedbackHistoryStep{seeder: seeder}, seedChildQuotaStep{}, seedBillingKeyDateCountsStep{})
+		steps = append(steps, seedPresenceHistoryStep{seeder: seeder}, seedFeedbackHistoryStep{seeder: seeder}, seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedBillingKeyDateCountsStep{})
 	}
 	if seeder.options.SeedWeekProtocols {
 		steps = append(steps, seedWeekProtocolStep{})
@@ -292,7 +293,7 @@ func traegerSteps(seeder *Seeder) []Step {
 // traegerSetupSteps prepare the Träger: office, holidays, settings and
 // master data.
 func traegerSetupSteps(seeder *Seeder) []Step {
-	return traegerSerial(seedTraegerBueroStep{}, seedTraegerHolidayPeriodStep{}, seedHolidayParentAccountStep{seeder: seeder}, seedTraegerClosingDayStep{}, seedTraegerHolidayDaysStep{}, seedTraegerHolidayCriteriaStep{}, seedTraegerHolidayHomeSchoolStep{}, seedHolidayLegalStep{}, seedTraegerSettingsStep{}, seedTraegerMasterDataStep{}, seedTraegerReportTemplatesStep{})
+	return traegerSerial(seedTraegerBueroStep{}, seedVisitorTraegerBueroStep{seeder: seeder}, seedTraegerHolidayPeriodStep{}, seedHolidayParentAccountStep{seeder: seeder}, seedTraegerClosingDayStep{}, seedTraegerHolidayDaysStep{}, seedTraegerHolidayCriteriaStep{}, seedTraegerHolidayHomeSchoolStep{}, seedHolidayLegalStep{}, seedTraegerSettingsStep{}, seedTraegerMasterDataStep{}, seedTraegerReportTemplatesStep{})
 }
 
 // traegerCareSteps conclude and bill the contracts of the school's accepted
@@ -349,13 +350,18 @@ func deferredDemoSteps(seeder *Seeder) []Step {
 	// The contracts of the accepted applications and their billing, in the
 	// order of a full seed (#6621).
 	steps = append(steps, traegerCareSteps(seeder)...)
+	// An own Träger (ADR 0271) links its staff records too, without the
+	// visitor's: a record of the Träger outlives the visit (ADR 0233).
+	if seeder.options.OwnTraeger {
+		steps = append(steps, traegerSerial(seedTraegerStaffStep{}, seedTraegerStaffProofStep{})...)
+	}
 	return append(steps,
 		// The past presence of every child, once the requests have added the
 		// last ones (#5031).
 		seedPresenceHistoryStep{seeder: seeder},
 		// The feedback the children gave on those days (#5029).
 		seedFeedbackHistoryStep{seeder: seeder},
-		seedChildQuotaStep{}, seedBillingKeyDateCountsStep{})
+		seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedBillingKeyDateCountsStep{})
 }
 
 // fullDemoSetupSteps prepares the school before its history and parent flows.

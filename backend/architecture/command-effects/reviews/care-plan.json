@@ -5800,6 +5800,197 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/parentannouncementaudience/internal/adapters/postgres.Projection.GroupAudience (parent-announcement-audience) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/parentannouncementaudience/internal/adapters/postgres.Projection.GroupAudience",
+      "target_owner": "parent-announcement-audience"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/staffdirectoryview.Directory.AccountIDsByStaffIDs (staff-directory-view) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.Directory.AccountIDsByStaffIDs",
+      "target_owner": "staff-directory-view"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/communication.ParentGroupAudienceReads.GroupAudience (communication) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/communication.ParentGroupAudienceReads.GroupAudience",
+      "target_owner": "communication"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Platform protocol participation (durable): care-plan reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). The notification feed entries and the push outbox entries of a changed class timetable join the class arrival write's unit; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/delivery/internal/notifications.PreferenceService.FilterOptedIn (delivery-platform) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/identityaccess.AuditActorName (identity-access) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.AuditActorName",
+      "target_owner": "identity-access"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope (identity-access) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope",
+      "target_owner": "identity-access"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/peopledirectory/ports.StaffRepository.ListAccountIDsByStaffIDs (people-directory) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.ListAccountIDsByStaffIDs",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/peopledirectory/ports.StudentRepository.FindReadScopeByIDs (people-directory) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindReadScopeByIDs",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Capability.ListGroupAssignments (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListGroupAssignments",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Capability.ListTeachers (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListTeachers",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Owner.ListClassAssignments (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListClassAssignments",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Owner.ListGroupAssignments (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListGroupAssignments",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Owner.ListTeachers (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListTeachers",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Query.ListGroupAssignments (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListGroupAssignments",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Query.ListTeachers (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListTeachers",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/schoolstructure.NormalizeClass (school-structure) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.NormalizeClass",
+      "target_owner": "school-structure"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
+      "reason": "Read-only target: care-plan reaches modules/staffdirectoryview.New (staff-directory-view) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.New",
+      "target_owner": "staff-directory-view"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/ports.PickupScheduleRecords.DeleteDepartureException",
       "classification": "platform",
@@ -8735,7 +8926,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ParentPortalChildQueries.FindForAccount",
-      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/adapters/postgres.parentChildQueries.FindForAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/adapters/postgres.parentChildQueries.FindForAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListActiveAccountSchoolIDs",
       "target_owner": "identity-access"
@@ -8745,7 +8936,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ParentPortalChildQueries.ListByAccount",
-      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/adapters/postgres.parentChildQueries.ListByAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/adapters/postgres.parentChildQueries.ListByAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListActiveAccountSchoolIDs",
       "target_owner": "identity-access"
@@ -8795,7 +8986,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ParentPortalDirectory.ListParentPortalStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentsByID; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentsByID; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also carries the mark of a child without an OGS place to the parents portal (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsByID",
       "target_owner": "people-directory"
@@ -8805,7 +8996,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ParentPortalDirectory.ListParentPortalStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also carries the mark of a child without an OGS place to the parents portal (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsByID",
       "target_owner": "people-directory"
@@ -10001,7 +10192,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupChangeTeamReach.NotifyPickupChanged",
-      "reason": "Platform protocol participation (durable): care-plan reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.pickupChangeTeamReach.NotifyPickupChanged and the shared owners.StaffPushNotifier (#6855). The push outbox entry joins the care request decision's unit with the team markers; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (durable): care-plan reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.pickupChangeTeamReach.NotifyPickupChanged and the shared owners.StaffPushNotifier (#6855). The push outbox entry joins the care request decision's unit with the team markers; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the event now also writes the staff notification feed entries of its whole audience in the same unit, beside the push outbox entries of the push recipients.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
       "target_owner": "delivery-platform"
@@ -10011,7 +10202,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupChangeTeamReach.NotifyPickupChanged",
-      "reason": "Read-only target: care-plan reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.pickupChangeTeamReach.NotifyPickupChanged (#6855). No persistent, lock or scope effect.",
+      "reason": "Read-only target: care-plan reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.pickupChangeTeamReach.NotifyPickupChanged (#6855). No persistent, lock or scope effect. Rechecked for #7137: the filter now narrows only the push recipients; the feed reaches the whole audience. Still read-only.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
       "target_owner": "delivery-platform"
@@ -11873,7 +12064,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.Decide",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/compose.MasterDataDecisions.Decide. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/compose.MasterDataDecisions.Decide. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -11900,12 +12091,12 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0240",
+      "approval_adr": "0286",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.Decide",
       "classification": "E4",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.Decide",
-      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.CohortRosters.FollowCohortChanges",
       "target_owner": "timetable-activities"
@@ -11963,7 +12154,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.DecideConflictRequest",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/compose.MasterDataDecisions.DecideConflictRequest. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/compose.MasterDataDecisions.DecideConflictRequest. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -11990,12 +12181,12 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0240",
+      "approval_adr": "0286",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.DecideConflictRequest",
       "classification": "E4",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.DecideConflictRequest",
-      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.CohortRosters.FollowCohortChanges",
       "target_owner": "timetable-activities"
@@ -12053,19 +12244,19 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.FollowBulkClassChanges",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/compose.MasterDataDecisions.FollowBulkClassChanges. The offering resync of a bulk approval's Klassen joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/compose.MasterDataDecisions.FollowBulkClassChanges. The offering resync of a bulk approval's Klassen joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
     },
     {
       "adr": "0067",
-      "approval_adr": "0240",
+      "approval_adr": "0286",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.FollowBulkClassChanges",
       "classification": "E4",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.FollowBulkClassChanges",
-      "reason": "E4 named Care master-data approval surface: the Klassen a bulk approval wrote let Regeltermine with a Klasse or Jahrgang target follow in one call after its last decision, right after the offering resync, under the class-writes and recurrence gates the bulk took before its child frontier; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "E4 named Care master-data approval surface: the Klassen a bulk approval wrote let Regeltermine with a Klasse or Jahrgang target follow in one call after its last decision, right after the offering resync, under the class-writes and recurrence gates the bulk took before its child frontier; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.CohortRosters.FollowCohortChanges",
       "target_owner": "timetable-activities"
@@ -12180,19 +12371,19 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.WriteStaffValue",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/compose.MasterDataDecisions.WriteStaffValue. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/compose.MasterDataDecisions.WriteStaffValue. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
     },
     {
       "adr": "0067",
-      "approval_adr": "0240",
+      "approval_adr": "0286",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.WriteStaffValue",
       "classification": "E4",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.WriteStaffValue",
-      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.CohortRosters.FollowCohortChanges",
       "target_owner": "timetable-activities"
@@ -13394,6 +13585,18 @@
       "target_owner": "file-storage"
     },
     {
+      "adr": "0067",
+      "approval_adr": "0083",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Coordinator.SaveSealed",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentDocumentFiles.SaveSealed",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/filestorage/internal/adapters/documents.Coordinator.SaveSealed; sealed write of #3840 beside Coordinator.Save. ",
+      "source_owner": "care-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Coordinator.SaveSealed",
+      "target_owner": "file-storage"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Coordinator.Serve",
       "classification": "query",
       "effect": "query",
@@ -14354,7 +14557,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByClass",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRecordsByClass; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRecordsByClass; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRecordsByClass",
       "target_owner": "people-directory"
@@ -14364,7 +14567,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByClass",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRecordsByClass; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRecordsByClass; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRecordsByClass",
       "target_owner": "people-directory"
@@ -14374,7 +14577,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByClass",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.CareEndedOn",
       "target_owner": "people-directory"
@@ -14384,7 +14587,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByClass",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.IsAlumnus",
       "target_owner": "people-directory"
@@ -14394,7 +14597,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByGroup",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRecordsByGroup; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRecordsByGroup; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRecordsByGroup",
       "target_owner": "people-directory"
@@ -14404,7 +14607,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByGroup",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRecordsByGroup; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRecordsByGroup; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRecordsByGroup",
       "target_owner": "people-directory"
@@ -14414,7 +14617,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByGroup",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.CareEndedOn",
       "target_owner": "people-directory"
@@ -14424,7 +14627,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByGroup",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.IsAlumnus",
       "target_owner": "people-directory"
@@ -14434,7 +14637,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRecordsByID; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRecordsByID; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRecordsByID",
       "target_owner": "people-directory"
@@ -14444,7 +14647,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRecordsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRecordsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRecordsByID",
       "target_owner": "people-directory"
@@ -14454,7 +14657,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.CareEndedOn",
       "target_owner": "people-directory"
@@ -14464,7 +14667,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.IsAlumnus",
       "target_owner": "people-directory"
@@ -14475,7 +14678,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.LockByID",
-      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Capability.FindStudentRecordForMutation; modules/peopledirectory.Capability (supplied contract method). ",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Capability.FindStudentRecordForMutation; modules/peopledirectory.Capability (supplied contract method).  The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindStudentRecordForMutation",
       "target_owner": "people-directory"
@@ -14486,7 +14689,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.LockByID",
-      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Owner.FindStudentRecordForMutation; modules/peopledirectory.Owner (supplied contract method). ",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Owner.FindStudentRecordForMutation; modules/peopledirectory.Owner (supplied contract method).  The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindStudentRecordForMutation",
       "target_owner": "people-directory"
@@ -14496,7 +14699,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.LockByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.CareEndedOn",
       "target_owner": "people-directory"
@@ -14506,7 +14709,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.LockByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.IsAlumnus",
       "target_owner": "people-directory"
@@ -14517,7 +14720,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.LockByIDs",
-      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Capability.LockStudentRecordsByID; modules/peopledirectory.Capability (supplied contract method). ",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Capability.LockStudentRecordsByID; modules/peopledirectory.Capability (supplied contract method).  The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentRecordsByID",
       "target_owner": "people-directory"
@@ -14528,7 +14731,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.LockByIDs",
-      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Owner.LockStudentRecordsByID; modules/peopledirectory.Owner (supplied contract method). ",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Owner.LockStudentRecordsByID; modules/peopledirectory.Owner (supplied contract method).  The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentRecordsByID",
       "target_owner": "people-directory"
@@ -14538,7 +14741,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.LockByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.CareEndedOn",
       "target_owner": "people-directory"
@@ -14548,7 +14751,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.LockByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.IsAlumnus",
       "target_owner": "people-directory"
@@ -14558,7 +14761,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.Name",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.FindPerson; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.FindPerson; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindPerson",
       "target_owner": "people-directory"
@@ -14568,7 +14771,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.Name",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.FindPerson; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.FindPerson; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindPerson",
       "target_owner": "people-directory"
@@ -14578,7 +14781,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.Name",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Person.FullName; modules/peopledirectory/peopledirectory.go:51. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Person.FullName; modules/peopledirectory/peopledirectory.go:51. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Person.FullName",
       "target_owner": "people-directory"
@@ -14631,7 +14834,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalRuleStudents.LockStudent",
-      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Capability.FindStudentRecordForMutation; modules/peopledirectory.Capability (supplied contract method). ",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Capability.FindStudentRecordForMutation; modules/peopledirectory.Capability (supplied contract method).  The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindStudentRecordForMutation",
       "target_owner": "people-directory"
@@ -14642,7 +14845,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalRuleStudents.LockStudent",
-      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Owner.FindStudentRecordForMutation; modules/peopledirectory.Owner (supplied contract method). ",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Owner.FindStudentRecordForMutation; modules/peopledirectory.Owner (supplied contract method).  The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindStudentRecordForMutation",
       "target_owner": "people-directory"
@@ -14652,7 +14855,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalRuleStudents.SchoolClass",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.FindStudentRecord; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.FindStudentRecord; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindStudentRecord",
       "target_owner": "people-directory"
@@ -14662,7 +14865,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalRuleStudents.SchoolClass",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.FindStudentRecord; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.FindStudentRecord; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindStudentRecord",
       "target_owner": "people-directory"
@@ -16558,19 +16761,19 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.CareStudentDirectory.FindCareStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StudentRepository.FindByIDs; modules/peopledirectory/ports/repository_contracts.go:87. Also maps School Membership's first-care fact (ADR 0166) and care gap (ADR 0180). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StudentRepository.FindByIDs; modules/peopledirectory/ports/repository_contracts.go:87. Also maps School Membership's first-care fact (ADR 0166), care gap (ADR 0180) and mark of a child without an OGS place (ADR 0282). May-bind method surface, not a production-call/liveness claim.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindByIDs",
       "target_owner": "people-directory"
     },
     {
       "adr": "0067",
-      "approval_adr": "0180",
+      "approval_adr": "0282",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareStudents.FindCareStudents",
       "classification": "E2",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.CareStudentDirectory.FindCareStudents",
-      "reason": "E2 named care confirm/cancel/due-effects protocol: class(shared), recurrence, sorted children, locked preview/removal ledger and conditional membership command; preserve current transaction and failures. Hand row 6 and ADR 0067 E2. Target modules/peopledirectory/ports.StudentRepository.FindByIDsForUpdate; modules/peopledirectory/ports/repository_contracts.go:213. The binding also maps School Membership's first-care fact (ADR 0166) and care gap; lock order and transaction unchanged (ADR 0180).",
+      "reason": "E2 named care confirm/cancel/due-effects protocol: class(shared), recurrence, sorted children, locked preview/removal ledger and conditional membership command; preserve current transaction and failures. Hand row 6 and ADR 0067 E2. Target modules/peopledirectory/ports.StudentRepository.FindByIDsForUpdate; modules/peopledirectory/ports/repository_contracts.go:213. The binding also maps School Membership's first-care fact (ADR 0166), care gap (ADR 0180) and mark of a child without an OGS place; lock order and transaction unchanged (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindByIDsForUpdate",
       "target_owner": "people-directory"
@@ -17289,7 +17492,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.DecideConflictRequest",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/internal/application.MasterDataDecisions.DecideConflictRequest. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/internal/application.MasterDataDecisions.DecideConflictRequest. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -17316,12 +17519,12 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0240",
+      "approval_adr": "0286",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.DecideConflictRequest",
       "classification": "E4",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.DecideConflictRequest",
-      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.CohortRosters.FollowCohortChanges",
       "target_owner": "timetable-activities"
@@ -17379,7 +17582,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.DecideConflictRequest",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/compose.ParentRequestMasterData.DecideConflictRequest. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/compose.ParentRequestMasterData.DecideConflictRequest. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -17406,12 +17609,12 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0240",
+      "approval_adr": "0286",
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.DecideConflictRequest",
       "classification": "E4",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.DecideConflictRequest",
-      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.CohortRosters.FollowCohortChanges",
       "target_owner": "timetable-activities"
@@ -17562,19 +17765,19 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.WriteStaffValue",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/internal/application.MasterDataDecisions.WriteStaffValue. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/internal/application.MasterDataDecisions.WriteStaffValue. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
     },
     {
       "adr": "0067",
-      "approval_adr": "0240",
+      "approval_adr": "0286",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.WriteStaffValue",
       "classification": "E4",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.WriteStaffValue",
-      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.CohortRosters.FollowCohortChanges",
       "target_owner": "timetable-activities"
@@ -17585,19 +17788,19 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.WriteStaffValue",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/compose.ParentRequestMasterData.WriteStaffValue. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/compose.ParentRequestMasterData.WriteStaffValue. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
     },
     {
       "adr": "0067",
-      "approval_adr": "0240",
+      "approval_adr": "0286",
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.WriteStaffValue",
       "classification": "E4",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.WriteStaffValue",
-      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.CohortRosters.FollowCohortChanges",
       "target_owner": "timetable-activities"
@@ -18019,7 +18222,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.Decide",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/internal/application.MasterDataDecisions.Decide. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/internal/application.MasterDataDecisions.Decide. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -18046,12 +18249,12 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0240",
+      "approval_adr": "0286",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.Decide",
       "classification": "E4",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.Decide",
-      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.CohortRosters.FollowCohortChanges",
       "target_owner": "timetable-activities"
@@ -18109,7 +18312,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.Decide",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/compose.ParentRequestMasterData.Decide. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/compose.ParentRequestMasterData.Decide. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -18136,12 +18339,12 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0240",
+      "approval_adr": "0286",
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.Decide",
       "classification": "E4",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.Decide",
-      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.CohortRosters.FollowCohortChanges",
       "target_owner": "timetable-activities"
@@ -18199,19 +18402,19 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.FollowBulkClassChanges",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/internal/application.MasterDataDecisions.FollowBulkClassChanges. The offering resync of a bulk approval's Klassen joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/internal/application.MasterDataDecisions.FollowBulkClassChanges. The offering resync of a bulk approval's Klassen joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
     },
     {
       "adr": "0067",
-      "approval_adr": "0240",
+      "approval_adr": "0286",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.FollowBulkClassChanges",
       "classification": "E4",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.FollowBulkClassChanges",
-      "reason": "E4 named Care master-data approval surface: the Klassen a bulk approval wrote let Regeltermine with a Klasse or Jahrgang target follow in one call after its last decision, right after the offering resync, under the class-writes and recurrence gates the bulk took before its child frontier; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "E4 named Care master-data approval surface: the Klassen a bulk approval wrote let Regeltermine with a Klasse or Jahrgang target follow in one call after its last decision, right after the offering resync, under the class-writes and recurrence gates the bulk took before its child frontier; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.CohortRosters.FollowCohortChanges",
       "target_owner": "timetable-activities"
@@ -18222,19 +18425,19 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.FollowBulkClassChanges",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/compose.ParentRequestMasterData.FollowBulkClassChanges. The offering resync of a bulk approval's Klassen joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/compose.ParentRequestMasterData.FollowBulkClassChanges. The offering resync of a bulk approval's Klassen joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
     },
     {
       "adr": "0067",
-      "approval_adr": "0240",
+      "approval_adr": "0286",
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.FollowBulkClassChanges",
       "classification": "E4",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.FollowBulkClassChanges",
-      "reason": "E4 named Care master-data approval surface: the Klassen a bulk approval wrote let Regeltermine with a Klasse or Jahrgang target follow in one call after its last decision, right after the offering resync, under the class-writes and recurrence gates the bulk took before its child frontier; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "E4 named Care master-data approval surface: the Klassen a bulk approval wrote let Regeltermine with a Klasse or Jahrgang target follow in one call after its last decision, right after the offering resync, under the class-writes and recurrence gates the bulk took before its child frontier; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.CohortRosters.FollowCohortChanges",
       "target_owner": "timetable-activities"
@@ -22154,7 +22357,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/rows.ChildRepository.FindForAccount",
-      "reason": "Read-only newly exposed target: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/adapters/parentpostgres.ChildRepository.FindForAccount. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/adapters/parentpostgres.ChildRepository.FindForAccount. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListActiveAccountSchoolIDs",
       "target_owner": "identity-access"
@@ -22164,7 +22367,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/rows.ChildRepository.FindForAccount",
-      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/application.SchoolChildRepository.FindForAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/application.SchoolChildRepository.FindForAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListActiveAccountSchoolIDs",
       "target_owner": "identity-access"
@@ -22174,7 +22377,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/rows.ChildRepository.FindForAccount",
-      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/application.personChildRepository.FindForAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/application.personChildRepository.FindForAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListActiveAccountSchoolIDs",
       "target_owner": "identity-access"
@@ -22184,7 +22387,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/rows.ChildRepository.ListByAccount",
-      "reason": "Read-only newly exposed target: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/adapters/parentpostgres.ChildRepository.ListByAccount. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/adapters/parentpostgres.ChildRepository.ListByAccount. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListActiveAccountSchoolIDs",
       "target_owner": "identity-access"
@@ -22194,7 +22397,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/rows.ChildRepository.ListByAccount",
-      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/application.SchoolChildRepository.ListByAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/application.SchoolChildRepository.ListByAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListActiveAccountSchoolIDs",
       "target_owner": "identity-access"
@@ -22204,7 +22407,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/rows.ChildRepository.ListByAccount",
-      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/application.personChildRepository.ListByAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/identityaccess.Owner.ListActiveAccountSchoolIDs (identity-access) through modules/careplan/internal/application.personChildRepository.ListByAccount. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListActiveAccountSchoolIDs",
       "target_owner": "identity-access"
@@ -22275,7 +22478,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests.Decisions.Correct",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/internal/application.MasterDataDecisions.Correct. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/internal/application.MasterDataDecisions.Correct. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -22302,12 +22505,12 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0240",
+      "approval_adr": "0286",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.Correct",
       "classification": "E4",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests.Decisions.Correct",
-      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.CohortRosters.FollowCohortChanges",
       "target_owner": "timetable-activities"
@@ -22365,7 +22568,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests.Decisions.Decide",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/internal/application.MasterDataDecisions.Decide. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/careplan/internal/application.MasterDataDecisions.Decide. The offering resync of an approved Klasse joins the decision's tenant unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -22392,12 +22595,12 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0240",
+      "approval_adr": "0286",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.Decide",
       "classification": "E4",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests.Decisions.Decide",
-      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged.",
+      "reason": "E4 named Care master-data approval surface: an approved or staff-written Klasse lets Regeltermine with a Klasse or Jahrgang target follow, right after the offering resync, under the class-writes and recurrence gates the decision took before the child row; Timetable writes only its own roster rows in the caller's tenant unit. Approved for this binding by ADR 0225. Target: modules/timetable.CohortRosters.FollowCohortChanges. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the root binds the same Berlin day without careplan.Today (ADR 0240); effect and classification are unchanged. Re-reviewed for #7104 (Workforce): a Workforce callee in the trace now reads the clock of its composition instead of the wall clock (ADR 0264); effect and classification are unchanged. Re-confirmed with ADR 0262 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0263 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0265 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0261 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0268 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0278 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0275 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0286 (#7295): only the clock the test roots hand to Care Plan changed on the call path; effect and classification are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.CohortRosters.FollowCohortChanges",
       "target_owner": "timetable-activities"

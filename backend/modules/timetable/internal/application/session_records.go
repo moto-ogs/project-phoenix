@@ -86,7 +86,7 @@ func (r SessionRecords) CreateMirroredSessionInstance(ctx context.Context, input
 	}
 	row.SetTenantID(tenant.FromContext(ctx))
 	row.SetWallClockTimes(input.StartTime, input.EndTime)
-	if err := createLegacyInstance(ctx, r.Instances, row); err != nil {
+	if err := createLegacyInstance(ctx, r.Instances, row, r.Instances.Now); err != nil {
 		return 0, err
 	}
 	return row.ID, nil

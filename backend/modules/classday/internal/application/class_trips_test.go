@@ -49,7 +49,7 @@ var tripToday = calendar.NewDate(2026, 11, 2)
 func newTripSeam(statusDays *fakeTripStatusDays, arrivals *fakeStudentArrivals, announcer *countingAnnouncer) classTrips {
 	seam := classTrips{
 		rosters: fakeDayRosters{roster: &DayRoster{Rows: []DayRosterRow{
-			{StudentID: 11}, {StudentID: 12}, {ListEntry: true, ListEntryID: 99},
+			{StudentID: 11}, {StudentID: 12}, {ListEntry: true, ListEntryID: 99}, {StudentID: 13, WithoutCarePlace: true},
 		}}},
 		writeScope: fakeTripScope{may: true},
 		statusDays: statusDays,
@@ -130,6 +130,7 @@ func TestReportClassTripRefusesInvalidReports(t *testing.T) {
 		{name: "return time on a Saturday", in: classday.ClassTripWrite{From: "2026-11-07", To: "2026-11-07", StudentIDs: []int64{11}, ReturnTime: &returnTime}, want: classday.ErrClassTripReturnTimeWeekend},
 		{name: "child of another class", in: classday.ClassTripWrite{From: "2026-11-02", To: "2026-11-02", StudentIDs: []int64{11, 42}}, want: classday.ErrClassTripStudentNotInClass},
 		{name: "class-list entry without OGS record", in: classday.ClassTripWrite{From: "2026-11-02", To: "2026-11-02", StudentIDs: []int64{99}}, want: classday.ErrClassTripStudentNotInClass},
+		{name: "child without an OGS place", in: classday.ClassTripWrite{From: "2026-11-02", To: "2026-11-02", StudentIDs: []int64{13}}, want: classday.ErrClassTripStudentNotInClass},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

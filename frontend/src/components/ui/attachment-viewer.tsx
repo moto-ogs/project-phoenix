@@ -17,7 +17,7 @@ import { buttonClassName, Button } from "./button";
 import { CloseIcon } from "./close-icon";
 import { FileTypeIcon } from "./file-type-icon";
 import { IconTile } from "./icon-tile";
-import { Z_LAYER } from "./overlay-styles";
+import { OVERLAY_BACKDROP_BLUR_CLASS, Z_LAYER } from "./overlay-styles";
 import { PdfPreview, useObjectUrl, usePdfViewerEnabled } from "./pdf-preview";
 
 const logger = createLogger({ component: "AttachmentViewer" });
@@ -176,7 +176,7 @@ export function AttachmentViewer({
         role="dialog"
         aria-modal="true"
         aria-label={item.name}
-        className={`fixed inset-0 ${Z_LAYER.modal} flex flex-col bg-black/90 text-white backdrop-blur-sm`}
+        className={`fixed inset-0 ${Z_LAYER.modal} flex flex-col bg-black/90 text-white ${OVERLAY_BACKDROP_BLUR_CLASS}`}
         style={{ pointerEvents: "auto" }}
       >
         <div className="flex items-center gap-2 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
@@ -320,6 +320,7 @@ function PdfBody({ item, downloadHref, loadFile, labels }: BodyProps) {
   const loadedUrl = useObjectUrl(blob);
   const canShow = viewer && (local || loadFile !== undefined);
 
+  // oxlint-disable-next-line swr/no-effect-load -- kit viewer (ui-kit/no-kit-domain-import): bytes come through the caller's loadFile prop and become an object URL for the PDF frame
   useEffect(() => {
     if (!canShow || local || !loadFile) return;
     let current = true;

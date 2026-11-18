@@ -102,6 +102,7 @@ function loginCopy(
     missingCredentials: t("errors.missingCredentials"),
     rateLimited: t("errors.rateLimited"),
     sessionExpired: tErrorCatalog("loginNotice"),
+    logoutNotRevoked: tErrorCatalog("codes.identity.logout_not_revoked"),
     reset: {
       title: tReset("title"),
       description: tReset("description"),
@@ -113,6 +114,7 @@ function loginCopy(
       successTitle: tReset("successTitle"),
       successMessage: tReset("successMessage"),
       successHint: tReset("successHint"),
+      changeAddress: tReset("changeAddress"),
       close: tReset("close"),
       errorObject: tReset("errorObject"),
       rateLimitWait: (countdown) => tReset("rateLimitWait", { countdown }),
@@ -187,6 +189,7 @@ function ParentLoginForm() {
     isRedirectingToParent ||
     (status === "authenticated" && session?.error !== undefined);
 
+  // oxlint-disable-next-line swr/no-effect-load -- session guard: signs a stale session out before the login form shows; no read
   useEffect(() => {
     const cleanup = signOutStaleSession({
       status,

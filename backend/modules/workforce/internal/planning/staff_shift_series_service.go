@@ -146,7 +146,6 @@ func NewStaffShiftSeriesService(
 		shiftService:    shiftService,
 		lockStaffShifts: lockStaffShifts,
 		logger:          logger,
-		today:           calendar.TodayDate,
 	}
 	// The series checks its occurrences with the working-time check of the
 	// shift service (#4708).
@@ -158,6 +157,9 @@ func NewStaffShiftSeriesService(
 			opt(service)
 		}
 	}
+	if service.today == nil {
+		panic("workforce staff shift series: the school day clock is required (WithStaffShiftSeriesToday)")
+	}
 	return service
 }
 
@@ -166,8 +168,7 @@ func NewStaffShiftSeriesService(
 type StaffShiftSeriesOption func(*staffShiftSeriesService)
 
 // WithStaffShiftSeriesToday overrides the calendar-day clock the
-// materializer and the replans compare against. A nil clock keeps the
-// default.
+// materializer and the replans compare against; the service requires it.
 func WithStaffShiftSeriesToday(today func() calendar.Date) StaffShiftSeriesOption {
 	return func(s *staffShiftSeriesService) {
 		if today != nil {

@@ -19,11 +19,12 @@ const (
 // DataDeletionRepository implements audit.DataDeletionRepository interface
 type DataDeletionRepository struct {
 	runtime Runtime
+	now     func() time.Time
 }
 
 // NewDataDeletionRepository creates a new DataDeletionRepository
-func NewDataDeletionRepository(runtime Runtime) *DataDeletionRepository {
-	return &DataDeletionRepository{runtime: requireRuntime(runtime)}
+func NewDataDeletionRepository(runtime Runtime, now func() time.Time) *DataDeletionRepository {
+	return &DataDeletionRepository{runtime: requireRuntime(runtime), now: now}
 }
 
 // Create overrides base Create to handle validation
@@ -31,7 +32,7 @@ func (r *DataDeletionRepository) Create(ctx context.Context, deletion *audit.Dat
 	if deletion == nil {
 		return errors.New("data deletion cannot be nil")
 	}
-	return NewAppender(r.runtime).Append(ctx, deletion)
+	return NewAppender(r.runtime, r.now).Append(ctx, deletion)
 }
 
 // CreateAll appends every deletion in one statement, all or nothing.
@@ -40,7 +41,7 @@ func (r *DataDeletionRepository) CreateAll(ctx context.Context, deletions []*aud
 	if err != nil || len(events) == 0 {
 		return err
 	}
-	return NewAppender(r.runtime).AppendAll(ctx, events)
+	return NewAppender(r.runtime, r.now).AppendAll(ctx, events)
 }
 
 // dataDeletionEvents rejects a nil deletion before any row is written.
@@ -183,19 +184,27 @@ func (r *DataDeletionRepository) List(ctx context.Context, filters map[string]in
 	return deletions, nil
 }
 
+// ListRecentRetentionSummaries lists the visit retention runs of the last
+// days, counted back from the database time: the column default stamps
+// deleted_at on that clock (ADR 0281, Nachtrag).
 func (r *DataDeletionRepository) ListRecentRetentionSummaries(
 	ctx context.Context,
-	since time.Time,
+	days int,
 	limit int,
 ) ([]audit.RecentDeletionSummary, error) {
-	if limit <= 0 {
-		return nil, errors.New("recent deletion summary limit must be positive")
+	if limit <= 0 || days <= 0 {
+		return nil, errors.New("recent deletion summary days and limit must be positive")
 	}
 	var summaries []audit.RecentDeletionSummary
 	ambientDB6, databaseErr6 := runtimeDB(ctx, r.runtime)
 	if databaseErr6 != nil {
 		return *new([]audit.RecentDeletionSummary), databaseErr6
 	}
+	databaseNow, err := readDatabaseTime(ctx, r.runtime)
+	if err != nil {
+		return nil, err
+	}
+	since := databaseNow.AddDate(0, 0, -days)
 	query := ambientDB6.NewSelect().
 		TableExpr(`audit.data_deletions AS "data_deletion"`).
 		ColumnExpr(`TO_CHAR("data_deletion".deleted_at, 'YYYY-MM-DD') AS date`).

@@ -7,8 +7,21 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ReactNode } from "react";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
+
+vi.unmock("swr");
+
+// The factor's state is read through a fresh shared cache per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>{children}</ToastProvider>
+    </SWRConfig>
+  );
+}
 
 const logout = vi.fn(() => Promise.resolve());
 
@@ -23,7 +36,9 @@ const mfa = vi.hoisted(() => ({
 vi.mock("next-auth/react", () => ({
   signIn: (...args: unknown[]) => mfa.signIn(...args),
   useSession: () => ({
-    data: { user: { email: "kueche@example.com" } },
+    data: {
+      user: { id: "1", scope: "caterer", email: "kueche@example.com" },
+    },
     status: "authenticated",
   }),
 }));
@@ -95,7 +110,7 @@ describe("Caterer-Konto (#4496)", () => {
   });
 
   it("shows the sign-in address and the password change", () => {
-    render(<CatererAccountPage />, { wrapper: ToastProvider });
+    render(<CatererAccountPage />, { wrapper: Providers });
 
     expect(screen.getByText("kueche@example.com")).toBeInTheDocument();
     expect(
@@ -111,7 +126,7 @@ describe("Caterer-Konto (#4496)", () => {
     // skip that pause instead of waiting it out.
     vi.useFakeTimers({ shouldAdvanceTime: true });
     global.fetch = reply(204);
-    render(<CatererAccountPage />, { wrapper: ToastProvider });
+    render(<CatererAccountPage />, { wrapper: Providers });
 
     openAndSubmit();
 
@@ -142,7 +157,7 @@ describe("Caterer-Konto (#4496)", () => {
     const assign = vi
       .spyOn(window.location, "assign")
       .mockImplementation(() => undefined);
-    render(<CatererAccountPage />, { wrapper: ToastProvider });
+    render(<CatererAccountPage />, { wrapper: Providers });
 
     openAndSubmit();
 
@@ -180,7 +195,7 @@ describe("Caterer-Konto: Zwei-Faktor-Anmeldung (#4497)", () => {
       maskedEmail: "k***@example.com",
     });
     mfa.confirm.mockResolvedValue({ sessionRenewed: true });
-    render(<CatererAccountPage />, { wrapper: ToastProvider });
+    render(<CatererAccountPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Ausgeschaltet")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Einschalten" }));
@@ -212,7 +227,7 @@ describe("Caterer-Konto: Zwei-Faktor-Anmeldung (#4497)", () => {
       maskedEmail: "k***@example.com",
     });
     mfa.confirm.mockResolvedValue({ sessionRenewed: false });
-    render(<CatererAccountPage />, { wrapper: ToastProvider });
+    render(<CatererAccountPage />, { wrapper: Providers });
 
     fireEvent.click(await screen.findByRole("button", { name: "Einschalten" }));
     fireEvent.change(await screen.findByLabelText("Code"), {
@@ -249,7 +264,7 @@ describe("Caterer-Konto: Zwei-Faktor-Anmeldung (#4497)", () => {
     const assign = vi
       .spyOn(window.location, "assign")
       .mockImplementation(() => undefined);
-    render(<CatererAccountPage />, { wrapper: ToastProvider });
+    render(<CatererAccountPage />, { wrapper: Providers });
 
     fireEvent.click(await screen.findByRole("button", { name: "Einschalten" }));
     fireEvent.change(await screen.findByLabelText("Code"), {
@@ -272,7 +287,7 @@ describe("Caterer-Konto: Zwei-Faktor-Anmeldung (#4497)", () => {
   it("switches it off after the current password", async () => {
     mfa.status.mockResolvedValue({ enabled: true, maskedEmail: "" });
     mfa.disable.mockResolvedValue(undefined);
-    render(<CatererAccountPage />, { wrapper: ToastProvider });
+    render(<CatererAccountPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Eingeschaltet")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Ausschalten" }));
@@ -288,7 +303,7 @@ describe("Caterer-Konto: Zwei-Faktor-Anmeldung (#4497)", () => {
   it("shows the remembered devices only while the factor is on", async () => {
     mfa.status.mockResolvedValue({ enabled: true, maskedEmail: "" });
     mfa.disable.mockResolvedValue(undefined);
-    render(<CatererAccountPage />, { wrapper: ToastProvider });
+    render(<CatererAccountPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Eingeschaltet")).toBeInTheDocument();
     expect(screen.getByText("Gemerkte Geräte (Karte)")).toBeInTheDocument();

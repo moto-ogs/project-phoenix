@@ -36,9 +36,12 @@ import {
   useChildMasterData,
 } from "~/components/parent/child-master-data";
 import GuardiansPanel from "~/components/parent/guardians-panel";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useApiLoadError } from "~/contexts/ToastContext";
-import { createLogger } from "~/lib/logger";
+import {
+  useSwrLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   UNKNOWN_CHILD_TODAY,
   fetchChildParentConferences,
@@ -49,11 +52,7 @@ import { parentPath } from "~/lib/parent-url";
 import { parseISODate } from "~/lib/date-helpers";
 import type { ParentConferenceOffer } from "~/lib/parent-conferences";
 import { requiresGuardianReason } from "~/lib/parent-request-reason";
-import { SharingOptionsProvider } from "~/components/parent/sharing-options-context";
-import {
-  SharedParentFeaturesProvider,
-  ChildRequestsProvider,
-} from "~/components/parent/child-requests-context";
+import { SharedParentFeaturesProvider } from "~/components/parent/child-requests-context";
 import {
   ParentPage,
   ParentPageHeader,
@@ -67,14 +66,14 @@ import { useCareTermTranslations } from "~/lib/care-facility-term";
 import { ParentChildCareTermScope } from "~/lib/parent-care-term";
 
 import {
+  PARENT_RESOURCE_OPTIONS,
   useParentChildren,
   useParentToday,
 } from "~/lib/hooks/use-parent-resources";
 
 const EMPTY_CHILDREN: Child[] = [];
 const EMPTY_TODAY: Record<string, ChildToday> = {};
-
-const logger = createLogger({ component: "ChildPage" });
+const NO_CONFERENCES: readonly ParentConferenceOffer[] = [];
 
 type ChildArea = "betreuung" | "angaben" | "kontakte";
 type PhosphorIcon = typeof CalendarDotsIcon;
@@ -207,25 +206,19 @@ export function ChildPage({
       />
       {/* key: ein Kindwechsel setzt alle Abschnitte zurueck, damit nie Daten
           des vorigen Kindes unter dem neuen Namen stehen. */}
-      {/* Eine Freigabe-Liste pro Kind: alle Abschnitte teilen sich einen
-          einzigen Abruf der möglichen Empfänger. Ebenso teilen sie laufende
-          Abrufe der Schulschalter und des Wochenplans. */}
+      {/* Alle Abschnitte teilen sich die Schulschalter des Kindes. */}
       {/* Alle Texte zum Kind nennen die Betreuung so, wie seine Schule sie
           nennt (#6082). */}
       <ParentChildCareTermScope studentId={active.student_id}>
         <SharedParentFeaturesProvider linkedChildren={children}>
-          <SharingOptionsProvider>
-            <ChildRequestsProvider>
-              <ChildSections
-                key={active.student_id}
-                child={active}
-                today={
-                  selectionToday[active.student_id] ??
-                  (statuses.error ? UNKNOWN_CHILD_TODAY : null)
-                }
-              />
-            </ChildRequestsProvider>
-          </SharingOptionsProvider>
+          <ChildSections
+            key={active.student_id}
+            child={active}
+            today={
+              selectionToday[active.student_id] ??
+              (statuses.error ? UNKNOWN_CHILD_TODAY : null)
+            }
+          />
         </SharedParentFeaturesProvider>
       </ParentChildCareTermScope>
     </ParentPage>
@@ -239,26 +232,16 @@ function ChildSections({
   const searchParams = useSearchParams();
   const router = useRouter();
   const t = useCareTermTranslations("parentChild");
-  const care = useChildCare(child.student_id);
-  const {
-    error: careLoadError,
-    show: showCareLoadError,
-    clear: clearCareLoadError,
-  } = useApiLoadError();
-  const careFailure = care.loadError;
-  const refreshCare = care.refresh;
+  const care = useChildCare(child.student_id, {
+    withoutCarePlace: child.without_care_place === true,
+  });
   // Fehlende Erstlade-Daten erhalten eine Fehlerkarte mit Retry. Bestätigte
   // Features bleiben bei Hintergrundfehlern nutzbar; ihr Leser loggt den Fehler.
-  useEffect(() => {
-    if (!careFailure) {
-      clearCareLoadError();
-      return;
-    }
-    void showCareLoadError(careFailure, {
-      object: t("errorObjectCare"),
-      retry: refreshCare,
-    });
-  }, [careFailure, clearCareLoadError, refreshCare, showCareLoadError, t]);
+  const careLoadError = useSwrLoadError(
+    care.loadError,
+    t("errorObjectCare"),
+    care.refresh,
+  );
   const [modal, setModal] = useState<null | "sick" | "pickup">(null);
   const fullName = `${child.first_name} ${child.last_name}`;
 
@@ -310,6 +293,11 @@ function ChildSections({
   // diesen einen Satz bliebe ein Profil zurück, dem still alle Aktionen fehlen
   // — und niemand wüsste warum.
   const careEnded = care.features.care_ended === true;
+  // Kind ohne OGS-Platz (#4803): die Kinderliste sagt es vor den Flags, damit
+  // keine OGS-Abschnitte erst aufblitzen und dann verschwinden.
+  const withoutCarePlace =
+    child.without_care_place === true ||
+    care.features.without_care_place === true;
 
   return (
     <>
@@ -346,7 +334,9 @@ function ChildSections({
             ? () => setModal("pickup")
             : undefined
         }
-        statusAside={<PickupSummary care={care} />}
+        statusAside={
+          withoutCarePlace ? undefined : <PickupSummary care={care} />
+        }
       />
       <ChildAreaTabs
         child={child}
@@ -355,7 +345,11 @@ function ChildSections({
         canRemove={care.features.related_accounts_remove_enabled}
         canAddContact={care.features.guardian_contact_manage_allowed}
         canManagePickup={care.features.pickup_manage_allowed === true}
+        canManageEmergencyContact={
+          care.features.emergency_contact_manage_allowed === true
+        }
         careEnded={careEnded}
+        withoutCarePlace={withoutCarePlace}
         sickDays={care.sickDays}
         excusedRequests={care.excusedRequests}
         canEditAbsenceRequests={
@@ -380,6 +374,7 @@ function ChildSections({
           excusedRequiresApproval={care.features.excused_requires_approval}
           careExceptions={care.careExceptions}
           sickDays={care.sickDays}
+          withoutCarePlace={withoutCarePlace}
         />
       )}
       {modal === "pickup" && (
@@ -416,7 +411,9 @@ function ChildAreaTabs({
   canRemove,
   canAddContact,
   canManagePickup,
+  canManageEmergencyContact,
   careEnded,
+  withoutCarePlace,
   sickDays,
   excusedRequests,
   canEditAbsenceRequests,
@@ -429,7 +426,9 @@ function ChildAreaTabs({
   canRemove: boolean;
   canAddContact: boolean;
   canManagePickup: boolean;
+  canManageEmergencyContact: boolean;
   careEnded: boolean;
+  withoutCarePlace: boolean;
   sickDays: import("~/lib/parent-api").StatusDay[];
   excusedRequests: import("~/lib/parent-api").ExcusedRequest[];
   canEditAbsenceRequests: boolean;
@@ -450,22 +449,12 @@ function ChildAreaTabs({
   // Elternsprechtag (#4801): nur sichtbar, wenn die Klasse einen hat. Ein
   // Ladefehler bleibt still, denn der Eintrag ist nur ein Weg zur Seite des
   // Sprechtags, die ihren Fehler selbst zeigt.
-  const [conferences, setConferences] = useState<ParentConferenceOffer[]>([]);
-  useEffect(() => {
-    let active = true;
-    fetchChildParentConferences(child.student_id)
-      .then((loaded) => {
-        if (active) setConferences(loaded);
-      })
-      .catch((err: unknown) => {
-        logger.warn("parent_child_conferences_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-    return () => {
-      active = false;
-    };
-  }, [child.student_id]);
+  const conferences =
+    useSWRAuth(
+      parentKeys.conferences(child.student_id),
+      () => fetchChildParentConferences(child.student_id),
+      PARENT_RESOURCE_OPTIONS,
+    ).data ?? NO_CONFERENCES;
   const booking = conferences.find((offer) => offer.booking);
 
   return (
@@ -568,23 +557,37 @@ function ChildAreaTabs({
               />
             </ParentSection>
           )}
-          <BookedCareSection
-            studentId={child.student_id}
-            childFirstName={child.first_name}
-            careEnded={careEnded}
-            enrolledUntil={child.enrolled_until}
-            reasonRequired={reasonRequired}
-          />
-          {/* Kurse (#3075): eigener Abschnitt, damit eine Kursanfrage nicht
-              zwischen Mittagessen und Betreuungszeiten verschwindet. Schaltet
-              die Schule sie aus, rendert der Abschnitt nichts. */}
-          <CoursesSection studentId={child.student_id} careEnded={careEnded} />
-          <ChildMasterDataView
-            studentId={child.student_id}
-            childName={childName}
-            area="departure"
-            masterData={masterData}
-          />
+          {withoutCarePlace ? (
+            // Ohne OGS-Platz (#4803) steht hier statt Betreuungszeiten,
+            // Kursen und Abholung ein Satz, warum es sie nicht gibt.
+            <ParentSubsection
+              title={t("withoutCarePlace.title")}
+              description={t("withoutCarePlace.body")}
+            />
+          ) : (
+            <>
+              <BookedCareSection
+                studentId={child.student_id}
+                childFirstName={child.first_name}
+                careEnded={careEnded}
+                enrolledUntil={child.enrolled_until}
+                reasonRequired={reasonRequired}
+              />
+              {/* Kurse (#3075): eigener Abschnitt, damit eine Kursanfrage
+                  nicht zwischen Mittagessen und Betreuungszeiten verschwindet.
+                  Schaltet die Schule sie aus, rendert der Abschnitt nichts. */}
+              <CoursesSection
+                studentId={child.student_id}
+                careEnded={careEnded}
+              />
+              <ChildMasterDataView
+                studentId={child.student_id}
+                childName={childName}
+                area="departure"
+                masterData={masterData}
+              />
+            </>
+          )}
         </TabsContent>
 
         <TabsContent
@@ -619,6 +622,8 @@ function ChildAreaTabs({
               canRemove={canRemove}
               canAddContact={canAddContact}
               canManagePickup={canManagePickup}
+              canManageEmergencyContact={canManageEmergencyContact}
+              withoutCarePlace={withoutCarePlace}
             />
           )}
         </TabsContent>

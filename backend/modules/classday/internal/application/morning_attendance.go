@@ -27,8 +27,9 @@ type (
 // MorningAttendanceDependencies wire the morning attendance (#4790). Without
 // Store or Scope the report fills in nothing beyond reported absences, the
 // write verdict stays false and the write answers
-// classday.ErrMorningAttendanceNotConfigured. Now is the clock "today" is
-// taken from; nil uses the wall clock.
+// classday.ErrMorningAttendanceNotConfigured. Now is the clock of the whole
+// class day (ADR 0239): "today", the access-log stamps and the export dates
+// read it; NewClassDay requires it.
 type MorningAttendanceDependencies struct {
 	Store MorningAttendance
 	Scope MorningAttendanceScope
@@ -64,11 +65,13 @@ type morningAttendance struct {
 	after func(ctx context.Context, in classday.MorningAttendanceWrite, date calendar.Date, newlyAbsent []int64) error
 }
 
+// clock is the composition's Now, which NewClassDay requires.
+func (d MorningAttendanceDependencies) clock() func() time.Time {
+	return d.Now
+}
+
 func newMorningAttendance(deps ClassDayDependencies) morningAttendance {
-	today := calendar.TodayDate
-	if now := deps.Now; now != nil {
-		today = func() calendar.Date { return calendar.DateFromTime(now()) }
-	}
+	today := calendar.CalendarDateClock(deps.clock())
 	return morningAttendance{store: deps.Store, scope: deps.Scope, rosters: deps.Rosters, today: today, changed: deps.MorningChanged}
 }
 
@@ -294,8 +297,8 @@ func morningChild(row classday.DayRow) studentpresence.MorningAttendanceChild {
 // unreportedAbsence reports a child the Lehrkraft marked absent that nobody
 // reported sick, excused or on a class trip ("fehlt ohne Meldung", #4791).
 // The derived "cancelled" (OGS care called off) explains no school morning.
-// A class-list-only entry has no status day to report through yet; it joins
-// with #4803.
+// A class-list-only entry has no status day to report through; a child
+// without an OGS place (#4803) is a student and has one, so it counts.
 func unreportedAbsence(row classday.DayRow) bool {
 	return !row.ListEntry && row.StudentID > 0 &&
 		row.MorningAttendance != nil &&

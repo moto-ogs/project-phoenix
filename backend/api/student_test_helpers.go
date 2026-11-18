@@ -116,11 +116,11 @@ func NewStudentHTTPTestModule(db transactionruntime.Database, unit tenant.UnitOf
 // photoBroadcaster (the graph's realtime hub when nil) and photoUnlinker
 // (no file cleanup when nil).
 func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, feedbackCounter studentdeletioncompose.Feedback, photoBroadcaster owners.PhotoBroadcaster, photoUnlinker peoplePorts.PhotoUnlinker, clocks ...func() time.Time) (StudentTestModule, ActiveTestModule, StudentTestPeople, auditModels.Command, enrollmentOwner.Decisions, grouplive.Query, error) {
-	auditCommand, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	auditCommand, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
-	students, repos, err := NewStudentTestRepositories(db, auditCommand)
+	students, repos, err := NewStudentTestRepositories(db, auditCommand, clocks...)
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
@@ -174,7 +174,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
-	now := OptionalClock(clocks)
+	now := clockOrNow(clocks)
 	today := timezone.CalendarDateClock(now)
 	settingsService := liveSettings.Settings
 	// Care Plan is composed after the live graph's person directory; the
@@ -199,7 +199,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	approvedOfferings := enrollmentCompose.NewApprovedOfferingProjection(repos.Enrollment(), owners.OfferingStudents{Query: persons})
 	pickupBaselines, err := careplanCompose.NewPickupBaselines(students.CarePlan, approvedOfferings, func(ctx context.Context) (bool, error) {
 		return settingsService.ResolveBool(ctx, configModels.KeyEnrollmentBookingsAuthoritative)
-	})
+	}, timezone.CalendarDateClock(clocks...))
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
@@ -208,7 +208,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
 	pickupAutoExcusal, err := careplanCompose.NewPickupAutoExcusal(careplanCompose.PickupExcusalDependencies{
-		DB: db.Pool(), Records: students.CarePlan, Baselines: pickupBaselines, Blocks: owners.NewLoggedStudentPresence(db, logger), Preview: owners.NewPickupExcusalTimetable(reposTimetable.Timetable, owners.NewPartialAbsencePreview(db)),
+		DB: db.Pool(), Records: students.CarePlan, Baselines: pickupBaselines, Blocks: owners.NewLoggedStudentPresence(db, logger), Preview: owners.NewPickupExcusalTimetable(reposTimetable.Timetable, owners.NewPartialAbsencePreview(db)), Today: timezone.CalendarDateClock(clocks...),
 	})
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
@@ -262,7 +262,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
 	enrollmentDecisionService := enrollmentCompose.PublicDecisions(owners.NewEnrollmentDecisions(enrollmentCompose.DecisionDependencies{
-		Requests:       repos.Enrollment(),
+		Now: time.Now, Requests: repos.Enrollment(),
 		Children:       repos.Enrollment(),
 		Guardians:      repos.Enrollment(),
 		LateInvites:    repos.Enrollment(),
@@ -326,7 +326,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	}
 	offeringChangeDeps.Planning = owners.ManualPlanningReader{Query: owners.PlanningQuery{DB: db}, CourseGroups: reposTimetable.Timetable}
 	offeringChangeDeps.Bookings = careBookings
-	offeringChangeDeps.Today = today
+	offeringChangeDeps.Today, offeringChangeDeps.Now = today, realClockUnless(clocks)
 	offeringChangeDeps.Logger = logger.With("service", "offering-change-requests")
 	offeringChanges, err := owners.ComposeOfferingChanges(offeringChangeDeps)
 	if err != nil {
@@ -344,7 +344,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	}
 	excusedRequestService, err := owners.NewExcusedAbsenceRequestService(
 		students.CarePlan, repos.Student, repos.Person, owners.ParentRequestReviewScope(requestReviewPolicy, requestTokenReads.Permissions),
-		pillEmitter, realtimeHub, parentRequestEvents, nil, nil, nil, logger.With("service", "excused-requests"), timezone.CalendarDateClock(clocks...), OptionalClock(clocks), partialAbsenceService,
+		pillEmitter, realtimeHub, parentRequestEvents, nil, nil, nil, logger.With("service", "excused-requests"), timezone.CalendarDateClock(clocks...), realClockUnless(clocks), partialAbsenceService,
 	)
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
@@ -367,7 +367,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	scheduleSubstitution, err := shiftplansyncCompose.NewSubstitution(shiftplansyncCompose.SubstitutionDependencies{
 		Deviations: liveTimetable.Deviations, Staff: owners.NewPlanStaffDirectory(repos.Staff), Broadcaster: realtimeHub, Logger: logger.With("service", "schedule-substitution"),
 		Runtime: schoolStructure.NewLegacyRepositoryRuntime(db.Pool()), ActivityInstances: timetableCompose.NewTimetableInstanceReads(reposTimetable.ActivityInstance.Reads),
-		InstanceStaff: timetableCompose.NewTimetableInstanceStaffReads(reposTimetable.InstanceStaff),
+		InstanceStaff: timetableCompose.NewTimetableInstanceStaffReads(reposTimetable.InstanceStaff), Today: today,
 	})
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
@@ -391,7 +391,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 			}
 			return admin || (scope == configModels.OverviewScopeAllStaff && hasStaff), nil
 		},
-		Now: now,
+		Now: clockOrNow(clocks),
 	})
 	substitutionService := SubstitutionEntries{Groups: groupSubstitutions, Schedule: scheduleSubstitution}
 	studentStatusDayService := presenceservice.NewStatusDays(

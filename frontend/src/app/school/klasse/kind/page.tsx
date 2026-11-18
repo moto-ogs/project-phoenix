@@ -32,6 +32,7 @@ import {
 import { schoolClassLabel } from "~/lib/school-class-label";
 import { schoolPath } from "~/lib/school-url";
 import { IsolatedSWRCache, useSWRAuth } from "~/lib/swr";
+import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 
 /** Wann und von wem: der beschriebene Tag oder „Dauerhafter Hinweis“. */
 function noteMeta(note: SharedNote): string {
@@ -80,7 +81,7 @@ function SharedNotes({
     mutate,
   } = useSWRAuth<StudentSharedNotes>(
     session && schoolClass && studentId
-      ? `school-shared-notes-${schoolClass}-${studentId}`
+      ? schoolPortalKeys.sharedNotes(schoolClass, studentId)
       : null,
     async () => {
       try {

@@ -2,8 +2,11 @@ package compose
 
 import (
 	"context"
+	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	usersRepo "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres"
+	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	"github.com/uptrace/bun"
@@ -40,14 +43,12 @@ func NewPersonRepository(db *bun.DB, accounts AccountLookup) peoplePorts.PersonR
 	return usersRepo.NewPersonRepository(NewLegacyRepositoryRuntime(db), usersRepo.WithAccountLookup(accounts))
 }
 
-// NewGuardianProfileRepository is the guardian profile repository with the
-// portal reachability queries its check joins: the schools in which an account
-// holds an active guardian membership, and those in which it can also log in
-// with a password (#2720, #2721).
-func NewGuardianProfileRepository(db *bun.DB, students usersRepo.StudentDirectoryRows, links usersRepo.GuardianLinkRows, portal, loginReady func(context.Context, []int64) (map[int64][]int64, error)) peoplePorts.GuardianProfileRepository {
-	return application.NewGuardianProfileCommands(usersRepo.NewGuardianProfileRepository(NewLegacyRepositoryRuntime(db), students, links,
-		usersRepo.WithPortalMemberships(portal),
-		usersRepo.WithPortalLoginMemberships(loginReady),
+// NewGuardianProfileRepository joins the schools in which an account holds an
+// active guardian membership and those it can log in to (#2720, #2721); a new
+// profile counts as childless from now, which is required.
+func NewGuardianProfileRepository(db *bun.DB, students usersRepo.StudentDirectoryRows, links usersRepo.GuardianLinkRows, portal, loginReady func(context.Context, []int64) (map[int64][]int64, error), now func() time.Time) peoplePorts.GuardianProfileRepository {
+	return application.NewGuardianProfileCommands(usersRepo.NewGuardianProfileRepository(NewLegacyRepositoryRuntime(db), students, links, now,
+		usersRepo.WithPortalMemberships(portal), usersRepo.WithPortalLoginMemberships(loginReady),
 	), NewLegacyRepositoryRuntime(db))
 }
 
@@ -81,19 +82,19 @@ func NewGuardianPhoneNumberRepository(db *bun.DB) peoplePorts.GuardianPhoneNumbe
 }
 
 // NewFamilyProtectionEventRepository is the family protection event repository.
-func NewFamilyProtectionEventRepository(db *bun.DB) peoplePorts.FamilyProtectionRecords {
-	return usersRepo.NewFamilyProtectionEventRepository(NewLegacyRepositoryRuntime(db))
+func NewFamilyProtectionEventRepository(db *bun.DB, now func() time.Time) peoplePorts.FamilyProtectionRecords {
+	return usersRepo.NewFamilyProtectionEventRepository(NewLegacyRepositoryRuntime(db), now)
 }
 
 // NewParentRequestShareEventRepository is the parent request share event
 // repository.
-func NewParentRequestShareEventRepository(db *bun.DB) peoplePorts.ParentRequestShareRecords {
-	return usersRepo.NewParentRequestShareEventRepository(NewLegacyRepositoryRuntime(db))
+func NewParentRequestShareEventRepository(db *bun.DB, now func() time.Time) peoplePorts.ParentRequestShareRecords {
+	return usersRepo.NewParentRequestShareEventRepository(NewLegacyRepositoryRuntime(db), now)
 }
 
 // NewParentRequestEventRepository is the parent request event repository.
-func NewParentRequestEventRepository(db *bun.DB) peoplePorts.ParentRequestEventRecords {
-	return usersRepo.NewParentRequestEventRepository(NewLegacyRepositoryRuntime(db))
+func NewParentRequestEventRepository(db *bun.DB, now func() time.Time) peoplePorts.ParentRequestEventRecords {
+	return usersRepo.NewParentRequestEventRepository(NewLegacyRepositoryRuntime(db), now)
 }
 
 // NewGuardianFinancialDataRepository is the guardian payment data repository
@@ -106,4 +107,10 @@ func NewGuardianFinancialDataRepository(db *bun.DB) peoplePorts.GuardianFinancia
 // the four binding owners' table locks.
 func NewCaregiverBindingLocker(owners CaregiverBindingOwners) peoplePorts.CaregiverBindingLocker {
 	return usersRepo.NewCaregiverBindingLocker(owners)
+}
+
+// NewStaffPersonMerge builds the restricted administrative repair capability;
+// now stamps the retired person's deleted_at.
+func NewStaffPersonMerge(now func() time.Time) peopledirectory.StaffPersonMerge {
+	return postgres.New(postgres.NewDatabase()).WithClock(now)
 }

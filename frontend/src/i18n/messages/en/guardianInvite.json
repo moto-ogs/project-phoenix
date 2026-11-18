@@ -18,6 +18,8 @@
   "showPassword": "Show password",
   "hidePassword": "Hide password",
   "requirementsTitle": "Password requirements",
+  "requirementMet": "met",
+  "requirementUnmet": "not met yet",
   "submitting": "Accepting...",
   "submit": "Accept invitation",
   "passwordRules": {

@@ -5,9 +5,8 @@ import { createPortal } from "react-dom";
 import { FocusScope } from "@radix-ui/react-focus-scope";
 import { useLatest } from "~/lib/hooks/use-latest";
 import {
-  OVERLAY_BACKDROP_CLASS,
+  OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
-  OVERLAY_BACKDROP_TINT_HIDDEN_CLASS,
   OVERLAY_PANEL_STYLE,
   Z_LAYER,
 } from "./overlay-styles";
@@ -22,7 +21,9 @@ import { useKitDefault } from "./kit-locale";
 import { CloseIcon } from "./close-icon";
 import { SpinnerIcon } from "./icons";
 import { useBusyFocus } from "./hooks/useBusyFocus";
+import { InOverlayContext } from "./in-overlay";
 import { ModalCancelButton, ModalFrameContext } from "./modal-frame";
+import { useScrollRegion } from "./hooks/useScrollRegion";
 import { MODAL_CLOSE_DELAY_MS, MODAL_MOTION_STYLE } from "./motion";
 
 const DEFAULT_CLOSE_LABEL = "Modal schließen";
@@ -77,8 +78,8 @@ interface ModalProps {
   readonly onClose: () => void;
   readonly title: string;
   /**
-   * Name of the dialog when it shows no `title` and draws its own heading
-   * (the password-reset dialog of the login pages). A dialog needs a name.
+   * Name of the dialog when it shows no `title` and draws its own
+   * heading. A dialog needs a name.
    */
   readonly ariaLabel?: string;
   /**
@@ -198,18 +199,7 @@ export function Modal({
   // A body that scrolls must be reachable by keyboard, also when it holds
   // nothing focusable (a read-only list): it then joins the tab order.
   const bodyRef = React.useRef<HTMLDivElement>(null);
-  const [bodyScrolls, setBodyScrolls] = React.useState(false);
-  useEffect(() => {
-    const body = bodyRef.current;
-    if (!visible || !body || typeof ResizeObserver === "undefined") return;
-    const measure = () =>
-      setBodyScrolls(body.scrollHeight > body.clientHeight + 1);
-    const observer = new ResizeObserver(measure);
-    observer.observe(body);
-    if (body.firstElementChild) observer.observe(body.firstElementChild);
-    measure();
-    return () => observer.disconnect();
-  }, [visible]);
+  const bodyScrolls = useScrollRegion(bodyRef, visible);
 
   // Store onClose in a ref so handleClose never changes identity
   const onCloseRef = useLatest(onClose);
@@ -331,174 +321,162 @@ export function Modal({
   );
 
   const modalContent = (
+    // Links leading elsewhere open a new tab from here (`in-overlay.tsx`).
     // Wrapping in FocusScope pushes a new entry onto Radix's focusScopesStack,
     // which auto-pauses any parent FocusScope (notably Vaul's drawer focus
     // trap). Without this, taps on inputs inside this modal are stolen back
     // by the drawer because the modal is portaled to document.body and counts
     // as "outside" the drawer's scope.
-    <FocusScope
-      asChild
-      loop={!suspended}
-      trapped={!suspended}
-      onMountAutoFocus={
-        initialFocusRef
-          ? (event) => {
-              event.preventDefault();
-              initialFocusRef.current?.focus();
-            }
-          : focusTitleOnOpen && title
+    <InOverlayContext.Provider value={true}>
+      <FocusScope
+        asChild
+        loop={!suspended}
+        trapped={!suspended}
+        onMountAutoFocus={
+          initialFocusRef
             ? (event) => {
                 event.preventDefault();
-                titleRef.current?.focus();
+                initialFocusRef.current?.focus();
               }
-            : undefined
-      }
-    >
-      <div
-        {...MODAL_SCOPE_PROPS}
-        className={`fixed inset-0 ${Z_LAYER.modal} ${suspended ? "hidden" : "flex"} justify-center ${
-          mobileSheet ? "items-end sm:items-center" : "items-center"
-        }`}
-        aria-hidden={suspended || undefined}
-        // pointerEvents: 'auto' is required when this modal is rendered while
-        // a Radix/Vaul dialog (e.g. the mobile master/detail drawer) has set
-        // `document.body { pointer-events: none }`. Without this, the modal
-        // is portaled to body and inherits `none`, leaving inputs unclickable.
-        style={{
-          ...MODAL_MOTION_STYLE,
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          pointerEvents: "auto",
-        }}
+            : focusTitleOnOpen && title
+              ? (event) => {
+                  event.preventDefault();
+                  titleRef.current?.focus();
+                }
+              : undefined
+        }
       >
-        {/* Backdrop button - dismiss-on-tap target. Excluded from the tab
+        <div
+          {...MODAL_SCOPE_PROPS}
+          className={`fixed inset-0 ${Z_LAYER.modal} ${suspended ? "hidden" : "flex"} justify-center ${
+            mobileSheet ? "items-end sm:items-center" : "items-center"
+          }`}
+          aria-hidden={suspended || undefined}
+          // pointerEvents: 'auto' is required when this modal is rendered while
+          // a Radix/Vaul dialog (e.g. the mobile master/detail drawer) has set
+          // `document.body { pointer-events: none }`. Without this, the modal
+          // is portaled to body and inherits `none`, leaving inputs unclickable.
+          style={{
+            ...MODAL_MOTION_STYLE,
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            pointerEvents: "auto",
+          }}
+        >
+          {/* Backdrop button - dismiss-on-tap target. Excluded from the tab
             order (tabIndex=-1) so the FocusScope auto-focus doesn't land on
             this invisible control; ESC is the keyboard equivalent. */}
-        <button
-          type="button"
-          tabIndex={-1}
-          onClick={handleClose}
-          disabled={isDismissDisabled || isBackdropDismissDisabled}
-          aria-label={backdropLabel}
-          // No bg-transparent reset here: Tailwind emits it after bg-black/*
-          // and the tint never rendered. The hidden state below is the reset.
-          className={`absolute inset-0 cursor-default border-none p-0 ${OVERLAY_BACKDROP_CLASS} transition-all duration-200 ease-out ${
-            isAnimating && !isExiting
-              ? OVERLAY_BACKDROP_TINT_CLASS
-              : OVERLAY_BACKDROP_TINT_HIDDEN_CLASS
-          }`}
-          style={{
-            animation:
-              isAnimating && !isExiting
-                ? "backdropEnter 200ms ease-out"
-                : undefined,
-          }}
-        />
-        {/* Dialog container */}
-        <div
-          className={`relative flex transform flex-col overflow-hidden overscroll-contain border border-gray-200/50 shadow-2xl outline-none ${
-            mobileSheet
-              ? `max-h-[calc(100dvh-3rem-env(safe-area-inset-top))] w-full rounded-t-2xl max-sm:max-w-none sm:mx-4 sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100%-2rem)] sm:rounded-2xl ${MODAL_MAX_WIDTH[size]}`
-              : `mx-4 w-[calc(100%-2rem)] ${MODAL_MAX_WIDTH[size]} max-h-[calc(100dvh-2rem)] rounded-2xl`
-          } ${getModalAnimationClass(isAnimating, isExiting)}`}
-          {...dialogAriaProps}
-          ref={panelRef}
-          // Focus target while a busy dialog has disabled its own controls.
-          tabIndex={busy ? -1 : undefined}
-          aria-labelledby={title ? titleId : undefined}
-          aria-label={title ? undefined : ariaLabel}
-          aria-describedby={title && description ? descriptionId : undefined}
-          aria-busy={busy || undefined}
-          style={{ ...OVERLAY_PANEL_STYLE, pointerEvents: "auto" }}
-        >
-          {/* Header with close button - only show border if title exists */}
-          {title ? (
-            <div className="flex shrink-0 items-start gap-4 border-b border-gray-100 p-4 sm:p-6">
-              {icon ? <div className="shrink-0">{icon}</div> : null}
-              {/* Das Polster hebt die 28-px-Zeile auf die Höhe des X (32 px
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={handleClose}
+            disabled={isDismissDisabled || isBackdropDismissDisabled}
+            aria-label={backdropLabel}
+            // Tint and blur fade in together, as before #7252.
+            className={`absolute inset-0 cursor-default border-none p-0 ${OVERLAY_BACKDROP_TINT_CLASS} ${OVERLAY_BACKDROP_BLUR_CLASS} transition-opacity duration-200 ease-out ${
+              isAnimating && !isExiting ? "opacity-100" : "opacity-0"
+            }`}
+          />
+          {/* Dialog container */}
+          <div
+            className={`relative flex transform flex-col overflow-hidden overscroll-contain border border-gray-200/50 shadow-2xl outline-none ${
+              mobileSheet
+                ? `max-h-[calc(100dvh-3rem-env(safe-area-inset-top))] w-full rounded-t-2xl max-sm:max-w-none sm:mx-4 sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100%-2rem)] sm:rounded-2xl ${MODAL_MAX_WIDTH[size]}`
+                : `mx-4 w-[calc(100%-2rem)] ${MODAL_MAX_WIDTH[size]} max-h-[calc(100dvh-2rem)] rounded-2xl`
+            } ${getModalAnimationClass(isAnimating, isExiting)}`}
+            {...dialogAriaProps}
+            ref={panelRef}
+            // Focus target while a busy dialog has disabled its own controls.
+            tabIndex={busy ? -1 : undefined}
+            aria-labelledby={title ? titleId : undefined}
+            aria-label={title ? undefined : ariaLabel}
+            aria-describedby={title && description ? descriptionId : undefined}
+            aria-busy={busy || undefined}
+            style={{ ...OVERLAY_PANEL_STYLE, pointerEvents: "auto" }}
+          >
+            {/* Header with close button - only show border if title exists */}
+            {title ? (
+              <div className="flex shrink-0 items-start gap-4 border-b border-gray-100 p-4 sm:p-6">
+                {icon ? <div className="shrink-0">{icon}</div> : null}
+                {/* Das Polster hebt die 28-px-Zeile auf die Höhe des X (32 px
                   mit Maus, 44 px unter Fingerbedienung): eine Zeile steht
                   mittig neben dem X, lange Titel brechen darunter um. */}
-              {description ? (
-                <div className="min-w-0 flex-1">
-                  {heading}
-                  <p id={descriptionId} className="text-sm text-gray-500">
-                    {description}
-                  </p>
-                </div>
-              ) : (
-                heading
-              )}
+                {description ? (
+                  <div className="min-w-0 flex-1">
+                    {heading}
+                    <p id={descriptionId} className="text-sm text-gray-500">
+                      {description}
+                    </p>
+                  </div>
+                ) : (
+                  heading
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleClose}
+                  disabled={isDismissDisabled}
+                  className="shrink-0"
+                  aria-label={closeName}
+                  tooltip={closeHint}
+                  data-overlay-close=""
+                >
+                  <CloseIcon />
+                </Button>
+              </div>
+            ) : (
+              /* X button positioned absolutely in top-right when no title */
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 onClick={handleClose}
                 disabled={isDismissDisabled}
-                className="shrink-0"
+                className={`absolute top-4 right-4 ${Z_LAYER.raised}`}
                 aria-label={closeName}
                 tooltip={closeHint}
                 data-overlay-close=""
               >
                 <CloseIcon />
               </Button>
-            </div>
-          ) : (
-            /* X button positioned absolutely in top-right when no title */
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={handleClose}
-              disabled={isDismissDisabled}
-              className={`absolute top-4 right-4 ${Z_LAYER.raised}`}
-              aria-label={closeName}
-              tooltip={closeHint}
-              data-overlay-close=""
-            >
-              <CloseIcon />
-            </Button>
-          )}
+            )}
 
-          {/* Content area with hidden scrollbar and reveal animation */}
-          {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling body without focusable content must be reachable by keyboard (axe scrollable-region-focusable); it is a labelled region only while it scrolls */}
-          <div
-            ref={bodyRef}
-            className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-600"
-            {...SCROLL_AREA_PROPS}
-            tabIndex={bodyScrolls ? 0 : undefined}
-            role={bodyScrolls ? "region" : undefined}
-            aria-labelledby={bodyScrolls && title ? titleId : undefined}
-            aria-label={bodyScrolls && !title ? ariaLabel : undefined}
-          >
+            {/* Content area with hidden scrollbar; it fades in with the panel */}
+            {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling body without focusable content must be reachable by keyboard (axe scrollable-region-focusable); it is a labelled region only while it scrolls */}
             <div
-              className={`p-4 leading-relaxed text-gray-700 md:p-6 ${
-                isAnimating && !isExiting
-                  ? "animate-contentReveal"
-                  : "opacity-0"
-              }`}
+              ref={bodyRef}
+              className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-600"
+              {...SCROLL_AREA_PROPS}
+              tabIndex={bodyScrolls ? 0 : undefined}
+              role={bodyScrolls ? "region" : undefined}
+              aria-labelledby={bodyScrolls && title ? titleId : undefined}
+              aria-label={bodyScrolls && !title ? ariaLabel : undefined}
             >
-              {children}
+              <div className="p-4 leading-relaxed text-gray-700 md:p-6">
+                {children}
+              </div>
             </div>
+
+            {/* Footer if provided */}
+            {footer && (
+              <div
+                className={`flex shrink-0 gap-3 border-t border-gray-100 bg-gray-50/50 p-4 sm:p-6 ${getModalFooterClass(
+                  mobileSheet ? sheetFooter : null,
+                )}`}
+              >
+                <ModalFrameContext.Provider value={frame}>
+                  {footer}
+                </ModalFrameContext.Provider>
+              </div>
+            )}
           </div>
-
-          {/* Footer if provided */}
-          {footer && (
-            <div
-              className={`flex shrink-0 gap-3 border-t border-gray-100 bg-gray-50/50 p-4 sm:p-6 ${getModalFooterClass(
-                mobileSheet ? sheetFooter : null,
-              )}`}
-            >
-              <ModalFrameContext.Provider value={frame}>
-                {footer}
-              </ModalFrameContext.Provider>
-            </div>
-          )}
         </div>
-      </div>
-    </FocusScope>
+      </FocusScope>
+    </InOverlayContext.Provider>
   );
 
   // Render to body to avoid any positioning issues
@@ -517,6 +495,8 @@ interface ConfirmationModalProps {
   readonly onClose: () => void;
   readonly onConfirm: () => void;
   readonly title: string;
+  /** Leading icon in the header, left of the title (e.g. an `IconTile`). */
+  readonly icon?: React.ReactNode;
   readonly children: React.ReactNode;
   readonly confirmText?: string;
   readonly cancelText?: string;
@@ -578,6 +558,7 @@ export function ConfirmationModal({
   onClose,
   onConfirm,
   title,
+  icon,
   children,
   confirmText = "Bestätigen",
   cancelText,
@@ -636,6 +617,7 @@ export function ConfirmationModal({
       isOpen={isOpen}
       onClose={onClose}
       title={title}
+      icon={icon}
       footer={modalFooter}
       isDismissDisabled={dismissLocked}
       busy={isConfirmLoading}

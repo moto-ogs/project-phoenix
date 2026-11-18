@@ -1,13 +1,18 @@
 import {
   act,
   fireEvent,
-  render,
+  render as baseRender,
   screen,
   waitFor,
 } from "@testing-library/react";
 import { useMessagesActivity } from "~/lib/hooks/use-messages-activity";
 import { ApiError } from "~/lib/api-error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type React from "react";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+const render = ((ui: React.ReactElement) =>
+  baseRender(ui, { wrapper: ParentResourceTestProvider })) as typeof baseRender;
 import { catalogText } from "~/test/error-catalog-text";
 
 const { mockGetConversation, mockPostMessage } = vi.hoisted(() => ({
@@ -20,15 +25,13 @@ vi.mock("~/lib/parent-api", async (importOriginal) => ({
   getChildConversation: mockGetConversation,
   postChildMessage: mockPostMessage,
   getChildToday: vi.fn(),
+  // Side-load of the child's other conversations; none in these tests.
+  listChildThreads: vi.fn(() => Promise.resolve([])),
+  listMyChildren: vi.fn(() => Promise.resolve([])),
 }));
 
-// The send overlay (#5011) is bound to the signed-in session's scope.
-vi.mock("next-auth/react", () => ({
-  useSession: () => ({
-    data: { user: { id: "1", scope: "parents" }, expires: "2099-01-01" },
-    status: "authenticated",
-  }),
-}));
+// The send overlay (#5011) and the readers are bound to the session's scope.
+vi.unmock("swr");
 
 vi.mock("~/lib/parent-url", () => ({
   parentPath: (path: string) => path,
@@ -128,7 +131,7 @@ describe("OgsConversation errors", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/not allowed/)).not.toBeInTheDocument();
-    expect(field).toHaveValue("Hallo OGS");
+    expect(await screen.findByLabelText("Nachricht")).toHaveValue("Hallo OGS");
   });
 });
 
@@ -396,5 +399,42 @@ describe("OgsConversation keeps the composer while care reloads (#7113)", () => 
 
     expect(screen.getByLabelText("Nachricht")).toBe(field);
     expect(field).toHaveFocus();
+  });
+});
+
+describe("OgsConversation on reopen", () => {
+  it("reads the conversation again when the chat opens anew within a minute", async () => {
+    const staffMessage = {
+      id: "m2",
+      kind: "message",
+      sender_kind: "staff",
+      sender_name: "Frau Berg",
+      body: "Felix wird heute früher abgeholt?",
+      created_at: "2026-09-09T11:00:00Z",
+    };
+    mockGetConversation
+      .mockResolvedValueOnce(thread)
+      .mockResolvedValueOnce({ ...thread, messages: [staffMessage] });
+    function Chat({ open }: Readonly<{ open: boolean }>) {
+      return (
+        <ParentResourceTestProvider>
+          {open ? <OgsConversation studentId="42" /> : null}
+        </ParentResourceTestProvider>
+      );
+    }
+    const view = baseRender(<Chat open />);
+    expect(
+      await screen.findByText("Noch keine Nachrichten", { exact: false }),
+    ).toBeInTheDocument();
+
+    view.rerender(<Chat open={false} />);
+    view.rerender(<Chat open />);
+
+    // The read on opening marks the thread read on the server and brings
+    // what the OGS wrote meanwhile.
+    expect(
+      await screen.findByText("Felix wird heute früher abgeholt?"),
+    ).toBeInTheDocument();
+    expect(mockGetConversation).toHaveBeenCalledTimes(2);
   });
 });

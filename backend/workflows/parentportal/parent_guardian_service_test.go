@@ -57,7 +57,7 @@ func buildGuardianServiceFeature(t *testing.T, mgmtEnabled bool) (*parentService
 		},
 		GuardianInvites:     &stubInvites{},
 		GuardianInvitations: guardianInvitationReads{db: db},
-		InvalidateInvites:   owners.NewGuardianInvitationInvalidation(testpkg.NewDatabase(t, db)),
+		InvalidateInvites:   owners.NewGuardianInvitationInvalidation(testpkg.NewDatabase(t, db), nil),
 		StudentGuardianRepo: owners.NewParentStudentGuardianReads(reposPeople.StudentGuardian),
 		GuardianProfileRepo: owners.NewParentGuardianProfileReads(reposPeople.GuardianProfile),
 		GuardianPhoneRepo:   owners.NewParentGuardianPhoneReads(reposPeople.GuardianPhoneNumber),
@@ -1361,7 +1361,7 @@ func TestUpdateGuardianContact_PropagatesEmailLookupError(t *testing.T) {
 		},
 		GuardianInvites:     &stubInvites{},
 		GuardianInvitations: guardianInvitationReads{db: db},
-		InvalidateInvites:   owners.NewGuardianInvitationInvalidation(testpkg.NewDatabase(t, db)),
+		InvalidateInvites:   owners.NewGuardianInvitationInvalidation(testpkg.NewDatabase(t, db), nil),
 		StudentGuardianRepo: owners.NewParentStudentGuardianReads(reposPeople.StudentGuardian),
 		GuardianProfileRepo: newEmailLookupFailingGuardianRepo(owners.NewParentGuardianProfileReads(reposPeople.GuardianProfile), lookupErr),
 		GuardianPhoneRepo:   owners.NewParentGuardianPhoneReads(reposPeople.GuardianPhoneNumber),
@@ -1466,4 +1466,31 @@ func TestUpdateGuardianContact_RequiresEditOnEverySiblingTheContactServes(t *tes
 	updated, err := svc.UpdateGuardianContact(ctx, chain.AccountID, chain.StudentID, contactID, input)
 	require.NoError(t, err)
 	assert.Equal(t, "Helga", updated.FirstName)
+}
+
+func TestCreateGuardianContact_WithoutCarePlaceKeepsEmergencyContacts(t *testing.T) {
+	t.Parallel()
+	svc, db := buildGuardianService(t)
+	chain := testpkg.CreateTestParentGuardianChain(t, db)
+	testpkg.MarkTestStudentWithoutCarePlace(t, db, chain.StudentID)
+	ctx := testpkg.WithPackageTenantRuntime(context.Background())
+	input := parentService.CreateGuardianContactInput{
+		Contact:            parentService.GuardianContactInput{FirstName: "Helga", LastName: "Schneider"},
+		RelationshipType:   "relative",
+		IsEmergencyContact: true,
+		CanPickup:          true,
+	}
+	_, err := svc.CreateGuardianContact(ctx, chain.AccountID, chain.StudentID, input)
+	require.ErrorIs(t, err, parentService.ErrChildWithoutCarePlace, "pickup is refused before signature validation or writes")
+	input.CanPickup = false
+	created, err := svc.CreateGuardianContact(ctx, chain.AccountID, chain.StudentID, input)
+	require.NoError(t, err)
+	require.NotNil(t, created)
+	assert.True(t, created.IsEmergencyContact)
+	assert.False(t, created.CanPickup)
+	emergency := false
+	updated, err := svc.UpdateGuardianRelationship(ctx, chain.AccountID, chain.StudentID, created.GuardianProfileID,
+		parentService.GuardianRelationshipInput{IsEmergencyContact: &emergency})
+	require.NoError(t, err)
+	assert.False(t, updated.IsEmergencyContact)
 }

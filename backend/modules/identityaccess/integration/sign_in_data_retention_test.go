@@ -35,7 +35,8 @@ func TestGuardianInvitationsAreDeletedThirtyDaysAfterExpiryOrRedemption(t *testi
 	profile := testpkg.CreateTestGuardianProfile(t, db, "retention-guardian@example.com")
 	otherSchool, _ := testpkg.CreateTestTenant(t, db)
 	otherProfile := testpkg.CreateTestGuardianProfileForTenant(t, db, otherSchool, "Andere", "Schule", "retention-other@example.com")
-	now := time.Now()
+	// The database clock stamps and judges the invitation (ADR 0285, Nachtrag).
+	now := testpkg.DatabaseNow(t, db)
 	invitation := func(tenantID, profileID int64, expiresAt time.Time, acceptedAt *time.Time) int64 {
 		return testpkg.InsertTestGuardianInvitation(t, db, &testpkg.GuardianInvitation{
 			TenantID: tenantID, Token: uuid.Must(uuid.NewV4()).String(), GuardianProfileID: profileID,
@@ -127,12 +128,13 @@ func TestPasskeySessionsAreDeletedSevenDaysAfterExpiry(t *testing.T) {
 
 // #3873: a school's invitation to its caterer holds an e-mail address and
 // goes 30 days after its acceptance, revocation or expiry, like one for
-// parents.
+// parents. The invitation's instants are on the database clock (ADR 0285),
+// so the fixture dates them from it.
 func TestCatererInvitationsAreDeletedThirtyDaysAfterTheyEnd(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
 	module := newOwner(t, db)
-	now := time.Now()
+	now := testpkg.DatabaseNow(t, db)
 	daysAgo := func(days int) time.Time { return now.Add(-time.Duration(days) * 24 * time.Hour) }
 	invitation := func(expiresAt time.Time, acceptedAt, revokedAt *time.Time) int64 {
 		var id int64

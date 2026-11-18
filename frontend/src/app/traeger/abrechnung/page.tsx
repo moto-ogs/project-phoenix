@@ -11,7 +11,7 @@
 import { Plus, Receipt } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import { BillingRunStartModal } from "~/components/traeger/billing-run-start-modal";
 import {
   billingAreaTitle,
@@ -22,12 +22,17 @@ import {
   BILLING_RUN_STATUS_TONES,
 } from "~/components/traeger/billing-format";
 import { BILLING_PERIOD_PARAM } from "~/components/traeger/use-holiday-period-billing-href";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import {
   factLine,
   invoiceCountLabel,
 } from "~/components/traeger/care-billing-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { formatDateRange } from "~/components/traeger/holiday-period-format";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -39,19 +44,19 @@ import type {
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { ListSkeleton } from "~/components/ui/page-skeletons";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import { formatDate } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   type BillingPeriod,
   type BillingRun,
   fetchBillingPeriods,
   fetchBillingRuns,
 } from "~/lib/traeger-billing-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerAbrechnungPage" });
 
 // On a phone a run is one line: its holiday period, the status beside it,
 // and below the care days with what the run issued. Only the first "meta"
@@ -214,33 +219,23 @@ function BillingRunsPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const periodFilter = searchParams?.get(BILLING_PERIOD_PARAM) ?? "";
-  const [data, setData] = useState<PageData | null>(null);
   const [starting, setStarting] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-
-  const load = useCallback(async () => {
-    try {
-      const [runs, periods] = await Promise.all([
-        fetchBillingRuns(),
-        fetchBillingPeriods(),
-      ]);
-      setData({ runs, periods });
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_billing_runs_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Abrechnung",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const runsRead = useTraegerResource(
+    traegerKeys.billingRuns(),
+    fetchBillingRuns,
+    "die Abrechnung",
+  );
+  const periodsRead = useTraegerResource(
+    traegerBillingKeys.holidayRunPeriods(),
+    fetchBillingPeriods,
+    "die Abrechnung",
+  );
+  const data: PageData | null =
+    runsRead.data && periodsRead.data
+      ? { runs: runsRead.data, periods: periodsRead.data }
+      : null;
+  const loadError = runsRead.error ?? periodsRead.error;
+  const invalidate = useInvalidateFamily();
 
   const openRun = (run: BillingRun) =>
     router.push(traegerPath(`/traeger/abrechnung/${run.id}`));
@@ -322,38 +317,52 @@ function BillingRunsPage() {
           />
         ) : null
       }
-      statsLoading={!data && !pageLoad.error}
+      statsLoading={!data && !loadError}
       tabs={billingTabs("laeufe")}
       filters={filters}
       activeFilters={activeFilters}
       onClearAllFilters={() => setPeriodFilter("")}
       actions={
-        <Button
-          type="button"
-          variant="primary"
-          size="md"
-          disabled={!data || noPeriod}
-          disabledReason={
-            noPeriod
-              ? "Zuerst braucht es einen veröffentlichten Ferienzeitraum."
-              : undefined
-          }
-          tooltip="Öffnet ein Fenster, um einen Lauf für einen Ferienzeitraum zu starten."
-          aria-describedby={noPeriod ? "billing-run-needs-period" : undefined}
-          onClick={() => setStarting(true)}
-        >
-          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-          Lauf starten
-        </Button>
+        <>
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerList("/api/traeger/billing-runs/export", format, {
+                holiday_period_id: periodFilter,
+              })
+            }
+            scope={
+              periodFilter
+                ? `Nur ${filterName ?? "der gewählte Ferienzeitraum"}`
+                : traegerExportScope()
+            }
+            ariaLabel="Abrechnungsläufe herunterladen"
+            fallbackName="abrechnungslaeufe"
+            errorObject="die Abrechnungsläufe"
+            unavailable={shownRuns.length === 0}
+          />
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            disabled={!data || noPeriod}
+            disabledReason={
+              noPeriod
+                ? "Zuerst braucht es einen veröffentlichten Ferienzeitraum."
+                : undefined
+            }
+            tooltip="Öffnet ein Fenster, um einen Lauf für einen Ferienzeitraum zu starten."
+            aria-describedby={noPeriod ? "billing-run-needs-period" : undefined}
+            onClick={() => setStarting(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+            Lauf starten
+          </Button>
+        </>
       }
-      error={pageLoad.error}
+      error={loadError}
       // A list loads in the shape of its rows.
       loading={
-        !pageLoad.error && !data ? (
-          <ListSkeleton rows={6} avatar={false} />
-        ) : (
-          false
-        )
+        !loadError && !data ? <ListSkeleton rows={6} avatar={false} /> : false
       }
       overlays={
         data ? (
@@ -375,6 +384,7 @@ function BillingRunsPage() {
             onClose={() => setStarting(false)}
             onStarted={(run) => {
               setStarting(false);
+              void invalidate(traegerKeys.billingRuns());
               openRun(run);
             }}
           />

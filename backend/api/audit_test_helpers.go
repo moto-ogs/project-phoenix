@@ -23,7 +23,7 @@ import (
 // routed through an Audit command over the test append store, the way the
 // test service graph (NewServiceGraphForTests) routes its repositories.
 func NewRoutedTestAuditPersistence(db transactionruntime.Database) (*auditCompose.Persistence, error) {
-	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return nil, err
 	}
@@ -80,8 +80,8 @@ func NewCareLifecycleTestRepositories(db transactionruntime.Database, _ auditMod
 // and returns them with the Enrollment graph. The audit trails the suites
 // read back come from NewStudentAuditRows, the access log recording into
 // the suite's command from NewEnrollmentAuditRows.
-func NewStudentTestRepositories(db transactionruntime.Database, _ auditModels.Command) (StudentTestRepositories, EnrollmentTestRepositories, error) {
-	result, enrollment, err := NewStudentTestRepositoriesWithMembers(db, owners.MustNewMembershipTestRepositories(db))
+func NewStudentTestRepositories(db transactionruntime.Database, _ auditModels.Command, clocks ...func() time.Time) (StudentTestRepositories, EnrollmentTestRepositories, error) {
+	result, enrollment, err := NewStudentTestRepositoriesWithMembers(db, owners.MustNewMembershipTestRepositories(db), clocks...)
 	if err != nil {
 		return StudentTestRepositories{}, EnrollmentTestRepositories{}, err
 	}

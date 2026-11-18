@@ -42,8 +42,8 @@ func (s *Store) SetAnalyticsConsent(ctx context.Context, accountID int64, grante
 	}
 	started := time.Now()
 	result, err := db.NewRaw(`UPDATE auth.accounts
-		SET analytics_consent = ?, analytics_consent_decided_at = NOW()
-		WHERE id = ? AND personal_data_erased_at IS NULL`, granted, accountID).Exec(ctx)
+		SET analytics_consent = ?, analytics_consent_decided_at = ?
+		WHERE id = ? AND personal_data_erased_at IS NULL`, granted, s.now(), accountID).Exec(ctx)
 	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started)}
 	if err != nil {
 		return false, stats, fmt.Errorf("identity access postgres: set analytics consent: %w", err)

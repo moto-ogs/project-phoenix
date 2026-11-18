@@ -29,6 +29,7 @@ type ProvisioningResource struct {
 	appEnv                     string
 	belegRetentionAudit        organizationtenancy.BelegRetentionChangeAudit
 	traegerStaffReleaseAudit   organizationtenancy.TraegerStaffReleaseChangeAudit
+	requiredDetails            organizationtenancy.SchoolRequiredDetailsProvisioning
 }
 
 // ProvisioningConfig holds the provisioning routes' dependencies.
@@ -48,6 +49,9 @@ type ProvisioningConfig struct {
 	// TraegerStaffReleaseAudit records the grants and withdrawals of the
 	// release „Personal beim Träger“ (#4705). Without it they answer 500.
 	TraegerStaffReleaseAudit organizationtenancy.TraegerStaffReleaseChangeAudit
+	// RequiredDetails marks the schools that lack a required detail (#7174).
+	// Without it that route answers 500.
+	RequiredDetails organizationtenancy.SchoolRequiredDetailsProvisioning
 }
 
 // NewProvisioningResource creates a new provisioning resource.
@@ -58,6 +62,7 @@ func NewProvisioningResource(cfg ProvisioningConfig) *ProvisioningResource {
 		appEnv:                     cfg.AppEnv,
 		belegRetentionAudit:        cfg.BelegRetentionAudit,
 		traegerStaffReleaseAudit:   cfg.TraegerStaffReleaseAudit,
+		requiredDetails:            cfg.RequiredDetails,
 	}
 }
 
@@ -82,6 +87,7 @@ type createSchoolRequest struct {
 	Zip            string `json:"zip,omitempty"`
 	Phone          string `json:"phone,omitempty"`
 	Email          string `json:"email,omitempty"`
+	FederalState   string `json:"federal_state"`
 	Hidden         bool   `json:"hidden,omitempty"`
 }
 
@@ -94,6 +100,7 @@ func (req *createSchoolRequest) Bind(_ *http.Request) error {
 	req.Zip = strings.TrimSpace(req.Zip)
 	req.Phone = strings.TrimSpace(req.Phone)
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+	req.FederalState = strings.TrimSpace(req.FederalState)
 	return nil
 }
 
@@ -239,6 +246,7 @@ func (rs *ProvisioningResource) CreateSchool(w http.ResponseWriter, r *http.Requ
 		Zip:            req.Zip,
 		Phone:          req.Phone,
 		Email:          req.Email,
+		FederalState:   req.FederalState,
 		Active:         true,
 		Hidden:         req.Hidden,
 	}

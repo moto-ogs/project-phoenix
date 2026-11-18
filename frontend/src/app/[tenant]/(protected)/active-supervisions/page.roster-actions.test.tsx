@@ -3,6 +3,7 @@
  * auto-move notice #2386, unplanned add). Kept apart from page.test.tsx because
  * it replaces the student search and timetable operations APIs entirely.
  */
+import { TEST_CLOCK_INSTANT } from "~/test/clock";
 import { setViewportWidth } from "~/test/helpers/viewport";
 import {
   render as rtlRender,
@@ -286,6 +287,45 @@ vi.mock("~/components/students/student-card", () => ({
     <div data-testid="student-absence-row">Kommt heute nicht ({label})</div>
   ),
 }));
+
+// The page mocks ~/lib/swr with fixed answers per key. The child list of the
+// add dialog reads the school's children through it; here it loads them from
+// the mocked fetchStudents instead, with the real paging and sorting, one
+// load per block as the real hook (its own test: add-unplanned-student-modal).
+vi.mock("~/components/students/student-choice-list", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/components/students/student-choice-list")
+    >();
+  const { useEffect, useState } = await import("react");
+  type Choices = Awaited<ReturnType<typeof actual.fetchStudentChoices>>;
+  return {
+    ...actual,
+    useStudentChoices: (enabled: boolean, scope = "") => {
+      const [result, setResult] = useState<{
+        scope: string;
+        choices: Choices;
+      } | null>(null);
+      useEffect(() => {
+        if (!enabled) return;
+        let live = true;
+        void actual.fetchStudentChoices().then((choices) => {
+          if (live) setResult({ scope, choices });
+        });
+        return () => {
+          live = false;
+        };
+      }, [enabled, scope]);
+      return {
+        load:
+          enabled && result?.scope === scope
+            ? { kind: "loaded" as const, choices: result.choices }
+            : { kind: "loading" as const },
+        error: null,
+      };
+    },
+  };
+});
 
 // Mock SWR hook
 vi.mock("~/lib/swr", () => ({
@@ -781,12 +821,18 @@ describe("MeinRaumPage roster actions", () => {
       status: "active",
     });
 
+    // Frist aus dem Speicher: Testuhr plus eine Minute, Berliner Uhrzeit (#5676).
+    const until = new Intl.DateTimeFormat("de-DE", {
+      timeZone: "Europe/Berlin",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(TEST_CLOCK_INSTANT.getTime() + 60_000);
+
     try {
       render(<MeinRaumPage />);
       expect(
         await screen.findByText(
-          // Frist aus dem Speicher: Testuhr 12:00 plus eine Minute (#5676).
-          "„Sport AG“ wurde beendet. Sie können das bis 12:01 Uhr rückgängig machen.",
+          `„Sport AG“ wurde beendet. Sie können das bis ${until} Uhr rückgängig machen.`,
         ),
       ).toBeInTheDocument();
 

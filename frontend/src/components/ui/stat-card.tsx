@@ -220,6 +220,9 @@ export function StatCard(
             {value}
           </span>
         )}
+        {/* Der Name der verlinkten Zeile beginnt mit ihrem sichtbaren Text
+            (WCAG 2.5.3, #7112); das Ziel folgt versteckt. */}
+        {href ? <span className="sr-only">, Liste öffnen</span> : null}
       </div>
     ) : (
       <div
@@ -299,11 +302,6 @@ export function StatCard(
     return (
       <Link
         href={href}
-        aria-label={
-          props.variant === "row"
-            ? `${label}: ${loading ? "…" : value}, Liste öffnen`
-            : undefined
-        }
         className={
           props.variant === "row"
             ? "focus-visible:ring-moto-blue group block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"

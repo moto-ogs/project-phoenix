@@ -120,6 +120,14 @@ describe("RemindersPage", () => {
     expect(screen.getByText("in 10 Min").className).not.toContain(
       "text-moto-red",
     );
+
+    // #7304: the cards sit in one grid, so the last one keeps its height.
+    const cards = ["Überfällige Abholung", "Aktivitätsbeginn"].map((title) =>
+      screen.getByText(title).closest("section"),
+    );
+    const grid = cards[0]?.parentElement;
+    expect(grid).toHaveClass("grid");
+    for (const card of cards) expect(card?.parentElement).toBe(grid);
   });
 
   // #2517: catalog text for the failed load, in place, never an empty state.

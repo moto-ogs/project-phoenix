@@ -13,8 +13,8 @@ type requestGuardianRow struct {
 	bun.BaseModel     `bun:"table:enrollment.request_guardians,alias:request_guardian"`
 	ID                int64     `bun:"id,pk,autoincrement"`
 	TenantID          int64     `bun:"tenant_id,notnull"`
-	CreatedAt         time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt         time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt         time.Time `bun:"updated_at,nullzero,notnull"`
 	RequestID         int64     `bun:"request_id,notnull"`
 	FirstName         string    `bun:"first_name,notnull"`
 	LastName          string    `bun:"last_name,notnull"`
@@ -48,6 +48,10 @@ func (r *Store) CreateRequestGuardian(ctx context.Context, guardian *enrollment.
 	}
 	row := &requestGuardianRow{ID: guardian.ID, TenantID: guardian.TenantID, CreatedAt: guardian.CreatedAt, UpdatedAt: guardian.UpdatedAt, RequestID: guardian.RequestID, FirstName: guardian.FirstName, LastName: guardian.LastName, Email: guardian.Email, Phone: guardian.Phone, GuardianProfileID: guardian.GuardianProfileID, SortOrder: guardian.SortOrder}
 	row.TenantID = tenantID
+	// The owner stamps both columns, as StampRequestGuardianProfile stamps
+	// updated_at and requests and children are stamped (ADR 0281).
+	row.CreatedAt = r.currentTime()
+	row.UpdatedAt = row.CreatedAt
 	_, err = db.NewInsert().Model(row).Returning("*").Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create request guardian: %w", err)
@@ -105,7 +109,7 @@ func (r *Store) StampRequestGuardianProfile(ctx context.Context, id, profileID i
 	if err != nil {
 		return err
 	}
-	res, err := db.NewUpdate().Model((*requestGuardianRow)(nil)).Set("guardian_profile_id = ?", profileID).Set("updated_at = ?", time.Now()).Where("request_guardian.tenant_id = ?", tenantID).Where("request_guardian.id = ?", id).Exec(ctx)
+	res, err := db.NewUpdate().Model((*requestGuardianRow)(nil)).Set("guardian_profile_id = ?", profileID).Set("updated_at = ?", r.currentTime()).Where("request_guardian.tenant_id = ?", tenantID).Where("request_guardian.id = ?", id).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to stamp resolved guardian profile: %w", err)
 	}

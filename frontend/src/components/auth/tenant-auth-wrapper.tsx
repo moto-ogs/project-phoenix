@@ -42,6 +42,7 @@ function useAnalyticsPerson(
   accountId: string | null,
 ): string | null {
   const [person, setPerson] = useState<string | null>(null);
+  // oxlint-disable-next-line swr/no-effect-load -- computes the analytics pseudonym with WebCrypto; no server read
   useEffect(() => {
     if (!freigabe || !schoolId || !accountId) {
       setPerson(null);

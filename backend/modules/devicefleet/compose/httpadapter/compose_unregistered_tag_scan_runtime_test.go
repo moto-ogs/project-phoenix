@@ -86,10 +86,10 @@ func TestUnregisteredTagScanRuntime(t *testing.T) {
 		}
 	}
 	abort := errors.New("injected failure after authoritative scan write")
-	cutoff := time.Now().Add(-devicefleet.UnregisteredTagScanRetentionDays * 24 * time.Hour)
+	cutoff := scanRetentionCutoff(t, db)
 	for iteration := range 35 {
 		measuring = iteration >= 5
-		input := devicefleet.RecordUnregisteredTagScan{TagUID: "RUNTIME-SCAN", DeviceID: &device.ID, ScannedAt: cutoff.Add(-24 * time.Hour)}
+		input := devicefleet.RecordUnregisteredTagScan{TagUID: "RUNTIME-SCAN", DeviceID: &device.ID}
 		var scan, aborted devicefleet.UnregisteredTagScan
 		measure("record_rollback", abort, func(ctx context.Context) error {
 			return tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
@@ -104,6 +104,7 @@ func TestUnregisteredTagScanRuntime(t *testing.T) {
 			scan, err = fleet.RecordUnregisteredTagScan(ctx, input)
 			return err
 		})
+		ageScan(t, db, scan.ID, (devicefleet.UnregisteredTagScanRetentionDays+1)*24*time.Hour)
 		measure("find", nil, func(ctx context.Context) error {
 			found, err := fleet.FindUnregisteredTagScan(ctx, scan.ID)
 			require.NotNil(t, found.DeviceIdentifier)

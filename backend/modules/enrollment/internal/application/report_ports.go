@@ -54,6 +54,23 @@ type RosterStudent struct {
 	AllowedDepartureModes  DepartureModes
 	DepartureDays          DepartureDays
 	DepartureCompanionNote *string
+	// WithoutCarePlace marks a child of the class without an OGS place
+	// (#4803); Departed a child that left the school (graduate or inactive).
+	// Such a child joins the class roster as a
+	// "Keine Betreuung" row instead of passing the care participation.
+	WithoutCarePlace bool
+	Departed         bool
+	// MemberFrom and MemberUntil bound the class membership of a child
+	// without an OGS place: its enrollment start or the day it was created,
+	// and its enrollment end (nil: open).
+	MemberFrom  calendar.Date
+	MemberUntil *calendar.Date
+	// ClassTimeFrom and ClassTimeUntil bound the class time a child with an
+	// OGS place keeps from before its care started (#4803); nil when there
+	// is none. On those days it joins the roster like a child without a
+	// place.
+	ClassTimeFrom  *calendar.Date
+	ClassTimeUntil *calendar.Date
 }
 
 // RosterPerson is a student's name.
@@ -178,14 +195,11 @@ var _ enrollmentNative.Reports = (*Reports)(nil)
 // NewReports creates the reports.
 func NewReports(deps ReportDependencies) *Reports {
 	if deps.Now == nil {
-		deps.Now = time.Now
+		panic("enrollment reports: the clock is required")
 	}
 	return &Reports{deps: deps}
 }
 
 func (s *Reports) today() calendar.Date {
-	if s.deps.Now == nil {
-		return calendar.TodayDate()
-	}
 	return calendar.DateFromTime(s.deps.Now())
 }

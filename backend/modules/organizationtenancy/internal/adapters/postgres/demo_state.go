@@ -13,7 +13,11 @@ import (
 
 // DemoStateStore is only composed in the isolated demo CLI with its privileged
 // database connection. HTTP roles have no access to the credentials table.
-type DemoStateStore struct{ db *bun.DB }
+// now stamps the claim of an order (ADR 0281); a store without it claims none.
+type DemoStateStore struct {
+	db  *bun.DB
+	now func() time.Time
+}
 
 type DemoState struct {
 	TenantID               int64  `bun:"tenant_id"`
@@ -22,7 +26,9 @@ type DemoState struct {
 	VisitorParentAccountID int64  `bun:"visitor_parent_account_id"`
 }
 
-func NewDemoStateStore(db *bun.DB) *DemoStateStore { return &DemoStateStore{db: db} }
+func NewDemoStateStore(db *bun.DB, now func() time.Time) *DemoStateStore {
+	return &DemoStateStore{db: db, now: now}
+}
 
 func (s *DemoStateStore) Load(ctx context.Context, name string) (*DemoState, error) {
 	var state DemoState
@@ -56,6 +62,39 @@ func (s *DemoStateStore) Reserve(ctx context.Context, name string, schoolID, vis
 	}
 	if rows, err := result.RowsAffected(); err != nil || rows != 1 {
 		return errors.New("demo school state already exists")
+	}
+	return nil
+}
+
+// RecordTraeger names the order's own Demo-Träger (ADR 0271) once the seed
+// created it. Every school of that Träger belongs to the order from then on:
+// the retirement hides them together. An order keeps the Träger it named
+// first.
+func (s *DemoStateStore) RecordTraeger(ctx context.Context, name string, traegerID int64) error {
+	result, err := s.db.NewRaw(`UPDATE platform.demo_school_states SET traeger_id = ?
+		WHERE name = ? AND (traeger_id IS NULL OR traeger_id = ?)`, traegerID, name, traegerID).Exec(ctx)
+	if err != nil {
+		return errors.New("could not record the Träger of the demo school")
+	}
+	if rows, err := result.RowsAffected(); err != nil || rows != 1 {
+		return errors.New("demo school state names another Träger or does not exist")
+	}
+	return nil
+}
+
+// RecordSchool adds a further school of the order, a neighbour school of its
+// Träger (ADR 0271), to the schools the order ever named. The demo origin
+// trigger records it, so the file and database erasure find it once it is
+// retired.
+func (s *DemoStateStore) RecordSchool(ctx context.Context, name string, schoolID int64) error {
+	result, err := s.db.NewRaw(`UPDATE platform.demo_school_states
+		SET visitor_school_ids = array_remove(visitor_school_ids || ARRAY[?::BIGINT], NULL)
+		WHERE name = ? AND NOT (? = ANY(visitor_school_ids))`, schoolID, name, schoolID).Exec(ctx)
+	if err != nil {
+		return errors.New("could not record a school of the demo order")
+	}
+	if rows, err := result.RowsAffected(); err != nil || rows > 1 {
+		return errors.New("demo school state does not exist")
 	}
 	return nil
 }
@@ -210,14 +249,17 @@ func (s *DemoStateStore) RequeueDeferred(ctx context.Context, name string) error
 
 // Claim takes the oldest waiting order, or none.
 func (s *DemoStateStore) Claim(ctx context.Context) (*DemoOrder, error) {
+	if s.now == nil {
+		return nil, errors.New("claim demo school order: the store needs the owner's clock")
+	}
 	var order DemoOrder
 	err := s.db.NewRaw(`UPDATE platform.demo_school_states AS state
-		SET claimed_at = CURRENT_TIMESTAMP, attempts = state.attempts + 1
+		SET claimed_at = ?, attempts = state.attempts + 1
 		WHERE state.name = (
 			SELECT name FROM platform.demo_school_states
 			WHERE status = 'preparing' AND claimed_at IS NULL
 			ORDER BY created_at, name LIMIT 1 FOR UPDATE SKIP LOCKED)
-		RETURNING state.name, state.school_name, state.first_name, state.last_name, state.attempts, state.seed_state IS NOT NULL AS seeded`).Scan(ctx, &order)
+		RETURNING state.name, state.school_name, state.first_name, state.last_name, state.attempts, state.seed_state IS NOT NULL AS seeded`, s.now()).Scan(ctx, &order)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -260,14 +302,24 @@ func (s *DemoStateStore) Fail(ctx context.Context, name string, maxAttempts int)
 				tenant_id = CASE WHEN attempts >= ? THEN target.tenant_id ELSE NULL END,
 				seed_state = NULL
 			FROM target WHERE platform.demo_school_states.name = target.name
-			RETURNING target.tenant_id, platform.demo_school_states.status
+			RETURNING target.tenant_id, platform.demo_school_states.traeger_id, platform.demo_school_states.status
 		), retired AS (
+			-- The order's own Träger (ADR 0271) goes with it: its neighbour
+			-- schools are hidden with the order's school.
 			UPDATE platform.schools SET deleted_at = NOW()
-			WHERE deleted_at IS NULL AND id IN (SELECT tenant_id FROM changed WHERE status = 'failed')
+			WHERE deleted_at IS NULL AND (id IN (SELECT tenant_id FROM changed WHERE status = 'failed')
+				OR organization_id IN (SELECT traeger_id FROM changed WHERE status = 'failed'))
 		)
 		SELECT status = 'failed' FROM changed`, name, maxAttempts, maxAttempts).Scan(ctx, &failed)
 	if err != nil {
 		return false, fmt.Errorf("fail demo school order: %w", err)
+	}
+	// A deferred seed can fail after visitors entered (RequeueDeferred): the
+	// order's own Träger goes out of service and its sessions end (ADR 0271).
+	if failed {
+		if _, err := s.db.NewRaw(`SELECT platform.retire_failed_demo_traeger(?)`, name).Exec(ctx); err != nil {
+			return true, fmt.Errorf("retire the Träger of the failed demo school order: %w", err)
+		}
 	}
 	return failed, nil
 }
@@ -330,6 +382,9 @@ type DemoProgress struct {
 	VisitorAccountID int64  `bun:"visitor_account_id"`
 	// VisitorParentAccountID is the parent the visitor enters as (#3468).
 	VisitorParentAccountID int64 `bun:"visitor_parent_account_id"`
+	// TraegerID is the order's own Demo-Träger (ADR 0271), zero under the
+	// shared one.
+	TraegerID int64 `bun:"traeger_id"`
 }
 
 // Enqueue queues the order unless maxActive demo schools hold a place: queued
@@ -375,7 +430,7 @@ func (s *DemoOrderStore) Progress(ctx context.Context, name string) (*DemoProgre
 	}
 	var progress DemoProgress
 	err = db.NewRaw(`SELECT status, COALESCE(tenant_id, 0) AS tenant_id, COALESCE(visitor_account_id, 0) AS visitor_account_id,
-			COALESCE(visitor_parent_account_id, 0) AS visitor_parent_account_id
+			COALESCE(visitor_parent_account_id, 0) AS visitor_parent_account_id, COALESCE(traeger_id, 0) AS traeger_id
 		FROM platform.demo_school_states WHERE name = ?`, name).Scan(ctx, &progress)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -407,10 +462,31 @@ func (s *DemoOrderStore) Retire(ctx context.Context, name string) error {
 	if err != nil {
 		return err
 	}
-	_, err = db.NewRaw(`UPDATE platform.schools SET deleted_at = NOW()
-		WHERE deleted_at IS NULL AND id = (SELECT tenant_id FROM platform.demo_school_states WHERE name = ?)`, name).Exec(ctx)
+	// With a Träger of its own (ADR 0271) the order's neighbour schools go
+	// with its school, and first every session of the Träger and its schools
+	// (auth.revoke_organization_sessions), in the lock order of a sign-in:
+	// accounts, then schools. Without one the caller ended the school's
+	// sessions already.
+	if _, err := db.NewRaw(`SELECT count(*) FROM platform.demo_school_states AS state,
+			auth.revoke_organization_sessions(state.traeger_id) AS revoked
+		WHERE state.name = ? AND state.traeger_id IS NOT NULL`, name).Exec(ctx); err != nil {
+		return fmt.Errorf("end the sessions of the demo Träger: %w", err)
+	}
+	_, err = db.NewRaw(`UPDATE platform.schools AS school SET deleted_at = NOW()
+		FROM platform.demo_school_states AS state
+		WHERE state.name = ? AND school.deleted_at IS NULL
+			AND (school.id = state.tenant_id OR school.organization_id = state.traeger_id)`, name).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("retire demo school: %w", err)
+	}
+	// The Träger goes out of service with its schools: every Träger session,
+	// minted or validated, needs an active Träger, so none outlives the
+	// restart, also not one a redemption mints at the same time.
+	_, err = db.NewRaw(`UPDATE platform.organizations AS organization SET active = false
+		FROM platform.demo_school_states AS state
+		WHERE state.name = ? AND organization.id = state.traeger_id AND organization.active`, name).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("retire demo Träger: %w", err)
 	}
 	return nil
 }

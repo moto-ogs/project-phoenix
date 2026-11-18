@@ -38,7 +38,13 @@ type ServiceConfig struct {
 	// attachments rather than orphaning their bytes silently.
 	Attachments AttachmentPurger
 	ParentsURL  string
-	Logger      *slog.Logger
+	// Letters fill an Elternbrief per child, keep the copies and print them
+	// (#4813).
+	Letters ParentLetters
+	// StudentRecords reads a child's letters and declarations (#4814); a
+	// service without it answers the child's record with an error.
+	StudentRecords communication.StudentParentRecordRecords
+	Logger         *slog.Logger
 	// Now is the clock of deadlines, expiries and publication; nil is the
 	// real clock (ADR 0239).
 	Now func() time.Time

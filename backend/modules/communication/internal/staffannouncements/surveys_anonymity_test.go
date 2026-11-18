@@ -22,6 +22,7 @@ import (
 	configModel "github.com/moto-ogs/project-phoenix/modules/settings"
 	deliveryPolicy "github.com/moto-ogs/project-phoenix/roots/communicationtest"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -54,6 +55,18 @@ type surveyFixture struct {
 	staff         surveyStaffStub
 }
 
+// surveyTestNow is the day the survey fixtures run on, a Wednesday 10:00 in
+// Berlin (#7104).
+var surveyTestNow = calendar.NewDate(2026, time.November, 4).BerlinMidnight().Add(10 * time.Hour)
+
+// newSurveyClock starts at surveyTestNow and runs at the pace of the real
+// clock: the service and the stores read it, so a survey closes after it was
+// created as it does in production.
+func newSurveyClock() func() time.Time {
+	started := time.Now()
+	return func() time.Time { return surveyTestNow.Add(time.Since(started)) }
+}
+
 func newSurveyFixture(t *testing.T, staffCount int) *surveyFixture {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
@@ -61,7 +74,8 @@ func newSurveyFixture(t *testing.T, staffCount int) *surveyFixture {
 	// to come through it.
 	organizations, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
-	repos := api.NewParentMessagingSuiteRepositories(testpkg.NewDatabase(t, db)).WithSchoolProjections(organizations)
+	clock := newSurveyClock()
+	repos := api.NewParentMessagingSuiteRepositories(testpkg.NewDatabase(t, db), clock).WithSchoolProjections(organizations)
 	logs := &bytes.Buffer{}
 	logger := slog.New(slog.NewJSONHandler(logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	staff := make(surveyStaffStub, 0, staffCount)
@@ -75,6 +89,7 @@ func newSurveyFixture(t *testing.T, staffCount int) *surveyFixture {
 		ParentsURL:  "https://parents.example.test",
 		Attachments: noAttachments{},
 		Logger:      logger,
+		Now:         clock,
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
 	withSurveys, err := announcement.WithSurveys(announcement.NewParentAnnouncementFacade(svc), repos.ParentAnnouncement, staff)
 	require.NoError(t, err)
@@ -94,7 +109,7 @@ func (f *surveyFixture) inSchool(t *testing.T, fn func(ctx context.Context) erro
 func staffSurveyInput(anonymous bool) communication.SurveyInput {
 	return communication.SurveyInput{
 		Title: "Wie geht es im Team?", Intro: "Bitte nehmen Sie sich fünf Minuten.", Audience: communication.SurveyAudienceStaff,
-		Anonymous: anonymous, ClosesAt: time.Now().Add(72 * time.Hour),
+		Anonymous: anonymous, ClosesAt: surveyTestNow.Add(72 * time.Hour),
 		Questions: []communication.SurveyQuestionInput{
 			{Kind: communication.SurveyQuestionSingle, Prompt: "Arbeiten Sie gern hier?", Required: true, Options: []string{"Ja", "Nein"}},
 			{Kind: communication.SurveyQuestionMultiple, Prompt: "Was hilft Ihnen?", Required: true, Options: []string{"Team", "Räume", "Material"}},
@@ -477,7 +492,7 @@ func TestSurveyRetention_DeletesClosedSurveysAfterTheWindowOnly(t *testing.T) {
 	old := f.publishStaffSurvey(t, true)
 	open := f.publishStaffSurvey(t, true)
 	ctx := testpkg.Ctx(t)
-	_, err := f.db.ExecContext(ctx, `UPDATE users.surveys SET closes_at = now() - interval '40 days' WHERE id = ?`, old.ID)
+	_, err := f.db.ExecContext(ctx, `UPDATE users.surveys SET closes_at = ? WHERE id = ?`, surveyTestNow.AddDate(0, 0, -40), old.ID)
 	require.NoError(t, err)
 
 	var deleted int
@@ -542,4 +557,43 @@ func TestSurveyListsQueryBudgetStaysFlat(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, results.Questions, 0, "three answers stay below the minimum")
 	querybudgets.AssertQueryBudget(t, "modules.communication.surveys.results", evaluation.Measurement(evaluation.Queries()))
+}
+
+// The database stamps the last change of a draft (its update trigger), so
+// the retention dates a draft on the database clock (#7295, ADR 0281): one
+// last changed before the window goes, a fresh one stays, whatever day the
+// owner's clock shows.
+func TestSurveyRetention_DatesDraftsOnTheDatabaseClock(t *testing.T) {
+	t.Parallel()
+	f := newSurveyFixture(t, 1)
+	draft := func() *communication.Survey {
+		var survey *communication.Survey
+		require.NoError(t, f.inSchool(t, func(ctx context.Context) error {
+			var err error
+			survey, err = f.surveys.CreateSurvey(ctx, f.staff[0].AccountID, staffSurveyInput(true))
+			return err
+		}))
+		return survey
+	}
+	old, fresh := draft(), draft()
+	ctx := testpkg.Ctx(t)
+	require.NoError(t, f.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		// Without its triggers the row takes the backdated stamp.
+		if _, err := tx.ExecContext(ctx, "SET LOCAL session_replication_role = replica"); err != nil {
+			return err
+		}
+		_, err := tx.ExecContext(ctx, `UPDATE users.surveys SET updated_at = now() - INTERVAL '31 days' WHERE id = ?`, old.ID)
+		return err
+	}))
+
+	var deleted int
+	require.NoError(t, f.inSchool(t, func(ctx context.Context) error {
+		var err error
+		deleted, err = f.surveys.DeleteExpiredSurveys(ctx, communication.SurveyAudienceStaff, 30)
+		return err
+	}))
+	assert.Equal(t, 1, deleted)
+	var left []int64
+	require.NoError(t, f.db.NewRaw(`SELECT id FROM users.surveys WHERE id IN (?, ?)`, old.ID, fresh.ID).Scan(ctx, &left))
+	assert.Equal(t, []int64{fresh.ID}, left)
 }

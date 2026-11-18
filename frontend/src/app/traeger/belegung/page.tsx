@@ -5,7 +5,8 @@
 // kann. Oben die Summe und die freien Plätze, darunter drei Reiter: je Schule,
 // je Gruppe und je Betreuungsform. Ein laufendes Angebot steht auch ohne
 // Buchung da, mit allen Plätzen frei (#5977). Nur Zahlen und die Namen von Gruppen und Angeboten, keine
-// Kinder. Der Export enthält dieselben Zahlen als CSV.
+// Kinder. Der Export enthält dieselben Zahlen als PDF, Excel oder CSV, für
+// alle Schulen oder die gewählte (#4718).
 
 import { type MouseEvent, type ReactNode, useMemo, useState } from "react";
 import { School } from "lucide-react";
@@ -13,16 +14,15 @@ import { OfferingOccupancyCell } from "~/components/enrollment/offering-occupanc
 import { offeringOccupancy } from "~/lib/care-offering-booking-stats";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
-import {
-  ExportMenu,
-  type ExportMenuOption,
-  exportFormatOptions,
-} from "~/components/ui/export-menu";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import NavigationLink from "~/components/ui/navigation-link";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { StatCard } from "~/components/ui/stat-card";
 import { StatusBadge } from "~/components/ui/status-badge";
+import type {
+  ActiveFilter,
+  FilterConfig,
+} from "~/components/ui/page-header/types";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import {
   formatShare,
@@ -39,26 +39,21 @@ import {
   type OccupancyPlaces,
   type OccupancyTotals,
 } from "~/components/traeger/occupancy-model";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerOccupancy } from "~/components/traeger/use-traeger-occupancy";
-import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { childrenConcept } from "~/lib/concepts/children";
 import { groupsConcept } from "~/lib/concepts/groups";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 import { formatBerlinTime, formatDate } from "~/lib/date-helpers";
-import { downloadBlob } from "~/lib/file-download";
-import { createLogger } from "~/lib/logger";
 import {
   downloadTraegerOccupancy,
   type TraegerSchoolOccupancy,
 } from "~/lib/traeger-occupancy-api";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerOccupancyPage" });
-
-const EXPORT_FORMATS: readonly ExportMenuOption[] = exportFormatOptions([
-  "csv",
-]);
 
 type View = "schulen" | "gruppen" | "betreuungsformen";
 
@@ -554,37 +549,54 @@ function ViewContent({
 
 export default function TraegerOccupancyPage() {
   const { occupancy, error, reportError } = useTraegerOccupancy();
-  const { show: showActionError } = useApiErrorDisplay();
   const [view, setView] = useState<View>("schulen");
   const [search, setSearch] = useState("");
-  const [exporting, setExporting] = useState(false);
+  const [schoolId, setSchoolId] = useState("");
   const loading = occupancy === null && !error;
   const allSchools = useMemo(() => occupancy?.schools ?? [], [occupancy]);
+  const chosenSchool = allSchools.find((school) => school.id === schoolId);
   const schools = useMemo(
-    () => allSchools.filter((school) => matchesSchool(school, search)),
-    [allSchools, search],
+    () =>
+      allSchools.filter(
+        (school) =>
+          (!schoolId || school.id === schoolId) &&
+          matchesSchool(school, search),
+      ),
+    [allSchools, schoolId, search],
   );
   const totals = useMemo(() => occupancyTotals(schools), [schools]);
   const places = useMemo(() => occupancyPlaces(schools), [schools]);
 
-  async function exportCsv() {
-    setExporting(true);
-    try {
-      const file = await downloadTraegerOccupancy();
-      downloadBlob(
-        file.blob,
-        file.filename ?? `belegung-${occupancy?.day ?? "heute"}.csv`,
-      );
-    } catch (err) {
-      reportError(err);
-      logger.error("traeger_occupancy_export_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showActionError(err, { object: "die Exportdatei" });
-    } finally {
-      setExporting(false);
-    }
-  }
+  // „Eine Schule oder alle“ (#4718): the choice narrows the page and the
+  // download alike; the search narrows only the page.
+  const filters: FilterConfig[] =
+    allSchools.length > 1
+      ? [
+          {
+            id: "school",
+            label: "Schule",
+            type: "dropdown",
+            value: schoolId,
+            onChange: (value) => setSchoolId(value as string),
+            options: [
+              { value: "", label: "Alle Schulen" },
+              ...allSchools.map((school) => ({
+                value: school.id,
+                label: school.name,
+              })),
+            ],
+          },
+        ]
+      : [];
+  const activeFilters: ActiveFilter[] = chosenSchool
+    ? [
+        {
+          id: "school",
+          label: chosenSchool.name,
+          onRemove: () => setSchoolId(""),
+        },
+      ]
+    : [];
 
   return (
     <TenantPage
@@ -600,16 +612,21 @@ export default function TraegerOccupancyPage() {
           mehreren Schulen, steht es unter „Betreuungsformen“ auch
           zusammengezählt. Es zählen dieselben Kinder wie bei der Stichtagszahl.
           moto zeigt hier keine Namen von Kindern. Mit „Herunterladen“ bekommen
-          Sie alle Zahlen als Tabelle.
+          Sie die Zahlen als PDF, Excel oder CSV, für alle Schulen oder die
+          gewählte Schule.
         </>
       }
       actions={
-        <ExportMenu
+        <TraegerListExportMenu
+          download={(format) =>
+            downloadTraegerOccupancy(format, schoolId || undefined)
+          }
+          scope={traegerExportScope(chosenSchool?.name)}
           ariaLabel="Belegung herunterladen"
-          options={EXPORT_FORMATS}
-          busyKey={exporting ? "csv" : null}
+          fallbackName={`belegung-${occupancy?.day ?? "heute"}`}
+          errorObject="die Belegung"
           unavailable={!occupancy}
-          onSelect={() => void exportCsv()}
+          onError={reportError}
         />
       }
       stats={
@@ -649,6 +666,9 @@ export default function TraegerOccupancyPage() {
             }
           : undefined
       }
+      filters={filters}
+      activeFilters={activeFilters}
+      onClearAllFilters={() => setSchoolId("")}
       tabs={{
         value: view,
         onChange: (next) => setView(next as View),

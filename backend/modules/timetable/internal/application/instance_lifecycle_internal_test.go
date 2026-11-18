@@ -37,7 +37,7 @@ func TestValidateStartTime(t *testing.T) {
 
 	svc := &InstanceLifecycleService{deps: ports.InstanceLifecycleDependencies{
 		EnforceTimePolicy: true,
-		Settings:          lifecycleSettingsStub{intVal: 15},
+		Settings:          lifecycleSettingsStub{intVal: 15}, Now: internalTestNow,
 	}}
 	require.ErrorIs(t, svc.validateStartTime(context.Background(), inst, tooEarly), timetable.ErrInstanceStartTooEarly)
 	require.NoError(t, svc.validateStartTime(context.Background(), inst, inWindow))
@@ -78,7 +78,7 @@ func TestValidateCompleteTime(t *testing.T) {
 
 	svc := &InstanceLifecycleService{deps: ports.InstanceLifecycleDependencies{
 		EnforceTimePolicy: true,
-		Settings:          lifecycleSettingsStub{boolVal: true},
+		Settings:          lifecycleSettingsStub{boolVal: true}, Now: internalTestNow,
 	}}
 	require.ErrorIs(t, svc.validateCompleteTime(context.Background(), inst, beforeEnd), timetable.ErrInstanceCompleteEarly)
 	require.NoError(t, svc.validateCompleteTime(context.Background(), inst, atEnd))
@@ -105,7 +105,7 @@ func TestValidateCompleteTimeHonorsCompleteLead(t *testing.T) {
 	leadBoundary := time.Date(2026, 8, 13, 14, 45, 0, 0, calendar.Berlin)
 	svc := &InstanceLifecycleService{deps: ports.InstanceLifecycleDependencies{
 		EnforceTimePolicy: true,
-		Settings:          lifecycleSettingsStub{boolVal: true, completeLead: 15},
+		Settings:          lifecycleSettingsStub{boolVal: true, completeLead: 15}, Now: internalTestNow,
 	}}
 
 	err := svc.validateCompleteTime(context.Background(), inst, leadBoundary.Add(-time.Second))
@@ -117,11 +117,15 @@ func TestValidateCompleteTimeHonorsCompleteLead(t *testing.T) {
 	require.ErrorIs(t, svc.validateCompleteTime(context.Background(), inst, leadBoundary), timetable.ErrLifecycleSettings)
 }
 
-func TestInstanceNowUsesWallClockWhenUnset(t *testing.T) {
+// The lifecycle reads the clock of its composition and has no wall-clock
+// fallback any more (ADR 0272): NewInstanceLifecycle refuses a missing clock,
+// and a service without one never reads the real time.
+func TestInstanceNowReadsOnlyTheComposedClock(t *testing.T) {
 	t.Parallel()
 
-	got := (&InstanceLifecycleService{}).now()
-	assert.False(t, got.IsZero())
+	assert.Equal(t, internalTestNow(), (&InstanceLifecycleService{deps: ports.InstanceLifecycleDependencies{Now: internalTestNow}}).now())
+	assert.Panics(t, func() { (&InstanceLifecycleService{}).now() })
+	assert.False(t, lifecycleCollaboratorsWired(ports.InstanceLifecycleDependencies{}))
 }
 
 func TestWithCompletionConfirmationStoresClone(t *testing.T) {
@@ -159,7 +163,7 @@ func TestBroadcastRestoredVisits_EmitsBulkCheckInAndDashboard(t *testing.T) {
 	student.ID = 42
 	svc := &InstanceLifecycleService{deps: ports.InstanceLifecycleDependencies{
 		Broadcaster: broadcaster,
-		StudentRepo: studentReadScopeStub{byID: map[int64]*timetable.LifecycleStudent{42: student}},
+		StudentRepo: studentReadScopeStub{byID: map[int64]*timetable.LifecycleStudent{42: student}}, Now: internalTestNow,
 	}}
 
 	svc.broadcastRestoredVisits(testpkg.Ctx(t), 99, []int64{42})
@@ -199,7 +203,7 @@ func TestBroadcastRestoredVisits_SkipsEmptyRestore(t *testing.T) {
 	t.Parallel()
 
 	broadcaster := &lifecycleEventRecorder{}
-	svc := &InstanceLifecycleService{deps: ports.InstanceLifecycleDependencies{Broadcaster: broadcaster}}
+	svc := &InstanceLifecycleService{deps: ports.InstanceLifecycleDependencies{Broadcaster: broadcaster, Now: internalTestNow}}
 	svc.broadcastRestoredVisits(testpkg.Ctx(t), 99, nil)
 	assert.Empty(t, broadcaster.Calls())
 }
@@ -396,7 +400,7 @@ func deleteUnitService(instanceRepo *deleteUnitInstanceRepo, exceptionRepo *dele
 		InstanceRepo:  fakeInstanceRows(instanceRepo),
 		ExceptionRepo: exceptionRepo,
 		Database:      deleteUnitDatabase{},
-		Logger:        slog.New(slog.DiscardHandler),
+		Logger:        slog.New(slog.DiscardHandler), Now: internalTestNow,
 	}}
 }
 

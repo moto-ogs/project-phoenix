@@ -10,6 +10,7 @@
  */
 
 import { ApiError, apiErrorFromText, transportFetch } from "./api-error";
+import { staffNoticeKeys } from "~/lib/swr/staff-keys";
 
 export type StaffNoticePriority = "info" | "important";
 
@@ -21,12 +22,12 @@ export const STAFF_NOTICES_REFRESH_EVENT = "staff-notices-refresh";
 
 /**
  * SWR-Schlüssel der heute geltenden Hinweise im OGS-Portal, je Konto;
- * useSWRAuth stellt die Schule davor. Den Eintrag teilen sich das Badge der
- * Seitenleiste, der Startseiten-Baustein und /tagesinformationen; die App-Hülle
- * legt ihn beim vollen Seitenaufruf aus dem Server-Seed an (#4989).
+ * useSWRAuth stellt die Schule davor. Die Quelle ist `staffNoticeKeys.today`
+ * (`~/lib/swr/staff-keys`); Leser nehmen die Factory, der Server-Seed der
+ * App-Hülle diesen Namen (#4989).
  */
 export function staffNoticesTodayKey(accountId: string): string {
-  return `staff-notices-today:${accountId}`;
+  return staffNoticeKeys.today(accountId);
 }
 
 /**
@@ -178,6 +179,21 @@ export const fetchTodaysNotices = tenantReadApi.fetchTodaysNotices;
 
 /** Kenntnisnahme im OGS-Portal. */
 export const acknowledgeStaffNotice = tenantReadApi.acknowledgeStaffNotice;
+
+/**
+ * Ein einzelner Hinweis, auf den ein Eintrag in der Glocke zeigt (#7143),
+ * auch wenn er heute nicht gilt. Ein gelöschter oder ausgeschalteter Hinweis
+ * antwortet mit 404.
+ */
+export async function fetchStaffNotice(id: string): Promise<StaffNotice> {
+  const data = await request<StaffNotice>(
+    `${BASE}/${encodeURIComponent(id)}`,
+    undefined,
+    "Der Hinweis konnte nicht geladen werden",
+  );
+  if (!data) throw missingData("Der Hinweis konnte nicht geladen werden");
+  return data;
+}
 
 /** Alle Hinweise des Mandanten — Leitungssicht, auch abgeschaltete. */
 export async function fetchStaffNotices(): Promise<StaffNotice[]> {

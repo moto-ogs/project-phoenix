@@ -17,6 +17,7 @@ import {
 } from "react";
 import { ApiError } from "~/lib/api-error";
 import { Check, ChevronRight, ExternalLink } from "lucide-react";
+import { SegmentedControl } from "~/components/ui/segmented-control";
 import { useLocale, useTranslations } from "next-intl";
 
 import { Modal } from "~/components/ui/modal";
@@ -27,7 +28,11 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { useSWRAuth } from "~/lib/swr";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
+import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
@@ -884,42 +889,23 @@ export function NewsCard({
  * is one message's attachment, not the entrance to a folder the family could
  * browse.
  */
+const NO_ATTACHMENTS: ParentAnnouncementAttachment[] = [];
+
 function NewsAttachments({
   item,
 }: Readonly<{ item: ParentAnnouncement }>): React.ReactNode {
   const t = useTranslations("parentDashboard");
-  const [attachments, setAttachments] = useState<
-    ParentAnnouncementAttachment[]
-  >([]);
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  const [reloadToken, setReloadToken] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    setAttachments([]);
-    clearLoadError();
-    void listAnnouncementAttachments(item.id)
-      .then((list) => {
-        if (!cancelled) setAttachments(list);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.error("parent_announcement_attachments_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showLoadError(err, {
-          object: t("newsErrorObjectAttachments"),
-          retry: () => setReloadToken((n) => n + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [item.id, reloadToken, clearLoadError, showLoadError, t]);
+  const resource = useSWRAuth(
+    parentInboxKeys.announcementAttachments(item.id),
+    () => listAnnouncementAttachments(item.id),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const attachments = resource.data ?? NO_ATTACHMENTS;
+  const { error: loadError } = useSwrResourceLoadError(
+    [resource],
+    t("newsErrorObjectAttachments"),
+    () => resource.mutate(),
+  );
 
   if (loadError) {
     return (
@@ -986,6 +972,42 @@ function NewsReminderNote({
   );
 }
 
+/**
+ * The text of a news item. An Elternbrief that names each child (#4813)
+ * shows one letter per own child; with siblings the family switches.
+ */
+function NewsLetterText({
+  item,
+}: Readonly<{ item: ParentAnnouncement }>): React.ReactNode {
+  const t = useTranslations("parentDashboard");
+  const letters = item.letters ?? [];
+  const [chosen, setChosen] = useState(letters[0]?.student_id ?? "");
+  const shown =
+    letters.find((letter) => letter.student_id === chosen) ?? letters[0];
+  return (
+    <>
+      {letters.length > 1 && (
+        <div className="mt-4 space-y-2">
+          <p className="text-sm text-gray-600">{t("newsLetterPerChild")}</p>
+          <SegmentedControl
+            ariaLabel={t("newsLetterChildChoice")}
+            value={shown?.student_id ?? null}
+            onChange={setChosen}
+            wrap
+            items={letters.map((letter) => ({
+              value: letter.student_id,
+              label: letter.first_name,
+            }))}
+          />
+        </div>
+      )}
+      <p className="mt-4 text-base leading-7 whitespace-pre-line text-gray-800">
+        <LinkifiedText text={shown?.body ?? item.body} />
+      </p>
+    </>
+  );
+}
+
 function NewsMessageSection({
   item,
 }: Readonly<{ item: ParentAnnouncement }>): React.ReactNode {
@@ -1016,9 +1038,7 @@ function NewsMessageSection({
         />
       )}
 
-      <p className="mt-4 text-base leading-7 whitespace-pre-line text-gray-800">
-        <LinkifiedText text={item.body} />
-      </p>
+      <NewsLetterText item={item} />
 
       {/* The files of an ended Einverständnis stay in the proof of each
           answer; the message itself no longer serves them. */}
@@ -1158,6 +1178,7 @@ export function NewsDetailModal({
   // An ended Einverständnis is no live message: the backend refuses a read
   // mark for it, which would wrongly report it as outdated.
   const ended = isEndedDeclaration(item);
+  // oxlint-disable-next-line swr/no-effect-load -- marks the opened announcement read: a one-shot write, not a read
   useEffect(() => {
     // published_at is the version the backend verifies; feed items always carry
     // it, so a missing value just means there is nothing to mark yet.

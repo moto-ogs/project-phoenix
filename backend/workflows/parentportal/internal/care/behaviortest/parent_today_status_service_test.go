@@ -59,12 +59,14 @@ func buildTodayStatusServiceWithSchedule(t *testing.T) (*parentportal.ChildFlows
 	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
 	arrivalRules, arrivalDeps, err := owners.ArrivalScheduleBinding(owners.MustNewPeopleDirectory(testpkg.MustDatabase(db)), nil, nil, slog.Default())
 	require.NoError(t, err)
+	today := func() calendar.Date { return calendar.NewDate(2026, 8, 24) }
+	arrivalDeps.Today = today
 	arrivals, err := careplanCompose.NewArrivalSchedules(db, repos.CarePlan(), nil, arrivalRules, arrivalDeps)
 	require.NoError(t, err)
 	pickupStudents, err := owners.PickupPlanStudents(owners.MustNewPeopleDirectory(testpkg.MustDatabase(db)))
 	require.NoError(t, err)
 	pickups, err := careplanCompose.NewPickupSchedules(db, repos.CarePlan(), newPickupBaselineService(repos.CarePlan(), approvedOfferingProjection(t)), // Auto-excusal (#2360) is not what these cases assert.
-		nil, pickupStudents, slog.Default(), nil)
+		nil, pickupStudents, slog.Default(), today)
 	require.NoError(t, err)
 	return parentportal.NewChildFlows(parentportal.ChildConfig{
 		GuardianPolicy: owners.NewParentGuardianPolicy(),
@@ -395,4 +397,25 @@ func approvedOfferingProjection(t *testing.T) *api.ApprovedOfferingTestProjectio
 	projection, err := api.NewOwnerApprovedOfferingTestProjection(testpkg.NewDatabase(t, testpkg.SetupTestDB(t)))
 	require.NoError(t, err)
 	return projection
+}
+
+// TestGetChildTodayStatusWithoutCarePlaceHasNoOGSDay liest fuer ein Kind ohne
+// OGS-Platz (#4803) keinen OGS-Tag: auch eine Anwesenheitszeile ergibt
+// "keine Betreuung", nicht "in der OGS".
+func TestGetChildTodayStatusWithoutCarePlaceHasNoOGSDay(t *testing.T) {
+	t.Parallel()
+
+	svc, db := buildTodayStatusService(t)
+	chain := testpkg.CreateTestParentGuardianChain(t, db)
+	openAttendanceToday(t, db, chain.TenantID, chain.StudentID, calendar.Now().Add(-90*time.Minute))
+	_, err := db.ExecContext(context.Background(), `UPDATE users.student_school_memberships
+		SET without_care_place = true, group_id = NULL
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, chain.TenantID, chain.StudentID)
+	require.NoError(t, err)
+
+	status, err := svc.GetChildTodayStatus(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID)
+
+	require.NoError(t, err)
+	assert.Equal(t, parentportal.DayStateNoCare, status.State)
+	assert.Nil(t, status.AtOgs)
 }

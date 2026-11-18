@@ -35,7 +35,7 @@ func setupSchemaRepoTest(t *testing.T) (*bun.DB, capability.Owner, int64, int64)
 
 	account := testpkg.CreateTestAccount(t, db, "schemarepo")
 
-	repo := ownerCompose.New()
+	repo := ownerCompose.NewClocked(time.Now)
 	return db, repo, tenantID, account.ID
 }
 

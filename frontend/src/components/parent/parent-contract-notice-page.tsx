@@ -10,7 +10,7 @@
  * BGB (#6105), the page has the withdrawal chosen.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import {
@@ -22,7 +22,7 @@ import { ParentSection } from "~/components/parent/shell/parent-section";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { ChoiceTile } from "~/components/ui/choice-tile";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import {
   FormErrorAlert,
   LoadErrorAlert,
@@ -30,7 +30,11 @@ import {
 import { Radio } from "~/components/ui/radio";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { Textarea } from "~/components/ui/textarea";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import type {
   ContractNotice,
   ContractNoticeOptions,
@@ -72,47 +76,50 @@ export function ParentContractNoticePage({
   withdrawal?: boolean;
 }>) {
   const t = useTranslations("parentContractNotice");
-  const [options, setOptions] = useState<ContractNoticeOptions | null>(null);
   const today = useBerlinToday();
-  const [optionsDay, setOptionsDay] = useState("");
+  const resource = useSWRAuth(
+    parentInboxKeys.contractNoticeOptions(organizationId, contractId, today),
+    // The day the options were read: they name deadlines from that day on.
+    async () => ({
+      day: berlinTodayISO(),
+      options: await fetchMyContractNoticeOptions(organizationId, contractId),
+    }),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const { mutate } = resource;
+  const options = resource.data?.options ?? null;
+  const optionsDay = resource.data?.day ?? "";
+  const { error: loadError } = useSwrResourceLoadError(
+    [resource],
+    t("errorObject"),
+    () => mutate(),
+  );
+  // Changed deadlines since the last answer make the parents choose again.
+  const [seen, setSeen] = useState<ContractNoticeOptions | null>(null);
   const [requireSelection, setRequireSelection] = useState(false);
-  const previous = useRef<ContractNoticeOptions | null>(null);
-  const generation = useRef(0);
-  const load = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = load;
-
-  const read = useCallback(async () => {
-    const request = ++generation.current;
-    const day = berlinTodayISO();
-    try {
-      const next = await fetchMyContractNoticeOptions(
-        organizationId,
-        contractId,
-      );
-      if (request !== generation.current) return;
-      const old = previous.current;
-      setRequireSelection(
-        old !== null &&
-          (old.ordinaryEndsOn !== next.ordinaryEndsOn ||
-            old.specialEndsOn !== next.specialEndsOn ||
-            old.withdrawalUntil !== next.withdrawalUntil),
-      );
-      previous.current = next;
-      setOptions(next);
-      setOptionsDay(day);
-      clearLoadError();
-    } catch (err) {
-      if (request !== generation.current) return;
-      await showLoadError(err, {
-        object: t("errorObject"),
-        retry: () => void read(),
+  if (options && options !== seen) {
+    setRequireSelection(
+      seen !== null &&
+        (seen.ordinaryEndsOn !== options.ordinaryEndsOn ||
+          seen.specialEndsOn !== options.specialEndsOn ||
+          seen.withdrawalUntil !== options.withdrawalUntil),
+    );
+    setSeen(options);
+  }
+  const refresh = useCallback(async () => {
+    await mutate();
+  }, [mutate]);
+  const invalidateFamily = useInvalidateFamily();
+  const declared = useCallback(
+    (next: ContractNoticeOptions) => {
+      void mutate((current) => current && { ...current, options: next }, {
+        revalidate: false,
       });
-    }
-  }, [organizationId, contractId, clearLoadError, showLoadError, t]);
-
-  useEffect(() => {
-    void read();
-  }, [read, today]);
+      // The documents inbox shows the contract's end too.
+      void invalidateFamily(parentInboxKeys.documents());
+    },
+    [mutate, invalidateFamily],
+  );
 
   const ended = options?.notice ?? null;
   return (
@@ -135,8 +142,8 @@ export function ParentContractNoticePage({
         backHref={DOCUMENTS_HREF}
         backLabel={t("back")}
       />
-      {load.error ? <LoadErrorAlert error={load.error} /> : null}
-      {options === null && !load.error ? <ParentPageSkeleton rows={2} /> : null}
+      {loadError ? <LoadErrorAlert error={loadError} /> : null}
+      {options === null && !loadError ? <ParentPageSkeleton rows={2} /> : null}
       {options && ended ? (
         <NoticeDone options={options} notice={ended} />
       ) : null}
@@ -153,10 +160,10 @@ export function ParentContractNoticePage({
           optionsDay={optionsDay}
           requireSelection={requireSelection}
           withdrawal={withdrawal}
-          onRefresh={read}
+          onRefresh={refresh}
           organizationId={organizationId}
           contractId={contractId}
-          onDeclared={setOptions}
+          onDeclared={declared}
         />
       ) : null}
     </ParentPage>

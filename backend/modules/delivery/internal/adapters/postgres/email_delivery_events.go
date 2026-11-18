@@ -44,11 +44,11 @@ const emailEventRerouteSQL = `UPDATE platform.email_outbox
 	WHERE id = ?1`
 
 // A complaint is the stronger reason and stays once it is recorded.
-const emailSuppressionUpsertSQL = `INSERT INTO platform.email_suppressions (tenant_id, address, reason)
-	VALUES (?, ?, ?)
+const emailSuppressionUpsertSQL = `INSERT INTO platform.email_suppressions (tenant_id, address, reason, created_at, updated_at)
+	VALUES (?0, ?1, ?2, ?3, ?3)
 	ON CONFLICT (tenant_id, address) DO UPDATE SET
 		reason = CASE WHEN platform.email_suppressions.reason = 'complained' THEN 'complained' ELSE EXCLUDED.reason END,
-		updated_at = NOW()`
+		updated_at = EXCLUDED.updated_at`
 
 type emailEventMailRow struct {
 	ID            int64      `bun:"id"`
@@ -88,7 +88,7 @@ func (s *Store) RecordEmailDeliveryEvent(ctx context.Context, event domain.Email
 			return err
 		}
 		result.Recorded = true
-		return applyEmailEvent(txCtx, db, mail, event, &result)
+		return applyEmailEvent(txCtx, db, mail, event, &result, s.now())
 	})
 	if err != nil {
 		return domain.EmailDeliveryEventResult{}, fmt.Errorf("delivery postgres: record email delivery event: %w", err)
@@ -103,13 +103,13 @@ func emailEventCurrentState(mail emailEventMailRow) domain.EmailDeliveryState {
 	return domain.EmailDeliveryState(*mail.DeliveryState)
 }
 
-func applyEmailEvent(ctx context.Context, db bun.IDB, mail emailEventMailRow, event domain.EmailDeliveryEvent, result *domain.EmailDeliveryEventResult) error {
+func applyEmailEvent(ctx context.Context, db bun.IDB, mail emailEventMailRow, event domain.EmailDeliveryEvent, result *domain.EmailDeliveryEventResult, now time.Time) error {
 	if mail.Fallback != nil && event.Provider != "moto" {
 		// The mail left over the fallback: the event stays in the history, and
 		// the original provider no longer speaks for it. Local SMTP rejections
 		// still describe the fallback's outcome.
 		if event.State == domain.EmailDeliveryComplained {
-			return suppressEmailEventAddress(ctx, db, mail, event)
+			return suppressEmailEventAddress(ctx, db, mail, event, now)
 		}
 		return nil
 	}
@@ -118,7 +118,7 @@ func applyEmailEvent(ctx context.Context, db bun.IDB, mail emailEventMailRow, ev
 	// its reason can still turn out as a blocklist. fallback_requested_at makes
 	// this happen once per mail.
 	if event.Reroute && mail.Fallback == nil && mail.Security && result.State != domain.EmailDeliveryDelivered && result.State != domain.EmailDeliveryComplained {
-		if _, err := db.ExecContext(ctx, emailEventRerouteSQL, time.Now(), mail.ID); err != nil {
+		if _, err := db.ExecContext(ctx, emailEventRerouteSQL, now, mail.ID); err != nil {
 			return err
 		}
 		result.State, result.Rerouted = "", true
@@ -126,19 +126,19 @@ func applyEmailEvent(ctx context.Context, db bun.IDB, mail emailEventMailRow, ev
 	}
 	next := domain.NextEmailDeliveryState(result.State, event.State)
 	if next != result.State {
-		if _, err := db.ExecContext(ctx, emailEventStateSQL, string(next), event.OccurredAt, time.Now(), mail.ID); err != nil {
+		if _, err := db.ExecContext(ctx, emailEventStateSQL, string(next), event.OccurredAt, now, mail.ID); err != nil {
 			return err
 		}
 		result.State = next
 	}
-	return suppressEmailEventAddress(ctx, db, mail, event)
+	return suppressEmailEventAddress(ctx, db, mail, event, now)
 }
 
-func suppressEmailEventAddress(ctx context.Context, db bun.IDB, mail emailEventMailRow, event domain.EmailDeliveryEvent) error {
+func suppressEmailEventAddress(ctx context.Context, db bun.IDB, mail emailEventMailRow, event domain.EmailDeliveryEvent, now time.Time) error {
 	if !event.State.BlocksAddress() || event.KeepsAddress || mail.TenantID == nil || mail.Address == nil || *mail.Address == "" {
 		return nil
 	}
-	_, err := db.ExecContext(ctx, emailSuppressionUpsertSQL, *mail.TenantID, normalizedAddress(*mail.Address), string(event.State.SuppressionReason()))
+	_, err := db.ExecContext(ctx, emailSuppressionUpsertSQL, *mail.TenantID, normalizedAddress(*mail.Address), string(event.State.SuppressionReason()), now)
 	return err
 }
 

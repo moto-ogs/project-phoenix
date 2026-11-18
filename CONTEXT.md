@@ -70,7 +70,12 @@ nicht genutzt wird.
 Ein **Demo-Zugang** verbindet die E-Mail-Adresse eines Interessenten mit
 seiner Demo-Schule. Der Interessent betritt die Demo-Schule über einen Link
 aus einer E-Mail und wählt dort eine **Demo-Rolle** (Betreuungskraft,
-OGS-Leitung oder Elternteil), ohne sich ein Passwort zu setzen.
+OGS-Leitung, Elternteil oder Träger-Büro), ohne sich ein Passwort zu setzen.
+
+Ein **Demo-Träger** ist der Träger einer Demo-Schule. Jede Demo-Schule hat
+ihren eigenen, mit zwei Nachbarschulen; die Rolle Träger-Büro öffnet sein
+Träger-Portal. Er geht mit seiner letzten Schule
+([ADR 0271](docs/adr/0271-jeder-demo-besuch-bekommt-einen-eigenen-demo-traeger.md)).
 
 _Vermeiden_: Demo-Tenant (klingt nach einer gemeinsamen Schule für alle),
 Sandbox, Testzugang, Probeaccount.
@@ -1016,6 +1021,23 @@ Austritt die OGS-Betreuung.
 nicht, dass der Betreuungszeitraum gerade läuft; ein inaktives Kind bleibt
 angemeldet.
 _Vermeiden_: „angemeldet" für „im Betreuungszeitraum".
+
+Ein **Kind ohne OGS-Platz** ist ein Kind der Klasse mit eigenem Datensatz,
+aber ohne Platz in der OGS ([ADR 0282](docs/adr/0282-kind-ohne-ogs-platz-ist-ein-kind-der-klasse-mit-eigenem-datensatz.md), #4803).
+Seine Eltern nutzen die Eltern-App für Krankmeldung, Elternbriefe und
+Elternsprechtag. In OGS-Listen, Gruppen, Anwesenheit, Abholung, Essen,
+Stichtagszahl und Kinderkontingent kommt es nicht vor. Es entsteht nur in
+einer Schule, für die das moto-Team den Schalter eingeschaltet hat; mit dem
+Einschalten werden die Klassenlisteneinträge der Schule zu solchen Kindern.
+Eine angenommene Anmeldung für das Kind gibt ihm einen OGS-Platz.
+_Vermeiden_: „Klassenlisteneintrag" für ein Kind ohne OGS-Platz, „inaktives
+Kind".
+
+Ein **Klassenlisteneintrag** (#2382) ist ein Kind der Klasse, das nur mit
+Vor- und Nachname und Klasse auf der Klassenliste steht, ohne Datensatz und
+ohne Eltern. Es gibt ihn nur in Schulen ohne den Schalter für Kinder ohne
+OGS-Platz.
+_Vermeiden_: „Kind ohne OGS-Platz" für einen Eintrag ohne Datensatz.
 
 ## Stichtagszahl
 

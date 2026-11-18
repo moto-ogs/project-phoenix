@@ -51,6 +51,8 @@ func listSchoolAccountMappings(ctx context.Context, db bun.IDB, schoolIDs []int6
 	return rows, err
 }
 
+// listSchoolAccountInvitations lists the invitations still open on the
+// database clock that also set their expiry (ADR 0285, Nachtrag).
 func listSchoolAccountInvitations(ctx context.Context, db bun.IDB, schoolIDs []int64) ([]domain.SchoolAccountListing, error) {
 	var rows []domain.SchoolAccountListing
 	err := db.NewSelect().
@@ -61,7 +63,7 @@ func listSchoolAccountInvitations(ctx context.Context, db bun.IDB, schoolIDs []i
 		Join("LEFT JOIN auth.roles AS r ON r.id = inv.role_id").
 		Where("inv.tenant_id IN (?)", bun.List(schoolIDs)).
 		Where("inv.used_at IS NULL").
-		Where("inv.expires_at > NOW()").
+		Where("inv.expires_at > "+databaseClock).
 		Where(`NOT EXISTS (
  SELECT 1 FROM auth.account_tenants AS existing
  JOIN auth.accounts AS ea ON ea.id = existing.account_id

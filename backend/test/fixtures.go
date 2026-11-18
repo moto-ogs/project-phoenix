@@ -540,25 +540,7 @@ type (
 // This requires a Staff and ActiveGroup to already exist.
 func CreateTestGroupSupervisor(tb testing.TB, db *bun.DB, staffID, activeGroupID int64, role string) *GroupSupervisorRow {
 	tb.Helper()
-
-	supervisor := &GroupSupervisorRow{
-		StaffID:   staffID,
-		GroupID:   activeGroupID,
-		Role:      role,
-		StartDate: calendar.TodayDate(),
-	}
-	supervisor.TenantID = fixtureTenantID(tb)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	err := db.NewInsert().
-		Model(supervisor).
-		ModelTableExpr(`active.group_supervisors`).
-		Scan(ctx)
-	require.NoError(tb, err, "Failed to create test group supervisor")
-
-	return supervisor
+	return CreateTestGroupSupervisorOn(tb, db, staffID, activeGroupID, role, calendar.TodayDate())
 }
 
 // cleanupRoleRecords removes roles and their role-permission/account-role associations.
@@ -1601,7 +1583,7 @@ func ensureTestTenant(ctx context.Context, db *bun.DB, tenantID int64) error {
 		return fmt.Errorf("ensure test school: %w", err)
 	}
 
-	return nil
+	return setTestSchoolFederalState(ctx, db, tenantID)
 }
 
 // CreateTestTenant creates an organization + school pair that nobody else
@@ -1641,7 +1623,7 @@ func CreateTestTenant(tb testing.TB, db *bun.DB) (tenantID int64, subdomain stri
 		VALUES (?, ?, ?, ?, ?, true)`,
 		tenantID, tenantID, "Test School "+token, "test-school-"+token, subdomain)
 	require.NoError(tb, err, "Failed to create test school")
-
+	require.NoError(tb, setTestSchoolFederalState(ctx, db, tenantID))
 	return tenantID, subdomain
 }
 
@@ -3032,15 +3014,15 @@ func CreateTestParentAnnouncement(tb testing.TB, db *bun.DB, createdBy int64, ti
 	return announcement
 }
 
-// PublishTestParentAnnouncement stamps an announcement as published now, so
-// tests can exercise the rules that only apply once it is out — above all that
-// a published announcement is immutable (#2890).
+// PublishTestParentAnnouncement stamps an announcement as published now on this
+// process's clock, which the audience projection judges on (#7295), so tests can
+// exercise the rules of a published announcement, above all immutability (#2890).
 func PublishTestParentAnnouncement(tb testing.TB, db *bun.DB, announcementID int64) {
 	tb.Helper()
 	ctx := TenantContext(fixtureTenantID(tb))
 	_, err := db.NewUpdate().
 		TableExpr("users.parent_announcements").
-		Set("published_at = NOW()").
+		Set("published_at = ?", time.Now()).
 		Where("id = ?", announcementID).
 		Exec(ctx)
 	if err != nil {

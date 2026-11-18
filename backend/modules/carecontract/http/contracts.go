@@ -28,13 +28,16 @@ type Resource struct {
 	intake          carecontract.Intake
 	paper           carecontract.PaperSignatures
 	requireContract common.Middleware
+	lists           common.ListRenderer
 }
 
-func NewResource(contracts carecontract.Contracts, intake carecontract.Intake, paper carecontract.PaperSignatures, requireContract common.Middleware) *Resource {
-	if contracts == nil || intake == nil || paper == nil || requireContract == nil {
-		panic("care contract http: the contracts, the intake, the paper signature and the right check are required")
+// NewResource builds the resource; lists renders the export of the
+// contracts (#4718).
+func NewResource(contracts carecontract.Contracts, intake carecontract.Intake, paper carecontract.PaperSignatures, requireContract common.Middleware, lists common.ListRenderer) *Resource {
+	if contracts == nil || intake == nil || paper == nil || requireContract == nil || lists == nil {
+		panic("care contract http: the contracts, the intake, the paper signature, the right check and the list renderer are required")
 	}
-	return &Resource{contracts: contracts, intake: intake, paper: paper, requireContract: requireContract}
+	return &Resource{contracts: contracts, intake: intake, paper: paper, requireContract: requireContract, lists: lists}
 }
 
 // ContractRouter returns the routes mounted at /traeger/contracts.
@@ -47,6 +50,7 @@ func (rs *Resource) ContractRouter(protectedTraegerRoutes func(chi.Router, func(
 		open.Get("/conclusion-modes", rs.conclusionModes)
 		open.Post("/", rs.create)
 		open.Get("/", rs.list)
+		open.Get("/export", rs.exportContracts)
 		open.Get("/{id}", rs.detail)
 		open.Get("/{id}/document", rs.document)
 		open.Get("/{id}/paper-signature", rs.paperDocument)

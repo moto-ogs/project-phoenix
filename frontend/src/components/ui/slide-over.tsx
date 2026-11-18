@@ -60,15 +60,17 @@ import { CloseIcon } from "./close-icon";
 import { ICON_ONLY } from "./control-geometry";
 import { DialogActions, DialogErrorSlot } from "./dialog-parts";
 import { useBusyFocus } from "./hooks/useBusyFocus";
+import { InOverlayContext } from "./in-overlay";
 import { useSheetAboveKeyboard } from "./hooks/useSheetAboveKeyboard";
 import type { FormModalPending } from "./use-form-modal-pending";
 import type { FormErrorInput } from "./form-error";
 import {
-  OVERLAY_BACKDROP_CLASS,
+  OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
   Z_LAYER,
 } from "./overlay-styles";
 import { isInsideModal, SHEET_SCOPE_PROPS, useOverlay } from "./overlay-stack";
+import { useScrollRegion } from "./hooks/useScrollRegion";
 
 /**
  * Unter sm fährt das Panel von unten ein, darüber von rechts. Vor dem ersten
@@ -232,7 +234,7 @@ const SlideOverOverlay = React.forwardRef<
     className={cn(
       `fixed inset-0 ${Z_LAYER.sheetBackdrop}`,
       OVERLAY_BACKDROP_TINT_CLASS,
-      OVERLAY_BACKDROP_CLASS,
+      OVERLAY_BACKDROP_BLUR_CLASS,
       className,
     )}
     {...props}
@@ -367,7 +369,9 @@ const SlideOverContent = React.forwardRef<
               className="mx-auto mt-3 h-1 w-12 shrink-0 rounded-full bg-gray-300"
             />
           )}
-          {children}
+          <InOverlayContext.Provider value={true}>
+            {children}
+          </InOverlayContext.Provider>
         </DrawerPrimitive.Content>
       </SlideOverPortal>
     );
@@ -489,16 +493,31 @@ type SlideOverBodyProps = React.HTMLAttributes<HTMLDivElement> & {
  * reaches the scrolling element (`useApiFormError` scrolls it).
  */
 const SlideOverBody = React.forwardRef<HTMLDivElement, SlideOverBodyProps>(
-  ({ className, error, children, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn("flex-1 overflow-y-auto px-5 py-4", className)}
-      {...props}
-    >
-      <DialogErrorSlot error={error} />
-      {children}
-    </div>
-  ),
+  ({ className, error, children, ...props }, ref) => {
+    const bodyRef = React.useRef<HTMLDivElement | null>(null);
+    // A body that scrolls must be reachable by keyboard, also when it holds
+    // nothing focusable (axe scrollable-region-focusable, #7112).
+    const scrolls = useScrollRegion(bodyRef);
+    return (
+      <div
+        ref={(node) => {
+          bodyRef.current = node;
+          if (typeof ref === "function") ref(node);
+          else if (ref) ref.current = node;
+        }}
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling body without focusable content must be reachable by keyboard; it joins the tab order only while it scrolls
+        tabIndex={scrolls ? 0 : undefined}
+        className={cn(
+          "flex-1 overflow-y-auto px-5 py-4 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-600",
+          className,
+        )}
+        {...props}
+      >
+        <DialogErrorSlot error={error} />
+        {children}
+      </div>
+    );
+  },
 );
 SlideOverBody.displayName = "SlideOverBody";
 

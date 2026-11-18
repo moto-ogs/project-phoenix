@@ -40,7 +40,7 @@ func careContractConclusionRun(t *testing.T, f careContractFixture) carecontract
 	unit := testpkg.TenantRuntime(t, f.db)
 	organizations, err := owners.NewOrganizationTenancy(database)
 	require.NoError(t, err)
-	audit, err := auditCompose.NewTenantPersistence(f.db)
+	audit, err := auditCompose.NewTenantPersistence(f.db, time.Now)
 	require.NoError(t, err)
 	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil)
 	require.NoError(t, err)
@@ -50,11 +50,18 @@ func careContractConclusionRun(t *testing.T, f careContractFixture) carecontract
 	require.NoError(t, err)
 	schoolSettings, err := owners.NewSettingsTestModule(database, unit)
 	require.NoError(t, err)
-	conclusion := NewCareContractConclusion(organizations, settings, schoolSettings.Settings, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog, owners.CareContractTestHolidays{}, "http://parents.localhost:3000")
+	conclusion := NewCareContractConclusion(organizations, settings, schoolSettings.Settings, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog, owners.CareContractTestHolidays{}, "http://parents.localhost:3000", careContractConclusionClock)
 	run, err := conclusion.ConcludeAccepted(tenant.WithUnitOfWork(context.Background(), unit), f.office.organization)
 	require.NoError(t, err)
 	return run
 }
+
+// careContractConclusionClock is the clock of the conclusion runs: the
+// instant the fixture's /traeger router runs on (holidayFixtureNow), before
+// the school year 2027/28 of the fixture starts and independent of the day
+// the test runs. One owner clock for the run and the routes that read its
+// stamps: sent_at, concluded_at and the signing links (#7295).
+func careContractConclusionClock() time.Time { return holidayFixtureNow() }
 
 func setTraegerConclusionMode(t *testing.T, f careContractFixture, mode string) {
 	t.Helper()
@@ -321,8 +328,10 @@ func TestCareContractConclusionKeepsConsentAfterAnUnchangedTemplateSave(t *testi
 // recordCareContractAcceptance arranges a parent submission whose required
 // conditions block was ticked, with the checksum taken when it was shown,
 // after the conditions were saved; the school accepted it an hour later. The
-// instants come from the database clock, which also stamps the templates.
-// It returns the instant of the acceptance.
+// instants are on Enrollment's clock, the one the fixture's router and the
+// conclusion run share (careContractConclusionClock), so the acceptance lies
+// before the run whatever day the database is on. It returns the instant of
+// the acceptance.
 func recordCareContractAcceptance(t *testing.T, f careContractFixture) time.Time {
 	t.Helper()
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, "/traeger/contract-templates", nil)
@@ -340,8 +349,7 @@ func recordCareContractAcceptance(t *testing.T, f careContractFixture) time.Time
 func recordCareContractTextAcceptance(t *testing.T, f careContractFixture, text string) time.Time {
 	t.Helper()
 	ctx := context.Background()
-	var submitted time.Time
-	require.NoError(t, f.db.NewRaw(`SELECT NOW()`).Scan(ctx, &submitted))
+	submitted := careContractConclusionClock().Add(-2 * time.Hour)
 	accepted := submitted.Add(time.Hour)
 	snapshot, err := json.Marshal([]enrollment.LegalBlocksSnapshotEntry{{
 		SnapshotAt: submitted, ConsentFlags: json.RawMessage(`{"terms":true}`), FormSchemaID: 81, DisplayedFormSchemaID: 81,

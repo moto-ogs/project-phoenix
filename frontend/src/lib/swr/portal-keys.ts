@@ -7,6 +7,8 @@ import { previewRow, previewText, type ListPreview } from "./list-preview";
 import { resourceKey } from "./resource-key";
 import { groupKeys } from "./groups-keys";
 
+import { shellResourceKeys } from "./shell-keys";
+
 export { announcementKeys, dashboardKeys } from "./shell-keys";
 export { parentKeys } from "./parent-keys";
 
@@ -43,6 +45,7 @@ export const operatorProvisioningKeys = {
   allDevices: () => "operator-all-devices",
   organizations: () => "operator-organizations",
   schoolSummaries: () => "operator-school-summaries",
+  schoolRequiredDetails: () => "operator-school-required-details",
   schoolPersons: (id: string | undefined) =>
     `operator-school-persons-${encodeURIComponent(id ?? "")}`,
   schoolAccounts: (id: string | undefined) =>
@@ -175,6 +178,9 @@ export const studentKeys = {
   pickupChangeNotices: (accountId: string) =>
     `student-pickup-change-notices:${encodeURIComponent(accountId)}`,
   enrollments: (id: string) => `student-enrollments-${encodeURIComponent(id)}`,
+  /** Elternbriefe and Einverständnisse of the child (#4814). */
+  parentRecords: (id: string) =>
+    `student-parent-records-${encodeURIComponent(id)}`,
   holidayGuest: (id: string) => `holiday-guest:${encodeURIComponent(id)}`,
   carePlanDay: (id: string, date: string) =>
     `${STUDENT_KEY_FAMILIES.carePlanDay}${encodeURIComponent(id)}-${date}`,
@@ -252,6 +258,21 @@ export const timetableKeys = {
   // Elternhinweise zu eigenen Schließtagen in Ferienwochen (ADR 0196):
   // Grund, Tage, Stand und eine Zahl, keine Namen.
   holidayClosureNotices: () => "timetable-holiday-closure-notices",
+  /** The offering matching the children a Regeltermin plans (#5104). */
+  offeringSuggestion: (query: object) =>
+    resourceKey("timetable-offering-suggestion-", query),
+  /** Doppelte Einplanungen eines Termins an einem Tag (Hinweis im Formular). */
+  conflictCheck: (query: object) =>
+    resourceKey("timetable-conflict-check-", query),
+  /** Dienstplan-Lücken der geplanten Tage eines Termins (Hinweis im Formular). */
+  shiftCoverageCheck: (probes: readonly object[]) =>
+    resourceKey("timetable-shift-coverage-check-", { probes }),
+  /** Die Kinder mehrerer Angebote ohne Doppelte, als Quelle eines Regeltermins. */
+  combinedOfferingCounts: (offeringIds: readonly string[], periodId: string) =>
+    resourceKey("timetable-combined-offering-counts-", {
+      offeringIds,
+      periodId,
+    }),
 } as const;
 
 // School portal (Lehrkräfte).
@@ -263,6 +284,24 @@ export const schoolPortalKeys = {
   parentConferences: () => "school-parent-conferences",
   absenceList: (schoolClass: string, from = "", to = "") =>
     `school-absence-list-${schoolClass}-${from}-${to}`,
+  // Der Feed der Glocke (#7139): dieselben Einträge wie im Staff-Portal,
+  // eigene Route und eigene Schlüssel.
+  notificationFeedFirstPage: () => "school-notification-feed-first-page",
+  notificationFeedUnread: () => "school-notification-feed-unread",
+  parentLetters: () => "school-parent-letters",
+  parentLetter: (id: string) => `school-parent-letter-${id}`,
+  calendar: (from: string, to: string) => `school-calendar-${from}-${to}`,
+  sharedNotes: (schoolClass: string, studentId: string) =>
+    `school-shared-notes-${schoolClass}-${studentId}`,
+  // Die heutigen Hinweise: Seite, Karte der Klassenansicht und das Badge
+  // der Hülle teilen den Eintrag, damit eine Kenntnisnahme alle sofort
+  // nachzieht.
+  noticesToday: shellResourceKeys.schoolNoticesToday,
+  supervisions: (today: string) => `school-supervisions-${today}`,
+  supervisionRoster: (id: string) => `school-supervision-roster-${id}`,
+  /** The info sheet of one child in a supervision the teacher holds. */
+  supervisionStudentSheet: (instanceId: string, studentId: string) =>
+    `school-supervision-student-sheet-${encodeURIComponent(instanceId)}-${encodeURIComponent(studentId)}`,
 } as const;
 
 export const weekProtocolKeys = {
@@ -283,10 +322,55 @@ export const databaseKeys = {
   counts: () => "/api/database/counts",
   // The SSE hook revalidates every key containing this name.
   calendarPeriods: () => "database-calendar-periods-list",
+  /** The id/name options of one API list for a select, per query. */
+  /** The choice of one loaded select field of a database form, by resource. */
+  formFieldOptions: (resource: string) =>
+    `database-form-options-${encodeURIComponent(resource)}`,
+  entityOptions: (entityType: string, query: string) =>
+    `database-entity-options-${entityType}-${encodeURIComponent(query)}`,
 } as const;
 
 export const homeLayoutKeys = {
   key: () => "home-layout",
+} as const;
+
+/** Cards of the start page. Keys describe the response, not the card. */
+export const homeKeys = {
+  /**
+   * Today's planned blocks without rosters. „Ablauf des Tages“, „Mein Tag“
+   * and the now strip share it; a settings change refreshes it.
+   */
+  dayFlow: () => "home-day-flow",
+  /** Birthdays of the current week, or of the week starting `weekStart`. */
+  birthdayOverview: (weekStart?: string | null) =>
+    weekStart ? `birthday-overview:${weekStart}` : "birthday-overview",
+  staffSummary: () => "home-staff-summary",
+  ownGroup: (accountId: string) => `home-own-group:${accountId}`,
+} as const;
+
+/**
+ * Lists of the request page (#4988): the merged request feed and the care
+ * withdrawals, per account, view and everything the sources query. A
+ * decision refreshes every view and filter of a list through its family.
+ */
+export type RequestFeedName = "request-feed" | "care-withdrawal-feed";
+export const requestFeedKeys = {
+  family: (name: RequestFeedName, accountId: string | undefined) =>
+    `${name}:${accountId}:`,
+  key: (
+    name: RequestFeedName,
+    accountId: string | undefined,
+    view: "open" | "history",
+    parts: readonly unknown[],
+  ): string | null =>
+    accountId ? `${name}:${accountId}:${view}:${JSON.stringify(parts)}` : null,
+} as const;
+
+/** Dateiablage: the folders, the files of one folder and the audience choices. */
+export const fileKeys = {
+  folders: () => "files-folders",
+  folder: (folderId: string) => `files-folder-${folderId}`,
+  audience: () => "files-audience",
 } as const;
 
 export const schoolSetupKeys = {
@@ -308,6 +392,20 @@ export const parentAnnouncementKeys = {
   detail: (id: string) => `parent-announcement-${id}`,
   pollEvaluation: (id: string) =>
     `parent-announcement-poll-evaluation-${encodeURIComponent(id)}`,
+  // Serienbriefe (#4813): the placeholders per portal and the children a
+  // letter preview can show.
+  letterPlaceholders: (base = "ogs") => `parent-letter-placeholders-${base}`,
+  letterPreview: (base = "ogs", studentId: string, body: string) =>
+    `parent-letter-preview-${base}-${studentId}-${body}`,
+  letterPreviewChildren: (scope: string) =>
+    `parent-letter-preview-children-${encodeURIComponent(scope)}`,
+  /** Activities a parent announcement can target. */
+  targetActivities: () => "parent-announcements-activities",
+  /** School classes a parent announcement can target. */
+  targetClasses: () => "parent-announcements-classes",
+  /** Child search by name in the target picker. */
+  targetStudentSearch: (search: string) =>
+    `parent-announcements-student-search-${search}`,
   preview(data: unknown, id: string) {
     const row = previewRow(data, id);
     const name = previewText(row?.title);
@@ -349,52 +447,37 @@ export const timeTrackingKeys = {
     `time-tracking-own-shifts-week-${from}-${to}`,
   ownShiftsAhead: (from: string, to: string) =>
     `time-tracking-own-shifts-week-ahead-${from}-${to}`,
-} as const;
-
-/** Träger metadata only. Registrations, people and audit logs are never cached. */
-export const traegerKeys = {
-  schools: () => "traeger-schools",
-  school: (id: string) => `traeger-school-${encodeURIComponent(id)}`,
-  schoolsAlerts: () => "traeger-schools-alerts",
-  keyDateCounts: () => "traeger-key-date-counts",
-  occupancy: () => "traeger-occupancy",
-  // Ankunft und Abholung eines Zeitraums (#4714): Durchschnitte, keine Kinder.
-  arrivalPickupTimes: (from: string, to: string) =>
-    `traeger-arrival-pickup-times-${from}-${to}`,
-  // Tagesmeldung Mecklenburg-Vorpommern eines Zeitraums (#4717): Zahlen, keine Kinder.
-  dailyAttendance: (from: string, to: string) =>
-    `traeger-daily-attendance-${from}-${to}`,
-  periodsFamily: "traeger-holiday-period-",
-  periods: () => "traeger-holiday-period-list",
-  period: (id: string) =>
-    `traeger-holiday-period-detail-${encodeURIComponent(id)}`,
-  settings: () => "traeger-settings-schema",
-  // Kriterien der Platzvergabe (#4700): Namen und Fragen, keine Antworten.
-  holidayCriteria: () => "traeger-holiday-criteria",
-  // Schließtage und Feiertage eines Jahres (#4702), keine Personendaten.
+  /** Einstellungen der Zeiterfassung der Schule. */
+  config: () => "time-tracking-config",
+  /** Feiertage und Schließtage im sichtbaren Zeitraum der Tabelle. */
+  holidays: (from: string, to: string) =>
+    `time-tracking-holidays-${from}-${to}`,
   closingDays: (from: string, to: string) =>
-    `traeger-closing-days-${from}-${to}`,
-  // Offene Hinweise an Eltern zu Schließtagen in Ferienwochen (#6434):
-  // Wochen und Zahlen, keine Namen.
-  holidayClosures: () => "traeger-holiday-closures-pending",
-  billingRuns: () => "traeger-billing-run-list",
-  // Geteilte Dokumente (#4692): Titel, Dateiname und Freigaben, keine Inhalte.
-  documents: () => "traeger-document-list",
-  documentAudiences: () => "traeger-document-audiences",
-  // Anmeldephasen und Angebote des Trägers (#4704): Entwürfe, Versionen und
-  // das Ergebnis je Schule, keine Personendaten.
-  // Berichtsvorlagen (#4716): Name, Abschnitte, Stichtag und Sozialräume,
-  // keine Personendaten.
-  reportTemplates: () => "traeger-report-templates",
-  catalogFamily: "traeger-catalog-phase-",
-  catalogPhases: () => "traeger-catalog-phase-list",
-  catalogPhase: (id: string) =>
-    `traeger-catalog-phase-detail-${encodeURIComponent(id)}`,
-  periodPreview(data: unknown, id: string): ListPreview | undefined {
-    const row = previewRow(data, id);
-    const name = previewText(row?.name);
-    return name ? { id, name } : undefined;
-  },
+    `time-tracking-closing-days-${from}-${to}`,
+  /** Eigene Einsätze von heute: Startseite und Zeiterfassung teilen sie. */
+  ownAssignmentsToday: (today: string) =>
+    `time-tracking-own-assignments-today-${today}`,
+  /** Eigene Tagesprojektion im Zeitraum (#2443). */
+  scheduleTargets: (from: string, to: string) =>
+    `time-tracking-schedule-targets-${from}-${to}`,
+  /** Eigene Monatskarte. */
+  monthSummary: (year: number, month: number) =>
+    `time-tracking-month-summary-${year}-${month}`,
+  /** Eigener Arbeitszeitplan; Präfix „time-tracking-own-schedule-“ im SSE. */
+  ownSchedule: (staffId: string) => `time-tracking-own-schedule-${staffId}`,
+  /** Eigene Schichten eines Tages für die Stempeluhr. */
+  ownShiftsToday: (day: string) => `time-tracking-own-shifts-today-${day}`,
+  /** Eigene Arbeitsblöcke für das Wochendiagramm. */
+  history: (from: string, to: string) => `time-tracking-history-${from}-${to}`,
+  /**
+   * Eigene Arbeitsblöcke, Abwesenheiten und Schichten der Tabelle. Alle
+   * beginnen mit „time-tracking-table“, das ein Stempeln neu lädt.
+   */
+  table: (from: string, to: string) => `time-tracking-table-${from}-${to}`,
+  tableAbsences: (from: string, to: string) =>
+    `time-tracking-table-absences-${from}-${to}`,
+  tableShifts: (from: string, to: string) =>
+    `time-tracking-table-shifts-${from}-${to}`,
 } as const;
 
 /** Exact list identity shared with intent; preserve the SSE group segment. */
@@ -467,6 +550,8 @@ export const holidayKeys = {
   /** Zuordnung der eigenen Kinder einer Ferienwoche (#6678). */
   ownChildren: (weekId: string) =>
     `holiday-own-children:${encodeURIComponent(weekId)}`,
+  /** Die Kinder einer ausgerichteten Ferienwoche. */
+  participants: (weekId: string) => `holiday-participants:${weekId}`,
   /** Eigene Kinder in Ferienwochen anderer OGS (#6679). */
   homeSchoolBookings: () => "holiday-home-school-bookings",
   /** Feriengruppen, deren Woche noch nicht begonnen hat (#6680). */

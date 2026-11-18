@@ -403,6 +403,7 @@ func checkMissingSetupTestDB(t *testing.T, root string) []string {
 		"setupOverviewAPI",               // api/staff overview/export tests (#1417) — wraps setupTestContext
 		"newTransitionFixture",           // services/education grade-transition workflow tests — wraps SetupTestDB
 		"buildLifecycle",                 // modules/timetable/compose/httpintegration instance-lifecycle tests — wraps SetupTestDB
+		"newFeedFixture",                 // modules/timetable/compose/httpintegration cancellation and reinstatement feed tests — wraps buildLifecycle
 		"newCareFixture",                 // modules/careplan/contracttest care-request tests — wraps SetupTestDB
 		"setupDashboardContext",          // api/active supervision-dashboard tests — wraps SetupActiveModule → SetupTestDB
 		"setupStudentsRoute",             // modules/peopledirectory/inbound/students route suites — wraps testutil.SetupStudentModule → SetupTestDB

@@ -1,18 +1,10 @@
 "use client";
 
-import {
-  Suspense,
-  use,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { Suspense, use, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { createLogger } from "~/lib/logger";
 import { formatDate } from "~/lib/date-helpers";
-import type { SettingsSchema } from "~/lib/settings-api";
+import { applyOptimisticSchemaUpdate } from "~/lib/settings-api";
 import {
   fetchOperatorSettingsSchema,
   setOperatorSettingValue,
@@ -26,7 +18,14 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import { useApiLoadError } from "~/contexts/ToastContext";
+import {
+  useSwrLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import { useAccessControlledData } from "~/lib/hooks/use-access-controlled-data";
+import { useSWRAuth } from "~/lib/swr";
+import { operatorKeys } from "~/lib/swr/operator-keys";
+import { operatorProvisioningKeys } from "~/lib/swr/portal-keys";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { useBookingAuthorityImpact } from "./use-booking-authority-impact";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -79,7 +78,6 @@ export default function OperatorSchoolSettingsPage({ params }: PageProps) {
 
 function OperatorSchoolSettingsPageContent({ params }: PageProps) {
   const { id: schoolId } = use(params);
-  const { status: sessionStatus } = useSession();
   const searchParams = useSearchParams();
   const backHref = useMemo(
     () =>
@@ -91,78 +89,50 @@ function OperatorSchoolSettingsPageContent({ params }: PageProps) {
       ? "Zurück zu den Schulen"
       : "Zurück zur Schule";
 
-  const [schema, setSchema] = useState<SettingsSchema | null>(null);
-  const [schoolName, setSchoolName] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const schemaLoad = useApiLoadError();
-  const { show: showSchemaError, clear: clearSchemaError } = schemaLoad;
-
-  const loadSchema = useCallback(async () => {
-    setLoading(true);
-    clearSchemaError();
-    try {
-      const data = await fetchOperatorSettingsSchema(schoolId);
-      setSchema(data);
-    } catch (err) {
-      logger.error("operator_settings_load_failed", {
-        school_id: schoolId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void showSchemaError(err, {
-        object: "die Liste der Einstellungen",
-        retry: () => void loadSchema(),
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [schoolId, showSchemaError, clearSchemaError]);
+  const schemaKey = operatorKeys.schoolSettingsSchema(schoolId);
+  const {
+    data: cachedSchema,
+    error: schemaError,
+    mutate: mutateSchema,
+  } = useSWRAuth(schemaKey, () => fetchOperatorSettingsSchema(schoolId), {
+    keepPreviousData: false,
+  });
+  // A refused read drops the shown values instead of offering their fields.
+  const { data: schema } = useAccessControlledData(
+    schemaKey,
+    cachedSchema,
+    schemaError,
+  );
+  // A failed refresh after a save keeps the shown values and reports the
+  // stale list, so the error shows also while data is there.
+  const schemaLoadError = useSwrLoadError(
+    schemaError,
+    "die Liste der Einstellungen",
+    () => mutateSchema(),
+  );
+  const loading = !schema && !schemaError;
 
   // The heading names the school; a failed lookup is shown in place (#2519).
-  const schoolNameLoad = useApiLoadError();
-  const { show: showSchoolNameError, clear: clearSchoolNameError } =
-    schoolNameLoad;
-  const loadSchoolName = useCallback(async () => {
-    clearSchoolNameError();
-    try {
-      const schools = await operatorProvisioningService.listSchools();
-      const school = schools.find((s) => s.id === schoolId);
-      if (school) setSchoolName(school.name);
-    } catch (err) {
-      logger.warn("operator_school_name_lookup_failed", {
-        school_id: schoolId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void showSchoolNameError(err, {
-        object: "die Bezeichnung der Schule",
-        retry: () => void loadSchoolName(),
-      });
-    }
-  }, [schoolId, showSchoolNameError, clearSchoolNameError]);
-
-  // After a save the schema is read again for the server state and DependsOn.
-  // A failed refresh keeps the shown values and reports the stale list.
-  const refreshSchema = useCallback(async () => {
-    try {
-      const fresh = await fetchOperatorSettingsSchema(schoolId);
-      clearSchemaError();
-      setSchema(fresh);
-    } catch (err) {
-      logger.warn("operator_settings_refresh_failed", {
-        school_id: schoolId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void showSchemaError(err, {
-        object: "die Liste der Einstellungen",
-        retry: () => void loadSchema(),
-      });
-    }
-  }, [schoolId, showSchemaError, clearSchemaError, loadSchema]);
-
-  useEffect(() => {
-    if (sessionStatus !== "authenticated") return;
-    void loadSchema();
-    void loadSchoolName();
-  }, [sessionStatus, loadSchema, loadSchoolName]);
+  const {
+    data: schools,
+    error: schoolsError,
+    mutate: reloadSchools,
+  } = useSWRAuth(
+    operatorProvisioningKeys.schools(),
+    () => operatorProvisioningService.listSchools(),
+    {
+      keepPreviousData: true,
+      revalidateOnFocus: false,
+      dedupingInterval: 5000,
+    },
+  );
+  const schoolNameLoad = useSwrResourceLoadError(
+    [{ data: schools, error: schoolsError }],
+    "die Bezeichnung der Schule",
+    () => reloadSchools(),
+  );
+  const schoolName =
+    schools?.find((school) => school.id === schoolId)?.name ?? "";
 
   // Save and reset throw the ApiError of a failed request; the field shows
   // it on the shared error path (#2519).
@@ -170,18 +140,25 @@ function OperatorSchoolSettingsPageContent({ params }: PageProps) {
     async (key: string, value: unknown): Promise<void> => {
       await setOperatorSettingValue(schoolId, key, value);
       logger.info("operator_setting_saved", { school_id: schoolId, key });
-      void refreshSchema();
+      // The saved value shows at once, as on the school page: a stale field
+      // would offer „Zurücksetzen“ for a value just saved (#7218).
+      await mutateSchema(
+        (current) =>
+          current ? applyOptimisticSchemaUpdate(current, key, value) : current,
+        { revalidate: false },
+      );
+      void mutateSchema();
     },
-    [schoolId, refreshSchema],
+    [schoolId, mutateSchema],
   );
 
   const handleReset = useCallback(
     async (key: string): Promise<void> => {
       await resetOperatorSettingValue(schoolId, key);
       logger.info("operator_setting_reset", { school_id: schoolId, key });
-      void refreshSchema();
+      void mutateSchema();
     },
-    [schoolId, refreshSchema],
+    [schoolId, mutateSchema],
   );
 
   const handleReveal = useCallback(
@@ -297,7 +274,7 @@ function OperatorSchoolSettingsPageContent({ params }: PageProps) {
       }
     >
       <LoadErrorAlert error={schoolNameLoad.error} />
-      <LoadErrorAlert error={schemaLoad.error} />
+      <LoadErrorAlert error={schemaLoadError} />
 
       {schema && (schema.tabs?.length ?? 0) === 0 ? (
         <SectionCard>

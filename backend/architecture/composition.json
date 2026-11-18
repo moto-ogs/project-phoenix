@@ -18,6 +18,7 @@
     "phoenix cleanup timetable stats",
     "phoenix cleanup tokens",
     "phoenix cleanup visits",
+    "phoenix gencontract",
     "phoenix gendoc",
     "phoenix migrate",
     "phoenix migrate preflight",
@@ -39,6 +40,7 @@
     "phoenix tenant return purge",
     "phoenix tenant return release",
     "phoenix tenant return revoke",
+    "phoenix upload-seal",
     "phoenix worker"
   ],
   "constructor_calls": [
@@ -79,7 +81,7 @@
       "declaration": "TestNewWorkerRejectsMissingJobs",
       "target": "services/scheduler.NewWorker",
       "lines": [
-        101
+        102
       ],
       "tables": []
     },
@@ -89,7 +91,7 @@
       "declaration": "TestNewWorkerRejectsMissingRuntimeDependencies",
       "target": "services/scheduler.NewWorker",
       "lines": [
-        93
+        94
       ],
       "tables": []
     },
@@ -99,8 +101,8 @@
       "declaration": "TestNewWorkerRejectsMissingSettings",
       "target": "services/scheduler.NewWorker",
       "lines": [
-        280,
-        284
+        281,
+        285
       ],
       "tables": []
     },
@@ -110,7 +112,7 @@
       "declaration": "TestNewWorkerRejectsMissingTokenCleanupDependencies",
       "target": "services/scheduler.NewWorker",
       "lines": [
-        130
+        131
       ],
       "tables": []
     },
@@ -120,8 +122,8 @@
       "declaration": "TestNewWorkerRejectsTypedNilDependencies",
       "target": "services/scheduler.NewWorker",
       "lines": [
-        146,
-        157
+        147,
+        158
       ],
       "tables": []
     }

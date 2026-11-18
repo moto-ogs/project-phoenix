@@ -14,7 +14,7 @@
   "legalGermanNotice": "Diese rechtlichen Texte liegen verbindlich auf Deutsch vor.",
   "previewError": "Dies ist eine Vorschau. Aus dieser Ansicht wird keine Anmeldung abgeschickt.",
   "missingPhase": "Für diese Anmeldung fehlt der Anmeldezeitraum.",
-  "fixMarked": "Bitte korrigieren Sie die rot markierten Felder.",
+  "fixMarked": "Bei einigen Feldern steht ein Hinweis. Bitte korrigieren Sie diese Felder.",
   "consentSummary": "Bitte bestätigen Sie alle erforderlichen Zustimmungen.",
   "sections": {
     "guardianKicker": "Schritt 1",
@@ -137,6 +137,20 @@
     "photoTitle": "Fotoeinwilligung"
   },
   "captchaMisconfigured": "Die Online-Anmeldung ist gerade nicht möglich. Das liegt nicht an Ihnen. Bitte wenden Sie sich an die {careTerm}.",
+  "captchaHelp": {
+    "hint": "Die Sicherheitsprüfung lädt nicht oder bleibt stehen?",
+    "restart": "Prüfung neu starten",
+    "restartTooltip": "Lädt die Prüfung neu, Ihre Angaben bleiben erhalten.",
+    "failedTitle": "Die Sicherheitsprüfung lädt nicht",
+    "failedText": "Oft blockiert ein Werbeblocker die Prüfung. So geht es weiter:",
+    "failedStepBlocker": "Schalten Sie den Werbeblocker für diese Seite aus.",
+    "failedStepRestart": "Wählen Sie „Prüfung neu starten“.",
+    "failedStepBrowser": "Klappt es nicht? Kopieren Sie den Link und öffnen Sie ihn in einem anderen Browser, zum Beispiel Chrome. Dort tragen Sie Ihre Angaben neu ein.",
+    "copyLink": "Link kopieren",
+    "copyLinkTooltip": "Kopiert die Adresse dieser Seite für einen anderen Browser.",
+    "linkCopied": "Link kopiert",
+    "copyFailed": "Kopieren geht hier nicht. Das ist der Link:"
+  },
   "structured": {
     "yes": "Ja",
     "no": "Nein",

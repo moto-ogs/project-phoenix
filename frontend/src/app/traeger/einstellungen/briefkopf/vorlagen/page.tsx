@@ -7,23 +7,25 @@
 
 import { FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { StatusBadge } from "~/components/ui/status-badge";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   DOCUMENT_TEMPLATE_KIND_LABELS,
   DOCUMENT_TEMPLATE_KIND_USE,
   type DocumentTemplateSummary,
   fetchDocumentTemplates,
 } from "~/lib/traeger-document-templates";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerVorlagenPage" });
 
 const COLUMNS: DataTableColumn<DocumentTemplateSummary>[] = [
   {
@@ -79,30 +81,15 @@ const COLUMNS: DataTableColumn<DocumentTemplateSummary>[] = [
 
 export default function TraegerVorlagenPage() {
   const router = useRouter();
-  const [templates, setTemplates] = useState<DocumentTemplateSummary[] | null>(
-    null,
+  const {
+    data: templates,
+    loading,
+    error,
+  } = useTraegerResource(
+    traegerKeys.documentTemplates(),
+    fetchDocumentTemplates,
+    "die Liste der Vorlagen",
   );
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-
-  const load = useCallback(async () => {
-    try {
-      setTemplates(await fetchDocumentTemplates());
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_document_templates_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Liste der Vorlagen",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const own = templates?.filter((template) => !template.standard).length ?? 0;
 
@@ -126,9 +113,24 @@ export default function TraegerVorlagenPage() {
           />
         ) : null
       }
-      statsLoading={!templates && !pageLoad.error}
-      error={pageLoad.error}
-      loading={!pageLoad.error && !templates}
+      statsLoading={loading}
+      actions={
+        <TraegerListExportMenu
+          download={(format) =>
+            downloadTraegerList(
+              "/api/traeger/master-data/document-templates/export",
+              format,
+            )
+          }
+          scope={traegerExportScope()}
+          ariaLabel="Vorlagen herunterladen"
+          fallbackName="vorlagen"
+          errorObject="die Liste der Vorlagen"
+          unavailable={!templates || templates.length === 0}
+        />
+      }
+      error={error}
+      loading={loading}
     >
       {templates ? (
         <DataTable

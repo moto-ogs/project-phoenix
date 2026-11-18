@@ -10,8 +10,9 @@ import {
   waitFor,
   fireEvent,
 } from "@testing-library/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { GraduatesModal } from "./graduates-modal";
@@ -20,9 +21,25 @@ import type {
   TransitionHistoryEntry,
 } from "~/lib/grade-transition-api";
 
+vi.unmock("swr");
+
+const session = {
+  data: { user: { id: "1", tenantId: 1, scope: "tenant" } },
+  status: "authenticated",
+};
+vi.mock("next-auth/react", () => ({ useSession: () => session }));
+
 // Fehler einer Aktion ohne Formular kommen als Toast (#2517).
+function Providers({ children }: { readonly children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>{children}</ToastProvider>
+    </SWRConfig>
+  );
+}
+
 function render(ui: ReactElement) {
-  return rtlRender(ui, { wrapper: ToastProvider });
+  return rtlRender(ui, { wrapper: Providers });
 }
 
 const toastSuccess = vi.fn();

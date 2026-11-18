@@ -16,7 +16,7 @@ type AuthEvent struct {
 	UserAgent    string                 `bun:"user_agent" json:"user_agent,omitempty"`
 	ErrorMessage string                 `bun:"error_message" json:"error_message,omitempty"`
 	Metadata     map[string]interface{} `bun:"metadata,type:jsonb" json:"metadata,omitempty"`
-	CreatedAt    time.Time              `bun:"created_at,notnull,default:now()" json:"created_at"`
+	CreatedAt    time.Time              `bun:"created_at,nullzero,notnull" json:"created_at"`
 }
 
 // EventType constants
@@ -106,10 +106,6 @@ func (ae *AuthEvent) Validate() error {
 		return errors.New("IP address is required")
 	}
 
-	if ae.CreatedAt.IsZero() {
-		ae.CreatedAt = time.Now()
-	}
-
 	return nil
 }
 
@@ -151,7 +147,6 @@ func NewAuthEvent(accountID int64, eventType string, success bool, ipAddress str
 		EventType: eventType,
 		Success:   success,
 		IPAddress: ipAddress,
-		CreatedAt: time.Now(),
 		Metadata:  make(map[string]interface{}),
 	}
 }

@@ -1,18 +1,31 @@
+import { useEffect } from "react";
+import { useSWRAuth } from "~/lib/swr";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   act,
   fireEvent,
   render,
   screen,
   waitFor,
+  waitForElementToBeRemoved,
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import { ApiError } from "~/lib/api-error";
 import { ErrorContactProvider } from "~/lib/error-contact";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
+
+vi.unmock("swr");
+vi.mock("~/lib/traeger-list-export", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/traeger-list-export")>()),
+  downloadTraegerList: vi.fn(),
+}));
 
 const api = vi.hoisted(() => ({
   fetchTraegerBuero: vi.fn(),
@@ -28,7 +41,14 @@ vi.mock("~/lib/traeger-api", () => api);
 vi.mock("next-auth/react", () => ({
   signOut: vi.fn(),
   useSession: () => ({
-    data: { user: { email: "leitung@traeger.example" } },
+    data: {
+      user: {
+        id: "1",
+        scope: "org",
+        orgId: 7,
+        email: "leitung@traeger.example",
+      },
+    },
     status: "authenticated",
   }),
 }));
@@ -89,11 +109,26 @@ const HISTORY = {
   hasMore: true,
 };
 
+function BackgroundRefusal() {
+  const reader = useTraegerResource(
+    traegerKeys.buero(),
+    api.fetchTraegerBuero,
+    "die Liste der Personen",
+  );
+  const { reload, refused } = reader;
+  useEffect(() => {
+    reload();
+  }, [reload]);
+  return refused ? <span>Zugriff verweigert</span> : null;
+}
+
 function renderPage() {
   return render(
-    <ToastProvider>
-      <TraegerAccountsPage />
-    </ToastProvider>,
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>
+        <TraegerAccountsPage />
+      </ToastProvider>
+    </SWRConfig>,
   );
 }
 
@@ -109,6 +144,108 @@ describe("TraegerAccountsPage", () => {
     for (const fn of Object.values(api)) fn.mockReset();
     api.fetchTraegerBuero.mockResolvedValue(BUERO);
     api.fetchTraegerAccountHistory.mockResolvedValue(HISTORY);
+  });
+
+  it.each([
+    "Mitglieder und Einladungen herunterladen",
+    "Verlauf herunterladen",
+  ])(
+    "withdraws office and history caches after a refused %s",
+    async (downloadLabel) => {
+      vi.mocked(downloadTraegerList).mockRejectedValue(
+        new ApiError("refused", 403),
+      );
+      let office!: ReturnType<typeof useSWRAuth>;
+      let history!: ReturnType<typeof useSWRAuth>;
+      function Probe() {
+        office = useSWRAuth(traegerKeys.buero(), api.fetchTraegerBuero);
+        history = useSWRAuth(
+          traegerKeys.accountHistory(),
+          api.fetchTraegerAccountHistory,
+        );
+        return null;
+      }
+      function View({ open }: { open: boolean }) {
+        return (
+          <>
+            {open && <TraegerAccountsPage />}
+            <Probe />
+          </>
+        );
+      }
+      function Providers({ children }: { children: React.ReactNode }) {
+        return (
+          <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+            <ToastProvider>{children}</ToastProvider>
+          </SWRConfig>
+        );
+      }
+      const view = render(<View open />, { wrapper: Providers });
+      expect(await screen.findByText("Lea Leitung")).toBeVisible();
+      expect((await screen.findAllByText("Rollen geändert"))[0]).toBeVisible();
+      fireEvent.click(screen.getByRole("button", { name: downloadLabel }));
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Excel" }));
+      expect(
+        (
+          await screen.findAllByText(
+            catalogText("general.permission", "die Liste der Personen"),
+          )
+        )[0],
+      ).toBeVisible();
+      expect(office.readCurrent?.().data).toBeUndefined();
+      expect(history.readCurrent?.().data).toBeUndefined();
+      view.rerender(<View open={false} />);
+      api.fetchTraegerBuero.mockRejectedValue(new ApiError("offline", 503));
+      api.fetchTraegerAccountHistory.mockRejectedValue(
+        new ApiError("offline", 503),
+      );
+      view.rerender(<View open />);
+      expect(
+        (
+          await screen.findAllByText(
+            catalogText("general.permission", "die Liste der Personen"),
+          )
+        )[0],
+      ).toBeVisible();
+      expect(screen.queryByText("Lea Leitung")).not.toBeInTheDocument();
+      expect(screen.queryByText("Verlauf")).not.toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    "Rollen ändern",
+    "Namen eintragen",
+    "Einladung zurücknehmen",
+    "Person einladen",
+  ])("closes %s after a refused background read", async (action) => {
+    const { rerender } = renderPage();
+    await screen.findByText("Lea Leitung");
+    if (action === "Person einladen")
+      fireEvent.click(screen.getByRole("button", { name: action }));
+    else if (action === "Einladung zurücknehmen") {
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "Aktionen für die Einladung an neu@traeger.example",
+        }),
+      );
+      fireEvent.click(await screen.findByRole("menuitem", { name: action }));
+    } else {
+      await openMenu("kasse@traeger.example");
+      fireEvent.click(await screen.findByRole("menuitem", { name: action }));
+    }
+    expect(await screen.findByRole("dialog")).toBeVisible();
+    api.fetchTraegerBuero.mockRejectedValue(new ApiError("forbidden", 403));
+    rerender(
+      <SWRConfig value={{ errorRetryCount: 0 }}>
+        <ToastProvider>
+          <TraegerAccountsPage />
+          <BackgroundRefusal />
+        </ToastProvider>
+      </SWRConfig>,
+    );
+    // Anker: der zweite Leser hat denselben Schlüssel erneut gelesen und verweigert.
+    expect(await screen.findByText("Zugriff verweigert")).toBeVisible();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("lists the people with their roles and the open invitations", async () => {
@@ -503,11 +640,13 @@ describe("TraegerAccountsPage", () => {
   it("sends the billing role to the Leitung of the Träger-Büro", async () => {
     api.fetchTraegerBuero.mockRejectedValue(new ApiError("Forbidden", 403));
     render(
-      <ErrorContactProvider contact="traeger">
-        <ToastProvider>
-          <TraegerAccountsPage />
-        </ToastProvider>
-      </ErrorContactProvider>,
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <ErrorContactProvider contact="traeger">
+          <ToastProvider>
+            <TraegerAccountsPage />
+          </ToastProvider>
+        </ErrorContactProvider>
+      </SWRConfig>,
     );
 
     expect(
@@ -528,6 +667,51 @@ describe("TraegerAccountsPage", () => {
     ).toBeInTheDocument();
     expect(await screen.findByText("Verlauf")).toBeInTheDocument();
   });
+
+  it.each([
+    [403, "Mitglieder und Einladungen herunterladen"],
+    [403, "Verlauf herunterladen"],
+    [503, "Mitglieder und Einladungen herunterladen"],
+  ] as const)(
+    "keeps the page usable after a %s from %s",
+    async (status, downloadLabel) => {
+      vi.mocked(downloadTraegerList).mockRejectedValue(
+        new ApiError("download failed", status),
+      );
+      renderPage();
+      await screen.findAllByText("kasse@traeger.example");
+      await screen.findAllByText("Rollen geändert");
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: downloadLabel,
+        }),
+      );
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Excel" }));
+      const closeToast = await screen.findByRole("button", {
+        name: "Schließen",
+      });
+      fireEvent.click(closeToast);
+      await waitForElementToBeRemoved(closeToast);
+
+      if (status === 403) {
+        // Anker: nach dem Schließen des Toasts bleibt der Seitenfehler sichtbar.
+        expect(
+          await screen.findByText(
+            catalogText("general.permission", "die Liste der Personen"),
+          ),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByText("kasse@traeger.example"),
+        ).not.toBeInTheDocument();
+        expect(screen.queryByText("Verlauf")).not.toBeInTheDocument();
+      } else {
+        expect(
+          screen.getAllByText("kasse@traeger.example")[0],
+        ).toBeInTheDocument();
+        expect(screen.getByText("Verlauf")).toBeInTheDocument();
+      }
+    },
+  );
 
   it("reads the history again after a change", async () => {
     api.changeTraegerRoles.mockResolvedValue(undefined);

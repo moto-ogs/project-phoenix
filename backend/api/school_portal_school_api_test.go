@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/tokenprimitives"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -55,7 +56,7 @@ func setupSchoolRoute(t *testing.T, clocks ...func() time.Time) (*bun.DB, *schoo
 	t.Helper()
 
 	db, services, classDay, delivery := setupSchoolPortalModule(t, clocks...)
-	classDayResource := classdayhttp.NewResource(classDay.ClassDay, nil)
+	classDayResource := classdayhttp.NewResource(classDay.ClassDay, nil, classDay.Today)
 	timetableOwner, _ := NewActiveTestTimetable(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db), clocks...)
 	timetableResource := timetable.NewResource(timetable.Dependencies{
 		OperationsService: timetableOwner.TimetableOperations,
@@ -111,8 +112,8 @@ func newSchoolTimetableResource(db *bun.DB, resource *schoolportal.Resource, clo
 }
 
 func firstSchoolClock(clocks []func() time.Time) func() time.Time {
-	if len(clocks) == 0 {
-		return nil
+	if len(clocks) == 0 || clocks[0] == nil {
+		return time.Now
 	}
 	return clocks[0]
 }
@@ -141,7 +142,7 @@ func TestSchoolPortalTokenMatrix(t *testing.T) {
 	className := fmt.Sprintf("sm%d", time.Now().UnixNano()%100000)
 	testpkg.CreateTestClassTeacherForTenant(t, db, tenantID, staff.ID, className)
 
-	classDayResource := classdayhttp.NewResource(resource.ClassDay.(*classdayhttp.Resource).ClassDay, nil)
+	classDayResource := classdayhttp.NewResource(resource.ClassDay.(*classdayhttp.Resource).ClassDay, nil, calendar.CalendarDateClock())
 	schoolRouter := NewSchoolPortalHTTP(resource.AuthService, resource.MFAService, resource.Resets, classDayResource, newSchoolTimetableResource(db, resource), resource.StaffMessaging, nil, nil, nil).Router(SchoolSessionChain, ProtectedSchoolRoutes)
 
 	schoolClaims := sessiontoken.AppClaims{

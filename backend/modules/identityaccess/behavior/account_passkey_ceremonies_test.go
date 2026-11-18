@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 
+	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -19,21 +20,31 @@ import (
 // software authenticator answers the options, the composed owner verifies
 // them and Postgres keeps the rows.
 type accountPasskeyScene struct {
-	passkeys  identityaccess.AccountPasskeyFlows
+	passkeys identityaccess.AccountPasskeyFlows
+	// sessions validates the session a completed login minted.
+	sessions  identityaccess.Owner
 	db        *bun.DB
 	tenantID  int64
 	subdomain string
 	origin    string
+	// now is the owner's clock; the e-mail codes the scene seeds expire on it.
+	now func() time.Time
 }
 
 var passkeyCodeSequence atomic.Int64
 
 func newAccountPasskeyScene(t *testing.T, db *bun.DB) accountPasskeyScene {
 	t.Helper()
-	module := newMFATestModule(t, db, withDeliveringMailer(nil)...)
+	return newAccountPasskeySceneAt(t, db, time.Now)
+}
+
+// newAccountPasskeySceneAt composes the owner on now (ADR 0261).
+func newAccountPasskeySceneAt(t *testing.T, db *bun.DB, now func() time.Time) accountPasskeyScene {
+	t.Helper()
+	module := newMFATestModule(t, db, withDeliveringMailer([]api.AuthTestOption{api.WithAuthTestClock(now)})...)
 	require.NotNil(t, module.Passkeys)
 	tenantID, subdomain := testpkg.CreateTestTenant(t, db)
-	return accountPasskeyScene{passkeys: module.Passkeys, db: db, tenantID: tenantID, subdomain: subdomain, origin: "http://" + subdomain + ".localhost"}
+	return accountPasskeyScene{passkeys: module.Passkeys, sessions: module.Auth, db: db, tenantID: tenantID, subdomain: subdomain, origin: "http://" + subdomain + ".localhost", now: now}
 }
 
 // member creates an account that belongs to the scene's school.
@@ -49,7 +60,7 @@ func (s accountPasskeyScene) member(t *testing.T) int64 {
 func (s accountPasskeyScene) beginRegistration(t *testing.T, accountID int64) identityaccess.PasskeyCeremonyOptions {
 	t.Helper()
 	code := fmt.Sprintf("%06d", 100000+passkeyCodeSequence.Add(1))
-	seedTenantChallenge(t, mfaRecordRows(t, s.db), accountID, s.tenantID, code)
+	seedTenantChallengeExpiring(t, mfaRecordRows(t, s.db), accountID, s.tenantID, code, s.now().Add(identityaccess.MFAChallengeTTL))
 	options, err := s.passkeys.BeginAccountPasskeyRegistration(context.Background(), identityaccess.AccountPasskeyRegistrationStart{
 		AccountID: accountID, TenantID: s.tenantID, TenantSubdomain: s.subdomain, ExpectedOrigin: s.origin, Code: code,
 	})
@@ -226,7 +237,7 @@ func TestAccountPasskeySessionIsConsumedOnce(t *testing.T) {
 	require.ErrorIs(t, err, identityaccess.ErrPasskeySessionInvalid, "a replayed login is refused")
 
 	expired := scene.beginLogin(t, scene.tenantID, scene.subdomain)
-	_, err = db.NewRaw("UPDATE auth.passkey_sessions SET expires_at = now() - interval '1 minute' WHERE id = ?", expired.SessionID).Exec(ctx)
+	_, err = db.NewRaw("UPDATE auth.passkey_sessions SET expires_at = ? WHERE id = ?", time.Now().Add(-time.Minute), expired.SessionID).Exec(ctx)
 	require.NoError(t, err)
 	_, err = scene.passkeys.FinishAccountPasskeyLogin(ctx, identityaccess.AccountPasskeyLoginFinish{
 		SessionID: expired.SessionID, CredentialResponse: authenticator.Assert(t, expired.Options, scene.origin),

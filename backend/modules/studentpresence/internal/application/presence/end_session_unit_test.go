@@ -551,7 +551,7 @@ func TestEndActivitySessionLocksGroupBeforeEnding(t *testing.T) {
 		t.Fatal("the legacy supervision end must not run: the presence owner ends the supervisions")
 		return nil
 	}}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal,
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal,
 		GroupRepo: groupRepo, SchoolPresence: visitRepo, SupervisorRepo: supervisorRepo,
 	}}
 
@@ -570,7 +570,7 @@ func TestProcessSessionTimeoutLocksGroupBeforeEnding(t *testing.T) {
 			return &ports.ActiveGroup{ID: 1}, nil
 		},
 	}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal,
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal,
 		GroupRepo: groupRepo,
 		SchoolPresence: &mockVisitRepository{
 			findByActiveGroupIDFunc: func(context.Context, int64) ([]*studentpresence.Visit, error) {
@@ -607,7 +607,7 @@ func TestEndSupervisionLocksGroupBeforeRelease(t *testing.T) {
 			return nil
 		},
 	}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal,
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal,
 		GroupRepo: &mockGroupRepository{findByIDForUpdateFunc: func(context.Context, int64) (*ports.ActiveGroup, error) {
 			order = append(order, "group-lock")
 			return &ports.ActiveGroup{ID: 1}, nil
@@ -641,7 +641,7 @@ func TestEndActivitySessionDoesNotBroadcastWhenCommitFails(t *testing.T) {
 		return []*ports.GroupSupervisor{}, nil
 	}}
 	broadcaster := &recordingEventPublisher{}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal,
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal,
 		DB: db, GroupRepo: groupRepo, SchoolPresence: visitRepo,
 		SupervisorRepo: supervisorRepo, Broadcaster: broadcaster,
 	}}
@@ -661,7 +661,7 @@ func TestEndActiveGroupSessionDoesNotBroadcastWhenOuterCommitFails(t *testing.T)
 	mock.ExpectBegin()
 	mock.ExpectCommit().WillReturnError(errors.New("outer commit failed"))
 	broadcaster := &recordingEventPublisher{}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal,
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal,
 		DB: db,
 		GroupRepo: &mockGroupRepository{findByIDForUpdateFunc: func(context.Context, int64) (*ports.ActiveGroup, error) {
 			return &ports.ActiveGroup{ID: 1}, nil
@@ -718,7 +718,7 @@ func TestEndActivitySession_FindByActiveGroupIDError(t *testing.T) {
 	supervisorRepo := &mockGroupSupervisorRepository{}
 
 	// Create service with mocks
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, GroupRepo: groupRepo, SchoolPresence: visitRepo, SupervisorRepo: supervisorRepo, Broadcaster: nil}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, GroupRepo: groupRepo, SchoolPresence: visitRepo, SupervisorRepo: supervisorRepo, Broadcaster: nil}}
 
 	// ACT
 	err = svc.EndActivitySession(ctx, 1)
@@ -749,9 +749,9 @@ func TestAssignMultipleSupervisorsNonCritical_PreservesBestEffortAssignments(t *
 		},
 	}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SupervisorRepo: supervisorRepo}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SupervisorRepo: supervisorRepo}}
 
-	svc.assignMultipleSupervisorsNonCritical(ctx, 77, []int64{11, 22, 33, 11}, time.Now())
+	svc.assignMultipleSupervisorsNonCritical(ctx, 77, []int64{11, 22, 33, 11}, presenceTestNow())
 
 	assert.ElementsMatch(t, []int64{11, 33}, createdStaffIDs)
 }
@@ -801,7 +801,7 @@ func TestEndActivitySession_EndSupervisionError(t *testing.T) {
 	}
 
 	// Create service with mocks
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, GroupRepo: groupRepo, SchoolPresence: visitRepo, SupervisorRepo: supervisorRepo, Broadcaster: nil}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, GroupRepo: groupRepo, SchoolPresence: visitRepo, SupervisorRepo: supervisorRepo, Broadcaster: nil}}
 
 	// ACT
 	err = svc.EndActivitySession(ctx, 1)

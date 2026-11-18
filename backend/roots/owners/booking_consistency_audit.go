@@ -3,6 +3,7 @@ package owners
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/auditlog"
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
@@ -21,14 +22,15 @@ type BookingConsistencyAudit func(context.Context, auditModels.Date) (*auditMode
 // builds it over the caller's tenant transaction, with the root database as
 // the fallback outside one; People Directory names the alumni the audit
 // excludes, Care Plan supplies the offerings and Enrollment the approved
-// bookings, each through a port the Audit composition declares.
-func NewBookingConsistencyAudit(db transactionruntime.Database, students peopledirectory.StudentQuery, carePlan careplan.Query) (BookingConsistencyAudit, error) {
+// bookings, each through a port the Audit composition declares; now is
+// Enrollment's root clock (ADR 0265) and required.
+func NewBookingConsistencyAudit(db transactionruntime.Database, students peopledirectory.StudentQuery, carePlan careplan.Query, now func() time.Time) (BookingConsistencyAudit, error) {
 	if db.Pool() == nil || students == nil || carePlan == nil {
 		return nil, fmt.Errorf("booking consistency audit: database, People Directory and Care Plan are required")
 	}
 	audits, err := auditCompose.NewPersistence(auditCompose.PersistenceDependencies{
 		DB:         db.Pool(),
-		Enrollment: auditEnrollmentBookings{bookings: NewEnrollmentBookings()},
+		Enrollment: auditEnrollmentBookings{bookings: NewEnrollmentBookings(now)},
 		Students:   auditStudentDirectory{students: students},
 		CarePlan:   auditCarePlanDirectory{query: carePlan},
 	})

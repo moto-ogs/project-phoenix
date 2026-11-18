@@ -6,10 +6,11 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { BillingRunDetail } from "~/lib/traeger-billing-api";
 import { catalogText } from "~/test/error-catalog-text";
+import { testClockDay } from "~/test/clock";
 
 const { api } = vi.hoisted(() => ({
   api: {
@@ -36,9 +37,17 @@ const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 const { session } = vi.hoisted(() => ({
   session: { permissions: [] as string[] },
 }));
-vi.mock("next-auth/react", () => ({
+vi.mock("next-auth/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next-auth/react")>()),
   useSession: () => ({
-    data: { user: { permissions: session.permissions } },
+    data: {
+      user: {
+        id: "traeger-test",
+        scope: "org",
+        orgId: 7,
+        permissions: session.permissions,
+      },
+    },
     status: "authenticated",
   }),
 }));
@@ -50,6 +59,27 @@ vi.mock("~/lib/traeger-export-handovers-api", async (importOriginal) => ({
   fetchExportRecipients: () => new Promise(() => undefined),
 }));
 
+// The SEPA direct debits of the run (#4697) are tested on their own: no
+// family pays by direct debit here.
+vi.mock("~/lib/traeger-sepa-debits-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/traeger-sepa-debits-api")>()),
+  fetchSepaDebitRun: () =>
+    Promise.resolve({
+      creditorId: "DE98ZZZ09999999999",
+      creditorName: "Träger",
+      creditorIbanMasked: "•••• 3000",
+      accountMissing: false,
+      messageId: "",
+      count: 0,
+      totalCents: 0,
+      groups: [],
+      pastDue: 0,
+      debits: [],
+      submitted: [],
+      left: [],
+      submittedAt: null,
+    }),
+}));
 vi.mock("~/lib/traeger-billing-api", () => api);
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",
@@ -61,6 +91,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 import TraegerBillingRunPage from "./page";
+
+vi.unmock("swr");
 
 const PREVIEW: BillingRunDetail = {
   id: "9",
@@ -195,9 +227,9 @@ const CORRECTED: BillingRunDetail = {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerBillingRunPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -613,9 +645,12 @@ describe("TraegerBillingRunPage", () => {
   };
 
   it("creates the letters of a released run once", async () => {
+    // The form proposes payment two weeks after today.
+    const dueOn = testClockDay(14);
+    const [dueYear, dueMonth, dueDay] = dueOn.split("-");
     api.fetchBillingRun.mockResolvedValue(RELEASED);
     api.createBillingLetters.mockResolvedValue({
-      paymentDueOn: "2026-09-23",
+      paymentDueOn: dueOn,
       notes: "Hausschuhe mitbringen.",
       emergencyContacts: [{ name: "OGS Am Lindenhof", phone: "0170 1" }],
       createdAt: "2026-09-09T10:00:00Z",
@@ -659,12 +694,14 @@ describe("TraegerBillingRunPage", () => {
 
     await waitFor(() =>
       expect(api.createBillingLetters).toHaveBeenCalledWith("9", {
-        paymentDueOn: "2026-09-23",
+        paymentDueOn: dueOn,
         notes: "Hausschuhe mitbringen.",
         emergencyContacts: [{ name: "OGS Am Lindenhof", phone: "0170 1" }],
       }),
     );
-    expect(await screen.findByText("23.09.2026")).toBeInTheDocument();
+    expect(
+      await screen.findByText(`${dueDay}.${dueMonth}.${dueYear}`),
+    ).toBeInTheDocument();
     expect(screen.getByText("OGS Am Lindenhof: 0170 1")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Schreiben erstellen" }),

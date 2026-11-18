@@ -52,6 +52,11 @@ type ImportService[T any] struct {
 	// savepointLost classifies a failed savepoint statement of an owner
 	// command; the write then ends the upload without retry or replay.
 	savepointLost func(error) bool
+	// now stamps the run, its batches and its row messages.
+	now func() time.Time
+	// beforeBatchCommit completes writes inside each batch transaction.
+	beforeBatchCommit func(context.Context, int64) error
+
 	// config keeps request-specific reference data after PreloadReferenceData.
 	// Serialize processing while that mutable configuration is shared.
 	importMu sync.Mutex
@@ -78,9 +83,13 @@ type importModeAuthorizer interface {
 }
 
 // NewImportService creates an import service bound to its platform
-// collaborators. A zero ports.ImportRuntime is legitimate for decision tests that
-// never record an audit row, read an observation, or execute batches.
+// collaborators. Apart from its clock (runtime.Now), which is required, a
+// zero ports.ImportRuntime is legitimate for decision tests that never
+// record an audit row, read an observation, or execute batches.
 func NewImportService[T any](config ports.ImportConfig[T], runtime ports.ImportRuntime) *ImportService[T] {
+	if runtime.Now == nil {
+		panic("data import: the import service requires the clock")
+	}
 	checkpoints, _ := runtime.Audit.(audit.ImportCheckpointReader)
 	return &ImportService[T]{
 		config:       config,
@@ -95,6 +104,9 @@ func NewImportService[T any](config ports.ImportConfig[T], runtime ports.ImportR
 		batchLimit:      batchLimitOf(runtime),
 		connectionLost:  runtime.ConnectionLost,
 		savepointLost:   runtime.SavepointLost,
+		now:             runtime.Now,
+
+		beforeBatchCommit: runtime.BeforeBatchCommit,
 	}
 }
 
@@ -114,8 +126,9 @@ func (s *ImportService[T]) renewed() *ImportService[T] {
 	}
 	return &ImportService[T]{
 		config: config, transactions: s.transactions, batchSize: s.batchSize, audit: s.audit, observe: s.observe,
-		fingerprint: s.fingerprint, checkpoints: s.checkpoints,
+		fingerprint: s.fingerprint, checkpoints: s.checkpoints, beforeBatchCommit: s.beforeBatchCommit,
 		boundStatements: s.boundStatements, batchLimit: s.batchLimit, connectionLost: s.connectionLost, savepointLost: s.savepointLost,
+		now: s.now,
 	}
 }
 
@@ -160,6 +173,7 @@ func (s *ImportService[T]) Import(ctx context.Context, request importModels.Impo
 			batchSize:    s.batchSize,
 			audit:        s.audit,
 			observe:      s.observe,
+			now:          s.now,
 		}
 		if locker, ok := clone.config.(importConfigLocker); ok {
 			locker.ImportLock().Lock()
@@ -174,7 +188,7 @@ func (s *ImportService[T]) Import(ctx context.Context, request importModels.Impo
 
 func (s *ImportService[T]) importWithConfig(ctx context.Context, request importModels.ImportRequest[T]) (*importModels.ImportResult[T], error) {
 	result := &importModels.ImportResult[T]{
-		StartedAt: time.Now(),
+		StartedAt: s.now(),
 		TotalRows: len(request.Rows),
 		DryRun:    request.DryRun,
 	}
@@ -200,7 +214,7 @@ func (s *ImportService[T]) importWithConfig(ctx context.Context, request importM
 		return nil, err
 	}
 
-	result.CompletedAt = time.Now()
+	result.CompletedAt = s.now()
 	result.BulkActions = s.generateBulkActions(result.Errors)
 
 	if s.observe != nil {
@@ -247,7 +261,7 @@ func (s *ImportService[T]) processAllRows(ctx context.Context, request importMod
 			if err != nil {
 				return true, err
 			}
-			s = &ImportService[T]{config: config}
+			s = &ImportService[T]{config: config, now: s.now}
 		}
 	}
 	return s.processPreparedRows(ctx, request, result, batchErrors), nil
@@ -327,11 +341,11 @@ func (s *ImportService[T]) validateRow(ctx context.Context, request importModels
 	result.WarningCount += len(warnings)
 
 	if len(blockingErrors) == 0 && len(warnings) > 0 {
-		recordWarnings(result, rowNum, row, warnings)
+		recordWarnings(s, result, rowNum, row, warnings)
 	}
 
 	if len(blockingErrors) > 0 {
-		recordBlockingErrors(result, rowNum, row, blockingErrors, warnings)
+		recordBlockingErrors(s, result, rowNum, row, blockingErrors, warnings)
 		return false, request.StopOnError
 	}
 	return true, false
@@ -358,11 +372,11 @@ func categorizeValidationErrors(validationErrors []importModels.ValidationError)
 // entry on first use. One entry per row: the preview renders entries as
 // cards keyed by row number, and a row that collects a warning during
 // validation and a duplicate note afterwards must not appear twice.
-func appendRowErrors[T any](result *importModels.ImportResult[T], rowNum int, row *T, errs []importModels.ValidationError) {
+func appendRowErrors[T any](stamp time.Time, result *importModels.ImportResult[T], rowNum int, row *T, errs []importModels.ValidationError) {
 	for i := range result.Errors {
 		if result.Errors[i].RowNumber == rowNum {
 			result.Errors[i].Errors = append(result.Errors[i].Errors, errs...)
-			result.Errors[i].Timestamp = time.Now()
+			result.Errors[i].Timestamp = stamp
 			return
 		}
 	}
@@ -370,18 +384,18 @@ func appendRowErrors[T any](result *importModels.ImportResult[T], rowNum int, ro
 		RowNumber: rowNum,
 		Data:      *row,
 		Errors:    errs,
-		Timestamp: time.Now(),
+		Timestamp: stamp,
 	})
 }
 
 // recordWarnings records warnings in the result
-func recordWarnings[T any](result *importModels.ImportResult[T], rowNum int, row *T, warnings []importModels.ValidationError) {
-	appendRowErrors(result, rowNum, row, warnings)
+func recordWarnings[T any](s *ImportService[T], result *importModels.ImportResult[T], rowNum int, row *T, warnings []importModels.ValidationError) {
+	appendRowErrors(s.now(), result, rowNum, row, warnings)
 }
 
 // recordBlockingErrors records blocking errors in the result
-func recordBlockingErrors[T any](result *importModels.ImportResult[T], rowNum int, row *T, blockingErrors, warnings []importModels.ValidationError) {
-	appendRowErrors(result, rowNum, row, append(blockingErrors, warnings...))
+func recordBlockingErrors[T any](s *ImportService[T], result *importModels.ImportResult[T], rowNum int, row *T, blockingErrors, warnings []importModels.ValidationError) {
+	appendRowErrors(s.now(), result, rowNum, row, append(blockingErrors, warnings...))
 	result.ErrorCount++
 }
 
@@ -389,7 +403,7 @@ func recordBlockingErrors[T any](result *importModels.ImportResult[T], rowNum in
 func (s *ImportService[T]) processDryRunRow(ctx context.Context, request importModels.ImportRequest[T], result *importModels.ImportResult[T], row *T, rowNum int) bool {
 	existingID, err := s.config.FindExisting(ctx, *row)
 	if err != nil {
-		recordDuplicateCheckError(result, rowNum, row, err)
+		recordDuplicateCheckError(s, result, rowNum, row, err)
 		return false
 	}
 
@@ -419,7 +433,7 @@ func (s *ImportService[T]) countChildQuota(ctx context.Context, result *importMo
 	}
 	adds, err := counter.AddsToChildQuota(ctx, *row, existingID)
 	if err != nil {
-		appendRowErrors(result, rowNum, row, []importModels.ValidationError{{
+		appendRowErrors(s.now(), result, rowNum, row, []importModels.ValidationError{{
 			Field:    "child_quota",
 			Message:  "Das Kinderkontingent ließ sich für diese Zeile nicht prüfen. Bitte versuchen Sie es noch einmal.",
 			Code:     "child_quota_check_failed",
@@ -437,7 +451,7 @@ func (s *ImportService[T]) countChildQuota(ctx context.Context, result *importMo
 // in update/upsert mode, so the UI can show which rows will be changed rather
 // than created.
 func recordWillUpdateInfo[T any](s *ImportService[T], result *importModels.ImportResult[T], rowNum int, row *T) {
-	appendRowErrors(result, rowNum, row, []importModels.ValidationError{{
+	appendRowErrors(s.now(), result, rowNum, row, []importModels.ValidationError{{
 		Field:    "update",
 		Message:  "Schon vorhanden: Die Zeile aktualisiert diesen Datensatz. Leere Zellen ändern nichts.",
 		Code:     "will_update",
@@ -449,7 +463,7 @@ func recordWillUpdateInfo[T any](s *ImportService[T], result *importModels.Impor
 func (s *ImportService[T]) processActualImportRow(ctx context.Context, request importModels.ImportRequest[T], result *importModels.ImportResult[T], row *T, rowNum int) bool {
 	existingID, err := s.config.FindExisting(ctx, *row)
 	if err != nil {
-		recordDuplicateCheckError(result, rowNum, row, err)
+		recordDuplicateCheckError(s, result, rowNum, row, err)
 		return false
 	}
 
@@ -498,7 +512,7 @@ func (s *ImportService[T]) performImportAction(ctx context.Context, request impo
 // performCreateAction performs the create operation
 func (s *ImportService[T]) performCreateAction(ctx context.Context, request importModels.ImportRequest[T], result *importModels.ImportResult[T], row *T, rowNum int) bool {
 	if _, err := s.config.Create(ctx, *row); err != nil {
-		recordCreationError(result, rowNum, row, err)
+		recordCreationError(s, result, rowNum, row, err)
 		return request.StopOnError
 	}
 	result.CreatedCount++
@@ -508,7 +522,7 @@ func (s *ImportService[T]) performCreateAction(ctx context.Context, request impo
 // performUpdateAction performs the update operation
 func (s *ImportService[T]) performUpdateAction(ctx context.Context, request importModels.ImportRequest[T], result *importModels.ImportResult[T], row *T, rowNum int, existingID *int64) bool {
 	if err := s.config.Update(ctx, *existingID, *row); err != nil {
-		recordUpdateError(result, rowNum, row, err)
+		recordUpdateError(s, result, rowNum, row, err)
 		return request.StopOnError
 	}
 	result.UpdatedCount++
@@ -516,8 +530,8 @@ func (s *ImportService[T]) performUpdateAction(ctx context.Context, request impo
 }
 
 // recordDuplicateCheckError records a duplicate check error
-func recordDuplicateCheckError[T any](result *importModels.ImportResult[T], rowNum int, row *T, err error) {
-	appendRowErrors(result, rowNum, row, []importModels.ValidationError{{
+func recordDuplicateCheckError[T any](s *ImportService[T], result *importModels.ImportResult[T], rowNum int, row *T, err error) {
+	appendRowErrors(s.now(), result, rowNum, row, []importModels.ValidationError{{
 		Field:    "duplicate_check",
 		Message:  fmt.Sprintf("Fehler bei Duplikatprüfung: %s", err.Error()),
 		Code:     "duplicate_check_failed",
@@ -528,7 +542,7 @@ func recordDuplicateCheckError[T any](result *importModels.ImportResult[T], rowN
 
 // recordAlreadyExistsError records an error when entity already exists
 func recordAlreadyExistsError[T any](s *ImportService[T], result *importModels.ImportResult[T], rowNum int, row *T) {
-	appendRowErrors(result, rowNum, row, []importModels.ValidationError{{
+	appendRowErrors(s.now(), result, rowNum, row, []importModels.ValidationError{{
 		Field:    "duplicate",
 		Message:  fmt.Sprintf("%s existiert bereits", s.config.EntityName()),
 		Code:     "already_exists",
@@ -539,7 +553,7 @@ func recordAlreadyExistsError[T any](s *ImportService[T], result *importModels.I
 
 // recordNotFoundError records an error when entity is not found
 func recordNotFoundError[T any](s *ImportService[T], result *importModels.ImportResult[T], rowNum int, row *T) {
-	appendRowErrors(result, rowNum, row, []importModels.ValidationError{{
+	appendRowErrors(s.now(), result, rowNum, row, []importModels.ValidationError{{
 		Field:    "not_found",
 		Message:  fmt.Sprintf("%s nicht gefunden", s.config.EntityName()),
 		Code:     "not_found",
@@ -549,8 +563,8 @@ func recordNotFoundError[T any](s *ImportService[T], result *importModels.Import
 }
 
 // recordCreationError records a creation error
-func recordCreationError[T any](result *importModels.ImportResult[T], rowNum int, row *T, err error) {
-	appendRowErrors(result, rowNum, row, []importModels.ValidationError{{
+func recordCreationError[T any](s *ImportService[T], result *importModels.ImportResult[T], rowNum int, row *T, err error) {
+	appendRowErrors(s.now(), result, rowNum, row, []importModels.ValidationError{{
 		Field:    "creation",
 		Message:  fmt.Sprintf("Fehler beim Erstellen: %s", err.Error()),
 		Code:     "creation_failed",
@@ -560,8 +574,8 @@ func recordCreationError[T any](result *importModels.ImportResult[T], rowNum int
 }
 
 // recordUpdateError records an update error
-func recordUpdateError[T any](result *importModels.ImportResult[T], rowNum int, row *T, err error) {
-	appendRowErrors(result, rowNum, row, []importModels.ValidationError{{
+func recordUpdateError[T any](s *ImportService[T], result *importModels.ImportResult[T], rowNum int, row *T, err error) {
+	appendRowErrors(s.now(), result, rowNum, row, []importModels.ValidationError{{
 		Field:    "update",
 		Message:  fmt.Sprintf("Fehler beim Aktualisieren: %s", err.Error()),
 		Code:     "update_failed",

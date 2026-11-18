@@ -13,6 +13,7 @@ type erasureLockKey struct{}
 
 type erasureLock struct {
 	conn          bun.Conn
+	now           func() time.Time
 	lastConfirmed time.Time
 	lost          error
 }
@@ -39,7 +40,7 @@ func (l *erasureLock) check(ctx context.Context) error {
 		l.lost = fmt.Errorf("erasure: coordination session unavailable; lock protection last confirmed at %s; exact loss time unknown; stopping before further work: %w", l.lastConfirmed.UTC().Format(time.RFC3339Nano), err)
 		return l.lost
 	}
-	l.lastConfirmed = time.Now()
+	l.lastConfirmed = l.now()
 	return nil
 }
 

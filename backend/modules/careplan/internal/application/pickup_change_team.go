@@ -53,8 +53,8 @@ var (
 
 // NewPickupChangeTeam binds the service. It opens no transaction: the store
 // joins the caller's school unit (the decision, the student route) and
-// refuses to run without one. observe nil records nothing; today nil is the
-// school's today.
+// refuses to run without one. observe nil records nothing; today is the
+// composition's day clock and required.
 func NewPickupChangeTeam(
 	store ports.PickupChangeTeamStore, reach ports.PickupChangeTeamReach, observe ports.Observer, today func() calendar.Date,
 ) *PickupChangeTeamService {
@@ -65,7 +65,7 @@ func NewPickupChangeTeam(
 		observe = func(ports.Observation) {}
 	}
 	if today == nil {
-		today = calendar.TodayDate
+		panic("care plan pickup change team: the composition's day clock is required")
 	}
 	return &PickupChangeTeamService{store: store, reach: reach, observe: observe, today: today}
 }

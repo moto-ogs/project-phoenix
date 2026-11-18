@@ -9,6 +9,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -23,9 +24,11 @@ import (
 type Runtime struct {
 	Success func(http.ResponseWriter, *http.Request, int, any, string)
 	Failure func(w http.ResponseWriter, r *http.Request, status int, code string, err error, details map[string]string, clientMessage string)
+	// Now is the root's clock the answers are stamped with.
+	Now func() time.Time
 }
 
-func (rt Runtime) valid() bool { return rt.Success != nil && rt.Failure != nil }
+func (rt Runtime) valid() bool { return rt.Success != nil && rt.Failure != nil && rt.Now != nil }
 
 // Resource defines the check-in API resource for student RFID scans.
 type Resource struct {

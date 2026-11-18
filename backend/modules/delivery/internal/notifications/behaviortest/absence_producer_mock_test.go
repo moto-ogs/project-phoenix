@@ -198,7 +198,7 @@ func newAbsenceWorld() (notifications.AbsenceNotifier, *absenceWorld) {
 		duty:     &fakeDutyReader{onDuty: map[int64]struct{}{absenceStaffA: {}, absenceAdminStaff: {}}},
 	}
 	recipients := notifications.NewStaffRecipientResolver(
-		w.consent, w.students, w.groups, w.staff, w.admins, w.settings, w.duty)
+		w.consent, w.students, w.groups, w.staff, w.admins, w.settings, w.duty, calendar.CalendarDateClock())
 	producer := notifications.NewAbsenceNotifier(w.notifier, recipients, nil, nil)
 	return producer, w
 }
@@ -428,24 +428,31 @@ func TestAbsenceNotifierExcludesAdditionalOriginators(t *testing.T) {
 func TestAbsenceNotifierRespectsConsent(t *testing.T) {
 	t.Parallel()
 
-	t.Run("only those who agreed are addressed", func(t *testing.T) {
+	// Since #7137 consent decides the push only: everyone responsible finds
+	// the notice in the notification feed.
+	t.Run("only those who agreed get the push", func(t *testing.T) {
 		producer, w := newAbsenceWorld()
 		w.consent.allowed = map[int64]struct{}{absenceAdmin: {}}
 
 		require.NoError(t, producer.NotifyAbsenceReported(context.Background(), sickToday(absenceStudentA)))
 
 		require.Len(t, w.notifier.events, 1)
-		assert.Equal(t, []int64{absenceAdmin}, w.notifier.events[0].Audience.StaffAccountIDs)
+		event := w.notifier.events[0]
+		assert.Equal(t, []int64{absenceAccountA, absenceAdmin}, event.Audience.StaffAccountIDs, "the feed reaches everyone responsible")
+		require.NotNil(t, event.Feed)
+		assert.Equal(t, []int64{absenceAdmin}, event.Feed.PushAccountIDs)
 		assert.ElementsMatch(t, []int64{absenceAccountA, absenceAdmin}, w.consent.asked,
 			"consent narrows the relation-derived set, it never replaces it")
 	})
 
-	t.Run("nobody agreed means no event", func(t *testing.T) {
+	t.Run("nobody agreed means no push", func(t *testing.T) {
 		producer, w := newAbsenceWorld()
 		w.consent.allowed = nil
 
 		require.NoError(t, producer.NotifyAbsenceReported(context.Background(), sickToday(absenceStudentA)))
-		assert.Empty(t, w.notifier.events)
+		require.Len(t, w.notifier.events, 1)
+		require.NotNil(t, w.notifier.events[0].Feed)
+		assert.Empty(t, w.notifier.events[0].Feed.PushAccountIDs)
 	})
 
 	t.Run("a child without a group still reaches the office", func(t *testing.T) {

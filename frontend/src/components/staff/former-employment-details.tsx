@@ -5,7 +5,7 @@ import { TenantPage } from "~/components/ui/tenant-page";
 import { Alert } from "~/components/ui/alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { DataTable } from "~/components/ui/data-table";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -16,6 +16,7 @@ import {
   type StaffHistorySession,
 } from "~/lib/staff-api";
 import { useSWRAuth } from "~/lib/swr";
+import { staffTimeKeys } from "~/lib/swr/staff-keys";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { StammdatenTab } from "./stammdaten-tab";
 
@@ -135,7 +136,7 @@ function FormerEmploymentTimes({ staff }: Readonly<{ staff: Staff }>) {
   const [anchor, setAnchor] = useState(staff.endedOn!);
   const { from, to } = monthRange(anchor, staff);
   const { data, error, isLoading, mutate } = useSWRAuth<StaffHistorySession[]>(
-    `staff-history-${staff.id}-${from}-${to}`,
+    staffTimeKeys.history(staff.id, from, to),
     () => staffHistoryService.getHistory(staff.id, from, to),
   );
   const loadError = useSwrLoadError(error, "die Zeiterfassung", mutate);

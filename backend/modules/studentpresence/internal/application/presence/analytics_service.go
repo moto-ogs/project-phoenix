@@ -61,7 +61,7 @@ func (s *service) GetDashboardAnalytics(ctx context.Context) (*DashboardAnalytic
 	applyLocationMetrics(analytics, s.calculateLocationMetrics(roomData, groupData, baseData.activeVisits, baseData.activeGroups))
 
 	// Phase 9: Build summary lists (using pre-loaded maps for O(1) name lookups)
-	analytics.RecentActivity = buildRecentActivity(baseData.activeGroups, baseData.activityGroupsByID, roomData)
+	analytics.RecentActivity = buildRecentActivity(baseData.activeGroups, baseData.activityGroupsByID, roomData, analytics.LastUpdated)
 	analytics.CurrentActivities = buildCurrentActivities(baseData.allActivityGroups, baseData.activeGroups, baseData.visitsByGroupID)
 	analytics.ActiveGroupsSummary = buildActiveGroupsSummary(baseData.activeGroups, baseData.activityGroupsByID, roomData, baseData.visitsByGroupID)
 

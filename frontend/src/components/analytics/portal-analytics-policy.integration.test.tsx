@@ -4,8 +4,11 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import type { AnalyticsConsentCopy } from "~/components/analytics/analytics-consent-copy";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TenantInfo } from "~/lib/tenant-api";
+import { SWRConfig } from "~/lib/swr/testing";
 
 vi.unmock("~/lib/tenant-context");
+// The parent enrollment page loads its form through real SWR.
+vi.unmock("swr");
 
 const mocks = vi.hoisted(() => ({
   useSession: vi.fn(),
@@ -793,6 +796,13 @@ describe("embedded enrollment analytics policy", () => {
         await import("~/lib/posthog-client");
       const view = render(
         <PortalAnalyticsSession surface="parents" consentCopy={COPY} />,
+        {
+          wrapper: ({ children }) => (
+            <SWRConfig value={{ provider: () => new Map() }}>
+              {children}
+            </SWRConfig>
+          ),
+        },
       );
       await act(async () => {});
       await initializePostHog();

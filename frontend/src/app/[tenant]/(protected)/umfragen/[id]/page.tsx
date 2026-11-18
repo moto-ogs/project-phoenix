@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 
 import { useParentTargetLookups } from "~/components/announcements/parent-target-picker";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { ForbiddenPage } from "~/components/ui/forbidden-page";
 import {
@@ -30,7 +30,6 @@ import {
   formatSurveyClosesAt,
   participantLabel,
   remindedMessage,
-  SURVEY_LIST_KEY,
   SurveyAnonymityBadge,
   SurveyStatusBadge,
 } from "~/components/surveys/survey-meta";
@@ -73,6 +72,7 @@ import {
   type SurveyResults,
 } from "~/lib/surveys-api";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { pollsConcept } from "~/lib/concepts/polls";
 
@@ -86,10 +86,6 @@ const BACK = {
 
 type Tab = "auswertung" | "fragebogen" | "personen";
 type LifecycleAction = "publish" | "close" | "remind" | "delete" | null;
-
-function surveyKey(id: string): string {
-  return `survey-${id}`;
-}
 
 export default function SurveyDetailPage() {
   // useSearchParams (`?reiter=`, `?bearbeiten=`) braucht die Suspense-Grenze.
@@ -137,9 +133,13 @@ function SurveyDetail({ surveyId }: Readonly<{ surveyId: string }>) {
     data: survey,
     error: loadError,
     mutate,
-  } = useSWRAuth<Survey>(surveyKey(surveyId), () => fetchSurvey(surveyId), {
-    revalidateOnFocus: false,
-  });
+  } = useSWRAuth<Survey>(
+    tenantAdminKeys.survey(surveyId),
+    () => fetchSurvey(surveyId),
+    {
+      revalidateOnFocus: false,
+    },
+  );
   const notFound = loadError instanceof ApiError && loadError.status === 404;
   // Nachladen nach dem Speichern des Entwurfs: ein Fehler dabei steht über
   // dem Fragebogen und speichert nichts erneut (#6652).
@@ -147,7 +147,7 @@ function SurveyDetail({ surveyId }: Readonly<{ surveyId: string }>) {
     "die Anzeige der Umfrage",
     async (saved: Survey) => {
       await mutate(saved, { revalidate: false });
-      await tenantMutate(SURVEY_LIST_KEY);
+      await tenantMutate(tenantAdminKeys.surveys());
     },
   );
   const shownLoadError = useSwrLoadError(
@@ -158,7 +158,7 @@ function SurveyDetail({ surveyId }: Readonly<{ surveyId: string }>) {
 
   const published = survey !== undefined && survey.status !== "draft";
   const results = useSWRAuth<SurveyResults>(
-    published ? `survey-results-${surveyId}` : null,
+    published ? tenantAdminKeys.surveyResults(surveyId) : null,
     () => fetchSurveyResults(surveyId),
     { revalidateOnFocus: false },
   );
@@ -179,7 +179,7 @@ function SurveyDetail({ surveyId }: Readonly<{ surveyId: string }>) {
 
   const respondents = useSWRAuth<SurveyRespondent[]>(
     published && survey && !survey.anonymous && tab === "personen"
-      ? `survey-respondents-${surveyId}`
+      ? tenantAdminKeys.surveyRespondents(surveyId)
       : null,
     () => fetchSurveyRespondents(surveyId),
     { revalidateOnFocus: false },
@@ -197,7 +197,7 @@ function SurveyDetail({ surveyId }: Readonly<{ surveyId: string }>) {
     await Promise.all([
       mutate(),
       results.mutate(),
-      tenantMutate(SURVEY_LIST_KEY),
+      tenantMutate(tenantAdminKeys.surveys()),
     ]);
   };
 
@@ -327,7 +327,7 @@ function SurveyDetail({ surveyId }: Readonly<{ surveyId: string }>) {
               survey={survey}
               onClose={() => setAction(null)}
               onDone={async () => {
-                await tenantMutate(SURVEY_LIST_KEY);
+                await tenantMutate(tenantAdminKeys.surveys());
                 router.push("/umfragen");
               }}
             />

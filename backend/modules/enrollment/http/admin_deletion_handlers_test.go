@@ -36,6 +36,7 @@ func TestAdminEnrollmentDeletionRoutesRequireConfigManage(t *testing.T) {
 	t.Parallel()
 
 	rs := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, DeletionService: deletionServiceStub{}}
 
 	for _, test := range []struct {

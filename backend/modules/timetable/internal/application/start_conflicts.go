@@ -195,7 +195,7 @@ func (d *conflictDetection) loadActiveStaffConflicts(ctx context.Context, assign
 	if len(staffIDs) == 0 {
 		return result
 	}
-	day := calendar.TodayDate().String()
+	day := calendar.DateFromTime(d.deps.Now()).String()
 	supervisions, err := d.deps.Presence.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{ActiveOn: &day, StaffIDs: staffIDs})
 	if err != nil {
 		d.logger.Warn("conflict detection: staff supervision batch lookup failed", slog.String("error", err.Error()))

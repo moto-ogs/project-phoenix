@@ -32,6 +32,7 @@ Registry mechanics: [docs/agents/error-registry.md](../../docs/agents/error-regi
      or validation failure.
    - `useApiLoadError` — `LoadErrorAlert` or the `TenantPage` error for data
      that failed to load.
+   Links to where a refusal is fixed: `components/*/error-fix-targets.tsx`.
    A modal only where the user has to decide something. A toast always follows
    a user action. Every `catch` has a visible result or a comment that names
    why it stays silent.

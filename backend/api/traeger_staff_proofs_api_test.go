@@ -205,6 +205,12 @@ func TestTraegerStaffProofsWarnBeforeExpiry(t *testing.T) {
 		after := staffAccessEntries(t, db, office.organization, "traeger_staff_records")
 		assert.Equal(t, before[north]+1, after[north])
 		assert.Equal(t, before[south]+1, after[south])
+
+		// #4718: PDF and Excel hold the same list and are logged alike.
+		listed := decode[workforce.TraegerStaffProofList](t, traegerJSON(t, router, office.token, http.MethodGet, "/traeger/staff-proofs/", nil))
+		assertTraegerListFormats(t, router, office.token, "/traeger/staff-proofs/export", "nachweise-"+listed.Today)
+		logged := staffAccessEntries(t, db, office.organization, "traeger_staff_records")
+		assert.Equal(t, after[north]+3, logged[north], "the list, the PDF and the Excel export are logged like the CSV")
 	})
 
 	t.Run("a school kind maps onto a Träger kind and the school sees the status only", func(t *testing.T) {

@@ -53,6 +53,7 @@ POST /api/timetable/instances/{id}/complete -> basis
 POST /api/timetable/instances/{id}/convert-to-series -> basis
 POST /api/timetable/instances/{id}/deviations -> basis
 POST /api/timetable/instances/{id}/move-staff -> basis
+POST /api/timetable/instances/{id}/reinstate -> basis
 POST /api/timetable/instances/{id}/reopen -> basis
 POST /api/timetable/instances/{id}/start -> basis
 POST /api/timetable/instances/{instance_id}/students/{student_id}/correction -> basis

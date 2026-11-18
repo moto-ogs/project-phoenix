@@ -20,17 +20,15 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { DateRangePicker } from "~/components/ui/date-range-picker";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatClosingDayRange } from "~/lib/closing-day-helpers";
 import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { SCHOOL_VACATION_HINTS_KEY } from "~/lib/school-vacations-api";
-import { useTenantMutateMatching } from "~/lib/swr";
+import { useFreshSWR, useTenantMutateMatching } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableService } from "~/lib/timetable-api";
 import type { BulkCancelResult } from "~/lib/timetable-types";
 
@@ -46,13 +44,9 @@ const PLAN_CACHE_PREFIXES = [
   "database-calendar-periods-list",
   // Der Ferienhinweis zählt die Regeltermine in den Ferien (#5345).
   SCHOOL_VACATION_HINTS_KEY,
+  // Das nächste Öffnen zählt neu.
+  tenantDailyKeys.bulkCancelPreviewFamily,
 ] as const;
-
-type CountState =
-  | { kind: "idle" }
-  | { kind: "loading" }
-  | ({ kind: "ready" } & Pick<BulkCancelResult, "count" | "keptSeries">)
-  | { kind: "error" };
 
 function termineLabel(count: number): string {
   return count === 1 ? "1 Termin" : `${count} Termine`;
@@ -99,15 +93,28 @@ export function BulkCancelAppointmentsModal({
   const [from, setFrom] = useState(initialFrom);
   const [to, setTo] = useState(initialTo);
   const [includeSeries, setIncludeSeries] = useState(false);
-  const [countState, setCountState] = useState<CountState>({ kind: "idle" });
   const [cancelling, setCancelling] = useState(false);
   // Der Dialog liegt über den Toasts: der Fehler des Absagens steht im
   // Dialog (#2516), der Fehler des Zählens vor Ort mit Wiederholen.
   const formErrors = useApiFormError();
   const { clear: clearError } = formErrors;
-  const countLoad = useApiLoadError();
-  const { show: showCountError, clear: clearCountError } = countLoad;
-  const [countAttempt, setCountAttempt] = useState(0);
+  const counting = isOpen && from !== "" && to !== "";
+  const {
+    data: preview,
+    error: countError,
+    mutate: recount,
+  } = useFreshSWR(
+    counting
+      ? tenantDailyKeys.bulkCancelPreview(from, to, includeSeries)
+      : null,
+    () => timetableService.bulkCancel(from, to, true, includeSeries),
+    { keepPreviousData: false },
+  );
+  const countLoad = useSwrResourceLoadError(
+    [{ data: preview, error: countError }],
+    "das Zählen der Termine",
+    () => recount(),
+  );
   const latestConfirmRef = useRef<() => void>(() => undefined);
   const { success: toastSuccess } = useToast();
   const refreshPlan = useTenantMutateMatching(PLAN_CACHE_PREFIXES);
@@ -128,57 +135,13 @@ export function BulkCancelAppointmentsModal({
     clearError();
   }, [isOpen, initialFrom, initialTo, clearError]);
 
-  useEffect(() => {
-    if (!isOpen || from === "" || to === "") {
-      setCountState({ kind: "idle" });
-      return;
-    }
-    let active = true;
-    setCountState({ kind: "loading" });
-    clearCountError();
-    timetableService
-      .bulkCancel(from, to, true, includeSeries)
-      .then((preview) => {
-        if (active) {
-          setCountState({
-            kind: "ready",
-            count: preview.count,
-            keptSeries: preview.keptSeries,
-          });
-        }
-      })
-      .catch((err: unknown) => {
-        logger.error("bulk_cancel_preview_failed", {
-          from,
-          to,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!active) return;
-        setCountState({ kind: "error" });
-        void showCountError(err, {
-          object: "das Zählen der Termine",
-          retry: () => setCountAttempt((current) => current + 1),
-        });
-      });
-    return () => {
-      active = false;
-    };
-  }, [
-    isOpen,
-    from,
-    to,
-    includeSeries,
-    countAttempt,
-    showCountError,
-    clearCountError,
-  ]);
-
   const handleRangeChange = (range: DateRange | undefined) => {
     setFrom(range?.from ? toISODate(range.from) : "");
     setTo(range?.to ? toISODate(range.to) : "");
   };
 
   const handleConfirm = async () => {
+    if (!preview || countError || cancelling) return;
     setCancelling(true);
     formErrors.clear();
     let result: Awaited<ReturnType<typeof timetableService.bulkCancel>>;
@@ -219,7 +182,8 @@ export function BulkCancelAppointmentsModal({
 
   // „Im Zeitraum 12.10.2026 – 16.10.2026“, ein einzelner Tag „Am 12.10.2026“.
   const rangeText = `${from === to ? "Am" : "Im Zeitraum"} ${formatClosingDayRange({ startDate: from, endDate: to })}`;
-  const ready = countState.kind === "ready" ? countState : null;
+  const ready: Pick<BulkCancelResult, "count" | "keptSeries"> | null =
+    counting && preview ? preview : null;
   const keptSeries = ready?.keptSeries ?? [];
   // Das Häkchen bleibt sichtbar, solange es gesetzt ist: nach dem Neuzählen
   // bleibt keine Serie mehr übrig, die Person muss es aber abwählen können.
@@ -255,10 +219,10 @@ export function BulkCancelAppointmentsModal({
               fromMin={parseISODate(berlinTodayISO())}
             />
           </div>
-          {countState.kind === "loading" && <p>Die Termine werden gezählt.</p>}
-          {countState.kind === "error" && (
-            <LoadErrorAlert error={countLoad.error} />
+          {counting && !preview && !countError && (
+            <p>Die Termine werden gezählt.</p>
           )}
+          <LoadErrorAlert error={countLoad.error} />
           <LoadErrorAlert error={planAfterWrite.error} />
           {ready && ready.count === 0 && keptSeries.length === 0 && (
             <p>{rangeText} sind keine Termine mehr geplant.</p>

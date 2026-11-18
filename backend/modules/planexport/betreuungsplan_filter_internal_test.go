@@ -33,7 +33,7 @@ func TestBetreuungsplanPrintsOnlyFilteredBlocksAndNamesTheFilter(t *testing.T) {
 	var asked BlockFilter
 	var staffSeen int
 	renderer := &captureRenderer{}
-	service := NewService(Dependencies{
+	service := NewService(Dependencies{Now: planExportTestClock,
 		Instances: stubInstances{instances: []*Instance{
 			instance(11, monday, clock(12, 0), clock(13, 0), "Mensa", 3),
 			instance(12, monday, clock(14, 0), clock(15, 0), "Lernzeit", 4),

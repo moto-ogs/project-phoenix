@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 
@@ -47,7 +46,6 @@ func (s *RetainedGuardianService) getStudentGuardians(ctx context.Context, stude
 	if err != nil {
 		return nil, err
 	}
-	now := time.Now()
 
 	result := make([]*peoplePorts.GuardianWithRelationship, 0, len(relationships))
 	for _, rel := range relationships {
@@ -58,7 +56,7 @@ func (s *RetainedGuardianService) getStudentGuardians(ctx context.Context, stude
 
 		profile.PhoneNumbers = phonesByProfile[profile.ID]
 
-		open, ended := splitGuardianInvitations(profile, invitations[profile.ID], now)
+		open, ended := splitGuardianInvitations(profile, invitations[profile.ID])
 		pending := invitationPendingForStudent(profile, rel.StudentID, open)
 		result = append(result, &peoplePorts.GuardianWithRelationship{
 			Profile:             profile,
@@ -96,14 +94,15 @@ const invitationAwaitingApproval = "pending"
 // open. A link mailed to an address the profile no longer has, or a legacy
 // link without a recorded recipient, works for nobody any more: the guardian
 // needs a new invitation. A request awaiting staff carries no link yet and
-// stays open; one that simply ran out is neither.
-func splitGuardianInvitations(profile *peopleValues.GuardianProfileSnapshot, invitations []peoplePorts.GuardianInvitationRecord, now time.Time) (open []peoplePorts.GuardianInvitationRecord, ended bool) {
+// stays open; one that simply ran out is neither. Identity & Access judges
+// the expiry on the clock that stamps it.
+func splitGuardianInvitations(profile *peopleValues.GuardianProfileSnapshot, invitations []peoplePorts.GuardianInvitationRecord) (open []peoplePorts.GuardianInvitationRecord, ended bool) {
 	address := ""
 	if profile.Email != nil {
 		address = strings.ToLower(strings.TrimSpace(*profile.Email))
 	}
 	for _, inv := range invitations {
-		live := inv.ExpiresAt.After(now)
+		live := !inv.Expired
 		switch {
 		case inv.ApprovalStatus == invitationAwaitingApproval:
 			if live {

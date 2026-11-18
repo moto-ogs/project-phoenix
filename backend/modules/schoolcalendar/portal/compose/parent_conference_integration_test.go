@@ -401,7 +401,7 @@ func TestParentConferenceIntegration_SchoolYearEndDeletesDaysBookingsAndAppointm
 	require.NoError(t, err)
 	assert.Equal(t, 2, deleted, "the day and its booking")
 
-	appointmentOwner, err := owners.BuildServeAppointments(testpkg.NewDatabase(t, db))
+	appointmentOwner, err := owners.BuildServeAppointments(testpkg.NewDatabase(t, db), time.Now)
 	require.NoError(t, err)
 	deleted, err = testpkg.TenantQuery1(t, testpkg.Ctx(t), db, appointmentOwner.DeleteParentConferenceAppointmentsBefore, appointments.NewDate(2026, 8, 1))
 	require.NoError(t, err)

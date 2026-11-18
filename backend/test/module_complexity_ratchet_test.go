@@ -68,7 +68,7 @@ const moduleComplexityThreshold = 15
 // baseline without headroom, measured at 722c5aa147.
 var moduleComplexityAllowlist = map[string]int{
 	// ADR 0087.
-	"analytics/core_actions_middleware.go:CoreActionMiddleware":                                               19,
+	"analytics/core_actions_middleware.go:CoreActionMiddleware":                                               18,
 	"api/active_test_helpers.go:buildActiveTestModule":                                                        31,
 	"api/auth_test_helpers.go:NewAuthTestModule":                                                              25,
 	"api/enrollment_booking_repository_test_helpers.go:(EnrollmentBookingFixture).InsertRequestChildOffering": 18,
@@ -298,8 +298,6 @@ var moduleComplexityAllowlist = map[string]int{
 	"internal/devtools/simulate/live.go:RunLive": 24,
 	// ADR 0087.
 	"internal/devtools/simulate/live.go:runLiveTick": 19,
-	// ADR 0087.
-	"internal/testdb/cmd/bootstrap/main.go:main": 18,
 	// ADR 0087.
 	"internal/testdb/idle_unix.go:HoldServer": 31,
 	// ADR 0087.

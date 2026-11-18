@@ -10,13 +10,15 @@ import {
 } from "~/components/ui/form-error-alert";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { Loading } from "~/components/ui/loading";
-import { mutate } from "~/lib/swr";
+import { mutate, useSWRAuth } from "~/lib/swr";
+import { staffAccessKeys } from "~/lib/swr/staff-keys";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   fetchStaffPreviewCandidates,
   performStartStaffPreview,
   type StaffPreviewCandidate,
 } from "~/lib/staff-preview-api";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
 import { leaveForAnotherAccount } from "~/lib/personal-storage";
 import { useTenantAwarePath } from "~/lib/tenant-path";
@@ -39,52 +41,34 @@ function candidateLabel(candidate: StaffPreviewCandidate): string {
  */
 export function StaffPreviewModal({ isOpen, onClose }: StaffPreviewModalProps) {
   const tenantPath = useTenantAwarePath();
-  const [candidates, setCandidates] = useState<StaffPreviewCandidate[] | null>(
-    null,
-  );
   const [selectedId, setSelectedId] = useState("");
   const [isStarting, setIsStarting] = useState(false);
-  // Erhöht sich bei „Wiederholen“ und lädt die Liste neu.
-  const [loadAttempt, setLoadAttempt] = useState(0);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const {
+    data: candidates,
+    error: candidatesError,
+    mutate: reloadCandidates,
+  } = useSWRAuth(
+    isOpen ? staffAccessKeys.previewCandidates() : null,
+    fetchStaffPreviewCandidates,
+  );
   // Fehler bleiben im offenen Dialog (#2517): Laden mit Wiederholen,
   // Starten im Fehlerkasten über der Auswahl.
-  const loadError = useApiLoadError();
-  const showLoadError = loadError.show;
-  const clearLoadError = loadError.clear;
+  const { error: loadError, failure } = useSwrResourceLoadError(
+    [{ data: candidates, error: candidatesError }],
+    "die Liste der Personen",
+    () => reloadCandidates(),
+  );
+  const loadFailed = failure !== undefined;
   const startError = useApiFormError();
   const clearStartError = startError.clear;
   const latestStartRef = useRef<() => void>(() => undefined);
 
+  // Jedes Öffnen beginnt ohne Auswahl und ohne alten Fehler.
   useEffect(() => {
     if (!isOpen) return;
-    clearLoadError();
     clearStartError();
-    setLoadFailed(false);
     setSelectedId("");
-    setCandidates(null);
-    let cancelled = false;
-    fetchStaffPreviewCandidates()
-      .then((result) => {
-        if (!cancelled) setCandidates(result);
-      })
-      .catch((err: unknown) => {
-        logger.error("staff_preview_candidates_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!cancelled) {
-          setCandidates([]);
-          setLoadFailed(true);
-          void showLoadError(err, {
-            object: "die Liste der Personen",
-            retry: () => setLoadAttempt((attempt) => attempt + 1),
-          });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, loadAttempt, showLoadError, clearLoadError, clearStartError]);
+  }, [isOpen, clearStartError]);
 
   const handleStart = async () => {
     if (!selectedId || isStarting) return;
@@ -156,18 +140,21 @@ export function StaffPreviewModal({ isOpen, onClose }: StaffPreviewModalProps) {
         </p>
 
         <FormErrorAlert message={startError.error} />
-        <LoadErrorAlert error={loadError.error} />
+        <LoadErrorAlert error={loadError} />
 
         {/* Bis der Fehlertext da ist, bleibt der Ladezustand stehen, nie
             „Keine Person gefunden“ für eine Liste, die nie geladen wurde. */}
-        {candidates === null ||
-        (loadFailed && formErrorMessage(loadError.error) === null) ? (
+        {loadFailed ? (
+          formErrorMessage(loadError) === null ? (
+            <Loading />
+          ) : null
+        ) : candidates === undefined ? (
           <Loading />
-        ) : candidates.length === 0 && !loadFailed ? (
+        ) : candidates.length === 0 ? (
           <p className="text-sm text-gray-500">
             Keine Person gefunden, die Sie ansehen können.
           </p>
-        ) : candidates.length > 0 ? (
+        ) : (
           <CustomSelect
             value={selectedId}
             options={options}
@@ -175,7 +162,7 @@ export function StaffPreviewModal({ isOpen, onClose }: StaffPreviewModalProps) {
             placeholder="Person auswählen"
             ariaLabel="Person für die Vorschau auswählen"
           />
-        ) : null}
+        )}
       </div>
     </Modal>
   );

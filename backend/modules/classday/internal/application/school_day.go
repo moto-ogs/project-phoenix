@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
@@ -153,7 +152,8 @@ func buildSchoolDayReport(date calendar.Date, weekday string, enrollmentKnown bo
 func schoolDayChild(row classday.DayRow, schoolDay, enrollmentKnown bool) classday.SchoolDayChild {
 	child := classday.SchoolDayChild{
 		StudentID: row.StudentID, ListEntry: row.ListEntry, ListEntryID: row.ListEntryID,
-		FirstName: row.FirstName, LastName: row.LastName,
+		WithoutCarePlace: row.WithoutCarePlace,
+		FirstName:        row.FirstName, LastName: row.LastName,
 	}
 	if !schoolDay {
 		return child
@@ -163,7 +163,7 @@ func schoolDayChild(row classday.DayRow, schoolDay, enrollmentKnown bool) classd
 	child.Unreported = row.Unreported
 	child.StatusBySchool = row.StatusBySchool
 	child.Changed = !row.ListEntry && (row.Status != "" || row.PickupChanged)
-	if row.ListEntry || row.Status != "" || !enrollmentKnown {
+	if row.NoCare() || row.Status != "" || !enrollmentKnown {
 		return child
 	}
 	if row.StaysToday {
@@ -220,14 +220,14 @@ func (s *dayReports) recordSchoolDayViewAudit(ctx context.Context, report *class
 	}
 	const errPrefix = "school day view audit"
 	date := calendar.Date(report.Date)
-	seen, err := s.accessLog.SchoolDayViewSeenSince(ctx, actor.AccountID, date.String(), calendar.TodayDate().BerlinMidnight())
+	seen, err := s.accessLog.SchoolDayViewSeenToday(ctx, actor.AccountID, date.String())
 	if err != nil {
 		return fmt.Errorf("%s dedupe: %w", errPrefix, err)
 	}
 	if seen {
 		return nil
 	}
-	entry, err := newAccessRecord(errPrefix, actor.AccountID, actor.Roles, date.BerlinMidnight(), date.EndOfDay(), time.Now())
+	entry, err := newAccessRecord(errPrefix, actor.AccountID, actor.Roles, date.BerlinMidnight(), date.EndOfDay(), s.now())
 	if err != nil {
 		return err
 	}

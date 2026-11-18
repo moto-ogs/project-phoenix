@@ -66,7 +66,7 @@ export function calendarPeriodsTopic(): HelpTopic {
           "Öffnen Sie `Schuljahr und Kalender`.",
           "Gehen Sie zum Abschnitt `Gesetzliche Feiertage`.",
           "Prüfen Sie das Bundesland im Text über der Liste.",
-          "Stimmt das Bundesland nicht? Wenden Sie sich an das moto-Team. Nur das moto-Team kann es ändern.",
+          "Stimmt das Bundesland nicht? Ändern Sie es in den `Einstellungen` unter `Betrieb`.",
         ],
       },
       {

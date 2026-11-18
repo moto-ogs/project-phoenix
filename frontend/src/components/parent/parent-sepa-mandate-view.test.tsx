@@ -1,4 +1,7 @@
+import { useSWRAuth } from "~/lib/swr";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -7,8 +10,12 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
+import { deferred } from "~/test/helpers/form-modal-pending";
 import { catalogText } from "~/test/error-catalog-text";
 import type {
   SepaMandateText,
@@ -33,6 +40,22 @@ vi.mock("~/lib/parent-sepa-mandate-api", () => ({
   grantSepaMandate: mocks.grant,
   revokeSepaMandate: mocks.revoke,
 }));
+
+let retryMandateRead!: () => Promise<boolean>;
+vi.mock("~/lib/hooks/use-refresh-after-write", async (original) => {
+  const actual =
+    await original<typeof import("~/lib/hooks/use-refresh-after-write")>();
+  return {
+    ...actual,
+    useRefreshAfterWrite: (
+      ...args: Parameters<typeof actual.useRefreshAfterWrite>
+    ) => {
+      const result = actual.useRefreshAfterWrite(...args);
+      retryMandateRead = result.refresh;
+      return result;
+    },
+  };
+});
 
 const IBAN = "DE89370400440532013000";
 
@@ -87,9 +110,13 @@ const granted: SepaMandateView = {
 };
 
 function renderView() {
-  return render(<ParentSepaMandateView organizationId="4" contractId="75" />, {
-    wrapper: ToastProvider,
-  });
+  return render(
+    <ParentResourceTestProvider>
+      <ToastProvider>
+        <ParentSepaMandateView organizationId="4" contractId="75" />
+      </ToastProvider>
+    </ParentResourceTestProvider>,
+  );
 }
 
 async function fillAccount() {
@@ -109,6 +136,97 @@ async function fillAccount() {
 
 describe("ParentSepaMandateView", () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it("reads the mandate again on every opening to record access", async () => {
+    mocks.fetch.mockResolvedValueOnce(granted);
+    const next = deferred<SepaMandateView>();
+    mocks.fetch.mockReturnValueOnce(next.promise);
+    const view = renderView();
+    expect(await screen.findByText(granted.mandate!.ibanMasked)).toBeVisible();
+    const reopen = (
+      <ParentResourceTestProvider>
+        <ToastProvider>
+          <ParentSepaMandateView organizationId="4" contractId="75" />
+        </ToastProvider>
+      </ParentResourceTestProvider>
+    );
+    view.rerender(
+      <ParentResourceTestProvider>
+        <ToastProvider>{null}</ToastProvider>
+      </ParentResourceTestProvider>,
+    );
+    view.rerender(reopen);
+    await waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(2));
+    expect(
+      screen.queryByText(granted.mandate!.ibanMasked),
+    ).not.toBeInTheDocument();
+    await act(async () => {
+      next.resolve(granted);
+    });
+    expect(await screen.findByText(granted.mandate!.ibanMasked)).toBeVisible();
+  });
+
+  it("never restores a refused mandate after a later server failure", async () => {
+    mocks.fetch.mockResolvedValue(granted);
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const { mutate } = useSWRAuth(
+        parentInboxKeys.sepaMandate("4", "75"),
+        () => mocks.fetch(),
+      );
+      reload = () => mutate();
+      return null;
+    }
+    render(
+      <ParentResourceTestProvider>
+        <ToastProvider>
+          <ParentSepaMandateView organizationId="4" contractId="75" />
+          <Probe />
+        </ToastProvider>
+      </ParentResourceTestProvider>,
+    );
+    expect(await screen.findByText(granted.mandate!.ibanMasked)).toBeVisible();
+    mocks.fetch.mockRejectedValueOnce(
+      new ApiError("gone", 404, {
+        code: "parent_billing.parent_document_not_found",
+      }),
+    );
+    await act(async () => {
+      await reload();
+    });
+    expect(
+      await screen.findByText(
+        catalogText(
+          "parent_billing.parent_document_not_found",
+          "das Lastschrift-Mandat",
+        ),
+      ),
+    ).toBeVisible();
+    mocks.fetch.mockRejectedValueOnce(new ApiError("down", 500));
+    await act(async () => {
+      await reload();
+    });
+    // Anker: der Ladefehler bleibt sichtbar, keine Finanzdaten ohne erfolgreichen Abruf.
+    expect(
+      screen.getByText(
+        catalogText(
+          "parent_billing.parent_document_not_found",
+          "das Lastschrift-Mandat",
+        ),
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(granted.mandate!.ibanMasked),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Mandat widerrufen" }),
+    ).not.toBeInTheDocument();
+    mocks.fetch.mockResolvedValue(granted);
+    await act(async () => {
+      await reload();
+    });
+    expect(await screen.findByText(granted.mandate!.ibanMasked)).toBeVisible();
+  });
 
   it("only points to paper while the Träger has the switch off", async () => {
     mocks.fetch.mockResolvedValue({ ...open, enabled: false });
@@ -228,11 +346,13 @@ describe("ParentSepaMandateView", () => {
     expect(document.activeElement).toBe(document.body);
 
     fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
-    expect(
-      await screen.findByRole("heading", {
-        name: "Schritt 2 von 2: Mandat bestätigen",
-      }),
-    ).toHaveFocus();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", {
+          name: "Schritt 2 von 2: Mandat bestätigen",
+        }),
+      ).toHaveFocus(),
+    );
 
     fireEvent.click(
       screen.getByRole("checkbox", {
@@ -240,9 +360,9 @@ describe("ParentSepaMandateView", () => {
       }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Mandat erteilen" }));
-    expect(
-      await screen.findByRole("heading", { name: "Ihr Mandat" }),
-    ).toHaveFocus();
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Ihr Mandat" })).toHaveFocus(),
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Mandat widerrufen" }));
     const dialog = await screen.findByRole("dialog");
@@ -338,6 +458,11 @@ describe("Reload after the revocation (#6652)", () => {
       expect(
         screen.queryByRole("button", { name: "Als Datei speichern" }),
       ).not.toBeInTheDocument();
+      await act(async () => {
+        await retryMandateRead();
+      });
+      expect(await screen.findByLabelText(/^IBAN/)).toBeVisible();
+      expect(mocks.fetch).toHaveBeenCalledTimes(3);
       expect(mocks.revoke).toHaveBeenCalledTimes(1);
     },
   );

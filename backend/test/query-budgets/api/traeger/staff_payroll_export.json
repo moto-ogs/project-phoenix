@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.staff_payroll_export",
+  "max": 41,
+  "exact": true,
+  "description": "modules/workforce — GET /traeger/staff-exports/payroll (#4712, ADR 0250)\nat a Träger with two schools and three contracts: the Träger values of the\npayroll file, the Träger's schools, the binding of the Träger transaction,\nits release, the records with their links, the month's contracts and their\nEinsatzorte in one statement each; then per school the binding of its\ntenant transaction and the month of its employments over the prefetch of\nthe school's payroll file (staff, profiles, persons, settings, sessions,\nbreaks, absences, adjustments, shifts, schedules, closing days, overrides,\nsnapshots). Flat in the number of people and contracts; one tenant\ntransaction per school (ADR 0105).",
+  "route": "GET /traeger/staff-exports/payroll"
+}

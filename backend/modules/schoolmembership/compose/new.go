@@ -5,6 +5,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres"
@@ -22,18 +23,18 @@ type Dependencies struct {
 	Observe func(Observation)
 	// Employment is the Workforce half of every staff member (#2753).
 	Employment StaffEmployment
-	// ChildQuota reads the school's Kinderkontingent (#3567). A graph that
-	// never enrolls children may leave it unbound; its counting writes then
-	// fail instead of skipping the check.
+	// ChildQuota reads the school's Kinderkontingent (#3567). A graph that never enrolls children
+	// may leave it unbound; its counting writes then fail instead of skipping the check.
 	ChildQuota ChildQuota
-	// ClassListStudents and ClassListTrail serve the audited class-list
-	// administration (#2382): the People Directory lookup and the Audit
-	// trail. Optional together; without them the audited flows refuse.
+	// ClassListStudents and ClassListTrail serve the audited class-list administration (#2382): the
+	// People Directory lookup and the Audit trail. Optional together; without them the audited flows refuse.
 	ClassListStudents schoolmembership.ClassListEntryStudents
 	ClassListTrail    schoolmembership.ClassListEntryTrail
-	// Today is the school day the writes decide on: the Kinderkontingent
-	// and the first-care bound of a child (#6041). Nil is the Berlin day.
+	// Today is the school day the writes decide on: the Kinderkontingent and the first-care bound
+	// of a child (#6041). Nil is the Berlin day of Now. Now, the root's clock (ADR 0239), stamps the
+	// retirement the automatic deletion of staff compares with its cutoff; nil is the real one.
 	Today func() calendar.Date
+	Now   func() time.Time
 }
 
 // ChildQuota is the consumer-owned port over Organisation & Tenancy's
@@ -45,11 +46,9 @@ type ChildQuota interface {
 	ChildQuotaLimit(ctx context.Context) (limit int, limited bool, err error)
 }
 
-// New composes the School Membership service, which is the whole Owner
-// surface. Every operation runs on the caller's ambient tenant transaction
-// when one exists and otherwise opens one for the tenant in context, so
-// row-level security decides visibility exactly as it did for the legacy
-// repositories.
+// New composes the School Membership service, which is the whole Owner surface. Every operation
+// runs on the caller's ambient tenant transaction when one exists and otherwise opens one for the
+// tenant in context, so row-level security decides visibility as it did for the legacy repositories.
 func New(dependencies Dependencies) (schoolmembership.Owner, error) {
 	service, err := newApplication(dependencies)
 	if err != nil {
@@ -59,7 +58,7 @@ func New(dependencies Dependencies) (schoolmembership.Owner, error) {
 }
 
 func NewStaffPersonMerge() schoolmembership.StaffPersonMerge {
-	return application.StaffPersonMerge{StaffPersonMerge: postgres.New(postgres.NewContextDatabase(tenant.TenantFromContext, tenant.TransactionFromContext, tenant.IsAdminTx))}
+	return application.StaffPersonMerge{StaffPersonMerge: postgres.New(postgres.NewContextDatabase(tenant.TenantFromContext, tenant.TransactionFromContext, tenant.IsAdminTx), calendar.TodayDate, time.Now)}
 }
 
 // NewPendingWindows composes the pending-window command of a phase edit.
@@ -81,7 +80,11 @@ func newApplication(dependencies Dependencies) (*application.Service, error) {
 	case dependencies.ClassListStudents != nil || dependencies.ClassListTrail != nil:
 		return nil, errors.New("school membership compose: the class list entries need a student directory and an audit trail")
 	}
-	store := postgres.New(postgres.NewContextDatabase(tenant.TenantFromContext, tenant.TransactionFromContext, tenant.IsAdminTx))
-	service := application.New(store, application.NewStaffEmployment(dependencies.Employment), dependencies.ChildQuota, postgres.SchoolDay(dependencies.Today), application.TenantTransaction{}, dependencies.Observe, classList)
+	today := dependencies.Today
+	if today == nil {
+		today = calendar.CalendarDateClock(dependencies.Now)
+	}
+	store := postgres.New(postgres.NewContextDatabase(tenant.TenantFromContext, tenant.TransactionFromContext, tenant.IsAdminTx), today, calendar.InstantClock(dependencies.Now))
+	service := application.New(store, application.NewStaffEmployment(dependencies.Employment), dependencies.ChildQuota, postgres.SchoolDay(today), application.TenantTransaction{}, dependencies.Observe, classList)
 	return service, nil
 }

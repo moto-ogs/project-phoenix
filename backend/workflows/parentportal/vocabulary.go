@@ -170,6 +170,7 @@ var (
 	ErrCareRequestNotFound              = care.ErrCareRequestNotFound
 	ErrCareRequestNotPending            = care.ErrCareRequestNotPending
 	ErrChildCareEnded                   = care.ErrChildCareEnded
+	ErrChildWithoutCarePlace            = care.ErrChildWithoutCarePlace
 	ErrChildNotAnswerable               = messaging.ErrChildNotAnswerable
 	ErrBillingDocumentNotFound          = care.ErrBillingDocumentNotFound
 	ErrContractNotEndable               = care.ErrContractNotEndable
@@ -233,6 +234,8 @@ var (
 	ErrLeadershipMessagesUnavailable    = messaging.ErrLeadershipUnavailable
 	ErrPastCareDate                     = care.ErrPastCareDate
 	ErrPhotoConsentNotWithdrawn         = care.ErrPhotoConsentNotWithdrawn
+	ErrPhotosDisabled                   = care.ErrPhotosDisabled
+	ErrPhotoConsentBusy                 = care.ErrPhotoConsentBusy
 	ErrPickupChangeCareDayEnded         = care.ErrPickupChangeCareDayEnded
 	ErrPickupChangeCutoffPassed         = care.ErrPickupChangeCutoffPassed
 	ErrPickupChangeDisabled             = care.ErrPickupChangeDisabled

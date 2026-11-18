@@ -45,19 +45,31 @@ func (b *correctionBoundary) NotifyCorrection(context.Context, *carerequests.Req
 	return b.notificationErr
 }
 
+// advancingDecisionClock starts at the fixed decision instant and runs on,
+// so a later edit is stamped after the decision it follows.
+func advancingDecisionClock() func() time.Time {
+	started := time.Now()
+	return func() time.Time { return decisionTestClock().Add(time.Since(started)) }
+}
+
 func TestNativeCorrectionReauthorizesAndRollsBackExactExceptionDeletion(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, advancingDecisionClock())
 	ctx := testpkg.Ctx(t)
 	student := testpkg.CreateTestStudent(t, db, "Correction", "Transaction", "1a")
 	parent := testpkg.CreateTestAccount(t, db, "parent")
 	staff, reviewer := testpkg.CreateTestStaffWithAccount(t, db, "Correction", "Reviewer")
-	createdAt := time.Now().Add(-time.Second)
+	createdAt := decisionTestClock().Add(-time.Second)
 	exception, err := owner.CreatePickupException(ctx, careplan.PickupException{
 		StudentID: student.ID, ExceptionDate: "2031-02-03", CreatedBy: staff.ID,
 		CreatedAt: createdAt, UpdatedAt: createdAt,
 	})
+	require.NoError(t, err)
+	// The history below has no row versions: a ledger written before them,
+	// whose approvals stamped the row on the owner clock (ADR 0281). Today the
+	// column default stamps it on the database clock, so restore that stamp.
+	_, err = db.NewUpdate().TableExpr("schedule.student_pickup_exceptions").Set("updated_at = ?", createdAt).Where("id = ?", exception.ID).Exec(ctx)
 	require.NoError(t, err)
 	request, err := owner.CreateCareScheduleRequest(ctx, carerequests.Request{StudentID: student.ID, SubmittedBy: parent.ID,
 		RequestKind: "pickup_change", Status: "pending", Payload: json.RawMessage(`{"date":"2031-02-03","pickup_time":"14:00"}`)})

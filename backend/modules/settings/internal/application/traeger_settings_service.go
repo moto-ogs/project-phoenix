@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
-	"time"
 
 	config "github.com/moto-ogs/project-phoenix/modules/settings/records"
 )
@@ -29,7 +28,6 @@ type TraegerSettingsDependencies struct {
 	Notify   config.SettingsChangedNotifier
 	Rights   map[config.TraegerRight]string
 	Logger   *slog.Logger
-	Now      func() time.Time
 	Registry *config.Registry
 }
 
@@ -43,7 +41,7 @@ type TraegerSettings struct {
 // NewTraegerSettings builds the Träger level. A missing collaborator or an
 // unmapped Träger right is a construction error.
 func NewTraegerSettings(deps TraegerSettingsDependencies) (*TraegerSettings, error) {
-	if deps.Values == nil || deps.Runtime == nil || deps.Schools == nil || deps.Notify == nil || deps.Logger == nil || deps.Now == nil {
+	if deps.Values == nil || deps.Runtime == nil || deps.Schools == nil || deps.Notify == nil || deps.Logger == nil {
 		return nil, errors.New("traeger settings: all dependencies are required")
 	}
 	for _, right := range []config.TraegerRight{config.TraegerRightSettings, config.TraegerRightStaff, config.TraegerRightBilling} {
@@ -148,6 +146,33 @@ func (t *TraegerSettings) TraegerBools(ctx context.Context, organizationID int64
 		}
 	}
 	return values, nil
+}
+
+// TraegerTextsAndBools reads Träger-level texts and switches of a Träger in
+// one read: its own values or the registry defaults. The letterhead of the
+// Elternabrechnung takes its texts and the switch of the GiroCode (#5624)
+// together, so its letters cost no second statement. It joins the caller's
+// Träger transaction; a key without a Träger level, or a value of another
+// type, is an error.
+func (t *TraegerSettings) TraegerTextsAndBools(ctx context.Context, organizationID int64, textKeys, boolKeys []string) (map[string]string, map[string]bool, error) {
+	keys := append(append(make([]string, 0, len(textKeys)+len(boolKeys)), textKeys...), boolKeys...)
+	snapshot, err := t.traegerSnapshot(ctx, organizationID, keys, "traeger_texts_and_bools")
+	if err != nil {
+		return nil, nil, err
+	}
+	texts := make(map[string]string, len(textKeys))
+	for _, key := range textKeys {
+		if texts[key], err = snapshot.String(key); err != nil {
+			return nil, nil, err
+		}
+	}
+	switches := make(map[string]bool, len(boolKeys))
+	for _, key := range boolKeys {
+		if switches[key], err = snapshot.Bool(key); err != nil {
+			return nil, nil, err
+		}
+	}
+	return texts, switches, nil
 }
 
 // TraegerInts reads the effective values of Träger-level whole numbers of a
@@ -360,10 +385,9 @@ func (t *TraegerSettings) writeChange(txCtx context.Context, organizationID int6
 	if existing != nil {
 		old = existing.Value
 	}
-	now := t.deps.Now()
 	entry := &config.TraegerSettingAuditEntry{
 		OrganizationID: organizationID, SettingKey: key, OldValue: old, NewValue: value,
-		Action: action, ChangedBy: actor.account, ChangedByOperator: actor.operator, ChangedAt: now,
+		Action: action, ChangedBy: actor.account, ChangedByOperator: actor.operator,
 	}
 	// Retention: changes are kept as long as the school's setting
 	// changes (three years); each change of the Träger drops older ones.

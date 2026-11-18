@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 )
 
 // ErrRetentionUnresolved means the tenant's retention window could not be
@@ -44,9 +43,11 @@ func (s *Service) CleanupExpiredMessages(ctx context.Context) (CleanupResult, er
 	}
 	result := CleanupResult{RetentionDays: days}
 
-	cutoff := time.Now().AddDate(0, 0, -days)
-
-	messages, err := s.MessageRepo.DeleteOlderThan(ctx, cutoff)
+	// The window is counted on the database clock (ADR 0277): PostgreSQL
+	// stamps the messages with clock_timestamp() and the threads by default,
+	// and that order is the one the chat shows, so the clock that stamped
+	// them also decides when they expire.
+	messages, err := s.MessageRepo.DeleteOlderThan(ctx, days)
 	if err != nil {
 		return result, err
 	}
@@ -56,9 +57,9 @@ func (s *Service) CleanupExpiredMessages(ctx context.Context) (CleanupResult, er
 	// aged out is noise in the inbox, and leaving it there would show a
 	// counterpart with no content and no way to tell why.
 	//
-	// Same cutoff as the messages, which doubles as the grace period for a
+	// Same window as the messages, which doubles as the grace period for a
 	// thread that was opened but never written in - see DeleteEmpty.
-	threads, err := s.ThreadRepo.DeleteEmpty(ctx, cutoff)
+	threads, err := s.ThreadRepo.DeleteEmpty(ctx, days)
 	if err != nil {
 		return result, err
 	}

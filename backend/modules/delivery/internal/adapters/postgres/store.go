@@ -20,14 +20,17 @@ type AdminDatabase func(context.Context) (bun.IDB, error)
 type Store struct {
 	tenantDB TenantDatabase
 	adminDB  AdminDatabase
+	// now stamps the store's own writes and dates what it compares; the
+	// worker passes its instants for claims, leases and fences.
+	now func() time.Time
 }
 
 const emailEnqueueSQL = `
 	WITH inserted AS (
 		INSERT INTO platform.email_outbox (
 			tenant_id, organization_id, kind, idempotency_key, related_entity_type,
-			related_entity_id, recipient, payload, security, status, next_retry_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+			related_entity_id, recipient, payload, security, status, next_retry_at, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
 		ON CONFLICT (tenant_id, organization_id, idempotency_key)
 			WHERE idempotency_key IS NOT NULL DO NOTHING
 		RETURNING id
@@ -213,11 +216,11 @@ type emailDeliveryRow struct {
 	UpdatedAt         time.Time `bun:"updated_at"`
 }
 
-func New(tenantDB TenantDatabase, adminDB AdminDatabase) *Store {
-	if tenantDB == nil || adminDB == nil {
-		panic("delivery postgres: tenant database and admin transaction are required")
+func New(tenantDB TenantDatabase, adminDB AdminDatabase, now func() time.Time) *Store {
+	if tenantDB == nil || adminDB == nil || now == nil {
+		panic("delivery postgres: tenant database, admin transaction and clock are required")
 	}
-	return &Store{tenantDB: tenantDB, adminDB: adminDB}
+	return &Store{tenantDB: tenantDB, adminDB: adminDB, now: now}
 }
 
 func (s *Store) Enqueue(ctx context.Context, intent domain.Intent) (domain.Enqueued, error) {
@@ -228,9 +231,9 @@ func (s *Store) Enqueue(ctx context.Context, intent domain.Intent) (domain.Enque
 	var result domain.Enqueued
 	switch intent.Transport {
 	case domain.TransportEmail:
-		result, err = enqueueEmailIntent(ctx, db, intent)
+		result, err = enqueueEmailIntent(ctx, db, intent, s.now())
 	case domain.TransportPush:
-		result, err = enqueuePushIntent(ctx, db, intent)
+		result, err = enqueuePushIntent(ctx, db, intent, s.now())
 	default:
 		return domain.Enqueued{}, unknownTransport(intent.Transport)
 	}
@@ -248,8 +251,9 @@ func (s *Store) Enqueue(ctx context.Context, intent domain.Intent) (domain.Enque
 
 // enqueueEmailIntent inserts an e-mail intent or reads the one with its
 // idempotency key. A mail of no school is a system mail or, with a Träger,
-// a mail of that Träger (ADR 0110).
-func enqueueEmailIntent(ctx context.Context, db bun.IDB, intent domain.Intent) (domain.Enqueued, error) {
+// a mail of that Träger (ADR 0110). now stamps the new intent: the worker
+// counts its age on the same clock.
+func enqueueEmailIntent(ctx context.Context, db bun.IDB, intent domain.Intent, now time.Time) (domain.Enqueued, error) {
 	var scope, organization any
 	if intent.TenantID != 0 {
 		scope = intent.TenantID
@@ -260,7 +264,7 @@ func enqueueEmailIntent(ctx context.Context, db bun.IDB, intent domain.Intent) (
 	var result domain.Enqueued
 	err := db.NewRaw(emailEnqueueSQL,
 		scope, organization, intent.Template, intent.IdempotencyKey, intent.RelatedEntityType,
-		intent.RelatedEntityID, intent.Recipient, intent.Payload, intent.Security, intent.NextRetryAt,
+		intent.RelatedEntityID, intent.Recipient, intent.Payload, intent.Security, intent.NextRetryAt, now, now,
 		intent.Template, intent.Recipient, intent.Payload, intent.RelatedEntityType, intent.RelatedEntityID,
 		intent.IdempotencyKey, scope, organization, intent.IdempotencyKey,
 	).Scan(ctx, &result)
@@ -351,9 +355,9 @@ func (s *Store) StartDelivery(ctx context.Context, transport domain.Transport, i
 		var scanErr error
 		switch transport {
 		case domain.TransportEmail:
-			scanErr = db.NewRaw(emailStartDeliverySQL, leaseExpiresAt, time.Now(), id, token).Scan(txCtx, &dispatchToken)
+			scanErr = db.NewRaw(emailStartDeliverySQL, leaseExpiresAt, s.now(), id, token).Scan(txCtx, &dispatchToken)
 		case domain.TransportPush:
-			scanErr = db.NewRaw(pushStartDeliverySQL, leaseExpiresAt, time.Now(), id, token).Scan(txCtx, &dispatchToken)
+			scanErr = db.NewRaw(pushStartDeliverySQL, leaseExpiresAt, s.now(), id, token).Scan(txCtx, &dispatchToken)
 		default:
 			return unknownTransport(transport)
 		}
@@ -428,7 +432,7 @@ func (s *Store) FinalizeCancelled(ctx context.Context, transport domain.Transpor
 }
 
 func (s *Store) FinalizeDeferred(ctx context.Context, transport domain.Transport, id int64, token, reason string, nextRetryAt time.Time) (bool, error) {
-	now := time.Now()
+	now := s.now()
 	var finalized bool
 	err := s.inAdminTransaction(ctx, func(txCtx context.Context, db bun.IDB) error {
 		args := []any{reason, nextRetryAt, now, id, token}
@@ -460,7 +464,7 @@ func (s *Store) FinalizeFailure(ctx context.Context, transport domain.Transport,
 	if attempts >= maxAttempts {
 		state = "dead_letter"
 	}
-	now := time.Now()
+	now := s.now()
 	var finalized bool
 	err := s.inAdminTransaction(ctx, func(txCtx context.Context, db bun.IDB) error {
 		args := []any{state, attempts, lastError, nextRetryAt, state, now, now, id, token}
@@ -596,15 +600,19 @@ func (s *Store) ReplaceEmailDeliveries(ctx context.Context, tenantID int64, rela
 	if len(rows) == 0 {
 		return nil
 	}
+	// The log carries the store's clock: the retention dates it on the same
+	// one (#7295).
+	now := s.now()
 	values := make([]emailDeliveryRow, 0, len(rows))
 	for _, row := range rows {
 		values = append(values, emailDeliveryRow{
 			TenantID: tenantID, RelatedEntityType: relatedType, RelatedEntityID: relatedID,
 			OutboxID: row.OutboxID, GuardianProfileID: row.GuardianProfileID, AccountID: row.AccountID,
 			RecipientEmail: row.RecipientEmail, Reachability: row.Reachability,
+			CreatedAt: now, UpdatedAt: now,
 		})
 	}
-	if _, err := db.NewInsert().Model(&values).ExcludeColumn("created_at", "updated_at").
+	if _, err := db.NewInsert().Model(&values).
 		ModelTableExpr(`platform.delivery_email_deliveries AS "email_delivery"`).Exec(ctx); err != nil {
 		return fmt.Errorf("delivery postgres: replace email deliveries insert: %w", err)
 	}
@@ -638,7 +646,7 @@ func (s *Store) AttachEmailOutbox(ctx context.Context, tenantID, deliveryID, out
 	}
 	result, err := db.NewUpdate().Model((*emailDeliveryRow)(nil)).
 		ModelTableExpr(`platform.delivery_email_deliveries AS "email_delivery"`).
-		Set("outbox_id = ?", outboxID).Set("updated_at = NOW()").
+		Set("outbox_id = ?", outboxID).Set("updated_at = ?", s.now()).
 		Where(`"email_delivery".tenant_id = ?`, tenantID).
 		Where(`"email_delivery".id = ?`, deliveryID).
 		Where(`EXISTS (SELECT 1 FROM platform.email_outbox AS outbox WHERE outbox.id = ? AND outbox.tenant_id = "email_delivery".tenant_id)`, outboxID).Exec(ctx)

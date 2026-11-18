@@ -20,16 +20,17 @@ const (
 // AuthEventRepository implements the audit.AuthEventRepository interface
 type AuthEventRepository struct {
 	runtime Runtime
+	now     func() time.Time
 }
 
 // NewAuthEventRepository creates a new auth event repository
-func NewAuthEventRepository(runtime Runtime) *AuthEventRepository {
-	return &AuthEventRepository{runtime: requireRuntime(runtime)}
+func NewAuthEventRepository(runtime Runtime, now func() time.Time) *AuthEventRepository {
+	return &AuthEventRepository{runtime: requireRuntime(runtime), now: now}
 }
 
 // Create creates a new auth event
 func (r *AuthEventRepository) Create(ctx context.Context, event *audit.AuthEvent) error {
-	return NewAppender(r.runtime).Append(ctx, event)
+	return NewAppender(r.runtime, r.now).Append(ctx, event)
 }
 
 // FindByID finds an auth event by ID
@@ -136,7 +137,7 @@ func (r *AuthEventRepository) CreateStaffPreviewEndOnce(ctx context.Context, eve
 	if event == nil || event.EventType != audit.EventTypeStaffPreviewEnded {
 		return false, errors.New("staff preview end event is required")
 	}
-	return NewAppender(r.runtime).AppendOnce(ctx, event)
+	return NewAppender(r.runtime, r.now).AppendOnce(ctx, event)
 }
 
 // StaffPreviewEnded reports whether the preview instance previewID of
@@ -188,6 +189,10 @@ func (r *AuthEventRepository) LockStaffPreview(ctx context.Context, accountID in
 	return err
 }
 
+// pendingWipeCutoffColumn reads the producer's cutoff of a pending wipe. It
+// is on the producer's clock, unlike the row's database-stamped created_at.
+const pendingWipeCutoffColumn = `("pending".metadata->>'session_cutoff')::timestamptz AS cutoff`
+
 // ListPendingAccountWideWipes returns the newest pending wipe per account.
 // A zero since value lists every still-pending wipe so a failed after-commit
 // revoke is retried for as long as the flag remains.
@@ -203,6 +208,7 @@ func (r *AuthEventRepository) ListPendingAccountWideWipes(ctx context.Context, s
 		ColumnExpr(`"pending".account_id`).
 		ColumnExpr(`COALESCE("pending".metadata->>'reason', '') AS reason`).
 		ColumnExpr(`"pending".created_at`).
+		ColumnExpr(pendingWipeCutoffColumn).
 		TableExpr(`audit.auth_events AS "pending"`).
 		Where(`"pending".event_type = ?`, audit.EventTypeTokenRevoked).
 		Where(`"pending".metadata @> ?`, `{"pending_account_wide_wipe":true}`).
@@ -238,6 +244,7 @@ func (r *AuthEventRepository) ClaimPendingAccountWideWipes(ctx context.Context, 
 		ColumnExpr(`"pending".account_id`).
 		ColumnExpr(`COALESCE("pending".metadata->>'reason', '') AS reason`).
 		ColumnExpr(`"pending".created_at`).
+		ColumnExpr(pendingWipeCutoffColumn).
 		TableExpr(`audit.auth_events AS "pending"`).
 		Where(`"pending".account_id = ?`, accountID).
 		Where(`"pending".event_type = ?`, audit.EventTypeTokenRevoked).

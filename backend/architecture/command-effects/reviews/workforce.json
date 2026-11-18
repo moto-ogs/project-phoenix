@@ -5882,7 +5882,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollRuleAudit.RecordPayrollRuleChange",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/settings/records.SettingAuditRepository.Create (settings-platform) through roots/owners.payrollRuleAudit.RecordPayrollRuleChange (#4807). The wage type, rule or mapping change and its settings audit row commit in the caller's tenant unit; the audit insert is append-only and its transaction stays with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/settings/records.SettingAuditRepository.Create (settings-platform) through roots/owners.payrollRuleAudit.RecordPayrollRuleChange (#4807). The wage type, rule or mapping change and its settings audit row commit in the caller's tenant unit; the audit insert is append-only and its transaction stays with the platform behavior tests (ADR 0098). Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged. Re-reviewed for #7295: the setting audit entry no longer carries a clock, the column default stamps it on the database clock its retention compares with (ADR 0281); effect and classification are unchanged.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingAuditRepository.Create",
       "target_owner": "settings-platform"
@@ -5892,7 +5892,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollRuleAudit.RecordPayrollRuleChange",
-      "reason": "Read or pure value helper of the payroll rule audit (#4807): workforce reaches tenant.TenantFromContext (tenant-runtime) through roots/owners.payrollRuleAudit.RecordPayrollRuleChange. No persistent, lock or scope effect at this terminal.",
+      "reason": "Read or pure value helper of the payroll rule audit (#4807): workforce reaches tenant.TenantFromContext (tenant-runtime) through roots/owners.payrollRuleAudit.RecordPayrollRuleChange. No persistent, lock or scope effect at this terminal. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged. Re-reviewed for #7295: the setting audit entry no longer carries a clock, the column default stamps it on the database clock its retention compares with (ADR 0281); effect and classification are unchanged.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -5902,7 +5902,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollRuleAudit.RecordPayrollRuleChange",
-      "reason": "Read or pure value helper of the payroll rule audit (#4807): workforce reaches tenant.TenantID.Int64 (tenant-runtime) through roots/owners.payrollRuleAudit.RecordPayrollRuleChange. No persistent, lock or scope effect at this terminal.",
+      "reason": "Read or pure value helper of the payroll rule audit (#4807): workforce reaches tenant.TenantID.Int64 (tenant-runtime) through roots/owners.payrollRuleAudit.RecordPayrollRuleChange. No persistent, lock or scope effect at this terminal. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged. Re-reviewed for #7295: the setting audit entry no longer carries a clock, the column default stamps it on the database clock its retention compares with (ADR 0281); effect and classification are unchanged.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
       "target_owner": "tenant-runtime"
@@ -6027,7 +6027,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.QualificationReminders.RunDue",
-      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.qualificationNotifier for the Nachweis reminders (#4808). The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.qualificationNotifier for the Nachweis reminders (#4808). The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the event now also writes the staff notification feed entries of its whole audience in the same unit, beside the push outbox entries of the push recipients.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
       "target_owner": "delivery-platform"
@@ -6037,7 +6037,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.QualificationReminders.RunDue",
-      "reason": "Read-only target of the Nachweis reminders (#4808): workforce reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.qualificationNotifier. No persistent, lock or scope effect.",
+      "reason": "Read-only target of the Nachweis reminders (#4808): workforce reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.qualificationNotifier. No persistent, lock or scope effect. Rechecked for #7137: the filter now narrows only the push recipients; the feed reaches the whole audience. Still read-only.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
       "target_owner": "delivery-platform"
@@ -6047,7 +6047,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.QualificationReminders.RunDue",
-      "reason": "Read-only target of the Nachweis reminders (#4808): workforce reaches modules/delivery/internal/notifications.PreferenceService.FilterOptedIn (delivery-platform) through roots/owners.qualificationNotifier. No persistent, lock or scope effect.",
+      "reason": "Read-only target of the Nachweis reminders (#4808): workforce reaches modules/delivery/internal/notifications.PreferenceService.FilterOptedIn (delivery-platform) through roots/owners.qualificationNotifier. No persistent, lock or scope effect. Rechecked for #7137: the filter now narrows only the push recipients; the feed reaches the whole audience. Still read-only.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
       "target_owner": "delivery-platform"
@@ -7883,12 +7883,34 @@
       "target_owner": "timetable-activities"
     },
     {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerSpringerEmployments.EmploySpringer",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.SpringerEmployments.EmploySpringer",
+      "reason": "Guarded leaf command (mutation): workforce reaches identityaccess.SpringerAccess.GrantSpringerWindow (identity-access) through api.traegerSpringerEmployments.EmploySpringer. Participates in the blocking school's tenant unit of the Vertretungspool block (#7173, ADR 0251); the block is the only caller and holds the Springer record and the account lock.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "target_owner": "identity-access"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerSpringerEmployments.EndSpringerAccess",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.SpringerEmployments.EndSpringerAccess",
+      "reason": "Guarded leaf command (mutation): workforce reaches identityaccess.SpringerAccess.EndSpringerWindow (identity-access) through api.traegerSpringerEmployments.EndSpringerAccess. Participates in the blocking school's tenant unit of the Vertretungspool block (#7173, ADR 0251); the block is the only caller and holds the Springer record and the account lock.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.EndSpringerWindow",
+      "target_owner": "identity-access"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffAdminAudit.RecordDataAccess",
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffAdminAudit.RecordDataAccess",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through roots/owners.staffAdminAudit.RecordDataAccess. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through roots/owners.staffAdminAudit.RecordDataAccess. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #4709 the binding also maps a school's read of the Vertretungspool to traeger_staff_pool with the record IDs instead of a staff ID.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",
       "target_owner": "audit-platform"
@@ -10425,12 +10447,44 @@
       "target_owner": "document-rendering"
     },
     {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerHireEmployments.CreateSchoolEmployment",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerHireEmployments.CreateSchoolEmployment",
+      "reason": "Guarded leaf command (mutation): workforce reaches schoolmembership.Command.CreateStaff (school-membership) through api.traegerHireEmployments.CreateSchoolEmployment. Participates in the tenant unit of one Einsatzort of a hire of the Träger (#7206, ADR 0254); the hire is the only caller, each owner keeps its validation and mutation, and no lock order or combined check spans the owners.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Command.CreateStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerHirePersons.CreateSchoolPerson",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerHirePersons.CreateSchoolPerson",
+      "reason": "Guarded leaf command (mutation): workforce reaches peopledirectory.Command.CreatePerson (people-directory) through api.traegerHirePersons.CreateSchoolPerson. Participates in the tenant unit of one Einsatzort of a hire of the Träger (#7206, ADR 0254); the hire is the only caller, each owner keeps its validation and mutation, and no lock order or combined check spans the owners.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Command.CreatePerson",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerPayrollSettings.TraegerPayrollSettings",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerPayrollSettingsReader.TraegerPayrollSettings",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/settings/compose.TraegerSettings.TraegerTexts: the payroll values of the session's Träger (Berater- and Mandantennummer of the Lohn, a Lohnart per category and kind of Arbeitsvertrag and the unit of each day category; its values of traeger_payroll.* or the empty registry defaults), read before the Träger's payroll file over all schools is computed (#4712).",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTexts",
+      "target_owner": "settings-platform"
+    },
+    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerProofReminders.RunDue",
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerProofReminders.RunDue",
-      "reason": "The warning before a proof of the Personalstamm expires (#4707) goes to the Leitung of each Einsatzort and the person through Delivery's notifier, in the school's tenant transaction, with an idempotency key per proof, expiry date, stage and school.",
+      "reason": "The warning before a proof of the Personalstamm expires (#4707) goes to the Leitung of each Einsatzort and the person through Delivery's notifier, in the school's tenant transaction, with an idempotency key per proof, expiry date, stage and school. Rechecked for #7137: the event now also writes the staff notification feed entries of its whole audience in the same unit, beside the push outbox entries of the push recipients.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
       "target_owner": "delivery-platform"
@@ -10440,7 +10494,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerProofReminders.RunDue",
-      "reason": "The warning before a proof of the Personalstamm expires (#4707) honors the recipients' notification preferences like the school's Nachweis reminders; the filter only reads.",
+      "reason": "The warning before a proof of the Personalstamm expires (#4707) honors the recipients' notification preferences like the school's Nachweis reminders; the filter only reads. Rechecked for #7137: the filter now narrows only the push recipients; the feed reaches the whole audience. Still read-only.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
       "target_owner": "delivery-platform"
@@ -10450,7 +10504,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerProofReminders.RunDue",
-      "reason": "The warning before a proof of the Personalstamm expires (#4707) honors the recipients' notification preferences like the school's Nachweis reminders; the filter only reads.",
+      "reason": "The warning before a proof of the Personalstamm expires (#4707) honors the recipients' notification preferences like the school's Nachweis reminders; the filter only reads. Rechecked for #7137: the filter now narrows only the push recipients; the feed reaches the whole audience. Still read-only.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
       "target_owner": "delivery-platform"
@@ -10511,7 +10565,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffAccessLog.RecordTraegerStaffAccess",
-      "reason": "Platform protocol participation (mutation): workforce reaches *modules/auditlog/compose.Command.Append (audit-platform) through api.traegerStaffAccessLog.RecordTraegerStaffAccess. A read of the Personalverwaltung in the staff records of the Träger lands in the access log of each school whose people it shows, in that school's tenant transaction (ADR 0084 section 7, ADR 0089 section 6). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): workforce reaches *modules/auditlog/compose.Command.Append (audit-platform) through api.traegerStaffAccessLog.RecordTraegerStaffAccess. A read of the Personalverwaltung in the staff records of the Träger lands in the access log of each school whose people it shows, in that school's tenant transaction (ADR 0084 section 7, ADR 0089 section 6). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #4709 the binding also writes the record IDs a pool view showed (staff_record_ids) into the metadata.",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/auditlog/compose.Command.Append",
       "target_owner": "audit-platform"
@@ -10522,7 +10576,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffAccessLog.RecordTraegerStaffAccess",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.AppendStore.Append (audit-platform) through api.traegerStaffAccessLog.RecordTraegerStaffAccess. A read of the Personalverwaltung in the staff records of the Träger lands in the access log of each school whose people it shows, in that school's tenant transaction (ADR 0084 section 7, ADR 0089 section 6). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.AppendStore.Append (audit-platform) through api.traegerStaffAccessLog.RecordTraegerStaffAccess. A read of the Personalverwaltung in the staff records of the Träger lands in the access log of each school whose people it shows, in that school's tenant transaction (ADR 0084 section 7, ADR 0089 section 6). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #4709 the binding also writes the record IDs a pool view showed (staff_record_ids) into the metadata.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.AppendStore.Append",
       "target_owner": "audit-platform"
@@ -10533,7 +10587,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffAccessLog.RecordTraegerStaffAccess",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.Command.Append (audit-platform) through api.traegerStaffAccessLog.RecordTraegerStaffAccess. A read of the Personalverwaltung in the staff records of the Träger lands in the access log of each school whose people it shows, in that school's tenant transaction (ADR 0084 section 7, ADR 0089 section 6). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.Command.Append (audit-platform) through api.traegerStaffAccessLog.RecordTraegerStaffAccess. A read of the Personalverwaltung in the staff records of the Träger lands in the access log of each school whose people it shows, in that school's tenant transaction (ADR 0084 section 7, ADR 0089 section 6). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #4709 the binding also writes the record IDs a pool view showed (staff_record_ids) into the metadata.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.Command.Append",
       "target_owner": "audit-platform"
@@ -10544,7 +10598,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffAccessLog.RecordTraegerStaffAccess",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through api.traegerStaffAccessLog.RecordTraegerStaffAccess. A read of the Personalverwaltung in the staff records of the Träger lands in the access log of each school whose people it shows, in that school's tenant transaction (ADR 0084 section 7, ADR 0089 section 6). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through api.traegerStaffAccessLog.RecordTraegerStaffAccess. A read of the Personalverwaltung in the staff records of the Träger lands in the access log of each school whose people it shows, in that school's tenant transaction (ADR 0084 section 7, ADR 0089 section 6). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #4709 the binding also writes the record IDs a pool view showed (staff_record_ids) into the metadata.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",
       "target_owner": "audit-platform"
@@ -17211,6 +17265,47 @@
       "target_owner": "shift-plan-sync"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.OpenPrivate",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate",
+      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.PrivateUploads.OpenPrivate (delivery-platform) through modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate. No persistent, lock or scope effect; opens sealed objects of #3840 (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.OpenPrivate",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.OpenPrivate",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate",
+      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.SealedPrivateUploadsBackend (delivery-platform) through modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate. No persistent, lock or scope effect; opens sealed objects of #3840 (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.SealedPrivateUploadsBackend",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.SaveSealed",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/delivery/objects.PrivateUploads.SaveSealed (delivery-platform) through modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Sealed write of #3840.",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.SaveSealed",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.SaveSealed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed",
+      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.SealedPrivateUploadsBackend (delivery-platform) through modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed. No persistent, lock or scope effect; opens sealed objects of #3840 (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.SealedPrivateUploadsBackend",
+      "target_owner": "delivery-platform"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce.Query.CurrentStaffSchedule",
       "classification": "platform",
@@ -19295,6 +19390,66 @@
       "source_owner": "workforce",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
       "target_owner": ""
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.overviewStaffQuery.FindOverviewStaff",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0250) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.overviewStaffQuery.FindOverviewStaff",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0250) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.overviewStaffQuery.FindOverviewStaff",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0250) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindWithPersonByIDs",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.overviewStaffQuery.FindOverviewStaff",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0250) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.overviewStaffQuery.FindOverviewStaff",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0250) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.overviewStaffQuery.FindOverviewStaff",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0250) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
+      "target_owner": "school-membership"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.overviewStaffQuery.ListOverviewStaff",

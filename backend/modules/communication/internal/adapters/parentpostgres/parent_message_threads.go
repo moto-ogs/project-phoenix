@@ -30,8 +30,8 @@ type parentThreadRow struct {
 	bun.BaseModel                  `bun:"table:users.parent_message_threads,alias:parent_message_thread"`
 	ID                             int64      `bun:"id,pk,autoincrement"`
 	TenantID                       int64      `bun:"tenant_id,notnull"`
-	CreatedAt                      time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt                      time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt                      time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt                      time.Time  `bun:"updated_at,nullzero,notnull"`
 	StudentID                      int64      `bun:"student_id,notnull"`
 	GuardianAccountID              int64      `bun:"guardian_account_id,notnull"`
 	Audience                       string     `bun:"audience,notnull"`
@@ -252,7 +252,6 @@ func (s *ThreadStore) TouchLastMessage(ctx context.Context, threadID int64, at t
 		Set("last_message_id = ?", messageID).
 		Set("last_sender_kind = ?", senderKind).
 		Set("last_message_body = ?", body).
-		Set("updated_at = ?", at).
 		Where(`"parent_message_thread".id = ?`, threadID).
 		Where(`("parent_message_thread".last_message_at IS NULL
 			OR "parent_message_thread".last_message_at < ?

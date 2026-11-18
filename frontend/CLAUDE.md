@@ -18,11 +18,11 @@ leaner first: [ci-test-performance](../.claude/rules/ci-test-performance.md).
 ## Test clock (MANDATORY)
 
 Every Vitest test runs on a frozen `Date` (`TEST_CLOCK_INSTANT`, Wednesday
-2026-09-09 12:00 Berlin) installed by `src/test/setup-common.ts`; timers stay
-real. Move time with `setTestClock()` from `~/test/clock`, hand fake timers
-back with `releaseFakeTimers()`, never `vi.useRealTimers()` inside a test body
-(oxlint `test-clock/no-real-clock`). Scope, helpers, and the reviewed
-real-clock exception: [frontend test clock](../docs/agents/frontend-testing.md).
+2026-09-09 12:00 Berlin; CI moves it, so use `testClockDay(n)`, no
+day literals); timers stay real. Move time with `setTestClock()`, never
+`vi.useRealTimers()` in a test body. Specs and stories read no clock
+(`e2e/clock.ts`, `.storybook/clock.ts`). oxlint `test-clock/no-real-clock`;
+details: [frontend test clock](../docs/agents/frontend-testing.md).
 
 ## Server and API boundaries
 
@@ -78,6 +78,14 @@ Calendar dates travel as `"YYYY-MM-DD"` strings; never derive one via `.toISOStr
 Use `createLogger` from `~/lib/logger` — never bare `console.*`. Snake_case event names, extract `error.message` (never pass raw Error objects). Detailed patterns: the `frontend-structured-logging` skill.
 
 Only three files may use raw `console.*`: `src/lib/logger.ts`, `src/lib/client-log-ingest.server.ts`, `src/test/setup-common.ts`. The logger is globally mocked in tests (passes through to `console.*`, so tests spy on `console.error`).
+
+## Loading data (MANDATORY)
+
+Read through the shared cache: `useSWRAuth` with a key factory of `~/lib/swr`
+(Träger portal: `useTraegerResource`), never `useEffect` + `useState`. A load
+in an effect is gone at the next page switch. oxlint `swr/no-effect-load`
+fails it; `scripts/swr-effect-load-baseline.json` stays empty.
+Contract and exceptions: `src/lib/swr/README.md`.
 
 ## Real-time updates
 

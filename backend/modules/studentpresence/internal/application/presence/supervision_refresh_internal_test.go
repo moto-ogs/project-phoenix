@@ -62,7 +62,7 @@ func TestClaimAnnouncesTheNewSupervisor(t *testing.T) {
 	ctx := refreshTestContext(t)
 	publisher := &refreshRecordingPublisher{}
 	owner := &claimOwnerForActiveWrapperTest{}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal,
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal,
 		StaffRepo:      &staffRepoForActiveWrapperTest{found: true},
 		SchoolPresence: owner,
 		Broadcaster:    publisher,
@@ -83,7 +83,7 @@ func TestDeleteVisitAnnouncesItsSession(t *testing.T) {
 	ctx := refreshTestContext(t)
 	publisher := &refreshRecordingPublisher{}
 	owner := &visitOwnerForRefreshTest{visit: &studentpresence.Visit{ID: 3, ActiveGroupID: 11}}
-	svc := &service{ServiceDependencies: ServiceDependencies{SchoolPresence: owner, Broadcaster: publisher}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, SchoolPresence: owner, Broadcaster: publisher}}
 
 	require.NoError(t, svc.DeleteVisit(ctx, 3))
 	require.Equal(t, []supervisionRefresh{{activeGroupID: 11, reason: activeSupervisionReasonStudentMoved}}, publisher.refreshes)

@@ -79,6 +79,8 @@ type SchoolInvitationDependencies struct {
 	Attach func(context.Context) context.Context
 	Expiry time.Duration
 	Logger *slog.Logger
+	// Now is the composition's clock (ADR 0239).
+	Now func() time.Time
 }
 
 func NewSchoolInvitation(deps SchoolInvitationDependencies) (*SchoolInvitation, error) {
@@ -91,6 +93,8 @@ func NewSchoolInvitation(deps SchoolInvitationDependencies) (*SchoolInvitation, 
 		return nil, fmt.Errorf("identity access school invitation: owner tokens, password policy, delivery and tenant runtime are required")
 	case deps.Expiry <= 0:
 		return nil, fmt.Errorf("identity access school invitation: a positive link expiry is required")
+	case deps.Now == nil:
+		return nil, fmt.Errorf("identity access school invitation: a clock is required")
 	}
 	logger := deps.Logger
 	if logger == nil {
@@ -99,7 +103,7 @@ func NewSchoolInvitation(deps SchoolInvitationDependencies) (*SchoolInvitation, 
 	return &SchoolInvitation{
 		permissionGranted: deps.PermissionGranted, employmentReset: deps.EmploymentReset, store: deps.Store, logins: deps.Logins, roles: deps.Roles, policy: deps.Policy, grants: deps.Grants,
 		identity: deps.Identity, schools: deps.Schools, owners: deps.Owners, passwords: deps.Passwords,
-		delivery: deps.Delivery, mailStates: deps.MailStates, runtime: deps.Runtime, attach: deps.Attach, expiry: deps.Expiry, now: time.Now, logger: logger,
+		delivery: deps.Delivery, mailStates: deps.MailStates, runtime: deps.Runtime, attach: deps.Attach, expiry: deps.Expiry, now: deps.Now, logger: logger,
 	}, nil
 }
 
@@ -122,9 +126,11 @@ func (s *SchoolInvitation) createInvitation(ctx context.Context, request domain.
 	if tenantID <= 0 {
 		tenantID = s.runtime.TenantID(ctx)
 	}
+	// The expiry counts from the database time read in the transaction
+	// (ADR 0285, Nachtrag); validating first only needs a positive lifetime.
 	invitation := domain.SchoolInvitation{
 		TenantID: tenantID, Email: email, Token: uuid.Must(uuid.NewV4()).String(), RoleID: request.RoleID,
-		RoleName: role.Name, ExpiresAt: s.now().Add(s.expiry), FirstName: trimmedName(request.FirstName),
+		RoleName: role.Name, ExpiresAt: time.Time{}.Add(s.expiry), FirstName: trimmedName(request.FirstName),
 		LastName: trimmedName(request.LastName), Position: trimmed(request.Position),
 		EmploymentAction: invitationEmploymentAction(request),
 		ResetMasterData:  request.ResetMasterData, ResetQualifications: request.ResetQualifications, ResetWorkTime: request.ResetWorkTime,
@@ -134,10 +140,9 @@ func (s *SchoolInvitation) createInvitation(ctx context.Context, request domain.
 		creator := request.CreatedBy
 		invitation.CreatedBy = &creator
 	}
-	if validateErr := invitation.Validate(s.now()); validateErr != nil {
+	if validateErr := invitation.Validate(time.Time{}); validateErr != nil {
 		return domain.SchoolInvitation{}, failed(opCreateInvitation, validateErr)
 	}
-	portal := s.portalOf(role)
 	if request.SchoolName == "" {
 		request.SchoolName = s.schoolName(ctx, tenantID)
 	}
@@ -145,26 +150,9 @@ func (s *SchoolInvitation) createInvitation(ctx context.Context, request domain.
 	// Spending the address's previous invitations and storing the new one
 	// commit together, so a failed insert never burns the last usable link.
 	err = s.runtime.RunInTx(s.runtime.WithTenantID(ctx, tenantID), func(txCtx context.Context) error {
-		// Account retention takes the same row lock before its final check.
-		// Re-checking after this lock makes one of the two writes happen first:
-		// an invitation already committed keeps the account, while an invitation
-		// created after erasure correctly targets a new account.
-		if targetErr := s.ensureTargetAllowed(txCtx, email, request); targetErr != nil {
-			return targetErr
-		}
-		if _, _, revokeErr := s.store.RevokeSchoolInvitationsForEmail(txCtx, email); revokeErr != nil {
-			return failed("invalidate invitations", revokeErr)
-		}
-		stored, _, insertErr := s.store.InsertSchoolInvitation(txCtx, invitation)
-		if insertErr != nil {
-			return failed(opCreateInvitation, insertErr)
-		}
-		result = stored
-		result.RoleName = role.Name
-		if queueErr := s.delivery.QueueSchoolWelcome(txCtx, result, request.SchoolName, portal, rolePermissions); queueErr != nil {
-			return failed("queue welcome email", queueErr)
-		}
-		return s.delivery.DispatchSchoolInvitation(txCtx, result, request.SchoolName, portal, s.expiry)
+		var issueErr error
+		result, issueErr = s.issueInvitation(txCtx, invitation, request, role.Name, s.portalOf(role), rolePermissions)
+		return issueErr
 	})
 	if err != nil {
 		return domain.SchoolInvitation{}, err
@@ -300,7 +288,7 @@ func (s *SchoolInvitation) ensureRoleAssignable(ctx context.Context, request dom
 // ValidateInvitation returns the public details of a redeemable invitation.
 func (s *SchoolInvitation) ValidateInvitation(ctx context.Context, token string) (result domain.InvitationPreview, err error) {
 	err = s.runtime.WithAdminTx(ctx, func(txCtx context.Context) error {
-		invitation, fetchErr := s.redeemable(txCtx, token)
+		invitation, fetchErr := s.redeemable(txCtx, token, s.store.FindSchoolInvitationByToken)
 		if fetchErr != nil {
 			return fetchErr
 		}
@@ -341,7 +329,7 @@ func (s *SchoolInvitation) ValidateInvitation(ctx context.Context, token string)
 // role and the identity chain the role requires commit together.
 func (s *SchoolInvitation) AcceptInvitation(ctx context.Context, token string, registration domain.InvitationRegistration) (result domain.LoginAccount, err error) {
 	err = s.runtime.WithAdminTx(ctx, func(txCtx context.Context) error {
-		invitation, fetchErr := s.redeemable(txCtx, token)
+		invitation, fetchErr := s.redeemable(txCtx, token, s.store.FindSchoolInvitationByToken)
 		if fetchErr != nil {
 			return fetchErr
 		}
@@ -354,6 +342,11 @@ func (s *SchoolInvitation) AcceptInvitation(ctx context.Context, token string, r
 		}
 		if err := s.requireInvitationSchool(txCtx, invitation); err != nil {
 			return err
+		}
+		// The decision is taken again under the invitation's row lock, in the
+		// order the invitation's creation takes: account, then invitation.
+		if invitation, fetchErr = s.redeemable(txCtx, token, s.store.LockSchoolInvitationByToken); fetchErr != nil {
+			return fetchErr
 		}
 		passwordHash, restore, passwordErr := s.invitationPassword(txCtx, account, hasAccount, registration)
 		if passwordErr != nil {
@@ -467,12 +460,15 @@ func (s *SchoolInvitation) grantAccess(
 	if err := s.provisionInvitationIdentity(ctx, invitation, account.ID, firstName, lastName); err != nil {
 		return domain.LoginAccount{}, err
 	}
-	redeemed, _, err := s.store.SpendSchoolInvitation(ctx, invitation.ID)
+	// The write judges the expiry again at its own database time. The row
+	// lock held since the acceptance read it keeps other spends out, so an
+	// invitation it does not spend has expired.
+	redeemed, _, err := s.store.RedeemSchoolInvitation(ctx, invitation.ID)
 	if err != nil {
 		return domain.LoginAccount{}, failed("mark invitation used", err)
 	}
 	if !redeemed {
-		return domain.LoginAccount{}, failed(opAcceptInvitation, domain.ErrInvitationUsed)
+		return domain.LoginAccount{}, failed(opAcceptInvitation, domain.ErrInvitationExpired)
 	}
 	return account, nil
 }
@@ -532,8 +528,7 @@ func (s *SchoolInvitation) assignCaregiverRole(ctx context.Context, accountID in
 // previous link: it stops working.
 func (s *SchoolInvitation) ResendInvitation(ctx context.Context, invitationID, actorAccountID int64) error {
 	return s.runtime.RunInTx(ctx, func(ctx context.Context) error {
-		now := s.now()
-		invitation, portal, err := s.resendableSchoolInvitation(ctx, invitationID, now)
+		invitation, portal, now, err := s.resendableSchoolInvitation(ctx, invitationID)
 		if err != nil {
 			return err
 		}
@@ -559,7 +554,7 @@ func (s *SchoolInvitation) ResendInvitation(ctx context.Context, invitationID, a
 		s.logger.Info("invitation resent",
 			slog.Int64("invitation_id", invitation.ID),
 			slog.Int64("actor_account_id", actorAccountID))
-		return s.delivery.DispatchSchoolInvitation(ctx, invitation, s.schoolName(ctx, invitation.TenantID), portal, s.expiry)
+		return s.delivery.DispatchSchoolInvitation(ctx, s.mailed(invitation), s.schoolName(ctx, invitation.TenantID), portal, s.expiry)
 	})
 }
 
@@ -567,7 +562,7 @@ func (s *SchoolInvitation) ResendInvitation(ctx context.Context, invitationID, a
 // context.
 
 func (s *SchoolInvitation) inUnitListPendingInvitations(ctx context.Context) ([]domain.SchoolInvitation, error) {
-	invitations, _, err := s.store.ListRedeemableSchoolInvitations(ctx, s.now())
+	invitations, _, err := s.store.ListRedeemableSchoolInvitations(ctx)
 	if err != nil {
 		return nil, failed("list invitations", err)
 	}
@@ -625,7 +620,11 @@ func (s *SchoolInvitation) inUnitInvitationDeliverySent(ctx context.Context, id 
 	if invitation.UsedAt != nil {
 		return false, failed("find invitation delivery", domain.ErrInvitationUsed)
 	}
-	if !invitation.ExpiresAt.After(s.now()) {
+	now, _, err := s.store.DatabaseTime(ctx)
+	if err != nil {
+		return false, failed("find invitation delivery", err)
+	}
+	if !invitation.ExpiresAt.After(now) {
 		return false, failed("find invitation delivery", domain.ErrInvitationExpired)
 	}
 	if invitation.Delivery.Error != nil {
@@ -658,13 +657,14 @@ func (s *SchoolInvitation) InvitationSubdomain(ctx context.Context, token string
 }
 
 // redeemable resolves an invitation that can still be accepted and reports
-// why it cannot otherwise.
-func (s *SchoolInvitation) redeemable(ctx context.Context, token string) (domain.SchoolInvitation, error) {
+// why it cannot otherwise. The expiry is judged at the database time read
+// after find, which may wait for a row lock (ADR 0285, Nachtrag).
+func (s *SchoolInvitation) redeemable(ctx context.Context, token string, find func(context.Context, string) (domain.SchoolInvitation, bool, domain.OperationStats, error)) (domain.SchoolInvitation, error) {
 	token = strings.TrimSpace(token)
 	if token == "" {
 		return domain.SchoolInvitation{}, failed(opFetchInvitation, domain.ErrInvitationNotFound)
 	}
-	invitation, found, _, err := s.store.FindSchoolInvitationByToken(ctx, token)
+	invitation, found, _, err := find(ctx, token)
 	if err != nil {
 		return domain.SchoolInvitation{}, failed(opFetchInvitation, err)
 	}
@@ -674,7 +674,11 @@ func (s *SchoolInvitation) redeemable(ctx context.Context, token string) (domain
 	if invitation.UsedAt != nil {
 		return domain.SchoolInvitation{}, failed(opFetchInvitation, domain.ErrInvitationUsed)
 	}
-	if !invitation.ExpiresAt.After(s.now()) {
+	now, _, err := s.store.DatabaseTime(ctx)
+	if err != nil {
+		return domain.SchoolInvitation{}, failed(opFetchInvitation, err)
+	}
+	if !invitation.ExpiresAt.After(now) {
 		return domain.SchoolInvitation{}, failed(opFetchInvitation, domain.ErrInvitationExpired)
 	}
 	return invitation, nil
@@ -745,27 +749,33 @@ func (d SchoolInvitationDelivery) QueueSchoolWelcome(ctx context.Context, invita
 	return d.Source.QueueSchoolWelcome(ctx, PublicSchoolInvitation(invitation), schoolName, identityaccess.InvitationPortal(portal), rolePermissions)
 }
 
-func (s *SchoolInvitation) resendableSchoolInvitation(ctx context.Context, invitationID int64, now time.Time) (domain.SchoolInvitation, domain.InvitationPortal, error) {
-	invitation, found, _, err := s.store.FindSchoolInvitation(ctx, invitationID)
+// resendableSchoolInvitation locks the invitation and judges it at the
+// database time read under that lock, which it returns for the new expiry.
+func (s *SchoolInvitation) resendableSchoolInvitation(ctx context.Context, invitationID int64) (domain.SchoolInvitation, domain.InvitationPortal, time.Time, error) {
+	invitation, found, _, err := s.store.LockSchoolInvitation(ctx, invitationID)
 	if err != nil {
-		return domain.SchoolInvitation{}, "", failed(opResendInvitation, err)
+		return domain.SchoolInvitation{}, "", time.Time{}, failed(opResendInvitation, err)
 	}
 	if !found {
-		return domain.SchoolInvitation{}, "", failed(opResendInvitation, domain.ErrInvitationNotFound)
+		return domain.SchoolInvitation{}, "", time.Time{}, failed(opResendInvitation, domain.ErrInvitationNotFound)
 	}
 	if invitation.UsedAt != nil {
-		return domain.SchoolInvitation{}, "", failed(opResendInvitation, domain.ErrInvitationUsed)
+		return domain.SchoolInvitation{}, "", time.Time{}, failed(opResendInvitation, domain.ErrInvitationUsed)
+	}
+	now, _, err := s.store.DatabaseTime(ctx)
+	if err != nil {
+		return domain.SchoolInvitation{}, "", time.Time{}, failed(opResendInvitation, err)
 	}
 	if !invitation.ExpiresAt.After(now) {
-		return domain.SchoolInvitation{}, "", failed(opResendInvitation, domain.ErrInvitationExpired)
+		return domain.SchoolInvitation{}, "", time.Time{}, failed(opResendInvitation, domain.ErrInvitationExpired)
 	}
 	role, roleFound, err := s.roles.FindRoleIgnoringTenant(ctx, invitation.RoleID)
 	if err != nil {
-		return domain.SchoolInvitation{}, "", failed("lookup role", err)
+		return domain.SchoolInvitation{}, "", time.Time{}, failed("lookup role", err)
 	}
 	if !roleFound {
-		return domain.SchoolInvitation{}, "", failed("lookup role", domain.ErrRoleNotFound)
+		return domain.SchoolInvitation{}, "", time.Time{}, failed("lookup role", domain.ErrRoleNotFound)
 	}
 	invitation.RoleName = role.Name
-	return invitation, s.portalOf(role), nil
+	return invitation, s.portalOf(role), now, nil
 }

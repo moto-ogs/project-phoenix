@@ -11,9 +11,6 @@ import type {
 /** Die Adresse der Elternbriefe in moto schule. */
 export const SCHOOL_PARENT_LETTERS_ROUTE = "/school/elternbriefe";
 
-/** SWR-Schlüssel der eigenen Elternbriefe. */
-export const SCHOOL_PARENT_LETTERS_KEY = "school-parent-letters";
-
 /** Was die Eltern mit dem Brief tun. */
 type SchoolParentLetterKind = "info" | "letter" | "consent";
 
@@ -37,7 +34,7 @@ export const SCHOOL_PARENT_LETTER_KINDS: readonly SchoolParentLetterKindOption[]
       value: "letter",
       deliveryMode: "letter",
       label: "Mit Lesebestätigung",
-      hint: "Die Eltern bestätigen, dass sie den Brief gelesen haben.",
+      hint: "Die Eltern bestätigen, dass sie den Brief gelesen haben. Sie können Name, Gruppe und Abholzeit jedes Kindes einsetzen.",
     },
     {
       value: "consent",

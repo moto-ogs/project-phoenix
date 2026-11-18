@@ -37,7 +37,7 @@ func NewCareLifecycleTestModule(db transactionruntime.Database, unit tenant.Unit
 	if err != nil {
 		return CareLifecycleTestModule{}, nil, err
 	}
-	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return CareLifecycleTestModule{}, nil, err
 	}
@@ -70,13 +70,13 @@ func NewCareLifecycleTestModule(db transactionruntime.Database, unit tenant.Unit
 func NewStudentDocumentsTestModule(
 	db transactionruntime.Database, records careplan.Capability, students peoplePorts.StudentRepository,
 	userContext securitycontract.StudentAccessUserContext,
-	edits auditModels.StudentFieldEditRepository, accessLog auditModels.DataAccessLogRepository,
+	edits auditModels.StudentFieldEditRepository, accessLog auditModels.DataAccessLogRepository, now func() time.Time,
 ) (careplan.StudentDocuments, error) {
 	deps, err := owners.StudentDocumentDependencies(records, students, userContext, edits, accessLog, studentDocumentPermissions())
 	if err != nil {
 		return nil, err
 	}
-	deps.DB = db.Pool()
+	deps.DB, deps.Now = db.Pool(), now
 	documents, err := carePlanCompose.NewStudentDocuments(deps)
 	if err != nil {
 		return nil, err
@@ -89,13 +89,13 @@ func NewStudentDocumentsTestModule(
 func NewStudentAccidentReportsTestModule(
 	db transactionruntime.Database, records careplan.Capability, students peoplePorts.StudentRepository,
 	userContext securitycontract.StudentAccessUserContext,
-	edits auditModels.StudentFieldEditRepository, accessLog auditModels.DataAccessLogRepository,
+	edits auditModels.StudentFieldEditRepository, accessLog auditModels.DataAccessLogRepository, now func() time.Time,
 ) (careplan.StudentAccidentReports, error) {
 	deps, err := owners.StudentDocumentDependencies(records, students, userContext, edits, accessLog, studentDocumentPermissions())
 	if err != nil {
 		return nil, err
 	}
-	deps.DB = db.Pool()
+	deps.DB, deps.Now = db.Pool(), now
 	reports, err := carePlanCompose.NewStudentDocuments(deps)
 	if err != nil {
 		return nil, err

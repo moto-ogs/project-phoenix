@@ -120,7 +120,7 @@ keine zweite Ansicht.
 
 1. **Anatomie, fest:** Identitätskopf (Name, Avatar, aktueller Status) →
    Reiter → Feldgruppen → Aktionen im Kebab des Kopfes.
-2. **Felder kommen aus `ui/detail-modal-components`** (`DataField`,
+2. **Felder kommen aus `ui/data-field` und `ui/info-section`** (`DataField`,
    `DataGrid`, `InfoSection`). Kein lokales `<dt>/<dd>`-Gitter, keine
    handgebaute Feldzeile.
 3. **Bearbeitet wird am Objekt, nicht daneben.** Ein Reiter wechselt in den
@@ -253,7 +253,7 @@ bekommt eine shrink-only Baseline analog zum bestehenden
    dasselbe gilt ortsgebunden für ein Formular im Slide-over (Übergabe einer
    Gruppe). Das Eltern-Portal zählt seit #5606 mit.
 2. `bauart/no-local-field-grid` — kein lokales `<dt>/<dd>`-Feldgitter
-   außerhalb `ui/detail-modal-components`. **Umgesetzt**
+   außerhalb `ui/data-field`. **Umgesetzt**
    (`scripts/oxlint-plugin-bauart.mjs`, #3117): jedes handgeschriebene
    `<dt>` außerhalb des Kits fällt durch; `DataField` rendert die einzige
    erlaubte Beschriftungszelle. Hard-zero seit #3119: der Bestand aus #3117

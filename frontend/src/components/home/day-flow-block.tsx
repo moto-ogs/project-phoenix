@@ -3,11 +3,14 @@
 import { Fragment } from "react";
 
 import { ListRow } from "~/components/ui/list-row";
-import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { SkeletonRows } from "~/components/ui/skeleton";
-import { HomeCard, HomeCardIcon } from "~/components/home/home-card";
+import {
+  HomeCard,
+  HomeCardEmpty,
+  HomeCardIcon,
+} from "~/components/home/home-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { blockTintStyle } from "~/components/timetable/block-row-parts";
 import { useOperationalOverviewScope } from "~/lib/tenant-context";
@@ -16,6 +19,7 @@ import { formatMinutesAhead, minutesBetween } from "~/lib/home-clock";
 import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import { useSWRAuth } from "~/lib/swr";
+import { homeKeys } from "~/lib/swr/portal-keys";
 import { useDayPlanHref, useDayPlanLabel } from "~/lib/hooks/use-day-plan-href";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
@@ -55,7 +59,7 @@ export function DayFlowBlock() {
   const { data, error, isLoading, mutate } = useSWRAuth<
     PlannedTimetableInstance[]
   >(
-    "home-day-flow",
+    homeKeys.dayFlow(),
     () =>
       timetableOperationsApi.plannedNow({
         scope: "day",
@@ -109,8 +113,7 @@ export function DayFlowBlock() {
         }
         if (blocks.length === 0) {
           return (
-            <EmptyState
-              className="py-4"
+            <HomeCardEmpty
               title="Gerade steht nichts an"
               description="Hier erscheinen die Blöcke des Betreuungsplans, sobald der nächste beginnt."
             />
@@ -133,7 +136,6 @@ export function DayFlowBlock() {
                       wird — wie die Zeilen der Nachbarkarten. */}
                     <ListRow
                       href={dayPlanHref}
-                      aria-label={`${block.title}${mine ? " (Mein Block)" : ""}: unter Heute öffnen`}
                       style={blockTintStyle(block, tinted)}
                       trailing={<BlockState block={block} now={now} />}
                     >
@@ -174,6 +176,9 @@ export function DayFlowBlock() {
                             .flatMap((part) => [" · ", part])}
                         </span>
                       </p>
+                      {/* Named by what the row shows (WCAG 2.5.3, #7112);
+                          the mark and the target follow hidden. */}
+                      <span className="sr-only">{`${mine ? ", Mein Block" : ""}, unter Heute öffnen`}</span>
                     </ListRow>
                   </li>
                 );

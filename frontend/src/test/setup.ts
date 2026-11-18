@@ -2,6 +2,10 @@ import "./setup-jest-dom";
 import type React from "react";
 import { beforeEach, vi } from "vitest";
 
+import { installNetworkGuard } from "./network-guard";
+
+installNetworkGuard();
+
 // Reset the module-level session cache between tests. A static import would
 // bind next-auth/react before the test file's vi.mock registers. Importing here
 // also resolves the current module after a test calls vi.resetModules(). Some
@@ -168,6 +172,7 @@ const tenantProviderMock = vi.hoisted(() => ({
   // The weekend stays closed like the registry default (#3921); tests of the
   // weekend-on branch override this locally.
   useWeekendFollowsFriday: vi.fn(() => false),
+  useChildrenWithoutCarePlace: vi.fn(() => false),
   // The separate child entries stay like the registry default (#1321); tests
   // of the child-search-only navigation override this locally.
   useChildSearchOnlyNavigation: vi.fn(() => false),

@@ -29,6 +29,8 @@ import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { formatDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
   deleteStaffContract,
   deleteStaffHolidayWeek,
@@ -274,6 +276,9 @@ function ContractPanel({
               label={contractPhaseLabel(contract, phase)}
               tone={CONTRACT_PHASE_TONES[phase]}
             />
+            {contract.pool ? (
+              <StatusBadge label="Vertretungspool" tone="blue" />
+            ) : null}
           </div>
           <p className="text-sm text-gray-500 tabular-nums">
             {contractTerm(contract)} ·{" "}
@@ -299,9 +304,9 @@ function ContractPanel({
               onClick: () => onOpen({ kind: "weeks", contract }),
             },
             {
-              label: ended ? "Vertrag ändern" : "Art oder Ende ändern",
+              label: "Vertrag ändern",
               description:
-                "Teilzeit, Vollzeit oder Minijob und der letzte Tag.",
+                "Die Art des Vertrags, der letzte Tag und der Vertretungspool.",
               icon: <CalendarPlusIcon className="size-4" aria-hidden="true" />,
               onClick: () => onOpen({ kind: "terms", contract }),
             },
@@ -351,6 +356,7 @@ export function StaffContractsCard({
   const [deleting, setDeleting] = useState(false);
   const deleteErrors = useApiFormError();
   const { success } = useToast();
+  const invalidateFamily = useInvalidateFamily();
   const activeSchools = record.employments.filter(
     (employment) => employment.active,
   ).length;
@@ -359,6 +365,11 @@ export function StaffContractsCard({
   const saved = (next: StaffRecordDetail) => {
     setDialog(null);
     onChanged(next);
+    // The contracts make the Soll of the planning and the time account and
+    // put a person into the Vertretungspool (#4709).
+    void invalidateFamily(traegerStaffKeys.poolFamily);
+    void invalidateFamily(traegerStaffKeys.planningFamily);
+    void invalidateFamily(traegerStaffKeys.timeAccountFamily);
   };
   const open = (next: Dialog) => {
     deleteErrors.clear();

@@ -78,7 +78,7 @@ func (s *Store) UpdateCareRule(ctx context.Context, organizationID, ruleID int64
 		}
 	}
 	row := newCareRuleRow(organizationID, input)
-	result, err := db.NewUpdate().Model(row).Column(careRuleColumns...).Set("updated_at = CURRENT_TIMESTAMP").
+	result, err := db.NewUpdate().Model(row).Column(careRuleColumns...).
 		Where("id = ?", ruleID).Where("organization_id = ?", organizationID).Where("service = ?", parentbilling.ServiceCare).
 		Exec(ctx)
 	if err != nil {
@@ -134,7 +134,7 @@ type careEvidenceRow struct {
 	Evidence            string         `bun:"evidence"`
 	CheckedOn           calendar.Date  `bun:"checked_on,type:date"`
 	RecordedByAccountID *int64         `bun:"recorded_by_account_id"`
-	UpdatedAt           time.Time      `bun:"updated_at,nullzero,default:current_timestamp"`
+	UpdatedAt           time.Time      `bun:"updated_at,nullzero"`
 }
 
 func (r careEvidenceRow) evidence() parentbilling.CareEvidence {
@@ -184,6 +184,7 @@ func (s *Store) InsertCareEvidence(ctx context.Context, organizationID, accountI
 		return 0, err
 	}
 	row := newCareEvidenceRow(organizationID, accountID, input)
+	row.UpdatedAt = s.now()
 	if _, err := db.NewInsert().Model(row).Returning("id").Exec(ctx); err != nil {
 		return 0, evidenceWriteError(err)
 	}
@@ -200,7 +201,7 @@ func (s *Store) UpdateCareEvidence(ctx context.Context, organizationID, accountI
 	row := newCareEvidenceRow(organizationID, accountID, input)
 	if err := db.NewUpdate().Model(row).
 		Column("kind", "rule_id", "valid_from", "valid_until", "evidence", "checked_on", "recorded_by_account_id").
-		Set("updated_at = CURRENT_TIMESTAMP").
+		Set("updated_at = ?", s.now()).
 		Where("id = ?", evidenceID).Where("organization_id = ?", organizationID).Where("care_contract_id = ?", input.ContractID).
 		Returning("care_contract_id").Scan(ctx, &row.CareContractID); err != nil {
 		if isNoRows(err) {

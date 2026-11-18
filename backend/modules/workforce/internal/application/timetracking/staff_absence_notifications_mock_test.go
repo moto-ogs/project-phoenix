@@ -58,7 +58,7 @@ func newAbsenceNotificationTestService(
 ) (*staffAbsenceService, *capturingAbsenceEmails) {
 	t.Helper()
 	mailer := newCapturingAbsenceEmails()
-	svc := &staffAbsenceService{}
+	svc := &staffAbsenceService{nowFunc: testNow}
 	svc.emailDeps = &AbsenceEmailDeps{
 		Settings:    settings,
 		Dispatcher:  mailer,
@@ -94,7 +94,7 @@ func TestAbsenceEmailHelpers_CoverLabelsRangesAndLoggers(t *testing.T) {
 	absence.DateEnd = NewDate(2027, 7, 6)
 	assert.Equal(t, "05.07.2027 bis 06.07.2027", formatAbsenceDateRange(absence))
 
-	svc := &staffAbsenceService{}
+	svc := &staffAbsenceService{nowFunc: testNow}
 	assert.NotNil(t, svc.emailLogger())
 	customLogger := slog.New(slog.DiscardHandler)
 	svc.emailDeps = &AbsenceEmailDeps{Logger: customLogger}
@@ -115,7 +115,7 @@ func TestAbsenceEmailsEnabled_RequiresDependenciesAndHandlesSettingFailure(t *te
 	t.Parallel()
 
 	ctx := context.Background()
-	svc := &staffAbsenceService{}
+	svc := &staffAbsenceService{nowFunc: testNow}
 	assert.False(t, svc.absenceEmailsEnabled(ctx))
 
 	svc.emailDeps = &AbsenceEmailDeps{Settings: absSettingsMock{enabled: true}}

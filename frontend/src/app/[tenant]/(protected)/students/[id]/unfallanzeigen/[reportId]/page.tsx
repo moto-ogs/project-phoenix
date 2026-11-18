@@ -14,7 +14,7 @@ import {
 import { ActionHint } from "~/components/ui/action-hint";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink, buttonClassName } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";

@@ -10,10 +10,13 @@ import {
   LinkSimpleIcon,
   LockKeyIcon,
   UploadSimpleIcon,
+  UserPlusIcon,
 } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { StaffLinkModal } from "~/components/traeger/staff/staff-link-modal";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import {
   STAFF_MATCH_LABELS,
   STAFF_MATCH_TONES,
@@ -25,23 +28,21 @@ import { IconTile } from "~/components/ui/icon-tile";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useApiLoadError, useToast } from "~/contexts/ToastContext";
+import { useToast } from "~/contexts/ToastContext";
 import { peopleConcept } from "~/lib/concepts/people";
 import { staffConcept } from "~/lib/concepts/staff";
 import { formatDate } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
+import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
+  downloadStaffRecordList,
   fetchStaffOverview,
   staffName,
   type StaffCandidate,
   type StaffLinkInput,
-  type StaffOverview,
   type StaffRecordSummary,
   type StaffSuggestion,
 } from "~/lib/traeger-staff-api";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerStaffRecordsPage" });
 
 type Tab = "vorschlaege" | "akten" | "ohne-akte";
 
@@ -215,33 +216,21 @@ const linkRequestOf = (suggestion: StaffSuggestion) => ({
 export default function TraegerStaffRecordsPage() {
   const router = useRouter();
   const { success } = useToast();
-  const [overview, setOverview] = useState<StaffOverview | null>(null);
+  const {
+    data: overview,
+    loading,
+    error,
+    reload,
+  } = useTraegerResource(
+    traegerStaffKeys.overview(),
+    fetchStaffOverview,
+    "die Personalakten",
+  );
   const [tab, setTab] = useState<Tab | null>(null);
   const [linking, setLinking] = useState<Omit<
     StaffLinkInput,
     "choices"
   > | null>(null);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-
-  const load = useCallback(async () => {
-    try {
-      setOverview(await fetchStaffOverview());
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_staff_records_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Personalakten",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const records = useMemo(
     () =>
@@ -294,23 +283,44 @@ export default function TraegerStaffRecordsPage() {
           />
         ) : null
       }
-      statsLoading={!overview && !pageLoad.error}
+      statsLoading={loading}
       actions={
-        released ? (
-          <ButtonLink
-            href={traegerPath("/traeger/personal/import")}
-            className="gap-2"
-            variant="outline"
-            size="md"
-            tooltip="Öffnet den Import für Personal aus einer CSV-Datei."
-          >
-            <UploadSimpleIcon className="h-4 w-4" aria-hidden="true" />
-            Personal importieren
-          </ButtonLink>
+        overview && released ? (
+          <>
+            <TraegerListExportMenu
+              download={downloadStaffRecordList}
+              scope="Alle Akten"
+              ariaLabel="Personalakten herunterladen"
+              tooltip="Zeigt die Formate für alle Akten. Jeder Download steht im Zugriffsprotokoll der Schulen."
+              fallbackName="personalakten"
+              errorObject="die Personalakten"
+              unavailable={overview.records.length === 0}
+            />
+            <ButtonLink
+              href={traegerPath("/traeger/personal/import")}
+              className="gap-2"
+              variant="outline"
+              size="md"
+              tooltip="Öffnet den Import für Personal aus einer CSV-Datei."
+            >
+              <UploadSimpleIcon className="h-4 w-4" aria-hidden="true" />
+              Personal importieren
+            </ButtonLink>
+            <ButtonLink
+              href={traegerPath("/traeger/personal/einstellen")}
+              className="gap-2"
+              variant="primary"
+              size="md"
+              tooltip="Öffnet das Formular für eine neue Person mit Akte, Vertrag und Schulen."
+            >
+              <UserPlusIcon className="h-4 w-4" aria-hidden="true" />
+              Person einstellen
+            </ButtonLink>
+          </>
         ) : undefined
       }
-      error={pageLoad.error}
-      loading={!overview && !pageLoad.error}
+      error={error}
+      loading={loading}
       tabs={
         released
           ? {
@@ -336,7 +346,7 @@ export default function TraegerStaffRecordsPage() {
           onLinked={(record) => {
             setLinking(null);
             success(`Die Akte von ${staffName(record)} ist verknüpft.`);
-            void load();
+            reload();
             router.push(traegerPath(`/traeger/personal/${record.id}`));
           }}
         />
@@ -410,7 +420,7 @@ export default function TraegerStaffRecordsPage() {
                   />
                 }
                 title="Noch keine Akte."
-                description="Verknüpfen Sie einen Vorschlag, legen Sie unter „Ohne Akte“ eine Akte an, oder importieren Sie Ihr Personal oben mit „Personal importieren“."
+                description="Stellen Sie oben mit „Person einstellen“ eine neue Person ein. Für Personal, das schon an einer Schule arbeitet: Verknüpfen Sie einen Vorschlag, legen Sie unter „Ohne Akte“ eine Akte an, oder nutzen Sie „Personal importieren“."
               />
             }
           />
@@ -441,7 +451,7 @@ export default function TraegerStaffRecordsPage() {
             emptyState={
               <EmptyState
                 title="Alle Personen haben eine Akte."
-                description="Neues Personal einer Schule erscheint hier."
+                description="Personal, das eine Schule selbst anlegt, erscheint hier."
               />
             }
           />

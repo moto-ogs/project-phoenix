@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -63,7 +64,7 @@ func traegerCatalogRouter(t *testing.T, db *bun.DB, tariffOverride ...parentbill
 	database := testpkg.NewDatabase(t, db)
 	organizations, err := owners.NewOrganizationTenancy(database)
 	require.NoError(t, err)
-	audit, err := auditCompose.NewTenantPersistence(db)
+	audit, err := auditCompose.NewTenantPersistence(db, time.Now)
 	require.NoError(t, err)
 	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil)
 	require.NoError(t, err)
@@ -76,7 +77,8 @@ func traegerCatalogRouter(t *testing.T, db *bun.DB, tariffOverride ...parentbill
 	})
 	require.NoError(t, err)
 	billing, intake := newTraegerCatalogBilling(organizations, settings, schoolSettings.Settings, presence, delivery.Module,
-		providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog, owners.CareContractTestHolidays{}, "http://parents.localhost:3000", traegerCatalogBillingDay)
+		providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog, owners.CareContractTestHolidays{}, "http://parents.localhost:3000", traegerCatalogBillingDay,
+		func() time.Time { return traegerCatalogBillingDay().BerlinMidnight().Add(10 * time.Hour) })
 	if len(tariffOverride) > 0 {
 		billing = tariffOverride[0]
 	}
@@ -86,6 +88,7 @@ func traegerCatalogRouter(t *testing.T, db *bun.DB, tariffOverride ...parentbill
 	require.NoError(t, err)
 	noLock := func(context.Context) error { return nil }
 	phases, err := enrollmentCompose.NewResyncingPhases(enrollmentCompose.PhaseDependencies{
+		Now:                    time.Now,
 		Records:                NewEnrollmentSuiteRepositories(database).Enrollment(),
 		Offerings:              catalogPhaseOfferings{carePlan: NewRepositoryTestFactory(database).CarePlan()},
 		LockTemplateRecurrence: noLock, Resyncer: bookings.Bookings,
@@ -97,7 +100,7 @@ func traegerCatalogRouter(t *testing.T, db *bun.DB, tariffOverride ...parentbill
 			next.ServeHTTP(w, r.WithContext(tenant.WithUnitOfWork(r.Context(), unit)))
 		})
 	})
-	require.NoError(t, mountTraegerCatalogRoutes(router, phases, catalog.Catalog, noLock, organizations, billing, intake))
+	require.NoError(t, mountTraegerCatalogRoutes(router, phases, catalog.Catalog, noLock, organizations, billing, intake, time.Now))
 	return testpkg.SessionVerifier(router)
 }
 
@@ -189,6 +192,12 @@ func TestTraegerCatalogRollsOutIntoEverySchoolAndKeepsTheSchoolsChanges(t *testi
 	rollout := catalogRollout(t, router, office.token, phasePath, preview.Fingerprint)
 	assert.Equal(t, []catalogResult{{SchoolID: office.schools[0], Outcome: "applied"}, {SchoolID: office.schools[1], Outcome: "applied"}}, rollout.Schools)
 
+	// The list of the phases as a file (#4718).
+	export := traegerJSON(t, router, office.token, http.MethodGet, "/traeger/catalog/phases/export", nil)
+	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
+	assert.Contains(t, export.Body.String(), "Schuljahr 2027/28;01.08.2027;31.07.2028;Alle Schulen;0;Übertragen\n")
+	assertTraegerListFormats(t, router, office.token, "/traeger/catalog/phases/export", "anmeldephasen")
+
 	ctx := context.Background()
 	for _, school := range office.schools {
 		var copyID int64
@@ -199,6 +208,12 @@ func TestTraegerCatalogRollsOutIntoEverySchoolAndKeepsTheSchoolsChanges(t *testi
 		require.NoError(t, db.NewRaw(`SELECT count(*) FROM care_contract.contract_templates WHERE school_id = ? AND care_offering_id = ?`, school, copyID).Scan(ctx, &templates))
 		assert.Equal(t, 2, tariffs, "school %d has a price per weekday", school)
 		assert.Equal(t, 1, templates, "school %d has its contract template", school)
+		var recorded int
+		require.NoError(t, db.NewRaw(`SELECT count(*) FROM care_contract.contract_events AS e
+  JOIN care_contract.contract_templates AS template ON template.id = (e.details->>'template_id')::bigint
+  WHERE template.school_id = ? AND template.care_offering_id = ? AND e.action = 'template'
+    AND jsonb_typeof(e.details->'acceptance_texts') = 'array'`, school, copyID).Scan(ctx, &recorded))
+		assert.Equal(t, 1, recorded, "school %d: the trail records the conditions texts of the saved version (#7295)", school)
 	}
 
 	// The first school deactivates its copy; the office raises the capacity
@@ -240,6 +255,11 @@ func TestTraegerCatalogRollsOutIntoEverySchoolAndKeepsTheSchoolsChanges(t *testi
 	billingOffice := newTraegerOffice(t, db, portal, "Träger Katalog Abrechnung", identityaccess.TraegerRoleBilling)
 	rec = traegerJSON(t, router, billingOffice.token, http.MethodGet, "/traeger/catalog/phases", nil)
 	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+	rec = traegerJSON(t, router, billingOffice.token, http.MethodGet, "/traeger/catalog/phases/export", nil)
+	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+	rec = traegerJSON(t, router, foreign.token, http.MethodGet, "/traeger/catalog/phases/export", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.NotContains(t, rec.Body.String(), "Schuljahr 2027/28", "another Träger exports none of these phases")
 
 	// The office withdraws the offering: copies without bookings go.
 	rec = traegerJSON(t, router, office.token, http.MethodPost, fmt.Sprintf("/traeger/catalog/offerings/%d/withdraw", offering.ID), nil)

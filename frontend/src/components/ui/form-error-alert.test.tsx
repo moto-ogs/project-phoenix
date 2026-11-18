@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { ErrorFixTargetsProvider } from "~/components/tenant/error-fix-targets";
 import { ModuleNotBookedSlots } from "~/components/tenant/module-not-booked-state";
 import { FormErrorAlert, LoadErrorAlert } from "./form-error-alert";
 
@@ -216,6 +217,82 @@ describe("FormErrorAlert", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Diese Seite gehört zum Modul Zeiterfassung. Ihre Schule hat es nicht gebucht. Für eine Buchung wenden Sie sich an das moto-Team.",
     );
+  });
+
+  // #7174, #7092: a missing federal state leads the Leitung to the setting.
+  it("links the Leitung to where a refusal is fixed", () => {
+    session.permissions = ["config:manage"];
+    const missingState = {
+      message: "Für die Schule ist noch kein Bundesland eingetragen.",
+      code: "calendar.federal_state_missing",
+      attempt: 1,
+    };
+
+    const { rerender } = render(
+      <ErrorFixTargetsProvider>
+        <LoadErrorAlert error={missingState} />
+      </ErrorFixTargetsProvider>,
+    );
+    expect(
+      screen.getByRole("link", { name: "Bundesland eintragen" }),
+    ).toHaveAttribute(
+      "href",
+      "/test-tenant/settings?tab=operations&highlight=operations.federal_state",
+    );
+
+    rerender(
+      <ErrorFixTargetsProvider>
+        <FormErrorAlert message={missingState} />
+      </ErrorFixTargetsProvider>,
+    );
+    expect(
+      screen.getByRole("link", { name: "Bundesland eintragen" }),
+    ).toBeInTheDocument();
+  });
+
+  it.each([
+    [
+      "enrollment.phase_eligibility_setting_required",
+      "config:update",
+      "Abfrage einschalten",
+      "/test-tenant/settings?tab=enrollment&highlight=enrollment.collect_grade_level",
+    ],
+    [
+      "students.day_log_disabled",
+      "config:manage",
+      "Protokoll einschalten",
+      "/test-tenant/settings?tab=gdpr&highlight=gdpr.attendance_log_enabled",
+    ],
+  ])("leads %s to its setting with %s (#7092)", (code, right, label, href) => {
+    session.permissions = [right];
+
+    render(
+      <ErrorFixTargetsProvider>
+        <FormErrorAlert message={{ message: "Abgelehnt.", code, attempt: 1 }} />
+      </ErrorFixTargetsProvider>,
+    );
+
+    expect(screen.getByRole("link", { name: label })).toHaveAttribute(
+      "href",
+      href,
+    );
+  });
+
+  it("shows no fix link without the right for the target", () => {
+    render(
+      <ErrorFixTargetsProvider>
+        <LoadErrorAlert
+          error={{
+            message: "Für die Schule ist noch kein Bundesland eingetragen.",
+            code: "calendar.federal_state_missing",
+            attempt: 1,
+          }}
+        />
+      </ErrorFixTargetsProvider>,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Bundesland");
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("puts a retry beside the message only without a request ID", () => {

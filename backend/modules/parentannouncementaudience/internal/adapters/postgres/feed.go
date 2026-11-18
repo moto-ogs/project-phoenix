@@ -59,12 +59,13 @@ func (p *Projection) ListFeedForAccount(ctx context.Context, accountID int64, sc
 	if err != nil {
 		return nil, err
 	}
-	today := p.day()
+	today, now := p.day(), p.now()
 	var rows []feedRow
 	if err := db.NewRaw(feedSQL,
-		applicants,
+		applicants, p.links.AllSchoolsGuardianLinkRows(db), accountID,
 		accountID, feedScopeList(scope.TenantIDs), feedScopeList(scope.SystemOnlyTenantIDs),
-		today, today, today, p.links.AllSchoolsGuardianLinkRows(db), accountID, accountID, accountID,
+		now, now,
+		today, today, today, accountID, accountID,
 	).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("list parent announcement feed: %w", err)
 	}
@@ -84,7 +85,11 @@ func scopeSchools(scope contract.ParentAnnouncementFeedScope) []int64 {
 // countOutstandingSQL counts live announcements that still need attention:
 // unread, pending confirmation, or an open poll with an unanswered child.
 // Reading an actionable item must not clear its reminder.
-const countOutstandingSQL = pendingApplicantsFeedCTE + `
+//
+// Bind order: applicants, guardian links, account, account, news schools,
+// notice-only schools, now, now, now, today, today, today, today, today,
+// today, account, account.
+const countOutstandingSQL = pendingApplicantsFeedCTE + `, ` + accountChildrenCTE + `
 			SELECT COUNT(*)
 			FROM users.parent_announcements a
 			LEFT JOIN users.parent_announcement_reads par
@@ -111,13 +116,14 @@ func (p *Projection) CountOutstandingForAccount(ctx context.Context, accountID i
 	if err != nil {
 		return 0, err
 	}
-	today := p.day()
+	today, now := p.day(), p.now()
 	var count int
 	if err := db.NewRaw(countOutstandingSQL,
-		applicants,
+		applicants, p.links.AllSchoolsGuardianLinkRows(db), accountID,
 		accountID, feedScopeList(scope.TenantIDs), feedScopeList(scope.SystemOnlyTenantIDs),
-		today, today, today, p.links.AllSchoolsGuardianLinkRows(db), accountID,
-		today, today, today, p.links.AllSchoolsGuardianLinkRows(db), accountID, accountID, accountID,
+		now, now,
+		now, today, today, today,
+		today, today, today, accountID, accountID,
 	).Scan(ctx, &count); err != nil {
 		return 0, fmt.Errorf("count outstanding parent announcements: %w", err)
 	}

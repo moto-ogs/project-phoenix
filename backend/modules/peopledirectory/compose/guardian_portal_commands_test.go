@@ -382,7 +382,8 @@ func TestGuardianPortalLocaleOnlyTouchesTheTenantInContext(t *testing.T) {
 func TestStudentPhotoConsentWritesTheGivenSlice(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := buildModule(t, db)
+	// A consent is given at a school with child photos on (#7208).
+	module, photos := buildPhotoModule(t, db)
 	ctx := testpkg.Ctx(t)
 	actor := testpkg.CreateTestAccount(t, db, "portal-consent")
 	student := testpkg.CreateTestStudentForTenant(t, db, testpkg.Tenant(t), "Pia", "Photo", "1a")
@@ -401,9 +402,15 @@ func TestStudentPhotoConsentWritesTheGivenSlice(t *testing.T) {
 	require.NoError(t, err)
 
 	grantedAt := time.Date(2026, 9, 21, 8, 30, 0, 0, time.UTC)
-	require.NoError(t, module.SetStudentPhotoConsent(ctx, peopledirectory.StudentPhotoState{
+	grant := peopledirectory.StudentPhotoState{
 		StudentID: student.ID, PhotoPath: textPtr("/photos/pia.jpg"), PhotoConsentGivenAt: &grantedAt, PhotoConsentGivenBy: &actor.ID,
-	}))
+	}
+	photos.switchedOff = true
+	require.ErrorIs(t, module.SetStudentPhotoConsent(ctx, grant), peopledirectory.ErrPhotoFeatureDisabled,
+		"no new consent while photos are off")
+	assert.Nil(t, read().GivenAt)
+	photos.switchedOff = false
+	require.NoError(t, module.SetStudentPhotoConsent(ctx, grant))
 	row := read()
 	assert.Equal(t, "/photos/pia.jpg", *row.PhotoPath)
 	require.NotNil(t, row.GivenAt)

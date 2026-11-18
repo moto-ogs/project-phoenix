@@ -19,8 +19,8 @@ type folderRow struct {
 	Name          string    `bun:"name,notnull"`
 	Visibility    string    `bun:"visibility,notnull"`
 	CreatedBy     int64     `bun:"created_by,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 func (r folderRow) folder() domain.Folder {
@@ -68,7 +68,7 @@ func (s *FolderStore) Create(ctx context.Context, folder domain.Folder) (domain.
 	row := folderRow{TenantID: tenantID, Name: folder.Name, Visibility: folder.Visibility, CreatedBy: folder.CreatedBy}
 	started := time.Now()
 	err = db.NewInsert().Model(&row).ModelTableExpr(`documents.folders`).Returning("*").Scan(ctx)
-	stats := measure(started, 1)
+	stats := measure(time.Since(started), 1)
 	if err != nil {
 		return domain.Folder{}, stats, fmt.Errorf("file storage postgres: create folder: %w", classifyWriteError(err))
 	}
@@ -90,7 +90,7 @@ func (s *FolderStore) Update(ctx context.Context, folder domain.Folder) (domain.
 		Where(`"folder".tenant_id = ?`, tenantID).
 		Returning("*").
 		Scan(ctx, &row)
-	stats := measure(started, 1)
+	stats := measure(time.Since(started), 1)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.Folder{}, stats, filestorage.ErrNotFound
 	}
@@ -111,7 +111,7 @@ func (s *FolderStore) Delete(ctx context.Context, folderID int64) (domain.Operat
 		Where(`"folder".id = ?`, folderID).
 		Where(`"folder".tenant_id = ?`, tenantID).
 		Exec(ctx)
-	stats := measure(started, 0)
+	stats := measure(time.Since(started), 0)
 	if err != nil {
 		return stats, fmt.Errorf("file storage postgres: delete folder: %w", err)
 	}
@@ -138,7 +138,7 @@ func (s *FolderStore) FindByID(ctx context.Context, folderID int64) (domain.Fold
 		Where(`"folder".id = ?`, folderID).
 		Where(`"folder".tenant_id = ?`, tenantID).
 		Scan(ctx)
-	stats := measure(started, 1)
+	stats := measure(time.Since(started), 1)
 	if errors.Is(err, sql.ErrNoRows) {
 		stats.Rows = 0
 		return domain.Folder{}, false, stats, nil
@@ -202,7 +202,7 @@ func (s *FolderStore) ListVisible(ctx context.Context, viewer domain.Viewer) ([]
 	query = visibleFolders(db, query, tenantID, viewer)
 	started := time.Now()
 	err = query.Scan(ctx)
-	stats := measure(started, int64(len(rows)))
+	stats := measure(time.Since(started), int64(len(rows)))
 	if err != nil {
 		return nil, stats, fmt.Errorf("file storage postgres: list visible folders: %w", err)
 	}
@@ -225,7 +225,7 @@ func (s *FolderStore) IsVisible(ctx context.Context, folderID int64, viewer doma
 	query = visibleFolders(db, query, tenantID, viewer)
 	started := time.Now()
 	exists, err := query.Exists(ctx)
-	stats := measure(started, 0)
+	stats := measure(time.Since(started), 0)
 	if err != nil {
 		return false, stats, fmt.Errorf("file storage postgres: check folder visibility: %w", err)
 	}

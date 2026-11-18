@@ -227,7 +227,7 @@ func (s *Service) deleteDeactivatedOperators(ctx context.Context) (result int, e
 
 func (s *Service) RecordOperatorLogin(ctx context.Context, id int64) error {
 	err := s.run(ctx, s.tx.RunAdmin, "record_operator_login", func(txCtx context.Context, stats *domain.OperationStats) error {
-		queryStats, err := s.operators.RecordOperatorLogin(txCtx, id, time.Now())
+		queryStats, err := s.operators.RecordOperatorLogin(txCtx, id, s.now())
 		stats.Add(queryStats)
 		return err
 	})
@@ -260,7 +260,7 @@ func (s *Service) writeOperatorCredential(ctx context.Context, id int64, write d
 func (s *Service) IncrementOperatorMFAAttempts(ctx context.Context, id int64, threshold int, lockout time.Duration) (identityaccess.OperatorMFAAttempts, error) {
 	var result domain.OperatorMFAAttempts
 	err := s.run(ctx, s.tx.RunAdmin, "increment_operator_mfa_attempts", func(txCtx context.Context, stats *domain.OperationStats) error {
-		attempts, found, queryStats, incrementErr := s.operators.IncrementOperatorMFAAttempts(txCtx, id, threshold, time.Now().Add(lockout))
+		attempts, found, queryStats, incrementErr := s.operators.IncrementOperatorMFAAttempts(txCtx, id, threshold, s.now().Add(lockout))
 		stats.Add(queryStats)
 		if incrementErr != nil {
 			return incrementErr
@@ -500,7 +500,7 @@ func (s *Service) VerifyOperatorSession(ctx context.Context, operatorID int64, f
 		if err != nil {
 			return err
 		}
-		if session.OperatorID != operatorID || !session.Expiry.After(time.Now()) {
+		if session.OperatorID != operatorID || !session.Expiry.After(s.now()) {
 			return identityaccess.ErrOperatorInactive
 		}
 		return nil

@@ -160,6 +160,8 @@ var moduleRouteRules = []moduleRouteRule{
 
 	// Dienstplan.
 	{"/api/staff-shifts", settings.ModuleDienstplan},
+	// The Springer of the Träger are planned with the Dienstplan (#4709).
+	{"/api/staff-pool", settings.ModuleDienstplan},
 	{"/api/shift-types", settings.ModuleDienstplan},
 	{"/api/timetable/shift-coverage", settings.ModuleDienstplan},
 

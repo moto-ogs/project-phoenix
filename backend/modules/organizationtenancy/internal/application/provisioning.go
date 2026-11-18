@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
@@ -34,7 +35,10 @@ type ProvisioningDependencies struct {
 	Settings            ports.ProvisioningSettings
 	Audit               ports.OperatorAudit
 	Secrets             ports.ProvisioningSecrets
-	Logger              *slog.Logger
+	// Now is the composition's clock; a device transfer stamps the archived
+	// source with it.
+	Now    func() time.Time
+	Logger *slog.Logger
 }
 
 // Provisioning implements the operator provisioning capability. Every
@@ -57,6 +61,7 @@ type Provisioning struct {
 	settings           ports.ProvisioningSettings
 	audit              ports.OperatorAudit
 	secrets            ports.ProvisioningSecrets
+	now                func() time.Time
 	logger             *slog.Logger
 }
 
@@ -66,7 +71,7 @@ var _ organizationtenancy.Provisioning = (*Provisioning)(nil)
 func NewProvisioning(deps ProvisioningDependencies) (*Provisioning, error) {
 	if deps.PWAUsageWindowDays <= 0 || deps.Organizations == nil || deps.ErasureOrderRecords == nil || deps.Transaction == nil || deps.Dashboard == nil || deps.Identity == nil ||
 		deps.Devices == nil || deps.People == nil || deps.Presence == nil || deps.Categories == nil ||
-		deps.Settings == nil || deps.Audit == nil || deps.Secrets == nil {
+		deps.Settings == nil || deps.Audit == nil || deps.Secrets == nil || deps.Now == nil {
 		return nil, errors.New("organization tenancy provisioning: all dependencies are required")
 	}
 	logger := deps.Logger
@@ -79,7 +84,7 @@ func NewProvisioning(deps ProvisioningDependencies) (*Provisioning, error) {
 		organizations:      deps.Organizations, erasureRecords: deps.ErasureOrderRecords, tx: deps.Transaction, dashboard: deps.Dashboard,
 		identity: deps.Identity, devices: deps.Devices, people: deps.People, presence: deps.Presence,
 		categories: deps.Categories, settings: deps.Settings, audit: deps.Audit, secrets: deps.Secrets,
-		logger: logger,
+		now: deps.Now, logger: logger,
 	}, nil
 }
 

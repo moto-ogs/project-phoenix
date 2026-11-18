@@ -27,8 +27,8 @@ type workSessionRow struct {
 	RoundingMode   string       `bun:"rounding_mode,notnull,default:''"`
 	CreatedBy      int64        `bun:"created_by,notnull"`
 	UpdatedBy      *int64       `bun:"updated_by"`
-	CreatedAt      time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt      time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt      time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt      time.Time    `bun:"updated_at,nullzero,notnull"`
 }
 
 type workSessionBreakRow struct {
@@ -40,8 +40,8 @@ type workSessionBreakRow struct {
 	EndedAt         *time.Time `bun:"ended_at"`
 	DurationMinutes int        `bun:"duration_minutes,notnull,default:0"`
 	PlannedEndTime  *time.Time `bun:"planned_end_time"`
-	CreatedAt       time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt       time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt       time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt       time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 type staffBalanceAdjustmentRow struct {
@@ -54,9 +54,9 @@ type staffBalanceAdjustmentRow struct {
 	EffectiveDate calendarDate `bun:"effective_date,notnull,type:date"`
 	Note          string       `bun:"note,notnull,default:''"`
 	DecidedBy     int64        `bun:"decided_by,notnull"`
-	DecidedAt     time.Time    `bun:"decided_at,nullzero,notnull,default:current_timestamp"`
-	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	DecidedAt     time.Time    `bun:"decided_at,nullzero,notnull"`
+	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull"`
 }
 
 type staffVacationOpeningRow struct {
@@ -70,9 +70,9 @@ type staffVacationOpeningRow struct {
 	EnteredRemainingDays float64      `bun:"entered_remaining_days,notnull"`
 	Note                 string       `bun:"note,notnull,default:''"`
 	DecidedBy            int64        `bun:"decided_by,notnull"`
-	DecidedAt            time.Time    `bun:"decided_at,nullzero,notnull,default:current_timestamp"`
-	CreatedAt            time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt            time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	DecidedAt            time.Time    `bun:"decided_at,nullzero,notnull"`
+	CreatedAt            time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt            time.Time    `bun:"updated_at,nullzero,notnull"`
 }
 
 type staffVacationQuotaRow struct {
@@ -83,8 +83,8 @@ type staffVacationQuotaRow struct {
 	Year          int       `bun:"year,notnull"`
 	EntitledDays  float64   `bun:"entitled_days,notnull,default:30"`
 	CarryoverDays float64   `bun:"carryover_days,notnull,default:0"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 type staffVacationQuotaChangeRow struct {

@@ -8,6 +8,11 @@
  * braucht eine Bestätigung (`~/lib/working-time`). Die Woche ist
  * Personendaten: jede Anfrage steht im Zugriffsprotokoll der Schulen.
  */
+import {
+  downloadTraegerList,
+  type TraegerListFile,
+  type TraegerListFormat,
+} from "./traeger-list-export";
 import { traegerRequest } from "~/lib/traeger-api";
 import {
   mapWorkingTimeWarnings,
@@ -229,6 +234,17 @@ export async function fetchTraegerPlanningWeek(
     `${BASE}?week=${encodeURIComponent(weekStart)}`,
   );
   return mapPlanningWeek(week);
+}
+
+/**
+ * Die Woche ab `weekStart` als Datei, eine Zeile je Person und eine Spalte je
+ * Tag; der Download steht im Zugriffsprotokoll.
+ */
+export function downloadTraegerPlanningWeek(
+  weekStart: string,
+  format: TraegerListFormat,
+): Promise<TraegerListFile> {
+  return downloadTraegerList(`${BASE}/export`, format, { week: weekStart });
 }
 
 export async function planTraegerShift(

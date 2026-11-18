@@ -74,7 +74,8 @@ const traegerEmailStatusesOfSQL = traegerEmailCandidatesSQL + `(candidate.idempo
 // retryFailedTraegerEmailsSQL makes a Träger's dead letters with a known
 // failure due again (ADR 0196 section 5). A mail sent, waiting or whose
 // worker stopped during the provider call stays as it is: its outcome is
-// known good, pending or unknown, and a repetition would be blind.
+// known good, pending or unknown, and a repetition would be blind. The mail is
+// due at the store's clock (?5), the clock the worker claims with.
 const retryFailedTraegerEmailsSQL = `WITH requested AS MATERIALIZED (
  SELECT id, kind, recipient FROM platform.email_outbox
  WHERE tenant_id IS NULL AND organization_id = ?0 AND idempotency_key = ANY(?1::text[])
@@ -88,8 +89,8 @@ const retryFailedTraegerEmailsSQL = `WITH requested AS MATERIALIZED (
    OR (mail.status = 'cancelled' AND mail.last_error IN (?3, ?4)))
 )
 UPDATE platform.email_outbox AS mail
- SET status = 'pending', next_retry_at = NOW(), attempts = 0, last_error = NULL, dead_letter_at = NULL, cancelled_at = NULL,
-  lease_token = NULL, lease_expires_at = NULL, updated_at = NOW()
+ SET status = 'pending', next_retry_at = ?5, attempts = 0, last_error = NULL, dead_letter_at = NULL, cancelled_at = NULL,
+  lease_token = NULL, lease_expires_at = NULL, updated_at = ?5
  WHERE mail.tenant_id IS NULL AND mail.organization_id = ?0 AND mail.id IN (SELECT id FROM recoverable)
   AND ((mail.status = 'dead_letter' AND mail.last_error IS DISTINCT FROM ?2)
    OR (mail.status = 'cancelled' AND mail.last_error IN (?3, ?4)))`
@@ -136,7 +137,7 @@ func (s *Store) RetryFailedTraegerEmails(ctx context.Context, organizationID int
 	if err != nil {
 		return 0, err
 	}
-	result, err := db.NewRaw(retryFailedTraegerEmailsSQL, organizationID, pgdialect.Array(keys), dispatchOutcomeUnknown, deliveryContract.MailHeldByList, deliveryContract.MailHeldByStop).Exec(ctx)
+	result, err := db.NewRaw(retryFailedTraegerEmailsSQL, organizationID, pgdialect.Array(keys), dispatchOutcomeUnknown, deliveryContract.MailHeldByList, deliveryContract.MailHeldByStop, s.now()).Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("delivery postgres: retry failed Träger emails: %w", err)
 	}

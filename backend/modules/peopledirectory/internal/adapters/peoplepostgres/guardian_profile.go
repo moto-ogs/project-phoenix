@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/uptrace/bun"
 
@@ -35,6 +36,7 @@ type guardianProfileRepository struct {
 	links                  GuardianLinkRows
 	portalMemberships      PortalMembershipQuery
 	portalLoginMemberships PortalLoginMembershipQuery
+	now                    func() time.Time // stamps childless_since, the start of retention (#4043, ADR 0268)
 }
 
 // GuardianProfileOption configures a GuardianProfileRepository at construction.
@@ -51,12 +53,13 @@ func WithPortalLoginMemberships(query PortalLoginMembershipQuery) GuardianProfil
 	return func(r *guardianProfileRepository) { r.portalLoginMemberships = query }
 }
 
-// newRawGuardianProfileRepository creates a new GuardianProfileRepository instance
-func newRawGuardianProfileRepository(runtime Runtime, students StudentDirectoryRows, links GuardianLinkRows, options ...GuardianProfileOption) rawGuardianProfileRepository {
+// newRawGuardianProfileRepository creates a new GuardianProfileRepository instance; now is required.
+func newRawGuardianProfileRepository(runtime Runtime, students StudentDirectoryRows, links GuardianLinkRows, now func() time.Time, options ...GuardianProfileOption) rawGuardianProfileRepository {
 	repository := &guardianProfileRepository{
 		runtime:  requireRuntime(runtime),
 		students: requireStudentRows(students),
 		links:    requireGuardianLinkRows(links),
+		now:      now,
 	}
 	for _, option := range options {
 		option(repository)
@@ -64,7 +67,7 @@ func newRawGuardianProfileRepository(runtime Runtime, students StudentDirectoryR
 	return repository
 }
 
-// Create inserts a new guardian profile into the database
+// Create inserts a new guardian profile, childless since the repository's clock.
 func (r *guardianProfileRepository) Create(ctx context.Context, profile *users.GuardianProfile) error {
 	if err := profile.Validate(); err != nil {
 		return fmt.Errorf("validation failed: %w", err)
@@ -82,8 +85,8 @@ func (r *guardianProfileRepository) Create(ctx context.Context, profile *users.G
 	_, err := db.NewInsert().
 		Model(profile).
 		ModelTableExpr(`users.guardian_profiles AS "guardian_profile"`).
+		Value("childless_since", "?", r.now()).
 		Exec(ctx)
-
 	if err != nil {
 		return guardianWriteError("failed to create guardian profile", err)
 	}
@@ -495,8 +498,8 @@ func (r *guardianProfileRepository) SetEmailsStopped(ctx context.Context, id int
 		return err
 	}
 	result, err := db.ExecContext(ctx, `UPDATE users.guardian_profiles
-		SET emails_stopped_at = CASE WHEN ?0 THEN COALESCE(emails_stopped_at, NOW()) ELSE NULL END, updated_at = NOW()
-		WHERE id = ?1`, stopped, id)
+		SET emails_stopped_at = CASE WHEN ?0 THEN COALESCE(emails_stopped_at, ?2::timestamptz) ELSE NULL END
+		WHERE id = ?1`, stopped, id, r.now())
 	if err != nil {
 		return fmt.Errorf("failed to change the guardian's mail stop: %w", err)
 	}

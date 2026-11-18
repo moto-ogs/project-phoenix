@@ -72,10 +72,6 @@ type PersonRepository interface {
 
 	// FindWithAccount retrieves a person with their associated account
 	FindWithAccount(ctx context.Context, id int64) (*peopledirectory.DirectoryPersonSnapshot, error)
-
-	// AnonymizeAndSoftDelete overwrites the person's PII with placeholder
-	// values and stamps deleted_at (GDPR person deletion).
-	AnonymizeAndSoftDelete(ctx context.Context, personID int64) error
 }
 
 // StudentRepository defines operations for managing students
@@ -130,10 +126,11 @@ type StudentRepository interface {
 	// ListSchoolClasses retrieves all distinct non-empty school classes.
 	ListSchoolClasses(ctx context.Context) ([]string, error)
 
-	// FindBirthdaysOn returns the non-graduated children whose birthday falls
-	// on one of the given annually recurring days (#1542). Children without a
-	// stored birth date are omitted, never rendered as an unknown date.
-	FindBirthdaysOn(ctx context.Context, days []peopleBirthday.MonthDay) ([]peopleBirthday.BirthdayEntry, error)
+	// FindBirthdaysOn returns the non-graduated children cared for on today
+	// whose birthday falls on one of the given annually recurring days
+	// (#1542). Children without a stored birth date are omitted, never
+	// rendered as an unknown date.
+	FindBirthdaysOn(ctx context.Context, days []peopleBirthday.MonthDay, today calendar.Date) ([]peopleBirthday.BirthdayEntry, error)
 
 	// FindBornOn returns every child of the school born on one of dates,
 	// also one whose care has ended, with its membership interval (#5994).

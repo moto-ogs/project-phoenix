@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 )
 
-func buildClassRosterExportFile(svc lists.DocumentRenderer, report *capability.ClassRosterReport, format lists.Format) (lists.File, error) {
+func buildClassRosterExportFile(svc lists.DocumentRenderer, report *capability.ClassRosterReport, format lists.Format, generatedAt time.Time) (lists.File, error) {
 	filename := "Klassenliste " + strings.TrimSpace(report.Filters.SchoolClass)
 	if report.Filters.AllClasses {
 		filename = "Klassenlisten"
@@ -18,18 +19,21 @@ func buildClassRosterExportFile(svc lists.DocumentRenderer, report *capability.C
 	if phaseName := strings.TrimSpace(report.Phase.Name); phaseName != "" {
 		filename += " " + phaseName
 	}
-	return svc.Render(buildClassRosterTableDocument(report), format, filename)
+	doc := buildClassRosterTableDocument(report)
+	doc.GeneratedAt = generatedAt
+	return svc.Render(doc, format, filename)
 }
 
 func buildClassRosterTableDocument(report *capability.ClassRosterReport) lists.Document {
 	children := make([]lists.ClassRosterChild, 0, len(report.Rows))
 	for _, row := range report.Rows {
-		// A class-list-only entry (#2382) has no OGS record at all: the
-		// shared table marks its name and leaves every weekday "—".
+		// A class-list-only entry (#2382) and a child without an OGS place
+		// (#4803) have no OGS care: the shared table marks the name and
+		// leaves every weekday "—".
 		child := lists.ClassRosterChild{
 			Name:        row.FirstName + " " + row.LastName,
 			SchoolClass: row.SchoolClass,
-			NoCare:      row.ListEntry,
+			NoCare:      row.ListEntry || row.WithoutCarePlace,
 			Extra: map[lists.ColumnID]string{
 				lists.ColumnGuardianContacts: classRosterGuardianContactsLabel(row.Guardians),
 			},

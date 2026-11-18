@@ -3,6 +3,7 @@
 import { FramedList } from "~/components/ui/framed-list";
 import { ListRowLink } from "~/components/ui/list-row-link";
 import { studentKeys } from "~/lib/swr/portal-keys";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import type React from "react";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import type { ReactNode } from "react";
@@ -38,9 +39,8 @@ import { formatCustomValue } from "~/lib/enrollment-custom-value-format";
 import { AllowedDepartureModesDisplay } from "~/components/students/allowed-departure-modes-display";
 import { AnchoredPopover } from "~/components/ui/anchored-popover";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { SectionCard } from "~/components/ui/section-card";
 import {
@@ -62,7 +62,6 @@ import {
   PARENT_VISIBLE_HINTS,
 } from "~/lib/parent-visible-fields";
 import { useStudentPhotosEnabled } from "~/lib/hooks/use-student-photos-enabled";
-import { createLogger } from "~/lib/logger";
 import { displayEmail } from "~/lib/demo-build";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
@@ -75,8 +74,6 @@ import { mealPlanConcept } from "~/lib/concepts/mealPlan";
 import { roomsConcept } from "~/lib/concepts/rooms";
 import { staffConcept } from "~/lib/concepts/staff";
 import { IconTile } from "~/components/ui/icon-tile";
-
-const logger = createLogger({ component: "StudentDetailComponents" });
 
 // =============================================================================
 // ICONS - Reusable SVG icons
@@ -397,6 +394,20 @@ export function StudentHeaderLocation({
     arrival_notes: todayArrivalNote,
   };
 
+  // Ein Kind ohne OGS-Platz (#4803) hat keinen Ort in der OGS. Eine
+  // Krankmeldung oder Entschuldigung zeigt der Badge weiter.
+  if (
+    student.without_care_place &&
+    !getStudentAbsence({
+      sick: student.sick,
+      classTrip: student.class_trip,
+      excused: student.excused,
+      currentLocation: student.current_location,
+    })
+  ) {
+    return <StatusBadge label="Keine Betreuung" tone="gray" />;
+  }
+
   return (
     <LocationBadge
       student={badgeStudent}
@@ -483,7 +494,8 @@ export function StudentHeaderStats({
         <span>Keine Klasse und keine Gruppe hinterlegt</span>
       )}
 
-      {notComingLabel && !todayPickupActualTime ? (
+      {student.without_care_place && !absence ? null : notComingLabel &&
+        !todayPickupActualTime ? (
         <span
           data-testid="today-absence-row"
           className="mt-1.5 flex items-center gap-2 text-sm text-gray-600"
@@ -798,6 +810,7 @@ interface PersonalInfoReadOnlyProps {
 
 const EMPTY_ENROLLMENT_EXTRA_GROUPS: StudentEnrollmentExtraFieldGroup[] = [];
 const noop = () => undefined;
+const NO_COMPANIONS: readonly StudentCompanion[] = [];
 
 export function PersonalInfoReadOnly({
   student,
@@ -819,23 +832,35 @@ export function PersonalInfoReadOnly({
   // child whose accompanied days are backed only by links there is no free-text
   // note, so silently dropping the row would leave "Mit anderem Kind" standing
   // without a name. Hence a distinct unavailable state next to the list.
-  const [companions, setCompanions] = useState<StudentCompanion[]>([]);
-  const [companionsUnavailable, setCompanionsUnavailable] = useState(false);
-  // Der Ladefehler steht im Feld „Geht mit“, mit Wiederholen (#2513).
-  const companionsLoad = useApiLoadError();
-  const showCompanionsLoadError = companionsLoad.show;
-  const clearCompanionsLoadError = companionsLoad.clear;
-  // Saving the Stammdaten does not remount this card and does not bring the
-  // links along in the student payload, so the fetch below must be re-run on
-  // every companion write — including a symmetric one made from the linked
-  // child's card. The counter is the effect's second trigger.
-  const [companionsRevalidation, setCompanionsRevalidation] = useState(0);
+  // keepPreviousData: false — this card is reused across children without
+  // unmounting, and one child's departure companions must never show under
+  // another child's name while the new request runs (safety-relevant: who
+  // walks home with whom).
+  const companionsRead = useSWRAuth(
+    student.id && showCompanions
+      ? tenantStudentKeys.companions(student.id)
+      : null,
+    () => fetchStudentCompanions(student.id),
+    { keepPreviousData: false },
+  );
+  const { mutate: revalidateCompanions } = companionsRead;
+  const companionsUnavailable = companionsRead.error !== undefined;
+  const companions = companionsUnavailable
+    ? NO_COMPANIONS
+    : (companionsRead.data ?? NO_COMPANIONS);
+  // Der Ladefehler steht im Feld „Geht mit“, mit Wiederholen (#2513). Also
+  // after a failed refresh: the stale list must not read as current.
+  const companionsLoadError = useSwrLoadError(
+    companionsRead.error,
+    "die Laufgemeinschaft",
+    () => revalidateCompanions(),
+  );
   useEffect(() => {
-    const revalidate = () => setCompanionsRevalidation((count) => count + 1);
+    const revalidate = () => void revalidateCompanions();
     // Two buses, because two different writes make this card stale. The links
     // themselves change on a companion write; what the links DISPLAY changes on
     // a plain student write — a linked child renamed or moved to another group
-    // emits only student_updated, and this effect's student id stays the same,
+    // emits only student_updated, and this card's student id stays the same,
     // so the old name would otherwise survive here forever. After a group
     // reassignment that name can be one a fresh request would redact for the
     // viewing supervisor, which makes the refetch a visibility fix, not a
@@ -847,53 +872,7 @@ export function PersonalInfoReadOnly({
       unsubscribeCompanions();
       unsubscribeDisplay();
     };
-  }, []);
-  // This card is reused across children without unmounting, and the links are
-  // fetched separately from the student payload. Dropping the previous child's
-  // companions only once the new request resolves would show one child's
-  // departure companions under another child's name for the whole request —
-  // safety-relevant information about who walks home with whom. Reset during
-  // render (React's "adjusting state on prop change" pattern) so the wrong
-  // names never reach the screen, not in the effect, which runs after paint.
-  const [companionsStudentId, setCompanionsStudentId] = useState(student.id);
-  if (companionsStudentId !== student.id) {
-    setCompanionsStudentId(student.id);
-    setCompanions([]);
-    setCompanionsUnavailable(false);
-  }
-  useEffect(() => {
-    if (!student.id || !showCompanions) return;
-    let cancelled = false;
-    fetchStudentCompanions(student.id)
-      .then((loaded) => {
-        if (cancelled) return;
-        setCompanions(loaded);
-        setCompanionsUnavailable(false);
-        clearCompanionsLoadError();
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        setCompanions([]);
-        setCompanionsUnavailable(true);
-        logger.error("student_companions_load_failed", {
-          student_id: student.id,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        void showCompanionsLoadError(error, {
-          object: "die Laufgemeinschaft",
-          retry: () => setCompanionsRevalidation((count) => count + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    student.id,
-    showCompanions,
-    companionsRevalidation,
-    showCompanionsLoadError,
-    clearCompanionsLoadError,
-  ]);
+  }, [revalidateCompanions]);
 
   const birthdayDisplay = student.birthday
     ? new Date(student.birthday).toLocaleDateString("de-DE", {
@@ -942,9 +921,13 @@ export function PersonalInfoReadOnly({
             {student.school_class}
           </ParentVisibleValue>
         </DataField>
-        <DataField label="Gruppe">
-          {student.group_name ?? "Nicht zugewiesen"}
-        </DataField>
+        {/* Ein Kind ohne OGS-Platz (#4803) hat keine Gruppe und keinen
+            Heimweg aus der OGS. */}
+        {student.without_care_place ? null : (
+          <DataField label="Gruppe">
+            {student.group_name ?? "Nicht zugewiesen"}
+          </DataField>
+        )}
         <DataField label="Geburtsdatum">
           <ParentVisibleValue hint={PARENT_VISIBLE_HINTS.birthday}>
             {birthdayDisplay}
@@ -955,37 +938,39 @@ export function PersonalInfoReadOnly({
             {addressDisplay}
           </DataField>
         )}
-        <DataField label="Erlaubte Heimwege" fullWidth>
-          <div className="flex items-start gap-1.5">
-            <div className="min-w-0 flex-1">
-              <div className="inline-flex items-start gap-1.5">
-                <AllowedDepartureModesDisplay
-                  value={
-                    student.allowed_departure_modes ??
-                    allowedDepartureModesFromDeparture(
-                      student.departure_days ??
-                        departureDaysFromLegacy(
-                          student.bus_days,
-                          student.pickup_days,
-                        ),
-                    )
-                  }
-                />
-                <VisibilityBadge
-                  compact
-                  hint={PARENT_VISIBLE_HINTS.departure}
-                />
+        {student.without_care_place ? null : (
+          <DataField label="Erlaubte Heimwege" fullWidth>
+            <div className="flex items-start gap-1.5">
+              <div className="min-w-0 flex-1">
+                <div className="inline-flex items-start gap-1.5">
+                  <AllowedDepartureModesDisplay
+                    value={
+                      student.allowed_departure_modes ??
+                      allowedDepartureModesFromDeparture(
+                        student.departure_days ??
+                          departureDaysFromLegacy(
+                            student.bus_days,
+                            student.pickup_days,
+                          ),
+                      )
+                    }
+                  />
+                  <VisibilityBadge
+                    compact
+                    hint={PARENT_VISIBLE_HINTS.departure}
+                  />
+                </div>
               </div>
+              <FieldHistoryInfo
+                studentId={student.id}
+                fields={["departure_days", "pickup_status"]}
+              />
             </div>
-            <FieldHistoryInfo
-              studentId={student.id}
-              fields={["departure_days", "pickup_status"]}
-            />
-          </div>
-        </DataField>
+          </DataField>
+        )}
         {companionsUnavailable && (
           <DataField label="Geht mit" fullWidth>
-            <LoadErrorAlert error={companionsLoad.error} />
+            <LoadErrorAlert error={companionsLoadError} />
           </DataField>
         )}
         {!companionsUnavailable && companions.length > 0 && (

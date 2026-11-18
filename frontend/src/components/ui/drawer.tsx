@@ -6,7 +6,7 @@ import { Drawer as DrawerPrimitive } from "vaul";
 import { cn } from "~/lib/utils";
 import { useSheetAboveKeyboard } from "./hooks/useSheetAboveKeyboard";
 import {
-  OVERLAY_BACKDROP_CLASS,
+  OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
   Z_LAYER,
 } from "./overlay-styles";
@@ -53,7 +53,7 @@ const DrawerOverlay = React.forwardRef<
     className={cn(
       `fixed inset-0 ${Z_LAYER.sheet}`,
       OVERLAY_BACKDROP_TINT_CLASS,
-      OVERLAY_BACKDROP_CLASS,
+      OVERLAY_BACKDROP_BLUR_CLASS,
       className,
     )}
     {...props}

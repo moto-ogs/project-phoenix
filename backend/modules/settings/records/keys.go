@@ -18,10 +18,10 @@ const (
 	KeyMFATrustedDeviceEnabled = "security.mfa_trusted_device_enabled"
 	KeyMFATrustedDeviceDays    = "security.mfa_trusted_device_days"
 
-	// Account brute-force lockout policy (issue #586 — Rule 12 extraction).
-	// Shared by the PIN and MFA failure counters: after
-	// KeyAccountLockoutThreshold failed attempts the account is locked for
-	// KeyAccountLockoutDurationMinutes minutes.
+	// Brute-force lockout (#586). A school's values govern its MFA code check:
+	// after KeyAccountLockoutThreshold wrong codes it pauses for
+	// KeyAccountLockoutDurationMinutes. Password locks use only the registry
+	// defaults; their failures decay after that duration (#7214).
 	KeyAccountLockoutThreshold       = "security.account_lockout_threshold"
 	KeyAccountLockoutDurationMinutes = "security.account_lockout_duration_minutes"
 )
@@ -787,14 +787,4 @@ const (
 	KeyModuleFerienbetreuung     = "module.ferienbetreuung"
 	KeyModuleVertraege           = "module.vertraege"
 	KeyModuleElternbeitraege     = "module.elternbeitraege"
-)
-
-// Branding of the Träger (#4653, ADR 0086 sections 1 and 4): the colour and
-// the texts every document of the Träger prints. Only the Träger sets them
-// (LevelTraeger); its schools see them read-only. Logo, contact person and
-// bank accounts are master data of Organisation & Tenancy (ADR 0112).
-const (
-	KeyBrandingPrimaryColor   = "branding.primary_color"
-	KeyBrandingLetterheadText = "branding.letterhead_text"
-	KeyBrandingFooterText     = "branding.footer_text"
 )

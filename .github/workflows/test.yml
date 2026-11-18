@@ -18,6 +18,10 @@ on:
       run-seed-smoke:
         type: boolean
         required: true
+      # False runs only the profiles scenario (pull requests, main.yml).
+      seed-smoke-all-scenarios:
+        type: boolean
+        default: true
       # True when the changed file list alone proves a selection of at most
       # 16 packages (main.yml, "Size backend test scope").
       backend-small-runner:
@@ -64,7 +68,11 @@ jobs:
     # job took 40-67 s plus 6-15 s for the next runner in 31 pull request
     # runs (12.11.2026). Before the selection the import graph is unknown, so
     # the caller sizes the runner from the changed file list alone.
-    runs-on: ${{ inputs.backend-small-runner && 'blacksmith-4vcpu-ubuntu-2404' || 'blacksmith-8vcpu-ubuntu-2404' }}
+    #
+    # 16 vCPU for every run but the small selections and the race shards: the
+    # job is CPU-bound and sets the wall-clock time, and Blacksmith bills
+    # every size at the same price per vCPU-minute (#7195).
+    runs-on: ${{ inputs.backend-small-runner && 'blacksmith-4vcpu-ubuntu-2404' || inputs.backend-race && 'blacksmith-8vcpu-ubuntu-2404' || 'blacksmith-16vcpu-ubuntu-2404' }}
     # Instrumented builds and tests need more headroom than ordinary runs.
     # Keep the default Actions limit unchanged for non-race callers.
     timeout-minutes: ${{ inputs.backend-race && 60 || 20 }}
@@ -102,13 +110,19 @@ jobs:
           # postgresql.conf, so the roles the migrations and the snapshot
           # restore create get one-iteration verifiers too. Passwords are still
           # checked; pg_hba keeps scram-sha-256 for TCP.
-          POSTGRES_INITDB_ARGS: --set max_connections=300 --set scram_iterations=1
+          #
+          # max_connections=600: twelve package binaries on 16 vCPU, twice the
+          # six the 300 above were sized for.
+          POSTGRES_INITDB_ARGS: --set max_connections=600 --set scram_iterations=1
         ports:
           - 5432:5432
         # Package database drops force checkpoints. These disposable databases
         # need no disk persistence; tmpfs avoids the measured fsync bottleneck.
+        # The size is a ceiling, not a reservation: twelve package binaries
+        # keep twice the clones of six alive (container peak 2.2-2.4 GiB
+        # with six).
         options: >-
-          --tmpfs /var/lib/postgresql/data:rw,size=4g
+          --tmpfs /var/lib/postgresql/data:rw,size=8g
           --health-cmd "pg_isready -U postgres"
           --health-interval 2s
           --health-timeout 5s
@@ -136,32 +150,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Fetch only the checked-out revision here. The next step expands
-          # its history and comparison refs without downloading every branch
-          # and tag. Only the architecture suite needs historical blobs.
+          # Only the checked-out revision; the next step adds the history and
+          # the files of the comparison commits.
           fetch-depth: 1
-          # The architecture suite reads historical source blobs; a partial
-          # clone would fetch them one by one. Whether it is selected is known
-          # only after the history below arrived, so every job but the other
-          # race shards fetches blobs. That fetch runs beside the setup steps.
-          filter: ${{ inputs.backend-race && matrix.shard != 1 && 'blob:none' || '' }}
 
-      # Runs in the background while Node, Go and the build cache are set up
-      # (28 s of 383 s in series, #6784); "Finish fetching" below waits for it.
-      # None of the steps in between reads git.
+      # Runs in the background while Node, Go and the build cache are set up;
+      # "Finish fetching" below waits for it. None of the steps in between
+      # reads git. With every blob of the history the fetch outlasted those
+      # steps by 7-16 s (#7195).
       - name: Start fetching backend comparison history
         env:
           BASE_REF: ${{ inputs.base_ref }}
         run: |
-          refs=("$(git rev-parse HEAD)" "+refs/heads/development:refs/remotes/origin/development")
-          if [ -n "$BASE_REF" ] && [ "$BASE_REF" != development ]; then
-            refs+=("+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF")
-          fi
-          # Full ancestry keeps merge-base intact for the architecture
-          # comparisons. Unrelated refs and tags are not test inputs.
           (
             set +e
-            git fetch --no-tags --unshallow origin "${refs[@]}"
+            scripts/fetch-comparison-history.sh "$BASE_REF"
             echo "$?" > "$RUNNER_TEMP/history-status"
           ) > "$RUNNER_TEMP/history.log" 2>&1 < /dev/null &
 
@@ -230,6 +233,7 @@ jobs:
           scripts/test-changed_test.sh
           scripts/go-test-link-cache_test.sh
           scripts/go-cache-sweep_test.sh
+          scripts/fetch-comparison-history_test.sh
 
       - name: Verify snapshot roles match migrations
         if: matrix.shard == 0
@@ -378,10 +382,13 @@ jobs:
           fi
           echo "Running ${#packages[@]} selected Go packages"
 
-          # Six package binaries keep eight vCPUs busy, four the small runner.
+          # Six package binaries keep eight vCPUs busy, four the small
+          # runner, twelve the sixteen vCPUs.
           PACKAGE_WORKERS=6
           if [ "$(nproc)" -lt 8 ]; then
             PACKAGE_WORKERS=4
+          elif [ "$(nproc)" -ge 16 ]; then
+            PACKAGE_WORKERS=12
           fi
           race_flags=()
           measure=()
@@ -593,7 +600,12 @@ jobs:
             node ../scripts/test-frontend-changed.mjs "origin/$BASE_REF" --disableConsoleIntercept "${test_args[@]}"
           else
             # Full suites already include every guard, with normal sharding.
+            # Changed tests then run again on the moved clock, as the
+            # selection runner does itself (MOVED_CLOCK there, #7337).
             pnpm vitest run --disableConsoleIntercept "${test_args[@]}"
+            if [ -n "$BASE_REF" ]; then
+              node ../scripts/test-frontend-changed.mjs --moved-clock "origin/$BASE_REF" --disableConsoleIntercept "${test_args[@]}"
+            fi
           fi
 
   # The seeder is the widest end-to-end path in this repo: roughly a hundred
@@ -608,7 +620,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scenario: [profiles, isolation, queue]
+        scenario: ${{ fromJSON(inputs.seed-smoke-all-scenarios && '["profiles","isolation","queue"]' || '["profiles"]') }}
     # Each scenario owns its database and operator MFA mailbox. The isolation
     # scenario seeds both schools side by side into the SAME database;
     # profiles retains the complete coverage ratchet after the standing demo;
@@ -626,6 +638,15 @@ jobs:
     # them in the background, and they come up while checkout, Go and the
     # build run.
     env:
+      # seedsmoke: Argon2id with the cheap profile of the backend tests
+      # (userpass/seedsmoke_params.go). One school seed hashes and verifies
+      # passwords some 150 times; with the production profile that was 41 of
+      # the server's 67 CPU seconds, and two schools side by side took
+      # 91-139 s against 70-82 s locally on four cores (#7195). The seed
+      # durations printed below are therefore no longer what a visitor of
+      # the demo waits for. backend-build-cache.yml builds with the same
+      # flags (scripts/seed-smoke-build.test.mjs).
+      GOFLAGS: -tags=testhooks,seedsmoke -trimpath
       DB_MAX_OPEN_CONNS: "40"
       DB_MAX_IDLE_CONNS: "40"
       DB_CONN_MAX_LIFETIME: 30m

@@ -92,6 +92,10 @@ export interface Child {
   readonly enrolled_until?: string; // ISO date
   readonly school_name: string;
   readonly school_slug: string;
+  // Das Kind gehört zur Klasse, hat aber keinen OGS-Platz (#4803). Das Portal
+  // zeigt dann keine OGS-Funktionen, nur die der Schule. Fehlt das Feld
+  // (älteres Backend), hat das Kind einen Platz.
+  readonly without_care_place?: boolean;
 }
 
 export type ChildConsentState = ConsentState;
@@ -271,6 +275,10 @@ export interface ChildFeatures {
   // ein Nur-Lesen-Profil mit einem Satz dazu statt Knöpfe, die alle gleich
   // scheitern würden.
   readonly care_ended?: boolean;
+  // Zustand, keine Fähigkeit: Das Kind hat keinen OGS-Platz (#4803). Alle
+  // OGS-Flags sind dann false; Krankmeldung, Elternsprechtag und Stammdaten
+  // bleiben, wie die Beziehung sie erlaubt.
+  readonly without_care_place?: boolean;
   readonly sick_note_enabled: boolean;
   readonly excused_note_enabled?: boolean;
   // Whether a Krankmeldung stays pending until the OGS confirms it.
@@ -299,6 +307,7 @@ export interface ChildFeatures {
   // im Unterricht ist. Der Server entscheidet das.
   readonly pickup_change_care_day_ended?: boolean;
   readonly pickup_manage_allowed?: boolean;
+  readonly emergency_contact_manage_allowed?: boolean;
   readonly guardian_contact_manage_allowed: boolean;
   // Ob die Person ihre eigenen offenen Abwesenheitsanfragen ändern darf
   // (parent_portal.sick_note.submit, #4603). Fehlt das Feld (älteres
@@ -1152,10 +1161,23 @@ interface ParentReaders {
 // One parent-news feed entry (#1669). read/acknowledged are THIS guardian's
 // state; requires_acknowledgement tells the app whether to offer the
 // "gelesen und bestätigt" action.
+/** The letter one of the family's children got (#4813). */
+interface ParentAnnouncementLetter {
+  readonly student_id: string;
+  readonly first_name: string;
+  readonly last_name: string;
+  readonly body: string;
+}
+
 export interface ParentAnnouncement {
   readonly id: string;
   readonly title: string;
   readonly body: string;
+  /**
+   * An Elternbrief that names each child (#4813): one letter per own child,
+   * body is the first. Absent for every other announcement.
+   */
+  readonly letters?: readonly ParentAnnouncementLetter[];
   readonly priority: "info" | "important";
   readonly link_url?: string;
   readonly requires_acknowledgement: boolean;

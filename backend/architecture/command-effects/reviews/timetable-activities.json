@@ -5482,7 +5482,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.TransitionParticipants",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Capability.TransitionParticipants; modules/studentpresence.Capability (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Capability.TransitionParticipants; modules/studentpresence.Capability (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Re-reviewed for #7295: the transition no longer takes an instant and stamps updated_at with the database's statement time (ADR 0281); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.TransitionParticipants",
       "target_owner": "student-presence"
@@ -5493,7 +5493,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.TransitionParticipants",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Owner.TransitionParticipants; modules/studentpresence.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Owner.TransitionParticipants; modules/studentpresence.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Re-reviewed for #7295: the transition no longer takes an instant and stamps updated_at with the database's statement time (ADR 0281); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
       "target_owner": "student-presence"
@@ -5504,7 +5504,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.TransitionParticipants",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Owner.TransitionParticipants; modules/studentpresence.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Owner.TransitionParticipants; modules/studentpresence.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Re-reviewed for #7295: the transition no longer takes an instant and stamps updated_at with the database's statement time (ADR 0281); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
       "target_owner": "student-presence"
@@ -8441,7 +8441,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence/internal/application.Service.TransitionParticipants; modules/studentpresence/internal/application/session_attendance.go:140.  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence/internal/application.Service.TransitionParticipants; modules/studentpresence/internal/application/session_attendance.go:140.  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Re-reviewed for #7295: the transition no longer takes an instant and stamps updated_at with the database's statement time (ADR 0281); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.TransitionParticipants",
       "target_owner": "student-presence"
@@ -8452,7 +8452,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Owner.TransitionParticipants; modules/studentpresence.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Owner.TransitionParticipants; modules/studentpresence.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Re-reviewed for #7295: the transition no longer takes an instant and stamps updated_at with the database's statement time (ADR 0281); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
       "target_owner": "student-presence"
@@ -12158,6 +12158,28 @@
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.BlockGroupQuery.BlockEducationGroups",
       "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through modules/timetable.Capability.BlockEducationGroups. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). New platform target, newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Owner.BlockEducationGroups",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.BlockGroupQuery.BlockEducationGroups",
+      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/timetable.Owner.BlockEducationGroups (#7136). The staffing notice reads the blocks' groups inside the deviation write's unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Owner.BlockEducationGroups",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.BlockGroupQuery.BlockEducationGroups",
+      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through modules/timetable.Owner.BlockEducationGroups (#7136). The staffing notice reads the blocks' groups inside the deviation write's unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
@@ -27331,6 +27353,28 @@
     },
     {
       "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.staffNoticeService.StaffNoticeFor",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.StaffNotices.StaffNoticeFor",
+      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/timetable/internal/application.staffNoticeService.StaffNoticeFor (#7143). The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.staffNoticeService.StaffNoticeFor",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.StaffNotices.StaffNoticeFor",
+      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through *modules/timetable/internal/application.staffNoticeService.StaffNoticeFor (#7143). The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.staffNoticeService.StaffNoticesOn",
       "classification": "platform",
       "effect": "scope",
@@ -28650,7 +28694,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Guarded leaf lock for timetable assignments (#6702): Membership ListStaff with ForMutation locks the complete ID set in ascending order inside the caller transaction, omits employment and rejects missing memberships. Timetable skips rows already held by that transaction. Replaces the single-row FindStaffForMutation binding without a new gate or scope protocol (ADR 0067). Re-reviewed under ADR 0215: the template split and end reach the care-offering catalog through the batch roster binding of the Träger copy commands; the staff-assignment lock, its order and the target stay unchanged. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Guarded leaf lock for timetable assignments (#6702): Membership ListStaff with ForMutation locks the complete ID set in ascending order inside the caller transaction, omits employment and rejects missing memberships. Timetable skips rows already held by that transaction. Replaces the single-row FindStaffForMutation binding without a new gate or scope protocol (ADR 0067). Re-reviewed under ADR 0215: the template split and end reach the care-offering catalog through the batch roster binding of the Träger copy commands; the staff-assignment lock, its order and the target stay unchanged. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
       "target_owner": "school-membership"
@@ -28676,34 +28720,34 @@
       "target_owner": "school-membership"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Capability.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Capability.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroups",
       "target_owner": "school-structure"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.GroupListing.ListGroups",
       "target_owner": "school-structure"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Owner.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Owner.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroups",
       "target_owner": "school-structure"
@@ -28719,36 +28763,36 @@
       "target_owner": "school-structure"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
       "target_owner": "settings-platform"
     },
     {
       "adr": "0098",
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
     },
     {
       "adr": "0098",
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
@@ -29022,7 +29066,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Guarded leaf lock for timetable assignments (#6702): Membership ListStaff with ForMutation locks the complete ID set in ascending order inside the caller transaction, omits employment and rejects missing memberships. Timetable skips rows already held by that transaction. Replaces the single-row FindStaffForMutation binding without a new gate or scope protocol (ADR 0067). Re-reviewed under ADR 0215: the template split and end reach the care-offering catalog through the batch roster binding of the Träger copy commands; the staff-assignment lock, its order and the target stay unchanged. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Guarded leaf lock for timetable assignments (#6702): Membership ListStaff with ForMutation locks the complete ID set in ascending order inside the caller transaction, omits employment and rejects missing memberships. Timetable skips rows already held by that transaction. Replaces the single-row FindStaffForMutation binding without a new gate or scope protocol (ADR 0067). Re-reviewed under ADR 0215: the template split and end reach the care-offering catalog through the batch roster binding of the Träger copy commands; the staff-assignment lock, its order and the target stay unchanged. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
       "target_owner": "school-membership"
@@ -29048,23 +29092,23 @@
       "target_owner": "school-membership"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Capability.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Capability.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroups",
       "target_owner": "school-structure"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.GroupListing.ListGroups",
       "target_owner": "school-structure"
@@ -29080,12 +29124,12 @@
       "target_owner": "school-structure"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Owner.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Owner.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroups",
       "target_owner": "school-structure"
@@ -29101,36 +29145,36 @@
       "target_owner": "school-structure"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
       "target_owner": "settings-platform"
     },
     {
       "adr": "0098",
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
     },
     {
       "adr": "0098",
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
@@ -33090,7 +33134,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.RosterStudents.FindByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -33110,7 +33154,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.RosterStudents.FindByIDForUpdate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -33131,7 +33175,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.RosterStudents.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -33151,7 +33195,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.RosterStudents.FindByIDsForUpdate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -33172,7 +33216,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.RosterStudents.FindReadScopeByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -34433,7 +34477,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities.SupervisorDirectory.GetStaffWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through api.TimetableSupervisorDirectory.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through api.TimetableSupervisorDirectory.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -34673,7 +34717,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.ActivityStudents.FindByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -34693,7 +34737,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.ActivityStudents.FindByIDForUpdate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -34714,7 +34758,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.ActivityStudents.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -34734,7 +34778,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.ActivityStudents.FindByIDsForUpdate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -34755,7 +34799,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.ActivityStudents.FindReadScopeByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -35912,7 +35956,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Guarded leaf lock for timetable assignments (#6702): Membership ListStaff with ForMutation locks the complete ID set in ascending order inside the caller transaction, omits employment and rejects missing memberships. Timetable skips rows already held by that transaction. Replaces the single-row FindStaffForMutation binding without a new gate or scope protocol (ADR 0067). Re-reviewed under ADR 0215: the template split and end reach the care-offering catalog through the batch roster binding of the Träger copy commands; the staff-assignment lock, its order and the target stay unchanged. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Guarded leaf lock for timetable assignments (#6702): Membership ListStaff with ForMutation locks the complete ID set in ascending order inside the caller transaction, omits employment and rejects missing memberships. Timetable skips rows already held by that transaction. Replaces the single-row FindStaffForMutation binding without a new gate or scope protocol (ADR 0067). Re-reviewed under ADR 0215: the template split and end reach the care-offering catalog through the batch roster binding of the Träger copy commands; the staff-assignment lock, its order and the target stay unchanged. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
       "target_owner": "school-membership"
@@ -35938,34 +35982,34 @@
       "target_owner": "school-membership"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Capability.ListGroups (school-structure) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Capability.ListGroups (school-structure) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroups",
       "target_owner": "school-structure"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.GroupListing.ListGroups",
       "target_owner": "school-structure"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Owner.ListGroups (school-structure) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Owner.ListGroups (school-structure) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroups",
       "target_owner": "school-structure"
@@ -35981,36 +36025,36 @@
       "target_owner": "school-structure"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
       "target_owner": "settings-platform"
     },
     {
       "adr": "0098",
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
     },
     {
       "adr": "0098",
-      "approval_adr": "0215",
+      "approval_adr": "0276",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged. Re-reviewed for #7104: the template writes read their day from the composition (ADR 0263); effect and classification are unchanged. Re-confirmed with ADR 0277 (#7104): only the clock on the body or call path changed; effect and classification are unchanged. Re-confirmed with ADR 0276 (#7104): only the clock on the body or call path changed; effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
@@ -37620,7 +37664,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ConflictStaffDirectory.FindWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -37740,7 +37784,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CorrectionPeople.FindByAccountID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through api.timetableCorrectionPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through api.timetableCorrectionPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -38308,7 +38352,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindByID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -38358,7 +38402,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -38408,7 +38452,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -38562,6 +38606,16 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.GetBulkEffectivePickupTimesForDate",
       "target_owner": "care-plan"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupHandovers.GroupHandovers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupHandoverStaff.GroupHandovers",
+      "reason": "Read-only target: timetable-activities reaches modules/workforce/compose.WorkTime.ListGroupSubstitutions (workforce) through roots/owners.timetableGroupHandovers.GroupHandovers (#7138). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.ListGroupSubstitutions",
+      "target_owner": "workforce"
     },
     {
       "adr": "0098",
@@ -38848,6 +38902,66 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Capability.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListGroupAssignments",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Capability.ListTeachers (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListTeachers",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Owner.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListGroupAssignments",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Owner.ListTeachers (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListTeachers",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Query.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListGroupAssignments",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Query.ListTeachers (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListTeachers",
+      "target_owner": "school-membership"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGuardianNotices.NoticeReach",
@@ -39368,6 +39482,47 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceRoomChangeNotices.NotifyInstanceRoomChanged",
+      "reason": "Platform protocol participation (durable): timetable-activities reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged (#7141). The feed entries of the staff and the families and their push outbox entries join the unit of the edit that moved the block to another room; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceRoomChangeNotices.NotifyInstanceRoomChanged",
+      "reason": "Read-only target: timetable-activities reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged (#7141) to narrow the push of a room change to the recipients whose switch allows it. No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceRoomChangeNotices.NotifyInstanceRoomChanged",
+      "reason": "Read-only target: timetable-activities reaches modules/delivery/internal/notifications.PreferenceService.FilterOptedIn (delivery-platform) through roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged (#7141) to narrow the push of a room change to the recipients whose switch allows it. No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceRoomChangeNotices.NotifyInstanceRoomChanged",
+      "reason": "Read-only target: timetable-activities reaches modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts (people-directory) through roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged (#7141) to name the guardians of the booked children with their stored parent_portal.access and portal language in one batched read inside the edit. No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts",
+      "target_owner": "people-directory"
     },
     {
       "adr": "0067",
@@ -39929,7 +40084,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindByID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -39979,7 +40134,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40029,7 +40184,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindWithPerson",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40099,7 +40254,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40159,7 +40314,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStudents.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40179,7 +40334,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStudents.FindByIDsForUpdate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40200,7 +40355,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStudents.FindReadScopeByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40483,7 +40638,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.FindByAccountID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40503,7 +40658,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.FindByAccountID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40523,7 +40678,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.GetByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.GetByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40543,7 +40698,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40603,7 +40758,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffByPersonID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetStaffByPersonID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetStaffByPersonID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40663,7 +40818,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40743,7 +40898,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40936,7 +41091,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationStudents.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -41420,7 +41575,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ParticipantPresence.TransitionParticipants",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Owner.TransitionParticipants; modules/studentpresence.Owner (supplied contract method). ",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Owner.TransitionParticipants; modules/studentpresence.Owner (supplied contract method). Re-reviewed for #7295: the transition no longer takes an instant and stamps updated_at with the database's statement time (ADR 0281); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
       "target_owner": "student-presence"
@@ -41431,7 +41586,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ParticipantPresence.TransitionParticipants",
-      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: timetable-activities reaches modules/studentpresence.Owner.TransitionParticipants (student-presence) through modules/timetable/internal/application.legacyParticipantPresence.TransitionParticipants. Participates in the caller unit; newly visible through #4836 callable resolution (ADR 0098).",
+      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: timetable-activities reaches modules/studentpresence.Owner.TransitionParticipants (student-presence) through modules/timetable/internal/application.legacyParticipantPresence.TransitionParticipants. Participates in the caller unit; newly visible through #4836 callable resolution (ADR 0098). Re-reviewed for #7295: the transition no longer takes an instant and stamps updated_at with the database's statement time (ADR 0281); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
       "target_owner": "student-presence"
@@ -41888,7 +42043,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffCancellationNotices.NotifyInstanceCancelled",
-      "reason": "Platform protocol participation (durable): timetable-activities reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.timetableStaffCancellationNotices.NotifyInstanceCancelled (#7148). The notification feed entries and the push outbox entries join the cancellation's unit; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (durable): timetable-activities reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.timetableStaffCancellationNotices.NotifyInstanceCancelled (#7148; #7139 adds the link of moto schule to the event). The notification feed entries and the push outbox entries join the cancellation's unit; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7151 the binding shares its delivery with NotifyInstanceReinstated through one helper; the effect and target are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
       "target_owner": "delivery-platform"
@@ -41898,10 +42053,82 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffCancellationNotices.NotifyInstanceCancelled",
-      "reason": "Read-only target: timetable-activities reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.timetableStaffCancellationNotices.NotifyInstanceCancelled (#7148). No persistent, lock or scope effect.",
+      "reason": "Read-only target: timetable-activities reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.timetableStaffCancellationNotices.NotifyInstanceCancelled (#7148; the binding's event gained the link of moto schule in #7139). No persistent, lock or scope effect. Since #7151 the binding shares the filter with NotifyInstanceReinstated through one helper.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
       "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffCancellationNotices.NotifyInstanceReinstated",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffCancellationNotices.NotifyInstanceReinstated",
+      "reason": "Platform protocol participation (durable): timetable-activities reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.timetableStaffCancellationNotices.NotifyInstanceReinstated (#7151; #7139 sends the school link too, so moto schule replaces the cancellation with the reinstatement). The notification feed entries and the push outbox entries join the reinstatement's unit; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffCancellationNotices.NotifyInstanceReinstated",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffCancellationNotices.NotifyInstanceReinstated",
+      "reason": "Read-only target: timetable-activities reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.timetableStaffCancellationNotices.NotifyInstanceReinstated (#7151; #7139 also carries the school link). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffNoticePublications.NotifyStaffNoticePublished",
+      "reason": "Reviewed notice-reader read (#7143): the root lists the live staff whose active account holds users:read in the caller's tenant scope. The target only constructs the directory or SELECTs account/staff facts, with no row mutation or locking read. Target modules/staffdirectoryview.Directory.StaffWithPermission.",
+      "source_owner": "timetable-activities",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.Directory.StaffWithPermission",
+      "target_owner": "staff-directory-view"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffNoticePublications.NotifyStaffNoticePublished",
+      "reason": "Platform protocol participation (durable): timetable-activities reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished (#7143). The notification feed entries and the push outbox entries join the unit that saves the Hinweis; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffNoticePublications.NotifyStaffNoticePublished",
+      "reason": "Read-only target: timetable-activities reaches modules/delivery/internal/notifications.PreferenceService.FilterOptedIn (delivery-platform) through roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished (#7143). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffNoticePublications.NotifyStaffNoticePublished",
+      "reason": "Reviewed notice-reader read (#7143): the root lists the live staff whose active account holds users:read in the caller's tenant scope. The target only constructs the directory or SELECTs account/staff facts, with no row mutation or locking read. Target modules/peopledirectory/ports.StaffRepository.ListStaffWithPermission.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.ListStaffWithPermission",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffNoticePublications.NotifyStaffNoticePublished",
+      "reason": "Reviewed notice-reader read (#7143): the root lists the live staff whose active account holds users:read in the caller's tenant scope. The target only constructs the directory or SELECTs account/staff facts, with no row mutation or locking read. Target modules/staffdirectoryview.New.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.New",
+      "target_owner": "staff-directory-view"
     },
     {
       "adr": "0098",
@@ -42132,6 +42359,49 @@
       "reason": "Platform protocol participation (notice): timetable-activities reaches realtime.Broadcaster.BroadcastToTenant (delivery-platform) through roots/owners.staffingAnnouncer.AnnounceStaffingChanged. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/realtime.Broadcaster.BroadcastToTenant",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.BlockGroupQuery.BlockEducationGroups",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffingBlockGroups.BlockEducationGroups",
+      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/timetable.BlockGroupQuery.BlockEducationGroups (#7136). The staffing notice reads the blocks' groups inside the deviation write's unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.BlockGroupQuery.BlockEducationGroups",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffingBlockGroups.BlockEducationGroups",
+      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through modules/timetable.BlockGroupQuery.BlockEducationGroups (#7136). The staffing notice reads the blocks' groups inside the deviation write's unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffingNotices.NotifyStaffingChanged",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffingNotices.NotifyStaffingChanged",
+      "reason": "Platform protocol participation (durable): timetable-activities reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.timetableStaffingNotices.NotifyStaffingChanged (#7136). The notification feed entries and the push outbox entries of a staffing change join the deviation write's unit; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffingNotices.NotifyStaffingChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffingNotices.NotifyStaffingChanged",
+      "reason": "Read-only target: timetable-activities reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.timetableStaffingNotices.NotifyStaffingChanged (#7136). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
       "target_owner": "delivery-platform"
     },
     {

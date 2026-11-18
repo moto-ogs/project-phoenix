@@ -2,6 +2,7 @@ package api
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/exporttransfer"
@@ -21,7 +22,7 @@ import (
 func NewFinanceExportHTTP(exports parentbilling.FinanceExports, accounts parentbilling.BookingAccountService) *parentBillingHTTP.FinanceExportResource {
 	return parentBillingHTTP.NewFinanceExportResource(exports, accounts,
 		common.RequiresPermission(identityaccess.TraegerRightFinanceExport),
-		common.RequiresPermission(identityaccess.TraegerRightBillingManage))
+		common.RequiresPermission(identityaccess.TraegerRightBillingManage), traegerListRenderer(NewSimpleListRenderer()))
 }
 
 // NewExportHandoverHTTP binds the handover of the finance exports to the
@@ -44,9 +45,10 @@ func NewExportRecipientHTTP(transfers exporttransfer.TraegerTransfers) *exportTr
 }
 
 // NewTraegerExportTransfers builds Export Transfer's Träger scope over the
-// bank cipher of the root, which seals the recipient password (ADR 0218).
-func NewTraegerExportTransfers(bankData parentbilling.BankDataCipher, logger *slog.Logger) exporttransfer.TraegerTransfers {
-	transfers, err := exportTransferCompose.NewTraegerTransfers(bankData, logger)
+// bank cipher of the root, which seals the recipient password (ADR 0218), and
+// the root's clock.
+func NewTraegerExportTransfers(bankData parentbilling.BankDataCipher, now func() time.Time, logger *slog.Logger) exporttransfer.TraegerTransfers {
+	transfers, err := exportTransferCompose.NewTraegerTransfers(bankData, now, logger)
 	if err != nil {
 		panic(err)
 	}

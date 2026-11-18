@@ -12,7 +12,7 @@
   "errorObject": "the enrollment",
   "loading": "Loading form…",
   "legalGermanNotice": "These legal texts are legally binding in German.",
-  "fixMarked": "Please correct the fields marked in red.",
+  "fixMarked": "Some fields show a note. Please correct these fields.",
   "consentSummary": "Please confirm all required consents.",
   "sections": {
     "guardianKicker": "Step 1",
@@ -135,6 +135,20 @@
     "photoTitle": "Photo consent"
   },
   "captchaMisconfigured": "Online enrollment is not possible right now. This is not your fault. Please contact the {careTerm}.",
+  "captchaHelp": {
+    "hint": "Is the security check not loading or stuck?",
+    "restart": "Restart check",
+    "restartTooltip": "Reloads the check, your entries stay.",
+    "failedTitle": "The security check is not loading",
+    "failedText": "An ad blocker often blocks the check. Here is what to do:",
+    "failedStepBlocker": "Turn off the ad blocker for this page.",
+    "failedStepRestart": "Choose “Restart check”.",
+    "failedStepBrowser": "Still not working? Copy the link and open it in another browser, for example Chrome. Enter your details there again.",
+    "copyLink": "Copy link",
+    "copyLinkTooltip": "Copies the address of this page for another browser.",
+    "linkCopied": "Link copied",
+    "copyFailed": "Copying does not work here. This is the link:"
+  },
   "structured": {
     "yes": "Yes",
     "no": "No",

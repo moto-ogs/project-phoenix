@@ -34,6 +34,7 @@ func parentMessagingFromOwnerAnnouncementFeedItem(v communication.PortalAnnounce
 			return ParentMessagingPointer(row, parentMessagingFromOwnerAnnouncementPollChild)
 		}),
 		Declaration: ParentMessagingPointer(v.Declaration, parentMessagingFromOwnerAnnouncementFeedDeclaration),
+		Letters:     parentMessagingFromOwnerLetters(v.Letters),
 		Poll:        v.Poll,
 		Ended:       v.Ended,
 	}
@@ -113,4 +114,17 @@ func parentMessagingFromOwnerParentAnnouncementTarget(v communication.PortalPare
 		TargetRefText:  v.TargetRefText,
 		CreatedAt:      v.CreatedAt,
 	}
+}
+
+// parentMessagingFromOwnerLetters hands the own children's letters of a
+// personalised Elternbrief to the parent portal (#4813).
+func parentMessagingFromOwnerLetters(letters []communication.ParentLetterCopy) []parentportal.AnnouncementLetter {
+	if len(letters) == 0 {
+		return nil
+	}
+	out := make([]parentportal.AnnouncementLetter, 0, len(letters))
+	for _, letter := range letters {
+		out = append(out, parentportal.AnnouncementLetter{StudentID: letter.StudentID, FirstName: letter.FirstName, LastName: letter.LastName, Body: letter.Body})
+	}
+	return out
 }

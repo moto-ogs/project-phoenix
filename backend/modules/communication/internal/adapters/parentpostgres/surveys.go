@@ -16,11 +16,15 @@ import (
 // are written and read apart: no statement here returns a participation
 // together with an answer, and no answer statement returns a response id,
 // an account of an anonymous survey or an order that follows the insertion.
-type SurveyStore struct{ store }
+type SurveyStore struct {
+	store
+	now func() time.Time
+}
 
-// NewSurveyStore builds the survey store over the ambient transaction runtime.
-func NewSurveyStore(database Database) *SurveyStore {
-	return &SurveyStore{store: newStore(database)}
+// NewSurveyStore builds the survey store over the ambient transaction runtime;
+// now stamps the rows it changes.
+func NewSurveyStore(database Database, now func() time.Time) *SurveyStore {
+	return &SurveyStore{store: newStore(database), now: now}
 }
 
 type surveyRow struct {
@@ -37,8 +41,8 @@ type surveyRow struct {
 	PublishedAt      *time.Time                   `bun:"published_at"`
 	AnnouncementID   *int64                       `bun:"announcement_id"`
 	CreatedBy        *int64                       `bun:"created_by"`
-	CreatedAt        time.Time                    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt        time.Time                    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt        time.Time                    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time                    `bun:"updated_at,nullzero,notnull"`
 	ParticipantCount int                          `bun:"participant_count,scanonly"`
 }
 
@@ -206,7 +210,10 @@ func (s *SurveyStore) CreateSurvey(ctx context.Context, in communication.SurveyI
 	row := &surveyRow{
 		TenantID: tenantID, Title: in.Title, Intro: in.Intro, Audience: in.Audience, Anonymous: in.Anonymous,
 		SendEmail: in.SendEmail, Targets: in.Targets, ClosesAt: in.ClosesAt, CreatedBy: createdBy,
+		CreatedAt: s.now(),
 	}
+	// updated_at stays the database's: its update trigger stamps every later
+	// change, and the draft retention dates it on that clock (ADR 0281).
 	if row.Targets == nil {
 		row.Targets = []communication.SurveyTarget{}
 	}
@@ -313,7 +320,6 @@ func (s *SurveyStore) CloseSurvey(ctx context.Context, id int64, at time.Time, a
 	}
 	result, err = db.NewUpdate().TableExpr("users.parent_announcements").
 		Set("expires_at = ?", at).
-		Set("updated_at = ?", time.Now()).
 		Where("id = ? AND tenant_id = ? AND system_kind = ?", *announcementID, tenantID, "survey").
 		Exec(ctx)
 	if err != nil {
@@ -338,9 +344,13 @@ func (s *SurveyStore) DeleteSurvey(ctx context.Context, id int64) error {
 }
 
 // ExpiredSurveys lists the school's surveys of one audience whose window has
-// passed: published ones closed before the cutoff, drafts last changed
-// before it. It returns their ids and carrier announcements.
-func (s *SurveyStore) ExpiredSurveys(ctx context.Context, audience string, cutoff time.Time) ([]communication.Survey, error) {
+// passed. A published survey closed before closedBefore, an instant of the
+// owner's clock, which also judges when a survey is open. A draft's last
+// change is stamped by the table's update trigger, so the database clock
+// dates it too (ADR 0281): it goes when that stamp lies before the start of
+// the Berlin day draftRetentionDays ago. It returns their ids and carrier
+// announcements.
+func (s *SurveyStore) ExpiredSurveys(ctx context.Context, audience string, closedBefore time.Time, draftRetentionDays int) ([]communication.Survey, error) {
 	db, tenantID, err := s.tenantDB(ctx, "list expired surveys")
 	if err != nil {
 		return nil, err
@@ -348,7 +358,9 @@ func (s *SurveyStore) ExpiredSurveys(ctx context.Context, audience string, cutof
 	var rows []surveyRow
 	if err := db.NewSelect().Model(&rows).Column("sv.id", "sv.tenant_id", "sv.announcement_id").
 		Where("sv.tenant_id = ? AND sv.audience = ?", tenantID, audience).
-		Where("(sv.published_at IS NOT NULL AND sv.closes_at < ?) OR (sv.published_at IS NULL AND sv.updated_at < ?)", cutoff, cutoff).
+		Where(`(sv.published_at IS NOT NULL AND sv.closes_at < ?) OR (sv.published_at IS NULL
+			AND sv.updated_at < ((now() AT TIME ZONE 'Europe/Berlin')::date - ?::int)::timestamp AT TIME ZONE 'Europe/Berlin')`,
+			closedBefore, draftRetentionDays).
 		OrderExpr("sv.id").Scan(ctx); err != nil {
 		return nil, fmt.Errorf("list expired surveys: %w", err)
 	}

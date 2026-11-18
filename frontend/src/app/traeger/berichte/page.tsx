@@ -7,14 +7,7 @@
 // zweite Reiter verwaltet die Vorlagen des Trägers. Nur Zahlen, keine Namen;
 // der Export enthält dieselben Zahlen als PDF, Excel oder CSV.
 
-import {
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Copy, FileText, Pencil, School, Trash2 } from "lucide-react";
@@ -43,6 +36,8 @@ import {
   type ReportRow,
 } from "~/components/traeger/key-date-report-model";
 import { useReportTemplates } from "~/components/traeger/use-report-templates";
+import { FreshPerTraeger } from "~/components/traeger/fresh-per-traeger";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -50,11 +45,7 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { EmptyState } from "~/components/ui/empty-state";
-import {
-  ExportMenu,
-  type ExportMenuOption,
-  exportFormatOptions,
-} from "~/components/ui/export-menu";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
@@ -62,40 +53,28 @@ import { SegmentedControl } from "~/components/ui/segmented-control";
 import { StatCard } from "~/components/ui/stat-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import {
-  useApiErrorDisplay,
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { childrenConcept } from "~/lib/concepts/children";
 import { staffConcept } from "~/lib/concepts/staff";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 import { formatDate, parseISODate } from "~/lib/date-helpers";
-import { downloadBlob } from "~/lib/file-download";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
+import { traegerReportKeys } from "~/lib/swr/traeger-report-keys";
 import {
   deleteReportTemplate,
   downloadKeyDateReport,
   fetchKeyDateReport,
   REPORT_TEMPLATES_MANAGE_RIGHT,
   type KeyDateReport,
-  type ReportExportFormat,
   type ReportSection,
   type ReportTemplate,
 } from "~/lib/traeger-reports-api";
 import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerReportsPage" });
-
-const EXPORT_FORMATS: readonly ExportMenuOption[] = exportFormatOptions([
-  "pdf",
-  "xlsx",
-  "csv",
-]);
 
 /** Ohne Vorlage: alle Abschnitte, keine Sozialräume. */
 const STANDARD = "standard";
@@ -448,18 +427,19 @@ export default function TraegerReportsPage() {
   // `useSearchParams` braucht eine Suspense-Grenze; bis dahin lädt die Seite.
   return (
     <Suspense fallback={<TenantPage title="Berichte" loading />}>
-      <TraegerReportsContent />
+      <FreshPerTraeger>
+        <TraegerReportsContent />
+      </FreshPerTraeger>
     </Suspense>
   );
 }
 
 function TraegerReportsContent() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const canManage = hasPermission(
     session ?? null,
     REPORT_TEMPLATES_MANAGE_RIGHT,
   );
-  const orgId = session?.user?.orgId;
   const params = useSearchParams();
   const today = useBerlinToday();
   const [tab, setTab] = useState<Tab>("bericht");
@@ -471,14 +451,8 @@ function TraegerReportsContent() {
     return value && ISO_DATE.test(value) ? value : null;
   });
   const [grouping, setGrouping] = useState<ReportGrouping>("schools");
-  const [report, setReport] = useState<KeyDateReport | null>(null);
-  const [exporting, setExporting] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<ReportTemplate | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
-  const request = useRef(0);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-  const { show: showActionError } = useApiErrorDisplay();
   const deleteErrors = useApiFormError();
   const { success } = useToast();
 
@@ -506,79 +480,23 @@ function TraegerReportsContent() {
       ? STANDARD
       : templateId;
 
-  const load = useCallback(async () => {
-    if (orgId === undefined || !templateKnown) return;
-    const current = ++request.current;
-    setReport(null);
-    try {
-      const result = await fetchKeyDateReport(
-        shownKeyDate,
-        effectiveTemplate === STANDARD ? null : effectiveTemplate,
-      );
-      if (current !== request.current) return;
-      setReport(result);
-      clearLoadError();
-    } catch (err) {
-      if (current !== request.current) return;
-      logger.error("traeger_report_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "der Bericht",
-        retry: () => void load(),
-      });
-    }
-  }, [
-    orgId,
-    templateKnown,
-    shownKeyDate,
-    effectiveTemplate,
-    clearLoadError,
-    showLoadError,
-  ]);
-
-  // A switch of the Träger drops what the previous one showed.
-  const shownOrgId = useRef(orgId);
-  useEffect(() => {
-    if (shownOrgId.current === orgId) return;
-    shownOrgId.current = orgId;
-    request.current++;
-    setReport(null);
-    setTemplateId(STANDARD);
-  }, [orgId]);
-
-  useEffect(() => {
-    if (status === "loading") return;
-    void load();
-  }, [load, status]);
+  const reportTemplate =
+    effectiveTemplate === STANDARD ? null : effectiveTemplate;
+  const {
+    data: report,
+    loading: reportLoading,
+    error: reportLoadError,
+  } = useTraegerResource(
+    templateKnown
+      ? traegerReportKeys.keyDateReport(shownKeyDate, reportTemplate)
+      : null,
+    () => fetchKeyDateReport(shownKeyDate, reportTemplate),
+    "der Bericht",
+  );
 
   useEffect(() => {
     if (report && report.districts.length === 0) setGrouping("schools");
   }, [report]);
-
-  async function exportReport(option: ExportMenuOption) {
-    const format = option.format as ReportExportFormat | undefined;
-    if (!format) return;
-    setExporting(option.key);
-    try {
-      const file = await downloadKeyDateReport(
-        shownKeyDate,
-        effectiveTemplate === STANDARD ? null : effectiveTemplate,
-        format,
-      );
-      downloadBlob(
-        file.blob,
-        file.filename ?? `bericht-stichtag-${shownKeyDate}.${format}`,
-      );
-    } catch (err) {
-      logger.error("traeger_report_export_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showActionError(err, { object: "die Exportdatei" });
-    } finally {
-      setExporting(null);
-    }
-  }
 
   async function confirmDelete() {
     if (!deleting) return;
@@ -606,8 +524,8 @@ function TraegerReportsContent() {
     setKeyDate(null);
   };
 
-  const reportError = !templateKnown ? templatesError : pageLoad.error;
-  const loading = report === null && !reportError;
+  const reportError = !templateKnown ? templatesError : reportLoadError;
+  const loading = !templateKnown ? !templatesError : reportLoading;
   const keyYear = parseISODate(shownKeyDate).getFullYear();
   const keyMonth = parseISODate(shownKeyDate).getMonth() + 1;
   const keyDay = parseISODate(shownKeyDate).getDate();
@@ -637,12 +555,15 @@ function TraegerReportsContent() {
       }
       actions={
         onReportTab ? (
-          <ExportMenu
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadKeyDateReport(shownKeyDate, reportTemplate, format)
+            }
+            scope="Alle Schulen"
             ariaLabel="Bericht herunterladen"
-            options={EXPORT_FORMATS}
-            busyKey={exporting}
+            fallbackName={`bericht-stichtag-${shownKeyDate}`}
+            errorObject="den Bericht"
             unavailable={!report || schoolCount === 0}
-            onSelect={(option) => void exportReport(option)}
           />
         ) : canManage ? (
           <ButtonLink
@@ -697,6 +618,7 @@ function TraegerReportsContent() {
             navigationInGroup
             navigationSlot={
               <ISODatePicker
+                embedded
                 id="report-key-date"
                 ariaLabel="Stichtag"
                 value={shownKeyDate}

@@ -6,7 +6,7 @@
 // frei, in der Reihenfolge der Anmeldung.
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   HolidayHeadFacts,
   holidayPeriodTabs,
@@ -18,16 +18,16 @@ import {
 } from "~/components/traeger/holiday-week-places";
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
-import { TenantPage } from "~/components/ui/tenant-page";
-import { useApiLoadError } from "~/contexts/ToastContext";
-import { createLogger } from "~/lib/logger";
 import {
-  fetchHolidayWeekPlaces,
-  type HolidayWeekPlaces,
-} from "~/lib/traeger-holiday-registrations-api";
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { TenantPage } from "~/components/ui/tenant-page";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
+import { fetchHolidayWeekPlaces } from "~/lib/traeger-holiday-registrations-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerHolidayPlacesPage" });
 
 export default function TraegerHolidayPlacesPage() {
   const params = useParams<{ id: string }>();
@@ -39,31 +39,17 @@ export default function TraegerHolidayPlacesPage() {
   } = useTraegerHolidayPeriod(id);
   const { schools } = useTraegerSchools();
   const names = useMemo(() => schoolNames(schools), [schools]);
-  const [weeks, setWeeks] = useState<readonly HolidayWeekPlaces[] | null>(null);
+  const {
+    data: weeks,
+    error: placesError,
+    reload,
+  } = useTraegerResource(
+    id ? traegerKeys.holidayPlaces(id) : null,
+    () => fetchHolidayWeekPlaces(id),
+    "die Plätze",
+  );
   const [editing, setEditing] = useState<string | null>(null);
-  const placesLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = placesLoad;
-
-  const load = useCallback(async () => {
-    try {
-      setWeeks(await fetchHolidayWeekPlaces(id));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_holiday_places_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Plätze",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, id, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const loadError = placesLoad.error ?? periodError;
+  const loadError = placesError ?? periodError;
   const totals = useMemo(() => {
     const all = weeks ?? [];
     return {
@@ -126,6 +112,21 @@ export default function TraegerHolidayPlacesPage() {
         period?.registrationCount,
         period?.allocationMode,
       )}
+      actions={
+        <TraegerListExportMenu
+          download={(format) =>
+            downloadTraegerList(
+              `/api/traeger/holiday-periods/${id}/places/export`,
+              format,
+            )
+          }
+          scope={traegerExportScope()}
+          ariaLabel="Plätze und Warteliste herunterladen"
+          fallbackName="plaetze"
+          errorObject="die Plätze"
+          unavailable={!weeks || weeks.length === 0}
+        />
+      }
       error={loadError}
       loading={!loadError && !weeks}
       empty={
@@ -138,8 +139,10 @@ export default function TraegerHolidayPlacesPage() {
           : undefined
       }
     >
+      {/* Equal week cards in a grid: grids do not grow (TenantPage body
+          rule), so the last week keeps its height like its siblings. */}
       {weeks && weeks.length > 0 ? (
-        <div className="flex flex-col gap-6">
+        <div className="compact:gap-4 grid gap-6 max-sm:gap-3">
           {weeks.map((week) => (
             <HolidayWeekPlacesCard
               key={week.weekId}
@@ -154,7 +157,7 @@ export default function TraegerHolidayPlacesPage() {
               onCancel={() => setEditing(null)}
               onSaved={() => {
                 setEditing(null);
-                void load();
+                reload();
               }}
             />
           ))}

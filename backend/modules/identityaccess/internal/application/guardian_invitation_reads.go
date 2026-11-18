@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
@@ -20,7 +19,9 @@ type GuardianInvitationReads struct {
 
 var _ identityaccess.GuardianInvitationReads = GuardianInvitationReads{}
 
-// NewGuardianInvitationReads reads the invitations through the store.
+// NewGuardianInvitationReads reads the invitations through the store, which
+// judges on the database clock which of them are still open (ADR 0285,
+// Nachtrag).
 func NewGuardianInvitationReads(invitations ports.GuardianInvitationStore, run func(context.Context, func(context.Context) error) error) GuardianInvitationReads {
 	return GuardianInvitationReads{invitations: invitations, run: run}
 }
@@ -44,7 +45,7 @@ func (r GuardianInvitationReads) ListOpenGuardianInvitations(ctx context.Context
 	var invitations []domain.GuardianInvitation
 	err := r.run(ctx, func(txCtx context.Context) error {
 		var err error
-		invitations, err = r.invitations.ListOpenGuardianInvitations(txCtx, guardianProfileIDs, time.Now())
+		invitations, err = r.invitations.ListOpenGuardianInvitations(txCtx, guardianProfileIDs)
 		return err
 	})
 	return guardianInvitationList(invitations, err)
@@ -56,7 +57,7 @@ func (r GuardianInvitationReads) ListRedeemableGuardianInvitations(ctx context.C
 	var invitations []domain.GuardianInvitation
 	err := r.run(ctx, func(txCtx context.Context) error {
 		var err error
-		invitations, err = r.invitations.ListRedeemableGuardianInvitations(txCtx, time.Now())
+		invitations, err = r.invitations.ListRedeemableGuardianInvitations(txCtx)
 		return err
 	})
 	return guardianInvitationList(invitations, err)
@@ -92,6 +93,7 @@ func (l *AccountLifecycle) ListRedeemableGuardianInvitations(ctx context.Context
 
 // NewGuardianInvitationInvalidation binds the guarded command independently of
 // the full lifecycle, so contact edits need neither late binding nor a cycle.
+// The links end at the database time of the write.
 func NewGuardianInvitationInvalidation(invitations ports.GuardianInvitationStore) identityaccess.GuardianInvitationInvalidation {
 	return func(ctx context.Context, profileID int64) error {
 		if profileID <= 0 {
@@ -99,6 +101,6 @@ func NewGuardianInvitationInvalidation(invitations ports.GuardianInvitationStore
 		}
 		// The store refuses a missing school or transaction. This leaf command
 		// never starts an independent unit or switches the caller's scope.
-		return invitationError(invitations.InvalidateGuardianInvitations(ctx, profileID, time.Now(), true))
+		return invitationError(invitations.InvalidateGuardianInvitations(ctx, profileID, true))
 	}
 }

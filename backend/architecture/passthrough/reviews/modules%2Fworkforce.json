@@ -232,11 +232,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/workforce/internal/application/Service.CurrentStaffSchedule",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/workforce/internal/application/Service.ExpiredWorkSessionBreaks",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -419,6 +414,11 @@
       "decision": "0090",
       "id": "modules/workforce/internal/application/StaffAdminEngine.UpdateStaffStammdatenPerson",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0289",
+      "id": "modules/workforce/internal/application/StaffDocumentFileSeal.Batch",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; sealed objects of #3840 (ADR 0289)."
     },
     {
       "decision": "0090",

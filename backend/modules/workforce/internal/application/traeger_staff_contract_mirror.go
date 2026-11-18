@@ -128,7 +128,7 @@ func (t *TraegerStaff) mirror(ctx context.Context, actor workforce.TraegerStaffA
 		}
 		err := t.ports.Runtime.WithinSchool(ctx, link.SchoolID, func(ctx context.Context) error {
 			if !plan.Governs {
-				return t.store.ReleaseMirror(ctx, site.StaffID, from)
+				return t.store.ReleaseMirror(ctx, site.StaffID, from, t.clock.Now())
 			}
 			return t.mirrorSchool(ctx, plan)
 		})
@@ -153,11 +153,12 @@ func (t *TraegerStaff) mirrorSchool(ctx context.Context, plan domain.SollPlan) e
 	if plan.Start.After(from) {
 		from = plan.Start
 	}
-	if err := t.store.KeepTemplateHistory(ctx, staffID, from); err != nil {
+	now := t.clock.Now()
+	if err := t.store.KeepTemplateHistory(ctx, staffID, from, now); err != nil {
 		return err
 	}
 	clipped := plan.From(from)
-	if err := t.store.MirrorStaffSchedule(ctx, staffID, from, clipped.ScheduleRows()); err != nil {
+	if err := t.store.MirrorStaffSchedule(ctx, staffID, from, clipped.ScheduleRows(), now); err != nil {
 		return err
 	}
 	return t.store.MirrorStaffHolidayWeeks(ctx, staffID, from, clipped.HolidayOverrides())
@@ -169,7 +170,7 @@ func publicContracts(contracts []domain.TraegerStaffContract, names map[int64]st
 	result := make([]workforce.TraegerStaffContract, 0, len(contracts))
 	for _, contract := range contracts {
 		public := workforce.TraegerStaffContract{
-			ID: contract.ID, Kind: contract.Kind, StartsOn: contract.StartsOn,
+			ID: contract.ID, Kind: contract.Kind, StartsOn: contract.StartsOn, Pool: contract.Pool,
 			Sites: []workforce.TraegerContractSiteDetail{}, HolidayWeeks: make([]workforce.TraegerContractHolidayWeek, 0, len(contract.HolidayWeeks)),
 		}
 		if !contract.EndsOn.IsZero() {

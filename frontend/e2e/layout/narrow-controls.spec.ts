@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { HEAD_ACTIONS_LAYOUT } from "../../src/components/ui/control-geometry";
 import { compileGlobalsCss, render } from "./harness";
 
 // Bedienelemente, die auf Tablet und Handy aus dem Bild rutschten (#4975):
@@ -16,6 +17,13 @@ const HEAD_ACTIONS_FIXED =
   "ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2";
 const HEAD_ACTIONS_BEFORE =
   "ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2";
+
+// `HEAD_ACTIONS_LAYOUT` (control-geometry.ts) mit einer Tagesnavigation:
+// Pfeil, Datum, Pfeil in einer Hülle, wie auf der Startseite der Schule.
+// Vor #7114 zog die Regel für Menüs hinter einem Textknopf auch die beiden
+// Pfeile auf volle Breite; die Seite scrollte bei 320 px waagrecht.
+const HEAD_LAYOUT_BEFORE =
+  "[&>div[data-icon-only]]:inline-flex max-sm:contents max-sm:[&>*:not([data-icon-only])]:order-last max-sm:[&>*:not([data-icon-only])]:basis-full max-sm:[&>div:not([data-icon-only])>button]:w-full";
 
 const NAV_ITEM =
   "relative z-10 flex min-h-[44px] items-center justify-center gap-2.5 rounded-full px-3 py-2.5";
@@ -56,6 +64,25 @@ function pageHeader(actionsClass: string): string {
         <h1 class="min-w-24 text-xl font-semibold">Anmeldung Schuljahr 2026/2027</h1>
         <div class="${actionsClass}">
           ${button("h1", 230)}${button("h2", 200)}${button("h3", 40)}${button("h4", 180)}${button("last", 40)}
+        </div>
+      </div>
+    </header>`;
+}
+
+/** Kopf von `TenantPage` mit der Tagesnavigation der Schul-Startseite. */
+function dayNavigationHeader(layoutClass: string): string {
+  const arrow = (testId: string) =>
+    `<button data-testid="${testId}" data-icon-only type="button" class="aspect-square h-8 shrink-0">&gt;</button>`;
+  return `
+    <header data-testid="head" class="moto-content-surface rounded-2xl border p-4">
+      <div class="flex flex-wrap items-start justify-between gap-x-2 gap-y-2">
+        <h1 class="min-w-24 text-xl font-semibold">Guten Abend, Lena Weber</h1>
+        <div class="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2 ${layoutClass}">
+          <div class="flex w-full items-center gap-1">
+            ${arrow("previous")}
+            <div class="min-w-0 flex-1"><input class="w-full" value="15.11.2026"></div>
+            ${arrow("last")}
+          </div>
         </div>
       </div>
     </header>`;
@@ -140,6 +167,27 @@ test("without max-w-full the page header actions run past the head", async ({
   // Gegenprobe: der Zustand vor #4975.
   await page.setViewportSize({ width: 768, height: 1024 });
   await render(page, compiledCss, pageHeader(HEAD_ACTIONS_BEFORE));
+
+  expect(await overhang(page, "head")).toBeGreaterThan(0);
+});
+
+test("the day arrows keep their size in the page header at 320 px", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await render(page, compiledCss, dayNavigationHeader(HEAD_ACTIONS_LAYOUT));
+
+  const previous = await page.getByTestId("previous").boundingBox();
+  expect(previous!.width).toBeLessThanOrEqual(44);
+  expect(await overhang(page, "head")).toBeLessThanOrEqual(0);
+});
+
+test("stretched day arrows run past the page header at 320 px", async ({
+  page,
+}) => {
+  // Gegenprobe: der Zustand vor #7114.
+  await page.setViewportSize({ width: 320, height: 800 });
+  await render(page, compiledCss, dayNavigationHeader(HEAD_LAYOUT_BEFORE));
 
   expect(await overhang(page, "head")).toBeGreaterThan(0);
 });

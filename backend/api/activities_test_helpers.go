@@ -10,6 +10,8 @@ import (
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // ActivitiesTestModule is the Timetable side of the activity routes; the
@@ -33,7 +35,7 @@ func NewActivitiesTestModule(db transactionruntime.Database) (ActivitiesTestModu
 		return ActivitiesTestModule{}, nil, nil, nil, err
 	}
 	activityService, err := timetableCompose.NewService(r.Timetable, r.ActivitySchedule,
-		r.Directories, presence.ActiveGroup, owners.NewTimetableStaff(members.Staff), owners.NewTimetableRosterStudents(members.Student))
+		r.Directories, presence.ActiveGroup, owners.NewTimetableStaff(members.Staff), owners.NewTimetableRosterStudents(members.Student), calendar.TodayDate)
 	if err != nil {
 		return ActivitiesTestModule{}, nil, nil, nil, err
 	}

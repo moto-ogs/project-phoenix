@@ -6,6 +6,8 @@ import (
 	"time"
 
 	inviteOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	ownerCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +20,9 @@ func TestLateInviteOwner_DeleteByUsedRequestID_DeletesOnlyLinkedInvite(t *testin
 	// setupRequestRepoTest owns the package's testpkg.SetupTestDB lifecycle and
 	// also creates the real tenant + phase fixtures this repository needs.
 	db, requestRepo, tenantID, phaseID := setupRequestRepoTest(t)
-	lateInviteRepo := requestRepo
+	// The owner stamps the invites' creation from the same fixed clock their
+	// expiry is set from (#7104), so expires_at > created_at on any day.
+	lateInviteRepo := ownerCompose.NewClocked(func() time.Time { return lateInviteTestNow })
 	tokenPrefix := uniqueToken("deleteUsedLateInvite")
 	creator := testpkg.CreateTestAccount(t, db, "late-invite-delete")
 
@@ -35,14 +39,14 @@ func TestLateInviteOwner_DeleteByUsedRequestID_DeletesOnlyLinkedInvite(t *testin
 		PhaseID:       phaseID,
 		TokenHash:     tokenPrefix + "-invite-a",
 		GuardianEmail: "a@example.test",
-		ExpiresAt:     time.Now().Add(24 * time.Hour),
+		ExpiresAt:     lateInviteTestNow.Add(24 * time.Hour),
 		CreatedBy:     creator.ID,
 	}
 	inviteB := &inviteOwner.LateInvite{
 		PhaseID:       phaseID,
 		TokenHash:     tokenPrefix + "-invite-b",
 		GuardianEmail: "b@example.test",
-		ExpiresAt:     time.Now().Add(24 * time.Hour),
+		ExpiresAt:     lateInviteTestNow.Add(24 * time.Hour),
 		CreatedBy:     creator.ID,
 	}
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
@@ -52,10 +56,10 @@ func TestLateInviteOwner_DeleteByUsedRequestID_DeletesOnlyLinkedInvite(t *testin
 		if err := lateInviteRepo.InsertLateInvite(ctx, inviteB); err != nil {
 			return err
 		}
-		if err := lateInviteRepo.MarkLateInviteUsed(ctx, inviteA.ID, requestA.ID, time.Now()); err != nil {
+		if err := lateInviteRepo.MarkLateInviteUsed(ctx, inviteA.ID, requestA.ID, lateInviteTestNow); err != nil {
 			return err
 		}
-		return lateInviteRepo.MarkLateInviteUsed(ctx, inviteB.ID, requestB.ID, time.Now())
+		return lateInviteRepo.MarkLateInviteUsed(ctx, inviteB.ID, requestB.ID, lateInviteTestNow)
 	}))
 
 	var linked *inviteOwner.LateInvite
@@ -82,3 +86,7 @@ func TestLateInviteOwner_DeleteByUsedRequestID_DeletesOnlyLinkedInvite(t *testin
 	assert.Zero(t, remainingA)
 	assert.Equal(t, 1, remainingB)
 }
+
+// lateInviteTestNow is the fixed instant of the late-invite fixtures, a
+// Wednesday 10:00 in Berlin.
+var lateInviteTestNow = calendar.NewDate(2026, time.November, 18).BerlinMidnight().Add(10 * time.Hour)

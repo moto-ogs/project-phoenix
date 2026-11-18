@@ -137,7 +137,7 @@ func TestHolidayRegistrationWithTheAccountProofLinksTheAccount(t *testing.T) {
 	otherPeriod := openHolidays(t, f, other)
 	offer := holidayOffer(t, f, period.PublicToken)
 	account := testpkg.CreateTestAccount(t, f.db, "holiday-proof-account")
-	proofs := enrollmentCompose.NewHolidayParentAccountProofs(testHealthCipher())
+	proofs := enrollmentCompose.NewHolidayParentAccountProofs(testHealthCipher(), holidayFixtureNow)
 	proof, err := proofs.HolidayParentAccountProof(office.organization, period.ID, account.ID)
 	require.NoError(t, err)
 	foreignTraeger, err := proofs.HolidayParentAccountProof(other.organization, otherPeriod.ID, account.ID)
@@ -169,6 +169,9 @@ func TestHolidayRegistrationWithTheAccountProofLinksTheAccount(t *testing.T) {
 // with the registration that asked for it (#7000).
 func TestHolidayRegistrationRetentionTakesTheAccountLinkAlong(t *testing.T) {
 	t.Parallel()
+	// The retention deletes the ended registrations of every Träger, those of
+	// the other retention tests too: it runs on its own database.
+	testpkg.SetupIsolatedTestDB(t)
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, "Träger Konto Löschfrist", identityaccess.TraegerRoleAdministration)
 	body := januaryHolidays(office)
@@ -180,7 +183,7 @@ func TestHolidayRegistrationRetentionTakesTheAccountLinkAlong(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	period := decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
 	account := testpkg.CreateTestAccount(t, f.db, "holiday-retention-account")
-	proof, err := enrollmentCompose.NewHolidayParentAccountProofs(testHealthCipher()).HolidayParentAccountProof(office.organization, period.ID, account.ID)
+	proof, err := enrollmentCompose.NewHolidayParentAccountProofs(testHealthCipher(), holidayFixtureNow).HolidayParentAccountProof(office.organization, period.ID, account.ID)
 	require.NoError(t, err)
 	offer := holidayOffer(t, f, period.PublicToken)
 	submitWithAccount(t, f, period.PublicToken, offer, "frist.konto@example.org", map[string]any{"parent_account_proof": proof})
@@ -190,7 +193,7 @@ func TestHolidayRegistrationRetentionTakesTheAccountLinkAlong(t *testing.T) {
 
 	ctx := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, f.db))
 	require.NoError(t, tenant.WithinAdmin(ctx, func(adminCtx context.Context) error {
-		_, err := owners.NewHolidayRegistrationRetention(nil).DeleteExpiredHolidayRegistrations(adminCtx)
+		_, err := owners.NewHolidayRegistrationRetention(holidayFixtureNow).DeleteExpiredHolidayRegistrations(adminCtx)
 		return err
 	}))
 

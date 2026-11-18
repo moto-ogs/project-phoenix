@@ -76,8 +76,11 @@ var retentionControlTables = map[string]string{
 //     file holds those bookings again. Invoices, Stornos, documents and the
 //     export file with its protocol entry stay.
 //
-// The erasure of a whole Träger after its export (#4657) deletes the
-// organization and reaches the Belege through its cascade.
+// The erasure of a whole Träger after its export (#4657), also of a demo
+// order's own Träger (platform.erase_retired_demo_traeger, ADR 0271),
+// deletes the organization and reaches the Belege through its cascade. The
+// Nachweise go there with their contracts: their key to the income level is
+// deferred over the cascade, not deleted by name (#7248).
 var belegErasureFunctions = []string{
 	"parent_billing.delete_due_belege",
 	"parent_billing.delete_expired_sepa_debit_downloads",

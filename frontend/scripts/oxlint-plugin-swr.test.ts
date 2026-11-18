@@ -4,6 +4,8 @@ import {
   copyFileSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -16,14 +18,18 @@ afterAll(removeProbeDirectories);
 const RULE = "swr(no-direct-import)";
 
 describe.concurrent("swr/no-direct-import", () => {
-  it("rejects new free hook keys but accepts factory keys", async () => {
+  it.each([
+    ["useSWRAuth", "~/lib/swr"],
+    ["useConfirmedSWR", "~/lib/hooks/use-confirmed-resource"],
+    ["useUnreadCount", "~/lib/hooks/use-unread-count"],
+  ])("checks forwarded keys of %s, including aliases", async (hook, source) => {
     const bad = await lintSource(
-      'import { useSWRAuth } from "~/lib/swr"; export function useProbe() { return useSWRAuth("new-key", async () => []); }',
+      `import { ${hook} as useRead } from "${source}"; export function useProbe() { return useRead("new-key", async () => []); }`,
     );
     expect(bad.status, bad.output).toBe(1);
     expect(bad.output).toContain("swr(no-free-key)");
     const good = await lintSource(
-      'import { useSWRAuth } from "~/lib/swr"; import { roomKeys } from "~/lib/swr/rooms-keys"; export function useProbe() { return useSWRAuth(roomKeys.key(), async () => []); }',
+      `import { ${hook} as useRead } from "${source}"; import { roomKeys } from "~/lib/swr/rooms-keys"; export function useProbe() { return useRead(roomKeys.key(), async () => []); }`,
     );
     expect(good.status, good.output).toBe(0);
   });
@@ -256,31 +262,83 @@ describe.concurrent("swr/no-direct-import", () => {
     },
   );
 
-  it("accepts the existing exception but rejects an additional import", async () => {
-    const file = "src/components/dashboard/sidebar.test.tsx";
+  // The exceptions live in a baseline of their own: the checked-in one only
+  // shrinks, and its last entries are gone once their files are migrated.
+  function lintWithImportBaseline(
+    baseline: Record<string, number>,
+    file: string,
+    code: string,
+  ) {
+    const directory = mkdtempSync(join(tmpdir(), "swr-baseline-"));
+    try {
+      const scripts = join(directory, "scripts");
+      mkdirSync(scripts);
+      copyFileSync(
+        resolve("scripts/oxlint-plugin-swr.mjs"),
+        join(scripts, "plugin.mjs"),
+      );
+      writeFileSync(
+        join(scripts, "swr-import-baseline.json"),
+        JSON.stringify(baseline),
+      );
+      writeFileSync(join(scripts, "swr-key-baseline.json"), "{}");
+      writeFileSync(join(scripts, "swr-effect-load-baseline.json"), "{}");
+      const config = join(directory, "config.json");
+      writeFileSync(
+        config,
+        JSON.stringify({
+          jsPlugins: [join(scripts, "plugin.mjs")],
+          rules: { "swr/no-direct-import": "error" },
+        }),
+      );
+      const source = join(directory, file);
+      mkdirSync(join(source, ".."), { recursive: true });
+      writeFileSync(source, code);
+      const result = spawnSync(
+        resolve("node_modules/.bin/oxlint"),
+        ["-c", config, source],
+        { encoding: "utf8" },
+      );
+      return {
+        status: result.status,
+        output: `${result.stdout}${result.stderr}`,
+      };
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }
+
+  it("accepts the existing exception but rejects an additional import", () => {
+    const file = "src/components/probe.test.tsx";
     const existing = 'import useSWR from "swr"; void useSWR;';
-    expect((await lintSource(existing, file)).status).toBe(0);
-    const result = await lintSource(
-      `${existing}\nexport { mutate } from "swr";`,
+    const accepted = lintWithImportBaseline({ [file]: 1 }, file, existing);
+    expect(accepted.status, accepted.output).toBe(0);
+    const result = lintWithImportBaseline(
+      { [file]: 1 },
       file,
+      `${existing}\nexport { mutate } from "swr";`,
     );
     expect(result.status).toBe(1);
     expect(result.output).toContain(RULE);
   });
 
-  it("requires removing an exception once its import is removed", async () => {
-    const result = await lintSource(
+  it("requires removing an exception once its import is removed", () => {
+    const file = "src/components/probe.test.tsx";
+    const result = lintWithImportBaseline(
+      { [file]: 1 },
+      file,
       "export const migrated = true;",
-      "src/components/dashboard/sidebar.test.tsx",
     );
     expect(result.status).toBe(1);
     expect(result.output).toContain("Shrink");
   });
 
-  it("also requires shrinking a partially migrated file", async () => {
-    const result = await lintSource(
+  it("also requires shrinking a partially migrated file", () => {
+    const file = "src/components/probe.test.tsx";
+    const result = lintWithImportBaseline(
+      { [file]: 2 },
+      file,
       'export { mutate } from "swr";',
-      "src/app/[tenant]/(protected)/students/[id]/page.test.tsx",
     );
     expect(result.status).toBe(1);
     expect(result.output).toContain("Shrink");
@@ -303,6 +361,7 @@ describe.concurrent("swr/no-direct-import", () => {
         JSON.stringify({ "src/deleted.ts": 1 }),
       );
       writeFileSync(join(scripts, "swr-key-baseline.json"), "{}");
+      writeFileSync(join(scripts, "swr-effect-load-baseline.json"), "{}");
       const config = join(directory, "config.json");
       writeFileSync(
         config,
@@ -407,4 +466,159 @@ describe.concurrent("swr/no-test-support-import", () => {
       expect(result.output).not.toContain("swr(no-test-support-import)");
     },
   );
+});
+
+describe.concurrent("swr/no-effect-load", () => {
+  const RULE = "swr(no-effect-load)";
+  const HEAD =
+    'import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react"; import { fetchRows, subscribe } from "~/lib/rows-api";';
+
+  it.each([
+    [
+      "an awaited load through a callback",
+      "const [rows, setRows] = useState([]); const load = useCallback(async () => { setRows(await fetchRows()); }, []); useEffect(() => { void load(); }, [load]); return rows;",
+    ],
+    [
+      "a promise chain inside the effect",
+      "const [rows, setRows] = useState([]); useEffect(() => { let active = true; fetchRows().then((next) => { if (active) setRows(next); }); return () => { active = false; }; }, []); return rows;",
+    ],
+    [
+      "a load two functions away",
+      "const [rows, setRows] = useState([]); async function read() { setRows(await fetchRows()); } const load = () => read(); useEffect(() => { void load(); }, []); return rows;",
+    ],
+    [
+      "a local function handed to the effect",
+      "const [rows, setRows] = useState([]); function loadEffect() { void fetchRows().then(setRows); } useEffect(loadEffect, []); return rows;",
+    ],
+    [
+      "a load kept by useEffectEvent",
+      "const [rows, setRows] = useState([]); const load = useEffectEvent(async () => { setRows(await fetchRows()); }); useEffect(() => { void load(); }, []); return rows;",
+    ],
+    [
+      "a load returned by useMemo",
+      "const [rows, setRows] = useState([]); const load = useMemo(() => async () => { setRows(await fetchRows()); }, []); useEffect(() => { void load(); }, [load]); return rows;",
+    ],
+    [
+      "a load kept in a ref",
+      "const [rows, setRows] = useState([]); const read = async () => { setRows(await fetchRows()); }; const latest = useRef(read); useEffect(() => { void latest.current(); }, []); return rows;",
+    ],
+    [
+      "a promise chain with only catch",
+      "const [failed, setFailed] = useState(false); useEffect(() => { fetchRows().catch(() => setFailed(true)); }, []); return failed;",
+    ],
+    [
+      "a promise chain with only finally",
+      "const [busy, setBusy] = useState(true); useEffect(() => { void fetchRows().finally(() => setBusy(false)); }, []); return busy;",
+    ],
+  ])("rejects %s", async (_name, body) => {
+    const result = await lintSource(
+      `${HEAD} export function useProbe() { ${body} }`,
+    );
+    expect(result.status, result.output).toBe(1);
+    expect(result.output).toContain(RULE);
+  });
+
+  it.each([
+    [
+      "a write in an event handler",
+      "const [rows, setRows] = useState([]); const save = async () => { setRows(await fetchRows()); }; return { rows, save };",
+    ],
+    [
+      "an effect that only derives state",
+      "const [open, setOpen] = useState(false); useEffect(() => { setOpen(true); }, []); return open;",
+    ],
+    [
+      "an effect that only keeps the latest handler for a retry",
+      "const [rows, setRows] = useState([]); const save = async () => { setRows(await fetchRows()); }; const latest = useRef(save); useEffect(() => { latest.current = () => void save(); }); return { rows, latest };",
+    ],
+    [
+      "a cleanup that is returned, not run",
+      "const [rows, setRows] = useState([]); const save = async () => { setRows(await fetchRows()); }; useEffect(() => () => { void save(); }, []); return rows;",
+    ],
+    [
+      "an effect that revalidates without state",
+      "useEffect(() => { void fetchRows().then(() => undefined); }, []); return null;",
+    ],
+    [
+      "an effect that stores a load in a ref without running it",
+      "const [rows, setRows] = useState([]); function load() { void fetchRows().then(setRows); } const latest = useRef(load); useEffect(() => { latest.current = load; }); return { rows, latest };",
+    ],
+    [
+      "an effect event returned as cleanup, not run",
+      "const [rows, setRows] = useState([]); const load = useEffectEvent(async () => { setRows(await fetchRows()); }); useEffect(() => () => { void load(); }, []); return rows;",
+    ],
+    [
+      "an effect that only subscribes",
+      "const [rows, setRows] = useState([]); useEffect(() => subscribe((next) => setRows(next)), []); return rows;",
+    ],
+    [
+      "a logging catch beside a synchronous setter",
+      "const [open, setOpen] = useState(false); useEffect(() => { void fetchRows().catch(() => undefined); setOpen(true); }, []); return open;",
+    ],
+    [
+      "an effect function that is not a local function",
+      "const [rows] = useState([]); const run = useCallback; useEffect(run, []); return rows;",
+    ],
+  ])("accepts %s", async (_name, body) => {
+    const result = await lintSource(
+      `${HEAD} export function useProbe() { ${body} }`,
+    );
+    expect(result.output).not.toContain(RULE);
+  });
+
+  it("leaves tests and the cache module alone", async () => {
+    const source = `${HEAD} export function useProbe() { const [rows, setRows] = useState([]); useEffect(() => { void fetchRows().then(setRows); }, []); return rows; }`;
+    const production = await lintSource(source);
+    expect(production.output).toContain(RULE);
+    for (const file of [
+      "src/components/probe.test.tsx",
+      "src/lib/swr/probe.ts",
+    ]) {
+      const result = await lintSource(source, file);
+      expect(result.output).not.toContain(RULE);
+    }
+  });
+});
+
+// An exception to swr/no-effect-load names why the effect is no load
+// (sessionless page, DOM work): `-- <reason>` after the rule.
+describe("swr/no-effect-load disable comments", () => {
+  const DISABLE = /oxlint-disable(?:-next-line|-line)?\b(.*)$/;
+  function missingReason(line: string) {
+    const match = DISABLE.exec(line);
+    if (!match?.[1]?.includes("swr/no-effect-load")) return false;
+    const reason = match[1].split("--")[1]?.replace(/\*\/\s*}?\s*$/, "");
+    return !reason?.trim();
+  }
+
+  it("tells a reason from a bare disable", () => {
+    expect(
+      missingReason("// oxlint-disable-next-line swr/no-effect-load"),
+    ).toBe(true);
+    expect(
+      missingReason("{/* oxlint-disable-next-line swr/no-effect-load -- */}"),
+    ).toBe(true);
+    expect(
+      missingReason(
+        "// oxlint-disable-next-line swr/no-effect-load -- lädt Schriften",
+      ),
+    ).toBe(false);
+    expect(
+      missingReason("// oxlint-disable-next-line ui-kit/no-raw-input"),
+    ).toBe(false);
+  });
+
+  it("finds no bare disable under src", () => {
+    const root = resolve(__dirname, "../src");
+    const bare = (readdirSync(root, { recursive: true }) as string[])
+      .filter((file) => /\.[cm]?[jt]sx?$/.test(file))
+      .flatMap((file) =>
+        readFileSync(join(root, file), "utf8")
+          .split("\n")
+          .flatMap((line, index) =>
+            missingReason(line) ? [`src/${file}:${index + 1}`] : [],
+          ),
+      );
+    expect(bare).toEqual([]);
+  });
 });

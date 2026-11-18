@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	careContractCompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
@@ -92,12 +93,12 @@ type parentContractDocuments struct {
 
 // NewParentContractDocuments binds the inbox's contracts to the
 // Betreuungsvertrag; signing is the signature in the inbox (#4679), holidays
-// dates the withdrawal period the list offers (#6350).
-func NewParentContractDocuments(signing carecontract.InboxSigning, holidays carecontract.SchoolHolidays) parentportal.ContractDocumentsPort {
+// dates the withdrawal period the list offers (#6350) on the clock now.
+func NewParentContractDocuments(signing carecontract.InboxSigning, holidays carecontract.SchoolHolidays, now func() time.Time) parentportal.ContractDocumentsPort {
 	if holidays == nil {
 		panic("parent contract documents: the school holidays are required")
 	}
-	return parentContractDocuments{inbox: careContractCompose.NewInbox(holidays), billing: careContractCompose.NewContractVersions(), signing: signing}
+	return parentContractDocuments{inbox: careContractCompose.NewInbox(holidays, now), billing: careContractCompose.NewContractVersions(), signing: signing}
 }
 
 func (d parentContractDocuments) ListContractDocuments(ctx context.Context, organizationID int64, reader parentportal.BillingDocumentReader) ([]parentportal.BillingDocument, error) {
@@ -307,7 +308,7 @@ func BuildParentDocumentNotices(
 		SchoolTraeger: NewParentSchoolTraeger(organizations), ParentAccounts: NewParentAccounts(identity),
 		GuardianProfileRepo: NewParentGuardianProfileReads(people.GuardianProfiles),
 		DocumentNotifier:    notifier, TraegerRuntime: ParentPortalRuntime{}, StudentRepo: NewParentStudentReads(people.Students),
-		Logger: env.Logger.With("service", "parent-document-notices"),
+		Logger: env.Logger.With("service", "parent-document-notices"), Now: env.Now,
 	}, parentportal.DocumentPushPorts{
 		// The pushes of a sent contract and of a release (#5941).
 		ContractInboxNotices: NewParentContractInboxNotices(), ReleaseNotices: NewParentReleaseNotices(),

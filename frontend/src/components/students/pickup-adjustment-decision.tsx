@@ -6,11 +6,8 @@ import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
-import {
-  DataField,
-  DataGrid,
-  InfoSection,
-} from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import { InfoSection } from "~/components/ui/info-section";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { formatDate } from "~/lib/date-helpers";
 import type {

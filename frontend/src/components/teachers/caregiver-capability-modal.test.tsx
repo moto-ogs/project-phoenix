@@ -1,7 +1,33 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ChangeEvent, ReactNode } from "react";
+import {
+  act,
+  fireEvent,
+  render as renderRaw,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ChangeEvent, ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in session per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
+const render = (ui: ReactElement) => renderRaw(ui, { wrapper: Providers });
 import { catalogText } from "~/test/error-catalog-text";
 import { CaregiverCapabilityModal } from "./caregiver-capability-modal";
 
@@ -116,7 +142,7 @@ vi.mock("~/components/ui/input", async () => {
   };
 });
 
-vi.mock("~/components/ui/detail-modal-components", async () => {
+vi.mock("~/components/ui/data-field", async () => {
   const { createElement } = await import("react");
 
   return {
@@ -129,6 +155,13 @@ vi.mock("~/components/ui/detail-modal-components", async () => {
       ),
     DataGrid: ({ children }: { children: ReactNode }) =>
       createElement("div", null, children),
+  };
+});
+
+vi.mock("~/components/ui/info-section", async () => {
+  const { createElement } = await import("react");
+
+  return {
     InfoSection: ({
       title,
       children,
@@ -142,9 +175,14 @@ vi.mock("~/components/ui/detail-modal-components", async () => {
         createElement("h2", null, title),
         children,
       ),
+  };
+});
+
+vi.mock("~/components/ui/detail-modal-components", async () => {
+  const { createElement } = await import("react");
+
+  return {
     DetailIcons: {
-      person: createElement("span", null, "person"),
-      group: createElement("span", null, "group"),
       x: createElement("span", null, "x"),
     },
   };
@@ -389,7 +427,11 @@ describe("CaregiverCapabilityModal", () => {
         onUpdated={onUpdated}
       />,
     );
-    fireEvent.click(await screen.findByText("Betreuung deaktivieren"));
+    const disableButton = await screen.findByRole("button", {
+      name: "Betreuung deaktivieren",
+    });
+    await waitFor(() => expect(disableButton).toBeEnabled());
+    fireEvent.click(disableButton);
 
     await waitFor(() => expect(onUpdated).toHaveBeenCalledTimes(1));
     expect(
@@ -415,7 +457,11 @@ describe("CaregiverCapabilityModal", () => {
         onUpdated={onUpdated}
       />,
     );
-    fireEvent.click(await screen.findByText("Betreuung aktivieren"));
+    const enableButton = await screen.findByRole("button", {
+      name: "Betreuung aktivieren",
+    });
+    await waitFor(() => expect(enableButton).toBeEnabled());
+    fireEvent.click(enableButton);
 
     await waitFor(() => expect(onUpdated).toHaveBeenCalledTimes(1));
     expect(
@@ -445,11 +491,11 @@ describe("CaregiverCapabilityModal", () => {
       />,
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Betreuung deaktivieren")).toBeInTheDocument();
+    const disableButton = await screen.findByRole("button", {
+      name: "Betreuung deaktivieren",
     });
-
-    fireEvent.click(screen.getByText("Betreuung deaktivieren"));
+    await waitFor(() => expect(disableButton).toBeEnabled());
+    fireEvent.click(disableButton);
 
     await waitFor(() => {
       expect(mockDisableTenantAccountCapability).toHaveBeenCalledWith("42");
@@ -567,6 +613,52 @@ describe("CaregiverCapabilityModal", () => {
     });
   });
 
+  it("starts the name fields of a reopened dialog from this opening's answer", async () => {
+    const withoutPerson = (firstName: string) =>
+      createState({
+        firstName,
+        lastName: "Lovelace",
+        personId: null,
+        staffId: null,
+        teacherId: null,
+        hasPerson: false,
+        hasStaff: false,
+        hasTeacher: false,
+        hasCaregiverProfile: false,
+        isActiveCaregiver: false,
+      });
+    let answerSecond!: (value: unknown) => void;
+    mockGetTenantAccountCapability
+      .mockResolvedValueOnce(withoutPerson("Ada"))
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          answerSecond = resolve;
+        }),
+      );
+    const modal = (isOpen: boolean) => (
+      <CaregiverCapabilityModal
+        isOpen={isOpen}
+        onClose={vi.fn()}
+        scope="tenant"
+        accountId="42"
+        accountLabel="Ada Lovelace"
+      />
+    );
+    const { rerender } = render(modal(true));
+    expect(await screen.findByLabelText("Vorname")).toHaveValue("Ada");
+
+    rerender(modal(false));
+    rerender(modal(true));
+    // Renamed elsewhere in the meantime.
+    await act(async () => {
+      answerSecond(withoutPerson("Adele"));
+    });
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Vorname")).toHaveValue("Adele"),
+    );
+  });
+
   it("shows a generic loading error when the capability state cannot be loaded", async () => {
     mockGetTenantAccountCapability.mockRejectedValue(
       new ApiError("boom", 503, { code: "general.unavailable" }),
@@ -611,7 +703,9 @@ describe("CaregiverCapabilityModal", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Betreuung aktivieren")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Betreuung aktivieren" }),
+      ).toBeEnabled();
     });
 
     fireEvent.click(screen.getByText("Betreuung aktivieren"));
@@ -687,11 +781,11 @@ describe("CaregiverCapabilityModal", () => {
       />,
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Betreuung deaktivieren")).toBeInTheDocument();
+    const disableButton = await screen.findByRole("button", {
+      name: "Betreuung deaktivieren",
     });
-
-    fireEvent.click(screen.getByText("Betreuung deaktivieren"));
+    await waitFor(() => expect(disableButton).toBeEnabled());
+    fireEvent.click(disableButton);
 
     await waitFor(() => {
       expect(mockDisableTenantAccountCapability).toHaveBeenCalledWith("42");

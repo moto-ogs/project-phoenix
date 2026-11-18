@@ -66,6 +66,9 @@ type SickDeviations interface {
 	MarkSickAbsence(ctx context.Context, in timetable.SickAbsenceMark, touched timetable.TouchedActivities) error
 	ClearSickAbsence(ctx context.Context, in timetable.SickAbsenceClear, touched timetable.TouchedActivities) error
 	QueueActivityUpdates(ctx context.Context, touched timetable.TouchedActivities)
+	// NoticeSickAbsence tells the person and the group's teachers about the
+	// blocks one cascade marked absent (#7136).
+	NoticeSickAbsence(ctx context.Context, in timetable.SickAbsenceNotice) error
 }
 
 // SickCascadeDependencies are the owner surfaces the cascade coordinates: the
@@ -81,8 +84,8 @@ type SickCascadeDependencies struct {
 	InstanceStaff SickStamps
 	Broadcaster   realtime.Broadcaster
 	Logger        *slog.Logger
-	// Today is the calendar day the past-day guards compare against; nil
-	// means timezone.TodayDate.
+	// Today is the calendar day the past-day guards compare against; the
+	// composition requires it.
 	Today func() calendar.Date
 	// LockStaff takes the staff rows in one ordered query in the caller's
 	// unit of work; offboarded members are omitted.
@@ -130,10 +133,7 @@ func NewSickCascade(deps SickCascadeDependencies) SickCascade {
 }
 
 func (s *sickCascade) todayDate() calendar.Date {
-	if s.today != nil {
-		return s.today()
-	}
-	return calendar.TodayDate()
+	return s.today()
 }
 
 func (s *sickCascade) getLogger() *slog.Logger {
@@ -260,32 +260,46 @@ func (s *sickCascade) markBlocksForSickDays(ctx context.Context, report sickRepo
 	// what actually happened (mirrors the deviations endpoints' past guard).
 	today := s.todayDate()
 	reason := timetable.BlockAbsenceReason(report.sick())
+	notice := timetable.SickAbsenceNotice{AbsenceID: report.absenceID, StaffID: report.subjectStaffID, ActorAccountID: report.actorAccountID}
 	for _, d := range days {
 		if d.Before(today) {
 			continue
 		}
-		if err := s.markBlocksForSickDay(ctx, report, d, &reason, activeTouched); err != nil {
+		marked, err := s.markBlocksForSickDay(ctx, report, d, &reason, activeTouched)
+		if err != nil {
 			return err
 		}
+		notice.Blocks = append(notice.Blocks, marked...)
+	}
+	// One notice for every block this pass marked, whatever the number of
+	// days; it names neither the absence's type nor its reason (#7136).
+	if len(notice.Blocks) == 0 {
+		return nil
+	}
+	if err := s.deviations.NoticeSickAbsence(ctx, notice); err != nil {
+		return fmt.Errorf("sick cascade: staffing notice: %w", err)
 	}
 	return nil
 }
 
-func (s *sickCascade) markBlocksForSickDay(ctx context.Context, report sickReport, day calendar.Date, reason *string, activeTouched timetable.TouchedActivities) error {
+// markBlocksForSickDay marks the person's plannable blocks of the day absent
+// and reports the blocks it marked.
+func (s *sickCascade) markBlocksForSickDay(ctx context.Context, report sickReport, day calendar.Date, reason *string, activeTouched timetable.TouchedActivities) ([]timetable.SickAbsenceNoticeBlock, error) {
 	if err := s.timetableData.AcquireSubstituteDayLock(ctx, day); err != nil {
-		return fmt.Errorf("sick cascade: day lock %s: %w", day.String(), err)
+		return nil, fmt.Errorf("sick cascade: day lock %s: %w", day.String(), err)
 	}
 	rows, err := s.timetableData.FindByStaffAndDate(ctx, report.subjectStaffID, day)
 	if err != nil {
-		return fmt.Errorf("sick cascade: load assignments %s: %w", day.String(), err)
+		return nil, fmt.Errorf("sick cascade: load assignments %s: %w", day.String(), err)
 	}
 	instancesByID, err := s.timetableData.GetActivityInstancesByID(ctx, instanceStaffInstanceIDs(rows))
 	if err != nil {
-		return fmt.Errorf("sick cascade: load instances for %s: %w", day.String(), err)
+		return nil, fmt.Errorf("sick cascade: load instances for %s: %w", day.String(), err)
 	}
 	if missingID := missingActivityInstanceID(rows, instancesByID); missingID > 0 {
-		return fmt.Errorf("sick cascade: load instance %d: %w", missingID, errRecordNotFound)
+		return nil, fmt.Errorf("sick cascade: load instance %d: %w", missingID, errRecordNotFound)
 	}
+	var marked []timetable.SickAbsenceNoticeBlock
 	for _, row := range rows {
 		if row.IsAbsent {
 			continue // already absent (manual deviation or overlapping report)
@@ -297,10 +311,11 @@ func (s *sickCascade) markBlocksForSickDay(ctx context.Context, report sickRepor
 		if err := s.deviations.MarkSickAbsence(ctx, timetable.SickAbsenceMark{
 			AssignmentID: row.ID, Reason: reason, SickAbsenceID: report.absenceID, Sick: report.sick(), ActorAccountID: report.actorAccountID,
 		}, activeTouched); err != nil {
-			return fmt.Errorf("sick cascade: mark block %d: %w", row.InstanceID, err)
+			return nil, fmt.Errorf("sick cascade: mark block %d: %w", row.InstanceID, err)
 		}
+		marked = append(marked, timetable.SickAbsenceNoticeBlock{InstanceID: row.InstanceID, Date: day})
 	}
-	return nil
+	return marked, nil
 }
 
 // ClearSickForRange reverses what MarkSickForRange stamped for this absence.
@@ -475,137 +490,6 @@ func (s *sickCascade) releaseStampedShift(ctx context.Context, shift workforce.S
 			"staff_id", shift.StaffID,
 			"replacements", replacementCount,
 		)
-	}
-	return nil
-}
-
-func (s *sickCascade) clearStampedBlocks(ctx context.Context, report sickReport, onlyDays map[calendar.Date]bool, activeTouched timetable.TouchedActivities) error {
-	rows, err := s.loadStampedBlockRows(ctx, report.absenceID)
-	if err != nil || len(rows) == 0 {
-		return err
-	}
-	byDay, releaseOnly, err := s.classifyStampedBlockRows(ctx, rows, onlyDays)
-	if err != nil {
-		return err
-	}
-	if err := s.releaseSickBlockStamps(ctx, releaseOnly); err != nil {
-		return err
-	}
-	for _, day := range sortedStampedBlockDays(byDay) {
-		if err := s.clearStampedBlocksForDay(ctx, report, day, byDay[day], activeTouched); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-type stampedSickBlockRow struct {
-	row      *timetable.InstanceStaff
-	instance *timetable.ScheduledInstance
-}
-
-func (s *sickCascade) loadStampedBlockRows(ctx context.Context, absenceID int64) ([]*timetable.InstanceStaff, error) {
-	rows, err := s.sickStamps.ListBySickAbsence(ctx, absenceID)
-	if err != nil {
-		return nil, fmt.Errorf("sick clear: load stamped rows: %w", err)
-	}
-	return rows, nil
-}
-
-func (s *sickCascade) classifyStampedBlockRows(ctx context.Context, rows []*timetable.InstanceStaff, onlyDays map[calendar.Date]bool) (map[calendar.Date][]stampedSickBlockRow, []*timetable.InstanceStaff, error) {
-	today := s.todayDate()
-	byDay := make(map[calendar.Date][]stampedSickBlockRow)
-	var releaseOnly []*timetable.InstanceStaff
-	instancesByID, err := s.timetableData.GetActivityInstancesByID(ctx, instanceStaffInstanceIDs(rows))
-	if err != nil {
-		return nil, nil, fmt.Errorf("sick clear: load stamped instances: %w", err)
-	}
-	if missingID := missingActivityInstanceID(rows, instancesByID); missingID > 0 {
-		return nil, nil, fmt.Errorf("sick clear: load instance %d: %w", missingID, errRecordNotFound)
-	}
-	for _, row := range rows {
-		instance := instancesByID[row.InstanceID]
-		if instance != nil && onlyDays != nil && !onlyDays[instance.Date] {
-			continue
-		}
-		// Past days stay as recorded history; rows a manual edit already
-		// restored, and terminal instances, only shed their stamp.
-		if instance == nil || !row.IsAbsent || instance.Date.Before(today) || !isPlannableInstance(instance) {
-			releaseOnly = append(releaseOnly, row)
-			continue
-		}
-		date := instance.Date
-		byDay[date] = append(byDay[date], stampedSickBlockRow{row: row, instance: instance})
-	}
-	return byDay, releaseOnly, nil
-}
-
-func instanceStaffInstanceIDs(rows []*timetable.InstanceStaff) []int64 {
-	ids := make([]int64, 0, len(rows))
-	for _, row := range rows {
-		ids = append(ids, row.InstanceID)
-	}
-	return ids
-}
-
-func missingActivityInstanceID(rows []*timetable.InstanceStaff, instances map[int64]*timetable.ScheduledInstance) int64 {
-	for _, row := range rows {
-		if instances[row.InstanceID] == nil {
-			return row.InstanceID
-		}
-	}
-	return 0
-}
-
-func (s *sickCascade) releaseSickBlockStamps(ctx context.Context, rows []*timetable.InstanceStaff) error {
-	for _, row := range rows {
-		row.SickAbsenceID = nil
-		if _, err := s.sickStamps.SetSickAbsence(ctx, row.ID, row.SickAbsenceID); err != nil {
-			return fmt.Errorf("sick clear: release row %d: %w", row.ID, err)
-		}
-	}
-	return nil
-}
-
-func sortedStampedBlockDays(byDay map[calendar.Date][]stampedSickBlockRow) []calendar.Date {
-	dates := make([]calendar.Date, 0, len(byDay))
-	for d := range byDay {
-		dates = append(dates, d)
-	}
-	sort.Slice(dates, func(i, j int) bool { return dates[i].Before(dates[j]) })
-	return dates
-}
-
-func (s *sickCascade) clearStampedBlocksForDay(ctx context.Context, report sickReport, day calendar.Date, entries []stampedSickBlockRow, activeTouched timetable.TouchedActivities) error {
-	if err := s.timetableData.AcquireSubstituteDayLock(ctx, day); err != nil {
-		return fmt.Errorf("sick clear: day lock %s: %w", day.String(), err)
-	}
-	for _, entry := range entries {
-		hasSubstitute, err := s.instanceHasActiveSubstitute(ctx, entry.row.InstanceID)
-		if err != nil {
-			return err
-		}
-		if hasSubstitute {
-			// An admin covered this block for the sick person; restoring
-			// presence would silently overstaff it. Release the stamp and
-			// keep the absence for the admin to resolve.
-			entry.row.SickAbsenceID = nil
-			if _, err := s.sickStamps.SetSickAbsence(ctx, entry.row.ID, entry.row.SickAbsenceID); err != nil {
-				return fmt.Errorf("sick clear: release row %d: %w", entry.row.ID, err)
-			}
-			s.getLogger().Info("sick clear kept a substituted block absent",
-				"instance_id", entry.row.InstanceID,
-				"staff_id", entry.row.StaffID,
-			)
-			continue
-		}
-		// The owner clears the block's understaffed acknowledgement when the
-		// restore leaves it fully staffed again.
-		if err := s.deviations.ClearSickAbsence(ctx, timetable.SickAbsenceClear{
-			AssignmentID: entry.row.ID, SickAbsenceID: report.absenceID, Sick: report.sick(), ActorAccountID: report.actorAccountID,
-		}, activeTouched); err != nil {
-			return fmt.Errorf("sick clear: clear block %d: %w", entry.row.InstanceID, err)
-		}
 	}
 	return nil
 }

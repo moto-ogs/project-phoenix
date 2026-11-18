@@ -22,15 +22,16 @@ type relayedContent struct {
 	runtime tenant.UnitOfWork
 	db      *bun.DB
 	store   deliveryPorts.RealtimeNotificationStore
+	now     func() time.Time
 }
 
 // NewRelayedContent builds the content lookup a relaying hub receives at
 // construction.
-func NewRelayedContent(runtime tenant.UnitOfWork, db *bun.DB, store deliveryPorts.RealtimeNotificationStore) (realtime.NotificationContent, error) {
-	if err := requireTenantRuntime("relayed notification content", runtime, db != nil && store != nil); err != nil {
+func NewRelayedContent(runtime tenant.UnitOfWork, db *bun.DB, store deliveryPorts.RealtimeNotificationStore, now func() time.Time) (realtime.NotificationContent, error) {
+	if err := requireTenantRuntime("relayed notification content", runtime, db != nil && store != nil && now != nil); err != nil {
 		return nil, err
 	}
-	return relayedContent{runtime: runtime, db: db, store: store}.load, nil
+	return relayedContent{runtime: runtime, db: db, store: store, now: now}.load, nil
 }
 
 // load reads the notification in the school's transaction, narrows the
@@ -43,7 +44,7 @@ func (r relayedContent) load(ctx context.Context, schoolID, id int64, address re
 	var permitted realtime.NotificationAddress
 	found := false
 	err := tenant.WithTenantTx(tenant.WithUnitOfWork(ctx, r.runtime), r.db, schoolID, func(txCtx context.Context, _ bun.Tx) error {
-		stored, ok, err := r.store.LoadRealtimeNotification(txCtx, schoolID, id, time.Now().Add(-domain.RealtimeNotificationLifetime))
+		stored, ok, err := r.store.LoadRealtimeNotification(txCtx, schoolID, id, r.now().Add(-domain.RealtimeNotificationLifetime))
 		if err != nil || !ok || stored.TenantID != schoolID {
 			return err
 		}

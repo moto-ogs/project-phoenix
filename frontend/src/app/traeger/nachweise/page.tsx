@@ -7,7 +7,7 @@
 // Liste und jeder Export steht im Zugriffsprotokoll der Einsatzorte.
 
 import { CertificateIcon, PlusIcon } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   StaffProofTypeModal,
   type StaffProofTypeTarget,
@@ -18,11 +18,6 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
-import {
-  ExportMenu,
-  exportFormatOptions,
-  type ExportMenuOption,
-} from "~/components/ui/export-menu";
 import type {
   ActiveFilter,
   FilterConfig,
@@ -34,17 +29,14 @@ import {
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
-import {
-  useApiErrorDisplay,
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { formatDate } from "~/lib/date-helpers";
-import { downloadBlob } from "~/lib/file-download";
 import { formatCount } from "~/lib/format-utils";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { createLogger } from "~/lib/logger";
+import { traegerReportKeys } from "~/lib/swr/traeger-report-keys";
 import { foldForSearch } from "~/lib/search-fold";
 import { staffName } from "~/lib/traeger-staff-api";
 import {
@@ -74,10 +66,6 @@ const STATUS_ORDER: readonly StaffProofStatus[] = [
   "expiring_soon",
   "valid",
 ];
-
-const EXPORT_FORMATS: readonly ExportMenuOption[] = exportFormatOptions([
-  "csv",
-]);
 
 const NO_MAPPING = "";
 
@@ -115,11 +103,7 @@ const NO_LIST: StaffProofList = {
 };
 
 /** Search, filters, export and table of the Ablaufliste in the page head. */
-function useProofListView(
-  loaded: StaffProofList | null,
-  onExport: () => void,
-  exporting: boolean,
-) {
+function useProofListView(loaded: StaffProofList | null) {
   const list = loaded ?? NO_LIST;
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("open");
@@ -289,13 +273,14 @@ function useProofListView(
       setKind("all");
     },
     actions: (
-      <ExportMenu
+      <TraegerListExportMenu
+        download={downloadStaffProofList}
+        scope="Alle Nachweise"
         ariaLabel="Ablaufliste herunterladen"
-        tooltip="Speichert alle Nachweise als Tabelle. Das steht im Zugriffsprotokoll der Schulen."
-        options={EXPORT_FORMATS}
-        busyKey={exporting ? "csv" : null}
+        tooltip="Zeigt die Formate für alle Nachweise. Jeder Download steht im Zugriffsprotokoll der Schulen."
+        fallbackName={`nachweise-${list.today || "heute"}`}
+        errorObject="die Ablaufliste"
         unavailable={list.entries.length === 0}
-        onSelect={onExport}
       />
     ),
     body: (
@@ -545,58 +530,32 @@ function SchoolKinds({
 
 export default function TraegerStaffProofsPage() {
   const [tab, setTab] = useState<Tab>("ablaufliste");
-  const [list, setList] = useState<StaffProofList | null>(null);
-  const [schools, setSchools] = useState<SchoolProofKinds[] | null>(null);
   const [editing, setEditing] = useState<StaffProofTypeTarget>(null);
-  const [exporting, setExporting] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-  const { show: showActionError } = useApiErrorDisplay();
+  const {
+    data: list,
+    loading: listLoading,
+    error: listError,
+    reload: reloadList,
+  } = useTraegerResource(
+    traegerReportKeys.staffProofList(),
+    fetchStaffProofList,
+    "die Personalnachweise",
+  );
+  const {
+    data: schools,
+    loading: schoolsLoading,
+    error: schoolsError,
+    mutate: mutateSchools,
+    reload: reloadSchools,
+  } = useTraegerResource(
+    traegerReportKeys.schoolProofKinds(),
+    fetchSchoolProofKinds,
+    "die Personalnachweise",
+  );
+  const loadError = listError ?? schoolsError;
 
-  const load = useCallback(async () => {
-    try {
-      const [nextList, nextSchools] = await Promise.all([
-        fetchStaffProofList(),
-        fetchSchoolProofKinds(),
-      ]);
-      setList(nextList);
-      setSchools(nextSchools);
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_staff_proofs_load_failed", {
-        error: errorMessage(err),
-      });
-      await showLoadError(err, {
-        object: "die Personalnachweise",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const exportCsv = async () => {
-    setExporting(true);
-    try {
-      const file = await downloadStaffProofList();
-      downloadBlob(
-        file.blob,
-        file.filename ?? `nachweise-${list?.today ?? "heute"}.csv`,
-      );
-    } catch (err) {
-      logger.error("traeger_staff_proofs_export_failed", {
-        error: errorMessage(err),
-      });
-      await showActionError(err, { object: "die Exportdatei" });
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const listView = useProofListView(list, () => void exportCsv(), exporting);
-  const loading = !list && !pageLoad.error;
+  const listView = useProofListView(list);
+  const loading = (listLoading || schoolsLoading) && !loadError;
   const open = list
     ? list.counts.expired + list.counts.missing + list.counts.expiringSoon
     : 0;
@@ -616,7 +575,7 @@ export default function TraegerStaffProofsPage() {
       }
       statsLoading={loading}
       loading={loading}
-      error={pageLoad.error}
+      error={loadError}
       tabs={{
         value: tab,
         onChange: (value) => setTab(value as Tab),
@@ -642,7 +601,8 @@ export default function TraegerStaffProofsPage() {
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
-            void load();
+            reloadList();
+            reloadSchools();
           }}
         />
       }
@@ -653,13 +613,17 @@ export default function TraegerStaffProofsPage() {
       ) : null}
       {list && schools && tab === "schulen" ? (
         schools.length > 0 ? (
-          <div className="flex flex-col gap-6">
+          // Equal school cards in a grid: grids do not grow (TenantPage body
+          // rule), so the last school keeps its height like its siblings.
+          <div className="compact:gap-4 grid gap-6 max-sm:gap-3">
             {schools.map((school) => (
               <SchoolKinds
                 key={school.schoolId}
                 school={school}
                 types={list.types}
-                onSaved={setSchools}
+                onSaved={(next) =>
+                  void mutateSchools(next, { revalidate: false })
+                }
               />
             ))}
           </div>

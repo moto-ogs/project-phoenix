@@ -127,9 +127,9 @@ create() {
   printf 'services:\n' > "$bundle/images.yml"
   : > "$bundle/images.tsv"
   while IFS= read -r service; do
-    # migrate, demo-runtime and bank-data-rekey run the serving backend image
+    # migrate, demo-runtime, bank-data-rekey and upload-seal run the serving backend image
     # by contract; the one-shot jobs need not have a container of their own.
-    case "$service" in migrate|demo-runtime|bank-data-rekey)
+    case "$service" in migrate|demo-runtime|bank-data-rekey|upload-seal)
       container=$(compose ps -a -q server);;
     *) container=$(compose ps -a -q "$service");;
     esac

@@ -88,6 +88,12 @@ import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { useTenantSlugSafe } from "~/lib/tenant-context";
 import { ParentTargetPicker } from "~/components/announcements/parent-target-picker";
+import { LetterTemplateInline } from "~/components/announcements/letter-template-text";
+import { hasLetterPlaceholders } from "~/lib/parent-letter-placeholders";
+import {
+  LetterBodyField,
+  type LetterPreviewChildren,
+} from "~/components/announcements/letter-body-field";
 import { WizardStepper } from "~/components/ui/wizard-stepper";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import type { SegmentedControlItem } from "~/components/ui/segmented-control";
@@ -103,8 +109,11 @@ import {
   formatBerlinDate,
   formatDate,
 } from "~/lib/date-helpers";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useApiFormError } from "~/contexts/ToastContext";
+import {
+  useSwrLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import {
   STALE_DATA_SUFFIX,
   useRefreshAfterWrite,
@@ -117,15 +126,19 @@ import {
   MIN_POLL_OPTIONS,
   insertPastedOptions,
 } from "~/lib/announcement-poll-options";
-import { useSWRAuth } from "~/lib/swr";
+import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
+import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 import { type Group } from "~/lib/api";
-import { fetchSchoolClasses } from "~/lib/student-api";
+import { fetchSchoolClasses, fetchAllStudentNames } from "~/lib/student-api";
+import { schoolClassLabel } from "~/lib/school-class-label";
 import { fetchActivities } from "~/lib/activity-api";
 import type { Activity } from "~/lib/activity-helpers";
 import {
   createAnnouncement,
   fetchAnnouncements,
   isClassLetter,
+  isLetter,
   publishAnnouncement,
   updateAnnouncement,
   announcementAttachmentDownloadUrl,
@@ -136,6 +149,7 @@ import {
 import type {
   Announcement,
   AnnouncementAttachment,
+  AnnouncementAttachmentList,
   AnnouncementEmailAudience,
   AnnouncementInput,
   AnnouncementPriority,
@@ -310,7 +324,7 @@ function ParentAnnouncementsContent() {
     error: loadError,
     mutate,
   } = useSWRAuth<Announcement[]>(
-    "parent-announcements-list",
+    parentAnnouncementKeys.list(),
     () => fetchAnnouncements(true),
     { keepPreviousData: true, revalidateOnFocus: false },
   );
@@ -343,7 +357,7 @@ function ParentAnnouncementsContent() {
     error: activitiesError,
     mutate: reloadActivities,
   } = useSWRAuth<Activity[]>(
-    isFormOpen ? "parent-announcements-activities" : null,
+    isFormOpen ? parentAnnouncementKeys.targetActivities() : null,
     () => fetchActivities(),
     { revalidateOnFocus: false },
   );
@@ -352,7 +366,7 @@ function ParentAnnouncementsContent() {
     error: classesError,
     mutate: reloadClasses,
   } = useSWRAuth<string[]>(
-    isFormOpen ? "parent-announcements-classes" : null,
+    isFormOpen ? parentAnnouncementKeys.targetClasses() : null,
     () => fetchSchoolClasses(),
     { revalidateOnFocus: false },
   );
@@ -585,7 +599,11 @@ function ParentAnnouncementsContent() {
               )}
           </div>
           <p className="mt-0.5 line-clamp-1 text-xs text-gray-500">
-            {row.body}
+            {isLetter(row) && hasLetterPlaceholders(row.body) ? (
+              <LetterTemplateInline text={row.body} links={false} />
+            ) : (
+              row.body
+            )}
           </p>
           {isClassLetter(row) && (
             <p className="mt-0.5 line-clamp-1 text-xs text-gray-500">
@@ -910,6 +928,19 @@ const DECLARATION_SIGNER_OPTIONS: ReadonlyArray<{
  * final, explicit choices. Only drafts ever reach this modal (published
  * announcements are immutable).
  */
+// The preview of a letter (#4813) can show any child of the school; it
+// loads their names only.
+const SCHOOL_PREVIEW_CHILDREN: LetterPreviewChildren = {
+  scope: "school",
+  load: async () =>
+    (await fetchAllStudentNames()).map((student) => ({
+      value: student.id,
+      label: student.school_class
+        ? `${student.name} (${schoolClassLabel(student.school_class)})`
+        : student.name,
+    })),
+};
+
 function AnnouncementFormModal({
   announcement,
   initialStudents = NO_PREFILL_STUDENTS,
@@ -948,9 +979,6 @@ function AnnouncementFormModal({
   // beim Anlegen gibt es die Mitteilung ja erst nach dem Speichern. Beide
   // Listen stehen untereinander, damit die schreibende Person nicht zwischen
   // "schon da" und "kommt noch" unterscheiden muss.
-  const [existingAttachments, setExistingAttachments] = useState<
-    AnnouncementAttachment[]
-  >([]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   // Fehler im Anhangsbereich stehen dort, wo die Dateien stehen (#2517):
   // Prüfungen vor dem Hochladen und das Entfernen über den Formularweg, das
@@ -958,11 +986,6 @@ function AnnouncementFormModal({
   const attachmentErrors = useApiFormError();
   const setAttachmentHint = attachmentErrors.invalid;
   const clearAttachmentErrors = attachmentErrors.clear;
-  const attachmentsLoad = useApiLoadError();
-  const showAttachmentsLoadError = attachmentsLoad.show;
-  const clearAttachmentsLoadError = attachmentsLoad.clear;
-  // „Wiederholen“ lädt die vorhandenen Dateien neu.
-  const [attachmentsReloadKey, setAttachmentsReloadKey] = useState(0);
   const latestRemoveAttachmentRef = useRef<(attachmentId: string) => void>(
     () => undefined,
   );
@@ -970,12 +993,6 @@ function AnnouncementFormModal({
   // Panel ist nur eingehängt, solange es offen ist.
   const save = useFormModalPending();
   const attachmentBusy = save.pending;
-  // Ob die Anhänge dieser Mitteilung noch änderbar sind. Die Antwort der
-  // Liste sagt es: ein Entwurf, der zwischenzeitlich anderswo veröffentlicht
-  // wurde, ist es nicht mehr. Ohne diesen Zustand bietet der Assistent weiter
-  // "Datei auswählen" und ein Kreuz an, die dann beide mit 409 scheitern.
-  const [attachmentsEditable, setAttachmentsEditable] =
-    useState(!attachmentsFrozen);
   const lockedHint = attachmentsFrozen
     ? DECLARATION_ATTACHMENTS_LOCKED_HINT
     : ATTACHMENTS_LOCKED_HINT;
@@ -985,38 +1002,47 @@ function AnnouncementFormModal({
   // Scheitert das, sagt der Anhangsbereich das auch: eine leere Liste liest
   // sich sonst als „es hängt nichts dran", und die schreibende Person hängt
   // eine Datei ein zweites Mal an oder hält eine vorhandene für gelöscht.
-  useEffect(() => {
-    if (!persistedId) return;
-    let cancelled = false;
-    void fetchAnnouncementAttachments(persistedId)
-      .then((list) => {
-        if (!cancelled) {
-          setExistingAttachments(list.attachments);
-          setAttachmentsEditable(list.editable && !attachmentsFrozen);
-          clearAttachmentsLoadError();
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          void showAttachmentsLoadError(err, {
-            object: "die Liste der Anhänge",
-            retry: () => setAttachmentsReloadKey((key) => key + 1),
-          });
-        }
-        logger.error("announcement_attachments_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    persistedId,
-    attachmentsFrozen,
-    attachmentsReloadKey,
-    showAttachmentsLoadError,
-    clearAttachmentsLoadError,
-  ]);
+  const attachments = useSWRAuth(
+    persistedId ? tenantListKeys.announcementAttachments(persistedId) : null,
+    () => fetchAnnouncementAttachments(persistedId ?? ""),
+    // Another draft's files never stand in for this one's.
+    { keepPreviousData: false },
+  );
+  const attachmentsLoad = useSwrResourceLoadError(
+    [attachments],
+    "die Liste der Anhänge",
+    () => attachments.mutate(),
+  );
+  const existingAttachments = attachments.data?.attachments ?? [];
+  // Ob die Anhänge dieser Mitteilung noch änderbar sind. Die Antwort der
+  // Liste sagt es: ein Entwurf, der zwischenzeitlich anderswo veröffentlicht
+  // wurde, ist es nicht mehr. Ohne diesen Zustand bietet der Assistent weiter
+  // "Datei auswählen" und ein Kreuz an, die dann beide mit 409 scheitern.
+  const attachmentsEditable =
+    !attachmentsFrozen && (attachments.data?.editable ?? true);
+  // A draft created by this save has no reader yet; its first uploads go to
+  // its key directly. Every other change goes through the reader.
+  const tenantMutate = useTenantMutate();
+  const writeAttachments = (
+    announcementId: string,
+    change: (list: AnnouncementAttachment[]) => AnnouncementAttachment[],
+  ) => {
+    // A draft saved a moment ago: its attachments are still editable.
+    const update = (current?: AnnouncementAttachmentList) => ({
+      max_count: 0,
+      max_bytes: 0,
+      editable: true,
+      ...current,
+      attachments: change(current?.attachments ?? []),
+    });
+    return announcementId === persistedId
+      ? attachments.mutate(update, { revalidate: false })
+      : tenantMutate(
+          tenantListKeys.announcementAttachments(announcementId),
+          update,
+          { revalidate: false },
+        );
+  };
 
   const [title, setTitle] = useState(announcement?.title ?? "");
   const [body, setBody] = useState(announcement?.body ?? "");
@@ -1279,8 +1305,8 @@ function AnnouncementFormModal({
       clearAttachmentErrors();
       try {
         await deleteAnnouncementAttachment(announcementId, attachmentId);
-        setExistingAttachments((prev) =>
-          prev.filter((a) => a.id !== attachmentId),
+        await writeAttachments(announcementId, (list) =>
+          list.filter((a) => a.id !== attachmentId),
         );
       } catch (err) {
         logger.error("announcement_attachment_delete_failed", {
@@ -1399,7 +1425,7 @@ function AnnouncementFormModal({
               // erreicht als die Person Dateien ausgewählt hat.
               setPendingFiles((prev) => prev.filter((entry) => entry !== file));
               if (uploaded) {
-                setExistingAttachments((prev) => [...prev, uploaded]);
+                await writeAttachments(saved.id, (list) => [...list, uploaded]);
               }
             }
           } catch (err) {
@@ -1597,18 +1623,30 @@ function AnnouncementFormModal({
                     }
                   />
 
-                  <Textarea
-                    id="announcement-body"
-                    name="body"
-                    label="Text"
-                    error={bodyError ?? undefined}
-                    value={body}
-                    onChange={(e) => setBody(e.target.value)}
-                    rows={5}
-                    maxLength={4000}
-                    placeholder="Inhalt der Mitteilung… Links im Text werden für Eltern klickbar."
-                    className="resize-y px-4 py-3 text-base"
-                  />
+                  {isLetterForm ? (
+                    <LetterBodyField
+                      id="announcement-body"
+                      value={body}
+                      onChange={setBody}
+                      error={bodyError ?? undefined}
+                      previewChildren={SCHOOL_PREVIEW_CHILDREN}
+                      placeholder="Liebe Eltern von {{vorname}}, … Links im Text werden für Eltern klickbar."
+                      className="resize-y px-4 py-3 text-base"
+                    />
+                  ) : (
+                    <Textarea
+                      id="announcement-body"
+                      name="body"
+                      label="Text"
+                      error={bodyError ?? undefined}
+                      value={body}
+                      onChange={(e) => setBody(e.target.value)}
+                      rows={5}
+                      maxLength={4000}
+                      placeholder="Inhalt der Mitteilung… Links im Text werden für Eltern klickbar."
+                      className="resize-y px-4 py-3 text-base"
+                    />
+                  )}
 
                   <Input
                     label="Link (optional)"
@@ -1804,7 +1842,6 @@ function AnnouncementFormModal({
                           value={deadline}
                           onChange={setDeadline}
                           placeholder="Keine Frist"
-                          dropdownPlacement="down"
                           hint={
                             isDeclarationForm
                               ? "Danach können Eltern nicht mehr antworten. Eine Zustimmung widerrufen geht weiter."
@@ -1822,7 +1859,6 @@ function AnnouncementFormModal({
                         value={expiresAt}
                         onChange={setExpiresAt}
                         placeholder="Kein Ablaufdatum"
-                        dropdownPlacement="down"
                         hint={`Danach wird ${
                           isPollForm
                             ? "die Umfrage"

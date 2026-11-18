@@ -26,7 +26,7 @@ func renameTestPerson(t *testing.T, db *bun.DB, personID int64, firstName, lastN
 func inviteTestPerson(t *testing.T, db *bun.DB, personID, createdBy int64) {
 	t.Helper()
 	role := testpkg.GetOrCreateTestRole(t, db, "user")
-	invitation := testpkg.CreateTestInvitationToken(t, db, "extern", role.ID, createdBy, time.Now().Add(48*time.Hour))
+	invitation := testpkg.CreateTestInvitationToken(t, db, "extern", role.ID, createdBy, testpkg.DatabaseNow(t, db).Add(48*time.Hour))
 	_, err := db.NewRaw(`UPDATE auth.invitation_tokens SET person_id = ? WHERE id = ?`, personID, invitation.ID).
 		Exec(context.Background())
 	require.NoError(t, err)

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	directoryPorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -29,8 +30,11 @@ func TestOperationalDateEditRejectsAssignmentsAddedAfterDiscovery(t *testing.T) 
 			first := testpkg.CreateTestStaff(t, db, "First", "Assignment")
 			retired := testpkg.CreateTestStaff(t, db, "Late", "Assignment")
 			fixture := newOwnedActivityInstanceFixture(t, db, "concurrent-date-edit")
-			past := time.Now().AddDate(-1, 0, 0).Format("2006-01-02")
-			future := time.Now().AddDate(1, 0, 0).Format("2006-01-02")
+			// The editor decides on 2030-08-26: a year before is history, a
+			// year after is operational.
+			today := calendar.NewDate(2030, 8, 26)
+			past := calendar.NewDate(2029, 8, 26).String()
+			future := calendar.NewDate(2031, 8, 26).String()
 			instance := createOwnedActivityInstance(t, module, ctx, fixture, past, "08:00:00", "History")
 			createOwnedInstanceStaff(t, module, ctx, instance.ID, first.ID, true, false)
 			interleaved := false
@@ -38,6 +42,7 @@ func TestOperationalDateEditRejectsAssignmentsAddedAfterDiscovery(t *testing.T) 
 				Students: directoryPorts.StudentDirectoryFunc(func(context.Context) ([]directoryPorts.TargetStudent, error) { return nil, nil }),
 				Rooms:    testRooms(), Sessions: &fixedSessions{},
 				Observe: func(Observation) {},
+				Now:     func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) },
 				LockStaffAssignments: func(context.Context, []int64) error {
 					if !interleaved {
 						interleaved = true

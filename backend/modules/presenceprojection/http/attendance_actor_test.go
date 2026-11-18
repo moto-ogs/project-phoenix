@@ -34,8 +34,8 @@ type recordedAttendance struct {
 func recordAttendanceActorCases(t *testing.T, tc *testContext) []recordedAttendance {
 	t.Helper()
 	ctx := testpkg.Ctx(t)
-	checkIn := calendar.Today().Add(8 * time.Hour)
-	checkOut := calendar.Today().Add(15 * time.Hour)
+	checkIn := calendar.DateOf(time.Now()).Add(8 * time.Hour)
+	checkOut := calendar.DateOf(time.Now()).Add(15 * time.Hour)
 	today := calendar.TodayDate().String()
 	device := testpkg.CreateTestDevice(t, tc.db, fmt.Sprintf("actor-dev-%d", time.Now().UnixNano()))
 

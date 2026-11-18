@@ -280,7 +280,15 @@ const modulePassthroughApplicationSegment = "/internal/application/"
 // Raised by ADR 0243: the month close of the Träger in modules/workforce,
 // whose capability maps the close, the reopen and the staff read onto the
 // public failures (+3).
-const modulePassthroughOwnerBudgetTotal = 1400
+// Lowered by #7104: People Directory's student rosters and guardian retention
+// read the day of the owner's clock instead of forwarding (-2); Device Fleet's
+// room move leaves updated_at to the database trigger (-1, ADR 0268).
+// Lowered by #4496: revoking a caterer invitation also stops its unsent
+// mail instead of forwarding (-1).
+// Raised by ADR 0283: Student Presence's mark transfer of the class-list
+// conversion, which validates the moves before its store call (+1).
+// Raised by ADR 0289: the file seal of modules/workforce (+1).
+const modulePassthroughOwnerBudgetTotal = 1396
 
 // modulePassthroughOwnerBudgets is the register: module directory →
 // pass-throughs measured in its application layer and its compositions
@@ -304,19 +312,20 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	"modules/communication": 55,
 	"modules/dataimport":    1,
 	"modules/delivery":      4,
-	"modules/devicefleet":   33,
+	"modules/devicefleet":   32, // #7104: UpdateRoomID no longer stamps updated_at (-1)
 	"modules/devicescan":    35,
 	// Raised by ADR 0105: the holiday period reads of the Träger-Portal; by
 	// ADR 0110: the retention of the public holiday registrations; by
 	// ADR 0116: the weeks the hosting school sees.
-	"modules/enrollment":     26,
+	"modules/enrollment":     25,
 	"modules/exporttransfer": 1,
 	"modules/facilities":     13,
 	"modules/feedback":       2,
 	"modules/filestorage":    6,
 	// Raised by ADR 0077: the caterer flows. Lowered by #7081: one name for
-	// the operator's resend of a code.
-	"modules/identityaccess": 206,
+	// the operator's resend of a code. Lowered by #4496: revoking a caterer
+	// invitation also stops its unsent mail.
+	"modules/identityaccess": 205,
 	"modules/mealplan":       1,
 	// Raised by ADR 0112: the Träger logo read of the Träger-Portal.
 	// Raised by ADR 0172: the document contact read without an account (+1).
@@ -333,7 +342,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0209: the billing lock B of the holiday allocation
 	// workflow, which validates the Träger and maps the lock error (+1).
 	"modules/parentbilling":    12,
-	"modules/peopledirectory":  204, // #6840: DeletePerson checks live profiles (-1)
+	"modules/peopledirectory":  202, // #6840: DeletePerson checks live profiles (-1); #7104: the rosters and the retention read the owner's clock (-2)
 	"modules/requestreview":    15,
 	"modules/schedulerruntime": 4,
 	// Raised by ADR 0073: the feed cleanup keeps only the staff feed tombstones.
@@ -347,7 +356,8 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0168: the first complete attendance day, which checks
 	// the window and takes the later of its cutoff and the retention mark
 	// (+1).
-	"modules/studentpresence": 123,
+	// Raised by ADR 0283: the mark transfer of the class-list conversion (+1).
+	"modules/studentpresence": 124,
 	// Raised by ADR 0230: the assignments of several staff members in a date
 	// range, one read for the absence plan gaps (+1).
 	"modules/timetable": 204,
@@ -357,6 +367,8 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Lowered by #7058: the payroll dispatch overview reads its mails too (-1).
 	// Raised by ADR 0243: the month close of the Träger maps its close, its
 	// reopen and the staff the school leaves out onto the public failures (+3).
+	// Raised by ADR 0289: the maintenance seal of the sick note and payslip
+	// files (+1).
 	"modules/workforce":      138,
 	"workflows/openroommove": 1,
 	// Raised by ADR 0078: the week change of the meal plan adapter.

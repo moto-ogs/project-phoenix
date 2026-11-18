@@ -8,7 +8,7 @@
 // brauchen eine Bestätigung mit Begründung.
 
 import { GearSixIcon, LockKeyIcon } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   PlanShiftModal,
@@ -23,23 +23,24 @@ import {
   schoolColors,
 } from "~/components/traeger/planning/planning-format";
 import { PlanningWeekGrid } from "~/components/traeger/planning/planning-week-grid";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useApiLoadError, useToast } from "~/contexts/ToastContext";
+import { useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
+  downloadTraegerPlanningWeek,
   fetchTraegerPlanningWeek,
-  type TraegerPlanningWeek,
 } from "~/lib/traeger-planning-api";
 import { describeWorkingTimeWarning } from "~/lib/working-time";
-
-const logger = createLogger({ component: "TraegerStaffPlanningPage" });
 
 const NOT_RELEASED = "workforce.traeger_staff_not_released";
 const RULES_HREF = "/traeger/einstellungen?bereich=einsatzplanung";
@@ -61,44 +62,25 @@ const INFO = (
 export default function TraegerStaffPlanningPage() {
   const today = useBerlinToday();
   const [weekStart, setWeekStart] = useState(() => mondayOf(today));
-  const [week, setWeek] = useState<TraegerPlanningWeek | null>(null);
-  const [notReleased, setNotReleased] = useState(false);
   const [target, setTarget] = useState<PlanShiftTarget | null>(null);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const { success } = useToast();
-
-  const load = useCallback(
-    async (monday: string) => {
-      try {
-        const loaded = await fetchTraegerPlanningWeek(monday);
-        setWeek(loaded);
-        setNotReleased(false);
-        clearLoadError();
-      } catch (err) {
-        if (err instanceof ApiError && err.code === NOT_RELEASED) {
-          setNotReleased(true);
-          clearLoadError();
-          return;
-        }
-        logger.error("traeger_planning_week_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        await showLoadError(err, {
-          object: "die Einsatzplanung",
-          retry: () => void load(monday),
-        });
-      }
-    },
-    [clearLoadError, showLoadError],
+  const invalidateFamily = useInvalidateFamily();
+  const {
+    data: shownWeek,
+    error,
+    failure,
+  } = useTraegerResource(
+    traegerStaffKeys.planningWeek(weekStart),
+    () => fetchTraegerPlanningWeek(weekStart),
+    "die Einsatzplanung",
   );
-
-  useEffect(() => {
-    void load(weekStart);
-  }, [load, weekStart]);
-
-  const shownWeek = week?.weekStart === weekStart ? week : null;
-  const colors = useMemo(() => schoolColors(week?.schools ?? []), [week]);
+  const notReleased =
+    failure instanceof ApiError && failure.code === NOT_RELEASED;
+  const loadError = notReleased ? null : error;
+  const colors = useMemo(
+    () => schoolColors(shownWeek?.schools ?? []),
+    [shownWeek],
+  );
   const days = useMemo(
     () => planningDays(weekStart, shownWeek?.people ?? []),
     [weekStart, shownWeek],
@@ -119,7 +101,7 @@ export default function TraegerStaffPlanningPage() {
     0,
   );
   const canPlan = shownWeek?.rules.enabled ?? false;
-  const loading = !notReleased && !shownWeek && !pageLoad.error;
+  const loading = !notReleased && !shownWeek && !loadError;
 
   const contextBar = (
     <PlanningContextBar
@@ -136,16 +118,29 @@ export default function TraegerStaffPlanningPage() {
           : () => setWeekStart(mondayOf(today))
       }
       actions={
-        <ButtonLink
-          href={RULES_HREF}
-          variant="outline"
-          size="md"
-          className="gap-2"
-          tooltip="Öffnet die Arbeitszeitregeln in den Einstellungen."
-        >
-          <GearSixIcon className="h-4 w-4" aria-hidden="true" />
-          Regeln
-        </ButtonLink>
+        <>
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerPlanningWeek(weekStart, format)
+            }
+            scope="Alle Personen dieser Woche"
+            ariaLabel="Einsatzplanung herunterladen"
+            tooltip="Zeigt die Formate für die gezeigte Woche. Jeder Download steht im Zugriffsprotokoll der Schulen."
+            fallbackName={`einsatzplanung-${weekStart}`}
+            errorObject="die Einsatzplanung"
+            unavailable={!shownWeek || shownWeek.people.length === 0}
+          />
+          <ButtonLink
+            href={RULES_HREF}
+            variant="outline"
+            size="md"
+            className="gap-2"
+            tooltip="Öffnet die Arbeitszeitregeln in den Einstellungen."
+          >
+            <GearSixIcon className="h-4 w-4" aria-hidden="true" />
+            Regeln
+          </ButtonLink>
+        </>
       }
       contextRowWrap
     >
@@ -183,7 +178,7 @@ export default function TraegerStaffPlanningPage() {
       }
       statsLoading={loading}
       searchSlot={notReleased ? undefined : contextBar}
-      error={pageLoad.error}
+      error={loadError}
       loading={loading}
       overlays={
         <PlanShiftModal
@@ -192,7 +187,9 @@ export default function TraegerStaffPlanningPage() {
           onSaved={(message) => {
             setTarget(null);
             success(message);
-            void load(weekStart);
+            // Eine Schicht ändert auch Nachbarwochen und die Schulen mit
+            // künftigen Schichten.
+            void invalidateFamily(traegerStaffKeys.planningFamily);
           }}
         />
       }

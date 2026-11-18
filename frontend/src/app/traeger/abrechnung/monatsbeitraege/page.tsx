@@ -9,7 +9,7 @@
 import { CalendarRange, Plus } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   billingAreaTitle,
   billingTabs,
@@ -26,27 +26,30 @@ import {
 } from "~/components/traeger/care-billing-format";
 import { runSchoolsLabel } from "~/components/traeger/care-review-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import {
   type CareRun,
-  type CareRunList,
   type CareSchool,
-  type CareTariffs,
   fetchCareRuns,
   fetchCareTariffs,
   startCareRun,
 } from "~/lib/traeger-care-billing-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerMonatsbeitraegePage" });
 
 // The start dialog loads when it opens (#5916).
 const CareRunStartModal = dynamic(
@@ -151,40 +154,26 @@ function startMonths(suggested: string) {
     .map((value) => ({ value, label: formatMonth(value) }));
 }
 
-interface PageData {
-  readonly list: CareRunList;
-  readonly tariffs: CareTariffs;
-}
-
 export default function TraegerMonatsbeitraegePage() {
   const router = useRouter();
-  const [data, setData] = useState<PageData | null>(null);
   const [starting, setStarting] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-
-  const load = useCallback(async () => {
-    try {
-      const [list, tariffs] = await Promise.all([
-        fetchCareRuns(),
-        fetchCareTariffs(),
-      ]);
-      setData({ list, tariffs });
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_care_runs_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Liste der Monatsbeiträge",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const invalidateFamily = useInvalidateFamily();
+  const runList = useTraegerResource(
+    traegerBillingRunKeys.careRuns(),
+    fetchCareRuns,
+    "die Liste der Monatsbeiträge",
+  );
+  const tariffs = useTraegerResource(
+    traegerBillingKeys.careTariffs(),
+    fetchCareTariffs,
+    "die Liste der Monatsbeiträge",
+  );
+  const loadError = runList.error ?? tariffs.error;
+  const loading = runList.loading || tariffs.loading;
+  const data =
+    runList.data && tariffs.data
+      ? { list: runList.data, tariffs: tariffs.data }
+      : null;
 
   const openRun = (run: CareRun) =>
     router.push(traegerPath(`/traeger/abrechnung/monatsbeitraege/${run.id}`));
@@ -215,23 +204,38 @@ export default function TraegerMonatsbeitraegePage() {
           />
         ) : null
       }
-      statsLoading={!data && !pageLoad.error}
+      statsLoading={loading}
       tabs={billingTabs("monatsbeitraege")}
       actions={
-        <Button
-          type="button"
-          variant="primary"
-          size="md"
-          disabled={!data}
-          tooltip="Öffnet ein Fenster, um einen Monatslauf für Monat und Schulen zu starten."
-          onClick={() => setStarting(true)}
-        >
-          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-          Monatslauf starten
-        </Button>
+        <>
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerList(
+                "/api/traeger/care-billing-runs/export",
+                format,
+              )
+            }
+            scope={traegerExportScope()}
+            ariaLabel="Monatsläufe herunterladen"
+            fallbackName="monatsbeitraege"
+            errorObject="die Monatsläufe"
+            unavailable={runs.length === 0}
+          />
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            disabled={!data}
+            tooltip="Öffnet ein Fenster, um einen Monatslauf für Monat und Schulen zu starten."
+            onClick={() => setStarting(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+            Monatslauf starten
+          </Button>
+        </>
       }
-      error={pageLoad.error}
-      loading={!pageLoad.error && !data}
+      error={loadError}
+      loading={loading}
       overlays={
         data ? (
           <CareRunStartModal
@@ -241,6 +245,8 @@ export default function TraegerMonatsbeitraegePage() {
             onClose={() => setStarting(false)}
             onStart={startCareRun}
             onStarted={(run: CareRun) => {
+              // The list and the open run of each school in the start dialog.
+              void invalidateFamily(traegerBillingRunKeys.careRunsFamily);
               setStarting(false);
               openRun(run);
             }}

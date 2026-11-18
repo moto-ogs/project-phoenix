@@ -50,6 +50,8 @@ import { unavailableApiError } from "~/lib/api-error";
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { Announcement } from "~/lib/parent-announcements-api";
 import SchoolParentLettersPage from "./page";
+import { SCHOOL_PARENT_LETTERS_BASE } from "~/lib/parent-announcements-api";
+import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 
 const sentLetter = {
   id: "11",
@@ -62,9 +64,33 @@ const sentLetter = {
   sender_school_class: "3b",
 } as Announcement;
 
+const previewLoad = { error: null as Error | null, retry: vi.fn() };
+
 function mockData(classes: string[], letters: Announcement[]) {
   mockUseSWRAuth.mockImplementation((key: string | null) => {
-    if (key === "school-parent-letter-classes") {
+    if (key === parentAnnouncementKeys.letterPreviewChildren("class-3b")) {
+      return {
+        data: undefined,
+        error: previewLoad.error,
+        isLoading: false,
+        mutate: previewLoad.retry,
+      };
+    }
+    if (
+      key ===
+      parentAnnouncementKeys.letterPlaceholders(SCHOOL_PARENT_LETTERS_BASE)
+    ) {
+      return {
+        data: [
+          { name: "vorname", label: "Vorname des Kindes", example: "Lina" },
+        ],
+        mutate: mockMutate,
+      };
+    }
+    if (key === null || key.startsWith("parent-letter-preview-")) {
+      return { data: undefined, isLoading: false, mutate: mockMutate };
+    }
+    if (key === "class-day-my-classes") {
       return {
         data: { classes },
         error: undefined,
@@ -89,6 +115,7 @@ describe("Elternbriefe in moto schule (#4800)", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mockMutate.mockResolvedValue(undefined);
+    previewLoad.error = null;
   });
 
   it("lists the own letters with their class and opens one", () => {
@@ -100,6 +127,24 @@ describe("Elternbriefe in moto schule (#4800)", () => {
     expect(screen.getAllByText("Gesendet").length).toBeGreaterThan(0);
     fireEvent.click(screen.getAllByText("Wandertag")[0]!);
     expect(mockPush).toHaveBeenCalledWith("/school/elternbriefe/11");
+  });
+
+  it("shows and retries a failed preview child load instead of claiming the class is empty", async () => {
+    mockData(["3b"], []);
+    previewLoad.error = unavailableApiError(new TypeError("Failed to fetch"));
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /Neuer Elternbrief/ }));
+    fireEvent.click(screen.getByLabelText(/Mit Lesebestätigung/));
+    fireEvent.change(screen.getByLabelText(/^Text/), {
+      target: { value: "Hallo {{vorname}}" },
+    });
+    const retry = await screen.findByRole("button", { name: /Wiederholen/ });
+    expect(screen.getByRole("alert")).toHaveTextContent(/Kinder.*Vorschau/);
+    expect(
+      screen.queryByText(/Noch kein Kind in der Auswahl/),
+    ).not.toBeInTheDocument();
+    fireEvent.click(retry);
+    expect(previewLoad.retry).toHaveBeenCalledOnce();
   });
 
   it("writes and sends a signed consent to the one class of the Lehrkraft", async () => {
@@ -137,9 +182,14 @@ describe("Elternbriefe in moto schule (#4800)", () => {
     );
   });
 
-  it.each(["Senden", "Wiederholen"])(
-    "retries the created letter via %s after a lost response",
-    async (action) => {
+  it.each([
+    { action: "Senden", kind: "info" },
+    { action: "Wiederholen", kind: "info" },
+    { action: "Senden", kind: "letter" },
+    { action: "Wiederholen", kind: "letter" },
+  ])(
+    "$kind retries the created letter via $action after a lost response",
+    async ({ action, kind }) => {
       mockData(["3b"], []);
       mockCreate.mockResolvedValue({
         ...sentLetter,
@@ -155,6 +205,9 @@ describe("Elternbriefe in moto schule (#4800)", () => {
       fireEvent.click(
         screen.getByRole("button", { name: /Neuer Elternbrief/ }),
       );
+      if (kind === "letter") {
+        fireEvent.click(screen.getByLabelText(/Mit Lesebestätigung/));
+      }
       fireEvent.change(screen.getByLabelText(/Betreff/), {
         target: { value: "Zoobesuch" },
       });
@@ -164,6 +217,17 @@ describe("Elternbriefe in moto schule (#4800)", () => {
       fireEvent.click(screen.getByRole("button", { name: "Senden" }));
       const retry = await screen.findByRole("button", { name: /Wiederholen/ });
       expect(screen.getByLabelText(/Betreff/)).toBeDisabled();
+      expect(screen.getByLabelText(/^Text/)).toBeDisabled();
+      if (kind === "letter") {
+        const insert = screen.getByRole("button", {
+          name: /Platzhalter Vorname des Kindes/,
+        });
+        expect(insert).toBeDisabled();
+        fireEvent.click(insert);
+      }
+      expect(screen.getByLabelText(/^Text/)).toHaveValue(
+        "Wir fahren in den Zoo.",
+      );
       fireEvent.click(
         action === "Wiederholen"
           ? retry
@@ -199,7 +263,7 @@ describe("Elternbriefe in moto schule (#4800)", () => {
       loaded = true;
     });
     mockUseSWRAuth.mockImplementation((key: string | null) =>
-      key === "school-parent-letter-classes"
+      key === "class-day-my-classes"
         ? {
             data: loaded ? { classes: ["3b"] } : undefined,
             error: loaded ? undefined : failure,

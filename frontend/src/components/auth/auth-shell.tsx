@@ -1,7 +1,7 @@
 "use client";
 
 import { SectionLabel } from "~/components/ui/section-label";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { Hammer, Quote, ShieldCheck, UsersRound } from "lucide-react";
 import { cn } from "~/lib/utils";
@@ -300,16 +300,9 @@ function AuthTestimonialPanel({
         : motoTestimonialPanelCopy)
     );
   }, [testimonialPanelCopy, variant]);
+  // Kein automatischer Wechsel (#7114, WCAG 2.2.2): wer liest, bestimmt
+  // selbst, wann der nächste Bericht kommt.
   const [activeIndex, setActiveIndex] = useState(0);
-
-  useEffect(() => {
-    if (items.testimonials.length <= 1) return;
-    const interval = window.setInterval(() => {
-      setActiveIndex((current) => (current + 1) % items.testimonials.length);
-    }, 11000);
-
-    return () => window.clearInterval(interval);
-  }, [items.testimonials.length]);
 
   if (items.testimonials.length === 0) {
     return null;
@@ -328,11 +321,13 @@ function AuthTestimonialPanel({
   return (
     <aside className="moto-dotted-background moto-dotted-background--split relative z-0 hidden min-h-screen overflow-hidden border-l border-gray-200 px-8 py-10 lg:flex lg:flex-col lg:justify-between xl:px-14">
       <div className="relative z-10 flex items-center justify-between">
-        <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/85 px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm backdrop-blur-sm">
+        {/* oxlint-disable-next-line ui-kit/no-hand-rolled-pill -- Marken-Chip der Anmeldeseite, kein Status */}
+        <div className="moto-glass inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/85 px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm">
           <UsersRound className="text-moto-green h-4 w-4" aria-hidden="true" />
           {items.badges.audience}
         </div>
-        <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/85 px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm backdrop-blur-sm">
+        {/* oxlint-disable-next-line ui-kit/no-hand-rolled-pill -- Marken-Chip der Anmeldeseite, kein Status */}
+        <div className="moto-glass inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/85 px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm">
           <ShieldCheck className="text-moto-blue h-4 w-4" aria-hidden="true" />
           {items.badges.hosting}
         </div>
@@ -349,7 +344,10 @@ function AuthTestimonialPanel({
           ))}
         </div>
 
-        <div className="mt-7 flex items-center justify-center gap-2">
+        {/* Jeder Punkt hat eine Trefferfläche von mindestens 24 × 24 px
+            (WCAG 2.5.8): der Rand um den Strich gehört zum Knopf, die Farbe
+            füllt nur die Inhaltsfläche (`bg-clip-content`). */}
+        <div className="mt-7 flex items-center justify-center">
           {items.testimonials.map((item, index) => (
             <button
               key={`${item.author}-${item.metric}`}
@@ -361,7 +359,7 @@ function AuthTestimonialPanel({
               )}
               onClick={() => setActiveIndex(index)}
               className={cn(
-                "h-2.5 rounded-full transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                "box-content h-2.5 rounded-full bg-clip-content p-[7px] transition-colors duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:ring-2 focus-visible:ring-gray-950 focus-visible:outline-none motion-reduce:transition-none",
                 index === activeIndex
                   ? "w-8 bg-gray-950"
                   : "w-2.5 bg-gray-300 hover:bg-gray-400",
@@ -414,7 +412,7 @@ function TestimonialCard({
     <article
       aria-hidden={state !== "active"}
       className={cn(
-        "absolute inset-x-0 top-0 min-h-[22rem] overflow-hidden rounded-2xl border border-gray-200 bg-white/94 p-8 shadow-xl shadow-gray-200/70 backdrop-blur-sm transition-all duration-[1250ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform motion-reduce:transition-none",
+        "absolute inset-x-0 top-0 min-h-[22rem] overflow-hidden rounded-2xl border border-gray-200 bg-white/94 p-8 shadow-xl shadow-gray-200/70 transition-[opacity,transform,box-shadow] duration-[1250ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform motion-reduce:transition-none",
         state !== "active" && "pointer-events-none",
         state === "active" && "shadow-2xl shadow-gray-300/60",
       )}
@@ -427,7 +425,7 @@ function TestimonialCard({
     >
       <div
         className={cn(
-          "transition-all duration-700 ease-out motion-reduce:transition-none",
+          "transition-[opacity,transform] duration-700 ease-out motion-reduce:transition-none",
           state === "active"
             ? "translate-y-0 opacity-100"
             : "translate-y-3 opacity-0",

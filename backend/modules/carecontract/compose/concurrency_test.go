@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -94,7 +95,7 @@ func TestConcurrentSendsOfOneDraftLetExactlyOneTransitionWin(t *testing.T) {
 	school := schoolDouble{school: carecontract.School{ID: testpkg.UniqueTestTenantID(t), Name: "OGS Am Lindenhof"},
 		child: testpkg.UniqueTestTenantID(t), offering: testpkg.UniqueTestTenantID(t), accesses: &accesses}
 	intake := compose.NewIntake(compose.IntakePorts{Schools: school, Applications: school, Bookings: school, Access: school,
-		Runtime: runtimeDouble{}, Modes: school, Mail: noMailBlocks{}, Letterheads: letterheadDouble{}, Families: familyNumbersDouble{}})
+		Runtime: runtimeDouble{}, Modes: school, Mail: noMailBlocks{}, Letterheads: letterheadDouble{}, Families: familyNumbersDouble{}}, calendar.TodayDate)
 	terms := carecontract.TemplateInput{TermKind: carecontract.TermOpenEnded, NoticeMonths: 1, NoticeTo: carecontract.NoticeMonthEnd}
 	for _, offering := range []int64{school.offering, school.offering + 1, school.offering + 2} {
 		_, err := intake.SaveTemplate(ctx, reviewer, school.school.ID, offering, terms)
@@ -108,7 +109,7 @@ func TestConcurrentSendsOfOneDraftLetExactlyOneTransitionWin(t *testing.T) {
 	letterhead := &holdingLetterhead{entered: make(chan struct{}), release: make(chan struct{})}
 	post := &waitingPost{next: testpkg.UniqueTestTenantID(t)}
 	contracts := compose.NewContracts(compose.ContractPorts{Holidays: holidaysDouble{}, Letterheads: letterhead, Post: post, Runtime: runtimeDouble{}, Access: school,
-		Ledger: ledgerDouble{}, Links: carecontract.SigningLinks{Tokens: &tokenDouble{}, ParentsURL: "http://parents.localhost", Fingerprint: sha256Hex}})
+		Ledger: ledgerDouble{}, Links: carecontract.SigningLinks{Tokens: &tokenDouble{}, ParentsURL: "http://parents.localhost", Fingerprint: sha256Hex}}, time.Now)
 	send := func(out chan<- sendOutcome) {
 		var outcome sendOutcome
 		outcome.err = tenant.WithinTraeger(ctx, organization, func(txCtx context.Context) error {

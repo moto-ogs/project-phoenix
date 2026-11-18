@@ -15,6 +15,13 @@ import {
   updateMasterDataRequest,
 } from "~/lib/parent-api";
 import { RequestEditModal } from "./request-edit-modal";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
+
+function renderParent(ui: Parameters<typeof render>[0]) {
+  return render(ui, { wrapper: ParentResourceTestProvider });
+}
 
 vi.mock("~/lib/parent-api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/lib/parent-api")>();
@@ -64,7 +71,7 @@ describe("RequestEditModal", () => {
 
   // Eine offene Anfrage wird geändert, nicht zurückgezogen (#2267).
   it("offers editing and never a withdrawal", async () => {
-    render(
+    renderParent(
       <RequestEditModal
         studentId="1"
         request={{
@@ -90,7 +97,7 @@ describe("RequestEditModal", () => {
   it("sends the changed request with the version it was loaded at", async () => {
     const onSaved = vi.fn();
     const onClose = vi.fn();
-    render(
+    renderParent(
       <RequestEditModal
         studentId="1"
         request={{
@@ -121,6 +128,51 @@ describe("RequestEditModal", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("reads the version anew when the dialog opens again", async () => {
+    const request = {
+      type: "excused" as const,
+      id: "req-1",
+      dates: ["2026-09-01"],
+      note: "Zahnarzt",
+    };
+    function Dialog({ open }: Readonly<{ open: boolean }>) {
+      return (
+        <ParentResourceTestProvider>
+          {open ? (
+            <RequestEditModal
+              studentId="1"
+              request={request}
+              onClose={vi.fn()}
+              onSaved={vi.fn()}
+            />
+          ) : null}
+        </ParentResourceTestProvider>
+      );
+    }
+    const view = render(<Dialog open />);
+    await screen.findByText("Geändert am 24.08.2026");
+    view.rerender(<Dialog open={false} />);
+    // Another guardian edited the request meanwhile.
+    events.mockResolvedValue([
+      {
+        event_type: "guardian_edited",
+        version: "v3",
+        created_at: "2026-08-25T10:00:00Z",
+      },
+    ]);
+    view.rerender(<Dialog open />);
+
+    await screen.findByText("Geändert am 25.08.2026");
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+    await waitFor(() =>
+      expect(updateExcused).toHaveBeenCalledWith("1", "req-1", {
+        dates: ["2026-09-01"],
+        note: "Zahnarzt",
+        expectedVersion: "v3",
+      }),
+    );
+  });
+
   it("changes a Stammdaten request through the same dialog", async () => {
     updateMasterData.mockResolvedValue({
       id: "md-1",
@@ -130,7 +182,7 @@ describe("RequestEditModal", () => {
       status: "pending",
       created_at: "2026-08-20T08:00:00Z",
     });
-    render(
+    renderParent(
       <RequestEditModal
         studentId="1"
         request={{
@@ -162,7 +214,7 @@ describe("RequestEditModal", () => {
   // dann leer raus, das Backend prüft sie nicht.
   it("still saves when the history cannot be loaded", async () => {
     events.mockRejectedValue(new Error("offline"));
-    render(
+    renderParent(
       <RequestEditModal
         studentId="1"
         request={{
@@ -197,7 +249,7 @@ describe("RequestEditModal", () => {
         code: "students.change_request_stale",
       }),
     );
-    render(
+    renderParent(
       <RequestEditModal
         studentId="1"
         request={{
@@ -225,7 +277,7 @@ describe("RequestEditModal", () => {
   });
 
   it("checks an empty value before sending and marks the field", async () => {
-    render(
+    renderParent(
       <RequestEditModal
         studentId="1"
         request={{

@@ -2,11 +2,15 @@ import {
   act,
   cleanup,
   fireEvent,
-  render,
-  renderHook,
+  render as renderUi,
+  renderHook as renderHookUi,
   screen,
   within,
+  type RenderHookOptions,
+  type RenderOptions,
 } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { waitFor } from "~/test/wait-for-state";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -24,7 +28,7 @@ import type {
 import * as parentApi from "~/lib/parent-api";
 import deMessages from "~/i18n/messages/de.generated";
 import { ApiError } from "~/lib/api-error";
-import { releaseFakeTimers } from "~/test/clock";
+import { releaseFakeTimers, TEST_CLOCK_TODAY } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 import {
   berlinTodayISO,
@@ -32,6 +36,22 @@ import {
   todayISO,
   toISODate,
 } from "~/lib/date-helpers";
+
+vi.unmock("swr");
+
+// Real SWR with a parent session, a fresh cache per render.
+function render(ui: ReactElement, options?: RenderOptions) {
+  return renderUi(ui, { wrapper: ParentResourceTestProvider, ...options });
+}
+function renderHook<Result, Props>(
+  hook: (props: Props) => Result,
+  options?: RenderHookOptions<Props>,
+) {
+  return renderHookUi(hook, {
+    wrapper: ParentResourceTestProvider,
+    ...options,
+  });
+}
 
 // The factory is hoisted above the imports, so the mock helper has to be
 // pulled in inside it rather than at the top of the file.
@@ -47,6 +67,10 @@ vi.mock("~/lib/parent-api", async (importOriginal) => ({
 beforeEach(() => {
   // These reads also run in nested controls. Keep them local unless a test
   // supplies its own recipients, contacts or request history.
+  vi.spyOn(parentApi, "listMyChildren").mockResolvedValue([
+    { student_id: "1", tenant_id: "1" } as parentApi.Child,
+    { student_id: "2", tenant_id: "1" } as parentApi.Child,
+  ]);
   vi.spyOn(parentApi, "listChildGuardians").mockResolvedValue([]);
   vi.spyOn(parentApi, "getRequestSharingOptions").mockResolvedValue({
     family_protected: false,
@@ -1140,6 +1164,35 @@ describe("SickNoteModal — Abmeldegrund", () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
+  // #4803: die Meldung für ein Kind ohne OGS-Platz geht an die Schule.
+  it("names no OGS for a child without an OGS place", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <SickNoteModal onClose={vi.fn()} onSubmit={onSubmit} withoutCarePlace />,
+    );
+    expect(
+      screen.getByText(
+        "Melden Sie Ihr Kind für die ausgewählten Tage ab. Die Schule sieht die Abmeldung.",
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Krankmeldung senden" }),
+    );
+    expect(
+      await screen.findAllByText("Bitte geben Sie einen kurzen Hinweis ein."),
+    ).not.toHaveLength(0);
+    fireEvent.change(screen.getByRole("textbox", { name: "Grund / Hinweis" }), {
+      target: { value: "Fieber" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Krankmeldung senden" }),
+    );
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(/OGS/)).toBeNull();
+  });
+
   it("uses neutral copy while the approval settings are unknown", () => {
     render(<SickNoteModal onClose={vi.fn()} onSubmit={vi.fn()} />);
 
@@ -1414,7 +1467,7 @@ describe("SickNoteModal — Teil-Abwesenheit der Schule", () => {
         onClose={vi.fn()}
         onSubmit={onSubmit}
         sickRequiresApproval={false}
-        careExceptions={[schoolPartial("2026-09-09", "11:30")]}
+        careExceptions={[schoolPartial(TEST_CLOCK_TODAY, "11:30")]}
       />,
     );
 
@@ -1428,7 +1481,7 @@ describe("SickNoteModal — Teil-Abwesenheit der Schule", () => {
     send();
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith(
-        ["2026-09-09"],
+        [TEST_CLOCK_TODAY],
         "Fieber",
         "sick",
         [],
@@ -1439,6 +1492,34 @@ describe("SickNoteModal — Teil-Abwesenheit der Schule", () => {
         "Die OGS hat für diese Tage schon etwas eingetragen. Sie prüft Ihre Meldung. Bis dahin gilt ihr Eintrag.",
       ),
     ).toBeInTheDocument();
+  });
+
+  // #4803: die Antwort für ein Kind ohne OGS-Platz nennt die Schule.
+  it("nennt nach dem Senden für ein Kind ohne OGS-Platz die Schule", async () => {
+    const onSubmit = vi.fn().mockResolvedValue("pending");
+    render(
+      <SickNoteModal
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+        sickRequiresApproval={false}
+        careExceptions={[schoolPartial(TEST_CLOCK_TODAY, "11:30")]}
+        withoutCarePlace
+      />,
+    );
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Grund / Hinweis" }), {
+      target: { value: "Fieber" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Krankmeldung senden" }),
+    );
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(
+      await screen.findByText(
+        "Die Schule hat für diese Tage schon etwas eingetragen. Sie prüft Ihre Meldung. Bis dahin gilt ihr Eintrag.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/OGS/)).toBeNull();
   });
 
   it("zählt eine Krankmeldung der OGS als Schuleintrag", () => {
@@ -2008,6 +2089,31 @@ describe("useChildCare reportSick", () => {
     expect(submitSickNote).toHaveBeenCalledTimes(1);
     expect(parentApi.getChildCareSchedule).toHaveBeenCalledTimes(1);
     expect(result.current.todayPickup).toEqual({ kind: "absent" });
+  });
+});
+
+describe("useChildCare ohne OGS-Platz", () => {
+  // Der Server lehnt Abholung und Wochenplan eines Kindes ohne OGS-Platz ab
+  // (#4803); die Seite fragt sie deshalb gar nicht erst an.
+  it("laedt nur die Abwesenheiten und Funktionen", async () => {
+    vi.spyOn(parentApi, "listSickDays").mockResolvedValue([]);
+    vi.spyOn(parentApi, "listExcusedRequests").mockResolvedValue([]);
+    const exceptions = vi.spyOn(parentApi, "listCareExceptions");
+    const pickupRequests = vi.spyOn(parentApi, "listPickupChangeRequests");
+    const schedule = vi.spyOn(parentApi, "getChildCareSchedule");
+    vi.spyOn(parentApi, "getChildFeatures").mockRejectedValue(
+      new Error("no features"),
+    );
+
+    const { result } = renderHook(() =>
+      useChildCare("1", { withoutCarePlace: true }),
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(exceptions).not.toHaveBeenCalled();
+    expect(pickupRequests).not.toHaveBeenCalled();
+    expect(schedule).not.toHaveBeenCalled();
+    expect(parentApi.listSickDays).toHaveBeenCalledTimes(1);
   });
 });
 

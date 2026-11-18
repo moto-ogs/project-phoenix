@@ -333,6 +333,7 @@ vi.mock("~/lib/swr", () => ({
     isValidating: false,
   })),
   useTenantMutate: vi.fn(() => vi.fn()),
+  useInvalidateMatching: () => () => Promise.resolve([]),
 }));
 
 import { useSWRAuth } from "~/lib/swr";
@@ -419,7 +420,22 @@ function mockDashboardAndRosters(
     { canOperate: boolean; rows?: readonly Partial<TimetableRosterRow>[] }
   > = {},
 ) {
-  vi.mocked(useSWRAuth).mockImplementation(((key: unknown) => {
+  vi.mocked(useSWRAuth).mockImplementation(((
+    key: unknown,
+    fetcher: () => Promise<unknown>,
+  ) => {
+    // The running supervision of an open dialog: the request starts and
+    // stays pending, as the old effect's request did.
+    if (typeof key === "string" && key.startsWith("running-supervision-")) {
+      void fetcher();
+      return {
+        data: undefined,
+        isLoading: true,
+        error: undefined,
+        mutate: vi.fn(),
+        isValidating: false,
+      } as never;
+    }
     const loaded = (data: unknown) =>
       ({
         data,

@@ -8,7 +8,7 @@
 import { FileText, Plus } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { billingTabs } from "~/components/traeger/billing-family-format";
 import {
   NOTICE_RUN_STATUS_LABELS,
@@ -19,27 +19,31 @@ import {
 import { formatMonth } from "~/components/traeger/care-billing-format";
 import { runSchoolsLabel } from "~/components/traeger/care-review-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import {
   type CareSchool,
   fetchCareTariffs,
 } from "~/lib/traeger-care-billing-api";
 import {
   type CareNoticeRun,
-  type CareNoticeRunList,
   fetchCareNoticeRuns,
   startCareNoticeRun,
 } from "~/lib/traeger-care-notices-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerJahresbescheidePage" });
 
 // The start dialog loads when it opens.
 const CareNoticeRunStartModal = dynamic(
@@ -112,40 +116,26 @@ function runColumns(
   ];
 }
 
-interface PageData {
-  readonly list: CareNoticeRunList;
-  readonly schools: readonly CareSchool[];
-}
-
 export default function TraegerJahresbescheidePage() {
   const router = useRouter();
-  const [data, setData] = useState<PageData | null>(null);
   const [starting, setStarting] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-
-  const load = useCallback(async () => {
-    try {
-      const [list, tariffs] = await Promise.all([
-        fetchCareNoticeRuns(),
-        fetchCareTariffs(),
-      ]);
-      setData({ list, schools: tariffs.schools });
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_care_notice_runs_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Jahresbescheide",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const invalidateFamily = useInvalidateFamily();
+  const runList = useTraegerResource(
+    traegerBillingRunKeys.noticeRuns(),
+    fetchCareNoticeRuns,
+    "die Jahresbescheide",
+  );
+  const tariffs = useTraegerResource(
+    traegerBillingKeys.careTariffs(),
+    fetchCareTariffs,
+    "die Jahresbescheide",
+  );
+  const loadError = runList.error ?? tariffs.error;
+  const loading = runList.loading || tariffs.loading;
+  const data =
+    runList.data && tariffs.data
+      ? { list: runList.data, schools: tariffs.data.schools }
+      : null;
 
   const openRun = (run: CareNoticeRun) =>
     router.push(traegerPath(`/traeger/abrechnung/jahresbescheide/${run.id}`));
@@ -174,23 +164,38 @@ export default function TraegerJahresbescheidePage() {
           />
         ) : null
       }
-      statsLoading={!data && !pageLoad.error}
+      statsLoading={loading}
       tabs={billingTabs("jahresbescheide")}
       actions={
-        <Button
-          type="button"
-          variant="primary"
-          size="md"
-          disabled={!data}
-          tooltip="Öffnet ein Fenster, um einen Jahreslauf für Jahr und Schulen zu starten."
-          onClick={() => setStarting(true)}
-        >
-          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-          Jahreslauf starten
-        </Button>
+        <>
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerList(
+                "/api/traeger/care-notice-runs/export",
+                format,
+              )
+            }
+            scope={traegerExportScope()}
+            ariaLabel="Jahresläufe herunterladen"
+            fallbackName="jahresbescheide"
+            errorObject="die Jahresläufe"
+            unavailable={runs.length === 0}
+          />
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            disabled={!data}
+            tooltip="Öffnet ein Fenster, um einen Jahreslauf für Jahr und Schulen zu starten."
+            onClick={() => setStarting(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+            Jahreslauf starten
+          </Button>
+        </>
       }
-      error={pageLoad.error}
-      loading={!pageLoad.error && !data}
+      error={loadError}
+      loading={loading}
       overlays={
         data ? (
           <CareNoticeRunStartModal
@@ -201,6 +206,7 @@ export default function TraegerJahresbescheidePage() {
             onClose={() => setStarting(false)}
             onStart={startCareNoticeRun}
             onStarted={(run: CareNoticeRun) => {
+              void invalidateFamily(traegerBillingRunKeys.noticeRuns());
               setStarting(false);
               openRun(run);
             }}

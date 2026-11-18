@@ -21,6 +21,11 @@ type StaffRecipientRequest struct {
 	// conversation uses it (#5200). An empty set reaches nobody.
 	OnlyAccounts bool
 	AccountIDs   []int64
+	// Feed keeps the responsible accounts who did not agree to the type:
+	// the notification feed reaches them too, and each scope's Push says
+	// whether a push may follow (#7137). Without it only the accounts who
+	// agreed are returned.
+	Feed bool
 }
 
 // StaffRecipientScope is one account and the requested children that account
@@ -29,6 +34,10 @@ type StaffRecipientRequest struct {
 type StaffRecipientScope struct {
 	AccountID  int64
 	StudentIDs []int64
+	// Push reports, for a Feed request, that the account agreed to the type.
+	// A request without Feed returns only accounts that agreed and leaves it
+	// unset.
+	Push bool
 }
 
 // StaffRecipientResolver resolves the responsible staff accounts for child-
@@ -45,6 +54,8 @@ type staffRecipientResolver struct {
 	accounts     authAccountReader
 	settings     settingsBoolReader
 	workSessions OnDutyStaff
+	// today is the day whose group supervisors are told.
+	today func() calendar.Date
 }
 
 // StudentGroups names the education group of each child that has one; a
@@ -97,6 +108,7 @@ func NewStaffRecipientResolver(
 	accounts authAccountReader,
 	settings settingsBoolReader,
 	workSessions OnDutyStaff,
+	today func() calendar.Date,
 ) StaffRecipientResolver {
 	return &staffRecipientResolver{
 		preferences:  preferences,
@@ -106,6 +118,7 @@ func NewStaffRecipientResolver(
 		accounts:     accounts,
 		settings:     settings,
 		workSessions: workSessions,
+		today:        today,
 	}
 }
 
@@ -129,6 +142,9 @@ func (r *staffRecipientResolver) Resolve(ctx context.Context, request StaffRecip
 		return nil, nil
 	}
 
+	if request.Feed {
+		return r.resolveFeed(ctx, request, visibleByAccount)
+	}
 	optedIn, err := r.preferences.FilterOptedIn(ctx, request.NotificationType, sortedAccountIDs(visibleByAccount))
 	if err != nil {
 		return nil, err
@@ -138,7 +154,22 @@ func (r *staffRecipientResolver) Resolve(ctx context.Context, request StaffRecip
 		return nil, err
 	}
 
-	return staffRecipientScopes(visibleByAccount, optedIn), nil
+	return staffRecipientScopes(visibleByAccount, optedIn, nil), nil
+}
+
+// resolveFeed applies the school's on-duty rule to everyone responsible and
+// the personal choice only to the push: a person who switched the type off
+// still finds the notice in the feed (#7137).
+func (r *staffRecipientResolver) resolveFeed(ctx context.Context, request StaffRecipientRequest, visibleByAccount map[int64]map[int64]struct{}) ([]StaffRecipientScope, error) {
+	onDuty, err := r.filterOnDutyAccounts(ctx, sortedAccountIDs(visibleByAccount))
+	if err != nil {
+		return nil, err
+	}
+	optedIn, err := r.preferences.FilterOptedIn(ctx, request.NotificationType, onDuty)
+	if err != nil {
+		return nil, err
+	}
+	return staffRecipientScopes(visibleByAccount, onDuty, optedIn), nil
 }
 
 // ResponsibleStaffAccountIDs lists the staff responsible for one child who
@@ -165,7 +196,7 @@ func (r *staffRecipientResolver) ResponsibleStaffAccountIDs(ctx context.Context,
 
 func (r *staffRecipientResolver) configured() bool {
 	return r.preferences != nil && r.students != nil && r.groups != nil && r.staff != nil &&
-		r.accounts != nil && r.settings != nil && r.workSessions != nil
+		r.accounts != nil && r.settings != nil && r.workSessions != nil && r.today != nil
 }
 
 func (r *staffRecipientResolver) resolveVisibility(ctx context.Context, studentIDs []int64) (map[int64]map[int64]struct{}, error) {
@@ -191,7 +222,7 @@ func (r *staffRecipientResolver) addGroupStaff(ctx context.Context, visibleByAcc
 	if len(groupIDs) == 0 {
 		return nil
 	}
-	pairs, err := r.groups.ListGroupSupervisors(ctx, groupIDs, calendar.TodayDate())
+	pairs, err := r.groups.ListGroupSupervisors(ctx, groupIDs, r.today())
 	if err != nil {
 		return fmt.Errorf("resolve supervising staff: %w", err)
 	}
@@ -323,12 +354,16 @@ func sortedAccountIDs(visibleByAccount map[int64]map[int64]struct{}) []int64 {
 	return accountIDs
 }
 
-func staffRecipientScopes(visibleByAccount map[int64]map[int64]struct{}, accountIDs []int64) []StaffRecipientScope {
+func staffRecipientScopes(visibleByAccount map[int64]map[int64]struct{}, accountIDs, pushAccountIDs []int64) []StaffRecipientScope {
+	push := make(map[int64]bool, len(pushAccountIDs))
+	for _, accountID := range pushAccountIDs {
+		push[accountID] = true
+	}
 	scopes := make([]StaffRecipientScope, 0, len(accountIDs))
 	for _, accountID := range accountIDs {
 		studentIDs := sortedInt64Set(visibleByAccount[accountID])
 		if len(studentIDs) > 0 {
-			scopes = append(scopes, StaffRecipientScope{AccountID: accountID, StudentIDs: studentIDs})
+			scopes = append(scopes, StaffRecipientScope{AccountID: accountID, StudentIDs: studentIDs, Push: push[accountID]})
 		}
 	}
 	sort.Slice(scopes, func(i, j int) bool { return scopes[i].AccountID < scopes[j].AccountID })

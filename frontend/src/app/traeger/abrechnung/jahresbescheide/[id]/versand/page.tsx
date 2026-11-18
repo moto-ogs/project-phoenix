@@ -6,7 +6,7 @@
 // wenn das Büro sendet. Die Seite des Laufs lädt diesen Code nicht.
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { CareLetterPanel } from "~/components/traeger/care-letter-panel";
 import {
   NOTICE_KIND_LABELS,
@@ -17,6 +17,11 @@ import { canSendMail } from "~/components/traeger/billing-mail-status";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
 import { LetterSendCell } from "~/components/traeger/letter-send-cell";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import {
   LetterSendState,
   lettersToSend,
@@ -34,17 +39,17 @@ import {
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { downloadBlob } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
 import {
+  REFRESH_WHILE_QUEUED_MS,
+  traegerBillingRunKeys,
+} from "~/lib/swr/traeger-billing-run-keys";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
   type CareNoticeLetterSummary,
-  type CareNoticeLetters,
   type CareNoticeMailing,
   type CareNoticeSeries,
   createCareNoticeLetters,
@@ -54,16 +59,10 @@ import {
   mailCareNoticeLetters,
   printCareNoticeLetters,
 } from "~/lib/traeger-care-notice-letters-api";
-import {
-  type CareNoticeRunDetail,
-  fetchCareNoticeRun,
-} from "~/lib/traeger-care-notices-api";
+import { fetchCareNoticeRun } from "~/lib/traeger-care-notices-api";
 import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerCareNoticeDeliveryPage" });
-
-// While a mail waits, the page looks again after this many milliseconds.
-const REFRESH_WHILE_QUEUED_MS = 15_000;
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -263,12 +262,15 @@ export default function TraegerCareNoticeDeliveryPage() {
   const params = useParams<{ id: string }>();
   const runId = params?.id ?? "";
   const runPath = traegerPath(`/traeger/abrechnung/jahresbescheide/${runId}`);
-  const [run, setRun] = useState<CareNoticeRunDetail | null>(null);
-  const [letters, setLetters] = useState<CareNoticeLetters | null>(null);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-  const lettersLoad = useApiLoadError();
-  const { show: showLettersError, clear: clearLettersError } = lettersLoad;
+  const {
+    data: run,
+    loading,
+    error: loadError,
+  } = useTraegerResource(
+    runId ? traegerBillingRunKeys.noticeRun(runId) : null,
+    () => fetchCareNoticeRun(runId),
+    "der Jahreslauf",
+  );
   const actionErrors = useApiErrorDisplay();
   const { success } = useToast();
   const [creating, setCreating] = useState(false);
@@ -278,64 +280,36 @@ export default function TraegerCareNoticeDeliveryPage() {
   const [printing, setPrinting] = useState(false);
   const [shown, setShown] = useState<CareNoticeMailing | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      setRun(await fetchCareNoticeRun(runId));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_care_notice_run_load_failed", {
-        error: errorMessage(err),
-      });
-      await showLoadError(err, {
-        object: "der Jahreslauf",
-        retry: () => void load(),
-      });
-    }
-  }, [runId, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   const released = run?.status === "released" && run.previewCount > 0;
-  const loadLetters = useCallback(async () => {
-    try {
-      setLetters(await fetchCareNoticeLetters(runId));
-      clearLettersError();
-    } catch (err) {
-      logger.error("traeger_care_notice_letters_load_failed", {
-        error: errorMessage(err),
-      });
-      await showLettersError(err, {
-        object: "die Bescheide",
-        retry: () => void loadLetters(),
-      });
-    }
-  }, [runId, clearLettersError, showLettersError]);
-
-  useEffect(() => {
-    if (released) void loadLetters();
-  }, [released, loadLetters]);
-
   // A mail on its way: look again until it is sent or failed.
-  const waiting = (letters?.summary.queued ?? 0) > 0;
-  useEffect(() => {
-    if (!waiting) return;
-    const timer = setTimeout(() => void loadLetters(), REFRESH_WHILE_QUEUED_MS);
-    return () => clearTimeout(timer);
-  }, [waiting, letters, loadLetters]);
+  const {
+    data: letters,
+    error: lettersError,
+    mutate: mutateLetters,
+    reload: loadLetters,
+  } = useTraegerResource(
+    released ? traegerBillingRunKeys.noticeLetters(runId) : null,
+    () => fetchCareNoticeLetters(runId),
+    "die Bescheide",
+    {
+      refreshInterval: (latest) =>
+        (latest?.summary.queued ?? 0) > 0 ? REFRESH_WHILE_QUEUED_MS : 0,
+    },
+  );
 
   const create = async () => {
     setCreating(true);
     try {
-      setLetters(await createCareNoticeLetters(runId));
+      await mutateLetters(await createCareNoticeLetters(runId), {
+        revalidate: false,
+      });
       success("Die Originale sind gespeichert. Gesendet ist noch nichts.");
     } catch (err) {
       logger.error("traeger_care_notice_letters_create_failed", {
         error: errorMessage(err),
       });
       void actionErrors.show(err, { object: "die Originale" });
-      void loadLetters();
+      loadLetters();
     } finally {
       setCreating(false);
     }
@@ -353,7 +327,7 @@ export default function TraegerCareNoticeDeliveryPage() {
     } finally {
       setSendingAll(false);
       setConfirming(false);
-      void loadLetters();
+      loadLetters();
     }
   };
 
@@ -371,7 +345,7 @@ export default function TraegerCareNoticeDeliveryPage() {
       void actionErrors.show(err, { object: "der Bescheid" });
     } finally {
       setSendingContract(null);
-      void loadLetters();
+      loadLetters();
     }
   };
 
@@ -429,9 +403,27 @@ export default function TraegerCareNoticeDeliveryPage() {
           </HolidayHeadFacts>
         ) : null
       }
-      statsLoading={!run && !pageLoad.error}
-      error={pageLoad.error}
-      loading={!pageLoad.error && !run}
+      statsLoading={loading}
+      actions={
+        run && released ? (
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerList(
+                `/api/traeger/care-notice-runs/${run.id}/letters/export`,
+                format,
+              )
+            }
+            scope={traegerExportScope()}
+            ariaLabel="Versandliste herunterladen"
+            tooltip="Zeigt die Formate für alle Bescheide des Versands. Jeder Download wird protokolliert."
+            fallbackName={`bescheid-versand-${run.year}`}
+            errorObject="die Versandliste"
+            unavailable={!letters || letters.notices.length === 0}
+          />
+        ) : undefined
+      }
+      error={loadError}
+      loading={loading}
       overlays={
         run && summary ? (
           <>
@@ -486,12 +478,12 @@ export default function TraegerCareNoticeDeliveryPage() {
           description="Versenden können Sie erst ausgestellte Bescheide. Stellen Sie sie auf der Seite des Jahreslaufs aus."
         />
       ) : null}
-      {released && lettersLoad.error ? (
+      {released && lettersError ? (
         <SectionCard title="Versand an die Familien">
-          <LoadErrorAlert error={lettersLoad.error} actionLayout="responsive" />
+          <LoadErrorAlert error={lettersError} actionLayout="responsive" />
         </SectionCard>
       ) : null}
-      {released && !lettersLoad.error && !summary ? (
+      {released && !lettersError && !summary ? (
         <SectionCard title="Versand an die Familien" loading />
       ) : null}
       {released && summary && missing > 0 ? (

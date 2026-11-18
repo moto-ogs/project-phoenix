@@ -6,7 +6,7 @@
 // Lesebestätigung, dasselbe Einverständnis mit Unterschrift. Die Liste zeigt
 // nur die eigenen Briefe; die OGS liest sie in ihrer Übersicht mit.
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -35,8 +35,11 @@ import {
 } from "~/components/ui/slide-over";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Textarea } from "~/components/ui/textarea";
+import {
+  LetterBodyField,
+  type LetterPreviewChildren,
+} from "~/components/announcements/letter-body-field";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { formatDate } from "~/lib/date-helpers";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import {
@@ -46,13 +49,16 @@ import {
   SCHOOL_PARENT_LETTERS_BASE,
   type Announcement,
 } from "~/lib/parent-announcements-api";
-import { fetchClassDayClassesSchool } from "~/lib/school-class-day-api";
+import {
+  fetchClassDayClassesSchool,
+  fetchClassDaySchool,
+} from "~/lib/school-class-day-api";
+import { berlinTodayISO, formatDate } from "~/lib/date-helpers";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import { NO_OWN_CLASS_REASON } from "~/components/school/no-own-class";
 import {
   emptySchoolParentLetterDraft,
   SCHOOL_PARENT_LETTER_KINDS,
-  SCHOOL_PARENT_LETTERS_KEY,
   SCHOOL_PARENT_LETTERS_ROUTE,
   schoolParentLetterFieldErrors,
   schoolParentLetterKindLabel,
@@ -62,6 +68,7 @@ import {
 } from "~/lib/school-parent-letters";
 import { schoolPath } from "~/lib/school-url";
 import { useSWRAuth } from "~/lib/swr";
+import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 import { StatusBadge } from "~/components/ui/status-badge";
 
 const logger = createLogger({ component: "SchoolParentLettersPage" });
@@ -122,7 +129,7 @@ export default function SchoolParentLettersPage() {
     isLoading,
     mutate,
   } = useSWRAuth<Announcement[]>(
-    session ? SCHOOL_PARENT_LETTERS_KEY : null,
+    session ? schoolPortalKeys.parentLetters() : null,
     () => fetchAnnouncements(false, SCHOOL_PARENT_LETTERS_BASE),
   );
   const loadError = useSwrLoadError(error, "Ihre Elternbriefe", () => mutate());
@@ -131,7 +138,7 @@ export default function SchoolParentLettersPage() {
     error: classesError,
     mutate: reloadClasses,
   } = useSWRAuth(
-    session ? "school-parent-letter-classes" : null,
+    session ? schoolPortalKeys.classDayClasses() : null,
     fetchClassDayClassesSchool,
     { revalidateOnFocus: false },
   );
@@ -149,8 +156,23 @@ export default function SchoolParentLettersPage() {
   const submitting = save.pending;
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
-  const latestSubmitRef = useRef<() => void>(() => undefined);
+  // A retry submits the form again, so it sends the current draft.
+  const letterFormRef = useRef<HTMLFormElement>(null);
 
+  // The preview of a letter (#4813) shows a child of the chosen class.
+  const previewClass = draft.kind === "letter" ? draft.schoolClass : "";
+  const previewChildren: LetterPreviewChildren | null = previewClass
+    ? {
+        scope: `class-${previewClass}`,
+        load: async () =>
+          (await fetchClassDaySchool(previewClass, berlinTodayISO())).rows
+            .filter((row) => row.student_id > 0)
+            .map((row) => ({
+              value: String(row.student_id),
+              label: `${row.first_name} ${row.last_name}`.trim(),
+            })),
+      }
+    : null;
   const update = (patch: Partial<SchoolParentLetterDraft>) =>
     setDraft((current) => ({ ...current, ...patch }));
 
@@ -204,15 +226,11 @@ export default function SchoolParentLettersPage() {
         if (!op.isCurrent()) return;
         await formErrors.show(err, {
           object: "das Senden des Elternbriefs",
-          retry: () => latestSubmitRef.current(),
+          retry: () => letterFormRef.current?.requestSubmit(),
         });
       }
     });
   };
-  useLayoutEffect(() => {
-    latestSubmitRef.current = () => void submit();
-  });
-
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     void submit();
@@ -258,6 +276,7 @@ export default function SchoolParentLettersPage() {
               <SlideOverTitle>Neuer Elternbrief</SlideOverTitle>
             </SlideOverHeader>
             <form
+              ref={letterFormRef}
               className="flex min-h-0 flex-1 flex-col"
               onSubmit={handleSubmit}
               noValidate
@@ -299,18 +318,6 @@ export default function SchoolParentLettersPage() {
                       required
                     />
 
-                    <Textarea
-                      label="Text"
-                      name="body"
-                      rows={8}
-                      value={draft.body}
-                      onChange={(event) => update({ body: event.target.value })}
-                      error={formErrors.fieldError("body")}
-                      disabled={fieldsDisabled}
-                      maxLength={4000}
-                      required
-                    />
-
                     <fieldset className="space-y-2">
                       <legend className="mb-2 block text-sm font-medium text-gray-700">
                         Was sollen die Eltern tun?
@@ -341,6 +348,33 @@ export default function SchoolParentLettersPage() {
                         ))}
                       </div>
                     </fieldset>
+
+                    {draft.kind === "letter" ? (
+                      <LetterBodyField
+                        value={draft.body}
+                        onChange={(body) => update({ body })}
+                        error={formErrors.fieldError("body")}
+                        disabled={fieldsDisabled}
+                        apiBase={SCHOOL_PARENT_LETTERS_BASE}
+                        required
+                        previewChildren={previewChildren}
+                        rows={8}
+                      />
+                    ) : (
+                      <Textarea
+                        label="Text"
+                        name="body"
+                        rows={8}
+                        value={draft.body}
+                        onChange={(event) =>
+                          update({ body: event.target.value })
+                        }
+                        error={formErrors.fieldError("body")}
+                        disabled={fieldsDisabled}
+                        maxLength={4000}
+                        required
+                      />
+                    )}
 
                     <p className="text-sm text-gray-600">
                       Die Eltern der Klasse bekommen den Brief in moto und eine

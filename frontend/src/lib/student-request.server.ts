@@ -5,6 +5,7 @@ import { bffError } from "~/lib/api-response-error.server";
 import type { StudentGuardianPayload } from "~/lib/guardian-helpers";
 import type { ArrivalScheduleFormEntry } from "~/lib/arrival-schedule-helpers";
 import type { BackendPickupScheduleRequest } from "~/lib/pickup-schedule-helpers";
+import type { StudentRequest } from "./contract/students.generated";
 import { prepareStudentForBackend } from "./student-wire";
 import type { StudentUpdate } from "./student-helpers";
 import type { ConsentPairInput } from "./student-privacy-consent.server";
@@ -41,7 +42,9 @@ export function rejectRetiredStudentContacts(body: object): void {
 }
 
 /** The backend body of a create; refuses a body without the required names. */
-export function buildStudentCreateRequest(body: StudentCreateBody) {
+export function buildStudentCreateRequest(
+  body: StudentCreateBody,
+): StudentRequest {
   rejectRetiredStudentContacts(body);
   const required = [
     {
@@ -82,5 +85,8 @@ export function buildStudentCreateRequest(body: StudentCreateBody) {
     ...(body.pickup_schedules?.length && {
       pickup_schedules: body.pickup_schedules,
     }),
+    // A child of the class without an OGS place (#4803); the backend refuses
+    // it unless the school keeps such children.
+    ...(body.without_care_place === true && { without_care_place: true }),
   };
 }

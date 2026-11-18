@@ -31,9 +31,9 @@ func newStudentAnswers() enrollmentOwner.StudentAnswers { return enrollmentCompo
 // search and the activity enrollments the note audience reads (ADR 0234),
 // and the caller's staff record and assignments.
 func mountSchoolSearch(tenant chi.Router, caller *owners.CallerRows, answers enrollmentOwner.StudentAnswers,
-	notes peopleOwner.StudentNoteSearch, activities activitycontract.ActivityService,
+	notes peopleOwner.StudentNoteSearch, activities activitycontract.ActivityService, today func() calendar.Date,
 ) error {
-	search, err := schoolSearchCompose.New(answers, schoolSearchNotes{notes: notes}, schoolSearchActivities{enrollments: studentActiveEnrollments{enrollments: activities}})
+	search, err := schoolSearchCompose.New(answers, schoolSearchNotes{notes: notes}, schoolSearchActivities{enrollments: studentActiveEnrollments{enrollments: activities}}, today)
 	if err != nil {
 		return err
 	}

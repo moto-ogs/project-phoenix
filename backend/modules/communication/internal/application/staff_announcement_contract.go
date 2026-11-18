@@ -160,6 +160,14 @@ type StaffService interface {
 	// ResendFailedEmails re-queues only the mails that ended up failed.
 	ResendFailedEmails(ctx context.Context, id int64) (int, error)
 
+	// ParentLetterCapability previews and prints the letters (#4813); its
+	// errors are already the public ones.
+	communication.ParentLetterCapability
+	// StudentParentRecordCapability reads a child's letters and
+	// declarations and a declaration's proof (#4814); its errors are already
+	// the public ones.
+	communication.StudentParentRecordCapability
+
 	// --- scheduled reminder (#3162) ---
 	// UpdateReminder moves, rewords or removes the scheduled reminder of a live
 	// announcement as long as it has not been sent.

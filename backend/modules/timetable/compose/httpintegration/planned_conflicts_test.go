@@ -342,6 +342,9 @@ func newConflictDetection(t *testing.T, db *bun.DB, repos owners.TimetableTestRe
 		Sessions:          presence.ActiveGroup,
 		Shifts:            fixtures.IntoConflictShifts(fixtures.FromWorkforceShiftRows(repos.StaffShift)),
 		Presence:          planningOnlyPresence{},
+		// No supervision is read (planningOnlyPresence), so the day of the
+		// active-staff check never decides here; it stays pinned anyway.
+		Now: func() time.Time { return time.Date(2026, time.March, 11, 10, 0, 0, 0, calendar.Berlin) },
 	}, nil)
 	require.NoError(t, err)
 	return detection

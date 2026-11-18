@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -37,8 +38,12 @@ func newTenantExporter(db transactionCompose.Database, sealed organizationtenanc
 		if err != nil {
 			return nil, err
 		}
+		objects, err := tenantExportObjects()
+		if err != nil {
+			return nil, err
+		}
 		fingerprints := organizationtenancy.ExportFingerprints{Bytes: securityruntime.Fingerprint, Reader: securityruntime.ReaderFingerprint}
-		return organizationCompose.NewTenantExporter(db.Pool(), fingerprints, sealed, projected, audit)
+		return organizationCompose.NewTenantExporter(db.Pool(), fingerprints, sealed, projected, objects, audit)
 	}
 	cipher, err := securityRuntimeCompose.NewBankDataCipher(viper.GetString("bank_data_keys"), viper.GetString("bank_data_legacy_keys"))
 	if err != nil {
@@ -55,11 +60,15 @@ func newTraegerTenantExporter(db transactionCompose.Database, sealed organizatio
 	if err != nil {
 		return nil, err
 	}
+	objects, err := tenantExportObjects()
+	if err != nil {
+		return nil, err
+	}
 	return organizationCompose.NewTraegerTenantExporter(db.Pool(), organizationtenancy.TenantExportDependencies{
 		Fingerprints: organizationtenancy.ExportFingerprints{Bytes: securityruntime.Fingerprint, Reader: securityruntime.ReaderFingerprint},
-		Sealed:       sealed, Projected: projected,
+		Sealed:       sealed, Projected: projected, Objects: objects,
 		SEPADebitFiles: traegerSEPADebitFiles{billing: billing},
-		Audit:          audit,
+		Audit:          audit, Now: time.Now,
 	})
 }
 

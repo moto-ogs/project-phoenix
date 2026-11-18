@@ -28,21 +28,15 @@ export function WizardStepper({
   const clampedCurrent = Math.max(0, Math.min(current, total - 1));
 
   return (
-    <div
-      className={`flex flex-col gap-3 ${className}`}
-      aria-label={`Schritt ${clampedCurrent + 1} von ${total}`}
-    >
-      <div className="flex items-center gap-2">
+    <div className={`flex flex-col gap-3 ${className}`}>
+      {/* The bars draw the progress; the text below says it, with the step
+          names and aria-current (#7112). A div without a role carries no
+          name, and an empty bar no current step. */}
+      <div className="flex items-center gap-2" aria-hidden="true">
         {steps.map((label, index) => {
-          const isCompleted = index < clampedCurrent;
-          const isCurrent = index === clampedCurrent;
-          const isActive = isCompleted || isCurrent;
+          const isActive = index <= clampedCurrent;
           return (
-            <div
-              key={label}
-              className="flex flex-1 items-center"
-              aria-current={isCurrent ? "step" : undefined}
-            >
+            <div key={label} className="flex flex-1 items-center">
               <div
                 className="h-2 flex-1 rounded-full transition-colors duration-300"
                 style={{ backgroundColor: isActive ? ACTIVE : INACTIVE }}
@@ -60,6 +54,7 @@ export function WizardStepper({
           {steps.map((label, index) => (
             <li
               key={label}
+              aria-current={index === clampedCurrent ? "step" : undefined}
               className={`min-w-0 flex-1 text-pretty ${index === clampedCurrent ? "font-semibold" : "text-gray-500"}`}
               style={
                 index === clampedCurrent ? { color: ACTIVE_TEXT } : undefined

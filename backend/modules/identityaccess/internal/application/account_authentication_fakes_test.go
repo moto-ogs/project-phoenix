@@ -175,6 +175,11 @@ type fakeStore struct {
 	nextSessionID  int64
 	operatorTokens map[int64]domain.OperatorSession
 
+	// pushLiveness answers LivePushSubscriptionLinks as is; pushLivenessErr
+	// fails it.
+	pushLiveness    map[int64]bool
+	pushLivenessErr error
+
 	// error injection
 	findAccountErr     error
 	findAccountByEmail error
@@ -324,6 +329,19 @@ func (s *fakeStore) ListActiveTenantIDs(_ context.Context, accountID int64) ([]i
 		}
 	}
 	return ids, stats(), nil
+}
+
+// AdmittedTenantMapping admits every active mapping: the fakes know no
+// windows (ADR 0251).
+func (s *fakeStore) AdmittedTenantMapping(ctx context.Context, accountID, tenantID int64, lock bool) (bool, domain.OperationStats, error) {
+	if lock {
+		return s.LockActiveTenantMappingShared(ctx, accountID, tenantID)
+	}
+	return s.HasActiveAccountTenant(ctx, accountID, tenantID)
+}
+
+func (s *fakeStore) ListAdmittedTenantIDs(ctx context.Context, accountID int64) ([]int64, domain.OperationStats, error) {
+	return s.ListActiveTenantIDs(ctx, accountID)
 }
 
 func (s *fakeStore) LockActiveTenantMappingShared(ctx context.Context, accountID, tenantID int64) (bool, domain.OperationStats, error) {
@@ -563,6 +581,15 @@ func (s *fakeStore) HasLiveAccountSessionsCreatedAfter(_ context.Context, accoun
 		}
 	}
 	return false, stats(), nil
+}
+
+func (s *fakeStore) LivePushSubscriptionLinks(context.Context, []domain.PushSubscriptionLink, time.Time) (map[int64]bool, domain.OperationStats, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.pushLivenessErr != nil {
+		return nil, stats(), s.pushLivenessErr
+	}
+	return s.pushLiveness, stats(), nil
 }
 
 func (s *fakeStore) InsertAccountSession(_ context.Context, session domain.AccountSession) (domain.AccountSession, domain.OperationStats, error) {
@@ -1051,6 +1078,7 @@ func (a *fakeAudit) eventsOfType(eventType string) []domain.AuthEvent {
 type fakePush struct {
 	mu    sync.Mutex
 	calls []string
+	links []identityaccess.PushSubscriptionLink
 }
 
 func (p *fakePush) record(call string) {
@@ -1079,8 +1107,13 @@ func (p *fakePush) DeleteUnboundByAccount(_ context.Context, accountID, tenantID
 	p.record(fmt.Sprintf("unbound:%s:%d:%d", portal, accountID, tenantID))
 	return nil
 }
-func (p *fakePush) DeleteOrphaned(context.Context) error {
-	p.record("orphaned")
+func (p *fakePush) ListLinks(context.Context) ([]identityaccess.PushSubscriptionLink, error) {
+	return p.links, nil
+}
+func (p *fakePush) DeleteLinks(_ context.Context, links []identityaccess.PushSubscriptionLink) error {
+	for _, link := range links {
+		p.record(fmt.Sprintf("link:%d", link.SubscriptionID))
+	}
 	return nil
 }
 
@@ -1104,7 +1137,7 @@ func newAuthFixture(t *testing.T) *authFixture {
 	t.Helper()
 	store := newFakeStore()
 	runtime := &fakeRuntime{}
-	sessions := New(store, store, store, fakeTransaction{}, runtime.TenantID, func(ports.Observation) {})
+	sessions := New(store, store, store, fakeTransaction{}, runtime.TenantID, func(ports.Observation) {}, time.Now)
 	schools := newFakeSchools()
 	persons := newFakePersons(runtime)
 	mfa := &fakeMFA{}

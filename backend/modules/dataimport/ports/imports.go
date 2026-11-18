@@ -78,6 +78,8 @@ type StaffImportDeps struct {
 	// it exclusively while it locks the school's staff rows. Nil takes none.
 	LockStaffPersonMerge func(context.Context) error
 	Records              StaffRecords
+	// Now is the instant a birthday must not lie after; required.
+	Now func() time.Time
 }
 
 // OpeningBalanceImportDeps contains the request-independent dependencies for
@@ -99,6 +101,11 @@ type OpeningBalanceImportDeps struct {
 // Audit makes RecordAuditInTransaction fail. Transactions is required for
 // ImportBatches, which owns the transaction lifecycle.
 type ImportRuntime struct {
+	// BeforeBatchCommit completes written rows in the batch's tenant transaction,
+	// before its checkpoint. A failure rolls back the batch. The account is the
+	// importer; previews and batches without writes do not call it.
+	BeforeBatchCommit func(context.Context, int64) error
+
 	Transactions importModels.Transactions
 	Audit        AuditCommand
 	Observe      func(importModels.ImportObservation)
@@ -120,6 +127,9 @@ type ImportRuntime struct {
 	// tenant.IsSavepointControlFailure): the transaction can no longer be
 	// trusted, so the upload ends without retry and without replay.
 	SavepointLost func(error) bool
+	// Now stamps the run, its batches and its row messages; required.
+	// Durations are measured on the monotonic clock regardless.
+	Now func() time.Time
 }
 
 // BatchStatement runs the bundled statements of a batch command as the
@@ -216,8 +226,11 @@ type StudentImportDeps struct {
 	// EnrollmentBatches is the People Directory's enrollment batch slice
 	// (#5552 step 7); without it each child is created in place.
 	EnrollmentBatches EnrollmentBatches
+	// Now stamps consents and their history and is the instant a birthday
+	// or a consent date must not lie after; required.
+	Now func() time.Time
 	// Today is the calendar day a new child's status is taken against;
-	// nil is calendar.TodayDate. Tests set a clock that crosses midnight.
+	// nil is the Berlin day of Now. Tests set a clock that crosses midnight.
 	Today func() calendar.Date
 	// FindRFIDCard resolves the optional RFID column to a card of this school
 	// (#2600). nil disables RFID import (the column is then rejected).
@@ -264,3 +277,28 @@ type RelationshipResolver interface {
 
 // GuardianPortDecorator binds a recording or failing owner port in tests.
 type GuardianPortDecorator func(GuardianDirectory) GuardianDirectory
+
+// ClassListEntryRemoval is School Membership's batch delete of class-list
+// entries (#4803); the conversion appends the change trail itself.
+type ClassListEntryRemoval interface {
+	RemoveClassListEntries(context.Context, []ClassListEntryJoin) error
+}
+
+// ClassListMarkTransfer is Student Presence's move of the morning marks of
+// class-list entries onto the students they became (#4803).
+type ClassListMarkTransfer interface {
+	TransferClassListEntryMarks(context.Context, []ClassListEntryMarkMove) error
+}
+
+// ClassListConversionDeps are the owner commands the conversion of a
+// school's class-list entries into children without an OGS place runs
+// through (#4803, ADR 0282). Students is the student import whose batch
+// creation the conversion reuses.
+type ClassListConversionDeps struct {
+	Membership ClassListMembership
+	Removal    ClassListEntryRemoval
+	Marks      ClassListMarkTransfer
+	Persons    PersonDirectory
+	Students   StudentDirectory
+	Audit      AuditCommand
+}

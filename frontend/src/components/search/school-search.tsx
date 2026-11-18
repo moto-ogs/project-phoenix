@@ -1,6 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -13,21 +14,15 @@ import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Skeleton } from "~/components/ui/skeleton";
-import {
-  STAFF_NAV_ITEMS,
-  staffNavItemPermitted,
-  staffNavSettingOn,
-  useStaffNavSettings,
-  type StaffNavItem,
-} from "~/components/dashboard/staff-nav-items";
-import { hasRole, isCaregiver } from "~/lib/auth-utils";
+import { leadsSchool } from "~/lib/auth-utils";
 import { childrenConcept } from "~/lib/concepts/children";
 import { groupsConcept } from "~/lib/concepts/groups";
 import { parentsConcept } from "~/lib/concepts/parents";
 import { roomsConcept } from "~/lib/concepts/rooms";
 import { staffConcept } from "~/lib/concepts/staff";
 import { getRelationshipTypeLabel } from "~/lib/guardian-helpers";
-import { useModuleNavigation } from "~/lib/hooks/use-module-navigation";
+import type { HelpUrlContext } from "~/lib/help-topics";
+import { createLogger } from "~/lib/logger";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import {
   answerQuestionLabel,
@@ -40,13 +35,33 @@ import {
   type SchoolSearchResult,
   type SchoolSearchScope,
 } from "~/lib/school-search";
-import { foldForSearch } from "~/lib/search-fold";
-import { useOpenCareGroupMode, usePresenceMode } from "~/lib/tenant-context";
+import {
+  useNFCEnabled,
+  useOpenCareGroupMode,
+  usePresenceMode,
+} from "~/lib/tenant-context";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { useApiLoadError } from "~/contexts/ToastContext";
 
+import {
+  matchEntries,
+  useSearchablePages,
+  useSearchableSettings,
+  type SearchEntry,
+} from "./school-search-catalog";
+import { helpEntriesOf, loadHelpIndex } from "./school-search-help";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
+import { useDebounce } from "~/lib/use-debounce";
+
+const logger = createLogger({ component: "SchoolSearch" });
+
 /** Waiting time after the last key before the search asks the server. */
 const SEARCH_DEBOUNCE_MS = 200;
+
+/** So viele Einstellungen und Hilfethemen zeigt die Suche höchstens. */
+const SETTINGS_HIT_LIMIT = 5;
+const HELP_HIT_LIMIT = 5;
 
 const NO_SCOPE: SchoolSearchScope = {
   children: false,
@@ -66,12 +81,6 @@ const EMPTY_RESULT: SchoolSearchResult = {
   scope: NO_SCOPE,
 };
 
-type SearchState =
-  | { readonly kind: "idle" }
-  | { readonly kind: "loading"; readonly term: string }
-  | { readonly kind: "ready"; readonly term: string }
-  | { readonly kind: "error"; readonly term: string };
-
 /**
  * Runs the search for the typed text, debounced. The last answer stays
  * visible while the next one loads, so the list never flashes empty. An
@@ -83,9 +92,6 @@ function useSchoolSearch(
   enabled: boolean,
   onScope?: (scope: SchoolSearchScope) => void,
 ) {
-  const [state, setState] = useState<SearchState>({ kind: "idle" });
-  const [lastResult, setLastResult] = useState<SchoolSearchResult | null>(null);
-  const [attempt, setAttempt] = useState(0);
   const {
     error,
     show: showLoadError,
@@ -93,76 +99,81 @@ function useSchoolSearch(
   } = useApiLoadError();
   const term = query.trim();
   const searchable = enabled && term.length >= SCHOOL_SEARCH_MIN_LENGTH;
+  const debounced = useDebounce(term, SEARCH_DEBOUNCE_MS);
+  // The text the person stopped typing at; only that one is asked for.
+  const asked = searchable && debounced === term;
+  const read = useSWRAuth(
+    asked ? tenantListKeys.schoolSearch(debounced) : null,
+    () => searchSchool(debounced),
+    { keepPreviousData: true },
+  );
+  const failure = asked ? read.error : undefined;
+  const answer = searchable && failure === undefined ? read.data : undefined;
+  const retry = read.mutate;
 
   useEffect(() => {
-    clearLoadError();
-    if (!searchable) {
-      setState((current) =>
-        current.kind === "idle" ? current : { kind: "idle" },
-      );
-      setLastResult(null);
+    if (answer) onScope?.(answer.scope);
+  }, [answer, onScope]);
+
+  useEffect(() => {
+    if (failure === undefined) {
+      clearLoadError();
       return;
     }
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      setState({ kind: "loading", term });
-      searchSchool(term, controller.signal)
-        .then((result) => {
-          if (controller.signal.aborted) return;
-          setState({ kind: "ready", term });
-          setLastResult(result);
-          onScope?.(result.scope);
-        })
-        .catch((failure: unknown) => {
-          // An aborted request was replaced by a newer text; it has no
-          // result to show.
-          if (controller.signal.aborted) return;
-          setState({ kind: "error", term });
-          setLastResult(null);
-          void showLoadError(failure, {
-            object: "die Suche",
-            retry: () => setAttempt((count) => count + 1),
-          });
-        });
-    }, SEARCH_DEBOUNCE_MS);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [searchable, term, attempt, showLoadError, clearLoadError, onScope]);
+    void showLoadError(failure, {
+      object: "die Suche",
+      retry: () => void retry(),
+    });
+  }, [failure, retry, showLoadError, clearLoadError]);
 
-  const settled =
-    (state.kind === "ready" || state.kind === "error") && state.term === term;
+  const settled = asked && (failure !== undefined || !read.isLoading);
   return {
-    result: searchable ? lastResult : null,
+    result: answer ?? null,
     busy: searchable && !settled,
     error: searchable ? error : null,
   };
 }
 
-/** The flat pages of the staff navigation this person may open. */
-function useSearchablePages(): readonly StaffNavItem[] {
+/**
+ * Die Hilfethemen dieser Person, sobald die Suche offen ist, aus dem kleinen
+ * Hilfe-Index (`/help/search-index`). Bis er da ist und wenn er nicht lädt,
+ * bleibt die Gruppe „Hilfe“ leer und alles andere findet die Suche weiter.
+ */
+function useSearchableHelp(enabled: boolean): readonly SearchEntry[] {
   const { data: session } = useSession();
-  const settings = useStaffNavSettings();
-  const moduleNav = useModuleNavigation();
+  const pathname = usePathname();
+  const nfcEnabled = useNFCEnabled();
+  const presenceMode = usePresenceMode();
   const openCareGroupMode = useOpenCareGroupMode();
-  const isBinaryMode = usePresenceMode() === "binary";
+  const role = leadsSchool(session) ? "lead" : "caregiver";
+  const { data: index } = useSWRAuth(
+    enabled ? tenantListKeys.helpSearchIndex() : null,
+    loadHelpIndex,
+    {
+      // Ohne Hilfethemen sucht die Suche trotzdem; ein Hinweis darauf würde
+      // die übrigen Treffer nur verdecken.
+      onError: (error: unknown) => {
+        logger.warn("school_search_help_load_failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      },
+    },
+  );
+
   return useMemo(() => {
-    const viewer = {
-      session,
-      isAdmin: hasRole(session, "admin"),
-      isCaregiver: isCaregiver(session),
-      openCareGroupMode,
+    if (!index) return NO_HELP_ENTRIES;
+    const context: HelpUrlContext = {
+      role,
+      nfcEnabled,
+      presenceMode: presenceMode === "binary" ? "binary" : "detailed",
+      groupMode: openCareGroupMode ? "open_care" : "fixed_groups",
+      returnTo: pathname,
     };
-    return STAFF_NAV_ITEMS.filter(
-      (item) =>
-        !(isBinaryMode && item.binaryHidden) &&
-        moduleNav.page(item.href) === "open" &&
-        staffNavSettingOn(item, settings) &&
-        staffNavItemPermitted(item, viewer),
-    );
-  }, [session, settings, moduleNav, openCareGroupMode, isBinaryMode]);
+    return helpEntriesOf(index, context);
+  }, [index, role, nfcEnabled, presenceMode, openCareGroupMode, pathname]);
 }
+
+const NO_HELP_ENTRIES: readonly SearchEntry[] = [];
 
 /** Joins names as German prose: "A", "A und B", "A, B und C". */
 function listInProse(names: readonly string[]): string {
@@ -192,6 +203,8 @@ function scopeHint(scope: SchoolSearchScope | null): string {
     scope.rooms && "Räume",
     scope.groups && "Gruppen",
     "Seiten",
+    "Einstellungen",
+    "Hilfe",
   ].filter((name): name is string => Boolean(name));
   return listInProse(kinds);
 }
@@ -267,16 +280,38 @@ function contactItems(
   });
 }
 
+function entryItems(
+  entries: readonly SearchEntry[],
+  query: string,
+  open: (href: string, newTab?: boolean) => void,
+): CommandPaletteItem[] {
+  return entries.map((entry) => ({
+    id: entry.id,
+    label: entry.context ? `${entry.label}, ${entry.context}` : entry.label,
+    title: <CommandPaletteHighlight text={entry.label} query={query} />,
+    subtitle: entry.context ? (
+      <CommandPaletteHighlight text={entry.context} query={query} />
+    ) : undefined,
+    leading: <ConceptIconTile concept={entry.concept} size="xs" />,
+    onSelect: () => open(entry.href, entry.newTab),
+  }));
+}
+
+interface LocalTargets {
+  readonly pages: readonly SearchEntry[];
+  readonly settings: readonly SearchEntry[];
+  readonly help: readonly SearchEntry[];
+}
+
 function buildGroups(
   result: SchoolSearchResult,
-  pages: readonly StaffNavItem[],
+  targets: LocalTargets,
   query: string,
   open: (href: string, newTab?: boolean) => void,
 ): CommandPaletteGroup[] {
-  const folded = foldForSearch(query.trim());
-  const matchingPages = folded
-    ? pages.filter((page) => foldForSearch(page.label).includes(folded))
-    : pages;
+  // Einstellungen und Hilfe erst ab der Länge, ab der auch der Server sucht:
+  // ein Buchstabe träfe fast jedes Thema.
+  const searching = query.length >= SCHOOL_SEARCH_MIN_LENGTH;
   return [
     {
       id: "children",
@@ -343,13 +378,29 @@ function buildGroups(
     {
       id: "pages",
       title: "Seiten",
-      items: matchingPages.map((page) => ({
-        id: `page-${page.href}`,
-        label: page.label,
-        title: <CommandPaletteHighlight text={page.label} query={query} />,
-        leading: <ConceptIconTile concept={page.concept} size="xs" />,
-        onSelect: () => open(page.href, page.newTab),
-      })),
+      items: entryItems(matchEntries(targets.pages, query), query, open),
+    },
+    {
+      id: "settings",
+      title: "Einstellungen",
+      items: searching
+        ? entryItems(
+            matchEntries(targets.settings, query, SETTINGS_HIT_LIMIT),
+            query,
+            open,
+          )
+        : [],
+    },
+    {
+      id: "help",
+      title: "Hilfe",
+      items: searching
+        ? entryItems(
+            matchEntries(targets.help, query, HELP_HIT_LIMIT),
+            query,
+            open,
+          )
+        : [],
     },
   ];
 }
@@ -385,7 +436,8 @@ interface SchoolSearchDialogProps {
 
 /**
  * The search over the school (#6954): children, contact persons, staff,
- * rooms, groups and the pages of the app, in one dialog. What a person may
+ * rooms, groups, the pages of the app with their sub-pages, the settings and
+ * the help, in one dialog. What a person may
  * find is decided by the server; every hint here follows the scope the
  * server states with its answer.
  */
@@ -397,6 +449,8 @@ export function SchoolSearchDialog({
 }: Readonly<SchoolSearchDialogProps>) {
   const router = useTenantRouter();
   const pages = useSearchablePages();
+  const settings = useSearchableSettings(isOpen);
+  const help = useSearchableHelp(isOpen);
   const [query, setQuery] = useState("");
   const { result, busy, error } = useSchoolSearch(query, isOpen, onScope);
   const scope = result?.scope ?? knownScope;
@@ -423,8 +477,16 @@ export function SchoolSearchDialog({
   // A failed search shows its error alone: matching pages beside it would
   // hide it.
   const groups = useMemo(
-    () => (error ? [] : buildGroups(result ?? EMPTY_RESULT, pages, term, open)),
-    [error, result, pages, term, open],
+    () =>
+      error
+        ? []
+        : buildGroups(
+            result ?? EMPTY_RESULT,
+            { pages, settings, help },
+            term,
+            open,
+          ),
+    [error, result, pages, settings, help, term, open],
   );
   const hits = countHits(groups);
   const searching = term.length >= SCHOOL_SEARCH_MIN_LENGTH;
@@ -446,7 +508,7 @@ export function SchoolSearchDialog({
         description={
           isPhone && scope && !scope.contacts
             ? "Telefonnummern finden nur Konten, die Kontaktdaten sehen dürfen."
-            : `Suchen Sie nach ${scope?.contacts ? "Name, Klasse, Gruppe, Notiz, Telefonnummer oder E-Mail" : "Name, Klasse, Gruppe oder Seite"}.`
+            : `Suchen Sie nach ${scope?.contacts ? "Name, Klasse, Gruppe, Notiz, Telefonnummer, E-Mail, Seite oder Einstellung" : "Name, Klasse, Gruppe, Seite oder Einstellung"}.`
         }
       />
     );
@@ -465,8 +527,8 @@ export function SchoolSearchDialog({
       onQueryChange={setQuery}
       placeholder={
         scope?.contacts
-          ? "Name, Telefonnummer, Klasse …"
-          : "Name, Klasse, Seite …"
+          ? "Name, Telefonnummer, Seite, Einstellung …"
+          : "Name, Klasse, Seite, Einstellung …"
       }
       groups={groups}
       busy={busy}

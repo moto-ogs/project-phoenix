@@ -30,7 +30,7 @@ func init() {
 			StaffAbsences: capabilities.StaffAbsences, WorkTimeMonth: capabilities.WorkTimeMonth,
 			BalanceAdjustments: capabilities.BalanceAdjustments, MonthClosing: capabilities.MonthClosing,
 			Overview: capabilities.Overview, AuditLog: capabilities.AuditLog, TimeExport: capabilities.TimeExport,
-			AbsenceWrites: svc.SickReports,
+			AbsenceWrites: svc.SickReports, Today: capabilities.Today,
 		}
 	}
 	workforcetest.ComposeCapability = func(t *testing.T, db *bun.DB, now func() time.Time) workforce.Capability {

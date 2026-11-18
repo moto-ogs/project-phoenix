@@ -68,9 +68,7 @@ var authRules = []common.ErrorRule{
 	{Target: identityaccess.ErrMFALocked, Render: operatorRejection(http.StatusTooManyRequests, common.CodeIdentityMfaBlocked, "MFA account temporarily locked")},
 	{Target: identityaccess.ErrMFAChallengeTokenInvalid, Render: operatorRejection(http.StatusUnauthorized, common.CodeIdentityMfaCodeInvalid, "Invalid email or password")},
 	{Target: identityaccess.ErrMFACodeInvalid, Render: operatorRejection(http.StatusUnauthorized, common.CodeIdentityMfaCodeInvalid, "Invalid email or password")},
-	{Target: identityaccess.ErrMFAStatusUnavailable, Render: func(error) render.Renderer {
-		return common.OperatorServiceUnavailable("MFA status temporarily unavailable, please retry")
-	}},
+	{Target: identityaccess.ErrMFAStatusUnavailable, Render: func(error) render.Renderer { return mfaStatusUnavailable() }},
 }
 
 // AuthErrorRenderer answers an operator sign-in outcome; everything the

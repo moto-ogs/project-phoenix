@@ -47,6 +47,7 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { substitutionService } from "~/lib/substitution-api";
 import { timetableService } from "~/lib/timetable-api";
 import { getGermanWeekdayShort } from "~/lib/timetable-helpers";
@@ -180,7 +181,7 @@ export function BulkSubstitutionModal({
   // bekäme sie fremde Planänderungen nie mit.
   const swrKey =
     isOpen && absentStaffId !== "" && rangeValid
-      ? `timetable-sammel-vertretung-${fromISO}-${toISO}`
+      ? tenantDailyKeys.bulkSubstitutionRange(fromISO, toISO)
       : null;
   const {
     data: rangeData,

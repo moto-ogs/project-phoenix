@@ -40,14 +40,23 @@ func (f *fakeGuardianAccess) FilterAccountsWithStudentAccess(_ context.Context, 
 // this file because the shared RecordingBroadcaster lives in package test, which
 // an internal test of this package cannot reach without an import cycle.
 type recordingGuardianBroadcaster struct {
-	guardians []int64
-	staff     []int64
-	schools   []int64
-	err       error
+	guardians      []int64
+	guardianEvents []realtime.Event
+	staff          []int64
+	schools        []int64
+	err            error
+	guardianErrors map[int64]error
+	feedErr        error
+	staffEvents    []realtime.Event
+	schoolEvents   []realtime.Event
 }
 
-func (b *recordingGuardianBroadcaster) BroadcastToGuardian(_, guardianAccountID int64, _ realtime.Event) error {
+func (b *recordingGuardianBroadcaster) BroadcastToGuardian(_, guardianAccountID int64, event realtime.Event) error {
 	b.guardians = append(b.guardians, guardianAccountID)
+	b.guardianEvents = append(b.guardianEvents, event)
+	if err, ok := b.guardianErrors[guardianAccountID]; ok {
+		return err
+	}
 	return b.err
 }
 
@@ -69,12 +78,20 @@ func (b *recordingGuardianBroadcaster) BroadcastLeadershipParentMessage(int64, i
 	return nil
 }
 
-func (b *recordingGuardianBroadcaster) BroadcastToStaffAccounts(_ int64, accountIDs []int64, _ realtime.Event) error {
+func (b *recordingGuardianBroadcaster) BroadcastToStaffAccounts(_ int64, accountIDs []int64, event realtime.Event) error {
 	b.staff = append(b.staff, accountIDs...)
+	b.staffEvents = append(b.staffEvents, event)
+	if event.Type == realtime.EventNotificationFeedChanged {
+		return b.feedErr
+	}
 	return nil
 }
-func (b *recordingGuardianBroadcaster) BroadcastToSchoolAccounts(_ int64, accountIDs []int64, _ realtime.Event) error {
+func (b *recordingGuardianBroadcaster) BroadcastToSchoolAccounts(_ int64, accountIDs []int64, event realtime.Event) error {
 	b.schools = append(b.schools, accountIDs...)
+	b.schoolEvents = append(b.schoolEvents, event)
+	if event.Type == realtime.EventNotificationFeedChanged {
+		return b.feedErr
+	}
 	return nil
 }
 
@@ -211,4 +228,77 @@ func TestSSESchoolPortalFanOutSkipsAnUnbookedModule(t *testing.T) {
 
 	assert.Equal(t, []int64{7}, broadcaster.staff)
 	assert.Empty(t, broadcaster.schools, "the school portal must not receive events after its module is cancelled")
+}
+
+func TestSSEStaffNotificationSurvivesFeedInvalidationFailure(t *testing.T) {
+	t.Parallel()
+
+	broadcaster := &recordingGuardianBroadcaster{feedErr: errors.New("feed invalidation failed")}
+	channel := newMockSSEChannel(t, broadcaster)
+	event := Event{
+		Type:        TypeInstanceCancelled,
+		Title:       "Termin abgesagt",
+		Body:        "Ein Termin fällt aus.",
+		DeepLink:    "/instances/1",
+		Priority:    PriorityNormal,
+		feedChanged: []int64{7},
+		Audience: Audience{
+			TenantID:        41,
+			Scope:           ScopeStaff,
+			StaffAccountIDs: []int64{7},
+		},
+	}
+
+	require.NoError(t, channel.Deliver(context.Background(), event))
+	require.Len(t, broadcaster.staffEvents, 2)
+	require.Len(t, broadcaster.schoolEvents, 2)
+	assert.Equal(t, []realtime.EventType{realtime.EventNotificationFeedChanged, realtime.EventNotification}, []realtime.EventType{
+		broadcaster.staffEvents[0].Type, broadcaster.staffEvents[1].Type,
+	})
+	assert.Equal(t, []realtime.EventType{realtime.EventNotificationFeedChanged, realtime.EventNotification}, []realtime.EventType{
+		broadcaster.schoolEvents[0].Type, broadcaster.schoolEvents[1].Type,
+	})
+}
+
+func TestSSEGuardianNotificationSurvivesFeedInvalidationFailure(t *testing.T) {
+	t.Parallel()
+
+	feedErr := errors.New("feed invalidation failed")
+	broadcaster := &recordingGuardianBroadcaster{guardianErrors: map[int64]error{77: feedErr}}
+	channel := newMockSSEChannel(t, broadcaster)
+	event := guardianEvent(nil)
+	event.feedChanged = []int64{77, 88}
+	event.Audience.GuardianAccountIDs = []int64{88}
+
+	require.NoError(t, channel.Deliver(context.Background(), event))
+	assert.Equal(t, []int64{77, 88, 88}, broadcaster.guardians)
+	require.Len(t, broadcaster.guardianEvents, 3)
+	assert.Equal(t, []realtime.EventType{
+		realtime.EventNotificationFeedChanged,
+		realtime.EventNotificationFeedChanged,
+		realtime.EventNotification,
+	}, []realtime.EventType{
+		broadcaster.guardianEvents[0].Type,
+		broadcaster.guardianEvents[1].Type,
+		broadcaster.guardianEvents[2].Type,
+	})
+}
+
+func TestSSEGuardianFanOutContinuesAfterBroadcastFailure(t *testing.T) {
+	t.Parallel()
+
+	firstErr := errors.New("first guardian unavailable")
+	secondErr := errors.New("second guardian unavailable")
+	broadcaster := &recordingGuardianBroadcaster{guardianErrors: map[int64]error{
+		77: firstErr,
+		88: secondErr,
+	}}
+	channel := newMockSSEChannel(t, broadcaster)
+
+	err := channel.Deliver(context.Background(), guardianEvent(nil))
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, firstErr)
+	assert.ErrorIs(t, err, secondErr)
+	assert.Equal(t, []int64{77, 88}, broadcaster.guardians)
 }

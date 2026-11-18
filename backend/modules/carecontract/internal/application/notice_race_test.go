@@ -104,7 +104,7 @@ func newNoticeFixture(t *testing.T, name string, now time.Time) noticeFixture {
 		}
 		return race.conclude(txCtx)
 	}))
-	store, post := postgres.NewStore(), &noticePost{next: testpkg.UniqueTestTenantID(t)}
+	store, post := postgres.NewStore(calendar.TodayDate), &noticePost{next: testpkg.UniqueTestTenantID(t)}
 	require.NoError(t, testpkg.WithinTraeger(race.ctx, race.org, func(ctx context.Context) error {
 		if _, err := race.db.NewUpdate().Table("care_contract.contracts").Set("student_id = ?", testpkg.UniqueTestTenantID(t)).
 			Where("id = ?", race.contract).Exec(ctx); err != nil {
@@ -164,7 +164,7 @@ func (f noticeFixture) versionsInForce(t *testing.T, from, to calendar.Date) []c
 	var periods []carecontract.VersionPeriod
 	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(txCtx context.Context) error {
 		var err error
-		periods, err = NewVersions(postgres.NewStore()).VersionsInForce(txCtx, f.org, from, to, f.contract)
+		periods, err = NewVersions(postgres.NewStore(calendar.TodayDate)).VersionsInForce(txCtx, f.org, from, to, f.contract)
 		return err
 	}))
 	return periods
@@ -234,7 +234,7 @@ func TestTerminationEndsTheVersionsInForceOnTheNoticeDate(t *testing.T) {
 	var listed []carecontract.Version
 	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(txCtx context.Context) error {
 		var err error
-		listed, err = postgres.NewStore().Versions(txCtx, f.org, f.contract)
+		listed, err = postgres.NewStore(calendar.TodayDate).Versions(txCtx, f.org, f.contract)
 		return err
 	}))
 	require.Len(t, listed, 1)
@@ -291,7 +291,7 @@ func TestWithdrawalOnlyWithinThePeriod(t *testing.T) {
 func TestDeclarationNeedsAnActiveContractAndAValidDay(t *testing.T) {
 	t.Parallel()
 	draft := newRaceFixture(t, "Träger Kündigung Entwurf")
-	store := postgres.NewStore()
+	store := postgres.NewStore(calendar.TodayDate)
 	notices := NewNotices(store, store, NoticePorts{Holidays: schoolHolidays{}, Templates: noticeTemplates{}, Post: &noticePost{}}, Clock{Now: func() time.Time { return noticeToday }},
 		draft.contracts)
 	err := testpkg.WithinTraeger(draft.ctx, draft.org, func(txCtx context.Context) error {
@@ -329,7 +329,7 @@ func TestDelayedConclusionStartsWithdrawalAtNoticeProvision(t *testing.T) {
 	var outboxID int64
 	require.NoError(t, f.db.NewRaw(`SELECT outbox_id FROM care_contract.contract_mailings WHERE contract_id = ?`, f.contract).Scan(f.ctx, &outboxID))
 	post := &noticePost{deliveries: []carecontract.NoticeDelivery{{OutboxID: outboxID, ProvidedAt: provided}}}
-	store := postgres.NewStore()
+	store := postgres.NewStore(calendar.TodayDate)
 	notices := NewNotices(store, store, NoticePorts{Holidays: schoolHolidays{}, Templates: noticeTemplates{}, Post: post}, Clock{Now: func() time.Time { return provided }}, f.contracts)
 	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(ctx context.Context) error {
 		state, err := notices.noticeState(ctx, f.org, f.contract)
@@ -483,7 +483,7 @@ func TestFailedMailAndCorrectedResendWaitForActualProvision(t *testing.T) {
 		require.Equal(t, []int64{f.contract}, result.Sent)
 		return nil
 	}))
-	store, post := postgres.NewStore(), &noticePost{}
+	store, post := postgres.NewStore(calendar.TodayDate), &noticePost{}
 	notices := NewNotices(store, store, NoticePorts{Holidays: schoolHolidays{}, Templates: noticeTemplates{}, Post: post}, Clock{Now: func() time.Time { return now }}, f.contracts)
 	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(ctx context.Context) error {
 		state, err := notices.noticeState(ctx, f.org, f.contract)

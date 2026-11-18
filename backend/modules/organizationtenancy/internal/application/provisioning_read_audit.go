@@ -31,6 +31,9 @@ func (p *Provisioning) RecordOperatorRead(ctx context.Context, access organizati
 	if access.AnnouncementID > 0 {
 		resourceID = &access.AnnouncementID
 	}
+	if access.TagScanID > 0 {
+		resourceID = &access.TagScanID
+	}
 	if resource == domain.AuditResourceSchool && access.SchoolID > 0 {
 		resourceID = &access.SchoolID
 	}
@@ -49,6 +52,7 @@ func operatorReadResource(view organizationtenancy.OperatorReadView) (string, er
 	switch view {
 	case organizationtenancy.ReadSchoolBookingAuthorityImpact, organizationtenancy.ReadSchools,
 		organizationtenancy.ReadSchool, organizationtenancy.ReadSchoolSummaries, organizationtenancy.ReadOrganizationSchools,
+		organizationtenancy.ReadSchoolRequiredDetails,
 		organizationtenancy.ReadSchoolSettingsSchema, organizationtenancy.ReadSchoolSettingReveal,
 		organizationtenancy.ReadDemoPresenceHistory:
 		resource = domain.AuditResourceSchool

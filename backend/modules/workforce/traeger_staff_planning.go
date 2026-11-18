@@ -15,8 +15,12 @@ import (
 // each school in its own tenant transaction and writes an access entry
 // there first (ADR 0084 section 7).
 
-// TraegerStaffViewPlanning is the access log view of the week plan.
-const TraegerStaffViewPlanning = "staff_planning"
+// The access log views of the week plan: the page and its download as PDF,
+// Excel or CSV (#4718).
+const (
+	TraegerStaffViewPlanning       = "staff_planning"
+	TraegerStaffViewPlanningExport = "staff_planning_export"
+)
 
 var (
 	// ErrTraegerPlanningSiteInvalid refuses a shift at a school that is no
@@ -107,7 +111,9 @@ type TraegerFutureShifts struct {
 
 // TraegerStaffPlanning is the Einsatzplanung of the Träger-Portal.
 type TraegerStaffPlanning interface {
-	PlanningWeek(ctx context.Context, actor TraegerStaffActor, weekStart calendar.Date) (TraegerPlanningWeek, error)
+	// PlanningWeek shows one week; view names the access entry, the page or
+	// its export.
+	PlanningWeek(ctx context.Context, actor TraegerStaffActor, weekStart calendar.Date, view string) (TraegerPlanningWeek, error)
 	PlanShift(ctx context.Context, actor TraegerStaffActor, input TraegerPlanShift) (TraegerPlanningShift, error)
 	ChangeShift(ctx context.Context, actor TraegerStaffActor, shiftID int64, input TraegerPlanShift) (TraegerPlanningShift, error)
 	RemoveShift(ctx context.Context, actor TraegerStaffActor, recordID, schoolID, shiftID int64) error

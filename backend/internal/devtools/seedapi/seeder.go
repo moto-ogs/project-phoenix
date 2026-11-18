@@ -68,6 +68,16 @@ type SeedOptions struct {
 	// SaveVisitor records the visitor accounts as soon as the seed creates
 	// them, so a later failed step can still erase their copied data.
 	SaveVisitor func(context.Context, int64, int64) error
+	// OwnTraeger marks TraegerSlug as a Träger of this school alone (#6193,
+	// ADR 0271): two neighbour schools join it, the visitor joins its
+	// Träger-Büro, and a demo order's deferred seed links its staff records
+	// without the visitor's.
+	OwnTraeger bool
+	// SaveTraeger records the school's own Träger as soon as it exists, and
+	// SaveSchool every neighbour school, so the demo retires and erases them
+	// with the order even after a failed seed.
+	SaveTraeger func(context.Context, int64) error
+	SaveSchool  func(context.Context, int64) error
 	// DeferHistory leaves the deferred steps out of Seed: the school is usable
 	// without them, and SeedResult.Deferred runs them afterwards.
 	DeferHistory bool
@@ -218,6 +228,13 @@ func (s *Seeder) bootstrapTenant(ctx context.Context) (*bootstrapSeedState, erro
 	}
 	if err != nil {
 		return nil, wrapConflictError(err, "organization")
+	}
+	// An own Träger (ADR 0271) is recorded before anything else can fail, so
+	// the demo erases it even when the school never comes to be.
+	if s.options.SaveTraeger != nil {
+		if err := s.options.SaveTraeger(ctx, orgID); err != nil {
+			return nil, err
+		}
 	}
 	schoolID, tenantSlug, err := s.createSeedSchool(orgID, identity.schoolName, identity.schoolSlug, identity.schoolSlug)
 	if err != nil && s.options.ReplaceAbandoned && isConflictError(err) {
@@ -456,8 +473,10 @@ func (s *Seeder) createSeedSchool(organizationID int64, name, slug, subdomain st
 		"name":            name,
 		"slug":            slug,
 		"subdomain":       subdomain,
-		// Every school needs a contact address for replies from parents (#2872).
+		// Replies from parents go to this contact address (#2872).
 		"email": fmt.Sprintf("kontakt@%s.example.test", subdomain),
+		// Holidays and school vacations follow it; there is no default (#7174).
+		"federal_state": "DE-NW",
 	})
 	if err != nil {
 		return 0, "", fmt.Errorf("create school: %w", err)

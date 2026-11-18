@@ -42,7 +42,7 @@ type Store interface {
 	// one statement.
 	InsertStaffSchedules(ctx context.Context, rows []domain.StaffWorkSchedule) (domain.OperationStats, error)
 
-	CurrentStaffSchedule(context.Context, int64) ([]domain.StaffWorkSchedule, domain.OperationStats, error)
+	CurrentStaffSchedule(ctx context.Context, staffID int64, today string) ([]domain.StaffWorkSchedule, domain.OperationStats, error)
 	StaffScheduleOn(ctx context.Context, staffID int64, date string) ([]domain.StaffWorkSchedule, domain.OperationStats, error)
 	StaffSchedulesInRange(ctx context.Context, staffIDs []int64, from, to string) ([]domain.StaffWorkSchedule, domain.OperationStats, error)
 	StaffPlanningProfiles(ctx context.Context, staffIDs []int64, from, to string) ([]domain.StaffPlanningProfile, domain.OperationStats, error)
@@ -432,7 +432,7 @@ type TraegerStaffStore interface {
 	FindTraegerAbsenceType(ctx context.Context, organizationID, id int64, forUpdate bool) (domain.TraegerAbsenceType, error)
 	SaveTraegerAbsenceType(ctx context.Context, value domain.TraegerAbsenceType) (domain.TraegerAbsenceType, error)
 	TraegerAbsencePool(ctx context.Context, organizationID, recordID int64, typeIDs []int64, from, to string, lock bool) (map[int64]domain.AbsencePoolType, []domain.AbsencePoolUse, error)
-	SaveTraegerAbsenceAllowance(ctx context.Context, organizationID, accountID int64, input workforce.SetTraegerAbsenceAllowance, previous *float64) error
+	SaveTraegerAbsenceAllowance(ctx context.Context, organizationID, accountID int64, input workforce.SetTraegerAbsenceAllowance, previous *float64, now time.Time) error
 	SchoolAbsenceTypes(ctx context.Context) ([]domain.StaffAbsenceType, error)
 	SchoolAbsenceTypeInUse(ctx context.Context, schoolTypeID int64) (bool, error)
 	CarryTraegerAbsenceType(ctx context.Context, schoolTypeID int64, value domain.TraegerAbsenceType) error
@@ -442,6 +442,10 @@ type TraegerStaffStore interface {
 	SchoolFinancialRows(ctx context.Context, staffIDs []int64) ([]domain.StaffFinancialData, error)
 	DeleteSchoolFinancialRow(ctx context.Context, staffID int64) error
 	InsertSchoolFinancialRow(ctx context.Context, data domain.StaffFinancialData) error
+	// InsertSchoolHireData writes the master data row of an employment a
+	// hire just created at the school (#7206): entry day, last day, address
+	// and phone. The employment has no row yet.
+	InsertSchoolHireData(ctx context.Context, data domain.StaffMasterData) error
 
 	ReleaseOfTraeger(ctx context.Context, organizationID int64) (*domain.TraegerStaffRelease, error)
 	CountStaffRecords(ctx context.Context, organizationID int64) (int, error)
@@ -450,6 +454,35 @@ type TraegerStaffStore interface {
 
 	TraegerProofStore
 	TraegerStaffImportStore
+	TraegerStaffPoolStore
+}
+
+// TraegerStaffPoolStore is the persistence of the Vertretungspool (#4709):
+// the school methods join the tenant transaction of one school and read
+// through the functions that answer only that school, the Träger methods
+// the Träger transaction.
+type TraegerStaffPoolStore interface {
+	SchoolPoolAvailable(ctx context.Context) (bool, error)
+	SchoolPoolSpringers(ctx context.Context, from, to calendar.Date) ([]domain.PoolSpringer, error)
+	SchoolPoolBlocks(ctx context.Context, recordIDs []int64, from, to calendar.Date) ([]domain.PoolBlock, error)
+	SchoolPoolProofs(ctx context.Context, recordIDs []int64) ([]domain.PoolProof, error)
+	BlockPoolSpringer(ctx context.Context, block domain.PoolBlock, accountID int64) (int64, error)
+	LiftSchoolPoolBlock(ctx context.Context, blockID, accountID int64) error
+	// PoolSpringerIdentity locks the record of a Springer until the tenant
+	// transaction ends and then reads who it is at the school (#7173).
+	PoolSpringerIdentity(ctx context.Context, recordID int64) (domain.PoolSpringerIdentity, bool, error)
+	// LinkPoolEmployment links a live employment of the school as an
+	// Einsatzort the pool created and writes it into the record's trail.
+	LinkPoolEmployment(ctx context.Context, recordID, staffID, accountID int64) error
+	// RecordPoolResumed writes into the record's trail that a block resumed
+	// the pool's former employment at the school (#7197).
+	RecordPoolResumed(ctx context.Context, recordID, accountID int64) error
+
+	TraegerPoolSpringers(ctx context.Context, organizationID int64, from, to calendar.Date) ([]domain.PoolSpringer, error)
+	TraegerPoolBlocks(ctx context.Context, organizationID int64, recordIDs []int64, from, to calendar.Date) ([]domain.PoolBlock, error)
+	TraegerPoolBlockSites(ctx context.Context, organizationID int64, recordIDs []int64) ([]domain.PoolBlockSite, error)
+	TraegerPoolProofs(ctx context.Context, organizationID int64, recordIDs []int64) ([]domain.PoolProof, error)
+	LiftTraegerPoolBlock(ctx context.Context, organizationID, blockID, accountID int64) (domain.PoolBlockSite, error)
 }
 
 // TraegerStaffImportStore writes the records of a Personal-Import (#4724)
@@ -487,7 +520,7 @@ type TraegerProofStore interface {
 	DeleteProof(ctx context.Context, organizationID, recordID, typeID int64) error
 	ClaimProofReminder(ctx context.Context, organizationID, proofID int64, stage, expiresOn string) (bool, error)
 	ListProofTypeMappings(ctx context.Context, organizationID int64) ([]domain.TraegerProofTypeMapping, error)
-	SaveProofTypeMapping(ctx context.Context, organizationID, accountID int64, mapping domain.TraegerProofTypeMapping) error
+	SaveProofTypeMapping(ctx context.Context, organizationID, accountID int64, mapping domain.TraegerProofTypeMapping, now time.Time) error
 	SchoolProofKinds(ctx context.Context) ([]domain.QualificationType, error)
 	SchoolTraegerProofStatus(ctx context.Context) ([]domain.SchoolTraegerProofStatus, error)
 }
@@ -497,6 +530,10 @@ type TraegerProofStore interface {
 // tracking in that school's tenant transaction.
 type TraegerStaffContractStore interface {
 	ListStaffContracts(ctx context.Context, organizationID, recordID int64) ([]domain.TraegerStaffContract, error)
+	// ListMonthContracts returns every contract of the Träger that runs on
+	// a day of first..last, with the Einsatzorte whose Soll starts by last
+	// (#4712): the employments the Träger closes and pays that month.
+	ListMonthContracts(ctx context.Context, organizationID int64, first, last calendar.Date) ([]domain.TraegerStaffContract, error)
 	InsertStaffContract(ctx context.Context, contract domain.TraegerStaffContract, accountID int64) (int64, error)
 	UpdateStaffContractTerms(ctx context.Context, contract domain.TraegerStaffContract) error
 	ReplaceContractTargetsFrom(ctx context.Context, organizationID, contractID, accountID int64, validFrom calendar.Date, targets []domain.ContractTarget) error
@@ -507,9 +544,10 @@ type TraegerStaffContractStore interface {
 	SchoolClosedMonths(ctx context.Context, staffIDs []int64) (map[int64][]*domain.StaffMonthBalanceSnapshot, error)
 	SchoolOwnTargetOverrides(ctx context.Context, staffID int64, from calendar.Date) ([]domain.StaffTargetOverride, error)
 	SollKeptStaffIDs(ctx context.Context, staffIDs []int64, day calendar.Date) ([]int64, error)
-	KeepTemplateHistory(ctx context.Context, staffID int64, until calendar.Date) error
-	ReleaseMirror(ctx context.Context, staffID int64, from calendar.Date) error
-	MirrorStaffSchedule(ctx context.Context, staffID int64, from calendar.Date, rows []domain.StaffWorkSchedule) error
+	KeepTemplateHistory(ctx context.Context, staffID int64, until calendar.Date, now time.Time) error
+	ReleaseMirror(ctx context.Context, staffID int64, from calendar.Date, now time.Time) error
+	// MirrorStaffSchedule stamps its writes with now.
+	MirrorStaffSchedule(ctx context.Context, staffID int64, from calendar.Date, rows []domain.StaffWorkSchedule, now time.Time) error
 	MirrorStaffHolidayWeeks(ctx context.Context, staffID int64, from calendar.Date, overrides []domain.StaffTargetOverride) error
 }
 

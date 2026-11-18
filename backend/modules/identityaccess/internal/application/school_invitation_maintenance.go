@@ -19,14 +19,14 @@ type SchoolInvitationMaintenance struct {
 	logger *slog.Logger
 }
 
-func NewSchoolInvitationMaintenance(store ports.SchoolInvitationStore, logger *slog.Logger, run func(context.Context, func(context.Context) error) error) *SchoolInvitationMaintenance {
-	if store == nil {
-		panic("identity access application: school invitation maintenance requires its store")
+func NewSchoolInvitationMaintenance(store ports.SchoolInvitationStore, logger *slog.Logger, run func(context.Context, func(context.Context) error) error, now func() time.Time) *SchoolInvitationMaintenance {
+	if store == nil || now == nil {
+		panic("identity access application: school invitation maintenance requires its store and clock")
 	}
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &SchoolInvitationMaintenance{store: store, now: time.Now, logger: logger, run: run}
+	return &SchoolInvitationMaintenance{store: store, now: now, logger: logger, run: run}
 }
 
 // RevokeTenantInvitations spends every pending invitation of the school, so
@@ -65,12 +65,13 @@ func (m *SchoolInvitationMaintenance) DeleteExpiredSchoolInvitations(ctx context
 }
 
 func (m *SchoolInvitationMaintenance) inUnitCleanupExpiredInvitations(ctx context.Context) (int, error) {
-	now := m.now()
-	deleted, _, err := m.store.DeleteExpiredSchoolInvitations(ctx, now)
+	// School invitations expire on the database clock (ADR 0285, Nachtrag),
+	// Träger invitations on the owner's.
+	deleted, _, err := m.store.DeleteExpiredSchoolInvitations(ctx)
 	if err != nil {
 		return 0, failed("cleanup invitations", err)
 	}
-	traeger, _, err := m.store.DeleteExpiredTraegerInvitations(ctx, now)
+	traeger, _, err := m.store.DeleteExpiredTraegerInvitations(ctx, m.now())
 	if err != nil {
 		return 0, failed("cleanup Träger invitations", err)
 	}

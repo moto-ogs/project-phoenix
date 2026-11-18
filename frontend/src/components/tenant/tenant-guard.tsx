@@ -26,6 +26,7 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
 import { isTenantSessionEnding } from "~/lib/tenant-session-end";
 import { Loading } from "~/components/ui/loading";
+import { SCHOOL_SIGN_IN_LABEL, schoolSignInTooltip } from "./school-sign-in";
 
 const logger = createLogger({ component: "TenantGuard" });
 
@@ -262,6 +263,7 @@ function GuardedTenant({
     })();
   }, [setRefusal]);
 
+  // oxlint-disable-next-line swr/no-effect-load -- session guard: subscribes to tenant mismatch refusals and redirects; timing-sensitive, no resource read
   useEffect(
     () =>
       onSessionTenantMismatch((code) => {
@@ -321,6 +323,7 @@ function GuardedTenant({
   // stripped token/roles because refresh failed. Do not render tenant UI in
   // that limbo state; it makes real admins look like caregivers and produces
   // confusing forbidden screens.
+  // oxlint-disable-next-line swr/no-effect-load -- session guard: signs an expired session out and clears the cache; no read
   useEffect(() => {
     if (status !== "authenticated") return;
     if (sessionHasAccess || onLoginEntry) return;
@@ -358,6 +361,7 @@ function GuardedTenant({
   }, [status, sessionHasAccess, sessionError, redirect, onLoginEntry]);
 
   // Operator session on tenant subdomain — sign out immediately
+  // oxlint-disable-next-line swr/no-effect-load -- session guard: signs an operator session out on a school host; no read
   useEffect(() => {
     if (status !== "authenticated" || !tenant) return;
     if (!sessionHasAccess) return;
@@ -400,6 +404,7 @@ function GuardedTenant({
     redirect,
   ]);
 
+  // oxlint-disable-next-line swr/no-effect-load -- session guard: switches the session to the URL's school; a write with retry limits, no read
   useEffect(() => {
     // Only check when authenticated and tenant context is resolved
     if (status !== "authenticated" || !tenant) return;
@@ -651,7 +656,7 @@ function GuardedTenant({
                 <Button
                   type="button"
                   size="md"
-                  tooltip={`Meldet Sie ab und öffnet die Anmeldung von ${tenant.name}.`}
+                  tooltip={schoolSignInTooltip(tenant.name)}
                   onClick={() => {
                     void import("./tenant-relogin")
                       .then(({ reloginAtTenant }) =>
@@ -662,7 +667,7 @@ function GuardedTenant({
                       });
                   }}
                 >
-                  Zur Schulanmeldung
+                  {SCHOOL_SIGN_IN_LABEL}
                 </Button>
               ) : (
                 <>

@@ -119,6 +119,9 @@ type StudentSchedules interface {
 // Student Presence contract: the retention consent.
 type PrivacyConsent = studentpresence.PrivacyConsent
 
+// ClassListEntryMarkMove names the student a class-list entry became (#4803).
+type ClassListEntryMarkMove = studentpresence.ClassListEntryMarkMove
+
 // PrivacyConsents is the Student Presence retention-consent slice.
 type PrivacyConsents interface {
 	ListPrivacyConsents(context.Context, int64) ([]PrivacyConsent, error)
@@ -128,6 +131,7 @@ type PrivacyConsents interface {
 // School Membership contract: staff, caregiver profiles and class-list
 // entries.
 type (
+	ClassListEntryJoin   = schoolmembership.ClassListEntryJoin
 	Staff                = schoolmembership.Staff
 	StaffFilter          = schoolmembership.StaffFilter
 	StaffFields          = schoolmembership.StaffFields

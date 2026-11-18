@@ -123,9 +123,6 @@
   "api/parent/me/documents/shared": [
     "GET parent /parent/me/documents/shared"
   ],
-  "api/parent/me/enrollable-schools": [
-    "GET parent /parent/me/enrollable-schools"
-  ],
   "api/parent/me/messages": [
     "GET parent /parent/me/messages"
   ],
@@ -168,6 +165,18 @@
   ],
   "api/parent/me/news/unread-count": [
     "GET parent /parent/me/news/unread-count"
+  ],
+  "api/parent/me/notifications/feed": [
+    "GET parent /parent/me/notifications/feed/ query=limit,cursor"
+  ],
+  "api/parent/me/notifications/feed/[id]/read": [
+    "POST parent /parent/me/notifications/feed/id%2F1/read"
+  ],
+  "api/parent/me/notifications/feed/read-all": [
+    "POST parent /parent/me/notifications/feed/read-all"
+  ],
+  "api/parent/me/notifications/feed/unread-count": [
+    "GET parent /parent/me/notifications/feed/unread-count"
   ],
   "api/parent/me/profile": [
     "GET parent /parent/me/profile",

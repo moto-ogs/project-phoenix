@@ -7,8 +7,12 @@
 // Measures the green first attempts of the CI workflow (main.yml) on pull
 // requests: first job start to the end of ci-gate. When the median of the runs
 // with backend tests is above the target's upper bound, it opens one issue or
-// comments on the open one. It never closes the issue: a fast week does not
-// prove the cause is gone. --dry-run prints the issue text instead of writing.
+// comments on the open one. The last three days decide when they hold enough
+// runs, the whole window otherwise: #7195 reported a week at 488 s whose cause
+// had been repaired three days earlier (561-642 s a day until 12.11.2026,
+// 264-281 s from 14.11.), and a week's median also hides a new regression for
+// days. It never closes the issue: fast days do not prove the cause is gone.
+// --dry-run prints the issue text instead of writing.
 import { appendFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { githubApi } from '../.github/actions/ci-cost/ci-cost.mjs';
@@ -21,6 +25,8 @@ export const THRESHOLD_SECONDS = 300;
 export const MIN_RUNS = 10;
 // Each sampled run costs one job-list request; GITHUB_TOKEN allows 1000 an hour.
 export const MAX_RUNS = 250;
+// The newest days of the window decide; older days show where it came from.
+export const RECENT_DAYS = 3;
 const WORKFLOW = 'main.yml';
 const GATE = 'ci-gate';
 const BACKEND_JOB = /^Test \/ Backend tests\b/;
@@ -69,6 +75,7 @@ export function measureRun(run, jobs) {
     id: run.id,
     url: run.html_url,
     branch: run.head_branch,
+    createdAt: run.created_at,
     seconds: Math.round(seconds(start, gate.completed_at)),
     backendSeconds: backend ? Math.round(seconds(backend.started_at, backend.completed_at)) : null,
     lastJob: last.name,
@@ -82,8 +89,12 @@ export function median(values) {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-export function summarize(measured, { listed, sampled }) {
+// slices: the window's days (windowSlices). The last recentDays of them
+// decide; a window no longer than that has no recent part of its own.
+export function summarize(measured, { listed, sampled, slices = [], recentDays = RECENT_DAYS }) {
   const backend = measured.filter(run => run.backendSeconds !== null);
+  const within = ({ from, to }) => backend.filter(run => run.createdAt >= from && run.createdAt <= to);
+  const recent = slices.length > recentDays ? slices.slice(-recentDays).flatMap(within) : [];
   const lastJobs = new Map();
   for (const run of measured) lastJobs.set(run.lastJob, (lastJobs.get(run.lastJob) ?? 0) + 1);
   return {
@@ -92,23 +103,42 @@ export function summarize(measured, { listed, sampled }) {
     all: { runs: measured.length, median: median(measured.map(run => run.seconds)) },
     backend: { runs: backend.length, median: median(backend.map(run => run.seconds)) },
     backendJob: { median: median(backend.map(run => run.backendSeconds)) },
+    recent: { runs: recent.length, median: median(recent.map(run => run.seconds)) },
+    days: slices.map(slice => {
+      const runs = within(slice);
+      return {
+        from: slice.from,
+        runs: runs.length,
+        median: median(runs.map(run => run.seconds)),
+        backendJob: median(runs.map(run => run.backendSeconds)),
+      };
+    }),
     lastJobs: [...lastJobs].sort(([a, x], [b, y]) => y - x || a.localeCompare(b)).slice(0, 3),
     slowest: [...measured].sort((a, b) => b.seconds - a.seconds).slice(0, 5),
   };
 }
 
+// The runs that decide: the recent days, or the whole window when they hold
+// too few runs to say anything.
+export function basis(stats, { minRuns = MIN_RUNS } = {}) {
+  return stats.recent.runs >= minRuns ? { recent: true, ...stats.recent } : { recent: false, ...stats.backend };
+}
+
 export function decide(stats, { threshold = THRESHOLD_SECONDS, minRuns = MIN_RUNS } = {}) {
   if (stats.backend.runs < minRuns) return 'insufficient';
-  return stats.backend.median > threshold ? 'over' : 'ok';
+  return basis(stats, { minRuns }).median > threshold ? 'over' : 'ok';
 }
 
 const fmt = value => (value === null ? '–' : `${Math.round(value)} s`);
 const cell = text => String(text).replace(/[\r\n|`]/g, ' ');
 
-export function renderReport(stats, decision, { repo, from, to, threshold = THRESHOLD_SECONDS, minRuns = MIN_RUNS }) {
+export function renderReport(stats, decision, { repo, from, to, threshold = THRESHOLD_SECONDS, minRuns = MIN_RUNS, recentDays = RECENT_DAYS }) {
+  const judged = basis(stats, { minRuns });
+  const span = judged.recent ? ` der letzten ${recentDays} Tage` : '';
+  const week = judged.recent ? ` Im ganzen Zeitraum sind es ${fmt(stats.backend.median)}.` : '';
   const verdict = {
-    over: `**Über dem Ziel:** Der Median der Läufe mit Backend-Tests liegt bei ${fmt(stats.backend.median)}, die Obergrenze ist ${threshold} s.`,
-    ok: `Im Ziel: Der Median der Läufe mit Backend-Tests liegt bei ${fmt(stats.backend.median)}, die Obergrenze ist ${threshold} s.`,
+    over: `**Über dem Ziel:** Der Median der Läufe mit Backend-Tests${span} liegt bei ${fmt(judged.median)}, die Obergrenze ist ${threshold} s.${week}`,
+    ok: `Im Ziel: Der Median der Läufe mit Backend-Tests${span} liegt bei ${fmt(judged.median)}, die Obergrenze ist ${threshold} s.${week}`,
     insufficient: `Keine Entscheidung: nur ${stats.backend.runs} Läufe mit Backend-Tests, nötig sind ${minRuns}.`,
   }[decision];
   const sample = stats.sampled < stats.listed ? ` (gleichmäßige Stichprobe von ${stats.sampled} aus ${stats.listed})` : '';
@@ -123,7 +153,14 @@ export function renderReport(stats, decision, { repo, from, to, threshold = THRE
     '|---|---:|---:|',
     `| Alle Läufe | ${stats.all.runs} | ${fmt(stats.all.median)} |`,
     `| Läufe mit Backend-Tests | ${stats.backend.runs} | ${fmt(stats.backend.median)} |`,
+    ...(stats.days.length > recentDays ? [`| Läufe mit Backend-Tests, letzte ${recentDays} Tage | ${stats.recent.runs} | ${fmt(stats.recent.median)} |`] : []),
     `| Job \`Test / Backend tests\` | ${stats.backend.runs} | ${fmt(stats.backendJob.median)} |`,
+    '',
+    'Läufe mit Backend-Tests je 24 Stunden (UTC). Ein Sprung zwischen zwei Zeilen zeigt, wann sich etwas geändert hat:',
+    '',
+    '| 24 Stunden ab | Läufe | Median | Job `Test / Backend tests` |',
+    '|---|---:|---:|---:|',
+    ...stats.days.map(day => `| ${cell(day.from.slice(0, 16).replace('T', ' '))} | ${day.runs} | ${fmt(day.median)} | ${fmt(day.backendJob)} |`),
     '',
     'Zuletzt fertig vor `ci-gate`:',
     '',
@@ -141,7 +178,7 @@ export function renderReport(stats, decision, { repo, from, to, threshold = THRE
 export function issueBody(report) {
   return [
     'Der wöchentliche Laufzeit-Wächter (`.github/workflows/ci-runtime-watch.yml`) hat das Laufzeitziel gerissen.',
-    'Suche die Pakete und Jobs, die gewachsen sind (Job-Summary „Backend package time budgets“ und „CPU seconds“), und mache sie günstiger in der Reihenfolge der Regel.',
+    'Suche in der Tagestabelle den Sprung und dort die Pakete und Jobs, die gewachsen sind (Job-Summary „Backend package time budgets“ und „CPU seconds“), und mache sie günstiger in der Reihenfolge der Regel.',
     'Der Wächter schließt dieses Issue nicht; schließe es, wenn die Ursache behoben ist.',
     '',
     report,
@@ -188,7 +225,7 @@ export async function main(env, api, args) {
     const row = measureRun(run, jobs);
     if (row) measured.push(row);
   }
-  const stats = summarize(measured, { listed: listed.length, sampled: sampled.length });
+  const stats = summarize(measured, { listed: listed.length, sampled: sampled.length, slices });
   const decision = decide(stats);
   const report = renderReport(stats, decision, { repo, from: slices[0].from, to: slices.at(-1).to });
   console.log(report);

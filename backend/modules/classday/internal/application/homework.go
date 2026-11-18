@@ -122,7 +122,7 @@ func (h homework) applyHomework(ctx context.Context, report *classday.DayReport,
 func (h homework) applyFeedback(ctx context.Context, report *classday.DayReport, date calendar.Date) error {
 	studentIDs := make([]int64, 0, len(report.Rows))
 	for _, row := range report.Rows {
-		if !row.ListEntry && row.StudentID > 0 {
+		if !row.NoCare() && row.StudentID > 0 {
 			studentIDs = append(studentIDs, row.StudentID)
 		}
 	}
@@ -143,7 +143,7 @@ func (h homework) applyFeedback(ctx context.Context, report *classday.DayReport,
 	}
 	for i := range report.Rows {
 		row := &report.Rows[i]
-		if value, ok := byStudent[row.StudentID]; ok && !row.ListEntry {
+		if value, ok := byStudent[row.StudentID]; ok && !row.NoCare() {
 			row.HomeworkFeedback = &value
 		}
 	}

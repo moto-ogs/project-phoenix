@@ -21,11 +21,12 @@ func (s *Store) ListCombinedGroups(ctx context.Context, filter studentpresence.C
 	if filter.ID != nil {
 		q = q.Where("id = ?", *filter.ID)
 	}
+	// The end times come from the store's clock, so "active" reads it too.
 	if filter.Active != nil {
 		if *filter.Active {
-			q = q.Where("(end_time IS NULL OR end_time > NOW())")
+			q = q.Where("(end_time IS NULL OR end_time > ?)", s.now())
 		} else {
-			q = q.Where("end_time IS NOT NULL AND end_time <= NOW()")
+			q = q.Where("end_time IS NOT NULL AND end_time <= ?", s.now())
 		}
 	}
 	if filter.Limit > 0 {
@@ -112,7 +113,7 @@ func (s *Store) ReviseCombination(ctx context.Context, id int64, start time.Time
 	}
 	var row studentpresence.CombinedGroup
 	started := time.Now()
-	err = db.NewRaw("UPDATE active.combined_groups SET start_time = ?,end_time = ?,updated_at = NOW() WHERE tenant_id = ? AND id = ? RETURNING id,tenant_id,created_at,updated_at,start_time,end_time", start, end, tenantID, id).Scan(ctx, &row)
+	err = db.NewRaw("UPDATE active.combined_groups SET start_time = ?,end_time = ? WHERE tenant_id = ? AND id = ? RETURNING id,tenant_id,created_at,updated_at,start_time,end_time", start, end, tenantID, id).Scan(ctx, &row)
 	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
 	if err != nil {
 		return studentpresence.CombinedGroup{}, stats, fmt.Errorf("revise combination: %w", err)

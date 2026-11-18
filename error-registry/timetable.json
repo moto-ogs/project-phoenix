@@ -535,6 +535,12 @@
       "legacy": "presence_would_overstaff"
     },
     {
+      "code": "timetable.reinstate_ended",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "timetable.reinstate_ended"
+    },
+    {
       "code": "timetable.reopen_attendance_changed",
       "class": "business_rejection",
       "parameters": [],

@@ -60,3 +60,38 @@ func (s *Service) MatchClassListEntries(ctx context.Context, keys []schoolmember
 	})
 	return result, err
 }
+
+// RemoveClassListEntries deletes the entries in one statement, all or none
+// (#4803): the conversion has already moved their morning marks. First a
+// child an entry joins keeps the class time the entry stood for before its
+// care starts.
+func (s *Service) RemoveClassListEntries(ctx context.Context, joins []schoolmembership.ClassListEntryJoin) error {
+	if len(joins) == 0 {
+		return nil
+	}
+	ids := make([]int64, 0, len(joins))
+	unique := make(map[int64]bool, len(joins))
+	for _, join := range joins {
+		if join.EntryID <= 0 || join.StudentID <= 0 {
+			return invalid("class list entry and student IDs must be positive")
+		}
+		ids = append(ids, join.EntryID)
+		unique[join.EntryID] = true
+	}
+	return s.runWrite(ctx, "remove_class_list_entries", func(txCtx context.Context, stats *domain.OperationStats) error {
+		keepStats, err := s.store.KeepClassTimeOfJoinedChildren(txCtx, joins)
+		stats.Add(keepStats)
+		if err != nil {
+			return err
+		}
+		deleted, deleteStats, err := s.store.DeleteClassListEntries(txCtx, ids)
+		stats.Add(deleteStats)
+		if err != nil {
+			return err
+		}
+		if deleted != int64(len(unique)) {
+			return schoolmembership.ErrClassListEntryNotFound
+		}
+		return nil
+	})
+}

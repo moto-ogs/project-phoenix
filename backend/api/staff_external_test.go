@@ -141,8 +141,10 @@ func (e *externalRoute) personsNamed(t *testing.T, lastName string) int {
 func (e *externalRoute) pendingToken(t *testing.T, personID string) (token string, roleID, tenantID int64) {
 	t.Helper()
 	var address string
+	// Identity & Access dates the invitation on the database clock (ADR
+	// 0285, Nachtrag).
 	require.NoError(t, e.db.NewRaw(`SELECT email, role_id, tenant_id FROM auth.invitation_tokens
-		WHERE person_id = ? AND used_at IS NULL AND expires_at > NOW()`, personID).Scan(context.Background(), &address, &roleID, &tenantID))
+		WHERE person_id = ? AND used_at IS NULL AND expires_at > now()`, personID).Scan(context.Background(), &address, &roleID, &tenantID))
 	var mail string
 	require.NoError(t, e.db.NewRaw(`SELECT payload::text FROM platform.email_outbox
 		WHERE strpos(lower(payload::text), lower(?)) > 0 AND strpos(payload::text, 'invite?token=') > 0

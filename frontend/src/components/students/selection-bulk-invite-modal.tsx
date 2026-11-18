@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -8,17 +8,16 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Skeleton } from "~/components/ui/skeleton";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import {
   bulkInviteGuardians,
   type BulkInviteProblem,
   type BulkInviteResult,
 } from "~/lib/guardian-bulk-invite-api";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useFreshSWR } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 
 const logger = createLogger({ component: "SelectionBulkInviteModal" });
 
@@ -73,56 +72,35 @@ export function SelectionBulkInviteModal({
   studentIds,
 }: SelectionBulkInviteModalProps) {
   const { success } = useToast();
-  const [preview, setPreview] = useState<BulkInviteResult | null>(null);
   const [sent, setSent] = useState<BulkInviteResult | null>(null);
   const [resendOpen, setResendOpen] = useState(false);
   const save = useFormModalPending(isOpen);
   const sending = save.pending;
-  const [previewAttempt, setPreviewAttempt] = useState(0);
   const errors = useApiFormError();
-  const load = useApiLoadError();
-  const showLoadError = load.show;
-  const clearLoadError = load.clear;
   // „Wiederholen“ sendet mit der aktuellen Auswahl.
   const latestSendRef = useRef<() => Promise<void>>(async () => undefined);
-  const selectionKey = studentIds.join(",");
 
-  useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-    clearLoadError();
-    bulkInviteGuardians(selectionKey.split(","), { dryRun: true, resendOpen })
-      .then((result) => {
-        if (!cancelled) setPreview(result);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.error("bulk_invite_preview_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showLoadError(err, {
-          object: "die Vorschau",
-          retry: () => setPreviewAttempt((attempt) => attempt + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    isOpen,
-    selectionKey,
-    resendOpen,
-    previewAttempt,
-    showLoadError,
-    clearLoadError,
-  ]);
+  // The dry run only counts; nothing is sent until the click below. The
+  // button names the counts of this opening's own dry run, never a cached one.
+  const previewRead = useFreshSWR(
+    isOpen ? tenantStudentKeys.bulkInvitePreview(studentIds, resendOpen) : null,
+    () => bulkInviteGuardians(studentIds, { dryRun: true, resendOpen }),
+  );
+  const { mutate: mutatePreview } = previewRead;
+  // A failed dry run shows its error, not the counts of an earlier one.
+  const previewData = previewRead.error ? undefined : previewRead.data;
+  const preview = previewData ?? null;
+  const load = useSwrResourceLoadError(
+    [{ data: previewData, error: previewRead.error }],
+    "die Vorschau",
+    () => mutatePreview(),
+  );
 
   const toMail = preview
     ? preview.invited + preview.resent + preview.linkedExistingAccount
     : 0;
 
   const handleResendOpenChange = (value: boolean) => {
-    setPreview(null);
     errors.clear();
     setResendOpen(value);
   };
@@ -135,7 +113,11 @@ export function SelectionBulkInviteModal({
           dryRun: false,
           resendOpen,
         });
-        if (op.isCurrent()) setSent(result);
+        if (op.isCurrent()) {
+          setSent(result);
+          // The counts of a later opening come from a new dry run.
+          void mutatePreview();
+        }
         success(
           invitedNotice(
             result.invited + result.resent + result.linkedExistingAccount,

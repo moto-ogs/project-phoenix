@@ -41,6 +41,16 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0271",
+      "id": "modules/organizationtenancy/DemoSchools.RecordDemoSchool",
+      "reason": "Owner-edge validation of the demo order's own Träger and neighbour schools (ADR 0271): checks name and ID, then hands them to the persistence engine like ReserveDemoSchool; ADR 0075 eligibility unchanged."
+    },
+    {
+      "decision": "0271",
+      "id": "modules/organizationtenancy/DemoSchools.RecordDemoTraeger",
+      "reason": "Owner-edge validation of the demo order's own Träger and neighbour schools (ADR 0271): checks name and ID, then hands them to the persistence engine like ReserveDemoSchool; ADR 0075 eligibility unchanged."
+    },
+    {
       "decision": "0090",
       "id": "modules/organizationtenancy/DemoSchools.RememberDemoSchool",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
@@ -118,6 +128,11 @@
     {
       "decision": "0090",
       "id": "modules/organizationtenancy/inbound/operator/ProvisioningResource.ListOrganizations",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0251",
+      "id": "modules/organizationtenancy/inbound/operator/ProvisioningResource.ListSchoolRequiredDetails",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -241,9 +256,19 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0271",
+      "id": "modules/organizationtenancy/internal/adapters/postgres/DemoSchoolDatabaseStore.DueDemoTraegers",
+      "reason": "Adapter call of the database function that lists due Demo-Träger (ADR 0271), like DueDemoSchoolDatabases; the function checks due-ness itself. ADR 0075 eligibility unchanged."
+    },
+    {
       "decision": "0189",
       "id": "modules/organizationtenancy/internal/adapters/postgres/DemoSchoolDatabaseStore.EraseDemoSchoolDatabase",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0271",
+      "id": "modules/organizationtenancy/internal/adapters/postgres/DemoSchoolDatabaseStore.EraseDemoTraeger",
+      "reason": "Adapter call of the database function that erases one Demo-Träger (ADR 0271) and decodes its status, like EraseDemoSchoolDatabase. ADR 0075 eligibility unchanged."
     },
     {
       "decision": "0148",
@@ -259,6 +284,16 @@
       "decision": "0090",
       "id": "modules/organizationtenancy/internal/adapters/postgres/DemoStateEngine.LoadDemoSchool",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0271",
+      "id": "modules/organizationtenancy/internal/adapters/postgres/DemoStateEngine.RecordDemoSchool",
+      "reason": "Composition binding of the demo state engine (ADR 0271), like ReserveDemoSchool: hands the order's neighbour school to the state store. ADR 0075 eligibility unchanged."
+    },
+    {
+      "decision": "0271",
+      "id": "modules/organizationtenancy/internal/adapters/postgres/DemoStateEngine.RecordDemoTraeger",
+      "reason": "Composition binding of the demo state engine (ADR 0271), like ReserveDemoSchool: hands the order's own Träger to the state store. ADR 0075 eligibility unchanged."
     },
     {
       "decision": "0090",
@@ -299,6 +334,16 @@
       "decision": "0090",
       "id": "modules/organizationtenancy/internal/adapters/postgres/DemoStateStore.ReadyNames",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0271",
+      "id": "modules/organizationtenancy/internal/adapters/postgres/DemoStateStore.RecordSchool",
+      "reason": "One statement on the demo state row (ADR 0271): appends a neighbour school to the schools the order named, so the origin trigger records it. ADR 0075 eligibility unchanged."
+    },
+    {
+      "decision": "0271",
+      "id": "modules/organizationtenancy/internal/adapters/postgres/DemoStateStore.RecordTraeger",
+      "reason": "One statement on the demo state row (ADR 0271): names the order's own Träger once and refuses another. ADR 0075 eligibility unchanged."
     },
     {
       "decision": "0090",

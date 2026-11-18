@@ -10,12 +10,20 @@ const FeedBundleWindow = 10 * time.Minute
 // FeedEntryContent is what a producer writes into a feed entry: the finished,
 // display-safe text and app-relative link, and the object the entry is about.
 type FeedEntryContent struct {
-	Type        string
-	Title       string
-	Body        string
-	DeepLink    string
-	RelatedType string
-	RelatedID   int64
+	Type     string
+	Title    string
+	Body     string
+	DeepLink string
+	// SchoolDeepLink is the same destination in moto schule (#7139); empty
+	// for a type the school portal does not show, or one that has no place
+	// there.
+	SchoolDeepLink string
+	RelatedType    string
+	RelatedID      int64
+	// StudentIDs are the children an entry of a guardian is about (#7140).
+	// The guardian reads it only while holding parent_portal.access for at
+	// least one of them. A staff entry names no child.
+	StudentIDs []int64
 }
 
 // FeedEntry is one entry of an account's notification feed in one school.
@@ -41,4 +49,32 @@ type FeedCursor struct {
 type FeedWrite struct {
 	Created []int64
 	Updated []int64
+}
+
+// FeedView is the portal an account reads its feed in (#7139): the types that
+// portal shows and the role that admits the reader. The staff portal admits a
+// member with a staff role, moto schule one with a school-portal role, as Web
+// Push and SSE do for each portal.
+type FeedView struct {
+	Types  []string
+	School bool
+}
+
+// SchoolAudienceMember is one account of a school-wide notice (#7144): an
+// account with a role of the OGS portal (Staff), moto schule (School), or a
+// guardian with the children it holds parent_portal.access for, or an active
+// member of the school's Träger (Traeger, #7146).
+type SchoolAudienceMember struct {
+	AccountID  int64
+	Staff      bool
+	School     bool
+	Traeger    bool
+	StudentIDs []int64
+}
+
+// TraegerFeedEntry is an entry of the Träger bell (#7146) with the school it
+// is about.
+type TraegerFeedEntry struct {
+	FeedEntry
+	SchoolName string
 }

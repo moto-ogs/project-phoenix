@@ -88,12 +88,20 @@ type AbsenceListReport struct {
 }
 
 // AbsenceListChild is one child of the class with its counts. Children with
-// an OGS record are listed, also without an OGS place; class-list-only
-// entries join once they can carry a report (#4803).
+// a student record are listed, children without an OGS place (#4803) too;
+// class-list-only entries carry no report and stay out.
 type AbsenceListChild struct {
 	StudentID int64  `json:"student_id"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
+	// SchoolMemberOnly marks a child without an OGS place (#4803): it
+	// belongs to the class from SchoolMemberFrom to SchoolMemberUntil (nil:
+	// open) without taking part in OGS care, and on any earlier day with a
+	// morning mark or status (a converted class list entry brings its marks
+	// along). Not on the wire.
+	SchoolMemberOnly  bool           `json:"-"`
+	SchoolMemberFrom  *calendar.Date `json:"-"`
+	SchoolMemberUntil *calendar.Date `json:"-"`
 	AbsenceListCounts
 }
 

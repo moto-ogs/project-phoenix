@@ -43,7 +43,7 @@ func (s *Service) attachDeclarationData(ctx context.Context, accountID int64, it
 	if err := s.loadEarlierVersions(ctx, facts, accountID); err != nil {
 		return err
 	}
-	now := time.Now()
+	now := s.now()
 	for _, item := range items {
 		if item.DeliveryMode == ParentAnnouncementDeliveryDeclaration {
 			item.Declaration = buildFeedDeclaration(s.Declarations, accountID, item, facts, now)
@@ -372,7 +372,7 @@ func (s *Service) countOwedReadDeclarations(ctx context.Context, accountID int64
 	if err != nil {
 		return 0, err
 	}
-	now := time.Now()
+	now := s.now()
 	owed := 0
 	for _, item := range items {
 		if declarationOwed(s.Declarations, buildFeedDeclaration(s.Declarations, accountID, item, facts, now), now) {

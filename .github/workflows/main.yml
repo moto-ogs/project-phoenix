@@ -56,6 +56,12 @@ jobs:
       # frontend-only pushes and CI changes outside its own workflow definition
       # cannot affect it and must not buy another runner.
       run-seed-smoke: ${{ steps.filter.outputs.backend-production == 'true' || steps.filter.outputs.seed-smoke-infra == 'true' }}
+      # Pull requests run only the profiles scenario: it seeds every profile and
+      # the standing demo and holds the coverage ratchet. isolation and queue
+      # (two schools in one database, prospect schools) took two thirds of the
+      # job's hosted minutes (14.11.2026: 837 of 1250) and run on release pull
+      # requests, main pushes, nightly and changes to the seeder or this job.
+      seed-smoke-all-scenarios: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.seed-smoke-infra == 'true' || steps.filter.outputs.seeder == 'true' }}
       # Changes to main.yml or test.yml validate the complete test commands.
       # Ordinary PRs use changed-test selection; protected-branch pushes and
       # release pull requests are always full because they revalidate the whole
@@ -140,6 +146,10 @@ jobs:
               - 'backend/modules/organizationtenancy/return_register.json'
               - 'backend/modules/organizationtenancy/inbound/datareturn/openapi.json'
               - 'backend/modules/organizationtenancy/data_lifecycle_catalog.json'
+              # Generated from the Go route registrations (ADR 0270); the
+              # backend quality job checks that they are current.
+              - 'backend/api/contract/contract.json'
+              - 'frontend/src/lib/contract/*.generated.ts'
               - 'backend/modules/documentrendering/internal/application/listrenderer/assets/**'
               - 'backend/templates/email/**'
               - 'scripts/backend-architecture.sh'
@@ -193,6 +203,8 @@ jobs:
               - 'backend/modules/organizationtenancy/data_lifecycle_catalog.json'
               - 'backend/modules/documentrendering/internal/application/listrenderer/assets/**'
               - 'backend/templates/email/**'
+            seeder:
+              - 'backend/internal/devtools/**'
             seed-smoke-infra:
               - '.github/workflows/main.yml'
               - '.github/workflows/test.yml'
@@ -217,6 +229,8 @@ jobs:
               - 'scripts/backend-source-ratchets.mjs'
               - 'scripts/backend-affected-packages.sh'
               - 'scripts/backend-affected-packages_test.sh'
+              - 'scripts/fetch-comparison-history.sh'
+              - 'scripts/fetch-comparison-history_test.sh'
               - 'scripts/backend-lint-packages.sh'
               - 'scripts/backend-test-matrix.sh'
               - 'scripts/backend-test-matrix_test.sh'
@@ -461,7 +475,7 @@ jobs:
           # runner before that. A changed test file selects only its own
           # package, so test files in at most 15 directories plus ./test stay
           # within the 16 packages four vCPUs are sized for. Every other
-          # change may reach any number of importers and gets eight.
+          # change may reach any number of importers and gets sixteen.
           small=$(jq 'length > 0 and all(.[]; endswith("_test.go")) and
             (map(split("/")[:-1] | join("/")) | unique | length <= 15)' <<< "$CHANGED_FILES")
           echo "small=$small" >> "$GITHUB_OUTPUT"
@@ -486,7 +500,12 @@ jobs:
           ) }}
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    # Blacksmith: in a private repository GitHub-hosted runners bill at a
+    # higher price per vCPU (.claude/rules/ci-test-performance.md). unit keeps
+    # its cores busy: 168 + 52 s on 2 vCPU against 70 + 20 s on the hosted
+    # 4 vCPU, same price at half the wall time (#7286). The restore suites
+    # wait on I/O and took as long on 2 vCPU (283 s) as hosted.
+    runs-on: ${{ (matrix.suite == 'restore' || matrix.suite == 'release-restore') && 'blacksmith-2vcpu-ubuntu-2404' || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -507,7 +526,7 @@ jobs:
         if: matrix.suite == 'unit'
         run: |
           node scripts/check-agent-context.mjs
-          node --test scripts/check-migration-versions.test.mjs scripts/student-contract-monitor.test.mjs scripts/check-agent-context.test.mjs scripts/check-test-runners.test.mjs scripts/check-pr-body.test.mjs scripts/db-snapshot-roles.test.mjs scripts/check-caddyfile.test.mjs scripts/seed-smoke-clock.test.mjs scripts/clock-boundaries.test.mjs scripts/clock-early-warning.test.mjs scripts/check-exit-status.test.mjs scripts/dev-bench.test.mjs scripts/test-perf.test.mjs scripts/ci-failures.test.mjs scripts/ci-runtime-watch.test.mjs scripts/check-changed.test.mjs scripts/backend-package-budgets.test.mjs scripts/architecture-build-cache.test.mjs scripts/query-budget-scoreboard.test.mjs scripts/capture-query-budget-routes.test.mjs .github/actions/ci-cost/ci-cost.test.mjs .agents/skills/security-audit/validate-coverage-ledger.test.cjs .agents/skills/security-audit/validate-findings.test.cjs
+          node --test scripts/check-migration-versions.test.mjs scripts/student-contract-monitor.test.mjs scripts/check-agent-context.test.mjs scripts/check-test-runners.test.mjs scripts/check-pr-body.test.mjs scripts/db-snapshot-roles.test.mjs scripts/check-caddyfile.test.mjs scripts/seed-smoke-clock.test.mjs scripts/clock-boundaries.test.mjs scripts/clock-early-warning.test.mjs scripts/check-exit-status.test.mjs scripts/dev-bench.test.mjs scripts/test-perf.test.mjs scripts/ci-failures.test.mjs scripts/ci-runtime-watch.test.mjs scripts/check-changed.test.mjs scripts/check-contract-compat.test.mjs scripts/backend-package-budgets.test.mjs scripts/architecture-build-cache.test.mjs scripts/db-snapshot-cache.test.mjs scripts/seed-smoke-build.test.mjs scripts/query-budget-scoreboard.test.mjs scripts/capture-query-budget-routes.test.mjs .github/actions/ci-cost/ci-cost.test.mjs .agents/skills/security-audit/validate-coverage-ledger.test.cjs .agents/skills/security-audit/validate-findings.test.cjs
           node scripts/check-caddyfile.mjs deploy/caddy/Caddyfile
           python3 -m unittest scripts/runtime_checkpoint_compare_test.py scripts/runtime_checkpoint_report_test.py scripts/check_runtime_env_test.py scripts/normalize_ci_needs_test.py
 
@@ -578,6 +597,7 @@ jobs:
           scripts/test-changed_test.sh
           scripts/go-test-link-cache_test.sh
           scripts/go-cache-sweep_test.sh
+          scripts/fetch-comparison-history_test.sh
           scripts/fake-clock_test.sh
 
   lint:
@@ -785,6 +805,7 @@ jobs:
       run-backend: ${{ needs.detect-changes.outputs.run-backend == 'true' }}
       run-frontend: ${{ needs.detect-changes.outputs.run-frontend == 'true' }}
       run-seed-smoke: ${{ needs.detect-changes.outputs.run-seed-smoke == 'true' }}
+      seed-smoke-all-scenarios: ${{ needs.detect-changes.outputs.seed-smoke-all-scenarios == 'true' }}
       changed-scope: ${{ needs.detect-changes.outputs.changed-scope == 'true' }}
       base_ref: ${{ needs.detect-changes.outputs.base-ref }}
       full-backend-suite: ${{ needs.detect-changes.outputs.full-backend-suite == 'true' }}

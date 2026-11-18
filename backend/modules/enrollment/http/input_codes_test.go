@@ -194,7 +194,7 @@ func TestDecideErrors_CarryCodes(t *testing.T) {
 	}
 	for _, tc := range cases {
 		w := httptest.NewRecorder()
-		(&Resource{Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}}).renderDecideError(w, httptest.NewRequest(http.MethodPost, "/x", nil), tc.err)
+		(&Resource{Now: resourceTestClock, Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}}).renderDecideError(w, httptest.NewRequest(http.MethodPost, "/x", nil), tc.err)
 		assert.Equal(t, tc.status, w.Code)
 		assert.Equal(t, tc.code, readCodedAnswer(t, w).Code)
 	}
@@ -209,6 +209,7 @@ func TestRolloverError_RejectedValueKeepsItsCode(t *testing.T) {
 	require.Error(t, err)
 
 	created := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, RolloverService: &mockRolloverService{}}
 	router := chi.NewRouter()
 	router.Post("/admin/phases/{id}/rollover", created.createRollover)
@@ -224,6 +225,7 @@ func TestRolloverError_RejectedValueKeepsItsCode(t *testing.T) {
 	assert.Equal(t, "rollover_deadline", body.Errors[0].Field)
 
 	rs := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}}
 	w := httptest.NewRecorder()
 	wrapped := capability.InvalidInput(capability.CodePhaseNameRequired, "name",

@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/ports"
@@ -22,7 +24,7 @@ type recordingStore struct {
 }
 
 func newRecordingService(store *recordingStore) *Service {
-	return New(store, NewTransitionRetention(store), func(ports.Observation) {})
+	return New(store, NewTransitionRetention(store, func() calendar.Date { return calendar.NewDate(2026, 11, 2) }), func(ports.Observation) {})
 }
 
 func (s *recordingStore) List(context.Context, int64, int) ([]domain.Group, domain.OperationStats, error) {
@@ -86,7 +88,7 @@ func (s *recordingStore) DeleteTransition(context.Context, int64, int64) (int64,
 	return 1, domain.OperationStats{}, nil
 }
 
-func (s *recordingStore) DeleteTransitionsEndedBefore(context.Context, int64, time.Time) (int64, domain.OperationStats, error) {
+func (s *recordingStore) DeleteTransitionsEndedBefore(context.Context, int64, time.Time, int) (int64, domain.OperationStats, error) {
 	s.calls++
 	return 0, domain.OperationStats{}, nil
 }

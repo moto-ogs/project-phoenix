@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -20,6 +19,7 @@ type Inbox struct {
 	carecontract.InboxNotices
 	carecontract.DocumentPushValidity
 	periods withdrawalPeriods
+	clock   Clock
 }
 
 var (
@@ -30,14 +30,16 @@ var (
 // NewInbox builds the inbox. holidays dates the withdrawal period the list
 // offers (#6350); a binding that lists no contracts may pass nil, and a
 // list without it then fails instead of offering a period it cannot date.
+// clock dates the withdrawal period and stamps the information about it.
 func NewInbox(store interface {
 	Store
 	carecontract.DocumentPushValidity
-}, holidays carecontract.SchoolHolidays) *Inbox {
+}, holidays carecontract.SchoolHolidays, clock Clock) *Inbox {
+	requireClock(clock, "inbox")
 	if store == nil {
 		panic("care contract: the store is required")
 	}
-	return &Inbox{store: store, InboxNotices: store, DocumentPushValidity: store, periods: withdrawalPeriods{holidays: holidays}}
+	return &Inbox{store: store, InboxNotices: store, DocumentPushValidity: store, periods: withdrawalPeriods{holidays: holidays}, clock: clock}
 }
 
 // InboxContracts lists the sent contracts addressed to the reader and
@@ -55,7 +57,7 @@ func (in *Inbox) InboxContracts(ctx context.Context, organizationID int64, reade
 	if len(rows) == 0 {
 		return []carecontract.InboxContract{}, nil
 	}
-	today := calendar.TodayDate()
+	today := calendar.DateFromTime(in.clock.now())
 	contracts, ids := make([]carecontract.InboxContract, len(rows)), make([]int64, len(rows))
 	subjects := make([]withdrawalSubject, len(rows))
 	for i, row := range rows {
@@ -93,7 +95,7 @@ func (in *Inbox) InboxContractDocument(ctx context.Context, organizationID, cont
 		return carecontract.File{}, err
 	}
 	if file.WithdrawalNotice {
-		if err := in.store.MarkWithdrawalInformed(ctx, organizationID, contractID, time.Now()); err != nil {
+		if err := in.store.MarkWithdrawalInformed(ctx, organizationID, contractID, in.clock.now()); err != nil {
 			return carecontract.File{}, err
 		}
 	}

@@ -6,7 +6,7 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { CareTariffs } from "~/lib/traeger-care-billing-api";
 import type { CareRule } from "~/lib/traeger-care-reductions-api";
 import { setTestClock } from "~/test/clock";
@@ -35,6 +35,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 import TraegerPreislistePage from "./page";
+
+vi.unmock("swr");
 
 const data: CareTariffs = {
   schools: [{ id: "11", name: "Sonnenhof" }],
@@ -84,9 +86,9 @@ const rule: CareRule = {
 function renderPage(rules: readonly CareRule[]) {
   fetchCareRules.mockResolvedValue({ rules });
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerPreislistePage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -157,5 +159,25 @@ describe("sibling prices of the displayed price list", () => {
     fireEvent.click(screen.getByRole("combobox", { name: "Preise anzeigen" }));
     fireEvent.click(screen.getByRole("option", { name: /Januar 2026/ }));
     await waitFor(() => expectInactive("Modul A", false));
+  });
+
+  // #7304: the school cards sit in one grid, so the last one keeps its
+  // height, and each keeps its jump anchor.
+  it("puts every school card with its jump anchor into one grid", async () => {
+    fetchCareTariffs.mockResolvedValue({
+      ...data,
+      schools: [
+        { id: "11", name: "Sonnenhof" },
+        { id: "12", name: "Am Berg" },
+      ],
+    });
+    const { container } = renderPage([rule]);
+    await screen.findAllByText("Modul A");
+    const cards = ["11", "12"].map((id) =>
+      container.querySelector(`#care-prices-${id}`),
+    );
+    const grid = cards[0]?.parentElement;
+    expect(grid).toHaveClass("grid");
+    for (const card of cards) expect(card?.parentElement).toBe(grid);
   });
 });

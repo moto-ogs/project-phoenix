@@ -1,4 +1,12 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,8 +16,19 @@ import {
   type StaffCareRequestDetail,
 } from "~/lib/care-request-review-api";
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 import { PickupRequestDetailModal } from "./pickup-request-detail-modal";
+
+// Echtes SWR statt des globalen Stubs, mit frischem Cache je Render.
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    status: "authenticated",
+  }),
+}));
 
 vi.mock("~/lib/care-request-review-api", async () => {
   const actual = await vi.importActual<
@@ -46,13 +65,66 @@ function detail(
 }
 
 function Wrapper({ children }: { readonly children: ReactNode }) {
-  return <ModalProvider>{children}</ModalProvider>;
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ModalProvider>{children}</ModalProvider>
+    </SWRConfig>
+  );
 }
 
 describe("PickupRequestDetailModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
+
+  it.each([
+    [
+      403,
+      "general.permission",
+      "Für dieses Kind dürfen Sie keine Anfragen ansehen.",
+    ],
+    [
+      404,
+      "care.request_not_found",
+      "Diese Anfrage gibt es nicht mehr. Der Hinweis im Verlauf bleibt erhalten.",
+    ],
+  ])(
+    "withdraws cached private details after %s",
+    async (status, code, message) => {
+      mockFetch.mockResolvedValue(detail());
+      let reload!: () => Promise<unknown>;
+      function Probe() {
+        const { mutate } = useSWRAuth(tenantContactKeys.careRequest("42"), () =>
+          mockFetch("42"),
+        );
+        reload = () => mutate();
+        return null;
+      }
+      render(
+        <>
+          <PickupRequestDetailModal requestId="42" onClose={vi.fn()} />
+          <Probe />
+        </>,
+        { wrapper: Wrapper },
+      );
+      expect(await screen.findByText("Arzttermin")).toBeVisible();
+      mockFetch.mockRejectedValueOnce(
+        new ApiError("refused", status, { code }),
+      );
+      await act(async () => {
+        await reload();
+      });
+      // Anker: der erklärte Sperrzustand ersetzt die geladene Anfrage.
+      expect(await screen.findByText(message)).toBeVisible();
+      expect(screen.queryByText("Arzttermin")).not.toBeInTheDocument();
+      expect(screen.queryByText("Mia Muster")).not.toBeInTheDocument();
+      mockFetch.mockRejectedValueOnce(new ApiError("offline", 503));
+      await act(async () => {
+        await reload();
+      });
+      expect(screen.queryByText("Arzttermin")).not.toBeInTheDocument();
+    },
+  );
 
   it("zeigt Kind, Tag, Uhrzeiten, Grund und Entscheidung einer freigegebenen Anfrage", async () => {
     mockFetch.mockResolvedValue(detail());

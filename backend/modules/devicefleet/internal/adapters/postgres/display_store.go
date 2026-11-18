@@ -24,22 +24,29 @@ type displayRow struct {
 
 	ID        int64     `bun:"id,pk,autoincrement"`
 	TenantID  int64     `bun:"tenant_id,notnull"`
-	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull"`
 	Name      string    `bun:"name,notnull"`
 	IsActive  bool      `bun:"is_active,notnull,default:true"`
 	TokenHash string    `bun:"token_hash,notnull"`
 }
 
 // DisplayStore reads and writes display.displays for the Device Fleet owner.
-type DisplayStore struct{ database Database }
+type DisplayStore struct {
+	database Database
+	// now is the owner's clock an update stamps updated_at with.
+	now func() time.Time
+}
 
 // NewDisplayStore builds the display adapter over the supplied runtime.
-func NewDisplayStore(database Database) *DisplayStore {
+func NewDisplayStore(database Database, now func() time.Time) *DisplayStore {
 	if database == nil {
 		panic("devicefleet postgres: database runtime is required")
 	}
-	return &DisplayStore{database: database}
+	if now == nil {
+		panic("devicefleet postgres: the clock is required")
+	}
+	return &DisplayStore{database: database, now: now}
 }
 
 // Create registers one display for the caller's tenant.
@@ -51,7 +58,11 @@ func (s *DisplayStore) Create(ctx context.Context, input domain.CreateDisplay) (
 	if scope.TenantID <= 0 {
 		return domain.Display{}, domain.OperationStats{}, errDisplayTenantRequired
 	}
-	row := displayRow{TenantID: scope.TenantID, Name: input.Name, IsActive: true, TokenHash: input.TokenHash}
+	// The owner stamps both columns on its clock, as Update does for
+	// updated_at: a column default would date the row on the database clock
+	// and a later update could move updated_at backwards (ADR 0281).
+	now := s.now()
+	row := displayRow{TenantID: scope.TenantID, Name: input.Name, IsActive: true, TokenHash: input.TokenHash, CreatedAt: now, UpdatedAt: now}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	err = db.NewInsert().Model(&row).ModelTableExpr(`display.displays`).Returning("*").Scan(ctx)
@@ -73,7 +84,7 @@ func (s *DisplayStore) Update(ctx context.Context, input domain.UpdateDisplay) (
 	if scope.TenantID <= 0 {
 		return 0, domain.OperationStats{}, errDisplayTenantRequired
 	}
-	row := displayRow{ID: input.ID, UpdatedAt: time.Now()}
+	row := displayRow{ID: input.ID, UpdatedAt: s.now()}
 	columns := []string{"updated_at"}
 	if input.Name != nil {
 		row.Name = *input.Name

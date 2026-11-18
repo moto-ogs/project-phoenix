@@ -1,11 +1,12 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   SchoolProofKinds,
   StaffProofList,
 } from "~/lib/traeger-staff-proofs-api";
 
+vi.unmock("swr");
 const { api, download } = vi.hoisted(() => ({
   api: {
     fetchStaffProofList: vi.fn(),
@@ -104,9 +105,9 @@ const SCHOOLS: SchoolProofKinds[] = [
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerStaffProofsPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -197,5 +198,24 @@ describe("TraegerStaffProofsPage", () => {
     await vi.waitFor(() =>
       expect(api.mapSchoolProofKind).toHaveBeenCalledWith("1", "41", "7"),
     );
+  });
+
+  // #7304: the school cards sit in one grid, so the last one keeps its height.
+  it("puts the school cards into one grid", async () => {
+    api.fetchSchoolProofKinds.mockResolvedValue([
+      SCHOOLS[0]!,
+      { ...SCHOOLS[0]!, schoolId: "2", schoolName: "OGS Süd" },
+    ]);
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole("tab", { name: "Arten der Schulen" }),
+    );
+    await screen.findByText("OGS Nord", { selector: "h2" });
+    const cards = ["OGS Nord", "OGS Süd"].map((name) =>
+      screen.getByText(name, { selector: "h2" }).closest("section"),
+    );
+    const grid = cards[0]?.parentElement;
+    expect(grid).toHaveClass("grid");
+    for (const card of cards) expect(card?.parentElement).toBe(grid);
   });
 });

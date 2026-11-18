@@ -7,7 +7,7 @@
 // bekommt die nächste Dateinummer des Trägers. Nur das Recht
 // „Finanz-Export“ sieht die Seite.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { billingTabs } from "~/components/traeger/billing-family-format";
 import { EXPORT_RECIPIENT_PATH } from "~/components/traeger/export-handover-format";
 import {
@@ -29,24 +29,27 @@ import {
   type RunFileFormat,
   runFileKey,
 } from "~/components/traeger/finance-export-tables";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { downloadBlob } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import {
   type DatevBookingProblem,
   type DatevDownloadOptions,
-  type DatevReadiness,
   type DatevRunStates,
   type ExportProtocolEntry,
   type ExportRun,
+  type ExportSettings,
   type FinanceExportPage,
   type FinanceExportRunPage,
   datevBookingProblems,
@@ -65,13 +68,21 @@ const logger = createLogger({ component: "TraegerFinanceExportsPage" });
 const INFO =
   "Hier laden Sie die Sollstellung für Ihre Kämmerei und die DATEV-Datei für Ihr Steuerbüro herunter. Welche Spalten die Sollstellung hat, legen Sie unter „Feldzuordnung“ fest. Jede Datei bekommt eine neue Nummer und steht im Protokoll.";
 
-interface ExportsData {
-  readonly runs: FinanceExportRunPage;
-  readonly protocol: FinanceExportPage<ExportProtocolEntry>;
-  readonly nextFileNumber: number;
-  readonly datev: DatevReadiness;
-  /** The new DATEV bookings of the loaded runs (#6433). */
-  readonly datevRuns: DatevRunStates;
+/** What the page shows, once runs, protocol and settings are there. */
+function exportsData(
+  runs: FinanceExportRunPage | null,
+  protocol: FinanceExportPage<ExportProtocolEntry> | null,
+  settings: ExportSettings | null,
+  datevRuns: DatevRunStates | null,
+) {
+  if (!runs || !protocol || !settings) return null;
+  return {
+    runs,
+    protocol,
+    nextFileNumber: settings.nextFileNumber,
+    datev: settings.datev,
+    datevRuns: datevRuns ?? NO_DATEV_RUNS,
+  };
 }
 
 /** A DATEV download that found no new booking, and of which run. */
@@ -81,26 +92,6 @@ interface DatevNothingNew {
 }
 
 const NO_DATEV_RUNS: DatevRunStates = { ready: false, runs: new Map() };
-
-/**
- * The DATEV states of the runs. A failure leaves the table with the last
- * DATEV file of each run, as before #6433, and is logged: the download
- * still names every refusal itself.
- */
-async function readDatevRuns(
-  runs: readonly ExportRun[],
-  ready: boolean,
-): Promise<DatevRunStates> {
-  if (!ready) return NO_DATEV_RUNS;
-  try {
-    return await fetchDatevRunStates(runs);
-  } catch (err) {
-    logger.warn("traeger_datev_runs_load_failed", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return NO_DATEV_RUNS;
-  }
-}
 
 /** The invoices of a refused DATEV download and the run they belong to. */
 interface DatevRefusal {
@@ -182,7 +173,6 @@ function MorePages({
 }
 
 export default function TraegerFinanceExportsPage() {
-  const [data, setData] = useState<ExportsData | null>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<DatevRefusal | null>(null);
   const [nothingNew, setNothingNew] = useState<DatevNothingNew | null>(null);
@@ -192,43 +182,53 @@ export default function TraegerFinanceExportsPage() {
   const [loadingMore, setLoadingMore] = useState<"runs" | "protocol" | null>(
     null,
   );
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const errors = useApiErrorDisplay();
   const { success } = useToast();
 
-  const load = useCallback(
-    async (keepRuns = 0, keepProtocol = 0) => {
-      try {
-        const [runs, protocol, settings] = await Promise.all([
-          readPages(fetchExportRuns, keepRuns),
-          readPages(fetchExportProtocol, keepProtocol),
-          fetchExportSettings(),
-        ]);
-        setData({
-          runs,
-          protocol,
-          nextFileNumber: settings.nextFileNumber,
-          datev: settings.datev,
-          datevRuns: await readDatevRuns(runs.items, settings.datev.ready),
-        });
-        clearLoadError();
-      } catch (err) {
-        logger.error("traeger_finance_exports_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        await showLoadError(err, {
-          object: "die Exporte",
-          retry: () => void load(),
-        });
-      }
-    },
-    [clearLoadError, showLoadError],
+  // A reload reads as many entries as the person already opened.
+  const opened = useRef({ runs: 0, protocol: 0 });
+  const runsRead = useTraegerResource(
+    traegerBillingKeys.exportRuns(),
+    () => readPages(fetchExportRuns, opened.current.runs),
+    "die Exporte",
   );
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const protocolRead = useTraegerResource(
+    traegerBillingKeys.exportProtocol(),
+    () => readPages(fetchExportProtocol, opened.current.protocol),
+    "die Exporte",
+  );
+  const settingsRead = useTraegerResource(
+    traegerBillingKeys.exportSettings(),
+    fetchExportSettings,
+    "die Exporte",
+  );
+  const settings = settingsRead.data;
+  const runItems = runsRead.data?.items;
+  // The new DATEV bookings of the shown runs (#6433). A failure leaves the
+  // table with the last DATEV file of each run, as before #6433: the
+  // download still names every refusal itself.
+  const datevRead = useTraegerResource(
+    settings?.datev.ready && runItems
+      ? traegerBillingKeys.datevRuns(runItems.map(datevRunKey))
+      : null,
+    () => fetchDatevRunStates(runItems ?? []),
+    "die DATEV-Buchungen",
+    { keepPreviousData: true },
+  );
+  const data = exportsData(
+    runsRead.data,
+    protocolRead.data,
+    settings,
+    datevRead.data,
+  );
+  const loadError = runsRead.error ?? protocolRead.error ?? settingsRead.error;
+  const loading = !data && !loadError;
+  const reloadAll = () => {
+    runsRead.reload();
+    protocolRead.reload();
+    settingsRead.reload();
+    datevRead.reload();
+  };
 
   // A DATEV handover that makes no file shows the notices of the download.
   const runs = data?.runs.items;
@@ -252,10 +252,7 @@ export default function TraegerFinanceExportsPage() {
 
   // Handover to the recipient of each format (ADR 0218, ADR 0222); a handover reloads
   // the runs and the protocol like a download.
-  const handover = useFinanceHandover(
-    () => void load(data?.runs.items.length, data?.protocol.items.length),
-    datevNotices,
-  );
+  const handover = useFinanceHandover(reloadAll, datevNotices);
   const openRepeat = (run: ExportRun, toRecipient: boolean) => {
     setRepeatHandover(toRecipient);
     setRepeat(run);
@@ -269,27 +266,16 @@ export default function TraegerFinanceExportsPage() {
     setLoadingMore(list);
     try {
       if (list === "runs") {
-        const next = await fetchExportRuns(offset);
-        const datevRuns = await readDatevRuns(next.items, data.datev.ready);
-        setData((current) =>
-          current
-            ? {
-                ...current,
-                runs: joinPages(current.runs, next),
-                datevRuns: {
-                  ready: datevRuns.ready,
-                  runs: new Map([...current.datevRuns.runs, ...datevRuns.runs]),
-                },
-              }
-            : current,
-        );
+        const runs = joinPages(data.runs, await fetchExportRuns(offset));
+        opened.current.runs = runs.items.length;
+        await runsRead.mutate(runs, { revalidate: false });
       } else {
-        const next = await fetchExportProtocol(offset);
-        setData((current) =>
-          current
-            ? { ...current, protocol: joinPages(current.protocol, next) }
-            : current,
+        const protocol = joinPages(
+          data.protocol,
+          await fetchExportProtocol(offset),
         );
+        opened.current.protocol = protocol.items.length;
+        await protocolRead.mutate(protocol, { revalidate: false });
       }
     } catch (err) {
       logger.error("traeger_finance_exports_more_failed", {
@@ -356,7 +342,7 @@ export default function TraegerFinanceExportsPage() {
       }
     } finally {
       setDownloading(null);
-      void load(data?.runs.items.length, data?.protocol.items.length);
+      reloadAll();
     }
   };
 
@@ -418,9 +404,9 @@ export default function TraegerFinanceExportsPage() {
           />
         ) : null
       }
-      statsLoading={!data && !pageLoad.error}
-      error={pageLoad.error}
-      loading={!data && !pageLoad.error}
+      statsLoading={loading}
+      error={loadError}
+      loading={loading}
     >
       {data ? (
         <>
@@ -444,7 +430,21 @@ export default function TraegerFinanceExportsPage() {
           <SectionCard
             title="Dateien je Lauf"
             description="Die Sollstellung ist für Ihre Kämmerei, die DATEV-Datei für Ihr Steuerbüro. Die DATEV-Datei enthält nur neue Buchungen."
-            flush
+            action={
+              <TraegerListExportMenu
+                download={(format) =>
+                  downloadTraegerList(
+                    "/api/traeger/finance-exports/runs/export",
+                    format,
+                  )
+                }
+                scope={traegerExportScope()}
+                ariaLabel="Läufe der Exporte herunterladen"
+                fallbackName="exportlaeufe"
+                errorObject="die Läufe der Exporte"
+                unavailable={data.runs.total === 0}
+              />
+            }
             footer={
               data.runs.nextOffset === null ? null : (
                 <MorePages
@@ -493,7 +493,21 @@ export default function TraegerFinanceExportsPage() {
           <SectionCard
             title="Exportprotokoll"
             description="Jede Datei, die moto verlassen hat: Sollstellungen, DATEV-Dateien und Lastschriftdateien."
-            flush
+            action={
+              <TraegerListExportMenu
+                download={(format) =>
+                  downloadTraegerList(
+                    "/api/traeger/finance-exports/files/export",
+                    format,
+                  )
+                }
+                scope={traegerExportScope()}
+                ariaLabel="Exportprotokoll herunterladen"
+                fallbackName="exportprotokoll"
+                errorObject="das Exportprotokoll"
+                unavailable={data.protocol.total === 0}
+              />
+            }
             footer={
               data.protocol.nextOffset === null ? null : (
                 <MorePages

@@ -1,26 +1,22 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { ListSkeleton } from "~/components/ui/page-skeletons";
 import {
   isOutstandingAnnouncement,
   NewsCard,
   NewsDetailModal,
 } from "~/components/parent/news/news-components";
-import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
+import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { type ParentAnnouncement, listAnnouncements } from "~/lib/parent-api";
 import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 
-const logger = createLogger({ component: "ParentNewsPage" });
+const NO_ITEMS: ParentAnnouncement[] = [];
 
 /** Elternbriefe buendeln Mitteilungen, Umfragen und Elterninformationen. */
 export function ParentNewsPage() {
@@ -29,53 +25,22 @@ export function ParentNewsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedBrief = searchParams.get("brief");
-  const [items, setItems] = useState<ParentAnnouncement[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const announcements = useSWRAuth(
+    parentKeys.announcements(),
+    listAnnouncements,
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const { mutate } = announcements;
+  const items = announcements.data ?? NO_ITEMS;
   // A failed load replaces the list with retry (#2518), so it never reads
   // as "nothing to do".
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
+  const { error: loadError, failure } = useSwrResourceLoadError(
+    [announcements],
+    t("errorObjectList"),
+    () => mutate(),
+  );
+  const loaded = announcements.data !== undefined || !!failure;
   const [openId, setOpenId] = useState<string | null>(null);
-  // Only the latest load may update the page; unmount invalidates all.
-  const loadSeqRef = useRef(0);
-
-  const load = useCallback(() => {
-    const seq = ++loadSeqRef.current;
-    setLoaded(false);
-    clearLoadError();
-    listAnnouncements()
-      .then((list) => {
-        if (seq === loadSeqRef.current) setItems(list);
-      })
-      .catch((err: unknown) => {
-        logger.error("parent_news_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (seq !== loadSeqRef.current) return;
-        void showLoadError(err, {
-          object: t("errorObjectList"),
-          retry: () => loadRef.current(),
-        });
-      })
-      .finally(() => {
-        if (seq === loadSeqRef.current) setLoaded(true);
-      });
-  }, [clearLoadError, showLoadError, t]);
-  // The retry runs the latest load, not the one of the failed attempt.
-  const loadRef = useRef(load);
-  useLayoutEffect(() => {
-    loadRef.current = load;
-  });
-
-  useEffect(() => {
-    load();
-    return () => {
-      loadSeqRef.current += 1;
-    };
-  }, [load]);
 
   useEffect(() => {
     if (requestedBrief && items.some((item) => item.id === requestedBrief)) {
@@ -85,26 +50,23 @@ export function ParentNewsPage() {
 
   const applyState = useCallback(
     (id: string, patch: Partial<ParentAnnouncement>) => {
-      setItems((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+      void mutate(
+        (current) =>
+          current?.map((item) =>
+            item.id === id ? { ...item, ...patch } : item,
+          ),
+        { revalidate: false },
       );
     },
-    [],
+    [mutate],
   );
 
   // Ein Lesen oder Bestaetigen wurde abgewiesen, weil die Meldung nicht mehr
-  // aktuell ist: neu laden, damit eine zurueckgezogene verschwindet.
+  // aktuell ist: neu laden, damit eine zurueckgezogene verschwindet. A failure
+  // stays silent: the open letter already shows that it is out of date.
   const refetchOnStale = useCallback(() => {
-    listAnnouncements()
-      .then(setItems)
-      .catch((err: unknown) => {
-        // Deliberately silent: the person did not start this refresh, and the
-        // open letter already shows that it is out of date.
-        logger.error("parent_news_refetch_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-  }, []);
+    void mutate();
+  }, [mutate]);
 
   const openItem = items.find((item) => item.id === openId) ?? null;
 

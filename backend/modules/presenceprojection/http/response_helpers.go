@@ -27,6 +27,9 @@ type StudentResponseOpts struct {
 	// Resolve once per request and thread through — populatePhotoFields
 	// runs per-student in list paths.
 	PhotosEnabled bool
+	// Today is the day the care end and the health information are read
+	// on: the Resource clock's day.
+	Today calendar.Date
 }
 
 // StudentResponseServices groups service dependencies for student response creation
@@ -62,17 +65,18 @@ func populatePersonAndGroupData(response *StudentResponse, person *peopleModule.
 // list and is labelled "Betreuung endet am …", an effective one is only shown
 // in the archive view. The exit REASON never travels here — it is read behind
 // users:delete.
-func populateCareEndFields(response *StudentResponse, student *peopleModule.StudentState) {
+func populateCareEndFields(response *StudentResponse, student *peopleModule.StudentState, today calendar.Date) {
+	response.WithoutCarePlace = student.WithoutCarePlace
 	if student.EnrolledUntil == nil {
 		return
 	}
 	response.CareEndsOn = student.EnrolledUntil.String()
-	response.CareEnded = student.CareEndedOn(calendar.TodayDate())
+	response.CareEnded = student.CareEndedOn(today)
 }
 
 // populatePublicStudentFields sets fields visible to all authenticated staff
-func populatePublicStudentFields(response *StudentResponse, student *peopleModule.StudentState) {
-	populateCareEndFields(response, student)
+func populatePublicStudentFields(response *StudentResponse, student *peopleModule.StudentState, today calendar.Date) {
+	populateCareEndFields(response, student, today)
 	allowed := student.AllowedDepartureModes.Normalize()
 	response.DepartureRuleConfigured = departureRuleConfigured(student, allowed)
 	if !allowed.HasAny() {
@@ -113,8 +117,8 @@ func responsePickupStatus(student *peopleModule.StudentState, derived string) st
 }
 
 // populateSensitiveStudentFields sets fields visible only with users:read.
-func populateSensitiveStudentFields(response *StudentResponse, student *peopleModule.StudentState) {
-	if health := student.HealthInfoOn(calendar.TodayDate()); health != nil {
+func populateSensitiveStudentFields(response *StudentResponse, student *peopleModule.StudentState, today calendar.Date) {
+	if health := student.HealthInfoOn(today); health != nil {
 		response.HealthInfo = *health
 	}
 	if student.ExtraInfo != nil && *student.ExtraInfo != "" {
@@ -226,8 +230,8 @@ func populateEnrollmentConsents(response *StudentResponse, student *peopleModule
 }
 
 // populateSnapshotPublicFields sets fields visible to all staff in snapshot version
-func populateSnapshotPublicFields(response *StudentResponse, student *peopleModule.StudentState) {
-	populateCareEndFields(response, student)
+func populateSnapshotPublicFields(response *StudentResponse, student *peopleModule.StudentState, today calendar.Date) {
+	populateCareEndFields(response, student, today)
 	allowed := student.AllowedDepartureModes.Normalize()
 	response.DepartureRuleConfigured = departureRuleConfigured(student, allowed)
 	if !allowed.HasAny() {
@@ -347,12 +351,12 @@ func newStudentResponseWithOpts(ctx context.Context, opts StudentResponseOpts, s
 	}
 
 	populatePersonAndGroupData(&response, person, student, group, hasFullAccess)
-	populatePublicStudentFields(&response, student)
+	populatePublicStudentFields(&response, student, opts.Today)
 
 	// Notes and health information require users:read, independently of the
 	// staff-only address and planning scope.
 	if canReadSensitiveStudentData(ctx) {
-		populateSensitiveStudentFields(&response, student)
+		populateSensitiveStudentFields(&response, student, opts.Today)
 	} else {
 		response.PickupStatus = response.AllowedDepartureModes.LegacyPickupStatus()
 	}
@@ -374,7 +378,7 @@ func newStudentResponseWithOpts(ctx context.Context, opts StudentResponseOpts, s
 
 // newStudentResponseFromSnapshot creates a student response using pre-loaded snapshot data
 // This eliminates N+1 queries by using cached person, group, and location data
-func newStudentResponseFromSnapshot(ctx context.Context, student *peopleModule.StudentState, person *peopleModule.Person, group *SchoolGroup, hasFullAccess bool, snapshot *studentDataSnapshot, photosEnabled bool) StudentResponse {
+func newStudentResponseFromSnapshot(ctx context.Context, student *peopleModule.StudentState, person *peopleModule.Person, group *SchoolGroup, hasFullAccess bool, snapshot *studentDataSnapshot, photosEnabled bool, today calendar.Date) StudentResponse {
 	hasPhotoAccess := hasFullAccess
 	hasFullAccess = hasFullAccess && canReadSensitiveStudentData(ctx)
 	response := StudentResponse{
@@ -396,10 +400,10 @@ func newStudentResponseFromSnapshot(ctx context.Context, student *peopleModule.S
 	response.RoomColor = locationInfo.RoomColor
 
 	populatePersonAndGroupData(&response, person, student, group, hasFullAccess)
-	populateSnapshotPublicFields(&response, student)
+	populateSnapshotPublicFields(&response, student, today)
 
 	if canReadSensitiveStudentData(ctx) {
-		populateSensitiveStudentFields(&response, student)
+		populateSensitiveStudentFields(&response, student, today)
 	} else {
 		response.PickupStatus = response.AllowedDepartureModes.LegacyPickupStatus()
 	}
@@ -421,7 +425,7 @@ func teacherToSupervisorContact(teacher GroupTeacher) *SupervisorContact {
 		FirstName: teacher.FirstName,
 		LastName:  teacher.LastName,
 		Email:     teacher.Email,
-		Role:      "teacher",
+		Role:      SupervisorRoleTeacher,
 	}
 }
 
@@ -681,7 +685,7 @@ func (rs *Resource) buildSingleStudentResponse(ctx context.Context, student *peo
 	}
 
 	// Build response
-	studentResponse := newStudentResponseFromSnapshot(ctx, student, person, group, hasFullAccess, dataSnapshot, photosEnabled)
+	studentResponse := newStudentResponseFromSnapshot(ctx, student, person, group, hasFullAccess, dataSnapshot, photosEnabled, params.careStatusToday)
 
 	return &studentResponse
 }

@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"time"
 	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
@@ -193,6 +192,10 @@ func (s *staffDeviations) executeDeviationPlan(ctx context.Context, instanceID i
 		return nil, timetable.DeviationInternal("deviation time-conflict detection failed", err)
 	}
 
+	if err := s.noticeStaffingChanges(ctx, staffingOperation{changes: deviationPlanChanges(plan), actor: in.ActorAccountID}); err != nil {
+		return nil, timetable.DeviationInternal("staffing notice failed", err)
+	}
+
 	return &timetable.ApplyDeviationsResult{
 		InstanceID:               instanceID,
 		Cancelled:                false,
@@ -215,7 +218,7 @@ func (s *staffDeviations) executeDeviationPlan(ctx context.Context, instanceID i
 // substitution writes in that order. Removals must precede additions so one
 // atomic request can replace a substitute on the same appointment.
 func (s *staffDeviations) writeDeviationOps(ctx context.Context, actor *int64, plan *deviationPlan) ([]timetable.DeviationAffected, timetable.TouchedActivities, error) {
-	now := time.Now()
+	now := s.now()
 	affected := make([]timetable.DeviationAffected, 0, len(plan.absencePlan)+len(plan.subPlan)+len(plan.presencePlan)+len(plan.removalPlan))
 	touched := make(timetable.TouchedActivities)
 

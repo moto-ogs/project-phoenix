@@ -45,9 +45,7 @@ type bulkDayPlan struct {
 // ApplyBulkSubstitution applies the whole multi-day save atomically. Runs
 // inside the caller's tenant tx (TenantTxMiddleware).
 func (s *staffDeviations) ApplyBulkSubstitution(ctx context.Context, in timetable.BulkSubstitutionInput) (*timetable.BulkSubstitutionResult, error) {
-	dates, err := normalizeBulkDates(in.Dates, func() calendar.Date {
-		return calendar.DateFromTime(s.now())
-	})
+	dates, err := normalizeBulkDates(in.Dates, calendar.DateFromTime(s.now()))
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +253,7 @@ func planBulkDay(in timetable.BulkSubstitutionInput, deviations timetable.ApplyD
 // covered blocks, and the per-day time-conflict advisories. Any failure here is
 // a 5xx, which rolls the whole multi-day tx back.
 func (s *staffDeviations) executeBulkPlans(ctx context.Context, actor *int64, plans []bulkDayPlan) (*timetable.BulkSubstitutionResult, error) {
-	now := time.Now()
+	now := s.now()
 	result := &timetable.BulkSubstitutionResult{
 		Days:          make([]timetable.BulkSubstitutionDay, 0, len(plans)),
 		ActiveTouched: make(timetable.TouchedActivities),
@@ -268,6 +266,15 @@ func (s *staffDeviations) executeBulkPlans(ctx context.Context, actor *int64, pl
 		result.ClearedAcks += cleared
 		result.AppliedWrites += len(day.Affected)
 		result.Days = append(result.Days, day)
+	}
+	// One notice per person and kind for the whole Sammel-Vertretung, not
+	// one per day (#7136).
+	var changes []staffingChange
+	for _, plan := range plans {
+		changes = append(append(changes, absenceChanges(plan.absencePlan)...), substitutionChanges(plan.subPlan)...)
+	}
+	if err := s.noticeStaffingChanges(ctx, staffingOperation{changes: changes, actor: actor}); err != nil {
+		return nil, timetable.DeviationInternal("staffing notice failed", err)
 	}
 	return result, nil
 }
@@ -326,13 +333,9 @@ func (s *staffDeviations) clearCoveredAcks(ctx context.Context, actor *int64, su
 // normalizeBulkDates validates, dedupes, and sorts the selected dates
 // ascending (the lock-ordering requirement). Past dates are historical record,
 // exactly like the single-day past-block guard.
-func normalizeBulkDates(dates []calendar.Date, clocks ...func() calendar.Date) ([]calendar.Date, error) {
+func normalizeBulkDates(dates []calendar.Date, today calendar.Date) ([]calendar.Date, error) {
 	if len(dates) == 0 {
 		return nil, timetable.DeviationBadRequest("dates must not be empty").WithCode(timetable.CodeDatesRequired).OnField("dates")
-	}
-	today := calendar.TodayDate()
-	if len(clocks) > 0 && clocks[0] != nil {
-		today = clocks[0]()
 	}
 	seen := make(map[calendar.Date]bool, len(dates))
 	out := make([]calendar.Date, 0, len(dates))

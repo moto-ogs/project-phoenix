@@ -3,6 +3,7 @@ package compose
 import (
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/adapters/datareturn"
@@ -12,12 +13,12 @@ import (
 
 // NewTenantExporter binds only the administrative return procedure, audited
 // per run (#6326); it owns its read-only snapshot, not a request scope.
-func NewTenantExporter(db *bun.DB, fingerprints organizationtenancy.ExportFingerprints, sealed organizationtenancy.TenantExportSealedFields, projected organizationtenancy.TenantExportProjectedFields, audit organizationtenancy.TenantExportAudit) (organizationtenancy.TenantExporter, error) {
-	if db == nil || fingerprints.Bytes == nil || fingerprints.Reader == nil || audit == nil {
-		return nil, errors.New("tenant export requires a database and its operator audit")
+func NewTenantExporter(db *bun.DB, fingerprints organizationtenancy.ExportFingerprints, sealed organizationtenancy.TenantExportSealedFields, projected organizationtenancy.TenantExportProjectedFields, objects organizationtenancy.TenantExportObjects, audit organizationtenancy.TenantExportAudit) (organizationtenancy.TenantExporter, error) {
+	if db == nil || fingerprints.Bytes == nil || fingerprints.Reader == nil || objects == nil || audit == nil {
+		return nil, errors.New("tenant export requires a database, its object store and its operator audit")
 	}
 	return tenantexport.NewTenantExporter(db, organizationtenancy.TenantExportDependencies{
-		Fingerprints: fingerprints, Sealed: sealed, Projected: projected, Audit: audit}), nil
+		Fingerprints: fingerprints, Sealed: sealed, Projected: projected, Objects: objects, Audit: audit, Now: time.Now}), nil
 }
 
 // NewTraegerTenantExporter binds the return procedure with what a Träger
@@ -26,8 +27,8 @@ func NewTenantExporter(db *bun.DB, fingerprints organizationtenancy.ExportFinger
 // through it unchanged.
 func NewTraegerTenantExporter(db *bun.DB, dependencies organizationtenancy.TenantExportDependencies) (organizationtenancy.TenantExporter, error) {
 	if db == nil || dependencies.Fingerprints.Bytes == nil || dependencies.Fingerprints.Reader == nil ||
-		dependencies.SEPADebitFiles == nil || dependencies.Audit == nil {
-		return nil, errors.New("tenant export of a Träger requires a database, its PAIN.008 files and its operator audit")
+		dependencies.SEPADebitFiles == nil || dependencies.Objects == nil || dependencies.Audit == nil || dependencies.Now == nil {
+		return nil, errors.New("tenant export of a Träger requires a database, its PAIN.008 files, its object store, its operator audit and the clock")
 	}
 	return tenantexport.NewTenantExporter(db, dependencies), nil
 }
@@ -41,9 +42,9 @@ func NewDataReturn(db *bun.DB, crypto organizationtenancy.DataReturnCrypto, root
 }
 
 // NewDataReturnRelease binds the operator side; it runs as phoenix_data_return.
-func NewDataReturnRelease(db *bun.DB, crypto organizationtenancy.DataReturnCrypto, root string) (organizationtenancy.DataReturnRelease, error) {
-	if db == nil || !crypto.Complete() || root == "" {
-		return nil, errors.New("data return release requires a database and its cryptography")
+func NewDataReturnRelease(db *bun.DB, crypto organizationtenancy.DataReturnCrypto, root string, now func() time.Time) (organizationtenancy.DataReturnRelease, error) {
+	if db == nil || !crypto.Complete() || root == "" || now == nil {
+		return nil, errors.New("data return release requires a database, its cryptography and the clock")
 	}
-	return datareturn.NewRelease(db, crypto, root), nil
+	return datareturn.NewRelease(db, crypto, root, now), nil
 }

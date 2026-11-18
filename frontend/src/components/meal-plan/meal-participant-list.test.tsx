@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render as rtlRender,
   screen,
@@ -16,6 +17,16 @@ import deMessages from "~/i18n/messages/de.generated";
 // Real next-intl: the cutoff texts use ICU plurals the global mock cannot
 // render.
 vi.unmock("next-intl");
+
+// Echtes SWR statt des globalen Stubs, mit frischem Cache je Render.
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    status: "authenticated",
+  }),
+}));
 
 const mocks = vi.hoisted(() => ({
   getDailyMealParticipants: vi.fn(),
@@ -46,8 +57,13 @@ vi.mock("~/lib/hooks/use-berlin-today", () => ({
 }));
 
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
+import { deferred } from "~/test/helpers/form-modal-pending";
+import { MealRegistrationChangeModal } from "./meal-registration-change-modal";
 import { MealParticipantList } from "./meal-participant-list";
 
 function render(ui: ReactElement) {
@@ -58,10 +74,34 @@ function render(ui: ReactElement) {
         messages={deMessages}
         timeZone="Europe/Berlin"
       >
-        <ToastProvider>{children}</ToastProvider>
+        <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+          <ToastProvider>{children}</ToastProvider>
+        </SWRConfig>
       </NextIntlClientProvider>
     ),
   });
+}
+
+/**
+ * The list next to a reader of the week's meal orders: a registration change
+ * reloads them. Returns the orders' fetcher.
+ */
+function renderWithOrderWeek() {
+  const readOrders = vi.fn(() => Promise.resolve(null));
+  function OrderWeek() {
+    useSWRAuth(
+      tenantContactKeys.mealOrders("2026-09-07", "2026-09-11"),
+      readOrders,
+    );
+    return null;
+  }
+  render(
+    <>
+      <MealParticipantList canRegister />
+      <OrderWeek />
+    </>,
+  );
+  return readOrders;
 }
 
 /** The download menu stays disabled until the list has loaded. */
@@ -125,6 +165,151 @@ describe("MealParticipantList", () => {
     mocks.setChildMealDay.mockResolvedValue(undefined);
     mocks.clearChildMealDay.mockResolvedValue(undefined);
     mocks.replaceChildMealSchedule.mockResolvedValue(undefined);
+  });
+
+  it.each(["date", "child"] as const)(
+    "drops an edited draft when the %s selection changes and returns",
+    async (selection) => {
+      mocks.getChildMealSchedule
+        .mockReset()
+        .mockResolvedValueOnce({ weekdays: [1, 3] })
+        .mockResolvedValueOnce({ weekdays: [4] })
+        .mockResolvedValueOnce({ weekdays: [5] });
+      render(
+        <MealRegistrationChangeModal
+          isOpen
+          date="2026-09-07"
+          participants={[
+            {
+              studentId: "42",
+              firstName: "Mia",
+              lastName: "Muster",
+              schoolClass: "2a",
+            },
+          ]}
+          others={[
+            {
+              studentId: "43",
+              firstName: "Ben",
+              lastName: "Bauer",
+              schoolClass: "3b",
+            },
+          ]}
+          initialStudentId="42"
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Feste Tage" }));
+      await waitFor(() =>
+        expect(screen.getByRole("checkbox", { name: "Montag" })).toBeChecked(),
+      );
+      fireEvent.click(screen.getByRole("checkbox", { name: "Dienstag" }));
+      expect(screen.getByRole("checkbox", { name: "Dienstag" })).toBeChecked();
+      async function selectOther(back: boolean) {
+        if (selection === "date") {
+          fireEvent.click(
+            screen.getByRole("button", {
+              name: back ? "14.09.2026" : "07.09.2026",
+            }),
+          );
+          fireEvent.click(
+            await screen.findByRole("button", {
+              name: back
+                ? /Montag, 7\. September 2026/
+                : "Montag, 14. September 2026",
+            }),
+          );
+        } else {
+          fireEvent.click(screen.getByRole("combobox", { name: "Kind" }));
+          fireEvent.click(
+            await screen.findByRole("option", {
+              name: back
+                ? "Muster, Mia · 2a · Isst mit"
+                : "Bauer, Ben · 3b · Isst nicht mit",
+            }),
+          );
+        }
+      }
+      await selectOther(false);
+      await waitFor(() =>
+        expect(
+          screen.getByRole("checkbox", { name: "Donnerstag" }),
+        ).toBeChecked(),
+      );
+      await selectOther(true);
+      await waitFor(() =>
+        expect(screen.getByRole("checkbox", { name: "Freitag" })).toBeChecked(),
+      );
+      expect(
+        screen.getByRole("checkbox", { name: "Dienstag" }),
+      ).not.toBeChecked();
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      await waitFor(() =>
+        expect(mocks.replaceChildMealSchedule).toHaveBeenCalledWith(
+          "42",
+          [5],
+          "2026-09-07",
+        ),
+      );
+    },
+  );
+
+  it("waits for this opening's meal schedule before edits can freeze a draft", async () => {
+    const props = {
+      date: "2026-09-07",
+      participants: [
+        {
+          studentId: "42",
+          firstName: "Mia",
+          lastName: "Muster",
+          schoolClass: "2a",
+        },
+      ],
+      others: [],
+      initialStudentId: "42",
+      onClose: vi.fn(),
+      onSaved: vi.fn(),
+    };
+    const view = render(<MealRegistrationChangeModal {...props} isOpen />);
+    fireEvent.click(screen.getByRole("button", { name: "Feste Tage" }));
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: "Montag" })).toBeChecked(),
+    );
+    view.rerender(<MealRegistrationChangeModal {...props} isOpen={false} />);
+    const fresh = deferred<{ weekdays: number[]; effectiveFrom: null }>();
+    mocks.getChildMealSchedule.mockReturnValue(fresh.promise);
+    view.rerender(<MealRegistrationChangeModal {...props} isOpen />);
+    fireEvent.click(screen.getByRole("button", { name: "Feste Tage" }));
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(mocks.replaceChildMealSchedule).not.toHaveBeenCalled();
+    await act(async () => fresh.reject(new ApiError("offline", 503)));
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die festen Tage"),
+      ),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "Montag" })).toBeDisabled();
+    mocks.getChildMealSchedule.mockResolvedValue({
+      weekdays: [2, 4],
+      effectiveFrom: null,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: "Dienstag" })).toBeChecked(),
+    );
+    expect(screen.getByRole("checkbox", { name: "Donnerstag" })).toBeChecked();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Freitag" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.replaceChildMealSchedule).toHaveBeenCalledWith(
+        "42",
+        [2, 4, 5],
+        "2026-09-07",
+      ),
+    );
   });
 
   // #3873: seeing the list opens no change of a registration.
@@ -389,13 +574,7 @@ describe("MealParticipantList", () => {
   // #3873: the school changes a registration, also after the deadline.
   describe("Anmeldung ändern", () => {
     it("registers a child for the day after the deadline", async () => {
-      const onRegistrationChanged = vi.fn();
-      render(
-        <MealParticipantList
-          canRegister
-          onRegistrationChanged={onRegistrationChanged}
-        />,
-      );
+      const orders = renderWithOrderWeek();
 
       const dialog = await openChangeFromHead();
       fireEvent.click(within(dialog).getByRole("combobox", { name: "Kind" }));
@@ -430,7 +609,7 @@ describe("MealParticipantList", () => {
       expect(
         await screen.findByText("Die Anmeldung von Ben Bauer ist geändert."),
       ).toBeInTheDocument();
-      expect(onRegistrationChanged).toHaveBeenCalledOnce();
+      await waitFor(() => expect(orders).toHaveBeenCalledTimes(2));
     });
 
     it("returns a day to the regular days", async () => {
@@ -678,13 +857,7 @@ describe("MealParticipantList", () => {
 
     // Das Menü einer Zeile öffnet dasselbe Fenster mit diesem Kind.
     it("opens the change for one child from its row menu", async () => {
-      const onRegistrationChanged = vi.fn();
-      render(
-        <MealParticipantList
-          canRegister
-          onRegistrationChanged={onRegistrationChanged}
-        />,
-      );
+      const orders = renderWithOrderWeek();
 
       await screen.findAllByText("Muster, Mia");
       fireEvent.click(
@@ -723,7 +896,7 @@ describe("MealParticipantList", () => {
       expect(
         await screen.findByText("Die Anmeldung von Mia Muster ist geändert."),
       ).toBeInTheDocument();
-      expect(onRegistrationChanged).toHaveBeenCalledOnce();
+      await waitFor(() => expect(orders).toHaveBeenCalledTimes(2));
     });
 
     it("offers no change for a past day", async () => {

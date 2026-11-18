@@ -18,6 +18,7 @@ package parent
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -47,7 +48,9 @@ type Resource struct {
 	HolidayLinks      HolidayRegistrationLinks
 	PushService       PushSubscriptions
 	PreferenceService NotificationPreferences
-	PWAUsageService   PWAUsage
+	// FeedService is the notification feed of the bell (#7140).
+	FeedService     NotificationFeed
+	PWAUsageService PWAUsage
 	// Reports renders the Erklärung proof PDF (#3430).
 	Reports ReportRenderer
 	// SupportedLocale is bound to the shared language catalog by the root.
@@ -55,6 +58,9 @@ type Resource struct {
 	// MessageAttachmentFiles moves the bytes of the photos and files in
 	// messages (#6685); nil answers 500 on their routes.
 	MessageAttachmentFiles common.MessageAttachmentFileStorage
+	// Now is the root's clock: the issue time of the proofs and the day of
+	// the enrollment form (ADR 0279).
+	Now func() time.Time
 }
 
 // ResourceConfig lists the parent-portal collaborators. The composition root
@@ -84,6 +90,9 @@ type ResourceConfig struct {
 	Push PushSubscriptions
 	// Preferences is the notification consent service.
 	Preferences NotificationPreferences
+	// Feed is the notification feed of the bell across the family's schools
+	// (#7140).
+	Feed NotificationFeed
 	// PWAUsage is the PWA standalone-usage service (#2189).
 	PWAUsage PWAUsage
 	// Reports renders the Erklärung proof PDF (#3430).
@@ -93,10 +102,15 @@ type ResourceConfig struct {
 	// MessageAttachmentFiles moves the bytes of the photos and files in
 	// messages (#6685).
 	MessageAttachmentFiles common.MessageAttachmentFileStorage
+	// Now is the root's clock. Required.
+	Now func() time.Time
 }
 
 // NewResource builds the parent-portal resource.
 func NewResource(cfg ResourceConfig) *Resource {
+	if cfg.Now == nil {
+		panic("parent resource requires a clock")
+	}
 	var sharing parentService.RequestSharingService
 	if cfg.Parent != nil {
 		var ok bool
@@ -118,10 +132,12 @@ func NewResource(cfg ResourceConfig) *Resource {
 		HolidayLinks:           cfg.HolidayLinks,
 		PushService:            cfg.Push,
 		PreferenceService:      cfg.Preferences,
+		FeedService:            cfg.Feed,
 		PWAUsageService:        cfg.PWAUsage,
 		Reports:                cfg.Reports,
 		SupportedLocale:        cfg.SupportedLocale,
 		MessageAttachmentFiles: cfg.MessageAttachmentFiles,
+		Now:                    cfg.Now,
 	}
 }
 

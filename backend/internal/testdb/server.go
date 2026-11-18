@@ -198,6 +198,9 @@ func pingServer(ctx context.Context, cfg *Config) error {
 const composeProjectPrefix = "project-phoenix-testdb"
 const legacyComposeProject = "project-phoenix"
 
+const ephemeralTestContainerImage = "postgres:17.12-alpine3.24@sha256:34261f594522cf41dfcb76aefd42b9d201098b0e6b23c9c68733f169e4218b6f"
+const ephemeralTestContainerLabel = "de.moto.testdb.ephemeral"
+
 func composeProjectFor(cfg *Config) string {
 	port := cfg.templateURL.Port()
 	if port == "" {
@@ -214,6 +217,141 @@ func startTestContainer(ctx context.Context, cfg *Config) error {
 	startCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
 	return startTestContainerWithRunner(startCtx, cfg, runDockerCommand, runTestContainerUp)
+}
+
+// StartEphemeralLocalServer starts the detached-wrapper fallback without a
+// Compose project. Docker picks and publishes a loopback host port, so this
+// path neither depends on host networking nor races another process for one.
+func StartEphemeralLocalServer(ctx context.Context) (_ *Config, err error) {
+	password, err := ephemeralDatabasePassword()
+	if err != nil {
+		return nil, err
+	}
+	startCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+	cmd, err := ephemeralTestContainerCommand(startCtx, password, os.Environ())
+	if err != nil {
+		return nil, err
+	}
+	containerID, err := startEphemeralContainer(cmd)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cleanupCancel()
+			_ = removeEphemeralContainers(cleanupCtx, []string{containerID})
+		}
+	}()
+	port, err := ephemeralContainerPort(startCtx, containerID)
+	if err != nil {
+		return nil, err
+	}
+	cfg, err := newEphemeralLocalConfig(port, password)
+	if err != nil {
+		return nil, err
+	}
+	err = waitForServer(ctx, cfg, pingServer, isPostgresAuthenticationFailure, nil)
+	if err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+// startEphemeralContainer reads only stdout as the container ID: compatible
+// runtimes may emit notices on stderr even when the container starts.
+func startEphemeralContainer(cmd *exec.Cmd) (string, error) {
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("docker run ephemeral postgres-test: %w\n%s%s", err, out, stderr.String())
+	}
+	containerID := strings.TrimSpace(string(out))
+	if containerID == "" {
+		return "", fmt.Errorf("docker run ephemeral postgres-test returned no container id")
+	}
+	return containerID, nil
+}
+
+func ephemeralTestContainerCommand(ctx context.Context, password string, environment []string) (*exec.Cmd, error) {
+	if password == "" {
+		return nil, fmt.Errorf("ephemeral test database startup requires the postgres user with a password")
+	}
+
+	args := []string{
+		"run", "-d", "--rm",
+		"--label", ephemeralTestContainerLabel + "=1",
+		"--tmpfs", "/var/lib/postgresql/data:size=2560m",
+		"--publish", "127.0.0.1::5432",
+		"-e", "POSTGRES_PASSWORD",
+		"-e", "POSTGRES_DB=phoenix_test",
+		ephemeralTestContainerImage,
+		"postgres",
+		"-c", "fsync=off",
+		"-c", "synchronous_commit=off",
+		"-c", "full_page_writes=off",
+		"-c", "shared_buffers=32MB",
+		"-c", "wal_level=minimal",
+		"-c", "max_wal_senders=0",
+		"-c", "max_wal_size=256MB",
+		"-c", "max_connections=300",
+	}
+	cmd := exec.CommandContext(ctx, "docker", args...)
+	cmd.Env = replaceCommandEnvironment(environment, "POSTGRES_PASSWORD", password)
+	return cmd, nil
+}
+
+func ephemeralContainerPort(ctx context.Context, containerID string) (string, error) {
+	out, err := exec.CommandContext(ctx, "docker", "container", "port", containerID, "5432").CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("inspect ephemeral postgres-test port: %w\n%s", err, out)
+	}
+	for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
+		host, port, splitErr := net.SplitHostPort(strings.TrimSpace(line))
+		if splitErr == nil && isLoopbackHost(host) && port != "" {
+			return port, nil
+		}
+	}
+	return "", fmt.Errorf("ephemeral postgres-test has no published loopback port")
+}
+
+// StopEphemeralLocalServer removes only the fallback container published on
+// cfg's port. Configured servers carry no ephemeral label and are never touched.
+func StopEphemeralLocalServer(ctx context.Context, cfg *Config) error {
+	port := cfg.templateURL.Port()
+	if port == "" {
+		return nil
+	}
+	list := exec.CommandContext(ctx, "docker", "container", "ls", "--quiet",
+		"--filter", "label="+ephemeralTestContainerLabel+"=1")
+	out, err := list.Output()
+	if err != nil {
+		return fmt.Errorf("find ephemeral postgres-test container: %w", err)
+	}
+	var ids []string
+	for _, containerID := range strings.Fields(string(out)) {
+		containerPort, portErr := ephemeralContainerPort(ctx, containerID)
+		if portErr != nil {
+			return portErr
+		}
+		if containerPort == port {
+			ids = append(ids, containerID)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	return removeEphemeralContainers(ctx, ids)
+}
+
+func removeEphemeralContainers(ctx context.Context, ids []string) error {
+	args := append([]string{"container", "rm", "--force"}, ids...)
+	if out, err := exec.CommandContext(ctx, "docker", args...).CombinedOutput(); err != nil {
+		return fmt.Errorf("remove ephemeral postgres-test container: %w\n%s", err, out)
+	}
+	return nil
 }
 
 type testContainerStarter func(context.Context, *Config, string) error

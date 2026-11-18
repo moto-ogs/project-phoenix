@@ -47,6 +47,7 @@ func newTestTimetableWithSessions(tb TestTimetableTB, db transactionruntime.Data
 		Sessions:             sessions,
 		Observe:              func(timetableCompose.Observation) {},
 		Provenance:           enrollmentProvenanceView.NewReader(),
+		Now:                  time.Now,
 	})
 	if err != nil {
 		tb.Fatalf("compose test Timetable & Activities: %v", err)

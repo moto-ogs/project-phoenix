@@ -60,8 +60,35 @@ func (s *AccountAuthentication) reconcileRevokedSessions(ctx context.Context) er
 				return err
 			}
 		}
-		return s.push.DeleteOrphaned(adminCtx)
+		return s.deleteOrphanedPush(adminCtx)
 	})
+}
+
+// deleteOrphanedPush removes the push subscriptions no live session backs
+// any more. Delivery names its subscriptions with their session facts;
+// Identity & Access decides liveness on its own session clock, the clock
+// that stamps the session expiry, and Delivery deletes only the links named
+// dead. A failed or incomplete answer deletes nothing.
+func (s *AccountAuthentication) deleteOrphanedPush(adminCtx context.Context) error {
+	links, err := s.push.ListLinks(adminCtx)
+	if err != nil || len(links) == 0 {
+		return err
+	}
+	sessionLinks := make([]domain.PushSubscriptionLink, len(links))
+	for i, link := range links {
+		sessionLinks[i] = domain.PushSubscriptionLink(link)
+	}
+	live, err := s.sessions.livePushSubscriptionLinks(adminCtx, sessionLinks)
+	if err != nil {
+		return err
+	}
+	orphaned := make([]identityaccess.PushSubscriptionLink, 0, len(links))
+	for _, link := range links {
+		if !live[link.SubscriptionID] {
+			orphaned = append(orphaned, link)
+		}
+	}
+	return s.push.DeleteLinks(adminCtx, orphaned)
 }
 
 // ListActiveSessions returns the account's live refresh sessions in the

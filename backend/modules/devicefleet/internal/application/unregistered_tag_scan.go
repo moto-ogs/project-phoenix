@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
@@ -13,7 +14,7 @@ import (
 func (s *Service) RecordUnregisteredTagScan(ctx context.Context, input devicefleet.RecordUnregisteredTagScan) (devicefleet.UnregisteredTagScan, error) {
 	var recorded devicefleet.UnregisteredTagScan
 	err := s.runWrite(ctx, "record_unregistered_tag_scan", func(ctx context.Context, stats *domain.OperationStats) error {
-		input.Normalize(s.deps.Now())
+		input.TagUID = strings.TrimSpace(input.TagUID)
 		if err := input.Validate(); err != nil {
 			return err
 		}

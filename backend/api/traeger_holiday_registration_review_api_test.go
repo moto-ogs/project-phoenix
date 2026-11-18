@@ -360,7 +360,7 @@ func TestTraegerFreezesReopensAndRebooksHolidayRegistrations(t *testing.T) {
 	assert.Equal(t, "cancelled", f.detail(t, f.act(t, f.again, "cancel")).Status)
 }
 
-func TestTraegerExportsHolidayRegistrationsAsCSVAndExcel(t *testing.T) {
+func TestTraegerExportsHolidayRegistrationsAsCSVExcelAndPDF(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Träger Export Ferien")
 	download := func(query string) *httptest.ResponseRecorder {
@@ -395,14 +395,21 @@ func TestTraegerExportsHolidayRegistrationsAsCSVAndExcel(t *testing.T) {
 	assert.Equal(t, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", rec.Header().Get("Content-Type"))
 	assert.True(t, strings.HasPrefix(rec.Body.String(), "PK"), "an Excel workbook is a zip archive")
 
+	// #4718: the list prints as a PDF; a format moto does not write is refused
+	// before anything is read.
 	rec = download("?format=pdf")
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, "application/pdf", rec.Header().Get("Content-Type"))
+	assert.Contains(t, rec.Header().Get("Content-Disposition"), `filename="ferienanmeldungen-winterferien-2027.pdf"`)
+	assert.True(t, strings.HasPrefix(rec.Body.String(), "%PDF"), "a PDF file")
+	rec = download("?format=docx")
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 
-	assert.Equal(t, []string{"export", "export", "export"}, f.auditActions(t), "every export is in the audit trail")
+	assert.Equal(t, []string{"export", "export", "export", "export"}, f.auditActions(t), "every export is in the audit trail")
 	var formats []string
 	require.NoError(t, f.db.NewRaw(`SELECT details->>'format' FROM enrollment.holiday_registration_audit
 		WHERE holiday_period_id = ? ORDER BY id`, f.period.ID).Scan(context.Background(), &formats))
-	assert.Equal(t, []string{"csv", "csv", "xlsx"}, formats)
+	assert.Equal(t, []string{"csv", "csv", "xlsx", "pdf"}, formats)
 }
 
 func TestTraegerHolidayRegistrationReviewNeedsTheRightAndStaysWithItsTraeger(t *testing.T) {
@@ -451,6 +458,9 @@ func TestTraegerHolidayRegistrationListQueryBudgetIsFlat(t *testing.T) {
 // its registrations and keeps those of a later period.
 func TestHolidayRegistrationAuditGoesWithItsPeriod(t *testing.T) {
 	t.Parallel()
+	// The retention deletes the ended registrations of every Träger, those of
+	// the other retention tests too: it runs on its own database.
+	testpkg.SetupIsolatedTestDB(t)
 	f := newReviewFixture(t, "Träger Frist Protokoll")
 	f.list(t, "")
 	f.detail(t, f.act(t, f.siblings, "confirm"))
@@ -465,7 +475,7 @@ func TestHolidayRegistrationAuditGoesWithItsPeriod(t *testing.T) {
 
 	ctx := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, f.db))
 	require.NoError(t, tenant.WithinAdmin(ctx, func(adminCtx context.Context) error {
-		_, err := owners.NewHolidayRegistrationRetention(nil).DeleteExpiredHolidayRegistrations(adminCtx)
+		_, err := owners.NewHolidayRegistrationRetention(holidayFixtureNow).DeleteExpiredHolidayRegistrations(adminCtx)
 		return err
 	}))
 	count := func(period int64) int {

@@ -19,7 +19,7 @@ type documentKindRow struct {
 	OrganizationID int64     `bun:"organization_id,pk"`
 	Service        string    `bun:"service,pk"`
 	DocumentKind   string    `bun:"document_kind"`
-	UpdatedAt      time.Time `bun:"updated_at,nullzero,default:current_timestamp"`
+	UpdatedAt      time.Time `bun:"updated_at,nullzero"`
 }
 
 // DocumentKinds reads the chosen kind of every service of the Träger.

@@ -1,10 +1,14 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
 import type { CalendarPeriod } from "~/lib/calendar-period-helpers";
 import { catalogText } from "~/test/error-catalog-text";
 import type { Phase } from "~/lib/enrollment-phase-api";
+
+vi.unmock("swr");
 
 const {
   mockListPeriods,
@@ -140,11 +144,25 @@ vi.mock("~/components/timetable/calendar-period-modal", () => ({
 }));
 
 import { TenantPage } from "~/components/ui/tenant-page";
+import { SWRConfig } from "~/lib/swr/testing";
 import {
   CalendarPeriodsActions,
   CalendarPeriodsEditor,
   useCalendarPeriods,
 } from "./calendar-periods-editor";
+
+function SWRTestProvider({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", tenantId: 1 }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
 
 /**
  * Der Kopf (Titel, Statuszeile, Anlegen-Aktionen) liegt seit dem
@@ -153,6 +171,14 @@ import {
  * weiter das prüfen, was die Seite wirklich rendert.
  */
 function CalendarPeriodsHost() {
+  return (
+    <SWRTestProvider>
+      <CalendarPeriodsView />
+    </SWRTestProvider>
+  );
+}
+
+function CalendarPeriodsView() {
   const state = useCalendarPeriods();
 
   return (

@@ -71,6 +71,7 @@ type AbsenceListDependencies struct {
 type absenceList struct {
 	deps  AbsenceListDependencies
 	today func() calendar.Date
+	now   func() time.Time
 }
 
 // AbsenceListReport builds the list of one class and logs every read.
@@ -95,11 +96,11 @@ func (a absenceList) RenderAbsenceList(ctx context.Context, query classday.Absen
 	if err != nil {
 		return classday.File{}, err
 	}
-	file, err := a.deps.Renderer.Render(absenceListDocument(report, time.Now()), format, absenceListFilename(report))
+	file, err := a.deps.Renderer.Render(absenceListDocument(report, a.now()), format, absenceListFilename(report))
 	if err != nil {
 		return classday.File{}, err
 	}
-	entry, err := absenceListAccessRecord("absence list export audit", report, query.Actor)
+	entry, err := absenceListAccessRecord("absence list export audit", report, query.Actor, a.now())
 	if err != nil {
 		return classday.File{}, err
 	}
@@ -150,7 +151,7 @@ func (a absenceList) build(ctx context.Context, query classday.AbsenceListQuery)
 	}
 
 	if ahead {
-		report.Children = children
+		report.Children = absenceListChildren(children, participation, nil, participationFrom, participationUntil)
 		return report, nil
 	}
 	from := period.From
@@ -159,7 +160,7 @@ func (a absenceList) build(ctx context.Context, query classday.AbsenceListQuery)
 		from = availableFrom
 	}
 	if from.After(until) {
-		report.Children = children
+		report.Children = absenceListChildren(children, participation, nil, participationFrom, participationUntil)
 		return report, nil
 	}
 	report.CountedUntil = until
@@ -169,7 +170,8 @@ func (a absenceList) build(ctx context.Context, query classday.AbsenceListQuery)
 	return report, nil
 }
 
-// children keeps every child who participated on any requested day.
+// children loads the class children and their dated participation. Filtering
+// waits until the recorded days are available, including transferred marks.
 func (a absenceList) children(ctx context.Context, schoolClass string, from, until calendar.Date) ([]classday.AbsenceListChild, map[calendar.Date]map[int64]bool, error) {
 	children, err := a.deps.Children(ctx, schoolClass)
 	if err != nil {
@@ -184,21 +186,74 @@ func (a absenceList) children(ctx context.Context, schoolClass string, from, unt
 	if err != nil {
 		return nil, nil, fmt.Errorf("absence list: participation: %w", err)
 	}
-	kept := make([]classday.AbsenceListChild, 0, len(children))
-	for _, child := range children {
-		for day := participationFrom; !day.After(participationUntil); day = day.AddDays(1) {
-			if participation[day][child.StudentID] {
-				kept = append(kept, child)
-				break
-			}
-		}
-	}
-	children = kept
+	participation = withSchoolMembersOnly(participation, children, participationFrom, participationUntil)
 	sort.SliceStable(children, func(i, j int) bool {
 		a, b := children[i], children[j]
 		return collation.CompareGermanNames(a.LastName, a.FirstName, b.LastName, b.FirstName) < 0
 	})
 	return children, participation, nil
+}
+
+// absenceListChildren keeps participants and children with transferred records
+// before membership, within the requested and retained window.
+func absenceListChildren(children []classday.AbsenceListChild, participation map[calendar.Date]map[int64]bool, days map[int64]map[calendar.Date]absenceDay, from, until calendar.Date) []classday.AbsenceListChild {
+	kept := make([]classday.AbsenceListChild, 0, len(children))
+	for _, child := range children {
+		for day := from; !day.After(until); day = day.AddDays(1) {
+			_, recorded := days[child.StudentID][day]
+			if participation[day][child.StudentID] || recordedBeforeMembership(child, day, recorded) {
+				kept = append(kept, child)
+				break
+			}
+		}
+	}
+	return kept
+}
+
+// withSchoolMembersOnly counts a child without an OGS place (#4803) on the
+// requested days it belongs to the class: it never takes part in OGS care,
+// yet its absences go into the Klassenbuch. count adds the earlier days a
+// converted class list entry brought marks for.
+func withSchoolMembersOnly(participation map[calendar.Date]map[int64]bool, children []classday.AbsenceListChild, from, until calendar.Date) map[calendar.Date]map[int64]bool {
+	if participation == nil {
+		participation = map[calendar.Date]map[int64]bool{}
+	}
+	for _, child := range children {
+		if !child.SchoolMemberOnly {
+			continue
+		}
+		first, last := schoolMemberDays(child, from, until)
+		for day := first; !day.After(last); day = day.AddDays(1) {
+			if participation[day] == nil {
+				participation[day] = map[int64]bool{}
+			}
+			participation[day][child.StudentID] = true
+		}
+	}
+	return participation
+}
+
+// schoolMemberDays bounds the requested period by the class membership of a
+// child without an OGS place.
+func schoolMemberDays(child classday.AbsenceListChild, from, until calendar.Date) (calendar.Date, calendar.Date) {
+	if child.SchoolMemberFrom != nil && child.SchoolMemberFrom.After(from) {
+		from = *child.SchoolMemberFrom
+	}
+	if child.SchoolMemberUntil != nil && child.SchoolMemberUntil.Before(until) {
+		until = *child.SchoolMemberUntil
+	}
+	return from, until
+}
+
+// recordedBeforeMembership is a day before a child without an OGS place
+// was created that carries a mark or status: its class list entry's
+// morning attendance moved to it when the class list entries became
+// children (#4803).
+func recordedBeforeMembership(child classday.AbsenceListChild, day calendar.Date, recorded bool) bool {
+	if !child.SchoolMemberOnly || !recorded || child.SchoolMemberFrom == nil || !day.Before(*child.SchoolMemberFrom) {
+		return false
+	}
+	return child.SchoolMemberUntil == nil || !day.After(*child.SchoolMemberUntil)
 }
 
 // count applies the retained window and each child's dated participation.
@@ -212,11 +267,14 @@ func (a absenceList) count(ctx context.Context, report *classday.AbsenceListRepo
 	if err != nil {
 		return err
 	}
+	children = absenceListChildren(children, participation, days, report.From, until)
 	for i := range children {
 		childID := children[i].StudentID
 		childSchoolDays := make(map[calendar.Date]bool)
 		for day := from; !day.After(until); day = day.AddDays(1) {
-			if !participation[day][childID] {
+			_, recorded := days[childID][day]
+			takesPart := participation[day][childID] || recordedBeforeMembership(children[i], day, recorded)
+			if !takesPart {
 				delete(days[childID], day)
 			} else if schoolDays[day] {
 				childSchoolDays[day] = true
@@ -389,7 +447,7 @@ func (a absenceList) recordView(ctx context.Context, report *classday.AbsenceLis
 		return nil
 	}
 	const errPrefix = "absence list audit"
-	entry, err := absenceListAccessRecord(errPrefix, report, actor)
+	entry, err := absenceListAccessRecord(errPrefix, report, actor, a.now())
 	if err != nil {
 		return err
 	}
@@ -399,8 +457,8 @@ func (a absenceList) recordView(ctx context.Context, report *classday.AbsenceLis
 	return nil
 }
 
-func absenceListAccessRecord(errPrefix string, report *classday.AbsenceListReport, actor classday.Actor) (AccessRecord, error) {
-	entry, err := newAccessRecord(errPrefix, actor.AccountID, actor.Roles, report.From.BerlinMidnight(), report.To.EndOfDay(), time.Now())
+func absenceListAccessRecord(errPrefix string, report *classday.AbsenceListReport, actor classday.Actor, accessedAt time.Time) (AccessRecord, error) {
+	entry, err := newAccessRecord(errPrefix, actor.AccountID, actor.Roles, report.From.BerlinMidnight(), report.To.EndOfDay(), accessedAt)
 	if err != nil {
 		return AccessRecord{}, err
 	}

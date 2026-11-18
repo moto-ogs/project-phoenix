@@ -3,6 +3,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"time"
 
 	recordports "github.com/moto-ogs/project-phoenix/modules/communication/ports"
 
@@ -29,14 +30,18 @@ type Dependencies struct {
 	Viewers       ViewerNames
 	Audit         recordports.Audit
 	Observe       func(Observation)
+	Now           func() time.Time // stamps a seen announcement; nil is the real clock
 }
 
 func New(dependencies Dependencies, audience ports.Audience) (communication.Capability, error) {
 	if audience == nil || dependencies.DB == nil || dependencies.Organizations == nil || dependencies.Viewers == nil || dependencies.Audit == nil || dependencies.Observe == nil {
 		return nil, errors.New("communication compose: all dependencies are required")
 	}
+	if dependencies.Now == nil {
+		dependencies.Now = time.Now
+	}
 	return application.New(
-		postgres.New(AnnouncementDatabase()),
+		postgres.New(AnnouncementDatabase(), dependencies.Now),
 		audience,
 		application.NewTargets(dependencies.Organizations),
 		dependencies.Viewers,

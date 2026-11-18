@@ -41,7 +41,7 @@ func (s *Service) SubmitPickupPermissionRequest(ctx context.Context, accountID, 
 	if err != nil {
 		return nil, err
 	}
-	if err := child.RequireCareRunning(); err != nil {
+	if err := child.RequireOGSCareRunning(); err != nil {
 		return nil, err
 	}
 	if err := s.requireGuardianManagementEnabled(ctx, child.TenantID); err != nil {
@@ -88,7 +88,7 @@ func (s *Service) SubmitPickupPermissionRequestWithRelationship(ctx context.Cont
 	if err != nil {
 		return nil, err
 	}
-	if err := child.RequireCareRunning(); err != nil {
+	if err := child.RequireOGSCareRunning(); err != nil {
 		return nil, err
 	}
 	if err := s.requireGuardianManagementEnabled(ctx, child.TenantID); err != nil {
@@ -238,6 +238,9 @@ func previousPickupPermissionLabel(link *GuardianRelationship) string {
 func (s *Service) ListPickupPermissionRequests(ctx context.Context, accountID, studentID int64) ([]carerequests.Request, error) {
 	child, err := s.ResolveOwnedChild(ctx, accountID, studentID)
 	if err != nil {
+		return nil, err
+	}
+	if err := child.RequireCarePlace(); err != nil {
 		return nil, err
 	}
 	if s.CareRequests == nil {

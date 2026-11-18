@@ -110,6 +110,16 @@ Proven here (#5700, #5762, #5770) or in pingdotgg/t3code (#14025, #19587,
   EPYC 7763. One school seed takes 52-58 s, 67-69 s or 77-86 s on them, so
   a hosted job spreads by a factor of 1.5 without any change. Compare
   hosted jobs per CPU (`lscpu`), or take at least six.
+- One school seed is serial API calls, so its wall time is the latency of
+  each call, not the runner's cores: 72 s server and 70 s Postgres CPU in
+  82 s on four cores. Argon2id took 41 of the server's 67 CPU s (about 150
+  hashes and checks per seed). The smoke builds with the `seedsmoke` tag and
+  the test profile (#7230): the two "isolation" seeds end after 64-69,
+  85-91 or 114-123 s against 89-97, 110-116 and 139-149 s on the three
+  hosted CPUs. What remains is Postgres, and there planning: 119 s against
+  36 s of execution in two seeds, 51 s of it two parent feed queries at
+  67-75 ms per call (#7231). Profile a Go server without pprof wiring with
+  a temporary `runtime/pprof` file in package main.
 - A seed that looks bimodal may be a query plan, not the runner. Autovacuum
   analyzes a database once a minute; until then the planner took freshly
   filled tables for one row and joined in nested loops (74-107 statements of
@@ -129,6 +139,20 @@ Proven here (#5700, #5762, #5770) or in pingdotgg/t3code (#14025, #19587,
   request compiled cold, because pull requests saved 2 GB caches no other
   pull request could read and the repository sat above its 10 GB limit.
   Check a slow job's "Restore backend build cache" line first.
+- "Backend tests" runs on 16 vCPU with twelve package workers (#7205): the
+  full suite took 140, 155 and 166 s against 215, 222 and 257 s on 8 vCPU
+  (test step 104-123 s against 179-212 s), 3 billed minutes at 16 vCPU
+  against 4-5 at 8, $0.096 against $0.064-0.080 per run. Busy CPU stayed at
+  about 1400 s, idle rose from 8 to 13 %. Small selections stay on 4 vCPU.
+- Four isolated clone slots per package instead of two, rejected (#7205):
+  `organizationtenancy/compose`, 119 tests on a clone at 0.3 s each, fell
+  from 55 to 36-42 s, the job did not (167 and 172 s).
+- Postgres work in the suite is flat (pg_stat_statements on a private
+  server, 16.11.): 1.65 million statements, 256 s of execution in total,
+  none above 4 s but lock waits. About 1900 clones cost 85 ms of Postgres
+  CPU each to create and drop, about 160 CPU s; `STRATEGY WAL_LOG` cost the
+  same as `FILE_COPY` (46 MB template, 3107 relations). Fewer clones or
+  fewer relations lower it, a different statement does not.
 - Package wall times under that load are 2–3 times a local run: `importtest`
   136 s locally, 245–389 s in the full suite. Starting the long packages first
   gained nothing (305 s against 311 s) and slowed them, because they then ran
@@ -140,7 +164,21 @@ Proven here (#5700, #5762, #5770) or in pingdotgg/t3code (#14025, #19587,
   the full 8-vCPU suite.
 - `ci-runtime-watch.yml` reports every Monday the median of the week's
   green pull request runs (all, with backend tests, the backend job, the
-  jobs that end last) and opens one issue above 300 s.
+  jobs that end last, one row per day) and opens one issue when the last
+  three days are above 300 s. A week's median lags: #7195 reported 488 s
+  three days after the repair (561-642 s a day until 12.11., 264-281 s
+  from 14.11.). Read the day table before looking for a cause.
+- History for the backend tests comes without blobs
+  (`scripts/fetch-comparison-history.sh`): the tests read old files only at
+  the comparison commits, and one more request loads what differs from
+  HEAD there (228 blobs in a typical pull request). Locally 14 s against
+  56 s with every blob; the job had waited 7-16 s for the full fetch
+  (#7195).
+- A cache `actions/cache` saves in a pull request job has no writer on
+  development unless a development job saves it too: the migrated DB
+  snapshot missed in 19 of 30 pull request runs, 4-21 s of migrations
+  against 1-2 s of restore. `backend-build-cache.yml` now writes it
+  (`scripts/db-snapshot-cache.test.mjs`, #7195).
 - "Backend tests" writes a "CPU seconds" table into its job summary (build,
   vet, link, Postgres, test binaries). Compare shares of the busy seconds, not
   job durations: the same full suite took 1431 to 2183 busy CPU seconds and

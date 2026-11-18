@@ -93,7 +93,9 @@ type ReminderCandidate struct {
 // contracts of a Träger in its Träger transaction.
 type SignatureStore interface {
 	CurrentDocument(ctx context.Context, organizationID, contractID, versionID int64) (StoredDocument, error)
-	InsertSigningLink(ctx context.Context, organizationID, contractID, documentID int64, tokenSHA256 string, sent SentState, expiresAt time.Time) error
+	// InsertSigningLink stamps the link's created_at and expires_at on the
+	// owner clock, the clock every reader of the link compares with (#7295).
+	InsertSigningLink(ctx context.Context, organizationID, contractID, documentID int64, tokenSHA256 string, sent SentState, createdAt, expiresAt time.Time) error
 	SigningLink(ctx context.Context, organizationID int64, tokenSHA256 string) (SigningLinkRecord, error)
 	// LatestSigningLink reads the newest link of a contract; found is false
 	// when the contract was never sent with one.
@@ -106,6 +108,7 @@ type SignatureStore interface {
 	PaperDocument(ctx context.Context, organizationID, contractID int64) (carecontract.File, error)
 	Reminders(ctx context.Context, organizationID, contractID int64) ([]carecontract.Reminder, error)
 	DueReminders(ctx context.Context, organizationID, contractID int64, lastContactBefore time.Time, maxReminders int) ([]ReminderCandidate, error)
-	InsertReminder(ctx context.Context, organizationID, contractID int64, number int, outboxID int64, recipient string) error
+	// InsertReminder records a reminder at the owner clock's instant at.
+	InsertReminder(ctx context.Context, organizationID, contractID int64, number int, outboxID int64, recipient string, at time.Time) error
 	InboxContractAddressed(ctx context.Context, organizationID, contractID int64, reader carecontract.InboxReader) (bool, error)
 }

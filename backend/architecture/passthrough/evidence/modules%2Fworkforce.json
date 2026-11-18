@@ -324,13 +324,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) CurrentStaffSchedule(ctx context.Context, staffID int64) ([]workforce.StaffWorkSchedule, error) {\n\tif staffID \u003c= 0 {\n\t\treturn nil, invalid(\"staff ID is required\")\n\t}\n\tvar result []domain.StaffWorkSchedule\n\tvar err error\n\terr = s.run(ctx, \"current_staff_schedule\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\tvar queryStats domain.OperationStats\n\t\tresult, queryStats, err = s.store.CurrentStaffSchedule(ctx, staffID)\n\t\tstats.Add(queryStats)\n\t\treturn err\n\t})\n\treturn schedulesToPublic(result), MapError(err)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/workforce/internal/application/Service.CurrentStaffSchedule",
-      "owner": "modules/workforce"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *Service) ExpiredWorkSessionBreaks(ctx context.Context, before time.Time) ([]workforce.WorkSessionBreak, error) {\n\tvar result []workforce.WorkSessionBreak\n\tvar err error\n\terr = s.run(ctx, \"expired_work_session_breaks\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\tvar queryStats domain.OperationStats\n\t\tresult, queryStats, err = s.store.ExpiredWorkSessionBreaks(ctx, before)\n\t\tstats.Add(queryStats)\n\t\treturn err\n\t})\n\treturn result, mapWorkSessionError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/Service.ExpiredWorkSessionBreaks",
@@ -586,6 +579,13 @@
       "evidence": "func (e StaffAdminEngine) UpdateStaffStammdatenPerson(ctx context.Context, staffID int64, input workforce.StammdatenPersonInput, changedByStaffID int64, note string) error {\n\treturn MapStaffAdminError(e.admin.UpdateStaffStammdatenPerson(ctx, staffID, domain.PersonSection(input), changedByStaffID, note))\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/StaffAdminEngine.UpdateStaffStammdatenPerson",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s *StaffDocumentFileSeal) Batch(ctx context.Context, schoolID, afterID int64, limit int, reseal workforce.StaffDocumentFileReseal) (workforce.StaffDocumentFileSealResult, error) {\n\tif schoolID \u003c= 0 || afterID \u003c 0 || limit \u003c 1 || limit \u003e 1000 || reseal == nil {\n\t\treturn workforce.StaffDocumentFileSealResult{}, errors.New(\"staff document file seal requires school, nonnegative cursor, batch size 1..1000 and the object store\")\n\t}\n\tcategories := []string{workforce.StaffDocumentCategoryAUBescheinigung, workforce.StaffDocumentCategoryLohnabrechnung}\n\treturn s.store.LockSealableStaffDocuments(ctx, schoolID, afterID, limit, categories, func(storedName, category string) (bool, error) {\n\t\tchanged, err := reseal(ctx, storedName, workforce.StaffDocumentKeyRing(category))\n\t\tif err != nil {\n\t\t\treturn false, errors.New(\"staff document file seal: a stored file could not be sealed\")\n\t\t}\n\t\treturn changed, nil\n\t})\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/workforce/internal/application/StaffDocumentFileSeal.Batch",
       "owner": "modules/workforce"
     },
     {
@@ -919,7 +919,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *staffAbsenceService) GetTodayAbsenceMap(ctx context.Context) (map[int64]string, error) {\n\tvalues, err := s.absenceRepo.StaffAbsenceMapForDate(ctx, calendar.TodayDate().String())\n\tif err != nil {\n\t\treturn nil, rowReadError(\"get effective absences for date\", err, nil)\n\t}\n\treturn values, nil\n}",
+      "evidence": "func (s *staffAbsenceService) GetTodayAbsenceMap(ctx context.Context) (map[int64]string, error) {\n\tvalues, err := s.absenceRepo.StaffAbsenceMapForDate(ctx, s.today().String())\n\tif err != nil {\n\t\treturn nil, rowReadError(\"get effective absences for date\", err, nil)\n\t}\n\treturn values, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/timetracking/staffAbsenceService.GetTodayAbsenceMap",
       "owner": "modules/workforce"

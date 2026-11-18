@@ -30,6 +30,10 @@ const (
 	// A type registered with PortalSchool itself exists only there (#4792):
 	// the OGS portal neither offers it nor delivers it.
 	PortalSchool = "school"
+	// PortalTraeger is the Träger-Portal (#7146). Its types write the
+	// notification feed only: the portal has no push devices and no live
+	// channel, and no person decides them, so no portal offers them.
+	PortalTraeger = "traeger"
 )
 
 // Channels a notification type is delivered over.
@@ -71,6 +75,7 @@ const (
 	GroupChildren     = "kinder"
 	GroupMessages     = "mitteilungen"
 	GroupAppointments = "termine"
+	GroupStaffing     = "dienstplan"
 )
 
 // groupOrder fixes the order of the headings independently of registration
@@ -81,6 +86,7 @@ var groupOrder = map[string]int{
 	GroupChildren:     3,
 	GroupMessages:     4,
 	GroupAppointments: 5,
+	GroupStaffing:     6,
 }
 
 // Notification type keys.
@@ -152,6 +158,13 @@ const (
 	// staffing that it was cancelled (#7148). It writes the notification feed
 	// and pushes while the cancellation takes effect within 14 days.
 	TypeInstanceCancelled = contract.NotificationInstanceCancelled
+	// TypeStaffNoticePublished tells the audience of a Hinweis der Leitung
+	// (Tagesinformation) that it was published (#7143). It writes the
+	// notification feed; the push is off until the person switches it on.
+	TypeStaffNoticePublished = contract.NotificationStaffNoticePublished
+	// TypeInstanceReinstated tells the same staff that a cancellation was
+	// taken back (#7151). It takes back TypeInstanceCancelled.
+	TypeInstanceReinstated = contract.NotificationInstanceReinstated
 
 	// TypeEnrollmentSubmitted is the e-mail "Neue Anmeldung" (#3780) to the
 	// enrollment managers who switched it on in the Anmeldungen overview.
@@ -175,6 +188,12 @@ type TypeDefinition struct {
 	// (#2208). Only types a Lehrkraft can actually receive belong here; the
 	// OGS supervision reminders never address a school-only account.
 	SchoolPortal bool
+	// SchoolPortalWithoutPermission offers a SchoolPortal type with a
+	// Permission to every account of the school portal (#7139). The
+	// Permission stands for "can be addressed by it" in the OGS portal; a
+	// Lehrkraft holds no OGS right, yet the producer addresses her the same
+	// way, for example as planned staff of a cancelled block.
+	SchoolPortalWithoutPermission bool
 	// Channel is ChannelPush (or empty) or ChannelEmail.
 	Channel string
 	// Permission is the right an e-mail type's recipient must hold when the
@@ -183,9 +202,22 @@ type TypeDefinition struct {
 	Permission string
 	// DefaultOn makes a decision nobody stored read as on: the type is on
 	// until the person switches it off, and delivery drops only explicit
-	// declines (FilterNotOptedOut). It needs a Permission, so it is on only
-	// for the people whose task the notice is (#4791).
+	// declines (FilterNotOptedOut). A staff type needs a Permission, so it is
+	// on only for the people whose task the notice is (#4791); a parent type
+	// is about the family's own children (#7141).
 	DefaultOn bool
+	// Reverses names the type whose change this one takes back (#7151), as
+	// "findet doch statt" takes back a cancellation. Such a type is no choice
+	// of its own: no portal offers it, it follows the reversed type's school
+	// switch, and in the notification feed it updates an unread entry of the
+	// reversed type about the same object within the bundle window.
+	Reverses string
+	// Feed writes every event of the type into the notification feed of its
+	// recipients as well (#7148, #7137): the producer hands over everyone the
+	// notice is for and, separately, whom a push may reach. Message types
+	// stay out, their inboxes count unread messages themselves; reminders
+	// stay out, the bell lists them in their own section.
+	Feed bool
 }
 
 var (
@@ -202,6 +234,10 @@ func RegisterType(def TypeDefinition) {
 	}
 	switch def.Portal {
 	case PortalStaff, PortalParent:
+	case PortalTraeger:
+		if !def.Feed || def.DefaultOn || def.Permission != "" || def.SchoolPortal || def.Channel != "" {
+			panic("notifications: Träger type " + def.Key + " must be a feed type without push, permission or other portal")
+		}
 	case PortalSchool:
 		// A school-only type is already offered there; SchoolPortal only
 		// widens a staff type.
@@ -211,13 +247,32 @@ func RegisterType(def TypeDefinition) {
 	default:
 		panic("notifications: unknown portal " + def.Portal + " for key " + def.Key)
 	}
+	requireSchoolPortalWaiver(def)
+	validateTypeChannel(def)
+
+	typeMu.Lock()
+	defer typeMu.Unlock()
+	if _, exists := typeRegistry[def.Key]; exists {
+		panic("notifications: duplicate type key " + def.Key)
+	}
+	typeRegistry[def.Key] = def
+}
+
+// validateTypeChannel panics on a definition its channel cannot deliver.
+func validateTypeChannel(def TypeDefinition) {
 	switch def.Channel {
 	case "", ChannelPush:
 		if _, ok := groupOrder[def.Group]; !ok {
 			panic("notifications: unknown group " + def.Group + " for key " + def.Key)
 		}
-		if def.DefaultOn && def.Permission == "" {
+		// A parent type reaches only the families of the children it is
+		// about (parent_portal.access), so it needs no right to be on by
+		// default (#7141); a staff type does.
+		if def.DefaultOn && def.Permission == "" && def.Portal != PortalParent {
 			panic("notifications: default-on type " + def.Key + " needs a permission")
+		}
+		if def.Feed && def.Portal != PortalStaff && def.Portal != PortalParent && def.Portal != PortalTraeger {
+			panic("notifications: feed type " + def.Key + " needs the staff, parent or Träger portal")
 		}
 	case ChannelEmail:
 		// An e-mail type is addressed by permission, not by a relation to a
@@ -229,26 +284,43 @@ func RegisterType(def TypeDefinition) {
 	default:
 		panic("notifications: unknown channel " + def.Channel + " for key " + def.Key)
 	}
-
-	typeMu.Lock()
-	defer typeMu.Unlock()
-	if _, exists := typeRegistry[def.Key]; exists {
-		panic("notifications: duplicate type key " + def.Key)
-	}
-	typeRegistry[def.Key] = def
 }
 
 // OfferedInPortal reports whether a person using the given portal may see
 // and decide this type. The school portal borrows from the staff catalogue
 // and adds its own school-only types.
 func OfferedInPortal(def TypeDefinition, portal string) bool {
-	if def.Channel == ChannelEmail {
+	if def.Channel == ChannelEmail || def.Reverses != "" {
 		return false
 	}
 	if portal == PortalSchool {
-		return def.Portal == PortalSchool || (def.Portal == PortalStaff && def.SchoolPortal)
+		return typeDeliversToSchoolPortal(def)
 	}
 	return def.Portal == portal
+}
+
+// typeDeliversToSchoolPortal reports whether a type reaches moto schule. A
+// reversal is not offered as a separate preference, but it follows its
+// cancellation into the school portal's feed and devices.
+func typeDeliversToSchoolPortal(def TypeDefinition) bool {
+	return def.Portal == PortalSchool || (def.Portal == PortalStaff && def.SchoolPortal)
+}
+
+// requireSchoolPortalWaiver panics when a type waives a Permission in the
+// school portal it neither offers there nor declares.
+func requireSchoolPortalWaiver(def TypeDefinition) {
+	if def.SchoolPortalWithoutPermission && (!def.SchoolPortal || def.Permission == "") {
+		panic("notifications: type " + def.Key + " needs SchoolPortal and a Permission to waive it in the school portal")
+	}
+}
+
+// PermissionInPortal is the right a person using the portal must hold to be
+// offered the type; empty means none.
+func PermissionInPortal(def TypeDefinition, portal string) string {
+	if portal == PortalSchool && def.SchoolPortalWithoutPermission {
+		return ""
+	}
+	return def.Permission
 }
 
 // GetType returns one definition.
@@ -272,10 +344,23 @@ func EmailType(key string) (TypeDefinition, bool) {
 // TypesForPortal returns the catalogue of one portal, ordered by group and
 // then by SortOrder.
 func TypesForPortal(portal string) []TypeDefinition {
+	return typesForPortal(portal, false)
+}
+
+// FeedTypesForPortal returns the types a portal renders in its notification
+// feed. A reversal is not a preference a person can set, but it replaces a
+// cancellation in every portal that receives that cancellation (#7151).
+func FeedTypesForPortal(portal string) []TypeDefinition {
+	return typesForPortal(portal, true)
+}
+
+func typesForPortal(portal string, includeStaffReversals bool) []TypeDefinition {
 	typeMu.RLock()
 	defs := make([]TypeDefinition, 0, len(typeRegistry))
 	for _, def := range typeRegistry {
-		if OfferedInPortal(def, portal) {
+		if OfferedInPortal(def, portal) ||
+			(includeStaffReversals && def.Portal == PortalStaff && def.Reverses != "" &&
+				(portal == PortalStaff || (portal == PortalSchool && typeDeliversToSchoolPortal(def)))) {
 			defs = append(defs, def)
 		}
 	}
@@ -297,12 +382,18 @@ func init() {
 	registerPickupTypes()
 	registerActivityTypes()
 	registerStaffMessageTypes()
+	registerStaffTeamTypes()
 	registerStaffNoteTypes()
 	registerStaffQualificationTypes()
 	registerParentMessageTypes()
 	registerParentStatusTypes()
 	registerSchoolTypes()
 	registerStaffAppointmentTypes()
+	registerStaffingTypes()
+	registerClassTimetableTypes()
+	registerStaffNoticeTypes()
+	registerRoomChangeTypes()
+	registerSchoolClosingDayTypes()
 }
 
 // registerStaffAppointmentTypes registers the staff notices about the
@@ -319,6 +410,46 @@ func registerStaffAppointmentTypes() {
 		SortOrder:   1,
 		Permission:  permissionActivitiesRead,
 		DefaultOn:   true,
+		// A Lehrkraft planned for a block in moto schule (#2527) hears
+		// about its cancellation and reinstatement there too (#7139).
+		SchoolPortal:                  true,
+		SchoolPortalWithoutPermission: true,
+		Feed:                          true,
+	})
+	RegisterType(TypeDefinition{
+		Key:                           TypeInstanceReinstated,
+		Label:                         "Absage zurückgenommen",
+		Description:                   "Wenn eine Absage zurückgenommen wird und der Termin doch stattfindet. Folgt dem Schalter für Absagen.",
+		Group:                         GroupAppointments,
+		Portal:                        PortalStaff,
+		TenantGate:                    settingInstanceCancelledEnabled,
+		SortOrder:                     2,
+		Permission:                    permissionActivitiesRead,
+		DefaultOn:                     true,
+		Reverses:                      TypeInstanceCancelled,
+		SchoolPortal:                  true,
+		SchoolPortalWithoutPermission: true,
+		Feed:                          true,
+	})
+}
+
+// registerStaffNoticeTypes registers the notice about a new Hinweis der
+// Leitung (#7143). It writes the notification feed; the person's switch
+// decides only the push.
+func registerStaffNoticeTypes() {
+	// A Hinweis der Leitung (#7143) reaches the readers of the
+	// Tagesinformationen, who hold users:read. The feed entry always comes;
+	// the push only for who switched it on.
+	RegisterType(TypeDefinition{
+		Key:         TypeStaffNoticePublished,
+		Label:       "Hinweise der Leitung",
+		Description: "Wenn die Leitung einen neuen Hinweis für das Team anlegt. Der Hinweis in moto kommt immer. Die Mitteilung aufs Handy kommt nur, wenn Sie sie einschalten.",
+		Group:       GroupMessages,
+		Portal:      PortalStaff,
+		TenantGate:  settingStaffNoticePublishedEnabled,
+		Permission:  permissionUsersRead,
+		SortOrder:   7,
+		Feed:        true,
 	})
 }
 
@@ -354,6 +485,7 @@ func registerPickupTypes() {
 		Permission:  permissionUsersRead,
 		DefaultOn:   true,
 		SortOrder:   3,
+		Feed:        true,
 	})
 }
 
@@ -413,6 +545,7 @@ func registerStaffNoteTypes() {
 		Permission:  permissionUsersRead,
 		DefaultOn:   true,
 		SortOrder:   2,
+		Feed:        true,
 	})
 }
 
@@ -426,6 +559,7 @@ func registerStaffMessageTypes() {
 		Portal:      PortalStaff,
 		TenantGate:  settingAbsenceReportedEnabled,
 		SortOrder:   1,
+		Feed:        true,
 	})
 	RegisterType(TypeDefinition{
 		Key:         TypeStaffParentMessage,
@@ -450,6 +584,12 @@ func registerStaffMessageTypes() {
 		SortOrder:    2,
 		SchoolPortal: true,
 	})
+
+}
+
+// registerStaffTeamTypes adds the notices about the team itself: surveys
+// and planned exits.
+func registerStaffTeamTypes() {
 	// Staff surveys (#4781) are answered in the OGS portal only; the school
 	// portal never offers them.
 	RegisterType(TypeDefinition{
@@ -459,6 +599,7 @@ func registerStaffMessageTypes() {
 		Group:       GroupMessages,
 		Portal:      PortalStaff,
 		SortOrder:   3,
+		Feed:        true,
 	})
 
 	// The Leitung's task (#4809): on until the person switches it off, and
@@ -472,8 +613,8 @@ func registerStaffMessageTypes() {
 		Permission:  permissionUsersDelete,
 		DefaultOn:   true,
 		SortOrder:   4,
+		Feed:        true,
 	})
-
 }
 
 func registerParentMessageTypes() {
@@ -547,6 +688,7 @@ func registerParentStatusTypes() {
 		Description: "Wenn die OGS einen Betreuungstermin Ihres Kindes absagt.",
 		Group:       GroupAppointments,
 		Portal:      PortalParent,
+		Feed:        true,
 		SortOrder:   3,
 	})
 
@@ -617,6 +759,7 @@ func registerStaffQualificationTypes() {
 		Permission:  permissionStaffStammdaten,
 		DefaultOn:   true,
 		SortOrder:   5,
+		Feed:        true,
 	})
 	RegisterType(TypeDefinition{
 		Key:         TypeStaffQualificationOwnExpiry,
@@ -625,5 +768,6 @@ func registerStaffQualificationTypes() {
 		Group:       GroupMessages,
 		Portal:      PortalStaff,
 		SortOrder:   6,
+		Feed:        true,
 	})
 }

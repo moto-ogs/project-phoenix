@@ -92,7 +92,7 @@ func conversionSupervisor(staffID int64, from calendar.Date) *activityContract.S
 func TestTemplateAssignmentsOn_NilDependencies(t *testing.T) {
 	t.Parallel()
 
-	svc := NewTemplateService(TemplateServiceDependencies{})
+	svc := NewTemplateService(TemplateServiceDependencies{Today: templateTestToday})
 	assignments, err := svc.TemplateAssignmentsOn(context.Background(), 1, conversionValidFrom(), 11)
 	require.Error(t, err)
 	assert.Nil(t, assignments.StudentIDs)
@@ -109,7 +109,7 @@ func TestTemplateAssignmentsOn_EnrollmentLoadError(t *testing.T) {
 		Directories:            fakeDirectories(),
 		StudentEnrollmentRepo:  &conversionEnrollmentRepo{err: errConversionMock},
 		ActivitySupervisorRepo: &conversionSupervisorRepo{},
-		ActivityGroupRepo:      &conversionPlainGroupRepo{},
+		ActivityGroupRepo:      &conversionPlainGroupRepo{}, Today: templateTestToday,
 	})
 	_, err := svc.TemplateAssignmentsOn(context.Background(), 1, conversionValidFrom(), 11)
 	require.Error(t, err)
@@ -125,7 +125,7 @@ func TestTemplateAssignmentsOn_SupervisorLoadError(t *testing.T) {
 		Directories:            fakeDirectories(),
 		StudentEnrollmentRepo:  &conversionEnrollmentRepo{rows: []*activityContract.StudentEnrollment{}},
 		ActivitySupervisorRepo: &conversionSupervisorRepo{err: errConversionMock},
-		ActivityGroupRepo:      &conversionPlainGroupRepo{},
+		ActivityGroupRepo:      &conversionPlainGroupRepo{}, Today: templateTestToday,
 	})
 	_, err := svc.TemplateAssignmentsOn(context.Background(), 1, from, 11)
 	require.Error(t, err)
@@ -141,7 +141,7 @@ func TestTemplateAssignmentsOn_TargetStudentLoadError(t *testing.T) {
 		Directories:            fakeDirectories(),
 		StudentEnrollmentRepo:  &conversionEnrollmentRepo{},
 		ActivitySupervisorRepo: &conversionSupervisorRepo{},
-		ActivityGroupRepo:      &conversionGroupTargetRepo{err: errConversionMock},
+		ActivityGroupRepo:      &conversionGroupTargetRepo{err: errConversionMock}, Today: templateTestToday,
 	})
 	_, err := svc.TemplateAssignmentsOn(context.Background(), 1, from, 11)
 	require.Error(t, err)
@@ -183,7 +183,7 @@ func TestTemplateAssignmentsOn_FiltersDuplicatesTargetsAndInvalidRows(t *testing
 		ActivityGroupRepo: &conversionGroupTargetRepo{
 			// 0 is ignored, 21 already seen from enrollments, 25 is new.
 			targetIDs: []int64{0, 21, 25},
-		},
+		}, Today: templateTestToday,
 	})
 
 	assignments, err := svc.TemplateAssignmentsOn(context.Background(), 7, from, periodID)
@@ -204,7 +204,7 @@ func TestTemplateAssignmentsOn_SkipsTargetBranchWithoutTargetRepo(t *testing.T) 
 		ActivitySupervisorRepo: &conversionSupervisorRepo{
 			rows: []*activityContract.SupervisorPlanned{conversionSupervisor(51, from)},
 		},
-		ActivityGroupRepo: &conversionPlainGroupRepo{},
+		ActivityGroupRepo: &conversionPlainGroupRepo{}, Today: templateTestToday,
 	})
 
 	assignments, err := svc.TemplateAssignmentsOn(context.Background(), 8, from, 11)

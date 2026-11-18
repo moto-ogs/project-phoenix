@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/devices"
 )
 
@@ -45,12 +46,22 @@ func communicationNotificationsToDelivery(events []communication.NotificationEve
 }
 
 func communicationNotificationToDelivery(event communication.NotificationEvent) devices.NotificationEvent {
+	var feed *deliveryContract.NotificationFeedDelivery
+	if event.Feed != nil {
+		feed = &deliveryContract.NotificationFeedDelivery{
+			PushAccountIDs:    event.Feed.PushAccountIDs,
+			Title:             event.Feed.Title,
+			Body:              event.Feed.Body,
+			DeepLink:          event.Feed.DeepLink,
+			HoldOutsideWindow: event.Feed.HoldOutsideWindow,
+		}
+	}
 	return devices.NotificationEvent{
 		Type: event.Type, IdempotencyKey: event.IdempotencyKey,
 		RelatedType: event.RelatedType, RelatedID: event.RelatedID,
 		Audience: devices.NotificationAudience(event.Audience),
 		Priority: event.Priority, Title: event.Title, Body: event.Body,
 		DeepLink: event.DeepLink, SchoolDeepLink: event.SchoolDeepLink,
-		Data: event.Data, Portal: event.Portal,
+		Data: event.Data, Portal: event.Portal, Feed: feed,
 	}
 }

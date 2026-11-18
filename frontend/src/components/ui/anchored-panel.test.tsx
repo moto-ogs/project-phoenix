@@ -11,6 +11,8 @@ vi.mock("react-day-picker", () => ({
   ),
 }));
 
+import { TEST_CLOCK_TODAY } from "~/test/clock";
+
 import { AnchoredPopover } from "./anchored-popover";
 import { DatePicker } from "./date-picker";
 import { DateRangePicker } from "./date-range-picker";
@@ -85,6 +87,12 @@ function monthShown(): string | null {
   return screen.getAllByTestId("day-grid")[0]!.getAttribute("data-month");
 }
 
+/** The month after today, as the grid mock writes it ("2026-10", "2027-1"). */
+function monthAfterToday(): string {
+  const [year = 0, month = 1] = TEST_CLOCK_TODAY.split("-").map(Number);
+  return month === 12 ? `${year + 1}-1` : `${year}-${month + 1}`;
+}
+
 const CASES: readonly PanelCase[] = [
   {
     name: "AnchoredPopover",
@@ -104,7 +112,9 @@ const CASES: readonly PanelCase[] = [
     name: "ListboxDropdown",
     render: () => <Select />,
     open: async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Gruppe" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /^(Sterne|Monde) ?, Gruppe$/ }),
+      );
       return screen.findByRole("option", { name: "Sterne" });
     },
     isOpen: () => screen.queryByRole("listbox") !== null,
@@ -113,9 +123,9 @@ const CASES: readonly PanelCase[] = [
       fireEvent.pointerDown(option);
       fireEvent.mouseDown(option);
       fireEvent.click(option);
-      expect(screen.getByRole("button", { name: "Gruppe" })).toHaveTextContent(
-        "Monde",
-      );
+      expect(
+        screen.getByRole("button", { name: /^(Sterne|Monde) ?, Gruppe$/ }),
+      ).toHaveTextContent("Monde");
     },
     closesOnUse: true,
     ignoresPageEscape: true,
@@ -149,7 +159,8 @@ const CASES: readonly PanelCase[] = [
       fireEvent.pointerDown(next);
       fireEvent.mouseDown(next);
       fireEvent.click(next);
-      expect(monthShown()).toBe("2026-10");
+      // Without a value the range picker opens on today's month.
+      expect(monthShown()).toBe(monthAfterToday());
     },
   },
 ];
@@ -226,7 +237,9 @@ describe("outside presses on a phone", () => {
         <Select />
       </>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Gruppe" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /^(Sterne|Monde) ?, Gruppe$/ }),
+    );
     await screen.findByRole("listbox");
 
     fireEvent.pointerDown(screen.getByText("Seite"));

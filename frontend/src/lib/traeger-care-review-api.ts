@@ -24,7 +24,7 @@ export interface CareRunSchool {
   readonly openRunId: string | null;
 }
 
-export type CareReviewFormat = "xlsx" | "csv";
+export type CareReviewFormat = "pdf" | "xlsx" | "csv";
 
 function runPath(runId: string): string {
   return `${RUNS_PATH}/${encodeURIComponent(runId)}`;

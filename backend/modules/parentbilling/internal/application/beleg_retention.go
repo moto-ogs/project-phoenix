@@ -56,13 +56,13 @@ type BelegRetention struct {
 	today     func() calendar.Date
 }
 
-// NewBelegRetention builds the retention; a nil today uses the Berlin day.
+// NewBelegRetention builds the retention on the root's day clock today.
 func NewBelegRetention(store BelegRetentionStore, contracts parentbilling.RetainedContracts, today func() calendar.Date) *BelegRetention {
 	if store == nil || contracts == nil {
 		panic("parent billing: the beleg retention needs its store and the contracts")
 	}
 	if today == nil {
-		today = calendar.TodayDate
+		panic("parent billing: the beleg retention needs the day clock")
 	}
 	return &BelegRetention{store: store, contracts: contracts, today: today}
 }

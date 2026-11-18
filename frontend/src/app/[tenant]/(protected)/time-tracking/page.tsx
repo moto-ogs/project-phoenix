@@ -2,6 +2,9 @@
 
 import { useOptimisticStamp } from "~/lib/hooks/use-optimistic-stamp";
 import { timeTrackingKeys } from "~/lib/swr/portal-keys";
+import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
+import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import React, {
   useState,
   useEffect,
@@ -40,7 +43,7 @@ import {
 } from "~/components/ui/drawer";
 import { Alert } from "~/components/ui/alert";
 import { CustomSelect } from "~/components/ui/custom-select";
-import { DataField } from "~/components/ui/detail-modal-components";
+import { DataField } from "~/components/ui/data-field";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { FieldLabel } from "~/components/ui/field-label";
 import { Input } from "~/components/ui/input";
@@ -624,7 +627,6 @@ function ClockInCard({
   const isCheckedOut =
     currentSession !== null && currentSession.checkOutTime !== null;
 
-  // Derive active break from breaks array
   const activeBreak = breaks.find((b) => !b.endedAt) ?? null;
   const isOnBreak = activeBreak !== null;
 
@@ -672,7 +674,6 @@ function ClockInCard({
         )
       : now;
 
-  // Calculate derived time values using extracted helpers
   const liveBreakMins = startedBeforeToday
     ? calcBreakMinutesSince(breaks, dayStart, liveEnd)
     : calcLiveBreakMins(breakMins, activeBreak, liveEnd);
@@ -708,6 +709,7 @@ function ClockInCard({
   })();
 
   // Auto-end break when countdown reaches 0
+  // oxlint-disable-next-line swr/no-effect-load -- one-shot write: ends the running break once its countdown expires; it reads nothing into state
   useEffect(() => {
     if (
       shouldAutoEndBreak(countdownRemainingSecs, isOnBreak, actionLoading) &&
@@ -1657,7 +1659,7 @@ function OwnZeiterfassungSection({
     error: tableError,
     mutate: mutateTable,
   } = useSWRAuth<HistoryResult>(
-    `time-tracking-table-${tableHistoryFromKey}-${tableHistoryToKey}`,
+    timeTrackingKeys.table(tableHistoryFromKey, tableHistoryToKey),
     () =>
       timeTrackingService.getHistory(tableHistoryFromKey, tableHistoryToKey),
     {
@@ -1674,7 +1676,7 @@ function OwnZeiterfassungSection({
     error: tableAbsencesError,
     mutate: mutateTableAbsences,
   } = useSWRAuth<StaffAbsence[]>(
-    `time-tracking-table-absences-${visibleFromKey}-${visibleToKey}`,
+    timeTrackingKeys.tableAbsences(visibleFromKey, visibleToKey),
     () => timeTrackingService.getAbsences(visibleFromKey, visibleToKey),
     { keepPreviousData: true, revalidateOnFocus: false },
   );
@@ -1703,7 +1705,7 @@ function OwnZeiterfassungSection({
     error: shiftsError,
     mutate: mutateShifts,
   } = useSWRAuth(
-    `time-tracking-table-shifts-${visibleFromKey}-${visibleToKey}`,
+    timeTrackingKeys.tableShifts(visibleFromKey, visibleToKey),
     () => ownShiftService.getOwnShifts(visibleFromKey, visibleToKey),
     { keepPreviousData: true, revalidateOnFocus: false },
   );
@@ -1722,7 +1724,7 @@ function OwnZeiterfassungSection({
     isLoading: dailyProjectionLoading,
     mutate: mutateDailyProjection,
   } = useSWRAuth(
-    `time-tracking-schedule-targets-${visibleFromKey}-${visibleToKey}`,
+    timeTrackingKeys.scheduleTargets(visibleFromKey, visibleToKey),
     () => timeTrackingService.getDailyProjection(visibleFromKey, visibleToKey),
     { keepPreviousData: true, revalidateOnFocus: false },
   );
@@ -1740,14 +1742,14 @@ function OwnZeiterfassungSection({
   // der Server bereits als 0; ein Fetch-Fehler lässt die Markierung weg,
   // ohne die Tabelle zu blockieren.
   const { data: tableHolidays } = useSWRAuth(
-    `time-tracking-holidays-${visibleFromKey}-${visibleToKey}`,
+    timeTrackingKeys.holidays(visibleFromKey, visibleToKey),
     () => timeTrackingService.getHolidays(visibleFromKey, visibleToKey),
     { keepPreviousData: true, revalidateOnFocus: false },
   );
   // OGS-Schließtage im sichtbaren Zeitraum (#1418 3b): eigenes Badge in der
   // Tabelle, Soll kommt bereits als 0 vom Server.
   const { data: tableClosingDays } = useSWRAuth(
-    `time-tracking-closing-days-${visibleFromKey}-${visibleToKey}`,
+    timeTrackingKeys.closingDays(visibleFromKey, visibleToKey),
     () => timeTrackingService.getClosingDays(visibleFromKey, visibleToKey),
     { keepPreviousData: true, revalidateOnFocus: false },
   );
@@ -1759,7 +1761,7 @@ function OwnZeiterfassungSection({
     mutate: mutateMonthSummary,
   } = useSWRAuth<MonthSummary>(
     viewMode === "month"
-      ? `time-tracking-month-summary-${monthYear}-${monthNumber}`
+      ? timeTrackingKeys.monthSummary(monthYear, monthNumber)
       : null,
     () => timeTrackingService.getMonthSummary(monthYear, monthNumber),
     { refreshInterval: isCurrentMonth ? openMonthRefreshMs : 0 },
@@ -1771,7 +1773,7 @@ function OwnZeiterfassungSection({
     error: timeTrackingConfigError,
     mutate: mutateTimeTrackingConfig,
   } = useSWRAuth(
-    "time-tracking-config",
+    timeTrackingKeys.config(),
     () => timeTrackingService.getConfig(),
     { revalidateOnFocus: false },
   );
@@ -3142,6 +3144,8 @@ function CreateAbsenceModal({
 
 // ─── Main Content ─────────────────────────────────────────────────────────────
 
+const NO_BREAKS: WorkSessionBreak[] = [];
+
 function TimeTrackingContent() {
   const { data: authSession, status: authStatus } = useSession({
     required: true,
@@ -3257,7 +3261,6 @@ function TimeTrackingContent() {
     absence: StaffAbsence | null;
     laborDay?: WorkDayLaborHint;
   } | null>(null);
-  const [currentBreaks, setCurrentBreaks] = useState<WorkSessionBreak[]>([]);
   const [absenceModalOpen, setAbsenceModalOpen] = useState(false);
   const handleCloseEditModal = useCallback(() => setEditModal(null), []);
   const handleCloseAbsenceModal = useCallback(
@@ -3366,7 +3369,7 @@ function TimeTrackingContent() {
     mutate: mutateHistory,
   } = useSWRAuth<HistoryResult>(
     chartFromDate && toDate
-      ? `time-tracking-history-${chartFromDate}-${toDate}`
+      ? timeTrackingKeys.history(chartFromDate, toDate)
       : null,
     () => timeTrackingService.getHistory(chartFromDate, toDate),
     {
@@ -3388,7 +3391,7 @@ function TimeTrackingContent() {
     mutate: mutateAbsences,
   } = useSWRAuth<StaffAbsence[]>(
     chartFromDate && toDate
-      ? `time-tracking-absences-${chartFromDate}-${toDate}`
+      ? staffAbsenceKeys.ownList(chartFromDate, toDate)
       : null,
     () => timeTrackingService.getAbsences(chartFromDate, toDate),
     { keepPreviousData: true, revalidateOnFocus: false, errorRetryCount: 1 },
@@ -3418,7 +3421,7 @@ function TimeTrackingContent() {
   // without it, and the plan column of the table below reports its own
   // failed shift load in place.
   const { data: ownTodayShifts } = useSWRAuth<StaffShift[]>(
-    `time-tracking-own-shifts-today-${todayISO}`,
+    timeTrackingKeys.ownShiftsToday(todayISO),
     () => ownShiftService.getOwnShifts(todayISO, todayISO),
     { revalidateOnFocus: false, errorRetryCount: 1 },
   );
@@ -3473,7 +3476,6 @@ function TimeTrackingContent() {
   const historyLoad = useApiLoadError();
   const absencesLoad = useApiLoadError();
   const profileLoad = useApiLoadError();
-  const breaksLoad = useApiLoadError();
   const metricsLoad = useApiLoadError();
 
   const metricsError = ownMetrics.error;
@@ -3560,46 +3562,26 @@ function TimeTrackingContent() {
     }
   }, [profileError, retryProfile, showProfileLoadError, clearProfileLoadError]);
 
-  // Fetch breaks for current session
-  const showBreaksLoadError = breaksLoad.show;
-  const clearBreaksLoadError = breaksLoad.clear;
-  const fetchBreaks = useCallback(async () => {
-    if (!confirmedSession?.id || confirmedSession.checkOutTime) {
-      setCurrentBreaks([]);
-      clearBreaksLoadError();
-      return;
-    }
-    try {
-      const breaks = await timeTrackingService.getSessionBreaks(
-        confirmedSession.id,
-      );
-      setCurrentBreaks(breaks);
-      clearBreaksLoadError();
-    } catch (err) {
-      logger.error("fetch_breaks_failed", {
-        error: err instanceof Error ? err.message : String(err),
-        session_id: confirmedSession?.id,
-      });
-      await showBreaksLoadError(err, {
-        object: "die Liste der Pausen",
-        retry: () => void fetchBreaksRef.current(),
-      });
-    }
-  }, [
-    confirmedSession?.id,
-    confirmedSession?.checkOutTime,
-    showBreaksLoadError,
-    clearBreaksLoadError,
-  ]);
-  const fetchBreaksRef = useRef(fetchBreaks);
-  useLayoutEffect(() => {
-    fetchBreaksRef.current = fetchBreaks;
-  });
-
-  useEffect(() => {
-    // fetchBreaks shows its own failure in place; nothing is left to catch.
-    void fetchBreaks();
-  }, [fetchBreaks]);
+  // The breaks of the open session. A failed reload shows in place, also
+  // next to breaks loaded before.
+  const breaksSessionId =
+    confirmedSession?.id && !confirmedSession.checkOutTime
+      ? confirmedSession.id
+      : null;
+  const breaks = useSWRAuth(
+    breaksSessionId ? tenantListKeys.sessionBreaks(breaksSessionId) : null,
+    () => timeTrackingService.getSessionBreaks(breaksSessionId ?? ""),
+    { keepPreviousData: false, revalidateOnFocus: false },
+  );
+  const { mutate: mutateBreaks } = breaks;
+  const breaksLoadError = useSwrLoadError(
+    breaksSessionId ? breaks.error : undefined,
+    "die Liste der Pausen",
+    () => mutateBreaks(),
+  );
+  const currentBreaks =
+    (breaksSessionId && !currentSession?.checkOutTime && breaks.data) ||
+    NO_BREAKS;
 
   // Weekly and daily minutes for the stamp card. Every block is booked on the
   // Berlin calendar day its minutes actually fall on — a block from 22:00 to
@@ -3755,7 +3737,6 @@ function TimeTrackingContent() {
       });
       return;
     }
-    setCurrentBreaks([]);
     void Promise.all([mutateHistory(), refreshTableData()]);
     toast.success("Sie sind ausgestempelt.");
   }, [
@@ -3785,7 +3766,6 @@ function TimeTrackingContent() {
       );
       if (outcome.status === "discarded") return;
       if (outcome.status === "failed") throw outcome.error;
-      if (pending.action === "check_out") setCurrentBreaks([]);
     } catch (err) {
       logger.error("deviation_reason_submit_failed", {
         error: err instanceof Error ? err.message : String(err),
@@ -3831,9 +3811,9 @@ function TimeTrackingContent() {
         });
         return;
       }
-      await fetchBreaks();
+      await mutateBreaks();
     },
-    [fetchBreaks, showActionError],
+    [mutateBreaks, showActionError],
   );
 
   const handleEndBreak = useCallback(async () => {
@@ -3867,7 +3847,7 @@ function TimeTrackingContent() {
       mutateCurrentSession(),
       mutateHistory(),
       refreshTableData(),
-      fetchBreaks(),
+      mutateBreaks(),
     ]);
     // The break ended, but the page could not reload: say so instead of
     // leaving the old running break on screen without explanation.
@@ -3886,7 +3866,7 @@ function TimeTrackingContent() {
     mutateCurrentSession,
     mutateHistory,
     refreshTableData,
-    fetchBreaks,
+    mutateBreaks,
     showActionError,
   ]);
 
@@ -4251,12 +4231,12 @@ function TimeTrackingContent() {
           50/50 nebeneinander. Drunter eine Placeholder-Section für den
           Urlaubs-Workflow (kommt in eigenem Chat). */}
       {currentLoad.error ||
-      breaksLoad.error ||
+      breaksLoadError ||
       absencesLoad.error ||
       profileLoad.error ? (
         <div className="space-y-3">
           <LoadErrorAlert error={currentLoad.error} />
-          <LoadErrorAlert error={breaksLoad.error} />
+          <LoadErrorAlert error={breaksLoadError} />
           <LoadErrorAlert error={absencesLoad.error} />
           <LoadErrorAlert error={profileLoad.error} />
         </div>

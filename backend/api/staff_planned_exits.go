@@ -25,8 +25,10 @@ import (
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	schedulerPorts "github.com/moto-ogs/project-phoenix/modules/schedulerruntime/ports"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
+	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 	"github.com/moto-ogs/project-phoenix/realtime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/workflows/staffoffboarding"
 )
@@ -35,13 +37,14 @@ import (
 // the offboarding workflow the DELETE route uses, so a planned exit runs the
 // same owners in the same order. The Worker has no request principal: the
 // planner acts in the name of the person who planned the exit, and the
-// request authorization of the workflow refuses everything else.
-func PlannedStaffExitsJob(db transactionruntime.Database, hub *realtime.Hub, logger *slog.Logger) owners.PlannedStaffExitsBuilder {
+// request authorization of the workflow refuses everything else. now is the
+// root's clock: it decides which exits are due and where they take effect.
+func PlannedStaffExitsJob(db transactionruntime.Database, hub *realtime.Hub, logger *slog.Logger, now func() time.Time) owners.PlannedStaffExitsBuilder {
 	return func(identity identityaccess.Owner, notifications owners.DeliveryNotifications, staff owners.StaffPermissionHolders) schedulerPorts.PlannedStaffExits {
 		if identity == nil || notifications.Notifier == nil || notifications.Preferences == nil || staff == nil {
 			panic("planned staff exits: identity, notifications and staff are required")
 		}
-		offboarding, err := NewStaffOffboardingOwners(db, peopleCompose.MustNewReads(db.Pool(), owners.StudentDirectoryReader()), owners.MembershipStaffEmployment(workforceCompose.MustNewStaffEmployment(db.Pool())), logger)
+		offboarding, err := NewStaffOffboardingOwners(db, peopleCompose.MustNewReads(db.Pool(), owners.StudentDirectoryReader()), owners.MembershipStaffEmployment(workforceCompose.MustNewStaffEmployment(db.Pool())), logger, now)
 		if err != nil {
 			panic(err)
 		}
@@ -57,11 +60,12 @@ func PlannedStaffExitsJob(db transactionruntime.Database, hub *realtime.Hub, log
 		})
 		due, err := staffoffboarding.NewDueExits(newStaffExitPlanner(workflow, offboarding), staffoffboarding.DueExitDependencies{
 			Notify: staffExitNotifier(notifications, staff, logger), Within: PlannedExitTransaction, BoundLockWaits: BoundPlannedExitLockWaits(plannedExitLockWait),
-			Isolate: isolatePlannedExit, Now: time.Now, Logger: logger,
+			Isolate: isolatePlannedExit, Now: now, Logger: logger,
 		})
 		if err != nil {
 			panic(err)
 		}
+		springers := springerStaffExits(due, identity)
 		return func(ctx context.Context) error {
 			_, err := due.RunDue(ctx)
 			if err != nil {
@@ -70,15 +74,59 @@ func PlannedStaffExitsJob(db transactionruntime.Database, hub *realtime.Hub, log
 					"error", err,
 				)
 			}
+			// After the last block, a Springer's employment ends the
+			// same way (#7197).
+			if _, springerErr := springers.RunDue(ctx); springerErr != nil {
+				logger.Error("springer exits run aborted",
+					"tenant_id", tenant.FromContext(ctx),
+					"error", springerErr,
+				)
+				err = errors.Join(err, springerErr)
+			}
 			return err
 		}
 	}
 }
 
-// staffExitNotifier tells the Leitung, the holders of users:delete who did
-// not switch the notice off, about a planned exit. The push lands on a lock
-// screen, so it names no person; the link opens the profile. A notice the
-// school's settings hold back now is reported unsent and repeated later.
+// springerStaffExits binds the Springer exits of #7197 to Workforce's pool
+// and Identity & Access's windows, beside the planned exits they share
+// their units with.
+func springerStaffExits(due *staffoffboarding.DueExits, identity identityaccess.Owner) *staffoffboarding.SpringerExits {
+	access, err := springerAccessOf(identity)
+	if err != nil {
+		panic(err)
+	}
+	pool := workforceCompose.NewSchoolSpringerExits()
+	springers, err := staffoffboarding.NewSpringerExits(due, staffoffboarding.SpringerExitPorts{
+		Due: func(ctx context.Context, today calendar.Date) ([]staffoffboarding.SpringerExit, error) {
+			exits, err := pool.DueSpringerExits(ctx, today)
+			out := make([]staffoffboarding.SpringerExit, 0, len(exits))
+			for _, exit := range exits {
+				out = append(out, staffoffboarding.SpringerExit(exit))
+			}
+			return out, err
+		},
+		Lock: func(ctx context.Context, recordID int64, today calendar.Date) (staffoffboarding.SpringerExit, bool, error) {
+			exit, due, err := pool.LockSpringerExit(ctx, recordID, today)
+			return staffoffboarding.SpringerExit(exit), due, err
+		},
+		Record: func(ctx context.Context, exit staffoffboarding.SpringerExit) error {
+			return pool.RecordSpringerExit(ctx, workforce.SpringerExit(exit))
+		},
+		HoldsOnlySpringerAccess: access.HoldsOnlySpringerAccess,
+		PruneWindows:            access.PruneSpringerWindows,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return springers
+}
+
+// staffExitNotifier tells the Leitung, the holders of users:delete, about a
+// planned exit: each gets a feed entry, and a push unless they switched the
+// notice off (#7137). The push lands on a lock screen, so it names no
+// person; the link opens the profile. A notice the school's settings hold
+// back now is reported unsent and repeated later, feed entry included.
 func staffExitNotifier(notifications owners.DeliveryNotifications, staff owners.StaffPermissionHolders, logger *slog.Logger) func(context.Context, staffoffboarding.ExitNotice) (bool, error) {
 	return func(ctx context.Context, notice staffoffboarding.ExitNotice) (bool, error) {
 		holders, err := staff.ListStaffWithPermission(ctx, permissions.UsersDelete)
@@ -89,14 +137,11 @@ func staffExitNotifier(notifications owners.DeliveryNotifications, staff owners.
 		if len(candidates) == 0 {
 			return true, nil
 		}
-		recipients, err := notifications.Preferences.FilterNotOptedOut(ctx, deliveryContract.NotificationStaffPlannedExit, candidates)
+		push, err := notifications.Preferences.FilterNotOptedOut(ctx, deliveryContract.NotificationStaffPlannedExit, candidates)
 		if err != nil {
 			return false, fmt.Errorf("filter staff exit recipients: %w", err)
 		}
-		if len(recipients) == 0 {
-			return true, nil
-		}
-		err = notifications.Notifier.Notify(ctx, staffExitEvent(notice, recipients))
+		err = notifications.Notifier.Notify(ctx, staffExitEvent(notice, candidates, push))
 		if errors.Is(err, deliveryCompose.ErrNotificationsDisabled) || errors.Is(err, deliveryCompose.ErrOutsideNotificationWindow) {
 			logger.Debug("planned staff exit notice held back",
 				"staff_id", notice.StaffID,
@@ -165,7 +210,7 @@ func isolatePlannedExit(ctx context.Context, fn func(context.Context) error) (fa
 	return failed, nil
 }
 
-func staffExitEvent(notice staffoffboarding.ExitNotice, recipients []int64) deliveryCompose.NotificationEvent {
+func staffExitEvent(notice staffoffboarding.ExitNotice, recipients, push []int64) deliveryCompose.NotificationEvent {
 	return deliveryCompose.NotificationEvent{
 		Type:           deliveryContract.NotificationStaffPlannedExit,
 		IdempotencyKey: notice.IdempotencyKey,
@@ -179,6 +224,7 @@ func staffExitEvent(notice staffoffboarding.ExitNotice, recipients []int64) deli
 			Scope:           deliveryCompose.NotificationAudienceScope("staff"),
 			StaffAccountIDs: recipients,
 		},
+		Feed: &deliveryContract.NotificationFeedDelivery{PushAccountIDs: push, HoldOutsideWindow: true},
 	}
 }
 

@@ -99,7 +99,8 @@ type ActivityInstance struct {
 
 // MarkCompleted applies the persisted lifecycle state after the live session
 // has ended. completedAt is supplied by the persistence layer because it is
-// also the baseline for detecting later recovery conflicts.
+// the baseline for detecting later recovery conflicts in rows the database
+// stamps; reopenUntil comes from the owner's clock, which Reopen reads.
 func (i *ActivityInstance) MarkCompleted(completedAt, reopenUntil time.Time, completedBy int64) {
 	i.Status = InstanceStatusCompleted
 	i.CompletedAt = &completedAt
@@ -126,6 +127,9 @@ type ActivityCompletionSnapshot struct {
 	VisitIDs      []int64                        `json:"visit_ids"`
 	SupervisorIDs []int64                        `json:"supervisor_ids"`
 	Attendance    []CompletionAttendanceSnapshot `json:"attendance"`
+	// OwnerCompletedAt is the completion on the owner's clock, the one
+	// checkouts carry (#7295); completed_at is the database's.
+	OwnerCompletedAt *time.Time `json:"owner_completed_at,omitempty"`
 }
 
 // Validate ensures activity instance data is valid for persistence.

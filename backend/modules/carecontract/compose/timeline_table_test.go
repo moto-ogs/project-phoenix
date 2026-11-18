@@ -61,8 +61,8 @@ func newTableFixture(t *testing.T, fixedMonths int, versions []tableVersion) *ta
 	f := &tableFixture{db: db, ctx: ctx, organization: organization, short: school.offering, long: school.offering + 1,
 		bookings: bookings}
 	require.NoError(t, db.NewRaw(`INSERT INTO care_contract.contracts (organization_id, school_id, request_child_id,
-			status, sent_at, concluded_at, conclusion_method) VALUES (?, ?, ?, 'aktiv', NOW(), NOW(), 'mit_anmeldung') RETURNING id`,
-		organization, school.school.ID, school.child).Scan(ctx, &f.contract))
+			status, sent_at, concluded_at, conclusion_method) VALUES (?, ?, ?, 'aktiv', ?, ?, 'mit_anmeldung') RETURNING id`,
+		organization, school.school.ID, school.child, time.Now(), time.Now()).Scan(ctx, &f.contract))
 	term, months, ends := "open_ended", any(nil), any(nil)
 	if fixedMonths > 0 {
 		term, months, ends = "fixed_months", fixedMonths, fixedEnd(fixedMonths)
@@ -92,7 +92,7 @@ func newTableFixture(t *testing.T, fixedMonths int, versions []tableVersion) *ta
 	f.conclusion = compose.NewConclusion(
 		compose.ContractPorts{Holidays: holidaysDouble{}, Letterheads: letterheadDouble{}, Post: &postDouble{}, Runtime: runtimeDouble{}, Access: school,
 			Ledger: ledgerDouble{}, Links: testSigningLinks()},
-		compose.IntakePorts{Schools: school, Applications: school, Bookings: school, Access: school, Runtime: runtimeDouble{}, Modes: modesDouble{}, Mail: noMailBlocks{}, Letterheads: letterheadDouble{}, Families: familyNumbersDouble{}})
+		compose.IntakePorts{Schools: school, Applications: school, Bookings: school, Access: school, Runtime: runtimeDouble{}, Modes: modesDouble{}, Mail: noMailBlocks{}, Letterheads: letterheadDouble{}, Families: familyNumbersDouble{}}, time.Now)
 	return f
 }
 

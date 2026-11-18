@@ -1,20 +1,37 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  render,
+  act,
+  render as rtlRender,
   screen,
   waitFor,
   fireEvent,
   within,
 } from "@testing-library/react";
 
+import type { ReactNode } from "react";
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import type { PaymentOverviewRow } from "~/lib/guardian-payment-api";
+import { releaseFakeTimers } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 import {
   DESKTOP_WIDTH,
   PHONE_WIDTH,
   setViewportWidth,
 } from "~/test/helpers/viewport";
+
+vi.unmock("swr");
+
+function render(ui: ReactNode) {
+  const cache = new Map();
+  return rtlRender(ui, {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <SWRConfig value={{ provider: () => cache, errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    ),
+  });
+}
 
 const mockFetchOverview = vi.fn();
 const mockExport = vi.fn();
@@ -27,7 +44,7 @@ let mockPermissions: string[] = ["guardians:financial"];
 let mockSessionStatus: "authenticated" | "loading" = "authenticated";
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { permissions: mockPermissions } },
+    data: { user: { id: "1", permissions: mockPermissions } },
     status: mockSessionStatus,
   }),
 }));
@@ -53,6 +70,8 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
 }));
 
 import BankverbindungenPage from "./page";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 
 function openExportDialog() {
   fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
@@ -86,6 +105,50 @@ describe("BankverbindungenPage", () => {
     vi.restoreAllMocks();
   });
 
+  it("withdraws cached financial data after a 403 until an authorized read succeeds", async () => {
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const resource = useSWRAuth(
+        tenantAdminKeys.paymentOverview(),
+        mockFetchOverview,
+      );
+      reload = () => resource.mutate();
+      return null;
+    }
+    mockFetchOverview.mockResolvedValue([row({})]);
+    render(
+      <>
+        <BankverbindungenPage />
+        <Probe />
+      </>,
+    );
+    expect(await screen.findByText("Sabine Schneider")).toBeVisible();
+    mockFetchOverview.mockRejectedValue(
+      new ApiError("forbidden", 403, { code: "general.permission" }),
+    );
+    await act(async () => {
+      await reload();
+    });
+    // Anker: die Ablehnung ersetzt die zuvor geladene Tabelle.
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Liste der Bankverbindungen"),
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("Sabine Schneider")).not.toBeInTheDocument();
+    expect(screen.queryByText("•••• 3000")).not.toBeInTheDocument();
+    mockFetchOverview.mockRejectedValue(new ApiError("offline", 503));
+    await act(async () => {
+      await reload();
+    });
+    expect(screen.queryByText("Sabine Schneider")).not.toBeInTheDocument();
+    mockFetchOverview.mockResolvedValue([row({})]);
+    await act(async () => {
+      await reload();
+    });
+    expect(await screen.findByText("Sabine Schneider")).toBeVisible();
+  });
+
   it("refuses the page without the bank permission", () => {
     mockPermissions = ["users:read", "users:update"];
 
@@ -102,6 +165,21 @@ describe("BankverbindungenPage", () => {
   afterEach(() => setViewportWidth(DESKTOP_WIDTH));
   const table = () => within(screen.getByTestId("data-table-table"));
   const stacked = () => within(screen.getByTestId("data-table-stacked"));
+  // Die Suchzeile rendert die Auswahl einmal je Anordnung; CSS zeigt auf
+  // jeder Breite genau eine. Unter der Desktop-Breite steht sie in ihrer
+  // eigenen Zeile unter der Suche (#7132).
+  const missingIbanChoice = (layout: "phone" | "desktop") => {
+    const choice = screen
+      .getAllByRole("button", { name: "Ohne IBAN (1)" })
+      .find(
+        (button) =>
+          (button.closest('[data-testid="search-row-primary-action"]') !==
+            null) ===
+          (layout === "phone"),
+      );
+    if (!choice) throw new Error(`Keine Auswahl „Ohne IBAN“ (${layout})`);
+    return choice;
+  };
 
   it("shows children without bank details as a gap, not as a blank cell", async () => {
     mockFetchOverview.mockResolvedValue([
@@ -123,7 +201,8 @@ describe("BankverbindungenPage", () => {
     );
     expect(table().getByText("Nicht zugeordnet")).toBeInTheDocument();
     expect(table().getByText("Fehlt")).toBeInTheDocument();
-    expect(screen.getByText("Ohne IBAN (1)")).toBeInTheDocument();
+    expect(missingIbanChoice("desktop")).toBeInTheDocument();
+    expect(missingIbanChoice("phone")).toBeInTheDocument();
   });
 
   it("narrows the list to the children still missing an IBAN", async () => {
@@ -137,7 +216,7 @@ describe("BankverbindungenPage", () => {
       expect(table().getByText("Mia Schneider")).toBeInTheDocument(),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Ohne IBAN (1)" }));
+    fireEvent.click(missingIbanChoice("desktop"));
 
     expect(table().queryByText("Mia Schneider")).not.toBeInTheDocument();
     expect(table().getByText("Lea Wolf")).toBeInTheDocument();
@@ -156,7 +235,9 @@ describe("BankverbindungenPage", () => {
       expect(stacked().getByText("Mia Schneider")).toBeInTheDocument(),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Ohne IBAN (1)" }));
+    // Die Auswahl in der Telefon-Fassung der Suchzeile: Vorher gab es sie
+    // nur auf dem Desktop (#7132).
+    fireEvent.click(missingIbanChoice("phone"));
 
     expect(stacked().queryByText("Mia Schneider")).not.toBeInTheDocument();
     expect(stacked().getByText("Lea Wolf")).toBeInTheDocument();
@@ -278,10 +359,15 @@ describe("BankverbindungenPage", () => {
         new ApiError("down", 503, { code: "general.unavailable" }),
       );
 
+    // The session switch below refetches once the shared reader's
+    // deduplication window has passed.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     const { rerender } = render(<BankverbindungenPage />);
     await waitFor(() =>
       expect(table().getByText("Mia Schneider")).toBeInTheDocument(),
     );
+    await act(() => vi.advanceTimersByTimeAsync(5_000));
+    releaseFakeTimers();
 
     mockSessionStatus = "loading";
     rerender(<BankverbindungenPage />);

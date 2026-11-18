@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { BillingFamilyDetail } from "~/lib/traeger-billing-families-api";
 
 const { api, mockPush } = vi.hoisted(() => ({
@@ -25,6 +25,8 @@ import {
   PHONE_WIDTH,
   setViewportWidth,
 } from "~/test/helpers/viewport";
+
+vi.unmock("swr");
 
 // DataTable renders only the layout for the window width (#6220).
 afterEach(() => setViewportWidth(DESKTOP_WIDTH));
@@ -126,9 +128,9 @@ const FAMILY: BillingFamilyDetail = {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerBillingFamilyPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

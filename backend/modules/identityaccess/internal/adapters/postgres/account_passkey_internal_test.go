@@ -21,7 +21,7 @@ import (
 func TestAccountPasskeyStoreServesActiveCredentialsOnly(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	store := NewStore(db)
+	store := NewStore(db, time.Now)
 	holder, other := testpkg.CreateTestAccount(t, db, "passkey-store").ID, testpkg.CreateTestAccount(t, db, "passkey-store").ID
 	handle := []byte("handle-" + uuid.Must(uuid.NewV4()).String())
 	credentialID := []byte("credential-" + uuid.Must(uuid.NewV4()).String())
@@ -91,7 +91,7 @@ func TestAccountPasskeyStoreServesActiveCredentialsOnly(t *testing.T) {
 func TestAccountPasskeyStoreConsumesACeremonyOnce(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	store := NewStore(db)
+	store := NewStore(db, time.Now)
 	holder := testpkg.CreateTestAccount(t, db, "passkey-store").ID
 	session := domain.AccountPasskeySession{
 		ID: "passkey-" + uuid.Must(uuid.NewV4()).String(), AccountID: &holder, Purpose: domain.PasskeySessionPurposeRegistration,

@@ -22,14 +22,14 @@ func TestEndOpenVisitForStudent_LookupErrorPropagates(t *testing.T) {
 	t.Parallel()
 
 	lookupErr := errors.New("connection reset")
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: &mockVisitRepository{
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: &mockVisitRepository{
 		getCurrentByStudentIDFunc: func(context.Context, int64) (*studentpresence.Visit, error) {
 			return nil, lookupErr
 		},
 	}},
 	}
 
-	_, err := svc.endOpenVisitForStudent(context.Background(), 4711, calendar.TodayDate(), time.Now())
+	_, err := svc.endOpenVisitForStudent(context.Background(), 4711, calendar.DateFromTime(presenceTestNow()), presenceTestNow())
 
 	require.Error(t, err, "a non-NotFound lookup failure must propagate so the checkout transaction rolls back")
 	assert.False(t, errors.Is(err, ErrVisitNotFound))
@@ -40,17 +40,17 @@ func TestEndOpenVisitForStudent_AlreadyEndedIsTolerated(t *testing.T) {
 
 	// GetCurrentByStudentID still reports the visit as open, but by the time
 	// EndVisit re-reads it the exit time is set — the concurrent-caller race.
-	exitTime := time.Now()
+	exitTime := presenceTestNow()
 	endedVisit := &studentpresence.Visit{
 		ID:        4712,
 		StudentID: 4711,
-		EntryTime: time.Now().Add(-1 * time.Hour),
+		EntryTime: presenceTestNow().Add(-1 * time.Hour),
 		ExitTime:  &exitTime,
 	}
 	openView := *endedVisit
 	openView.ExitTime = nil
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: &mockVisitRepository{
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: &mockVisitRepository{
 		getCurrentByStudentIDFunc: func(context.Context, int64) (*studentpresence.Visit, error) {
 			return &openView, nil
 		},
@@ -60,7 +60,7 @@ func TestEndOpenVisitForStudent_AlreadyEndedIsTolerated(t *testing.T) {
 	}},
 	}
 
-	result, err := svc.endOpenVisitForStudent(context.Background(), 4711, calendar.TodayDate(), time.Now())
+	result, err := svc.endOpenVisitForStudent(context.Background(), 4711, calendar.DateFromTime(presenceTestNow()), presenceTestNow())
 
 	require.NoError(t, err, "a visit ended by a concurrent caller is the desired end state, not an error")
 	require.NotNil(t, result)
@@ -73,11 +73,11 @@ func TestEndOpenVisitForStudent_BinaryModeStillEndsStaleVisit(t *testing.T) {
 	openVisit := &studentpresence.Visit{
 		ID:        4714,
 		StudentID: 4711,
-		EntryTime: time.Now().Add(-1 * time.Hour),
+		EntryTime: presenceTestNow().Add(-1 * time.Hour),
 	}
 	endCalled := false
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: &mockVisitRepository{
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: &mockVisitRepository{
 		getCurrentByStudentIDFunc: func(context.Context, int64) (*studentpresence.Visit, error) {
 			return openVisit, nil
 		},
@@ -88,7 +88,7 @@ func TestEndOpenVisitForStudent_BinaryModeStillEndsStaleVisit(t *testing.T) {
 		},
 		findByIDFunc: func(context.Context, interface{}) (*studentpresence.Visit, error) {
 			ended := *openVisit
-			exitTime := time.Now()
+			exitTime := presenceTestNow()
 			ended.ExitTime = &exitTime
 			return &ended, nil
 		},
@@ -97,7 +97,7 @@ func TestEndOpenVisitForStudent_BinaryModeStillEndsStaleVisit(t *testing.T) {
 	},
 	}
 
-	_, err := svc.endOpenVisitForStudent(context.Background(), 4711, calendar.TodayDate(), time.Now())
+	_, err := svc.endOpenVisitForStudent(context.Background(), 4711, calendar.DateFromTime(presenceTestNow()), presenceTestNow())
 
 	require.NoError(t, err)
 	assert.True(t, endCalled, "checkout stale-visit healing must bypass the binary-mode EndVisit no-op")
@@ -109,10 +109,10 @@ func TestEndOpenVisitForStudent_EndVisitErrorPropagates(t *testing.T) {
 	openVisit := &studentpresence.Visit{
 		ID:        4713,
 		StudentID: 4711,
-		EntryTime: time.Now().Add(-1 * time.Hour),
+		EntryTime: presenceTestNow().Add(-1 * time.Hour),
 	}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: &mockVisitRepository{
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: &mockVisitRepository{
 		getCurrentByStudentIDFunc: func(context.Context, int64) (*studentpresence.Visit, error) {
 			return openVisit, nil
 		},
@@ -125,7 +125,7 @@ func TestEndOpenVisitForStudent_EndVisitErrorPropagates(t *testing.T) {
 	}},
 	}
 
-	_, err := svc.endOpenVisitForStudent(context.Background(), 4711, calendar.TodayDate(), time.Now())
+	_, err := svc.endOpenVisitForStudent(context.Background(), 4711, calendar.DateFromTime(presenceTestNow()), presenceTestNow())
 
 	require.Error(t, err, "an EndVisit failure must propagate so attendance close and visit end stay atomic")
 	assert.False(t, errors.Is(err, ErrVisitAlreadyEnded))
@@ -138,12 +138,14 @@ func TestEndOpenVisitForStudent_NextDayVisitIsLeftAlone(t *testing.T) {
 	// attendance; a room visit the student started AFTER that day belongs to
 	// the new day's session and must stay open (review #2372).
 	endCalled := false
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: &mockVisitRepository{
+	day := calendar.NewDate(2026, 11, 2)
+	entry := day.BerlinMidnight().Add(9 * time.Hour)
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: &mockVisitRepository{
 		getCurrentByStudentIDFunc: func(context.Context, int64) (*studentpresence.Visit, error) {
 			return &studentpresence.Visit{
 				ID:        4715,
 				StudentID: 4711,
-				EntryTime: time.Now(),
+				EntryTime: entry,
 			}, nil
 		},
 		endVisitFunc: func(context.Context, int64) error {
@@ -153,7 +155,7 @@ func TestEndOpenVisitForStudent_NextDayVisitIsLeftAlone(t *testing.T) {
 	}},
 	}
 
-	result, err := svc.endOpenVisitForStudent(context.Background(), 4711, calendar.TodayDate().AddDays(-1), time.Now())
+	result, err := svc.endOpenVisitForStudent(context.Background(), 4711, day.AddDays(-1), entry.Add(time.Second))
 
 	require.NoError(t, err)
 	assert.Nil(t, result, "a newer-day visit reports as nothing-to-end, not as an ended row")
@@ -167,7 +169,7 @@ func TestEndOpenVisitForStudent_UsesCheckoutInstant(t *testing.T) {
 	checkoutAt := day.BerlinMidnight().Add(15*time.Hour + 30*time.Minute)
 	visit := &studentpresence.Visit{ID: 4716, StudentID: 4711, EntryTime: checkoutAt.Add(-time.Hour)}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: &mockVisitRepository{
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: &mockVisitRepository{
 		getCurrentByStudentIDFunc: func(context.Context, int64) (*studentpresence.Visit, error) {
 			return visit, nil
 		},

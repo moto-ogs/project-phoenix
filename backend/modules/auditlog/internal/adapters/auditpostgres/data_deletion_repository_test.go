@@ -19,7 +19,7 @@ func TestDataDeletionRepository_Create(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	// Create a test student for FK reference
@@ -47,7 +47,7 @@ func TestDataDeletionRepository_Create(t *testing.T) {
 			RecordsDeleted: 5,
 			DeletionReason: "Parent requested data deletion",
 			DeletedBy:      "admin@example.com",
-			DeletedAt:      time.Now(),
+			DeletedAt:      auditTestNow,
 		}
 
 		err := testpkg.TenantCommand1(t, ctx, db, repo.Create, deletion)
@@ -84,7 +84,7 @@ func TestDataDeletionRepository_FindByID(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	student := testpkg.CreateTestStudent(t, db, "Find", "Student", "2a")
@@ -121,7 +121,7 @@ func TestDataDeletionRepository_FindByStudentID(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	student1 := testpkg.CreateTestStudent(t, db, "Student", "One", "3a")
@@ -155,13 +155,15 @@ func TestDataDeletionRepository_FindByDateRange(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	student := testpkg.CreateTestStudent(t, db, "Range", "Student", "4a")
 
 	t.Run("finds deletions in date range", func(t *testing.T) {
-		now := time.Now()
+		// The column default stamps deleted_at (ADR 0281, Nachtrag).
+		var now time.Time
+		require.NoError(t, db.NewRaw(`SELECT clock_timestamp()`).Scan(ctx, &now))
 		weekAgo := now.AddDate(0, 0, -7)
 
 		deletion := audit.NewDataDeletion(student.ID, audit.DeletionTypeVisitRetention, 5, "system")
@@ -187,7 +189,7 @@ func TestDataDeletionRepository_FindByType(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	student := testpkg.CreateTestStudent(t, db, "Type", "Student", "5a")
@@ -224,7 +226,7 @@ func TestDataDeletionRepository_List(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	student := testpkg.CreateTestStudent(t, db, "List", "Student", "8a")
@@ -260,7 +262,7 @@ func TestTenantIsolation_DataDeletionVisibility(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
-	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	tenantA, ctxA := testpkg.Tenant(t), testpkg.Ctx(t)
 	scopeB := testpkg.NewTenantScope(t, db)
 	tenantB, ctxB := scopeB.TenantID, scopeB.Context()
@@ -306,7 +308,7 @@ func TestDataDeletionRepository_CreateAll(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
-	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 	first := testpkg.CreateTestStudent(t, db, "Stapel", "Eins", "1a")
 	second := testpkg.CreateTestStudent(t, db, "Stapel", "Zwei", "1a")
@@ -336,4 +338,31 @@ func TestDataDeletionRepository_CreateAll(t *testing.T) {
 		assert.Equal(t, testpkg.Tenant(t), stored[0].TenantID)
 	}
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, repo.CreateAll, nil), "an empty batch writes nothing")
+}
+
+// The cleanup statistics list the visit retention runs of the last 30 days,
+// counted back from the database time that stamps deleted_at: a run of today
+// is listed and one of 31 days before is not, whatever the Go clock says. A
+// window counted from an Audit clock years ahead dropped the fresh run.
+func TestRecentRetentionSummariesCountBackFromTheDatabaseTime(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), func() time.Time { return auditClockYearsAhead })
+	student := testpkg.CreateTestStudent(t, db, "Statistik", "Löschung", "1a")
+	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, repo.Create, audit.NewDataDeletion(student.ID, audit.DeletionTypeVisitRetention, 7, "system")))
+	var agedDay, today string
+	require.NoError(t, db.NewRaw(`INSERT INTO audit.data_deletions (tenant_id, student_id, deletion_type, records_deleted, deleted_by, deleted_at)
+		VALUES (?, ?, ?, 5, 'system', clock_timestamp() - INTERVAL '31 days') RETURNING TO_CHAR(deleted_at, 'YYYY-MM-DD'), TO_CHAR(clock_timestamp(), 'YYYY-MM-DD')`,
+		testpkg.Tenant(t), student.ID, audit.DeletionTypeVisitRetention).Scan(ctx, &agedDay, &today))
+
+	summaries, err := testpkg.TenantQuery2(t, ctx, db, repo.ListRecentRetentionSummaries, 30, 10)
+	require.NoError(t, err)
+	days := map[string]int64{}
+	for _, summary := range summaries {
+		days[summary.Date] = summary.RecordsDeleted
+	}
+	assert.GreaterOrEqual(t, days[today], int64(7), "the run of today is listed")
+	assert.NotContains(t, days, agedDay, "the run of 31 days before is outside the window")
 }

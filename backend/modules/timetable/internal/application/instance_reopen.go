@@ -44,7 +44,7 @@ func (s *InstanceLifecycleService) Reopen(ctx context.Context, instanceID, accou
 	if err != nil {
 		return nil, err
 	}
-	if err := s.validateReopenStudentsStillAtSchool(ctx, instance, studentIDs); err != nil {
+	if err := s.validateReopenStudentsStillAtSchool(ctx, instance, snapshot, studentIDs); err != nil {
 		return nil, err
 	}
 	if err := s.validateReopenState(ctx, instance, snapshot); err != nil {
@@ -151,9 +151,18 @@ func (s *InstanceLifecycleService) lockReopenSnapshotStudents(ctx context.Contex
 // child back into the room after it left school. The reopen window lasts
 // until the planned end (#5676), long enough for a child to go home after
 // the completion.
-func (s *InstanceLifecycleService) validateReopenStudentsStillAtSchool(ctx context.Context, instance *scheduleModel.ActivityInstance, studentIDs []int64) error {
+func (s *InstanceLifecycleService) validateReopenStudentsStillAtSchool(
+	ctx context.Context, instance *scheduleModel.ActivityInstance, snapshot scheduleModel.ActivityCompletionSnapshot, studentIDs []int64,
+) error {
 	if len(studentIDs) == 0 || instance.CompletedAt == nil {
 		return nil
+	}
+	// A checkout carries the owners' clock, so it is ordered against the
+	// completion on that clock. A snapshot from before #7295 has only the
+	// database's completed_at.
+	completedAt := *instance.CompletedAt
+	if snapshot.OwnerCompletedAt != nil {
+		completedAt = *snapshot.OwnerCompletedAt
 	}
 	day := calendar.Date(instance.Date).String()
 	// Checkout does not take the student row locks in detailed mode. Hold
@@ -164,7 +173,7 @@ func (s *InstanceLifecycleService) validateReopenStudentsStillAtSchool(ctx conte
 		return &ports.ScheduleError{Op: "reopen instance: load school attendance", Err: err}
 	}
 	for _, stay := range stays {
-		if stay.CheckOutTime != nil && stay.CheckOutTime.After(*instance.CompletedAt) {
+		if stay.CheckOutTime != nil && stay.CheckOutTime.After(completedAt) {
 			return timetable.WithCode(fmt.Errorf("%w: student %d left school after completion", timetable.ErrTimetableOperationConflict, stay.StudentID), timetable.CodeReopenStudentLeft)
 		}
 	}
@@ -268,7 +277,7 @@ func (s *InstanceLifecycleService) activeSupervisionsByStaff(ctx context.Context
 	if len(staffIDs) == 0 {
 		return activeByStaff, nil
 	}
-	day := calendar.TodayDate().String()
+	day := calendar.DateFromTime(s.now()).String()
 	activeRows, err := s.deps.Presence.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{ActiveOn: &day, StaffIDs: staffIDs})
 	if err != nil {
 		return nil, &ports.ScheduleError{Op: "reopen instance: load staff supervisions", Err: err}

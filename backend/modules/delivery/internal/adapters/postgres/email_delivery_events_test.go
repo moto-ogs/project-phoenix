@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -255,7 +256,8 @@ func TestRetentionRemovesExpiredEventsAndSuppressions(t *testing.T) {
 	mail := enqueueEventMail(t, db, store, ctx, school, "retention", false)
 	_, err := store.RecordEmailDeliveryEvent(ctx, eventAt(eventMailToken(t, db, mail.ID), "hard", domain.EmailDeliveryFailed, time.Now()))
 	require.NoError(t, err)
-	_, err = db.ExecContext(context.Background(), `UPDATE platform.email_outbox SET status = 'sent', sent_at = NOW() - INTERVAL '31 days' WHERE id = ?`, mail.ID)
+	// Delivery stamps and ages its mails on its own clock, here time.Now (ADR 0281).
+	_, err = db.ExecContext(context.Background(), `UPDATE platform.email_outbox SET status = 'sent', sent_at = ? WHERE id = ?`, time.Now().Add(-31*24*time.Hour), mail.ID)
 	require.NoError(t, err)
 
 	var events, keptSuppressions, suppressions int
@@ -463,7 +465,7 @@ func TestRetentionClearsTheDeliveryDataOfAKeyOnlyMail(t *testing.T) {
 	_, err := store.RecordEmailDeliveryEvent(ctx, eventAt(token, "complaint", domain.EmailDeliveryComplained, time.Now()))
 	require.NoError(t, err)
 	_, err = db.ExecContext(context.Background(), `UPDATE platform.email_outbox
-		SET status = 'sent', sent_at = NOW() - INTERVAL '31 days', message_id = 'x@mail.example', provider_message_id = 'p' WHERE id = ?`, welcome.ID)
+		SET status = 'sent', sent_at = ?, message_id = 'x@mail.example', provider_message_id = 'p' WHERE id = ?`, time.Now().Add(-31*24*time.Hour), welcome.ID)
 	require.NoError(t, err)
 
 	require.NoError(t, tenant.WithTenantTx(ctx, db, school, func(txCtx context.Context, _ bun.Tx) error {
@@ -753,9 +755,12 @@ func TestOpenProviderMailsAreTheAcceptedOnesWithoutAnOutcome(t *testing.T) {
 	require.NoError(t, err)
 	_, err = store.RecordEmailDeliveryEvent(ctx, eventAt(eventMailToken(t, db, delivered), "ok", domain.EmailDeliveryDelivered, time.Now()))
 	require.NoError(t, err)
-	_, err = db.ExecContext(context.Background(), `UPDATE platform.email_outbox SET sent_at = NOW() - INTERVAL '30 days' WHERE id = ?`, tooOld)
+	// The reconciliation runs on a fixed day (#7104), a Wednesday 10:00 in
+	// Berlin: the mails went out then, the old one 30 days before.
+	now := calendar.NewDate(2026, time.November, 4).BerlinMidnight().Add(10 * time.Hour)
+	_, err = db.ExecContext(context.Background(), `UPDATE platform.email_outbox SET sent_at = CASE WHEN id = ? THEN ?::timestamptz ELSE ? END
+		WHERE tenant_id = ? AND status = 'sent'`, tooOld, now.AddDate(0, 0, -30), now, school)
 	require.NoError(t, err)
-	now := time.Now()
 	require.NoError(t, store.MarkEmailDeliveryChecked(ctx, checked, now))
 
 	query := domain.ProviderMailQuery{SentAfter: now.Add(-28 * 24 * time.Hour), SentBefore: now.Add(time.Minute), CheckedBefore: now.Add(-time.Hour), Limit: 10}

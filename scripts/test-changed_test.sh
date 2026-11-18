@@ -75,6 +75,13 @@ case "$*" in
   'env GOCACHE')
     echo "$PHX_FIXTURE_GO_CACHE"
     ;;
+  'run ./internal/testdb/cmd/bootstrap --resolve-dsn')
+    echo resolve-dsn >>"$TEST_CHANGED_CALL_LOG"
+    echo postgres://postgres:fixture@127.0.0.1:15432/phoenix_test?sslmode=disable
+    ;;
+  'run ./internal/testdb/cmd/bootstrap --stop-ephemeral')
+    echo stop-ephemeral >>"$TEST_CHANGED_CALL_LOG"
+    ;;
   'run ./internal/testdb/cmd/bootstrap')
     echo bootstrap >>"$TEST_CHANGED_CALL_LOG"
     if [ "${PHX_FIXTURE_BOOTSTRAP_STATUS:-0}" -ne 0 ]; then
@@ -109,8 +116,16 @@ case "$*" in
       echo "go test: expected GOGC=$PHX_FIXTURE_EXPECT_GOGC, got ${GOGC-unset}" >&2
       exit 1
     fi
+    if [ "${GOMAXPROCS-unset}" != 1 ]; then
+      echo "go test: expected GOMAXPROCS=1, got ${GOMAXPROCS-unset}" >&2
+      exit 1
+    fi
     if [ "${PHX_TEST_TEMPLATE:-}" != phoenix_test_template_regression ]; then
       echo 'go test did not receive the bootstrapped template' >&2
+      exit 1
+    fi
+    if [ "${TEST_DB_DSN:-}" != 'postgres://postgres:fixture@127.0.0.1:15432/phoenix_test?sslmode=disable' ]; then
+      echo 'go test did not receive the resolved test database DSN' >&2
       exit 1
     fi
     echo "test:$PHX_TEST_TEMPLATE:$*" >>"$TEST_CHANGED_CALL_LOG"
@@ -228,47 +243,19 @@ go_test_call() {
   printf ' %s' "$@"
 }
 
-# Keep this list explicit: these are the filesystem scan contracts, not
-# import dependencies. The fake list returns one guard too: it must run only once.
-guards=(
-  src/app/api/proxy-routes.test.ts
-  src/app/api/route-cache-policy.test.ts
-  src/app/api/route-session-coverage.test.ts
-  src/app/api/credential-route-coverage.test.ts
-  src/app/api/auth/session-cookie-inventory.test.ts
-  src/lib/app-route-invariants.test.ts
-  src/lib/analytics-routes.test.ts
-  src/lib/help-topics.test.ts
-  src/lib/loading-boundaries.test.ts
-  src/lib/navigation-sync.test.ts
-  src/lib/page-titles.test.ts
-  src/lib/personal-storage.test.ts
-  src/lib/browser-token-ratchet.test.ts
-  src/components/ui/tenant-page-scaffold.test.ts
-  "src/app/[tenant]/(protected)/bauart.test.ts"
-  src/components/ui/nav-scene-icon/nav-scene-coverage.test.ts
-  src/components/ui/planning/plan-design-guards.test.ts
-  src/components/timetable/timetable-design-guards.test.ts
-  src/components/staff/dienstplan-design-guards.test.ts
-  src/components/settings/settings-filter.test.ts
-  src/components/school-setup/setup-tour-targets.test.ts
-  src/components/auth/session-end-barrier.test.tsx
-  src/lib/hooks/use-sse.test.ts
-  src/lib/service-worker.test.ts
-  src/styles/moto-token-drift.test.ts
-  src/lib/hooks/tailwind-breakpoints.test.ts
-  src/server/node-header-limit.test.ts
-  src/lib/permission-labels.test.ts
-  src/lib/modules.test.ts
-  src/lib/role-labels.test.ts
-  src/proxy.test.ts
-  src/sentry.config.test.ts
-  src/test/phosphor-imports-plugin.test.ts
-  src/test/proxy-routes.table.test.ts
-  src/test/session-cookie-writers.test.ts
-  src/lib/moto-concepts.test.ts
-  src/lib/hooks/chat-viewport-lock-consumers.test.ts
-)
+# Guard completeness is checked by --check-guards and its AST regressions.
+# These fixtures verify dispatch, so use the copied selector's current inventory
+# instead of keeping a second list that drifts when new guards are registered.
+# The fake list returns one guard too: it must run only once.
+guards=()
+while IFS= read -r guard; do
+  guards+=("$guard")
+done < <(sed -n '/^const guards = \[$/,/^\];$/p' "$fixture/scripts/test-frontend-changed.mjs" |
+  sed -n 's/^  "\(.*\)",$/\1/p')
+if [ "${#guards[@]}" -eq 0 ]; then
+  echo 'Could not read the frontend guard inventory' >&2
+  exit 1
+fi
 for guard in "${guards[@]}"; do
   if [ ! -f "$repo_root/frontend/$guard" ]; then
     echo "Guard test does not exist: frontend/$guard" >&2
@@ -294,9 +281,9 @@ while read -r os cpus ram workers; do
     else
       run_wrapper "$wrapper" 0 origin/development
     fi
-    expected=$'bootstrap\n'"$(go_test_call "$wrapper" "$workers" ./probe)"
+    expected=$'resolve-dsn\nbootstrap\n'"$(go_test_call "$wrapper" "$workers" ./probe)"
     if [ "$wrapper" = test-changed.sh ]; then expected+=$'\n'"$frontend_calls"; fi
-    assert_calls "$expected"$'\nsweep'
+    assert_calls "$expected"$'\nsweep\nstop-ephemeral'
   done
 done <<'EOF'
 Darwin 32 8 1
@@ -343,26 +330,26 @@ PHX_FIXTURE_PACKAGES=example.test/project/nested/test run_wrapper test-changed.s
 grep -q '^source:' "$call_log"
 
 run_wrapper test-backend.sh 0
-assert_calls $'bootstrap\n'"$(go_test_call test-backend.sh 2 ./...)"$'\nsweep'
+assert_calls $'resolve-dsn\nbootstrap\n'"$(go_test_call test-backend.sh 2 ./...)"$'\nsweep\nstop-ephemeral'
 
 # A forced rebuild and a GOFLAGS-owned tool adapter retain native semantics.
 run_wrapper test-backend.sh 0 -a ./probe
-assert_calls $'bootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' -a ./probe\nsweep'
+assert_calls $'resolve-dsn\nbootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' -a ./probe\nsweep\nstop-ephemeral'
 GOFLAGS='-toolexec=caller-tool' run_wrapper test-backend.sh 0 ./probe
-assert_calls $'bootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' ./probe\nsweep'
+assert_calls $'resolve-dsn\nbootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' ./probe\nsweep\nstop-ephemeral'
 run_wrapper test-backend.sh 0 -toolexec caller-tool ./probe
-assert_calls $'bootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' -toolexec caller-tool ./probe\nsweep'
+assert_calls $'resolve-dsn\nbootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' -toolexec caller-tool ./probe\nsweep\nstop-ephemeral'
 GOGC=123 run_wrapper test-backend.sh 0 ./probe
-expected=$'bootstrap\n'"$(go_test_call test-backend.sh 2 ./probe)"$'\nsweep'
+expected=$'resolve-dsn\nbootstrap\n'"$(go_test_call test-backend.sh 2 ./probe)"$'\nsweep\nstop-ephemeral'
 assert_calls "$expected"
 
 # Defaults precede explicit CLI flags so users retain their existing override.
 for gotestsum_status in 0 1; do
   export PHX_FIXTURE_GOTESTSUM_STATUS=$gotestsum_status
   run_wrapper test-backend.sh 0 -p 3 ./probe
-  expected=$'bootstrap\n'
+  expected=$'resolve-dsn\nbootstrap\n'
   if [ "$gotestsum_status" -eq 0 ]; then expected+=$'gotestsum\n'; fi
-  expected+="$(go_test_call test-backend.sh 2 -p 3 ./probe)"$'\nsweep'
+  expected+="$(go_test_call test-backend.sh 2 -p 3 ./probe)"$'\nsweep\nstop-ephemeral'
   assert_calls "$expected"
 done
 unset PHX_FIXTURE_GOTESTSUM_STATUS
@@ -375,12 +362,12 @@ for wrapper in test-backend.sh test-changed.sh; do
 
   export PHX_FIXTURE_BOOTSTRAP_STATUS=5
   run_wrapper "$wrapper" 5 "${args[@]}"
-  assert_calls $'bootstrap\nsweep'
+  assert_calls $'resolve-dsn\nbootstrap\nsweep\nstop-ephemeral'
   unset PHX_FIXTURE_BOOTSTRAP_STATUS
 
   export PHX_FIXTURE_TEST_STATUS=7 PHX_FIXTURE_SWEEP_STATUS=9
   run_wrapper "$wrapper" 7 "${args[@]}"
-  assert_calls $'bootstrap\n'"$(go_test_call "$wrapper" 2 ./probe)"$'\nsweep'
+  assert_calls $'resolve-dsn\nbootstrap\n'"$(go_test_call "$wrapper" 2 ./probe)"$'\nsweep\nstop-ephemeral'
   if [ "$wrapper" = test-changed.sh ]; then
     grep -q 'go test failure summary' "$output_log"
     grep -q '^FAIL github.com/moto-ogs/project-phoenix/probe$' "$output_log"
@@ -398,9 +385,9 @@ for wrapper in test-backend.sh test-changed.sh; do
 
   export PHX_FIXTURE_SWEEP_STATUS=9
   run_wrapper "$wrapper" 1 "${args[@]}"
-  expected=$'bootstrap\n'"$(go_test_call "$wrapper" 2 ./probe)"
+  expected=$'resolve-dsn\nbootstrap\n'"$(go_test_call "$wrapper" 2 ./probe)"
   if [ "$wrapper" = test-changed.sh ]; then expected+=$'\n'"$frontend_calls"; fi
-  assert_calls "$expected"$'\nsweep'
+  assert_calls "$expected"$'\nsweep\nstop-ephemeral'
   unset PHX_FIXTURE_SWEEP_STATUS
 done
 
@@ -454,14 +441,14 @@ for no_backend in 0 1; do
       fi
       expected_calls=
       if [ "$no_backend" -eq 0 ]; then
-        expected_calls=$'bootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks ./probe\n'
+        expected_calls=$'resolve-dsn\nbootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks ./probe\n'
       fi
       expected_calls+='pnpm:install --frozen-lockfile'
       if [ "$failure" != install ]; then expected_calls+=$'\n'"$vitest_call"; fi
       if [ "$selection" = changed ] && [[ "$failure" = success || "$failure" = vitest ]]; then
         expected_calls+=$'\n'"$guard_call"
       fi
-      if [ "$no_backend" -eq 0 ]; then expected_calls+=$'\nsweep'; fi
+      if [ "$no_backend" -eq 0 ]; then expected_calls+=$'\nsweep\nstop-ephemeral'; fi
       assert_calls "$expected_calls"
       [ ! -e "$fixture/.git/phx-test-run.lock" ]
     done
@@ -542,6 +529,9 @@ for input in backend/auth/authorize/permissions/catalog.json \
     if [[ "$input" = frontend/* ]]; then
       if [[ "$input" = *.md && "$change" != rename ]]; then
         assert_calls "$frontend_calls"
+      elif [[ "$input" = *.test.ts && ( "$change" = create || "$change" = modify ) ]]; then
+        # A changed Vitest test runs again on the moved clock (#7337).
+        assert_calls $'pnpm:install --frozen-lockfile\npnpm:exec vitest run\npnpm:exec vitest run --passWithNoTests '"${input#frontend/}"
       else
         assert_calls $'pnpm:install --frozen-lockfile\npnpm:exec vitest run'
       fi

@@ -12,8 +12,8 @@ type appointmentRow struct {
 	bun.BaseModel      `bun:"table:calendar.appointments,alias:appointment"`
 	ID                 int64       `bun:"id,pk,autoincrement"`
 	TenantID           int64       `bun:"tenant_id,notnull"`
-	CreatedAt          time.Time   `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt          time.Time   `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt          time.Time   `bun:"created_at,nullzero,notnull"`
+	UpdatedAt          time.Time   `bun:"updated_at,nullzero,notnull"`
 	OrganizerStaffID   int64       `bun:"organizer_staff_id,notnull"`
 	Title              string      `bun:"title,notnull"`
 	Description        *string     `bun:"description"`
@@ -36,8 +36,8 @@ type targetRow struct {
 	bun.BaseModel `bun:"table:calendar.appointment_targets,alias:appointment_target"`
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	AppointmentID int64     `bun:"appointment_id,notnull"`
 	TargetType    string    `bun:"target_type,notnull"`
 	TargetID      *int64    `bun:"target_id"`
@@ -48,8 +48,8 @@ type recurrenceRuleRow struct {
 	bun.BaseModel   `bun:"table:calendar.recurrence_rules,alias:recurrence_rule"`
 	ID              int64        `bun:"id,pk,autoincrement"`
 	TenantID        int64        `bun:"tenant_id,notnull"`
-	CreatedAt       time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt       time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt       time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt       time.Time    `bun:"updated_at,nullzero,notnull"`
 	AppointmentID   int64        `bun:"appointment_id,notnull"`
 	Frequency       string       `bun:"frequency,notnull"`
 	IntervalCount   int          `bun:"interval_count,notnull"`
@@ -63,8 +63,8 @@ type occurrenceOverrideRow struct {
 	bun.BaseModel  `bun:"table:calendar.appointment_occurrence_overrides,alias:appointment_occurrence_override"`
 	ID             int64        `bun:"id,pk,autoincrement"`
 	TenantID       int64        `bun:"tenant_id,notnull"`
-	CreatedAt      time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt      time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt      time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt      time.Time    `bun:"updated_at,nullzero,notnull"`
 	AppointmentID  int64        `bun:"appointment_id,notnull"`
 	OccurrenceDate domain.Date  `bun:"occurrence_date,notnull,type:date"`
 	Cancelled      bool         `bun:"cancelled,notnull"`
@@ -82,8 +82,8 @@ type appointmentRecipientRow struct {
 	bun.BaseModel     `bun:"table:calendar.appointment_recipients,alias:appointment_recipient"`
 	ID                int64      `bun:"id,pk,autoincrement"`
 	TenantID          int64      `bun:"tenant_id,notnull"`
-	CreatedAt         time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt         time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt         time.Time  `bun:"updated_at,nullzero,notnull"`
 	AppointmentID     int64      `bun:"appointment_id,notnull"`
 	RecipientType     string     `bun:"recipient_type,notnull"`
 	StaffID           *int64     `bun:"staff_id"`
@@ -99,8 +99,8 @@ type appointmentRecipientStudentRow struct {
 	bun.BaseModel `bun:"table:calendar.appointment_recipient_students,alias:appointment_recipient_student"`
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	RecipientID   int64     `bun:"recipient_id,notnull"`
 	StudentID     int64     `bun:"student_id,notnull"`
 }

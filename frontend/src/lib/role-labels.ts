@@ -12,7 +12,8 @@ export type SystemRoleName =
   | "schulverwaltung"
   | "guardian"
   | "guest"
-  | "ag-leitung";
+  | "ag-leitung"
+  | "springer";
 
 export const SYSTEM_ROLE_LABELS: Record<
   SystemRoleName,
@@ -49,6 +50,12 @@ export const SYSTEM_ROLE_LABELS: Record<
     name: "AG-Leitung",
     description:
       "Betreut eigene Termine: starten, Kinder ein- und auschecken, beenden",
+  },
+  // ADR 0251: the first block of the Vertretungspool gives it, never a person.
+  springer: {
+    name: "Springer",
+    description:
+      "Aus dem Vertretungspool. Sieht den eigenen Dienstplan und stempelt, nur in den geblockten Zeiten.",
   },
 };
 
@@ -94,15 +101,17 @@ export const ROLE_TEMPLATES = [
 ] as const;
 
 /**
- * Eltern is a system role the parent-app invitation gives (#4574). Nobody
- * picks it by hand, so the role management neither lists it nor offers it
- * under „Gilt als“. Parent accounts and the role itself stay as they are.
+ * Eltern is a system role the parent-app invitation gives (#4574), Springer
+ * one the first block of the Vertretungspool gives (ADR 0251). Nobody picks
+ * them by hand, so the role management neither lists them nor offers them
+ * under „Gilt als“. The accounts and the roles themselves stay as they are.
  */
 export function isHiddenSystemRole(role: {
   name: string;
   isSystem: boolean;
 }): boolean {
-  return role.isSystem && systemRoleKey(role.name) === "guardian";
+  const key = systemRoleKey(role.name);
+  return role.isSystem && (key === "guardian" || key === "springer");
 }
 
 /**

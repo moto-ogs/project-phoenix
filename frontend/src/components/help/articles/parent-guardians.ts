@@ -70,6 +70,7 @@ export function parentGuardiansTopic(): HelpTopic {
       "Eine E-Mail beim Kontakt lädt niemanden ein. Der App-Zugang ist ein eigener Schritt.",
     ],
     differences: [
+      "Ihr Kind hat keinen OGS-Platz? Notfallkontakte bleiben möglich. Abholrechte und Hinweise zur Abholung fehlen dann. Bei bestehenden Kontakten öffnen Sie dafür `Notfallkontakt`.",
       "Unter `Verbundene Konten` sehen Sie, wer die Eltern-App für Ihr Kind nutzt.",
     ],
     troubleshootingDetails: [

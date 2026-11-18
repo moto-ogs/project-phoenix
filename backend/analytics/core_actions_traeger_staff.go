@@ -7,12 +7,13 @@ import (
 
 // traegerStaffCoreActions classifies the writing routes of the staff records
 // of a Träger (#4705), their Nachweise (#4707) and the Personal-Import
-// (#4724). They belong to the
+// (#4724) and the Vertretungspool (#4709). They belong to the
 // Träger, not to a school, so like the other Träger-Portal routes they count
 // for no school yet. init merges the table into coreActions.
 var traegerStaffCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/traeger/staff-records/"}:                      notCaptured,
 	{http.MethodPost, "/traeger/staff-records/link-preview"}:          notCaptured,
+	{http.MethodPost, "/traeger/staff-records/hire"}:                  notCaptured,
 	{http.MethodDelete, "/traeger/staff-records/{id}"}:                notCaptured,
 	{http.MethodPut, "/traeger/staff-records/{id}/personnel-number"}:  notCaptured,
 	{http.MethodPost, "/traeger/staff-records/{id}/financial/reveal"}: notCaptured,
@@ -44,6 +45,12 @@ var traegerStaffCoreActions = map[RouteKey]CoreAction{
 	// The Monatsabschluss of the Stundenkonto (#4711).
 	{http.MethodPost, "/traeger/staff-records/{id}/time-account/close"}:  notCaptured,
 	{http.MethodPost, "/traeger/staff-records/{id}/time-account/reopen"}: notCaptured,
+	// The Vertretungspool (#4709): the Personalverwaltung lifts a block;
+	// a school blocks a Springer, the core action of the pool, and lifts
+	// its own block.
+	{http.MethodDelete, "/traeger/staff-pool/blocks/{id}"}: notCaptured,
+	{http.MethodPost, "/api/staff-pool/blocks"}:            event("springer_blocked"),
+	{http.MethodDelete, "/api/staff-pool/blocks/{id}"}:     notCaptured,
 }
 
 func init() {

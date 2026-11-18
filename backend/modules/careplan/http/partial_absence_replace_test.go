@@ -47,7 +47,7 @@ func partialAbsenceCount(t *testing.T, tc *testContext, studentID, accountID int
 func TestStatusDayReplacesConfirmedPartialAbsence(t *testing.T) {
 	t.Parallel()
 
-	tc := setupStudentsRoute(t)
+	tc := setupStudentsRoute(t, fixedCalendarClock)
 	student := testpkg.CreateTestStudent(t, tc.db, "Replace", "Partial", "RP1")
 	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Replace", "Teacher")
 	free := replaceDay.AddDays(1)
@@ -99,7 +99,7 @@ func TestStatusDayReplacesConfirmedPartialAbsence(t *testing.T) {
 func TestStatusDayReplacementStaysInTheTenant(t *testing.T) {
 	t.Parallel()
 
-	tc := setupStudentsRoute(t)
+	tc := setupStudentsRoute(t, fixedCalendarClock)
 	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Tenant", "Teacher")
 	otherTenant, _ := testpkg.CreateTestTenant(t, tc.db)
 	foreign := testpkg.CreateTestStudentForTenant(t, tc.db, otherTenant, "Fremd", "Kind", "4b")
@@ -117,7 +117,7 @@ func TestStatusDayReplacementStaysInTheTenant(t *testing.T) {
 func TestApproveExcusedRequestReplacesConfirmedPartialAbsence(t *testing.T) {
 	t.Parallel()
 
-	tc := setupStudentsRoute(t)
+	tc := setupStudentsRoute(t, fixedCalendarClock)
 	chain := testpkg.CreateTestParentGuardianChain(t, tc.db)
 	_, account := testpkg.CreateTestStaffWithAccount(t, tc.db, "Queue", "Staff")
 	createPartialAbsence(t, tc, chain.StudentID, account.ID, replaceDay)

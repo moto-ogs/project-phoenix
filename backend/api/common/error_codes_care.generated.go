@@ -17,6 +17,7 @@ const CodeCareCareRequestBookingsAuthoritative = "care.care_request_bookings_aut
 const CodeCareCareRequestFieldDisabled = "care.care_request_field_disabled"
 const CodeCareChildCareEnded = "care.child_care_ended"
 const CodeCareChildNotLinked = "care.child_not_linked"
+const CodeCareChildWithoutCarePlace = "care.child_without_care_place"
 const CodeCareCourseAlreadyBooked = "care.course_already_booked"
 const CodeCareCourseRequestInvalid = "care.course_request_invalid"
 const CodeCareCourseRequestNotOwn = "care.course_request_not_own"
@@ -62,7 +63,9 @@ const CodeCareOfferingChangeForbidden = "care.offering_change_forbidden"
 const CodeCareOfferingChangeInvalid = "care.offering_change_invalid"
 const CodeCareOfferingChangesDisabled = "care.offering_changes_disabled"
 const CodeCarePayerGuardianProtected = "care.payer_guardian_protected"
+const CodeCarePhotoConsentBusy = "care.photo_consent_busy"
 const CodeCarePhotoConsentNotWithdrawn = "care.photo_consent_not_withdrawn"
+const CodeCarePhotosDisabled = "care.photos_disabled"
 const CodeCarePickupChangeCareDayEnded = "care.pickup_change_care_day_ended"
 const CodeCarePickupChangeCutoffPassed = "care.pickup_change_cutoff_passed"
 const CodeCarePickupChangeDisabled = "care.pickup_change_disabled"
@@ -99,6 +102,7 @@ var errorCodeClassesCare = []errorCodeClass{
 	{CodeCareCareRequestFieldDisabled, "permission"},
 	{CodeCareChildCareEnded, "permission"},
 	{CodeCareChildNotLinked, "permission"},
+	{CodeCareChildWithoutCarePlace, "permission"},
 	{CodeCareCourseAlreadyBooked, "input"},
 	{CodeCareCourseRequestInvalid, "input"},
 	{CodeCareCourseRequestNotOwn, "input"},
@@ -144,7 +148,9 @@ var errorCodeClassesCare = []errorCodeClass{
 	{CodeCareOfferingChangeInvalid, "input"},
 	{CodeCareOfferingChangesDisabled, "permission"},
 	{CodeCarePayerGuardianProtected, "permission"},
+	{CodeCarePhotoConsentBusy, "unavailable"},
 	{CodeCarePhotoConsentNotWithdrawn, "business_rejection"},
+	{CodeCarePhotosDisabled, "business_rejection"},
 	{CodeCarePickupChangeCareDayEnded, "business_rejection"},
 	{CodeCarePickupChangeCutoffPassed, "business_rejection"},
 	{CodeCarePickupChangeDisabled, "permission"},

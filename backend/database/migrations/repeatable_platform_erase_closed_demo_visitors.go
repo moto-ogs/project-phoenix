@@ -48,7 +48,7 @@ AS $function$
 			-- log line; every order stays for the next run (#5540).
 			BEGIN
 			FOR visitor IN
-				SELECT state.name, state.tenant_id, state.attempts,
+				SELECT state.name, state.tenant_id, state.attempts, state.traeger_id,
 					array_remove(state.visitor_account_ids || ARRAY[state.visitor_account_id], NULL) AS visitor_account_ids,
 					array_remove(state.visitor_parent_account_ids || ARRAY[state.visitor_parent_account_id], NULL) AS visitor_parent_account_ids,
 					array_remove(state.visitor_school_ids || ARRAY[state.tenant_id], NULL) AS visitor_school_ids
@@ -85,7 +85,7 @@ AS $function$
 				BEGIN
 				PERFORM pg_advisory_xact_lock(hashtextextended('demo school seed:' || target_name, 3461));
 				PERFORM pg_advisory_xact_lock(hashtextextended('platform.demo_school_states:' || target_name, 0));
-				SELECT state.name, state.tenant_id, state.attempts,
+				SELECT state.name, state.tenant_id, state.attempts, state.traeger_id,
 					array_remove(state.visitor_account_ids || ARRAY[state.visitor_account_id], NULL) AS visitor_account_ids,
 					array_remove(state.visitor_parent_account_ids || ARRAY[state.visitor_parent_account_id], NULL) AS visitor_parent_account_ids,
 					array_remove(state.visitor_school_ids || ARRAY[state.tenant_id], NULL) AS visitor_school_ids
@@ -176,6 +176,10 @@ AS $function$
 					-- school can name the visitor too (an absence request names the
 					-- requester). The school is no one's but the visitor's (#5521).
 					DELETE FROM platform.email_delivery
+					WHERE tenant_id = ANY (hidden_schools);
+					-- A letter copy names the child and carries the text the
+					-- visitor wrote for it (#4813); like the mail, every one goes.
+					DELETE FROM users.parent_announcement_letter_copies
 					WHERE tenant_id = ANY (hidden_schools);
 					DELETE FROM platform.email_outbox
 					WHERE tenant_id = ANY (hidden_schools);
@@ -641,6 +645,7 @@ AS $function$
 					DELETE FROM auth.mfa_overrides
 					WHERE account_id = ANY (visitor.visitor_account_ids || visitor.visitor_parent_account_ids)
 						AND tenant_id = ANY (visitor.visitor_school_ids);
+					PERFORM platform.erase_demo_visitor_traeger_member(visitor.traeger_id, visitor.visitor_account_ids || visitor.visitor_parent_account_ids); -- the visitor in the office of its own Träger (ADR 0271)
 					-- Hold the visitor accounts until the check below is done (#5540):
 					-- a school or Träger membership another transaction is writing
 					-- holds its account, so the erasure gives up after lock_timeout
@@ -762,6 +767,7 @@ AS $function$
 							username = NULL, active = FALSE, password_hash = NULL, is_password_otp = FALSE,
 							last_login = NULL, avatar = NULL, calendar_feed_token = NULL,
 							mfa_attempts = 0, mfa_locked_until = NULL,
+							password_attempts = 0, password_locked_until = NULL, password_failed_at = NULL,
 							-- Erased like every erased account: no school can take it on
 							-- afterwards (auth.lock_live_account_reference).
 							personal_data_erased_at = statement_timestamp(), updated_at = statement_timestamp()

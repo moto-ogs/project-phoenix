@@ -1,0 +1,11 @@
+{
+  "api/staff-pool": [
+    "GET tenant /api/staff-pool/ query=week"
+  ],
+  "api/staff-pool/blocks": [
+    "POST tenant /api/staff-pool/blocks"
+  ],
+  "api/staff-pool/blocks/[id]": [
+    "DELETE tenant /api/staff-pool/blocks/id%2F1"
+  ]
+}

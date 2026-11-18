@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -105,11 +106,12 @@ func operatorRouter(
 	billing *provisioningOperatorAPI.BillingResource,
 	schoolSettings *operatorSchoolSettings,
 	announcements communicationModule.Capability,
-	unregisteredTagScans http.Handler,
+	unregisteredTagScans unregisteredTagScanReview,
 	limiters authRateLimiters,
 	staffPersonMerge http.Handler,
 	sampleChildren http.HandlerFunc,
 	demoPresenceHistory http.HandlerFunc,
+	now func() time.Time,
 ) chi.Router {
 	// The root provides the session chains; without the signer the verifier
 	// mounts below would fail with a nil dereference instead of naming the
@@ -129,7 +131,7 @@ func operatorRouter(
 	}
 	identityRoutes := identity.routes()
 	provisioningRoutes := provisioningOperatorAPI.NewProvisioningResource(provisioning)
-	announcementRoutes := operatorannouncements.NewAnnouncementsResource(announcements)
+	announcementRoutes := operatorannouncements.NewAnnouncementsResource(announcements, time.Now)
 
 	r := chi.NewRouter()
 	r.Use(render.SetContentType(render.ContentTypeJSON))
@@ -159,7 +161,7 @@ func operatorRouter(
 		identityRoutes.mountInvitationRoutes(r)
 		mountOperatorAnnouncementRoutes(r, announcementRoutes, provisioningRoutes)
 		mountOperatorBillingRoutes(r, billing)
-		mountOperatorBelegRetentionRoutes(r, provisioningRoutes)
+		mountOperatorBelegRetentionRoutes(r, provisioningRoutes, now)
 		mountOperatorTraegerStaffReleaseRoutes(r, provisioningRoutes)
 	})
 
@@ -350,9 +352,9 @@ func mountOperatorTraegerSettingsRoutes(r chi.Router, provisioning *provisioning
 // Träger to the moto team (#4720, ADR 0184): the instructions, suspensions,
 // clarification list and deletion log under the operator read audit, and
 // the writes (Weisung, suspension and its lift, review of a clarification
-// entry) with their operator audit entry.
-func mountOperatorBelegRetentionRoutes(r chi.Router, provisioning *provisioningOperatorAPI.ProvisioningResource) {
-	retention := parentBillingHTTP.NewBelegRetentionResource(owners.NewBelegRetention(nil), provisioning.RecordBelegRetentionChange, operatorIDFromSession)
+// entry) with their operator audit entry; now is the root's clock.
+func mountOperatorBelegRetentionRoutes(r chi.Router, provisioning *provisioningOperatorAPI.ProvisioningResource, now func() time.Time) {
+	retention := parentBillingHTTP.NewBelegRetentionResource(owners.NewBelegRetention(now), provisioning.RecordBelegRetentionChange, operatorIDFromSession)
 	r.Get("/organizations/{id}/beleg-retention", provisioning.AuditReadAccess(organizationtenancy.ReadBelegRetention, retention.Overview))
 	r.Post("/organizations/{id}/beleg-retention/instructions", retention.RecordInstruction)
 	r.Post("/organizations/{id}/beleg-retention/suspensions", retention.RecordSuspension)
@@ -383,6 +385,7 @@ func mountOperatorSchoolRoutes(
 	r.Route("/schools", func(r chi.Router) {
 		r.Get("/", provisioning.AuditReadAccess(organizationtenancy.ReadSchools, provisioning.ListSchools))
 		r.Get("/summaries", provisioning.AuditReadAccess(organizationtenancy.ReadSchoolSummaries, provisioning.ListSchoolSummaries))
+		r.Get("/required-details", provisioning.AuditReadAccess(organizationtenancy.ReadSchoolRequiredDetails, provisioning.ListSchoolRequiredDetails))
 		r.Post("/", provisioning.AuditReadAccess(organizationtenancy.ReadSchools, provisioning.CreateSchool))
 		r.Put("/{id}", provisioning.AuditReadAccess(organizationtenancy.ReadSchool, provisioning.UpdateSchool))
 		r.Delete("/{id}", provisioning.SoftDeleteSchool)
@@ -430,15 +433,21 @@ func mountOperatorPersonRoutes(r chi.Router, provisioning *provisioningOperatorA
 }
 
 // mountOperatorTagScanRoutes mounts the optional Device Fleet review of
-// unregistered RFID scans (GET / and POST /{id}/resolve).
-func mountOperatorTagScanRoutes(r chi.Router, unregisteredTagScans http.Handler, provisioning *provisioningOperatorAPI.ProvisioningResource) {
+// unregistered RFID scans (GET / and POST /{id}/resolve). The review runs the
+// audit as route middleware, after its route matched, so the audit names the
+// resolved scan (#7212).
+func mountOperatorTagScanRoutes(r chi.Router, unregisteredTagScans unregisteredTagScanReview, provisioning *provisioningOperatorAPI.ProvisioningResource) {
 	if unregisteredTagScans == nil {
 		return
 	}
-	r.With(func(next http.Handler) http.Handler {
+	r.Mount("/unregistered-tag-scans", unregisteredTagScans(func(next http.Handler) http.Handler {
 		return provisioning.AuditReadAccess(organizationtenancy.ReadUnregisteredTagScans, next.ServeHTTP)
-	}).Mount("/unregistered-tag-scans", unregisteredTagScans)
+	}))
 }
+
+// unregisteredTagScanReview builds Device Fleet's review routes with the
+// operator router's route middleware.
+type unregisteredTagScanReview func(routeMiddleware ...func(http.Handler) http.Handler) chi.Router
 
 // mountAccountMFARoutes registers the account-wide MFA override surface
 // ("mailbox lockout emergency switch"). Deliberately decoupled from

@@ -15,16 +15,20 @@ import (
 // into the time tracking of every Einsatzort; the rules below decide what
 // the mirror writes and which changes the closed months still allow.
 
-// Kinds of a contract. They are the kinds a school knows for an employment
-// (users.staff.employment_type); Übungsleiter and Ehrenamt follow in #4712.
+// Kinds of a contract. The first three are the kinds a school knows for an
+// employment (users.staff.employment_type). Übungsleiter and Ehrenamt exist
+// only at the Träger (#4712, ADR 0089 section 1): the Träger pays each kind
+// with its own Lohnarten, so Minijob and Übungsleiterpauschale stay apart.
 const (
-	ContractKindFullTime = "full_time"
-	ContractKindPartTime = "part_time"
-	ContractKindMinijob  = "minijob"
+	ContractKindFullTime      = "full_time"
+	ContractKindPartTime      = "part_time"
+	ContractKindMinijob       = "minijob"
+	ContractKindUebungsleiter = "uebungsleiter"
+	ContractKindEhrenamt      = "ehrenamt"
 )
 
 // ContractKinds lists every kind in display order.
-var ContractKinds = []string{ContractKindPartTime, ContractKindFullTime, ContractKindMinijob}
+var ContractKinds = []string{ContractKindPartTime, ContractKindFullTime, ContractKindMinijob, ContractKindUebungsleiter, ContractKindEhrenamt}
 
 // ContractWeekdays is the number of weekdays a Soll names: Monday to Friday.
 const ContractWeekdays = 5
@@ -91,9 +95,12 @@ type TraegerStaffContract struct {
 	Kind           string
 	StartsOn       calendar.Date
 	EndsOn         calendar.Date
-	Targets        []ContractTarget
-	HolidayWeeks   []ContractHolidayWeek
-	CreatedAt      time.Time
+	// Pool marks a contract of the Vertretungspool: its person is a
+	// Springer whom any school of the Träger may block (ADR 0089 section 9).
+	Pool         bool
+	Targets      []ContractTarget
+	HolidayWeeks []ContractHolidayWeek
+	CreatedAt    time.Time
 }
 
 // ContractSite is one Einsatzort of a contract: the employment StaffID of

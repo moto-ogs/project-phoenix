@@ -3,7 +3,10 @@
 import { useParentResourceEvents } from "~/lib/hooks/use-parent-resources";
 import { useCallback } from "react";
 import { useSSE } from "~/lib/hooks/use-sse";
-import { dispatchPhoenixNotification } from "~/lib/notification-events";
+import {
+  dispatchPhoenixNotification,
+  NOTIFICATION_FEED_REFRESH_EVENT,
+} from "~/lib/notification-events";
 import type { SSEEvent } from "~/lib/sse-types";
 
 /**
@@ -37,6 +40,13 @@ export function ParentRealtimeBridge() {
       dispatchPhoenixNotification(event);
       return;
     }
+    // Der Feed des Kontos änderte sich (#7140): neuer Hinweis oder ein
+    // Gelesen-Status, auch von einem anderen Gerät. Die Glocke lädt Zähler
+    // und Liste neu.
+    if (event.type === "notification_feed_changed") {
+      window.dispatchEvent(new CustomEvent(NOTIFICATION_FEED_REFRESH_EVENT));
+      return;
+    }
     if (event.type === "parent_message") {
       window.dispatchEvent(new CustomEvent("parent-messages-unread-refresh"));
       window.dispatchEvent(
@@ -56,15 +66,9 @@ export function ParentRealtimeBridge() {
       return;
     }
     if (event.type === "parent_child_updated") {
-      // Message-independent care-state invalidation: the child's care view
-      // refetches, but this is NOT a message — do NOT touch the unread badge or the
-      // thread list. The conversation care view and the daily-status views use
-      // separate refresh events, so invalidate both for the affected child.
-      window.dispatchEvent(
-        new CustomEvent("parent-conversation-refresh", {
-          detail: { studentId: event.data?.student_id ?? null },
-        }),
-      );
+      // The shared status invalidation reaches mounted and unmounted care
+      // readers. A conversation refresh would reload the same care keys twice.
+      // No message changed, so leave conversations and unread state alone.
       window.dispatchEvent(
         new CustomEvent("parent-child-status-refresh", {
           detail: { studentId: event.data?.student_id ?? null },

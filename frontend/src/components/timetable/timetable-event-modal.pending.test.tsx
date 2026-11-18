@@ -4,13 +4,14 @@
 import {
   act,
   fireEvent,
-  render,
+  render as rtlRender,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ReactElement, ReactNode } from "react";
 import { ApiError } from "~/lib/api-error";
 import type { CalendarPeriod } from "~/lib/calendar-period-helpers";
 import type { TenantInfo } from "~/lib/tenant-api";
@@ -19,6 +20,7 @@ import type {
   EnrichedInstance,
   TimetableTemplate,
 } from "~/lib/timetable-types";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 import {
   deferred,
@@ -27,6 +29,16 @@ import {
 } from "~/test/helpers/form-modal-pending";
 
 vi.mock("vaul", () => import("~/test/mocks/vaul"));
+// The form reads its lists, probes and offering data through the shared,
+// session-scoped cache (~/lib/swr): a signed-in session and a fresh cache
+// per render, as in timetable-event-modal.test.tsx.
+vi.unmock("swr");
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "1", tenantId: 1, scope: "tenant" } },
+    status: "authenticated",
+  }),
+}));
 
 vi.mock("~/components/ui/date-picker", async () =>
   (await import("~/test/mocks/date-picker")).datePickerModuleMock(),
@@ -73,10 +85,24 @@ vi.mock("~/lib/timetable-api", () => ({
       Promise.resolve({ totalCount: 0, gradeCounts: {}, students: [] }),
     getOfferingPreview: () =>
       Promise.resolve({ from: "2026-09-09", weekdays: [], segments: [] }),
+    getOfferingSuggestion: () => Promise.resolve(null),
   },
 }));
 
 import { TimetableEventModal } from "./timetable-event-modal";
+import { SWRConfig } from "~/lib/swr/testing";
+
+function SwrProviders({ children }: { readonly children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: SwrProviders });
+}
 
 const periods: CalendarPeriod[] = [
   {
@@ -215,7 +241,7 @@ async function deleteSeries() {
   );
   expect(onDeleteSeries).toHaveBeenCalledWith(
     expect.objectContaining({ id: "7" }),
-    "2026-09-09",
+    TEST_CLOCK_TODAY,
   );
   return { ...view, answer, dialog };
 }

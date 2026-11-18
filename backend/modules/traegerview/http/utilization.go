@@ -1,8 +1,6 @@
 package traegerviewhttp
 
 import (
-	"bytes"
-	"encoding/csv"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,7 +9,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // utilization answers GET /traeger/schools/utilization?from=&to=: the
@@ -28,36 +25,29 @@ func (rs *Resource) utilization(w http.ResponseWriter, r *http.Request) {
 }
 
 // utilizationExport answers GET /traeger/schools/utilization/export: the same
-// figures as CSV, one row per day and school, offering or room, optionally of
-// one school (school=ID). A school of another Träger and an unknown ID answer
-// 404 traeger.school_not_found, like the children of a school.
+// figures as PDF, Excel or CSV (format=, CSV without one), one row per day
+// and school, offering or room, optionally of one school (school=ID). A
+// school of another Träger and an unknown ID answer 404
+// traeger.school_not_found, like the children of a school.
 func (rs *Resource) utilizationExport(w http.ResponseWriter, r *http.Request) {
+	format, schoolID, ok := readExportOptions(w, r)
+	if !ok {
+		return
+	}
 	utilization, ok := rs.readUtilization(w, r)
 	if !ok {
 		return
 	}
-	if raw := r.URL.Query().Get("school"); raw != "" {
-		schoolID, err := strconv.ParseInt(raw, 10, 64)
-		if err != nil || schoolID <= 0 {
-			common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("school must be a positive ID")))
+	schoolName := ""
+	if schoolID > 0 {
+		school, found := findSchool(utilization.Schools, schoolID, func(s traegerview.SchoolUtilization) traegerview.School { return s.School })
+		if !found {
+			renderSchoolNotFound(w, r)
 			return
 		}
-		if utilization.Schools = schoolsWithID(utilization.Schools, schoolID); utilization.Schools == nil {
-			common.RenderError(w, r, common.ErrorNotFoundWithCode(traegerview.ErrSchoolOutsideTraeger, common.CodeTraegerSchoolNotFound))
-			return
-		}
+		utilization.Schools, schoolName = []traegerview.SchoolUtilization{school}, school.Name
 	}
-	data, err := utilizationCSV(utilization)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", textnorm.ContentDisposition("attachment",
-		fmt.Sprintf("auslastung-%s-bis-%s.csv", utilization.From, utilization.To)))
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(data)
+	common.WriteList(w, r, rs.lists, format, utilizationTable(utilization, schoolName))
 }
 
 // utilizationChildren answers GET /traeger/schools/{id}/utilization/children:
@@ -137,15 +127,6 @@ func utilizationWindow(r *http.Request) (calendar.Date, calendar.Date, error) {
 	return from, to, nil
 }
 
-func schoolsWithID(schools []traegerview.SchoolUtilization, schoolID int64) []traegerview.SchoolUtilization {
-	for _, school := range schools {
-		if school.ID == schoolID {
-			return []traegerview.SchoolUtilization{school}
-		}
-	}
-	return nil
-}
-
 // The kinds of a row of the utilization export.
 const (
 	utilizationRowSchool   = "Schule"
@@ -153,24 +134,24 @@ const (
 	utilizationRowRoom     = "Raum"
 )
 
-var utilizationCSVHeader = []string{
-	"Datum", "Schule", "Ort", "Art", "Name", "Plätze", "Kinder gebucht", "Plätze belegt", "Kinder anwesend", "Kinder im Raum", "Höchstens gleichzeitig",
+// utilizationColumns are the columns of the utilization export.
+var utilizationColumns = []common.ListColumn{
+	{ID: "day", Label: "Datum"}, {ID: "school", Label: "Schule"}, {ID: "city", Label: "Ort"}, {ID: "kind", Label: "Art"},
+	{ID: "name", Label: "Name"}, {ID: "places", Label: "Plätze", Numeric: true}, {ID: "booked", Label: "Kinder gebucht", Numeric: true},
+	{ID: "booked_places", Label: "Plätze belegt", Numeric: true}, {ID: "present", Label: "Kinder anwesend", Numeric: true},
+	{ID: "room_children", Label: "Kinder im Raum", Numeric: true}, {ID: "room_peak", Label: "Höchstens gleichzeitig", Numeric: true},
 }
 
-// utilizationCSV writes one row per day and school, offering or room. A
+// utilizationTable is one row per day and school, offering or room. A
 // figure that does not apply to the kind, or that is missing on a day,
 // stays empty, so a spreadsheet never reads a gap as 0.
-func utilizationCSV(utilization traegerview.Utilization) ([]byte, error) {
-	var buf bytes.Buffer
-	buf.WriteString("\xEF\xBB\xBF")
-	writer := csv.NewWriter(&buf)
-	writer.Comma = ';'
-	rows := [][]string{utilizationCSVHeader}
+func utilizationTable(utilization traegerview.Utilization, schoolName string) common.ListTable {
+	var rows [][]string
 	for i, day := range utilization.Days {
 		date := day.Format("02.01.2006")
 		for _, school := range utilization.Schools {
 			row := func(kind, name string, figures ...string) []string {
-				return append([]string{date, csvSafe(school.Name), csvSafe(school.City), kind, csvSafe(name)}, figures...)
+				return append([]string{date, school.Name, school.City, kind, name}, figures...)
 			}
 			rows = append(rows, row(utilizationRowSchool, "", placesCount(school.Places), strconv.Itoa(school.Booked[i]),
 				strconv.Itoa(school.BookedPlaces[i]), optionalCount(school.Present[i]), "", ""))
@@ -182,10 +163,13 @@ func utilizationCSV(utilization traegerview.Utilization) ([]byte, error) {
 			}
 		}
 	}
-	if err := writer.WriteAll(rows); err != nil {
-		return nil, err
+	from, to := utilization.From.Format("02.01.2006"), utilization.To.Format("02.01.2006")
+	return common.ListTable{
+		Title: "Auslastung", Subtitle: from + " bis " + to,
+		Filters: []string{common.ListSchoolLabel(schoolName), common.ListPeriodLabel(from, to)},
+		Columns: utilizationColumns, Rows: rows,
+		Filename: fmt.Sprintf("auslastung-%s-bis-%s", utilization.From, utilization.To),
 	}
-	return buf.Bytes(), nil
 }
 
 func optionalCount(value *int) string {

@@ -32,11 +32,12 @@ import { DatabaseFormModal } from "~/components/database/database-form-modal";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useIsMobile } from "~/components/ui/hooks/useIsMobile";
+import { BELOW_MD, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useDeleteConfirmation } from "~/hooks/useDeleteConfirmation";
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { createLogger } from "~/lib/logger";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { ModuleRouteGuard } from "~/components/tenant/module-route-guard";
 import { devicesConcept } from "~/lib/concepts/devices";
 import { foldForSearch } from "~/lib/search-fold";
@@ -78,7 +79,7 @@ function DevicesPageContent() {
   const selectedId = searchParams.get("device");
   const grouping = parseDevicesGrouping(searchParams.get("groupBy"));
   const [searchTerm, setSearchTerm] = useState("");
-  const isMobile = useIsMobile();
+  const isMobile = useMediaQuery(BELOW_MD);
 
   // The list response never carries `api_key` (it's a one-time create-only
   // secret). We snapshot the freshly-created device here so the detail panel
@@ -120,7 +121,7 @@ function DevicesPageContent() {
     isLoading: swrLoading,
     error: devicesError,
     mutate: mutateDevices,
-  } = useSWRAuth("database-devices-list", async () => {
+  } = useSWRAuth(tenantAdminKeys.devices(), async () => {
     const data = await service.getList({ page: 1, pageSize: 500 });
     return Array.isArray(data.data) ? data.data : [];
   });
@@ -257,7 +258,7 @@ function DevicesPageContent() {
       setShowCreateModal(false);
       setCreatedDevice(created);
       handleSelectDevice(created.id);
-      await tenantMutate("database-devices-list");
+      await tenantMutate(tenantAdminKeys.devices());
     },
     [service, handleSelectDevice, tenantMutate, toastSuccess],
   );
@@ -276,7 +277,7 @@ function DevicesPageContent() {
       toastSuccess(
         `Das Gerät „${updatedDevice.name ?? updatedDevice.device_id}“ ist gespeichert.`,
       );
-      await tenantMutate("database-devices-list");
+      await tenantMutate(tenantAdminKeys.devices());
     },
     [selectedDevice, service, tenantMutate, toastSuccess],
   );
@@ -294,7 +295,7 @@ function DevicesPageContent() {
       handleDeleteCancel();
       setCreatedDevice(null);
       handleSelectDevice(null);
-      await tenantMutate("database-devices-list");
+      await tenantMutate(tenantAdminKeys.devices());
     } catch (err) {
       logger.warn("device_delete_failed", {
         device_id: selectedDevice.id,

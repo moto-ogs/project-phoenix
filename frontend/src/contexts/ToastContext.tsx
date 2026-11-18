@@ -11,7 +11,9 @@ import React, {
   useState,
   type RefObject,
 } from "react";
+import { useErrorFixTarget } from "~/components/ui/error-fix-slot";
 import { useFormError, type FormErrorDetail } from "~/components/ui/form-error";
+import { useInOverlay } from "~/components/ui/in-overlay";
 import { KitLocaleProvider } from "~/components/ui/kit-locale";
 import { TOAST_FADE_MS } from "~/components/ui/motion";
 import { Toast } from "~/components/ui/toast";
@@ -42,6 +44,8 @@ interface ToastOptions {
   action?: {
     label: string;
     onClick: () => void;
+    /** What the action does (#6744); defaults to none. */
+    tooltip?: string;
   };
   requestId?: string;
   requestIdLabel?: string;
@@ -394,6 +398,7 @@ function ToastRow({
           item.action
             ? {
                 label: item.action.label,
+                tooltip: item.action.tooltip,
                 accessibleLabel: isMobile
                   ? labels.actionInstruction(item.action.label)
                   : item.action.label,
@@ -470,6 +475,7 @@ export function ToastProvider({
             duration,
             action: action && {
               label: action.label,
+              tooltip: action.tooltip,
               onClick: () => {
                 // A deliberate new attempt is no accidental repeat: its
                 // result shows even when it fails within the de-dup window.
@@ -566,6 +572,10 @@ interface DisplayedError {
   retry?: { label: string; onClick: () => void };
   requestId?: string;
   requestIdLabel?: string;
+  /** The registered code, for the link to where it is fixed (#7092). */
+  code?: string;
+  /** The failed action was activated from an open dialog or slide-over. */
+  fixInNewTab?: boolean;
 }
 
 /**
@@ -661,6 +671,11 @@ function useApiErrorCore(
     async (error: unknown, options: ApiErrorDisplayOptions) => {
       const version = showVersion.current + 1;
       showVersion.current = version;
+      // The hook may belong to the component that renders the dialog, above
+      // its provider. Capture the action's actual rendered context before the
+      // asynchronous catalog lookup, while its focused trigger is still in it.
+      const fixInNewTab =
+        document.activeElement?.closest('[role="dialog"]') !== null;
       const locale = normalizeLocale(document.documentElement.lang);
       // The presenter remains a separate chunk. The mounted error path starts
       // its load ahead of time, and concurrent failures share that request.
@@ -745,6 +760,8 @@ function useApiErrorCore(
               : undefined),
           requestId: presentation.requestId,
           requestIdLabel: labels.requestId,
+          code: error instanceof ApiError ? error.code : undefined,
+          fixInNewTab,
         },
         locale,
       );
@@ -785,15 +802,41 @@ function firstInPageOrder<T extends Element>(elements: readonly T[]) {
   )[0];
 }
 
+/** Opens the place that fixes a refusal from a toast (#7092). */
+function openFixTarget(href: string, newTab: boolean): void {
+  if (newTab) {
+    window.open(href, "_blank", "noopener,noreferrer");
+    return;
+  }
+  window.location.assign(href);
+}
+
 /** Opt-in display path for actions without a form (#2510). */
 export function useApiErrorDisplay(formRef?: RefObject<HTMLElement | null>) {
   const toast = useToast();
   const seesLocked = useContext(ModuleBookingAudienceContext);
   const portal = useModulePortal();
+  const fixTarget = useErrorFixTarget();
+  const inOverlay = useInOverlay();
   const deliver = useCallback(
     (shown: DisplayedError, locale: AppLocale) => {
+      // A refusal fixed elsewhere leads there (#7092); from a dialog in a
+      // new tab, so its input stays.
+      const fix = shown.retry ? null : fixTarget(shown.code);
       const options = {
-        action: shown.retry,
+        action:
+          shown.retry ??
+          (fix
+            ? {
+                label: fix.label,
+                tooltip: fix.tooltip,
+                onClick: () =>
+                  openFixTarget(
+                    fix.href,
+                    inOverlay || shown.fixInNewTab === true,
+                  ),
+              }
+            : undefined),
         requestId: shown.requestId,
         requestIdLabel: shown.requestIdLabel,
       };
@@ -810,7 +853,7 @@ export function useApiErrorDisplay(formRef?: RefObject<HTMLElement | null>) {
       }
       toast.error(shown.message, options);
     },
-    [toast, seesLocked, portal],
+    [toast, seesLocked, portal, fixTarget, inOverlay],
   );
   const core = useApiErrorCore(formRef, deliver, "toast");
   /**
@@ -836,6 +879,7 @@ function toFormErrorDetail(
   return {
     message: shown.message,
     notBookedModule: shown.notBookedModule,
+    code: shown.code,
     retry: shown.retry,
     requestId: shown.requestId
       ? {

@@ -25,6 +25,7 @@ import { enrollmentsConcept } from "~/lib/concepts/enrollments";
 import { helpConcept } from "~/lib/concepts/help";
 import { holidayWeeksConcept } from "~/lib/concepts/holidayWeeks";
 import { parentsConcept } from "~/lib/concepts/parents";
+import { payrollConcept } from "~/lib/concepts/payroll";
 import { peopleConcept } from "~/lib/concepts/people";
 import { reportsConcept } from "~/lib/concepts/reports";
 import { schoolComparisonConcept } from "~/lib/concepts/schoolComparison";
@@ -33,6 +34,7 @@ import { settingsConcept } from "~/lib/concepts/settings";
 import { staffConcept } from "~/lib/concepts/staff";
 import { staffPlanConcept } from "~/lib/concepts/staffPlan";
 import { stateReportConcept } from "~/lib/concepts/stateReport";
+import { substitutionConcept } from "~/lib/concepts/substitution";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 
@@ -249,6 +251,15 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         right: STAFF_RIGHT,
       },
       {
+        // Die Springer und wer sie geblockt hat, über alle Schulen (#4709).
+        key: "vertretungspool",
+        href: "/traeger/personal/vertretungspool",
+        label: "Vertretungspool",
+        shortLabel: "Springer",
+        concept: substitutionConcept,
+        right: STAFF_RIGHT,
+      },
+      {
         // Führungszeugnis, Masernschutz und die Arten des Trägers mit
         // Ablaufwarnung (#4707).
         key: "personalnachweise",
@@ -265,6 +276,15 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         label: "Abwesenheitsarten",
         shortLabel: "Abwesenheit",
         concept: timeTrackingConcept,
+        right: STAFF_RIGHT,
+      },
+      {
+        // Die DATEV-Lohndatei und der Zeitexport über alle Schulen (#4712).
+        key: "lohnexport",
+        href: "/traeger/personal/lohnexport",
+        label: "Lohnexport",
+        shortLabel: "Lohn",
+        concept: payrollConcept,
         right: STAFF_RIGHT,
       },
     ],

@@ -2,6 +2,7 @@ package owners
 
 import (
 	"context"
+	"errors"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	parentaudience "github.com/moto-ogs/project-phoenix/modules/parentannouncementaudience/contract"
@@ -12,6 +13,12 @@ type projectionAnnouncementAudienceReads interface {
 	projectionDeliveryAudienceReads
 	projectionFeedAudienceReads
 	projectionPollAudienceReads
+	projectionStudentAudienceReads
+}
+
+// projectionStudentAudienceReads reads what reached one child (#4814).
+type projectionStudentAudienceReads interface {
+	StudentAnnouncements(ctx context.Context, schoolID, studentID int64, history []parentaudience.DeclarationHistoryLink) ([]*parentaudience.StudentAnnouncement, error)
 }
 
 type projectionDeclarationAudienceReads interface {
@@ -41,6 +48,12 @@ type projectionFeedAudienceReads interface {
 	Stats(ctx context.Context, schoolID, announcementID int64) (*parentaudience.ParentAnnouncementStats, error)
 }
 
+// projectionLetterChildren reads which own children's letters an account may
+// read (#4813); the projection answers in the shape Communication's port asks.
+type projectionLetterChildren interface {
+	PermittedLetterChildren(ctx context.Context, accountID int64, announcementIDs []int64) (map[int64][]int64, error)
+}
+
 type projectionPollAudienceReads interface {
 	AnswerableChildren(ctx context.Context, accountID int64, announcementIDs []int64) ([]*parentaudience.ParentAnnouncementPollChild, error)
 	AccountMayAnswerForStudent(ctx context.Context, schoolID, announcementID, accountID, studentID int64) (bool, error)
@@ -51,6 +64,7 @@ type projectionPollAudienceReads interface {
 }
 
 type communicationAnnouncementAudience struct {
+	projectionLetterChildren
 	source projectionAnnouncementAudienceReads
 }
 
@@ -89,6 +103,15 @@ func (r communicationAnnouncementAudience) DeclarationChildren(ctx context.Conte
 	rows, err := r.source.DeclarationChildren(ctx, schoolID, announcementID, projectionDeclarationHistory(history))
 	return mapProjectionRows(rows, func(row *parentaudience.DeclarationChild) *communication.PortalDeclarationChild {
 		return (*communication.PortalDeclarationChild)(row)
+	}), err
+}
+func (r communicationAnnouncementAudience) StudentAnnouncements(ctx context.Context, schoolID, studentID int64, history []*communication.PortalDeclarationSubmission) ([]*communication.PortalStudentAnnouncement, error) {
+	rows, err := r.source.StudentAnnouncements(ctx, schoolID, studentID, projectionDeclarationHistory(history))
+	if errors.Is(err, parentaudience.ErrStudentNotInSchool) {
+		return nil, communication.ErrStudentNotInSchool
+	}
+	return mapProjectionRows(rows, func(row *parentaudience.StudentAnnouncement) *communication.PortalStudentAnnouncement {
+		return (*communication.PortalStudentAnnouncement)(row)
 	}), err
 }
 func (r communicationAnnouncementAudience) DeclarationSigners(ctx context.Context, schoolID int64, studentIDs []int64) ([]*communication.PortalDeclarationSigner, error) {
@@ -192,6 +215,7 @@ func (r communicationAnnouncementAudience) Stats(ctx context.Context, schoolID, 
 	rows, err := r.source.Stats(ctx, schoolID, announcementID)
 	return (*communication.PortalAnnouncementStats)(rows), err
 }
+
 func (r communicationAnnouncementAudience) AnswerableChildren(ctx context.Context, accountID int64, announcementIDs []int64) ([]*communication.PortalAnnouncementPollChild, error) {
 	rows, err := r.source.AnswerableChildren(ctx, accountID, announcementIDs)
 	return mapProjectionRows(rows, func(row *parentaudience.ParentAnnouncementPollChild) *communication.PortalAnnouncementPollChild {

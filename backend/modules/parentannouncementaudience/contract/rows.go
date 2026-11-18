@@ -112,6 +112,9 @@ type ParentAnnouncementDeliveryRecipient struct {
 	Email             string
 	HasPortalAccess   bool
 	PortalLocale      string
+	// StudentIDs are the reached children this guardian is linked to with
+	// parent_portal.access (#4813): a mail names only these children.
+	StudentIDs []int64
 }
 
 // ParentAnnouncementLetterChildStatus is one reached child of an Elternbrief
@@ -226,4 +229,21 @@ type GroupStudent struct {
 	FirstName   string
 	LastName    string
 	SchoolClass string
+}
+
+// StudentAnnouncement is one published Elternbrief or Einverständnis that
+// reached a child, or that a guardian answered for it (#4814). The
+// confirmation fields belong to a letter: the first guardian of the child
+// who confirmed it, and whether any guardian of the child can confirm.
+// PublishedAt is nil for an answered declaration the school retracted.
+type StudentAnnouncement struct {
+	AnnouncementID   int64
+	Title            string
+	DeliveryMode     string
+	PublishedAt      *time.Time
+	ResponseDeadline *time.Time
+	CanConfirm       bool
+	AcknowledgedAt   *time.Time
+	AckFirstName     string
+	AckLastName      string
 }

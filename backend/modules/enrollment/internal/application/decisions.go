@@ -44,8 +44,11 @@ func NewDecisions(deps DecisionDependencies) *Decisions {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
+	if deps.Now == nil {
+		panic("enrollment decisions: the clock is required")
+	}
 	if deps.Today == nil {
-		deps.Today = calendar.TodayDate
+		deps.Today = calendar.CalendarDateClock(deps.Now)
 	}
 	deps.ParentsURL = strings.TrimRight(strings.TrimSpace(deps.ParentsURL), "/")
 	d := &Decisions{deps: deps}

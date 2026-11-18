@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render as rtlRender,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
 import "@testing-library/jest-dom/vitest";
 import { ApiError } from "~/lib/api-error";
 
@@ -61,9 +68,25 @@ vi.mock("next-auth/react", () => ({
 }));
 vi.mock("~/lib/tenant-session-cookie", () => ({ signOutTenant: mockSignOut }));
 
-vi.mock("~/lib/swr", () => ({
+vi.unmock("swr");
+
+vi.mock("~/lib/swr", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/swr")>()),
   mutate: mockMutate,
 }));
+
+function render(ui: ReactNode) {
+  return rtlRender(
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {ui}
+    </SWRConfig>,
+  );
+}
+
+const SIGNED_IN = {
+  status: "authenticated",
+  data: { user: { id: "1" }, expires: "2099-01-01" },
+};
 
 vi.mock("~/lib/tenant-context", () => ({
   useTenantSlugSafe: mockUseTenantSlugSafe,
@@ -136,7 +159,9 @@ import { ToastProvider } from "~/contexts/ToastContext";
 
 import { BrandTenantSwitcher } from "./tenant-switcher";
 
-const TRIGGER_LABEL = "Einrichtung wechseln";
+// The trigger is named by the school it shows; the action follows as hidden
+// text (WCAG 2.5.3, #7112).
+const TRIGGER_LABEL = /, Einrichtung wechseln$/;
 
 // ============================================================================
 // Test Data
@@ -182,7 +207,7 @@ describe("BrandTenantSwitcher", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     realErrorDisplay.enabled = false;
-    mockUseSession.mockReturnValue({ status: "authenticated" });
+    mockUseSession.mockReturnValue(SIGNED_IN);
     mockUseTenantSlugSafe.mockReturnValue("school-a");
     mockListAvailableTenants.mockResolvedValue([]);
     mockPerformTenantSwitch.mockResolvedValue({

@@ -18,6 +18,7 @@ import { substitutionService } from "~/lib/substitution-api";
 import type { RunningSupervision } from "~/lib/substitution-helpers";
 import {
   supervisionTargetLabel,
+  useRefreshSupervisors,
   useRunningSupervision,
   type SupervisionTarget,
 } from "~/components/active-supervisions/running-supervision";
@@ -116,6 +117,7 @@ function useAddSupervisor(
 ) {
   const [isSaving, setIsSaving] = useState(false);
   const toast = useToast();
+  const refreshSupervisors = useRefreshSupervisors();
   const formErrors = useApiFormError();
   const { clear: clearFormErrors } = formErrors;
   // „Wiederholen“ trägt die aktuell gewählte Person ein.
@@ -145,6 +147,7 @@ function useAddSupervisor(
       return;
     }
     setIsSaving(false);
+    void refreshSupervisors(props.activeGroupId);
     toast.success(`${result.targetName} ist jetzt als Betreuer eingetragen.`);
     props.onClose();
     // Die Person ist eingetragen; ein gescheitertes Nachladen zeigt die Seite

@@ -283,6 +283,17 @@ func requestTestCapacity(cfg owners.EnrollmentIntakeSources) enrollmentNative.Of
 
 func setupRequestTest(t *testing.T) *requestTestEnv {
 	t.Helper()
+	return setupRequestTestOn(t, time.Now)
+}
+
+// requestTestNow is the fixed instant of the window tests, a Wednesday 10:00
+// in Berlin inside the phase's service year (#7104).
+var requestTestNow = requestTestToday.BerlinMidnight().Add(10 * time.Hour)
+
+// setupRequestTestOn builds the request environment over the intake clock
+// now; setupRequestTest binds the real one.
+func setupRequestTestOn(t *testing.T, now func() time.Time) *requestTestEnv {
+	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	testpkg.EnsureTestTenant(t, db, testpkg.Tenant(t))
 
@@ -316,6 +327,7 @@ func setupRequestTest(t *testing.T) *requestTestEnv {
 		Settings:         settings,
 		FrontendURL:      "http://localhost:3000",
 		Logger:           slog.Default(),
+		Now:              now,
 	}
 	config.Capacity = requestTestCapacity(config)
 	svc := newTestRequestService(config)
@@ -727,14 +739,14 @@ func TestRequestService_Submit_RejectsWhenDisabled(t *testing.T) {
 func TestRequestService_Submit_RejectsOutsideWindow(t *testing.T) {
 	t.Parallel()
 
-	env := setupRequestTest(t)
+	env := setupRequestTestOn(t, func() time.Time { return requestTestNow })
 	ctx := testpkg.Ctx(t)
 
 	// Set the phase's window to "ended yesterday" via repo update,
 	// then re-submit. Phase-window enforcement runs in Submit's
 	// IsEnrollmentWindowOpen check.
-	pastStart := time.Now().AddDate(0, 0, -7)
-	pastEnd := time.Now().AddDate(0, 0, -1)
+	pastStart := requestTestNow.AddDate(0, 0, -7)
+	pastEnd := requestTestNow.AddDate(0, 0, -1)
 	env.phase.EnrollmentOpenAt = &pastStart
 	env.phase.EnrollmentCloseAt = &pastEnd
 	repoFactory, _, _, _, _, _ := flowRepositories(t, env.db)
@@ -1639,14 +1651,14 @@ func TestRequestService_GetEditDraft_DirectEditRejectsInactiveCurrentOffering(t 
 func TestRequestService_ReplaceEditable_AllowsSubmittedEditsAfterEnrollmentWindowClosed(t *testing.T) {
 	t.Parallel()
 
-	env := setupRequestTest(t)
+	env := setupRequestTestOn(t, func() time.Time { return requestTestNow })
 	ctx := testpkg.Ctx(t)
 
 	submitted, err := env.svc.Submit(ctx, validSubmission(t, env.phaseID))
 	require.NoError(t, err)
 
-	pastStart := time.Now().AddDate(0, 0, -14)
-	pastEnd := time.Now().AddDate(0, 0, -1)
+	pastStart := requestTestNow.AddDate(0, 0, -14)
+	pastEnd := requestTestNow.AddDate(0, 0, -1)
 	env.phase.EnrollmentOpenAt = &pastStart
 	env.phase.EnrollmentCloseAt = &pastEnd
 	repoFactory, _, _, _, _, _ := flowRepositories(t, env.db)

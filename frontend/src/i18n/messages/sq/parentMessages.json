@@ -3,6 +3,7 @@
   "title": "Mesazhet",
   "description": "Lexoni mesazhet dhe shkruajini drejtpërdrejt {careTerm}-së.",
   "noChildren": "Me llogarinë tuaj nuk është lidhur ende asnjë fëmijë. Sapo të lidhet një fëmijë, mund t'i shkruani {careTerm}-së këtu.",
+  "withoutCarePlace": "Mesazhet për {careTerm} janë të disponueshme vetëm për fëmijët që kanë vend në {careTerm}.",
   "noMessagesYet": "Prekni për të shkruar.",
   "previewFromOgs": "{careTerm}: {text}",
   "previewFromYou": "Ju: {text}",

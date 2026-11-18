@@ -2,7 +2,6 @@ package presence
 
 import (
 	"testing"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/internal/ptrtest"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
@@ -221,7 +220,7 @@ func TestCountStudentsInIndoorRooms(t *testing.T) {
 				{StudentID: 1, ActiveGroupID: 100},
 			},
 			activeGroups: []*ports.ActiveGroup{
-				{ID: 100, RoomID: 10, EndTime: ptrtest.Ptr(time.Now())},
+				{ID: 100, RoomID: 10, EndTime: ptrtest.Ptr(presenceTestNow())},
 			},
 			rooms: []*studentpresence.SessionRoom{
 				{ID: 10, Name: "Raum 101", Category: ptrtest.Ptr("Klassenraum")},
@@ -232,7 +231,7 @@ func TestCountStudentsInIndoorRooms(t *testing.T) {
 		{
 			name: "Exited visit excluded",
 			activeVisits: []studentpresence.Visit{
-				{StudentID: 1, ActiveGroupID: 100, ExitTime: ptrtest.Ptr(time.Now())},
+				{StudentID: 1, ActiveGroupID: 100, ExitTime: ptrtest.Ptr(presenceTestNow())},
 			},
 			activeGroups: []*ports.ActiveGroup{
 				{ID: 100, RoomID: 10},
@@ -280,7 +279,7 @@ func TestCountStudentsInIndoorRooms(t *testing.T) {
 			}
 
 			// Use zero-value service (countStudentsInIndoorRooms doesn't use service fields)
-			s := &service{}
+			s := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow}}
 			count := s.countStudentsInIndoorRooms(tt.activeVisits, tt.activeGroups, roomData)
 
 			assert.Equal(t, tt.expectedCount, count, tt.description)

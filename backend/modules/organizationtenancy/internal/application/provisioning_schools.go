@@ -62,11 +62,21 @@ func (p *Provisioning) createSchool(adminCtx context.Context, school organizatio
 	if err := p.createWebManualDevice(adminCtx, created.ID); err != nil {
 		return nil, err
 	}
+	// Settings records the state in this unit (#7174): the school exists
+	// with its federal state or not at all.
+	recorded, err := p.settings.RecordFederalState(adminCtx, created.ID, school.FederalState)
+	if err != nil {
+		return nil, fmt.Errorf("record federal state of school %d: %w", created.ID, err)
+	}
+	if !recorded {
+		return nil, &organizationtenancy.InvalidProvisioningDataError{Err: &organizationtenancy.InvalidSchoolError{Reason: "federal state is not supported"}}
+	}
 	if err := p.recordAction(adminCtx, operatorID, domain.AuditActionCreate, domain.AuditResourceSchool, &created.ID, clientIP, map[string]any{
 		"name":           created.Name,
 		"slug":           created.Slug,
 		"subdomain":      created.Subdomain,
 		"organizationID": created.OrganizationID,
+		"federalState":   school.FederalState,
 	}); err != nil {
 		return nil, err
 	}
@@ -195,8 +205,8 @@ func (p *Provisioning) UpdateSchool(ctx context.Context, id int64, changes organ
 }
 
 // schoolContactEmailChange checks a changed contact address. Only a change
-// is checked: a school that predates the rule keeps its other edits until the
-// operator adds the address (#2872).
+// is checked: a stored address that predates the format rule must not block
+// the other edits. The address is optional and may be cleared.
 func schoolContactEmailChange(existing organizationtenancy.School, changes organizationtenancy.SchoolChanges) error {
 	if changes.Email == existing.Email {
 		return nil

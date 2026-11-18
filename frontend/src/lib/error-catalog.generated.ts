@@ -34,6 +34,8 @@ export const ERROR_CATALOG = {
         "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "billing.invalid_key_day":
         "Der Stichtag muss zwischen dem 1. und dem 28. des Monats liegen. Bitte wählen Sie einen dieser Tage.",
+      "calendar.federal_state_missing":
+        "Für die Schule ist noch kein Bundesland eingetragen. Deshalb fehlen die Feiertage. Die Leitung trägt es in den Einstellungen ein.",
       "calendar.occurrence_unavailable":
         "Diesen Termin gibt es nicht mehr, er wurde vielleicht abgesagt. Bitte laden Sie den Kalender neu.",
       "care_contract.application_not_found":
@@ -65,7 +67,7 @@ export const ERROR_CATALOG = {
       "care_contract.import_file_too_large":
         "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
       "care_contract.letterhead_too_long":
-        "Absender oder Fußzeile sind zu lang für den Vertrag. Bitte kürzen Sie sie unter „Briefkopf und Vorlagen“.",
+        "Absender oder Fußzeile sind zu lang für den Vertrag. Bitte kürzen Sie sie unter „Briefkopf und Vorlagen“. Das darf, wer das Recht „Einstellungen“ hat.",
       "care_contract.notice_end_not_open":
         "Für diesen Vertrag gibt es kein offenes Vertragsende mehr. Bitte laden Sie die Seite neu.",
       "care_contract.notice_template_missing":
@@ -106,6 +108,8 @@ export const ERROR_CATALOG = {
         "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "care.child_care_ended":
         "Die Betreuung dieses Kindes ist beendet. Änderungen sind nicht mehr möglich. Bei Fragen wenden Sie sich bitte an die OGS.",
+      "care.child_without_care_place":
+        "Ihr Kind hat keinen Platz in der OGS. Diese Funktion gibt es für Ihr Kind deshalb nicht.",
       "care.course_request_invalid":
         "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.course_requests_disabled":
@@ -177,6 +181,10 @@ export const ERROR_CATALOG = {
         "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.offering_changes_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
+      "care.photo_consent_busy":
+        "Die Foto-Einwilligung konnte gerade nicht gespeichert werden. Bitte versuchen Sie es noch einmal.",
+      "care.photos_disabled":
+        "Die Schule hat Kinderfotos ausgeschaltet. Sie können die Einwilligung später wieder geben.",
       "care.pickup_change_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "care.pickup_permission_request_required":
@@ -283,6 +291,12 @@ export const ERROR_CATALOG = {
         "Niemand in dieser Gruppe hat Eltern mit Zugang zu moto. Die Nachricht wurde nicht verschickt.",
       "communication.leadership_messages_unavailable":
         "Nachrichten nur an die Leitung sind hier zurzeit nicht möglich. Bitte schreiben Sie an das ganze OGS-Team.",
+      "communication.letter_placeholder_letter_only":
+        "Platzhalter gehen nur im Text eines Elternbriefs. Bitte nehmen Sie sie aus dem Betreff oder wählen Sie „Elternbrief“.",
+      "communication.letter_placeholder_unknown":
+        "Diese Platzhalter kennt moto nicht: {placeholders}. Bitte nehmen Sie nur Platzhalter aus der Liste.",
+      "communication.letter_print_not_letter":
+        "Nur ein veröffentlichter Elternbrief lässt sich drucken.",
       "communication.message_send_conflict":
         "Die Nachricht wurde bereits anders gesendet. Bitte laden Sie den Chat neu.",
       "communication.notifications_disabled":
@@ -592,8 +606,12 @@ export const ERROR_CATALOG = {
         "Der neue Zeitraum passt nicht zu einem vorgemerkten Kind. Bitte prüfen Sie zuerst dessen Betreuungszeitraum.",
       "enrollment.phase_school_classes_invalid":
         "Die angebotenen und die zugelassenen Klassen passen nicht zusammen. Bitte prüfen Sie die Klassen.",
+      "enrollment.phase_service_end_too_far":
+        "Das Ende darf höchstens 5 Jahre in der Zukunft liegen. Bitte wählen Sie ein früheres Ende.",
       "enrollment.phase_service_period_invalid":
         "Der Betreuungszeitraum ist unvollständig oder endet vor dem Beginn. Bitte prüfen Sie Beginn und Ende.",
+      "enrollment.phase_service_period_too_long":
+        "Der Betreuungszeitraum darf höchstens 2 Jahre lang sein. Bitte wählen Sie ein früheres Ende.",
       "enrollment.phase_window_invalid":
         "Das Anmeldefenster endet vor seinem Start. Bitte prüfen Sie Öffnung und Schließung.",
       "enrollment.pickup_time_not_allowed":
@@ -673,6 +691,8 @@ export const ERROR_CATALOG = {
         "Die Anmeldefrist ist vorbei oder hat noch nicht begonnen. Bitte wenden Sie sich an die Schule.",
       "enrollment.withdraw_not_allowed":
         "Diese Anmeldung kann nicht mehr zurückgezogen werden. Bitte wenden Sie sich an die Schule.",
+      "enrollment.without_care_place_school_year_only":
+        "Ein Kind ohne OGS-Platz bekommt seinen Platz über eine Anmeldung für das Schuljahr.",
       "feedback.disabled": "Rückmeldungen sind an dieser Schule ausgeschaltet.",
       "files.announcement_published":
         "Die Mitteilung ist schon veröffentlicht. Ihre Anhänge lassen sich nicht mehr ändern.",
@@ -766,6 +786,8 @@ export const ERROR_CATALOG = {
         "Es wurden zu viele Einladungen verschickt. Bitte versuchen Sie es in einer Stunde erneut.",
       "identity.lehrkraft_role_immutable":
         "Ein Lehrkraft-Konto behält seine Rolle. Für eine andere Rolle braucht die Person ein neues Konto.",
+      "identity.logout_not_revoked":
+        "Sie sind auf diesem Gerät abgemeldet. moto konnte Ihre Anmeldung aber nicht ganz beenden. Sie endet später von selbst. Haben Sie ein fremdes Gerät benutzt? Dann ändern Sie bitte Ihr Passwort.",
       "identity.mail_block_unreadable":
         "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuchen Sie es später noch einmal.",
       "identity.mail_blocked_at_provider":
@@ -899,7 +921,7 @@ export const ERROR_CATALOG = {
       "operator.audit_unavailable":
         "Die Anfrage konnte nicht sicher protokolliert werden. Bitte versuchen Sie es später erneut.",
       "parent_billing.bank_account_missing":
-        "Für die Schreiben fehlt eine Bankverbindung. Bitte tragen Sie unter „Abrechnungsvorgaben“ ein Konto ein.",
+        "Für die Schreiben fehlt eine Bankverbindung. Bitte tragen Sie unter „Abrechnungsvorgaben“ ein Konto ein. Das darf, wer das Recht „Einstellungen“ hat.",
       "parent_billing.beleg_retention_basis_cites_statute":
         "Die Grundlage nennt § 147 AO, § 257 HGB oder § 14b UStG. Dann gelten deren Fristen. Bitte prüfen Sie die Grundlage.",
       "parent_billing.benefits_exemption_unavailable":
@@ -941,7 +963,7 @@ export const ERROR_CATALOG = {
       "parent_billing.care_amendment_conflict":
         "Diese Änderung passt nicht mehr zur Rechnung. Bitte laden Sie die Seite neu.",
       "parent_billing.care_amendment_disabled":
-        "Diese Änderung ist bei Ihrem Träger ausgeschaltet. Sie können sie in den Einstellungen der Abrechnung einschalten.",
+        "Diese Änderung ist bei Ihrem Träger ausgeschaltet. Sie lässt sich in den Einstellungen unter „Monatsbeitrag“ einschalten. Das darf, wer das Recht „Einstellungen“ hat.",
       "parent_billing.care_amendment_invalid":
         "Bitte prüfen Sie die Eingaben für die Änderung.",
       "parent_billing.care_amendments_unresolved":
@@ -1026,7 +1048,7 @@ export const ERROR_CATALOG = {
       "parent_billing.datev_no_new_bookings":
         "Alle Buchungen dieses Laufs sind schon in einer DATEV-Datei. Es wurde keine Datei erstellt.",
       "parent_billing.datev_not_ready":
-        "Für die DATEV-Datei fehlen noch Werte. Tragen Sie sie in den Einstellungen unter „DATEV“ ein.",
+        "Für die DATEV-Datei fehlen noch Werte. Tragen Sie sie in den Einstellungen unter „DATEV“ ein. Das darf, wer das Recht „Einstellungen“ hat.",
       "parent_billing.debtor_number_digit_range":
         "Die Debitorennummer hat {min_digits} bis {max_digits} Ziffern, zum Beispiel {example}.",
       "parent_billing.debtor_number_digits":
@@ -1088,7 +1110,7 @@ export const ERROR_CATALOG = {
       "parent_billing.invoice_number_taken":
         "Diese Rechnungsnummer gibt es schon. Bitte ändern Sie das Muster unter „Abrechnungsvorgaben“.",
       "parent_billing.legal_remedy_missing":
-        "Der Gebührenbescheid braucht eine Rechtsbehelfsbelehrung. Tragen Sie sie in der Vorlage „Bescheid“ ein. Danach können Sie freigeben.",
+        "Der Gebührenbescheid braucht eine Rechtsbehelfsbelehrung. Tragen Sie sie in der Vorlage „Bescheid“ ein. Das darf, wer das Recht „Einstellungen“ hat. Danach können Sie freigeben.",
       "parent_billing.letter_mail_block_unreadable":
         "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuchen Sie es später noch einmal.",
       "parent_billing.letter_mail_blocked":
@@ -1108,7 +1130,7 @@ export const ERROR_CATALOG = {
       "parent_billing.parent_document_not_found":
         "Dieses Dokument gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "parent_billing.payment_text_debtor_number_missing":
-        "Rechnungen ohne Debitorennummer: {count}. Ihr Zahlungstext nennt aber die Debitorennummer. Löschen Sie den eigenen Zahlungstext in den Einstellungen unter „Allgemein“ im Bereich „Ferienbetreuung“ oder nehmen Sie dort den Platzhalter für die Debitorennummer heraus.",
+        "Rechnungen ohne Debitorennummer: {count}. Ihr Zahlungstext nennt aber die Debitorennummer. Löschen Sie den eigenen Zahlungstext in den Einstellungen unter „Allgemein“ im Bereich „Ferienbetreuung“ oder nehmen Sie dort den Platzhalter für die Debitorennummer heraus. Das darf, wer das Recht „Einstellungen“ hat.",
       "parent_billing.recipient_email_missing":
         "Für diese Familie gibt es keine E-Mail-Adresse. Bitte drucken Sie das Schreiben und geben Sie es der Familie.",
       "parent_billing.sepa_account_holder_unsupported":
@@ -1381,6 +1403,8 @@ export const ERROR_CATALOG = {
         "Die Notiz ist zu lang. Bitte kürzen Sie sie.",
       "students.child_quota_reached":
         "Das Kinderkontingent Ihrer Schule ist voll ({occupied_places} von {booked_places} Kindern). Bitte melden Sie sich beim moto-Team.",
+      "students.class_list_entries_replaced":
+        "Ihre Schule legt Kinder ohne OGS-Platz als Kind an. Bitte nutzen Sie dafür „Ohne OGS-Platz“ in den Kinderdaten.",
       "students.class_list_entry_assign_mismatch":
         "Das gewählte Kind passt nicht zum Eintrag. Name und Klasse müssen gleich sein.",
       "students.class_list_entry_duplicate":
@@ -1483,6 +1507,12 @@ export const ERROR_CATALOG = {
         "An einigen Tagen gibt es schon einen Eintrag. Diese Tage wurden nicht geändert.",
       "students.status_day_occupied":
         "Für heute ist eine Klassenfahrt eingetragen. Heben Sie zuerst die Klassenfahrt auf.",
+      "students.without_care_place_care_data":
+        "Ein Kind ohne OGS-Platz hat keine Ankunfts- und Abholzeiten und keinen Heimweg der OGS.",
+      "students.without_care_place_group":
+        "Ein Kind ohne OGS-Platz ist in keiner Gruppe. Bitte lassen Sie die Gruppe leer.",
+      "students.without_care_place_off":
+        "Kinder ohne OGS-Platz kann Ihre Schule noch nicht anlegen. Das moto-Team schaltet das auf Wunsch ein.",
       "substitutions.invalid_period":
         "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "substitutions.invalid_target":
@@ -1652,6 +1682,8 @@ export const ERROR_CATALOG = {
         "Die Planungsspur gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "timetable.presence_would_overstaff":
         "Der Termin ist schon voll besetzt. Bitte entfernen Sie zuerst die nicht mehr nötige Vertretung.",
+      "timetable.reinstate_ended":
+        "Der Termin ist schon vorbei. Eine Absage lässt sich nur bis zum Ende des Termins zurücknehmen.",
       "timetable.reopen_attendance_changed":
         "Die Anwesenheit wurde nach dem Abschluss geändert. Der Termin lässt sich nicht wieder öffnen.",
       "timetable.reopen_staff_busy":
@@ -1916,6 +1948,16 @@ export const ERROR_CATALOG = {
         "Die Personalnummer darf nur Ziffern haben, höchstens 9. Bitte prüfen Sie die Eingabe.",
       "workforce.personnel_number_taken":
         "Diese Personalnummer ist schon vergeben. Bitte wählen Sie eine andere.",
+      "workforce.pool_block_invalid":
+        "Bitte wählen Sie einen Tag ab heute. Das Ende muss nach dem Beginn liegen.",
+      "workforce.pool_block_not_found":
+        "Diese Blockung gibt es nicht mehr. Bitte laden Sie die Woche neu.",
+      "workforce.pool_block_taken":
+        "Diese Person ist zu dieser Zeit schon geblockt. Bitte wählen Sie eine andere Zeit.",
+      "workforce.pool_springer_busy":
+        "Die Person arbeitet zu dieser Zeit an einer anderen Schule. Bitte wählen Sie eine andere Zeit.",
+      "workforce.pool_springer_not_found":
+        "Diese Person ist an diesem Tag nicht im Vertretungspool. Bitte laden Sie die Woche neu.",
       "workforce.qualification_type_name_taken":
         "Es gibt schon eine Nachweisart mit diesem Namen. Bitte wählen Sie einen anderen Namen.",
       "workforce.qualification_type_not_found":
@@ -2025,6 +2067,8 @@ export const ERROR_CATALOG = {
         "An der Schule {school} ist {month} schon abgeschlossen. Bitte öffnen Sie zuerst diesen späteren Monat.",
       "workforce.traeger_month_not_kept":
         "In diesem Monat gilt kein Arbeitsvertrag des Trägers. Die Schulen schließen den Monat selbst ab.",
+      "workforce.traeger_payroll_not_ready":
+        "Die Lohndatei kann noch nicht entstehen. Die Prüfung auf der Seite nennt, was noch fehlt.",
       "workforce.traeger_planning_shift_not_found":
         "Die Schicht gibt es nicht mehr. Bitte laden Sie die Woche neu.",
       "workforce.traeger_planning_site_invalid":
@@ -2041,6 +2085,12 @@ export const ERROR_CATALOG = {
         "Diese Nachweisart gibt es nicht mehr oder sie ist archiviert. Bitte laden Sie die Seite neu.",
       "workforce.traeger_staff_already_linked":
         "Eine dieser Personen hat schon eine Personalakte. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_staff_hire_duplicate":
+        "Diese Person gibt es vielleicht schon. Bitte prüfen Sie die Angaben.",
+      "workforce.traeger_staff_hire_incomplete":
+        "Die Person ist nur zum Teil angelegt. Bitte stellen Sie sie nicht noch einmal ein.",
+      "workforce.traeger_staff_hire_invalid":
+        "Die Person konnte nicht eingestellt werden. Bitte prüfen Sie Ihre Angaben.",
       "workforce.traeger_staff_import_changed":
         "Seit der Vorschau hat sich etwas an den Personalakten geändert. Bitte prüfen Sie die Vorschau noch einmal und übernehmen Sie dann.",
       "workforce.traeger_staff_import_file_invalid":
@@ -2104,6 +2154,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Please check this field.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "No federal state is set for the school yet, so the public holidays are missing. The school management can set it in the settings.",
       "calendar.occurrence_unavailable":
         "This date no longer exists. It may have been cancelled. Please reload the calendar.",
       "care_contract.application_not_found":
@@ -2169,6 +2221,8 @@ export const ERROR_CATALOG = {
         "{object} is not available here at the moment. Please ask your contact person.",
       "care.child_care_ended":
         "Care for this child has ended. Changes are no longer possible. If you have questions, please contact the OGS.",
+      "care.child_without_care_place":
+        "Your child does not have a place in the OGS. This function is therefore not available for your child.",
       "care.course_request_invalid":
         "{object} contains invalid details. Please check your entries.",
       "care.course_requests_disabled":
@@ -2239,6 +2293,10 @@ export const ERROR_CATALOG = {
         "{object} contains invalid details. Please check your entries.",
       "care.offering_changes_disabled":
         "{object} is not available here at the moment. Please ask your contact person.",
+      "care.photo_consent_busy":
+        "The photo consent could not be saved right now. Please try again.",
+      "care.photos_disabled":
+        "The school has switched child photos off. You can give your consent again later.",
       "care.pickup_change_disabled":
         "{object} is not available here at the moment. Please ask your contact person.",
       "care.pickup_permission_request_required":
@@ -2315,6 +2373,12 @@ export const ERROR_CATALOG = {
         "No child in this group has parents with access to moto. The message was not sent.",
       "communication.leadership_messages_unavailable":
         "Messages to the leadership only are not possible here right now. Please write to the whole OGS team.",
+      "communication.letter_placeholder_letter_only":
+        "Placeholders only work in the text of a parent letter. Please remove them from the subject or choose “Parent letter”.",
+      "communication.letter_placeholder_unknown":
+        "moto does not know these placeholders: {placeholders}. Please use only placeholders from the list.",
+      "communication.letter_print_not_letter":
+        "Only a published parent letter can be printed.",
       "communication.message_send_conflict":
         "This message was already sent differently. Please reload the chat.",
       "communication.parent_messaging_disabled":
@@ -2518,6 +2582,8 @@ export const ERROR_CATALOG = {
         "The enrollment period has ended or has not started yet. Please contact the school.",
       "enrollment.withdraw_not_allowed":
         "This enrollment can no longer be withdrawn. Please contact the school.",
+      "enrollment.without_care_place_school_year_only":
+        "A child without an OGS place gets its place through an enrollment for the school year.",
       "files.file_name_invalid":
         "This file name is not allowed. Please choose the file again.",
       "general.request_too_large":
@@ -2564,6 +2630,8 @@ export const ERROR_CATALOG = {
         "The invitation could not be sent right now. Please try again.",
       "identity.invitation_not_found":
         "This invitation does not exist. Please check the link in the email.",
+      "identity.logout_not_revoked":
+        "You are signed out on this device. But moto could not fully end your sign-in. It will end on its own later. Did you use someone else's device? Then please change your password.",
       "identity.mail_block_unreadable":
         "We cannot check right now whether this address is blocked. Please try again later.",
       "identity.mail_blocked_at_provider":
@@ -2740,6 +2808,8 @@ export const ERROR_CATALOG = {
         "Some days already have an entry. These days were not changed.",
       "students.status_day_occupied":
         "A class trip is entered for today. Remove the class trip first.",
+      "students.without_care_place_care_data":
+        "A child without an OGS place has no arrival or pickup times and no way home set by the OGS.",
       "substitutions.last_supervisor":
         "You are the only supervisor. Hand the supervision over to someone or end the activity.",
       "timetable.closing_day_notice_changed":
@@ -2844,6 +2914,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Проверьте это поле.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "Для школы ещё не указана федеральная земля. Поэтому нет праздничных дней. Руководство может указать её в настройках.",
       "calendar.occurrence_unavailable":
         "Этой даты больше нет. Возможно, её отменили. Пожалуйста, обновите календарь.",
       "care_contract.application_not_found":
@@ -2909,6 +2981,8 @@ export const ERROR_CATALOG = {
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
       "care.child_care_ended":
         "Присмотр за этим ребёнком завершён. Изменения больше невозможны. По вопросам обращайтесь в OGS.",
+      "care.child_without_care_place":
+        "У вашего ребёнка нет места в OGS. Поэтому эта функция для ребёнка недоступна.",
       "care.course_request_invalid":
         "Указаны неверные данные: {object}. Проверьте введённые данные.",
       "care.course_requests_disabled":
@@ -2979,6 +3053,10 @@ export const ERROR_CATALOG = {
         "Указаны неверные данные: {object}. Проверьте введённые данные.",
       "care.offering_changes_disabled":
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
+      "care.photo_consent_busy":
+        "Сейчас не удалось сохранить согласие на фотографии. Пожалуйста, попробуйте ещё раз.",
+      "care.photos_disabled":
+        "Школа отключила фотографии детей. Вы сможете снова дать согласие позже.",
       "care.pickup_change_disabled":
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
       "care.pickup_permission_request_required":
@@ -3207,6 +3285,8 @@ export const ERROR_CATALOG = {
         "Срок записи истёк или ещё не начался. Обратитесь в школу.",
       "enrollment.withdraw_not_allowed":
         "Эту запись больше нельзя отозвать. Обратитесь в школу.",
+      "enrollment.without_care_place_school_year_only":
+        "Ребёнок без места в OGS получает место через запись на учебный год.",
       "files.file_name_invalid":
         "Имя файла недопустимо. Выберите файл ещё раз.",
       "general.request_too_large":
@@ -3253,6 +3333,8 @@ export const ERROR_CATALOG = {
         "Сейчас не удалось отправить приглашение. Повторите попытку.",
       "identity.invitation_not_found":
         "Такого приглашения нет. Проверьте ссылку в письме.",
+      "identity.logout_not_revoked":
+        "Вы вышли на этом устройстве. Но moto не смогло полностью завершить вход. Он закончится позже сам. Вы пользовались чужим устройством? Тогда смените пароль.",
       "identity.mail_block_unreadable":
         "Сейчас нельзя проверить, заблокирован ли этот адрес. Попробуйте позже.",
       "identity.mail_blocked_at_provider":
@@ -3406,6 +3488,8 @@ export const ERROR_CATALOG = {
         "На некоторые дни уже есть запись. Эти дни не изменены.",
       "students.status_day_occupied":
         "На сегодня внесена классная поездка. Сначала отмените классную поездку.",
+      "students.without_care_place_care_data":
+        "У ребёнка без места в OGS нет времени прихода и забора и нет пути домой, установленного OGS.",
       "substitutions.last_supervisor":
         "Вы единственный, кто ведёт присмотр. Передайте присмотр другому человеку или завершите занятие.",
       "timetable.closing_day_notice_not_found":
@@ -3454,6 +3538,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Kontrolloni këtë fushë.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "Për shkollën nuk është vendosur ende landi federal. Prandaj mungojnë ditët e festave. Drejtuesit mund ta vendosin te cilësimet.",
       "calendar.occurrence_unavailable":
         "Kjo datë nuk ekziston më. Mund të jetë anuluar. Ju lutemi rifreskoni kalendarin.",
       "care_contract.application_not_found":
@@ -3519,6 +3605,8 @@ export const ERROR_CATALOG = {
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
       "care.child_care_ended":
         "Kujdesi për këtë fëmijë ka përfunduar. Ndryshimet nuk janë më të mundshme. Për pyetje kontaktoni OGS-në.",
+      "care.child_without_care_place":
+        "Fëmija juaj nuk ka vend në OGS. Prandaj ky funksion nuk është i disponueshëm për fëmijën tuaj.",
       "care.course_request_invalid":
         "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
       "care.course_requests_disabled":
@@ -3590,6 +3678,10 @@ export const ERROR_CATALOG = {
         "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
       "care.offering_changes_disabled":
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
+      "care.photo_consent_busy":
+        "Pëlqimi për fotot nuk mund të ruhej tani. Ju lutemi provoni përsëri.",
+      "care.photos_disabled":
+        "Shkolla i ka çaktivizuar fotot e fëmijëve. Pëlqimin mund ta jepni përsëri më vonë.",
       "care.pickup_change_disabled":
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
       "care.pickup_permission_request_required":
@@ -3830,6 +3922,8 @@ export const ERROR_CATALOG = {
         "Afati i regjistrimit ka mbaruar ose nuk ka filluar ende. Ju lutemi kontaktoni shkollën.",
       "enrollment.withdraw_not_allowed":
         "Ky regjistrim nuk mund të tërhiqet më. Ju lutemi kontaktoni shkollën.",
+      "enrollment.without_care_place_school_year_only":
+        "Një fëmijë pa vend në OGS e merr vendin me një regjistrim për vitin shkollor.",
       "files.file_name_invalid":
         "Emri i skedarit nuk lejohet. Ju lutemi zgjidhni skedarin përsëri.",
       "general.request_too_large":
@@ -3876,6 +3970,8 @@ export const ERROR_CATALOG = {
         "Ftesa nuk mund të dërgohej tani. Provoni përsëri.",
       "identity.invitation_not_found":
         "Kjo ftesë nuk ekziston. Kontrolloni lidhjen në e-mail.",
+      "identity.logout_not_revoked":
+        "Keni dalë nga llogaria në këtë pajisje. Por moto nuk mundi ta mbyllë plotësisht hyrjen tuaj. Ajo do të mbyllet më vonë vetë. A keni përdorur pajisjen e dikujt tjetër? Atëherë ju lutemi ndryshoni fjalëkalimin.",
       "identity.mail_block_unreadable":
         "Tani nuk mund të kontrollohet nëse kjo adresë është e bllokuar. Ju lutemi provoni përsëri më vonë.",
       "identity.mail_blocked_at_provider":
@@ -4031,6 +4127,8 @@ export const ERROR_CATALOG = {
         "Disa ditë kanë tashmë një regjistrim. Këto ditë nuk u ndryshuan.",
       "students.status_day_occupied":
         "Për sot është regjistruar një ekskursion klase. Hiqni fillimisht ekskursionin e klasës.",
+      "students.without_care_place_care_data":
+        "Një fëmijë pa vend në OGS nuk ka orare ardhjeje dhe marrjeje dhe as rrugë për në shtëpi nga OGS.",
       "substitutions.last_supervisor":
         "Jeni i vetmi mbikëqyrës. Ia dorëzoni mbikëqyrjen dikujt tjetër ose përfundoni aktivitetin.",
       "timetable.closing_day_notice_not_found":
@@ -4080,6 +4178,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Sprawdź to pole.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "Dla szkoły nie ustawiono jeszcze kraju związkowego. Dlatego brakuje dni świątecznych. Kierownictwo może go ustawić w ustawieniach.",
       "calendar.occurrence_unavailable":
         "Tego terminu już nie ma. Mógł zostać odwołany. Proszę odświeżyć kalendarz.",
       "care_contract.application_not_found":
@@ -4145,6 +4245,8 @@ export const ERROR_CATALOG = {
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
       "care.child_care_ended":
         "Opieka nad tym dzieckiem zakończyła się. Zmiany nie są już możliwe. W razie pytań skontaktuj się z OGS.",
+      "care.child_without_care_place":
+        "Państwa dziecko nie ma miejsca w OGS. Dlatego ta funkcja nie jest dostępna dla dziecka.",
       "care.course_request_invalid":
         "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",
       "care.course_requests_disabled":
@@ -4216,6 +4318,10 @@ export const ERROR_CATALOG = {
         "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",
       "care.offering_changes_disabled":
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
+      "care.photo_consent_busy":
+        "Nie udało się teraz zapisać zgody na zdjęcia. Proszę spróbować ponownie.",
+      "care.photos_disabled":
+        "Szkoła wyłączyła zdjęcia dzieci. Zgodę możesz ponownie wyrazić później.",
       "care.pickup_change_disabled":
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
       "care.pickup_permission_request_required":
@@ -4443,6 +4549,8 @@ export const ERROR_CATALOG = {
         "Termin zapisów minął lub jeszcze się nie zaczął. Skontaktuj się ze szkołą.",
       "enrollment.withdraw_not_allowed":
         "Tego zapisu nie można już wycofać. Skontaktuj się ze szkołą.",
+      "enrollment.without_care_place_school_year_only":
+        "Dziecko bez miejsca w OGS otrzymuje miejsce poprzez zapis na rok szkolny.",
       "files.file_name_invalid":
         "Nazwa pliku jest niedozwolona. Wybierz plik ponownie.",
       "general.request_too_large":
@@ -4489,6 +4597,8 @@ export const ERROR_CATALOG = {
         "Nie udało się teraz wysłać zaproszenia. Spróbuj ponownie.",
       "identity.invitation_not_found":
         "To zaproszenie nie istnieje. Sprawdź link w e-mailu.",
+      "identity.logout_not_revoked":
+        "Wylogowano Cię na tym urządzeniu. moto nie mogło jednak całkiem zakończyć logowania. Zakończy się ono później samo. Korzystasz z cudzego urządzenia? Zmień wtedy hasło.",
       "identity.mail_block_unreadable":
         "Nie można teraz sprawdzić, czy ten adres jest zablokowany. Spróbuj ponownie później.",
       "identity.mail_blocked_at_provider":
@@ -4643,6 +4753,8 @@ export const ERROR_CATALOG = {
         "Niektóre dni mają już wpis. Tych dni nie zmieniono.",
       "students.status_day_occupied":
         "Na dziś wpisana jest wycieczka klasowa. Najpierw usuń wycieczkę klasową.",
+      "students.without_care_place_care_data":
+        "Dziecko bez miejsca w OGS nie ma godzin przyjścia i odbioru ani drogi do domu ustalanej przez OGS.",
       "substitutions.last_supervisor":
         "Jesteś jedyną osobą sprawującą opiekę. Przekaż opiekę innej osobie lub zakończ zajęcia.",
       "timetable.closing_day_notice_not_found":
@@ -4691,6 +4803,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Bu alanı kontrol edin.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "Okul için henüz eyalet belirlenmedi. Bu yüzden resmi tatiller eksik. Yönetim bunu ayarlardan girebilir.",
       "calendar.occurrence_unavailable":
         "Bu tarih artık yok. İptal edilmiş olabilir. Lütfen takvimi yeniden yükleyin.",
       "care_contract.application_not_found":
@@ -4756,6 +4870,8 @@ export const ERROR_CATALOG = {
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
       "care.child_care_ended":
         "Bu çocuğun bakımı sona erdi. Artık değişiklik yapılamaz. Sorularınız için OGS ile iletişime geçin.",
+      "care.child_without_care_place":
+        "Çocuğunuzun OGS'de yeri yok. Bu nedenle bu işlev çocuğunuz için kullanılamaz.",
       "care.course_request_invalid":
         "{object} geçersiz bilgiler içeriyor. Lütfen girdiğiniz bilgileri kontrol edin.",
       "care.course_requests_disabled":
@@ -4827,6 +4943,10 @@ export const ERROR_CATALOG = {
         "{object} geçersiz bilgiler içeriyor. Lütfen girdiğiniz bilgileri kontrol edin.",
       "care.offering_changes_disabled":
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
+      "care.photo_consent_busy":
+        "Fotoğraf izni şu anda kaydedilemedi. Lütfen tekrar deneyin.",
+      "care.photos_disabled":
+        "Okul çocuk fotoğraflarını kapattı. Onayınızı daha sonra yeniden verebilirsiniz.",
       "care.pickup_change_disabled":
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
       "care.pickup_permission_request_required":
@@ -5061,6 +5181,8 @@ export const ERROR_CATALOG = {
         "Kayıt süresi bitti veya henüz başlamadı. Lütfen okulla iletişime geçin.",
       "enrollment.withdraw_not_allowed":
         "Bu kayıt artık geri çekilemez. Lütfen okulla iletişime geçin.",
+      "enrollment.without_care_place_school_year_only":
+        "OGS yeri olmayan bir çocuk, yerini okul yılı kaydıyla alır.",
       "files.file_name_invalid":
         "Dosya adı kabul edilmiyor. Lütfen dosyayı yeniden seçin.",
       "general.request_too_large":
@@ -5107,6 +5229,8 @@ export const ERROR_CATALOG = {
         "Davet şu anda gönderilemedi. Yeniden deneyin.",
       "identity.invitation_not_found":
         "Bu davet mevcut değil. Lütfen e-postadaki bağlantıyı kontrol edin.",
+      "identity.logout_not_revoked":
+        "Bu cihazda oturumunuz kapatıldı. Ancak moto girişinizi tamamen sonlandıramadı. Giriş daha sonra kendiliğinden sona erecek. Başkasının cihazını mı kullandınız? O zaman lütfen şifrenizi değiştirin.",
       "identity.mail_block_unreadable":
         "Bu adresin engelli olup olmadığı şu anda kontrol edilemiyor. Lütfen daha sonra tekrar deneyin.",
       "identity.mail_blocked_at_provider":
@@ -5261,6 +5385,8 @@ export const ERROR_CATALOG = {
         "Bazı günlerde zaten bir kayıt var. Bu günler değiştirilmedi.",
       "students.status_day_occupied":
         "Bugün için bir sınıf gezisi girilmiş. Önce sınıf gezisini kaldırın.",
+      "students.without_care_place_care_data":
+        "OGS yeri olmayan bir çocuğun OGS tarafından belirlenen geliş ve alınma saatleri ile eve dönüş şekli yoktur.",
       "substitutions.last_supervisor":
         "Gözetimi yapan tek kişi sizsiniz. Gözetimi başka birine devredin veya etkinliği bitirin.",
       "timetable.closing_day_notice_not_found":
@@ -5310,6 +5436,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Перевірте це поле.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "Для школи ще не вказано федеральну землю. Тому бракує святкових днів. Керівництво може вказати її в налаштуваннях.",
       "calendar.occurrence_unavailable":
         "Цієї дати більше немає. Можливо, її скасували. Будь ласка, оновіть календар.",
       "care_contract.application_not_found":
@@ -5374,6 +5502,8 @@ export const ERROR_CATALOG = {
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
       "care.child_care_ended":
         "Догляд за цією дитиною завершено. Зміни більше неможливі. З питаннями звертайтеся до OGS.",
+      "care.child_without_care_place":
+        "Ваша дитина не має місця в OGS. Тому ця функція для дитини недоступна.",
       "care.course_request_invalid":
         "Указано неправильні дані: {object}. Перевірте введені дані.",
       "care.course_requests_disabled":
@@ -5444,6 +5574,10 @@ export const ERROR_CATALOG = {
         "Указано неправильні дані: {object}. Перевірте введені дані.",
       "care.offering_changes_disabled":
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
+      "care.photo_consent_busy":
+        "Зараз не вдалося зберегти згоду на фотографії. Будь ласка, спробуйте ще раз.",
+      "care.photos_disabled":
+        "Школа вимкнула фото дітей. Ви зможете знову надати згоду пізніше.",
       "care.pickup_change_disabled":
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
       "care.pickup_permission_request_required":
@@ -5672,6 +5806,8 @@ export const ERROR_CATALOG = {
         "Термін запису минув або ще не почався. Зверніться до школи.",
       "enrollment.withdraw_not_allowed":
         "Цей запис більше не можна відкликати. Зверніться до школи.",
+      "enrollment.without_care_place_school_year_only":
+        "Дитина без місця в OGS отримує місце через запис на навчальний рік.",
       "files.file_name_invalid":
         "Назва файлу не дозволена. Виберіть файл ще раз.",
       "general.request_too_large":
@@ -5718,6 +5854,8 @@ export const ERROR_CATALOG = {
         "Зараз не вдалося надіслати запрошення. Спробуйте ще раз.",
       "identity.invitation_not_found":
         "Такого запрошення немає. Перевірте посилання в листі.",
+      "identity.logout_not_revoked":
+        "Ви вийшли на цьому пристрої. Але moto не змогло повністю завершити вхід. Він закінчиться пізніше сам. Ви користувалися чужим пристроєм? Тоді змініть пароль.",
       "identity.mail_block_unreadable":
         "Зараз неможливо перевірити, чи заблоковано цю адресу. Спробуйте пізніше.",
       "identity.mail_blocked_at_provider":
@@ -5871,6 +6009,8 @@ export const ERROR_CATALOG = {
         "На деякі дні вже є запис. Ці дні не змінено.",
       "students.status_day_occupied":
         "На сьогодні внесено класну поїздку. Спочатку скасуйте класну поїздку.",
+      "students.without_care_place_care_data":
+        "Дитина без місця в OGS не має часу приходу й забору та шляху додому, встановленого OGS.",
       "substitutions.last_supervisor":
         "Ви єдина особа, що здійснює нагляд. Передайте нагляд іншій особі або завершіть заняття.",
       "timetable.closing_day_notice_not_found":

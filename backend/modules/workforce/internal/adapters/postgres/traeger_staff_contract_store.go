@@ -29,6 +29,7 @@ type staffContractRow struct {
 	Kind           string         `bun:"kind"`
 	StartsOn       calendar.Date  `bun:"starts_on"`
 	EndsOn         *calendar.Date `bun:"ends_on"`
+	Pool           bool           `bun:"pool"`
 	CreatedAt      time.Time      `bun:"created_at"`
 }
 
@@ -48,7 +49,7 @@ func (s *TraegerStaffStore) ListStaffContracts(ctx context.Context, organization
 		return nil, err
 	}
 	var rows []staffContractRow
-	if err := db.NewRaw(`SELECT id, organization_id, staff_record_id, kind, starts_on, ends_on, created_at FROM workforce.staff_contracts
+	if err := db.NewRaw(`SELECT id, organization_id, staff_record_id, kind, starts_on, ends_on, pool, created_at FROM workforce.staff_contracts
 		WHERE organization_id = ? AND staff_record_id = ? ORDER BY starts_on DESC, id DESC`, organizationID, recordID).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("workforce postgres: list staff contracts: %w", err)
 	}
@@ -61,7 +62,7 @@ func (s *TraegerStaffStore) ListStaffContracts(ctx context.Context, organization
 	for i, row := range rows {
 		contracts[i] = domain.TraegerStaffContract{
 			ID: row.ID, OrganizationID: row.OrganizationID, RecordID: row.StaffRecordID, Kind: row.Kind,
-			StartsOn: row.StartsOn, CreatedAt: row.CreatedAt,
+			StartsOn: row.StartsOn, Pool: row.Pool, CreatedAt: row.CreatedAt,
 		}
 		if row.EndsOn != nil {
 			contracts[i].EndsOn = *row.EndsOn
@@ -94,6 +95,54 @@ func (s *TraegerStaffStore) ListStaffContracts(ctx context.Context, organization
 	return contracts, nil
 }
 
+// ListMonthContracts returns the contracts of the Träger that run on a day
+// of first..last with every Einsatzort whose Soll starts by last, in two
+// statements. The conditions are those of TraegerKeptStaffByMonth, so the
+// Träger's payroll file holds exactly the employments the school's file
+// leaves out (#4711 E6, #4712).
+func (s *TraegerStaffStore) ListMonthContracts(ctx context.Context, organizationID int64, first, last calendar.Date) ([]domain.TraegerStaffContract, error) {
+	db, err := traegerStaffDB(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	var rows []staffContractRow
+	if err := db.NewRaw(`SELECT id, organization_id, staff_record_id, kind, starts_on, ends_on, created_at FROM workforce.staff_contracts
+		WHERE organization_id = ? AND starts_on <= ? AND (ends_on IS NULL OR ends_on >= ?) ORDER BY staff_record_id, starts_on, id`,
+		organizationID, last, first).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("workforce postgres: list month contracts: %w", err)
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	contracts := make([]domain.TraegerStaffContract, len(rows))
+	index := make(map[int64]int, len(rows))
+	ids := make([]int64, len(rows))
+	for i, row := range rows {
+		contracts[i] = domain.TraegerStaffContract{
+			ID: row.ID, OrganizationID: row.OrganizationID, RecordID: row.StaffRecordID, Kind: row.Kind,
+			StartsOn: row.StartsOn, CreatedAt: row.CreatedAt,
+		}
+		if row.EndsOn != nil {
+			contracts[i].EndsOn = *row.EndsOn
+		}
+		index[row.ID], ids[i] = i, row.ID
+	}
+	var targets []staffContractWeekdayRow
+	if err := db.NewRaw(`SELECT DISTINCT ON (contract_id, school_id, membership_id) contract_id, school_id, membership_id, valid_from AS day, weekday_minutes
+		FROM workforce.staff_contract_targets
+		WHERE organization_id = ? AND contract_id = ANY(?) AND valid_from <= ?
+		ORDER BY contract_id, school_id, membership_id, valid_from DESC`, organizationID, pgdialect.Array(ids), last).Scan(ctx, &targets); err != nil {
+		return nil, fmt.Errorf("workforce postgres: list month contract sites: %w", err)
+	}
+	for _, row := range targets {
+		i := index[row.ContractID]
+		contracts[i].Targets = append(contracts[i].Targets, domain.ContractTarget{
+			ContractSite: domain.ContractSite{SchoolID: row.SchoolID, StaffID: row.StaffID}, ValidFrom: row.Day, WeekdayMinutes: row.WeekdayMinutes,
+		})
+	}
+	return contracts, nil
+}
+
 // InsertStaffContract writes a new contract with its first Soll per
 // Einsatzort.
 func (s *TraegerStaffStore) InsertStaffContract(ctx context.Context, contract domain.TraegerStaffContract, accountID int64) (int64, error) {
@@ -102,9 +151,9 @@ func (s *TraegerStaffStore) InsertStaffContract(ctx context.Context, contract do
 		return 0, err
 	}
 	var id int64
-	if err := db.NewRaw(`INSERT INTO workforce.staff_contracts (organization_id, staff_record_id, kind, starts_on, ends_on, created_by_account_id)
-		VALUES (?, ?, ?, ?, ?, ?) RETURNING id`, contract.OrganizationID, contract.RecordID, contract.Kind, contract.StartsOn,
-		optionalDate(contract.EndsOn), accountID).Scan(ctx, &id); err != nil {
+	if err := db.NewRaw(`INSERT INTO workforce.staff_contracts (organization_id, staff_record_id, kind, starts_on, ends_on, pool, created_by_account_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`, contract.OrganizationID, contract.RecordID, contract.Kind, contract.StartsOn,
+		optionalDate(contract.EndsOn), contract.Pool, accountID).Scan(ctx, &id); err != nil {
 		return 0, fmt.Errorf("workforce postgres: insert staff contract: %w", err)
 	}
 	return id, insertContractTargets(ctx, db, contract.OrganizationID, id, accountID, contract.Targets)
@@ -117,8 +166,8 @@ func (s *TraegerStaffStore) UpdateStaffContractTerms(ctx context.Context, contra
 	if err != nil {
 		return err
 	}
-	if _, err := db.ExecContext(ctx, `UPDATE workforce.staff_contracts SET kind = ?, ends_on = ? WHERE organization_id = ? AND id = ?`,
-		contract.Kind, optionalDate(contract.EndsOn), contract.OrganizationID, contract.ID); err != nil {
+	if _, err := db.ExecContext(ctx, `UPDATE workforce.staff_contracts SET kind = ?, ends_on = ?, pool = ? WHERE organization_id = ? AND id = ?`,
+		contract.Kind, optionalDate(contract.EndsOn), contract.Pool, contract.OrganizationID, contract.ID); err != nil {
 		return fmt.Errorf("workforce postgres: update staff contract: %w", err)
 	}
 	if contract.EndsOn.IsZero() {
@@ -354,8 +403,8 @@ func (s *TraegerStaffStore) TraegerKeptStaffByMonth(ctx context.Context, staffID
 // as a schedule version up to the day until, when the employment has no
 // schedule version yet. The Soll resolution uses a template only while no
 // version exists (#1842); without this, the first mirrored version would
-// set the template's earlier open months to zero.
-func (s *TraegerStaffStore) KeepTemplateHistory(ctx context.Context, staffID int64, until calendar.Date) error {
+// set the template's earlier open months to zero. now stamps the version.
+func (s *TraegerStaffStore) KeepTemplateHistory(ctx context.Context, staffID int64, until calendar.Date, now time.Time) error {
 	db, schoolID, err := schoolStaffDB(ctx)
 	if err != nil {
 		return err
@@ -363,13 +412,13 @@ func (s *TraegerStaffStore) KeepTemplateHistory(ctx context.Context, staffID int
 	if _, err := db.ExecContext(ctx, `INSERT INTO `+tableStaffWorkSchedules+`
 		(tenant_id, staff_id, week_index, rotation_length, day_of_week, target_minutes, start_time, rotation_anchor_date, valid_from, valid_until, created_at, updated_at)
 		SELECT profile.tenant_id, profile.membership_id, entry.week_index, model.rotation_length, entry.day_of_week, entry.target_minutes, entry.start_time,
-			COALESCE(profile.rotation_anchor_date, model.rotation_anchor_date), DATE '2000-01-01', ?, now(), now()
+			COALESCE(profile.rotation_anchor_date, model.rotation_anchor_date), DATE '2000-01-01', ?, ?, ?
 		FROM users.staff_employment_profiles AS profile
 		JOIN config.work_time_models AS model ON model.id = profile.work_time_model_id AND model.tenant_id = profile.tenant_id
 		JOIN config.work_time_model_entries AS entry ON entry.model_id = model.id
 		WHERE profile.tenant_id = ? AND profile.membership_id = ?
 		  AND NOT EXISTS (SELECT FROM `+tableStaffWorkSchedules+` AS schedule WHERE schedule.tenant_id = profile.tenant_id AND schedule.staff_id = profile.membership_id)`,
-		until, schoolID, staffID); err != nil {
+		until, now, now, schoolID, staffID); err != nil {
 		return fmt.Errorf("workforce postgres: keep template history before the mirror: %w", err)
 	}
 	return nil
@@ -378,8 +427,9 @@ func (s *TraegerStaffStore) KeepTemplateHistory(ctx context.Context, staffID int
 // ReleaseMirror gives an employment back to its school from the day from
 // on, after the Träger deleted the only contract that named it: the versions
 // the mirror wrote from then on go, the version that ran until then runs on,
-// and the Ferien-Soll of the Träger from then on goes.
-func (s *TraegerStaffStore) ReleaseMirror(ctx context.Context, staffID int64, from calendar.Date) error {
+// and the Ferien-Soll of the Träger from then on goes. now stamps the
+// reopened version.
+func (s *TraegerStaffStore) ReleaseMirror(ctx context.Context, staffID int64, from calendar.Date, now time.Time) error {
 	db, schoolID, err := schoolStaffDB(ctx)
 	if err != nil {
 		return err
@@ -388,8 +438,8 @@ func (s *TraegerStaffStore) ReleaseMirror(ctx context.Context, staffID int64, fr
 		schoolID, staffID, from); err != nil {
 		return fmt.Errorf("workforce postgres: drop released mirror versions: %w", err)
 	}
-	if _, err := db.ExecContext(ctx, `UPDATE `+tableStaffWorkSchedules+` SET valid_until = NULL, updated_at = now()
-		WHERE tenant_id = ? AND staff_id = ? AND valid_until = ?`, schoolID, staffID, from); err != nil {
+	if _, err := db.ExecContext(ctx, `UPDATE `+tableStaffWorkSchedules+` SET valid_until = NULL, updated_at = ?
+		WHERE tenant_id = ? AND staff_id = ? AND valid_until = ?`, now, schoolID, staffID, from); err != nil {
 		return fmt.Errorf("workforce postgres: reopen the school version: %w", err)
 	}
 	if _, err := db.ExecContext(ctx, `DELETE FROM `+tableStaffTargetOverrides+`
@@ -403,12 +453,11 @@ func (s *TraegerStaffStore) ReleaseMirror(ctx context.Context, staffID int64, fr
 // employment from the day from on with rows: later versions go, the version
 // running over from ends there, and the employment leaves its work-time
 // template, so a template change no longer rewrites the Soll.
-func (s *TraegerStaffStore) MirrorStaffSchedule(ctx context.Context, staffID int64, from calendar.Date, rows []domain.StaffWorkSchedule) error {
+func (s *TraegerStaffStore) MirrorStaffSchedule(ctx context.Context, staffID int64, from calendar.Date, rows []domain.StaffWorkSchedule, now time.Time) error {
 	db, schoolID, err := schoolStaffDB(ctx)
 	if err != nil {
 		return err
 	}
-	now := time.Now()
 	if _, err := db.ExecContext(ctx, `DELETE FROM `+tableStaffWorkSchedules+` WHERE tenant_id = ? AND staff_id = ? AND valid_from >= ?`,
 		schoolID, staffID, from); err != nil {
 		return fmt.Errorf("workforce postgres: drop mirrored schedule versions: %w", err)

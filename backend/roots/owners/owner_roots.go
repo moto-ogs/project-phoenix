@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	devicefleetCompose "github.com/moto-ogs/project-phoenix/modules/devicefleet/compose"
 	enrollmentCapability "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	facilitiesCompose "github.com/moto-ogs/project-phoenix/modules/facilities/compose"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
@@ -48,16 +49,17 @@ func NewOperatorAuditLog(db transactionruntime.Database) OperatorAuditEntries {
 // NewParentPortalReads builds Care Plan's guardian-portal repositories over
 // the owners they read through: people answers the student, guardian and
 // person reads; identity owns the accounts, their school memberships and
-// role classes; enrollment owns the phases and applications; schools names
-// the schools.
+// role classes; Enrollment, bound to the root clock now (ADR 0265), owns the
+// phases and applications, so the phase discovery checks the window on the
+// clock the intake checks a submission on; schools names the schools.
 func NewParentPortalReads(
 	db transactionruntime.Database, people peopledirectory.Capability, identity identityaccess.Owner,
-	enrollment enrollmentCapability.Owner, schools organizationtenancy.Query,
+	now func() time.Time, schools organizationtenancy.Query,
 ) carePlanCompose.ParentPortalRepositories {
 	if schools == nil {
 		panic("parent portal repositories: organization tenancy query is required")
 	}
-	return ComposeParentPortalReads(db, people, identity, enrollment).WithSchools(ParentPortalSchools{Schools: schools})
+	return ComposeParentPortalReads(db, people, identity, enrollmentCompose.NewClocked(now)).WithSchools(ParentPortalSchools{Schools: schools})
 }
 
 // NewParentMessagingRepositories builds Communication's parent-portal and
@@ -112,7 +114,7 @@ func ComposeParentMessagingRepositories(
 	}
 	groupNames := parentGroupNames{groups: groups}.list
 	return parentStore.MessagingRepositories{
-		ParentAnnouncement:  parentStore.NewParentAnnouncementRepository(pool, NewParentAnnouncementAudience(db, ParentAnnouncementApplicants(enrollment), now)),
+		ParentAnnouncement:  parentStore.NewParentAnnouncementRepository(pool, NewParentAnnouncementAudience(db, ParentAnnouncementApplicants(enrollment), now), now),
 		ParentMessageThread: parentStore.NewParentMessageThreadRepository(pool, NewParentGuardianLister(db, identity.FindActiveSchoolMemberships), NewParentReachableStudents(db, identity.FindActiveSchoolMemberships)),
 		ParentMessageRead: parentStore.WithInboxGroupNames(
 			parentStore.NewStaffParentMessageReadRepository(pool, NewParentMessageInbox(db), members, personAccounts), groupNames),
@@ -122,10 +124,10 @@ func ComposeParentMessagingRepositories(
 }
 
 // NewDeviceFleet composes the device owner for graphs that do not record
-// observations and never serve the info-point dashboard. The serving root
-// composes the observed module where it mounts the IoT routes, so runtime
-// evidence and the dashboard collaborators are kept.
-func NewDeviceFleet(db transactionruntime.Database, onlineWindowMinutes ...func(context.Context) int) (devicefleet.Capability, error) {
+// observations and never serve the info-point dashboard, on the root's clock
+// now. The serving root composes the observed module where it mounts the IoT
+// routes, so runtime evidence and the dashboard collaborators are kept.
+func NewDeviceFleet(db transactionruntime.Database, now func() time.Time, onlineWindowMinutes ...func(context.Context) int) (devicefleet.Capability, error) {
 	rooms, err := facilitiesCompose.NewUnobserved(db.Pool())
 	if err != nil {
 		return nil, err
@@ -137,9 +139,9 @@ func NewDeviceFleet(db transactionruntime.Database, onlineWindowMinutes ...func(
 	return devicefleetCompose.New(devicefleetCompose.Dependencies{
 		DB:                  db.Pool(),
 		Rooms:               rooms,
-		OnlineWindowMinutes: minutes,
-		APIKeys:             DeviceAPIKeys{},
-		Observe:             func(devicefleetCompose.Observation) {},
+		OnlineWindowMinutes: minutes, Now: now,
+		APIKeys: DeviceAPIKeys{},
+		Observe: func(devicefleetCompose.Observation) {},
 	})
 }
 
@@ -223,6 +225,7 @@ func (d ParentPortalDirectory) ListParentPortalStudents(ctx context.Context, ids
 			ID: student.ID, TenantID: student.TenantID, PersonID: student.PersonID,
 			SchoolClass: student.SchoolClass, Status: student.Status,
 			EnrolledFrom: calendar.Date(student.EnrolledFrom), EnrolledUntil: calendar.Date(student.EnrolledUntil),
+			WithoutCarePlace: student.WithoutCarePlace,
 		})
 	}
 	return result, nil

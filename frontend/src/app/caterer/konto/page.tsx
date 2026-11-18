@@ -11,7 +11,7 @@ import { PasskeySettingsSection } from "~/components/settings/passkey-settings-s
 import { TrustedDevicesSection } from "~/components/settings/trusted-devices-section";
 import { EmailCodeFactorSection } from "~/components/settings/email-code-factor-section";
 import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { emailCodeFactorApi } from "~/lib/email-code-factor-api";
 import { useShellAuth } from "~/lib/shell-auth-context";

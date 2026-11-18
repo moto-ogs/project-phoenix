@@ -117,8 +117,8 @@ type notificationFeed struct {
 	deliveryContract.NotificationFeed
 }
 
-func (f notificationFeed) Page(ctx context.Context, tenantID, accountID int64, cursor string, limit int) (notificationsHTTP.FeedPage, error) {
-	page, err := f.NotificationFeed.Page(ctx, tenantID, accountID, cursor, limit)
+func (f notificationFeed) Page(ctx context.Context, tenantID, accountID int64, portal, cursor string, limit int) (notificationsHTTP.FeedPage, error) {
+	page, err := f.NotificationFeed.Page(ctx, tenantID, accountID, portal, cursor, limit)
 	if err != nil {
 		return notificationsHTTP.FeedPage{}, err
 	}
@@ -132,5 +132,41 @@ func (notificationFeed) IsNotFound(err error) bool {
 	return errors.Is(err, deliveryContract.ErrNotificationFeedEntryNotFound)
 }
 func (notificationFeed) IsInvalidCursor(err error) bool {
+	return errors.Is(err, deliveryContract.ErrInvalidNotificationFeedCursor)
+}
+
+// NewTraegerNotificationHTTP binds Delivery's bell of the Träger-Portal
+// (#7146) to the HTTP adapter.
+func NewTraegerNotificationHTTP(feed deliveryContract.TraegerNotificationFeed) *notificationsHTTP.TraegerFeedResource {
+	var port notificationsHTTP.TraegerFeedService
+	if feed != nil {
+		port = traegerNotificationFeed{TraegerNotificationFeed: feed}
+	}
+	return notificationsHTTP.NewTraegerFeedResource(port, notificationHTTPRuntime())
+}
+
+// traegerNotificationFeed translates the Träger bell's page onto the HTTP
+// adapter's types.
+type traegerNotificationFeed struct {
+	deliveryContract.TraegerNotificationFeed
+}
+
+func (f traegerNotificationFeed) Page(ctx context.Context, organizationID, accountID int64, cursor string, limit int) (notificationsHTTP.TraegerFeedPage, error) {
+	page, err := f.TraegerNotificationFeed.Page(ctx, organizationID, accountID, cursor, limit)
+	if err != nil {
+		return notificationsHTTP.TraegerFeedPage{}, err
+	}
+	out := notificationsHTTP.TraegerFeedPage{NextCursor: page.NextCursor, UnreadCount: page.UnreadCount, Entries: make([]notificationsHTTP.TraegerFeedEntry, len(page.Entries))}
+	for i, entry := range page.Entries {
+		out.Entries[i] = notificationsHTTP.TraegerFeedEntry{
+			FeedEntry: notificationsHTTP.FeedEntry(entry.NotificationFeedEntry), SchoolID: entry.SchoolID, SchoolName: entry.SchoolName,
+		}
+	}
+	return out, nil
+}
+func (traegerNotificationFeed) IsNotFound(err error) bool {
+	return errors.Is(err, deliveryContract.ErrNotificationFeedEntryNotFound)
+}
+func (traegerNotificationFeed) IsInvalidCursor(err error) bool {
 	return errors.Is(err, deliveryContract.ErrInvalidNotificationFeedCursor)
 }

@@ -1,9 +1,9 @@
 "use client";
 
 import { useSWRAuth } from "~/lib/swr/hooks";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import {
   fetchPickupExtensions,
-  PICKUP_EXTENSIONS_SWR_KEY,
   type PickupExtension,
 } from "~/lib/pickup-extension-api";
 
@@ -14,7 +14,7 @@ import {
  */
 export function usePickupExtensions(enabled: boolean) {
   const { data, error, isLoading, mutate } = useSWRAuth<PickupExtension[]>(
-    enabled ? PICKUP_EXTENSIONS_SWR_KEY : null,
+    enabled ? tenantDailyKeys.pickupExtensions() : null,
     () => fetchPickupExtensions(),
     { revalidateOnFocus: true },
   );

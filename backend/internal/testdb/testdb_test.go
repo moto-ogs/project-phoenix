@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -98,6 +99,23 @@ func TestParsePostgresDSNRejectsInvalidInput(t *testing.T) {
 			assert.Error(t, err)
 		})
 	}
+}
+
+func TestNewEphemeralLocalConfigUsesDockerAssignedLoopbackPort(t *testing.T) {
+	cfg, err := newEphemeralLocalConfig("6543", "generated-password")
+	require.NoError(t, err)
+
+	parsed, err := url.Parse(cfg.TemplateDSN())
+	require.NoError(t, err)
+	assert.Equal(t, "postgres", parsed.Scheme)
+	assert.Equal(t, "127.0.0.1", parsed.Hostname())
+	assert.Equal(t, "6543", parsed.Port())
+	assert.Equal(t, "postgres", parsed.User.Username())
+	password, ok := parsed.User.Password()
+	assert.True(t, ok)
+	assert.Equal(t, "generated-password", password)
+	assert.Equal(t, "/phoenix_test", parsed.Path)
+	assert.Equal(t, "disable", parsed.Query().Get("sslmode"))
 }
 
 func TestConfigDerivesDSNs(t *testing.T) {
@@ -207,6 +225,66 @@ func TestTestContainerCommandUsesDSNConnectionSettings(t *testing.T) {
 	assert.Equal(t, "pa'ss", environment["POSTGRES_PASSWORD"])
 	assert.Contains(t, cmd.Args, "project-phoenix-testdb-6543")
 	assert.NotContains(t, strings.Join(cmd.Args, " "), "pa'ss", "the password must not be exposed in process arguments")
+}
+
+func TestEphemeralContainerIDIgnoresStderr(t *testing.T) {
+	t.Parallel()
+
+	cmd, err := ephemeralTestContainerCommand(t.Context(), "unused", nil)
+	require.NoError(t, err)
+	cmd.Path = "/bin/sh"
+	cmd.Args = []string{"sh", "-c", "printf 'container-id\\n'; printf 'container runtime notice\\n' >&2"}
+	id, err := startEphemeralContainer(cmd)
+
+	require.NoError(t, err)
+	assert.Equal(t, "container-id", id)
+}
+
+func TestEphemeralContainerStartPreservesFailureDiagnostics(t *testing.T) {
+	t.Parallel()
+
+	cmd, err := ephemeralTestContainerCommand(t.Context(), "unused", nil)
+	require.NoError(t, err)
+	cmd.Path = "/bin/sh"
+	cmd.Args = []string{"sh", "-c", "printf 'image unavailable\\n' >&2; exit 1"}
+	_, err = startEphemeralContainer(cmd)
+
+	require.ErrorContains(t, err, "image unavailable")
+	require.EqualError(t, errors.Unwrap(err), "exit status 1")
+}
+
+func TestEphemeralTestContainerCommandPublishesOnlyLoopback(t *testing.T) {
+	t.Parallel()
+
+	cmd, err := ephemeralTestContainerCommand(context.Background(), "generated-password", []string{"POSTGRES_PASSWORD=stale-password"})
+	require.NoError(t, err)
+	assert.Equal(t, "docker", filepath.Base(cmd.Path))
+	assert.Equal(t, []string{
+		"docker", "run", "-d", "--rm",
+		"--label", ephemeralTestContainerLabel + "=1",
+		"--tmpfs", "/var/lib/postgresql/data:size=2560m",
+		"--publish", "127.0.0.1::5432",
+		"-e", "POSTGRES_PASSWORD",
+		"-e", "POSTGRES_DB=phoenix_test",
+		ephemeralTestContainerImage,
+		"postgres",
+		"-c", "fsync=off",
+		"-c", "synchronous_commit=off",
+		"-c", "full_page_writes=off",
+		"-c", "shared_buffers=32MB",
+		"-c", "wal_level=minimal",
+		"-c", "max_wal_senders=0",
+		"-c", "max_wal_size=256MB",
+		"-c", "max_connections=300",
+	}, cmd.Args)
+
+	environment := make(map[string]string, len(cmd.Env))
+	for _, entry := range cmd.Env {
+		key, value, ok := strings.Cut(entry, "=")
+		require.True(t, ok)
+		environment[key] = value
+	}
+	assert.Equal(t, "generated-password", environment["POSTGRES_PASSWORD"])
 }
 
 func TestComposeProjectSeparatesConfiguredPorts(t *testing.T) {
@@ -552,6 +630,30 @@ func TestEnsureTemplateAdoptsUnstampedCompleteDatabase(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, verifyCalls, "stamped template must skip verification")
 	assert.Equal(t, 0, builds)
+}
+
+func TestEnsureResolvedTemplateRebuildsMissingCurrentTemplate(t *testing.T) {
+	t.Parallel()
+	cfg := integrationConfig(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	builds := 0
+	options := []TemplateOption{
+		WithBuild(fakeBuild(&builds)),
+		WithMigrationsHash("resolved-template"),
+	}
+	templateCfg, err := EnsureTemplate(ctx, cfg, options...)
+	require.NoError(t, err)
+	maint := openSQL(cfg.MaintenanceDSN())
+	defer func() { _ = maint.Close() }()
+	require.NoError(t, dropDatabase(ctx, maint, templateCfg.TemplateName()))
+
+	restored, err := EnsureResolvedTemplate(ctx, cfg, templateCfg.TemplateName(), options...)
+	require.NoError(t, err)
+	assert.Equal(t, templateCfg.TemplateName(), restored.TemplateName())
+	assert.Equal(t, 2, builds)
+	assert.True(t, databaseExists(t, ctx, cfg, restored.TemplateName()))
 }
 
 func TestEnsureTemplateRebuildsUnstampedIncompleteDatabase(t *testing.T) {

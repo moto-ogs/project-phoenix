@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "4acd3fdd1c00d621510637b935be21acf5de932ac25f714cf0799dfeb12a16d7",
+  "catalogSHA256": "6a171468f6ce8605ef7939103eeb53ca077764076d489099c225841d7b3071e1",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -6579,6 +6579,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "access_windows",
+          "type": "jsonb",
+          "udt": "jsonb",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -6698,6 +6704,7 @@
         "is_password_otp": "Authentication or operational secret/credential material; not customer export content.",
         "mfa_reset_generation": "Credential-proof revocation generation, not customer export content.",
         "password_attempts": "Operational authentication abuse counter, not customer export content.",
+        "password_failed_at": "Time of the last refused password; operational authentication abuse state, not customer export content.",
         "password_hash": "Authentication or operational secret/credential material; not customer export content.",
         "password_locked_until": "Operational authentication lock deadline, not customer export content."
       }
@@ -26895,6 +26902,18 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": true
+        },
+        {
+          "name": "school_deep_link",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
+        },
+        {
+          "name": "student_ids",
+          "type": "ARRAY",
+          "udt": "_int8",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -32902,6 +32921,95 @@
       ]
     },
     {
+      "name": "users.parent_announcement_letter_copies",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "tenant_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "announcement_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "student_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "first_name",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "last_name",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "school_class",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "announcement_id",
+          "targetTable": "users.parent_announcements",
+          "targetColumn": "id"
+        },
+        {
+          "column": "student_id",
+          "targetTable": "users.student_profiles",
+          "targetColumn": "id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "platform.schools",
+          "targetColumn": "id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "users.parent_announcements",
+          "targetColumn": "tenant_id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "users.student_profiles",
+          "targetColumn": "tenant_id"
+        }
+      ],
+      "packages": [
+        "school"
+      ]
+    },
+    {
       "name": "users.parent_announcement_options",
       "columns": [
         {
@@ -37460,6 +37568,24 @@
           "type": "date",
           "udt": "date",
           "nullable": true
+        },
+        {
+          "name": "without_care_place",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "class_member_from",
+          "type": "date",
+          "udt": "date",
+          "nullable": true
+        },
+        {
+          "name": "class_member_class",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -38233,6 +38359,105 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "pool",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "staff_record_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "workforce.staff_pool_blocks",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "staff_record_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "school_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "start_time",
+          "type": "time without time zone",
+          "udt": "time",
+          "nullable": false
+        },
+        {
+          "name": "end_time",
+          "type": "time without time zone",
+          "udt": "time",
+          "nullable": false
+        },
+        {
+          "name": "blocked_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "blocked_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "lifted_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
+        },
+        {
+          "name": "lifted_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "lifted_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -38634,6 +38859,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "via_pool",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -38912,6 +39143,11 @@
       "name": "platform.demo_school_origins",
       "classification": "excludeInternal",
       "reason": "Internal demo-process provenance with school IDs only; not customer content."
+    },
+    {
+      "name": "platform.demo_traeger_origins",
+      "classification": "excludeInternal",
+      "reason": "Internal demo-process provenance with Träger IDs and counts only; not customer content."
     },
     {
       "name": "platform.demo_school_states",

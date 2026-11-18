@@ -170,7 +170,7 @@ func TestToChildResponse_StringifiesIDs(t *testing.T) {
 		SchoolName:   "OGS Sonnenschule",
 		SchoolSlug:   "sonnenschule",
 	}
-	out := toChildResponse(in)
+	out := toChildResponse(in, now)
 	assert.Equal(t, "12345", out.StudentID, "int64 IDs are stringified per CLAUDE.md rule 4")
 	assert.Equal(t, "6789", out.TenantID)
 	assert.Equal(t, "Lara", out.FirstName)
@@ -179,6 +179,16 @@ func TestToChildResponse_StringifiesIDs(t *testing.T) {
 	require.NotNil(t, out.EnrolledFrom)
 	assert.Equal(t, careplan.Date(enrolledFrom.String()), *out.EnrolledFrom)
 	assert.Nil(t, out.EnrolledUntil, "nil pointers pass through unchanged")
+	assert.False(t, out.CareEnded)
+
+	enrolledUntil := now
+	in.EnrolledUntil = &enrolledUntil
+	assert.False(t, toChildResponse(in, now).CareEnded, "care runs through its last day")
+	assert.True(t, toChildResponse(in, now.AddDays(1)).CareEnded, "care_ended follows the day the resource clock gives")
+	assert.False(t, out.WithoutCarePlace)
+	in.WithoutCarePlace = true
+	assert.True(t, toChildResponse(in, now).WithoutCarePlace,
+		"the portal hides the OGS blocks of a child without an OGS place (#4803)")
 }
 
 // --- staffShortName ------------------------------------------------------
@@ -342,7 +352,7 @@ func TestParentResponseDatesKeepLegacyWireStrings(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			response := toChildResponse(&parentService.ChildSummary{EnrolledFrom: &test.day})
+			response := toChildResponse(&parentService.ChildSummary{EnrolledFrom: &test.day}, timezone.NewDate(2026, 8, 24))
 			body, err := json.Marshal(response)
 			require.NoError(t, err)
 			var fields map[string]json.RawMessage

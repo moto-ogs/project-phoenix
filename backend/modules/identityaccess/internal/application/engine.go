@@ -41,6 +41,7 @@ type engine struct {
 	*SchoolInvitationMaintenance
 	*SignInDataRetention
 	*TraegerAccounts
+	*SpringerAccess
 	identityaccess.OperatorMFAFlows
 	identityaccess.OperatorPasskeyFlows
 	identityaccess.AccountPasskeyFlows

@@ -64,6 +64,16 @@ const webServerEnvPrefix = Object.entries(webServerEnv)
   .map(([key, value]) => `${key}=${value}`)
   .join(" ");
 
+// Locally `next dev`. CI (.github/workflows/e2e.yml) builds once per run and
+// serves that build with E2E_FRONTEND_SERVER=start: `next dev` compiled every
+// page on its first request in every shard.
+function frontendServerScript(): "dev" | "start" {
+  const value = process.env.E2E_FRONTEND_SERVER;
+  if (value === undefined || value === "" || value === "dev") return "dev";
+  if (value === "start") return "start";
+  throw new Error("E2E_FRONTEND_SERVER must be dev or start.");
+}
+
 /** @public Loaded by the Playwright CLI rather than imported by application code. */
 export default defineConfig({
   globalSetup: SECURE_CHROME_SETUP,
@@ -76,7 +86,7 @@ export default defineConfig({
   // CI (.github/workflows/e2e.yml) braucht die Fehler im Log; der HTML-Report
   // landet bei einem Fehlschlag als Artefakt. Aus dem JSON-Bericht prüft der
   // Workflow, dass Tests gelaufen und keine übersprungen sind.
-  // e2e/a11y/reporter.ts meldet, wo die A11y-Baseline sinken kann (#7107).
+  // e2e/a11y/reporter.ts meldet, welche Einträge der A11y-Baseline entfallen können (#7107).
   reporter: process.env.CI
     ? [
         ["list"],
@@ -97,7 +107,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `${webServerEnvPrefix} pnpm run dev`,
+    command: `${webServerEnvPrefix} pnpm run ${frontendServerScript()}`,
     port: frontendPort,
     timeout: 120_000,
     reuseExistingServer: !process.env.CI,

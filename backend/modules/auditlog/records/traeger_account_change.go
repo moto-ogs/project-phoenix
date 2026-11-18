@@ -14,6 +14,8 @@ const (
 	TraegerAccountMemberRemoved      = "member_removed"
 	TraegerAccountMembersListed      = "members_listed"
 	TraegerAccountNameChanged        = "name_changed"
+	// TraegerAccountHistoryExported is a download of the history (#4718).
+	TraegerAccountHistoryExported = "history_exported"
 )
 
 // TraegerAccountChange is one step of the Träger-Büro account management in
@@ -31,7 +33,7 @@ type TraegerAccountChange struct {
 	TargetName      *string   `bun:"target_name" json:"target_name,omitempty"`
 	RolesBefore     []string  `bun:"roles_before,array,notnull" json:"roles_before"`
 	RolesAfter      []string  `bun:"roles_after,array,notnull" json:"roles_after"`
-	CreatedAt       time.Time `bun:"created_at,notnull,default:current_timestamp" json:"created_at"`
+	CreatedAt       time.Time `bun:"created_at,nullzero,notnull" json:"created_at"`
 }
 
 // PlatformScoped marks the entry as tenantless: the Audit adapter appends it
@@ -48,7 +50,8 @@ func (c *TraegerAccountChange) Validate() error {
 	}
 	switch c.Action {
 	case TraegerAccountInvitationCreated, TraegerAccountInvitationRevoked, TraegerAccountInvitationAccepted,
-		TraegerAccountRolesChanged, TraegerAccountMemberRemoved, TraegerAccountMembersListed, TraegerAccountNameChanged:
+		TraegerAccountRolesChanged, TraegerAccountMemberRemoved, TraegerAccountMembersListed, TraegerAccountNameChanged,
+		TraegerAccountHistoryExported:
 	default:
 		return errors.New("unknown Träger account change action")
 	}

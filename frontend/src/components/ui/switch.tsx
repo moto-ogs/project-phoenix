@@ -16,7 +16,7 @@ type SwitchName =
   | { ariaLabel: string; "aria-labelledby"?: undefined }
   | { ariaLabel?: undefined; "aria-labelledby": string };
 
-export type SwitchProps = Readonly<
+type SwitchProps = Readonly<
   {
     checked: boolean;
     onCheckedChange: (checked: boolean) => void;

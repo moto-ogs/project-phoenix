@@ -16,7 +16,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/ui/segmented-control.tsx",
-    lines: [155, 201, 219],
+    lines: [155, 201, 222],
     reason: "SegmentedControl: Wertauswahl, kein Knopf",
   },
   {
@@ -40,43 +40,43 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/ui/date-picker.tsx",
-    lines: [393],
+    lines: [400],
     reason: "Auslöser des Datumsfelds (Eingabefeld, sieht aus wie ein Select)",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/ui/planning/plan-block.tsx",
-    lines: [210],
+    lines: [215],
     reason: "Planungsblock im Raster: Kachel, kein Knopf",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/ui/portal-bottom-nav.tsx",
-    lines: [401, 440],
+    lines: [425, 467],
     reason: "Navigationszeilen im „Mehr“-Blatt der unteren Leiste",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/guardians/guardian-picker-panel.tsx",
-    lines: [326],
+    lines: [308],
     reason: "Trefferzeile der Erziehungsberechtigten-Suche: Auswahlzeile",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/messaging/new-message-modal.tsx",
-    lines: [396],
+    lines: [351],
     reason: "Elternteil in der Empfängerliste wählen: Auswahlzeile",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/messaging/new-team-message-modal.tsx",
-    lines: [159],
+    lines: [147],
     reason: "Person in der Empfängerliste wählen: Auswahlzeile",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/files/files-page.tsx",
-    lines: [159],
+    lines: [160],
     reason: "Ordner-Navigation (aria-current), Navigationszeile",
   },
   {
@@ -88,27 +88,27 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/auth/auth-shell.tsx",
-    lines: [354],
+    lines: [352],
     reason: "Auswahlpunkte des Zitat-Karussells (Seitenauswahl), kein Knopf",
   },
   {
     rule: "no-button-override",
     file: "src/app/[tenant]/(protected)/time-tracking/page.tsx",
-    lines: [834, 871, 977, 1165],
+    lines: [836, 873, 979, 1167],
     reason:
       "Pausen-Stepper −/+ und Stempelknöpfe Abwesenheit/Ausstempeln der Zeiterfassung (#5529: nicht angleichen)",
   },
   {
     rule: "no-button-override",
     file: "src/components/parent/calendar/parent-calendar-page.tsx",
-    lines: [588, 863],
+    lines: [593, 869],
     reason:
       "Termin-Zeilen und Monats-Chips im Elternkalender, optisch Listeneinträge (#5529: nicht angleichen)",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/active-supervisions/spontaneous-activity-start.tsx",
-    lines: [329],
+    lines: [296],
     reason: "Startkachel mit Symbol, Titel und Beschreibung: Kachel",
   },
   {
@@ -120,13 +120,13 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/care-schedule-manager.tsx",
-    lines: [1583],
+    lines: [1615],
     reason: "Wochentagskarte, öffnet den Editor: Kachel",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/companion-picker.tsx",
-    lines: [406],
+    lines: [391],
     reason: "Suchtreffer zum Auswählen: Auswahlzeile",
   },
   {
@@ -138,7 +138,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/planned-status-days-modal.tsx",
-    lines: [1107],
+    lines: [1094],
     reason: "Kalendertag zum Umschalten: Kalender-/Auswahlzelle",
   },
   {
@@ -172,7 +172,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/care-schedule-manager.tsx",
-    lines: [1540],
+    lines: [1572],
     reason: "Statustag-Karte, öffnet das Entfernen: Kachel",
   },
   {

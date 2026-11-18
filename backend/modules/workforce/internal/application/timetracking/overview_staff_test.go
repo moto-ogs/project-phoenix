@@ -16,12 +16,16 @@ func (f overviewStaffQueryFunc) ListOverviewStaff(ctx context.Context) ([]Overvi
 	return f(ctx)
 }
 
+func (f overviewStaffQueryFunc) FindOverviewStaff(ctx context.Context, _ []int64) ([]OverviewStaff, error) {
+	return f(ctx)
+}
+
 func TestOverviewStaffFailureStopsReports(t *testing.T) {
 	t.Parallel()
 	failure := errors.New("staff directory unavailable")
 	svc := &staffOverviewService{staffRepo: overviewStaffQueryFunc(func(context.Context) ([]OverviewStaff, error) {
 		return []OverviewStaff{{ID: 42}}, failure
-	})}
+	}), nowFunc: testNow}
 	svc.todayFunc = func() Date { return NewDate(2026, time.July, 15) }
 	ctx := context.Background()
 	overview, err := svc.GetTimeTrackingOverview(ctx, OverviewFilters{})

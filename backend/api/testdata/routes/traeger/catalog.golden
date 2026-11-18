@@ -1,4 +1,5 @@
 GET /traeger/catalog/phases
+GET /traeger/catalog/phases/export
 GET /traeger/catalog/phases/{id}
 POST /traeger/catalog/offerings/{id}/withdraw
 POST /traeger/catalog/phases

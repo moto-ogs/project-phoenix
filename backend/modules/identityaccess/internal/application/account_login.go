@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -195,7 +196,7 @@ func (s *AccountAuthentication) validateLoginCredentials(ctx context.Context, em
 		if !found {
 			account = domain.LoginAccount{}
 		}
-		accepted, err = checkPasswordLogin(txCtx, s.store, s.passwords, s.passwordPolicy, account.ID, account.PasswordHash, password, false)
+		accepted, err = checkPasswordLogin(txCtx, s.store, s.passwords, s.passwordPolicy, account.ID, account.PasswordHash, password, false, s.sessions.now)
 		return err
 	})
 	if err != nil {
@@ -465,9 +466,17 @@ func (s *AccountAuthentication) resolveAccountTenantBySlug(ctx context.Context, 
 }
 
 // resolveAccountTenantDefault picks the first active mapping whose school is
-// alive and active, in mapping order.
+// alive and active, in mapping order. A Springer's school without an open
+// window is no default (ADR 0251).
 func (s *AccountAuthentication) resolveAccountTenantDefaultInTransaction(ctx context.Context, accountID int64) (int64, int64, error) {
-	tenantIDs, _, err := s.store.ListActiveTenantIDs(ctx, accountID)
+	return s.firstLiveTenant(ctx, accountID, s.store.ListAdmittedTenantIDs)
+}
+
+// firstLiveTenant picks the first school of list whose school is alive and
+// active. A parent session lists every active mapping: a Springer's window
+// gates only the portals at a school.
+func (s *AccountAuthentication) firstLiveTenant(ctx context.Context, accountID int64, list func(context.Context, int64) ([]int64, domain.OperationStats, error)) (int64, int64, error) {
+	tenantIDs, _, err := list(ctx, accountID)
 	if err != nil {
 		s.logger.Warn("failed to resolve account tenant",
 			slog.Int64("account_id", accountID),
@@ -535,10 +544,22 @@ func (s *AccountAuthentication) logFailedLogin(ctx context.Context, accountID in
 	if ipAddress == "" {
 		return
 	}
-	if err := s.logAuthEvent(ctx, accountID, domain.AuthEventLogin, false, ipAddress, userAgent, reason); err != nil {
+	err := s.logAuthEvent(ctx, accountID, domain.AuthEventLogin, false, ipAddress, userAgent, reason)
+	switch {
+	case errors.Is(err, errAuthEventWithoutSchool):
+		s.logger.Warn("rejected login not audited: account has no live school",
+			slog.Int64("account_id", accountID),
+			slog.String("reason", reason))
+	case err != nil:
 		s.logger.Error("failed to audit rejected login", slog.Any("error", err))
 	}
 }
+
+// errAuthEventWithoutSchool reports an authentication event of an account
+// that belongs to no live school (a Träger member, a parent whose school
+// left). audit.auth_events is a school's log, so the event has nowhere to go;
+// that is no server fault.
+var errAuthEventWithoutSchool = errors.New("audit auth event: account has no live school")
 
 // logAuthEvent records one authentication event. The pre-authentication
 // routes carry no tenant, so it is resolved from the account's first active
@@ -546,7 +567,14 @@ func (s *AccountAuthentication) logFailedLogin(ctx context.Context, accountID in
 func (s *AccountAuthentication) logAuthEvent(ctx context.Context, accountID int64, eventType string, success bool, ipAddress, userAgent, errorMessage string) error {
 	tenantID := s.runtime.TenantID(ctx)
 	if tenantID == 0 && accountID > 0 {
-		tenantID, _, _ = s.resolveAccountTenant(ctx, accountID, "")
+		resolved, _, err := s.resolveAccountTenant(ctx, accountID, "")
+		switch {
+		case errors.Is(err, identityaccess.ErrTenantNotFound):
+			return errAuthEventWithoutSchool
+		case err != nil:
+			return fmt.Errorf("audit auth event: %w", err)
+		}
+		tenantID = resolved
 	}
 	if tenantID <= 0 {
 		return fmt.Errorf("audit auth event: tenant is required")

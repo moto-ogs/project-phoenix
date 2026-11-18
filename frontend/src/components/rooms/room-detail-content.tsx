@@ -25,7 +25,7 @@ import {
   DataField,
   DataFieldSkeleton,
   DataGrid,
-} from "~/components/ui/detail-modal-components";
+} from "~/components/ui/data-field";
 import { useSWRAuth } from "~/lib/swr";
 import { roomKeys } from "~/lib/swr/rooms-keys";
 import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";

@@ -28,7 +28,15 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import {
+  PARENT_RESOURCE_OPTIONS,
+  useParentChildren,
+  useParentToday,
+} from "~/lib/hooks/use-parent-resources";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import { Skeleton, SkeletonRows } from "~/components/ui/skeleton";
@@ -49,13 +57,10 @@ import {
 } from "~/lib/messaging-status";
 import {
   type ChildFeatures,
-  type ChildToday,
   type ParentMessage,
   type ThreadSummary,
-  type ThreadView,
   UNKNOWN_CHILD_TODAY,
   getChildConversation,
-  getChildToday,
   listChildThreads,
   postChildMessage,
 } from "~/lib/parent-api";
@@ -79,6 +84,8 @@ import {
 } from "~/lib/care-facility-term";
 
 const logger = createLogger({ component: "OgsConversation" });
+
+const NO_SUMMARIES: readonly ThreadSummary[] = [];
 
 // Nudge the sidebar unread badge to refetch after a read/send that marked the
 // thread read server-side. EVERY such path must call this AFTER the read
@@ -109,8 +116,14 @@ export function OgsConversation({
   audience: audienceProp,
   onAudienceChange,
   tourAnchor,
+  headingLevel = 1,
 }: {
   readonly studentId: string;
+  /**
+   * 2 when the page above already carries the h1 (the messages page of a
+   * family with one child): a page has exactly one h1 (#7112).
+   */
+  readonly headingLevel?: 1 | 2;
   readonly showBack?: boolean;
   readonly showChild?: boolean;
   /**
@@ -129,6 +142,7 @@ export function OgsConversation({
 }) {
   const t = useTranslations("parentOgsMessaging");
   const tm = useCareTermTranslations("parentMessages");
+  const Heading = headingLevel === 1 ? "h1" : "h2";
   const careTerm = useCareFacilityTerm();
   const locale = useLocale();
   // A child has a team conversation and, once begun, one with the leadership
@@ -139,35 +153,55 @@ export function OgsConversation({
   // Both conversations of the child: whether a leadership one exists (the
   // switch stays for it after the school switched the offer off) and the
   // unread count of the one not on screen.
-  const [summaries, setSummaries] = useState<readonly ThreadSummary[]>([]);
-  const [summariesFailed, setSummariesFailed] = useState(false);
-  const [loadedThread, setThread] = useState<ThreadView | null>(null);
-  // Only the conversation of the chosen audience is shown. A late answer for
-  // the other one (a slow load or send from before a switch) never appears
-  // under this audience's title and readers.
+  const summaryResource = useSWRAuth(
+    parentInboxKeys.childThreads(studentId),
+    () => listChildThreads(studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const summaries = summaryResource.data ?? NO_SUMMARIES;
+  // The list says whether a leadership conversation exists. Without it the
+  // switch stays on screen (see showAudienceChoice), so an existing
+  // leadership conversation remains reachable; only its unread count is
+  // missing until the next refresh (focus or new message) loads it.
+  const summariesFailed = !!summaryResource.error;
+  const conversationKey = parentKeys.conversation(studentId, audience);
+  // Reading the conversation marks it read server-side, so no separate
+  // mark-read call is needed; the badge refetches after every read. Only
+  // the conversation of the chosen audience is shown: its key carries it,
+  // and an answer for another one never appears under this one's title.
+  // Every opening reads anew: that read marks the thread read, and the
+  // unread refresh leaves conversations out (parentKeys.isMessagesResource),
+  // so a cached answer would miss what the OGS wrote since.
+  const conversation = useSWRAuth(
+    conversationKey,
+    () => getChildConversation(studentId, audience),
+    {
+      ...PARENT_RESOURCE_OPTIONS,
+      revalidateOnMount: true,
+      dedupingInterval: 0,
+      onSuccess: nudgeUnreadBadge,
+    },
+  );
+  const { mutate: mutateConversation } = conversation;
+  const { mutate: mutateSummaries } = summaryResource;
+  const confirmedThread = conversation.data ?? null;
   const audienceRef = useLatest(audience);
-
-  const confirmedThread =
-    loadedThread && (loadedThread.audience ?? "team") === audience
-      ? loadedThread
-      : null;
   // A sent message shows at once (#5011), marked until the answer confirms
   // it or its failure marks it as not sent. Bound to the session's scope
   // and generation like the SWR readers.
-  const conversationKey = parentKeys.conversation(studentId, audience);
   const send = useOptimisticAction(
     conversationKey,
     confirmedThread ?? undefined,
   );
   const thread = send.data ?? null;
-  const [loading, setLoading] = useState(true);
+  const loading = !confirmedThread && !conversation.error;
   // A failed load shows in the thread with retry (#2518). Only shown while
   // nothing is on screen: a failed background refresh keeps the visible chat.
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
+  const { error: loadError } = useSwrResourceLoadError(
+    [conversation],
+    tm("errorObjectConversation"),
+    () => mutateConversation(),
+  );
   const [draft, setDraft] = useState("");
   const draftRevision = useRef(0);
   const care = useChildCare(studentId);
@@ -178,7 +212,12 @@ export function OgsConversation({
   const [careKnownFor, setCareKnownFor] = useState<string | null>(null);
   if (!care.loading && careKnownFor !== studentId) setCareKnownFor(studentId);
   const careKnown = careKnownFor === studentId;
-  const [today, setToday] = useState<ChildToday>(UNKNOWN_CHILD_TODAY);
+  // The pickup dialog works without today's schedule and only drops its
+  // hint about the usual pickup time.
+  const linkedChildren = useParentChildren();
+  const today =
+    useParentToday(linkedChildren.data).data?.[studentId] ??
+    UNKNOWN_CHILD_TODAY;
   const [activeModal, setActiveModal] = useState<OgsActionKey | null>(null);
   const sending = send.pending;
   const {
@@ -190,34 +229,6 @@ export function OgsConversation({
   // Pin the chat to the viewport and lock page scroll (only the list scrolls).
   const containerRef = useChatViewportLock<HTMLDivElement>(!loading);
 
-  useEffect(() => {
-    if (activeModal !== "pickup") return;
-    void getChildToday(studentId)
-      .then(setToday)
-      .catch((err: unknown) => {
-        // Deliberately silent: the pickup dialog works without today's
-        // schedule and only drops its hint about the usual pickup time.
-        logger.warn("ogs_child_today_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setToday(UNKNOWN_CHILD_TODAY);
-      });
-  }, [activeModal, studentId]);
-
-  // Latest-wins guard shared by EVERY setThread path (refresh, send). SSE fires
-  // one parent-conversation-refresh per message and those refetches can overlap a
-  // just-sent write, so without a token an older in-flight snapshot resolving
-  // late would clobber a fresher one.
-  //
-  // READS (refresh) claim their token at START — latest-started read wins. The
-  // SEND claims it right BEFORE applying its result, AFTER the await: the value
-  // it returns is the authoritative post-commit thread (it includes the
-  // just-sent message), so it must always win. Claiming the send's token at start
-  // let a parent-conversation-refresh that began during the send window take a
-  // higher token and apply a PRE-commit snapshot, dropping the send's result and
-  // making the sent message vanish until the next event. mountedRef additionally
-  // blocks setState after unmount.
-  const applySeqRef = useRef(0);
   const mountedRef = useRef(true);
   useEffect(() => {
     mountedRef.current = true;
@@ -225,71 +236,13 @@ export function OgsConversation({
       mountedRef.current = false;
     };
   }, []);
-  const applyThread = useCallback((seq: number, view: ThreadView): boolean => {
-    if (!mountedRef.current || seq !== applySeqRef.current) return false;
-    setThread(view);
-    return true;
-  }, []);
 
-  // Reading the conversation marks it read server-side, so no separate
-  // mark-read call is needed.
   const refresh = useCallback(async () => {
-    const seq = ++applySeqRef.current;
-    void listChildThreads(studentId)
-      .then((rows) => {
-        if (mountedRef.current && seq === applySeqRef.current) {
-          setSummaries(rows);
-          setSummariesFailed(false);
-        }
-      })
-      .catch((err: unknown) => {
-        // The list says whether a leadership conversation exists. Without it
-        // the switch stays on screen (see showAudienceChoice), so an existing
-        // leadership conversation remains reachable; only its unread count is
-        // missing until the next refresh (focus or new message) loads it.
-        logger.warn("ogs_child_threads_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (mountedRef.current && seq === applySeqRef.current) {
-          setSummariesFailed(true);
-        }
-      });
-    try {
-      const view = await getChildConversation(studentId, audience);
-      if (applyThread(seq, view)) clearLoadError();
-    } catch (err) {
-      logger.warn("ogs_conversation_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      if (mountedRef.current && seq === applySeqRef.current) {
-        void showLoadError(err, {
-          object: tm("errorObjectConversation"),
-          retry: () => void refreshRef.current(),
-        });
-      }
-    }
-  }, [studentId, audience, applyThread, clearLoadError, showLoadError, tm]);
-  // The retry runs the latest refresh, not the one of the failed attempt.
-  const refreshRef = useRef(refresh);
-  useLayoutEffect(() => {
-    refreshRef.current = refresh;
-  });
-
-  useEffect(() => {
-    let active = true;
-    void (async () => {
-      setLoading(true);
-      await refresh();
-      if (active) {
-        setLoading(false);
-        // Opening the conversation marked it read server-side; refresh the badge.
-        nudgeUnreadBadge();
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [studentId, refresh]);
+    await Promise.all([mutateSummaries(), mutateConversation()]);
+  }, [mutateSummaries, mutateConversation]);
+  // A refusal bumps the keys' data generation and hands out new mutates:
+  // a reload after it runs the latest refresh, not the one of the send.
+  const refreshRef = useLatest(refresh);
 
   // Real-time: the portal-wide ParentRealtimeBridge owns the SINGLE SSE
   // connection to /api/parent/sse/events and dispatches `parent-conversation-
@@ -298,17 +251,15 @@ export function OgsConversation({
   // SECOND EventSource — that duplicate doubled SSE connections + backend
   // goroutines and fired every event twice. The hook skips the refetch when the
   // event names a DIFFERENT child (a multi-child guardian gets one event per child).
-  const refreshConversation = useCallback(
-    () => void refresh().then(nudgeUnreadBadge),
-    [refresh],
-  );
+  const refreshConversation = useCallback(() => void refresh(), [refresh]);
   useMessagesActivity({
     eventName: "parent-conversation-refresh",
     studentId,
-    // refresh() marks the thread read server-side; nudge the badge AFTER it
-    // resolves so the sidebar count drops the message this chat just read. The
-    // bridge's own pre-read badge dispatch races ahead of this and would
-    // otherwise leave the badge stale (see nudgeUnreadBadge).
+    // The conversation read marks the thread read server-side; its reader
+    // nudges the badge AFTER it resolves so the sidebar count drops the
+    // message this chat just read. The bridge's own pre-read badge dispatch
+    // races ahead of this and would otherwise leave the badge stale (see
+    // nudgeUnreadBadge).
     onMatch: refreshConversation,
     // SSE is this chat's only refresh path after mount; if the bridge dropped
     // while the tab slept a message could have been missed, so refetch on return.
@@ -354,7 +305,6 @@ export function OgsConversation({
   // so a text can still go to the other side.
   const changeAudience = (next: MessageAudience) => {
     if (next === audience || sending) return;
-    setLoading(true);
     clearSendError();
     if (onAudienceChange) onAudienceChange(next);
     else setOwnAudience(next);
@@ -437,23 +387,20 @@ export function OgsConversation({
             clientMessageId,
             ...attachmentIdArgs(attachments),
           ),
-        // Claim the token AFTER the POST resolves so this authoritative result
-        // wins. A successful send means the thread is loadable, so clear any
-        // stale load error left by an earlier failed background refresh. A
+        // The answer is the authoritative post-commit thread: written after
+        // the POST, it wins over a refresh that started during the send. A
         // result for a conversation no longer on screen (the route changed the
-        // audience meanwhile) claims nothing: the load of the new one must win.
+        // audience meanwhile) writes nothing: the load of the new one must win.
         commit: (view) => {
-          if (
-            audienceRef.current === audience &&
-            applyThread(++applySeqRef.current, view)
-          ) {
-            clearLoadError();
-          }
+          if (mountedRef.current && audienceRef.current === audience)
+            void mutateConversation(view, { revalidate: false });
         },
         keepFailed: true,
         refusal: {
           codes: PARENT_PORTAL_SEND_REFUSALS,
-          matches: (key) => key === conversationKey,
+          matches: (key) =>
+            key === conversationKey ||
+            key === parentInboxKeys.childThreads(studentId),
         },
       });
       sendArrived.current = outcome.status !== "failed";
@@ -491,9 +438,6 @@ export function OgsConversation({
         // writing right): drop the history, the composer and the overview of
         // both conversations, then ask again, so only what the server still
         // grants shows.
-        ++applySeqRef.current;
-        setThread(null);
-        setSummaries([]);
         void refreshRef.current();
       } else if (
         err instanceof ApiError &&
@@ -510,8 +454,8 @@ export function OgsConversation({
       studentId,
       audience,
       audienceRef,
-      applyThread,
-      clearLoadError,
+      mutateConversation,
+      refreshRef,
       clearSendError,
       showSendError,
       tm,
@@ -556,13 +500,13 @@ export function OgsConversation({
           ) : (
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <h1 className="text-base leading-tight font-semibold tracking-tight break-words text-gray-900 sm:text-lg">
+                <Heading className="text-base leading-tight font-semibold tracking-tight break-words text-gray-900 sm:text-lg">
                   {thread?.school_name
                     ? tm(leadershipView ? "ogsLeadership" : "ogsTeam", {
                         school: thread.school_name,
                       })
                     : counterpart}
-                </h1>
+                </Heading>
               </div>
               {showChild && thread?.student_name ? (
                 // oxlint-disable-next-line ui-kit/no-hand-rolled-notice -- Namensschild des Kindes im Gesprächskopf, kein Hinweis

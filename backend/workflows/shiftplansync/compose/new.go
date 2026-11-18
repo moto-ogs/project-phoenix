@@ -52,7 +52,7 @@ type SickCascadeDependencies struct {
 	Broadcaster realtime.Broadcaster
 	Logger      *slog.Logger
 	// Today is the calendar day the cascade's past-day guards compare
-	// against; nil means timezone.TodayDate.
+	// against; the root passes its environment's day clock.
 	Today func() calendar.Date
 }
 
@@ -67,7 +67,7 @@ func NewSickCascade(deps SickCascadeDependencies) (shiftplansync.SickCascade, er
 		"LockStaffShifts": deps.LockStaffShifts != nil, "LockStaff": deps.LockStaff != nil,
 		"Deviations":    deps.Deviations != nil,
 		"TimetableData": deps.TimetableData != nil,
-		"InstanceStaff": deps.InstanceStaff != nil,
+		"InstanceStaff": deps.InstanceStaff != nil, "Today": deps.Today != nil,
 	}); len(missing) > 0 {
 		return nil, fmt.Errorf("shift plan sync compose: sick cascade needs %s", strings.Join(missing, ", "))
 	}
@@ -96,6 +96,7 @@ type SubstitutionDependencies struct {
 	Broadcaster realtime.Broadcaster
 	Logger      *slog.Logger
 	Runtime     application.ScheduleRuntime
+	Today       func() calendar.Date // appointments before this day no longer change
 }
 
 // NewSubstitution binds the Terminvertretung entry the root routes the
@@ -106,7 +107,7 @@ func NewSubstitution(deps SubstitutionDependencies) (shiftplansync.ScheduleSubst
 		"ActivityInstances": deps.ActivityInstances != nil,
 		"InstanceStaff":     deps.InstanceStaff != nil,
 		"Staff":             deps.Staff != nil,
-		"Runtime":           deps.Runtime != nil,
+		"Runtime":           deps.Runtime != nil, "Today": deps.Today != nil,
 	}); len(missing) > 0 {
 		return nil, fmt.Errorf("shift plan sync compose: schedule substitution needs %s", strings.Join(missing, ", "))
 	}
@@ -116,7 +117,7 @@ func NewSubstitution(deps SubstitutionDependencies) (shiftplansync.ScheduleSubst
 		Staff:         deps.Staff,
 		Engine:        deps.Deviations,
 		Broadcaster:   deps.Broadcaster,
-		Logger:        deps.Logger,
+		Logger:        deps.Logger, Today: deps.Today,
 	}), deps.Runtime), nil
 }
 

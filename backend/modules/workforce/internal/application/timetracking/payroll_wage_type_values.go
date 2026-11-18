@@ -188,17 +188,17 @@ func appendDatevWageTypeLines(lines []datevLine, row MonthExportRow) []datevLine
 		if value.WageType.Number == "" {
 			continue
 		}
-		line := datevLine{personnelNumber: row.PersonnelNumber, lohnart: value.WageType.Number}
+		line := datevLine{PersonnelNumber: row.PersonnelNumber, WageType: value.WageType.Number}
 		switch value.WageType.Unit {
 		case workforce.WageTypeUnitAmount:
 			cents := value.Cents
-			line.amountCents = &cents
+			line.AmountCents = &cents
 		case workforce.WageTypeUnitDays:
 			days := value.Days
-			line.days = &days
+			line.Days = &days
 		default:
 			minutes := value.Minutes
-			line.hoursMinutes = &minutes
+			line.HoursMinutes = &minutes
 		}
 		lines = append(lines, line)
 	}
@@ -222,13 +222,4 @@ func unnumberedWageTypes(rows []MonthExportRow) []string {
 		}
 	}
 	return names
-}
-
-func datevLinesCarryAmounts(lines []datevLine) bool {
-	for _, line := range lines {
-		if line.amountCents != nil {
-			return true
-		}
-	}
-	return false
 }

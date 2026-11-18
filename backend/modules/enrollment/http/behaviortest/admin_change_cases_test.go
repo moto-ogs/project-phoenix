@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
@@ -16,6 +17,7 @@ import (
 
 func adminCaseService(env *requestTestEnv, requests compose.ChangeRequestRecords, children compose.IntakeChildren, catalog compose.IntakeCatalog) enrollmenthttp.ChangeRequestService {
 	return newTestChangeRequestService(owners.EnrollmentChangeRequestSources{
+		Now:      time.Now,
 		Bookings: requestTestBookingCommands(), Requests: requests, Children: children,
 		Catalog: catalog, Settings: env.settings, ParentsURL: "http://parents.localhost:3000",
 	})

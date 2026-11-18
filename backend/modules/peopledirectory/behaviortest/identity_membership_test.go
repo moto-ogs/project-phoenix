@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api"
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
@@ -158,7 +159,7 @@ func TestIdentityMembership_UnboundQueriesFailClosed(t *testing.T) {
 	require.ErrorIs(t, err, lookupFailure)
 	require.Nil(t, listed, "failed membership reads must not return relationship candidates")
 
-	unboundProfiles := peopleCompose.NewRetainedGuardianProfileRepository(db, testpkg.StudentDirectory{}, testpkg.GuardianLinks{})
+	unboundProfiles := peopleCompose.NewRetainedGuardianProfileRepository(db, testpkg.StudentDirectory{}, testpkg.GuardianLinks{}, time.Now)
 	emptyActiveProfiles, err := testpkg.TenantQuery1(t, ctx, db, unboundProfiles.FindActivePortalProfilesByIDs, nil)
 	require.NoError(t, err)
 	assert.Empty(t, emptyActiveProfiles)
@@ -169,7 +170,7 @@ func TestIdentityMembership_UnboundQueriesFailClosed(t *testing.T) {
 	_, err = testpkg.TenantQuery1(t, ctx, db, unboundProfiles.FindActivePortalProfilesByIDs, []int64{chain.GuardianProfileID})
 	require.ErrorContains(t, err, "portal membership query is required")
 	projectionFailure := errors.New("portal membership lookup failed")
-	failingProfiles := peopleCompose.NewRetainedGuardianProfileRepository(db, testpkg.StudentDirectory{}, testpkg.GuardianLinks{}, api.PeopleRepositorySuiteWithPortalMemberships(
+	failingProfiles := peopleCompose.NewRetainedGuardianProfileRepository(db, testpkg.StudentDirectory{}, testpkg.GuardianLinks{}, time.Now, api.PeopleRepositorySuiteWithPortalMemberships(
 		func(_ context.Context, accountIDs []int64) (map[int64][]int64, error) {
 			require.Equal(t, []int64{chain.AccountID}, accountIDs)
 			return nil, projectionFailure

@@ -79,7 +79,9 @@ type StaffThreadRecords interface {
 	AdvanceStaffThreadPreview(context.Context, int64, time.Time, int64, int64, string) error
 	StaffParticipantAccountIDs(context.Context, int64) ([]int64, error)
 	HasStaffParticipant(context.Context, int64, int64) (bool, error)
-	DeleteEmptyStaffThreads(context.Context, time.Time) (int64, error)
+	// DeleteEmptyStaffThreads ages direct threads out after retentionDays on
+	// the database clock, which stamps them and their messages.
+	DeleteEmptyStaffThreads(ctx context.Context, retentionDays int) (int64, error)
 }
 
 // StaffGroupRecords is the group-chat membership capability (#4776). It is a
@@ -102,7 +104,9 @@ type StaffConversationRecords interface {
 type StaffMessageRecords interface {
 	CreateStaffMessage(context.Context, *StaffMessageRecord) error
 	ListStaffMessages(context.Context, int64) ([]*StaffMessageRecord, error)
-	DeleteStaffMessagesBefore(context.Context, time.Time) (int64, error)
+	// DeleteStaffMessagesBefore removes the messages older than retentionDays
+	// on the database clock, which stamps and orders them.
+	DeleteStaffMessagesBefore(ctx context.Context, retentionDays int) (int64, error)
 }
 type StaffReadRecords interface {
 	MarkStaffReadUpTo(context.Context, int64, int64, time.Time, int64) error

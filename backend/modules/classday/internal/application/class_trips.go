@@ -139,7 +139,7 @@ func (t classTrips) validate(in classday.ClassTripWrite) ([]calendar.Date, strin
 	if to.Before(from) || to.After(from.AddDays(classday.ClassTripMaxDays-1)) {
 		return nil, "", classday.ErrClassTripInvalidRange
 	}
-	if from.Before(t.todayDate()) {
+	if from.Before(t.today()) {
 		return nil, "", classday.ErrClassTripPastDate
 	}
 	if in.ReturnTime != nil {
@@ -162,8 +162,9 @@ func (t classTrips) validate(in classday.ClassTripWrite) ([]calendar.Date, strin
 }
 
 // requireClassChildren refuses a child that is not an OGS child of the class
-// on the first day of the trip. Class-list-only entries ("Keine Betreuung")
-// have no OGS record to write to and are not selectable.
+// on the first day of the trip. Class-list-only entries and children without
+// an OGS place (#4803), both "Keine Betreuung", are no OGS children: the
+// report tells the OGS who comes later or not at all.
 func (t classTrips) requireClassChildren(ctx context.Context, schoolClass string, day calendar.Date, studentIDs []int64) error {
 	if t.rosters == nil {
 		return classday.ErrClassTripsNotConfigured
@@ -175,7 +176,7 @@ func (t classTrips) requireClassChildren(ctx context.Context, schoolClass string
 	inClass := make(map[int64]bool)
 	if roster != nil {
 		for _, row := range roster.Rows {
-			if row.StudentID > 0 && !row.ListEntry {
+			if row.StudentID > 0 && !row.NoCare() {
 				inClass[row.StudentID] = true
 			}
 		}
@@ -186,13 +187,6 @@ func (t classTrips) requireClassChildren(ctx context.Context, schoolClass string
 		}
 	}
 	return nil
-}
-
-func (t classTrips) todayDate() calendar.Date {
-	if t.today != nil {
-		return t.today()
-	}
-	return calendar.TodayDate()
 }
 
 // dedupeIDs keeps the first occurrence of every ID in request order.

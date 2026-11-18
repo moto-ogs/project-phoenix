@@ -150,6 +150,12 @@ type StaffOverviewService interface {
 	// GetMonthExportRows builds the cross-staff payroll rows (#1417 2b) over
 	// the same prefetch + month math as the overview. month == 0 = whole year.
 	GetMonthExportRows(ctx context.Context, year, month int) ([]MonthExportRow, error)
+	// TraegerPayrollMonths computes the month of the given employments for
+	// the Träger's payroll file (#4712), over the same prefetch.
+	TraegerPayrollMonths(ctx context.Context, staffIDs []int64, year, month int) ([]workforce.TraegerPayrollMonth, error)
+	// traegerTimeStaff keeps the employments the Träger's time export reads:
+	// offboarded ones stay, external caregivers record no time (#3823).
+	traegerTimeStaff(ctx context.Context, staffIDs []int64) ([]int64, error)
 	// TargetCoverage counts the staff without a Soll in a month for the
 	// payroll completeness check (#6890). It speaks the public contract
 	// directly, so the capability promotes it instead of copying it.
@@ -182,8 +188,9 @@ type staffOverviewService struct {
 	traeger TraegerMonthStaff
 	logger  *slog.Logger
 
-	// todayFunc is a test hook; production uses timezone.TodayDate.
+	// todayFunc and nowFunc are the clock of the composition (ADR 0239).
 	todayFunc func() calendar.Date
+	nowFunc   func() time.Time
 }
 
 func NewStaffOverviewService(
@@ -226,10 +233,11 @@ func (s *staffOverviewService) getLogger() *slog.Logger {
 }
 
 func (s *staffOverviewService) today() calendar.Date {
-	if s.todayFunc != nil {
-		return s.todayFunc()
-	}
-	return calendar.TodayDate()
+	return dayOf(s.todayFunc, s.nowFunc)()
+}
+
+func (s *staffOverviewService) now() time.Time {
+	return requireClock(s.nowFunc)()
 }
 
 // --- overview list ---------------------------------------------------------
@@ -274,7 +282,7 @@ func (s *staffOverviewService) GetTimeTrackingOverview(ctx context.Context, filt
 		return nil, err
 	}
 
-	now := time.Now()
+	now := s.now()
 	for _, staff := range staffMembers {
 		row, err := s.overviewRow(ctx, monthSvc, staff, key, vacation)
 		if err != nil {

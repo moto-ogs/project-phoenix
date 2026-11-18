@@ -101,7 +101,10 @@ type Dependencies struct {
 	MaterializationService  timetable.MaterializationCapability
 	InstanceService         timetable.InstanceLifecycleCapability
 	InstanceSeriesConverter timetable.InstanceSeriesConversion
-	OperationsService       timetable.OperationCapability
+	// InstanceReinstatement takes back a cancellation (#7151); nil answers
+	// its route with 500.
+	InstanceReinstatement timetable.InstanceReinstatement
+	OperationsService     timetable.OperationCapability
 	// People serves display names and whether a child still attends from
 	// the People Directory (#2732).
 	People People
@@ -183,7 +186,7 @@ func NewResource(deps Dependencies) *Resource {
 		panic("timetable API: settings service is required")
 	}
 	if deps.Now == nil {
-		deps.Now = calendar.Now
+		panic("timetable API: the clock is required")
 	}
 	return &Resource{Dependencies: deps}
 }

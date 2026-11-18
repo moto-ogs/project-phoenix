@@ -6,7 +6,8 @@
     "phase": "Selection",
     "form": "Form",
     "done": "Confirmation",
-    "aria": "Enrollment progress"
+    "aria": "Enrollment progress",
+    "completed": "completed"
   },
   "loading": "Loading enrollment…",
   "phaseTitle": "What would you like to enroll your child for?",

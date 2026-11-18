@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -315,6 +316,9 @@ type WorkSessionService interface {
 	// DayExportRowsByStaffIDs loads the same rows for many staff members with
 	// batched repository calls, keyed by staff ID.
 	DayExportRowsByStaffIDs(ctx context.Context, staffIDs []int64, from, to calendar.Date) (map[int64][]DayExportRow, error)
+	// TraegerTimeDays folds the same blocks and absences into one row per
+	// staff member and day for the Träger's time export (#4712).
+	TraegerTimeDays(ctx context.Context, staffIDs []int64, from, to calendar.Date) ([]workforce.TraegerTimeDay, error)
 	AutoEndExpiredBreaks(ctx context.Context) (int, error)
 
 	// Staff work-schedule operations (issue #584: moved out of api/staff).

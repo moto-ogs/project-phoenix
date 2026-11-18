@@ -2,6 +2,7 @@ package owners
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	careContractCompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
@@ -25,9 +26,10 @@ type parentContractInboxNotices struct {
 }
 
 // NewParentContractInboxNotices binds the contract check of the push; it
-// lists no contracts, so it dates no withdrawal period.
+// lists no contracts, so it dates no withdrawal period; no root clock reaches
+// it, so it binds the real one explicitly (ADR 0265).
 func NewParentContractInboxNotices() parentportal.ContractInboxNoticesPort {
-	return parentContractInboxNotices{inbox: careContractCompose.NewInbox(nil)}
+	return parentContractInboxNotices{inbox: careContractCompose.NewInbox(nil, time.Now)}
 }
 
 func (n parentContractInboxNotices) ContractNoticeTarget(ctx context.Context, organizationID, contractID int64, email string) (parentportal.ContractNoticeTarget, bool, error) {

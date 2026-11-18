@@ -22,8 +22,8 @@ const classListEntryNameIndex = "uniq_class_list_entries_name_class"
 type classListEntryRow struct {
 	bun.BaseModel `bun:"table:class_list_entries,alias:class_list_entry"`
 	ID            int64     `bun:"id,pk,autoincrement"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
 	FirstName     string    `bun:"first_name,notnull"`
 	LastName      string    `bun:"last_name,notnull"`
@@ -132,7 +132,6 @@ func (s *Store) UpdateClassListEntry(ctx context.Context, id int64, fields schoo
 	query := withTenant(db.NewUpdate().Model(&row).
 		ModelTableExpr(`users.class_list_entries AS "class_list_entry"`).
 		Column("first_name", "last_name", "school_class").
-		Set(`updated_at = NOW()`).
 		Where(`"class_list_entry".id = ?`, id), "class_list_entry", scope)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()

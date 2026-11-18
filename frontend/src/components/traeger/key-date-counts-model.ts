@@ -21,15 +21,35 @@ export function formatKeyDateMonth(period: string): string {
   return monthFormat.format(parseISODate(period));
 }
 
+/** Fehlende Schulerfassungen sind unbekannt, keine gemessene Null. */
+export interface KeyDateMonthFigures extends Omit<
+  TraegerKeyDateMonth,
+  "activeStudents" | "activeTerminals"
+> {
+  readonly activeStudents: number | null;
+  readonly activeTerminals: number | null;
+}
+
 /** Ein Monat mit allen tatsächlich erfassten Stichtagen seiner Schulen. */
-export interface KeyDateMonthRow extends TraegerKeyDateMonth {
+export interface KeyDateMonthRow extends KeyDateMonthFigures {
   readonly keyDates: readonly string[];
 }
 
 export function keyDateMonthRows(
   schools: readonly TraegerSchoolKeyDateCounts[],
   months: readonly TraegerKeyDateMonth[],
+  schoolId = "",
 ): KeyDateMonthRow[] {
+  if (schoolId) {
+    const school = schools.find((entry) => entry.id === schoolId);
+    return months.map((month) => {
+      const count = school ? countOf(school, month.period) : null;
+      return {
+        ...schoolMonthFigures(count, month),
+        keyDates: count ? [count.keyDate] : [],
+      };
+    });
+  }
   const dates = new Map<string, Set<string>>();
   for (const school of schools) {
     for (const count of school.counts) {
@@ -97,10 +117,10 @@ function countOf(
 
 /** Die Veränderung zum Vormonat; `null`, wenn eine der Zahlen fehlt. */
 export function keyDateChange(
-  current: number | undefined,
-  previous: number | undefined,
+  current: number | null | undefined,
+  previous: number | null | undefined,
 ): number | null {
-  if (current === undefined || previous === undefined) return null;
+  if (current == null || previous == null) return null;
   return current - previous;
 }
 
@@ -123,4 +143,42 @@ export function capturedLate(count: TraegerKeyDateCount): boolean {
 function berlinDay(iso: string): string | null {
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? null : berlinTodayISO(date);
+}
+
+/** Die Kennzahlen eines Monats für eine einzige gewählte Schule (#4718). */
+export interface KeyDateSchoolFigures {
+  readonly month: KeyDateMonthFigures;
+  readonly previous: KeyDateMonthFigures | null;
+}
+
+/**
+ * Die Monatszahlen nur einer Schule, im Format der Summe über alle Schulen:
+ * so zeigen die Kennzahlen oben dieselbe Schule wie Tabelle und Download.
+ * Ohne Erfassung bleiben die Zahlen unbekannt und der Vergleich entfällt.
+ */
+export function keyDateSchoolFigures(
+  row: KeyDateSchoolRow,
+  month: TraegerKeyDateMonth,
+  previous: TraegerKeyDateMonth | null,
+): KeyDateSchoolFigures {
+  return {
+    month: schoolMonthFigures(row.count, month),
+    previous:
+      previous && row.previous
+        ? schoolMonthFigures(row.previous, previous)
+        : null,
+  };
+}
+
+function schoolMonthFigures(
+  count: TraegerKeyDateCount | null,
+  base: TraegerKeyDateMonth,
+): KeyDateMonthFigures {
+  return {
+    period: base.period,
+    keyDate: count?.keyDate ?? base.keyDate,
+    activeStudents: count?.activeStudents ?? null,
+    activeTerminals: count?.activeTerminals ?? null,
+    schools: count ? 1 : 0,
+  };
 }

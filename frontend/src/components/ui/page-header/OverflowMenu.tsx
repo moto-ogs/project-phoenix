@@ -3,6 +3,8 @@
 import { CONTROL_HEIGHT_CLASS, iconOnlyMarker } from "../control-geometry";
 import { Z_LAYER } from "../overlay-styles";
 import {
+  Fragment,
+  isValidElement,
   useEffect,
   useId,
   useRef,
@@ -37,7 +39,11 @@ export type { OverflowMenuEntry, OverflowMenuItem } from "./types";
 interface OverflowMenuProps {
   /** Menu items to render. Empty array → renders nothing. */
   readonly items: readonly OverflowMenuEntry[];
-  /** Accessible label for the trigger button. */
+  /**
+   * Name of the menu, and of the kebab trigger (default „Weitere Aktionen“).
+   * A trigger with `triggerContent` is named by that content; this name
+   * follows it as hidden text (WCAG 2.5.3, #7112).
+   */
   readonly ariaLabel?: string;
   /**
    * Rolle und Auswahlzustand des Auslösers. Nötig für den gebündelten
@@ -101,14 +107,6 @@ interface OverflowMenuProps {
    */
   readonly matchContainerSelector?: string;
   /**
-   * Identifies an overlay which owns this menu while the menu itself is
-   * rendered at the document level. This lets a scrollable overlay treat menu
-   * interactions as internal without clipping the menu at its scroll edge.
-   */
-  readonly portalOwnerId?: string;
-  /** Stacking level for a document-level menu owned by an overlay. */
-  readonly portalZIndex?: number;
-  /**
    * Side the menu opens on when it fits on both. `above` suits a trigger at
    * the top of a phone row: the menu then leaves the row's own details in
    * view. Without room above it opens below, as by default.
@@ -132,7 +130,7 @@ const TEXT_TRIGGER_TOOLTIP = "Öffnet die Auswahl, noch passiert nichts.";
  */
 export function OverflowMenu({
   items,
-  ariaLabel = "Weitere Aktionen",
+  ariaLabel: ariaLabelProp,
   triggerRole,
   triggerAriaSelected,
   triggerTabIndex,
@@ -147,8 +145,6 @@ export function OverflowMenu({
   wrapperClassName = "inline-block",
   tourTarget,
   matchContainerSelector,
-  portalOwnerId,
-  portalZIndex,
   preferredSide = "below",
 }: OverflowMenuProps) {
   const kitDefault = useKitDefault();
@@ -184,9 +180,7 @@ export function OverflowMenu({
   const focusOnOpenRef = useRef(false);
   const openAnchorRef = useRef<{ top: number; left: number } | null>(null);
   const menuId = useId();
-  // Menus normally stay inside a slide-over's focus scope. A scrollable
-  // AnchoredPopover instead passes an owner ID, so its menu can escape the
-  // clipped panel while the popover still recognizes the interaction.
+  // Menus stay inside a slide-over's focus scope.
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(
     null,
   );
@@ -262,11 +256,9 @@ export function OverflowMenu({
     // Enter and Space fire a click without a pointer (detail 0).
     focusOnOpenRef.current = event.detail === 0;
     if (trigger != null && typeof document !== "undefined") {
-      const scope = portalOwnerId
-        ? null
-        : trigger.closest(
-            `[data-overflow-menu-scope="true"], ${SHEET_SCOPE_SELECTOR}`,
-          );
+      const scope = trigger.closest(
+        `[data-overflow-menu-scope="true"], ${SHEET_SCOPE_SELECTOR}`,
+      );
       const nextPortalContainer =
         scope instanceof HTMLElement ? scope : document.body;
       const scopeRect =
@@ -435,6 +427,22 @@ export function OverflowMenu({
 
   if (items.length === 0) return null;
 
+  const ariaLabel = ariaLabelProp ?? "Weitere Aktionen";
+  // A trigger with visible content is named by it (WCAG 2.5.3, #7112). A
+  // given name that does not already contain a plain-text label follows it
+  // as hidden text instead of replacing it.
+  const textContent = plainText(triggerContent);
+  // No text to show (an icon): the given name is the whole name.
+  const labelKeepsText =
+    textContent === "" ||
+    ariaLabel
+      .toLocaleLowerCase("de-DE")
+      .includes(textContent.toLocaleLowerCase("de-DE"));
+  const triggerAriaLabel =
+    triggerContent == null || labelKeepsText ? ariaLabel : undefined;
+  const hiddenTriggerName =
+    triggerContent != null && !labelKeepsText ? ariaLabelProp : undefined;
+
   const blocked = disabled && Boolean(disabledReason);
   const triggerHint = blocked
     ? disabledReason
@@ -456,7 +464,7 @@ export function OverflowMenu({
       role={triggerRole}
       aria-selected={triggerAriaSelected}
       tabIndex={triggerTabIndex}
-      aria-label={ariaLabel}
+      aria-label={triggerAriaLabel}
       aria-haspopup="menu"
       aria-expanded={isOpen}
       aria-controls={isOpen ? menuId : undefined}
@@ -470,6 +478,9 @@ export function OverflowMenu({
       }
     >
       {triggerContent ?? <MoreVertical className={iconSizeClass} aria-hidden />}
+      {hiddenTriggerName ? (
+        <span className="sr-only">{`, ${hiddenTriggerName}`}</span>
+      ) : null}
     </button>
   );
 
@@ -498,12 +509,10 @@ export function OverflowMenu({
               aria-label={ariaLabel}
               tabIndex={-1}
               onKeyDown={onMenuKey}
-              data-overflow-menu-owner={portalOwnerId}
               style={{
                 ...menuStyle,
                 position:
                   portalContainer !== document.body ? "absolute" : "fixed",
-                zIndex: portalZIndex,
               }}
               // Surface mirrors DesktopFilters dropdown so menu / filter
               // popovers read as one component family — same border, radius,
@@ -723,4 +732,23 @@ export function OverflowMenu({
         : null}
     </div>
   );
+}
+
+/**
+ * The text a trigger shows, from strings and the children of its elements;
+ * empty when a component draws it (a name from a hook).
+ */
+function plainText(node: ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node).trim();
+  }
+  if (Array.isArray(node)) {
+    return node.map(plainText).filter(Boolean).join(" ");
+  }
+  if (isValidElement<{ children?: ReactNode }>(node)) {
+    return typeof node.type === "string" || node.type === Fragment
+      ? plainText(node.props.children)
+      : "";
+  }
+  return "";
 }

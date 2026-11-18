@@ -1,6 +1,8 @@
 package api
 
 import (
+	"time"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -17,11 +19,11 @@ import (
 
 // mountCareContractImportRoutes serves the import of children and their
 // existing care contracts from a file (#4723) at /traeger/contract-imports
-// behind the right "Verträge verwalten"; today is the root's day clock of
-// the debtor numbers.
+// behind the right "Verträge verwalten"; today and now are the root's clocks
+// of the debtor numbers.
 func mountCareContractImportRoutes(root chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings,
-	accessLog owners.DataAccessAppender, today func() calendar.Date) {
-	resource := careContractHTTP.NewImportResource(NewCareContractImports(organizations, settings, accessLog, today),
+	accessLog owners.DataAccessAppender, today func() calendar.Date, now func() time.Time) {
+	resource := careContractHTTP.NewImportResource(NewCareContractImports(organizations, settings, accessLog, today, now),
 		common.RequiresPermission(identityaccess.TraegerRightContractsManage))
 	root.Mount("/traeger/contract-imports", resource.Router(ProtectedTraegerRoutes))
 }
@@ -29,15 +31,15 @@ func mountCareContractImportRoutes(root chi.Router, organizations HolidayOrganiz
 // NewCareContractImports binds the import to the schools of the Träger, the
 // offerings of each school with the names of their phases, the school's
 // access log and the debtor numbers the Elternabrechnung keeps on the day of
-// today.
+// today, stamped on now.
 func NewCareContractImports(organizations HolidayOrganizations, settings TraegerBrandingSettings,
-	accessLog owners.DataAccessAppender, today func() calendar.Date) carecontract.ContractImports {
+	accessLog owners.DataAccessAppender, today func() calendar.Date, now func() time.Time) carecontract.ContractImports {
 	return careContractCompose.NewContractImports(careContractCompose.ImportPorts{
 		Schools:      careContractSchools{organizations: organizations},
 		Applications: careContractApplications{applications: enrollmentCompose.NewContractApplications(securityruntime.Fingerprint)},
-		Bookings:     careContractBookings{offerings: carePlanCompose.NewContractOfferings(), bookings: carePlanCompose.NewOfferingBookings()},
+		Bookings:     careContractBookings{offerings: carePlanCompose.NewContractOfferings(), bookings: carePlanCompose.NewOfferingBookings(now)},
 		Access:       careContractAccessLog{log: accessLog}, Runtime: owners.CareContractRuntime{},
-		Numbers:     owners.NewCareContractDebtorNumbers(parentBillingSettings{settings: settings}, today),
+		Numbers:     owners.NewCareContractDebtorNumbers(parentBillingSettings{settings: settings}, today, now),
 		Fingerprint: securityruntime.Fingerprint,
-	})
+	}, today)
 }

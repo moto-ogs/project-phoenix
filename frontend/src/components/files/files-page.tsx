@@ -43,6 +43,7 @@ import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useSWRAuth } from "~/lib/swr";
+import { fileKeys } from "~/lib/swr/portal-keys";
 import { cn } from "~/lib/utils";
 import { FolderModal } from "./folder-modal";
 import {
@@ -81,7 +82,7 @@ export function FilesPage() {
     isLoading,
     error,
     mutate: mutateFolders,
-  } = useSWRAuth<FolderOverview>("files-folders", () =>
+  } = useSWRAuth<FolderOverview>(fileKeys.folders(), () =>
     filesService.listFolders(),
   );
 
@@ -368,7 +369,7 @@ function FolderFilesPanel({
   readonly onFilesChanged: () => void;
 }) {
   const { data, isLoading, error, mutate } = useSWRAuth<FolderFiles>(
-    `files-folder-${folder.id}`,
+    fileKeys.folder(folder.id),
     () => filesService.listFiles(folder.id),
   );
   const files = data?.files ?? [];

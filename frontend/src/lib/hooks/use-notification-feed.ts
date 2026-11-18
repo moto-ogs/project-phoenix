@@ -8,10 +8,27 @@ import {
   markAllNotificationFeedRead,
   markNotificationFeedEntryRead,
   NOTIFICATION_FEED_REFRESH_EVENT,
+  type NotificationFeedApi,
+  parentNotificationFeedApi,
 } from "~/lib/notification-feed-api";
 import type { NotificationFeedEntry } from "~/lib/notification-feed-helpers";
+import { useNotificationFeedPortal } from "~/lib/notification-feed-portal";
 import { onSWRScopeReset, useLiveRefreshInterval, useSWRAuth } from "~/lib/swr";
-import { notificationFeedKeys } from "~/lib/swr/portal-keys";
+import { parentKeys } from "~/lib/swr/parent-keys";
+import { notificationFeedKeys, schoolPortalKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
+
+/** Woher eine Glocke ihren Feed liest: das Portal und seine Aufrufe. */
+export interface NotificationFeedSource {
+  readonly portal: "parent";
+  readonly api: NotificationFeedApi;
+}
+
+/** Der Feed des Elternportals über alle Schulen der Familie (#7140). */
+export const PARENT_NOTIFICATION_FEED: NotificationFeedSource = {
+  api: parentNotificationFeedApi,
+  portal: "parent",
+};
 
 // Ohne verbundenen Live-Kanal holt die Glocke den Stand jede Minute; mit
 // Kanal reicht der Abgleich alle fünf Minuten (useLiveRefreshInterval).
@@ -46,13 +63,27 @@ function onFeedRefresh(refresh: () => void): () => void {
  * Wiederverbinden lösen über ein Fenster-Ereignis einen neuen Abruf aus.
  */
 export function useNotificationFeedUnread(
-  /** Nur im Staff-Portal; die untere Leiste dient auch anderen Portalen. */
+  /** Nur in Portalen mit Glocke; die untere Leiste dient auch anderen. */
   enabled = true,
+  source?: NotificationFeedSource,
 ) {
+  const portal = useNotificationFeedPortal();
+  const { apiBase } = portal;
   const refreshInterval = useLiveRefreshInterval(FEED_FALLBACK_INTERVAL_MS);
   const { data, mutate } = useSWRAuth<number>(
-    enabled ? notificationFeedKeys.unreadCount() : null,
-    fetchNotificationFeedUnreadCount,
+    !enabled
+      ? null
+      : source
+        ? parentKeys.notificationFeed.unreadCount()
+        : portal.keyScope === "school"
+          ? schoolPortalKeys.notificationFeedUnread()
+          : portal.keyScope === "traeger"
+            ? traegerKeys.notificationFeedUnread()
+            : notificationFeedKeys.unreadCount(),
+    () =>
+      source
+        ? source.api.fetchUnreadCount()
+        : fetchNotificationFeedUnreadCount(apiBase),
     {
       refreshInterval,
       // Ein verborgener Tab pollt nicht. Kommt er zurück, stimmt die Zahl
@@ -89,7 +120,12 @@ export interface NotificationFeedItem {
  * nie durch das Öffnen. Beides zeigt die Liste sofort gelesen; das Backend
  * schickt danach das Live-Ereignis, und die Liste lädt den bestätigten Stand.
  */
-export function useNotificationFeed(onUnreadCount: (count: number) => void) {
+export function useNotificationFeed(
+  onUnreadCount: (count: number) => void,
+  source?: NotificationFeedSource,
+) {
+  const portal = useNotificationFeedPortal();
+  const { apiBase } = portal;
   const [extra, setExtra] = useState<readonly NotificationFeedEntry[]>([]);
   // undefined: der nächste Cursor ist der der ersten Seite.
   const [extraCursor, setExtraCursor] = useState<string | null | undefined>(
@@ -129,8 +165,14 @@ export function useNotificationFeed(onUnreadCount: (count: number) => void) {
 
   const refreshInterval = useLiveRefreshInterval(FEED_FALLBACK_INTERVAL_MS);
   const first = useSWRAuth(
-    notificationFeedKeys.firstPage(),
-    () => fetchNotificationFeed(),
+    source
+      ? parentKeys.notificationFeed.firstPage()
+      : portal.keyScope === "school"
+        ? schoolPortalKeys.notificationFeedFirstPage()
+        : portal.keyScope === "traeger"
+          ? traegerKeys.notificationFeedFirstPage()
+          : notificationFeedKeys.firstPage(),
+    () => (source ? source.api.fetchPage() : fetchNotificationFeed(apiBase)),
     {
       refreshInterval,
       // Auch bei verlorenen Live-Ereignissen stimmen Seiten und Cursor
@@ -164,7 +206,9 @@ export function useNotificationFeed(onUnreadCount: (count: number) => void) {
     setLoadingMore(true);
     setLoadMoreError(null);
     try {
-      const page = await fetchNotificationFeed(nextCursor);
+      const page = source
+        ? await source.api.fetchPage(nextCursor)
+        : await fetchNotificationFeed(apiBase, nextCursor);
       if (generation.current !== started) return;
       setExtra((current) => [...current, ...page.entries]);
       setExtraCursor(page.nextCursor);
@@ -173,7 +217,7 @@ export function useNotificationFeed(onUnreadCount: (count: number) => void) {
     } finally {
       if (generation.current === started) setLoadingMore(false);
     }
-  }, [nextCursor, loadingMore]);
+  }, [nextCursor, loadingMore, apiBase, source]);
 
   const items = useMemo((): readonly NotificationFeedItem[] => {
     const seen = new Set<string>();
@@ -199,7 +243,9 @@ export function useNotificationFeed(onUnreadCount: (count: number) => void) {
       const { id, updatedAt } = item.entry;
       setLocallyRead((current) => new Map(current).set(id, updatedAt));
       try {
-        const count = await markNotificationFeedEntryRead(id);
+        const count = source
+          ? await source.api.markRead(id)
+          : await markNotificationFeedEntryRead(apiBase, id);
         if (sessionGeneration.current === started) onUnreadCount(count);
       } catch {
         if (sessionGeneration.current !== started) return;
@@ -213,18 +259,20 @@ export function useNotificationFeed(onUnreadCount: (count: number) => void) {
         });
       }
     },
-    [onUnreadCount],
+    [onUnreadCount, apiBase, source],
   );
 
   /** Wirft bei einem Fehler; der Aufrufer zeigt ihn als Meldung. */
   const markAllRead = useCallback(async () => {
     const started = sessionGeneration.current;
     const upTo = latestUpdate(items);
-    const count = await markAllNotificationFeedRead();
+    const count = source
+      ? await source.api.markAllRead()
+      : await markAllNotificationFeedRead(apiBase);
     if (sessionGeneration.current !== started) return;
     setAllReadUpTo(upTo);
     onUnreadCount(count);
-  }, [items, onUnreadCount]);
+  }, [items, onUnreadCount, apiBase, source]);
 
   const retry = useCallback(() => {
     if (first.error) {

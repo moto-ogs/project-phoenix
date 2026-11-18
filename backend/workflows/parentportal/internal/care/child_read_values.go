@@ -36,6 +36,10 @@ type ChildSummary struct {
 	// parent service; handlers must not serialize it.
 	GuardianPermissions map[string]bool `json:"-"`
 	GuardianProfileID   int64           `json:"-"`
+	// WithoutCarePlace marks a child of the class without an OGS place
+	// (#4803, ADR 0282): the family keeps the school's functions, none of
+	// the OGS ones.
+	WithoutCarePlace bool `json:"-"`
 }
 
 type EnrollablePhase struct {

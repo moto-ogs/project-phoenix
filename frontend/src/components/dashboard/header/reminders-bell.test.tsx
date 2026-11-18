@@ -122,9 +122,22 @@ vi.mock("~/lib/analytics", () => ({
   trackTenantEvent: (...args: unknown[]) => mockTrack(...args),
 }));
 
+// moto schule (#7139): the session names the school; on the school host
+// schoolPath drops the /school prefix.
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { tenantId: "5", id: "11" } },
+    status: "authenticated",
+  }),
+}));
+vi.mock("~/lib/school-url", () => ({
+  schoolPath: (path: string) => path.replace(/^\/school/, "") || "/",
+}));
+
+import { SchoolNotificationFeedProvider } from "~/components/school/shell/school-notification-feed";
 import { NotificationsSheet } from "./notifications-panel";
 import { closeNotificationsSheet } from "./notifications-sheet-state";
-import { RemindersBell } from "./reminders-bell";
+import { NotificationFeedBell, RemindersBell } from "./reminders-bell";
 
 function reminder(over: Partial<Reminder> = {}): Reminder {
   return {
@@ -215,14 +228,15 @@ beforeEach(() => {
     tenantSlug: "test-tenant",
     tenant: { tenantId: 7 },
   } as unknown as ReturnType<typeof useTenantSafe>);
-  api.fetchNotificationFeed.mockImplementation((cursor?: string | null) =>
-    Promise.resolve(
-      state.feedPages.get(cursor ?? "") ?? {
-        entries: [],
-        nextCursor: null,
-        unreadCount: 0,
-      },
-    ),
+  api.fetchNotificationFeed.mockImplementation(
+    (_base: string, cursor?: string | null) =>
+      Promise.resolve(
+        state.feedPages.get(cursor ?? "") ?? {
+          entries: [],
+          nextCursor: null,
+          unreadCount: 0,
+        },
+      ),
   );
   api.fetchNotificationFeedUnreadCount.mockImplementation(() =>
     Promise.resolve(state.unreadCount),
@@ -304,7 +318,7 @@ describe("RemindersBell — Erinnerungen", () => {
       ],
     });
     renderBell();
-    await openBell("Benachrichtigungen (2)");
+    await openBell("2 Benachrichtigungen");
 
     expect(screen.getByText("5 Min überfällig").className).toContain(
       "text-moto-red",
@@ -322,7 +336,7 @@ describe("RemindersBell — Erinnerungen", () => {
     );
     setReminders({ enabled: true, count: 7, reminders: many });
     renderBell();
-    await openBell("Benachrichtigungen (7)");
+    await openBell("7 Benachrichtigungen");
 
     expect(screen.getByText("Kind 0")).toBeInTheDocument();
     expect(screen.getByText("Kind 4")).toBeInTheDocument();
@@ -335,7 +349,7 @@ describe("RemindersBell — Erinnerungen", () => {
     renderBell();
 
     const button = await screen.findByRole("button", {
-      name: "Benachrichtigungen (1)",
+      name: "1 Benachrichtigung",
     });
     expect(button).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(button);
@@ -351,7 +365,7 @@ describe("RemindersBell — Erinnerungen", () => {
   it("closes on Escape and on an outside click, not on an inside click", async () => {
     setReminders({ enabled: true, count: 1, reminders: [reminder()] });
     renderBell();
-    const button = await openBell("Benachrichtigungen (1)");
+    const button = await openBell("1 Benachrichtigung");
 
     fireEvent.mouseDown(screen.getByText("Alle ansehen"));
     expect(button).toHaveAttribute("aria-expanded", "true");
@@ -380,11 +394,13 @@ describe("RemindersBell — Zähler", () => {
     setUnread(3);
     renderBell();
 
-    expect(
-      await screen.findByRole("button", { name: "Benachrichtigungen (5)" }),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText("5 Benachrichtigungen")).toHaveTextContent(
-      "5",
+    const bell = await screen.findByRole("button", {
+      name: "5 Benachrichtigungen",
+    });
+    expect(bell).toBeInTheDocument();
+    // The badge shows the count; the rest of its sentence is hidden text.
+    expect(within(bell).getByText("5")).toHaveTextContent(
+      "5 Benachrichtigungen",
     );
   });
 
@@ -394,7 +410,7 @@ describe("RemindersBell — Zähler", () => {
     renderBell();
 
     expect(
-      await screen.findByRole("button", { name: "Benachrichtigungen (2)" }),
+      await screen.findByRole("button", { name: "2 Benachrichtigungen" }),
     ).toBeInTheDocument();
   });
 
@@ -403,12 +419,20 @@ describe("RemindersBell — Zähler", () => {
     setUnread(9);
     const view = renderBell();
     expect(await screen.findByText("9")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "9 Benachrichtigungen" }),
+    ).toBeInTheDocument();
     view.unmount();
     swrCache.entries.clear();
 
     setUnread(10);
     renderBell();
     expect(await screen.findByText("9+")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "9+ Benachrichtigungen, insgesamt 10",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("updates live when the feed changes, also from another device", async () => {
@@ -416,7 +440,7 @@ describe("RemindersBell — Zähler", () => {
     setUnread(1);
     setFeed([entry({ title: "Erster Hinweis" })]);
     renderBell();
-    await openBell("Benachrichtigungen (1)");
+    await openBell("1 Benachrichtigung");
     expect(await screen.findByText("Erster Hinweis")).toBeInTheDocument();
 
     setUnread(2);
@@ -430,7 +454,7 @@ describe("RemindersBell — Zähler", () => {
 
     expect(await screen.findByText("Neuer Hinweis")).toBeInTheDocument();
     expect(
-      await screen.findByRole("button", { name: "Benachrichtigungen (2)" }),
+      await screen.findByRole("button", { name: "2 Benachrichtigungen" }),
     ).toBeInTheDocument();
   });
 });
@@ -441,7 +465,7 @@ describe("RemindersBell — Hinweise", () => {
     setUnread(1);
     setFeed([entry({ title: "Termin abgesagt" })]);
     renderBell();
-    await openBell("Benachrichtigungen (1)");
+    await openBell("1 Benachrichtigung");
 
     expect(await screen.findByText("Termin abgesagt")).toBeInTheDocument();
     expect(screen.getByText("Neu")).toBeInTheDocument();
@@ -454,13 +478,16 @@ describe("RemindersBell — Hinweise", () => {
     setUnread(1);
     setFeed([entry({ id: "41", title: "Termin abgesagt" })]);
     renderBell();
-    const bell = await openBell("Benachrichtigungen (1)");
+    const bell = await openBell("1 Benachrichtigung");
 
     fireEvent.click(
       await screen.findByRole("button", { name: /Termin abgesagt/ }),
     );
 
-    expect(api.markNotificationFeedEntryRead).toHaveBeenCalledWith("41");
+    expect(api.markNotificationFeedEntryRead).toHaveBeenCalledWith(
+      "/api/notifications/feed",
+      "41",
+    );
     expect(mockPush).toHaveBeenCalledWith("/mein-dienstplan?d=2026-11-20");
     expect(bell).toHaveAttribute("aria-expanded", "false");
     expect(
@@ -480,13 +507,16 @@ describe("RemindersBell — Hinweise", () => {
       entry({ id: "42", title: "Fremder Link", deepLink: "//evil.example/x" }),
     ]);
     renderBell();
-    const bell = await openBell("Benachrichtigungen (1)");
+    const bell = await openBell("1 Benachrichtigung");
 
     fireEvent.click(
       await screen.findByRole("button", { name: /Fremder Link/ }),
     );
 
-    expect(api.markNotificationFeedEntryRead).toHaveBeenCalledWith("42");
+    expect(api.markNotificationFeedEntryRead).toHaveBeenCalledWith(
+      "/api/notifications/feed",
+      "42",
+    );
     expect(mockPush).not.toHaveBeenCalled();
     expect(bell).toHaveAttribute("aria-expanded", "true");
   });
@@ -511,7 +541,7 @@ describe("RemindersBell — Hinweise", () => {
     setUnread(2);
     setFeed([entry({ title: "Eins" }), entry({ title: "Zwei" })]);
     renderBell();
-    await openBell("Benachrichtigungen (2)");
+    await openBell("2 Benachrichtigungen");
     expect(await screen.findByText("Eins")).toBeInTheDocument();
     expect(screen.getAllByText("Neu")).toHaveLength(2);
 
@@ -538,7 +568,7 @@ describe("RemindersBell — Hinweise", () => {
     setFeed([entry({ title: "Eins" })]);
     api.markAllNotificationFeedRead.mockRejectedValue(new Error("offline"));
     renderBell();
-    await openBell("Benachrichtigungen (1)");
+    await openBell("1 Benachrichtigung");
     expect(await screen.findByText("Eins")).toBeInTheDocument();
 
     fireEvent.click(
@@ -564,7 +594,10 @@ describe("RemindersBell — Hinweise", () => {
     fireEvent.click(screen.getByRole("button", { name: "Weitere laden" }));
 
     expect(await screen.findByText("Seite zwei")).toBeInTheDocument();
-    expect(api.fetchNotificationFeed).toHaveBeenCalledWith("c2");
+    expect(api.fetchNotificationFeed).toHaveBeenCalledWith(
+      "/api/notifications/feed",
+      "c2",
+    );
     expect(
       screen.queryByRole("button", { name: "Weitere laden" }),
     ).not.toBeInTheDocument();
@@ -620,7 +653,7 @@ describe("RemindersBell — Telefon", () => {
     setUnread(1);
     renderBell();
 
-    await openBell("Benachrichtigungen (2)");
+    await openBell("2 Benachrichtigungen");
 
     const sheet = await screen.findByTestId("notification-sheet");
     expect(sheet).toHaveClass("h-dvh");
@@ -637,9 +670,156 @@ describe("RemindersBell — Telefon", () => {
     // The sheet animates out; until then Radix hides the page behind it.
     expect(
       screen.getByRole("button", {
-        name: "Benachrichtigungen (2)",
+        name: "2 Benachrichtigungen",
         hidden: true,
       }),
     ).toHaveAttribute("aria-expanded", "false");
+  });
+});
+
+const SCHOOL_FEED = "/api/school/notifications/feed";
+
+function renderSchoolBell() {
+  // The school shell renders the bell in its header and the phone sheet once,
+  // both under the school's feed context.
+  return render(
+    <SchoolNotificationFeedProvider>
+      <NotificationFeedBell />
+      <NotificationsSheet feedOnly />
+    </SchoolNotificationFeedProvider>,
+    {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <ToastProvider>{children}</ToastProvider>
+      ),
+    },
+  );
+}
+
+describe("NotificationFeedBell — moto schule", () => {
+  beforeEach(() => {
+    // moto schule has no tenant context; the session names the school.
+    vi.mocked(useTenantSafe).mockReturnValue(
+      null as unknown as ReturnType<typeof useTenantSafe>,
+    );
+    setReminders({ enabled: true, count: 3, reminders: [reminder()] });
+  });
+
+  it("counts only the Hinweise, caps at 9+ and reads the school route", async () => {
+    setUnread(12);
+    renderSchoolBell();
+
+    expect(await screen.findByText("9+")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "9+ Benachrichtigungen, insgesamt 12",
+      }),
+    ).toBeInTheDocument();
+    expect(api.fetchNotificationFeedUnreadCount).toHaveBeenCalledWith(
+      SCHOOL_FEED,
+    );
+    expect(mockUseReminders).not.toHaveBeenCalled();
+  });
+
+  it("shows the Hinweise without Erinnerungen", async () => {
+    setUnread(1);
+    setFeed([entry({ title: "Termin abgesagt" })]);
+    renderSchoolBell();
+    await openBell("1 Benachrichtigung");
+
+    const feed = await screen.findByRole("region", { name: "Hinweise" });
+    expect(within(feed).getByText("Termin abgesagt")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Erinnerungen" }),
+    ).not.toBeInTheDocument();
+    expect(api.fetchNotificationFeed).toHaveBeenCalledWith(SCHOOL_FEED);
+    await waitFor(() =>
+      expect(mockTrack).toHaveBeenCalledWith("notification_bell_opened", "5"),
+    );
+  });
+
+  it("a click marks the entry read in moto schule and opens its page there", async () => {
+    setUnread(1);
+    setFeed([
+      entry({
+        id: "41",
+        title: "Termin abgesagt",
+        deepLink: "/school/aufsichten",
+      }),
+    ]);
+    renderSchoolBell();
+    const bell = await openBell("1 Benachrichtigung");
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Termin abgesagt/ }),
+    );
+
+    expect(api.markNotificationFeedEntryRead).toHaveBeenCalledWith(
+      SCHOOL_FEED,
+      "41",
+    );
+    expect(mockPush).toHaveBeenCalledWith("/aufsichten");
+    expect(bell).toHaveAttribute("aria-expanded", "false");
+    expect(mockTrack).toHaveBeenCalledWith(
+      "notification_feed_entry_clicked",
+      "5",
+      { notification_type: "instance_cancelled" },
+    );
+  });
+
+  it("marks all as read through the school route", async () => {
+    setUnread(2);
+    setFeed([entry({ title: "Erster" }), entry({ title: "Zweiter" })]);
+    renderSchoolBell();
+    await openBell("2 Benachrichtigungen");
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Alle als gelesen markieren" }),
+    );
+
+    await waitFor(() =>
+      expect(api.markAllNotificationFeedRead).toHaveBeenCalledWith(SCHOOL_FEED),
+    );
+    await waitFor(() =>
+      expect(mockTrack).toHaveBeenCalledWith("notification_feed_all_read", "5"),
+    );
+  });
+
+  it("updates live when the feed changes", async () => {
+    setUnread(1);
+    setFeed([entry({ title: "Erster Hinweis" })]);
+    renderSchoolBell();
+    await openBell("1 Benachrichtigung");
+    expect(await screen.findByText("Erster Hinweis")).toBeInTheDocument();
+
+    setUnread(2);
+    setFeed([
+      entry({ title: "Neuer Hinweis", updatedAt: "2026-09-09T09:30:00Z" }),
+      entry({ title: "Erster Hinweis" }),
+    ]);
+    act(() => {
+      window.dispatchEvent(new CustomEvent("notification-feed-refresh"));
+    });
+
+    expect(await screen.findByText("Neuer Hinweis")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "2 Benachrichtigungen" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens the full-screen sheet with the Hinweise only on a phone", async () => {
+    state.phone = true;
+    setUnread(1);
+    setFeed([entry({ title: "Termin abgesagt" })]);
+    renderSchoolBell();
+    await openBell("1 Benachrichtigung");
+
+    const sheet = await screen.findByTestId("notification-sheet");
+    expect(
+      await within(sheet).findByText("Termin abgesagt"),
+    ).toBeInTheDocument();
+    expect(within(sheet).getByText("Hinweise für Sie.")).toBeInTheDocument();
+    expect(
+      within(sheet).queryByRole("region", { name: "Erinnerungen" }),
+    ).not.toBeInTheDocument();
   });
 });

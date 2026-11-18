@@ -35,7 +35,7 @@ export function manageStudentTopic(): HelpTopic {
           "`Betreuungszeiten`: der Wochenplan und einzelne Ausnahmen.",
           "`Betreuungsplan`: die geplante Betreuung Woche für Woche.",
           "`Nachrichten`: die Unterhaltungen mit den Bezugspersonen.",
-          "`Dokumente`: hochgeladene Dateien zu diesem Kind.",
+          "`Dokumente`: hochgeladene Dateien zu diesem Kind. Unter `Aus moto` stehen die Elternbriefe und Einverständnisse des Kindes.",
           "`Änderungsprotokoll`: wer wann was geändert hat.",
           "`Historie`: die vergangenen Betreuungstage.",
         ],
@@ -56,6 +56,7 @@ export function manageStudentTopic(): HelpTopic {
     differences: [
       "Sie sehen weniger Reiter? Dann haben Sie nur eingeschränkten Zugriff auf dieses Kind.",
       "Der Reiter `Anmeldungen` erscheint nur, wenn die Anmeldung über moto läuft.",
+      "`Aus moto` fehlt unter `Dokumente`? Den Bereich sehen nur Personen mit Zugriff auf `Mitteilungen`. Die Schule muss außerdem die Eltern-App nutzen.",
     ],
     troubleshootingDetails: [
       "Fehlt `Bearbeiten`? Dann fehlen Ihnen die Schreibrechte für dieses Kind.",

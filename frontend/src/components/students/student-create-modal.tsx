@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useApiFormError } from "~/contexts/ToastContext";
 import { Plus, Search, Trash2 } from "lucide-react";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import {
@@ -65,6 +65,9 @@ import {
 } from "~/lib/student-arrival-api";
 import { fetchPrivacyConsentDefaults } from "~/lib/student-api";
 import { useTenantAwarePath } from "~/lib/tenant-path";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import {
   mapBulkPickupScheduleFormToBackend,
   type BackendPickupScheduleRequest,
@@ -75,6 +78,8 @@ import { groupsConcept } from "~/lib/concepts/groups";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
 const logger = createLogger({ component: "StudentCreateModal" });
+
+const NO_SCHOOL_PERIODS: readonly SchoolPeriod[] = [];
 
 // Shape returned by GuardianFormModal's onSubmit for each entry.
 type GuardianSubmitEntry = {
@@ -193,6 +198,12 @@ interface StudentCreateModalProps {
     lastName: string;
     schoolClass: string;
   }) => Promise<void>;
+  /**
+   * The school keeps children without an OGS place as children of their own
+   * (#4803): the second mode then reads „Ohne OGS-Platz“ and
+   * `onCreateListEntry` creates such a child instead of a class list entry.
+   */
+  readonly withoutCarePlace?: boolean;
   readonly groups?: Array<{ readonly value: string; readonly label: string }>;
 }
 
@@ -203,6 +214,7 @@ export function StudentCreateModal({
   onClose,
   onCreate,
   onCreateListEntry,
+  withoutCarePlace = false,
   groups = EMPTY_GROUPS,
 }: StudentCreateModalProps) {
   const tenantPath = useTenantAwarePath();
@@ -239,26 +251,48 @@ export function StudentCreateModal({
     PickupScheduleFormData[]
   >([]);
   const [carePlanModalOpen, setCarePlanModalOpen] = useState(false);
-  const [careDaysSource, setCareDaysSource] = useState<CareDaysSource | null>(
-    null,
+  // The tenant decides where care days come from. Resolve that boundary as
+  // soon as the dialog opens: in booking mode this direct form must not create
+  // an OGS child without the approved offering links that define its days.
+  const arrivalSettings = useSWRAuth(
+    isOpen ? tenantStudentKeys.arrivalSettings() : null,
+    fetchArrivalSettings,
   );
-  const [schoolPeriods, setSchoolPeriods] = useState<readonly SchoolPeriod[]>(
-    [],
+  const settingsLoad = useSwrResourceLoadError(
+    [arrivalSettings],
+    "die Einstellung für Betreuungstage",
+    () => arrivalSettings.mutate(),
   );
-  const [timePresets, setTimePresets] = useState<CareTimePresets>();
-  const [arrivalSettingsLoading, setArrivalSettingsLoading] = useState(false);
-  // Erneut laden nach einem Ladefehler: zählt hoch, der Effekt lädt neu.
-  const [arrivalSettingsReload, setArrivalSettingsReload] = useState(0);
-  const settingsLoad = useApiLoadError();
-  const showSettingsLoadError = settingsLoad.show;
-  const clearSettingsLoadError = settingsLoad.clear;
+  const settings = arrivalSettings.data;
+  const careDaysSource: CareDaysSource | null =
+    settings?.careDaysSource ?? null;
+  const schoolPeriods = settings?.schoolPeriods ?? NO_SCHOOL_PERIODS;
+  const timePresets = useMemo<CareTimePresets | undefined>(
+    () =>
+      settings
+        ? {
+            arrival: settings.defaultArrivalTime ?? "",
+            pickup: settings.defaultPickupTime ?? "",
+          }
+        : undefined,
+    [settings],
+  );
+  const arrivalSettingsLoading =
+    isOpen && !settings && settingsLoad.failure === undefined;
   // The consent fields start at the school's defaults and are only sent when
   // the person changed one: the stored consent then follows the school
   // setting until somebody decides otherwise for this child.
-  const [consentDefaultsReload, setConsentDefaultsReload] = useState(0);
-  const consentDefaultsLoad = useApiLoadError();
-  const showConsentDefaultsError = consentDefaultsLoad.show;
-  const clearConsentDefaultsError = consentDefaultsLoad.clear;
+  const consentDefaults = useFreshSWR(
+    isOpen ? tenantStudentKeys.privacyConsentDefaults() : null,
+    fetchPrivacyConsentDefaults,
+  );
+  const consentDefaultsLoad = useSwrResourceLoadError(
+    [consentDefaults],
+    "die Datenschutz-Voreinstellung",
+    () => consentDefaults.mutate(),
+  );
+  // Whether this opening's form already took the school's defaults.
+  const [consentDefaultsApplied, setConsentDefaultsApplied] = useState(false);
   const touchedConsentFieldsRef = useRef(new Set<string>());
   const [guardianPickerOpen, setGuardianPickerOpen] = useState(false);
   // The inline picker panel is tall; collapsing it (on add or cancel) shrinks
@@ -298,93 +332,41 @@ export function StudentCreateModal({
       setArrivalSchedules([]);
       setPickupSchedules([]);
       setCarePlanModalOpen(false);
-      setCareDaysSource(null);
-      setSchoolPeriods([]);
-      setTimePresets(undefined);
-      setArrivalSettingsLoading(false);
       setGuardianPickerOpen(false);
       pendingGuardianScrollRef.current = false;
       touchedConsentFieldsRef.current = new Set();
     }
+    setConsentDefaultsApplied(false);
   }, [isOpen, clearErrors]);
 
+  // Take the defaults once per opening, from an answer read in this opening,
+  // and only into fields nobody touched yet.
+  const consentDefaultsData = consentDefaults.data;
+  const consentDefaultsValidating = consentDefaults.isValidating;
   useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-    clearConsentDefaultsError();
-    void fetchPrivacyConsentDefaults()
-      .then((defaults) => {
-        if (cancelled) return;
-        const touched = touchedConsentFieldsRef.current;
-        setFormData((prev) => ({
-          ...prev,
-          ...(!touched.has("privacy_consent_accepted") && {
-            privacy_consent_accepted: defaults.accepted,
-          }),
-          ...(!touched.has("data_retention_days") && {
-            data_retention_days: defaults.dataRetentionDays,
-          }),
-        }));
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          void showConsentDefaultsError(error, {
-            object: "die Datenschutz-Voreinstellung",
-            retry: () => setConsentDefaultsReload((count) => count + 1),
-          });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
+    if (
+      !isOpen ||
+      consentDefaultsApplied ||
+      !consentDefaultsData ||
+      consentDefaultsValidating
+    )
+      return;
+    setConsentDefaultsApplied(true);
+    const touched = touchedConsentFieldsRef.current;
+    setFormData((prev) => ({
+      ...prev,
+      ...(!touched.has("privacy_consent_accepted") && {
+        privacy_consent_accepted: consentDefaultsData.accepted,
+      }),
+      ...(!touched.has("data_retention_days") && {
+        data_retention_days: consentDefaultsData.dataRetentionDays,
+      }),
+    }));
   }, [
     isOpen,
-    consentDefaultsReload,
-    showConsentDefaultsError,
-    clearConsentDefaultsError,
-  ]);
-
-  // The tenant decides where care days come from. Resolve that boundary as
-  // soon as the dialog opens: in booking mode this direct form must not create
-  // an OGS child without the approved offering links that define its days.
-  useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-    setArrivalSettingsLoading(true);
-    clearSettingsLoadError();
-    void fetchArrivalSettings()
-      .then((settings) => {
-        if (!cancelled) {
-          setCareDaysSource(settings.careDaysSource);
-          setSchoolPeriods(settings.schoolPeriods);
-          setTimePresets({
-            arrival: settings.defaultArrivalTime ?? "",
-            pickup: settings.defaultPickupTime ?? "",
-          });
-        }
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setCareDaysSource(null);
-          setSchoolPeriods([]);
-          setTimePresets(undefined);
-          void showSettingsLoadError(error, {
-            object: "die Einstellung für Betreuungstage",
-            retry: () => setArrivalSettingsReload((count) => count + 1),
-          });
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setArrivalSettingsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    isOpen,
-    arrivalSettingsReload,
-    showSettingsLoadError,
-    clearSettingsLoadError,
+    consentDefaultsApplied,
+    consentDefaultsData,
+    consentDefaultsValidating,
   ]);
 
   // After the inline picker collapses (add or cancel), re-anchor to the guardian
@@ -497,7 +479,7 @@ export function StudentCreateModal({
         // Eine späte Ablehnung gehört nicht in einen neueren Vorgang.
         if (!op.isCurrent()) return;
         await errors.show(error, {
-          object: "die Klassenliste",
+          object: withoutCarePlace ? "das Kind" : "die Klassenliste",
           retry: () => void latestSubmitRef.current(),
         });
         return;
@@ -616,10 +598,17 @@ export function StudentCreateModal({
                 <SegmentedControl
                   ariaLabel="Art des Eintrags"
                   fullWidth
-                  items={[
-                    { value: "student", label: "Mit OGS-Betreuung" },
-                    { value: "list-entry", label: "Nur Klassenliste" },
-                  ]}
+                  items={
+                    withoutCarePlace
+                      ? [
+                          { value: "student", label: "Mit OGS-Platz" },
+                          { value: "list-entry", label: "Ohne OGS-Platz" },
+                        ]
+                      : [
+                          { value: "student", label: "Mit OGS-Betreuung" },
+                          { value: "list-entry", label: "Nur Klassenliste" },
+                        ]
+                  }
                   value={mode}
                   onChange={(next) => {
                     setMode(next);
@@ -666,17 +655,28 @@ export function StudentCreateModal({
                     type="info"
                     announce="off"
                     message={
-                      <>
-                        Für Kinder, die nicht im Ganztag sind: Der Eintrag
-                        besteht nur aus Name und Klasse und erscheint
-                        ausschließlich auf Klassenlisten und in der
-                        Klassenansicht (
-                        <span className="font-medium">Keine Betreuung</span>).
-                        Keine Anwesenheit, keine Betreuungsplanung, keine
-                        Kontaktdaten. Verwalten lässt sich die Liste über das
-                        Menü oben rechts unter{" "}
-                        <span className="font-medium">Klassenliste</span>.
-                      </>
+                      withoutCarePlace ? (
+                        <>
+                          Für Kinder der Klasse ohne Platz in der OGS. Sie
+                          stehen in der Kinderliste und in der Klassenansicht (
+                          <span className="font-medium">Keine Betreuung</span>
+                          ). Danach können Sie die Eltern in die Eltern-App
+                          einladen. Gruppe, Abholung und Betreuungszeiten gibt
+                          es für diese Kinder nicht.
+                        </>
+                      ) : (
+                        <>
+                          Für Kinder, die nicht im Ganztag sind: Der Eintrag
+                          besteht nur aus Name und Klasse und erscheint
+                          ausschließlich auf Klassenlisten und in der
+                          Klassenansicht (
+                          <span className="font-medium">Keine Betreuung</span>).
+                          Keine Anwesenheit, keine Betreuungsplanung, keine
+                          Kontaktdaten. Verwalten lässt sich die Liste über das
+                          Menü oben rechts unter{" "}
+                          <span className="font-medium">Klassenliste</span>.
+                        </>
+                      )
                     }
                   />
                   <InsetPanel framed padding="md">
@@ -1012,7 +1012,9 @@ export function StudentCreateModal({
                   data-setup-tour="student-submit"
                   tooltip={
                     mode === "list-entry"
-                      ? "Legt den Eintrag mit Name und Klasse an, ohne Betreuung."
+                      ? withoutCarePlace
+                        ? "Legt das Kind ohne OGS-Platz an, Eltern bekommen dabei keine Einladung."
+                        : "Legt den Eintrag mit Name und Klasse an, ohne Betreuung."
                       : "Legt das Kind an, Eltern bekommen dabei keine Einladung."
                   }
                   isLoading={save.pending}

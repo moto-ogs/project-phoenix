@@ -277,3 +277,45 @@ func reminderRecipients(rows []reminderRecipientRow) []*contract.ParentAnnouncem
 	}
 	return recipients
 }
+
+// permittedLetterChildrenSQL is "the child was reached by the published
+// letter AND the account is a guardian of exactly that child with parent
+// portal access" (#4813). Only these children's letters reach the account.
+//
+// Bind order: guardian links, account, announcements.
+const permittedLetterChildrenSQL = `WITH ` + accountChildrenCTE + `
+			SELECT DISTINCT a.id AS announcement_id, ac.student_id
+			FROM users.parent_announcements a
+			JOIN account_children ac ON ac.tenant_id = a.tenant_id AND ac.student_id = ANY(a.recipient_student_ids)
+			JOIN users.student_profiles s ON s.id = ac.student_id AND s.tenant_id = a.tenant_id` + studentMembershipJoins + `
+			JOIN users.persons p ON p.id = s.person_id AND p.deleted_at IS NULL AND sm.status <> 'alumnus'
+			WHERE a.id IN (?) AND a.delivery_mode = 'letter' AND a.published_at IS NOT NULL
+			ORDER BY a.id, ac.student_id`
+
+type permittedLetterChildRow struct {
+	AnnouncementID int64 `bun:"announcement_id"`
+	StudentID      int64 `bun:"student_id"`
+}
+
+// PermittedLetterChildren returns, per letter, the reached children whose
+// letter the account may read.
+func (p *Projection) PermittedLetterChildren(ctx context.Context, accountID int64, announcementIDs []int64) (map[int64][]int64, error) {
+	children := make(map[int64][]int64, len(announcementIDs))
+	if len(announcementIDs) == 0 {
+		return children, nil
+	}
+	db, _, err := p.database(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var rows []permittedLetterChildRow
+	if err := db.NewRaw(permittedLetterChildrenSQL,
+		p.links.AllSchoolsGuardianLinkRows(db), accountID, bun.List(announcementIDs),
+	).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("list permitted letter children: %w", err)
+	}
+	for _, row := range rows {
+		children[row.AnnouncementID] = append(children[row.AnnouncementID], row.StudentID)
+	}
+	return children, nil
+}

@@ -1,11 +1,14 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type {
   TraegerPlanningPerson,
   TraegerPlanningWeek,
 } from "~/lib/traeger-planning-api";
+import { setTestClock } from "~/test/clock";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchTraegerPlanningWeek: vi.fn(),
@@ -24,7 +27,8 @@ vi.mock("next/navigation", () => ({
 
 import TraegerStaffPlanningPage from "./page";
 
-// The test clock stands on Wednesday 2026-09-09; its week starts 2026-09-07.
+// The fixture week starts Monday 2026-09-07; every test pins the clock to
+// Wednesday 2026-09-09 so the page opens on that week.
 const MIRA: TraegerPlanningPerson = {
   recordId: "11",
   firstName: "Mira",
@@ -98,14 +102,15 @@ const WEEK: TraegerPlanningWeek = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerStaffPlanningPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
 describe("TraegerStaffPlanningPage", () => {
   beforeEach(() => {
+    setTestClock("2026-09-09T12:00:00+02:00");
     vi.clearAllMocks();
     api.fetchTraegerPlanningWeek.mockResolvedValue(WEEK);
   });
@@ -117,10 +122,15 @@ describe("TraegerStaffPlanningPage", () => {
     );
     expect(api.fetchTraegerPlanningWeek).toHaveBeenCalledWith("2026-09-07");
     expect(
-      screen.getByRole("button", { name: /11:30–16:30 an OGS Nord/ }),
+      // Named by what the block shows, then the hidden details (#7112).
+      screen.getByRole("button", {
+        name: /^11:30–16:30 Vom Träger OGS Nord ?, vom Träger geplant, Schicht ändern$/,
+      }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /18:00–21:30 an OGS Süd/ }),
+      screen.getByRole("button", {
+        name: /^18:00–21:30 Schicht OGS Süd ?, Schicht ändern$/,
+      }),
     ).toBeInTheDocument();
     expect(screen.getByText("8,5/20 h")).toBeInTheDocument();
     const hints = screen
@@ -217,7 +227,10 @@ describe("TraegerStaffPlanningPage", () => {
       screen.queryByRole("button", { name: /^Schicht planen,/ }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /11:30–16:30 an OGS Nord/ }),
+      // Named by what the block shows, then the hidden details (#7112).
+      screen.getByRole("button", {
+        name: /^11:30–16:30 Vom Träger OGS Nord ?, vom Träger geplant, Schicht ändern$/,
+      }),
     ).toBeInTheDocument();
   });
 

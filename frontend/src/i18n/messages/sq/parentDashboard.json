@@ -58,5 +58,7 @@
   "newsPollSaveTooltip": "Dërgon menjëherë përgjigjen tuaj te shkolla.",
   "newsPollSaveDisabledReason": "Fillimisht zgjidhni një përgjigje ose ndryshoni zgjedhjen.",
   "newsReadAndConfirmTooltip": "I konfirmon menjëherë shkollës që e keni lexuar mesazhin.",
-  "newsCloseUnsavedTooltip": "Mbyll sondazhin, zgjedhja juaj e re humbet."
+  "newsCloseUnsavedTooltip": "Mbyll sondazhin, zgjedhja juaj e re humbet.",
+  "newsLetterChildChoice": "Letër për cilin fëmijë?",
+  "newsLetterPerChild": "Secili nga fëmijët tuaj ka letrën e vet."
 }

@@ -39,11 +39,11 @@ func NewStaffAdmin(dependencies StaffAdminDependencies) (*workforce.StaffAdmin, 
 	if dependencies.DB == nil || dependencies.Subjects == nil || dependencies.Audit == nil || dependencies.Allows == nil || dependencies.BankData == nil {
 		return nil, errors.New("staff admin: database, staff subjects, audit trail, permission matcher and bank data cipher are required")
 	}
-	store := postgres.New(postgres.DatabaseRuntime(dependencies.DB))
 	now := dependencies.Now
 	if now == nil {
 		now = time.Now
 	}
+	store := postgres.New(postgres.DatabaseRuntime(dependencies.DB)).WithClock(now)
 	logger := dependencies.Logger
 	if logger == nil {
 		logger = slog.Default()
@@ -60,11 +60,23 @@ func NewTraegerStaffReleases() workforce.TraegerStaffReleases {
 	return application.NewTraegerStaffReleases(postgres.NewTraegerStaffStore())
 }
 
+// NewSchoolSpringerExits composes the exits of Springer after their last
+// block at a school (#7197); the Worker binds them to the staff offboarding.
+func NewSchoolSpringerExits() workforce.SchoolSpringerExits {
+	return postgres.NewTraegerStaffStore()
+}
+
 // --- documents --------------------------------------------------------------
 
 // NewStaffBankExportFields opens the sealed staff bank and tax values for the return export of a school (#6412); only the administrative export CLI binds it, never HTTP.
 func NewStaffBankExportFields(cipher workforce.BankDataCipher) workforce.StaffBankExportFields {
 	return application.NewStaffBankExportFields(cipher)
+}
+
+// NewStaffDocumentFileSeal is the maintenance-only seal of the sick note and
+// payslip files (#3840), never HTTP.
+func NewStaffDocumentFileSeal() workforce.StaffDocumentFileSeal {
+	return application.NewStaffDocumentFileSeal(postgres.NewStaffDocumentFileSealStore())
 }
 
 // NewStaffBankDataRekey is the maintenance-only bank backfill/rekey (#6332), never HTTP.

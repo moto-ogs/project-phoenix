@@ -27,7 +27,7 @@ func TestEnrollmentHistorySchemaMetadataKeepsRowFailures(t *testing.T) {
 	broken, err := f.resource.FormSchemaService.CreateSchema(ctx, "Broken history metadata", []enrollment.FormField{{Key: "other", Label: "Other", Type: enrollment.FormFieldText}}, env.creatorID)
 	require.NoError(t, err)
 	student := testpkg.CreateTestStudent(t, env.db, "History", "Metadata", "2a")
-	f.resource.DecisionService = newTestDecisionService(compose.DecisionDependencies{Requests: env.repos.Enrollment(), Children: env.repos.Enrollment(), Guardians: env.repos.Enrollment(), Phases: env.repos.Enrollment(), Schemas: env.repos.Enrollment(), Offerings: compose.NewCareOfferingRecords(env.reposCare.CarePlan)}, f.settings.Settings)
+	f.resource.DecisionService = newTestDecisionService(compose.DecisionDependencies{Now: time.Now, Requests: env.repos.Enrollment(), Children: env.repos.Enrollment(), Guardians: env.repos.Enrollment(), Phases: env.repos.Enrollment(), Schemas: env.repos.Enrollment(), Offerings: compose.NewCareOfferingRecords(env.reposCare.CarePlan)}, f.settings.Settings)
 	schemaIDs := []*int64{&valid.ID, &broken.ID, nil}
 	requestIDs := make([]string, 0, len(schemaIDs))
 	for i, schemaID := range schemaIDs {

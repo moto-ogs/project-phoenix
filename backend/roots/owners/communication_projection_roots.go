@@ -43,7 +43,8 @@ func applicantRows(rows []recordports.PendingAnnouncementApplicant) []audienceRo
 }
 
 func NewParentAnnouncementAudience(db transactionruntime.Database, applicants recordports.PendingApplicantSource, clocks ...func() time.Time) recordports.AnnouncementAudienceReads {
-	return communicationAnnouncementAudience{source: parentAudience.New(parentStore.ProjectionDatabase(db.Pool()), announcementApplicants{source: applicants}, guardianLinkView.NewReader(), clocks...)}
+	projection := parentAudience.New(parentStore.ProjectionDatabase(db.Pool()), announcementApplicants{source: applicants}, guardianLinkView.NewReader(), clocks...)
+	return communicationAnnouncementAudience{projectionLetterChildren: projection, source: projection}
 }
 
 func NewParentMessageInbox(db transactionruntime.Database) recordports.ParentInboxReads {

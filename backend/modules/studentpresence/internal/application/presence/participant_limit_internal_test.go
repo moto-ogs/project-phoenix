@@ -39,7 +39,7 @@ func (r *participantLimitActivities) FindByID(context.Context, any) (*ports.Sess
 
 func participantLimitService(settings *participantLimitSettings, activities *participantLimitActivities, openVisits int) *service {
 	return &service{
-		ServiceDependencies: ServiceDependencies{
+		ServiceDependencies: ServiceDependencies{Now: presenceTestNow,
 			PrincipalReader:   testAttendancePrincipal,
 			ActivityGroupRepo: activities,
 			SchoolPresence: &mockVisitRepository{countActiveByGroupIDFunc: func(context.Context, int64) (int, error) {

@@ -25,6 +25,30 @@ describe("Loading", () => {
     expect(output.className).toContain("z-50");
   });
 
+  it("covers the page with a calm, opaque surface instead of frosted glass", () => {
+    render(<Loading fullPage />);
+
+    const output = screen.getByLabelText("Lädt...");
+    expect(output).toHaveClass("bg-gray-50", "moto-loading-delayed");
+    expect(output.className).not.toContain("backdrop-blur");
+  });
+
+  it("shows a region loader at once; only the full page waits a moment", () => {
+    render(<Loading />);
+
+    expect(screen.getByLabelText("Lädt...")).not.toHaveClass(
+      "moto-loading-delayed",
+    );
+  });
+
+  it("stacks the message under the spinner outside compact rows", () => {
+    const { container } = render(<Loading />);
+
+    expect(container.querySelector(".flex-col")).toContainElement(
+      screen.getByText("Lädt..."),
+    );
+  });
+
   it("stays inside its region by default", () => {
     render(<Loading />);
 

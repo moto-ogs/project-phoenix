@@ -5,7 +5,6 @@ import (
 	"errors"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
@@ -20,11 +19,7 @@ import (
 var _ workforce.TraegerStaffProofs = (*TraegerStaff)(nil)
 
 func (t *TraegerStaff) today() calendar.Date {
-	today, err := calendar.ParseDate(t.clock.Today())
-	if err != nil {
-		return calendar.TodayDate()
-	}
-	return today
+	return calendar.DateFromTime(t.clock.Now())
 }
 
 // proofKinds adds the standard kinds the Träger does not have yet and lists
@@ -118,8 +113,9 @@ func (t *TraegerStaff) saveProofType(ctx context.Context, actor workforce.Traege
 		return workforce.TraegerStaffProofType{}, publicProofError(err)
 	}
 	if input.Archived {
-		// The store keeps an earlier archive time; any value marks it.
-		kind.ArchivedAt = new(time.Time)
+		// The store keeps an earlier archive time.
+		archivedAt := t.clock.Now()
+		kind.ArchivedAt = &archivedAt
 	}
 	var saved domain.TraegerProofType
 	err = t.released(ctx, actor, func(ctx context.Context) error {
@@ -418,7 +414,7 @@ func (t *TraegerStaff) MapProofKind(ctx context.Context, actor workforce.Traeger
 			}
 			mapping.ProofTypeID = *input.ProofTypeID
 		}
-		return t.store.SaveProofTypeMapping(ctx, actor.OrganizationID, actor.AccountID, mapping)
+		return t.store.SaveProofTypeMapping(ctx, actor.OrganizationID, actor.AccountID, mapping, t.clock.Now())
 	})
 	if err != nil {
 		return nil, publicProofError(err)

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	api "github.com/moto-ogs/project-phoenix/roots/owners"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -84,12 +85,12 @@ func TestRejectedEnrollmentCleanup_ConcurrentReopenPreservesRequestAndOutbox(t *
 		SubmissionSource:  capability.RequestSourcePublic,
 		SourceMetadata:    testFormValues(map[string]any{}),
 		StatusToken:       fmt.Sprintf("cleanup-token-%d", scope.TenantID),
-		SubmittedAt:       time.Now(),
+		SubmittedAt:       cleanupConcurrencyNow,
 	}
 	request.TenantID = scope.TenantID
 	require.NoError(t, InsertOwnerRequestForTest(ctx, repos.Enrollment(), request))
 
-	oldReview := time.Now().Add(-60 * 24 * time.Hour)
+	oldReview := cleanupConcurrencyNow.Add(-60 * 24 * time.Hour)
 	child := &capability.RequestChild{
 		RequestID:      request.ID,
 		FirstName:      "Cleanup",
@@ -123,7 +124,7 @@ func TestRejectedEnrollmentCleanup_ConcurrentReopenPreservesRequestAndOutbox(t *
 		UPDATE enrollment.request_children
 		SET status = ?, reviewed_at = ?
 		WHERE id = ?
-	`, capability.ChildStatusUnderReview, time.Now(), child.ID)
+	`, capability.ChildStatusUnderReview, cleanupConcurrencyNow, child.ID)
 	require.NoError(t, err)
 
 	lockStarted := make(chan struct{})
@@ -137,6 +138,7 @@ func TestRejectedEnrollmentCleanup_ConcurrentReopenPreservesRequestAndOutbox(t *
 		Delivery: newTestEnrollmentDelivery(t, db),
 		Settings: cleanupRetentionSettings{days: 30},
 		Logger:   slog.New(slog.DiscardHandler),
+		Now:      func() time.Time { return cleanupConcurrencyNow },
 	}).Cleanup
 
 	type cleanupOutcome struct {
@@ -184,7 +186,7 @@ func TestRejectedEnrollmentCleanup_TenantRoleDeletesLateInviteOutboxAndRequest(t
 	var _, requestID, outboxID, linkedInviteID, unrelatedInviteID int64
 	deliveryPort := newTestEnrollmentDelivery(t, db)
 
-	oldReview := time.Now().Add(-60 * 24 * time.Hour)
+	oldReview := cleanupConcurrencyNow.Add(-60 * 24 * time.Hour)
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), db, scope.TenantID, func(ctx context.Context, _ bun.Tx) error {
 		phase := &capability.Phase{
 			Name:             fmt.Sprintf("cleanup-late-invite-%d", scope.TenantID),
@@ -207,7 +209,7 @@ func TestRejectedEnrollmentCleanup_TenantRoleDeletesLateInviteOutboxAndRequest(t
 			SubmissionSource:  capability.RequestSourceLateInvite,
 			SourceMetadata:    testFormValues(map[string]any{}),
 			StatusToken:       fmt.Sprintf("cleanup-late-invite-token-%d", scope.TenantID),
-			SubmittedAt:       time.Now(),
+			SubmittedAt:       cleanupConcurrencyNow,
 		}
 		if err := InsertOwnerRequestForTest(ctx, repos.Enrollment(), request); err != nil {
 			return err
@@ -234,15 +236,15 @@ func TestRejectedEnrollmentCleanup_TenantRoleDeletesLateInviteOutboxAndRequest(t
 			GuardianEmail:     request.GuardianEmail,
 			GuardianFirstName: testpkg.StrPtr("Cleanup"),
 			GuardianLastName:  testpkg.StrPtr("Late Invite"),
-			ExpiresAt:         time.Now().Add(24 * time.Hour),
+			ExpiresAt:         cleanupConcurrencyNow.Add(24 * time.Hour),
 			CreatedBy:         creator.ID,
 			Reason:            testpkg.StrPtr("Contains enrollment PII"),
 		}
-		if err := testpkg.TenantCommand1(t, ctx, db, repos.Enrollment().InsertLateInvite, linkedInvite); err != nil {
+		if err := testpkg.TenantCommand1(t, ctx, db, cleanupConcurrencyInvites.InsertLateInvite, linkedInvite); err != nil {
 			return err
 		}
 		linkedInviteID = linkedInvite.ID
-		if err := testpkg.TenantCommand3(t, ctx, db, repos.Enrollment().MarkLateInviteUsed, linkedInvite.ID, request.ID, time.Now()); err != nil {
+		if err := testpkg.TenantCommand3(t, ctx, db, repos.Enrollment().MarkLateInviteUsed, linkedInvite.ID, request.ID, cleanupConcurrencyNow); err != nil {
 			return err
 		}
 
@@ -250,10 +252,10 @@ func TestRejectedEnrollmentCleanup_TenantRoleDeletesLateInviteOutboxAndRequest(t
 			PhaseID:       phase.ID,
 			TokenHash:     fmt.Sprintf("unrelated-invite-%d", scope.TenantID),
 			GuardianEmail: "unrelated@example.invalid",
-			ExpiresAt:     time.Now().Add(24 * time.Hour),
+			ExpiresAt:     cleanupConcurrencyNow.Add(24 * time.Hour),
 			CreatedBy:     creator.ID,
 		}
-		if err := testpkg.TenantCommand1(t, ctx, db, repos.Enrollment().InsertLateInvite, unrelatedInvite); err != nil {
+		if err := testpkg.TenantCommand1(t, ctx, db, cleanupConcurrencyInvites.InsertLateInvite, unrelatedInvite); err != nil {
 			return err
 		}
 		unrelatedInviteID = unrelatedInvite.ID
@@ -275,6 +277,7 @@ func TestRejectedEnrollmentCleanup_TenantRoleDeletesLateInviteOutboxAndRequest(t
 		Delivery: deliveryPort,
 		Settings: cleanupRetentionSettings{days: 30},
 		Logger:   slog.New(slog.DiscardHandler),
+		Now:      func() time.Time { return cleanupConcurrencyNow },
 	}).Cleanup
 	var result capability.RejectedEnrollmentCleanupResult
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), db, scope.TenantID, func(ctx context.Context, _ bun.Tx) error {
@@ -301,3 +304,12 @@ func TestRejectedEnrollmentCleanup_TenantRoleDeletesLateInviteOutboxAndRequest(t
 	require.NoError(t, db.NewRaw(`SELECT COUNT(*) FROM enrollment.late_invites WHERE id = ?`, unrelatedInviteID).Scan(context.Background(), &unrelatedCount))
 	assert.Equal(t, 1, unrelatedCount)
 }
+
+// cleanupConcurrencyNow is the fixed clock of the cleanup and of its
+// reviews and invites, a Wednesday 10:00 in Berlin inside the phases'
+// service year (#7104).
+var cleanupConcurrencyNow = calendar.NewDate(2026, time.November, 18).BerlinMidnight().Add(10 * time.Hour)
+
+// cleanupConcurrencyInvites stamps the invites' creation from the same
+// clock their expiry is set from, so expires_at > created_at on any day.
+var cleanupConcurrencyInvites = enrollmentCompose.NewClocked(func() time.Time { return cleanupConcurrencyNow })

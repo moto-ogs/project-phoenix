@@ -39,5 +39,5 @@ export default function DashboardRedirectPage() {
     router.replace(destination);
   }, [router, session, status]);
 
-  return <Loading message="Startseite wird geöffnet" />;
+  return <Loading message="Startseite wird geöffnet …" />;
 }

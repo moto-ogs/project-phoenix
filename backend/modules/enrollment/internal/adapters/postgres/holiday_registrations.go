@@ -24,10 +24,15 @@ import (
 // it names and names it once more in its filter.
 
 // HolidayRegistrationStore persists the public registrations of a Träger.
-type HolidayRegistrationStore struct{}
+type HolidayRegistrationStore struct{ now holidayClock }
 
 // NewHolidayRegistrationStore builds the store.
 func NewHolidayRegistrationStore() *HolidayRegistrationStore { return &HolidayRegistrationStore{} }
+
+// WithClock returns the store stamping its writes with now (ADR 0239).
+func (s *HolidayRegistrationStore) WithClock(now func() time.Time) *HolidayRegistrationStore {
+	return &HolidayRegistrationStore{now: now}
+}
 
 const findHolidayRegistrationLinkQuery = `SELECT organization_id, id, holiday_wish_rule,
 		(SELECT min(week.starts_on) FROM enrollment.holiday_period_weeks AS week
@@ -119,16 +124,18 @@ const (
 	// deleteExpiredHolidayRateLimitsQuery keeps the counters of a Träger
 	// small.
 	deleteExpiredHolidayRateLimitsQuery = `DELETE FROM enrollment.holiday_registration_rate_limits
-		WHERE organization_id = ? AND window_start < statement_timestamp() - (? * INTERVAL '1 second')`
+		WHERE organization_id = ? AND window_start < ?::timestamptz - (? * INTERVAL '1 second')`
+	// countHolidayRateLimitQuery runs the window on the owner clock: the
+	// proposed window_start is the attempt's instant (ADR 0281).
 	countHolidayRateLimitQuery = `INSERT INTO enrollment.holiday_registration_rate_limits AS bucket
-			(organization_id, key_type, key_hash)
-		VALUES (?, ?, encode(sha256(convert_to(?, 'UTF8')), 'hex'))
+			(organization_id, key_type, key_hash, window_start, updated_at)
+		VALUES (?, ?, encode(sha256(convert_to(?, 'UTF8')), 'hex'), ?, ?)
 		ON CONFLICT (organization_id, key_type, key_hash) DO UPDATE SET
-			attempts = CASE WHEN bucket.window_start > statement_timestamp() - (? * INTERVAL '1 second')
+			attempts = CASE WHEN bucket.window_start > EXCLUDED.window_start - (? * INTERVAL '1 second')
 				THEN bucket.attempts + 1 ELSE 1 END,
-			window_start = CASE WHEN bucket.window_start > statement_timestamp() - (? * INTERVAL '1 second')
-				THEN bucket.window_start ELSE statement_timestamp() END,
-			updated_at = statement_timestamp()
+			window_start = CASE WHEN bucket.window_start > EXCLUDED.window_start - (? * INTERVAL '1 second')
+				THEN bucket.window_start ELSE EXCLUDED.window_start END,
+			updated_at = EXCLUDED.updated_at
 		RETURNING attempts`
 )
 
@@ -148,30 +155,36 @@ func (s *HolidayRegistrationStore) CountHolidayRegistrationAttempt(ctx context.C
 	if err != nil {
 		return 0, err
 	}
-	if _, err := db.NewRaw(deleteExpiredHolidayRateLimitsQuery, organizationID, retentionSeconds).Exec(ctx); err != nil {
+	now := holidayNow(s.now)
+	if _, err := db.NewRaw(deleteExpiredHolidayRateLimitsQuery, organizationID, now, retentionSeconds).Exec(ctx); err != nil {
 		return 0, fmt.Errorf("enrollment postgres: remove expired holiday registration counters: %w", err)
 	}
 	var attempts int
-	if err := db.NewRaw(countHolidayRateLimitQuery, organizationID, keyType, value, seconds, seconds).Scan(ctx, &attempts); err != nil {
+	if err := db.NewRaw(countHolidayRateLimitQuery, organizationID, keyType, value, now, now, seconds, seconds).Scan(ctx, &attempts); err != nil {
 		return 0, fmt.Errorf("enrollment postgres: count holiday registration attempt: %w", err)
 	}
 	return attempts, nil
 }
 
 const (
-	insertHolidayRegistrationQuery = `INSERT INTO enrollment.holiday_registrations
+	// insertHolidayRegistrationQuery stamps the submission, the consents and
+	// the acceptances with the one instant of the owner clock the first
+	// parameter binds; the allocation orders by submitted_at (ADR 0281).
+	insertHolidayRegistrationQuery = `WITH clock AS (SELECT ?::timestamptz AS at)
+		INSERT INTO enrollment.holiday_registrations
 			(organization_id, holiday_period_id, guardian_first_name, guardian_last_name, guardian_email, guardian_phone,
 			 privacy_consent_at, health_consent_at, binding_confirmed_at, custody_confirmed_at, declaration_name, benefits_declared,
 			second_guardian_first_name, second_guardian_last_name, second_guardian_email, second_guardian_phone,
 			form_version, custom_data, legal_acceptances, consent_version,
 			guardian_address_street, guardian_address_postal_code, guardian_address_city, retention_days,
-			parent_account_id, parent_account_requested, status_token)
-		VALUES (?, ?, ?, ?, ?, ?, statement_timestamp(),
-			CASE WHEN ? THEN statement_timestamp() END, CASE WHEN ? THEN statement_timestamp() END,
-			CASE WHEN ? THEN statement_timestamp() END, NULLIF(?, ''), ?,
+			parent_account_id, parent_account_requested, status_token, submitted_at, created_at)
+		SELECT ?, ?, ?, ?, ?, ?, clock.at,
+			CASE WHEN ? THEN clock.at END, CASE WHEN ? THEN clock.at END,
+			CASE WHEN ? THEN clock.at END, NULLIF(?, ''), ?,
 			NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), ?, ?::jsonb,
-			(SELECT COALESCE(jsonb_object_agg(key, statement_timestamp()), '{}'::jsonb) FROM unnest(?::text[]) AS accepted(key)),
-			NULLIF(?, 0), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), ?, NULLIF(?, 0), ?, NULLIF(?, ''))
+			(SELECT COALESCE(jsonb_object_agg(key, clock.at), '{}'::jsonb) FROM unnest(?::text[]) AS accepted(key)),
+			NULLIF(?, 0), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), ?, NULLIF(?, 0), ?, NULLIF(?, ''), clock.at, clock.at
+		FROM clock
 		RETURNING id, submitted_at`
 	setHolidayFamilyHealthQuery = `UPDATE enrollment.holiday_registrations SET health_data = ?
 		WHERE organization_id = ? AND id = ?`
@@ -258,7 +271,7 @@ func (s *HolidayRegistrationStore) InsertHolidayRegistration(ctx context.Context
 	if err != nil {
 		return enrollment.HolidayRegistrationReceipt{}, err
 	}
-	if err := db.NewRaw(insertHolidayRegistrationQuery, organizationID, periodID, guardian.FirstName, guardian.LastName,
+	if err := db.NewRaw(insertHolidayRegistrationQuery, holidayNow(s.now), organizationID, periodID, guardian.FirstName, guardian.LastName,
 		guardian.Email, guardian.Phone, input.HealthConsent, input.BindingConfirmed, input.CustodyConfirmed, input.DeclarationName, input.BenefitsDeclared,
 		second.FirstName, second.LastName, second.Email, second.Phone, input.FormVersion, answers, pgdialect.Array(acceptedHolidayKeys(input.LegalAcceptances)),
 		input.ConsentVersion, address.Street, address.PostalCode, address.City, input.RetentionDays,
@@ -382,7 +395,7 @@ const (
 	// cascade deletes. A period with nothing to delete writes no row.
 	// Parameters: today, health retention in days.
 	deleteEndedHolidayRegistrationsQuery = `WITH run AS (
-			SELECT ?::date AS today, ?::int AS health_days
+			SELECT ?::date AS today, ?::int AS health_days, ?::timestamptz AS deleted_at
 		), ended AS (
 			SELECT week.organization_id, week.holiday_period_id, max(week.ends_on) AS ended_on
 			FROM enrollment.holiday_period_weeks AS week
@@ -456,8 +469,9 @@ const (
 			FROM ended
 		), logged AS (
 		INSERT INTO enrollment.holiday_registration_deletions
-			(organization_id, holiday_period_id, period_ended_on, registrations, children, audit_entries, health_records)
-		SELECT organization_id, holiday_period_id, ended_on, registrations, children, audit_entries, health_records
+			(organization_id, holiday_period_id, period_ended_on, registrations, children, audit_entries, health_records, deleted_at)
+		SELECT organization_id, holiday_period_id, ended_on, registrations, children, audit_entries, health_records,
+			(SELECT deleted_at FROM run)
 		FROM counts
 		WHERE registrations + audit_entries + health_records > 0
 		RETURNING id, organization_id, holiday_period_id, period_ended_on, registrations, children, audit_entries, health_records, deleted_at)
@@ -465,9 +479,10 @@ const (
 			WHERE registration.organization_id = logged.organization_id AND registration.holiday_period_id = logged.holiday_period_id) AS registration_ids
 		FROM logged`
 	deleteAllExpiredHolidayRateLimitsQuery = `DELETE FROM enrollment.holiday_registration_rate_limits
-		WHERE window_start < statement_timestamp() - (? * INTERVAL '1 second')`
+		WHERE window_start < ?::timestamptz - (? * INTERVAL '1 second')`
+	// The deletion log is stamped and aged on the owner clock (ADR 0281).
 	deleteExpiredHolidayRegistrationDeletionsQuery = `DELETE FROM enrollment.holiday_registration_deletions
-		WHERE deleted_at < statement_timestamp() - make_interval(years => ?)`
+		WHERE deleted_at < ?::timestamptz - make_interval(years => ?)`
 )
 
 // holidayRegistrationDeletionRow is one row of the deletion log: the counts
@@ -507,7 +522,8 @@ func (s *HolidayRegistrationStore) DeleteExpiredHolidayRegistrations(ctx context
 		return 0, nil, err
 	}
 	var logged []holidayRegistrationDeletionRow
-	if err := db.NewRaw(deleteEndedHolidayRegistrationsQuery, today, healthDays).Scan(ctx, &logged); err != nil {
+	now := holidayNow(s.now)
+	if err := db.NewRaw(deleteEndedHolidayRegistrationsQuery, today, healthDays, now).Scan(ctx, &logged); err != nil {
 		return 0, nil, fmt.Errorf("enrollment postgres: delete ended holiday registrations: %w", err)
 	}
 	deleted := 0
@@ -518,7 +534,7 @@ func (s *HolidayRegistrationStore) DeleteExpiredHolidayRegistrations(ctx context
 			registrations = append(registrations, enrollment.HolidayRegistrationReference{OrganizationID: period.OrganizationID, RegistrationID: id})
 		}
 	}
-	counters, err := affectedRows(db.NewRaw(deleteAllExpiredHolidayRateLimitsQuery, retentionSeconds).Exec(ctx))
+	counters, err := affectedRows(db.NewRaw(deleteAllExpiredHolidayRateLimitsQuery, now, retentionSeconds).Exec(ctx))
 	if err != nil {
 		return 0, nil, fmt.Errorf("enrollment postgres: delete expired holiday registration counters: %w", err)
 	}
@@ -536,7 +552,7 @@ func (s *HolidayRegistrationStore) DeleteExpiredHolidayRegistrationDeletions(ctx
 	if err != nil {
 		return 0, err
 	}
-	deleted, err := affectedRows(db.NewRaw(deleteExpiredHolidayRegistrationDeletionsQuery, years).Exec(ctx))
+	deleted, err := affectedRows(db.NewRaw(deleteExpiredHolidayRegistrationDeletionsQuery, holidayNow(s.now), years).Exec(ctx))
 	if err != nil {
 		return 0, fmt.Errorf("enrollment postgres: delete expired holiday registration deletion log: %w", err)
 	}

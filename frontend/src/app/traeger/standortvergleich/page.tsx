@@ -4,12 +4,12 @@
 // Kennzahlen der Schulen über einen gewählten Zeitraum nebeneinander. Oben
 // vier Zahlen für alle gewählten Schulen zusammen, darunter die Rangfolge
 // einer Kennzahl mit dem Schnitt der Schulen und die Tabelle aller gewählten
-// Kennzahlen. Der Export enthält dieselben Schulen und Kennzahlen als CSV.
+// Kennzahlen. Der Export enthält dieselben Schulen und Kennzahlen als PDF,
+// Excel oder CSV (#4718).
 // Nur Zahlen, keine Kinder.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { useSession } from "next-auth/react";
 import type { DateRange } from "react-day-picker";
 import { School } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
@@ -17,11 +17,6 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DateRangePicker } from "~/components/ui/date-range-picker";
 import { EmptyState } from "~/components/ui/empty-state";
-import {
-  ExportMenu,
-  type ExportMenuOption,
-  exportFormatOptions,
-} from "~/components/ui/export-menu";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { MultiSelect } from "~/components/ui/multi-select";
 import { PlanLegend } from "~/components/ui/planning/plan-legend";
@@ -51,15 +46,17 @@ import {
   utilizationPresets,
   windowLength,
 } from "~/components/traeger/utilization-model";
-import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { FreshPerTraeger } from "~/components/traeger/fresh-per-traeger";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { childrenConcept } from "~/lib/concepts/children";
 import { presentConcept } from "~/lib/concepts/present";
 import { schoolComparisonConcept } from "~/lib/concepts/schoolComparison";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
-import { downloadBlob } from "~/lib/file-download";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { createLogger } from "~/lib/logger";
+import { traegerReportKeys } from "~/lib/swr/traeger-report-keys";
 import {
   COMPARISON_METRICS,
   type ComparisonMetric,
@@ -69,9 +66,6 @@ import {
 } from "~/lib/traeger-comparison-api";
 import type { UtilizationWindow } from "~/lib/traeger-utilization-api";
 import { traegerPath } from "~/lib/traeger-url";
-import { fetchTraegerSchools, type TraegerSchool } from "~/lib/traeger-api";
-
-const logger = createLogger({ component: "TraegerComparisonPage" });
 
 const ComparisonChart = dynamic(
   () =>
@@ -80,10 +74,6 @@ const ComparisonChart = dynamic(
     ),
   { ssr: false, loading: () => <Skeleton className="h-56" aria-hidden /> },
 );
-
-const EXPORT_FORMATS: readonly ExportMenuOption[] = exportFormatOptions([
-  "csv",
-]);
 
 /** Ein Fenster ist höchstens 366 Tage lang, wie die Auslastung. */
 const MAX_WINDOW_DAYS = 366;
@@ -278,8 +268,14 @@ function Figures({
 }
 
 export default function TraegerComparisonPage() {
-  const { data: session, status } = useSession();
-  const orgId = session?.user?.orgId;
+  return (
+    <FreshPerTraeger>
+      <TraegerComparisonContent />
+    </FreshPerTraeger>
+  );
+}
+
+function TraegerComparisonContent() {
   const today = useBerlinToday();
   const presets = useMemo(() => utilizationPresets(today), [today]);
   const defaultWindow = presets[DEFAULT_PRESET]?.window ?? {
@@ -293,13 +289,6 @@ export default function TraegerComparisonPage() {
   const [rankBy, setRankBy] = useState<ComparisonMetric>(
     DEFAULT_RANKING_METRIC,
   );
-  const [allSchools, setAllSchools] = useState<readonly TraegerSchool[]>([]);
-  const [comparison, setComparison] = useState<TraegerComparison | null>(null);
-  const [exporting, setExporting] = useState(false);
-  const request = useRef(0);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-  const { show: showActionError } = useApiErrorDisplay();
 
   const changeWindow = useCallback((next: UtilizationWindow) => {
     let { from } = next;
@@ -309,63 +298,20 @@ export default function TraegerComparisonPage() {
     setPeriod({ from, to: next.to });
   }, []);
 
-  const load = useCallback(async () => {
-    if (orgId === undefined) return;
-    const current = ++request.current;
-    setComparison(null);
-    try {
-      const result = await fetchTraegerComparison({ ...period, schoolIds });
-      if (current !== request.current) return;
-      setComparison(result);
-      clearLoadError();
-    } catch (err) {
-      if (current !== request.current) return;
-      logger.error("traeger_comparison_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "den Standortvergleich",
-        retry: () => void load(),
-      });
-    }
-  }, [period, schoolIds, orgId, clearLoadError, showLoadError]);
-
+  const {
+    data: comparison,
+    loading,
+    error: loadError,
+  } = useTraegerResource(
+    traegerReportKeys.comparison(period.from, period.to, schoolIds),
+    () => fetchTraegerComparison({ ...period, schoolIds }),
+    "den Standortvergleich",
+  );
   // The school choice offers every school of the Träger, also those not
-  // chosen at the moment.
-  useEffect(() => {
-    if (orgId === undefined) return;
-    let active = true;
-    fetchTraegerSchools()
-      .then((schools) => {
-        if (active) setAllSchools(schools);
-      })
-      .catch((err: unknown) => {
-        // The comparison itself still loads and shows its own error; without
-        // the list the school choice only stays empty.
-        logger.warn("traeger_comparison_schools_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-    return () => {
-      active = false;
-    };
-  }, [orgId]);
-
-  // A switch of the Träger drops what the previous one showed.
-  const shownOrgId = useRef(orgId);
-  useEffect(() => {
-    if (shownOrgId.current === orgId) return;
-    shownOrgId.current = orgId;
-    request.current++;
-    setComparison(null);
-    setSchoolIds([]);
-    setAllSchools([]);
-  }, [orgId]);
-
-  useEffect(() => {
-    if (status === "loading") return;
-    void load();
-  }, [load, status]);
+  // chosen at the moment. Without the list the choice only stays empty; the
+  // comparison shows its own error.
+  const { schools: traegerSchools } = useTraegerSchools();
+  const allSchools = traegerSchools ?? [];
 
   const schools = useMemo(() => comparison?.schools ?? [], [comparison]);
   const rows = useMemo(
@@ -380,32 +326,9 @@ export default function TraegerComparisonPage() {
     [metrics, comparison],
   );
   const ranked = useMemo(() => ranking(schools, rankBy), [schools, rankBy]);
-  const loading = comparison === null && !pageLoad.error;
   const rankInfo = metricInfo(rankBy);
   const averageForRank = comparison?.average[rankBy];
   const missingForRank = schools.length - ranked.length;
-
-  async function exportCsv() {
-    setExporting(true);
-    try {
-      const file = await downloadTraegerComparison(
-        { ...period, schoolIds },
-        metrics,
-      );
-      downloadBlob(
-        file.blob,
-        file.filename ??
-          `standortvergleich-${period.from}-bis-${period.to}.csv`,
-      );
-    } catch (err) {
-      logger.error("traeger_comparison_export_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showActionError(err, { object: "die Exportdatei" });
-    } finally {
-      setExporting(false);
-    }
-  }
 
   const range: DateRange = {
     from: parseISODate(period.from),
@@ -436,16 +359,25 @@ export default function TraegerComparisonPage() {
           Schulen stehen der Schnitt der Schulen und alle Schulen zusammen. Eine
           Schule ohne Zahl hat „–“, etwa ohne Platzgrenze oder ohne Check-in.
           Mit „Herunterladen“ bekommen Sie die Tabelle mit den gewählten Schulen
-          und Kennzahlen.
+          und Kennzahlen als PDF, Excel oder CSV.
         </>
       }
       actions={
-        <ExportMenu
+        <TraegerListExportMenu
+          download={(format) =>
+            downloadTraegerComparison({ ...period, schoolIds }, metrics, format)
+          }
+          scope={
+            schoolIds.length > 0
+              ? schoolIds.length === 1
+                ? "Eine gewählte Schule"
+                : `${schoolIds.length} gewählte Schulen`
+              : "Alle Schulen"
+          }
           ariaLabel="Standortvergleich herunterladen"
-          options={EXPORT_FORMATS}
-          busyKey={exporting ? "csv" : null}
+          fallbackName={`standortvergleich-${period.from}-bis-${period.to}`}
+          errorObject="den Standortvergleich"
           unavailable={!comparison || schools.length === 0}
-          onSelect={() => void exportCsv()}
         />
       }
       stats={
@@ -469,7 +401,7 @@ export default function TraegerComparisonPage() {
         ) : null
       }
       statsLoading={loading}
-      error={pageLoad.error}
+      error={loadError}
       empty={
         noSchools
           ? {

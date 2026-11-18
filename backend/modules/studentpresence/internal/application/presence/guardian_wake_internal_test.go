@@ -31,7 +31,7 @@ func (r *recordingWaker) BroadcastChildUpdateToGuardians(tenantID, studentID int
 func TestWakeGuardiansAfterCommitIsNoOpWithoutWaker(t *testing.T) {
 	t.Parallel()
 
-	s := &service{}
+	s := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow}}
 	ctx := tenant.WithTenantID(context.Background(), 42)
 
 	s.wakeGuardiansAfterCommit(ctx, 4242) // darf nicht panicken
@@ -44,7 +44,7 @@ func TestWakeGuardiansAfterCommitSkipsWithoutTenant(t *testing.T) {
 	t.Parallel()
 
 	waker := &recordingWaker{}
-	s := &service{}
+	s := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow}}
 	WithGuardianWaker(waker)(s)
 
 	s.wakeGuardiansAfterCommit(context.Background(), 4242)
@@ -60,7 +60,7 @@ func TestWakeGuardiansAfterCommitSkipsInvalidStudent(t *testing.T) {
 	t.Parallel()
 
 	waker := &recordingWaker{}
-	s := &service{}
+	s := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow}}
 	WithGuardianWaker(waker)(s)
 	ctx := tenant.WithTenantID(context.Background(), 42)
 
@@ -75,7 +75,7 @@ func TestBroadcastVisitMovedWakesGuardiansWithoutBroadcaster(t *testing.T) {
 	t.Parallel()
 
 	waker := &recordingWaker{}
-	s := &service{}
+	s := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow}}
 	WithGuardianWaker(waker)(s)
 	ctx, commit := tenanttest.WithAfterCommitHooks(
 		tenant.WithTenantID(context.Background(), 42),

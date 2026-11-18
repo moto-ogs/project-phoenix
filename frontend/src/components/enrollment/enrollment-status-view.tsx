@@ -51,7 +51,7 @@ import type { FormError } from "~/components/ui/form-error";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { ParentFamilyChildrenCard } from "~/components/parent/parent-family-children-card";
 import { SectionCard } from "~/components/ui/section-card";
@@ -255,6 +255,7 @@ function EnrollmentStatusViewContent({
   const invalidateRequest = useCallback(() => {
     latestRequest.current++;
   }, []);
+  // oxlint-disable-next-line swr/no-effect-load -- status-link token page, open without a session; ~/lib/swr has no public reader
   useEffect(() => {
     void load();
     return invalidateRequest;
@@ -1675,6 +1676,7 @@ function useLocalizedFormLabels(
   useLayoutEffect(() => {
     setLabels(null);
   }, [token, enabled]);
+  // oxlint-disable-next-line swr/no-effect-load -- form labels of a status-link token, read without a session; ~/lib/swr has no public reader
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;

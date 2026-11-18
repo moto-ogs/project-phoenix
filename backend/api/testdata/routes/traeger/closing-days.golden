@@ -1,4 +1,5 @@
 DELETE /traeger/closing-days/{id}
 GET /traeger/closing-days/
+GET /traeger/closing-days/export
 POST /traeger/closing-days/
 PUT /traeger/closing-days/{id}

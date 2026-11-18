@@ -100,6 +100,9 @@
   "traeger_absence_type_name_taken": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "traeger_absence_type_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "traeger_staff_already_linked": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "traeger_staff_hire_duplicate": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "traeger_staff_hire_incomplete": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "traeger_staff_hire_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "traeger_staff_import_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "traeger_staff_import_file_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "traeger_staff_import_file_too_large": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
@@ -118,5 +121,11 @@
   "traeger_planning_shift_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "traeger_month_closed_by_school": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "traeger_month_later_closed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
-  "traeger_month_not_kept": "{object} değiştirilemedi. Güncel durumu kontrol edin."
+  "traeger_month_not_kept": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "pool_block_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "pool_block_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "pool_block_taken": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "pool_springer_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "pool_springer_busy": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "traeger_payroll_not_ready": "{object} değiştirilemedi. Güncel durumu kontrol edin."
 }

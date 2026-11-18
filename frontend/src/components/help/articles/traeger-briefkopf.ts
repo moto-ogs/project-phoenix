@@ -1,7 +1,7 @@
 import type { HelpTopic } from "../help-types";
 import { HELP_TOPICS } from "~/lib/help-topics";
 
-/** `/traeger/einstellungen/briefkopf` (#4653, #5685): Logo, Absender und Fußzeile; dazu Ansprechperson und Bankverbindungen. */
+/** `/traeger/einstellungen/briefkopf` (#4653, #5685, #5624): Logo, Absender, Fußzeile und QR-Code zum Überweisen; dazu Ansprechperson und Bankverbindungen. */
 export function traegerBriefkopfTopic(): HelpTopic {
   return {
     id: HELP_TOPICS.traegerBriefkopf,
@@ -35,6 +35,16 @@ export function traegerBriefkopfTopic(): HelpTopic {
         ],
       },
       {
+        title: "QR-Code zum Überweisen ein- oder ausschalten",
+        description:
+          "Der QR-Code steht auf Rechnung, Gebührenbescheid und Bestätigungsschreiben, wenn die Familie überweist. Er ist von Anfang an eingeschaltet.",
+        steps: [
+          "Wählen Sie in den Einstellungen `Briefkopf und Vorlagen`.",
+          "Schalten Sie bei `GiroCode drucken` den Schalter aus oder ein. Der GiroCode ist der QR-Code zum Überweisen.",
+          "moto speichert die Änderung sofort. Sie gilt für alle Schreiben, die Sie danach erstellen.",
+        ],
+      },
+      {
         title: "Ansprechperson eintragen",
         steps: [
           "Wählen Sie in den Einstellungen `Allgemein` und dann den Bereich `Kontakt`.",
@@ -58,9 +68,10 @@ export function traegerBriefkopfTopic(): HelpTopic {
       "Die `Vorschau` oben auf der Seite `Briefkopf und Vorlagen` zeigt, wie Kopf und Fuß eines Briefs aussehen.",
     notes: [
       "Ein leeres Feld für Absender oder Fußzeile zeigt ein graues Beispiel. Das Beispiel steht nie im Brief.",
-      "Eine Bankverbindung ist der `Standard`. Sie steht auf allen Briefen und Rechnungen.",
+      "Eine Bankverbindung ist der `Standard`. Sie steht auf allen Briefen und Rechnungen. Auch der QR-Code zum Überweisen nimmt diese Bankverbindung.",
       "Eine andere Bankverbindung machen Sie im Menü der Zeile mit `Als Standard festlegen` zum Standard.",
       "Löschen Sie den Standard, wird die älteste andere Bankverbindung der Standard.",
+      "Schreiben, die schon erstellt sind, ändern sich nicht. Sie behalten ihren QR-Code oder bleiben ohne.",
       "Jedes Ansehen und jede Änderung von Ansprechperson und Bankverbindungen steht im Protokoll des Trägers.",
     ],
     differences: [

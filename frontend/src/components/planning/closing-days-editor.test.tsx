@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ClosingDayDraft } from "./closing-day-modal";
 import { ApiError } from "~/lib/api-error";
 import type { ClosingDay } from "~/lib/closing-day-helpers";
+import { testClockDay } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 
 const {
@@ -35,6 +36,8 @@ const {
   mockHostedWeeks: vi.fn(),
 }));
 
+vi.unmock("swr");
+
 vi.mock("next-auth/react", () => ({
   useSession: mockUseSession,
 }));
@@ -47,7 +50,8 @@ vi.mock("~/lib/timetable-api", () => ({
   timetableService: { bulkCancel: mockBulkCancel },
 }));
 
-vi.mock("~/lib/swr", () => ({
+vi.mock("~/lib/swr", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/swr")>()),
   useTenantMutateMatching: () => mockRefreshPlan,
 }));
 
@@ -130,7 +134,16 @@ vi.mock("~/components/planning/closing-day-modal", () => ({
     ) : null,
 }));
 
-import { ClosingDaysEditor } from "./closing-days-editor";
+import { SWRConfig } from "~/lib/swr/testing";
+import { ClosingDaysEditor as Editor } from "./closing-days-editor";
+
+function ClosingDaysEditor(props: Parameters<typeof Editor>[0]) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <Editor {...props} />
+    </SWRConfig>
+  );
+}
 
 function makeClosingDay(overrides: Partial<ClosingDay> = {}): ClosingDay {
   return {
@@ -142,6 +155,12 @@ function makeClosingDay(overrides: Partial<ClosingDay> = {}): ClosingDay {
   };
 }
 
+/** "YYYY-MM-DD" -> "DD.MM.YYYY" */
+function germanDate(iso: string): string {
+  const [year, month, day] = iso.split("-");
+  return `${day}.${month}.${year}`;
+}
+
 describe("ClosingDaysEditor", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -149,7 +168,7 @@ describe("ClosingDaysEditor", () => {
     mockInvalidate.mockResolvedValue(undefined);
     mockRefreshPlan.mockResolvedValue(undefined);
     mockUseSession.mockReturnValue({
-      data: { user: { permissions: ["schedules:manage"] } },
+      data: { user: { id: "1", permissions: ["schedules:manage"] } },
       status: "authenticated",
     });
   });
@@ -214,7 +233,7 @@ describe("ClosingDaysEditor", () => {
     render(<ClosingDaysEditor />);
 
     const table = await screen.findByRole("table");
-    expect(within(table).getByText("Vom Träger")).toBeInTheDocument();
+    expect(await within(table).findByText("Vom Träger")).toBeInTheDocument();
     expect(
       within(table).getByRole("button", {
         name: "Aktionen für Pädagogischer Tag",
@@ -280,7 +299,7 @@ describe("ClosingDaysEditor", () => {
     expect(
       within(screen.getByRole("group", { name: "Zeitraum" })).getByRole(
         "button",
-        { name: "12.–25. Okt. 2026" },
+        { name: "12.–25. Okt. 2026 , Zeitraum" },
       ),
     ).toBeInTheDocument();
     expect(mockBulkCancel).toHaveBeenCalledWith(
@@ -314,10 +333,13 @@ describe("ClosingDaysEditor", () => {
   });
 
   it("sperrt das Absagen, wenn im Zeitraum nichts mehr geplant ist", async () => {
-    mockList.mockResolvedValue([makeClosingDay()]);
+    // Ein Zeitraum ganz nach heute: das Absagen beginnt nicht erst bei heute.
+    const startDate = testClockDay(14);
+    const endDate = testClockDay(21);
+    mockList.mockResolvedValue([makeClosingDay({ startDate, endDate })]);
     mockBulkCancel.mockResolvedValue({
-      from: "2026-12-24",
-      to: "2026-12-31",
+      from: startDate,
+      to: endDate,
       dryRun: true,
       count: 0,
       days: [],
@@ -332,7 +354,7 @@ describe("ClosingDaysEditor", () => {
 
     expect(
       await screen.findByText(
-        "Im Zeitraum 24.12.2026 – 31.12.2026 sind keine Termine mehr geplant.",
+        `Im Zeitraum ${germanDate(startDate)} – ${germanDate(endDate)} sind keine Termine mehr geplant.`,
       ),
     ).toBeInTheDocument();
     expect(
@@ -395,7 +417,7 @@ describe("ClosingDaysEditor", () => {
 
   it("zeigt ohne Planungsrecht kein Absagen", async () => {
     mockUseSession.mockReturnValue({
-      data: { user: { permissions: ["schedules:read"] } },
+      data: { user: { id: "1", permissions: ["schedules:read"] } },
       status: "authenticated",
     });
     mockList.mockResolvedValue([makeClosingDay()]);

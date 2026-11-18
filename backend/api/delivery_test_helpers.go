@@ -66,6 +66,10 @@ type DeliveryTestModule struct {
 	// hub its signals and the in-app notices go to.
 	Feed deliveryContract.NotificationFeed
 	Hub  *realtime.Hub
+	// GuardianFeed reads the feed of a guardian across its schools (#7140).
+	GuardianFeed deliveryContract.GuardianNotificationFeed
+	// TraegerFeed reads the bell of the Träger-Portal (#7146).
+	TraegerFeed deliveryContract.TraegerNotificationFeed
 }
 
 // NotificationPreferenceRouterForTests mounts the actual protected resources
@@ -77,8 +81,13 @@ func (m DeliveryTestModule) NotificationPreferenceRouterForTests() chi.Router {
 	notifications := NewNotificationHTTP(nil, nil, m.NotificationPreferences, m.Feed)
 	router.Mount("/api/notifications", notifications.Router())
 	router.Mount("/school/notifications", notifications.SchoolRouter())
-	parents := parentAPI.NewResource(parentAPI.ResourceConfig{Preferences: bindParentPreferences(m.NotificationPreferences)})
+	parents := parentAPI.NewResource(parentAPI.ResourceConfig{
+		Now:         time.Now,
+		Preferences: bindParentPreferences(m.NotificationPreferences),
+		Feed:        bindParentNotificationFeed(m.GuardianFeed),
+	})
 	router.Mount("/parent", parents.Router(ParentSessionChain))
+	router.Mount("/traeger/notifications", NewTraegerNotificationHTTP(m.TraegerFeed).Router())
 	return router
 }
 
@@ -124,7 +133,7 @@ func NewDeliveryTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	}
 	_, err = deliveryCompose.NewWorker(delivery, &deliveryCompose.MailPushProvider{Registry: deliveryCompose.NewEmailTemplateRegistry(nil), Mailer: fallbackMailer, MailIdentity: identity,
 		Push:   deliveryCompose.NewWebPushSender(deliveryContract.WebPushConfig{Subscriber: vapid.Subscriber, PublicKey: vapid.PublicKey, PrivateKey: vapid.PrivateKey}, deliveryCompose.NewExpiredPushSubscriptionCleaner(deliveryCompose.NewTenantTransactions(db.Pool()), pushRepo)),
-		Logger: logger, Tenants: deliveryCompose.NewTenantTransactions(db.Pool()), PushAuthorized: deliveryCompose.NewPushAuthorizationChecker(deliveryCompose.NewTenantTransactions(db.Pool()), pushRepo)})
+		Logger: logger, Tenants: deliveryCompose.NewTenantTransactions(db.Pool()), PushAuthorized: deliveryCompose.NewPushAuthorizationChecker(deliveryCompose.NewTenantTransactions(db.Pool()), pushRepo), Now: delivery.Now})
 	if err != nil {
 		return DeliveryTestModule{}, err
 	}
@@ -141,8 +150,14 @@ func NewDeliveryTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return DeliveryTestModule{}, err
 	}
+	guardianFeed := service.(interface {
+		GuardianFeed() deliveryContract.GuardianNotificationFeed
+	}).GuardianFeed()
+	traegerFeed := service.(interface {
+		TraegerFeed() deliveryContract.TraegerNotificationFeed
+	}).TraegerFeed()
 	return DeliveryTestModule{Runtime: delivery, EmailOutbox: deliveryCompose.NewEmailOutbox(deliveryCompose.NewDurableEmails(delivery.Module)),
-		Notifications: service, PushSubscriptions: push, NotificationPreferences: preferences, Feed: feed, Hub: hub}, nil
+		Notifications: service, PushSubscriptions: push, NotificationPreferences: preferences, Feed: feed, Hub: hub, GuardianFeed: guardianFeed, TraegerFeed: traegerFeed}, nil
 }
 
 // newDeliveryTestRouter builds the notification router over the SSE, Web Push
@@ -183,7 +198,7 @@ func NewDeliveryTestPushNotifier(db transactionruntime.Database, unit tenant.Uni
 	if err != nil {
 		return nil, err
 	}
-	return deliveryCompose.NewNotifier(settings, slog.Default(), func(string, string, string, time.Duration, error) {}, nil, nil, webPush), nil
+	return deliveryCompose.NewNotifier(settings, slog.Default(), func(string, string, string, time.Duration, error) {}, nil, time.Now, webPush), nil
 }
 
 // NewDeliveryTestFeedNotifier is the production notification router with the

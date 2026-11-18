@@ -29,12 +29,15 @@ type EmailWebhooks struct {
 // NewEmailWebhooks registers the providers under their path segment. Without a
 // fallback transport no event may send a mail again: it would go out over the
 // same provider.
-func NewEmailWebhooks(store ports.EmailDeliveryEventStore, providers []ports.EmailWebhookProvider, fallback bool, logger *slog.Logger, observe ports.Observer) *EmailWebhooks {
+func NewEmailWebhooks(store ports.EmailDeliveryEventStore, providers []ports.EmailWebhookProvider, fallback bool, logger *slog.Logger, observe ports.Observer, now func() time.Time) *EmailWebhooks {
+	if now == nil {
+		panic("email webhooks: the composition's clock is required")
+	}
 	byName := make(map[string]ports.EmailWebhookProvider, len(providers))
 	for _, provider := range providers {
 		byName[provider.Name()] = provider
 	}
-	return &EmailWebhooks{store: store, providers: byName, fallback: fallback, logger: logger, observe: observe, now: time.Now}
+	return &EmailWebhooks{store: store, providers: byName, fallback: fallback, logger: logger, observe: observe, now: now}
 }
 
 // IngestEmailWebhook verifies one delivery on its raw body, before anything

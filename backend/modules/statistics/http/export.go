@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 )
@@ -81,9 +80,8 @@ func courseExportFilters(report *studentpresence.StatisticsReport) []string {
 // buildCourseExportDocument renders one row per course.
 func buildCourseExportDocument(report *studentpresence.StatisticsReport) ExportDocument {
 	doc := ExportDocument{
-		Title:       "Kursteilnahme",
-		Subtitle:    fmt.Sprintf("Teilnahme je Kurs vom %s bis %s", report.From.Format("02.01.2006"), report.To.Format("02.01.2006")),
-		GeneratedAt: time.Now(),
+		Title:    "Kursteilnahme",
+		Subtitle: fmt.Sprintf("Teilnahme je Kurs vom %s bis %s", report.From.Format("02.01.2006"), report.To.Format("02.01.2006")),
 		Columns: []ExportColumn{
 			{ID: columnCourse, Label: "Kurs"},
 			{ID: columnCategory, Label: "Kategorie"},
@@ -122,9 +120,8 @@ func buildCourseExportDocument(report *studentpresence.StatisticsReport) ExportD
 // grouped by child so a family sees its own block in one place.
 func buildCourseStudentExportDocument(report *studentpresence.StatisticsReport) ExportDocument {
 	doc := ExportDocument{
-		Title:       "Kursteilnahme je Kind",
-		Subtitle:    fmt.Sprintf("Teilnahme je Kind vom %s bis %s", report.From.Format("02.01.2006"), report.To.Format("02.01.2006")),
-		GeneratedAt: time.Now(),
+		Title:    "Kursteilnahme je Kind",
+		Subtitle: fmt.Sprintf("Teilnahme je Kind vom %s bis %s", report.From.Format("02.01.2006"), report.To.Format("02.01.2006")),
 		Columns: []ExportColumn{
 			{ID: columnName, Label: "Name"},
 			{ID: columnSchoolClass, Label: "Klasse"},
@@ -162,9 +159,8 @@ func formatSeats(maxParticipants int) string {
 // buildRoomExportDocument renders the room utilization table.
 func buildRoomExportDocument(report *studentpresence.StatisticsReport) ExportDocument {
 	doc := ExportDocument{
-		Title:       "Raumauslastung",
-		Subtitle:    fmt.Sprintf("Raumnutzung vom %s bis %s", report.From.Format("02.01.2006"), report.To.Format("02.01.2006")),
-		GeneratedAt: time.Now(),
+		Title:    "Raumauslastung",
+		Subtitle: fmt.Sprintf("Raumnutzung vom %s bis %s", report.From.Format("02.01.2006"), report.To.Format("02.01.2006")),
 		Columns: []ExportColumn{
 			{ID: columnRoomName, Label: "Raum"},
 			{ID: columnCapacity, Label: "Plätze"},
@@ -212,9 +208,8 @@ func buildRoomExportDocument(report *studentpresence.StatisticsReport) ExportDoc
 // their own document (buildRoomExportDocument, section=rooms).
 func buildExportDocument(report *studentpresence.StatisticsReport) ExportDocument {
 	doc := ExportDocument{
-		Title:       "Statistik",
-		Subtitle:    fmt.Sprintf("Anwesenheit vom %s bis %s", report.From.Format("02.01.2006"), report.To.Format("02.01.2006")),
-		GeneratedAt: time.Now(),
+		Title:    "Statistik",
+		Subtitle: fmt.Sprintf("Anwesenheit vom %s bis %s", report.From.Format("02.01.2006"), report.To.Format("02.01.2006")),
 		Columns: []ExportColumn{
 			{ID: columnName, Label: "Name"},
 			{ID: columnSchoolClass, Label: "Klasse"},

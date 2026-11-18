@@ -18,8 +18,8 @@ type fileCleanupRow struct {
 	FilenameStored string     `bun:"filename_stored,notnull"`
 	RetryAfter     time.Time  `bun:"retry_after,notnull"`
 	CleanedAt      *time.Time `bun:"cleaned_at"`
-	CreatedAt      time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt      time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt      time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt      time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 func (r fileCleanupRow) intent() domain.CleanupIntent {
@@ -33,17 +33,19 @@ func (r fileCleanupRow) intent() domain.CleanupIntent {
 // the durable cleanup intents of the folder files in documents.files. An
 // intent's owner is the folder the upload was meant for; like the attachment
 // intents it carries no foreign key, so it outlives a deleted folder.
+// now is the clock of the eligibility (retry_after) and of the settle stamps.
 type FileCleanupStore struct {
 	database Database
 	kind     string
+	now      func() time.Time
 }
 
 // NewFileCleanupStore wires the folder-file intent store.
-func NewFileCleanupStore(database Database) *FileCleanupStore {
-	if database == nil {
-		panic("file storage postgres: database runtime is required")
+func NewFileCleanupStore(database Database, now func() time.Time) *FileCleanupStore {
+	if database == nil || now == nil {
+		panic("file storage postgres: database runtime and clock are required")
 	}
-	return &FileCleanupStore{database: database, kind: "files"}
+	return &FileCleanupStore{database: database, kind: "files", now: now}
 }
 
 // Queue durably records the intent to remove an object before it is written.
@@ -63,7 +65,7 @@ func (s *FileCleanupStore) Queue(ctx context.Context, ownerID int64, storedName 
 		Set("retry_after = EXCLUDED.retry_after").
 		Set("owner_id = EXCLUDED.owner_id").
 		Exec(ctx)
-	stats := measure(started, 1)
+	stats := measure(time.Since(started), 1)
 	if err != nil {
 		return stats, fmt.Errorf("file storage postgres: queue file cleanup: %w", err)
 	}
@@ -88,7 +90,7 @@ func (s *FileCleanupStore) QueueAll(ctx context.Context, ownerID int64, names []
 	_, err = db.NewInsert().Model(&rows).ModelTableExpr(`documents.file_cleanup`).
 		On("CONFLICT (tenant_id, object_kind, filename_stored) DO UPDATE").
 		Set("cleaned_at = NULL").Set("retry_after = EXCLUDED.retry_after").Set("owner_id = EXCLUDED.owner_id").Exec(ctx)
-	stats := measure(started, int64(len(rows)))
+	stats := measure(time.Since(started), int64(len(rows)))
 	if err != nil {
 		return stats, fmt.Errorf("file storage postgres: queue upload cleanups: %w", err)
 	}
@@ -111,13 +113,13 @@ func (s *FileCleanupStore) ListQueued(ctx context.Context) ([]domain.CleanupInte
 		ModelTableExpr(`documents.file_cleanup AS "intent"`).
 		Where(`"intent".tenant_id = ?`, tenantID).
 		Where(`"intent".object_kind = ?`, s.kind).
-		Where(`"intent".retry_after <= ?`, time.Now()).
+		Where(`"intent".retry_after <= ?`, s.now()).
 		Where(`"intent".cleaned_at IS NULL`).
 		OrderExpr(`"intent".id ASC`).
 		Limit(domain.CleanupBatchSize).
 		For("UPDATE SKIP LOCKED").
 		Scan(ctx)
-	stats := measure(started, int64(len(rows)))
+	stats := measure(time.Since(started), int64(len(rows)))
 	if err != nil {
 		return nil, stats, fmt.Errorf("file storage postgres: list queued file cleanups: %w", err)
 	}
@@ -130,19 +132,19 @@ func (s *FileCleanupStore) ListQueued(ctx context.Context) ([]domain.CleanupInte
 
 func (s *FileCleanupStore) MarkComplete(ctx context.Context, intentID int64) (domain.OperationStats, error) {
 	return s.settle(ctx, "mark file cleanup complete", func(query *bun.UpdateQuery) *bun.UpdateQuery {
-		return query.Set(`cleaned_at = ?`, time.Now()).Where(`"intent".id = ?`, intentID)
+		return query.Set(`cleaned_at = ?`, s.now()).Where(`"intent".id = ?`, intentID)
 	})
 }
 
 func (s *FileCleanupStore) MarkCompleteByFilename(ctx context.Context, storedName string) (domain.OperationStats, error) {
 	return s.settle(ctx, "mark file cleanup complete by filename", func(query *bun.UpdateQuery) *bun.UpdateQuery {
-		return query.Set(`cleaned_at = ?`, time.Now()).Where(`"intent".filename_stored = ?`, storedName)
+		return query.Set(`cleaned_at = ?`, s.now()).Where(`"intent".filename_stored = ?`, storedName)
 	})
 }
 
 func (s *FileCleanupStore) ActivateByFilename(ctx context.Context, storedName string) (domain.OperationStats, error) {
 	return s.settle(ctx, "activate file cleanup", func(query *bun.UpdateQuery) *bun.UpdateQuery {
-		return query.Set(`retry_after = ?`, time.Now()).Where(`"intent".filename_stored = ?`, storedName)
+		return query.Set(`retry_after = ?`, s.now()).Where(`"intent".filename_stored = ?`, storedName)
 	})
 }
 
@@ -158,7 +160,7 @@ func (s *FileCleanupStore) settle(ctx context.Context, operation string, narrow 
 		Where(`"intent".cleaned_at IS NULL`)
 	started := time.Now()
 	result, err := query.Exec(ctx)
-	stats := measure(started, 0)
+	stats := measure(time.Since(started), 0)
 	if err != nil {
 		return stats, fmt.Errorf("file storage postgres: %s: %w", operation, err)
 	}
@@ -170,11 +172,11 @@ func (s *FileCleanupStore) settle(ctx context.Context, operation string, narrow 
 
 // NewPhotoCleanupStore shares the existing intent protocol, with a disjoint
 // namespace so a folder sweep can never remove a student's photo.
-func NewUploadCleanupStore(database Database, kind string) *FileCleanupStore {
+func NewUploadCleanupStore(database Database, kind string, now func() time.Time) *FileCleanupStore {
 	if kind != "student-photos" && kind != "enrollment-legal-documents" {
 		panic("unsupported upload cleanup namespace")
 	}
-	store := NewFileCleanupStore(database)
+	store := NewFileCleanupStore(database, now)
 	store.kind = kind
 	return store
 }

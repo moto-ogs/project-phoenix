@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Mail } from "lucide-react";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { EmploymentCarryover } from "./invitation-employment-carryover";
@@ -26,6 +26,8 @@ import {
 } from "~/lib/invitation-helpers";
 import { looksLikeEmail } from "~/lib/email-format";
 import { createLogger } from "~/lib/logger";
+import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { useDebounce } from "~/lib/use-debounce";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -54,47 +56,38 @@ function useFormerEmployment(email: string): {
 } {
   const current = email.trim().toLowerCase();
   const address = useDebounce(current, FORMER_EMPLOYMENT_DEBOUNCE_MS);
-  const [answer, setAnswer] = useState<{
-    address: string;
-    formerEmployment: FormerEmployment | null;
-  } | null>(null);
-
-  useEffect(() => {
-    // Only an address that could be complete is worth a lookup; a half-typed
-    // one would ask once per keystroke pause.
-    if (!looksLikeEmail(address)) return;
-    let cancelled = false;
-    setAnswer(null);
-    const controller = new AbortController();
-    const timeoutID = window.setTimeout(
-      () => controller.abort(),
-      FORMER_EMPLOYMENT_LOOKUP_TIMEOUT_MS,
-    );
-    findFormerEmployment(address, controller.signal)
-      .then((formerEmployment) => {
-        if (!cancelled) setAnswer({ address, formerEmployment });
-      })
-      .catch((err: unknown) => {
-        // Without a successful lookup there is no choice to offer. Keep the
-        // existing invitation behavior; sending reports its own form errors.
-        if (cancelled) return;
-        setAnswer({ address, formerEmployment: null });
+  // Each address asks anew, also when the person returns to one: a
+  // Wiederaufnahme must not rest on an earlier answer.
+  const lookup = useFreshSWR(
+    looksLikeEmail(address) ? enrollmentKeys.formerEmployment(address) : null,
+    async () => {
+      const controller = new AbortController();
+      const timeoutID = globalThis.setTimeout(
+        () => controller.abort(),
+        FORMER_EMPLOYMENT_LOOKUP_TIMEOUT_MS,
+      );
+      try {
+        return await findFormerEmployment(address, controller.signal);
+      } finally {
+        globalThis.clearTimeout(timeoutID);
+      }
+    },
+    {
+      shouldRetryOnError: false,
+      // Without a successful lookup there is no choice to offer. Keep the
+      // existing invitation behavior; sending reports its own form errors.
+      onError: (err) => {
         logger.warn("former_employment_lookup_failed", {
           error: err instanceof Error ? err.message : String(err),
         });
-      })
-      .finally(() => window.clearTimeout(timeoutID));
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutID);
-      controller.abort();
-    };
-  }, [address]);
+      },
+    },
+  );
+  const answered = address === current && lookup.fresh;
 
   return {
-    formerEmployment:
-      answer?.address === current ? answer.formerEmployment : null,
-    pending: looksLikeEmail(current) && answer?.address !== current,
+    formerEmployment: answered ? (lookup.data ?? null) : null,
+    pending: looksLikeEmail(current) && !answered,
   };
 }
 
@@ -182,8 +175,6 @@ export function InvitationForm({
   existingPositions = EMPTY_POSITIONS,
 }: InvitationFormProps) {
   const [form, setForm] = useState<CreateInvitationRequest>(initialForm);
-  const [roles, setRoles] = useState<RoleOption[]>([]);
-  const [isLoadingRoles, setIsLoadingRoles] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Every failure of this form, validation included, comes from the server
   // and is shown on the shared error path (#2511): the message in the alert
@@ -203,40 +194,32 @@ export function InvitationForm({
   } | null>(null);
   const { success: toastSuccess } = useToast();
 
-  const loadRoles = useCallback(
-    async (isCancelled: () => boolean = () => false) => {
-      try {
-        setIsLoadingRoles(true);
-        const roleList = await authService.getRoles();
-        if (isCancelled()) return;
-        setRoles(toAssignableRoleOptions(roleList));
-        clearErrors();
-      } catch (err) {
-        logger.error("failed to load roles", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!isCancelled()) {
-          void showError(err, {
-            object: "die Rollenauswahl",
-            retry: () => void loadRoles(),
-          });
-        }
-      } finally {
-        if (!isCancelled()) {
-          setIsLoadingRoles(false);
-        }
-      }
-    },
-    [clearErrors, showError],
+  const {
+    data: roleList,
+    error: rolesError,
+    mutate: mutateRoles,
+  } = useSWRAuth(enrollmentKeys.roles(), () => authService.getRoles());
+  const roles = useMemo<RoleOption[]>(
+    () => (roleList ? toAssignableRoleOptions(roleList) : []),
+    [roleList],
   );
-
+  const isLoadingRoles = !roleList && !rolesError;
+  // A failed role list stands in the form's alert; a later answer clears it.
+  const rolesErrorShown = useRef(false);
   useEffect(() => {
-    let cancelled = false;
-    void loadRoles(() => cancelled);
-    return () => {
-      cancelled = true;
-    };
-  }, [loadRoles]);
+    if (roleList) {
+      if (!rolesErrorShown.current) return;
+      rolesErrorShown.current = false;
+      clearErrors();
+      return;
+    }
+    if (!rolesError) return;
+    rolesErrorShown.current = true;
+    void showError(rolesError, {
+      object: "die Rollenauswahl",
+      retry: () => void mutateRoles(),
+    });
+  }, [roleList, rolesError, clearErrors, showError, mutateRoles]);
 
   const inviteBaseUrl = useMemo(() => {
     if (typeof globalThis !== "undefined" && "location" in globalThis) {

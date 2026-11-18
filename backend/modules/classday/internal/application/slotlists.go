@@ -94,8 +94,8 @@ type SlotListDependencies struct {
 	Settings        ports.Settings
 	Access          ports.ReadAccess
 	ListExport      ListRenderer
-	// Now overrides the service clock. Leave nil in production (defaults to
-	// time.Now); tests inject a fixed instant for a deterministic weekday.
+	// Now is the composition's clock and is required: the root binds the
+	// real clock, tests a fixed instant for a deterministic weekday.
 	Now func() time.Time
 }
 
@@ -115,8 +115,8 @@ type service struct {
 	access          ports.ReadAccess
 	listExport      ListRenderer
 	// now is the clock the service reads "today" and "has this slot started
-	// yet" from. Production leaves it nil (→ time.Now); tests inject a fixed
-	// instant so the pickup suite is not at the mercy of the weekday CI runs on.
+	// yet" from: the root's clock, or in tests a fixed instant so the pickup
+	// suite is not at the mercy of the weekday CI runs on.
 	now func() time.Time
 }
 
@@ -130,10 +130,10 @@ func NewSlotLists(deps SlotListDependencies) classday.SlotLists {
 	if deps.Settings == nil {
 		panic("classday application.NewSlotLists: Settings dependency is required")
 	}
-	now := deps.Now
-	if now == nil {
-		now = time.Now
+	if deps.Now == nil {
+		panic("classday application.NewSlotLists: the clock is required")
 	}
+	now := deps.Now
 	return &service{
 		timetable:       deps.Timetable,
 		presence:        deps.Presence,

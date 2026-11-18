@@ -4,7 +4,6 @@ import { ChevronRight } from "lucide-react";
 import { Fragment, type ReactNode } from "react";
 
 import { Button } from "~/components/ui/button";
-import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ListRow } from "~/components/ui/list-row";
 import Link from "~/components/ui/navigation-link";
@@ -13,7 +12,11 @@ import { SkeletonRows } from "~/components/ui/skeleton";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { BlockState } from "~/components/home/day-flow-block";
 import { blockStaffNames } from "~/components/timetable/block-row-parts";
-import { HomeCard, HomeCardIcon } from "~/components/home/home-card";
+import {
+  HomeCard,
+  HomeCardEmpty,
+  HomeCardIcon,
+} from "~/components/home/home-card";
 import {
   dayPlanLinkTooltip,
   HomeCardLink,
@@ -34,6 +37,7 @@ import {
 } from "~/components/home/use-start-own-block";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
+import { homeKeys } from "~/lib/swr/portal-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import { canStartPlannedInstance } from "~/lib/timetable-lifecycle";
@@ -71,7 +75,7 @@ export function MyDayBlock() {
   const { data, error, isLoading, mutate } = useSWRAuth<
     PlannedTimetableInstance[]
   >(
-    "home-day-flow",
+    homeKeys.dayFlow(),
     () =>
       timetableOperationsApi.plannedNow({
         scope: "day",
@@ -143,8 +147,7 @@ export function MyDayBlock() {
         }
         if (mine.length === 0) {
           return (
-            <EmptyState
-              className="py-4"
+            <HomeCardEmpty
               title="Heute sind Sie für keinen Block eingeteilt"
               description="Ihre Einsätze aus dem Betreuungsplan erscheinen hier, mit Raum, Kindern und dem Starten-Knopf."
             />

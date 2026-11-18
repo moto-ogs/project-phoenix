@@ -8,7 +8,7 @@
 
 import { ArchiveX, Inbox } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   NOTICE_KIND_LABELS,
   NOTICE_KIND_TONES,
@@ -23,23 +23,27 @@ import {
 } from "~/components/traeger/care-notice-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EmptyState } from "~/components/ui/empty-state";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import {
   type CareNotice,
   type CareNoticeRunDetail,
@@ -47,6 +51,7 @@ import {
   fetchCareNoticeRun,
   releaseCareNoticeRun,
 } from "~/lib/traeger-care-notices-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 const logger = createLogger({ component: "TraegerCareNoticeRunPage" });
 
@@ -140,40 +145,33 @@ export default function TraegerCareNoticeRunPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const runId = params.id;
-  const [run, setRun] = useState<CareNoticeRunDetail | null>(null);
+  const {
+    data: run,
+    loading,
+    error: loadError,
+    mutate,
+    reload,
+  } = useTraegerResource(
+    traegerBillingRunKeys.noticeRun(runId),
+    () => fetchCareNoticeRun(runId),
+    "der Jahreslauf",
+  );
+  const invalidateFamily = useInvalidateFamily();
   const [confirming, setConfirming] = useState(false);
   const [releasing, setReleasing] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [discarding, setDiscarding] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const releaseErrors = useApiErrorDisplay();
   const { success } = useToast();
-
-  const load = useCallback(async () => {
-    try {
-      setRun(await fetchCareNoticeRun(runId));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_care_notice_run_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "der Jahreslauf",
-        retry: () => void load(),
-      });
-    }
-  }, [runId, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const release = async () => {
     if (!run) return;
     setReleasing(true);
     try {
-      setRun(await releaseCareNoticeRun(run));
+      await mutate(await releaseCareNoticeRun(run), { revalidate: false });
+      void invalidateFamily(traegerBillingRunKeys.noticeRuns());
+      // The exports list the notices of the released run.
+      void invalidateFamily(traegerBillingKeys.exportRuns());
       setConfirming(false);
       success(
         run.previewCount === 0
@@ -186,7 +184,7 @@ export default function TraegerCareNoticeRunPage() {
       });
       setConfirming(false);
       void releaseErrors.show(err, { object: "der Jahreslauf" });
-      void load();
+      reload();
     } finally {
       setReleasing(false);
     }
@@ -196,7 +194,8 @@ export default function TraegerCareNoticeRunPage() {
     if (!run) return;
     setDiscarding(true);
     try {
-      setRun(await discardCareNoticeRun(run.id));
+      await mutate(await discardCareNoticeRun(run.id), { revalidate: false });
+      void invalidateFamily(traegerBillingRunKeys.noticeRuns());
       setConfirmingDiscard(false);
       success(
         `Der Lauf ist verworfen. Für ${run.year} können Sie einen neuen Jahreslauf starten.`,
@@ -207,7 +206,7 @@ export default function TraegerCareNoticeRunPage() {
       });
       setConfirmingDiscard(false);
       void releaseErrors.show(err, { object: "der Jahreslauf" });
-      void load();
+      reload();
     } finally {
       setDiscarding(false);
     }
@@ -265,65 +264,83 @@ export default function TraegerCareNoticeRunPage() {
           </HolidayHeadFacts>
         ) : null
       }
-      statsLoading={!run && !pageLoad.error}
+      statsLoading={loading}
       actions={
-        empty ? (
-          <Button
-            type="button"
-            variant="outline_danger"
-            size="md"
-            tooltip="moto fragt vorher nach, dann ist das Jahr frei für einen neuen Lauf."
-            onClick={() => setConfirmingDiscard(true)}
-          >
-            Leeren Lauf verwerfen
-          </Button>
-        ) : preview ? (
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            disabled={!canRelease}
-            disabledReason={releaseBlockReason(run)}
-            tooltip={
-              run.previewCount === 0
-                ? "moto fragt vorher nach, dann ist der Jahreslauf ohne Bescheid abgeschlossen."
-                : "moto fragt vorher nach, dann sind alle Bescheide mit Nummer festgeschrieben."
-            }
-            onClick={() => setConfirming(true)}
-          >
-            {run.previewCount === 0
-              ? "Jahreslauf abschließen"
-              : "Bescheide ausstellen"}
-          </Button>
-        ) : run?.status === "released" && run.previewCount > 0 ? (
-          // The PAIN.008 file of the installments (#4697) and the delivery of
-          // the stored originals (#6347) have pages of their own.
-          <div className="flex flex-wrap gap-2">
-            <ButtonLink
-              href={traegerPath(
-                `/traeger/abrechnung/jahresbescheide/${run.id}/lastschrift`,
-              )}
-              variant="outline"
+        <>
+          {run ? (
+            <TraegerListExportMenu
+              download={(format) =>
+                downloadTraegerList(
+                  `/api/traeger/care-notice-runs/${run.id}/export`,
+                  format,
+                )
+              }
+              scope={traegerExportScope()}
+              ariaLabel="Bescheide herunterladen"
+              tooltip="Zeigt die Formate für alle Bescheide des Laufs. Jeder Download wird protokolliert."
+              fallbackName={`jahresbescheide-${run.year}`}
+              errorObject="die Bescheide"
+              unavailable={run.notices.length === 0}
+            />
+          ) : null}
+          {empty ? (
+            <Button
+              type="button"
+              variant="outline_danger"
               size="md"
-              tooltip="Öffnet die Lastschrift der Raten mit der Datei für Ihre Bank."
+              tooltip="moto fragt vorher nach, dann ist das Jahr frei für einen neuen Lauf."
+              onClick={() => setConfirmingDiscard(true)}
             >
-              Lastschrift der Raten
-            </ButtonLink>
-            <ButtonLink
-              href={traegerPath(
-                `/traeger/abrechnung/jahresbescheide/${run.id}/versand`,
-              )}
+              Leeren Lauf verwerfen
+            </Button>
+          ) : preview ? (
+            <Button
+              type="button"
               variant="primary"
               size="md"
-              tooltip="Öffnet den Versand, dort senden Sie die Bescheide an die Familien."
+              disabled={!canRelease}
+              disabledReason={releaseBlockReason(run)}
+              tooltip={
+                run.previewCount === 0
+                  ? "moto fragt vorher nach, dann ist der Jahreslauf ohne Bescheid abgeschlossen."
+                  : "moto fragt vorher nach, dann sind alle Bescheide mit Nummer festgeschrieben."
+              }
+              onClick={() => setConfirming(true)}
             >
-              An Familien senden
-            </ButtonLink>
-          </div>
-        ) : undefined
+              {run.previewCount === 0
+                ? "Jahreslauf abschließen"
+                : "Bescheide ausstellen"}
+            </Button>
+          ) : run?.status === "released" && run.previewCount > 0 ? (
+            // The PAIN.008 file of the installments (#4697) and the delivery of
+            // the stored originals (#6347) have pages of their own.
+            <div className="flex flex-wrap gap-2">
+              <ButtonLink
+                href={traegerPath(
+                  `/traeger/abrechnung/jahresbescheide/${run.id}/lastschrift`,
+                )}
+                variant="outline"
+                size="md"
+                tooltip="Öffnet die Lastschrift der Raten mit der Datei für Ihre Bank."
+              >
+                Lastschrift der Raten
+              </ButtonLink>
+              <ButtonLink
+                href={traegerPath(
+                  `/traeger/abrechnung/jahresbescheide/${run.id}/versand`,
+                )}
+                variant="primary"
+                size="md"
+                tooltip="Öffnet den Versand, dort senden Sie die Bescheide an die Familien."
+              >
+                An Familien senden
+              </ButtonLink>
+            </div>
+          ) : null}
+        </>
       }
-      error={pageLoad.error}
-      loading={!pageLoad.error && !run}
+      error={loadError}
+      loading={loading}
       overlays={
         run && empty ? (
           <ConfirmationModal

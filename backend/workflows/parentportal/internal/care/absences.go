@@ -256,7 +256,7 @@ func (s *Service) schoolEntryDays(ctx context.Context, studentID int64, dates []
 // the same student, including future-only ranges, and staff conflict
 // detection relies on it to make its read and write one atomic decision.
 func (s *Service) writeAbsence(ctx context.Context, tenantID int64, fresh *PortalStudent, report absenceReport, note *string) ([]*absencerecords.StudentStatusDay, error) {
-	now := time.Now()
+	now := s.now()
 	today := s.todayDate()
 	includesToday := slices.Contains(report.dates, today)
 	notifyAbsence := includesToday && isNewParentReportableAbsence(fresh, report.status)

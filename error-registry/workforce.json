@@ -231,6 +231,36 @@
       "legacy": "personnel_number_taken"
     },
     {
+      "code": "workforce.pool_block_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.pool_block_invalid"
+    },
+    {
+      "code": "workforce.pool_block_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.pool_block_not_found"
+    },
+    {
+      "code": "workforce.pool_block_taken",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.pool_block_taken"
+    },
+    {
+      "code": "workforce.pool_springer_busy",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.pool_springer_busy"
+    },
+    {
+      "code": "workforce.pool_springer_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.pool_springer_not_found"
+    },
+    {
       "code": "workforce.qualification_type_name_taken",
       "class": "business_rejection",
       "parameters": [],
@@ -601,6 +631,12 @@
       "legacy": "workforce.traeger_month_not_kept"
     },
     {
+      "code": "workforce.traeger_payroll_not_ready",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_payroll_not_ready"
+    },
+    {
       "code": "workforce.traeger_planning_shift_not_found",
       "class": "input",
       "parameters": [],
@@ -647,6 +683,24 @@
       "class": "business_rejection",
       "parameters": [],
       "legacy": "workforce.traeger_staff_already_linked"
+    },
+    {
+      "code": "workforce.traeger_staff_hire_duplicate",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_hire_duplicate"
+    },
+    {
+      "code": "workforce.traeger_staff_hire_incomplete",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_hire_incomplete"
+    },
+    {
+      "code": "workforce.traeger_staff_hire_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_hire_invalid"
     },
     {
       "code": "workforce.traeger_staff_import_changed",

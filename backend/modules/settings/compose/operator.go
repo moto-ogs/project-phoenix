@@ -5,6 +5,9 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	configSvc "github.com/moto-ogs/project-phoenix/modules/settings/internal/application"
@@ -28,6 +31,7 @@ type OperatorDependencies struct {
 	// the closure it returns runs only after a successful commit.
 	OnValueSet configModel.OperatorValueSetHook
 	Logger     *slog.Logger
+	Now        func() time.Time // the root's clock of the presence-mode guard; nil is the real one
 }
 
 // NewOperatorSchoolSettings composes the operator's management of one
@@ -37,7 +41,7 @@ func NewOperatorSchoolSettings(deps OperatorDependencies) settings.OperatorSchoo
 	if logger == nil {
 		logger = slog.Default()
 	}
-	runtime := operatorSettingsRuntime{db: deps.DB}
+	runtime := operatorSettingsRuntime{db: deps.DB, today: calendar.CalendarDateClock(deps.Now)}
 	return configSvc.NewOperatorSchoolSettings(deps.Settings, runtime,
 		configSvc.NewOperatorSettingsService(
 			deps.Settings,
@@ -48,7 +52,10 @@ func NewOperatorSchoolSettings(deps OperatorDependencies) settings.OperatorSchoo
 		))
 }
 
-type operatorSettingsRuntime struct{ db *bun.DB }
+type operatorSettingsRuntime struct {
+	db    *bun.DB
+	today func() calendar.Date
+}
 
 func (r operatorSettingsRuntime) WithinTenant(ctx context.Context, schoolID int64, fn func(context.Context) error) error {
 	return tenant.WithTenantTx(ctx, r.db, schoolID, configSvc.SettingContextCallback[bun.Tx](fn))
@@ -58,8 +65,8 @@ func (operatorSettingsRuntime) AfterCommit(ctx context.Context, fn func()) {
 	tenant.RegisterAfterCommit(ctx, fn)
 }
 
-func (operatorSettingsRuntime) Today() configModel.CalendarDate {
-	return configSvc.OperatorSettingToday()
+func (r operatorSettingsRuntime) Today() configModel.CalendarDate {
+	return configSvc.OperatorSettingDay(r.today())
 }
 
 // NewExportFields projects setting values for the return export (#3838); only the administrative export CLI binds it, never HTTP.

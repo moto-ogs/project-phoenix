@@ -97,9 +97,10 @@ func (s *Store) ClaimFailedEmailDelivery(ctx context.Context, tenantID, delivery
 	if err != nil {
 		return false, err
 	}
+	now := s.now()
 	result, err := db.NewRaw(`
 		UPDATE platform.delivery_email_deliveries AS delivery
-		SET outbox_id = NULL, updated_at = NOW()
+		SET outbox_id = NULL, updated_at = ?
 		FROM platform.email_outbox AS outbox
 		WHERE delivery.tenant_id = ? AND delivery.id = ?
 			AND delivery.outbox_id = outbox.id
@@ -109,8 +110,8 @@ func (s *Store) ClaimFailedEmailDelivery(ctx context.Context, tenantID, delivery
 				OR (outbox.status = 'sent' AND outbox.delivery_state IN ('failed', 'suppressed'))
 				OR `+refusedElsewhereSQL+`
 				OR (outbox.status = 'sent' AND outbox.delivery_state = 'delayed' AND outbox.delivery_state_at < ?))`,
-		tenantID, deliveryID, deliveryContract.MailHeldByList, deliveryContract.MailHeldByStop, deliveryContract.MailHeldByDeparture,
-		time.Now().Add(-deliveryContract.EmailDelayLimit)).Exec(ctx)
+		now, tenantID, deliveryID, deliveryContract.MailHeldByList, deliveryContract.MailHeldByStop, deliveryContract.MailHeldByDeparture,
+		now.Add(-deliveryContract.EmailDelayLimit)).Exec(ctx)
 	if err != nil {
 		return false, fmt.Errorf("delivery postgres: claim failed email delivery: %w", err)
 	}
@@ -145,7 +146,7 @@ func (s *Store) EmailDeliveryStatuses(ctx context.Context, tenantID int64, relat
 			status.AddressMark = deliveryContract.EmailAddressMark(*row.AddressMark)
 		}
 		if row.OutboxStatus != nil {
-			status.Outcome = deliveryContract.EmailOutcomeAt(deliveryContract.EmailOutcomeOf(*row.OutboxStatus, row.DeliveryState, row.LastError, status.AddressMark), row.DeliveryStateAt, time.Now())
+			status.Outcome = deliveryContract.EmailOutcomeAt(deliveryContract.EmailOutcomeOf(*row.OutboxStatus, row.DeliveryState, row.LastError, status.AddressMark), row.DeliveryStateAt, s.now())
 			// The wait has ended: the status says a new mail can go out (#5934).
 			if status.Outcome == deliveryContract.EmailOverdue {
 				status.EmailStatus = "failed"

@@ -85,6 +85,7 @@ import { createLogger } from "~/lib/logger";
 import { staffShiftService } from "~/lib/shift-api";
 import { substitutionService } from "~/lib/substitution-api";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import {
   useTimetableEnabled,
@@ -93,8 +94,6 @@ import {
 import { staffNamesFromOverview } from "~/components/timetable/block-staff-names";
 import { timetableService } from "~/lib/timetable-api";
 import {
-  VERTRETUNG_GAPS_KEY_PREFIX,
-  VERTRETUNG_WEEK_KEY_PREFIX,
   careDayISO,
   formatWeekLabel,
   getGermanWeekdayShort,
@@ -108,7 +107,6 @@ import type {
 
 const logger = createLogger({ component: "Vertretung" });
 const HOUR_HEIGHT_PX = 90;
-const VERTRETUNG_STAFF_LIST_KEY_PREFIX = "vertretung-staff-list-";
 // Das verbindliche URL-Vokabular. updateUrlParams baut die URL aus dieser
 // Allowlist neu auf, damit fremde Params (?utm_source=…) nicht jeden
 // Tageswechsel überleben. Muss mit ALLOWED_PARAMS in
@@ -258,14 +256,14 @@ function VertretungContent() {
     [weekDays],
   );
 
-  const weekSwrKey = `${VERTRETUNG_WEEK_KEY_PREFIX}${fromISO}-${toISO}`;
-  const staffSwrKey = `${VERTRETUNG_STAFF_LIST_KEY_PREFIX}${fromISO}-${toISO}`;
+  const weekSwrKey = tenantDailyKeys.vertretungWeek(fromISO, toISO);
+  const staffSwrKey = tenantDailyKeys.vertretungStaffList(fromISO, toISO);
   // Die Lücken-Erkennung ist vorwärtsgerichtet: der Endpunkt lehnt ein
   // vergangenes `date` ab, also den Fensterstart auf heute klemmen und für
   // vollständig vergangene Wochen den Abruf ganz überspringen.
   const gapsFromISO = fromISO < today ? today : fromISO;
   const loadGaps = toISO >= today;
-  const gapsSwrKey = `${VERTRETUNG_GAPS_KEY_PREFIX}${gapsFromISO}-${toISO}`;
+  const gapsSwrKey = tenantDailyKeys.vertretungGaps(gapsFromISO, toISO);
 
   // Fenster des Dienstplan-Abgleichs: dieselben sichtbaren Betreuungstage wie
   // im Raster. Eine vollständig vergangene Woche braucht keinen Abgleich.
@@ -274,7 +272,10 @@ function VertretungContent() {
     weekDays[weekDays.length - 1] ?? weekDays[0] ?? range.to,
   );
   const loadCoverage = canReadCoverage && coverageToISO >= today;
-  const coverageSwrKey = `dienstplan-overview-${coverageFromISO}-${coverageToISO}`;
+  const coverageSwrKey = tenantDailyKeys.dienstplanOverview(
+    coverageFromISO,
+    coverageToISO,
+  );
 
   const { data, isLoading, error } = useSWRAuth(
     status === "authenticated" ? weekSwrKey : null,

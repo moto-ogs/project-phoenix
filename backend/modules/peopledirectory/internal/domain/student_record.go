@@ -54,6 +54,12 @@ type StudentRecord struct {
 	// is known (School Membership, #6073).
 	CarePausedAfter string
 	CareResumedFrom string
+	// WithoutCarePlace marks a child without an OGS place (#4803).
+	WithoutCarePlace bool
+	// ClassMemberFrom and ClassMemberClass are the class time kept from
+	// before the child's OGS care (#4803); empty when there is none.
+	ClassMemberFrom  string
+	ClassMemberClass string
 
 	AddressStreet     *string
 	AddressCity       *string

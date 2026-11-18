@@ -65,7 +65,7 @@ func (r *Store) LinkTraegerPhaseCopy(ctx context.Context, copyID, sourceID int64
 		return fmt.Errorf("enrollment postgres: encode träger phase values: %w", err)
 	}
 	if _, err := db.NewRaw(`UPDATE enrollment.phases SET traeger_source_id = ?, traeger_source_version = ?, traeger_values = ?::jsonb,
-		updated_at = NOW() WHERE tenant_id = ? AND id = ?`, sourceID, version, string(encoded), tenantID, copyID).Exec(ctx); err != nil {
+		updated_at = ? WHERE tenant_id = ? AND id = ?`, sourceID, version, string(encoded), r.currentTime(), tenantID, copyID).Exec(ctx); err != nil {
 		return fmt.Errorf("enrollment postgres: link träger phase copy: %w", err)
 	}
 	return nil
@@ -82,8 +82,8 @@ func (r *Store) UnlinkTraegerPhaseCopy(ctx context.Context, copyID int64) error 
 	if err != nil {
 		return err
 	}
-	if _, err := db.NewRaw(`UPDATE enrollment.phases SET traeger_source_id = NULL, updated_at = NOW()
-		WHERE tenant_id = ? AND id = ?`, tenantID, copyID).Exec(ctx); err != nil {
+	if _, err := db.NewRaw(`UPDATE enrollment.phases SET traeger_source_id = NULL, updated_at = ?
+		WHERE tenant_id = ? AND id = ?`, r.currentTime(), tenantID, copyID).Exec(ctx); err != nil {
 		return fmt.Errorf("enrollment postgres: unlink träger phase copy: %w", err)
 	}
 	return nil

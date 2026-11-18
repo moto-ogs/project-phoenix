@@ -15,6 +15,8 @@ import {
   type PeriodTotals,
 } from "~/lib/staff-metrics-helpers";
 import { useLiveRefreshInterval, useSWRAuth } from "~/lib/swr";
+import { timeTrackingKeys } from "~/lib/swr/portal-keys";
+import { staffMonthSummaryKeys, staffTimeKeys } from "~/lib/swr/staff-keys";
 import { timeTrackingService } from "~/lib/time-tracking-api";
 import {
   OPEN_MONTH_REFRESH_MS,
@@ -89,8 +91,8 @@ export function usePeriodMetrics(staffId?: string): PeriodMetrics {
     mutate: mutateMonthSummary,
   } = useSWRAuth<MonthSummary>(
     staffId
-      ? `staff-month-summary-${staffId}-${year}-${monthNumber}`
-      : `time-tracking-month-summary-${year}-${monthNumber}`,
+      ? staffMonthSummaryKeys.month(staffId, year, monthNumber)
+      : timeTrackingKeys.monthSummary(year, monthNumber),
     () =>
       staffId
         ? staffMonthSummaryService.getMonthSummary(staffId, year, monthNumber)
@@ -114,8 +116,8 @@ export function usePeriodMetrics(staffId?: string): PeriodMetrics {
     mutate: mutateWeekProjection,
   } = useSWRAuth<ReadonlyMap<string, DayProjection>>(
     staffId
-      ? `staff-schedule-targets-${staffId}-${weekFromKey}-${weekToKey}`
-      : `time-tracking-schedule-targets-${weekFromKey}-${weekToKey}`,
+      ? staffTimeKeys.scheduleTargets(staffId, weekFromKey, weekToKey)
+      : timeTrackingKeys.scheduleTargets(weekFromKey, weekToKey),
     () =>
       staffId
         ? staffMonthSummaryService.getDailyProjection(
@@ -130,7 +132,7 @@ export function usePeriodMetrics(staffId?: string): PeriodMetrics {
     { revalidateOnFocus: false, refreshInterval: openMonthRefreshMs },
   );
 
-  const { data: config } = useSWRAuth("time-tracking-config", () =>
+  const { data: config } = useSWRAuth(timeTrackingKeys.config(), () =>
     timeTrackingService.getConfig(),
   );
   const {

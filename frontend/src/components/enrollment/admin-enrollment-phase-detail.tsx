@@ -40,7 +40,6 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import {
   getPhaseResponseOverview,
   listPhases,
-  type Phase,
   type PhaseResponseOverview,
 } from "~/lib/enrollment-phase-api";
 import { PhaseResponseOverview as PhaseResponseOverviewPanel } from "~/components/enrollment/phase-response-overview";
@@ -73,7 +72,10 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { MultiSelect } from "~/components/ui/multi-select";
 import { Alert } from "~/components/ui/alert";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useSwrLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { ActionHint } from "~/components/ui/action-hint";
 import { DECISION_HINTS } from "~/components/enrollment/decision-hints";
 import { Button, ButtonLink, buttonClassName } from "~/components/ui/button";
@@ -85,11 +87,7 @@ import {
   useCareOfferingsEnabled,
   useTenantSlugSafe,
 } from "~/lib/tenant-context";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import { useEnrollmentPublicUrl } from "~/lib/enrollment-public-url";
 import { useTenantAwarePath } from "~/lib/tenant-path";
@@ -97,11 +95,13 @@ import {
   ENROLLMENT_QR_CODE,
   PublicLinkCopyButton,
 } from "~/components/enrollment/public-link-copy-button";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
 import { ApiError } from "~/lib/api-error";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { fetchSchoolClasses } from "~/lib/student-api";
-import { useSWRAuth } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import {
   CHILD_STATUS_LABELS,
   ChildQuotaHeldBadge,
@@ -111,6 +111,8 @@ import {
 import { enrollmentsConcept } from "~/lib/concepts/enrollments";
 
 const logger = createLogger({ component: "AdminEnrollmentPhaseDetail" });
+
+const NO_REQUESTS: AdminRequestSummary[] = [];
 
 type PhaseDetailTab = "requests" | "responses";
 
@@ -129,19 +131,37 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
   const tenantPath = useTenantAwarePath();
   const toast = useToast();
   const { show: showActionError } = useApiErrorDisplay();
-  const pageError = useApiLoadError();
-  const showPageError = pageError.show;
-  const clearPageError = pageError.clear;
-  const reportLoadError = useApiLoadError();
   // „Wiederholen“ ruft die aktuelle Fassung auf, nicht die vom Fehler.
-  const reloadPageRef = useRef<() => Promise<void>>(async () => undefined);
   const handleToggleReadRef = useRef<
     (requestId: string, read: boolean) => Promise<void>
   >(async () => undefined);
-  const showReportError = reportLoadError.show;
-  const clearReportError = reportLoadError.clear;
-  const [phase, setPhase] = useState<Phase | null>(null);
-  const [requests, setRequests] = useState<AdminRequestSummary[]>([]);
+  const phasesRead = useConfirmedSWR(enrollmentKeys.phases(), () =>
+    listPhases(),
+  );
+  const requestsRead = useConfirmedSWR(
+    enrollmentKeys.adminRequests(phaseId),
+    () => listAdminRequests({ phaseId }),
+  );
+  const { mutate: mutatePhases } = phasesRead;
+  const { mutate: mutateRequests } = requestsRead;
+  const pageError = useSwrResourceLoadError(
+    [
+      { data: phasesRead.data ?? undefined, error: phasesRead.failure },
+      { data: requestsRead.data ?? undefined, error: requestsRead.failure },
+    ],
+    "die Anmeldephase",
+    () => Promise.all([mutatePhases(), mutateRequests()]),
+  );
+  // A refused read shows nothing of the phase, its list or its report.
+  const accessRefused = phasesRead.refused || requestsRead.refused;
+  const phase = accessRefused
+    ? null
+    : (phasesRead.data?.find((item) => item.id === phaseId) ?? null);
+  const requests = accessRefused
+    ? NO_REQUESTS
+    : (requestsRead.data ?? NO_REQUESTS);
+  const loadFailed = pageError.failure !== undefined || accessRefused;
+  const loading = !loadFailed && (!phasesRead.data || !requestsRead.data);
   const [statusFilter, setStatusFilter] =
     useState<EnrollmentReportStatus>(ALL_VALUE);
   const [defaultOfferingIds, setDefaultOfferingIds] = useState<string[]>([]);
@@ -155,12 +175,6 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
   const [classRosterSchoolClass, setClassRosterSchoolClass] =
     useState<string>(ALL_VALUE);
   const [search, setSearch] = useState("");
-  const [report, setReport] = useState<CareUsageReport | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [reportLoading, setReportLoading] = useState(false);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [reportFailed, setReportFailed] = useState(false);
-  const [reportAttempt, setReportAttempt] = useState(0);
   const [busyChildId, setBusyChildId] = useState<string | null>(null);
   const [approvalWithoutOfferingRow, setApprovalWithoutOfferingRow] =
     useState<CareUsageRow | null>(null);
@@ -175,7 +189,7 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
   useSetBreadcrumb({ pageTitle: phase?.name ?? "Anmeldephase" });
 
   const { data: schoolClassOptionsData } = useSWRAuth<unknown>(
-    "enrollment-phase-school-classes",
+    enrollmentKeys.phaseSchoolClasses(),
     async () => fetchSchoolClasses(),
     { revalidateOnFocus: false },
   );
@@ -192,7 +206,7 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
     error: responseOverviewError,
     mutate: reloadResponseOverview,
   } = useSWRAuth<PhaseResponseOverview>(
-    `enrollment-phase-responses-${phaseId}`,
+    enrollmentKeys.phaseResponses(phaseId),
     async () => getPhaseResponseOverview(phaseId),
     { shouldRetryOnError: false },
   );
@@ -266,44 +280,21 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
     setExplicitOfferingIds(ids);
   }, []);
 
+  // Der Filter, den die Auswertung gerade zeigt; ein Nachladen für einen
+  // ersetzten Filter meldet keinen Fehler mehr.
   const reportFiltersRef = useRef(reportFilters);
   useLayoutEffect(() => {
     reportFiltersRef.current = reportFilters;
   }, [reportFilters]);
-  const reportRequestRef = useRef(0);
-
-  const loadReport = useCallback(
-    async (
-      filters: CareUsageFilters,
-      isCancelled?: () => boolean,
-      // Nach einem Schreiben: die bestätigte Auswertung bleibt stehen, ein
-      // Fehler geht an den Aufrufer (#6652).
-      options: { rethrow?: boolean } = {},
-    ) => {
-      const request = ++reportRequestRef.current;
-      const superseded = () =>
-        isCancelled?.() ||
-        reportRequestRef.current !== request ||
-        reportFiltersRef.current !== filters;
-      if (!options.rethrow) {
-        setReportLoading(true);
-        setReportFailed(false);
-        clearReportError();
-        setReport(null);
-      }
-      try {
-        const data = await getCareUsageReport(filters);
-        if (superseded()) return;
-        setReport(data);
-        setReportFailed(false);
-        clearReportError();
-        setDefaultOfferingIds(
-          data.filter_options.offerings
-            .filter((offering) => offering.counts_as_care !== false)
-            .map((offering) => offering.id),
-        );
-      } catch (err) {
-        if (superseded()) return;
+  const reportRead = useSWRAuth<CareUsageReport>(
+    enrollmentKeys.careUsageReport(reportFilters),
+    () => getCareUsageReport(reportFilters),
+    {
+      // Ein anderer Filter zeigt das Skelett, nicht die Zahlen des alten.
+      keepPreviousData: false,
+      // Der Fehler steht mit „Wiederholen“ vor Ort, ohne stilles Wiederholen.
+      shouldRetryOnError: false,
+      onError: (err) => {
         logger.error("phase_care_usage_report_load_failed", {
           error: err instanceof Error ? err.message : "unknown",
           phase_id: phaseId,
@@ -312,34 +303,38 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
           err instanceof ApiError &&
           (err.status === 401 || err.status === 403)
         ) {
-          setReport(null);
-          setReportFailed(true);
           setDefaultOfferingIds([]);
           setExplicitOfferingIds(null);
           setClassRosterSchoolClass(ALL_VALUE);
           setApprovalWithoutOfferingRow(null);
         }
-        if (options.rethrow) throw err;
-        setReportFailed(true);
-        await showReportError(err, {
-          object: "die Auswertung",
-          retry: () => setReportAttempt((attempt) => attempt + 1),
-        });
-      } finally {
-        if (!superseded()) setReportLoading(false);
-      }
+      },
     },
-    [phaseId, clearReportError, showReportError],
   );
-  const displayedOfferingIds = explicitOfferingIds ?? defaultOfferingIds;
-
+  const { mutate: mutateReport } = reportRead;
+  const report = accessRefused ? null : (reportRead.data ?? null);
+  const reportLoading = !accessRefused && reportRead.isLoading;
+  // Während „Wiederholen“ läuft, steht das Skelett statt des Fehlers.
+  const reportFailed =
+    reportRead.error !== undefined &&
+    reportRead.data === undefined &&
+    !reportRead.isValidating;
+  const reportLoadError = useSwrLoadError(
+    reportFailed ? reportRead.error : undefined,
+    "die Auswertung",
+    () => mutateReport(),
+  );
+  // Die Angebote, die als Betreuung zählen, bleiben die Vorauswahl, bis die
+  // nächste Auswertung geladen ist.
   useEffect(() => {
-    let cancelled = false;
-    void loadReport(reportFilters, () => cancelled);
-    return () => {
-      cancelled = true;
-    };
-  }, [loadReport, reportFilters, reportAttempt]);
+    if (!report) return;
+    setDefaultOfferingIds(
+      report.filter_options.offerings
+        .filter((offering) => offering.counts_as_care !== false)
+        .map((offering) => offering.id),
+    );
+  }, [report]);
+  const displayedOfferingIds = explicitOfferingIds ?? defaultOfferingIds;
 
   const handleReportExport = useCallback(
     async (
@@ -402,84 +397,58 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
     [tenantPath],
   );
 
-  const dataRequestRef = useRef(0);
-  const loadData = useCallback(
-    async (
-      isCancelled?: () => boolean,
-      // Nach einem Schreiben: die bestätigte Liste bleibt stehen, ein Fehler
-      // geht an den Aufrufer (#6652).
-      options: { rethrow?: boolean } = {},
-    ) => {
-      const request = ++dataRequestRef.current;
-      const superseded = () =>
-        isCancelled?.() || request !== dataRequestRef.current;
-      if (!options.rethrow) {
-        setLoading(true);
-        clearPageError();
-        setLoadFailed(false);
-      }
-      try {
-        const [phasesData, requestsData] = await Promise.all([
-          listPhases(),
-          listAdminRequests({ phaseId }),
-        ]);
-        if (superseded()) return;
-        setPhase(phasesData.find((item) => item.id === phaseId) ?? null);
-        setRequests(requestsData);
-        setLoadFailed(false);
-        clearPageError();
-      } catch (err) {
-        if (superseded()) return;
-        logger.error("admin_enrollment_phase_detail_load_failed", {
-          error: err instanceof Error ? err.message : "unknown",
-          phase_id: phaseId,
-        });
-        if (
-          err instanceof ApiError &&
-          (err.status === 401 || err.status === 403)
-        ) {
-          setLoadFailed(true);
-          setPhase(null);
-          setRequests([]);
-          setReport(null);
-          reportRequestRef.current++;
-          setReportLoading(false);
-          setDefaultOfferingIds([]);
-          setExplicitOfferingIds(null);
-          setApprovalWithoutOfferingRow(null);
-        }
-        if (options.rethrow) throw err;
-        setLoadFailed(true);
-        await showPageError(err, {
-          object: "die Anmeldephase",
-          retry: () => void reloadPageRef.current(),
-        });
-      } finally {
-        if (!superseded()) setLoading(false);
-      }
-    },
-    [phaseId, clearPageError, showPageError],
-  );
+  useEffect(() => {
+    if (!accessRefused) return;
+    setDefaultOfferingIds([]);
+    setExplicitOfferingIds(null);
+    setApprovalWithoutOfferingRow(null);
+  }, [accessRefused]);
   // Nachladen nach einer Schnellentscheidung: ein Fehler dabei steht über der
   // Tabelle und entscheidet nichts erneut (#6652).
   const decisionAfterWrite = useRefreshAfterWrite(
     "die Anzeige der Anmeldephase",
     async () => {
-      await loadData(undefined, { rethrow: true });
-      await loadReport(reportFiltersRef.current, undefined, { rethrow: true });
+      await Promise.all([
+        mutatePhases(
+          listPhases().then(
+            (data) => {
+              phasesRead.readCallbacks.onSuccess();
+              return data;
+            },
+            (err: unknown) => {
+              phasesRead.readCallbacks.onError(err);
+              throw err;
+            },
+          ),
+          { revalidate: false },
+        ),
+        mutateRequests(
+          listAdminRequests({ phaseId }).then(
+            (data) => {
+              requestsRead.readCallbacks.onSuccess();
+              return data;
+            },
+            (err: unknown) => {
+              requestsRead.readCallbacks.onError(err);
+              throw err;
+            },
+          ),
+          { revalidate: false },
+        ),
+      ]);
+      // Die bestätigte Auswertung bleibt stehen; ein Fehler geht an den
+      // Aufrufer (#6652), außer der Filter wurde inzwischen ersetzt.
+      const filters = reportFilters;
+      try {
+        await mutateReport(getCareUsageReport(filters), {
+          revalidate: false,
+        });
+      } catch (err) {
+        if (reportFiltersRef.current !== filters) return;
+        throw err;
+      }
     },
   );
-  useLayoutEffect(() => {
-    reloadPageRef.current = () => loadData();
-  });
-
-  useEffect(() => {
-    let cancelled = false;
-    void loadData(() => cancelled);
-    return () => {
-      cancelled = true;
-    };
-  }, [loadData]);
 
   const stats = useMemo(
     () => countChildStatuses(requests.flatMap((request) => request.children)),
@@ -517,17 +486,22 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
       ),
     [phase?.is_active, requests],
   );
+  const invalidateFamily = useInvalidateFamily();
   const handleToggleRead = useCallback(
     async (requestId: string, read: boolean) => {
       try {
         await setAdminRequestRead(requestId, read);
-        setRequests((current) =>
-          current.map((request) =>
-            request.id === requestId
-              ? { ...request, is_unread: !read }
-              : request,
-          ),
+        void mutateRequests(
+          (current) =>
+            current?.map((request) =>
+              request.id === requestId
+                ? { ...request, is_unread: !read }
+                : request,
+            ),
+          { revalidate: false },
         );
+        // The overview lists the requests of every phase.
+        void invalidateFamily(enrollmentKeys.adminRequests());
       } catch (err) {
         logger.error("admin_enrollment_toggle_read_failed", {
           error: err instanceof Error ? err.message : "unknown",
@@ -539,7 +513,7 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
         });
       }
     },
-    [showActionError],
+    [invalidateFamily, mutateRequests, showActionError],
   );
   useLayoutEffect(() => {
     handleToggleReadRef.current = handleToggleRead;
@@ -1087,7 +1061,7 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
           {reportFailed ? (
             // Ohne Auswertung keine Zahlen und keine Tabelle: 0 Kinder oder
             // "Noch keine Anmeldungen" wären falsch.
-            <LoadErrorAlert error={reportLoadError.error} />
+            <LoadErrorAlert error={reportLoadError} />
           ) : (
             <>
               <ReportStats

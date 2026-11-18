@@ -5,6 +5,7 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import deMessages from "~/i18n/messages/de.generated";
 import { ApiError } from "~/lib/api-error";
 import type { HolidayRegistrationStatus } from "~/lib/holiday-registration-status-api";
+import { setTestClock } from "~/test/clock";
 import { HolidayRegistrationStatusView } from "./holiday-registration-status-view";
 
 const mockFetch = vi.hoisted(() => vi.fn());
@@ -71,6 +72,9 @@ function renderView() {
 describe("HolidayRegistrationStatusView (#6676)", () => {
   beforeEach(() => {
     mockFetch.mockReset();
+    // Fixed fixture world: the registration window for the Christmas holidays
+    // 2026/27 is still open on this day (closes 2026-12-01).
+    setTestClock("2026-09-09T12:00:00+02:00");
   });
 
   it("shows the state, the next steps and every child's weeks with their place", async () => {

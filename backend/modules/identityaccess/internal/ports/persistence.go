@@ -213,6 +213,9 @@ type AccountSessionStore interface {
 	CountExpiredAccountSessions(ctx context.Context, now time.Time) (int, domain.OperationStats, error)
 	ListInactiveAccountIDsWithLiveSessions(ctx context.Context, now time.Time) ([]int64, domain.OperationStats, error)
 	HasLiveAccountSessionsCreatedAfter(ctx context.Context, accountID int64, since, now time.Time) (bool, domain.OperationStats, error)
+	// LivePushSubscriptionLinks answers for every link, keyed by its
+	// SubscriptionID, whether an un-rotated session alive at now backs it.
+	LivePushSubscriptionLinks(ctx context.Context, links []domain.PushSubscriptionLink, now time.Time) (map[int64]bool, domain.OperationStats, error)
 
 	// InsertAccountSession stores a validated session and returns the row
 	// with its identity and timestamps.
@@ -289,6 +292,13 @@ type AccountLoginStore interface {
 	// LockActiveTenantMappingShared is HasActiveAccountTenant with a FOR
 	// SHARE lock so a revocation cannot commit under a mint.
 	LockActiveTenantMappingShared(ctx context.Context, accountID, tenantID int64) (bool, domain.OperationStats, error)
+	// AdmittedTenantMapping is HasActiveAccountTenant, or with lock
+	// LockActiveTenantMappingShared, that also refuses a Springer
+	// without an open window (#7173, ADR 0251). Sessions rest on it.
+	AdmittedTenantMapping(ctx context.Context, accountID, tenantID int64, lock bool) (bool, domain.OperationStats, error)
+	// ListAdmittedTenantIDs is ListActiveTenantIDs without the schools
+	// where the account is only a Springer outside a window; sign-in chooses from it.
+	ListAdmittedTenantIDs(ctx context.Context, accountID int64) ([]int64, domain.OperationStats, error)
 	// ListAccountRolesAtTenant returns the roles the account holds at the
 	// school, with their role facts; forShare pins the assignment rows.
 	ListAccountRolesAtTenant(ctx context.Context, accountID, tenantID int64, forShare bool) ([]domain.RoleAssignment, domain.OperationStats, error)

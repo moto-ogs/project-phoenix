@@ -88,8 +88,8 @@ func init() {
 	root.RecurrenceLock = func(db *bun.DB) (timetableModule.RecurrenceWriteLock, error) {
 		return api.NewTimetableHTTPTestRecurrenceLock(testpkg.MustDatabase(db))
 	}
-	root.SessionRecords = func(db *bun.DB) timetableAPI.SessionRecords {
-		return api.NewTimetableHTTPTestSessionRecords(testpkg.MustDatabase(db))
+	root.SessionRecords = func(db *bun.DB, clocks ...func() time.Time) timetableAPI.SessionRecords {
+		return api.NewTimetableHTTPTestSessionRecords(testpkg.MustDatabase(db), clocks...)
 	}
 	root.OfferingSources = func(t *testing.T, db *bun.DB) (timetableModule.OfferingSourceSupport, error) {
 		t.Helper()

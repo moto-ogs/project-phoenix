@@ -1,5 +1,5 @@
 "use client";
-import { BELOW_SM } from "~/lib/hooks/use-media-query";
+import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { Z_LAYER } from "./overlay-styles";
 import {
   MODAL_SCOPE_SELECTOR,
@@ -9,6 +9,7 @@ import {
   type OverlayOwner,
 } from "./overlay-stack";
 import { useAnchoredPanel } from "./anchored-panel";
+import { useKitDefault } from "./kit-locale";
 import { PANEL_VIEWPORT_MARGIN } from "./panel-geometry";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { parseISODate } from "~/lib/date-helpers";
@@ -27,6 +28,7 @@ import {
   type PanelGeometry,
 } from "~/components/ui/calendar-panel-position";
 import { selectTriggerClassName } from "~/components/ui/select-trigger-styles";
+import { CONTROL_PART } from "~/components/ui/control-geometry";
 import {
   DAY_PICKER_CLASSNAMES,
   preloadDayPicker,
@@ -51,6 +53,12 @@ interface DateRangePickerProps {
   /** Between the arrows of a framed group: frame and radius come from the group,
    * the trigger brings only content and height. */
   readonly embedded?: boolean;
+  /**
+   * What the range is for („Zeitraum“ by default). The trigger shows only the
+   * dates; this name follows them as hidden text (#7112). A translated
+   * surface passes its own word.
+   */
+  readonly fieldLabel?: string;
 }
 
 // Beside a second month the grid cannot follow the panel's width, so from `sm`
@@ -114,7 +122,9 @@ export function DateRangePicker({
   toMax,
   triggerClassName,
   embedded = false,
+  fieldLabel,
 }: DateRangePickerProps) {
+  const kitDefault = useKitDefault();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -153,6 +163,8 @@ export function DateRangePicker({
     onCovered: closeCovered,
   });
 
+  const resolvedFieldLabel = fieldLabel ?? kitDefault("Zeitraum");
+
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       <button
@@ -167,11 +179,15 @@ export function DateRangePicker({
         onPointerEnter={preloadDayPicker}
         onFocus={preloadDayPicker}
         // Derselbe Auslöser wie jedes Auswahlfeld (`CustomSelect`).
+        {...(embedded && CONTROL_PART)}
         className={
           embedded
             ? cn(
-                "flex h-9 w-full items-center justify-center gap-2 px-3 text-sm transition-colors",
-                isOpen ? "bg-gray-50" : "hover:bg-gray-50",
+                selectTriggerClassName({
+                  embedded: true,
+                  className: "w-full justify-center",
+                }),
+                isOpen && "bg-gray-50",
               )
             : cn(
                 selectTriggerClassName({ className: triggerClassName }),
@@ -189,6 +205,10 @@ export function DateRangePicker({
         >
           {formatRangeLabel(value)}
         </span>
+        {/* Without a range the trigger already says „Zeitraum wählen“. */}
+        {resolvedFieldLabel && value?.from ? (
+          <span className="sr-only">{`, ${resolvedFieldLabel}`}</span>
+        ) : null}
         <svg
           className="h-4 w-4 shrink-0 text-gray-400"
           aria-hidden="true"
@@ -394,20 +414,6 @@ function RangeCalendar({
   );
 }
 
-function useIsSingleMonthCalendar(): boolean {
-  const [isSingleMonth, setIsSingleMonth] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia(BELOW_SM);
-    const update = () => setIsSingleMonth(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
-
-  return isSingleMonth;
-}
-
 function formatDraftRangeLabel(
   draftFrom: Date | undefined,
   draftTo: Date | undefined,
@@ -445,7 +451,7 @@ export function RangeCalendarInline({
 }: RangeCalendarProps) {
   const today = useBerlinToday();
   const [month, setMonth] = useState(value?.from ?? parseISODate(today));
-  const isSingleMonth = useIsSingleMonthCalendar();
+  const isSingleMonth = useMediaQuery(BELOW_SM);
   // Manual draft state. We use `mode="multiple"` on the underlying DayPicker
   // and manage the two-click range logic ourselves, react-day-picker v10's
   // mode="range" calls onSelect with surprising payloads (sometimes a complete

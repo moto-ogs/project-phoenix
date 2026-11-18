@@ -75,7 +75,14 @@ const LEGAL_MARKDOWN_COMPONENTS: Components = {
 };
 
 export function LegalMarkdown({ text }: { readonly text: string }) {
+  // The school writes its legal texts in German, also when the form around
+  // them is translated: screen readers must read them as German (WCAG 3.1.2,
+  // #7112).
   return (
-    <ReactMarkdown components={LEGAL_MARKDOWN_COMPONENTS}>{text}</ReactMarkdown>
+    <div lang="de">
+      <ReactMarkdown components={LEGAL_MARKDOWN_COMPONENTS}>
+        {text}
+      </ReactMarkdown>
+    </div>
   );
 }

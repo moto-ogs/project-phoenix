@@ -13,9 +13,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// studentImportTestNow is the instant the date checks of these tests judge
+// against, so a date a year after it stays in the future whatever day the
+// suite runs (#7104).
+var studentImportTestNow = time.Date(2026, time.November, 2, 10, 0, 0, 0, time.UTC)
+
+func studentImportTestClock() time.Time { return studentImportTestNow }
+
 func futureBirthdayForTests() time.Time {
-	now := time.Now().In(time.UTC)
-	return time.Date(now.Year()+1, now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	return time.Date(studentImportTestNow.Year()+1, studentImportTestNow.Month(), studentImportTestNow.Day(), 0, 0, 0, 0, time.UTC)
 }
 
 func futureBirthdayISOForTests() string {
@@ -47,7 +53,7 @@ func TestEnrollmentStartsInFuture_UsesBusinessDate(t *testing.T) {
 func TestStudentImportConfig_CreateSingleGuardianRelationship_ForwardsRolePreset(t *testing.T) {
 	t.Parallel()
 	guardians := newFakeGuardians()
-	config := NewStudentImportConfig(ports.StudentImportDeps{Transactions: newTestTransactions(), Guardians: guardians})
+	config := NewStudentImportConfig(ports.StudentImportDeps{Now: studentImportTestClock, Transactions: newTestTransactions(), Guardians: guardians})
 	ctx := context.Background()
 
 	require.NoError(t, config.createSingleGuardianRelationship(ctx, ports.CreatedEnrollmentStudent{ID: 41}, importModels.GuardianImportData{
@@ -80,7 +86,7 @@ func TestStudentImportConfig_CreatedStudentFactNeedsTransaction(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			guardians := newFakeGuardians()
-			config := NewStudentImportConfig(ports.StudentImportDeps{
+			config := NewStudentImportConfig(ports.StudentImportDeps{Now: studentImportTestClock,
 				Transactions: guardianFactTransactions{active: active}, Guardians: guardians,
 			})
 			created := ports.CreatedEnrollmentStudent{ID: 41, TenantID: 23}
@@ -106,7 +112,7 @@ func (t guardianFactTransactions) HasTransaction(context.Context) bool { return 
 
 func TestStudentImportConfig_Validate_RequiredFields(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Now: studentImportTestClock, Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -188,7 +194,7 @@ func TestStudentImportConfig_Validate_RequiredFields(t *testing.T) {
 
 func TestStudentImportConfig_Validate_GuardianValidation(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Now: studentImportTestClock, Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -290,7 +296,7 @@ func TestStudentImportConfig_Validate_GuardianValidation(t *testing.T) {
 
 func TestStudentImportConfig_Validate_EnrollmentDates(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Now: studentImportTestClock, Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -350,7 +356,7 @@ func TestStudentImportConfig_Validate_EnrollmentDates(t *testing.T) {
 
 func TestStudentImportConfig_Validate_ConsentDates(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Now: studentImportTestClock, Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -407,7 +413,7 @@ func TestStudentImportConfig_Validate_ConsentDates(t *testing.T) {
 // the model rejects mid-import.
 func TestStudentImportConfig_Validate_AccompaniedCompanionNote(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Now: studentImportTestClock, Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -461,7 +467,7 @@ func TestStudentImportConfig_Validate_AccompaniedCompanionNote(t *testing.T) {
 
 func TestStudentImportConfig_Validate_DataRetention(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Now: studentImportTestClock, Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -529,7 +535,7 @@ func TestStudentImportConfig_Validate_DataRetention(t *testing.T) {
 
 func TestStudentImportConfig_Validate_BirthdayFormat(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Now: studentImportTestClock, Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -600,7 +606,7 @@ func TestStudentImportConfig_Validate_BirthdayFormat(t *testing.T) {
 
 func TestStudentImportConfig_Validate_ErrorSeverity(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Now: studentImportTestClock, Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -766,7 +772,7 @@ func TestValidateGuardianLanguage(t *testing.T) {
 
 func TestStudentImportConfig_Validate_GuardianLanguageWarning(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Now: studentImportTestClock, Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -804,7 +810,7 @@ func TestStudentImportConfig_Validate_GuardianLanguageWarning(t *testing.T) {
 
 func TestStudentImportConfig_Validate_PickupSchedule(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Now: studentImportTestClock, Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -897,7 +903,7 @@ func TestStudentImportConfig_Validate_PickupSchedule(t *testing.T) {
 
 func TestStudentImportConfig_Validate_ArrivalSchedule(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Now: studentImportTestClock, Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -1014,7 +1020,7 @@ func TestGuardianLanguagePreference(t *testing.T) {
 
 func TestStudentImportConfig_Validate_CombinedGuardianAndPickupErrors(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Now: studentImportTestClock, Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -1050,7 +1056,7 @@ func TestStudentImportConfig_Validate_CombinedGuardianAndPickupErrors(t *testing
 
 func TestStudentImportConfig_Validate_MultipleInvalidPickupSchedules(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Now: studentImportTestClock, Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -1088,7 +1094,7 @@ func TestStudentImportConfig_Validate_MultipleInvalidPickupSchedules(t *testing.
 
 func TestStudentImportConfig_Validate_PickupScheduleEmptyListIsValid(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Now: studentImportTestClock, Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -1113,7 +1119,7 @@ func TestStudentImportConfig_Validate_PickupScheduleEmptyListIsValid(t *testing.
 
 func TestStudentImportConfig_Validate_PickupScheduleErrorMessages(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Now: studentImportTestClock, Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -1168,7 +1174,7 @@ func TestStudentImportConfig_Validate_PickupScheduleErrorMessages(t *testing.T) 
 
 func TestStudentImportConfig_Validate_GuardianWithProfileFieldsStillValidatesContact(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Now: studentImportTestClock, Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -1210,7 +1216,7 @@ func TestStudentImportConfig_Validate_GuardianWithProfileFieldsStillValidatesCon
 
 func TestStudentImportConfig_Validate_PickupScheduleBoundaryWeekdays(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Now: studentImportTestClock, Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -1263,7 +1269,7 @@ func TestStudentImportConfig_Validate_PickupScheduleBoundaryWeekdays(t *testing.
 
 func TestStudentImportConfig_Validate_PickupTimeBoundaryValues(t *testing.T) {
 	t.Parallel()
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Now: studentImportTestClock, Transactions: newTestTransactions(), Resolver: &RelationshipResolver{
 		groupCache: make(map[string]Reference),
 	}},
 	}
@@ -1407,7 +1413,7 @@ func TestParseOptionalDate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := parseOptionalDate(tt.input)
+			result, err := parseOptionalDate(tt.input, studentImportTestNow)
 
 			if tt.wantError {
 				assert.Error(t, err)

@@ -26,5 +26,8 @@
   "staff_group_members_required": "Please choose at least one person who is not in the group yet.",
   "staff_group_too_large": "A group chat has at most {max_members} members.",
   "parent_messaging_disabled": "The school has turned off parent messaging. This is not possible right now.",
-  "message_send_conflict": "This message was already sent differently. Please reload the chat."
+  "message_send_conflict": "This message was already sent differently. Please reload the chat.",
+  "letter_placeholder_letter_only": "Placeholders only work in the text of a parent letter. Please remove them from the subject or choose “Parent letter”.",
+  "letter_placeholder_unknown": "moto does not know these placeholders: {placeholders}. Please use only placeholders from the list.",
+  "letter_print_not_letter": "Only a published parent letter can be printed."
 }

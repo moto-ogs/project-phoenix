@@ -61,13 +61,13 @@ func (s *Scheduler) executeTokenCleanup(ctx context.Context, task *ScheduledTask
 		return
 	}
 	task.Running = true
-	task.LastRun = time.Now()
+	task.LastRun = s.clock()
 	task.mu.Unlock()
 
 	defer func() {
 		task.mu.Lock()
 		task.Running = false
-		task.NextRun = time.Now().Add(time.Hour)
+		task.NextRun = s.clock().Add(time.Hour)
 		task.mu.Unlock()
 	}()
 
@@ -193,23 +193,19 @@ func buildCleanupJobs(authService ports.AuthCleanup, invitationService ports.Inv
 			Run:         operatorInvitationCleaner.DeleteExpiredOperatorInvitations,
 		})
 	}
-	if operatorInvitationCleaner != nil {
-		jobs = append(jobs, signInDataCleanupJobs(operatorInvitationCleaner)...)
-	}
-
 	return jobs
 }
 
 // signInDataCleanupJobs deletes the short-lived sign-in data after its fixed
 // window. Operator sessions go at their expiry, as account sessions do.
-func signInDataCleanupJobs(cleaner ports.SignInDataCleaner) []CleanupJob {
+func signInDataCleanupJobs(cleaner ports.SignInDataCleaner, now func() time.Time) []CleanupJob {
 	return []CleanupJob{
 		{Description: "Guardian invitation cleanup", Run: cleaner.DeleteExpiredGuardianInvitations},
 		{Description: "Caterer invitation cleanup", Run: cleaner.DeleteExpiredCatererInvitations},
 		{Description: "MFA email code cleanup", Run: cleaner.DeleteExpiredMFAEmailChallenges},
 		{Description: "Passkey session cleanup", Run: cleaner.DeleteExpiredPasskeySessions},
 		{Description: "Operator session cleanup", Run: func(ctx context.Context) (int, error) {
-			return cleaner.DeleteExpiredOperatorSessions(ctx, time.Now())
+			return cleaner.DeleteExpiredOperatorSessions(ctx, now())
 		}},
 	}
 }

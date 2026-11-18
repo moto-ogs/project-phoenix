@@ -45,10 +45,10 @@ const (
 		FROM enrollment.holiday_closure_notices
 		WHERE organization_id = ? AND holiday_registration_id = ANY(?::bigint[])`
 	setHolidayClosureNoticesQuery = `INSERT INTO enrollment.holiday_closure_notices
-			(organization_id, holiday_registration_id, holiday_period_week_id, closed_on, state, operation_id)
-		SELECT ?, unnest(?::bigint[]), unnest(?::bigint[]), unnest(?::date[]), unnest(?::text[]), ?::uuid
+			(organization_id, holiday_registration_id, holiday_period_week_id, closed_on, state, operation_id, notified_at, changed_at)
+		SELECT ?, unnest(?::bigint[]), unnest(?::bigint[]), unnest(?::date[]), unnest(?::text[]), ?::uuid, ?::timestamptz, ?::timestamptz
 		ON CONFLICT (organization_id, holiday_registration_id, holiday_period_week_id, closed_on) DO UPDATE
-			SET state = EXCLUDED.state, operation_id = EXCLUDED.operation_id, changed_at = CURRENT_TIMESTAMP`
+			SET state = EXCLUDED.state, operation_id = EXCLUDED.operation_id, changed_at = EXCLUDED.changed_at`
 	insertHolidayClosureFamilyKeyQuery = `INSERT INTO enrollment.holiday_closure_family_keys (organization_id, secret)
 		VALUES (?, ?) ON CONFLICT (organization_id) DO NOTHING`
 	holidayClosureFamilyKeyQuery   = `SELECT secret FROM enrollment.holiday_closure_family_keys WHERE organization_id = ?`
@@ -174,8 +174,9 @@ func (s *HolidayRegistrationStore) SetHolidayClosureNotices(ctx context.Context,
 	for i, notice := range notices {
 		registrations[i], weeks[i], days[i], states[i] = notice.RegistrationID, notice.WeekID, notice.ClosedOn.String(), notice.State
 	}
+	now := holidayNow(s.now)
 	if _, err := db.NewRaw(setHolidayClosureNoticesQuery, organizationID, pgdialect.Array(registrations), pgdialect.Array(weeks),
-		pgdialect.Array(days), pgdialect.Array(states), operationID).Exec(ctx); err != nil {
+		pgdialect.Array(days), pgdialect.Array(states), operationID, now, now).Exec(ctx); err != nil {
 		return fmt.Errorf("enrollment postgres: record holiday closure notices: %w", err)
 	}
 	return nil

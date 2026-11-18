@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use, useCallback, useEffect, useState } from "react";
+import { Suspense, use, useCallback } from "react";
 // eslint-disable-next-line no-restricted-imports -- parent portal uses bare paths, no tenant-router
 import { useRouter, useSearchParams } from "next/navigation";
 import { LATE_INVITE_QUERY_PARAM } from "~/lib/enrollment-http";
@@ -25,12 +25,20 @@ import {
 import { fetchParentEnrollmentBootstrap } from "~/lib/enrollment-submission-api";
 import { parentPath } from "~/lib/parent-url";
 import { resolveTenant, type TenantInfo } from "~/lib/tenant-api";
-import { useApiLoadError } from "~/contexts/ToastContext";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useFreshSWR } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import {
   normalizeCareFacilityTerm,
   CareFacilityTermScope,
   useCareTermTranslations,
 } from "~/lib/care-facility-term";
+
+interface LoadedForm {
+  readonly tenant: TenantInfo;
+  readonly prefetchedData: EnrollmentFormPrefetchedData;
+  readonly targetPath: string;
+}
 
 interface PageProps {
   readonly params: Promise<{ tenantSlug: string; phaseId: string }>;
@@ -65,20 +73,52 @@ function ParentEnrollFormPageContent({ params }: PageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const lateInviteToken = searchParams.get(LATE_INVITE_QUERY_PARAM)?.trim();
-  const [loaded, setLoaded] = useState<{
-    tenant: TenantInfo;
-    prefetchedData: EnrollmentFormPrefetchedData;
-    targetPath: string;
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
-  // A failed load stays where the form would be, with retry (#2515).
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  const [loadAttempt, setLoadAttempt] = useState(0);
   const targetPath = `/anmeldung/${encodeURIComponent(tenantSlug)}/${encodeURIComponent(phaseId)}`;
+  // The form starts its draft from this opening's own answer, never from
+  // an earlier opening of the same phase.
+  const formRead = useFreshSWR(
+    enrollmentKeys.parentEnrollmentForm(tenantSlug, phaseId, lateInviteToken),
+    async (): Promise<LoadedForm | null> => {
+      const [tenant, bootstrap, profile] = await Promise.all([
+        resolveTenant(tenantSlug),
+        // Authenticated parent bootstrap (#1663): the anonymous public path
+        // now refuses audience-restricted (linked_parents) phases, so the
+        // parents portal loads form metadata through its own parent-scoped
+        // endpoint. Parent autofill still comes only from the profile call
+        // below.
+        fetchParentEnrollmentBootstrap(tenantSlug, phaseId, {
+          lateInviteToken,
+        }),
+        // Parent-profile lookup is best-effort, matching EnrollmentForm's
+        // existing autofill contract. It stays on the parent-authenticated
+        // API; public form metadata never receives the parent session token.
+        // Deliberately silent: the client logs the failure, and without the
+        // prefill the parent types the guardian fields.
+        fetchParentEnrollmentProfile(tenantSlug).catch(() => null),
+      ]);
+      // Without the school's grade setting the form cannot be built; the
+      // page shows its load-failed text.
+      if (!tenant || !isSupportedGradeLevelMax(tenant.gradeLevelMax)) {
+        return null;
+      }
+      return {
+        tenant,
+        // Autofill comes from the parent API only, never from the shared
+        // public bootstrap shape.
+        prefetchedData: prefetchedDataFromBootstrap(bootstrap, { profile }),
+        targetPath,
+      };
+    },
+    { shouldRetryOnError: false },
+  );
+  const loaded = formRead.data ?? null;
+  // A failed load stays where the form would be, with retry (#2515).
+  const loadError = useSwrLoadError(formRead.error, loadErrorObject, () =>
+    formRead.mutate(),
+  );
+  // Until its catalog text is there, a failure keeps the loading state.
+  const loading =
+    !formRead.fresh || (formRead.error !== undefined && loadError === null);
   useAnalyticsSchoolPolicy(
     tenantSlug,
     !loading &&
@@ -87,69 +127,6 @@ function ParentEnrollFormPageContent({ params }: PageProps) {
       loaded.tenant.analyticsEnabled === true,
     targetPath,
   );
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    clearLoadError();
-    setLoaded(null);
-
-    void Promise.all([
-      resolveTenant(tenantSlug),
-      // Authenticated parent bootstrap (#1663): the anonymous public path
-      // now refuses audience-restricted (linked_parents) phases, so the
-      // parents portal loads form metadata through its own parent-scoped
-      // endpoint. Parent autofill still comes only from the profile call
-      // below.
-      fetchParentEnrollmentBootstrap(tenantSlug, phaseId, {
-        lateInviteToken,
-      }),
-      // Parent-profile lookup is best-effort, matching EnrollmentForm's
-      // existing autofill contract. It stays on the parent-authenticated API;
-      // public form metadata never receives the parent session token.
-      // Deliberately silent: the client logs the failure, and without the
-      // prefill the parent types the guardian fields.
-      fetchParentEnrollmentProfile(tenantSlug).catch(() => null),
-    ])
-      .then(([tenant, bootstrap, profile]) => {
-        if (cancelled) return;
-        // Without the school's grade setting the form cannot be built;
-        // `loaded` stays empty and the page shows its load-failed text.
-        if (!tenant || !isSupportedGradeLevelMax(tenant.gradeLevelMax)) {
-          return;
-        }
-        setLoaded({
-          tenant,
-          // Autofill comes from the parent API only, never from the shared
-          // public bootstrap shape.
-          prefetchedData: prefetchedDataFromBootstrap(bootstrap, { profile }),
-          targetPath,
-        });
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        void showLoadError(err, {
-          object: loadErrorObject,
-          retry: () => setLoadAttempt((n) => n + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    lateInviteToken,
-    phaseId,
-    tenantSlug,
-    loadAttempt,
-    clearLoadError,
-    showLoadError,
-    loadErrorObject,
-    targetPath,
-  ]);
 
   const handleSubmitted = (statusURL: string) => {
     try {

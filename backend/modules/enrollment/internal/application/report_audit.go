@@ -42,7 +42,7 @@ func (s *Reports) recordPhaseExport(ctx context.Context, errPrefix string, phase
 		return fmt.Errorf("%s: phase %d: %w", errPrefix, phaseID, err)
 	}
 	entry, err := newExportAccess(errPrefix, actorAccountID, actorRole,
-		calendar.Date(phase.ServiceStartDate).BerlinMidnight(), calendar.Date(phase.ServiceEndDate).EndOfDay(), time.Now())
+		calendar.Date(phase.ServiceStartDate).BerlinMidnight(), calendar.Date(phase.ServiceEndDate).EndOfDay(), s.deps.Now())
 	if err != nil {
 		return err
 	}

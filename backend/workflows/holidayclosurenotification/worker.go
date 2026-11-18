@@ -121,10 +121,11 @@ func (s *Service) process(ctx context.Context, event schoolcalendar.HolidayClosu
 }
 
 // fail writes a failure back under the still valid lease: pending again
-// with a growing wait, or blocked after maxAttempts.
+// with a growing wait, or blocked after maxAttempts. The wait runs on the
+// database's clock, the one the lease reads when the command is due again.
 func (s *Service) fail(ctx context.Context, event schoolcalendar.HolidayClosureEvent, cause error) error {
 	outcome := schoolcalendar.HolidayClosureOutcome{State: schoolcalendar.HolidayClosureEventPending, ErrorCode: errorCode(cause),
-		RetryAt: time.Now().Add(retryBase << min(event.Attempts, 6))}
+		RetryAfter: retryBase << min(event.Attempts, 6)}
 	if event.Attempts >= maxAttempts || errors.Is(cause, schoolcalendar.ErrHolidayClosureNoticeNotFound) {
 		outcome = schoolcalendar.HolidayClosureOutcome{State: schoolcalendar.HolidayClosureEventBlocked, ErrorCode: errorCode(cause)}
 	}

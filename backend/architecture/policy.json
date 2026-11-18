@@ -497,6 +497,10 @@
       "class": "utility"
     },
     {
+      "path": "github.com/boombuler/barcode/qr",
+      "class": "rendering"
+    },
+    {
       "path": "github.com/getsentry/sentry-go",
       "class": "observability"
     },
@@ -551,6 +555,14 @@
     {
       "path": "github.com/lestrrat-go/jwx/v3/jwt",
       "class": "crypto"
+    },
+    {
+      "path": "github.com/makiuchi-d/gozxing",
+      "class": "test"
+    },
+    {
+      "path": "github.com/makiuchi-d/gozxing/qrcode",
+      "class": "test"
     },
     {
       "path": "github.com/pkg/sftp",
@@ -698,6 +710,10 @@
     },
     {
       "path": "golang.org/x/text/unicode/norm",
+      "class": "utility"
+    },
+    {
+      "path": "golang.org/x/sys/unix",
       "class": "utility"
     },
     {

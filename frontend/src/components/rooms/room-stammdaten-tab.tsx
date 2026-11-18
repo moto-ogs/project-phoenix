@@ -5,7 +5,7 @@ import {
   DatabaseForm,
   type DatabaseFormErrorPath,
 } from "~/components/database/database-form";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { isSystemRoom, type Room } from "~/lib/room-helpers";

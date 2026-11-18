@@ -5,6 +5,10 @@
     "title": "Kujdesi ka përfunduar",
     "body": "Fëmija juaj nuk kujdeset më në këtë {careTerm}. Gjithçka e mëparshme mund ta shihni ende. Njoftime të reja nuk janë më të mundura."
   },
+  "withoutCarePlace": {
+    "title": "Nuk ka vend në {careTerm}",
+    "body": "Fëmija juaj nuk ka vend në {careTerm}. Prandaj marrja e fëmijës, oraret e kujdesit, ushqimi dhe mesazhet për {careTerm} nuk janë të disponueshme këtu."
+  },
   "notFound": "Në këtë adresë nuk ka asnjë fëmijë në llogarinë tuaj. Ju lutemi zgjidhni fëmijën tuaj te përmbledhja.",
   "noChildren": "Me llogarinë tuaj nuk është lidhur ende asnjë fëmijë. {careTerm}-ja e shkollës suaj mund ta rregullojë këtë.",
   "sections": {

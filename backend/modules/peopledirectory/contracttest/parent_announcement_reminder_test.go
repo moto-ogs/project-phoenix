@@ -29,30 +29,30 @@ func TestParentAnnouncementReminderDueScanAndClaim(t *testing.T) {
 	repo := api.NewPeopleRepositorySuiteAnnouncements(testpkg.NewDatabase(t, db))
 	ctx := tenantCtx(t)
 
-	now := databaseTimestamp(t, db)
+	now := publishedNow()
 	window := now.Add(-time.Hour)
 
 	due := api.ParentStoreReminderAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Fällig", now.Add(-10*time.Minute), true, nil)
 	draft := api.ParentStoreReminderAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Entwurf", now.Add(-10*time.Minute), false, nil)
 	tooOld := api.ParentStoreReminderAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Zu alt", window.Add(-time.Minute), true, nil)
 	future := api.ParentStoreReminderAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Später", now.Add(2*time.Hour), true, nil)
 	// The expiry CHECK (expires_at > created_at) only accepts a future expiry
 	// on insert; age the row afterwards, the way time itself does.
 	expiresSoon := now.Add(time.Hour)
 	expired := api.ParentStoreReminderAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Abgelaufen", now.Add(-10*time.Minute), true, &expiresSoon)
 	_, err := db.NewUpdate().TableExpr("users.parent_announcements").
@@ -166,11 +166,11 @@ func TestParentAnnouncementReminderDueScanBatchLoadsTargets(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	repo := api.NewPeopleRepositorySuiteAnnouncements(testpkg.NewDatabase(t, db))
 	ctx := tenantCtx(t)
-	now := databaseTimestamp(t, db)
+	now := publishedNow()
 	window := now.Add(-time.Hour)
 	addDue := func(title string) {
 		api.ParentStoreReminderAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-			return databaseTimestamp(t, db)
+			return publishedNow()
 		}, repo, chain.AccountID, chain.TenantID,
 			title, now.Add(-10*time.Minute), true, nil)
 	}
@@ -204,14 +204,14 @@ func TestParentAnnouncementReminderFeedOrderAndTenantIsolation(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	repo := api.NewPeopleRepositorySuiteAnnouncements(testpkg.NewDatabase(t, db))
 	ctx := tenantCtx(t)
-	now := databaseTimestamp(t, db)
+	now := publishedNow()
 
 	older := api.ParentStoreReminderAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Älter", now.Add(-10*time.Minute), true, nil)
 	newer := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Neuer", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{{TargetType: userModels.AnnouncementTargetSchoolAll}}))
 
@@ -229,7 +229,7 @@ func TestParentAnnouncementReminderFeedOrderAndTenantIsolation(t *testing.T) {
 	assert.Equal(t, newer.ID, feed[0].ID, "before the reminder the newer publication leads")
 
 	// The reminder goes out AFTER the newer announcement was published.
-	sentAt := databaseTimestamp(t, db)
+	sentAt := publishedNow()
 	claimed, err := testpkg.TenantQuery2(t, ctx, db, repo.ClaimReminder, older.ID, sentAt)
 	require.NoError(t, err)
 	require.True(t, claimed)
@@ -249,7 +249,7 @@ func TestParentAnnouncementReminderFeedOrderAndTenantIsolation(t *testing.T) {
 	// Another school's due scan must not see this tenant's reminder. The
 	// claim above already consumed it here, so seed a fresh unsent one first.
 	pending := api.ParentStoreReminderAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Offen", now.Add(-10*time.Minute), true, nil)
 	rows, err := testpkg.TenantQuery2(t, ctx, db, repo.ListDueReminders, now.Add(-time.Hour), now)

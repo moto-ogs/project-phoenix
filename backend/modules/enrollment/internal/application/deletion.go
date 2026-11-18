@@ -78,6 +78,8 @@ type DeletionDependencies struct {
 	Delivery EnrollmentDeletionDelivery
 	Runtime  Runtime
 	Logger   *slog.Logger
+	// Now stamps the deletion audit (ADR 0239); nil is the real clock.
+	Now func() time.Time
 }
 
 // Deletions previews and deletes an enrollment request or one of its
@@ -93,6 +95,9 @@ var _ enrollmentNative.EnrollmentDeletions = (*Deletions)(nil)
 func NewDeletions(deps DeletionDependencies) *Deletions {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
+	}
+	if deps.Now == nil {
+		panic("enrollment deletions: the clock is required")
 	}
 	return &Deletions{deps: deps}
 }
@@ -289,7 +294,7 @@ func (s *Deletions) auditDeletion(ctx context.Context, impact *enrollmentNative.
 		Scope:          scope,
 		Reason:         reason,
 		Counts:         impact.Counts,
-		DeletedAt:      time.Now(),
+		DeletedAt:      s.deps.Now(),
 	}); err != nil {
 		return fmt.Errorf("audit enrollment deletion: %w", err)
 	}

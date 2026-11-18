@@ -2,7 +2,7 @@
 
 import { EmptyState } from "~/components/ui/empty-state";
 import { FramedList } from "~/components/ui/framed-list";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   BellRing,
   ExternalLink,
@@ -12,7 +12,7 @@ import {
   Send,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { LinkifiedText } from "~/components/ui/linkified-text";
@@ -28,12 +28,15 @@ import {
   type SegmentedControlItem,
 } from "~/components/ui/segmented-control";
 import { LetterStatusPanel } from "~/components/announcements/letter-status-panel";
+import { LetterPrintButton } from "~/components/announcements/letter-print-button";
+import { LetterTemplateText } from "~/components/announcements/letter-template-text";
+import { hasLetterPlaceholders } from "~/lib/parent-letter-placeholders";
 import { DeclarationStatusPanel } from "~/components/announcements/declaration-status-panel";
 import type { Group } from "~/lib/api";
 import type { Activity } from "~/lib/activity-helpers";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { LONG_POLL_OPTIONS } from "~/lib/announcement-poll-options";
-import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
 import {
   fetchAnnouncementRecipients,
@@ -63,7 +66,11 @@ import {
 
 import { useSWRAuth } from "~/lib/swr";
 import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useSwrLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { foldForSearch } from "~/lib/search-fold";
 
@@ -519,16 +526,6 @@ export function AnnouncementDetail({
   onReminded,
   apiBase,
 }: AnnouncementDetailProps) {
-  const [stats, setStats] = useState<AnnouncementStats | null>(null);
-  const [recipients, setRecipients] = useState<AnnouncementRecipient[] | null>(
-    null,
-  );
-  const [loadFailed, setLoadFailed] = useState(false);
-  const loadError = useApiLoadError();
-  const showLoadError = loadError.show;
-  const clearLoadError = loadError.clear;
-  // „Wiederholen“ lädt neu: ein neuer Wert startet den Abruf erneut.
-  const [reloadKey, setReloadKey] = useState(0);
   const [statusFilter, setStatusFilter] = useState<
     "all" | AnnouncementRecipient["status"]
   >("all");
@@ -543,53 +540,47 @@ export function AnnouncementDetail({
     announcement.status !== "draft"
   );
 
-  useEffect(() => {
-    if (!showReadStats) return;
-    let cancelled = false;
-    Promise.all([
-      withApiBase(fetchAnnouncementStats, announcement.id, apiBase),
-      withApiBase(fetchAnnouncementRecipients, announcement.id, apiBase),
-    ])
-      .then(([statsResult, recipientsResult]) => {
-        if (cancelled) return;
-        setStats(statsResult);
-        setRecipients(
-          [...recipientsResult].sort(
+  const statsResource = useSWRAuth(
+    showReadStats
+      ? tenantContactKeys.announcementStats(announcement.id, apiBase)
+      : null,
+    () => withApiBase(fetchAnnouncementStats, announcement.id, apiBase),
+    { keepPreviousData: false },
+  );
+  const recipientsResource = useSWRAuth(
+    showReadStats
+      ? tenantContactKeys.announcementRecipients(announcement.id, apiBase)
+      : null,
+    () => withApiBase(fetchAnnouncementRecipients, announcement.id, apiBase),
+    { keepPreviousData: false },
+  );
+  const loadError = useSwrResourceLoadError(
+    [statsResource, recipientsResource],
+    "die Statistik der Mitteilung",
+    () => {
+      void statsResource.mutate();
+      void recipientsResource.mutate();
+    },
+  );
+  const stats = statsResource.data ?? null;
+  const recipientRows = recipientsResource.data;
+  const recipients = useMemo(
+    () =>
+      recipientRows
+        ? [...recipientRows].sort(
             (a, b) =>
               RECIPIENT_SORT[a.status] - RECIPIENT_SORT[b.status] ||
               a.last_name.localeCompare(b.last_name) ||
               a.first_name.localeCompare(b.first_name),
-          ),
-        );
-        setLoadFailed(false);
-        clearLoadError();
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.error("announcement_detail_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setLoadFailed(true);
-        void showLoadError(err, {
-          object: "die Statistik der Mitteilung",
-          retry: () => setReloadKey((key) => key + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    announcement.id,
-    apiBase,
-    showReadStats,
-    reloadKey,
-    showLoadError,
-    clearLoadError,
-  ]);
+          )
+        : null,
+    [recipientRows],
+  );
 
   const isPublished = announcement.status !== "draft";
   const poll = isPoll(announcement);
   const letter = isLetter(announcement);
+  const personalLetter = letter && hasLetterPlaceholders(announcement.body);
   const declaration = isDeclaration(announcement);
   const chips = targetChips(announcement.targets, groups, activities);
   const sender = classLetterSenderLine(announcement);
@@ -611,10 +602,22 @@ export function AnnouncementDetail({
                 : "Mitteilung"
         }
         icon={poll ? ListChecks : declaration ? FileCheck : Megaphone}
+        action={
+          letter && isPublished ? (
+            <LetterPrintButton
+              announcementId={announcement.id}
+              apiBase={apiBase}
+            />
+          ) : undefined
+        }
       >
-        <p className="text-sm leading-6 whitespace-pre-line text-gray-800">
-          <LinkifiedText text={announcement.body} />
-        </p>
+        {personalLetter ? (
+          <LetterTemplateText text={announcement.body} apiBase={apiBase} />
+        ) : (
+          <p className="text-sm leading-6 whitespace-pre-line text-gray-800">
+            <LinkifiedText text={announcement.body} />
+          </p>
+        )}
 
         {announcement.link_url && (
           <a
@@ -742,7 +745,7 @@ export function AnnouncementDetail({
         staff check before publishing. */}
       {showReadStats && (
         <SectionCard title={isPublished ? "Statistik" : "Aktuelle Reichweite"}>
-          {loadFailed && loadError.error ? (
+          {loadError.error ? (
             <LoadErrorAlert error={loadError.error} />
           ) : stats === null || recipients === null ? (
             <SkeletonRegion label="Statistik wird geladen…">

@@ -47,6 +47,7 @@ export default function OperatorLoginPage() {
     if (status !== "loading") setSessionKnown(true);
   }, [status]);
 
+  // oxlint-disable-next-line swr/no-effect-load -- session guard: signs a stale session out before the login form shows; no read
   useEffect(() => {
     const cleanup = signOutStaleSession({
       status,
@@ -77,7 +78,7 @@ export default function OperatorLoginPage() {
   ) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4">
-        <Loading fullPage />
+        <Loading fullPage message="Einen Moment bitte …" />
       </div>
     );
   }

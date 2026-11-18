@@ -4,6 +4,64 @@ status: accepted
 
 # Gespeicherte Daten risikobasiert ohne Feldverschlüsselung schützen
 
+> **Teilweise abgelöst** seit November 2026: Gesundheitsangaben der
+> Kinderakte und der Ferienanmeldung sowie IBAN, Kontoinhaber, Steuer-ID und
+> SV-Nummer von Eltern, Personal und SEPA-Zahlern liegen feldverschlüsselt in der Datenbank (AES-256-GCM mit
+> Security Runtimes Feld-Cipher, jeder Wert an Schule oder Träger gebunden).
+> Dazu kommen bestätigte Mandatstexte, PAIN.008-Dateien, die Bank- und
+> Steuerwerte in der Änderungshistorie des Personalstamms, das SFTP-Passwort
+> des Trägers und das Rückgabearchiv. Für diese Daten
+> gilt der Satz „keine Feld-/Dateiverschlüsselung in der Anwendung“ nicht mehr:
+>
+> - Gesundheitsangaben der Ferienanmeldung und des Feriengasts (#4722,
+>   Migration `1.15.725`, Ring `HEALTH_DATA_KEYS`):
+>   [ADR 0084, Nachtrag 2026-11-01](0084-traeger-portal-liest-ueber-eine-projektion-und-schreibt-in-der-schule.md#nachtrag-2026-11-01-recht-gesundheitsangaben-sehen-4722).
+> - Gesundheitsfeld der Kinderakte (#5472, Migration `1.15.730`):
+>   `users.student_care_profiles.health_info` ist durch das versiegelte
+>   `health_data` ersetzt, Ring `HEALTH_DATA_KEYS`. Dafür gibt es keine eigene ADR.
+> - IBAN und Kontoinhaber der SEPA-Mandate und -Lastschriften sowie der
+>   bestätigte Mandatstext und die PAIN.008-Dateien
+>   ([ADR 0187](0187-traegerpaket-enthaelt-pain008-originale-und-ein-operator-protokoll.md)):
+>   [ADR 0171](0171-sepa-mandat-gehoert-dem-zahler-der-familie-und-die-rechnung-haelt-es-fest.md),
+>   seit [ADR 0183](0183-bankdaten-haben-einen-eigenen-schluesselring-und-einen-wiederholbaren-rekey.md)
+>   mit dem eigenen Bankring `BANK_DATA_KEYS`.
+> - IBAN und abweichender Kontoinhaber der Eltern, IBAN, Steuer-ID und
+>   SV-Nummer des Personals (#6332, Migrationen `1.15.836`/`1.15.837`,
+>   Klartextspalten mit `1.15.900` entfernt):
+>   [ADR 0188](0188-bankdaten-von-eltern-und-personal-liegen-versiegelt-im-bankring.md).
+>   Der Personalstamm des Trägers (#4705) speichert IBAN, Steuer-ID und
+>   SV-Nummer samt Änderungshistorie von Anfang an versiegelt mit dem Bankring:
+>   [ADR 0233](0233-personalakte-des-traegers-verknuepft-beschaeftigungen-und-uebernimmt-bankdaten.md).
+> - Das SFTP-Passwort des Export-Empfängers eines Trägers liegt nur versiegelt
+>   mit dem Bankring vor:
+>   [ADR 0218](0218-export-transfer-uebergibt-finanz-exporte-an-einen-empfaenger-des-traegers.md).
+> - Das freigegebene Archiv der Mandantenrückgabe verschlüsselt die Anwendung
+>   mit einem eigenen Zufallsschlüssel je Paket (AES-256-GCM); die Datenbank
+>   hält diesen Schlüssel nur in Abruf-Tokens eingewickelt:
+>   [ADR 0203](0203-mandantenrueckgabe-wird-per-https-mit-kurzlebigem-token-abgerufen.md).
+> - Hochgeladene Atteste, Impfnachweise und Medikamentenpläne der Kinder und
+>   AU-Bescheinigungen des Personals liegen mit `HEALTH_DATA_KEYS` versiegelt
+>   im Dateispeicher, Lohnabrechnungen mit `BANK_DATA_KEYS`; der Bestand wird
+>   mit `upload-seal` nachverschlüsselt (#3840):
+>   [ADR 0289](0289-atteste-au-bescheinigungen-und-lohnabrechnungen-liegen-versiegelt-im-dateispeicher.md).
+>
+> ADR 0171, 0183, 0187, 0188, 0203 und 0289 tragen noch `status: proposed`. Der
+> Code von 0171 bis 0203 liegt auf `development`. Weiter gilt diese
+> Entscheidung für die übrigen Datei-Uploads, für
+> Dateien in Datenbankzeilen (Uploads und erzeugte Dokumente), für
+> Gesundheitsantworten in Anmeldeanträgen
+> (`enrollment.request_children.custom_data` und die Snapshots in
+> `enrollment.change_requests`), für Konten der Träger, für Zugangsgeheimnisse
+> in den Schuleinstellungen (SFTP-Passwort und Geräte-PIN in
+> `config.setting_values`), für die übrigen Personal-, Eltern- und
+> Kinderdaten sowie für Datenträger-,
+> Sicherungs-, Diagnose- und Protokollmaßnahmen. Die
+> Abwägung unten bleibt gültig: Der Anwendungsprozess erhält die
+> Schlüsselringe als Umgebungsvariablen und kann jeden feldverschlüsselten
+> Wert öffnen.
+> Aktueller Stand je Bestand:
+> [Schutz gespeicherter Daten](../reference/schutz-gespeicherter-daten.md).
+
 Entscheidung des Nutzers vom 23.10.2026, dokumentiert in Slice 3840-a für
 [#3840](https://github.com/moto-ogs/project-phoenix/issues/3840).
 Für Finanz-, Gesundheits-, Personal- und Kinderdaten gilt Option 1:

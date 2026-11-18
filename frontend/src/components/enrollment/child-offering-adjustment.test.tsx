@@ -4,7 +4,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
@@ -15,9 +15,21 @@ import type { AdminRequestChild } from "~/lib/enrollment-admin-api";
 import type { OfferingAdjustmentSnapshot } from "~/lib/offering-adjustment-history";
 import { useCareOfferingsEnabled } from "~/lib/tenant-context";
 
-// Errors and success messages run through the real display path (#2515).
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// Errors and success messages run through the real display path (#2515),
+// reads through real SWR with a fresh cache per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>{children}</ToastProvider>
+    </SWRConfig>
+  );
+}
 const render = (ui: ReactElement) =>
-  renderComponent(ui, { wrapper: ToastProvider });
+  renderComponent(ui, { wrapper: Providers });
 
 const mocks = vi.hoisted(() => ({
   listCareOfferings: vi.fn(),
@@ -30,7 +42,15 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next-auth/react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next-auth/react")>()),
   useSession: () => ({
-    data: { user: { id: "1", token: "t", permissions: ["schedules:manage"] } },
+    data: {
+      user: {
+        id: "1",
+        token: "t",
+        permissions: ["schedules:manage"],
+        scope: "tenant",
+        tenantId: 42,
+      },
+    },
     status: "authenticated",
   }),
 }));

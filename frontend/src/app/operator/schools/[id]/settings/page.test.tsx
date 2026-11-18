@@ -8,6 +8,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 
 const {
@@ -33,6 +34,8 @@ vi.mock("~/lib/tenant-context", () => ({
   useTenantSlugSafe: () => null,
   useTenantRoutingModeSafe: () => "path",
 }));
+
+vi.unmock("swr");
 
 vi.mock("next-auth/react", () => ({
   useSession: mockUseSession,
@@ -96,13 +99,28 @@ vi.mock("~/components/settings/settings-category", () => ({
     onReset,
     onBookingAuthorityEnable,
   }: {
-    category: { key: string; label: string };
+    category: {
+      key: string;
+      label: string;
+      items?: { key: string; value: unknown; is_default: boolean }[];
+    };
     onSave: (key: string, value: unknown) => Promise<void>;
     onReset: (key: string) => Promise<void>;
     onBookingAuthorityEnable?: () => Promise<void>;
   }) => (
     <div data-testid={`category-${category.key}`}>
       <span>{category.label}</span>
+      {category.items?.map((item) => (
+        <span key={item.key} data-testid={`item-${item.key}`}>
+          {`${JSON.stringify(item.value)} ${item.is_default ? "Standard" : "eigener Wert"}`}
+        </span>
+      ))}
+      <button
+        type="button"
+        onClick={() => void onSave("gdpr.attendance_log_enabled", false)}
+      >
+        switch-off-{category.key}
+      </button>
       <button
         type="button"
         onClick={() => void onSave("operations.session_end_time", "18:30")}
@@ -134,11 +152,13 @@ async function renderPage(id = "42") {
   let result!: ReturnType<typeof render>;
   await act(async () => {
     result = render(
-      <ToastProvider>
-        <Suspense fallback={<div data-testid="suspense-fallback" />}>
-          <OperatorSchoolSettingsPage params={Promise.resolve({ id })} />
-        </Suspense>
-      </ToastProvider>,
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <ToastProvider>
+          <Suspense fallback={<div data-testid="suspense-fallback" />}>
+            <OperatorSchoolSettingsPage params={Promise.resolve({ id })} />
+          </Suspense>
+        </ToastProvider>
+      </SWRConfig>,
     );
   });
   return result;
@@ -147,7 +167,13 @@ async function renderPage(id = "42") {
 describe("OperatorSchoolSettingsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseSession.mockReturnValue({ status: "authenticated" });
+    mockUseSession.mockReturnValue({
+      status: "authenticated",
+      data: {
+        user: { id: "account-1", scope: "platform" },
+        expires: "2099-01-01",
+      },
+    });
     mockListSchools.mockResolvedValue([]);
     mockSearchParams.value = new URLSearchParams();
   });
@@ -265,6 +291,55 @@ describe("OperatorSchoolSettingsPage", () => {
         catalogText("general.unavailable", "die Liste der Einstellungen"),
       ),
     ).toBeNull();
+  });
+
+  // #7218: until the refresh arrives, a switched-off field must not keep the
+  // stale „eigener Wert“ state that offers „Zurücksetzen“ and its deletion
+  // dialog; the school page applies the same optimistic update.
+  it("shows a saved switch at once, before the refreshed schema arrives", async () => {
+    mockFetchSchema
+      .mockResolvedValueOnce({
+        tabs: [
+          {
+            key: "gdpr",
+            label: "GDPR",
+            categories: [
+              {
+                key: "bewegungsdaten",
+                label: "Bewegungsdaten",
+                items: [
+                  {
+                    key: "gdpr.attendance_log_enabled",
+                    type: "boolean",
+                    default: false,
+                    value: true,
+                    is_default: false,
+                    levels: "schule",
+                    source: "school",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+      .mockImplementation(() => new Promise(() => undefined));
+    mockSetValue.mockResolvedValue(undefined);
+
+    await renderPage();
+    const item = await screen.findByTestId("item-gdpr.attendance_log_enabled");
+    expect(item).toHaveTextContent("true eigener Wert");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "switch-off-bewegungsdaten" }),
+    );
+
+    await waitFor(() => expect(item).toHaveTextContent("false Standard"));
+    expect(mockSetValue).toHaveBeenCalledExactlyOnceWith(
+      "42",
+      "gdpr.attendance_log_enabled",
+      false,
+    );
   });
 
   it("shows a failed impact check inside the dialog and keeps activation off", async () => {

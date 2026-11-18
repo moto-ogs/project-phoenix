@@ -7,10 +7,15 @@ import {
 } from "@testing-library/react";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  DESKTOP_WIDTH,
+  PHONE_WIDTH,
+  setViewportWidth,
+} from "~/test/helpers/viewport";
 import DatabasePage from "./page";
 import { mockSessionData } from "~/test/mocks/next-auth";
-import useSWR from "swr";
+import { useSWR } from "~/lib/swr/testing";
 
 // Die Kacheln folgen den Rechten der Sitzung (#3469); die Leitung hält den
 // Adminzuschnitt und sieht jede.
@@ -52,10 +57,6 @@ vi.mock("~/components/ui/tenant-page-search-row", () => ({
   ),
 }));
 
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: vi.fn(() => false),
-}));
-
 const mockCountsResponse = {
   success: true,
   message: "Counts fetched",
@@ -91,7 +92,6 @@ global.fetch = vi.fn(() =>
 import { useSession } from "next-auth/react";
 import { MODULE_KEYS } from "~/lib/modules";
 import { useBookedModules } from "~/lib/tenant-context";
-import { useIsMobile } from "~/components/ui/hooks/useIsMobile";
 import { useTimetableEnabled } from "~/lib/tenant-context";
 
 vi.mock("~/lib/tenant-context", () => ({
@@ -117,6 +117,10 @@ function mockCounts(
   } as never);
 }
 
+afterEach(() => {
+  setViewportWidth(DESKTOP_WIDTH);
+});
+
 describe("DatabasePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -125,7 +129,6 @@ describe("DatabasePage", () => {
       status: "authenticated",
       update: vi.fn(),
     });
-    vi.mocked(useIsMobile).mockReturnValue(false);
     vi.mocked(useTimetableEnabled).mockReturnValue(true);
     mockCounts();
     vi.mocked(global.fetch).mockResolvedValue({
@@ -214,7 +217,7 @@ describe("DatabasePage", () => {
   });
 
   it("shows page header on mobile", async () => {
-    vi.mocked(useIsMobile).mockReturnValue(true);
+    setViewportWidth(PHONE_WIDTH);
 
     render(<DatabasePage />);
 

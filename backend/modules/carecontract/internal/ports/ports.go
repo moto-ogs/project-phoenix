@@ -53,6 +53,12 @@ type TemplateRow struct {
 	SchoolID   int64
 	OfferingID int64
 	Template   carecontract.Template
+	// Versions are the conditions texts of every saved version of the template the trail recorded (VersionsDetail), the
+	// current one included. VersionsComplete tells that every save of the
+	// template recorded them; Templates reads both, UpsertTemplate and
+	// UpsertTemplates leave them empty.
+	Versions         []string
+	VersionsComplete bool
 }
 
 // ContractKey is the key of a contract: the application child at one
@@ -138,6 +144,11 @@ const (
 	ActionConclude = "conclude"
 )
 
+// VersionsDetail is the detail of a template entry of the trail with the
+// conditions texts the saved version gives (ADR 0281,
+// Nachtrag 2026-11-17 on the acceptance of the conditions).
+const VersionsDetail = "acceptance_texts"
+
 // Store persists the contracts of a Träger in its Träger transaction.
 type Store interface {
 	UpsertTemplates(ctx context.Context, organizationID, accountID, schoolID int64, inputs []carecontract.ModuleTemplateInput) ([]TemplateRow, error)
@@ -152,7 +163,9 @@ type Store interface {
 	Mailings(ctx context.Context, organizationID, contractID int64) ([]StoredMailing, error)
 	InsertDocument(ctx context.Context, organizationID, accountID int64, record ContractRecord, templateVersion int, file carecontract.File) (int64, error)
 	Document(ctx context.Context, organizationID, contractID int64) (carecontract.File, error)
-	InsertMailing(ctx context.Context, organizationID, accountID, contractID, documentID, outboxID int64, recipient string) error
+	// InsertMailing records a send at the owner clock's instant at; the
+	// reminders compare it with that clock (ADR 0281).
+	InsertMailing(ctx context.Context, organizationID, accountID, contractID, documentID, outboxID int64, recipient string, at time.Time) error
 	MarkSent(ctx context.Context, organizationID, contractID int64, at time.Time) error
 	DeleteDraft(ctx context.Context, organizationID, contractID int64) (bool, error)
 	// MarkConcluded moves a sent contract with its version beantragt to

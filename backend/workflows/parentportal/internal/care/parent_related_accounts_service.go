@@ -150,13 +150,15 @@ type GuardianInvitationRecord struct {
 	ExpiresAt         time.Time
 	AcceptedAt        *time.Time
 	Rejected          bool
+	// Expired reports whether the link ran out, judged by Identity & Access
+	// on the clock that stamps it.
+	Expired bool
 }
 
 // Open reports whether the invitation still gives the contact a way in: not
 // spent, not expired, and not refused by staff.
-func (r GuardianInvitationRecord) Open(now time.Time) bool {
-	return r.AcceptedAt == nil && r.ExpiresAt.After(now) &&
-		!r.Rejected
+func (r GuardianInvitationRecord) Open() bool {
+	return r.AcceptedAt == nil && !r.Expired && !r.Rejected
 }
 
 // GuardianInvitationReads is the consumer-owned port over the Identity &
@@ -191,12 +193,11 @@ func (s *Service) hasOpenInvitationForStudent(ctx context.Context, guardianProfi
 	if err != nil {
 		return false
 	}
-	now := time.Now()
 	for _, inv := range invitations {
 		if inv.StudentID == nil || *inv.StudentID != studentID {
 			continue
 		}
-		if inv.Open(now) {
+		if inv.Open() {
 			return true
 		}
 	}

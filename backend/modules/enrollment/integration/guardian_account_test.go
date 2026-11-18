@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -15,7 +16,7 @@ import (
 func TestGuardianAccountBackfillTenantScopeRollbackAndRetry(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := enrollmentCompose.New()
+	module := enrollmentCompose.NewClocked(time.Now)
 	account := testpkg.CreateTestAccount(t, db, "enrollment-backfill")
 	email := account.Email
 	tenantIDs := make([]int64, 0, 2)

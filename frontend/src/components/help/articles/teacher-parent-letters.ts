@@ -18,14 +18,17 @@ export function teacherParentLettersTopic(): HelpTopic {
       "Öffnen Sie `Elternbriefe`.",
       "Wählen Sie `Neuer Elternbrief`.",
       "Wählen Sie die Klasse.",
-      "Geben Sie `Betreff` und `Text` ein.",
+      "Geben Sie den `Betreff` ein.",
       "Wählen Sie unter `Was sollen die Eltern tun?`: `Nur zur Information`, `Mit Lesebestätigung` oder `Einverständnis mit Unterschrift`.",
+      "Schreiben Sie den `Text`.",
       "Wählen Sie `Senden`.",
     ],
     result:
       "Die Eltern der Klasse sehen den Brief sofort. Als Absender sehen sie Ihren Namen, die Klasse und die Schule.",
     notes: [
       "Wählen Sie den Brief in der Liste. Dort sehen Sie, wer gelesen, bestätigt oder zugestimmt hat.",
+      "Bei `Mit Lesebestätigung` setzen Sie unter `Für jedes Kind einsetzen` Angaben wie den Vornamen in den Text. Jede Familie liest dann den Brief mit den Angaben ihres Kindes. Unter `So liest die Familie den Brief` sehen Sie ihn vorher.",
+      "Für Familien ohne moto wählen Sie im gesendeten Brief `Briefe drucken`. Das PDF hat einen Brief je Kind.",
       "Ein gesendeter Brief lässt sich nicht mehr ändern. Sie können ihn über `Zurückziehen` zurücknehmen.",
       "Die OGS sieht Ihre Briefe in ihrer Übersicht. Ändern kann sie nur Sie.",
       "Unter `Empfänger` steht bei jeder Mail, was aus ihr geworden ist. Steht dort `Adresse prüfen`, sagen Sie der OGS Bescheid. Sie korrigiert die Adresse.",

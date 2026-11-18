@@ -36,6 +36,7 @@ type Reminders struct {
 var _ carecontract.Reminders = (*Reminders)(nil)
 
 func NewReminders(store ContractStore, ports ReminderPorts, clock Clock) *Reminders {
+	requireClock(clock, "reminders")
 	if store == nil || ports.Organizations == nil || ports.Settings == nil || ports.Sender == nil || ports.Post == nil ||
 		ports.Runtime == nil || ports.Links.Tokens == nil || ports.Links.Fingerprint == nil {
 		panic("care contract: the reminders need the store, the Träger, the settings, the sender, the post, the runtime and the tokens")
@@ -128,7 +129,7 @@ func (r *Reminders) remind(ctx context.Context, organizationID int64, letterhead
 	if err != nil {
 		return fmt.Errorf("enqueue reminder: %w", err)
 	}
-	if err := r.store.InsertReminder(ctx, organizationID, candidate.ContractID, candidate.Number, outboxID, candidate.Recipient); err != nil {
+	if err := r.store.InsertReminder(ctx, organizationID, candidate.ContractID, candidate.Number, outboxID, candidate.Recipient, r.clock.now()); err != nil {
 		return err
 	}
 	return trailContract(ctx, r.store, organizationID, 0, record, ports.ActionRemind, map[string]any{"number": candidate.Number})

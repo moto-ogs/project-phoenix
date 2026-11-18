@@ -57,6 +57,7 @@ export function parentNewsTopic(): HelpTopic {
     ],
     result: "Erledigte Einträge wandern von `Offen` zu `Erledigt`.",
     notes: [
+      "Haben Sie mehrere Kinder an der Schule? Manche Elternbriefe gibt es für jedes Kind einzeln. Oben im Brief wählen Sie dann den Namen des Kindes.",
       "Die Bestätigung heißt `Lesebestätigung`. Damit bestätigen Sie nur, dass Sie den Brief gelesen haben.",
       "Bei mehreren Kindern zeigt moto, wie viele Antworten noch fehlen.",
       "Angehängte Dateien öffnen Sie, indem Sie auf den Namen tippen.",

@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { StaffSchedule } from "~/lib/staff-api";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
 import { ArbeitszeitmodellTab } from "./arbeitszeitmodell-tab";
 
 // #6887: ohne gepflegtes Soll sagt der Reiter, was fehlt und was daraus
@@ -80,8 +81,9 @@ describe("ArbeitszeitmodellTab ohne Soll", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/Schnitt 0min/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Bearbeiten" })).toBeVisible();
-    // Der aktuelle Monat der Testuhr (September 2026).
-    expect(mocks.monthKey).toBe("staff-month-summary-42-2026-9");
+    // Der aktuelle Monat der Testuhr, ohne führende Null.
+    const [year, month] = TEST_CLOCK_TODAY.split("-").map(Number);
+    expect(mocks.monthKey).toBe(`staff-month-summary-42-${year}-${month}`);
   });
 
   it("warnt bei gepflegtem Modell, das in diesem Monat nicht gilt", () => {
@@ -140,4 +142,3 @@ describe("ArbeitszeitmodellTab mit Soll vom Träger", () => {
     ).not.toBeInTheDocument();
   });
 });
-

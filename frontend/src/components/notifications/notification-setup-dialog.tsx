@@ -21,6 +21,8 @@ import {
 } from "~/lib/notification-preferences-api";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateMatching } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import {
   isPushConfigurationMissing,
   isPushSupported,
@@ -136,6 +138,7 @@ export function NotificationSetupDialog({
     [onFinished],
   );
 
+  // oxlint-disable-next-line swr/no-effect-load -- inspects this device's install, Notification permission and push subscription (syncs it with the server); per-device browser state, not a shared resource
   useEffect(() => {
     let active = true;
     const decision = readDecision(storageKey);
@@ -267,14 +270,20 @@ export function NotificationSetupDialog({
     }
   };
 
+  const invalidate = useInvalidateMatching();
   const enable = async () => {
     setBusy(true);
     dialogErrors.clear();
+    const preferences = tenantAdminKeys.notificationPreferences(portal);
     try {
       const pushRequest = subscribePush(portal);
       const preferenceRequests = types
         .filter((type) => type.available && !type.enabled)
         .map((type) => setNotificationPreference(type.key, true, portal));
+      // The settings card shows these preferences, also after a partial save.
+      void Promise.allSettled(preferenceRequests).then(() =>
+        invalidate((key) => key === preferences),
+      );
       await Promise.all([pushRequest, ...preferenceRequests]);
       writeDecision(storageKey, { done: true });
       close(null);

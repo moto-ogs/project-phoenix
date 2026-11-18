@@ -1,9 +1,11 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { TraegerComparison } from "~/lib/traeger-comparison-api";
+import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 
+vi.unmock("swr");
 const {
   mockFetchComparison,
   mockFetchSchools,
@@ -21,7 +23,10 @@ const {
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path,
 }));
-vi.mock("next-auth/react", () => ({ useSession: mockUseSession }));
+vi.mock("next-auth/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next-auth/react")>()),
+  useSession: mockUseSession,
+}));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/standortvergleich",
   useRouter: () => ({ push: vi.fn() }),
@@ -122,11 +127,14 @@ const COMPARISON: TraegerComparison = {
   },
 };
 
+// Die Seite fragt die letzten vier Wochen bis heute an.
+const LAST_FOUR_WEEKS = { from: testClockDay(-27), to: TEST_CLOCK_TODAY };
+
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerComparisonPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -156,8 +164,7 @@ describe("TraegerComparisonPage", () => {
 
     const table = await screen.findByRole("table");
     expect(mockFetchComparison).toHaveBeenCalledWith({
-      from: "2026-08-13",
-      to: "2026-09-09",
+      ...LAST_FOUR_WEEKS,
       schoolIds: [],
     });
     // 82 % of all places: the tile and the row „Alle zusammen“.
@@ -207,8 +214,9 @@ describe("TraegerComparisonPage", () => {
 
     await waitFor(() => expect(mockDownloadBlob).toHaveBeenCalled());
     expect(mockDownload).toHaveBeenCalledWith(
-      { from: "2026-08-13", to: "2026-09-09", schoolIds: [] },
+      { ...LAST_FOUR_WEEKS, schoolIds: [] },
       ["places_rate", "free_places", "booked", "present", "active_students"],
+      "csv",
     );
   });
 });

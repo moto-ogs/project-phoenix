@@ -6,6 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 
@@ -15,13 +16,32 @@ const mocks = vi.hoisted(() => ({
   downloadMealDeliveries: vi.fn(),
 }));
 
+// Echtes SWR statt des globalen Stubs, mit frischem Cache je Render.
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    status: "authenticated",
+  }),
+}));
+
 vi.mock("~/lib/meal-plan-api", () => ({
   getMealOrders: mocks.getMealOrders,
   downloadMealMonth: mocks.downloadMealMonth,
   downloadMealDeliveries: mocks.downloadMealDeliveries,
 }));
 
-import { ToastProvider } from "~/contexts/ToastContext";
+import { ToastProvider as Toasts } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
+
+function ToastProvider({ children }: { readonly children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <Toasts>{children}</Toasts>
+    </SWRConfig>
+  );
+}
 import { ApiError } from "~/lib/api-error";
 import type { MealOrders } from "~/lib/meal-plan-api";
 import { catalogText } from "~/test/error-catalog-text";

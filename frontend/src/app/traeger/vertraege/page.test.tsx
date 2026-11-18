@@ -6,9 +6,10 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { catalogText } from "~/test/error-catalog-text";
@@ -29,12 +30,16 @@ const { api, mockPush } = vi.hoisted(() => ({
   mockPush: vi.fn(),
 }));
 
+vi.unmock("swr");
 vi.mock("~/lib/traeger-care-contracts-api", () => api);
 vi.mock("next-auth/react", () => ({
+  SessionProvider: ({ children }: { children: ReactNode }) => children,
   useSession: () => ({
     data: {
       user: {
         id: "A",
+        scope: "org",
+        orgId: 7,
         permissions: ["traeger_contracts:manage", "traeger_overview:read"],
       },
     },
@@ -120,9 +125,9 @@ const CANDIDATE: ContractCandidate = {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerVertraegePage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -167,6 +172,32 @@ describe("TraegerVertraegePage", () => {
     expect(
       screen.getByRole("button", { name: /Verträge erstellen \(3\)/ }),
     ).toBeInTheDocument();
+  });
+
+  it("withdraws cached contracts as soon as loading another page refuses access", async () => {
+    api.fetchCareContracts.mockResolvedValueOnce({
+      contracts: [SENT],
+      counts: { entwurf: 1100, versendet: 1 },
+      hasMore: true,
+    });
+    renderPage();
+    expect((await screen.findAllByText("Ben Muster"))[0]).toBeVisible();
+    api.fetchCareContracts
+      .mockRejectedValueOnce(new ApiError("refused", 403))
+      .mockImplementation(() => new Promise(() => undefined));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Weitere Verträge laden (1 von 1101)",
+      }),
+    );
+    // Anker: die ursprüngliche Verweigerung ist sichtbar, ohne einen zweiten Abruf abzuwarten.
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Liste der Verträge"),
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("Ben Muster")).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
   it("loads older contracts and sends filters to the server", async () => {
@@ -241,6 +272,41 @@ describe("TraegerVertraegePage", () => {
     expect(
       await screen.findByText(/1 Entwurf ist erstellt/),
     ).toBeInTheDocument();
+  });
+
+  it("reads the other filters' lists again after creating drafts", async () => {
+    api.createCareContracts.mockResolvedValue({
+      created: [DRAFT],
+      skipped: [],
+    });
+    renderPage();
+    await screen.findAllByText("Lina Muster");
+    fireEvent.click(screen.getByRole("button", { name: "Alle Status" }));
+    fireEvent.click(await screen.findByRole("option", { name: /^Entwurf/ }));
+    await waitFor(() =>
+      expect(api.fetchCareContracts).toHaveBeenLastCalledWith(
+        expect.objectContaining({ status: "entwurf" }),
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Verträge erstellen/ }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "1 Entwurf erstellen" }),
+    );
+    expect(
+      await screen.findByText(/1 Entwurf ist erstellt/),
+    ).toBeInTheDocument();
+    api.fetchCareContracts.mockClear();
+
+    fireEvent.click(screen.getByRole("button", { name: /^Entwurf \(/ }));
+    fireEvent.click(await screen.findByRole("option", { name: "Alle Status" }));
+    await waitFor(() =>
+      expect(api.fetchCareContracts).toHaveBeenCalledWith({
+        status: undefined,
+        schoolId: "",
+        search: "",
+        offset: 0,
+      }),
+    );
   });
 
   it("sends the selected drafts", async () => {
@@ -392,13 +458,13 @@ describe("TraegerVertraegePage", () => {
         "Der Vertrag entsteht in wenigen Minuten von selbst.",
       ),
     ).toHaveLength(1);
-    // Changed conditions name the real state and the next step.
+    // Consent that does not match the current terms names what is known and the next step.
     expect(
-      screen.getByText("Bedingungen nach der Anmeldung geändert"),
+      screen.getByText("Zustimmung passt nicht zum Vertrag"),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Sie haben die Bedingungen nach der Anmeldung geändert\. Die Eltern haben ihnen nicht zugestimmt\./,
+        /Die Eltern haben anderen Bedingungen zugestimmt als den aktuellen\. Es entsteht kein Vertrag\./,
       ),
     ).toBeInTheDocument();
     expect(

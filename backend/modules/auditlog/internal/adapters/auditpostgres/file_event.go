@@ -2,6 +2,7 @@ package audit
 
 import (
 	"context"
+	"time"
 
 	audit "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 )
@@ -10,16 +11,17 @@ const fileEventTableExpr = `audit.file_event_ledger AS "file_event"`
 
 type fileEventRepository struct {
 	runtime Runtime
+	now     func() time.Time
 }
 
 // NewFileEventRepository creates the append-only file storage trail
 // repository (#2596).
-func NewFileEventRepository(runtime Runtime) audit.FileEventRepository {
-	return &fileEventRepository{runtime: requireRuntime(runtime)}
+func NewFileEventRepository(runtime Runtime, now func() time.Time) audit.FileEventRepository {
+	return &fileEventRepository{runtime: requireRuntime(runtime), now: now}
 }
 
 func (r *fileEventRepository) Create(ctx context.Context, event *audit.FileEvent) error {
-	return NewAppender(r.runtime).Append(ctx, event)
+	return NewAppender(r.runtime, r.now).Append(ctx, event)
 }
 
 func (r *fileEventRepository) ListRecent(ctx context.Context, limit int) ([]*audit.FileEvent, error) {

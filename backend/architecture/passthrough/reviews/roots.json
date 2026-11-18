@@ -442,7 +442,7 @@
     },
     {
       "decision": "0090",
-      "id": "api/classDayAccessLog.ClassDayViewSeenSince",
+      "id": "api/classDayAccessLog.ClassDayViewSeenToday",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -477,7 +477,7 @@
     },
     {
       "decision": "0090",
-      "id": "api/classDayAccessLog.SchoolDayViewSeenSince",
+      "id": "api/classDayAccessLog.SchoolDayViewSeenToday",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -966,6 +966,11 @@
       "reason": "ADR 0121 addendum (#5622): Consumer-port adapter of the Elternabrechnung's settings port; it reads the payment text of the Träger through the Settings Platform's Träger level in the caller's Träger transaction and translates the keyed text into the port's answer."
     },
     {
+      "decision": "0075",
+      "id": "api/parentNotificationFeed.Page",
+      "reason": "ADR 0075 consumer-port adapter (#7140): translates Delivery's guardian notification feed page onto the feed port of the parents portal's HTTP adapter; the count and read-state calls reach Delivery's guardian feed unchanged through the embedded interface. No decision or SQL."
+    },
+    {
       "decision": "0090",
       "id": "api/parentPreferences.DisableAllForParent",
       "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
@@ -1271,6 +1276,16 @@
       "reason": "ADR 0084 (#4676): Consumer-port adapter of the Träger projection's group names port; it translates School Structure's named groups of each school into the projection's NamedGroup vocabulary."
     },
     {
+      "decision": "0254",
+      "id": "api/traegerHireEmployments.CreateSchoolEmployment",
+      "reason": "ADR 0254 (#7206): Consumer-port adapter that translates Workforce's TraegerSchoolEmploymentInput into School Membership's CreateStaff and returns only the employment's ID."
+    },
+    {
+      "decision": "0254",
+      "id": "api/traegerHirePersons.CreateSchoolPerson",
+      "reason": "ADR 0254 (#7206): Consumer-port adapter that translates Workforce's TraegerSchoolPersonInput into the People Directory's CreatePerson and returns only the person's ID."
+    },
+    {
       "decision": "0137",
       "id": "api/traegerHolidayTrail.ListHolidayTrail",
       "reason": "ADR 0137 (#5326): root translation of Enrollment's holiday registration trail into the Träger projection's trail entries without a school."
@@ -1279,6 +1294,11 @@
       "decision": "0137",
       "id": "api/traegerHolidayTrail.ListHolidayTrailActors",
       "reason": "ADR 0137 (#5326): root translation of Enrollment's holiday registration trail accounts into the Träger projection's actors without a school."
+    },
+    {
+      "decision": "0075",
+      "id": "api/traegerNotificationFeed.Page",
+      "reason": "ADR 0075 consumer-port adapter (#7146): translates Delivery's Träger bell page with each entry's school onto the Träger feed port of the HTTP adapter; the count and read-state calls reach Delivery's reader unchanged through the embedded interface. No decision or SQL."
     },
     {
       "decision": "0109",
@@ -1334,6 +1354,16 @@
       "decision": "0247",
       "id": "api/traegerSchoolStates.TraegerSchoolStates",
       "reason": "ADR 0247 (#4717): Consumer-port adapter of the daily attendance report of Mecklenburg-Vorpommern; it reads the federal state of each school of the Träger at School Calendar's Träger view (#4702) and keys it by school for the projection."
+    },
+    {
+      "decision": "0251",
+      "id": "api/traegerSpringerEmployments.EmploySpringer",
+      "reason": "ADR 0251 (#7173): Consumer-port adapter that translates Workforce's SpringerEmploymentRequest into the Identity \u0026 Access SpringerWindow and returns only the employment's staff ID."
+    },
+    {
+      "decision": "0251",
+      "id": "api/traegerSpringerEmployments.EndSpringerAccess",
+      "reason": "ADR 0251 (#7173): Finite named forwarding debt under ADR 0090: Workforce's EndSpringerAccess names the end of a lifted block's access, Identity \u0026 Access ends the window of that block."
     },
     {
       "decision": "0090",
@@ -2362,8 +2392,8 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/PushSubscriptionCleanup.DeleteOrphaned",
-      "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
+      "id": "roots/owners/PushSubscriptionCleanup.DeleteLinks",
+      "reason": "Root translation of Identity \u0026 Access's push cleanup port onto Delivery's DeleteSessionLinks (#7295): maps Identity \u0026 Access's link values onto Delivery's; Delivery deletes only the links Identity \u0026 Access named dead on its session clock. No forwarding without translation."
     },
     {
       "decision": "0090",
@@ -2384,6 +2414,11 @@
       "decision": "0090",
       "id": "roots/owners/PushSubscriptionCleanup.DeleteUnboundByAccount",
       "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
+    },
+    {
+      "decision": "0090",
+      "id": "roots/owners/PushSubscriptionCleanup.ListLinks",
+      "reason": "Root translation of Delivery's ListSessionLinks onto Identity \u0026 Access's push cleanup port (#7295): maps Delivery's link values onto Identity \u0026 Access's, which decides session liveness on its own clock instead of a Delivery view on the database clock. No forwarding without translation."
     },
     {
       "decision": "0090",
@@ -2552,7 +2587,7 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/StatisticsAuditLog.SeenStatisticsAccessSince",
+      "id": "roots/owners/StatisticsAuditLog.SeenStatisticsAccessWithin",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -2598,11 +2633,6 @@
     {
       "decision": "0090",
       "id": "roots/owners/StudentConsents.CurrentStudentConsents",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/StudentPhotoRuntime.PhotoFeatureEnabled",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -3607,6 +3637,11 @@
     },
     {
       "decision": "0090",
+      "id": "roots/owners/catererInvitationDelivery.CancelCatererInvitation",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0090",
       "id": "roots/owners/classArrivalExceptionRecords.Delete",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -3733,6 +3768,11 @@
     {
       "decision": "0090",
       "id": "roots/owners/communicationAnnouncementAudience.Stats",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0090",
+      "id": "roots/owners/communicationAnnouncementAudience.StudentAnnouncements",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -4402,11 +4442,6 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/guardianInvitationReads.ListByProfile",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "roots/owners/guardianInvitationReads.ListOpen",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -4816,6 +4851,31 @@
       "reason": "ADR 0113 addendum (#4703): Consumer-port adapter of the parents portal's holiday wish statement port; it translates the workflow's claim into Enrollment's claim and the sealed statement into the wish and its proof, in the caller's tenant transaction."
     },
     {
+      "decision": "0217",
+      "id": "roots/owners/parentLetterArrivals.GetWeeklySchedulesByStudentIDsForDate",
+      "reason": "Root binding maps one source capability into Communication-owned letter values; preserves context, date and errors without joining sources or deriving care days or pickup text (ADR 0068, #4813)."
+    },
+    {
+      "decision": "0217",
+      "id": "roots/owners/parentLetterGroups.GroupNames",
+      "reason": "Root binding maps one source capability into Communication-owned letter values; preserves context, date and errors without joining sources or deriving care days or pickup text (ADR 0068, #4813)."
+    },
+    {
+      "decision": "0217",
+      "id": "roots/owners/parentLetterPickups.GetWeeklySchedulesByStudentIDsForDate",
+      "reason": "Root binding maps one source capability into Communication-owned letter values; preserves context, date and errors without joining sources or deriving care days or pickup text (ADR 0068, #4813)."
+    },
+    {
+      "decision": "0217",
+      "id": "roots/owners/parentLetterStudents.ListStudentNamesByID",
+      "reason": "Root binding maps one source capability into Communication-owned letter values; preserves context, date and errors without joining sources or deriving care days or pickup text (ADR 0068, #4813)."
+    },
+    {
+      "decision": "0217",
+      "id": "roots/owners/parentLetterStudents.ListStudentsByID",
+      "reason": "Root binding maps one source capability into Communication-owned letter values; preserves context, date and errors without joining sources or deriving care days or pickup text (ADR 0068, #4813)."
+    },
+    {
       "decision": "0171",
       "id": "roots/owners/parentMandateParties.Recipients",
       "reason": "Consumer-port adapter of the parents' SEPA mandate (#4696): it reads the billing party of the checked contract from the Betreuungsvertrag and translates it into the Elternabrechnung's recipient, the proposal for the account holder."
@@ -4958,11 +5018,6 @@
     {
       "decision": "0090",
       "id": "roots/owners/phaseResponseCareExits.StudentsWithCareExit",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/phaseResponseRoster.ListRunningStudents",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -5218,6 +5273,11 @@
     {
       "decision": "0090",
       "id": "roots/owners/provisioningSettings.DeviceOnlineWindowMinutes",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0251",
+      "id": "roots/owners/provisioningSettings.ReplyToAddresses",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

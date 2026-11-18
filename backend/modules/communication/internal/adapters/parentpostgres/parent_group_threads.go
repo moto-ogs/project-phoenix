@@ -38,8 +38,8 @@ type groupThreadRow struct {
 	ClosedAt           *time.Time `bun:"closed_at"`
 	ClosedByAccountID  *int64     `bun:"closed_by_account_id"`
 	LastMessageAt      *time.Time `bun:"last_message_at"`
-	CreatedAt          time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt          time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt          time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt          time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 func (r *groupThreadRow) value() *communication.ParentGroupThread {
@@ -66,7 +66,7 @@ type groupMessageRow struct {
 	SenderName      string          `bun:"sender_name,notnull"`
 	Body            string          `bun:"body,notnull"`
 	Attachments     json.RawMessage `bun:"attachments,type:jsonb,nullzero,default:'[]'"`
-	CreatedAt       time.Time       `bun:"created_at,nullzero,notnull,default:clock_timestamp()"`
+	CreatedAt       time.Time       `bun:"created_at,nullzero,notnull"`
 }
 
 func (r *groupMessageRow) value() communication.ParentGroupMessage {
@@ -167,7 +167,7 @@ func (s *GroupThreadStore) AppendMessage(ctx context.Context, threadID int64, se
 		value := row.value()
 		return &value, nil
 	}
-	if err := claimMessageAttachments(ctx, db, db.NewUpdate().TableExpr("users.message_attachments AS attachment").Set("parent_group_message_id = ?", row.ID), tenantID, attachmentIDs); err != nil {
+	if err := claimMessageAttachments(ctx, db, db.NewUpdate().TableExpr("users.message_attachments AS attachment").Set("parent_group_message_id = ?", row.ID), tenantID, attachmentIDs, row.CreatedAt); err != nil {
 		return nil, err
 	}
 	if len(recipients) > 0 {

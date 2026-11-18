@@ -28,11 +28,23 @@ type Resource struct {
 	// Classes answers the class reach and sender name of the class-letter
 	// routes in moto schule (#4800); without it they refuse to write.
 	Classes ClassLetterCaller
+	// Letters lays out the printed letters of a dispatch (#4813);
+	// ParentLetters previews and prints them.
+	Letters       LetterPrinter
+	ParentLetters announcementService.ParentLetterCapability
+	// StudentRecords reads a child's letters and declarations and the proof
+	// of a declaration (#4814).
+	StudentRecords announcementService.StudentParentRecordCapability
+	// now tells a published announcement from an expired one.
+	now func() time.Time
 }
 
-// NewResource wires the staff announcement resource.
-func NewResource(service announcementService.ParentAnnouncementCapability, reports ReportRenderer) *Resource {
-	return &Resource{Service: service, Reports: reports}
+// NewResource wires the staff announcement resource over the clock now.
+func NewResource(service announcementService.ParentAnnouncementCapability, reports ReportRenderer, now func() time.Time) *Resource {
+	// Announcements composed without letters answer their routes with 500.
+	letters, _ := announcementService.ParentLettersOf(service)
+	students, _ := announcementService.StudentParentRecordsOf(service)
+	return &Resource{Service: service, Reports: reports, ParentLetters: letters, StudentRecords: students, now: now}
 }
 
 // Router returns the chi router scoped to /parent-announcements.
@@ -54,7 +66,13 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		announce := common.RequiresPermission(permissions.AdminWildcard)
 		read := r.With(announce, withTx, rs.requireReadableAnnouncement)
 		r.With(announce, withTx).Get("/", rs.list)
+		// Kinderakte (#4814): the letters and declarations of one child.
+		r.With(announce, withTx).Get("/students/{studentId}", rs.studentRecords)
 		r.With(announce, withTx).Post("/", rs.create)
+		// Serienbriefe (#4813): the placeholders, a letter filled for one
+		// child before it is sent, and every letter of a dispatch to print.
+		r.With(announce).Get("/letter-placeholders", rs.letterPlaceholders)
+		r.With(announce, withTx).Post("/letter-preview", rs.letterPreview)
 		r.With(announce, withTx).Get("/{announcementId}", rs.get)
 		r.With(announce, withTx).Put("/{announcementId}", rs.update)
 		r.With(announce, withTx).Delete("/{announcementId}", rs.delete)
@@ -70,6 +88,7 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		// Elternbrief (#2384): the recipient matrix — e-mail and moto status per
 		// person, plus which children the letter is already fulfilled for.
 		read.Get("/{announcementId}/letter-status", rs.letterStatus)
+		read.Get("/{announcementId}/letters-pdf", rs.lettersPDF)
 		r.With(announce, withTx).Post("/{announcementId}/resend-failed", rs.resendFailed)
 		// Scheduled reminder (#3162): the one post-publish edit. Distinct from
 		// POST /remind above, which is the manual nudge to whoever still owes
@@ -181,11 +200,11 @@ type statsResponse struct {
 	Recorded bool `json:"recorded"`
 }
 
-func announcementStatus(a *announcementService.ParentAnnouncement) string {
+func announcementStatus(a *announcementService.ParentAnnouncement, now time.Time) string {
 	if a.PublishedAt == nil {
 		return "draft"
 	}
-	if a.ExpiresAt != nil && !a.ExpiresAt.After(time.Now()) {
+	if a.ExpiresAt != nil && !a.ExpiresAt.After(now) {
 		return "expired"
 	}
 	return "published"
@@ -215,7 +234,7 @@ func toOptionResponses(options []announcementService.ParentAnnouncementOption) [
 	return out
 }
 
-func toAnnouncementResponse(a *announcementService.ParentAnnouncement) announcementResponse {
+func toAnnouncementResponse(a *announcementService.ParentAnnouncement, now time.Time) announcementResponse {
 	resp := announcementResponse{
 		ID:                          strconv.FormatInt(a.ID, 10),
 		Title:                       a.Title,
@@ -224,7 +243,7 @@ func toAnnouncementResponse(a *announcementService.ParentAnnouncement) announcem
 		LinkURL:                     a.LinkURL,
 		RequiresAcknowledgement:     a.RequiresAcknowledgement,
 		SendEmail:                   a.SendEmail,
-		Status:                      announcementStatus(a),
+		Status:                      announcementStatus(a, now),
 		PublishedAt:                 a.PublishedAt,
 		ExpiresAt:                   a.ExpiresAt,
 		ReminderAt:                  a.ReminderAt,
@@ -297,7 +316,7 @@ func (rs *Resource) list(w http.ResponseWriter, r *http.Request) {
 		if a.IsClassLetter() && a.PublishedAt == nil {
 			continue
 		}
-		out = append(out, toAnnouncementResponse(&a))
+		out = append(out, toAnnouncementResponse(&a, rs.now()))
 	}
 	common.Respond(w, r, http.StatusOK, out, "Announcements retrieved")
 }
@@ -343,7 +362,7 @@ func (rs *Resource) get(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	common.Respond(w, r, http.StatusOK, toAnnouncementResponse(a), "Announcement retrieved")
+	common.Respond(w, r, http.StatusOK, toAnnouncementResponse(a, rs.now()), "Announcement retrieved")
 }
 
 func (rs *Resource) create(w http.ResponseWriter, r *http.Request) {
@@ -357,7 +376,7 @@ func (rs *Resource) create(w http.ResponseWriter, r *http.Request) {
 		renderAnnouncementError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusCreated, toAnnouncementResponse(a), "Announcement created")
+	common.Respond(w, r, http.StatusCreated, toAnnouncementResponse(a, rs.now()), "Announcement created")
 }
 
 func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
@@ -374,7 +393,7 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 		renderAnnouncementError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, toAnnouncementResponse(a), "Announcement updated")
+	common.Respond(w, r, http.StatusOK, toAnnouncementResponse(a, rs.now()), "Announcement updated")
 }
 
 // updateReminder moves, rewords or removes the scheduled reminder of an
@@ -406,7 +425,7 @@ func (rs *Resource) updateReminder(w http.ResponseWriter, r *http.Request) {
 		renderAnnouncementError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, toAnnouncementResponse(a), "Announcement reminder updated")
+	common.Respond(w, r, http.StatusOK, toAnnouncementResponse(a, rs.now()), "Announcement reminder updated")
 }
 
 func (rs *Resource) delete(w http.ResponseWriter, r *http.Request) {
@@ -418,7 +437,7 @@ func (rs *Resource) delete(w http.ResponseWriter, r *http.Request) {
 		renderAnnouncementError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]bool{"deleted": true}, "Announcement deleted")
+	common.Respond(w, r, http.StatusOK, deletedResponse{Deleted: true}, "Announcement deleted")
 }
 
 func (rs *Resource) publish(w http.ResponseWriter, r *http.Request) {
@@ -431,7 +450,7 @@ func (rs *Resource) publish(w http.ResponseWriter, r *http.Request) {
 		renderAnnouncementError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, toAnnouncementResponse(a), "Announcement published")
+	common.Respond(w, r, http.StatusOK, toAnnouncementResponse(a, rs.now()), "Announcement published")
 }
 
 func (rs *Resource) unpublish(w http.ResponseWriter, r *http.Request) {
@@ -444,7 +463,7 @@ func (rs *Resource) unpublish(w http.ResponseWriter, r *http.Request) {
 		renderAnnouncementError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, toAnnouncementResponse(a), "Announcement unpublished")
+	common.Respond(w, r, http.StatusOK, toAnnouncementResponse(a, rs.now()), "Announcement unpublished")
 }
 
 func (rs *Resource) stats(w http.ResponseWriter, r *http.Request) {
@@ -694,7 +713,7 @@ func (rs *Resource) remindUnanswered(w http.ResponseWriter, r *http.Request) {
 		renderAnnouncementError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int{"reminded_count": count}, "Reminder sent")
+	common.Respond(w, r, http.StatusOK, remindedResponse{RemindedCount: count}, "Reminder sent")
 }
 
 // resendFailed re-queues only the failed mails. Deliberately a separate endpoint
@@ -711,7 +730,7 @@ func (rs *Resource) resendFailed(w http.ResponseWriter, r *http.Request) {
 		renderAnnouncementError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int{"resent_count": count}, "Failed e-mails re-queued")
+	common.Respond(w, r, http.StatusOK, resentResponse{ResentCount: count}, "Failed e-mails re-queued")
 }
 
 func decodeInput(w http.ResponseWriter, r *http.Request) (announcementService.ParentAnnouncementInput, bool) {
@@ -734,7 +753,15 @@ func parseAnnouncementID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 
 // renderAnnouncementError maps service sentinels to HTTP status codes.
 func renderAnnouncementError(w http.ResponseWriter, r *http.Request, err error) {
+	var placeholders *announcementService.ParentLetterPlaceholderError
 	switch {
+	case errors.As(err, &placeholders) && placeholders.LetterOnly:
+		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeCommunicationLetterPlaceholderLetterOnly))
+	case errors.As(err, &placeholders):
+		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeCommunicationLetterPlaceholderUnknown,
+			map[string]any{"placeholders": strings.Join(placeholders.Names, ", ")}))
+	case errors.Is(err, announcementService.ErrParentLetterNotPrintable):
+		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeCommunicationLetterPrintNotLetter))
 	case errors.Is(err, announcementService.ErrParentAnnouncementNotFound):
 		common.RenderError(w, r, common.ErrorNotFound(err))
 	case errors.Is(err, announcementService.ErrParentNewsDisabled):

@@ -5,21 +5,26 @@
 // eine Person entfernt hat.
 // Nur zum Lesen, neueste zuerst, seitenweise.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { History } from "lucide-react";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
-import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   fetchTraegerAccountHistory,
   type TraegerAccountChangeAction,
   type TraegerAccountHistoryEntry,
+  type TraegerAccountHistoryPage,
 } from "~/lib/traeger-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { TRAEGER_ROLE_LABELS, type TraegerRole } from "~/lib/traeger-roles";
 
 const logger = createLogger({ component: "TraegerAccountHistory" });
@@ -105,71 +110,59 @@ const COLUMNS: DataTableColumn<TraegerAccountHistoryEntry>[] = [
 ];
 
 /**
- * The history section of the page „Mitglieder und Rollen“. `version` changes after every
- * change on the page; the history then reads its first page again.
+ * The history section of the page „Mitglieder und Rollen“. A change on the
+ * page invalidates `traegerKeys.accountHistoryFamily`; the history then reads
+ * its first page again and drops the older pages it had loaded.
+ * „Herunterladen“ gives the whole history as PDF, Excel or CSV (#4718);
+ * `onExportError` hears a failed download first.
  */
 export function TraegerAccountHistory({
-  version,
-}: Readonly<{ version: number }>) {
-  const [entries, setEntries] = useState<readonly TraegerAccountHistoryEntry[]>(
-    [],
+  onExportError,
+}: Readonly<{
+  onExportError?: (error: unknown) => void;
+}>) {
+  const {
+    data: first,
+    loading,
+    error,
+  } = useTraegerResource(
+    traegerKeys.accountHistory(),
+    () => fetchTraegerAccountHistory(),
+    "die Liste der Änderungen",
   );
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(true);
+  // Older pages belong to the first page they continue.
+  const [older, setOlder] = useState<{
+    readonly after: TraegerAccountHistoryPage;
+    readonly entries: readonly TraegerAccountHistoryEntry[];
+    readonly hasMore: boolean;
+  } | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
-  const historyLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = historyLoad;
   const { show: showActionError } = useApiErrorDisplay();
-  // A reload drops the answer of an older read, also of „Ältere laden“.
-  const generation = useRef(0);
-
-  const load = useCallback(async () => {
-    const current = ++generation.current;
-    setLoading(true);
-    // A pending „Ältere laden“ of the older read no longer counts.
-    setLoadingMore(false);
-    try {
-      const page = await fetchTraegerAccountHistory();
-      if (current !== generation.current) return;
-      setEntries(page.entries);
-      setHasMore(page.hasMore);
-      clearLoadError();
-    } catch (err) {
-      if (current !== generation.current) return;
-      logger.error("traeger_account_history_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Liste der Änderungen",
-        retry: () => void load(),
-      });
-    } finally {
-      if (current === generation.current) setLoading(false);
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load, version]);
+  const continued = older && older.after === first ? older : null;
+  const entries = first
+    ? [...first.entries, ...(continued?.entries ?? [])]
+    : [];
+  const hasMore = continued ? continued.hasMore : (first?.hasMore ?? false);
 
   const loadMore = async () => {
     const last = entries.at(-1);
-    if (!last) return;
-    const current = generation.current;
+    if (!last || !first) return;
     setLoadingMore(true);
     try {
       const page = await fetchTraegerAccountHistory(last.id);
-      if (current !== generation.current) return;
-      setEntries((shown) => [...shown, ...page.entries]);
-      setHasMore(page.hasMore);
+      // After a reload of the first page meanwhile, this answer shows no more.
+      setOlder({
+        after: first,
+        entries: [...(continued?.entries ?? []), ...page.entries],
+        hasMore: page.hasMore,
+      });
     } catch (err) {
-      if (current !== generation.current) return;
       logger.error("traeger_account_history_load_more_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
       await showActionError(err, { object: "die älteren Einträge" });
     } finally {
-      if (current === generation.current) setLoadingMore(false);
+      setLoadingMore(false);
     }
   };
 
@@ -177,9 +170,22 @@ export function TraegerAccountHistory({
     <SectionCard
       title="Verlauf"
       description="Wer wann Personen eingeladen, Rollen oder Namen geändert oder entfernt hat. Nur zum Lesen."
+      action={
+        <TraegerListExportMenu
+          download={(format) =>
+            downloadTraegerList("/api/traeger/accounts/history/export", format)
+          }
+          scope="Träger-Büro"
+          ariaLabel="Verlauf herunterladen"
+          fallbackName="verlauf-traeger-buero"
+          errorObject="den Verlauf"
+          unavailable={loading || entries.length === 0}
+          onError={onExportError}
+        />
+      }
     >
-      {historyLoad.error ? (
-        <LoadErrorAlert error={historyLoad.error} actionLayout="responsive" />
+      {error ? (
+        <LoadErrorAlert error={error} actionLayout="responsive" />
       ) : (
         <div className="flex flex-col gap-4">
           <DataTable

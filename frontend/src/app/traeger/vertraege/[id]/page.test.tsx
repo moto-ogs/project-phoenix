@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setTestClock } from "~/test/clock";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { catalogText } from "~/test/error-catalog-text";
@@ -27,6 +27,7 @@ const { api, mockPush } = vi.hoisted(() => ({
   mockPush: vi.fn(),
 }));
 
+vi.unmock("swr");
 vi.mock("~/lib/traeger-care-contracts-api", () => api);
 // The SEPA mandate card of the family (#4695) answers 403 without the right
 // „Abrechnung“; these tests cover the contract and keep it empty.
@@ -35,6 +36,38 @@ vi.mock("~/lib/traeger-sepa-api", () => ({
   fetchSepaMandateHistory: vi.fn().mockResolvedValue([]),
   createSepaMandate: vi.fn(),
   revokeSepaMandate: vi.fn(),
+}));
+// The change requests of the parents (#5979) and the termination (#4682)
+// have their own tests; here no change waits and nobody gave notice.
+vi.mock("~/lib/care-contract-changes-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/care-contract-changes-api")>()),
+  fetchContractChanges: () =>
+    Promise.resolve({
+      decidable: true,
+      pending: [],
+      lastDecision: null,
+      reasonRequired: false,
+      rosterImpact: null,
+    }),
+}));
+vi.mock("~/lib/care-contract-notices-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/care-contract-notices-api")>()),
+  fetchContractNoticeOptions: (contractId: string) =>
+    Promise.resolve({
+      contractId,
+      traegerName: "Träger",
+      status: "aktiv",
+      childName: "Lina Muster",
+      modules: "Frühbetreuung und Offene Ganztagsschule",
+      schoolName: "OGS Am Lindenhof",
+      terms: "mit 1 Monat Frist zum Monatsende",
+      ordinaryEndsOn: "2026-10-31",
+      specialEndsOn: null,
+      withdrawalUntil: null,
+      earlyStart: false,
+      reinterpretedEndsOn: null,
+      notice: null,
+    }),
 }));
 vi.mock("~/components/ui/pdf-preview", () => ({
   PdfPreview: ({ url, title }: { url: string | null; title: string }) => (
@@ -139,13 +172,44 @@ const DRAFT: CareContractDetail = {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerVertragPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
 describe("TraegerVertragPage", () => {
+  it("reads the audited contract and PDF again on a quick reopening", async () => {
+    const page = (open: boolean) => (
+      <TraegerResourceTestProvider>
+        {open && <TraegerVertragPage />}
+      </TraegerResourceTestProvider>
+    );
+    const view = render(page(true));
+    await waitFor(() =>
+      expect(screen.getByTestId("pdf-preview")).toHaveAttribute(
+        "data-loaded",
+        "true",
+      ),
+    );
+    expect(api.fetchCareContract).toHaveBeenCalledTimes(1);
+    expect(api.downloadCareContract).toHaveBeenCalledTimes(1);
+
+    view.rerender(page(false));
+    view.rerender(page(true));
+
+    await waitFor(() => expect(api.fetchCareContract).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(api.downloadCareContract).toHaveBeenCalledTimes(2),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("pdf-preview")).toHaveAttribute(
+        "data-loaded",
+        "true",
+      ),
+    );
+  });
+
   beforeEach(() => {
     for (const fn of Object.values(api)) fn.mockReset();
     mockPush.mockReset();
@@ -218,13 +282,13 @@ describe("TraegerVertragPage", () => {
   it("does not allow paper signing dates before 2000", async () => {
     setTestClock("2000-01-02T12:00:00+01:00");
     render(
-      <ToastProvider>
+      <TraegerResourceTestProvider>
         <PaperSignatureModal
           contract={DRAFT}
           onClose={vi.fn()}
           onSaved={vi.fn()}
         />
-      </ToastProvider>,
+      </TraegerResourceTestProvider>,
     );
     fireEvent.click(screen.getByLabelText("Unterschrieben am"));
     const previousMonth = await screen.findByRole("button", {
@@ -248,13 +312,13 @@ describe("TraegerVertragPage", () => {
       }),
     );
     render(
-      <ToastProvider>
+      <TraegerResourceTestProvider>
         <PaperSignatureModal
           contract={DRAFT}
           onClose={vi.fn()}
           onSaved={vi.fn()}
         />
-      </ToastProvider>,
+      </TraegerResourceTestProvider>,
     );
     fireEvent.change(screen.getByLabelText("PDF wählen"), {
       target: {
@@ -637,6 +701,8 @@ describe("TraegerVertragPage", () => {
   });
 
   it("shows the versions of an active contract and from when a change applies", async () => {
+    // Die Änderung ab 01.03.2027 muss noch bevorstehen.
+    setTestClock("2026-09-09T12:00:00+02:00");
     const first = DRAFT.version.services;
     api.fetchCareContract.mockResolvedValue({
       ...DRAFT,
@@ -711,6 +777,8 @@ describe("TraegerVertragPage", () => {
   });
 
   it("announces no change for a contract that only starts later", async () => {
+    // Der Vertrag ab 01.08.2027 muss noch bevorstehen.
+    setTestClock("2026-09-09T12:00:00+02:00");
     api.fetchCareContract.mockResolvedValue({
       ...DRAFT,
       status: "aktiv",
@@ -737,6 +805,8 @@ describe("TraegerVertragPage", () => {
   });
 
   it("lists a change that goes in front of a planned version by its date", async () => {
+    // Beide Änderungen ab Februar und März 2027 müssen noch bevorstehen.
+    setTestClock("2026-09-09T12:00:00+02:00");
     const monday = DRAFT.version.services.slice(0, 2);
     const late = { ...monday[1]!, endsAt: "16:30" };
     const version = (
@@ -796,7 +866,7 @@ describe("TraegerVertragPage", () => {
       ),
     ).toBeInTheDocument();
   });
-  it.each([403, 503])(
+  it.each([403, 404, 503])(
     "handles a %s contract reload after sending",
     async (status) => {
       api.fetchCareContract
@@ -815,6 +885,18 @@ describe("TraegerVertragPage", () => {
           await screen.findByRole("dialog", { name: "Vertrag senden?" }),
         ).getByRole("button", { name: "Vertrag senden" }),
       );
+      if (status === 404) {
+        expect(
+          await screen.findByText(catalogText("general.input", "der Vertrag")),
+        ).toBeVisible();
+        expect(screen.queryByText("Vertragsangaben")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("pdf-preview")).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole("button", { name: "Erneut senden" }),
+        ).not.toBeInTheDocument();
+        expect(api.sendCareContracts).toHaveBeenCalledTimes(1);
+        return;
+      }
       if (status === 403) {
         // #6801: the page loads anew; its first load shows the refusal.
         await expectPageReloadedAfterRefusal();

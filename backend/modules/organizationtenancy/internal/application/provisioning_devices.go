@@ -84,6 +84,7 @@ func (p *Provisioning) listDevices(ctx context.Context, filter deviceFilter) ([]
 		return nil, fmt.Errorf("list devices for operator device listing: %w", err)
 	}
 	result := make([]organizationtenancy.OperatorDevice, 0, len(devices))
+	now := p.now()
 	for _, device := range devices {
 		if filter.deviceRowID != nil && device.ID != *filter.deviceRowID {
 			continue
@@ -92,7 +93,7 @@ func (p *Provisioning) listDevices(ctx context.Context, filter deviceFilter) ([]
 		if !found {
 			continue
 		}
-		result = append(result, operatorDevice(device, school))
+		result = append(result, operatorDevice(device, school, now))
 	}
 	sort.SliceStable(result, func(i, j int) bool {
 		if result[i].OrganizationName != result[j].OrganizationName {
@@ -106,7 +107,9 @@ func (p *Provisioning) listDevices(ctx context.Context, filter deviceFilter) ([]
 	return result, nil
 }
 
-func operatorDevice(device domain.Device, school organizationtenancy.DashboardSchool) organizationtenancy.OperatorDevice {
+// operatorDevice lists one device; it is online when last seen within the
+// window before now, the composition's clock that also stamps last_seen.
+func operatorDevice(device domain.Device, school organizationtenancy.DashboardSchool, now time.Time) organizationtenancy.OperatorDevice {
 	view := organizationtenancy.OperatorDevice{
 		ID: device.ID, DeviceID: device.DeviceID, DeviceType: device.DeviceType,
 		Name: device.Name, Status: device.Status,
@@ -116,7 +119,7 @@ func operatorDevice(device domain.Device, school organizationtenancy.DashboardSc
 		CreatedAt: device.CreatedAt, UpdatedAt: device.UpdatedAt,
 	}
 	if device.LastSeen != nil {
-		view.IsOnline = time.Since(*device.LastSeen) <= listedDeviceOnlineWindow
+		view.IsOnline = now.Sub(*device.LastSeen) <= listedDeviceOnlineWindow
 	}
 	return view
 }
@@ -407,7 +410,7 @@ func (p *Provisioning) transferStatus(ctx, adminCtx context.Context, device doma
 		return status, nil
 	}
 	if device.LastSeen != nil {
-		status.IsOnline = time.Since(*device.LastSeen) <= p.deviceOnlineWindow(ctx, device.TenantID)
+		status.IsOnline = p.now().Sub(*device.LastSeen) <= p.deviceOnlineWindow(ctx, device.TenantID)
 	}
 	session, err := p.presence.ActiveDeviceSession(adminCtx, device.TenantID, device.ID)
 	if err != nil {
@@ -442,7 +445,7 @@ func (p *Provisioning) deviceOnlineWindow(ctx context.Context, tenantID int64) t
 func (p *Provisioning) archiveAndTransfer(ctx context.Context, source domain.Device, targetSchoolID int64) (domain.Device, error) {
 	originalStatus := source.Status
 	transferredHash, transferredMask := source.APIKeyHash, source.MaskedAPIKey
-	now := time.Now()
+	now := p.now()
 	source.ArchivedAt = &now
 	source.APIKey = nil
 	source.APIKeyHash = nil

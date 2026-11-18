@@ -3,21 +3,25 @@ import { test as base, type Page, type TestInfo } from "@playwright/test";
 import { join } from "node:path";
 
 import {
-  distinctNodes,
-  exceeding,
   readBaseline,
   routeKey,
+  unlisted,
   type Baseline,
   type ScanRecord,
 } from "../../scripts/a11y-baseline";
 
 // A11y-Ratchet (#7107): axe prüft jede Seite, die eine E2E-Spec ansteuert.
-// Die Baseline zählt Stellen pro Route und axe-Regel: Knoten ohne Position
-// in Listen, siehe distinctNodes. Mehr als die Baseline
-// macht den Test rot, weniger meldet reporter.ts als Hinweis, die Baseline zu
-// senken. Fingerprints pro Knoten gibt es bewusst nicht: Sie brechen bei
-// jedem Umbau und laden dazu ein, die Baseline blind neu zu erzeugen (Spec
-// in #2790).
+// Die Baseline nennt je Route die axe-Regeln, die dort als offene Schuld
+// bekannt sind. Eine Regel, die für die Route nicht in der Baseline steht,
+// macht den Test rot; findet ein voller Lauf eine gelistete Regel nicht mehr,
+// meldet reporter.ts, dass der Eintrag entfallen kann.
+//
+// Die Baseline zählt bewusst keine Knoten oder Stellen (#7196): Die Zahl
+// hängt an Daten und Wochentag, nicht am Code. Der Preis: Eine neue Stelle
+// einer gelisteten Regel auf derselben Route fällt nicht auf, bis die Schuld
+// dort getilgt ist (#7112) und der Eintrag entfällt. Fingerprints pro Knoten
+// gibt es ebenso bewusst nicht: Sie brechen bei jedem Umbau und laden dazu
+// ein, die Baseline blind neu zu erzeugen (Spec in #2790).
 //
 // Specs importieren `test` und `expect` von hier statt von
 // "@playwright/test". Der Fixture-Wrapper prüft nach `page.goto`,
@@ -50,10 +54,10 @@ export interface ScanReport {
  */
 async function settle(page: Page): Promise<string | null> {
   await page.waitForLoadState("domcontentloaded");
-  const deadline = Date.now() + 10_000;
+  const deadline = performance.now() + 10_000;
   let quiet = 0;
   let busy: string | null = null;
-  while (Date.now() < deadline && quiet < 2) {
+  while (performance.now() < deadline && quiet < 2) {
     busy = await page
       .evaluate(() => {
         const element = Array.from(
@@ -122,7 +126,7 @@ export class A11yRecorder {
    * Ergebnis nicht, und die neue Seite wird geprüft.
    */
   async scan(page: Page, state?: string): Promise<void> {
-    const started = Date.now();
+    const started = performance.now();
     try {
       await this.scanOnce(page, state);
     } catch (error) {
@@ -132,7 +136,7 @@ export class A11yRecorder {
       );
       throw error;
     } finally {
-      this.ms += Date.now() - started;
+      this.ms += performance.now() - started;
     }
   }
 
@@ -144,9 +148,9 @@ export class A11yRecorder {
         return;
       }
       if (this.scanned.has(before)) return;
-      const settleStarted = Date.now();
+      const settleStarted = performance.now();
       const busy = await settle(page);
-      this.settleMs += Date.now() - settleStarted;
+      this.settleMs += performance.now() - settleStarted;
       if (busy) {
         this.complete = false;
         this.info.annotations.push({
@@ -173,7 +177,7 @@ export class A11yRecorder {
       this.scanned.add(route);
       const counts: Record<string, number> = {};
       for (const violation of violations) {
-        counts[violation.id] = distinctNodes(violation.nodes);
+        counts[violation.id] = violation.nodes.length;
       }
       this.records.push({ route, counts });
       this.violations.set(route, violations);
@@ -182,7 +186,7 @@ export class A11yRecorder {
     this.complete = false;
   }
 
-  /** Fehlermeldung für jede Regel über der Baseline, sonst null. */
+  /** Fehlermeldung für jede Regel, die nicht in der Baseline steht, sonst null. */
   failure(): string | null {
     // Auch ein Aufrufer, der einen Navigationsfehler abfängt, darf den
     // fehlgeschlagenen Scan nicht in einen grünen Test verwandeln.
@@ -191,12 +195,12 @@ export class A11yRecorder {
     }
     const lines: string[] = [];
     for (const record of this.records) {
-      for (const { rule, count, allowed } of exceeding(this.baseline, record)) {
+      for (const { rule, count } of unlisted(this.baseline, record)) {
         const violation = this.violations
           .get(record.route)
           ?.find((entry) => entry.id === rule);
         lines.push(
-          `${record.route}: ${rule} an ${count} Stellen, Baseline ${allowed}. ${violation?.help ?? ""} ${violation?.helpUrl ?? ""}`,
+          `${record.route}: ${rule} an ${count} Knoten. ${violation?.help ?? ""} ${violation?.helpUrl ?? ""}`,
         );
         for (const node of violation?.nodes.slice(0, 5) ?? []) {
           lines.push(`    ${node.target.map(String).join(" ")}`);
@@ -205,7 +209,7 @@ export class A11yRecorder {
     }
     if (lines.length === 0) return null;
     return [
-      "Neue Barrierefreiheits-Verstöße (axe, WCAG 2.1 AA). Beheben; nur mit begründeter Ausnahme im PR die Baseline e2e/a11y/baseline.json erhöhen.",
+      "Neue Barrierefreiheits-Verstöße (axe, WCAG 2.1 AA). Beheben; nur mit begründeter Ausnahme im PR die Regel für die Route in e2e/a11y/baseline.json aufnehmen.",
       ...lines,
     ].join("\n");
   }

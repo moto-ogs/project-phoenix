@@ -94,7 +94,6 @@ func (s *StudentStore) UpdateRecord(
 	result, err := db.NewUpdate().Model(&row).
 		ModelTableExpr(`users.student_profiles AS "student"`).
 		Column(studentWritableColumnList()...).
-		Set(`updated_at = NOW()`).
 		Where(`"student".id = ?`, record.ID).
 		Where(`"student".tenant_id = ?`, scope.TenantID).
 		Returning(studentReturningColumns).
@@ -192,6 +191,10 @@ func newStudentWriteRow(record domain.StudentRecord, tenantID int64) studentWrit
 	row.AGBAcceptedAt = record.AGBAcceptedAt
 	row.DataProcessingAcceptedAt = record.DataProcessingAcceptedAt
 	row.EmailContactAcceptedAt = record.EmailContactAcceptedAt
+	// School Membership's mark (#4803) is no profile column. The row hands
+	// it back with the other membership facts, so the enrollment written
+	// after the profile keeps it instead of giving the child an OGS place.
+	row.WithoutCarePlace = record.WithoutCarePlace
 	return row
 }
 

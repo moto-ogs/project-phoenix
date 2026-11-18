@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/subscriptiontest"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
@@ -28,7 +29,7 @@ func TestSchoolPortalCatalogue(t *testing.T) {
 	for _, def := range TypesForPortal(PortalSchool) {
 		keys = append(keys, def.Key)
 	}
-	assert.Equal(t, []string{TypeSchoolClassAbsenceReported, TypeSchoolUnreportedAbsence, TypeStaffMessage, TypeSchoolParentConferenceBooking}, keys)
+	assert.Equal(t, []string{TypeSchoolClassAbsenceReported, TypeSchoolUnreportedAbsence, TypeClassTimetableChanged, TypeClassTimetableChangedAhead, TypeStaffMessage, TypeInstanceCancelled, TypeSchoolParentConferenceBooking, TypeInstanceRoomChanged, TypeSchoolClosingDayChanged, TypeInstanceRoomChangedLater}, keys)
 
 	staffMessage, _ := GetType(TypeStaffMessage)
 	pickup, _ := GetType(TypePickupUpcoming)
@@ -42,6 +43,33 @@ func TestSchoolPortalCatalogue(t *testing.T) {
 	assert.True(t, OfferedInPortal(conferenceBooking, PortalSchool))
 	assert.False(t, OfferedInPortal(conferenceBooking, PortalStaff), "the Elternsprechtag notice exists only in moto schule (#4801)")
 	assert.Equal(t, "Krankmeldungen meiner Klassen", classAbsence.Label)
+	cancelled, _ := GetType(TypeInstanceCancelled)
+	assert.True(t, OfferedInPortal(cancelled, PortalSchool), "a planned Lehrkraft hears of a cancelled block in moto schule (#7139)")
+	assert.Empty(t, PermissionInPortal(cancelled, PortalSchool), "offered there without the OGS right a Lehrkraft does not hold")
+	assert.Equal(t, cancelled.Permission, PermissionInPortal(cancelled, PortalStaff))
+	reinstated, _ := GetType(TypeInstanceReinstated)
+	assert.False(t, OfferedInPortal(reinstated, PortalSchool), "a reinstatement follows the cancellation's switch instead of becoming another choice")
+	assert.True(t, reinstated.SchoolPortal)
+	assert.Empty(t, PermissionInPortal(reinstated, PortalSchool))
+	closingDay, _ := GetType(TypeSchoolClosingDayChanged)
+	assert.True(t, OfferedInPortal(closingDay, PortalSchool), "every Lehrkraft hears of a closing day in moto schule (#7144)")
+	assert.Empty(t, PermissionInPortal(closingDay, PortalSchool))
+}
+
+func TestFeedTypesIncludeReinstatementsInTheSchoolPortal(t *testing.T) {
+	t.Parallel()
+
+	staffKeys := make([]string, 0)
+	for _, def := range FeedTypesForPortal(PortalStaff) {
+		staffKeys = append(staffKeys, def.Key)
+	}
+	schoolKeys := make([]string, 0)
+	for _, def := range FeedTypesForPortal(PortalSchool) {
+		schoolKeys = append(schoolKeys, def.Key)
+	}
+
+	assert.Contains(t, staffKeys, TypeInstanceReinstated)
+	assert.Contains(t, schoolKeys, TypeInstanceReinstated)
 }
 
 // A school registration rebinds the browser endpoint: the school a Lehrkraft
@@ -170,6 +198,29 @@ func TestSchoolPushDeliveryIsLimitedToSupportedTypes(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []*deliveryModels.PushSubscription{schoolSub}, schoolOnly,
 		"a school-only type never reaches an OGS device of the same account (#4792)")
+}
+
+func TestSchoolPortalNarrowingKeepsAStaffTypeOutOfOGS(t *testing.T) {
+	t.Parallel()
+
+	event := Event{Type: TypeSchoolClosingDayChanged, Portal: PortalSchool}
+	assert.False(t, deliversToStaffPortal(event))
+	assert.True(t, deliversToSchoolPortal(event))
+}
+
+func TestSchoolOnlyFeedEventUsesTheSchoolLink(t *testing.T) {
+	t.Parallel()
+
+	_, err := feedType(Event{
+		Type:           TypeSchoolClosingDayChanged,
+		Portal:         PortalSchool,
+		SchoolDeepLink: "/school/kalender",
+		RelatedType:    "closing_day",
+		RelatedID:      7,
+		Audience:       Audience{Scope: ScopeStaff},
+		Feed:           &contract.NotificationFeedDelivery{},
+	})
+	require.NoError(t, err)
 }
 
 // The same split holds for the devices: a test fired in moto schule reaches

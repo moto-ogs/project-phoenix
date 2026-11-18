@@ -780,7 +780,7 @@ func (s *Service) tenantRegion(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("%w: %w", schoolcalendar.ErrFederalStateUnavailable, err)
 	}
 	if !s.ValidHolidayRegion(region) {
-		return "", fmt.Errorf("%w: unsupported region %q", schoolcalendar.ErrFederalStateUnavailable, region)
+		return "", fmt.Errorf("%w: unsupported region %q", schoolcalendar.ErrFederalStateMissing, region)
 	}
 	return region, nil
 }

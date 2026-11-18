@@ -112,7 +112,8 @@ type Service struct {
 	Config
 }
 
-// New wires messaging with its required runtime, guardian policy and fingerprints.
+// New wires messaging with its required runtime, guardian policy, fingerprints
+// and clock.
 func New(cfg Config) *Service {
 	if cfg.Runtime == nil {
 		panic("messaging: runtime is required")
@@ -129,19 +130,17 @@ func New(cfg Config) *Service {
 	if cfg.Fingerprints == nil {
 		panic("messaging: fingerprints are required")
 	}
+	if cfg.Now == nil {
+		panic("messaging: clock is required")
+	}
 	if cfg.Logger == nil {
 		cfg.Logger = slog.Default()
-	}
-	if cfg.Now == nil {
-		cfg.Now = calendar.Now
 	}
 	return &Service{Config: cfg}
 }
 
+// now reads the clock of the composition (ADR 0239).
 func (s *Service) now() time.Time {
-	if s.Now == nil {
-		return calendar.Now()
-	}
 	return s.Now()
 }
 
@@ -151,6 +150,19 @@ func (s *Service) todayDate() calendar.Date {
 
 func (s *Service) resolveOwnedChild(ctx context.Context, accountID, studentID int64) (*Child, error) {
 	return s.resolvePermittedChild(ctx, accountID, studentID, care.GuardianPermissionPortalAccess)
+}
+
+// resolveChatChild is resolveOwnedChild for the conversation with the OGS:
+// a child without an OGS place has none (#4803).
+func (s *Service) resolveChatChild(ctx context.Context, accountID, studentID int64) (*Child, error) {
+	child, err := s.resolveOwnedChild(ctx, accountID, studentID)
+	if err != nil {
+		return nil, err
+	}
+	if err := child.RequireCarePlace(); err != nil {
+		return nil, err
+	}
+	return child, nil
 }
 
 func (s *Service) resolvePermittedChild(ctx context.Context, accountID, studentID int64, permission string) (*Child, error) {

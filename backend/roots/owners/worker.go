@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
 
@@ -50,9 +51,10 @@ import (
 // passes the owners it mounts, the Worker root the owners its jobs need.
 // Each argument is one owner's value or a single-owner bundle; the Worker's
 // own collaborators (lease, tenant runtime, settings snapshots, retention,
-// booking audit, reminder tick, document sweeps) are built here.
+// booking audit, reminder tick, document sweeps) are built here. now is the
+// root clock of Enrollment's jobs (ADR 0265); nil is the real clock.
 func NewWorker(
-	db transactionruntime.Database, logger *slog.Logger, tracer *observability.Tracer, hub *realtime.Hub,
+	db transactionruntime.Database, logger *slog.Logger, now func() time.Time, tracer *observability.Tracer, hub *realtime.Hub,
 	settings settingsCompose.BatchSettingsService, audit auditCommand, accessLog DataAccessAppender, fleet devicefleet.Capability,
 	carePlan carePlanModule.Owner, persons peopledirectory.Capability, people PeopleRows,
 	organizations organizationtenancy.Query, identity identityaccess.Owner, rooms facilitiesModule.Capability,
@@ -73,7 +75,7 @@ func NewWorker(
 	if err != nil {
 		return nil, fmt.Errorf("compose worker billing: %w", err)
 	}
-	lease, runtime, err := newWorkerRuntime(db.UnitOfWork())
+	lease, runtime, err := newWorkerRuntime(db.UnitOfWork(), now)
 	if err != nil {
 		return nil, err
 	}
@@ -81,11 +83,11 @@ func NewWorker(
 	if err != nil {
 		return nil, err
 	}
-	retention, err := workerRetentionOf(db, logger, settings, audit, fleet, carePlan, communicationCompose.NewParentMessageRetention(db.Pool(), settingsValues.NewParentMessageRetentionValues(settings)), notices.RejectedCleanup, studentDeletion, identity, announcements, timetableRepos.Timetable, peopleOwner)
+	retention, err := workerRetentionOf(db, logger, settings, audit, fleet, carePlan, communicationCompose.NewParentMessageRetention(db.Pool(), settingsValues.NewParentMessageRetentionValues(settings)), notices.RejectedCleanup, studentDeletion, identity, announcements, timetableRepos.Timetable, peopleOwner, clockOrReal(now))
 	if err != nil {
 		return nil, err
 	}
-	bookings, err := schedulerBookingConsistency(db, persons, carePlan)
+	bookings, err := schedulerBookingConsistency(db, persons, carePlan, now)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +100,7 @@ func NewWorker(
 		return nil, err
 	}
 	return schedulerRuntimeCompose.NewWorker(schedulerPorts.WorkerDependencies{
-		Logger:                       logger.With("service", "scheduler"),
+		Logger: logger.With("service", "scheduler"), Now: clockOrReal(now),
 		Getenv:                       os.Getenv,
 		SchoolRepo:                   schedulerTenantDirectory{schools: organizations, billing: billing, schoolNames: schoolNames},
 		TenantRuntime:                runtime,
@@ -112,7 +114,7 @@ func NewWorker(
 		CleanupRuns:                  retention.runs,
 		StaffDocumentCleaner:         staffDocuments,
 		StudentDocumentCleaner:       studentDocuments,
-		FileStoreCleaner:             newFileStoreCleaner(db, fileStore, logger),
+		FileStoreCleaner:             newFileStoreCleaner(db, fileStore, logger, now),
 		Active:                       newSchedulerSessionMaintenance(active),
 		ActiveCleanup:                newSchedulerPresenceCleanup(reports.ActiveCleanup),
 		AuthCleanup:                  &identityaccessCompose.SessionMaintenance{AccountSessionMaintenance: identity, PasswordResets: identity},
@@ -121,7 +123,7 @@ func NewWorker(
 		OperatorInvitationCleanup:    identity,
 		OperatorRetention:            schedulerPorts.OperatorRetention{Ledger: audit, Accounts: identity},
 		AccountRetention:             identity,
-		HolidayRegistrationRetention: NewHolidayRegistrationRetention(nil),
+		HolidayRegistrationRetention: NewHolidayRegistrationRetention(now),
 		WorkSessionCleanup:           workforce.TimeTracking.Jobs,
 		BreakAutoEnder:               workforce.TimeTracking.Jobs,
 		AutoCheckouter:               workforce.TimeTracking.Jobs,
@@ -150,9 +152,9 @@ func NewWorker(
 		InstanceStudentRepo:    timetableRepos.ParticipantCheckouts(),
 		StudentStatusDayRepo:   NewStudentStatusDayRepository(carePlan),
 		OverdueBroadcaster:     newSchedulerOverdueBroadcaster(hub),
-		StudentLifecycleRepo:   schedulerStudentLifecycle(NewStudentRootReads(people.Students)), WeekProtocols: NewWeekProtocolEvenings(db, logger, settings, persons, services, reports, schedules, carePlan, timetableRepos, dayLog),
+		StudentLifecycleRepo:   schedulerStudentLifecycle(NewStudentRootReads(people.Students)), WeekProtocols: NewWeekProtocolEvenings(db, logger, settings, persons, services, reports, schedules, carePlan, timetableRepos, dayLog, now),
 		PayrollDispatch:       workforce.PayrollDispatch.RunDue,
-		ReminderNotifications: reminderNotifications, HolidayGuests: schedulerHolidayGuests(persons, people.Students, organizations, carePlan, accessLog, healthData), PlannedStaffExits: plannedExits(identity, notifications, people.Staff), CareContractConclusion: careContracts, CareContractReminders: careContractReminders, HolidayClosureNotifications: holidayClosures, StaffQualificationReminders: qualificationRemindersJob(workforce.QualificationReminders), TraegerStaffProofReminders: traegerProofRemindersJob(workforce.TraegerProofReminders, db.UnitOfWork()), SchoolVacations: schoolVacationSync(), TraegerDocumentReadRetention: organizationCompose.NewSharedTraegerDocuments(), BelegRetention: NewBelegRetention(nil), SEPADebitDownloadRetention: parentBillingCompose.NewSEPADebitDownloadRetention(),
+		ReminderNotifications: reminderNotifications, HolidayGuests: schedulerHolidayGuests(persons, people.Students, organizations, carePlan, accessLog, healthData, now), PlannedStaffExits: plannedExits(identity, notifications, people.Staff), CareContractConclusion: careContracts, CareContractReminders: careContractReminders, HolidayClosureNotifications: holidayClosures, StaffQualificationReminders: qualificationRemindersJob(workforce.QualificationReminders), TraegerStaffProofReminders: traegerProofRemindersJob(workforce.TraegerProofReminders, db.UnitOfWork()), SchoolVacations: schoolVacationSync(), TraegerDocumentReadRetention: organizationCompose.NewSharedTraegerDocuments(), BelegRetention: NewBelegRetention(now), SEPADebitDownloadRetention: parentBillingCompose.NewSEPADebitDownloadRetention(now),
 	})
 }
 

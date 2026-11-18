@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	provisioningAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
@@ -31,7 +33,7 @@ func TestOperatorAuditBookingAuthorityImpact(t *testing.T) {
 		values: settingsAPI.NewSettingsResource(settingsAPI.SettingsConfig{
 			Settings: module.OperatorSchoolSettings(module.SettingsSideEffects.Dispatch), OperatorID: operatorIDFromSession,
 		}),
-		bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle),
+		bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle, calendar.TodayDate),
 	}, nil)
 	request := func() *httptest.ResponseRecorder {
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/schools/%d/settings/booking-authority-impact?search=private-filter", testpkg.Tenant(t)), nil)

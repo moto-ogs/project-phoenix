@@ -1,10 +1,12 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   TraegerAbsenceType,
   TraegerAbsenceTypeList,
 } from "~/lib/traeger-absence-api";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchTraegerAbsenceTypes: vi.fn(),
@@ -62,9 +64,9 @@ const LIST: TraegerAbsenceTypeList = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerAbsenceTypesPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -150,5 +152,21 @@ describe("TraegerAbsenceTypesPage", () => {
       screen.queryByRole("button", { name: "Abwesenheitsart" }),
     ).not.toBeInTheDocument();
     expect(screen.getByText("Abwesenheitsarten")).toBeInTheDocument();
+  });
+
+  // #7304: the type cards sit in one grid, so the last one keeps its height.
+  it("puts the type cards into one grid", async () => {
+    api.fetchTraegerAbsenceTypes.mockResolvedValue({
+      ...LIST,
+      types: [REGENERATION, { ...REGENERATION, id: "8", name: "Bildungstag" }],
+    });
+    renderPage();
+    await screen.findByText("Regenerationstag", { selector: "h2" });
+    const cards = ["Regenerationstag", "Bildungstag"].map((name) =>
+      screen.getByText(name, { selector: "h2" }).closest("section"),
+    );
+    const grid = cards[0]?.parentElement;
+    expect(grid).toHaveClass("grid");
+    for (const card of cards) expect(card?.parentElement).toBe(grid);
   });
 });
