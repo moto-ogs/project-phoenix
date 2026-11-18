@@ -25,7 +25,6 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
-import { FramedList } from "~/components/ui/framed-list";
 import { IconTile } from "~/components/ui/icon-tile";
 import { Input } from "~/components/ui/input";
 import { ListRowLink } from "~/components/ui/list-row-link";
@@ -507,43 +506,47 @@ export function ExportRecipientListCard({
           description="Füge oben einen Empfänger hinzu, zum Beispiel deine Kämmerei."
         />
       ) : (
-        <FramedList className="rounded-none border-0">
+        // The flush card is the frame: the rows run to its edge (#7407).
+        <ul className="divide-y divide-gray-100">
           {recipients.map((recipient) => {
             const status = recipientStatus(recipient);
             return (
-              <ListRowLink
-                key={recipient.id}
-                href={traegerPath(exportRecipientPath(recipient.id))}
-                icon={
-                  <IconTile
-                    icon={<Inbox aria-hidden />}
-                    size="sm"
-                    className="max-sm:hidden"
-                  />
-                }
-                title={recipient.name}
-                subtitle={
-                  <>
-                    <span className="block">
-                      {recipient.host
-                        ? destinationText(
-                            recipient.host,
-                            recipient.remoteDirectory,
-                          )
-                        : "Noch keine Adresse"}
-                    </span>
-                    <span className="block text-gray-500">
-                      {recipient.formats.length > 0
-                        ? `Bekommt: ${formatsText(recipient.formats)}`
-                        : "Bekommt noch keine Datei"}
-                    </span>
-                  </>
-                }
-                badge={<StatusBadge label={status.label} tone={status.tone} />}
-              />
+              <li key={recipient.id}>
+                <ListRowLink
+                  href={traegerPath(exportRecipientPath(recipient.id))}
+                  icon={
+                    <IconTile
+                      icon={<Inbox aria-hidden />}
+                      size="sm"
+                      className="max-sm:hidden"
+                    />
+                  }
+                  title={recipient.name}
+                  subtitle={
+                    <>
+                      <span className="block">
+                        {recipient.host
+                          ? destinationText(
+                              recipient.host,
+                              recipient.remoteDirectory,
+                            )
+                          : "Noch keine Adresse"}
+                      </span>
+                      <span className="block text-gray-500">
+                        {recipient.formats.length > 0
+                          ? `Bekommt: ${formatsText(recipient.formats)}`
+                          : "Bekommt noch keine Datei"}
+                      </span>
+                    </>
+                  }
+                  badge={
+                    <StatusBadge label={status.label} tone={status.tone} />
+                  }
+                />
+              </li>
             );
           })}
-        </FramedList>
+        </ul>
       )}
     </SectionCard>
   );

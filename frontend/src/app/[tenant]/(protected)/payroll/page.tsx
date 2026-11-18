@@ -71,6 +71,7 @@ import { ProgressBar } from "~/components/ui/progress-bar";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import {
   fetchSFTPStatus,
@@ -656,9 +657,7 @@ function ReadinessRow({ item }: { readonly item: ReadinessItem }) {
         </div>
       </div>
       {item.action ? (
-        <div className="flex w-full flex-col gap-2 pl-8 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end sm:pl-0">
-          {item.action}
-        </div>
+        <ResponsiveRowActions leading={20}>{item.action}</ResponsiveRowActions>
       ) : null}
     </ResponsiveActionRow>
   );

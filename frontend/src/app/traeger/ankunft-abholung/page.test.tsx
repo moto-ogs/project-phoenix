@@ -248,7 +248,7 @@ describe("TraegerArrivalPickupPage", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Ankunft und Abholung herunterladen",
+        name: "Weitere Aktionen",
       }),
     );
     fireEvent.click(await screen.findByRole("menuitem", { name: /CSV/ }));
@@ -268,13 +268,13 @@ describe("TraegerArrivalPickupPage", () => {
     // #4718: the same menu offers the PDF and Excel of every school.
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Ankunft und Abholung herunterladen",
+        name: "Weitere Aktionen",
       }),
     );
     expect(
-      await screen.findByRole("menuitem", { name: "Excel" }),
+      await screen.findByRole("menuitem", { name: /^Excel/ }),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("menuitem", { name: "PDF" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /^PDF/ }));
     await vi.waitFor(() =>
       expect(mockDownload).toHaveBeenLastCalledWith(
         { from: FROM, to: TO },

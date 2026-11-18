@@ -706,6 +706,19 @@ export function staffName(person: {
   return `${person.firstName} ${person.lastName}`.trim();
 }
 
+/**
+ * „Nachname, Vorname“ for a table row, so the column reads alphabetically
+ * (TENANT-PAGE-SPEC Regel 11). Tiles and sentences keep `staffName`.
+ */
+export function staffTableName(person: {
+  readonly firstName: string;
+  readonly lastName: string;
+}): string {
+  return [person.lastName.trim(), person.firstName.trim()]
+    .filter((part) => part !== "")
+    .join(", ");
+}
+
 /** „Person einstellen“ (#7206): Person, Arbeitsvertrag und Einsatzorte. */
 export interface StaffHireInput {
   readonly firstName: string;

@@ -725,8 +725,11 @@ each `reverse_proxy` imports `client_ip_upstream`; `--cloudflare` also compares
 `caddy-cloudflare-ranges.yml` runs that comparison weekly and opens an issue
 with the diff and the corrected line.
 
-Automatic rollout: `caddy-deploy.yml` runs on a push to `main` that changes
-`deploy/caddy/**`, or by `workflow_dispatch` from `main`. It uses the
+Automatic rollout: `caddy-deploy.yml` runs on every push to `main` and deploys
+when `git diff` between the push's before commit and its head touches
+`deploy/caddy/`, or on `workflow_dispatch` from `main`. It has no `paths`
+filter: GitHub matches paths only against the first 300 changed files, so a
+release merge from `development` skipped the rollout. It uses the
 `production` environment and its SSH secrets and shares the `deploy-production`
 concurrency group with production releases and rollbacks. After
 `check-caddyfile.mjs` it runs `scripts/deploy-caddy-remote.sh` on the server:

@@ -74,9 +74,9 @@ export interface SepaDebitRun {
 }
 
 interface BackendDebit {
-  id: number;
-  mandate_id: number;
-  contract_id: number;
+  id: number | string;
+  mandate_id: number | string;
+  contract_id: number | string;
   invoice_number: string;
   recipient_name: string;
   amount_cents: number;

@@ -4,8 +4,12 @@
 // Familie übernehmen, zum Beispiel das Jugendamt bei Leistungsbezug. Das
 // Träger-Büro wählt einen aktiven Kostenträger beim Bestätigen einer
 // Anmeldung. Ein Kostenträger, den ein Beitrag oder eine Rechnung nennt,
-// lässt sich nur ausschalten, nicht löschen. Neu angelegt wird im Dialog;
-// „Ändern“ macht die Zeile selbst zum Formular (Bauart 2, kein Overlay).
+// lässt sich nur ausschalten, nicht löschen.
+//
+// Anlegen und Bearbeiten laufen im selben Dialog (#7407): eine
+// Bearbeitungsart je Karte. Ein Kostenträger ist ein kleiner Listeneintrag
+// mit drei Feldern und ohne eigene Seite; eine Objektseite brächte nur einen
+// Seitenwechsel für drei Felder. Das Issue erlaubt solche Einträge im Dialog.
 
 import { Building2, Pencil, Plus, Trash2 } from "lucide-react";
 import { type RefObject, useEffect, useRef, useState } from "react";
@@ -13,7 +17,6 @@ import { Button } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { FormModal } from "~/components/ui/form-modal";
 import {
   useFormModalPending,
@@ -24,6 +27,7 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -118,7 +122,7 @@ function CostBearerFields({
   return (
     <>
       <Input
-        controlSize="touch"
+        controlSize="compact"
         id={`${idPrefix}-name`}
         name="name"
         label="Name"
@@ -139,7 +143,7 @@ function CostBearerFields({
         onChange={(event) => onChange({ address: event.target.value })}
       />
       <Input
-        controlSize="touch"
+        controlSize="compact"
         id={`${idPrefix}-file-reference`}
         name="file_reference"
         label="Dein Aktenzeichen beim Kostenträger (freiwillig)"
@@ -152,13 +156,16 @@ function CostBearerFields({
   );
 }
 
-/** Adds a new cost bearer. Existing ones change in their row. */
-function CostBearerCreateModal({
+/** Adds a new cost bearer, or changes one (`bearer`). */
+function CostBearerModal({
   isOpen,
+  bearer,
   onClose,
   onSaved,
 }: Readonly<{
   isOpen: boolean;
+  /** The cost bearer to change; null adds a new one. */
+  bearer: CostBearer | null;
   onClose: () => void;
   onSaved: RefreshAfterWrite;
 }>) {
@@ -170,12 +177,12 @@ function CostBearerCreateModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    setDraft(EMPTY);
+    setDraft(bearer ?? EMPTY);
     clearErrors();
-  }, [isOpen, clearErrors]);
+  }, [isOpen, bearer, clearErrors]);
 
   const submit = async () => {
-    const result = await save(null, draft);
+    const result = await save(bearer?.id ?? null, draft);
     if (result === "failed") return;
     if (result === "saved") onClose();
     await onSaved();
@@ -187,7 +194,7 @@ function CostBearerCreateModal({
       onClose={onClose}
       pending={pending}
       isBackdropDismissDisabled
-      title="Kostenträger hinzufügen"
+      title={bearer ? "Kostenträger ändern" : "Kostenträger hinzufügen"}
       size="md"
       error={formErrors.error}
       footer={
@@ -208,7 +215,7 @@ function CostBearerCreateModal({
         }}
       >
         <CostBearerFields
-          idPrefix="cost-bearer"
+          idPrefix={bearer ? `cost-bearer-${bearer.id}` : "cost-bearer"}
           draft={draft}
           formErrors={formErrors}
           onChange={(patch) =>
@@ -224,60 +231,6 @@ function CostBearerCreateModal({
   );
 }
 
-/** One cost bearer in its row while it is changed. */
-function CostBearerEditRow({
-  bearer,
-  onDone,
-  onSaved,
-}: Readonly<{
-  bearer: CostBearer;
-  onDone: () => void;
-  onSaved: RefreshAfterWrite;
-}>) {
-  const [draft, setDraft] = useState<CostBearerInput>(bearer);
-  const formRef = useRef<HTMLFormElement>(null);
-  const [save, pending, formErrors] = useCostBearerSave(formRef);
-  const saving = pending.pending;
-  const idPrefix = `cost-bearer-${bearer.id}`;
-
-  useEffect(() => {
-    document.getElementById(`${idPrefix}-name`)?.focus();
-  }, [idPrefix]);
-
-  const submit = async () => {
-    const result = await save(bearer.id, draft);
-    if (result === "failed") return;
-    if (result === "saved") onDone();
-    await onSaved();
-  };
-
-  return (
-    <li className="py-3 first:pt-0 last:pb-0 sm:col-span-2">
-      <form
-        ref={formRef}
-        noValidate
-        aria-label={`${bearer.name} ändern`}
-        className="space-y-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void submit();
-        }}
-      >
-        <FormErrorAlert message={formErrors.error} />
-        <CostBearerFields
-          idPrefix={idPrefix}
-          draft={draft}
-          formErrors={formErrors}
-          onChange={(patch) =>
-            setDraft((current) => ({ ...current, ...patch }))
-          }
-        />
-        <EditActions onCancel={onDone} saving={saving} saveType="submit" />
-      </form>
-    </li>
-  );
-}
-
 export function CostBearersCard({
   bearers,
   onChanged,
@@ -285,9 +238,8 @@ export function CostBearersCard({
   bearers: readonly CostBearer[];
   onChanged: () => Promise<unknown>;
 }>) {
-  const [creating, setCreating] = useState(false);
-  // Only one row is a form at a time.
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // The dialog: null closed, "new" adds one, a cost bearer changes it.
+  const [editing, setEditing] = useState<CostBearer | "new" | null>(null);
   const [deleting, setDeleting] = useState<CostBearer | null>(null);
   const [busy, setBusy] = useState(false);
   const deleteErrors = useApiFormError();
@@ -348,7 +300,7 @@ export function CostBearersCard({
           variant="outline"
           size="md"
           tooltip="Öffnet ein Fenster für einen neuen Kostenträger."
-          onClick={() => setCreating(true)}
+          onClick={() => setEditing("new")}
         >
           <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
           Kostenträger hinzufügen
@@ -363,75 +315,71 @@ export function CostBearersCard({
         />
       ) : (
         <ResponsiveActionList>
-          {bearers.map((bearer) =>
-            editingId === bearer.id ? (
-              <CostBearerEditRow
-                key={bearer.id}
-                bearer={bearer}
-                onDone={() => setEditingId(null)}
-                onSaved={afterWrite.refresh}
-              />
-            ) : (
-              <ResponsiveActionRow key={bearer.id} align="start">
-                <div className="min-w-0 space-y-0.5 text-sm text-gray-700">
-                  <p className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold wrap-anywhere text-gray-900">
-                      {bearer.name}
-                    </span>
-                    {bearer.active ? null : (
-                      <StatusBadge tone="gray" label="Ausgeschaltet" />
-                    )}
+          {bearers.map((bearer) => (
+            <ResponsiveActionRow key={bearer.id} align="start">
+              <div className="min-w-0 space-y-0.5 text-sm text-gray-700">
+                <p className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold wrap-anywhere text-gray-900">
+                    {bearer.name}
+                  </span>
+                  {bearer.active ? null : (
+                    <StatusBadge tone="gray" label="Ausgeschaltet" />
+                  )}
+                </p>
+                {bearer.address ? (
+                  <p className="wrap-anywhere whitespace-pre-line">
+                    {bearer.address}
                   </p>
-                  {bearer.address ? (
-                    <p className="wrap-anywhere whitespace-pre-line">
-                      {bearer.address}
-                    </p>
-                  ) : null}
-                  {bearer.fileReference ? (
-                    <p className="wrap-anywhere">
-                      Aktenzeichen: {bearer.fileReference}
-                    </p>
-                  ) : null}
-                </div>
-                <OverflowMenu
-                  ariaLabel={`Aktionen für ${bearer.name}`}
-                  items={[
-                    {
-                      icon: <Pencil className="size-4" aria-hidden />,
-                      label: "Ändern",
-                      description:
-                        "Öffnet die Angaben in dieser Zeile zum Ändern.",
-                      onClick: () => setEditingId(bearer.id),
-                    },
-                    {
-                      label: bearer.active ? "Ausschalten" : "Einschalten",
-                      description: bearer.active
-                        ? "Nimmt den Kostenträger sofort aus der Auswahl beim Bestätigen von Anmeldungen."
-                        : "Bietet den Kostenträger sofort wieder beim Bestätigen von Anmeldungen an.",
-                      onClick: () => void switchActive(bearer),
-                    },
-                    ...(bearer.inUse
-                      ? []
-                      : [
-                          {
-                            label: "Löschen",
-                            description:
-                              "Löscht den Kostenträger. moto fragt vorher nach.",
-                            icon: <Trash2 className="size-4" aria-hidden />,
-                            destructive: true,
-                            onClick: () => setDeleting(bearer),
-                          },
-                        ]),
-                  ]}
-                />
-              </ResponsiveActionRow>
-            ),
-          )}
+                ) : null}
+                {bearer.fileReference ? (
+                  <p className="wrap-anywhere">
+                    Aktenzeichen: {bearer.fileReference}
+                  </p>
+                ) : null}
+              </div>
+              <ResponsiveRowActions
+                menu={
+                  <OverflowMenu
+                    ariaLabel={`Aktionen für ${bearer.name}`}
+                    items={[
+                      {
+                        icon: <Pencil className="size-4" aria-hidden />,
+                        label: "Bearbeiten",
+                        description:
+                          "Öffnet die Angaben in einem Fenster zum Ändern.",
+                        onClick: () => setEditing(bearer),
+                      },
+                      {
+                        label: bearer.active ? "Ausschalten" : "Einschalten",
+                        description: bearer.active
+                          ? "Nimmt den Kostenträger sofort aus der Auswahl beim Bestätigen von Anmeldungen."
+                          : "Bietet den Kostenträger sofort wieder beim Bestätigen von Anmeldungen an.",
+                        onClick: () => void switchActive(bearer),
+                      },
+                      ...(bearer.inUse
+                        ? []
+                        : [
+                            {
+                              label: "Löschen",
+                              description:
+                                "Löscht den Kostenträger. moto fragt vorher nach.",
+                              icon: <Trash2 className="size-4" aria-hidden />,
+                              destructive: true,
+                              onClick: () => setDeleting(bearer),
+                            },
+                          ]),
+                    ]}
+                  />
+                }
+              />
+            </ResponsiveActionRow>
+          ))}
         </ResponsiveActionList>
       )}
-      <CostBearerCreateModal
-        isOpen={creating}
-        onClose={() => setCreating(false)}
+      <CostBearerModal
+        isOpen={editing !== null}
+        bearer={editing === "new" ? null : editing}
+        onClose={() => setEditing(null)}
         onSaved={afterWrite.refresh}
       />
       <ConfirmDeleteModal

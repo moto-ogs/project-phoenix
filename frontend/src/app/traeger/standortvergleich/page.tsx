@@ -41,12 +41,12 @@ import {
   spread,
 } from "~/components/traeger/comparison-model";
 import {
-  daysBetween,
   shiftDays,
+  shiftWindow,
   utilizationPresets,
   windowLength,
 } from "~/components/traeger/utilization-model";
-import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
 import { FreshPerTraeger } from "~/components/traeger/fresh-per-traeger";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
@@ -72,7 +72,10 @@ const ComparisonChart = dynamic(
     import("~/components/traeger/comparison-chart").then(
       (module) => module.ComparisonChart,
     ),
-  { ssr: false, loading: () => <Skeleton className="h-56" aria-hidden /> },
+  {
+    ssr: false,
+    loading: () => <Skeleton shape="inner" className="h-56" aria-hidden />,
+  },
 );
 
 /** Ein Fenster ist höchstens 366 Tage lang, wie die Auslastung. */
@@ -103,7 +106,7 @@ function RowName({ row }: Readonly<{ row: ComparisonRow }>) {
         {row.school.name}
       </NavigationLink>
       {row.school.city ? (
-        <span className="block text-xs text-gray-500 max-md:hidden">
+        <span className="block text-sm text-gray-500 max-md:hidden">
           {row.school.city}
         </span>
       ) : null}
@@ -150,12 +153,12 @@ function MetricCell({
         {formatMetric(metric, value)}
       </span>
       {deviation ? (
-        <span className="text-xs whitespace-nowrap text-gray-500">
+        <span className="text-sm whitespace-nowrap text-gray-500">
           {deviation}
         </span>
       ) : null}
       {keyDate ? (
-        <span className="text-xs whitespace-nowrap text-gray-500">
+        <span className="text-sm whitespace-nowrap text-gray-500">
           am {formatDate(keyDate)}
         </span>
       ) : null}
@@ -334,20 +337,27 @@ function TraegerComparisonContent() {
     from: parseISODate(period.from),
     to: parseISODate(period.to),
   };
-  const length = windowLength(period);
-  const canShiftForward = period.to < today;
-  const shift = (direction: number) => {
-    let to = shiftDays(period.to, direction * length);
-    if (to > today) to = today;
-    const delta = daysBetween(period.to, to);
-    if (delta === 0) return;
-    changeWindow({ from: shiftDays(period.from, delta), to });
-  };
+  const previousWindow = shiftWindow(period, -1, { max: today });
+  const nextWindow = shiftWindow(period, 1, { max: today });
   const onDefault =
     period.from === defaultWindow.from && period.to === defaultWindow.to;
   const schoolCount = allSchools.length || schools.length;
   const noSchools =
     comparison !== null && schoolIds.length === 0 && schools.length === 0;
+
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerComparison({ ...period, schoolIds }, metrics, format),
+    scope:
+      schoolIds.length > 0
+        ? schoolIds.length === 1
+          ? "Eine gewählte Schule"
+          : `${schoolIds.length} gewählte Schulen`
+        : "Alle Schulen",
+    fallbackName: `standortvergleich-${period.from}-bis-${period.to}`,
+    errorObject: "den Standortvergleich",
+    unavailable: !comparison || schools.length === 0,
+  });
 
   return (
     <TenantPage
@@ -357,29 +367,12 @@ function TraegerComparisonContent() {
           Hier vergleichst du deine Schulen über einen Zeitraum. moto zählt die
           Wochentage im Zeitraum. „Ø“ ist der Durchschnitt je Tag. Unter den
           Schulen stehen der Schnitt der Schulen und alle Schulen zusammen. Eine
-          Schule ohne Zahl hat „–“, etwa ohne Platzgrenze oder ohne Check-in.
-          Mit „Herunterladen“ bekommst du die Tabelle mit den gewählten Schulen
-          und Kennzahlen als PDF, Excel oder CSV.
+          Schule ohne Zahl hat „–“, etwa ohne Platzgrenze oder ohne Check-in. Im
+          Drei-Punkte-Menü unter „Herunterladen“ bekommst du die Tabelle mit den
+          gewählten Schulen und Kennzahlen als PDF, Excel oder CSV.
         </>
       }
-      actions={
-        <TraegerListExportMenu
-          download={(format) =>
-            downloadTraegerComparison({ ...period, schoolIds }, metrics, format)
-          }
-          scope={
-            schoolIds.length > 0
-              ? schoolIds.length === 1
-                ? "Eine gewählte Schule"
-                : `${schoolIds.length} gewählte Schulen`
-              : "Alle Schulen"
-          }
-          ariaLabel="Standortvergleich herunterladen"
-          fallbackName={`standortvergleich-${period.from}-bis-${period.to}`}
-          errorObject="den Standortvergleich"
-          unavailable={!comparison || schools.length === 0}
-        />
-      }
+      overflowMenu={exportItems}
       stats={
         comparison ? (
           <TenantPageStats
@@ -439,8 +432,10 @@ function TraegerComparisonContent() {
               embedded
             />
           }
-          onPrevious={() => shift(-1)}
-          onNext={canShiftForward ? () => shift(1) : undefined}
+          onPrevious={
+            previousWindow ? () => changeWindow(previousWindow) : undefined
+          }
+          onNext={nextWindow ? () => changeWindow(nextWindow) : undefined}
           previousLabel="Zeitraum davor"
           nextLabel="Zeitraum danach"
           onToday={onDefault ? undefined : () => changeWindow(defaultWindow)}
@@ -522,7 +517,7 @@ function TraegerComparisonContent() {
               aria-label="Legende der Rangfolge"
             />
             {missingForRank > 0 ? (
-              <span className="text-xs text-gray-500">
+              <span className="text-sm text-gray-500">
                 {missingForRank === 1
                   ? "1 Schule ohne Zahl fehlt im Diagramm."
                   : `${missingForRank} Schulen ohne Zahl fehlen im Diagramm.`}
@@ -532,7 +527,7 @@ function TraegerComparisonContent() {
         }
       >
         {loading ? (
-          <Skeleton className="h-56" aria-hidden />
+          <Skeleton shape="inner" className="h-56" aria-hidden />
         ) : ranked.length === 0 ? (
           <EmptyState
             variant="compact"

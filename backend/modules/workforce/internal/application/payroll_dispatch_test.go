@@ -665,3 +665,26 @@ func TestPayrollFilename(t *testing.T) {
 	assert.Equal(t, "a_2026-09_korrektur-2.xlsx", payrollFilename("a_2026-09.xlsx", 2))
 	assert.Equal(t, "ohne_endung_korrektur-1", payrollFilename("ohne_endung", 1))
 }
+
+type retiredPayrollSchools struct{}
+
+func (retiredPayrollSchools) School(context.Context, int64) (workforce.PayrollSchool, error) {
+	return workforce.PayrollSchool{Name: "OGS Am Park", Subdomain: "park", Retired: true}, nil
+}
+
+// A retired school's managers get no notice (#7478): its demo visitor's
+// erasure may run beside the Worker, and a notice queued from names read
+// before that commit would keep the visitor's name in the outbox. The
+// dispatch itself still records its reason.
+func TestPayrollDispatch_RetiredSchoolNotifiesNoManager(t *testing.T) {
+	t.Parallel()
+	h := newPayrollHarness(t, sftpConfig("csv"))
+	h.service.deps.Schools = retiredPayrollSchools{}
+	h.transfer.outcomes = []workforce.PayrollTransferOutcome{{NotConfigured: true}}
+	h.close(t)
+	h.run(t)
+
+	assert.Equal(t, workforce.PayrollDispatchBlocked, h.store.rows[0].State)
+	assert.Equal(t, workforce.PayrollReasonSFTPNotConfigured, h.store.rows[0].Reason, "the dispatch still records its reason")
+	assert.Empty(t, h.mail.problems, "no notice to the managers of a retired school")
+}

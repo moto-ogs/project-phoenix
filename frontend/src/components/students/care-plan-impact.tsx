@@ -7,6 +7,7 @@ import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -319,7 +320,7 @@ function ManualTemplateEntry({
           : {removed ? "Kind entfernt." : "Kind bleibt eingeplant."}
         </p>
       </div>
-      <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row min-[480px]:items-center sm:justify-end">
+      <ResponsiveRowActions>
         {removed ? (
           <span className="flex">
             <StatusBadge tone="green" label="Entfernt" />
@@ -357,7 +358,7 @@ function ManualTemplateEntry({
         >
           Im Betreuungsplan ansehen
         </ButtonLink>
-      </div>
+      </ResponsiveRowActions>
     </ResponsiveActionRow>
   );
 }

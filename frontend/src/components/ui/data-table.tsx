@@ -31,7 +31,7 @@ type SortDirection = "asc" | "desc";
 const LOAD_MORE_TOOLTIP = "Zeigt die nächsten Einträge unter den bisherigen.";
 
 /** The footer button of a list the server pages (`moreAction`). */
-interface DataTableMoreAction {
+export interface DataTableMoreAction {
   readonly label: string;
   readonly onClick: () => void;
   readonly loading?: boolean;

@@ -15,6 +15,7 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -286,9 +287,7 @@ function OfferingGapRow({
         </p>
       </div>
       {children ? (
-        <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
-          {children}
-        </div>
+        <ResponsiveRowActions>{children}</ResponsiveRowActions>
       ) : null}
     </ResponsiveActionRow>
   );

@@ -10,6 +10,7 @@
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { Button } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
@@ -430,7 +431,7 @@ export function CarePriceListCard({
                 Diese Kinder kommen erst in den Monatslauf, wenn jeder Tag einen
                 Preis hat.
               </p>
-              <div className="flex sm:justify-end">
+              <ResponsiveRowActions>
                 <Button
                   type="button"
                   variant="surface"
@@ -441,7 +442,7 @@ export function CarePriceListCard({
                 >
                   Preise ergänzen
                 </Button>
-              </div>
+              </ResponsiveRowActions>
             </ResponsiveActionRow>
           </ResponsiveActionList>
         ) : null}

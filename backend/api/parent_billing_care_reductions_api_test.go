@@ -283,8 +283,8 @@ func TestCareReductionsAreCheckedBeforeTheyAreSaved(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careEvidencesPath, careEvidence(contract, "income_level", &otherLevel))
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.care_evidence_invalid")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careEvidencesPath, careEvidence(contract, "income_level", &level))
-	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	created := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careEvidencesPath, careEvidence(contract, "income_level", &level))
+	require.Equal(t, http.StatusCreated, created.Code, created.Body.String())
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careEvidencesPath, careEvidence(contract, "income_level", &level))
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.care_evidence_overlap")
@@ -296,6 +296,46 @@ func TestCareReductionsAreCheckedBeforeTheyAreSaved(t *testing.T) {
 		careRule("single_parent", "Stufe 1", []int64{school}, map[string]any{"discount_cents": 100}))
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.care_rule_in_use")
+
+	// The evidence is changed in place and deleted; then its level goes too.
+	evidencePath := careEvidencesPath + "/" + strconv.FormatInt(evidenceOf(t, decodeSchoolPortalData[careEvidenceSetBody](t, created.Body.Bytes()), contract), 10)
+	changed := careEvidence(contract, "single_parent", nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, evidencePath, changed)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, []string{"single_parent"}, evidenceKinds(decodeSchoolPortalData[careEvidenceSetBody](t, rec.Body.Bytes()), contract))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, evidencePath, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Empty(t, evidenceKinds(decodeSchoolPortalData[careEvidenceSetBody](t, rec.Body.Bytes()), contract))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, careRulesPath+"/"+strconv.FormatInt(level, 10), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	for _, rule := range decodeSchoolPortalData[careRuleSetBody](t, rec.Body.Bytes()).Rules {
+		assert.NotEqual(t, level, rule.ID, "the deleted level is gone")
+	}
+}
+
+// evidenceOf names the one evidence of a contract.
+func evidenceOf(t *testing.T, set careEvidenceSetBody, contractID int64) int64 {
+	t.Helper()
+	for _, contract := range set.Contracts {
+		if contract.ContractID == contractID && len(contract.Evidences) == 1 {
+			return contract.Evidences[0].ID
+		}
+	}
+	t.Fatalf("no single evidence of contract %d", contractID)
+	return 0
+}
+
+// evidenceKinds names the kinds of the evidences of a contract.
+func evidenceKinds(set careEvidenceSetBody, contractID int64) []string {
+	var kinds []string
+	for _, contract := range set.Contracts {
+		if contract.ContractID == contractID {
+			for _, evidence := range contract.Evidences {
+				kinds = append(kinds, evidence.Kind)
+			}
+		}
+	}
+	return kinds
 }
 
 // Without the right "Abrechnung" every route answers 403; another Träger

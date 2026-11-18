@@ -1269,3 +1269,311 @@ export const HomeworkFeedbackResponseSchema: z.ZodType<HomeworkFeedbackResponse,
   status: z.string(),
   note: z.string().optional(),
 });
+
+/** Go: parentbilling.RunDueDate */
+export interface RunDueDate {
+  payment_method: string;
+  due_on: string | null;
+}
+
+export const RunDueDateSchema: z.ZodType<RunDueDate, unknown> = z.object({
+  payment_method: z.string(),
+  due_on: calendarDate.nullable(),
+});
+
+/** Go: parentbilling.PostalAddress */
+export interface PostalAddress {
+  street: string;
+  postal_code: string;
+  city: string;
+}
+
+export const PostalAddressSchema: z.ZodType<PostalAddress, unknown> = z.object({
+  street: z.string(),
+  postal_code: z.string(),
+  city: z.string(),
+});
+
+/** Go: parentbilling.InvoiceMandate */
+export interface InvoiceMandate {
+  mandate_id: string;
+  reference: string;
+  signed_on: string | null;
+  creditor_id: string;
+  iban_masked: string;
+  sequence_type: string;
+  notice_short?: boolean;
+}
+
+export const InvoiceMandateSchema: z.ZodType<InvoiceMandate, unknown> = z.object({
+  mandate_id: int64StringOrNumber,
+  reference: z.string(),
+  signed_on: calendarDate.nullable(),
+  creditor_id: z.string(),
+  iban_masked: z.string(),
+  sequence_type: z.string(),
+  notice_short: z.boolean().optional(),
+});
+
+/** Go: parentbilling.InvoicePayment */
+export interface InvoicePayment {
+  method: string;
+  due_on: string | null;
+  due_source: string;
+  mandate?: InvoiceMandate;
+  debit_gap?: string;
+}
+
+export const InvoicePaymentSchema: z.ZodType<InvoicePayment, unknown> = z.object({
+  method: z.string(),
+  due_on: calendarDate.nullable(),
+  due_source: z.string(),
+  mandate: InvoiceMandateSchema.optional(),
+  debit_gap: z.string().optional(),
+});
+
+/** Go: parentbilling.BillingLetterSeries */
+export interface BillingLetterSeries {
+  queued: number;
+  already: number;
+  without_email: number;
+  recipient_changed?: number;
+}
+
+export const BillingLetterSeriesSchema: z.ZodType<BillingLetterSeries, unknown> = z.object({
+  queued: safeInt,
+  already: safeInt,
+  without_email: safeInt,
+  recipient_changed: safeInt.optional(),
+});
+
+/** Go: parentbilling.CareRecipient */
+export interface CareRecipient {
+  first_name: string;
+  last_name: string;
+  email: string;
+  kind: string;
+  second_name: string;
+  address: PostalAddress | null;
+}
+
+export const CareRecipientSchema: z.ZodType<CareRecipient, unknown> = z.object({
+  first_name: z.string(),
+  last_name: z.string(),
+  email: z.string(),
+  kind: z.string(),
+  second_name: z.string(),
+  address: PostalAddressSchema.nullable(),
+});
+
+/** Go: parentbilling.CareUnpriced */
+export interface CareUnpriced {
+  contract_id: string;
+  school_id: string;
+  school_name: string;
+  child_first_name: string;
+  child_last_name: string;
+  care_offering_id: string;
+  module_name: string;
+  weekday: string;
+  days_per_week?: number;
+}
+
+export const CareUnpricedSchema: z.ZodType<CareUnpriced, unknown> = z.object({
+  contract_id: int64StringOrNumber,
+  school_id: int64StringOrNumber,
+  school_name: z.string(),
+  child_first_name: z.string(),
+  child_last_name: z.string(),
+  care_offering_id: int64StringOrNumber,
+  module_name: z.string(),
+  weekday: z.string(),
+  days_per_week: safeInt.optional(),
+});
+
+/** Go: parentbilling.CareDuplicateContract */
+export interface CareDuplicateContract {
+  contract_id: string;
+  school_id: string;
+  school_name: string;
+}
+
+export const CareDuplicateContractSchema: z.ZodType<CareDuplicateContract, unknown> = z.object({
+  contract_id: int64StringOrNumber,
+  school_id: int64StringOrNumber,
+  school_name: z.string(),
+});
+
+/** Go: parentbilling.CareDuplicate */
+export interface CareDuplicate {
+  child_first_name: string;
+  child_last_name: string;
+  module_name: string;
+  weekday: string;
+  contracts: CareDuplicateContract[] | null;
+}
+
+export const CareDuplicateSchema: z.ZodType<CareDuplicate, unknown> = z.object({
+  child_first_name: z.string(),
+  child_last_name: z.string(),
+  module_name: z.string(),
+  weekday: z.string(),
+  contracts: z.array(CareDuplicateContractSchema).nullable(),
+});
+
+/** Go: parentbilling.CareSchool */
+export interface CareSchool {
+  id: string;
+  name: string;
+}
+
+export const CareSchoolSchema: z.ZodType<CareSchool, unknown> = z.object({
+  id: int64StringOrNumber,
+  name: z.string(),
+});
+
+/** Go: parentbillinghttp.PostalAddressRequest */
+export interface PostalAddressRequest {
+  street?: string;
+  postal_code?: string;
+  city?: string;
+}
+
+/** Go: parentbillinghttp.CareReleaseRequest */
+export interface CareReleaseRequest {
+  document_count?: number;
+  total_cents?: number;
+  fingerprint?: string;
+}
+
+/** Go: parentbilling.CostBearer */
+export interface CostBearer {
+  id: string;
+  name: string;
+  address: string;
+  file_reference: string;
+  active: boolean;
+  in_use: boolean;
+  updated_at: string;
+}
+
+export const CostBearerSchema: z.ZodType<CostBearer, unknown> = z.object({
+  id: int64StringOrNumber,
+  name: z.string(),
+  address: z.string(),
+  file_reference: z.string(),
+  active: z.boolean(),
+  in_use: z.boolean(),
+  updated_at: instant,
+});
+
+/** Go: parentbilling.ContributionRule */
+export interface ContributionRule {
+  id: string;
+  service: string;
+  kind: string;
+  valid_from: string | null;
+  valid_until: string | null;
+  sibling_from_child: number | null;
+  discount_basis_points: number | null;
+  discount_cents: number | null;
+  note: string;
+  name: string;
+  school_ids: string[] | null;
+  care_offering_ids: string[] | null;
+  count_school_ids: string[] | null;
+  price_cents: number | null;
+  cap_cents: number | null;
+  tariff_sibling_price: boolean;
+  counts_family_children: boolean;
+  updated_at: string;
+}
+
+export const ContributionRuleSchema: z.ZodType<ContributionRule, unknown> = z.object({
+  id: int64StringOrNumber,
+  service: z.string(),
+  kind: z.string(),
+  valid_from: calendarDate.nullable(),
+  valid_until: calendarDate.nullable(),
+  sibling_from_child: safeInt.nullable(),
+  discount_basis_points: safeInt.nullable(),
+  discount_cents: safeInt.nullable(),
+  note: z.string(),
+  name: z.string(),
+  school_ids: z.array(int64StringOrNumber).nullable(),
+  care_offering_ids: z.array(int64StringOrNumber).nullable(),
+  count_school_ids: z.array(int64StringOrNumber).nullable(),
+  price_cents: safeInt.nullable(),
+  cap_cents: safeInt.nullable(),
+  tariff_sibling_price: z.boolean(),
+  counts_family_children: z.boolean(),
+  updated_at: instant,
+});
+
+/** Go: parentbilling.CareModule */
+export interface CareModule {
+  school_id: string;
+  school_name: string;
+  care_offering_id: string;
+  module_name: string;
+  ends_at: string;
+  booked_weekdays: string[] | null;
+  booked_days_per_week: number[] | null;
+  contract_count: number;
+}
+
+export const CareModuleSchema: z.ZodType<CareModule, unknown> = z.object({
+  school_id: int64StringOrNumber,
+  school_name: z.string(),
+  care_offering_id: int64StringOrNumber,
+  module_name: z.string(),
+  ends_at: z.string(),
+  booked_weekdays: z.array(z.string()).nullable(),
+  booked_days_per_week: z.array(safeInt).nullable(),
+  contract_count: safeInt,
+});
+
+/** Go: parentbilling.SEPADebit */
+export interface SEPADebit {
+  id: string;
+  mandate_id: string;
+  contract_id: string;
+  run_kind: string;
+  run_id: string;
+  invoice_number: string;
+  recipient_name: string;
+  amount_cents: number;
+  due_on: string | null;
+  collect_on?: string;
+  sequence_type: string;
+  mandate_reference: string;
+  iban_masked: string;
+  status: string;
+  left?: string;
+  submitted_at: string | null;
+  notice_id?: string;
+  notice_month?: string;
+  message_id?: string;
+}
+
+export const SEPADebitSchema: z.ZodType<SEPADebit, unknown> = z.object({
+  id: int64StringOrNumber,
+  mandate_id: int64StringOrNumber,
+  contract_id: int64StringOrNumber,
+  run_kind: z.string(),
+  run_id: int64StringOrNumber,
+  invoice_number: z.string(),
+  recipient_name: z.string(),
+  amount_cents: safeInt,
+  due_on: calendarDate.nullable(),
+  collect_on: calendarDate.optional(),
+  sequence_type: z.string(),
+  mandate_reference: z.string(),
+  iban_masked: z.string(),
+  status: z.string(),
+  left: z.string().optional(),
+  submitted_at: instant.nullable(),
+  notice_id: int64StringOrNumber.optional(),
+  notice_month: calendarDate.optional(),
+  message_id: z.string().optional(),
+});

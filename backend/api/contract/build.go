@@ -266,13 +266,20 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 		return Schema{Kind: KindNumber}, nil
 	case reflect.Slice, reflect.Array:
 		if t.Elem().Kind() == reflect.Uint8 {
-			return Schema{}, fmt.Errorf("%s: []byte is not supported", where)
+			if t.Kind() == reflect.Array {
+				return Schema{}, fmt.Errorf("%s: a byte array is not supported", where)
+			}
+			// encoding/json writes []byte as a base64 string, nil as null.
+			return Schema{Kind: KindString, Nullable: true}, nil
 		}
 		elem, err := b.schema(t.Elem(), where, request)
 		// A nil slice renders as null.
 		return Schema{Kind: KindArray, Elem: &elem, Nullable: t.Kind() == reflect.Slice}, err
 	case reflect.Map:
-		if t.Key().Kind() != reflect.String {
+		// encoding/json writes an integer key as its decimal string.
+		switch t.Key().Kind() {
+		case reflect.String, reflect.Int, reflect.Int32, reflect.Int64:
+		default:
 			return Schema{}, fmt.Errorf("%s: map key %s is not a string", where, t.Key())
 		}
 		elem, err := b.schema(t.Elem(), where, request)

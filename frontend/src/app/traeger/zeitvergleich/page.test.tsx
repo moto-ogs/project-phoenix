@@ -148,7 +148,7 @@ describe("Länger als gebucht", () => {
     });
     renderPage();
 
-    const names = await screen.findAllByText("Sina Soll");
+    const names = await screen.findAllByText("Soll, Sina");
     const row =
       names.map((name) => name.closest("tr")).find((tr) => tr !== null) ?? null;
     expect(row).not.toBeNull();

@@ -95,6 +95,13 @@ func (r *QualificationReminders) RunDue(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("read school for qualification reminders: %w", err)
 	}
+	// A retired school gets no reminder (#7478). The read holds the school
+	// until this transaction ends, so a retirement that hides it either
+	// waits for these mails, which its erasure then removes, or committed
+	// before the read, which then sees it retired.
+	if school.Retired {
+		return nil
+	}
 	for _, reminder := range due {
 		if !live[reminder.qualification.StaffID] {
 			continue

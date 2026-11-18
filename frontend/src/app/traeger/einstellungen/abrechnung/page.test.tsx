@@ -369,7 +369,7 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
       await screen.findByRole("menuitem", { name: "Ausschalten" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("menuitem", { name: "Ändern" }),
+      screen.getByRole("menuitem", { name: "Bearbeiten" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("menuitem", { name: "Löschen" })).toBeNull();
     fireEvent.click(screen.getByRole("menuitem", { name: "Ausschalten" }));
@@ -382,7 +382,9 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
     );
   });
 
-  it("changes a cost bearer in its row, one row at a time, without a dialog", async () => {
+  // Changing opens the dialog of adding (#7407): one way of editing per
+  // card, filled with the row's values, each opening with its own.
+  it("changes a cost bearer in the dialog of adding one, filled with its values", async () => {
     const social: CostBearer = {
       id: "5",
       name: "Sozialamt Musterstadt",
@@ -400,33 +402,26 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
       fireEvent.click(
         screen.getAllByRole("button", { name: `Aktionen für ${name}` })[0]!,
       );
-      fireEvent.click(await screen.findByRole("menuitem", { name: "Ändern" }));
+      fireEvent.click(
+        await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+      );
+      return screen.findByRole("dialog", { name: "Kostenträger ändern" });
     };
 
-    await openChange(YOUTH_OFFICE.name);
-    const form = await screen.findByRole("form", {
-      name: `${YOUTH_OFFICE.name} ändern`,
-    });
-    expect(form.closest("li")).not.toBeNull();
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.getByDisplayValue("FJ 51-2027")).toBeInTheDocument();
-    expect(screen.getByText("Sozialamt Musterstadt")).toBeInTheDocument();
-
-    // Opening another row closes the first one.
+    // Each opening shows the values of its own row.
     await openChange(social.name);
     expect(
-      await screen.findByRole("form", { name: "Sozialamt Musterstadt ändern" }),
+      await screen.findByDisplayValue("Sozialamt Musterstadt"),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("form", { name: `${YOUTH_OFFICE.name} ändern` }),
-    ).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
-    expect(
-      screen.queryByRole("form", { name: "Sozialamt Musterstadt ändern" }),
-    ).toBeNull();
-    expect(screen.getByText("Sozialamt Musterstadt")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Kostenträger ändern" }),
+      ).toBeNull(),
+    );
 
     await openChange(YOUTH_OFFICE.name);
+    expect(screen.getByDisplayValue("FJ 51-2027")).toBeInTheDocument();
     const name = await screen.findByDisplayValue(YOUTH_OFFICE.name);
     fireEvent.change(name, { target: { value: " " } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
@@ -450,9 +445,11 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
       ),
     );
     await waitFor(() => expect(api.fetchCostBearers).toHaveBeenCalledTimes(2));
-    expect(
-      screen.queryByRole("form", { name: "Jugendamt Musterstadt ändern" }),
-    ).toBeNull();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Kostenträger ändern" }),
+      ).toBeNull(),
+    );
   });
 
   it("shows bank accounts, number range, rules and cost bearers together (#5685)", async () => {

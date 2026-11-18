@@ -42,3 +42,9 @@ func (d dbTenantDirectory) RecordDueBillingKeyDates(context.Context, time.Time) 
 func (d dbTenantDirectory) PublishSchoolNames(context.Context) (int, error) {
 	return 0, nil
 }
+
+// HoldLiveSchool answers every school as live: the wired scheduler tests
+// cover the tenant loops; the hold has its root test.
+func (dbTenantDirectory) HoldLiveSchool(context.Context, int64) (bool, error) {
+	return true, nil
+}

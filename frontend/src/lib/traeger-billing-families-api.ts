@@ -129,7 +129,7 @@ interface BackendPayment {
 }
 
 interface BackendFamily {
-  id: number;
+  id: number | string;
   recipient_first_name: string;
   recipient_last_name: string;
   recipient_email: string;
@@ -150,9 +150,9 @@ interface BackendFamily {
 }
 
 interface BackendFamilyDocument {
-  id: number;
+  id: number | string;
   service?: string;
-  run_id: number;
+  run_id: number | string;
   kind: BillingDocumentKind;
   number: string;
   issued_on: string;
@@ -195,7 +195,7 @@ function familyFromBackend(family: BackendFamily): BillingFamily {
     familyEmail: family.family_email ?? family.recipient_email,
     familyDebtorNumber: family.family_debtor_number ?? "",
     holidayOnly: family.holiday_only ?? false,
-    hasDocuments: family.id !== 0,
+    hasDocuments: String(family.id) !== "0",
     issuedCents: family.issued_cents,
     cancelledCents: family.cancelled_cents,
     creditedCents: family.credited_cents,

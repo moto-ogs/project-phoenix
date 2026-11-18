@@ -14,6 +14,7 @@ import { ListGroupHeader } from "~/components/ui/list-group-header";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import {
@@ -127,7 +128,7 @@ function RecordRow({
           <p className="mt-0.5 text-xs text-gray-500">{detail}</p>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2 max-sm:pl-11">{children}</div>
+      <ResponsiveRowActions leading={32}>{children}</ResponsiveRowActions>
     </ResponsiveActionRow>
   );
 }

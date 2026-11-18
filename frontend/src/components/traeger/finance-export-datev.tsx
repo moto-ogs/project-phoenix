@@ -22,8 +22,8 @@ import { traegerPath } from "~/lib/traeger-url";
 /** The DATEV area of the Träger settings. */
 export const DATEV_SETTINGS_PATH = "/traeger/einstellungen?bereich=datev";
 
-/** The id of the notice the disabled DATEV buttons point to. */
-export const DATEV_READINESS_ID = "datev-readiness";
+/** The id of the notice that names the missing DATEV values. */
+const DATEV_READINESS_ID = "datev-readiness";
 
 /** The name of each DATEV value as the settings page shows it. */
 const DATEV_SETTING_LABELS: Record<string, string> = {
@@ -82,7 +82,7 @@ export function DatevReadinessNotice({
       action={
         <ButtonLink
           href={traegerPath(DATEV_SETTINGS_PATH)}
-          variant="ghost_tone"
+          variant="surface"
           size="compact"
           tooltip="Öffnet die Einstellungen, in denen die DATEV-Werte stehen."
         >
@@ -183,7 +183,7 @@ export function DatevRefusedNotice({
         accounts ? (
           <ButtonLink
             href={traegerPath(BOOKING_ACCOUNTS_PATH)}
-            variant="ghost_tone"
+            variant="surface"
             size="compact"
             tooltip={BOOKING_ACCOUNTS_HINT}
           >
