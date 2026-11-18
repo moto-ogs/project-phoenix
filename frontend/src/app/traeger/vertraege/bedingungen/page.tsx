@@ -4,15 +4,31 @@
 // Sonderkündigung, Satzung und Vertragspartner. Jeder neue Vertrag eines
 // Angebots übernimmt sie; ohne sie entsteht für das Angebot kein Entwurf.
 
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { CareContractConditions } from "~/components/traeger/care-contract-conditions";
 import { careContractTabs } from "~/components/traeger/care-contract-tabs";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { useInvalidateFamily } from "~/lib/swr";
 import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
 import { fetchContractTemplates } from "~/lib/traeger-care-contracts-api";
 
+/** The chosen offering in the address: `?angebot=<schoolId>-<offeringId>`. */
+const OFFERING_PARAM = "angebot";
+
 export default function TraegerVertragsbedingungenPage() {
+  return (
+    <Suspense fallback={null}>
+      <VertragsbedingungenContent />
+    </Suspense>
+  );
+}
+
+function VertragsbedingungenContent() {
+  const searchParams = useSearchParams();
+  const updateUrlParams = useUpdateUrlParams();
   const {
     data: offerings,
     loading,
@@ -54,6 +70,8 @@ export default function TraegerVertragsbedingungenPage() {
       {offerings ? (
         <CareContractConditions
           offerings={offerings}
+          selectedKey={searchParams.get(OFFERING_PARAM)}
+          onSelect={(key) => updateUrlParams({ [OFFERING_PARAM]: key })}
           onSaved={(saved) => {
             void mutate(
               offerings.map((offering) =>

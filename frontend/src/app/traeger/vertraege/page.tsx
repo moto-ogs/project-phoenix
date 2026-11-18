@@ -7,7 +7,7 @@
 // nicht: ihr Vertrag entsteht von selbst und ist sofort aktiv. Nur die Rolle
 // mit dem Recht „Verträge verwalten“ sieht die Seite.
 
-import { Plus, Send } from "lucide-react";
+import { Plus, Send, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type MouseEvent, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -31,8 +31,8 @@ import {
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import {
-  TraegerListExportMenu,
   traegerExportScope,
+  useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -536,6 +536,23 @@ export default function TraegerVertraegePage() {
       : []),
   ];
 
+  // #7409: „Verträge erstellen“ is the one visible head action; the import
+  // and the export („Herunterladen“) sit in the page menu.
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/contracts/export", format, {
+        status: status === "all" ? undefined : status,
+        school_id: schoolId,
+        search: debouncedSearch,
+      }),
+    scope: traegerExportScope(
+      schools.find((school) => school.value === schoolId)?.label,
+    ),
+    fallbackName: "betreuungsvertraege",
+    errorObject: "die Verträge",
+    unavailable: !data,
+  });
+
   // The count names the children waiting for a contract; the dialog lists
   // each of them, with the reason where a draft cannot be made yet.
   const createLabel =
@@ -573,44 +590,30 @@ export default function TraegerVertraegePage() {
         setStatus("all");
         setSchoolId("");
       }}
+      overflowMenu={[
+        {
+          label: "Verträge importieren",
+          description:
+            "Öffnet den Import von Kindern und bestehenden Verträgen aus einer CSV-Datei.",
+          icon: <Upload className="h-4 w-4" aria-hidden />,
+          href: traegerPath("/traeger/vertraege/import"),
+          onClick: () => undefined,
+        },
+        { kind: "separator" },
+        ...exportItems,
+      ]}
       actions={
-        <>
-          <TraegerListExportMenu
-            download={(format) =>
-              downloadTraegerList("/api/traeger/contracts/export", format, {
-                status: status === "all" ? undefined : status,
-                school_id: schoolId,
-                search: debouncedSearch,
-              })
-            }
-            scope={traegerExportScope(
-              schools.find((school) => school.value === schoolId)?.label,
-            )}
-            ariaLabel="Verträge herunterladen"
-            fallbackName="betreuungsvertraege"
-            errorObject="die Verträge"
-            unavailable={!data}
-          />
-          <ButtonLink
-            href={traegerPath("/traeger/vertraege/import")}
-            variant="outline"
-            size="md"
-            tooltip="Öffnet den Import von Kindern und bestehenden Verträgen aus einer CSV-Datei."
-          >
-            Verträge importieren
-          </ButtonLink>
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            disabled={!data}
-            tooltip="Öffnet die Auswahl angenommener Kinder, Entwürfe gehen noch nicht an Eltern."
-            onClick={() => setCreating(true)}
-          >
-            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-            {createLabel}
-          </Button>
-        </>
+        <Button
+          type="button"
+          variant="primary"
+          size="md"
+          disabled={!data}
+          tooltip="Öffnet die Auswahl angenommener Kinder, Entwürfe gehen noch nicht an Eltern."
+          onClick={() => setCreating(true)}
+        >
+          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+          {createLabel}
+        </Button>
       }
       error={loadError ?? (!data ? afterWrite.error : null)}
       // A list loads in the shape of its rows.
@@ -628,17 +631,11 @@ export default function TraegerVertraegePage() {
             candidates={data.candidates}
             onClose={() => setCreating(false)}
             onCreated={(result) => void onCreated(result)}
-            onOpenConditions={() =>
-              router.push(traegerPath("/traeger/vertraege/bedingungen"))
-            }
           />
         ) : null
       }
     >
-      <LoadErrorAlert
-        error={afterWrite.error ?? moreLoad.error}
-        className="mb-4"
-      />
+      <LoadErrorAlert error={afterWrite.error ?? moreLoad.error} />
       {data && data.modes.length > 0 ? (
         <SectionCard
           title="Wann gilt der Vertrag?"
@@ -663,8 +660,8 @@ export default function TraegerVertraegePage() {
               // Betreuungsvertrag?“, not the first tab of the settings.
               <ButtonLink
                 href={traegerPath("/traeger/einstellungen?bereich=enrollment")}
-                variant="surface"
-                size="compact"
+                variant="outline"
+                size="md"
                 tooltip="Öffnet die Einstellungen, ab wann Verträge an jeder Schule gelten."
               >
                 In den Einstellungen ändern
@@ -834,16 +831,15 @@ export default function TraegerVertraegePage() {
                 type="button"
                 variant="success"
                 size="compact"
-                disabled={sending}
+                isLoading={sending}
+                loadingText="Wird gesendet …"
                 tooltip="Schickt die Entwürfe sofort per E-Mail und in die Eltern-App."
                 onClick={() => void sendSelected()}
               >
                 <Send className="mr-2 h-4 w-4" aria-hidden="true" />
-                {sending
-                  ? "Wird gesendet …"
-                  : selectedDrafts.length === 1
-                    ? "1 Entwurf senden"
-                    : `${selectedDrafts.length} Entwürfe senden`}
+                {selectedDrafts.length === 1
+                  ? "1 Entwurf senden"
+                  : `${selectedDrafts.length} Entwürfe senden`}
               </Button>
             ) : null
           }

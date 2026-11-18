@@ -83,7 +83,7 @@ describe("CareRunStartModal", () => {
   it("needs at least one school", async () => {
     const onStart = renderModal();
     fireEvent.click(
-      await screen.findByRole("button", { name: "Keine wählen" }),
+      await screen.findByRole("button", { name: "Auswahl aufheben" }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Vorschau öffnen" }));
     expect(

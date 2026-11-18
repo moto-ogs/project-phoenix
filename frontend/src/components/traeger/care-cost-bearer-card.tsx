@@ -61,7 +61,7 @@ export function CareCostBearerCard({
       icon={HandCoins}
       title="Kostenträger"
       titleBadge={
-        <StatusBadge tone="blue" label={`${formatEuro(sum)} übernommen`} />
+        <StatusBadge tone="gray" label={`${formatEuro(sum)} übernommen`} />
       }
       amountHeader="Übernimmt"
       description={
