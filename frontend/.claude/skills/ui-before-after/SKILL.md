@@ -1,15 +1,16 @@
 ---
 name: ui-before-after
-description: Use when a UI change needs before/after screenshot pairs for a PR or review. Triggers on "vorher/nachher", "before/after screenshots", visual comparison of a frontend refactor, or verifying that a migration did not change the look.
+description: Use when a UI change needs before/after screenshot pairs for a PR or review, with the changed regions outlined and numbered. Triggers on "vorher/nachher", "before/after screenshots", "circle what changed", visual comparison of a frontend refactor, or verifying that a migration did not change the look.
 metadata:
   author: moto-ogs
-  version: "1.2.0"
+  version: "1.3.0"
 ---
 
 # Before/After UI Screenshot Pairs
 
 Capture the same interactions against two pinned source states, verify the
-rendered state before each screenshot, and composite matched pairs.
+rendered state before each screenshot, outline what changed, and composite
+matched pairs.
 Turbopack can serve stale modules after a source switch. Hot reload alone does
 not establish which state the browser shows.
 
@@ -95,7 +96,9 @@ not establish which state the browser shows.
 1. **Plan the shot list.** List URLs, exact interactions and required data for
    each surface and viewport. Choose a rendered-state assertion for each target
    before switching. Create needed data once; use the same data and interactions
-   throughout both passes, matching the viewport within each pair.
+   throughout both passes, matching the viewport within each pair. Write the
+   numbered change list of [Mark what changed](#mark-what-changed) and note per
+   shot which numbers it shows.
 2. **BEFORE:** restore only the comparison paths from the pinned baseline into
    the working tree, leaving the index at the branch state:
    ```bash
@@ -114,20 +117,26 @@ not establish which state the browser shows.
    # Re-snapshot and verify the target-specific rendered assertion here.
    agent-browser --session s screenshot shots/before/<viewport>-<nn>-<name>.png
    ```
+   Where the shot shows a region the branch removes, add its marked twin under
+   `shots/before-marked/` ([Mark what changed](#mark-what-changed)).
 3. **AFTER:** restore the comparison paths from the recorded branch commit:
    ```bash
    git restore --source=<branch-sha> --worktree -- frontend/src
    ```
    Run the source-state gate again. Repeat the same URLs and interactions at
    **both viewports**, verifying the branch assertion before each image. Use
-   identical viewport-prefixed filenames under `shots/after/`.
-4. **Composite pairs** with ImageMagick, left=before and right=after. Use a
-   task-owned output directory and unique temporary filenames:
+   identical viewport-prefixed filenames under `shots/after/`, and the marked
+   twin of every shot with a visible change under `shots/after-marked/`.
+4. **Composite pairs** with ImageMagick, left=before and right=after, taking
+   the marked twin of a side where one exists. Use a task-owned output
+   directory and unique temporary filenames:
    ```bash
    for f in shots/before/*.png; do
      n=$(basename "$f")
-     magick "$f" -resize 50% -bordercolor gray -border 1 "shots/b-$n"
-     magick "shots/after/$n" -resize 50% -bordercolor gray -border 1 "shots/a-$n"
+     b="shots/before-marked/$n"; [ -f "$b" ] || b="$f"
+     a="shots/after-marked/$n"; [ -f "$a" ] || a="shots/after/$n"
+     magick "$b" -resize 50% -bordercolor gray -border 1 "shots/b-$n"
+     magick "$a" -resize 50% -bordercolor gray -border 1 "shots/a-$n"
      magick "shots/b-$n" "shots/a-$n" +append "shots/pair-$n"
    done
    ```
@@ -138,9 +147,41 @@ not establish which state the browser shows.
    state as a separate source check. Then close the dedicated browser session
    and stop task-owned services no longer needed. Preserve pre-existing
    services, databases, volumes and caches; record anything left running.
-6. **Deliver** the inspected pairs with the ref/restart/rendered evidence. Post
+6. **Deliver** the inspected pairs with the ref/restart/rendered evidence and,
+   beside each marked pair, the change-list lines of the numbers it shows. Post
    native PR attachments as described in
    [PR screenshots and QA evidence](../../../../docs/agents/operations.md#pr-screenshots-and-qa-evidence).
+
+## Mark what changed
+
+A pair with a visible change carries numbered red outlines, so a reviewer finds
+the changed regions at a glance. A pair that proves "no visual change" stays
+unmarked.
+
+- **Change list.** Number every visible change the PR names and give each one
+  line a reviewer can check against the image („2: Speichern steht am Ende der
+  Karte“). A number keeps its meaning across all shots and both viewports.
+- **Which side.** Outline added, moved and restyled regions on the after image,
+  removed regions on the before image. A rebuilt card gets one outline around
+  the card.
+- **Draw, then shoot again.** Keep the clean screenshot. With the page still in
+  the asserted state, draw the marks and save the twin under the same filename.
+  From the repository root:
+  ```bash
+  { cat frontend/.claude/skills/ui-before-after/mark-changes.js
+    echo 'markChanges([[1, "[data-testid=save-bar]"], [2, "main section:nth-of-type(3)"]])'
+  } | agent-browser --session s eval --stdin
+  agent-browser --session s screenshot shots/after-marked/<viewport>-<nn>-<name>.png
+  ```
+  Each entry is `[number, CSS selector]`; the first match is outlined. Scroll a
+  region inside an inner scroll area into view first. An evaluation error
+  (selector matches nothing, element invisible) blocks the marked shot like a
+  failed rendered assertion.
+- **Inspect the twin.** Every outline surrounds its region, and outline and
+  number cover no changed content; choose a wider or narrower selector until
+  both hold.
+- **Clear before going on.** The marks exist only in the open page. Navigation
+  removes them; to keep interacting on the same page, call `markChanges([])`.
 
 ## Interaction notes
 
