@@ -127,7 +127,7 @@ describe("OperatorBillingPage", () => {
     renderPage();
 
     expect(
-      await screen.findByText("Stichtage vom 05.08.2026 bis 15.08.2026"),
+      await screen.findByText(/^Stichtage vom 05\.08\.2026 bis 15\.08\.2026\./),
     ).toBeInTheDocument();
     const linden = screen
       .getAllByText("OGS Lindenweg")
@@ -140,7 +140,9 @@ describe("OperatorBillingPage", () => {
     mockListKeyDateCounts.mockResolvedValue([count()]);
     renderPage();
 
-    expect(await screen.findByText("Stichtag 15.08.2026")).toBeInTheDocument();
+    expect(
+      await screen.findByText(/^Stichtag 15\.08\.2026\./),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("columnheader", { name: /^Stichtag/ }),
     ).not.toBeInTheDocument();
@@ -181,7 +183,7 @@ describe("OperatorBillingPage", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Monat als CSV" }),
+      screen.queryByRole("button", { name: "Weitere Aktionen" }),
     ).not.toBeInTheDocument();
   });
 
@@ -189,6 +191,9 @@ describe("OperatorBillingPage", () => {
     mockListKeyDateCounts.mockResolvedValue([]);
     renderPage();
 
+    fireEvent.click(
+      await screen.findByRole("button", { name: "So wird gezählt ausklappen" }),
+    );
     expect(
       await screen.findByText(/Auch offline Geräte zählen/),
     ).toBeInTheDocument();
@@ -198,6 +203,9 @@ describe("OperatorBillingPage", () => {
     mockListKeyDateCounts.mockResolvedValue([]);
     renderPage();
 
+    fireEvent.click(
+      await screen.findByRole("button", { name: "So wird gezählt ausklappen" }),
+    );
     expect(
       await screen.findByText(/Ein sofort aktiviertes Kind zählt auch/),
     ).toBeInTheDocument();
@@ -225,7 +233,7 @@ describe("OperatorBillingPage", () => {
     renderPage();
 
     expect(await screen.findAllByText("OGS Am See")).not.toHaveLength(0);
-    expect(screen.getByText("Stichtag 15.08.2026")).toBeInTheDocument();
+    expect(screen.getByText(/^Stichtag 15\.08\.2026\./)).toBeInTheDocument();
     expect(screen.queryAllByText("OGS Juli")).toHaveLength(0);
     expect(screen.getByText("200")).toBeInTheDocument();
     expect(screen.getByText("5")).toBeInTheDocument();
@@ -255,18 +263,18 @@ describe("OperatorBillingPage", () => {
     mockListKeyDateCounts.mockResolvedValue([count()]);
     renderPage();
 
+    // #7301: the downloads sit in the page menu under „Herunterladen“.
     fireEvent.click(
-      await screen.findByRole("button", { name: "Monat als CSV" }),
+      await screen.findByRole("button", { name: "Weitere Aktionen" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /August 2026 als CSV/ }),
     );
     await waitFor(() => expect(mockDownload).toHaveBeenCalledWith("2026-08"));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Alle Monate als CSV" }),
-      ).toBeEnabled(),
-    );
 
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
     fireEvent.click(
-      screen.getByRole("button", { name: "Alle Monate als CSV" }),
+      await screen.findByRole("menuitem", { name: /Alle Monate als CSV/ }),
     );
     await waitFor(() =>
       expect(mockDownload).toHaveBeenLastCalledWith(undefined),
@@ -281,7 +289,10 @@ describe("OperatorBillingPage", () => {
     renderPage();
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "Monat als CSV" }),
+      await screen.findByRole("button", { name: "Weitere Aktionen" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /August 2026 als CSV/ }),
     );
     // #2519: catalog text by code in the toast, with retry.
     expect(
@@ -319,7 +330,9 @@ describe("OperatorBillingPage", () => {
     });
     renderPage();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Ändern" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Standard ändern" }),
+    );
     const save = screen.getByRole("button", { name: "Speichern" });
     expect(save).toBeDisabled();
 
@@ -342,7 +355,9 @@ describe("OperatorBillingPage", () => {
     );
     renderPage();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Ändern" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Standard ändern" }),
+    );
     fireEvent.click(screen.getByRole("combobox"));
     fireEvent.click(within(screen.getByRole("listbox")).getByText("20."));
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));

@@ -87,8 +87,16 @@ const amBach: BillingKeyDayOverride = {
   updatedAt: "2026-11-01T08:00:00Z",
 };
 
+const NOTHING_CAPTURED: ReadonlySet<string> = new Set();
+
 /** The page around the card: it keeps the key day the writes answer. */
-function Harness({ initial }: Readonly<{ initial: BillingKeyDayOverride[] }>) {
+function Harness({
+  initial,
+  captured = NOTHING_CAPTURED,
+}: Readonly<{
+  initial: BillingKeyDayOverride[];
+  captured?: ReadonlySet<string>;
+}>) {
   const [keyDay, setKeyDay] = useState<BillingKeyDay>({
     keyDay: 15,
     nextKeyDate: "2026-11-15",
@@ -99,16 +107,20 @@ function Harness({ initial }: Readonly<{ initial: BillingKeyDayOverride[] }>) {
     <BillingKeyDayOverrides
       keyDay={keyDay}
       loading={false}
+      capturedThisMonth={captured}
       onChanged={setKeyDay}
     />
   );
 }
 
-function renderOverrides(initial: BillingKeyDayOverride[]) {
+function renderOverrides(
+  initial: BillingKeyDayOverride[],
+  captured?: Set<string>,
+) {
   return render(
     <ToastProvider>
       <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
-        <Harness initial={initial} />
+        <Harness initial={initial} captured={captured} />
       </SWRConfig>
     </ToastProvider>,
   );
@@ -189,7 +201,7 @@ describe("BillingKeyDayOverrides", () => {
 
     expect(
       within(dialog).getByText(
-        "Nächster Stichtag von OGS Lindenweg (Träger Süd): 20.11.2026. Schon erfasste Monate bleiben, wie sie sind.",
+        "Nächster Stichtag von OGS Lindenweg: 20.11.2026. Schon erfasste Monate bleiben, wie sie sind.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(
@@ -219,7 +231,7 @@ describe("BillingKeyDayOverrides", () => {
 
     expect(
       within(dialog).getByText(
-        "Der 8. ist im November 2026 schon vorbei. Schulen ohne Zahlen für November 2026 bekommen für diesen Monat keine mehr. Nächster Stichtag von Träger Nord: 08.12.2026.",
+        "Der 8. ist im November 2026 schon vorbei. OGS Am Bach hat noch keine Zahlen für November 2026 und bekommt für diesen Monat keine mehr. Nächster Stichtag: 08.12.2026.",
       ),
     ).toBeInTheDocument();
   });
@@ -303,5 +315,23 @@ describe("BillingKeyDayOverrides", () => {
         "OGS Am Bach zählt wieder am Stichtag von Ganztag Nord e. V.",
       ),
     );
+  });
+
+  it("says the month stays when every reached school already has its figures", async () => {
+    renderOverrides([traegerNord], new Set(["9"]));
+    await screen.findByText("Träger Nord");
+
+    openMenuOf("Träger Nord");
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /Tag ändern/ }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await choose("Tag im Monat", "8.");
+
+    expect(
+      await within(dialog).findByText(
+        "Der 8. ist im November 2026 schon vorbei. Die Zahlen für November 2026 stehen schon und bleiben, wie sie sind. Nächster Stichtag: 08.12.2026.",
+      ),
+    ).toBeInTheDocument();
   });
 });

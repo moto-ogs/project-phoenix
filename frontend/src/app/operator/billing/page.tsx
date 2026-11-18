@@ -17,9 +17,8 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { SectionCard } from "~/components/ui/section-card";
-import { StatCard } from "~/components/ui/stat-card";
 import {
   useApiErrorDisplay,
   useApiFormError,
@@ -185,7 +184,7 @@ function KeyDaySection({
             size="md"
             onClick={startEditing}
           >
-            Ändern
+            Standard ändern
           </Button>
         )
       }
@@ -210,7 +209,7 @@ function KeyDaySection({
           keyDayPassedThisMonth(Number(draft), berlinTodayISO()) ? (
             <Alert
               type="warning"
-              message={`Der ${draft}. ist im ${billingMonthName(berlinTodayISO())} schon vorbei. Schulen ohne Zahlen für ${billingMonthName(berlinTodayISO())} bekommen für diesen Monat keine mehr. Nächster Stichtag: ${formatDate(nextBillingKeyDate(Number(draft), berlinTodayISO()))}.`}
+              message={`Der ${draft}. ist im ${billingMonthName(berlinTodayISO())} schon vorbei. Schulen ohne Zahlen für diesen Monat bekommen keine mehr. Nächster Stichtag: ${formatDate(nextBillingKeyDate(Number(draft), berlinTodayISO()))}.`}
             />
           ) : null}
           <EditActions
@@ -239,6 +238,8 @@ function CountingRulesSection() {
     <SectionCard
       title="So wird gezählt"
       description="Maßgeblich ist der Stand am Stichtag ab 6 Uhr."
+      collapsible
+      defaultCollapsed
     >
       <DataGrid>
         <DataField label="Aktive Kinder">
@@ -343,9 +344,106 @@ function OperatorBillingPageContent() {
 
   const hasCounts = periods.length > 0;
 
+  // The schools that already have figures for the running month: a new key
+  // day that is already reached this month skips the others (#7301).
+  const currentPeriod = `${berlinTodayISO().slice(0, 8)}01`;
+  const capturedThisMonth = useMemo(
+    () =>
+      counts
+        ? new Set(
+            counts
+              .filter((row) => row.period === currentPeriod)
+              .map((row) => row.schoolId),
+          )
+        : undefined,
+    [counts, currentPeriod],
+  );
+
+  const monthName = period ? monthLabel(period) : "";
+  const overflowMenu = hasCounts
+    ? [
+        { kind: "header" as const, label: "Herunterladen" },
+        {
+          label: `${monthName} als CSV`,
+          description: "Alle Schulen des gewählten Monats.",
+          disabled: downloading !== null,
+          onClick: () => void download("month"),
+        },
+        {
+          label: "Alle Monate als CSV",
+          description: "Jeder erfasste Monat, für die Rechnungsprüfung.",
+          disabled: downloading !== null,
+          onClick: () => void download("all"),
+        },
+      ]
+    : undefined;
+
   return (
-    <TenantPage title="Stichtagszahlen">
-      <LoadErrorAlert error={keyDayLoadError} />
+    <TenantPage
+      title="Stichtagszahlen"
+      statsLoading={countsLoading}
+      stats={
+        hasCounts ? (
+          <TenantPageStats
+            items={[
+              {
+                value: rows.length,
+                label: rows.length === 1 ? "Schule" : "Schulen",
+              },
+              { value: totalStudents, label: "aktive Kinder" },
+              { value: totalTerminals, label: "aktive Terminals" },
+            ]}
+          />
+        ) : undefined
+      }
+      overflowMenu={overflowMenu}
+    >
+      <LoadErrorAlert error={keyDayLoadError} actionLayout="responsive" />
+
+      <SectionCard
+        title="Erfasste Zahlen"
+        description={
+          period
+            ? `${keyDateLine}. Je Schule, so wie moto sie am Stichtag erfasst hat.`
+            : "Je Monat und Schule, so wie moto sie am Stichtag erfasst hat."
+        }
+        action={
+          hasCounts ? (
+            <CustomSelect
+              ariaLabel="Monat"
+              value={period ?? ""}
+              options={periods.map((value) => ({
+                value,
+                label: monthLabel(value),
+              }))}
+              onChange={setChosenPeriod}
+              className="min-w-44"
+            />
+          ) : undefined
+        }
+      >
+        {countsError ? (
+          <LoadErrorAlert error={countsLoadError} actionLayout="responsive" />
+        ) : !countsLoading && !hasCounts ? (
+          <EmptyState
+            title="Noch keine Stichtagszahlen"
+            description="moto erfasst die Zahlen am Stichtag ab 6 Uhr. Fällt die Erfassung am Stichtag aus, holt moto sie im selben Monat nach."
+          />
+        ) : (
+          <DataTable
+            columns={
+              keyDates.length > 1
+                ? COLUMNS
+                : COLUMNS.filter((column) => column.key !== "keyDate")
+            }
+            rows={rows}
+            getRowKey={(row) => `${row.period}-${row.schoolId}`}
+            isLoading={countsLoading}
+            defaultSortKey="organization"
+            stackedOnMobile
+          />
+        )}
+      </SectionCard>
 
       <KeyDaySection
         keyDay={keyDay}
@@ -356,85 +454,9 @@ function OperatorBillingPageContent() {
       <BillingKeyDayOverrides
         keyDay={keyDay}
         loading={keyDayLoading}
+        capturedThisMonth={capturedThisMonth}
         onChanged={(updated) => void mutateKeyDay(updated, false)}
       />
-
-      <SectionCard
-        title="Stichtagszahlen"
-        description="Je Monat und Schule, so wie moto sie am Stichtag erfasst hat."
-        action={
-          hasCounts ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <CustomSelect
-                ariaLabel="Monat"
-                value={period ?? ""}
-                options={periods.map((value) => ({
-                  value,
-                  label: monthLabel(value),
-                }))}
-                onChange={setChosenPeriod}
-                className="min-w-44"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                disabled={downloading !== null}
-                onClick={() => void download("month")}
-              >
-                {downloading === "month" ? "Erstellt…" : "Monat als CSV"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                disabled={downloading !== null}
-                onClick={() => void download("all")}
-              >
-                {downloading === "all" ? "Erstellt…" : "Alle Monate als CSV"}
-              </Button>
-            </div>
-          ) : undefined
-        }
-      >
-        {countsError ? (
-          <LoadErrorAlert error={countsLoadError} />
-        ) : !countsLoading && !hasCounts ? (
-          <EmptyState
-            title="Noch keine Stichtagszahlen"
-            description="moto erfasst die Zahlen am Stichtag ab 6 Uhr. Fällt die Erfassung am Stichtag aus, holt moto sie im selben Monat nach."
-          />
-        ) : (
-          <div className="space-y-4">
-            {period && <p className="text-sm text-gray-600">{keyDateLine}</p>}
-            <div className="grid grid-cols-3 gap-3">
-              <StatCard variant="tile" label="Schulen" value={rows.length} />
-              <StatCard
-                variant="tile"
-                label="Aktive Kinder"
-                value={totalStudents}
-              />
-              <StatCard
-                variant="tile"
-                label="Aktive Terminals"
-                value={totalTerminals}
-              />
-            </div>
-            <DataTable
-              columns={
-                keyDates.length > 1
-                  ? COLUMNS
-                  : COLUMNS.filter((column) => column.key !== "keyDate")
-              }
-              rows={rows}
-              getRowKey={(row) => `${row.period}-${row.schoolId}`}
-              isLoading={countsLoading}
-              defaultSortKey="organization"
-              stackedOnMobile
-            />
-          </div>
-        )}
-      </SectionCard>
 
       <CountingRulesSection />
     </TenantPage>

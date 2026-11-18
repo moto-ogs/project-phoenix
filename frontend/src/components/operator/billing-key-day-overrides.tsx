@@ -125,11 +125,14 @@ function fallbackSentence(
 export function BillingKeyDayOverrides({
   keyDay,
   loading,
+  capturedThisMonth,
   onChanged,
 }: Readonly<{
   /** The key day with its overrides; undefined while it loads or failed. */
   keyDay: BillingKeyDay | undefined;
   loading: boolean;
+  /** Schools with figures for the running month; undefined until loaded. */
+  capturedThisMonth: ReadonlySet<string> | undefined;
   /** Takes the key day the write answered, overrides included. */
   onChanged: (keyDay: BillingKeyDay) => void;
 }>) {
@@ -161,7 +164,7 @@ export function BillingKeyDayOverrides({
         error: resetError instanceof Error ? resetError.message : "unknown",
       });
       void showResetError(resetError, {
-        object: `den Stichtag von ${override.name}`,
+        object: `der Stichtag von ${override.name}`,
         retry: () => void reset(override),
       });
     } finally {
@@ -187,6 +190,7 @@ export function BillingKeyDayOverrides({
           size="md"
           onClick={() => setEditing({ mode: "create" })}
           disabled={!overrides}
+          disabledReason="Geht erst, wenn der Stichtag oben geladen ist."
         >
           Stichtag festlegen
         </Button>
@@ -197,8 +201,8 @@ export function BillingKeyDayOverrides({
       ) : !overrides ? (
         <EmptyState
           variant="compact"
-          title="Eigene Stichtage nicht geladen"
-          description="Sie stehen mit dem Standard oben. Lädt er wieder, erscheinen sie hier."
+          title="Eigene Stichtage konnten nicht geladen werden"
+          description="Lade sie oben mit „Wiederholen“ neu."
         />
       ) : count === 0 ? (
         <EmptyState
@@ -220,10 +224,10 @@ export function BillingKeyDayOverrides({
                   size="sm"
                 />
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-gray-900">
+                  <p className="text-sm font-semibold break-words text-gray-900">
                     {override.name}
                   </p>
-                  <p className="truncate text-sm text-gray-500">
+                  <p className="text-sm break-words text-gray-500">
                     {overrideMeta(override)}
                   </p>
                 </div>
@@ -287,6 +291,7 @@ export function BillingKeyDayOverrides({
           editing={editing}
           overrides={overrides ?? []}
           standardDay={standardDay}
+          capturedThisMonth={capturedThisMonth}
           onClose={() => setEditing(null)}
           onSaved={(updated, saved) => {
             onChanged(updated);
@@ -309,15 +314,16 @@ interface TargetOption {
 function useTargetOptions(
   scope: BillingKeyDayScope,
   overrides: readonly BillingKeyDayOverride[],
-  enabled: boolean,
 ) {
+  // Both lists load for either scope: a Träger's day reaches its schools,
+  // and the dialog names those that would miss the running month.
   const organizations = useSWRAuth(
-    enabled ? operatorProvisioningKeys.organizations() : null,
+    operatorProvisioningKeys.organizations(),
     () => operatorProvisioningService.listOrganizations(),
     { revalidateOnFocus: false },
   );
   const schools = useSWRAuth(
-    enabled && scope === "school" ? operatorProvisioningKeys.schools() : null,
+    operatorProvisioningKeys.schools(),
     () => operatorProvisioningService.listSchools(),
     { revalidateOnFocus: false },
   );
@@ -359,21 +365,54 @@ function useTargetOptions(
       .sort((a, b) => a.label.localeCompare(b.label, "de"));
   }, [organizations.data, schools.data, overrides, scope]);
 
-  const loading =
-    organizations.isLoading || (scope === "school" && schools.isLoading);
-  return { options, loading, loadError };
+  const liveSchools = useMemo(
+    () => (schools.data ?? []).filter((school) => school.deletedAt == null),
+    [schools.data],
+  );
+  const loading = organizations.isLoading || schools.isLoading;
+  return { options, loading, loadError, schools: liveSchools };
+}
+
+/**
+ * The schools a new day that is already reached this month leaves without
+ * figures for it: those the day reaches that have none yet. A Träger's day
+ * reaches its schools without an own day.
+ */
+function schoolsMissingTheMonth(
+  scope: BillingKeyDayScope,
+  targetId: string,
+  schools: readonly { id: string; name: string; organizationId: string }[],
+  overrides: readonly BillingKeyDayOverride[],
+  captured: ReadonlySet<string>,
+): string[] {
+  const ownDay = new Set(
+    overrides
+      .filter((override) => override.scope === "school")
+      .map((override) => override.id),
+  );
+  return schools
+    .filter((school) =>
+      scope === "school"
+        ? school.id === targetId
+        : school.organizationId === targetId && !ownDay.has(school.id),
+    )
+    .filter((school) => !captured.has(school.id))
+    .map((school) => school.name)
+    .sort((a, b) => a.localeCompare(b, "de"));
 }
 
 function KeyDayOverrideModal({
   editing,
   overrides,
   standardDay,
+  capturedThisMonth,
   onClose,
   onSaved,
 }: Readonly<{
   editing: Editing;
   overrides: readonly BillingKeyDayOverride[];
   standardDay: number | undefined;
+  capturedThisMonth: ReadonlySet<string> | undefined;
   onClose: () => void;
   onSaved: (keyDay: BillingKeyDay, saved: BillingKeyDayOverride) => void;
 }>) {
@@ -385,7 +424,7 @@ function KeyDayOverrideModal({
   const [day, setDay] = useState(existing ? String(existing.keyDay) : "");
   const save = useFormModalPending();
   const errors = useApiFormError();
-  const targets = useTargetOptions(scope, overrides, existing === null);
+  const targets = useTargetOptions(scope, overrides);
 
   const today = berlinTodayISO();
   const keyDay = day === "" ? null : Number(day);
@@ -412,7 +451,7 @@ function KeyDayOverrideModal({
           error: saveError instanceof Error ? saveError.message : "unknown",
         });
         if (op.isCurrent()) {
-          void errors.show(saveError, { object: "den eigenen Stichtag" });
+          void errors.show(saveError, { object: "der eigene Stichtag" });
         }
         return;
       }
@@ -425,6 +464,25 @@ function KeyDayOverrideModal({
   };
 
   const passed = keyDay !== null && keyDayPassedThisMonth(keyDay, today);
+  const shortName =
+    existing?.name ??
+    (scope === "school"
+      ? targets.schools.find((school) => school.id === targetId)?.name
+      : targetName) ??
+    "";
+  // Unknown until the figures and the school list are loaded; then the
+  // dialog names who misses the month instead of guessing.
+  const missing =
+    passed && capturedThisMonth && !targets.loading && targetId !== ""
+      ? schoolsMissingTheMonth(
+          scope,
+          targetId,
+          targets.schools,
+          overrides,
+          capturedThisMonth,
+        )
+      : null;
+  const skipsMonth = passed && (missing === null || missing.length > 0);
   const scopeHint =
     scope === "school"
       ? "Gilt nur für diese Schule, auch wenn ihr Träger einen eigenen Tag hat."
@@ -446,6 +504,7 @@ function KeyDayOverrideModal({
           <Button
             type="button"
             size="md"
+            variant={skipsMonth && ready ? "warning" : "primary"}
             onClick={() => void submit()}
             isLoading={save.pending}
             loadingText="Wird gespeichert…"
@@ -523,10 +582,11 @@ function KeyDayOverrideModal({
         </div>
         {keyDay !== null && targetId !== "" && !unchanged ? (
           <KeyDayPreview
-            name={targetName}
+            name={shortName}
             keyDay={keyDay}
             today={today}
             passed={passed}
+            missing={missing}
           />
         ) : null}
       </div>
@@ -534,26 +594,56 @@ function KeyDayOverrideModal({
   );
 }
 
-/** What the save will do, in one line, before it is done. */
+/** "A", "A und B", "A, B und C", or "4 Schulen" for more. */
+function schoolList(names: readonly string[]): string {
+  if (names.length > 3) return `${names.length} Schulen`;
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} und ${names.at(-1)}`;
+}
+
+/** What the save will do, before it is done. */
 function KeyDayPreview({
   name,
   keyDay,
   today,
   passed,
-}: Readonly<{ name: string; keyDay: number; today: string; passed: boolean }>) {
-  const next = nextBillingKeyDate(keyDay, today);
-  if (passed) {
+  missing,
+}: Readonly<{
+  name: string;
+  keyDay: number;
+  today: string;
+  passed: boolean;
+  /** Schools that would get no figures this month; null while unknown. */
+  missing: readonly string[] | null;
+}>) {
+  const next = formatDate(nextBillingKeyDate(keyDay, today));
+  const month = billingMonthName(today);
+  if (!passed) {
     return (
       <Alert
-        type="warning"
-        message={`Der ${keyDay}. ist im ${billingMonthName(today)} schon vorbei. Schulen ohne Zahlen für ${billingMonthName(today)} bekommen für diesen Monat keine mehr. Nächster Stichtag von ${name}: ${formatDate(next)}.`}
+        type="info"
+        message={`Nächster Stichtag von ${name}: ${next}. Schon erfasste Monate bleiben, wie sie sind.`}
       />
     );
   }
+  if (missing !== null && missing.length === 0) {
+    return (
+      <Alert
+        type="info"
+        message={`Der ${keyDay}. ist im ${month} schon vorbei. Die Zahlen für ${month} stehen schon und bleiben, wie sie sind. Nächster Stichtag: ${next}.`}
+      />
+    );
+  }
+  const who =
+    missing === null
+      ? "Schulen ohne Zahlen für diesen Monat bekommen"
+      : missing.length === 1
+        ? `${schoolList(missing)} hat noch keine Zahlen für ${month} und bekommt`
+        : `${schoolList(missing)} haben noch keine Zahlen für ${month} und bekommen`;
   return (
     <Alert
-      type="info"
-      message={`Nächster Stichtag von ${name}: ${formatDate(next)}. Schon erfasste Monate bleiben, wie sie sind.`}
+      type="warning"
+      message={`Der ${keyDay}. ist im ${month} schon vorbei. ${who} für diesen Monat keine mehr. Nächster Stichtag: ${next}.`}
     />
   );
 }
