@@ -1,5 +1,6 @@
 "use client";
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { groups as groupsKeys } from "~/lib/swr/groups";
@@ -122,8 +123,7 @@ function GroupsPageContent() {
   }, [holidayGroupList]);
 
   const accessRefused =
-    groupsError instanceof ApiError &&
-    (groupsError.status === 401 || groupsError.status === 403);
+    groupsError instanceof ApiError && isAccessRefusal(groupsError);
   const groupsData = accessRefused ? undefined : cachedGroups;
   const discardRefused = useDiscardRefusedEntity();
   useLayoutEffect(() => {
