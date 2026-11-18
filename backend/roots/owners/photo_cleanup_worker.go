@@ -21,11 +21,10 @@ import (
 // tenant-scoped cleanup tick, including inactive schools.
 type workerFileCleanup func(context.Context) (int, error)
 
-func newFileStoreCleaner(db transactionruntime.Database, files fileStorage.Capability, logger *slog.Logger, now func() time.Time) workerFileCleanup {
-	remover := peopledirectory.NewPhotoUnlinker(logger, "public", nativeUploads.UploadFiles{})
+func newFileStoreCleaner(db transactionruntime.Database, files fileStorage.Capability, logger *slog.Logger, now func() time.Time, filesBackend nativeUploads.UploadFiles) workerFileCleanup {
+	remover := peopledirectory.NewPhotoUnlinker(logger, "public", filesBackend)
 	photos := fileStorageCompose.NewUploadCleanup(db.Pool(), fileStorage.CleanupStudentPhotos, now)
 	legal := fileStorageCompose.NewUploadCleanup(db.Pool(), fileStorage.CleanupEnrollmentLegalDocuments, now)
-	filesBackend := nativeUploads.UploadFiles{}
 	removeLegal := func(ctx context.Context, url string) error {
 		path, err := filesBackend.StoredPath("public", url, "/uploads/enrollment-legal-documents/")
 		if err != nil {
@@ -35,7 +34,7 @@ func newFileStoreCleaner(db transactionruntime.Database, files fileStorage.Capab
 	}
 	uploads := NewEnrollmentRequestUploads(enrollmentCompose.NewClocked(now), nil, nil, logger.With("service", "enrollment-upload-cleanup"), now)
 	removeUpload := func(ctx context.Context, tenantID int64, storedName string) error {
-		backend, err := nativeUploads.PrivateUploadsBackend()
+		backend, err := filesBackend.Private(nativeUploads.FileKeys{})
 		if err != nil {
 			return err
 		}
@@ -46,7 +45,7 @@ func newFileStoreCleaner(db transactionruntime.Database, files fileStorage.Capab
 	// reiht die Objekte ein, dieser Lauf entfernt sie.
 	attachments := communicationCompose.NewMessageAttachmentCleanup(db.Pool(), logger.With("service", "message-attachment-cleanup"))
 	removeAttachment := func(ctx context.Context, tenantID int64, storedName string) error {
-		backend, err := nativeUploads.PrivateUploadsBackend()
+		backend, err := filesBackend.Private(nativeUploads.FileKeys{})
 		if err != nil {
 			return err
 		}

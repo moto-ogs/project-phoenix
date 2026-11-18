@@ -31,7 +31,7 @@ func Communication18AttachmentRouterForTest(t *testing.T, ctx context.Context, p
 	testpkg.SetupTestDB(t)
 	db := testpkg.NewDatabase(t, pool)
 	unit := testpkg.TenantRuntime(t, pool)
-	objects, err := objects.PrivateUploadsBackend()
+	objects, err := objects.SealedPrivateUploadsBackend(objects.FileKeys{})
 	if err != nil {
 		return nil, err
 	}

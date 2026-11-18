@@ -145,7 +145,7 @@ func TestCommunication18AnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 			settings, err := owners.NewSettingsTestModule(database, testpkg.TenantRuntime(t, db))
 			require.NoError(t, err)
 			require.NoError(t, settings.Settings.SetValue(ctx, "operations.parent_news_enabled", true, nil, nil))
-			objects, err := objects.PrivateUploadsBackend()
+			objects, err := objects.SealedPrivateUploadsBackend(objects.FileKeys{})
 			require.NoError(t, err)
 			files, _, err := api.NewFileStoreTestModule(database, testpkg.TenantRuntime(t, db), objects)
 			require.NoError(t, err)

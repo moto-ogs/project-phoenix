@@ -7061,6 +7061,16 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.CleanupErasedAccountAvatars",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.CleanupErasedAccountAvatars",
+      "reason": "Select the avatar removal callback for the configured backend. The construction does not delete bytes. Account retention calls the callback under its existing durable cleanup queue.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.RemoteAccountAvatarRemover",
+      "target_owner": "delivery-platform"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.CleanupErasedAccountAvatars",
       "classification": "platform",

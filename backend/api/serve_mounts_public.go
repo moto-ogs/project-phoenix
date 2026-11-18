@@ -22,8 +22,8 @@ import (
 // landing/health probes, the public image/legal-document servers, and the
 // bearer-protected metrics endpoint.
 // mountPublic mounts everything that needs no session.
-func mountPublic(root chi.Router, metricsToken string, db transactionruntime.Database, emailWebhooks emailWebhooksHTTP.Ingest, rateLimitEnabled bool, newLimiter rateLimiterFactory) {
-	mountPublicRoutes(root, metricsToken, db.Pool().PingContext)
+func mountPublic(root chi.Router, metricsToken string, db transactionruntime.Database, emailWebhooks emailWebhooksHTTP.Ingest, rateLimitEnabled bool, newLimiter rateLimiterFactory, uploads nativeUploads.UploadFiles) {
+	mountPublicRoutes(root, metricsToken, db.Pool().PingContext, uploads)
 	mountEmailWebhooks(root, emailWebhooks, rateLimitEnabled)
 	// The register and the retrieval of the return package (Data Act,
 	// ADR 0201, ADR 0203): register and OpenAPI without a session, the
@@ -42,7 +42,7 @@ func mountDataReturn(root chi.Router, packages organizationtenancy.DataReturn, l
 	root.Mount("/public/data-return", dataReturnHTTP.NewResource(packages, limit).Router())
 }
 
-func mountPublicRoutes(root chi.Router, metricsToken string, ping func(context.Context) error) {
+func mountPublicRoutes(root chi.Router, metricsToken string, ping func(context.Context) error, uploads nativeUploads.UploadFiles) {
 	root.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("MOTO API - Phoenix Project"))
 	})
@@ -58,17 +58,17 @@ func mountPublicRoutes(root chi.Router, metricsToken string, ping func(context.C
 	// Public login image serving (no auth - displayed on the login page before authentication)
 	root.Get("/public/login-image/{filename}", func(w http.ResponseWriter, r *http.Request) {
 		filename := chi.URLParam(r, "filename")
-		apiCommon.ServeImage(w, r, "public/uploads/login-images", filename, "public, max-age=86400", nativeUploads.UploadFiles{})
+		apiCommon.ServeImage(w, r, "public/uploads/login-images", filename, "public, max-age=86400", uploads)
 	})
 
 	// Public enrollment legal document serving (no auth - parents read it before submitting).
 	root.Get("/public/enrollment-legal-documents/{filename}", func(w http.ResponseWriter, r *http.Request) {
 		filename := chi.URLParam(r, "filename")
-		apiCommon.ServeFile(w, r, "public/uploads/enrollment-legal-documents", filename, "public, max-age=86400", nativeUploads.UploadFiles{})
+		apiCommon.ServeFile(w, r, "public/uploads/enrollment-legal-documents", filename, "public, max-age=86400", uploads)
 	})
 	root.Get("/public/enrollment-form-legal-documents/{filename}", func(w http.ResponseWriter, r *http.Request) {
 		filename := chi.URLParam(r, "filename")
-		apiCommon.ServeFile(w, r, "public/uploads/enrollment-form-legal-documents", filename, "public, max-age=86400", nativeUploads.UploadFiles{})
+		apiCommon.ServeFile(w, r, "public/uploads/enrollment-form-legal-documents", filename, "public, max-age=86400", uploads)
 	})
 
 	root.With(metricsAuthMiddleware(metricsToken)).Handle("/internal/metrics", metricsHandler())

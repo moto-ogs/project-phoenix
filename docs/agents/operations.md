@@ -674,6 +674,8 @@ Rollbacks restore matching images, configuration, roles, database and uploads;
 an old image alone is not compatible with every newer schema.
 For env changes, read `.claude/rules/env-docker-sync.md` before editing.
 
+For a shared upload bucket, follow the [migration and restore runbook](../operations/shared-upload-storage.md).
+
 ## Replica runtime state
 
 The general request limiter is a load guard on each API replica.

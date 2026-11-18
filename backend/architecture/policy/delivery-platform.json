@@ -71,6 +71,13 @@
       "external_test_role": "adapter-test"
     },
     {
+      "path": "modules/delivery/internal/adapters/s3objects",
+      "owner": "delivery-platform",
+      "role": "adapter",
+      "internal_test_role": "module-internal-test",
+      "external_test_role": "module-behavior-test"
+    },
+    {
       "path": "modules/delivery/internal/adapters/localization",
       "owner": "delivery-platform",
       "role": "adapter",
@@ -179,6 +186,13 @@
       "path": "templates/email",
       "owner": "delivery-platform",
       "role": "adapter",
+      "internal_test_role": "module-internal-test",
+      "external_test_role": "module-behavior-test"
+    },
+    {
+      "path": "modules/delivery/objects/compose",
+      "owner": "delivery-platform",
+      "role": "compose",
       "internal_test_role": "module-internal-test",
       "external_test_role": "module-behavior-test"
     },

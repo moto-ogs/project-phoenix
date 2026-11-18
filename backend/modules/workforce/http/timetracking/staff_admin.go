@@ -34,7 +34,6 @@ type AdminAbsenceWrites interface {
 
 // StaffAdminResource serves the workforce half of /api/staff.
 type StaffAdminResource struct {
-	uploads              common.UploadStorage
 	documentObjects      StaffDocumentObjects
 	PersonService        workforce.StaffDirectory
 	traegerKeep          workforce.StaffTraegerKeep
@@ -81,8 +80,7 @@ type StaffAdminResource struct {
 // resource. Schedules is the Workforce query the schedule views read the
 // assigned template and the running schedule version from.
 type StaffAdminDependencies struct {
-	Uploads common.UploadStorage
-	// DocumentObjects writes and opens the staff document files, sealing
+	// DocumentObjects writes, opens and removes the staff document files, sealing
 	// sick notes and payslips (#3840); required.
 	DocumentObjects StaffDocumentObjects
 	Staff           workforce.StaffDirectory
@@ -132,8 +130,8 @@ func NewStaffAdminResource(deps StaffAdminDependencies) *StaffAdminResource {
 	if deps.Staff == nil || deps.Documents == nil || deps.OffboardingCleanup == nil || deps.WorkSessions == nil || deps.StaffAbsences == nil || deps.AbsenceWrites == nil || deps.Identity == nil || deps.Today == nil {
 		panic("staff admin resource: staff directory, documents, work sessions, absences, absence writes, identity and day clock are required")
 	}
-	if deps.Uploads == nil || deps.DocumentObjects == nil {
-		panic("staff admin resource: upload storage and document objects are required")
+	if deps.DocumentObjects == nil {
+		panic("staff admin resource: document objects are required")
 	}
 	if deps.DocumentFiles == nil {
 		panic("staff admin resource: document files are required")
@@ -158,7 +156,6 @@ func NewStaffAdminResource(deps StaffAdminDependencies) *StaffAdminResource {
 		schedules = deps.Schedules
 	}
 	return &StaffAdminResource{
-		uploads:              deps.Uploads,
 		documentObjects:      deps.DocumentObjects,
 		PersonService:        deps.Staff,
 		traegerKeep:          deps.TraegerKeep,
