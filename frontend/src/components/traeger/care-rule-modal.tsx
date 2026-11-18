@@ -305,6 +305,9 @@ export function CareRuleModal({
           ? "Preis je Monat in €"
           : "Betrag je Monat in €";
 
+  // Bewusst ein Modal, keine Bearbeitung am Objekt (BAUARTEN-SPEC Bauart 2
+  // Regel 3): eine Betreuungsregel ist ein kleiner Listeneintrag ohne eigene
+  // Adresse, eine Route nur für dieses Formular wäre ein Umweg (#7409).
   return (
     <FormModal
       isOpen={open !== null}
@@ -337,7 +340,7 @@ export function CareRuleModal({
         }}
       >
         <Input
-          controlSize="touch"
+          controlSize="compact"
           id="care-rule-name"
           name="name"
           label="Name auf der Rechnung"
@@ -491,7 +494,7 @@ export function CareRuleModal({
           </p>
         ) : (
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id="care-rule-value"
             name={valueField}
             label={valueLabel}

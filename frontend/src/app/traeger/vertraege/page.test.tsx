@@ -240,6 +240,40 @@ describe("TraegerVertraegePage", () => {
     );
   });
 
+  it("keeps one visible head action; import and download sit in the page menu", async () => {
+    renderPage();
+    await screen.findAllByText("Lina Muster");
+
+    expect(
+      screen.queryByRole("link", { name: "Verträge importieren" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Verträge herunterladen" }),
+    ).not.toBeInTheDocument();
+    // The head renders the menu once per layout (phone title row, search
+    // row); both open the same entries.
+    const [menu] = screen.getAllByRole("button", { name: "Weitere Aktionen" });
+    fireEvent.click(menu!);
+    expect(
+      screen.getByRole("menuitem", { name: /Verträge importieren/ }),
+    ).toHaveAttribute("href", "/vertraege/import");
+    expect(screen.getByRole("menuitem", { name: /CSV/ })).toBeInTheDocument();
+  });
+
+  it("opens the conditions from the create dialog in a new tab", async () => {
+    renderPage();
+    await screen.findAllByText("Lina Muster");
+    fireEvent.click(screen.getByRole("button", { name: /Verträge erstellen/ }));
+
+    // The ticked children stay in the dialog; the conditions open beside it.
+    expect(
+      await screen.findByRole("link", {
+        name: "Bedingungen festlegen, neuer Tab",
+      }),
+    ).toHaveAttribute("target", "_blank");
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
   it("creates one draft per child over its modules, only with equal conditions", async () => {
     api.createCareContracts.mockResolvedValue({
       created: [DRAFT],

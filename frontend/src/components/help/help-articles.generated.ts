@@ -11724,7 +11724,7 @@ export const traegerCareContractsTopic =
           steps: [
             "Wähle in der Navigation `Verträge`.",
             "Wähle oben den Reiter `Vertragsbedingungen`.",
-            "Wähle links ein Angebot. `Fehlt` heißt: Für dieses Angebot gibt es noch keine Bedingungen.",
+            "Wähle links ein Angebot. `Fehlt` heißt: Für dieses Angebot gibt es noch keine Bedingungen. Auf dem Handy öffnen sich die Bedingungen über der Liste.",
             "Wähle die `Laufzeit`, die `Frist in Monaten` und wann die `Kündigung wirkt`.",
             "Erlaube bei Bedarf eine `Sonderkündigung`. Sie endet immer zum Halbjahr, also am 31. Januar oder 31. Juli. Es gilt dieselbe `Frist in Monaten`. Schreibe bei `In welchen Fällen?`, wann sie möglich ist. Ein anderes Datum in diesem Text ändert den Termin nicht. Ausnahmen klärst du wie bisher im Büro. Vertrag und Text für das Anmeldeformular nennen den Termin.",
             "Müssen die Eltern eine Satzung anerkennen? Setze den Haken bei `Satzung`. Trage den Namen und, wenn vorhanden, den Link ein.",
@@ -11793,7 +11793,7 @@ export const traegerCareContractsTopic =
           steps: [
             "Wähle in der Navigation `Verträge`.",
             "Wähle bei Bedarf einen Status, einen Betreuungsort oder suche.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Datei enthält alle Verträge zu deiner Auswahl. Jeder Download steht im Zugriffsprotokoll der Schulen.",
           ],
         },
@@ -11804,7 +11804,7 @@ export const traegerCareContractsTopic =
           steps: [
             "Trage zuerst die `Vertragsbedingungen` für jedes Modul ein. Ohne Bedingungen übernimmt moto keinen Vertrag für das Modul.",
             "Speichere die Kinder im anderen Programm als CSV-Datei. Die erste Zeile enthält die Überschriften, jede weitere Zeile ein Kind.",
-            "Wähle in der Navigation `Verträge` und oben `Verträge importieren`.",
+            "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Verträge importieren`.",
             "Du kennst den Aufbau noch nicht? Wähle `Beispieldatei`. Sie zeigt alle Spalten, die moto von selbst erkennt.",
             "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
             "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Pflicht sind Vorname und Nachname des Kindes.",
