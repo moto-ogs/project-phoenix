@@ -5,6 +5,8 @@ import type {
   BackendProvisioningStats,
   BackendSchool,
   BackendSchoolSummary,
+  BackendSchoolRequiredDetails,
+  SchoolRequiredDetails,
   BackendInvitation,
   BackendSchoolAccount,
   BackendOrgAccount,
@@ -56,6 +58,7 @@ import {
   mapProvisioningStats,
   mapSchool,
   mapSchoolSummary,
+  mapSchoolRequiredDetails,
   mapInvitation,
   mapSchoolAccount,
   mapOrgAccount,
@@ -93,6 +96,13 @@ class OperatorProvisioningService {
       "/api/operator/provisioning/schools/summaries",
     );
     return data.map(mapSchoolSummary);
+  }
+
+  async listSchoolRequiredDetails(): Promise<SchoolRequiredDetails[]> {
+    const data = await operatorFetch<BackendSchoolRequiredDetails[]>(
+      "/api/operator/provisioning/schools/required-details",
+    );
+    return data.map(mapSchoolRequiredDetails);
   }
 
   async listOrganizationSchools(

@@ -2,10 +2,12 @@
 package common
 
 const CodeCalendarFederalStateMissing = "calendar.federal_state_missing"
+const CodeCalendarNoStaffProfile = "calendar.no_staff_profile"
 const CodeCalendarOccurrenceUnavailable = "calendar.occurrence_unavailable"
 
 var errorCodeClassesCalendar = []errorCodeClass{
 	{CodeCalendarFederalStateMissing, "business_rejection"},
+	{CodeCalendarNoStaffProfile, "permission"},
 	{CodeCalendarOccurrenceUnavailable, "business_rejection"},
 }
 

@@ -145,6 +145,7 @@ async function fetchTenantInfo(
       data.early_checkout_note_tolerance_minutes,
     ),
     weekendFollowsFriday: data.weekend_follows_friday === true,
+    childrenWithoutCarePlace: data.children_without_care_place === true,
     childSearchOnlyNavigation: data.child_search_only_navigation === true,
     simpleStaffNavigation: data.simple_staff_navigation === true,
     careFacilityTerm: normalizeCareFacilityTerm(data.care_facility_term),

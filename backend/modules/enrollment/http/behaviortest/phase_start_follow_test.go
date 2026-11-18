@@ -153,8 +153,8 @@ func TestPhaseService_Update_KeepsWindowFromSupersedingApproval(t *testing.T) {
 	env := setupDecisionTest(t)
 	ctx := testpkg.Ctx(t)
 	env.sourcePhase.Kind = enrollmentNative.PhaseKindHoliday
-	env.sourcePhase.ServiceStartDate = "2100-07-20"
-	env.sourcePhase.ServiceEndDate = "2100-07-31"
+	env.sourcePhase.ServiceStartDate = "2030-07-20"
+	env.sourcePhase.ServiceEndDate = "2030-07-31"
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, env.repos.Enrollment().UpdatePhase, OwnerPhaseForTest(env.sourcePhase)))
 	holiday := approveScheduledNewChild(t, env, "Ersetzt")
 	oldHoliday := OwnerPhaseForTest(env.sourcePhase)
@@ -163,8 +163,8 @@ func TestPhaseService_Update_KeepsWindowFromSupersedingApproval(t *testing.T) {
 	year.ID = 0
 	year.Name = "superseding-school-year"
 	year.Kind = enrollmentNative.PhaseKindSchoolYear
-	year.ServiceStartDate = "2100-08-01"
-	year.ServiceEndDate = "2101-07-31"
+	year.ServiceStartDate = "2030-08-01"
+	year.ServiceEndDate = "2031-07-31"
 	require.NoError(t, InsertOwnerPhaseForTest(ctx, env.repos.Enrollment(), &year))
 	env.sourcePhase = &year
 	requestID, childID := submitOneChild(t, env, "superseding@example.com", "Neu", "Ersetzt")
@@ -179,7 +179,7 @@ func TestPhaseService_Update_KeepsWindowFromSupersedingApproval(t *testing.T) {
 	// Editing the superseded holiday must not restore its earlier start,
 	// whether its new start is later or earlier than the old one.
 	phases := followingPhases(t, env, decisionTestToday)
-	for _, start := range []enrollmentNative.Date{"2100-07-21", "2100-07-15"} {
+	for _, start := range []enrollmentNative.Date{"2030-07-21", "2030-07-15"} {
 		moved := *oldHoliday
 		moved.ServiceStartDate = start
 		require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, phaseEdit(phases), &moved))

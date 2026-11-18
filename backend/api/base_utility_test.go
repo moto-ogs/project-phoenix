@@ -326,7 +326,9 @@ func setupSettingsCallbackRoute(t *testing.T) *settingsCallbackRoute {
 		SetHomeBlockPolicies(context.Context, int64, int64, []string, map[string]string) error
 	})
 	require.True(t, ok)
-	return &settingsCallbackRoute{router: newSettingsResource(testpkg.NewDatabase(t, db), module.TenantSettings, homeLayouts, repos.Enrollment().SchemaReferencesLegalDocument, time.Now).SettingsRouter(), hub: hub}
+	schools, err := owners.BuildServeOrganizations(testpkg.NewDatabase(t, db), time.Now)
+	require.NoError(t, err)
+	return &settingsCallbackRoute{router: newSettingsResource(testpkg.NewDatabase(t, db), module.TenantSettings, homeLayouts, requireDevicePINOperations(module.Settings), repos.Enrollment().SchemaReferencesLegalDocument, time.Now, schools).SettingsRouter(), hub: hub}
 }
 
 func setupOperatorInvitationRoute(t *testing.T, graph *goldenRuntime) chi.Router {

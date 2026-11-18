@@ -24,6 +24,9 @@ type studentRecordRow struct {
 
 	EnrolledFrom  *calendar.Date `bun:"enrolled_from"`
 	EnrolledUntil *calendar.Date `bun:"enrolled_until"`
+	// WithoutCarePlace is School Membership's mark (#4803); no write of
+	// this owner stores it, the row only carries it to the enrollment.
+	WithoutCarePlace bool `bun:"without_care_place"`
 
 	AddressStreet     *string `bun:"address_street"`
 	AddressCity       *string `bun:"address_city"`
@@ -59,6 +62,7 @@ func (r studentRecordRow) toDomain() domain.StudentRecord {
 	record := domain.StudentRecord{
 		ID: r.ID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, TenantID: r.TenantID,
 		PersonID: r.PersonID, SchoolClass: r.SchoolClass, GroupID: r.GroupID, Status: r.Status,
+		WithoutCarePlace: r.WithoutCarePlace,
 
 		AddressStreet: r.AddressStreet, AddressCity: r.AddressCity, AddressPostalCode: r.AddressPostalCode,
 		ExtraInfo:  r.ExtraInfo,

@@ -16,6 +16,11 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0289",
+      "id": "modules/filestorage/internal/adapters/documents/Coordinator.SaveSealed",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; sealed objects of #3840 (ADR 0289)."
+    },
+    {
       "decision": "0090",
       "id": "modules/filestorage/internal/adapters/postgres/DocumentStore[R].ListByOwner",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."

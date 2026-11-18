@@ -21,13 +21,14 @@ type tenantExporter struct {
 	sealed       organizationtenancy.TenantExportSealedFields
 	projected    organizationtenancy.TenantExportProjectedFields
 	sepaFiles    organizationtenancy.TenantExportSEPADebitFiles
+	objects      organizationtenancy.TenantExportObjects
 	audit        organizationtenancy.TenantExportAudit
 	now          func() time.Time
 }
 
 func NewTenantExporter(db *bun.DB, dependencies organizationtenancy.TenantExportDependencies) organizationtenancy.TenantExporter {
 	return &tenantExporter{db: db, fingerprints: dependencies.Fingerprints, sealed: dependencies.Sealed, projected: dependencies.Projected,
-		sepaFiles: dependencies.SEPADebitFiles, audit: dependencies.Audit, now: dependencies.Now}
+		sepaFiles: dependencies.SEPADebitFiles, objects: dependencies.Objects, audit: dependencies.Audit, now: dependencies.Now}
 }
 
 type exportRun struct {
@@ -41,6 +42,7 @@ type exportRun struct {
 	fingerprints organizationtenancy.ExportFingerprints
 	sealed       organizationtenancy.TenantExportSealedFields
 	projected    organizationtenancy.TenantExportProjectedFields
+	objects      organizationtenancy.TenantExportObjects
 	person       *personSelection
 }
 
@@ -156,7 +158,7 @@ func (e *tenantExporter) start(ctx context.Context, options organizationtenancy.
 	if err != nil {
 		return nil, errors.New("tenant export: catalog unavailable")
 	}
-	r := &exportRun{options: options, references: make(map[string]bool), fingerprints: e.fingerprints, sealed: e.sealed, projected: e.projected}
+	r := &exportRun{options: options, references: make(map[string]bool), fingerprints: e.fingerprints, sealed: e.sealed, projected: e.projected, objects: e.objects}
 	if err = json.Unmarshal(source, &r.catalog); err != nil {
 		return nil, errors.New("tenant export: invalid catalog")
 	}

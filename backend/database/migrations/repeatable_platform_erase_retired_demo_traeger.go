@@ -69,12 +69,13 @@ const repeatablePlatformEraseRetiredDemoTraegerSQL = `
 				'care_contract.contracts', (SELECT count(*) FROM care_contract.contracts WHERE organization_id = p_organization_id),
 				'parent_billing.runs', (SELECT count(*) FROM parent_billing.runs WHERE organization_id = p_organization_id),
 				'enrollment.holiday_registrations', (SELECT count(*) FROM enrollment.holiday_registrations WHERE organization_id = p_organization_id));
-			-- Every Träger table cascades from its root, after the Nachweise: their
-			-- RESTRICT rule reference stops the cascade whenever the root's
-			-- triggers reach the rules before the contracts (#7248). A
-			-- Demo-Träger keeps no books (ADR 0184 does not apply).
-			DELETE FROM parent_billing.care_evidences WHERE organization_id = p_organization_id;
+			-- Every Träger table cascades from its root. An evidence names its
+			-- income level and goes with its contract: as in
+			-- platform.erase_organization its rule key is checked after the
+			-- whole cascade, not when the rules go first (#7248).
+			SET CONSTRAINTS parent_billing.fk_care_evidences_rule DEFERRED;
 			DELETE FROM platform.organizations WHERE id = p_organization_id;
+			SET CONSTRAINTS parent_billing.fk_care_evidences_rule IMMEDIATE;
 			UPDATE platform.demo_traeger_origins
 			SET erased_at = clock_timestamp(), row_counts = v_counts
 			WHERE organization_id = p_organization_id;

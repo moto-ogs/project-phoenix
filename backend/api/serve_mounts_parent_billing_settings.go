@@ -14,6 +14,9 @@ type TraegerBrandingSettings interface {
 	TraegerInts(ctx context.Context, organizationID int64, keys []string) (map[string]int, error)
 	TraegerTexts(ctx context.Context, organizationID int64, keys []string) (map[string]string, error)
 	TraegerBools(ctx context.Context, organizationID int64, keys []string) (map[string]bool, error)
+	// TraegerTextsAndBools reads texts and switches in one read, as the
+	// letterhead takes its texts with the switch of the GiroCode (#5624).
+	TraegerTextsAndBools(ctx context.Context, organizationID int64, textKeys, boolKeys []string) (map[string]string, map[string]bool, error)
 }
 
 // parentBillingSettings binds the Elternabrechnung's settings port to the

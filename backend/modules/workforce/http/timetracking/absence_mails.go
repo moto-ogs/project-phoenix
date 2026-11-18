@@ -63,7 +63,7 @@ func (rs *StaffAdminResource) getAbsenceDecisionMails(w http.ResponseWriter, r *
 func (rs *Resource) getOwnAbsenceRequestMails(w http.ResponseWriter, r *http.Request) {
 	staffID, err := rs.getStaffIDFromClaims(r.Context(), rs.identity(r.Context()))
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	waiting, err := rs.StaffAbsenceService.ListAbsences(r.Context(), staffID, workforce.StaffAbsenceListFilter{Status: workforce.AbsenceStatusRequested})

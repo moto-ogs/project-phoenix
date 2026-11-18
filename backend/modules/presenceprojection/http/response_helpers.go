@@ -66,6 +66,7 @@ func populatePersonAndGroupData(response *StudentResponse, person *peopleModule.
 // in the archive view. The exit REASON never travels here — it is read behind
 // users:delete.
 func populateCareEndFields(response *StudentResponse, student *peopleModule.StudentState, today calendar.Date) {
+	response.WithoutCarePlace = student.WithoutCarePlace
 	if student.EnrolledUntil == nil {
 		return
 	}

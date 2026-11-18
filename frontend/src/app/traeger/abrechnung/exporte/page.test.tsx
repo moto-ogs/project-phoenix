@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
@@ -144,35 +150,36 @@ it("opens older runs page by page and keeps them after a download", async () => 
   ).not.toHaveLength(0);
 });
 
+const PROTOCOL_ENTRY = {
+  id: "9",
+  fileNumber: 9,
+  format: "sollstellung" as const,
+  runKind: "care" as const,
+  runId: "7",
+  runLabel: "Monatsbeiträge Oktober 2026",
+  fileName: "sollstellung-9.csv",
+  invoiceCount: 2,
+  totalCents: 0,
+  reference: "",
+  repeatOf: null,
+  datevAll: false,
+  resolvedPositions: 0,
+  costCenterFallbacks: [],
+  exportedByYou: true,
+  exportedByAccount: true,
+  exportedByName: "",
+  exportedAt: "2026-11-09T10:00:00Z",
+  submittedAt: null,
+};
+
 it("offers older files of the protocol", async () => {
-  const entry = {
-    id: "9",
-    fileNumber: 9,
-    format: "sollstellung" as const,
-    runKind: "care" as const,
-    runId: "7",
-    runLabel: "Monatsbeiträge Oktober 2026",
-    fileName: "sollstellung-9.csv",
-    invoiceCount: 2,
-    totalCents: 0,
-    reference: "",
-    repeatOf: null,
-    datevAll: false,
-    resolvedPositions: 0,
-    costCenterFallbacks: [],
-    exportedByYou: true,
-    exportedByAccount: true,
-    exportedByName: "",
-    exportedAt: "2026-11-09T10:00:00Z",
-    submittedAt: null,
-  };
   api.fetchExportProtocol.mockImplementation(async (offset = 0) =>
     offset === 0
-      ? { items: [entry], total: 2, nextOffset: 1 }
+      ? { items: [PROTOCOL_ENTRY], total: 2, nextOffset: 1 }
       : {
           items: [
             {
-              ...entry,
+              ...PROTOCOL_ENTRY,
               id: "8",
               fileNumber: 8,
               fileName: "sollstellung-8.csv",
@@ -195,6 +202,39 @@ it("offers older files of the protocol", async () => {
     (await screen.findAllByText("sollstellung-8.csv")).length,
   ).toBeGreaterThan(0);
   expect(api.fetchExportProtocol).toHaveBeenLastCalledWith(1);
+});
+
+// A DataTable draws its own frame; in a flush card it met the card frame
+// (#7303). The card body keeps its inset, the footer stays in the card.
+it("keeps the card inset around the run table and the protocol table", async () => {
+  api.fetchExportRuns.mockResolvedValue({
+    items: [RUN],
+    total: 2,
+    notExported: 2,
+    nextOffset: 1,
+  });
+  api.fetchExportProtocol.mockResolvedValue({
+    items: [PROTOCOL_ENTRY],
+    total: 2,
+    nextOffset: 1,
+  });
+  renderPage();
+  expect(
+    await screen.findByText("Sie sehen 1 von 2 Dateien."),
+  ).toBeInTheDocument();
+
+  for (const title of ["Dateien je Lauf", "Exportprotokoll"]) {
+    const card = screen
+      .getByRole("heading", { name: title })
+      .closest("section")!;
+    const body = [...card.children].find((child) =>
+      child.querySelector("table"),
+    );
+    expect(body).toHaveClass("px-5");
+    expect(
+      within(card).getByRole("button", { name: "Ältere anzeigen" }),
+    ).toBeInTheDocument();
+  }
 });
 
 function renderPage() {

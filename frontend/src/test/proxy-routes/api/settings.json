@@ -1,4 +1,7 @@
 {
+  "api/settings/device-pin-status": [
+    "GET tenant /api/settings/device-pin-status"
+  ],
   "api/settings/home-layout": [
     "DELETE tenant /api/settings/home-layout",
     "GET tenant /api/settings/home-layout",
@@ -9,5 +12,8 @@
   ],
   "api/settings/payroll-status": [
     "GET tenant /api/settings/payroll-status"
+  ],
+  "api/settings/school-contact-email": [
+    "GET tenant /api/settings/school-contact-email"
   ]
 }

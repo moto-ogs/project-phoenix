@@ -37,6 +37,7 @@ type Dependencies struct {
 	ParticipantDays mealplan.ParticipantDaysFinder
 	StudentNames    mealplan.StudentNameFinder
 	Calendar        mealplan.CalendarFinder
+	Notices         mealplan.MenuChangeNotices // changed menu to the families (#7145); nil in the worker, which never changes it
 }
 
 func New(dependencies Dependencies) (mealplan.Capability, error) {
@@ -44,7 +45,7 @@ func New(dependencies Dependencies) (mealplan.Capability, error) {
 		return nil, errors.New("meal plan compose: all dependencies are required")
 	}
 	store := postgres.New(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext))
-	return application.New(store, application.NewParticipantDirectory(dependencies.Participants, dependencies.StudentNames, dependencies.ParticipantDays), application.NewSchoolCalendar(dependencies.Calendar), dependencies.Settings, transaction{}, dependencies.Observe, dependencies.Now), nil
+	return application.New(store, application.NewParticipantDirectory(dependencies.Participants, dependencies.StudentNames, dependencies.ParticipantDays), application.NewSchoolCalendar(dependencies.Calendar), dependencies.Settings, transaction{}, dependencies.Observe, dependencies.Now, dependencies.Notices), nil
 }
 
 // Settings are the application-owned bound resolvers.

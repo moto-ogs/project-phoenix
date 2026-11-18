@@ -1378,10 +1378,7 @@ func TestEnrollmentLegalTexts(t *testing.T) {
 		assert.Equalf(t, "config:manage", def.WritePermission, "setting %q should use config:manage (legal/GDPR)", key)
 		assert.NotEmptyf(t, def.Label, "setting %q must have a German label", key)
 		assert.NotEmptyf(t, def.Description, "setting %q must have a German description", key)
-		require.NotNilf(t, def.DependsOn, "setting %q must declare a DependsOn parent", key)
-		assert.Equalf(t, config.KeyEnrollmentEnabled, def.DependsOn.Key, "setting %q has unexpected DependsOn parent", key)
-		assert.Equal(t, "eq", def.DependsOn.Condition)
-		assert.Equal(t, true, def.DependsOn.Value)
+		assertLegalTextVisibility(t, key, def)
 	}
 
 	documentDef := config.GetDefinition(config.KeyEnrollmentLegalAGBDocumentURL)
@@ -1429,10 +1426,7 @@ func TestEnrollmentLegalBlockToggles(t *testing.T) {
 		assert.Equalf(t, "config:manage", def.WritePermission, "setting %q should use config:manage", key)
 		assert.NotEmptyf(t, def.Label, "setting %q must have a German label", key)
 		assert.NotEmptyf(t, def.Description, "setting %q must have a German description", key)
-		require.NotNilf(t, def.DependsOn, "setting %q must declare a DependsOn parent", key)
-		assert.Equalf(t, config.KeyEnrollmentEnabled, def.DependsOn.Key, "setting %q has unexpected DependsOn parent", key)
-		assert.Equal(t, "eq", def.DependsOn.Condition)
-		assert.Equal(t, true, def.DependsOn.Value)
+		assertLegalTextVisibility(t, key, def)
 	}
 }
 
@@ -2069,7 +2063,7 @@ func TestDefaults_HaveReasonableValues(t *testing.T) {
 		{"gdpr.room_detail_visible_days", 7},
 		{"feedback.enabled", false},
 		{"feedback.data_retention_days", 90},
-		{"security.ogs_device_pin", "1234"},
+		{"security.ogs_device_pin", ""},
 		{"checkout.raumwechsel_enabled", true},
 		{"checkout.schulhof_enabled", false},
 		{"checkout.wc_enabled", false},
@@ -2634,4 +2628,20 @@ func TestTimeTrackingCreditSettings(t *testing.T) {
 		assert.Equal(t, "config:update", def.WritePermission, def.Key)
 		assert.Equal(t, config.AccessShared, def.AccessPolicy, def.Key)
 	}
+}
+
+// assertLegalTextVisibility pins when a legal-text setting shows. The privacy
+// notice must be entered before the public enrollment form can be switched on
+// (#7176), so its switch and text stay visible while the form is off; the
+// other legal texts hang off enrollment.enabled.
+func assertLegalTextVisibility(t *testing.T, key string, def *config.Definition) {
+	t.Helper()
+	if key == config.KeyEnrollmentLegalDSGVOEnabled || key == config.KeyEnrollmentLegalDSGVOText {
+		assert.Nilf(t, def.DependsOn, "setting %q must not hide behind enrollment.enabled", key)
+		return
+	}
+	require.NotNilf(t, def.DependsOn, "setting %q must declare a DependsOn parent", key)
+	assert.Equalf(t, config.KeyEnrollmentEnabled, def.DependsOn.Key, "setting %q has unexpected DependsOn parent", key)
+	assert.Equal(t, "eq", def.DependsOn.Condition)
+	assert.Equal(t, true, def.DependsOn.Value)
 }

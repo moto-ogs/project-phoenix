@@ -577,6 +577,14 @@
       "target_owner": "delivery-platform"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.SaveSealed",
+      "binding_digest": "08b7d4f5949c1eb0f29992631c001124",
+      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Objects.SaveSealed",
+      "source_owner": "file-storage",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.SaveSealed",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.StudentDocuments.ActivateQueuedCleanup",
       "binding_digest": "9669dc81198ba3a5ed6541d914ab577a",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Store.ActivateQueuedCleanup",

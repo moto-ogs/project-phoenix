@@ -8,9 +8,9 @@ import { HELP_TOPICS } from "~/lib/help-topics";
  * Eltern-Anleitung `moto-eltern-push-benachrichtigungen.pdf`.
  *
  * Die `Hinweise` (#7140) stehen ohne Einstellung in moto: am Computer hinter
- * der Glocke oben rechts, auf dem Telefon unter `Mehr`. Erster Hinweis ist
- * die Absage einer Betreuung des Kindes, dann Raumänderungen und Schließtage
- * des Kindes (#7141, #7144).
+ * der Glocke oben rechts, auf dem Telefon unter `Mehr`. Dazu gehören die
+ * Absage einer Betreuung, Raumänderungen und Schließtage des Kindes sowie ein
+ * geänderter Speiseplan an einem Tag mit Essensbuchung (#7141, #7144, #7145).
  */
 export function parentNotificationsTopic(): HelpTopic {
   return {
@@ -36,6 +36,7 @@ export function parentNotificationsTopic(): HelpTopic {
       "moto meldet sich ab jetzt bei den gewählten Themen. Auch wenn die App geschlossen ist.",
     notes: [
       "Jeder Hinweis steht auch in moto unter `Hinweise`, zum Beispiel wenn eine Betreuung Ihres Kindes ausfällt. Dafür müssen Sie nichts einschalten.",
+      "Ändert sich das Essen an einem Tag, an dem Ihr Kind ein Essen gebucht hat, steht das auch unter `Hinweise`. Der Hinweis öffnet den Speiseplan dieser Woche. Aufs Handy kommt er nur, wenn Sie `Speiseplan geändert` einschalten.",
       "Findet ein Termin Ihres Kindes in einem anderen Raum statt, steht das auch unter `Hinweise`. Für heute und morgen bekommen Sie dazu eine Benachrichtigung, solange Sie `Raumänderung heute oder morgen` nicht ausschalten.",
       "Trägt die OGS einen Schließtag ein, ändert oder löscht ihn, steht das ebenfalls unter `Hinweise`. Das Thema `Schließtage` ist von Anfang an eingeschaltet. Eine Mitteilung aufs Handy kommt nur, wenn der Tag in den nächsten 14 Tagen liegt.",
       "Für spätere Tage schalten Sie `Raumänderung an späteren Tagen` selbst ein. Sie gilt bis 14 Tage im Voraus.",

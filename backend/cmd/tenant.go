@@ -190,6 +190,36 @@ func tenantExportSealedFields() (organizationtenancy.TenantExportSealedFieldsByT
 	}, nil
 }
 
+// tenantExportObjects opens the sealed originals of the source installation
+// (#3840) with its HEALTH_DATA_KEYS and BANK_DATA_KEYS: sick notes, payslips
+// and child health documents leave the package opened, like the sealed
+// columns. Without either ring the export refuses.
+func tenantExportObjects() (objects.FileKeys, error) {
+	health, bank, err := uploadFileCiphers()
+	if err != nil {
+		return objects.FileKeys{}, fmt.Errorf("tenant export: %w", err)
+	}
+	return objects.FileKeys{Health: health, Bank: bank}, nil
+}
+
+// uploadFileCiphers reads the health and bank rings the sealed uploads open
+// with; both are required.
+func uploadFileCiphers() (objects.FileCipher, objects.FileCipher, error) {
+	bank, err := securityRuntimeCompose.NewBankDataCipher(viper.GetString("bank_data_keys"), viper.GetString("bank_data_legacy_keys"))
+	if err != nil {
+		return nil, nil, errors.New("BANK_DATA_KEYS / BANK_DATA_LEGACY_KEYS configuration invalid")
+	}
+	healthKeys := strings.TrimSpace(viper.GetString("health_data_keys"))
+	if healthKeys == "" {
+		return nil, nil, errors.New("HEALTH_DATA_KEYS is required")
+	}
+	health, err := securityRuntimeCompose.NewFieldCipher(healthKeys)
+	if err != nil {
+		return nil, nil, errors.New("HEALTH_DATA_KEYS configuration invalid")
+	}
+	return health, bank, nil
+}
+
 // tenantExportProjectedFields binds each untyped container to the owner that
 // knows its secrets (#3838, ADR 0193): settings keep their non-secret values,
 // a school keeps its branding images; nothing of a container leaves raw.

@@ -35,7 +35,7 @@ import { ChoiceTile } from "~/components/ui/choice-tile";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
 import { ParentSubsection } from "~/components/parent/shell/parent-section";
-import { parseISODate, toISODate } from "~/lib/date-helpers";
+import { isValidISODate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import {
   getChildMealPlan,
@@ -81,11 +81,11 @@ interface ChildOption {
   careTerm?: string;
 }
 
-// Parents read the meal plan for this and next week; with the registration on
-// they reach four weeks, so deadlines with a lead time stay reachable (#3873).
+// Parents reach the current week and the three following weeks. The meal plan
+// and the registration use this same range, so a notice always opens its plan.
 type WeekOffset = 0 | 1 | 2 | 3;
-const LAST_MEAL_PLAN_WEEK: WeekOffset = 1;
-const LAST_PARTICIPATION_WEEK: WeekOffset = 3;
+const LAST_MEAL_PLAN_WEEK: WeekOffset = 3;
+const LAST_PARTICIPATION_WEEK: WeekOffset = LAST_MEAL_PLAN_WEEK;
 
 function mondayISOFromOffset(todayISO: string, weekOffset: number): string {
   const base = parseISODate(todayISO);
@@ -93,6 +93,33 @@ function mondayISOFromOffset(todayISO: string, weekOffset: number): string {
   const offset = (base.getDay() + 6) % 7; // Mon=0 .. Sun=6
   base.setDate(base.getDate() - offset);
   return toISODate(base);
+}
+
+/**
+ * Die Woche, die ein Link aus den Hinweisen öffnet (`?week=<Montag>`, #7145):
+ * ihr Abstand zur aktuellen Woche, oder null für einen ungültigen Wert, eine
+ * vergangene Woche oder eine Woche hinter der letzten erreichbaren.
+ */
+function linkedWeekOffset(
+  todayISO: string,
+  week: string | undefined,
+): WeekOffset | null {
+  if (!week || !isValidISODate(week)) return null;
+  const monday = mondayISOFromOffset(week, 0);
+  for (let offset = 0; offset <= LAST_MEAL_PLAN_WEEK; offset++) {
+    if (mondayISOFromOffset(todayISO, offset) === monday) {
+      return offset as WeekOffset;
+    }
+  }
+  return null;
+}
+
+/** Wie `linkedWeekOffset`; ohne erreichbare Woche öffnet die aktuelle. */
+export function weekOffsetFromParam(
+  todayISO: string,
+  week: string | undefined,
+): WeekOffset {
+  return linkedWeekOffset(todayISO, week) ?? 0;
 }
 
 function workWeekDates(mondayISO: string): string[] {
@@ -332,6 +359,7 @@ function ParticipationWeek({
   weekError,
   dishesByDate,
   planLater,
+  weekFromLink = false,
   onWeekChange,
   onEditingChange,
 }: Readonly<{
@@ -348,6 +376,8 @@ function ParticipationWeek({
   dishesByDate: ReadonlyMap<string, MealPlanEntry[]>;
   // The week lies beyond the meal plan parents may read.
   planLater: boolean;
+  // A link from the notices chose the week (#7145); the page keeps it.
+  weekFromLink?: boolean;
   onWeekChange: (offset: WeekOffset) => void;
   onEditingChange: (editing: boolean) => void;
 }>) {
@@ -461,7 +491,7 @@ function ParticipationWeek({
   useEffect(() => {
     if (!participation || weekChosenRef.current) return;
     weekChosenRef.current = true;
-    if (weekOffset !== 0) return;
+    if (weekOffset !== 0 || weekFromLink) return;
     const thisWeek = new Set(workWeekDates(mondayISOFromOffset(today, 0)));
     const thisWeekDays = participation.days.filter((day) =>
       thisWeek.has(day.date),
@@ -472,7 +502,7 @@ function ParticipationWeek({
     ) {
       onWeekChange(1);
     }
-  }, [onWeekChange, participation, today, weekOffset]);
+  }, [onWeekChange, participation, today, weekFromLink, weekOffset]);
 
   function toggleWeekday(weekday: number) {
     setWeekdays((current) =>
@@ -1201,7 +1231,17 @@ function ParticipationWeek({
   );
 }
 
-export function ParentMealPlanPage() {
+interface ParentMealPlanPageProps {
+  /** Montag der Woche, die ein Link aus den Hinweisen öffnet (#7145). */
+  readonly initialWeek?: string;
+  /** Schule des Hinweises; wird nur gewählt, wenn sie zum Elternkonto gehört. */
+  readonly initialSchool?: string;
+}
+
+export function ParentMealPlanPage({
+  initialWeek,
+  initialSchool,
+}: ParentMealPlanPageProps = {}) {
   const locale = useLocale();
 
   // Which of the parent's schools actually run a meal plan. A failed
@@ -1234,11 +1274,19 @@ export function ParentMealPlanPage() {
   const schools = resolved ?? knownSchools ?? NO_SCHOOLS;
   const hasLinkedChildren = (children.data?.length ?? 0) > 0;
   const [chosenStudent, setSelectedStudent] = useState<string | null>(null);
-  const selectedStudent = schools.some(
-    (school) => school.studentId === chosenStudent,
-  )
-    ? chosenStudent
-    : (schools[0]?.studentId ?? null);
+  const [linkedSchool, setLinkedSchool] = useState(initialSchool);
+  if (initialSchool !== linkedSchool) {
+    setLinkedSchool(initialSchool);
+    setSelectedStudent(null);
+  }
+  const selectedStudent =
+    initialSchool === linkedSchool &&
+    schools.some((school) => school.studentId === chosenStudent)
+      ? chosenStudent
+      : (schools.find((school) => school.tenantId === initialSchool)
+          ?.studentId ??
+        schools[0]?.studentId ??
+        null);
   // Der Plan gehört zur Schule des gewählten Kindes; seine Texte nennen die
   // Betreuung so, wie diese Schule sie nennt (#6082).
   const accountTerm = useCareFacilityTerm();
@@ -1250,7 +1298,17 @@ export function ParentMealPlanPage() {
   // switch to a child with another term must not reload it and reset the
   // selection.
   const tSchools = useTranslations("parentMealPlan");
-  const [weekOffset, setWeekOffset] = useState<WeekOffset>(0);
+  const today = useBerlinToday();
+  const [weekOffset, setWeekOffset] = useState<WeekOffset>(() =>
+    weekOffsetFromParam(today, initialWeek),
+  );
+  // Ein weiterer Link aus den Hinweisen, während die Seite offen ist, öffnet
+  // seine Woche ebenfalls; der Tageswechsel allein wechselt sie nicht.
+  const [linkedWeek, setLinkedWeek] = useState(initialWeek);
+  if (initialWeek !== linkedWeek) {
+    setLinkedWeek(initialWeek);
+    setWeekOffset(weekOffsetFromParam(today, initialWeek));
+  }
   // Distinguish operational failures (backend/network/session errors) from a
   // genuinely empty result: a failed request must not render as "no meal
   // plan available" / "no plan entered", which would be false information.
@@ -1266,9 +1324,9 @@ export function ParentMealPlanPage() {
   const loadingSchools = !schoolsFailure && !resolved && !knownSchools;
   const [participationEditing, setParticipationEditing] = useState(false);
 
-  // useBerlinToday re-renders on the Berlin midnight rollover, so a page left
-  // mounted overnight follows the date instead of freezing on yesterday.
-  const today = useBerlinToday();
+  // useBerlinToday (above) re-renders on the Berlin midnight rollover, so a
+  // page left mounted overnight follows the date instead of freezing on
+  // yesterday.
   // Anchor the week on the Berlin `today`, not just weekOffset: if the page
   // stays mounted across Berlin midnight, the selected week must roll forward
   // with the date. Keying the memo on `today` also keeps it aligned with the
@@ -1285,18 +1343,8 @@ export function ParentMealPlanPage() {
     [schools, selectedStudent],
   );
 
-  // A school without the registration only shows the meal plan, so a week
-  // beyond it cannot stay selected after switching to that school.
-  useEffect(() => {
-    if (selectedSchool && !selectedSchool.registrationEnabled) {
-      setWeekOffset((offset) =>
-        offset > LAST_MEAL_PLAN_WEEK ? LAST_MEAL_PLAN_WEEK : offset,
-      );
-    }
-  }, [selectedSchool]);
-
-  // Beyond next week parents only see their registration; the meal plan for
-  // those weeks is not public yet, so it is not loaded.
+  // The page never selects a later week, but this guard keeps the request
+  // scoped if an invalid state reaches it.
   const planLater = weekOffset > LAST_MEAL_PLAN_WEEK;
   // The key carries school and week: a slower answer of a previous
   // selection never shows under the new school's label or week.
@@ -1444,6 +1492,7 @@ export function ParentMealPlanPage() {
             weekError={weekError}
             dishesByDate={dishesByDate}
             planLater={planLater}
+            weekFromLink={linkedWeekOffset(today, initialWeek) !== null}
             onWeekChange={setWeekOffset}
             onEditingChange={setParticipationEditing}
           />

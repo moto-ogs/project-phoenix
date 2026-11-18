@@ -15,5 +15,6 @@
   "answerTo": "Përgjigje për: {title}",
   "errorObjectThread": "mesazhi i grupit",
   "errorObjectAnswer": "përgjigjja",
-  "errorObjectList": "mesazhet e grupit"
+  "errorObjectList": "mesazhet e grupit",
+  "closedNoteWithoutChat": "Ky mesazh grupi është mbyllur."
 }

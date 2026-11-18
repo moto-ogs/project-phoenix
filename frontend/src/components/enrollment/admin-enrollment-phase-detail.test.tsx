@@ -437,9 +437,12 @@ describe("AdminEnrollmentPhaseDetail", () => {
       "care_offering_ids",
     );
     expect(screen.getByRole("button", { name: "Alle Status" })).toBeVisible();
-    expect(
-      screen.getByRole("combobox", { name: /Berücksichtigte Angebote/ }),
-    ).toHaveTextContent("2 Angebote");
+    // The offerings arrive with their own request after the phase.
+    await waitFor(() => {
+      expect(
+        screen.getByRole("combobox", { name: /Berücksichtigte Angebote/ }),
+      ).toHaveTextContent("2 Angebote");
+    });
     expect(screen.getAllByText("OGS Ganztag").length).toBeGreaterThan(0);
     expect(screen.getByText("Mo, Mi, Fr")).toBeVisible();
     expect(screen.getAllByText("Randstunde").length).toBeGreaterThan(0);

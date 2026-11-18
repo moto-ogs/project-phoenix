@@ -91,7 +91,7 @@ func newPersonExportFixture(t *testing.T) personExportFixture {
 
 func personExport(t *testing.T, fixture personExportFixture, subject string) string {
 	t.Helper()
-	exporter, err := compose.NewTenantExporter(fixture.db, organizationtenancy.ExportFingerprints{Bytes: testpkg.ContentFingerprint, Reader: testpkg.ReaderContentFingerprint}, openedSealedFields{}, projectedFields{}, &exportAuditFake{})
+	exporter, err := compose.NewTenantExporter(fixture.db, organizationtenancy.ExportFingerprints{Bytes: testpkg.ContentFingerprint, Reader: testpkg.ReaderContentFingerprint}, openedSealedFields{}, projectedFields{}, plainExportObjects{}, &exportAuditFake{})
 	require.NoError(t, err)
 	out := filepath.Join(t.TempDir(), "person")
 	require.NoError(t, exporter.Export(t.Context(), organizationtenancy.TenantExportOptions{SchoolID: fixture.school, OperatorID: 42, Person: subject, Output: out, Uploads: fixture.uploads}))
@@ -227,7 +227,7 @@ func assertPersonReview(t *testing.T, out string, hasUnassigned bool) {
 func TestPersonExportRejectsForeignSubjectAndMissingOriginal(t *testing.T) {
 	t.Parallel()
 	f := newPersonExportFixture(t)
-	exporter, err := compose.NewTenantExporter(f.db, organizationtenancy.ExportFingerprints{Bytes: testpkg.ContentFingerprint, Reader: testpkg.ReaderContentFingerprint}, openedSealedFields{}, projectedFields{}, &exportAuditFake{})
+	exporter, err := compose.NewTenantExporter(f.db, organizationtenancy.ExportFingerprints{Bytes: testpkg.ContentFingerprint, Reader: testpkg.ReaderContentFingerprint}, openedSealedFields{}, projectedFields{}, plainExportObjects{}, &exportAuditFake{})
 	require.NoError(t, err)
 	for _, subject := range []string{"kind:" + strconv.FormatInt(f.foreignChild, 10), "staff:" + strconv.FormatInt(f.otherStaff, 10), "student:1", "kind:0", "kind:01"} {
 		out := filepath.Join(t.TempDir(), "failed")

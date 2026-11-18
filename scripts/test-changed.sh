@@ -14,6 +14,11 @@ cd "$repo_root"
 # shellcheck source=scripts/go-test-workspace.sh
 source "$repo_root/scripts/go-test-workspace.sh"
 
+# Keep concurrent package binaries from multiplying runtime workers across
+# overlapping worktrees. This matches scripts/test-backend.sh and the shared
+# local test budget; -parallel remains the deliberate per-binary test budget.
+export GOMAXPROCS=1
+
 FAST=false
 if [ "${1:-}" = --fast ]; then
   FAST=true

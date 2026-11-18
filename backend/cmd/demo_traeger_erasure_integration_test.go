@@ -38,8 +38,9 @@ func TestDemoProcessErasesTheOwnDemoTraegerAfterItsLastSchool(t *testing.T) {
 	require.NoError(t, err)
 	_, err = db.NewRaw(`INSERT INTO users.persons (tenant_id, first_name, last_name, tag_id) VALUES (?, 'Demo', 'Kind', 'DEMOCARD' || ?::text)`, school, school).Exec(ctx)
 	require.NoError(t, err)
-	// A Nachweis references its contribution rule with RESTRICT: the root's
-	// cascade cannot pass it, so it goes first (#6193).
+	// A Nachweis references its contribution rule; the root's cascade may
+	// reach the rule before the contract that takes the Nachweis along, so
+	// the erasure defers that key over the cascade (#6193, #7248).
 	_, err = db.NewRaw(`WITH rule AS (
 			INSERT INTO parent_billing.contribution_rules (organization_id, service, kind, valid_from, note)
 			VALUES (?0, 'holiday', 'benefits_exemption', '2026-11-01', 'Bescheid liegt vor') RETURNING id),

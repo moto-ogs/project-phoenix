@@ -45,7 +45,7 @@ func TestWeeklyListStopsBeforeLaterCalendarFailure(t *testing.T) {
 		}
 		return map[string]bool{}, nil, nil
 	})
-	service := New(seamStore{}, directory, calendar, weeklyReadSettings{}, seamTransaction{}, func(ports.Observation) {}, func() time.Time { return monday.BerlinMidnight() })
+	service := New(seamStore{}, directory, calendar, weeklyReadSettings{}, seamTransaction{}, func(ports.Observation) {}, func() time.Time { return monday.BerlinMidnight() }, nil)
 	_, err := service.WeeklyList(context.Background(), mealplan.Date(monday.String()))
 	require.ErrorIs(t, err, rosterErr)
 	assert.NotErrorIs(t, err, calendarErr)
@@ -81,7 +81,7 @@ func TestWeeklyListRangeFailureKeepsEarlierRosterFailure(t *testing.T) {
 		}
 		return map[string]bool{}, nil, nil
 	})
-	service := New(weeklyReadStore{}, directory, calendar, weeklyReadSettings{}, seamTransaction{}, func(ports.Observation) {}, func() time.Time { return monday.BerlinMidnight() })
+	service := New(weeklyReadStore{}, directory, calendar, weeklyReadSettings{}, seamTransaction{}, func(ports.Observation) {}, func() time.Time { return monday.BerlinMidnight() }, nil)
 	_, err := service.WeeklyList(context.Background(), mealplan.Date(monday.String()))
 
 	require.ErrorIs(t, err, rosterErr)

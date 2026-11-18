@@ -55,6 +55,7 @@ const PARENT_TYPES = new Set([
   "parent_appointment",
   "parent_appointment_reminder",
   "parent_request_decided",
+  "meal_plan_changed",
   "parent_care_cancelled",
   "parent_class_timetable_changed",
   "parent_school_closing_day_changed",

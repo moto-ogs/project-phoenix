@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // TraegerPhaseReads read the Träger phases; the administration serves them
@@ -37,13 +38,19 @@ type TraegerPhaseStore interface {
 type TraegerPhases struct {
 	TraegerPhaseReads
 	store TraegerPhaseStore
+	// today is the calendar day the service period bounds count from.
+	today func() calendar.Date
 }
 
 var _ enrollment.TraegerPhases = (*TraegerPhases)(nil)
 
-// NewTraegerPhases builds the Träger phases over their store.
-func NewTraegerPhases(store TraegerPhaseStore) *TraegerPhases {
-	return &TraegerPhases{TraegerPhaseReads: store, store: store}
+// NewTraegerPhases builds the Träger phases over their store; today bounds
+// the service period of a draft (#5658).
+func NewTraegerPhases(store TraegerPhaseStore, today func() calendar.Date) *TraegerPhases {
+	if today == nil {
+		panic("enrollment träger phases: the clock is required")
+	}
+	return &TraegerPhases{TraegerPhaseReads: store, store: store, today: today}
 }
 
 // CreateTraegerPhase validates the draft and creates the phase with its
@@ -51,6 +58,9 @@ func NewTraegerPhases(store TraegerPhaseStore) *TraegerPhases {
 func (s *TraegerPhases) CreateTraegerPhase(ctx context.Context, organizationID int64, input enrollment.TraegerPhaseInput) (enrollment.TraegerPhase, error) {
 	draft, schools, err := normalizeTraegerPhaseInput(input)
 	if err != nil {
+		return enrollment.TraegerPhase{}, err
+	}
+	if err := s.validateServicePeriodBounds(draft); err != nil {
 		return enrollment.TraegerPhase{}, err
 	}
 	id, err := s.store.InsertTraegerPhase(ctx, organizationID, draft, input.AllSchools)
@@ -77,6 +87,13 @@ func (s *TraegerPhases) UpdateTraegerPhase(ctx context.Context, organizationID, 
 	if current.WithdrawnAt != nil {
 		return enrollment.TraegerPhase{}, enrollment.ErrTraegerPhaseWithdrawn
 	}
+	// Like a school phase, a stored draft beyond the bounds stays editable
+	// while its period stays as it is (#5658).
+	if enrollment.ServicePeriodChanged(current.Draft.ServiceStartDate, current.Draft.ServiceEndDate, draft.ServiceStartDate, draft.ServiceEndDate) {
+		if err := s.validateServicePeriodBounds(draft); err != nil {
+			return enrollment.TraegerPhase{}, err
+		}
+	}
 	if _, err := s.store.UpdateTraegerPhaseDraft(ctx, organizationID, id, draft, input.AllSchools); err != nil {
 		return enrollment.TraegerPhase{}, err
 	}
@@ -84,6 +101,15 @@ func (s *TraegerPhases) UpdateTraegerPhase(ctx context.Context, organizationID, 
 		return enrollment.TraegerPhase{}, err
 	}
 	return s.store.TraegerPhase(ctx, organizationID, id)
+}
+
+// validateServicePeriodBounds keeps a draft within the bounds every school
+// applies when it stores the copy (#5658).
+func (s *TraegerPhases) validateServicePeriodBounds(draft enrollment.TraegerPhaseFields) error {
+	if err := enrollment.ValidateServicePeriodBounds(draft.ServiceStartDate, draft.ServiceEndDate, s.today()); err != nil {
+		return fmt.Errorf("%w: %w", enrollment.ErrInvalidPhase, err)
+	}
+	return nil
 }
 
 // WithdrawTraegerPhase marks the phase withdrawn.

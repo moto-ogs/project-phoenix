@@ -97,6 +97,12 @@
       "legacy": "child_not_linked"
     },
     {
+      "code": "care.child_without_care_place",
+      "class": "permission",
+      "parameters": [],
+      "legacy": "care.child_without_care_place"
+    },
+    {
       "code": "care.course_already_booked",
       "class": "input",
       "parameters": [],

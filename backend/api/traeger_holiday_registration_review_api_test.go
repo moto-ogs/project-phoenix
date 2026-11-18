@@ -458,6 +458,9 @@ func TestTraegerHolidayRegistrationListQueryBudgetIsFlat(t *testing.T) {
 // its registrations and keeps those of a later period.
 func TestHolidayRegistrationAuditGoesWithItsPeriod(t *testing.T) {
 	t.Parallel()
+	// The retention deletes the ended registrations of every Träger, those of
+	// the other retention tests too: it runs on its own database.
+	testpkg.SetupIsolatedTestDB(t)
 	f := newReviewFixture(t, "Träger Frist Protokoll")
 	f.list(t, "")
 	f.detail(t, f.act(t, f.siblings, "confirm"))

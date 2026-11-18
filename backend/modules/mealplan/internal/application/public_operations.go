@@ -52,15 +52,15 @@ func (s *Service) ReplaceDay(ctx context.Context, command mealplan.ReplaceDay) e
 		}
 		dishes = append(dishes, mealplan.Dish{Dish: dish, Note: trimOptional(input.Note), Allergens: allergens})
 	}
-	return mapPublicError(s.replace(ctx, date, dishes))
+	return mapPublicError(s.replace(ctx, date, dishes, command.AccountID))
 }
 
-func (s *Service) ClearDay(ctx context.Context, date mealplan.Date) error {
-	parsed, err := calendar.ParseDate(string(date))
+func (s *Service) ClearDay(ctx context.Context, command mealplan.ClearDay) error {
+	parsed, err := calendar.ParseDate(string(command.Date))
 	if err != nil {
 		return mealplan.ErrInvalidMealDate
 	}
-	return mapPublicError(s.clear(ctx, parsed))
+	return mapPublicError(s.replace(ctx, parsed, nil, command.AccountID))
 }
 
 func (s *Service) RegistrationAvailable(ctx context.Context) (bool, error) {

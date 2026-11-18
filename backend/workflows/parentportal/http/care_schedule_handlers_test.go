@@ -91,3 +91,15 @@ func TestRenderParentWriteErrorMapsPickupChangeCutoffToConflictCode(t *testing.T
 	assert.Equal(t, http.StatusConflict, recorder.Code)
 	assert.Contains(t, recorder.Body.String(), `"code":"care.pickup_change_cutoff_passed"`)
 }
+
+func TestRenderParentWriteErrorMapsChildWithoutCarePlaceToForbiddenCode(t *testing.T) {
+	t.Parallel()
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/me/children/1/care-schedule", nil)
+
+	renderParentWriteError(recorder, request, parentService.ErrChildWithoutCarePlace)
+
+	assert.Equal(t, http.StatusForbidden, recorder.Code)
+	assert.Contains(t, recorder.Body.String(), `"code":"care.child_without_care_place"`)
+}

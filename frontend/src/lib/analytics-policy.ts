@@ -30,6 +30,11 @@ import {
 } from "~/lib/analytics-routes";
 import { NOTIFICATION_FEED_ANALYTICS_TYPES } from "~/lib/notification-feed-helpers";
 
+/** Reiterarten auf „Alle Kinder“ (#5046); ein Aufsichtsreiter nennt keinen Raum. */
+const CHILD_SCOPE_ANALYTICS_VALUES = ["all", "groups", "room"] as const;
+export type ChildScopeAnalyticsValue =
+  (typeof CHILD_SCOPE_ANALYTICS_VALUES)[number];
+
 const ANALYTICS_SURFACES = [
   "ogs",
   "parents",
@@ -487,6 +492,8 @@ const CUSTOM_EVENTS: ReadonlySet<string> = new Set([
   "notification_bell_opened",
   "notification_feed_entry_clicked",
   "notification_feed_all_read",
+  // Reiter auf „Alle Kinder“ (#5046): nur die Art des Reiters, nie ein Raum.
+  "child_scope_tab_selected",
 ]);
 
 const SAFE_VALUES: Readonly<Record<string, ReadonlySet<string>>> = {
@@ -498,6 +505,7 @@ const SAFE_VALUES: Readonly<Record<string, ReadonlySet<string>>> = {
   $event_type: new Set(["click", "submit", "change", "touch"]),
   $dead_swipe_direction: new Set(["up", "down", "left", "right"]),
   notification_type: new Set(NOTIFICATION_FEED_ANALYTICS_TYPES),
+  child_scope: new Set(CHILD_SCOPE_ANALYTICS_VALUES),
 };
 
 /** SDK identifiers: anonymous runtime IDs, UUIDs, the project token. */

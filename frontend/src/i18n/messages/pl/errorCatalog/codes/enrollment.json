@@ -113,7 +113,9 @@
   "phase_not_eligible": "Ten zapis nie jest dostępny dla Twojego konta. Zaloguj się w aplikacji dla rodziców lub zapytaj szkołę.",
   "phase_not_found": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "phase_school_classes_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
+  "phase_service_end_too_far": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "phase_service_period_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
+  "phase_service_period_too_long": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "phase_window_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "pickup_time_not_allowed": "Wybieraj tylko godziny odbioru z listy. Zaznaczona godzina nie jest już dostępna.",
   "request_duplicate": "To dziecko ma już zapis w tym okresie zapisów.",
@@ -178,5 +180,6 @@
   "traeger_school_outside": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "traeger_catalog_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "traeger_preview_stale": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
-  "traeger_copy_rejected": "Nie udało się zmienić: {object}. Sprawdź aktualny stan."
+  "traeger_copy_rejected": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "without_care_place_school_year_only": "Dziecko bez miejsca w OGS otrzymuje miejsce poprzez zapis na rok szkolny."
 }
