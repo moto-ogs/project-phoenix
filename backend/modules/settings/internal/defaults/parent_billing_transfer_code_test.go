@@ -14,7 +14,7 @@ import (
 // on the page of the letterhead.
 func TestTransferCodeSwitchIsOnByDefault(t *testing.T) {
 	t.Parallel()
-	definition := config.DefaultRegistry().GetDefinition(config.KeyParentBillingTransferCode)
+	definition := config.DefaultRegistry().GetDefinition(config.KeyParentBillingPrintTransferQR)
 	require.NotNil(t, definition)
 	assert.Equal(t, config.FieldBoolean, definition.Type)
 	assert.Equal(t, true, definition.Default)

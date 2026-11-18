@@ -87,9 +87,9 @@ const (
 	KeyParentBillingDebtorNumberMaxDigits  = "parent_billing.debtor_number_max_digits"
 )
 
-// KeyParentBillingTransferCode says whether the letters of a Träger print
+// KeyParentBillingPrintTransferQR says whether the letters of a Träger print
 // the transfer code (#4818, #5624): the GiroCode (EPC069-12) beside the
 // payment text of a document the family pays by transfer. On by default;
 // letters already stored keep what they print. Only the Träger sets it
 // (LevelTraeger).
-const KeyParentBillingTransferCode = "parent_billing.transfer_code"
+const KeyParentBillingPrintTransferQR = "parent_billing.transfer_code"

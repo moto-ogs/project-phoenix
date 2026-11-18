@@ -79,12 +79,12 @@ func TestLetterheadFollowsTheTransferCodeSwitchOfTheTraeger(t *testing.T) {
 		"on prints the code": {value: true, without: false},
 		"off leaves it off":  {value: false, without: true},
 	} {
-		settings := &letterheadSettings{bools: map[string]bool{configModels.KeyParentBillingTransferCode: tc.value}}
+		settings := &letterheadSettings{bools: map[string]bool{configModels.KeyParentBillingPrintTransferQR: tc.value}}
 		letterheads := parentBillingLetterheads{masterData: letterheadMasterData{}, templates: letterheadTemplates{}, settings: settings}
 		head, err := letterheads.Letterhead(context.Background(), reviewer)
 		require.NoError(t, err, name)
 		assert.Equal(t, tc.without, head.WithoutTransferCode, name)
-		assert.Equal(t, []string{configModels.KeyParentBillingTransferCode}, settings.asked, name)
+		assert.Equal(t, []string{configModels.KeyParentBillingPrintTransferQR}, settings.asked, name)
 		require.NotNil(t, head.BankAccount, name)
 	}
 
@@ -112,15 +112,15 @@ func TestTransferCodeSwitchResolvesPerTraeger(t *testing.T) {
 	read := func(organizationID int64) bool {
 		t.Helper()
 		texts, switches, err := settings.TraegerTextsAndBools(ctx, organizationID,
-			[]string{configModels.KeyBrandingFooterText}, []string{configModels.KeyParentBillingTransferCode})
+			[]string{configModels.KeyBrandingFooterText}, []string{configModels.KeyParentBillingPrintTransferQR})
 		require.NoError(t, err)
 		require.Contains(t, texts, configModels.KeyBrandingFooterText)
-		require.Contains(t, switches, configModels.KeyParentBillingTransferCode)
-		return switches[configModels.KeyParentBillingTransferCode]
+		require.Contains(t, switches, configModels.KeyParentBillingPrintTransferQR)
+		return switches[configModels.KeyParentBillingPrintTransferQR]
 	}
 
 	assert.True(t, read(f.office.organization), "without a value of its own the Träger prints the code")
-	path := "/traeger/settings/values/" + configModels.KeyParentBillingTransferCode
+	path := "/traeger/settings/values/" + configModels.KeyParentBillingPrintTransferQR
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 	rec := traegerJSON(t, f.traeger, billing, http.MethodPut, path, map[string]any{"value": false})
 	assert.Equal(t, http.StatusForbidden, rec.Code, "the billing right does not switch it: %s", rec.Body.String())

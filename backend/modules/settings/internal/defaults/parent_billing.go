@@ -163,7 +163,7 @@ var parentBillingDefinitions = []config.Definition{
 		SortOrder:       100,
 	},
 	{
-		Key:             config.KeyParentBillingTransferCode,
+		Key:             config.KeyParentBillingPrintTransferQR,
 		Levels:          config.LevelTraeger,
 		Label:           "QR-Code zum Überweisen drucken",
 		Description:     "Ist das an, steht ein QR-Code (GiroCode) auf Rechnung, Gebührenbescheid und Bestätigungsschreiben. Die Familie scannt ihn mit der Banking-App und überweist. Bei Lastschrift und bei 0 € gibt es nie einen Code. Schreiben, die schon erstellt sind, bleiben, wie sie sind.",
