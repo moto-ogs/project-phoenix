@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -20,7 +21,7 @@ import (
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 )
 
-func newSettingsResource(db transactionruntime.Database, operations settingsHTTP.Operations, homeLayouts settingsHTTP.HomeLayoutOperations, devicePIN settingsHTTP.DevicePINOperations, references func(context.Context, string, string) (bool, error), now func() time.Time, schools owners.SchoolFinder) *settingsHTTP.SettingsResource {
+func newSettingsResource(db transactionruntime.Database, operations settingsHTTP.Operations, homeLayouts settingsHTTP.HomeLayoutOperations, devicePIN settingsHTTP.DevicePINOperations, references func(context.Context, string, string) (bool, error), now func() time.Time, schools owners.SchoolFinder, uploads nativeUploads.UploadFiles) *settingsHTTP.SettingsResource {
 	settingsRuntime := settingsHTTP.NewRuntime(settingsHTTP.RuntimeDependencies{
 		DocumentCleanup: fileStorageCompose.NewUploadCleanup(db.Pool(), "enrollment-legal-documents", now).Queue,
 		Protected: func(r chi.Router, fn func(chi.Router, settingsHTTP.Middleware)) {
@@ -40,18 +41,7 @@ func newSettingsResource(db transactionruntime.Database, operations settingsHTTP
 		Editable:  canEditConfig,
 		Success:   apiCommon.Respond,
 		NoContent: apiCommon.RespondNoContent,
-		Failure: func(w http.ResponseWriter, r *http.Request, status int, err error) {
-			switch status {
-			case http.StatusBadRequest:
-				apiCommon.RenderError(w, r, settingsInputError(err))
-			case http.StatusForbidden:
-				apiCommon.RenderError(w, r, apiCommon.ErrorForbidden(err))
-			case http.StatusNotFound:
-				apiCommon.RenderError(w, r, apiCommon.ErrorNotFound(err))
-			default:
-				apiCommon.RenderError(w, r, apiCommon.ErrorInternalServer(err))
-			}
-		},
+		Failure:   renderSettingsError,
 		ImageUpload: func(w http.ResponseWriter, r *http.Request, field string, maxBody int64) (*settingsHTTP.UploadedFile, error) {
 			file, err := apiCommon.ParseImage(w, r, field, maxBody)
 			if err != nil {
@@ -66,10 +56,14 @@ func newSettingsResource(db transactionruntime.Database, operations settingsHTTP
 			}
 			return &settingsHTTP.UploadedFile{File: file.File, ContentType: file.ContentType}, nil
 		},
-		ImageSave:  saveImageUpload,
-		PDFSave:    savePDFUpload,
-		FileRemove: (nativeUploads.UploadFiles{}).RemoveUpload,
-		StoredPath: nativeUploads.ResolveStoredPath,
+		ImageSave: func(file io.Reader, dir, prefix, contentType string) (string, error) {
+			return apiCommon.SaveImage(file, dir, prefix, contentType, uploads)
+		},
+		PDFSave: func(file io.Reader, dir, prefix string) (string, error) {
+			return apiCommon.SavePDF(file, dir, prefix, uploads)
+		},
+		FileRemove: uploads.RemoveUpload,
+		StoredPath: uploads.StoredPath,
 		LegalDocumentReference: func(ctx context.Context, storedURL string) (bool, error) {
 			publicURL := enrollmentAPI.PublicLegalDocumentURL(storedURL)
 			referenced, err := references(ctx, storedURL, publicURL)
@@ -80,6 +74,19 @@ func newSettingsResource(db transactionruntime.Database, operations settingsHTTP
 		},
 	})
 	return settingsHTTP.NewSettingsResource(operations, homeLayouts, devicePIN, settingsRuntime, owners.SchoolContactDirectory{Schools: schools}.ContactEmail)
+}
+
+func renderSettingsError(w http.ResponseWriter, r *http.Request, status int, err error) {
+	switch status {
+	case http.StatusBadRequest:
+		apiCommon.RenderError(w, r, settingsInputError(err))
+	case http.StatusForbidden:
+		apiCommon.RenderError(w, r, apiCommon.ErrorForbidden(err))
+	case http.StatusNotFound:
+		apiCommon.RenderError(w, r, apiCommon.ErrorNotFound(err))
+	default:
+		apiCommon.RenderError(w, r, apiCommon.ErrorInternalServer(err))
+	}
 }
 
 // settingsInputError renders a rejected setting value. A visible attendance

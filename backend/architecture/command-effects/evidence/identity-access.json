@@ -5218,6 +5218,14 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.CleanupErasedAccountAvatars",
+      "binding_digest": "4b77d1ee174ac4332b0c37f2155be6ea",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.CleanupErasedAccountAvatars",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.RemoteAccountAvatarRemover",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.CleanupErasedAccountAvatars",
       "binding_digest": "d611daa4da614f31d6a0312b17c04982",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.CleanupErasedAccountAvatars",
       "source_owner": "identity-access",

@@ -13,9 +13,9 @@ import (
 // attach to an enrollment (#4783) through File Storage's document
 // coordinator. The backend is looked up on each call, like the child
 // documents, so constructing the routes opens no storage.
-func NewEnrollmentUploadStorage(logger *slog.Logger) enrollmentAPI.UploadFileStorage {
+func NewEnrollmentUploadStorage(logger *slog.Logger, uploads nativeUploads.UploadFiles) enrollmentAPI.UploadFileStorage {
 	return func(kind string) (enrollmentAPI.UploadFileStore, error) {
-		backend, err := nativeUploads.PrivateUploadsBackend()
+		backend, err := uploads.Private(nativeUploads.FileKeys{})
 		if err != nil {
 			return nil, err
 		}

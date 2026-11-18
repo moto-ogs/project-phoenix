@@ -6,6 +6,9 @@ import (
 	"context"
 	"net/http"
 
+	"path/filepath"
+	"strconv"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -44,7 +47,11 @@ func ScopeTestTenantRoutes(authenticate, scope func(http.Handler) http.Handler, 
 // StaffDocumentsDirForTest is the directory the staff documents of tenantID
 // are stored in.
 func StaffDocumentsDirForTest(tenantID int64, uploads common.UploadStorage) string {
-	return staffDocumentsDir(tenantID, uploads)
+	public, err := uploads.PublicDir()
+	if err != nil {
+		panic(err)
+	}
+	return filepath.Join(public, "uploads", "staff-documents", strconv.FormatInt(tenantID, 10))
 }
 
 // ExportTransferReasonNotConfiguredForTest is the transfer reason of a school

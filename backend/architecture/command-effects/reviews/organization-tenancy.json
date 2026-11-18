@@ -99,6 +99,17 @@
       "target_owner": "delivery-platform"
     },
     {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.TenantObjectSources.TenantObjects",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ErasureFiles.TenantObjects",
+      "reason": "Count or delete the same tenant namespace in the active bucket and the retained local root during tenant erasure.",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.TenantObjectSources.TenantObjects",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/operatordashboard/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DashboardCounts, github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DashboardOrganization, github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DashboardSchool, github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DashboardPWAUsage].AllSchoolsPWAUsage",
       "classification": "query",
       "effect": "query",

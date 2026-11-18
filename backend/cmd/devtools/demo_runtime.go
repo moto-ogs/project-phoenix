@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/objects"
+	uploadCompose "github.com/moto-ogs/project-phoenix/modules/delivery/objects/compose"
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	organizationcompose "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/compose"
 	presencecompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
@@ -87,12 +88,12 @@ type DemoRuntime struct {
 // expiry of demo accesses reads (#3470). uploadsRoot is the uploads directory
 // of the demo server, from which the files of retired demo schools are
 // removed (#5544).
-func NewDemoRuntime(db transactionruntime.Database, now func() time.Time, seedAdapter func(string, bool) seedCommandAdapter, uploadsRoot string) (*DemoRuntime, error) {
+func NewDemoRuntime(db transactionruntime.Database, now func() time.Time, seedAdapter func(string, bool) seedCommandAdapter, uploadsRoot string, readConfig func(string) string) (*DemoRuntime, error) {
 	schools, err := organizationcompose.NewDemoSchools(db.Pool())
 	if err != nil {
 		return nil, err
 	}
-	expiry, erasure, err := newDemoCleanup(db, now, uploadsRoot)
+	expiry, erasure, err := newDemoCleanup(db, now, uploadsRoot, objects.UploadStorageConfigFrom(readConfig))
 	if err != nil {
 		return nil, err
 	}
@@ -149,12 +150,16 @@ func NewDemoRuntime(db transactionruntime.Database, now func() time.Time, seedAd
 // past their end (#3470), the uploads of retired demo schools from the demo
 // server's uploads store (#5544, ADR 0148) and their database rows (#5559,
 // ADR 0189).
-func newDemoCleanup(db transactionruntime.Database, now func() time.Time, uploadsRoot string) (demoAccessExpiry, demoSchoolErasure, error) {
+func newDemoCleanup(db transactionruntime.Database, now func() time.Time, uploadsRoot string, config objects.UploadStorageConfig) (demoAccessExpiry, demoSchoolErasure, error) {
 	expiry, err := identityaccessCompose.NewDemoAccessExpiry(db.Pool(), now)
 	if err != nil {
 		return nil, nil, err
 	}
-	erasure, err := organizationcompose.NewDemoSchoolErasure(db.Pool(), objects.NewLocal(uploadsRoot))
+	backend, err := uploadCompose.NewBackend(context.Background(), config, uploadsRoot)
+	if err != nil {
+		return nil, nil, err
+	}
+	erasure, err := organizationcompose.NewDemoSchoolErasure(db.Pool(), objects.ErasureSources(backend, uploadsRoot))
 	if err != nil {
 		return nil, nil, err
 	}

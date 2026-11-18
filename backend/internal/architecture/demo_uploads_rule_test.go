@@ -12,8 +12,8 @@ func TestDemoUploadsRuleRequiresReviewedEpoch(t *testing.T) {
 	base := *candidate
 	base.PolicyEpoch--
 	base.Rules = slices.DeleteFunc(slices.Clone(candidate.Rules), reviewedDemoUploadsRule)
-	if len(candidate.Rules)-len(base.Rules) != 1 {
-		t.Fatal("expected one reviewed demo uploads rule")
+	if len(candidate.Rules)-len(base.Rules) != 2 {
+		t.Fatal("expected the two reviewed demo upload rules for byte access and backend composition")
 	}
 	if err := comparePolicyStrictness(&base, candidate, noCreated(), noCreated(), noCreated(), noCreated(), nil); err != nil {
 		t.Fatalf("reviewed demo uploads rule: %v", err)

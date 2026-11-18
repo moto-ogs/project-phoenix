@@ -69,7 +69,7 @@ type apiContext struct {
 
 func setupFileStoreRoute(t *testing.T) *apiContext {
 	t.Helper()
-	objects, err := nativeUploads.PrivateUploadsBackend()
+	objects, err := nativeUploads.SealedPrivateUploadsBackend(nativeUploads.FileKeys{})
 	require.NoError(t, err)
 	db, files, setSetting := setupFileStoreModule(t, objects)
 	resource := filestoreAPI.NewResource(files, slog.Default())

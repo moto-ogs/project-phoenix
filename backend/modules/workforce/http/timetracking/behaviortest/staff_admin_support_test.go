@@ -93,16 +93,15 @@ func setupStaffRouteWith(t *testing.T, adjust func(*bun.DB, *timetracking.StaffA
 	db, capabilities := workforcetest.ComposeAdmin(t, clocks...)
 	cleanup, err := workforceCompose.NewDocumentCleanup(db, nil)
 	require.NoError(t, err)
-	documentFiles, err := workforceCompose.NewStaffDocumentFileRecovery(capabilities.Documents, cleanup, nativeUploads.UploadFiles{}, slog.Default())
+	documentObjects, err := nativeUploads.SealedPrivateUploadsBackend(testUploadFileKeys())
+	require.NoError(t, err)
+	documentFiles, err := workforceCompose.NewStaffDocumentFileRecovery(capabilities.Documents, cleanup, documentObjects, slog.Default())
 	require.NoError(t, err)
 	workforceCapability := newWorkforceCapability(t, db, clocks...)
 	qualifications, err := workforceCompose.NewQualifications(db, qualificationStaffStub{}, workforce.QualificationReminderPorts{}, nil)
 	require.NoError(t, err)
 
-	documentObjects, err := nativeUploads.SealedPrivateUploadsBackend(testUploadFileKeys())
-	require.NoError(t, err)
 	deps := timetracking.StaffAdminDependencies{
-		Uploads:            nativeUploads.UploadFiles{},
 		DocumentObjects:    documentObjects,
 		PayrollDispatch:    payrollDispatchOff{},
 		PayrollRules:       workforcetest.ComposePayrollRules(t, db),

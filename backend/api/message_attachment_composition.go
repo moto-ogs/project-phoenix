@@ -17,8 +17,8 @@ import (
 
 // newMessageAttachmentRoutes builds the upload and read routes of one chat
 // family's photos and files (#6685) behind the family's route permission.
-func newMessageAttachmentRoutes(attachments communicationModule.MessageAttachmentCapability, logger *slog.Logger, guard ...func(http.Handler) http.Handler) *messageattachments.Resource {
-	return messageattachments.NewResource(messageAttachmentUnits{attachments: attachments}, NewMessageAttachmentStorage(logger), guard...)
+func newMessageAttachmentRoutes(attachments communicationModule.MessageAttachmentCapability, logger *slog.Logger, uploads nativeUploads.UploadFiles, guard ...func(http.Handler) http.Handler) *messageattachments.Resource {
+	return messageattachments.NewResource(messageAttachmentUnits{attachments: attachments}, NewMessageAttachmentStorage(logger, uploads), guard...)
 }
 
 // schoolMessageAttachmentRouter serves the team chat's attachment routes to
@@ -69,9 +69,9 @@ func (u messageAttachmentUnits) OpenMessageAttachment(ctx context.Context, attac
 // of chat messages (#6685) through File Storage's document coordinator. The
 // backend is looked up on each call, so constructing the routes opens no
 // storage.
-func NewMessageAttachmentStorage(logger *slog.Logger) common.MessageAttachmentFileStorage {
+func NewMessageAttachmentStorage(logger *slog.Logger, uploads nativeUploads.UploadFiles) common.MessageAttachmentFileStorage {
 	return func() (common.MessageAttachmentFiles, error) {
-		backend, err := nativeUploads.PrivateUploadsBackend()
+		backend, err := uploads.Private(nativeUploads.FileKeys{})
 		if err != nil {
 			return nil, err
 		}

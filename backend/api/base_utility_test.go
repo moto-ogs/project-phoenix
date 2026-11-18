@@ -22,6 +22,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	customMiddleware "github.com/moto-ogs/project-phoenix/middleware"
+	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	devicefleetCompose "github.com/moto-ogs/project-phoenix/modules/devicefleet/compose"
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
@@ -328,7 +329,7 @@ func setupSettingsCallbackRoute(t *testing.T) *settingsCallbackRoute {
 	require.True(t, ok)
 	schools, err := owners.BuildServeOrganizations(testpkg.NewDatabase(t, db), time.Now)
 	require.NoError(t, err)
-	return &settingsCallbackRoute{router: newSettingsResource(testpkg.NewDatabase(t, db), module.TenantSettings, homeLayouts, requireDevicePINOperations(module.Settings), repos.Enrollment().SchemaReferencesLegalDocument, time.Now, schools).SettingsRouter(), hub: hub}
+	return &settingsCallbackRoute{router: newSettingsResource(testpkg.NewDatabase(t, db), module.TenantSettings, homeLayouts, requireDevicePINOperations(module.Settings), repos.Enrollment().SchemaReferencesLegalDocument, time.Now, schools, nativeUploads.UploadFiles{}).SettingsRouter(), hub: hub}
 }
 
 func setupOperatorInvitationRoute(t *testing.T, graph *goldenRuntime) chi.Router {
