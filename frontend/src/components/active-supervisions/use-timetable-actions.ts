@@ -319,7 +319,7 @@ export function useTimetableActions(
   const syncRoster = useCallback(async () => {
     const instanceId = activeTimetableInstanceIdRef.current;
     try {
-      await Promise.all([mutateRoster(), mutateDashboard()]);
+      await mutateRoster();
     } catch (err) {
       if (activeTimetableInstanceIdRef.current !== instanceId) return;
       logger.warn("timetable_roster_sync_retry_failed", {
@@ -327,12 +327,7 @@ export function useTimetableActions(
       });
       showRosterSyncError(err);
     }
-  }, [
-    activeTimetableInstanceIdRef,
-    mutateDashboard,
-    mutateRoster,
-    showRosterSyncError,
-  ]);
+  }, [activeTimetableInstanceIdRef, mutateRoster, showRosterSyncError]);
 
   // Runs the local update after a saved write. If it fails, the write still
   // counts: say so and offer to load the list again, never report the write

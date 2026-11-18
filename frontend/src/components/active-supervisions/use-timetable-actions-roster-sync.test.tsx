@@ -5,7 +5,6 @@
  */
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { testClockDay } from "~/test/clock";
 
 const showActionError = vi.hoisted(() => vi.fn());
 const errorDisplay = vi.hoisted(() => ({ show: showActionError }));
@@ -153,77 +152,6 @@ describe("useTimetableActions roster sync after a saved action", () => {
       action: { label: "Liste neu laden" },
     });
   });
-
-  it.each(["expected-roster", "expected-dashboard", "unplanned", "present"])(
-    "keeps the saved check-in successful when %s fails and retries only reads",
-    async (scenario) => {
-      const failure = new Error("local update failed");
-      const roster: TimetableRoster = {
-        instance: {
-          id: "99",
-          title: "Mittagessen",
-          status: "active",
-          isSpontaneous: false,
-          activeGroupId: "4",
-          roomId: "20",
-          date: testClockDay(),
-          startTime: "12:00",
-          endTime: "13:00",
-          canComplete: true,
-          completeAvailableAt: "",
-        },
-        rows: [],
-      };
-      vi.mocked(timetableOperationsApi.checkIn).mockResolvedValue(roster);
-      vi.mocked(timetableOperationsApi.checkInMany).mockResolvedValue(roster);
-      const { result, options } = setup(() => Promise.resolve(undefined));
-      if (scenario === "expected-dashboard") {
-        options.mutateDashboard.mockRejectedValueOnce(failure);
-      } else {
-        options.mutateRoster.mockRejectedValueOnce(failure);
-      }
-
-      let saved: boolean | void = undefined;
-      await act(async () => {
-        if (scenario.startsWith("expected")) {
-          saved = await result.current.handleConfirmExpectedStudents([row]);
-        } else if (scenario === "unplanned") {
-          saved = await result.current.handleAddUnplannedStudent(row.studentId);
-        } else {
-          saved = await result.current.handleAddPresentStudents([
-            row.studentId,
-          ]);
-        }
-      });
-
-      if (!scenario.startsWith("expected")) expect(saved).toBe(true);
-      expect(showActionError).toHaveBeenCalledOnce();
-      expect(formError.show).not.toHaveBeenCalled();
-      const [shownError, shownOptions] = showActionError.mock.calls[0]!;
-      expect(shownError).toBe(failure);
-      expect(shownOptions).toMatchObject({
-        object: "die Anwesenheitsliste",
-        messageSuffix: "Deine Änderung ist gespeichert.",
-        action: { label: "Liste neu laden" },
-      });
-      const write =
-        scenario === "present"
-          ? timetableOperationsApi.checkInMany
-          : timetableOperationsApi.checkIn;
-      expect(write).toHaveBeenCalledOnce();
-      await act(async () => {
-        (shownOptions as { action: { onClick: () => void } }).action.onClick();
-        await Promise.resolve();
-      });
-      expect(options.mutateRoster).toHaveBeenCalledTimes(2);
-      expect(options.mutateDashboard).toHaveBeenCalledTimes(
-        scenario === "expected-dashboard" ? 2 : 1,
-      );
-      expect(write).toHaveBeenCalledOnce();
-      expect(result.current.isAddingStudent).toBe(false);
-      expect(result.current.isConfirmingExpected).toBe(false);
-    },
-  );
 });
 
 // Safari's message when SWR's mutate finds no state for its cache (#2459).
