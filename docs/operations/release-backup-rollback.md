@@ -21,11 +21,13 @@ captures the previous state under `~/backups/<environment>/release-<timestamp>-<
 
 - `database.dump`: PostgreSQL schema, data, sequences and ACLs.
 - `roles.sql`: cluster roles, attributes, password hashes and memberships.
-- `uploads.tar.gz`: the actual server upload volume, including hidden files.
+- `uploads.tar.gz`: the actual server upload volume, including hidden files,
+  or in S3 mode the whole upload bucket ([below](#s3-upload-bucket)).
 - `.env`, `compose.yml`, `images.tsv`, `deploy-state`: previous configuration,
   immutable image digests and deployment state.
 - `environment`, `created-at`, `uploads-volume`, `checksums.sha256`, `complete`:
-  snapshot identity and verification data.
+  snapshot identity and verification data. `uploads-volume` names the volume,
+  or `bucket:<name>` in S3 mode.
 
 The directory is owner-only (0700, files 0600). It is **not encrypted**: `.env`
 contains plaintext operating secrets and `roles.sql` contains password hashes.
@@ -46,6 +48,28 @@ files, their checksums, image availability, archive readability and Compose
 configuration. Only verified snapshots receive a usable completion marker.
 Retention removes complete sets, never individual components. Existing loose
 backups are left untouched but cannot be selected by the new rollback workflow.
+
+## S3 upload bucket
+
+The serving container's own settings decide: with `UPLOADS_BACKEND=s3` the
+snapshot holds the bucket, otherwise the volume. The script reads
+`UPLOADS_S3_*` from the stopped `server` container's environment, the values
+that wrote the objects, and passes them to rclone only through the
+environment. rclone runs from the pinned image in `release-backup.sh`
+(`rclone/rclone:1.75.1`, host network), so hosts need no rclone; its output is
+discarded because it names objects.
+
+- **Create:** With the application stopped, rclone copies every object into
+  the snapshot directory, which is packed into `uploads.tar.gz` like a volume.
+  The copy needs free disk for the bucket twice until the archive replaces it.
+  The legacy volume from before the switch is not part of the snapshot.
+- **Restore:** Before stopping anything, restore checks that the server still
+  uses the snapshot's bucket and that the bucket is reachable. After the
+  database, `rclone sync --checksum` returns the bucket to the snapshot:
+  objects added since are deleted, changed or deleted ones come back. A
+  `check --download` must then match, else the application stays stopped.
+  A snapshot of one bucket never writes to another; one taken in local mode
+  restores the volume and leaves the bucket alone.
 
 ## Snapshot retention (Slice 3836-c)
 
@@ -154,3 +178,6 @@ and files, then restores through the manual rollback entrypoint. It verifies
 the old schema, privileges, hidden files, deletion of post-backup files, saved
 configuration and image digests. It does not exercise real production images,
 production data volumes or external notification delivery.
+`node --test scripts/release-backup-s3.integration.test.mjs` does the same for
+S3 mode against a local S3 endpoint (`rclone serve s3`): snapshot, changed
+objects, rollback to the snapshot's bucket state, and refusal of another bucket.

@@ -11,7 +11,8 @@ export const scripts = dirname(fileURLToPath(import.meta.url));
 // dailyBackupRig builds what every daily backup test needs: a private
 // workspace and Compose project, the backup environment, the guarded
 // transport and the age identity. The caller starts the services it needs.
-export function dailyBackupRig(t) {
+// dotEnv adds lines to the Compose .env, the server's upload settings among them.
+export function dailyBackupRig(t, { dotEnv = '' } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'moto-daily-test-'));
   const project = `moto-daily-${process.pid}-${Date.now()}`;
   const volume = `${project}-uploads`;
@@ -23,7 +24,7 @@ export function dailyBackupRig(t) {
   const compose = join(root, 'compose.yml');
   const ledger = join(root, 'erasure-ledger');
   writeFileSync(ledger, 'moto-erasure-ledger-v1\n', { mode: 0o600 });
-  writeFileSync(join(root, '.env'), `PRIVATE_MARKER=${credential}\nPOSTGRES_PASSWORD=${credential}\n`);
+  writeFileSync(join(root, '.env'), `PRIVATE_MARKER=${credential}\nPOSTGRES_PASSWORD=${credential}\n${dotEnv}`);
   writeFileSync(compose, `services:
   postgres:
     image: postgres:17.12-alpine3.24@sha256:34261f594522cf41dfcb76aefd42b9d201098b0e6b23c9c68733f169e4218b6f
@@ -40,6 +41,14 @@ export function dailyBackupRig(t) {
     image: postgres:17.12-alpine3.24@sha256:34261f594522cf41dfcb76aefd42b9d201098b0e6b23c9c68733f169e4218b6f
     network_mode: none
     entrypoint: [sleep, infinity]
+    # As in the deployed Compose files; the backup reads them from here.
+    environment:
+      UPLOADS_BACKEND: \${UPLOADS_BACKEND-}
+      UPLOADS_S3_ENDPOINT: \${UPLOADS_S3_ENDPOINT-}
+      UPLOADS_S3_REGION: \${UPLOADS_S3_REGION-}
+      UPLOADS_S3_BUCKET: \${UPLOADS_S3_BUCKET-}
+      UPLOADS_S3_ACCESS_KEY: \${UPLOADS_S3_ACCESS_KEY-}
+      UPLOADS_S3_SECRET_KEY: \${UPLOADS_S3_SECRET_KEY-}
 volumes:
   database:
 `);
@@ -51,6 +60,7 @@ volumes:
     PHOENIX_DEMO_PASSWORD: randomBytes(24).toString('hex') };
   mkdirSync(env.BACKUP_CIPHER_DIR);
   for (const key of ['COMPOSE_FILE', 'COMPOSE_PROJECT_NAME', 'COMPOSE_PROFILES']) delete env[key];
+  for (const key of Object.keys(env)) if (key.startsWith('UPLOADS_')) delete env[key];
   const invoke = (command, args, input, overrides = {}) => spawnSync(command, args,
     { cwd: root, env: { ...env, ...overrides }, input, encoding: 'utf8', timeout: 180000 });
   const run = (command, args, input, overrides) => {

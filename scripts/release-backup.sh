@@ -7,6 +7,9 @@ umask 077
 fail() { echo "ERROR: $*" >&2; exit 1; }
 compose() { docker compose "$@"; }
 required_files=(database.dump roles.sql uploads.tar.gz .env compose.yml images.tsv deploy-state environment created-at uploads-volume)
+# Copies the S3 upload bucket; hosts need no rclone of their own.
+rclone_image=rclone/rclone:1.75.1@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
+bucket_pattern='^bucket:([a-z0-9][a-z0-9.-]{1,61}[a-z0-9])$'
 
 digest() {
   if command -v sha256sum >/dev/null; then sha256sum "$1"; else shasum -a 256 "$1"; fi
@@ -24,6 +27,52 @@ volume() {
   [ -n "$mounted" ] || fail 'Server uploads mount is not a named volume'
   docker volume inspect "$mounted" >/dev/null
   printf '%s\n' "$mounted"
+}
+
+# The value the serving container ran with, the one that wrote the uploads.
+# Reads the environment without printing it; credentials never enter argv.
+server_setting() {
+  local container line
+  container=$(compose ps -a -q server)
+  [ -n "$container" ] || fail 'Serving container is missing; cannot read its upload settings'
+  while IFS= read -r line; do
+    if [[ "$line" == "$1="* ]]; then printf '%s\n' "${line#*=}"; return 0; fi
+  done < <(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container")
+}
+
+# local (empty included) uses the volume, s3 the bucket; as the app decides.
+upload_store() {
+  local backend
+  backend=$(server_setting UPLOADS_BACKEND)
+  case "${backend:-local}" in local) echo local;; s3) echo s3;; *) fail 'Unknown UPLOADS_BACKEND on the server';; esac
+}
+
+# Loads the server's bucket settings into this shell, not into its output.
+load_bucket() {
+  upload_endpoint=$(server_setting UPLOADS_S3_ENDPOINT)
+  upload_region=$(server_setting UPLOADS_S3_REGION)
+  upload_bucket=$(server_setting UPLOADS_S3_BUCKET)
+  upload_access_key=$(server_setting UPLOADS_S3_ACCESS_KEY)
+  upload_secret_key=$(server_setting UPLOADS_S3_SECRET_KEY)
+  [ -n "$upload_endpoint" ] && [ -n "$upload_region" ] && [ -n "$upload_bucket" ] &&
+    [ -n "$upload_access_key" ] && [ -n "$upload_secret_key" ] ||
+    fail 'Server has UPLOADS_BACKEND=s3 without every UPLOADS_S3_* value'
+  [[ "bucket:$upload_bucket" =~ $bucket_pattern ]] || fail 'Invalid UPLOADS_S3_BUCKET on the server'
+}
+
+# rclone against the loaded bucket, with /tree bound to the given directory.
+# Diagnostics name objects and stay off the deployment log.
+bucket_rclone() {
+  local tree=$1; shift
+  RCLONE_CONFIG_UPLOADS_ENDPOINT=$upload_endpoint RCLONE_CONFIG_UPLOADS_REGION=$upload_region \
+  RCLONE_CONFIG_UPLOADS_ACCESS_KEY_ID=$upload_access_key RCLONE_CONFIG_UPLOADS_SECRET_ACCESS_KEY=$upload_secret_key \
+    docker run --rm --network host --user "$(id -u):$(id -g)" --mount "type=bind,src=$tree,dst=/tree" \
+      -e RCLONE_CONFIG_UPLOADS_TYPE=s3 -e RCLONE_CONFIG_UPLOADS_PROVIDER=Other \
+      -e RCLONE_CONFIG_UPLOADS_ENV_AUTH=false -e RCLONE_CONFIG_UPLOADS_ACL=private \
+      -e RCLONE_CONFIG_UPLOADS_NO_CHECK_BUCKET=true -e RCLONE_CONFIG_UPLOADS_ENDPOINT \
+      -e RCLONE_CONFIG_UPLOADS_REGION -e RCLONE_CONFIG_UPLOADS_ACCESS_KEY_ID \
+      -e RCLONE_CONFIG_UPLOADS_SECRET_ACCESS_KEY "$rclone_image" \
+      --config /dev/null --quiet --retries 1 --no-unicode-normalization "$@" >/dev/null 2>&1
 }
 
 # Everything that writes to the database or uploads: server and frontend
@@ -96,6 +145,8 @@ verify_files() {
   docker compose --env-file "$bundle/.env" -f "$bundle/compose.yml" config -q
   local uploads
   uploads=$(cat "$bundle/uploads-volume")
+  # bucket:<name> in S3 mode; restore checks it against the server's settings.
+  [[ "$uploads" =~ $bucket_pattern ]] && return 0
   [[ "$uploads" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]+$ ]] || fail 'Invalid uploads volume name'
   docker volume inspect "$uploads" >/dev/null
 }
@@ -120,8 +171,14 @@ create() {
   dedicated_cluster
   [ ! -e "$bundle" ] || fail 'Backup path already exists'
   mkdir -m 700 -p "$bundle"
-  local service container image_id image_ref uploads
-  uploads=$(volume)
+  local service container image_id image_ref uploads store
+  store=$(upload_store)
+  if [ "$store" = s3 ]; then
+    load_bucket
+    uploads="bucket:$upload_bucket"
+  else
+    uploads=$(volume)
+  fi
   printf '%s\n' "$uploads" > "$bundle/uploads-volume"
   # Snapshot the actual previous containers, not mutable registry tags.
   printf 'services:\n' > "$bundle/images.yml"
@@ -148,9 +205,19 @@ create() {
   date -u +%Y-%m-%dT%H:%M:%SZ > "$bundle/created-at"
   compose exec -T postgres pg_dumpall -U postgres --globals-only > "$bundle/roles.sql"
   compose exec -T postgres pg_dump -U postgres -d postgres -Fc > "$bundle/database.dump"
-  docker run --rm --mount "type=volume,src=$uploads,dst=/volume,readonly" \
-    --mount "type=bind,src=$bundle,dst=/backup" --entrypoint tar "$(postgres_image)" \
-    -czf /backup/uploads.tar.gz -C /volume .
+  if [ "$store" = s3 ]; then
+    # The application is stopped: the bucket matches the database dump.
+    mkdir -m 700 "$bundle/uploads-tree"
+    bucket_rclone "$bundle/uploads-tree" copy "uploads:$upload_bucket" /tree ||
+      fail 'Copying the upload bucket failed; migration must not start'
+    docker run --rm --user "$(id -u):$(id -g)" --mount "type=bind,src=$bundle,dst=/backup" \
+      --entrypoint tar "$(postgres_image)" -czf /backup/uploads.tar.gz -C /backup/uploads-tree .
+    rm -rf -- "$bundle/uploads-tree"
+  else
+    docker run --rm --mount "type=volume,src=$uploads,dst=/volume,readonly" \
+      --mount "type=bind,src=$bundle,dst=/backup" --entrypoint tar "$(postgres_image)" \
+      -czf /backup/uploads.tar.gz -C /volume .
+  fi
   : > "$bundle/checksums.sha256"
   local file value
   for file in "${required_files[@]}"; do
@@ -191,7 +258,18 @@ restore() {
   verify
   dedicated_cluster
   # All preflight checks happen before stopping or deleting anything.
-  local uploads services
+  local uploads services tree='' snapshot_bucket
+  uploads=$(cat "$bundle/uploads-volume")
+  if [[ "$uploads" =~ $bucket_pattern ]]; then
+    snapshot_bucket=${BASH_REMATCH[1]}
+    # The restored .env names the same bucket only if the server does now.
+    [ "$(upload_store)" = s3 ] || fail 'Snapshot holds bucket uploads, but the server does not use S3'
+    load_bucket
+    [ "$upload_bucket" = "$snapshot_bucket" ] || fail 'Snapshot holds another bucket than the server uses'
+    tree=$(mktemp -d "$PWD/.uploads-restore.XXXXXX")
+    trap '[ -z "$tree" ] || rm -rf -- "$tree"' EXIT
+    bucket_rclone "$tree" lsf --max-depth 1 "uploads:$upload_bucket" || fail 'Upload bucket is not reachable; nothing was changed'
+  fi
   services=$(app_services)
   # shellcheck disable=SC2086 # service names, split on purpose
   compose stop $services
@@ -213,7 +291,7 @@ SQL
   # roles; only duplicate-object on that statement is an accepted condition.
   local roles_log
   roles_log=$(mktemp)
-  trap 'rm -f "$roles_log"' EXIT
+  trap 'rm -f "$roles_log"; [ -z "$tree" ] || rm -rf -- "$tree"' EXIT
   if ! awk '
     /^CREATE ROLE / {
       if (index($0, "$moto_restore$")) exit 1;
@@ -249,10 +327,21 @@ DO $$ BEGIN
   END IF;
 END $$;
 SQL
-  uploads=$(cat "$bundle/uploads-volume")
-  docker run --rm --mount "type=volume,src=$uploads,dst=/volume" \
-    --mount "type=bind,src=$bundle,dst=/backup,readonly" --entrypoint sh "$(postgres_image)" \
-    -c 'find /volume -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && tar -xzf /backup/uploads.tar.gz -C /volume'
+  if [ -n "$tree" ]; then
+    docker run --rm --user "$(id -u):$(id -g)" --mount "type=bind,src=$tree,dst=/tree" \
+      --mount "type=bind,src=$bundle,dst=/backup,readonly" --entrypoint tar "$(postgres_image)" \
+      -xzf /backup/uploads.tar.gz -C /tree
+    # Like the volume: objects added after the snapshot go, changed ones return.
+    bucket_rclone "$tree" sync /tree "uploads:$upload_bucket" --checksum ||
+      fail 'Upload bucket restore failed; application remains stopped'
+    bucket_rclone "$tree" check /tree "uploads:$upload_bucket" --download ||
+      fail 'Upload bucket differs from the snapshot; application remains stopped'
+    rm -rf -- "$tree"
+  else
+    docker run --rm --mount "type=volume,src=$uploads,dst=/volume" \
+      --mount "type=bind,src=$bundle,dst=/backup,readonly" --entrypoint sh "$(postgres_image)" \
+      -c 'find /volume -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && tar -xzf /backup/uploads.tar.gz -C /volume'
+  fi
   cp "$bundle/deploy-state" .deploy-state
   rm -f "$roles_log"
   trap - EXIT

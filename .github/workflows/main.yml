@@ -539,7 +539,7 @@ jobs:
       # test, whose job ran 230-281 s (three runs, 14.11.2026, #6962).
       - name: Verify complete release restore with PostgreSQL
         if: matrix.suite == 'release-restore'
-        run: node --test scripts/release-backup.integration.test.mjs
+        run: node --test scripts/release-backup.integration.test.mjs scripts/release-backup-s3.integration.test.mjs
 
       - name: Install daily backup test tools
         if: matrix.suite == 'restore'
@@ -548,7 +548,7 @@ jobs:
       - name: Verify encrypted daily backup and isolated restore
         if: matrix.suite == 'restore'
         run: |
-          node --test scripts/daily-backup.integration.test.mjs scripts/daily-backup-roles-diagnostics.integration.test.mjs scripts/daily-backup-roles-school-erasure.integration.test.mjs scripts/daily-backup-roles-billing-retention.integration.test.mjs scripts/daily-backup-roles-data-return.integration.test.mjs scripts/daily-backup-alerts.integration.test.mjs scripts/nightly-cleanup-alerts.integration.test.mjs scripts/db-pool-alerts.integration.test.mjs scripts/holiday-closure-alerts.integration.test.mjs scripts/email-delivery-alerts.integration.test.mjs
+          node --test scripts/daily-backup.integration.test.mjs scripts/daily-backup-s3.integration.test.mjs scripts/daily-backup-roles-diagnostics.integration.test.mjs scripts/daily-backup-roles-school-erasure.integration.test.mjs scripts/daily-backup-roles-billing-retention.integration.test.mjs scripts/daily-backup-roles-data-return.integration.test.mjs scripts/daily-backup-alerts.integration.test.mjs scripts/nightly-cleanup-alerts.integration.test.mjs scripts/db-pool-alerts.integration.test.mjs scripts/holiday-closure-alerts.integration.test.mjs scripts/email-delivery-alerts.integration.test.mjs
           sudo install -d /usr/local/lib/moto-backup
           sudo install scripts/daily-backup.sh /usr/local/lib/moto-backup/
           systemd-analyze verify scripts/systemd/moto-daily-backup.service scripts/systemd/moto-daily-backup.timer scripts/systemd/moto-backup-failure@.service
