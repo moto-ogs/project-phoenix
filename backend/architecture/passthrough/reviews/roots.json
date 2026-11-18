@@ -5271,6 +5271,11 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0251",
+      "id": "roots/owners/provisioningSettings.ReplyToAddresses",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
       "decision": "0090",
       "id": "roots/owners/pwaUsageCounts.PWAUsage",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."

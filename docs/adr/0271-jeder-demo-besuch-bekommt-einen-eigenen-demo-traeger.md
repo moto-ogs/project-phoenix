@@ -85,13 +85,13 @@ Punkt 9 und den Abschnitt „Was bleibt“ von
   Tarife und Freigaben gehen mit dem Träger. Freitext, den der Besucher im
   Träger-Büro eingibt, bleibt wie Freitext in der Schule bis zu dieser
   Löschung.
-- Ein Nachweis zu einem Monatsbeitrag verweist mit `RESTRICT` auf seine
-  Beitragsregel. Erreichen die Kaskaden der Träger-Wurzel die Regel vor dem
-  Vertrag, der den Nachweis mitnähme, bricht die Löschung ab. Die
-  Demo-Löschung löscht die Nachweise deshalb vor der Wurzel; ein Demo-Träger
-  führt keine Bücher (ADR 0184 gilt nicht), und der Beleg-Wächter nennt sie.
-  Die Operator-Löschung (`platform.erase_organization`) hat dasselbe Problem;
-  wie sie mit den Belegen umgeht, klärt #7248.
+- Ein Nachweis zu einem Monatsbeitrag verweist auf seine Beitragsregel.
+  Erreichen die Kaskaden der Träger-Wurzel die Regel vor dem Vertrag, der den
+  Nachweis mitnimmt, darf das die Löschung nicht abbrechen. Seit #7248 ist der
+  Schlüssel `NO ACTION DEFERRABLE INITIALLY IMMEDIATE`; die Demo-Löschung und
+  die Operator-Löschung (`platform.erase_organization`) prüfen ihn erst nach
+  der Kaskade. Die Demo-Löschung löscht die Nachweise nicht mehr beim Namen
+  und steht nicht mehr im Beleg-Wächter.
 - Die Schullöschung löscht `users.rfid_cards` nach `users.persons`: Die Karte
   einer Person (`tenant_id, tag_id`, `ON DELETE SET NULL`) hätte sonst die
   Schule der Person geleert und jede Löschung einer Schule mit Karten

@@ -427,7 +427,11 @@ describe("CaregiverCapabilityModal", () => {
         onUpdated={onUpdated}
       />,
     );
-    fireEvent.click(await screen.findByText("Betreuung deaktivieren"));
+    const disableButton = await screen.findByRole("button", {
+      name: "Betreuung deaktivieren",
+    });
+    await waitFor(() => expect(disableButton).toBeEnabled());
+    fireEvent.click(disableButton);
 
     await waitFor(() => expect(onUpdated).toHaveBeenCalledTimes(1));
     expect(
@@ -487,11 +491,11 @@ describe("CaregiverCapabilityModal", () => {
       />,
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Betreuung deaktivieren")).toBeInTheDocument();
+    const disableButton = await screen.findByRole("button", {
+      name: "Betreuung deaktivieren",
     });
-
-    fireEvent.click(screen.getByText("Betreuung deaktivieren"));
+    await waitFor(() => expect(disableButton).toBeEnabled());
+    fireEvent.click(disableButton);
 
     await waitFor(() => {
       expect(mockDisableTenantAccountCapability).toHaveBeenCalledWith("42");
@@ -777,11 +781,11 @@ describe("CaregiverCapabilityModal", () => {
       />,
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Betreuung deaktivieren")).toBeInTheDocument();
+    const disableButton = await screen.findByRole("button", {
+      name: "Betreuung deaktivieren",
     });
-
-    fireEvent.click(screen.getByText("Betreuung deaktivieren"));
+    await waitFor(() => expect(disableButton).toBeEnabled());
+    fireEvent.click(disableButton);
 
     await waitFor(() => {
       expect(mockDisableTenantAccountCapability).toHaveBeenCalledWith("42");
