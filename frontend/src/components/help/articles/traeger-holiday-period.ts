@@ -63,7 +63,7 @@ export function traegerHolidayPeriodTopic(): HelpTopic {
         description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
         steps: [
           "Wähle in der Navigation `Ferienbetreuung`.",
-          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
           "Die Datei enthält alle Ferienzeiträume mit Anmeldung, Wochen, Schulen und Status.",
         ],
       },

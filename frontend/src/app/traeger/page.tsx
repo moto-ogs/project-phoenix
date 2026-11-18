@@ -9,9 +9,8 @@
 
 import { type MouseEvent, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLink, School } from "lucide-react";
+import { School } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import NavigationLink from "~/components/ui/navigation-link";
@@ -24,15 +23,12 @@ import {
 import { TraegerCodeStepModal } from "~/components/traeger/traeger-code-step-modal";
 import { TraegerRequiredDetailsNotice } from "~/components/traeger/traeger-required-details-notice";
 import {
-  TraegerListExportMenu,
   traegerExportScope,
+  useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
+import { TraegerOpenSchoolButton } from "~/components/traeger/traeger-open-school-button";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
-import {
-  TRAEGER_HANDOFF_OPEN,
-  TRAEGER_HANDOFF_OPEN_HINT,
-} from "~/lib/traeger-handoff";
 import { traegerPath } from "~/lib/traeger-url";
 
 const COLUMNS: DataTableColumn<TraegerSchool>[] = [
@@ -70,6 +66,14 @@ export default function TraegerSchoolsPage() {
   const loading = schoolData === null && !schoolsError;
   const router = useRouter();
   const { canOpen, opening, open, codeStepModal } = useOpenTraegerSchool();
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/schools/export", format),
+    scope: traegerExportScope(),
+    fallbackName: "schulen",
+    errorObject: "die Liste der Schulen",
+    unavailable: schools.length === 0,
+  });
 
   const columns = useMemo<DataTableColumn<TraegerSchool>[]>(
     () =>
@@ -89,28 +93,13 @@ export default function TraegerSchoolsPage() {
               stacked: "meta",
               stackedLabel: false,
               render: (school) => (
-                <Button
-                  type="button"
-                  variant="surface"
-                  size="compact"
-                  aria-label={`${TRAEGER_HANDOFF_OPEN}: ${school.name}, neuer Tab`}
-                  tooltip={TRAEGER_HANDOFF_OPEN_HINT}
-                  disabled={opening !== null}
-                  onClick={(event) => {
-                    // Die Aktion öffnet die Schul-App, nicht die Schulansicht.
-                    event.stopPropagation();
-                    void open(school);
-                  }}
-                >
-                  {opening === school.id ? (
-                    "Wird geöffnet …"
-                  ) : (
-                    <>
-                      {TRAEGER_HANDOFF_OPEN}
-                      <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                    </>
-                  )}
-                </Button>
+                <TraegerOpenSchoolButton
+                  school={school}
+                  opening={opening}
+                  // Die Aktion öffnet die Schul-App, nicht die Schulansicht.
+                  stopPropagation
+                  onOpen={() => void open(school)}
+                />
               ),
             },
           ]
@@ -143,18 +132,7 @@ export default function TraegerSchoolsPage() {
       }
       statsLoading={loading}
       error={schoolsError}
-      actions={
-        <TraegerListExportMenu
-          download={(format) =>
-            downloadTraegerList("/api/traeger/schools/export", format)
-          }
-          scope={traegerExportScope()}
-          ariaLabel="Schulen herunterladen"
-          fallbackName="schulen"
-          errorObject="die Liste der Schulen"
-          unavailable={schools.length === 0}
-        />
-      }
+      overflowMenu={exportItems}
     >
       <TraegerRequiredDetailsNotice />
       {!canOpen && (

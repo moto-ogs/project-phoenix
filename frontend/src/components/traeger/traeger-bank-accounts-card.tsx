@@ -150,8 +150,8 @@ export function TraegerBankAccountsCard({
           ariaLabel={`Aktionen für die Bankverbindung ${account.label}`}
           items={[
             {
-              label: "Ändern",
-              description: "Öffnet die Bankverbindung zum Ändern.",
+              label: "Bearbeiten",
+              description: "Öffnet die Bankverbindung zum Bearbeiten.",
               icon: <Pencil className="size-4" aria-hidden />,
               onClick: () => setEdit({ kind: "change", account }),
             },

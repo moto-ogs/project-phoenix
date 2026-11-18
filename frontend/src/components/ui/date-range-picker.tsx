@@ -1,6 +1,7 @@
 "use client";
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { Z_LAYER } from "./overlay-styles";
+import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
 import {
   MODAL_SCOPE_SELECTOR,
   OverlayOwnerProvider,
@@ -376,6 +377,11 @@ function RangeCalendar({
   const needsPortalledFocusScope =
     !modalScope && triggerRef.current?.closest(SHEET_SCOPE_SELECTOR) != null;
 
+  // On a phone the panel stands at a fixed screen spot and follows the
+  // installed app's viewport shift; at its trigger it keeps the trigger's
+  // coordinates, which already include any shift.
+  const followsScreen = Boolean(isNarrowViewport) || !geometry;
+
   const panel = (
     <div
       ref={panelRef}
@@ -385,9 +391,9 @@ function RangeCalendar({
       data-range-panel
       // A dialog locks the page scroll; the panel scrolls like `DatePicker`'s.
       {...SCROLL_AREA_PROPS}
-      className={`fixed ${Z_LAYER.popover} moto-popover-surface max-h-[calc(100vh-6rem)] w-max max-w-[calc(100vw-1rem)] overflow-y-auto rounded-xl border sm:max-h-none sm:overflow-visible`}
+      className={`fixed ${Z_LAYER.popover} moto-popover-surface max-h-[calc(100vh-6rem)] w-max max-w-[calc(100vw-1rem)] overflow-y-auto rounded-xl border sm:max-h-none sm:overflow-visible ${followsScreen ? FIXED_LAYER_SHIFT : ""}`}
       style={
-        isNarrowViewport || !geometry
+        followsScreen
           ? {
               ...narrowStyle,
               pointerEvents: "auto",

@@ -313,7 +313,7 @@ function TemplateEditorPage({
     >
       {data && draft && schema ? (
         <>
-          <LoadErrorAlert error={afterSave.error} className="mb-4" />
+          <LoadErrorAlert error={afterSave.error} />
           {!canEdit ? (
             <Alert
               type="info"
@@ -323,8 +323,8 @@ function TemplateEditorPage({
           {/* Zwei Spalten ab xl: links bearbeiten, rechts die Vorschau, die
               beim Scrollen stehen bleibt. Auf schmalen Bildschirmen folgt
               die Vorschau direkt auf das Formular. */}
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:items-start">
-            <div className="flex min-w-0 flex-col gap-6">
+          <div className="compact:gap-4 grid gap-6 max-sm:gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:items-start">
+            <div className="compact:gap-4 flex min-w-0 flex-col gap-6 max-sm:gap-3">
               <SectionCard
                 title="Text der Vorlage"
                 description="Das steht im Brief unter dem Briefkopf. Speichern legt eine neue Version an."
@@ -357,7 +357,7 @@ function TemplateEditorPage({
                 >
                   <FormErrorAlert message={formErrors.error} />
                   <Input
-                    controlSize="touch"
+                    controlSize="compact"
                     id="template-subject"
                     label="Betreff"
                     name="subject"
@@ -369,7 +369,7 @@ function TemplateEditorPage({
                     disabled={!canEdit || saving}
                   />
                   <Input
-                    controlSize="touch"
+                    controlSize="compact"
                     id="template-salutation"
                     label="Anrede"
                     name="salutation"
@@ -521,7 +521,7 @@ function TemplateEditorPage({
                 </div>
               </SectionCard>
             </div>
-            <div className="flex min-w-0 flex-col gap-6">
+            <div className="compact:gap-4 flex min-w-0 flex-col gap-6 max-sm:gap-3">
               <DocumentTemplatePlaceholdersCard
                 placeholders={data.detail.placeholders}
                 onInsert={canEdit ? insertPlaceholder : undefined}

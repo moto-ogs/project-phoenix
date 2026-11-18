@@ -61,6 +61,8 @@ export function DemoEveningRow({
   return (
     <div
       role="note"
+      // Rendered inside the demo banner, whose FIXED_LAYER_SHIFT makes it this
+      // row's containing block: the row moves with the banner already.
       className="fixed inset-x-0 top-12 z-50 flex h-8 items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 text-xs text-gray-900"
     >
       <ClockIcon

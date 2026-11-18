@@ -27,7 +27,7 @@ export function traegerHolidayRegistrationReviewTopic(): HelpTopic {
           "Wähle in der Navigation `Ferienbetreuung`.",
           "Öffne den Ferienzeitraum.",
           "Wähle den Reiter `Anmeldungen`.",
-          "Filtere nach Status, `Schule`, `Woche` oder `Zeitmodell`. Unter `Schule` findest du auch `Feriengäste`.",
+          "Wähle `Filter` und filtere nach `Status`, `Schule`, `Woche` oder `Zeitmodell`. Unter `Schule` findest du auch `Feriengäste`.",
           "Wähle eine Anmeldung, um sie zu öffnen.",
         ],
       },
@@ -54,7 +54,7 @@ export function traegerHolidayRegistrationReviewTopic(): HelpTopic {
         description:
           "moto bestätigt nur Anmeldungen, die keine Angabe mehr brauchen. Die Familie bezahlt dann den Beitrag. Bei offenen Anmeldungen prüfst du zuerst den Grund.",
         steps: [
-          "Filtere nach dem Status `Eingegangen`.",
+          "Wähle `Filter` und unter `Status` `Eingegangen`.",
           "Setze einen Haken bei jeder Anmeldung. Mit dem Haken in der Kopfzeile wählst du alle aus.",
           "Wähle oben `Ausgewählte bestätigen`.",
           "Das Fenster zeigt unter `Wird bestätigt`, welche Anmeldungen moto bestätigt. Darunter steht, welche offen bleiben und warum.",
@@ -129,7 +129,7 @@ export function traegerHolidayRegistrationReviewTopic(): HelpTopic {
         title: "Exportieren",
         steps: [
           "Stelle die Filter ein, zum Beispiel eine Schule.",
-          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
           "Die PDF ist zum Ausdrucken. Sie enthält Kind, Woche, Zeitmodell, Mittagessen und Telefon. Adresse, E-Mail und die Antworten im Formular stehen nur in Excel und CSV.",
         ],
       },
@@ -137,7 +137,7 @@ export function traegerHolidayRegistrationReviewTopic(): HelpTopic {
         title: "Anmeldungen als PDF aufbewahren",
         steps: [
           "Über der Liste steht, wann moto die Anmeldungen löscht.",
-          "Wähle `Herunterladen` und dann `Alle als PDF (ZIP)`. Du bekommst eine ZIP-Datei mit einem PDF je Anmeldung.",
+          "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `Alle als PDF (ZIP)`. Du bekommst eine ZIP-Datei mit einem PDF je Anmeldung.",
           "Hast du Filter eingestellt? Dann heißt der Eintrag `Gefilterte als PDF (ZIP)`. Die ZIP-Datei enthält nur die gefilterten Anmeldungen.",
           "Für eine einzelne Anmeldung öffnest du die Anmeldung. Wähle oben rechts das Menü mit den drei Punkten und unter `Herunterladen` den Eintrag `PDF`.",
           "Speichere die Dateien bei deinem Träger. Für diese Kopien bist du selbst verantwortlich.",

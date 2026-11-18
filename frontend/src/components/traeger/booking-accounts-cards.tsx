@@ -182,11 +182,11 @@ function RevenueRow({
           type="button"
           variant="surface"
           size="compact"
-          aria-label={`Erlöskonto für ${title} ändern`}
+          aria-label={`Erlöskonto für ${title} bearbeiten`}
           tooltip={`Öffnet das Erlöskonto für ${title} zum Bearbeiten.`}
           onClick={() => setDraft(own)}
         >
-          Ändern
+          Bearbeiten
         </Button>
       </ResponsiveRowActions>
     </ResponsiveActionRow>

@@ -11065,7 +11065,7 @@ export const traegerAccessLogTopic =
           description: "Für einen Nachweis, zum Ablegen oder für eine Tabelle.",
           steps: [
             "Stelle die Filter ein.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Öffne rechts neben den Filtern das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "moto lädt eine Datei mit allen Einträgen zu den Filtern herunter.",
           ],
         },
@@ -11141,7 +11141,7 @@ export const traegerAccountsTopic = function traegerAccountsTopic(): HelpTopic {
         steps: [
           "Wähle unten in der Navigation `Einstellungen`.",
           "Wähle `Mitglieder und Rollen`.",
-          "Wähle oben `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Personen und offenen Einladungen.",
+          "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Personen und offenen Einladungen.",
           "Den Verlauf lädst du mit `Herunterladen` beim `Verlauf` herunter.",
         ],
       },
@@ -12611,7 +12611,7 @@ export const traegerCatalogPhasesTopic =
           description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
           steps: [
             "Wähle in der Navigation `Anmeldephasen`.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Datei enthält alle Anmeldephasen mit Leistungszeitraum, Schulen und Stand.",
           ],
         },
@@ -12687,7 +12687,7 @@ export const traegerClosingDaysTopic =
           title: "Schließtag ändern oder löschen",
           steps: [
             "Wähle beim Schließtag die drei Punkte.",
-            "Wähle `Ändern` oder `Löschen`.",
+            "Wähle `Bearbeiten` oder `Löschen`.",
             "Unter `Ferienbetreuung an diesen Tagen` steht, welche Tage wieder geöffnet sind und wie viele Familien eine E-Mail bekommen.",
             "Wähle `Speichern` oder beim Löschen `Ja, löschen` und dann `Endgültig löschen`. Die Eltern bekommen die E-Mail sofort.",
           ],
@@ -12710,7 +12710,7 @@ export const traegerClosingDaysTopic =
           steps: [
             "Wähle in der Navigation `Schließtage`.",
             "Wähle oben das Jahr.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Datei enthält die Schließtage dieses Jahres mit Grund und Schulen.",
           ],
         },
@@ -12822,7 +12822,7 @@ export const traegerDashboardTopic =
         "Wähle dort `Zur Schule`, um die Schule anzusehen.",
         "Lies unter `Zahlen je Schule` die Zahlen jeder Schule.",
         "Wähle eine Schule, um ihre Zahlen und Stammdaten zu sehen.",
-        "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Hast du bei `Auffälligkeiten` eine Schule gewählt, enthält die Datei nur diese Schule.",
+        "Öffne das Drei-Punkte-Menü rechts neben der Suche, bei nur einer Schule rechts neben dem Titel. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Hast du bei `Auffälligkeiten` eine Schule gewählt, enthält die Datei nur diese Schule.",
       ],
       result:
         "Du siehst für jede Schule, wie viele Kinder gerade da sind, wie viele heute krank sind, wie viele Betreuungskräfte angemeldet sind und wie viele Anmeldungen offen sind.",
@@ -12835,13 +12835,13 @@ export const traegerDashboardTopic =
         "`Betreuungsschlüssel` heißt: Eine anwesende Betreuungskraft kommt auf so viele anwesende Kinder. Oben gilt das für alle Schulen zusammen.",
         "`Auffälligkeiten` kennt drei Hinweise: `Zu wenig Personal`, `Viele Krankmeldungen` und `Offene Anmeldungen`. In der Tabelle sind die Zahlen dazu gelb mit einem Warnzeichen.",
         "Mit dem Feld `Alle Schulen` zeigst du nur die Hinweise einer Schule.",
-        "Ab wann eine Schule auffällt, legst du selbst fest. Wähle dazu `Grenzen ändern`. Mehr dazu steht im Artikel `Einstellungen für alle Schulen festlegen`.",
+        "Ab wann eine Schule auffällt, legst du selbst fest. Wähle dazu `Grenzen bearbeiten`. Mehr dazu steht im Artikel `Einstellungen für alle Schulen festlegen`.",
         "`Offene Anmeldungen` zählt die Kinder aus der Online-Anmeldung, über die die Schule noch nicht entschieden hat.",
       ],
       differences: [
         "`Betreuungskräfte` zählt nur, wer sich in der Zeiterfassung angemeldet hat. Homeoffice zählt nicht. Nutzt eine Schule die Zeiterfassung nicht, steht dort 0 und beim Schlüssel `–`.",
         "Ohne das Recht `In OGS wechseln` fehlt die Aktion `Schul-App öffnen`. Die Zahlen siehst du trotzdem.",
-        "Ohne das Recht, Einstellungen zu ändern, steht dort `Grenzen ansehen` statt `Grenzen ändern`.",
+        "Ohne das Recht, Einstellungen zu ändern, steht dort `Grenzen ansehen` statt `Grenzen bearbeiten`.",
         "Steht unter `Auffälligkeiten` „Gerade ist an keiner Schule etwas auffällig.“? Dann erreicht keine Schule deine Grenzen.",
       ],
       related: [
@@ -12890,7 +12890,7 @@ export const traegerDatevExportTopic =
           steps: [
             "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
             "Wähle oben rechts das Menü mit den drei Punkten und dann `Konten und Kostenstellen`.",
-            "Unter `Erlöskonten` wählst du bei `Monatsbeiträge`, `Mensa`, `Ferienbetreuung` oder `Mittagessen in den Ferien` `Ändern`. Trage das Konto ein und wähle `Speichern`. Ein Angebot kann ein eigenes Konto haben.",
+            "Unter `Erlöskonten` wählst du bei `Monatsbeiträge`, `Mensa`, `Ferienbetreuung` oder `Mittagessen in den Ferien` `Bearbeiten`. Trage das Konto ein und wähle `Speichern`. Ein Angebot kann ein eigenes Konto haben.",
             "Ohne eigenes Konto bucht `Mittagessen in den Ferien` auf das Konto der `Ferienbetreuung`. Daneben steht dann `wie Ferienbetreuung`.",
             "Unter `Kostenstellen (KOST1)` steht jede Schule mit zwei Zeilen. Wähle bei `Monatsbeiträge und Mensa` `Neue Kostenstelle`. Wähle den Tag bei `Gilt ab` und trage die `Kostenstelle` ein.",
             "Bucht dein Steuerbüro die Ferienbetreuung einer Schule getrennt? Dann trägst du bei `Ferienbetreuung` dieser Schule eine eigene Kostenstelle ein. Ohne sie bucht eine Ferienwoche auf die Kostenstelle der Schule. Daneben steht dann `wie Monatsbeiträge`.",
@@ -13056,7 +13056,7 @@ export const traegerDocumentTemplatesTopic =
           steps: [
             "Wähle unten in der Navigation `Einstellungen`.",
             "Wähle `Briefkopf und Vorlagen` und dann `Vorlagen`.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Datei zeigt für jedes Dokument, ob es die Standardvorlage oder eine eigene Vorlage nutzt.",
           ],
         },
@@ -13287,7 +13287,7 @@ export const traegerHolidayAllocationTopic =
           title: "Kriterien festlegen",
           steps: [
             "Wähle in der Navigation `Ferienbetreuung`.",
-            "Wähle oben `Kriterien der Platzvergabe`.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle `Kriterien der Platzvergabe`.",
             "Wähle eine Vorlage oder `Eigenes Kriterium`.",
             "Gib den Namen und die `Frage an die Eltern` ein. Wähle bei `Gilt für`, ob die Frage für die Familie oder für jedes Kind gilt.",
             "Bringe die Kriterien mit den Pfeilen in die richtige Reihenfolge. Das oberste Kriterium zählt am meisten.",
@@ -13306,7 +13306,7 @@ export const traegerHolidayAllocationTopic =
           title: "Plätze vergeben",
           steps: [
             "Öffne den Ferienzeitraum und wähle den Reiter `Vergabe`.",
-            "Je Woche stehen die offenen Anmeldungen in der Reihenfolge des Vorschlags. Die Linie zeigt, wo die freien Plätze enden.",
+            "Je Woche stehen die offenen Anmeldungen in der Reihenfolge des Vorschlags. Die Zeile mit „ab hier schlägt moto die Warteliste vor“ zeigt, wo die freien Plätze enden.",
             "Wähle bei einem Kind `Platz geben` oder `Auf die Warteliste`. Weicht das vom Vorschlag ab, schreibe eine `Begründung`.",
             "Oder wähle bei der Woche `Vorschlag übernehmen`. Mit mehreren Wochen gibt es oben `Vorschlag für alle Wochen übernehmen`.",
             "Bestätige im Fenster.",
@@ -13317,7 +13317,7 @@ export const traegerHolidayAllocationTopic =
           description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
           steps: [
             "Öffne den Ferienzeitraum und wähle den Reiter `Vergabe`.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Datei enthält die offenen Anmeldungen im Vorschlag und alle Entscheidungen deines Büros.",
           ],
         },
@@ -13648,7 +13648,7 @@ export const traegerHolidayPeriodTopic =
           description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
           steps: [
             "Wähle in der Navigation `Ferienbetreuung`.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Datei enthält alle Ferienzeiträume mit Anmeldung, Wochen, Schulen und Status.",
           ],
         },
@@ -13725,7 +13725,7 @@ export const traegerHolidayPlacesTopic =
             "Wähle in der Navigation `Ferienbetreuung`.",
             "Öffne den Ferienzeitraum.",
             "Wähle den Reiter `Plätze`.",
-            "Wähle bei der Woche `Plätze ändern`.",
+            "Wähle bei der Woche `Plätze bearbeiten`.",
             "Schalte `Plätze begrenzen` ein und stelle die Zahl ein.",
             "Wähle `Plätze speichern`.",
           ],
@@ -13744,7 +13744,7 @@ export const traegerHolidayPlacesTopic =
           description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
           steps: [
             "Öffne den Ferienzeitraum und wähle den Reiter `Plätze`.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Datei enthält je Woche die Plätze und die Kinder auf der Warteliste.",
           ],
         },
@@ -13816,7 +13816,7 @@ export const traegerHolidayRegistrationReviewTopic =
             "Wähle in der Navigation `Ferienbetreuung`.",
             "Öffne den Ferienzeitraum.",
             "Wähle den Reiter `Anmeldungen`.",
-            "Filtere nach Status, `Schule`, `Woche` oder `Zeitmodell`. Unter `Schule` findest du auch `Feriengäste`.",
+            "Wähle `Filter` und filtere nach `Status`, `Schule`, `Woche` oder `Zeitmodell`. Unter `Schule` findest du auch `Feriengäste`.",
             "Wähle eine Anmeldung, um sie zu öffnen.",
           ],
         },
@@ -13843,7 +13843,7 @@ export const traegerHolidayRegistrationReviewTopic =
           description:
             "moto bestätigt nur Anmeldungen, die keine Angabe mehr brauchen. Die Familie bezahlt dann den Beitrag. Bei offenen Anmeldungen prüfst du zuerst den Grund.",
           steps: [
-            "Filtere nach dem Status `Eingegangen`.",
+            "Wähle `Filter` und unter `Status` `Eingegangen`.",
             "Setze einen Haken bei jeder Anmeldung. Mit dem Haken in der Kopfzeile wählst du alle aus.",
             "Wähle oben `Ausgewählte bestätigen`.",
             "Das Fenster zeigt unter `Wird bestätigt`, welche Anmeldungen moto bestätigt. Darunter steht, welche offen bleiben und warum.",
@@ -13918,7 +13918,7 @@ export const traegerHolidayRegistrationReviewTopic =
           title: "Exportieren",
           steps: [
             "Stelle die Filter ein, zum Beispiel eine Schule.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die PDF ist zum Ausdrucken. Sie enthält Kind, Woche, Zeitmodell, Mittagessen und Telefon. Adresse, E-Mail und die Antworten im Formular stehen nur in Excel und CSV.",
           ],
         },
@@ -13926,7 +13926,7 @@ export const traegerHolidayRegistrationReviewTopic =
           title: "Anmeldungen als PDF aufbewahren",
           steps: [
             "Über der Liste steht, wann moto die Anmeldungen löscht.",
-            "Wähle `Herunterladen` und dann `Alle als PDF (ZIP)`. Du bekommst eine ZIP-Datei mit einem PDF je Anmeldung.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `Alle als PDF (ZIP)`. Du bekommst eine ZIP-Datei mit einem PDF je Anmeldung.",
             "Hast du Filter eingestellt? Dann heißt der Eintrag `Gefilterte als PDF (ZIP)`. Die ZIP-Datei enthält nur die gefilterten Anmeldungen.",
             "Für eine einzelne Anmeldung öffnest du die Anmeldung. Wähle oben rechts das Menü mit den drei Punkten und unter `Herunterladen` den Eintrag `PDF`.",
             "Speichere die Dateien bei deinem Träger. Für diese Kopien bist du selbst verantwortlich.",
@@ -14204,7 +14204,7 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
     result: "moto öffnet die Seite `Schulen` mit allen Schulen deines Trägers.",
     notes: [
       "Lege dir die Adresse als Lesezeichen an.",
-      "Die Liste der Schulen lädst du mit `Herunterladen` als `PDF`, `Excel` oder `CSV` herunter.",
+      "Die Liste der Schulen lädst du über das Drei-Punkte-Menü oben rechts herunter. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
       "Ein neues Passwort gilt auch für dein Konto in der OGS.",
     ],
     differences: [
@@ -14404,6 +14404,7 @@ export const traegerProfileTopic = function traegerProfileTopic(): HelpTopic {
     steps: [
       "Öffne oben rechts das Profil-Menü.",
       "Wähle `Konto`.",
+      "Wähle bei `Name` den Knopf `Bearbeiten`.",
       "Trage bei `Dein Name` deinen Namen ein.",
       "Wähle `Speichern`.",
     ],

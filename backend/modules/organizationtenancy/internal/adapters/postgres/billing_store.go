@@ -41,18 +41,29 @@ SET key_day = ?, updated_at = ?, updated_by_operator_id = ?
 WHERE id = 1
 RETURNING key_day, updated_at, updated_by_operator_id`
 
-// selectSchoolsMissingBillingPeriodSQL takes the key date twice: once to
-// skip schools created after it, once for its month. A school created on the
-// key date itself counts; creation is compared on the Berlin calendar.
-const selectSchoolsMissingBillingPeriodSQL = `SELECT school.id, school.name, organization.name AS organization_name
+// selectSchoolsMissingBillingPeriodSQL lists the schools created by the end
+// of the month and still without a row for it, with their own and their
+// Träger's key day override (#7301). Its parameter is the month's first day,
+// twice. The caller drops a school created after its own key date; creation
+// is compared on the Berlin calendar.
+const selectSchoolsMissingBillingPeriodSQL = `SELECT school.id, school.name, organization.name AS organization_name,
+  (school.created_at AT TIME ZONE 'Europe/Berlin')::date::text AS created_on,
+  school_override.id IS NOT NULL AS school_override, school_override.key_day AS school_key_day,
+  school_override.updated_at AS school_key_day_updated_at,
+  organization_override.id IS NOT NULL AS organization_override, organization_override.key_day AS organization_key_day,
+  organization_override.updated_at AS organization_key_day_updated_at
 FROM platform.schools AS school
 JOIN platform.organizations AS organization ON organization.id = school.organization_id
+LEFT JOIN platform.billing_key_day_overrides AS school_override ON school_override.school_id = school.id
+LEFT JOIN platform.billing_key_day_overrides AS organization_override
+  ON organization_override.organization_id = school.organization_id
 WHERE school.deleted_at IS NULL
-  AND (school.created_at AT TIME ZONE 'Europe/Berlin')::date <= ?::date
+  AND (school.created_at AT TIME ZONE 'Europe/Berlin')::date
+    < (date_trunc('month', ?::date) + interval '1 month')::date
   AND NOT EXISTS (
     SELECT 1 FROM platform.live_billing_key_date_counts AS captured
     WHERE captured.school_id = school.id
-      AND captured.period = date_trunc('month', ?::date)::date
+      AND captured.period = ?::date
   )
 ORDER BY school.id`
 
@@ -139,25 +150,51 @@ func (s *BillingStore) UpdateBillingKeyDay(ctx context.Context, keyDay int, oper
 }
 
 // SchoolsMissingBillingPeriod lists the schools still without a row for the
-// month of keyDate.
-func (s *BillingStore) SchoolsMissingBillingPeriod(ctx context.Context, keyDate string) ([]domain.BillingSchool, error) {
+// month that starts on period, with the levels of their key day.
+func (s *BillingStore) SchoolsMissingBillingPeriod(ctx context.Context, period string) ([]domain.BillingSchool, error) {
 	db, err := s.database(ctx)
 	if err != nil {
 		return nil, err
 	}
-	var rows []struct {
-		ID               int64  `bun:"id"`
-		Name             string `bun:"name"`
-		OrganizationName string `bun:"organization_name"`
-	}
-	if err := db.NewRaw(selectSchoolsMissingBillingPeriodSQL, keyDate, keyDate).Scan(ctx, &rows); err != nil {
+	var rows []billingSchoolRow
+	if err := db.NewRaw(selectSchoolsMissingBillingPeriodSQL, period, period).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("organization tenancy postgres: list schools missing billing period: %w", err)
 	}
 	schools := make([]domain.BillingSchool, 0, len(rows))
 	for _, row := range rows {
-		schools = append(schools, domain.BillingSchool{ID: row.ID, Name: row.Name, OrganizationName: row.OrganizationName})
+		schools = append(schools, row.toDomain())
 	}
 	return schools, nil
+}
+
+// billingSchoolRow is one school of selectSchoolsMissingBillingPeriodSQL.
+type billingSchoolRow struct {
+	ID                          int64      `bun:"id"`
+	Name                        string     `bun:"name"`
+	OrganizationName            string     `bun:"organization_name"`
+	CreatedOn                   string     `bun:"created_on"`
+	SchoolOverride              bool       `bun:"school_override"`
+	SchoolKeyDay                *int       `bun:"school_key_day"`
+	SchoolKeyDayUpdatedAt       *time.Time `bun:"school_key_day_updated_at"`
+	OrganizationOverride        bool       `bun:"organization_override"`
+	OrganizationKeyDay          *int       `bun:"organization_key_day"`
+	OrganizationKeyDayUpdatedAt *time.Time `bun:"organization_key_day_updated_at"`
+}
+
+func (r billingSchoolRow) toDomain() domain.BillingSchool {
+	return domain.BillingSchool{
+		ID: r.ID, Name: r.Name, OrganizationName: r.OrganizationName, CreatedOn: r.CreatedOn,
+		School:       keyDayLevel(r.SchoolOverride, r.SchoolKeyDay, r.SchoolKeyDayUpdatedAt),
+		Organization: keyDayLevel(r.OrganizationOverride, r.OrganizationKeyDay, r.OrganizationKeyDayUpdatedAt),
+	}
+}
+
+func keyDayLevel(present bool, day *int, updatedAt *time.Time) domain.BillingKeyDayLevel {
+	level := domain.BillingKeyDayLevel{Present: present, Day: day}
+	if updatedAt != nil {
+		level.UpdatedAt = *updatedAt
+	}
+	return level
 }
 
 // InsertBillingKeyDateCounts writes one row per school and month. A row that
@@ -230,4 +267,141 @@ func (s *BillingStore) ListBillingKeyDateCounts(ctx context.Context) ([]domain.B
 		return nil, fmt.Errorf("organization tenancy postgres: list billing key-date counts: %w", err)
 	}
 	return billingKeyDateCounts(rows), nil
+}
+
+// selectBillingKeyDayOverridesSQL lists the overrides that set a day, with
+// the names the operator recognises: a Träger by its name, a school by its
+// name and its Träger's. A deleted Träger or school is no longer listed.
+const selectBillingKeyDayOverridesSQL = `SELECT override.organization_id, override.school_id,
+  COALESCE(school.organization_id, organization.id) AS traeger_id,
+  COALESCE(school.name, organization.name) AS name,
+  COALESCE(school_organization.name, '') AS organization_name,
+  override.key_day, override.updated_at, override.updated_by_operator_id
+FROM platform.billing_key_day_overrides AS override
+LEFT JOIN platform.organizations AS organization ON organization.id = override.organization_id
+LEFT JOIN platform.schools AS school ON school.id = override.school_id
+LEFT JOIN platform.organizations AS school_organization ON school_organization.id = school.organization_id
+WHERE override.key_day IS NOT NULL
+  AND COALESCE(school.deleted_at, organization.deleted_at) IS NULL
+  AND (organization.id IS NOT NULL OR school.id IS NOT NULL)
+ORDER BY COALESCE(school_organization.name, organization.name), override.school_id NULLS FIRST, name, override.id`
+
+// upsertOrganizationBillingKeyDaySQL sets the day of a live Träger. A day
+// equal to the stored one changes nothing, so its updated_at stays and no
+// month is skipped; a reset row (NULL) always takes the new day. Parameters: Träger, day, time, operator, Träger.
+const upsertOrganizationBillingKeyDaySQL = `INSERT INTO platform.billing_key_day_overrides AS override
+  (organization_id, key_day, updated_at, updated_by_operator_id)
+SELECT ?, ?, ?, ?
+WHERE EXISTS (SELECT 1 FROM platform.organizations WHERE id = ? AND deleted_at IS NULL)
+ON CONFLICT ON CONSTRAINT uq_billing_key_day_overrides_organization DO UPDATE
+  SET key_day = EXCLUDED.key_day, updated_at = EXCLUDED.updated_at,
+      updated_by_operator_id = EXCLUDED.updated_by_operator_id
+  WHERE COALESCE(override.key_day, 0) <> EXCLUDED.key_day
+RETURNING id`
+
+// upsertSchoolBillingKeyDaySQL is upsertOrganizationBillingKeyDaySQL for a
+// live school.
+const upsertSchoolBillingKeyDaySQL = `INSERT INTO platform.billing_key_day_overrides AS override
+  (school_id, key_day, updated_at, updated_by_operator_id)
+SELECT ?, ?, ?, ?
+WHERE EXISTS (SELECT 1 FROM platform.schools WHERE id = ? AND deleted_at IS NULL)
+ON CONFLICT ON CONSTRAINT uq_billing_key_day_overrides_school DO UPDATE
+  SET key_day = EXCLUDED.key_day, updated_at = EXCLUDED.updated_at,
+      updated_by_operator_id = EXCLUDED.updated_by_operator_id
+  WHERE COALESCE(override.key_day, 0) <> EXCLUDED.key_day
+RETURNING id`
+
+// resetOrganizationBillingKeyDaySQL hands a live Träger back to the day of
+// every school. Only a set day is reset: a Träger without one keeps no row,
+// so nothing records a change that did not happen. It answers whether the
+// Träger is live.
+const resetOrganizationBillingKeyDaySQL = `WITH reset AS (
+  UPDATE platform.billing_key_day_overrides
+  SET key_day = NULL, updated_at = ?, updated_by_operator_id = ?
+  WHERE organization_id = ? AND key_day IS NOT NULL
+)
+SELECT EXISTS (SELECT 1 FROM platform.organizations WHERE id = ? AND deleted_at IS NULL)`
+
+// resetSchoolBillingKeyDaySQL hands a live school back to its Träger's day.
+const resetSchoolBillingKeyDaySQL = `WITH reset AS (
+  UPDATE platform.billing_key_day_overrides
+  SET key_day = NULL, updated_at = ?, updated_by_operator_id = ?
+  WHERE school_id = ? AND key_day IS NOT NULL
+)
+SELECT EXISTS (SELECT 1 FROM platform.schools WHERE id = ? AND deleted_at IS NULL)`
+
+const selectLiveOrganizationSQL = `SELECT EXISTS (SELECT 1 FROM platform.organizations WHERE id = ? AND deleted_at IS NULL)`
+
+const selectLiveSchoolSQL = `SELECT EXISTS (SELECT 1 FROM platform.schools WHERE id = ? AND deleted_at IS NULL)`
+
+type billingKeyDayOverrideRow struct {
+	OrganizationID      *int64    `bun:"organization_id"`
+	SchoolID            *int64    `bun:"school_id"`
+	TraegerID           int64     `bun:"traeger_id"`
+	Name                string    `bun:"name"`
+	OrganizationName    string    `bun:"organization_name"`
+	KeyDay              *int      `bun:"key_day"`
+	UpdatedAt           time.Time `bun:"updated_at"`
+	UpdatedByOperatorID *int64    `bun:"updated_by_operator_id"`
+}
+
+// ListBillingKeyDayOverrides reads every Träger and school with its own day.
+func (s *BillingStore) ListBillingKeyDayOverrides(ctx context.Context) ([]domain.BillingKeyDayOverride, error) {
+	db, err := s.database(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var rows []billingKeyDayOverrideRow
+	if err := db.NewRaw(selectBillingKeyDayOverridesSQL).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("organization tenancy postgres: list billing key day overrides: %w", err)
+	}
+	overrides := make([]domain.BillingKeyDayOverride, 0, len(rows))
+	for _, row := range rows {
+		overrides = append(overrides, domain.BillingKeyDayOverride(row))
+	}
+	return overrides, nil
+}
+
+// SetBillingKeyDayOverride sets (day not nil) or resets (day nil) the own
+// key day of a live Träger or school; target names which. It reports whether
+// the Träger or school is live. Every statement is its own constant, so the
+// architecture evaluator reads the tables it touches.
+func (s *BillingStore) SetBillingKeyDayOverride(ctx context.Context, target domain.BillingKeyDayTarget, day *int, operatorID int64) (bool, error) {
+	db, err := s.database(ctx)
+	if err != nil {
+		return false, err
+	}
+	now := s.now()
+	var live bool
+	var ids []int64
+	switch {
+	case day == nil && target.School:
+		err = db.NewRaw(resetSchoolBillingKeyDaySQL, now, operatorID, target.ID, target.ID).Scan(ctx, &live)
+		return live, wrapKeyDayError("reset", err)
+	case day == nil:
+		err = db.NewRaw(resetOrganizationBillingKeyDaySQL, now, operatorID, target.ID, target.ID).Scan(ctx, &live)
+		return live, wrapKeyDayError("reset", err)
+	case target.School:
+		err = db.NewRaw(upsertSchoolBillingKeyDaySQL, target.ID, *day, now, operatorID, target.ID).Scan(ctx, &ids)
+	default:
+		err = db.NewRaw(upsertOrganizationBillingKeyDaySQL, target.ID, *day, now, operatorID, target.ID).Scan(ctx, &ids)
+	}
+	if err != nil || len(ids) > 0 {
+		return err == nil, wrapKeyDayError("set", err)
+	}
+	// No row came back: the Träger or school is not live, or the day was
+	// already set. Only the first is a refusal.
+	if target.School {
+		err = db.NewRaw(selectLiveSchoolSQL, target.ID).Scan(ctx, &live)
+	} else {
+		err = db.NewRaw(selectLiveOrganizationSQL, target.ID).Scan(ctx, &live)
+	}
+	return live, wrapKeyDayError("check target of", err)
+}
+
+func wrapKeyDayError(action string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("organization tenancy postgres: %s billing key day: %w", action, err)
 }

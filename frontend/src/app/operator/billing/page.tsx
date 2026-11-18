@@ -1,28 +1,23 @@
 "use client";
 
-import { operatorBillingKeys } from "~/lib/swr/portal-keys";
-import { Suspense, useMemo, useRef, useState } from "react";
+import {
+  operatorBillingKeys,
+  operatorProvisioningKeys,
+} from "~/lib/swr/portal-keys";
+import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
+import { Suspense, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 // eslint-disable-next-line no-restricted-imports -- operator pages are not tenant-scoped
 import { useSWRAuth } from "~/lib/swr";
-import {
-  FormErrorAlert,
-  LoadErrorAlert,
-} from "~/components/ui/form-error-alert";
-import { Button } from "~/components/ui/button";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { BillingKeyDays } from "~/components/operator/billing-key-days";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
-import { DataField, DataGrid } from "~/components/ui/data-field";
-import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { SectionCard } from "~/components/ui/section-card";
-import { StatCard } from "~/components/ui/stat-card";
-import {
-  useApiErrorDisplay,
-  useApiFormError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { StatusBadge } from "~/components/ui/status-badge";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import {
@@ -34,26 +29,15 @@ import {
 } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import {
-  BILLING_KEY_DAY_MAX,
-  BILLING_KEY_DAY_MIN,
   billingMonth,
   operatorBillingService,
   type BillingKeyDateCount,
-  type BillingKeyDay,
 } from "~/lib/operator/billing-api";
 
 const logger = createLogger({ component: "OperatorBillingPage" });
 
 const KEY_DAY_SWR_KEY = operatorBillingKeys.keyDay();
 const COUNTS_SWR_KEY = operatorBillingKeys.counts();
-
-const KEY_DAY_OPTIONS = Array.from(
-  { length: BILLING_KEY_DAY_MAX - BILLING_KEY_DAY_MIN + 1 },
-  (_, index) => {
-    const day = String(BILLING_KEY_DAY_MIN + index);
-    return { value: day, label: `${day}.` };
-  },
-);
 
 /** "September 2026" for a period (YYYY-MM-01). */
 function monthLabel(period: string): string {
@@ -72,34 +56,66 @@ function recordedLabel(row: BillingKeyDateCount): string {
   return `${formatBerlinDate(row.recordedAt)}, ${berlinClockFromISO(row.recordedAt)} Uhr`;
 }
 
-const COLUMNS: DataTableColumn<BillingKeyDateCount>[] = [
+/**
+ * A row of the table: a captured school, or for the running month a school
+ * still without figures, with the key date its day gives this month (#7301).
+ */
+type CountRow =
+  | { readonly kind: "captured"; readonly count: BillingKeyDateCount }
+  | {
+      readonly kind: "pending";
+      readonly schoolId: string;
+      readonly schoolName: string;
+      readonly organizationName: string;
+      readonly keyDate: string;
+    };
+
+const rowSchool = (row: CountRow) =>
+  row.kind === "captured" ? row.count.schoolName : row.schoolName;
+const rowOrganization = (row: CountRow) =>
+  row.kind === "captured" ? row.count.organizationName : row.organizationName;
+const rowKeyDate = (row: CountRow) =>
+  row.kind === "captured" ? row.count.keyDate : row.keyDate;
+
+const COLUMNS: DataTableColumn<CountRow>[] = [
   {
     key: "school",
     header: "Schule",
-    render: (row) => row.schoolName,
-    sortValue: (row) => row.schoolName.toLowerCase(),
+    render: rowSchool,
+    sortValue: (row) => rowSchool(row).toLowerCase(),
     stacked: "title",
   },
   {
     key: "organization",
     header: "Träger",
-    render: (row) => row.organizationName,
-    sortValue: (row) => row.organizationName.toLowerCase(),
+    render: rowOrganization,
+    sortValue: (row) => rowOrganization(row).toLowerCase(),
     stacked: "meta",
+  },
+  {
+    key: "keyDate",
+    header: "Stichtag",
+    render: (row) =>
+      rowKeyDate(row) ? formatDate(rowKeyDate(row)) : "unbekannt",
+    sortValue: rowKeyDate,
+    stacked: "field",
   },
   {
     key: "students",
     header: "Aktive Kinder",
-    render: (row) => row.activeStudents,
-    sortValue: (row) => row.activeStudents,
+    render: (row) => (row.kind === "captured" ? row.count.activeStudents : "–"),
+    sortValue: (row) =>
+      row.kind === "captured" ? row.count.activeStudents : -1,
     align: "right",
     stacked: "field",
   },
   {
     key: "terminals",
     header: "Aktive Terminals",
-    render: (row) => row.activeTerminals,
-    sortValue: (row) => row.activeTerminals,
+    render: (row) =>
+      row.kind === "captured" ? row.count.activeTerminals : "–",
+    sortValue: (row) =>
+      row.kind === "captured" ? row.count.activeTerminals : -1,
     align: "right",
     stacked: "field",
   },
@@ -107,132 +123,47 @@ const COLUMNS: DataTableColumn<BillingKeyDateCount>[] = [
     key: "recorded",
     header: "Erfasst am",
     render: (row) =>
-      capturedLate(row) ? (
+      row.kind === "pending" ? (
+        row.keyDate !== "" && row.keyDate < berlinTodayISO() ? (
+          <StatusBadge
+            tone="warning"
+            label="Zahlen fehlen"
+            title="Der Stichtag ist vorbei und moto hat noch keine Zahlen. Lief die Erfassung nicht, holt moto sie in diesem Monat nach."
+          />
+        ) : (
+          <span className="text-gray-500">noch nicht erfasst</span>
+        )
+      ) : capturedLate(row.count) ? (
         <span title="Die Zahlen wurden nach dem Stichtag erfasst, weil die Erfassung am Stichtag nicht lief.">
-          {recordedLabel(row)} · nachträglich
+          {recordedLabel(row.count)} · nachträglich
         </span>
       ) : (
-        recordedLabel(row)
+        recordedLabel(row.count)
       ),
-    sortValue: (row) => row.recordedAt,
+    sortValue: (row) => (row.kind === "captured" ? row.count.recordedAt : ""),
     stacked: "field",
   },
 ];
 
-function KeyDaySection({
-  keyDay,
-  loading,
-  onSaved,
-}: Readonly<{
-  keyDay: BillingKeyDay | undefined;
-  loading: boolean;
-  onSaved: (keyDay: BillingKeyDay) => void;
-}>) {
-  const { success: toastSuccess } = useToast();
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [saving, setSaving] = useState(false);
-  const formRef = useRef<HTMLDivElement>(null);
-  const saveErrors = useApiFormError(formRef);
-
-  const startEditing = () => {
-    setDraft(String(keyDay?.keyDay ?? ""));
-    saveErrors.clear();
-    setEditing(true);
-  };
-
-  const save = async () => {
-    setSaving(true);
-    saveErrors.clear();
-    try {
-      const updated = await operatorBillingService.updateKeyDay(Number(draft));
-      onSaved(updated);
-      setEditing(false);
-      toastSuccess(`Stichtag ist jetzt der ${updated.keyDay}. des Monats.`);
-    } catch (saveError) {
-      logger.warn("billing_key_day_update_failed", {
-        error: saveError instanceof Error ? saveError.message : "unknown",
-      });
-      void saveErrors.show(saveError, { object: "die Änderung des Stichtags" });
-    } finally {
-      setSaving(false);
-    }
-  };
-
+/** How moto counts, for the info next to the title: read to learn the page. */
+function CountingRules() {
   return (
-    <SectionCard
-      title="Stichtag"
-      description="Am Stichtag hält moto für jede Schule fest, wie viele Kinder und Terminals aktiv sind. Diese Zahlen ändern sich danach nicht mehr."
-      action={
-        editing || !keyDay ? undefined : (
-          <Button
-            type="button"
-            variant="outline"
-            size="md"
-            onClick={startEditing}
-          >
-            Ändern
-          </Button>
-        )
-      }
-    >
-      {editing ? (
-        <div ref={formRef} className="space-y-4">
-          <FormErrorAlert message={saveErrors.error} />
-          <div className="max-w-xs">
-            <CustomSelect
-              id="billing-key-day"
-              name="key_day"
-              label="Tag im Monat"
-              hint="Gilt ab dem nächsten Stichtag. Schon erfasste Monate bleiben, wie sie sind. Höchstens der 28., damit jeder Monat den Tag hat."
-              error={saveErrors.fieldError("key_day")}
-              value={draft}
-              options={KEY_DAY_OPTIONS}
-              onChange={setDraft}
-            />
-          </div>
-          <EditActions
-            onCancel={() => setEditing(false)}
-            onSave={() => void save()}
-            saving={saving}
-            disabled={draft === "" || draft === String(keyDay?.keyDay)}
-          />
-        </div>
-      ) : (
-        <DataGrid>
-          <DataField label="Stichtag">
-            {loading || !keyDay ? "–" : `Jeden Monat am ${keyDay.keyDay}.`}
-          </DataField>
-          <DataField label="Nächster Stichtag">
-            {loading || !keyDay ? "–" : formatDate(keyDay.nextKeyDate)}
-          </DataField>
-        </DataGrid>
-      )}
-    </SectionCard>
-  );
-}
-
-function CountingRulesSection() {
-  return (
-    <SectionCard
-      title="So wird gezählt"
-      description="Maßgeblich ist der Stand am Stichtag ab 6 Uhr."
-    >
-      <DataGrid>
-        <DataField label="Aktive Kinder">
-          Kinder mit dem Status „aktiv“. Ein sofort aktiviertes Kind zählt auch
-          vor dem geplanten Betreuungsbeginn. Nicht gezählt werden Kinder mit
-          dem Status „ausstehend“, mit beendeter Betreuung, nach dem Schulabgang
-          und gelöschte Kinder.
-        </DataField>
-        <DataField label="Aktive Terminals">
-          Physische Geräte mit dem Status „aktiv“. Auch offline Geräte zählen.
-          Nicht gezählt werden inaktive Geräte, Geräte in Wartung und die
-          Erfassung im Browser. Ein umgezogenes Gerät zählt nur bei der neuen
-          Schule.
-        </DataField>
-      </DataGrid>
-    </SectionCard>
+    <div className="space-y-2">
+      <p>
+        moto hält am Stichtag ab 6 Uhr fest, wie viele Kinder und Terminals jede
+        Schule aktiv hat. Die Zahlen ändern sich danach nicht mehr.
+      </p>
+      <p>
+        <strong>Aktive Kinder:</strong> Status „aktiv“. Ein sofort aktiviertes
+        Kind zählt auch vor dem Betreuungsbeginn. Ausstehende, beendete,
+        abgegangene und gelöschte Kinder zählen nicht.
+      </p>
+      <p>
+        <strong>Aktive Terminals:</strong> Geräte mit dem Status „aktiv“. Auch
+        offline Geräte zählen, Geräte in Wartung und die Erfassung im Browser
+        nicht.
+      </p>
+    </div>
   );
 }
 
@@ -254,7 +185,7 @@ function OperatorBillingPageContent() {
   );
   const keyDayLoadError = useSwrLoadError(
     keyDayError,
-    "die Einstellung des Stichtags",
+    "die Liste der Stichtage",
     () => void mutateKeyDay(),
   );
   const {
@@ -314,94 +245,180 @@ function OperatorBillingPageContent() {
 
   const hasCounts = periods.length > 0;
 
+  // The schools that already have figures for the running month: a new key
+  // day that is already reached this month skips the others (#7301).
+  const currentPeriod = `${berlinTodayISO().slice(0, 8)}01`;
+  const capturedThisMonth = useMemo(
+    () =>
+      counts
+        ? new Set(
+            counts
+              .filter((row) => row.period === currentPeriod)
+              .map((row) => row.schoolId),
+          )
+        : undefined,
+    [counts, currentPeriod],
+  );
+
+  // The running month also lists the schools still without figures, with
+  // the key date their own, their Träger's or the standard day gives.
+  const showsCurrentMonth = period === currentPeriod;
+  const schools = useSWRAuth(
+    isAuthenticated && showsCurrentMonth
+      ? operatorProvisioningKeys.schools()
+      : null,
+    () => operatorProvisioningService.listSchools(),
+    { revalidateOnFocus: false },
+  );
+  const organizations = useSWRAuth(
+    isAuthenticated && showsCurrentMonth
+      ? operatorProvisioningKeys.organizations()
+      : null,
+    () => operatorProvisioningService.listOrganizations(),
+    { revalidateOnFocus: false },
+  );
+  const pending = useMemo<CountRow[]>(() => {
+    if (!showsCurrentMonth || !schools.data || !organizations.data) {
+      return [];
+    }
+    const captured = new Set(rows.map((row) => row.schoolId));
+    const names = new Map(organizations.data.map((org) => [org.id, org.name]));
+    const own = (scope: string, id: string) =>
+      keyDay?.overrides.find(
+        (override) => override.scope === scope && override.id === id,
+      )?.keyDay;
+    return schools.data
+      .filter((school) => school.deletedAt == null && !captured.has(school.id))
+      .map((school) => {
+        // Without the key days (they failed to load) the school stays
+        // listed, its key date unknown.
+        const day =
+          own("school", school.id) ??
+          own("organization", school.organizationId) ??
+          keyDay?.keyDay;
+        return {
+          kind: "pending" as const,
+          schoolId: school.id,
+          schoolName: school.name,
+          organizationName: names.get(school.organizationId) ?? "",
+          keyDate: day
+            ? `${currentPeriod.slice(0, 8)}${String(day).padStart(2, "0")}`
+            : "",
+        };
+      });
+  }, [
+    showsCurrentMonth,
+    keyDay,
+    schools.data,
+    organizations.data,
+    rows,
+    currentPeriod,
+  ]);
+  const tableRows = useMemo<CountRow[]>(
+    () => [
+      ...rows.map((count) => ({ kind: "captured" as const, count })),
+      ...pending,
+    ],
+    [rows, pending],
+  );
+
+  const monthName = period ? monthLabel(period) : "";
+  const overflowMenu = hasCounts
+    ? [
+        { kind: "header" as const, label: "Herunterladen" },
+        {
+          label: `${monthName} als CSV`,
+          description: "Alle Schulen des gewählten Monats.",
+          disabled: downloading !== null,
+          onClick: () => void download("month"),
+        },
+        {
+          label: "Alle Monate als CSV",
+          description: "Jeder erfasste Monat, für die Rechnungsprüfung.",
+          disabled: downloading !== null,
+          onClick: () => void download("all"),
+        },
+      ]
+    : undefined;
+
   return (
-    <TenantPage title="Stichtagszahlen">
-      <LoadErrorAlert error={keyDayLoadError} />
-
-      <KeyDaySection
-        keyDay={keyDay}
-        loading={keyDayLoading}
-        onSaved={(updated) => void mutateKeyDay(updated, false)}
-      />
-
+    <TenantPage
+      title="Stichtagszahlen"
+      info={<CountingRules />}
+      statsLoading={countsLoading}
+      stats={
+        hasCounts ? (
+          <TenantPageStats
+            items={[
+              pending.length > 0
+                ? {
+                    value: `${rows.length} von ${tableRows.length}`,
+                    label: "Schulen erfasst",
+                  }
+                : {
+                    value: rows.length,
+                    label: rows.length === 1 ? "Schule" : "Schulen",
+                  },
+              { value: totalStudents, label: "aktive Kinder" },
+              { value: totalTerminals, label: "aktive Terminals" },
+            ]}
+          />
+        ) : undefined
+      }
+      overflowMenu={overflowMenu}
+    >
       <SectionCard
-        title="Stichtagszahlen"
-        description="Je Monat und Schule, so wie moto sie am Stichtag erfasst hat."
+        title="Erfasste Zahlen"
+        description={
+          pending.length > 0
+            ? "Je Schule, so wie moto sie am Stichtag erfasst hat. Schulen ohne Zahlen stehen mit ihrem Stichtag dabei."
+            : "Je Schule, so wie moto sie am Stichtag erfasst hat."
+        }
         action={
           hasCounts ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <CustomSelect
-                ariaLabel="Monat"
-                value={period ?? ""}
-                options={periods.map((value) => ({
-                  value,
-                  label: monthLabel(value),
-                }))}
-                onChange={setChosenPeriod}
-                className="min-w-44"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                disabled={downloading !== null}
-                onClick={() => void download("month")}
-              >
-                {downloading === "month" ? "Erstellt…" : "Monat als CSV"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                disabled={downloading !== null}
-                onClick={() => void download("all")}
-              >
-                {downloading === "all" ? "Erstellt…" : "Alle Monate als CSV"}
-              </Button>
-            </div>
+            <CustomSelect
+              ariaLabel="Monat"
+              value={period ?? ""}
+              options={periods.map((value) => ({
+                value,
+                label: monthLabel(value),
+              }))}
+              onChange={setChosenPeriod}
+              className="min-w-44"
+            />
           ) : undefined
         }
       >
         {countsError ? (
-          <LoadErrorAlert error={countsLoadError} />
+          <LoadErrorAlert error={countsLoadError} actionLayout="responsive" />
         ) : !countsLoading && !hasCounts ? (
           <EmptyState
             title="Noch keine Stichtagszahlen"
             description="moto erfasst die Zahlen am Stichtag ab 6 Uhr. Fällt die Erfassung am Stichtag aus, holt moto sie im selben Monat nach."
           />
         ) : (
-          <div className="space-y-4">
-            {period && (
-              <p className="text-sm text-gray-600">
-                Stichtag {rows[0] ? formatDate(rows[0].keyDate) : "–"}
-              </p>
-            )}
-            <div className="grid grid-cols-3 gap-3">
-              <StatCard variant="tile" label="Schulen" value={rows.length} />
-              <StatCard
-                variant="tile"
-                label="Aktive Kinder"
-                value={totalStudents}
-              />
-              <StatCard
-                variant="tile"
-                label="Aktive Terminals"
-                value={totalTerminals}
-              />
-            </div>
-            <DataTable
-              columns={COLUMNS}
-              rows={rows}
-              getRowKey={(row) => `${row.period}-${row.schoolId}`}
-              isLoading={countsLoading}
-              defaultSortKey="organization"
-              stackedOnMobile
-            />
-          </div>
+          <DataTable
+            columns={COLUMNS}
+            rows={tableRows}
+            getRowKey={(row) =>
+              row.kind === "captured"
+                ? `${row.count.period}-${row.count.schoolId}`
+                : `pending-${row.schoolId}`
+            }
+            isLoading={countsLoading}
+            defaultSortKey="organization"
+            stackedOnMobile
+          />
         )}
       </SectionCard>
 
-      <CountingRulesSection />
+      <BillingKeyDays
+        keyDay={keyDay}
+        loading={keyDayLoading}
+        loadError={keyDayLoadError}
+        capturedThisMonth={capturedThisMonth}
+        onChanged={(updated) => void mutateKeyDay(updated, false)}
+      />
     </TenantPage>
   );
 }

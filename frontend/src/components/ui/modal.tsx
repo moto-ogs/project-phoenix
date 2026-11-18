@@ -24,6 +24,7 @@ import { useBusyFocus } from "./hooks/useBusyFocus";
 import { InOverlayContext } from "./in-overlay";
 import { ModalCancelButton, ModalFrameContext } from "./modal-frame";
 import { useScrollRegion } from "./hooks/useScrollRegion";
+import { FIXED_LAYER_SHIFT_INSET } from "./hooks/useFixedLayersFollowViewport";
 import { MODAL_CLOSE_DELAY_MS, MODAL_MOTION_STYLE } from "./motion";
 
 const DEFAULT_CLOSE_LABEL = "Modal schließen";
@@ -348,7 +349,7 @@ export function Modal({
       >
         <div
           {...MODAL_SCOPE_PROPS}
-          className={`fixed inset-0 ${Z_LAYER.modal} ${suspended ? "hidden" : "flex"} justify-center ${
+          className={`fixed inset-0 ${Z_LAYER.modal} ${FIXED_LAYER_SHIFT_INSET} ${suspended ? "hidden" : "flex"} justify-center ${
             mobileSheet ? "items-end sm:items-center" : "items-center"
           }`}
           aria-hidden={suspended || undefined}
@@ -358,11 +359,12 @@ export function Modal({
           // is portaled to body and inherits `none`, leaving inputs unclickable.
           style={{
             ...MODAL_MOTION_STYLE,
+            // top/bottom come from FIXED_LAYER_SHIFT_INSET: it moves the
+            // dialog with the installed app's viewport shift without becoming
+            // the containing block of the date pickers portaled in here.
             position: "fixed",
-            top: 0,
             left: 0,
             right: 0,
-            bottom: 0,
             pointerEvents: "auto",
           }}
         >

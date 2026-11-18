@@ -10,6 +10,7 @@ import { BadgeCheck, CircleHelp } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "~/components/ui/button";
 import { IconTile } from "~/components/ui/icon-tile";
+import { ListGroupHeader } from "~/components/ui/list-group-header";
 import NavigationLink from "~/components/ui/navigation-link";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import {
@@ -32,13 +33,17 @@ import {
   allocationChips,
   capacityBoundary,
   countLabel,
-  criterionTone,
+  criterionRankLabel,
   freePlacesText,
 } from "./holiday-allocation-model";
 import { HOLIDAY_PENDING_TONE } from "./holiday-placement";
 import { formatHolidayWeek } from "./holiday-registration-format";
 
-/** The criteria of one entry: met in its priority colour, open as „ungeklärt“. */
+/**
+ * The criteria of one entry: met as a neutral chip with its rank number,
+ * open as „ungeklärt“. The number ties the chip to the criterion; colour
+ * means status only (#7411).
+ */
 function AllocationCriteriaChips({
   entry,
   criteria,
@@ -62,19 +67,22 @@ function AllocationCriteriaChips({
               tone="outline"
               size="xs"
               wrap
-              className="[overflow-wrap:anywhere]"
+              className="wrap-anywhere"
               icon={CircleHelp}
-              label={`${chip.criterion.position}. ${chip.criterion.name}: ungeklärt`}
+              label={`${criterionRankLabel(chip.criterion.position, chip.criterion.name)}: ungeklärt`}
               title="Keine Angabe. Zählt erst, wenn das Büro es geprüft hat."
             />
           ) : (
             <StatusBadge
-              tone={criterionTone(chip.criterion.position)}
+              tone="gray"
               size="xs"
               wrap
-              className="[overflow-wrap:anywhere]"
+              className="wrap-anywhere"
               icon={chip.checkedByOffice ? BadgeCheck : undefined}
-              label={`${chip.criterion.position}. ${chip.criterion.name}`}
+              label={criterionRankLabel(
+                chip.criterion.position,
+                chip.criterion.name,
+              )}
               title={
                 chip.checkedByOffice
                   ? "Vom Büro geprüft"
@@ -171,17 +179,21 @@ function AllocationRow({
   );
 }
 
-/** The line in the list where the free places end. */
+/**
+ * Where the free places end: the head of the rows moto proposes for the
+ * waiting list, as a group head of the list (#7411).
+ */
 function CapacityLine({ free }: Readonly<{ free: number | null }>) {
   return (
-    <li className="flex items-center gap-3 py-2 sm:col-span-2">
-      <span className="h-px flex-1 bg-gray-300" aria-hidden="true" />
-      <span className="text-center text-xs font-medium text-gray-600">
-        {free === null || free <= 0
-          ? "Ab hier schlägt moto die Warteliste vor"
-          : `${countLabel(free, "freier Platz", "freie Plätze")} oben · ab hier schlägt moto die Warteliste vor`}
-      </span>
-      <span className="h-px flex-1 bg-gray-300" aria-hidden="true" />
+    <li className="py-2 sm:col-span-2">
+      <ListGroupHeader
+        as="h3"
+        title={
+          free === null || free <= 0
+            ? "Ab hier schlägt moto die Warteliste vor"
+            : `${countLabel(free, "freier Platz", "freie Plätze")} oben · ab hier schlägt moto die Warteliste vor`
+        }
+      />
     </li>
   );
 }

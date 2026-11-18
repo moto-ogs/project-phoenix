@@ -7,6 +7,7 @@
 import { useMemo, useState } from "react";
 import { ScrollText } from "lucide-react";
 import type { DateRange } from "react-day-picker";
+import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DateRangePicker } from "~/components/ui/date-range-picker";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -17,7 +18,7 @@ import type {
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
 import {
-  TraegerListExportMenu,
+  useTraegerListExportItems,
   traegerExportScope,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
@@ -334,45 +335,45 @@ export default function TraegerAccessLogPage() {
       : []),
   ];
 
+  const exportItems = useTraegerListExportItems({
+    download: (format) => {
+      if (!filter) return Promise.reject(new Error("no filter"));
+      return downloadTraegerAccessLog(filter, format);
+    },
+    scope: traegerExportScope(
+      schoolId
+        ? schoolOptions.find((option) => option.value === schoolId)?.label
+        : null,
+    ),
+    fallbackName: `zugriffsprotokoll-${from}-bis-${to}`,
+    errorObject: "das Zugriffsprotokoll",
+    unavailable: !filter || loading,
+  });
+
+  const clearFilters = () => {
+    setSchoolId("");
+    setAccountId("");
+    setKind("all");
+  };
+
   return (
     <TenantPage
       title="Zugriffsprotokoll"
       info="Wer hat an deinen Schulen Daten gelesen oder geändert? Hier steht jeder Zugriff mit Zeitpunkt, Person und Schule."
       actions={
-        <>
-          <DateRangePicker
-            value={range}
-            onChange={setRange}
-            presets={rangePresets()}
-            toMax={parseISODate(berlinTodayISO())}
-            className="w-full sm:w-auto"
-            triggerClassName="w-full sm:w-auto"
-          />
-          <TraegerListExportMenu
-            download={(format) => {
-              if (!filter) return Promise.reject(new Error("no filter"));
-              return downloadTraegerAccessLog(filter, format);
-            }}
-            scope={traegerExportScope(
-              schoolId
-                ? schoolOptions.find((option) => option.value === schoolId)
-                    ?.label
-                : null,
-            )}
-            ariaLabel="Zugriffsprotokoll herunterladen"
-            fallbackName={`zugriffsprotokoll-${from}-bis-${to}`}
-            errorObject="das Zugriffsprotokoll"
-            unavailable={!filter || loading}
-          />
-        </>
+        <DateRangePicker
+          value={range}
+          onChange={setRange}
+          presets={rangePresets()}
+          toMax={parseISODate(berlinTodayISO())}
+          className="w-full sm:w-auto"
+          triggerClassName="w-full sm:w-auto"
+        />
       }
+      overflowMenu={exportItems}
       filters={filters}
       activeFilters={activeFilters}
-      onClearAllFilters={() => {
-        setSchoolId("");
-        setAccountId("");
-        setKind("all");
-      }}
+      onClearAllFilters={clearFilters}
       error={error}
     >
       <DataTable
@@ -405,6 +406,19 @@ export default function TraegerAccessLogPage() {
                 : "In diesem Zeitraum gibt es keinen Eintrag."
             }
             description="Wähle einen anderen Zeitraum oder andere Filter."
+            action={
+              filtered ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  tooltip="Entfernt Schule, Person und Art und zeigt wieder alle Einträge im Zeitraum."
+                  onClick={clearFilters}
+                >
+                  Filter zurücksetzen
+                </Button>
+              ) : undefined
+            }
           />
         }
       />

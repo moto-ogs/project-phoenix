@@ -132,7 +132,7 @@ export function InviteTraegerAccountModal({
       >
         <p className="text-sm text-gray-600">{hint}</p>
         <Input
-          controlSize="touch"
+          controlSize="compact"
           id="invite-traeger-account-email"
           label="E-Mail-Adresse"
           name="email"

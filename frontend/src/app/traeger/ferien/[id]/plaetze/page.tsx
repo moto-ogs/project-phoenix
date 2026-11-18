@@ -13,8 +13,8 @@ import { HolidayWeekPlacesCard } from "~/components/traeger/holiday-week-places"
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import {
-  TraegerListExportMenu,
   traegerExportScope,
+  useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
@@ -54,6 +54,20 @@ export default function TraegerHolidayPlacesPage() {
       ).size,
     };
   }, [weeks]);
+
+  // The export is the only action: it stands in the page menu, the head
+  // shows no text action (#7411).
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList(
+        `/api/traeger/holiday-periods/${id}/places/export`,
+        format,
+      ),
+    scope: traegerExportScope(),
+    fallbackName: "plaetze",
+    errorObject: "die Plätze",
+    unavailable: !weeks || weeks.length === 0,
+  });
 
   return (
     <TenantPage
@@ -115,21 +129,7 @@ export default function TraegerHolidayPlacesPage() {
         period?.registrationCount,
         period?.allocationMode,
       )}
-      actions={
-        <TraegerListExportMenu
-          download={(format) =>
-            downloadTraegerList(
-              `/api/traeger/holiday-periods/${id}/places/export`,
-              format,
-            )
-          }
-          scope={traegerExportScope()}
-          ariaLabel="Plätze und Warteliste herunterladen"
-          fallbackName="plaetze"
-          errorObject="die Plätze"
-          unavailable={!weeks || weeks.length === 0}
-        />
-      }
+      overflowMenu={exportItems}
       error={loadError}
       loading={!loadError && !weeks}
       empty={

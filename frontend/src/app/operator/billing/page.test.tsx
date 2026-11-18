@@ -15,6 +15,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { testClockDay } from "~/test/clock-instant";
 import type {
   BillingKeyDateCount,
   BillingKeyDay,
@@ -28,7 +29,11 @@ const {
   mockToastSuccess,
   mockToastError,
   mockSetBreadcrumb,
+  mockListOrganizations,
+  mockListSchools,
 } = vi.hoisted(() => ({
+  mockListOrganizations: vi.fn(),
+  mockListSchools: vi.fn(),
   mockGetKeyDay: vi.fn(),
   mockUpdateKeyDay: vi.fn(),
   mockListKeyDateCounts: vi.fn(),
@@ -73,12 +78,21 @@ vi.mock("~/lib/operator/billing-api", async () => {
   };
 });
 
+// The key day dialog reads the Träger and schools it can reach.
+vi.mock("~/lib/operator/provisioning-api", () => ({
+  operatorProvisioningService: {
+    listOrganizations: mockListOrganizations,
+    listSchools: mockListSchools,
+  },
+}));
+
 import OperatorBillingPage from "./page";
 
 const keyDay: BillingKeyDay = {
   keyDay: 15,
   nextKeyDate: "2026-09-15",
   updatedAt: "2026-09-01T08:00:00Z",
+  overrides: [],
 };
 
 function count(
@@ -112,6 +126,83 @@ describe("OperatorBillingPage", () => {
     vi.clearAllMocks();
     mockGetKeyDay.mockResolvedValue(keyDay);
     mockDownload.mockResolvedValue(undefined);
+    mockListOrganizations.mockResolvedValue([]);
+    mockListSchools.mockResolvedValue([]);
+  });
+
+  it("shows each school's own key date in its row (#7301)", async () => {
+    mockListKeyDateCounts.mockResolvedValue([
+      count({ schoolId: "11", keyDate: "2026-08-15" }),
+      count({
+        schoolId: "12",
+        schoolName: "OGS Lindenweg",
+        keyDate: "2026-08-05",
+      }),
+    ]);
+    renderPage();
+
+    const linden = (await screen.findAllByText("OGS Lindenweg"))
+      .map((cell) => cell.closest("tr"))
+      .find(Boolean) as HTMLElement;
+    expect(within(linden).getByText("05.08.2026")).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: /^Stichtag/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("lists the schools still without figures in the running month (#7301)", async () => {
+    const month = testClockDay(0).slice(0, 7);
+    mockListKeyDateCounts.mockResolvedValue([
+      count({
+        period: `${month}-01`,
+        keyDate: `${month}-05`,
+        recordedAt: `${month}-05T05:00:00Z`,
+      }),
+    ]);
+    mockGetKeyDay.mockResolvedValue({
+      ...keyDay,
+      overrides: [
+        {
+          scope: "organization",
+          id: "4",
+          organizationId: "4",
+          name: "Träger Nord",
+          organizationName: "",
+          keyDay: 20,
+          nextKeyDate: `${month}-20`,
+          updatedAt: "2026-08-01T08:00:00Z",
+        },
+      ],
+    });
+    mockListOrganizations.mockResolvedValue([
+      { id: "4", name: "Träger Nord", deletedAt: null },
+    ]);
+    mockListSchools.mockResolvedValue([
+      { id: "11", organizationId: "4", name: "OGS Am Berg", deletedAt: null },
+      { id: "13", organizationId: "4", name: "OGS Neu", deletedAt: null },
+      {
+        id: "14",
+        organizationId: "4",
+        name: "OGS Alt",
+        deletedAt: "2026-01-01",
+      },
+    ]);
+    renderPage();
+
+    const neu = (await screen.findAllByText("OGS Neu"))
+      .map((cell) => cell.closest("tr"))
+      .find(Boolean) as HTMLElement;
+    // Its Träger's own day gives the key date of the month.
+    expect(
+      within(neu).getByText(`20.${month.slice(5, 7)}.${month.slice(0, 4)}`),
+    ).toBeInTheDocument();
+    expect(within(neu).getByText("noch nicht erfasst")).toBeInTheDocument();
+    expect(screen.queryAllByText("OGS Alt")).toHaveLength(0);
+    expect(screen.getByText("1 von 2")).toBeInTheDocument();
+    expect(screen.getByText("Schulen erfasst")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Schulen ohne Zahlen stehen mit ihrem Stichtag dabei\./),
+    ).toBeInTheDocument();
   });
 
   it("shows the key day and the next key date", async () => {
@@ -119,7 +210,7 @@ describe("OperatorBillingPage", () => {
     renderPage();
 
     expect(await screen.findByText("Jeden Monat am 15.")).toBeInTheDocument();
-    expect(screen.getByText("15.09.2026")).toBeInTheDocument();
+    expect(screen.getByText("nächster am 15.09.2026")).toBeInTheDocument();
   });
 
   it("uses Stichtagszahlen as the report title", async () => {
@@ -146,7 +237,7 @@ describe("OperatorBillingPage", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Monat als CSV" }),
+      screen.queryByRole("button", { name: "Weitere Aktionen" }),
     ).not.toBeInTheDocument();
   });
 
@@ -154,6 +245,12 @@ describe("OperatorBillingPage", () => {
     mockListKeyDateCounts.mockResolvedValue([]);
     renderPage();
 
+    // #7301: the counting rules sit in the info next to the title.
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Erklärung zu Stichtagszahlen",
+      }),
+    );
     expect(
       await screen.findByText(/Auch offline Geräte zählen/),
     ).toBeInTheDocument();
@@ -163,6 +260,12 @@ describe("OperatorBillingPage", () => {
     mockListKeyDateCounts.mockResolvedValue([]);
     renderPage();
 
+    // #7301: the counting rules sit in the info next to the title.
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Erklärung zu Stichtagszahlen",
+      }),
+    );
     expect(
       await screen.findByText(/Ein sofort aktiviertes Kind zählt auch/),
     ).toBeInTheDocument();
@@ -190,7 +293,7 @@ describe("OperatorBillingPage", () => {
     renderPage();
 
     expect(await screen.findAllByText("OGS Am See")).not.toHaveLength(0);
-    expect(screen.getByText("Stichtag 15.08.2026")).toBeInTheDocument();
+    expect(screen.getAllByText("15.08.2026")).not.toHaveLength(0);
     expect(screen.queryAllByText("OGS Juli")).toHaveLength(0);
     expect(screen.getByText("200")).toBeInTheDocument();
     expect(screen.getByText("5")).toBeInTheDocument();
@@ -220,18 +323,18 @@ describe("OperatorBillingPage", () => {
     mockListKeyDateCounts.mockResolvedValue([count()]);
     renderPage();
 
+    // #7301: the downloads sit in the page menu under „Herunterladen“.
     fireEvent.click(
-      await screen.findByRole("button", { name: "Monat als CSV" }),
+      await screen.findByRole("button", { name: "Weitere Aktionen" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /August 2026 als CSV/ }),
     );
     await waitFor(() => expect(mockDownload).toHaveBeenCalledWith("2026-08"));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Alle Monate als CSV" }),
-      ).toBeEnabled(),
-    );
 
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
     fireEvent.click(
-      screen.getByRole("button", { name: "Alle Monate als CSV" }),
+      await screen.findByRole("menuitem", { name: /Alle Monate als CSV/ }),
     );
     await waitFor(() =>
       expect(mockDownload).toHaveBeenLastCalledWith(undefined),
@@ -246,7 +349,10 @@ describe("OperatorBillingPage", () => {
     renderPage();
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "Monat als CSV" }),
+      await screen.findByRole("button", { name: "Weitere Aktionen" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /August 2026 als CSV/ }),
     );
     // #2519: catalog text by code in the toast, with retry.
     expect(
@@ -275,7 +381,25 @@ describe("OperatorBillingPage", () => {
     );
   });
 
-  it("changes the key day through the edit state", async () => {
+  /** Opens the standard's dialog through its row menu (#7301). */
+  async function openStandardDialog() {
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Aktionen für den Standard" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /Tag ändern/ }),
+    );
+    return screen.findByRole("dialog");
+  }
+
+  async function chooseDay(dialog: HTMLElement, day: string) {
+    fireEvent.click(
+      within(dialog).getByRole("combobox", { name: /Tag im Monat/ }),
+    );
+    fireEvent.click(await screen.findByRole("option", { name: day }));
+  }
+
+  it("changes the standard key day in its dialog", async () => {
     mockListKeyDateCounts.mockResolvedValue([]);
     mockUpdateKeyDay.mockResolvedValue({
       ...keyDay,
@@ -284,20 +408,25 @@ describe("OperatorBillingPage", () => {
     });
     renderPage();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Ändern" }));
-    const save = screen.getByRole("button", { name: "Speichern" });
-    expect(save).toBeDisabled();
-
-    fireEvent.click(screen.getByRole("combobox"));
-    fireEvent.click(within(screen.getByRole("listbox")).getByText("10."));
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    const dialog = await openStandardDialog();
+    const save = within(dialog).getByRole("button", {
+      name: "Stichtag festlegen",
+    });
+    // The standard day itself is no change.
+    expect(save).toHaveAttribute("aria-disabled", "true");
+    await chooseDay(dialog, "10.");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Stichtag festlegen" }),
+    );
 
     await waitFor(() => expect(mockUpdateKeyDay).toHaveBeenCalledWith(10));
     expect(await screen.findByText("Jeden Monat am 10.")).toBeInTheDocument();
-    expect(mockToastSuccess).toHaveBeenCalled();
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "Der Standard ist jetzt der 10. Nächster Stichtag: 10.10.2026.",
+    );
   });
 
-  it("keeps the edit state open and says so when saving fails", async () => {
+  it("keeps the dialog open and says so when saving fails", async () => {
     mockListKeyDateCounts.mockResolvedValue([]);
     mockUpdateKeyDay.mockRejectedValue(
       new ApiError("key day out of range", 400, {
@@ -307,20 +436,41 @@ describe("OperatorBillingPage", () => {
     );
     renderPage();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Ändern" }));
-    fireEvent.click(screen.getByRole("combobox"));
-    fireEvent.click(within(screen.getByRole("listbox")).getByText("20."));
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    const dialog = await openStandardDialog();
+    await chooseDay(dialog, "20.");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Stichtag festlegen" }),
+    );
 
     expect(
-      await screen.findByText(
-        catalogText("general.input", "die Änderung des Stichtags"),
+      await within(dialog).findByText(
+        catalogText("general.input", "der Stichtag"),
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText("key day out of range")).toBeNull();
     expect(mockToastError).not.toHaveBeenCalled();
-    expect(
-      screen.getByRole("button", { name: "Speichern" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("keeps the schools without figures listed when the key days fail to load (#7301)", async () => {
+    const month = testClockDay(0).slice(0, 7);
+    mockListKeyDateCounts.mockResolvedValue([
+      count({ period: `${month}-01`, keyDate: `${month}-05` }),
+    ]);
+    mockGetKeyDay.mockRejectedValue(new ApiError("boom", 503));
+    mockListOrganizations.mockResolvedValue([
+      { id: "4", name: "Träger Nord", deletedAt: null },
+    ]);
+    mockListSchools.mockResolvedValue([
+      { id: "11", organizationId: "4", name: "OGS Am Berg", deletedAt: null },
+      { id: "13", organizationId: "4", name: "OGS Neu", deletedAt: null },
+    ]);
+    renderPage();
+
+    const neu = (await screen.findAllByText("OGS Neu"))
+      .map((cell) => cell.closest("tr"))
+      .find(Boolean) as HTMLElement;
+    expect(within(neu).getByText("unbekannt")).toBeInTheDocument();
+    expect(screen.getByText("1 von 2")).toBeInTheDocument();
   });
 });

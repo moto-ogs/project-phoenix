@@ -39,16 +39,20 @@ import {
 } from "~/components/traeger/holiday-known-child";
 import { metadataLoadError } from "~/components/traeger/metadata-load-error";
 import { Alert } from "~/components/ui/alert";
-import { Button, ButtonLink } from "~/components/ui/button";
+import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SelectionBar } from "~/components/ui/selection-bar";
 import NavigationLink from "~/components/ui/navigation-link";
-import { ExportMenu, type ExportMenuOption } from "~/components/ui/export-menu";
+import {
+  exportMenuItems,
+  type ExportMenuOption,
+} from "~/components/ui/export-menu";
 import type {
   ActiveFilter,
   FilterConfig,
+  FilterSection,
 } from "~/components/ui/page-header/types";
 import { StatusBadge } from "~/components/ui/status-badge";
 import {
@@ -70,8 +74,6 @@ import {
   HOLIDAY_BILLING_HINT,
   useHolidayPeriodBillingHref,
 } from "~/components/traeger/use-holiday-period-billing-href";
-import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import { billingConcept } from "~/lib/concepts/billing";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
@@ -157,6 +159,15 @@ const STATUS_OPTIONS: { value: StatusChoice; label: string }[] = [
   { value: "received", label: "Eingegangen" },
   { value: "confirmed", label: "Bestätigt" },
   { value: "cancelled", label: "Storniert" },
+];
+
+/**
+ * The headings of the filter panel: four or five filters do not fit in the
+ * row, so the filter button collects them (TENANT-PAGE R5, #7411).
+ */
+const FILTER_SECTIONS: readonly FilterSection[] = [
+  { title: "Anmeldung", filterIds: ["status", "wish"] },
+  { title: "Betreuung", filterIds: ["school", "week", "timeModel"] },
 ];
 
 /** The debtor number, only while the Träger asks for it (#5621). */
@@ -873,45 +884,48 @@ export default function TraegerHolidayRegistrationsPage() {
         period?.registrationCount,
         period?.allocationMode,
       )}
-      actions={
-        <>
-          {billingHref ? (
-            <ButtonLink
-              href={billingHref}
-              variant="outline"
-              size="md"
-              tooltip={HOLIDAY_BILLING_HINT}
-            >
-              <MotoConceptIcon
-                concept={billingConcept}
-                size={18}
-                className="mr-2"
-              />
-              Zur Abrechnung
-            </ButtonLink>
-          ) : null}
-          {/* The download keeps its name in the head: the office exports
-              the list for the schools and the kitchen. */}
-          <ExportMenu
-            ariaLabel="Anmeldungen herunterladen"
-            header={
-              activeFilters.length > 0
-                ? "Gefilterte Anmeldungen"
-                : "Alle Anmeldungen"
-            }
-            options={exportOptions(activeFilters.length > 0, canSeeHealth)}
-            busyKey={exporting}
-            unavailable={loading || Boolean(loadError)}
-            onSelect={selectExport}
-          />
-        </>
-      }
+      // Export and the way to billing stand in the page menu; the list has
+      // no visible head action (#7411).
+      overflowMenu={[
+        ...(billingHref
+          ? [
+              {
+                label: "Zur Abrechnung",
+                description: HOLIDAY_BILLING_HINT,
+                href: billingHref,
+                onClick: () => undefined,
+              },
+              { kind: "separator" as const },
+            ]
+          : []),
+        ...exportMenuItems({
+          headerDescription:
+            activeFilters.length > 0
+              ? "Gefilterte Anmeldungen"
+              : "Alle Anmeldungen",
+          options: exportOptions(activeFilters.length > 0, canSeeHealth),
+          busyKey: exporting,
+          unavailable: loading || Boolean(loadError),
+          onSelect: selectExport,
+        }),
+      ]}
       filters={filters}
+      filterPanel={{ sections: FILTER_SECTIONS }}
       activeFilters={activeFilters}
       onClearAllFilters={clearFilters}
       error={loadError}
+      overlays={
+        bulkPlan ? (
+          <HolidayBulkConfirmModal
+            periodId={periodId}
+            plan={bulkPlan}
+            isOpen
+            onClose={closeBulkConfirmation}
+          />
+        ) : null
+      }
     >
-      <LoadErrorAlert error={afterMerge.error} className="mb-4" />
+      <LoadErrorAlert error={afterMerge.error} />
       {deletionNotice ? <Alert type="info" message={deletionNotice} /> : null}
       {duplicates > 0 ? (
         <Alert
@@ -982,6 +996,19 @@ export default function TraegerHolidayRegistrationsPage() {
                   ? "Wähle andere Filter."
                   : "Eltern melden ihre Kinder über den Link für Eltern an."
             }
+            action={
+              !needle && filtered ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  tooltip="Hebt alle Filter auf und zeigt wieder alle Anmeldungen."
+                  onClick={clearFilters}
+                >
+                  Filter zurücksetzen
+                </Button>
+              ) : undefined
+            }
           />
         }
       />
@@ -1031,14 +1058,6 @@ export default function TraegerHolidayRegistrationsPage() {
               </Button>
             </>
           }
-        />
-      ) : null}
-      {bulkPlan ? (
-        <HolidayBulkConfirmModal
-          periodId={periodId}
-          plan={bulkPlan}
-          isOpen
-          onClose={closeBulkConfirmation}
         />
       ) : null}
     </TenantPage>

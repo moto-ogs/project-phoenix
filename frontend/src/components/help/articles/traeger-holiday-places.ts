@@ -24,7 +24,7 @@ export function traegerHolidayPlacesTopic(): HelpTopic {
           "Wähle in der Navigation `Ferienbetreuung`.",
           "Öffne den Ferienzeitraum.",
           "Wähle den Reiter `Plätze`.",
-          "Wähle bei der Woche `Plätze ändern`.",
+          "Wähle bei der Woche `Plätze bearbeiten`.",
           "Schalte `Plätze begrenzen` ein und stelle die Zahl ein.",
           "Wähle `Plätze speichern`.",
         ],
@@ -43,7 +43,7 @@ export function traegerHolidayPlacesTopic(): HelpTopic {
         description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
         steps: [
           "Öffne den Ferienzeitraum und wähle den Reiter `Plätze`.",
-          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
           "Die Datei enthält je Woche die Plätze und die Kinder auf der Warteliste.",
         ],
       },

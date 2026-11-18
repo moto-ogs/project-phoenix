@@ -18,6 +18,7 @@ import {
   buttonRatchetBaseline,
 } from "./ui-kit-button-baseline.mjs";
 import { contrastRatchetBaseline } from "./ui-kit-contrast-baseline.mjs";
+import { fixedLayerShiftExceptions } from "./ui-kit-fixed-layer-exceptions.mjs";
 import {
   lintSource as lintProbe,
   removeProbeDirectories,
@@ -42,6 +43,58 @@ describe.concurrent("ui-kit/no-hand-rolled-overlay", () => {
 
     expect(result.status).toBe(1);
     expect(output).toContain("ui-kit(no-hand-rolled-overlay)");
+  });
+});
+
+describe.concurrent("ui-kit/fixed-layer-follows-viewport", () => {
+  const RULE = "ui-kit(fixed-layer-follows-viewport)";
+  const reports = (output: string) => output.split(RULE).length - 1;
+
+  it("reports fixed layers without the shift in className, cn() and constants", async () => {
+    const { output } = await lintSource(
+      [
+        'import { cn } from "~/lib/utils";',
+        "declare const open: boolean;",
+        'export const A = () => <div className="fixed inset-x-0 bottom-0" />;',
+        'export const B = () => <div className={`fixed ${open ? "top-0" : ""}`} />;',
+        'export const C = () => <div className={cn("fixed inset-0", open && "flex")} />;',
+        'export const POSITION = "fixed bottom-20 left-4 z-40";',
+        'export const D = () => <div className={open ? "fixed inset-0" : FIXED_LAYER_SHIFT} />;',
+        'export const F = () => <div className="max-sm:fixed max-sm:inset-0" />;',
+        'export const G = () => <div className="md:fixed md:inset-0" />;',
+        'export const H = () => <div className="max-sm:fixed! max-sm:inset-0" />;',
+      ].join("\n"),
+      "src/components/students/probe-fixed.tsx",
+    );
+    expect(reports(output)).toBe(8);
+  });
+
+  it("accepts the shift, lg:fixed, enum values and prose", async () => {
+    const { output } = await lintSource(
+      [
+        'import { cn } from "~/lib/utils";',
+        'import { FIXED_LAYER_SHIFT, FIXED_LAYER_SHIFT_INSET } from "~/components/ui/hooks/useFixedLayersFollowViewport";',
+        "declare const open: boolean;",
+        "export const A = () => <div className={`fixed inset-0 ${FIXED_LAYER_SHIFT}`} />;",
+        'export const B = () => <div className={cn("fixed inset-0", open ? FIXED_LAYER_SHIFT : "")} />;',
+        "export const C = () => <div className={`fixed inset-0 ${FIXED_LAYER_SHIFT_INSET}`} />;",
+        "export const POSITION = `fixed bottom-20 left-4 ${FIXED_LAYER_SHIFT}`;",
+        'export const D = () => <div className="lg:fixed lg:inset-0" />;',
+        'export const mode = { days_of_week_mode: "fixed" };',
+        'export const text = "The early debit is fixed by a later due date.";',
+      ].join("\n"),
+      "src/components/students/probe-fixed-ok.tsx",
+    );
+    expect(reports(output)).toBe(0);
+  });
+
+  it("keeps every exception pointing at a class string that exists", () => {
+    for (const entry of fixedLayerShiftExceptions) {
+      expect(entry.reason.length, entry.file).toBeGreaterThan(20);
+      expect(readFileSync(resolve(entry.file), "utf8"), entry.file).toContain(
+        entry.match,
+      );
+    }
   });
 });
 

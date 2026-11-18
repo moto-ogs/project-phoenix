@@ -383,6 +383,7 @@ var tableRetentions = map[string]tableRetention{
 	"platform.announcement_views":                           parent("auth.accounts"),
 	"platform.announcements":                                notPersonal("operator release announcements"),
 	"platform.billing_key_date_counts":                      own("platform.delete_expired_billing_key_date_counts: 10 years after the end of the key_date calendar year, restricted billing evidence (ADR 0092)"),
+	"platform.billing_key_day_overrides":                    notPersonal("billing configuration of a Träger or school (#7301)"),
 	"platform.billing_settings":                             notPersonal("billing configuration"),
 	"platform.cleanup_runs":                                 notPersonal("ledger of last successful cleanup per school and job"),
 	"platform.demo_school_file_erasures":                    notPersonal("demo process marker (#5544): school ID, time and object counts per upload namespace, and since #5559 the time and row counts per table of the database erasure; no file name, no value, no person"),

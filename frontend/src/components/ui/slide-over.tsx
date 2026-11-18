@@ -71,6 +71,7 @@ import {
 } from "./overlay-styles";
 import { isInsideModal, SHEET_SCOPE_PROPS, useOverlay } from "./overlay-stack";
 import { useScrollRegion } from "./hooks/useScrollRegion";
+import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
 
 /**
  * Unter sm fährt das Panel von unten ein, darüber von rechts. Vor dem ersten
@@ -232,7 +233,7 @@ const SlideOverOverlay = React.forwardRef<
   <DrawerPrimitive.Overlay
     ref={ref}
     className={cn(
-      `fixed inset-0 ${Z_LAYER.sheetBackdrop}`,
+      `fixed inset-0 ${Z_LAYER.sheetBackdrop} ${FIXED_LAYER_SHIFT}`,
       OVERLAY_BACKDROP_TINT_CLASS,
       OVERLAY_BACKDROP_BLUR_CLASS,
       className,
@@ -316,7 +317,7 @@ const SlideOverContent = React.forwardRef<
           tabIndex={-1}
           aria-busy={busy || undefined}
           className={cn(
-            `fixed ${Z_LAYER.sheet} flex flex-col bg-white shadow-2xl outline-none`,
+            `fixed ${Z_LAYER.sheet} ${FIXED_LAYER_SHIFT} flex flex-col bg-white shadow-2xl outline-none`,
             isSheet
               ? // Blatt von unten: an drei Kanten bündig, oben abgerundet, nie
                 // höher als 90vh — der Rest der Seite bleibt als Kontext sichtbar.

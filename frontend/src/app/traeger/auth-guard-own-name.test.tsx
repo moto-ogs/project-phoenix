@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
@@ -160,7 +161,9 @@ describe("Träger header name (#6870)", () => {
     });
     renderPortal(<TraegerAccountPage />);
 
-    const field = await screen.findByRole("textbox", { name: /Dein Name/ });
+    // „Konto“ shows the name first; „Bearbeiten“ opens the field (#7416).
+    fireEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
+    const field = screen.getByRole("textbox", { name: /Dein Name/ });
     expect(headerName()).toHaveTextContent("Träger-Büro");
     fireEvent.change(field, { target: { value: "Karl Kasse" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
@@ -194,7 +197,8 @@ describe("Träger header name (#6870)", () => {
       </>,
     );
 
-    const field = await screen.findByRole("textbox", { name: /Dein Name/ });
+    fireEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
+    const field = screen.getByRole("textbox", { name: /Dein Name/ });
     await waitFor(() => expect(headerName()).toHaveTextContent("Karl Kasse"));
     fireEvent.click(screen.getByRole("button", { name: "Reload profile" }));
     await waitFor(() =>
@@ -206,7 +210,12 @@ describe("Träger header name (#6870)", () => {
 
     await act(async () => answerLate(oldProfile));
     expect(headerName()).toHaveTextContent("Karla Kasse");
-    expect(field).toHaveValue("Karla Kasse");
+    // After saving, „Konto“ reads the name again: still the saved one.
+    expect(
+      within(screen.getByTestId("traeger-account-name")).getByText(
+        "Karla Kasse",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("drops the name of the former membership after a change of Träger", async () => {
