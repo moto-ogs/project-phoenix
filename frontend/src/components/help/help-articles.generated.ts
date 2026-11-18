@@ -6108,6 +6108,7 @@ export const parentChildOverviewTopic =
         "Ist Ihr Kind heute abgemeldet, steht dort `Heute abgemeldet, keine Abholung`.",
         "Wurde die Abholzeit für heute geändert, steht die Zeit mit dem Hinweis `geändert für heute`.",
         "Ist für heute nichts eingetragen, steht dort `Für heute ist keine Abholung eingetragen`.",
+        "Hat Ihr Kind keinen Platz in der OGS, steht unter `Betreuung` der Hinweis `Kein Platz in der OGS`. Abholung, Betreuungszeiten und Essen fehlen dann. Krankmeldung, Elternsprechtag und Angaben bleiben.",
       ],
       troubleshootingDetails: [
         "Sie sehen kein Kind? Dann hat die OGS Ihren Zugang noch nicht freigegeben.",
@@ -6533,6 +6534,7 @@ export const parentFeatureMissingTopic =
       ],
       differences: [
         "Manche Dinge dürfen Sie nur ansehen, nicht ändern. Dann fehlt der Knopf, nicht der Bereich.",
+        "Hat Ihr Kind keinen Platz in der OGS, fehlen für dieses Kind Abholung, Betreuungszeiten, Essen und Nachrichten an die OGS. Krankmeldung, Elternbriefe und Elternsprechtag nutzen Sie wie gewohnt.",
       ],
       troubleshootingDetails: [
         "Das Ändern von Angaben ist deaktiviert? Schreiben Sie der OGS, was geändert werden soll.",
@@ -6763,6 +6765,7 @@ export const parentGuardiansTopic = function parentGuardiansTopic(): HelpTopic {
       "Eine E-Mail beim Kontakt lädt niemanden ein. Der App-Zugang ist ein eigener Schritt.",
     ],
     differences: [
+      "Ihr Kind hat keinen OGS-Platz? Notfallkontakte bleiben möglich. Abholrechte und Hinweise zur Abholung fehlen dann. Bei bestehenden Kontakten öffnen Sie dafür `Notfallkontakt`.",
       "Unter `Verbundene Konten` sehen Sie, wer die Eltern-App für Ihr Kind nutzt.",
     ],
     troubleshootingDetails: [
@@ -7552,6 +7555,8 @@ export const parentReportAbsenceTopic =
         "Manche OGS bestätigen jede Meldung erst. Dann steht `Freigabe ausstehend`, und Ihr Kind gilt bis dahin als erwartet.",
         "Am Kind steht danach `Krank` oder `Entschuldigt` mit den Tagen.",
         "Wurde eine Anfrage abgelehnt, steht dort `Abgelehnt`.",
+        // #4803: die Meldung für ein Kind ohne OGS-Platz geht an die Schule.
+        "Ihr Kind hat keinen Platz in der OGS? Dann heißen das Feld `Grund / Hinweis` und der Knopf `Krankmeldung senden` oder `Entschuldigung senden`. Die Schule sieht die Meldung.",
         // #5698: Schuleinträge überschreibt keine Elternmeldung.
         "Hat die OGS einen Tag schon eingetragen, etwa ab einer Uhrzeit entschuldigt? Dann geht für diesen Tag eine Anfrage an die OGS. Sie entscheidet. Bis dahin gilt ihr Eintrag. Die anderen Tage meldet moto direkt.",
       ],

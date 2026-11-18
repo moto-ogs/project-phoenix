@@ -3,6 +3,7 @@
   "title": "Повідомлення",
   "description": "Читайте повідомлення та пишіть напряму в {careTerm}.",
   "noChildren": "З вашим обліковим записом ще не пов'язано жодної дитини. Щойно дитину буде пов'язано, ви зможете писати тут в {careTerm}.",
+  "withoutCarePlace": "Повідомлення до {careTerm} доступні лише для дітей, які мають місце в {careTerm}.",
   "noMessagesYet": "Торкніться, щоб написати.",
   "previewFromOgs": "{careTerm}: {text}",
   "previewFromYou": "Ви: {text}",

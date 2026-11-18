@@ -204,6 +204,28 @@ describe("ParentMessagesPage", () => {
     expect(mockedThreads).not.toHaveBeenCalled();
   });
 
+  // Kind ohne OGS-Platz (#4803): keine Unterhaltung mit der OGS.
+  it("zeigt fuer ein Kind ohne OGS-Platz keine Unterhaltung", async () => {
+    mockedChildren.mockResolvedValue([
+      { ...felix, without_care_place: true },
+      mia,
+    ]);
+    renderPage();
+    expect(await screen.findByTestId("conversation")).toHaveTextContent("43");
+    expect(mockedThreads).not.toHaveBeenCalled();
+  });
+
+  it("nennt den Grund, wenn kein Kind einen OGS-Platz hat", async () => {
+    mockedChildren.mockResolvedValue([{ ...felix, without_care_place: true }]);
+    renderPage();
+    expect(
+      await screen.findByText(
+        "Nachrichten an die OGS gibt es nur für Kinder mit einem Platz in der OGS.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("conversation")).not.toBeInTheDocument();
+  });
+
   it("zeigt bei mehreren Kindern eine Zeile je Kind mit Vorschau und Zaehler", async () => {
     mockedChildren.mockResolvedValue([felix, mia]);
     mockedThreads.mockResolvedValue([

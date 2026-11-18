@@ -30,6 +30,9 @@ type directoryStudentRow struct {
 	Excused       *bool          `bun:"excused"`
 	ExcusedSince  *time.Time     `bun:"excused_since"`
 	PhotoPath     *string        `bun:"photo_path"`
+	// WithoutCarePlace is School Membership's mark of a child without an
+	// OGS place (#4803).
+	WithoutCarePlace bool `bun:"without_care_place"`
 }
 
 // StudentDirectory is People Directory's reader port onto the student
@@ -304,6 +307,7 @@ func toDirectoryStudent(row directoryStudentRow) directory.Student {
 		ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, TenantID: row.TenantID,
 		PersonID: row.PersonID, SchoolClass: row.SchoolClass, GroupID: row.GroupID, Status: row.Status,
 		Sick: row.Sick, SickSince: row.SickSince, Excused: row.Excused, ExcusedSince: row.ExcusedSince, PhotoPath: row.PhotoPath,
+		WithoutCarePlace: row.WithoutCarePlace,
 	}
 	if row.EnrolledFrom != nil {
 		student.EnrolledFrom = row.EnrolledFrom.String()

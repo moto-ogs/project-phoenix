@@ -1164,6 +1164,35 @@ describe("SickNoteModal — Abmeldegrund", () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
+  // #4803: die Meldung für ein Kind ohne OGS-Platz geht an die Schule.
+  it("names no OGS for a child without an OGS place", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <SickNoteModal onClose={vi.fn()} onSubmit={onSubmit} withoutCarePlace />,
+    );
+    expect(
+      screen.getByText(
+        "Melden Sie Ihr Kind für die ausgewählten Tage ab. Die Schule sieht die Abmeldung.",
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Krankmeldung senden" }),
+    );
+    expect(
+      await screen.findAllByText("Bitte geben Sie einen kurzen Hinweis ein."),
+    ).not.toHaveLength(0);
+    fireEvent.change(screen.getByRole("textbox", { name: "Grund / Hinweis" }), {
+      target: { value: "Fieber" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Krankmeldung senden" }),
+    );
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(/OGS/)).toBeNull();
+  });
+
   it("uses neutral copy while the approval settings are unknown", () => {
     render(<SickNoteModal onClose={vi.fn()} onSubmit={vi.fn()} />);
 
@@ -1463,6 +1492,34 @@ describe("SickNoteModal — Teil-Abwesenheit der Schule", () => {
         "Die OGS hat für diese Tage schon etwas eingetragen. Sie prüft Ihre Meldung. Bis dahin gilt ihr Eintrag.",
       ),
     ).toBeInTheDocument();
+  });
+
+  // #4803: die Antwort für ein Kind ohne OGS-Platz nennt die Schule.
+  it("nennt nach dem Senden für ein Kind ohne OGS-Platz die Schule", async () => {
+    const onSubmit = vi.fn().mockResolvedValue("pending");
+    render(
+      <SickNoteModal
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+        sickRequiresApproval={false}
+        careExceptions={[schoolPartial(TEST_CLOCK_TODAY, "11:30")]}
+        withoutCarePlace
+      />,
+    );
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Grund / Hinweis" }), {
+      target: { value: "Fieber" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Krankmeldung senden" }),
+    );
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(
+      await screen.findByText(
+        "Die Schule hat für diese Tage schon etwas eingetragen. Sie prüft Ihre Meldung. Bis dahin gilt ihr Eintrag.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/OGS/)).toBeNull();
   });
 
   it("zählt eine Krankmeldung der OGS als Schuleintrag", () => {
@@ -2032,6 +2089,31 @@ describe("useChildCare reportSick", () => {
     expect(submitSickNote).toHaveBeenCalledTimes(1);
     expect(parentApi.getChildCareSchedule).toHaveBeenCalledTimes(1);
     expect(result.current.todayPickup).toEqual({ kind: "absent" });
+  });
+});
+
+describe("useChildCare ohne OGS-Platz", () => {
+  // Der Server lehnt Abholung und Wochenplan eines Kindes ohne OGS-Platz ab
+  // (#4803); die Seite fragt sie deshalb gar nicht erst an.
+  it("laedt nur die Abwesenheiten und Funktionen", async () => {
+    vi.spyOn(parentApi, "listSickDays").mockResolvedValue([]);
+    vi.spyOn(parentApi, "listExcusedRequests").mockResolvedValue([]);
+    const exceptions = vi.spyOn(parentApi, "listCareExceptions");
+    const pickupRequests = vi.spyOn(parentApi, "listPickupChangeRequests");
+    const schedule = vi.spyOn(parentApi, "getChildCareSchedule");
+    vi.spyOn(parentApi, "getChildFeatures").mockRejectedValue(
+      new Error("no features"),
+    );
+
+    const { result } = renderHook(() =>
+      useChildCare("1", { withoutCarePlace: true }),
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(exceptions).not.toHaveBeenCalled();
+    expect(pickupRequests).not.toHaveBeenCalled();
+    expect(schedule).not.toHaveBeenCalled();
+    expect(parentApi.listSickDays).toHaveBeenCalledTimes(1);
   });
 });
 

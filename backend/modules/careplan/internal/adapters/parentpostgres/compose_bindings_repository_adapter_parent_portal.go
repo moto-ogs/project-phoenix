@@ -17,7 +17,7 @@ func (d ParentStudentDirectory) ListStudentsByID(ctx context.Context, ids []int6
 	}
 	result := make([]DirectoryStudent, 0, len(students))
 	for _, student := range students {
-		result = append(result, DirectoryStudent{ID: student.ID, TenantID: student.TenantID, PersonID: student.PersonID, SchoolClass: student.SchoolClass, Status: student.Status, EnrolledFrom: student.EnrolledFrom.String(), EnrolledUntil: student.EnrolledUntil.String()})
+		result = append(result, DirectoryStudent{ID: student.ID, TenantID: student.TenantID, PersonID: student.PersonID, SchoolClass: student.SchoolClass, Status: student.Status, EnrolledFrom: student.EnrolledFrom.String(), EnrolledUntil: student.EnrolledUntil.String(), WithoutCarePlace: student.WithoutCarePlace})
 	}
 	return result, nil
 }
