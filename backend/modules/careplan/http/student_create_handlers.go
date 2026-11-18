@@ -46,8 +46,9 @@ func createPersonFromStudentRequest(req *StudentRequest) (*peopleModule.Person, 
 // createStudentFromRequest creates a Student object from a StudentRequest and personID
 func createStudentFromRequest(req *StudentRequest, personID int64) *peopleModule.StudentState {
 	student := &peopleModule.StudentState{
-		PersonID:    personID,
-		SchoolClass: req.SchoolClass,
+		PersonID:         personID,
+		SchoolClass:      req.SchoolClass,
+		WithoutCarePlace: req.WithoutCarePlace,
 	}
 
 	if req.GroupID != nil {
@@ -267,7 +268,11 @@ func (rs *Resource) createStudent(w http.ResponseWriter, r *http.Request) {
 	// Parse request
 	req := &StudentRequest{}
 	if err := render.Bind(r, req); err != nil {
-		renderError(w, r, common.ErrorInvalidRequest(err))
+		renderError(w, r, studentRequestError(err))
+		return
+	}
+	if renderer := rs.withoutCarePlaceRefusal(r.Context(), req); renderer != nil {
+		renderError(w, r, renderer)
 		return
 	}
 

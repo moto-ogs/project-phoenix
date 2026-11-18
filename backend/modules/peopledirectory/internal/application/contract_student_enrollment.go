@@ -6,7 +6,8 @@ import (
 )
 
 func enrollmentInput(input peopledirectory.EnrollmentStudent) domain.EnrollmentStudent {
-	result := domain.EnrollmentStudent{PersonID: input.PersonID, SchoolClass: input.SchoolClass, Status: input.Status, EnrolledFrom: input.EnrolledFrom, EnrolledUntil: input.EnrolledUntil}
+	result := domain.EnrollmentStudent{PersonID: input.PersonID, SchoolClass: input.SchoolClass, Status: input.Status, EnrolledFrom: input.EnrolledFrom, EnrolledUntil: input.EnrolledUntil,
+		WithoutCarePlace: input.WithoutCarePlace, PreserveCarePlaceStatus: input.PreserveCarePlaceStatus}
 	if input.InitialProfile != nil {
 		profile := domain.EnrollmentProfilePatch(*input.InitialProfile)
 		result.InitialProfile = &profile

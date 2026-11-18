@@ -180,6 +180,7 @@ export const codes = [
   "enrollment.waitlist_disabled",
   "enrollment.window_closed",
   "enrollment.withdraw_not_allowed",
+  "enrollment.without_care_place_school_year_only",
 ] as const;
 
 export const classes = {
@@ -363,6 +364,7 @@ export const classes = {
   "enrollment.waitlist_disabled": "business_rejection",
   "enrollment.window_closed": "business_rejection",
   "enrollment.withdraw_not_allowed": "permission",
+  "enrollment.without_care_place_school_year_only": "business_rejection",
 } as const;
 
 export const parameters = {
@@ -549,4 +551,5 @@ export const parameters = {
   "enrollment.waitlist_disabled": [],
   "enrollment.window_closed": [],
   "enrollment.withdraw_not_allowed": [],
+  "enrollment.without_care_place_school_year_only": [],
 } as const;
