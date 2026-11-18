@@ -59,6 +59,23 @@ export function traegerCareReductionsTopic(): HelpTopic {
         ],
       },
       {
+        title: "Kinderzahl aus einer Datei nachtragen",
+        description:
+          "Du führst die Kinderzahl schon in einem anderen Programm, zum Beispiel OGS Connect? Dann trägst du viele Zahlen auf einmal aus einer CSV-Datei nach. Jede Zahl gilt als von dir bestätigt. moto bewahrt die Datei nicht auf.",
+        steps: [
+          "Speichere die Liste als CSV-Datei. Jede Zeile nennt ein Kind mit Vertrag: Vorname, Nachname und die Zahl der Kinder in der Familie.",
+          "Wähle `Familien und Zahlung`, den Reiter `Kinderzahl` und oben `Aus Datei nachtragen`.",
+          "Du kennst den Aufbau noch nicht? Wähle `Beispieldatei`.",
+          "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
+          "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Hat die Datei keine Spalte für die Schule, wähle `Schule für alle Zeilen`.",
+          "Prüfe die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. Bei `Fehlerhaft` und `Widerspruch in der Datei` steht der Grund in der Spalte `Hinweis`.",
+          "`Andere Zahl bestätigt` heißt: Für die Familie gilt schon eine andere Zahl. moto ändert sie nicht. Ändere sie in der Liste über `Kinderzahl ändern`.",
+          "`Verschiedene Angaben` heißt: Für die Familie sind verschiedene Kinderzahlen bestätigt. Bestätige die Kinderzahl in der Familienliste. Die Datei löst diesen Widerspruch nicht.",
+          "Ist die bisherige Zahl einer Familie abgelaufen? Dann übernimmt moto die Zahl aus der Datei. Sie gilt ab dem Tag nach dem Ablauf.",
+          "Wähle unten `übernehmen`. Die Zahlen stehen danach in der Liste mit dem Stand `Bestätigt`.",
+        ],
+      },
+      {
         title: "Nachweis eintragen",
         description:
           "Einkommensstufe und Ermäßigung für Alleinerziehende brauchen einen Nachweis je Kind.",
@@ -98,7 +115,10 @@ export function traegerCareReductionsTopic(): HelpTopic {
       "Gilt ein Nachweis erst ab Mitte des Monats, zählt er für den ganzen Monat.",
       "Zählt eine Regel die Kinderzahl, gilt die bestätigte Zahl. Es zählen aber immer mindestens die Kinder mit Vertrag. Geschwister ohne Vertrag stehen in der Reihe vorn: Bei 3 Kindern und einem Kind mit Vertrag ist es das 3. Kind.",
       "Geschwister zählen je Schule getrennt. Ein Kind mit Vertrag an einer anderen Schule zählt bei der Kinderzahl nur mit, wenn die Regel unter `Geschwister zählen an` auch diese Schule nennt. Geschwister ohne Vertrag zählen an jeder Schule mit.",
-      "Eine Angabe der Eltern, die du noch nicht bestätigt hast, zählt nicht. Ist die Zahl abgelaufen, zählen nur die Kinder mit Vertrag. Der Monatslauf zeigt dann einen Hinweis.",
+      "Eine Angabe der Eltern, die du noch nicht bestätigt hast, zählt nicht. Ist die Zahl abgelaufen, zählen nur die Kinder mit Vertrag. Der Monatslauf nennt diese Kinder dann unter `Kinderzahl der Familie fehlt`.",
+      "Ein Vertrag ohne E-Mail-Adresse der Eltern ist eine eigene Familie, zum Beispiel nach einem Import. Die Liste nennt sie nach dem Kind und zeigt `Vertrag Nr.`. Sie bekommt ihre eigene Kinderzahl.",
+      "Aus einer Datei kommt die Zahl ab dem ersten Tag des Vertrags, frühestens ab drei Monaten zurück. Einen anderen Beginn wählst du über `Kinderzahl ändern`.",
+      "Steht bei einer Familie `Verschiedene Angaben`? Die Verträge der Familie nennen verschiedene Zahlen. Bestätige eine Zahl für die Familie. Oder wähle im Menü `Kinderzahl entfernen`. moto fragt vorher nach. Bis dahin zählen nur die Kinder mit Vertrag.",
       "Eine Rechnung, die schon ausgestellt ist, bleibt, wie sie ist. Eine geänderte Regel gilt ab dem nächsten Monatslauf.",
     ],
     notes: [

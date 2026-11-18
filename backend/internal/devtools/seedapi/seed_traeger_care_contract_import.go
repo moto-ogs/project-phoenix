@@ -40,7 +40,7 @@ func (seedTraegerCareContractImportStep) Run(_ context.Context, rt *Runtime) err
 // whose phase still runs next month takes the file.
 const seedImportTries = 6
 
-// seedImportedCareContracts takes over three children with their existing
+// seedImportedCareContracts takes over four children with their existing
 // contracts from a CSV export of another program (#4723), so the demo shows
 // imported contracts and the import log. The contracts start next month, so
 // no monthly run of the seed bills them. They belong to the seeded school,
@@ -86,14 +86,22 @@ func seedImportedCareContracts(client *Client, auth AuthRef, school int64) (int,
 // and takes over what the preview showed. ready is false when the module
 // takes no row, so the caller offers the next one.
 func seedCareContractImport(client *Client, auth AuthRef, school, module, start string) (int, bool, error) {
-	rows := []string{"Vorname Kind;Nachname Kind;Geburtsdatum;Schule;Modul;Vertragsbeginn;Vorname Eltern;Nachname Eltern;E-Mail"}
-	for _, child := range [][4]string{
-		{"Jonte", "Petersen", "14.03.2018", "Maren"},
-		{"Malia", "Okafor", "02.09.2019", "Chidi"},
-		{"Emil", "Wagner", "27.11.2017", "Sabine"},
+	// The last column is how many children the family has (#7356); moto
+	// keeps it only for an account that bills. Ida's row names no parents,
+	// as the master data of OGS Connect does: her contract is a family of
+	// its own, known by the contract.
+	rows := []string{"Vorname Kind;Nachname Kind;Geburtsdatum;Schule;Modul;Vertragsbeginn;Vorname Eltern;Nachname Eltern;E-Mail;Kinder in der Familie"}
+	for _, child := range [][5]string{
+		{"Jonte", "Petersen", "14.03.2018", "Maren", "2"},
+		{"Malia", "Okafor", "02.09.2019", "Chidi", ""},
+		{"Emil", "Wagner", "27.11.2017", "Sabine", "3"},
+		{"Ida", "Brandt", "19.06.2018", "", "2"},
 	} {
-		email := strings.ToLower(child[3]+"."+child[1]) + "@familie.example.test"
-		rows = append(rows, strings.Join([]string{child[0], child[1], child[2], school, module, start, child[3], child[1], email}, ";"))
+		parentLast, email := child[1], strings.ToLower(child[3]+"."+child[1])+"@familie.example.test"
+		if child[3] == "" {
+			parentLast, email = "", ""
+		}
+		rows = append(rows, strings.Join([]string{child[0], child[1], child[2], school, module, start, child[3], parentLast, email, child[4]}, ";"))
 	}
 	csv := []byte(strings.Join(rows, "\r\n") + "\r\n")
 	const file = "ogs-connect-stammdaten.csv"

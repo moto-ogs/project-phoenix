@@ -56,6 +56,7 @@ export function CareContractImportMappingCard({
   unmapped,
   schools,
   debtorNumberScope,
+  familyChildrenAllowed,
   disabled,
   onChange,
 }: Readonly<{
@@ -64,6 +65,8 @@ export function CareContractImportMappingCard({
   unmapped: readonly ContractImportField[];
   schools: readonly ContractImportSchool[];
   debtorNumberScope: "payer" | "child";
+  /** Whether the account bills: only then a file may name the number. */
+  familyChildrenAllowed: boolean;
   disabled: boolean;
   onChange: (mapping: ContractImportMapping) => void;
 }>) {
@@ -99,8 +102,15 @@ export function CareContractImportMappingCard({
   // rows stand right under the file; it opens again on request.
   const complete = unmapped.length === 0;
   const collapsed = complete && !open;
-  const mapped = Object.values(mapping.columns).filter(
-    (header) => header !== UNMAPPED,
+  // The number of the family's children counts as confirmed by the
+  // Abrechnung (#7356): without that right the field is not offered.
+  const offered = (field: ContractImportField) =>
+    field !== "family_children" || familyChildrenAllowed;
+  const fields = (Object.keys(mapping.columns) as ContractImportField[]).filter(
+    offered,
+  );
+  const mapped = fields.filter(
+    (field) => mapping.columns[field] !== UNMAPPED,
   ).length;
   const schoolForAll = mapping.columns.school === UNMAPPED;
   const moduleForAll = mapping.columns.module === UNMAPPED;
@@ -113,7 +123,7 @@ export function CareContractImportMappingCard({
       title="Spalten zuordnen"
       description={
         collapsed
-          ? `${mapped} von ${Object.keys(mapping.columns).length} Feldern sind zugeordnet, alle Pflichtfelder sind dabei.`
+          ? `${mapped} von ${fields.length} Feldern sind zugeordnet, alle Pflichtfelder sind dabei.`
           : "Wähle für jedes Feld die Spalte aus deiner Datei. moto hat schon passende Spalten vorgeschlagen."
       }
       collapsible={complete}
@@ -127,7 +137,7 @@ export function CareContractImportMappingCard({
               {group.title}
             </SectionLabel>
             <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
-              {group.fields.map((field) => (
+              {group.fields.filter(offered).map((field) => (
                 <CustomSelect
                   key={field}
                   id={`contract-import-${field}`}

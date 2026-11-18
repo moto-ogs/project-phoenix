@@ -2,6 +2,7 @@ package application
 
 import (
 	"net/mail"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -19,6 +20,8 @@ import (
 const (
 	maxImportNameLength  = 100
 	maxImportEmailLength = 320
+	// The CSV column accepts the receiving capability's range (ADR 0288).
+	maxImportFamilyChildren = 20
 )
 
 // earliestImportDay bounds the dates a file may name: a year before it is a
@@ -153,6 +156,22 @@ func (r rowReader) date(field string, required bool) *calendar.Date {
 	return &date
 }
 
+// familyChildren reads how many children the family has (#7356): a whole
+// number from 1 to 20, nil for an empty or invalid cell. Rejecting its range
+// here keeps an invalid row out of duplicate detection.
+func (r rowReader) familyChildren() *int {
+	value := strings.TrimSpace(r.check.index.cell(r.cells, carecontract.ContractImportFieldFamilyChildren))
+	if value == "" {
+		return nil
+	}
+	number, err := strconv.Atoi(value)
+	if err != nil || number < 1 || number > maxImportFamilyChildren {
+		r.problem(carecontract.ContractImportFieldFamilyChildren, carecontract.ContractImportProblemInvalid)
+		return nil
+	}
+	return &number
+}
+
 // firstDay is the first day of the contract: the day the row names, or the
 // day the office chose for a file without that column.
 func (r rowReader) firstDay() *calendar.Date {
@@ -185,6 +204,7 @@ func (c *contractImportCheck) candidate(cells []string, line int) importCandidat
 		reader.problem(carecontract.ContractImportFieldConcludedOn, carecontract.ContractImportProblemFuture)
 	}
 	row.DebtorNumber = strings.TrimSpace(c.index.cell(cells, carecontract.ContractImportFieldDebtorNumber))
+	row.FamilyChildren = reader.familyChildren()
 
 	school, hasSchool := reader.school()
 	var booking importBooking

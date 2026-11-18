@@ -19,12 +19,13 @@ import (
 
 // mountCareContractImportRoutes serves the import of children and their
 // existing care contracts from a file (#4723) at /traeger/contract-imports
-// behind the right "Verträge verwalten"; today and now are the root's clocks
-// of the debtor numbers.
+// behind the right "Verträge verwalten"; the number of the family's children
+// of a row also needs the right "Abrechnung" (#7356). today and now are the
+// root's clocks of the debtor numbers.
 func mountCareContractImportRoutes(root chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings,
 	accessLog owners.DataAccessAppender, today func() calendar.Date, now func() time.Time) {
 	resource := careContractHTTP.NewImportResource(NewCareContractImports(organizations, settings, accessLog, today, now),
-		common.RequiresPermission(identityaccess.TraegerRightContractsManage))
+		common.RequiresPermission(identityaccess.TraegerRightContractsManage), identityaccess.TraegerRightBillingManage)
 	root.Mount("/traeger/contract-imports", resource.Router(ProtectedTraegerRoutes))
 }
 
@@ -40,6 +41,7 @@ func NewCareContractImports(organizations HolidayOrganizations, settings Traeger
 		Bookings:     careContractBookings{offerings: carePlanCompose.NewContractOfferings(), bookings: carePlanCompose.NewOfferingBookings(now)},
 		Access:       careContractAccessLog{log: accessLog}, Runtime: owners.CareContractRuntime{},
 		Numbers:     owners.NewCareContractDebtorNumbers(parentBillingSettings{settings: settings}, today, now),
+		Families:    owners.NewCareContractFamilyNumbers(),
 		Fingerprint: securityruntime.Fingerprint,
 	}, today)
 }

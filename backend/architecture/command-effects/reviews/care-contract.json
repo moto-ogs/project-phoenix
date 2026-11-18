@@ -32,6 +32,17 @@
       "target_owner": "parent-billing"
     },
     {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractFamilyNumbers.DecideImportedFamilyChildren",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractFamilyChildren.DecideImportedFamilyChildren",
+      "reason": "Guarded target record command (#7356); participates in the caller's Träger transaction after the Betreuungsvertrag stored the contracts of an import file. Target modules/parentbilling FamilyNumbers keeps the range check of the number, the family key of a contract with or without a mail address (ADR 0232 point 7), the rule that a confirmed number is never overwritten and that disagreeing rows of a family take over none, the lock of the monthly billing and the read/confirm trail of each number; failures propagate to the caller unit. No separate commit, scope switch or combined protocol.",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/parentbilling.ContractFamilyChildren.DecideImportedFamilyChildren",
+      "target_owner": "parent-billing"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractDocumentNotices.EnqueueContractDocumentNotice",
       "classification": "platform",

@@ -3,15 +3,11 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
-	"syscall"
 	"testing"
 	"time"
 
-	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
-	"github.com/moto-ogs/project-phoenix/modules/delivery/mail"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
@@ -20,7 +16,8 @@ import (
 func TestDemoAdminEnrollsAndSignsInAgainWithoutExternalMail(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	listener := listenDemoCodeInbox(t)
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
 	codes := make(chan string, 2)
 	// Delivery-only test peer, matching the sidecar wire protocol. No code-read API.
 	done := make(chan struct{})
@@ -41,10 +38,9 @@ func TestDemoAdminEnrollsAndSignsInAgainWithoutExternalMail(t *testing.T) {
 		}
 	}()
 	defer func() { _ = listener.Close(); <-done }()
-	transport, err := deliveryCompose.NewMailTransport(mail.MailerConfig{AppEnv: "demo", Host: "127.0.0.1", Port: 1025, TemplateDir: "../templates"})
-	require.NoError(t, err)
+	transport := testpkg.NewCapturingMailer()
 	module, err := NewAuthTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db),
-		WithAuthTestMailer(transport), WithAuthTestMFABackoff(time.Millisecond))
+		WithAuthTestMailer(transport.InDemoEnvironmentWithCodeInbox(listener.Addr().String())), WithAuthTestMFABackoff(time.Millisecond))
 	require.NoError(t, err)
 	password := testpkg.NewTestPassword()
 	account := testpkg.CreateTestAccountWithPassword(t, db, fmt.Sprintf("demo-mfa-%d@example.test", testpkg.UniqueSuffix()), password)
@@ -76,24 +72,5 @@ func TestDemoAdminEnrollsAndSignsInAgainWithoutExternalMail(t *testing.T) {
 	require.NoError(t, err)
 	_, _, err = module.Auth.RefreshTokenWithAudit(ctx, refresh, "", "", "")
 	require.NoError(t, err)
-}
-
-// listenDemoCodeInbox binds the fixed loopback address the demo sender dials.
-// Test processes of parallel worktrees and the seed's demo inbox share it on
-// one machine (#5395). The bind is the cross-process lock: while another
-// process holds the address it cannot receive this test's codes, so waiting
-// for it keeps the real delivery path instead of failing at once.
-func listenDemoCodeInbox(t *testing.T) net.Listener {
-	t.Helper()
-	deadline := time.Now().Add(time.Minute)
-	for {
-		listener, err := net.Listen("tcp", "127.0.0.1:10026")
-		if err == nil {
-			return listener
-		}
-		if !errors.Is(err, syscall.EADDRINUSE) || time.Now().After(deadline) {
-			require.NoError(t, err)
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
+	require.Empty(t, transport.Messages(), "MFA codes must stay in the internal demo inbox")
 }

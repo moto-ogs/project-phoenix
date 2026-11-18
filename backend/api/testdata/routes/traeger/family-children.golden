@@ -1,4 +1,6 @@
 DELETE /traeger/family-children/{contractId}
 GET /traeger/family-children/
 GET /traeger/family-children/export
+POST /traeger/family-children/imports
+POST /traeger/family-children/imports/preview
 PUT /traeger/family-children/

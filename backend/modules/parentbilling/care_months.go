@@ -351,6 +351,18 @@ type CareDuplicate struct {
 	Contracts      []CareDuplicateContract `json:"contracts"`
 }
 
+// CareUncountedContract is a contract a run bills as the sibling rule
+// counts its children with a contract alone, because its family has no
+// confirmed number for the month (#7356). Status is FamilyChildrenMissing
+// or FamilyChildrenExpired.
+type CareUncountedContract struct {
+	ContractID     int64  `json:"contract_id"`
+	SchoolName     string `json:"school_name"`
+	ChildFirstName string `json:"child_first_name"`
+	ChildLastName  string `json:"child_last_name"`
+	Status         string `json:"status"`
+}
+
 // HoldReasonDuplicateContract is why a release held a child back: two of
 // its contracts bill the same module on the same day (ADR 0158 E3).
 const HoldReasonDuplicateContract = "duplicate_contract"
@@ -391,7 +403,10 @@ type CareRunDetail struct {
 	// family ranked without a confirmed number for the month (#5918): the
 	// rule counts their children with a contract alone.
 	UncountedFamilies int `json:"uncounted_families"`
-	Billed            int `json:"billed"`
+	// UncountedContracts names the invoices of those families (#7356), so
+	// the office sees whose number to confirm before the release.
+	UncountedContracts []CareUncountedContract `json:"uncounted_contracts"`
+	Billed             int                     `json:"billed"`
 	// FeeNoticeContracts counts the contracts of Billed a Jahresbescheid
 	// assesses for the month (#6219); no monthly invoice bills them.
 	FeeNoticeContracts int `json:"fee_notice_contracts"`

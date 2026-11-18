@@ -38,6 +38,7 @@ export const CONTRACT_IMPORT_GROUPS: readonly {
       "party_last_name",
       "party_email",
       "debtor_number",
+      "family_children",
     ],
   },
 ];
@@ -64,6 +65,7 @@ export const CONTRACT_IMPORT_FIELD_LABELS: Record<ContractImportField, string> =
     party_last_name: "Nachname der Eltern",
     party_email: "E-Mail der Eltern",
     debtor_number: "Debitorennummer",
+    family_children: "Kinder in der Familie",
   };
 
 export const CONTRACT_IMPORT_FIELD_HINTS: Partial<
@@ -79,6 +81,8 @@ export const CONTRACT_IMPORT_FIELD_HINTS: Partial<
     "Die Person, die den Vertrag unterschrieben hat. Ohne Spalte hat der Vertrag keinen Vertragspartner.",
   party_email:
     "Nötig für Rechnungen per Mail. Geschwister erkennt moto nur über dieselbe Adresse.",
+  family_children:
+    "Alle Kinder der Familie, auch Geschwister ohne Vertrag. Gilt als bestätigt ab Vertragsbeginn.",
 };
 
 export const CONTRACT_IMPORT_STATUS: Record<
@@ -162,6 +166,7 @@ const INVALID_TEXT: Partial<Record<ContractImportField, string>> = {
   concluded_on: "„Abgeschlossen am“ ist kein Datum. Beispiel: 15.06.2026.",
   weekdays: "Die Wochentage sind nicht lesbar. Beispiel: Mo-Do oder Mo, Mi.",
   party_email: "Die E-Mail-Adresse ist nicht gültig.",
+  family_children: "„Kinder in der Familie“ ist keine ganze Zahl von 1 bis 20.",
 };
 
 const UNKNOWN_TEXT: Partial<Record<ContractImportField, string>> = {
@@ -250,6 +255,26 @@ export function contractImportDebtorText(
   }
 }
 
+/** Was der Import mit der Kinderzahl der Familie einer Zeile macht. */
+export function contractImportFamilyChildrenText(
+  row: ContractImportRow,
+): string | null {
+  const children =
+    row.familyChildren === 1 ? "1 Kind" : `${row.familyChildren ?? 0} Kinder`;
+  switch (row.familyChildrenStatus) {
+    case "new":
+      return `Kinderzahl der Familie: ${children}, bestätigt ab Vertragsbeginn.`;
+    case "same":
+      return `Kinderzahl der Familie: ${children} ist schon bestätigt.`;
+    case "differs":
+      return "Kinderzahl der Familie: In moto ist schon eine andere Zahl bestätigt. moto ändert sie nicht.";
+    case "rows_differ":
+      return "Kinderzahl der Familie: In der Datei stehen verschiedene Zahlen für dieselbe Familie. moto übernimmt keine.";
+    default:
+      return null;
+  }
+}
+
 export type ContractImportFilter =
   "all" | "ready" | "no_email" | "problems" | "duplicate";
 
@@ -318,7 +343,7 @@ export function rowsWithoutConditions(result: ContractImportResult): number {
 
 /** Eine Beispieldatei mit den Spalten, die moto von selbst erkennt. */
 export const CONTRACT_IMPORT_SAMPLE = [
-  "Vorname Kind;Nachname Kind;Geburtsdatum;Schule;Modul;Wochentage;Vertragsbeginn;Vertragsende;Vorname Eltern;Nachname Eltern;E-Mail;Debitorennummer",
-  "Mia;Beispiel;03.05.2018;Grundschule Nord;OGS bis 16 Uhr;Mo-Do;01.08.2026;;Eva;Beispiel;eva.beispiel@example.org;70001",
-  "Ben;Muster;11.11.2019;Grundschule Nord;OGS bis 14 Uhr;;01.08.2026;31.01.2027;Jan;Muster;jan.muster@example.org;70002",
+  "Vorname Kind;Nachname Kind;Geburtsdatum;Schule;Modul;Wochentage;Vertragsbeginn;Vertragsende;Vorname Eltern;Nachname Eltern;E-Mail;Debitorennummer;Kinder in der Familie",
+  "Mia;Beispiel;03.05.2018;Grundschule Nord;OGS bis 16 Uhr;Mo-Do;01.08.2026;;Eva;Beispiel;eva.beispiel@example.org;70001;2",
+  "Ben;Muster;11.11.2019;Grundschule Nord;OGS bis 14 Uhr;;01.08.2026;31.01.2027;Jan;Muster;jan.muster@example.org;70002;1",
 ].join("\r\n");

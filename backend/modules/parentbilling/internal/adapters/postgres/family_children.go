@@ -163,21 +163,26 @@ func familyChildWriteError(err error) error {
 	return fmt.Errorf("store family child count: %w", err)
 }
 
-// DeleteFamilyChildren removes the number of a family and answers it.
-func (s *Store) DeleteFamilyChildren(ctx context.Context, organizationID int64, family string) (parentbilling.FamilyChildCount, error) {
+// DeleteFamilyChildren removes the family's own and brought numbers in one
+// statement and answers the contracts to record in their trail.
+func (s *Store) DeleteFamilyChildren(ctx context.Context, organizationID int64, families []string) ([]parentbilling.FamilyChildTarget, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
-		return parentbilling.FamilyChildCount{}, err
+		return nil, err
 	}
 	var rows []familyChildCountRow
-	if err := db.NewDelete().Model(&rows).Where("organization_id = ?", organizationID).Where("family_email = ?", family).
-		Returning(familyChildCountColumns).Scan(ctx); err != nil {
-		return parentbilling.FamilyChildCount{}, fmt.Errorf("delete family child count: %w", err)
+	if err := db.NewDelete().Model(&rows).Where("organization_id = ?", organizationID).Where("family_email IN (?)", bun.List(families)).
+		Returning("care_contract_id").Scan(ctx); err != nil {
+		return nil, fmt.Errorf("delete family child count: %w", err)
 	}
 	if len(rows) == 0 {
-		return parentbilling.FamilyChildCount{}, parentbilling.ErrFamilyChildrenNotFound
+		return nil, parentbilling.ErrFamilyChildrenNotFound
 	}
-	return rows[0].count(), nil
+	targets := make([]parentbilling.FamilyChildTarget, len(rows))
+	for i, row := range rows {
+		targets[i] = parentbilling.FamilyChildTarget{ContractID: row.ContractID}
+	}
+	return targets, nil
 }
 
 // InsertFamilyChildEvents records one action per target in one statement:
@@ -210,4 +215,41 @@ func (s *Store) InsertFamilyChildEvents(ctx context.Context, organizationID int6
 		return fmt.Errorf("record family child count event: %w", err)
 	}
 	return nil
+}
+
+// ConfirmImportedFamilyChildren stores the numbers a file names as confirmed
+// by the account, each from its day on without an end, and records every
+// one in the trail of its contract, all in one statement (#7356). A family
+// named twice is refused: the caller hands over each family once. The stamp
+// is the store's clock, as the caller holds the monthly billing.
+func (s *Store) ConfirmImportedFamilyChildren(ctx context.Context, organizationID, accountID int64, numbers []parentbilling.ImportedFamilyChildren) error {
+	if len(numbers) == 0 {
+		return nil
+	}
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return err
+	}
+	families, contracts := make([]string, len(numbers)), make([]int64, len(numbers))
+	children, days := make([]int64, len(numbers)), make([]string, len(numbers))
+	for i, number := range numbers {
+		families[i], contracts[i], children[i], days[i] = number.FamilyEmail, number.ContractID, int64(number.Children), number.ValidFrom.String()
+	}
+	account := accountOrNull(accountID)
+	_, err = db.ExecContext(ctx, `WITH confirmed AS (
+			INSERT INTO parent_billing.family_child_counts
+				(organization_id, family_email, care_contract_id, confirmed_children, valid_from, confirmed_at, confirmed_by_account_id)
+			SELECT ?0, number.family, number.contract_id, number.children, number.valid_from::date, ?1, ?2
+			FROM unnest(?3::text[], ?4::bigint[], ?5::bigint[], ?6::text[]) AS number(family, contract_id, children, valid_from)
+			ON CONFLICT (organization_id, family_email) DO UPDATE SET care_contract_id = EXCLUDED.care_contract_id,
+				confirmed_children = EXCLUDED.confirmed_children, valid_from = EXCLUDED.valid_from, valid_until = NULL,
+				confirmed_at = EXCLUDED.confirmed_at, confirmed_by_account_id = EXCLUDED.confirmed_by_account_id,
+				updated_at = EXCLUDED.confirmed_at
+			RETURNING id, care_contract_id, confirmed_children, valid_from)
+		INSERT INTO parent_billing.family_child_count_events
+			(organization_id, care_contract_id, family_child_count_id, action, actor, actor_account_id, children, valid_from)
+		SELECT ?0, care_contract_id, id, ?7, ?8, ?2, confirmed_children, valid_from FROM confirmed`,
+		organizationID, s.now(), account, pgdialect.Array(families), pgdialect.Array(contracts), pgdialect.Array(children),
+		pgdialect.Array(days), parentbilling.FamilyChildEventConfirm, parentbilling.FamilyChildActorOffice)
+	return familyChildWriteError(err)
 }

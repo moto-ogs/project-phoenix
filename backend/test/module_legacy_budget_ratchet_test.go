@@ -275,7 +275,8 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0218: the handovers of the finance exports (+5).
 	// ADR 0232: the debtor numbers of an import of care contracts (+5).
 	// ADR 0275: the time import of the root clock (+2).
-	"modules/parentbilling/compose":               136,
+	// ADR 0288: the numbers of the families from a file (+5).
+	"modules/parentbilling/compose":               141,
 	"modules/parentrequestfeedprojection/compose": 11,
 	// Raised by ADR 0076: the restricted administrative repair constructor.
 	// ADR 0188: the guardian bank backfill/rekey constructor (+6).

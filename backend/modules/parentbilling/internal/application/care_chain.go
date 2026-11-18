@@ -380,7 +380,7 @@ func familySize(children []*rankedCareChild, rule *parentbilling.ContributionRul
 	family := familyOf(children[0].entries[0])
 	stated, ok := in.familyChildren[family]
 	if !ok {
-		if in.uncounted != nil && !strings.HasPrefix(family, "contract:") {
+		if in.uncounted != nil {
 			noteUncounted(in.uncounted, family, children, rule)
 		}
 		return withContract, 0
