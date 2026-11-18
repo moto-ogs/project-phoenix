@@ -110,7 +110,7 @@ describe("HolidayFormEditor (#5198)", () => {
     mockSavedHealth.mockReset();
   });
 
-  it("builds the editor like the OGS form editor: one card, one icon per add button (#7412)", () => {
+  it("builds the editor like the OGS form editor: one card, one plus per add button (#7412)", () => {
     renderEditor();
     // Health and address are sections of the one editor card, not cards
     // of their own inside it.
@@ -122,6 +122,8 @@ describe("HolidayFormEditor (#5198)", () => {
     for (const name of [/Frage hinzufügen/, /Infotext hinzufügen/]) {
       const button = screen.getByRole("button", { name });
       expect(button.querySelectorAll("svg")).toHaveLength(1);
+      // An info glyph reads as a hint to hover, not as "add".
+      expect(button.querySelector("svg")).toHaveClass("lucide-plus");
     }
   });
 
@@ -721,8 +723,9 @@ describe("HolidayFormEditor on a phone", () => {
       screen.queryByRole("textbox", { name: "Frage im Elternformular" }),
     ).not.toBeInTheDocument();
 
+    // The phone label is shorter, so both buttons stay on one line.
     fireEvent.click(
-      screen.getByRole("button", { name: "Als neue Version speichern" }),
+      screen.getByRole("button", { name: "Neue Version speichern" }),
     );
 
     expect(questionInputs()).toHaveLength(1);

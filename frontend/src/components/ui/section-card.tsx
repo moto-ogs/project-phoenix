@@ -227,9 +227,13 @@ export function SectionCollapseHead({
   );
 }
 
-/** Unter `lg` liegt unten die Navigation, der Fuß klebt darüber. */
+/**
+ * Unter `lg` liegt unten die Navigation, der Fuß klebt direkt auf ihrer
+ * Oberkante (Leiste 86 px über dem Rand). Mit Abstand liefe der Inhalt
+ * zwischen Fuß und Leiste sichtbar weiter.
+ */
 const STICKY_FOOTER =
-  "sticky bottom-[calc(6rem+env(safe-area-inset-bottom))] lg:bottom-0";
+  "sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-0";
 
 /**
  * The canonical content section of the calm design language the app converged

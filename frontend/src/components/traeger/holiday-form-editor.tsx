@@ -8,7 +8,7 @@
 // die Anschrift ab (#5625), der feste Baustein „Gesundheit“ macht Allergien
 // und Medikamente zur Pflicht (#6686). Speichern legt eine neue Version an.
 
-import { Info, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useCallback, useId, useMemo, useRef, useState } from "react";
 import {
   FieldEditorRow,
@@ -256,9 +256,12 @@ export function HolidayFormEditor({
       saving={saving}
       cancelDisabled={uploading}
       disabled={!dirty || uploading}
-      // A phone keeps both buttons on one line under the long list.
+      // A phone keeps both buttons on one line under the long list: two
+      // lines would cover a quarter of the screen with the sticky footer.
       cancelLabel={isPhone ? "Verwerfen" : "Änderungen verwerfen"}
-      saveLabel="Als neue Version speichern"
+      saveLabel={
+        isPhone ? "Neue Version speichern" : "Als neue Version speichern"
+      }
     />
   );
 
@@ -418,7 +421,7 @@ export function HolidayFormEditor({
                     tooltip="Fügt einen Text an, den Eltern nur lesen."
                     onClick={() => addField(blankInfoField(fields.length))}
                   >
-                    <Info className="h-4 w-4" aria-hidden="true" />
+                    <Plus className="h-4 w-4" aria-hidden="true" />
                     Infotext hinzufügen
                   </Button>
                 </div>
