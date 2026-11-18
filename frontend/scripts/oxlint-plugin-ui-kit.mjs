@@ -4596,7 +4596,8 @@ const rowActionsSlot = {
         while (
           parent?.type === "JSXExpressionContainer" ||
           parent?.type === "ConditionalExpression" ||
-          parent?.type === "LogicalExpression"
+          parent?.type === "LogicalExpression" ||
+          parent?.type === "JSXFragment"
         ) {
           parent = parent.parent;
         }

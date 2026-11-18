@@ -4798,27 +4798,32 @@ describe.concurrent("ui-kit row actions slot (#7456)", () => {
   });
 
   it("reports a column hidden in a variable or call, and width set on an action in the slot", async () => {
-    const [variable, call, width, conditionalWidth, undef] = await Promise.all([
-      outputOf(
-        `<ResponsiveActionRow><p>Text</p>{actions}</ResponsiveActionRow>`,
-      ),
-      outputOf(
-        `<ResponsiveActionRow><p>Text</p>{renderActions()}</ResponsiveActionRow>`,
-      ),
-      outputOf(
-        `<ResponsiveRowActions><Button className="w-full sm:w-auto" /></ResponsiveRowActions>`,
-      ),
-      outputOf(
-        `<ResponsiveRowActions>{ok ? <Button className="max-sm:w-full" /> : null}</ResponsiveRowActions>`,
-      ),
-      outputOf(
-        `<ResponsiveActionRow><p>Text</p>{ok ? <div className="flex" /> : undefined}{ok ? "" : false}</ResponsiveActionRow>`,
-      ),
-    ]);
+    const [variable, call, width, conditionalWidth, fragmentWidth, undef] =
+      await Promise.all([
+        outputOf(
+          `<ResponsiveActionRow><p>Text</p>{actions}</ResponsiveActionRow>`,
+        ),
+        outputOf(
+          `<ResponsiveActionRow><p>Text</p>{renderActions()}</ResponsiveActionRow>`,
+        ),
+        outputOf(
+          `<ResponsiveRowActions><Button className="w-full sm:w-auto" /></ResponsiveRowActions>`,
+        ),
+        outputOf(
+          `<ResponsiveRowActions>{ok ? <Button className="max-sm:w-full" /> : null}</ResponsiveRowActions>`,
+        ),
+        outputOf(
+          `<ResponsiveRowActions><><Button className="w-full" /></></ResponsiveRowActions>`,
+        ),
+        outputOf(
+          `<ResponsiveActionRow><p>Text</p>{ok ? <div className="flex" /> : undefined}{ok ? "" : false}</ResponsiveActionRow>`,
+        ),
+      ]);
     expect(variable).toContain(rule);
     expect(call).toContain(rule);
     expect(width).toContain(rule);
     expect(conditionalWidth).toContain(rule);
+    expect(fragmentWidth).toContain(rule);
     expect(undef).toContain(rule);
   });
 
