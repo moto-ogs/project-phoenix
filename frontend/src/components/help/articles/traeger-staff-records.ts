@@ -95,15 +95,15 @@ export function traegerStaffRecordsTopic(): HelpTopic {
         title: "Personalnummer eintragen",
         steps: [
           "Öffne die Akte im Reiter `Akten`.",
-          "Wähle bei `Personalnummer` den Knopf `Ändern`.",
+          "Wähle im Reiter `Stammdaten` bei `Personalnummer` den Knopf `Bearbeiten`.",
           "Trage die Nummer aus deinem Lohnsystem ein. Wähle `Speichern`.",
         ],
       },
       {
         title: "Bank- und Steuerdaten ändern",
         steps: [
-          "Öffne die Akte.",
-          "Wähle bei `Bank und Steuer` den Knopf `Ändern`.",
+          "Öffne die Akte und darin den Reiter `Bank und Steuer`.",
+          "Wähle `Bearbeiten`.",
           "Trage IBAN, Steuer-ID oder Sozialversicherungsnummer ein. Wähle `Speichern`.",
         ],
       },

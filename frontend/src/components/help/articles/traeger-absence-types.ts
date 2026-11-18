@@ -40,7 +40,7 @@ export function traegerAbsenceTypesTopic(): HelpTopic {
         description: "Ohne eigenen Wert gilt für jede Person die Zahl der Art.",
         steps: [
           "Öffne unter `Personalakten` die Akte der Person.",
-          "Wähle in der Karte `Kontingente` das Jahr.",
+          "Öffne den Reiter `Verträge und Zeit`. Wähle in der Karte `Kontingente` das Jahr.",
           "Wähle bei der Art `Anspruch ändern`.",
           "Trage die Tage und eine Begründung ein. Wähle `Speichern`.",
         ],

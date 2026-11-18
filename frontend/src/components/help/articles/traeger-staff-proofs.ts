@@ -37,7 +37,7 @@ export function traegerStaffProofsTopic(): HelpTopic {
       {
         title: "Einen Nachweis eintragen",
         steps: [
-          "Öffne die Personalakte der Person.",
+          "Öffne die Personalakte der Person und darin den Reiter `Nachweise`.",
           "Wähle bei `Nachweise` neben der Art `Eintragen` oder `Erneuern`.",
           "Wähle den Tag, an dem der Nachweis vorlag.",
           "Beim Führungszeugnis: Wähle auch das Ausstellungsdatum. Bestätige, dass es keine einschlägige Eintragung hat.",

@@ -10992,7 +10992,7 @@ export const traegerAbsenceTypesTopic =
             "Ohne eigenen Wert gilt für jede Person die Zahl der Art.",
           steps: [
             "Öffne unter `Personalakten` die Akte der Person.",
-            "Wähle in der Karte `Kontingente` das Jahr.",
+            "Öffne den Reiter `Verträge und Zeit`. Wähle in der Karte `Kontingente` das Jahr.",
             "Wähle bei der Art `Anspruch ändern`.",
             "Trage die Tage und eine Begründung ein. Wähle `Speichern`.",
           ],
@@ -15017,6 +15017,7 @@ export const traegerStaffContractsTopic =
           title: "Vertrag anlegen",
           steps: [
             "Öffne die Akte im Reiter `Akten`.",
+            "Öffne den Reiter `Verträge und Zeit`.",
             "Wähle bei `Arbeitsverträge` den Knopf `Vertrag anlegen`.",
             "Wähle die Art: `Teilzeit`, `Vollzeit`, `Minijob`, `Übungsleiter` oder `Ehrenamt`.",
             "Wähle den `Ersten Tag`. Den `Letzten Tag` lässt du leer, wenn der Vertrag unbefristet ist.",
@@ -15205,6 +15206,7 @@ export const traegerStaffPoolTopic =
           title: "Eine Person zum Springer machen",
           steps: [
             "Öffne `Personalakten` und dort die Akte der Person.",
+            "Öffne den Reiter `Verträge und Zeit`.",
             "Lege einen Arbeitsvertrag an, oder wähle beim Vertrag `Vertrag ändern`.",
             "Schalte `Vertretungspool` ein und speichere.",
           ],
@@ -15287,7 +15289,7 @@ export const traegerStaffProofsTopic =
         {
           title: "Einen Nachweis eintragen",
           steps: [
-            "Öffne die Personalakte der Person.",
+            "Öffne die Personalakte der Person und darin den Reiter `Nachweise`.",
             "Wähle bei `Nachweise` neben der Art `Eintragen` oder `Erneuern`.",
             "Wähle den Tag, an dem der Nachweis vorlag.",
             "Beim Führungszeugnis: Wähle auch das Ausstellungsdatum. Bestätige, dass es keine einschlägige Eintragung hat.",
@@ -15429,15 +15431,15 @@ export const traegerStaffRecordsTopic =
           title: "Personalnummer eintragen",
           steps: [
             "Öffne die Akte im Reiter `Akten`.",
-            "Wähle bei `Personalnummer` den Knopf `Ändern`.",
+            "Wähle im Reiter `Stammdaten` bei `Personalnummer` den Knopf `Bearbeiten`.",
             "Trage die Nummer aus deinem Lohnsystem ein. Wähle `Speichern`.",
           ],
         },
         {
           title: "Bank- und Steuerdaten ändern",
           steps: [
-            "Öffne die Akte.",
-            "Wähle bei `Bank und Steuer` den Knopf `Ändern`.",
+            "Öffne die Akte und darin den Reiter `Bank und Steuer`.",
+            "Wähle `Bearbeiten`.",
             "Trage IBAN, Steuer-ID oder Sozialversicherungsnummer ein. Wähle `Speichern`.",
           ],
         },
@@ -15514,7 +15516,7 @@ export const traegerStaffTimeAccountTopic =
           title: "Stundenkonto ansehen",
           steps: [
             "Öffne die Akte im Reiter `Akten`.",
-            "Gehe zur Karte `Stundenkonto`. Sie zeigt den Vormonat.",
+            "Öffne den Reiter `Verträge und Zeit`. Die Karte `Stundenkonto` zeigt den Vormonat.",
             "Mit den Pfeilen wechselst du den Monat.",
             "Oben stehen Soll, Ist, Saldo und Kontostand über alle Schulen. Darunter steht jede Schule in einer Zeile.",
           ],

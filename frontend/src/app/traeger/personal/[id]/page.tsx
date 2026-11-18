@@ -6,11 +6,17 @@
 // Stundenkonto mit dem Monatsabschluss (#4711), die
 // Bank- und Steuerdaten und der Verlauf. Die Personalnummer und die Bankdaten ändert nur die
 // Personalverwaltung; die Schulen sehen sie nur noch als „vom Träger“.
+// Die Akte ist in Reiter geteilt (#7414); der Reiter steht in der Adresse.
 
 import { EyeIcon, PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
 import dynamic from "next/dynamic";
-import { useParams, useRouter } from "next/navigation";
-import { Suspense, useState } from "react";
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { staffChangeText } from "~/components/traeger/staff/staff-record-format";
 import { StaffPersonCard } from "~/components/traeger/staff/staff-person-card";
 import { StaffProofsCard } from "~/components/traeger/staff/staff-proofs-card";
@@ -28,7 +34,7 @@ import { Input } from "~/components/ui/input";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { TenantPage } from "~/components/ui/tenant-page";
 import {
   useApiErrorDisplay,
   useApiFormError,
@@ -90,6 +96,22 @@ const StaffTimeAccountCard = dynamic(
     loading: () => <SectionCard title="Stundenkonto" loading />,
   },
 );
+
+/** Die Reiter der Akte (#7414); `stammdaten` steht ohne `?tab=` in der Adresse. */
+const RECORD_TABS = [
+  { value: "stammdaten", label: "Stammdaten" },
+  { value: "vertraege", label: "Verträge und Zeit" },
+  { value: "nachweise", label: "Nachweise" },
+  { value: "bank-und-steuer", label: "Bank und Steuer" },
+  { value: "verlauf", label: "Verlauf" },
+] as const;
+
+type RecordTab = (typeof RECORD_TABS)[number]["value"];
+
+/** Der Reiter in der Adresse; ein unbekannter Wert öffnet die Stammdaten. */
+function parseRecordTab(value: string | null | undefined): RecordTab {
+  return RECORD_TABS.find((tab) => tab.value === value)?.value ?? "stammdaten";
+}
 
 const errorMessage = (err: unknown) =>
   err instanceof Error ? err.message : String(err);
@@ -161,7 +183,7 @@ function PersonnelNumberCard({
             }}
           >
             <PencilSimpleIcon className="h-4 w-4" aria-hidden="true" />
-            Ändern
+            Bearbeiten
           </Button>
         )
       }
@@ -179,6 +201,7 @@ function PersonnelNumberCard({
         <Input
           id="traeger-staff-personnel-number"
           label="Personalnummer"
+          controlSize="compact"
           hint="Leer lassen, wenn es noch keine Nummer gibt."
           inputMode="numeric"
           autoComplete="off"
@@ -298,7 +321,7 @@ function FinancialCard({
               onClick={() => void startEdit()}
             >
               <PencilSimpleIcon className="h-4 w-4" aria-hidden="true" />
-              Ändern
+              Bearbeiten
             </Button>
           </span>
         )
@@ -320,6 +343,7 @@ function FinancialCard({
               key={key}
               id={`traeger-staff-${key}`}
               label={label}
+              controlSize="compact"
               placeholder={placeholder}
               autoComplete="off"
               value={draft[key] ?? ""}
@@ -360,6 +384,37 @@ function StaffRecordContent() {
   const params = useParams<{ id: string }>();
   const recordId = params?.id ?? "";
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Der Reiter steht in der Adresse, ein Lesezeichen öffnet ihn wieder
+  // (#7414). Ein Klick zeigt ihn sofort, die Adresse folgt; bis dahin gilt
+  // der Klick. Ändert sich die Adresse anders (Zurück, ein Link), gewinnt sie.
+  const addressedTab = parseRecordTab(searchParams?.get("tab"));
+  const [clicked, setClicked] = useState<{
+    recordId: string;
+    tab: RecordTab;
+    from: RecordTab;
+  } | null>(null);
+  const activeTab =
+    clicked && clicked.recordId === recordId && clicked.from === addressedTab
+      ? clicked.tab
+      : addressedTab;
+  useEffect(() => {
+    // Der vorgezogene Reiter überbrückt nur das Umschalten der Adresse. Danach
+    // darf er eine spätere Navigation im Browser nicht überstimmen.
+    setClicked(null);
+  }, [addressedTab, recordId]);
+  const openTab = (next: RecordTab) => {
+    setClicked({ recordId, tab: next, from: addressedTab });
+    // `from` (der Rückweg zur Übersicht) bleibt in der Adresse stehen.
+    const query = new URLSearchParams(searchParams?.toString());
+    if (next === "stammdaten") query.delete("tab");
+    else query.set("tab", next);
+    const queryString = query.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+      scroll: false,
+    });
+  };
   const { success } = useToast();
   const {
     data: record,
@@ -404,9 +459,6 @@ function StaffRecordContent() {
     }
   };
 
-  const activeSchools =
-    record?.employments.filter((employment) => employment.active).length ?? 0;
-
   return (
     <TenantPage
       title={record ? staffName(record) : "Personalakte"}
@@ -414,23 +466,17 @@ function StaffRecordContent() {
       back
       backHref={backHref}
       backLabel="Zurück zu den Personalakten"
-      stats={
-        record ? (
-          <TenantPageStats
-            items={[
-              {
-                value: activeSchools,
-                label: activeSchools === 1 ? "Einsatzort" : "Einsatzorte",
-              },
-              {
-                value: record.personnelNumber ?? "–",
-                label: "Personalnummer",
-              },
-            ]}
-          />
-        ) : null
+      tabs={
+        record
+          ? {
+              value: activeTab,
+              onChange: (next) => openTab(parseRecordTab(next)),
+              inUrl: true,
+              label: "Bereiche der Personalakte",
+              items: RECORD_TABS,
+            }
+          : undefined
       }
-      statsLoading={loading}
       error={error}
       loading={loading}
       actions={
@@ -491,104 +537,118 @@ function StaffRecordContent() {
     >
       {record ? (
         <>
-          <StaffPersonCard
-            record={record}
-            onSaved={() => {
-              refreshOverview();
-              return mutate();
-            }}
-          />
+          {activeTab === "stammdaten" ? (
+            <>
+              <StaffPersonCard
+                record={record}
+                onSaved={() => {
+                  refreshOverview();
+                  return mutate();
+                }}
+              />
+              <div className="compact:gap-4 grid gap-6 max-sm:gap-3 lg:grid-cols-2">
+                <PersonnelNumberCard record={record} onSaved={replace} />
+                <SectionCard
+                  concept={schoolsConcept}
+                  title="Einsatzorte"
+                  description="An diesen Schulen arbeitet die Person. Jede Schule plant und erfasst ihre Zeiten wie bisher."
+                >
+                  <FramedList>
+                    {record.employments.map((employment) => (
+                      <li
+                        key={`${employment.schoolId}-${employment.staffId}`}
+                        className="flex items-center justify-between gap-3 px-4 py-3"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                            <span className="min-w-0 truncate text-sm font-medium text-gray-900">
+                              {employment.schoolName}
+                            </span>
+                            {employment.viaPool ? (
+                              <StatusBadge
+                                label="Vertretungspool"
+                                tone="blue"
+                                size="xs"
+                              />
+                            ) : null}
+                          </div>
+                          {employment.viaPool ? (
+                            <p className="mt-0.5 text-sm text-gray-500">
+                              {poolEmploymentHint(employment.active)}
+                            </p>
+                          ) : null}
+                        </div>
+                        <StatusBadge
+                          label={employment.active ? "Beschäftigt" : "Beendet"}
+                          tone={employment.active ? "green" : "gray"}
+                        />
+                      </li>
+                    ))}
+                  </FramedList>
+                </SectionCard>
+              </div>
+            </>
+          ) : null}
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <PersonnelNumberCard record={record} onSaved={replace} />
+          {activeTab === "vertraege" ? (
+            <>
+              <StaffContractsCard record={record} onChanged={replace} />
+              <StaffTimeAccountCard recordId={record.id} />
+              <StaffAbsenceAccountsCard recordId={record.id} />
+            </>
+          ) : null}
+
+          {activeTab === "nachweise" ? (
+            <StaffProofsCard
+              recordId={record.id}
+              personName={staffName(record)}
+              proofs={record.proofs}
+              onChanged={(proofs) =>
+                void mutate(
+                  (current) => (current ? { ...current, proofs } : current),
+                  { revalidate: false },
+                )
+              }
+            />
+          ) : null}
+
+          {activeTab === "bank-und-steuer" ? (
+            <FinancialCard
+              record={record}
+              onSaved={() => {
+                reload();
+                refreshOverview();
+              }}
+            />
+          ) : null}
+
+          {activeTab === "verlauf" ? (
             <SectionCard
-              concept={schoolsConcept}
-              title="Einsatzorte"
-              description="An diesen Schulen arbeitet die Person. Jede Schule plant und erfasst ihre Zeiten wie bisher."
+              concept={changeHistoryConcept}
+              title="Verlauf"
+              description="Woher die Akte kommt, was beim Verknüpfen nicht übernommen wurde und was sich seitdem geändert hat. Bank- und Steuerwerte stehen nur maskiert hier."
             >
-              <FramedList>
-                {record.employments.map((employment) => (
-                  <li
-                    key={`${employment.schoolId}-${employment.staffId}`}
-                    className="flex items-center justify-between gap-3 px-4 py-3"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="min-w-0 truncate text-sm font-medium text-gray-900">
-                          {employment.schoolName}
-                        </span>
-                        {employment.viaPool ? (
-                          <StatusBadge
-                            label="Vertretungspool"
-                            tone="blue"
-                            size="xs"
-                          />
-                        ) : null}
-                      </div>
-                      {employment.viaPool ? (
-                        <p className="mt-0.5 text-sm text-gray-500">
-                          {poolEmploymentHint(employment.active)}
-                        </p>
-                      ) : null}
-                    </div>
-                    <StatusBadge
-                      label={employment.active ? "Beschäftigt" : "Beendet"}
-                      tone={employment.active ? "green" : "gray"}
-                    />
-                  </li>
-                ))}
-              </FramedList>
+              {record.changes.length > 0 ? (
+                <FramedList>
+                  {record.changes.map((change, index) => (
+                    <li
+                      key={`${change.occurredAt}-${index}`}
+                      className="flex flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                    >
+                      <span className="min-w-0 text-sm wrap-anywhere text-gray-900">
+                        {staffChangeText(change)}
+                      </span>
+                      <span className="shrink-0 text-sm text-gray-500 tabular-nums">
+                        {formatBerlinDate(change.occurredAt)}
+                      </span>
+                    </li>
+                  ))}
+                </FramedList>
+              ) : (
+                <EmptyState title="Noch kein Eintrag." variant="compact" />
+              )}
             </SectionCard>
-          </div>
-
-          <StaffProofsCard
-            recordId={record.id}
-            personName={staffName(record)}
-            proofs={record.proofs}
-            onChanged={(proofs) =>
-              void mutate(
-                (current) => (current ? { ...current, proofs } : current),
-                { revalidate: false },
-              )
-            }
-          />
-          <StaffAbsenceAccountsCard recordId={record.id} />
-          <StaffContractsCard record={record} onChanged={replace} />
-          <StaffTimeAccountCard recordId={record.id} />
-
-          <FinancialCard
-            record={record}
-            onSaved={() => {
-              reload();
-              refreshOverview();
-            }}
-          />
-
-          <SectionCard
-            concept={changeHistoryConcept}
-            title="Verlauf"
-            description="Woher die Akte kommt, was beim Verknüpfen nicht übernommen wurde und was sich seitdem geändert hat. Bank- und Steuerwerte stehen nur maskiert hier."
-          >
-            {record.changes.length > 0 ? (
-              <FramedList>
-                {record.changes.map((change, index) => (
-                  <li
-                    key={`${change.occurredAt}-${index}`}
-                    className="flex flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
-                  >
-                    <span className="min-w-0 text-sm wrap-anywhere text-gray-900">
-                      {staffChangeText(change)}
-                    </span>
-                    <span className="shrink-0 text-sm text-gray-500 tabular-nums">
-                      {formatBerlinDate(change.occurredAt)}
-                    </span>
-                  </li>
-                ))}
-              </FramedList>
-            ) : (
-              <EmptyState title="Noch kein Eintrag." variant="compact" />
-            )}
-          </SectionCard>
+          ) : null}
         </>
       ) : null}
     </TenantPage>
