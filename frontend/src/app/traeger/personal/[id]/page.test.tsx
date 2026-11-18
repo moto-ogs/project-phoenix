@@ -10,6 +10,7 @@ const { api, mockPush } = vi.hoisted(() => ({
   api: {
     fetchStaffRecord: vi.fn(),
     updateStaffPersonnelNumber: vi.fn(),
+    updateStaffPerson: vi.fn(),
     revealStaffFinancial: vi.fn(),
     updateStaffFinancial: vi.fn(),
     dissolveStaffRecord: vi.fn(),
@@ -297,6 +298,75 @@ describe("TraegerStaffRecordPage", () => {
       expect(api.updateStaffPersonnelNumber).toHaveBeenCalledWith("5", "70005"),
     );
     expect(await within(card!).findByText("70005")).toBeInTheDocument();
+  });
+
+  // #7379: Name und Geburtstag korrigiert die Personalverwaltung in der Akte.
+  it("corrects name and birthday and refuses an empty name", async () => {
+    api.updateStaffPerson.mockResolvedValue({
+      ...RECORD,
+      firstName: "Myra",
+      birthday: "1990-04-12",
+      changes: [
+        {
+          kind: "changed",
+          field: "birthday",
+          value: "1990-04-02",
+          occurredAt: "2026-11-18T10:00:00Z",
+        },
+        ...RECORD.changes,
+      ],
+    });
+    renderPage();
+    const card = (
+      await screen.findByText("Person", { selector: "h2" })
+    ).closest("section");
+    expect(card).not.toBeNull();
+    expect(within(card!).getByText("02.04.1990")).toBeInTheDocument();
+    fireEvent.click(within(card!).getByRole("button", { name: /Ändern/ }));
+
+    const firstName = within(card!).getByLabelText(/Vorname/);
+    fireEvent.change(firstName, { target: { value: "  " } });
+    fireEvent.click(within(card!).getByRole("button", { name: "Speichern" }));
+    expect(
+      await within(card!).findByText("Bitte tragen Sie den Vornamen ein."),
+    ).toBeInTheDocument();
+    expect(api.updateStaffPerson).not.toHaveBeenCalled();
+
+    fireEvent.change(firstName, { target: { value: " Myra " } });
+    fireEvent.change(
+      within(card!).getByRole("textbox", { name: /Geburtstag/ }),
+      {
+        target: { value: "12.04.1990" },
+      },
+    );
+    fireEvent.click(within(card!).getByRole("button", { name: "Speichern" }));
+    await vi.waitFor(() =>
+      expect(api.updateStaffPerson).toHaveBeenCalledWith("5", {
+        firstName: "Myra",
+        lastName: "Sommer-Berg",
+        birthday: "1990-04-12",
+      }),
+    );
+    expect(await within(card!).findByText("12.04.1990")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Myra Sommer-Berg" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Geburtstag ersetzt, vorher „02.04.1990“"),
+    ).toBeInTheDocument();
+  });
+
+  it("closes the person without a request when nothing changed", async () => {
+    renderPage();
+    const card = (
+      await screen.findByText("Person", { selector: "h2" })
+    ).closest("section");
+    fireEvent.click(within(card!).getByRole("button", { name: /Ändern/ }));
+    fireEvent.click(within(card!).getByRole("button", { name: "Speichern" }));
+    expect(
+      await within(card!).findByRole("button", { name: /Ändern/ }),
+    ).toBeInTheDocument();
+    expect(api.updateStaffPerson).not.toHaveBeenCalled();
   });
 
   it("reveals the bank values on request", async () => {

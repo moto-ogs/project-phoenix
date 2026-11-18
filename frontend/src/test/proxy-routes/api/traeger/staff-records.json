@@ -35,6 +35,9 @@
   "api/traeger/staff-records/[id]/financial/reveal": [
     "POST traeger /traeger/staff-records/id%2F1/financial/reveal"
   ],
+  "api/traeger/staff-records/[id]/person": [
+    "PUT traeger /traeger/staff-records/id%2F1/person"
+  ],
   "api/traeger/staff-records/[id]/personnel-number": [
     "PUT traeger /traeger/staff-records/id%2F1/personnel-number"
   ],

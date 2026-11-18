@@ -527,6 +527,35 @@ export async function updateStaffPersonnelNumber(
   );
 }
 
+/** Name und Geburtstag der Akte, wie die Personalverwaltung sie korrigiert. */
+export interface StaffPersonInput {
+  readonly firstName: string;
+  readonly lastName: string;
+  /** Kalendertag `YYYY-MM-DD`; leer entfernt den Geburtstag. */
+  readonly birthday: string;
+}
+
+/**
+ * Korrigiert Vorname, Nachname und Geburtstag der Akte (#7379). Jeder
+ * geänderte Wert steht danach mit seinem alten Wert im Verlauf; die
+ * Angaben an den Schulen bleiben unverändert.
+ */
+export async function updateStaffPerson(
+  id: string,
+  input: StaffPersonInput,
+): Promise<StaffRecordDetail> {
+  return mapDetail(
+    await traegerRequest<BackendDetail>(recordPath(id, "/person"), {
+      method: "PUT",
+      body: {
+        first_name: input.firstName,
+        last_name: input.lastName,
+        birthday: input.birthday === "" ? null : input.birthday,
+      },
+    }),
+  );
+}
+
 export async function revealStaffFinancial(
   id: string,
 ): Promise<StaffFinancial> {

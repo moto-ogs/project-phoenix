@@ -213,6 +213,7 @@ type staffRecordBody struct {
 	ID              int64   `json:"id"`
 	FirstName       string  `json:"first_name"`
 	LastName        string  `json:"last_name"`
+	Birthday        string  `json:"birthday"`
 	PersonnelNumber *string `json:"personnel_number"`
 	HasFinancial    bool    `json:"has_financial"`
 	Employments     []struct {
@@ -435,6 +436,53 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		assert.Equal(t, after[north]+2, logged[north], "the PDF and the Excel export are logged like the CSV")
 	})
 
+	// #7379: the Personalverwaltung corrects name and birthday in the
+	// record; the trail keeps the old values, the schools keep their own.
+	t.Run("name and birthday are corrected in the record and stand in its trail", func(t *testing.T) {
+		path := fmt.Sprintf("/traeger/staff-records/%d/person", record.ID)
+		rec := traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"first_name": " ", "last_name": "Sommer-Berg", "birthday": nil})
+		assertStaffRefusal(t, rec, http.StatusBadRequest, "workforce.stammdaten_invalid")
+		require.Len(t, refusalOf(t, rec).Errors, 1)
+		assert.Equal(t, "first_name", refusalOf(t, rec).Errors[0].Field)
+		rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"first_name": "Mira", "last_name": "Sommer-Berg", "birthday": "2999-01-01"})
+		assertStaffRefusal(t, rec, http.StatusBadRequest, "workforce.stammdaten_invalid")
+		assert.Equal(t, "birthday", refusalOf(t, rec).Errors[0].Field, "a birthday that has not come yet is refused")
+
+		rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"first_name": " Myra ", "last_name": "Sommer-Berg", "birthday": "1990-04-12"})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		corrected := decode[staffRecordBody](t, rec)
+		assert.Equal(t, "Myra", corrected.FirstName)
+		assert.Equal(t, "Sommer-Berg", corrected.LastName)
+		assert.Equal(t, "1990-04-12", corrected.Birthday)
+		changed := map[string]string{}
+		for _, change := range corrected.Changes {
+			if change.Kind == workforce.TraegerStaffChangeChanged {
+				changed[change.Field] = change.Value
+			}
+		}
+		assert.Equal(t, "Mira", changed["first_name"], "the trail keeps the name before the correction")
+		assert.Contains(t, changed, "birthday", "a birthday set for the first time stands in the trail")
+		assert.NotContains(t, changed, "last_name", "an unchanged value writes no entry")
+		assert.Equal(t, 1, staffSchoolValue(t, db, `SELECT COUNT(*) FROM users.persons p JOIN users.staff_school_memberships s ON s.person_id = p.id WHERE s.id = ? AND p.first_name = 'Mira'`, miraNorth.ID),
+			"the school keeps its own person")
+
+		before := len(corrected.Changes)
+		rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"first_name": "Myra", "last_name": "Sommer-Berg", "birthday": "1990-04-12"})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Len(t, decode[staffRecordBody](t, rec).Changes, before, "saving the same values writes nothing")
+
+		rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"first_name": "Myra", "last_name": "Sommer-Berg", "birthday": nil})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		cleared := decode[staffRecordBody](t, rec)
+		assert.Empty(t, cleared.Birthday)
+		require.NotEmpty(t, cleared.Changes)
+		assert.Equal(t, "birthday", cleared.Changes[0].Field)
+		assert.Equal(t, "1990-04-12", cleared.Changes[0].Value)
+
+		rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"first_name": "Mira", "last_name": "Sommer-Berg", "birthday": "1990-04-12"})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	})
+
 	t.Run("no role without the right and no other Träger reaches the records", func(t *testing.T) {
 		overviewOnly := newTraegerOffice(t, db, portal, "Träger Übersicht", identityaccess.TraegerRoleReadOnly)
 		rec := traegerJSON(t, router, overviewOnly.token, http.MethodGet, "/traeger/staff-records/", nil)
@@ -444,6 +492,9 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		other := newTraegerOffice(t, db, portal, "Träger Fremd", identityaccess.TraegerRolePersonnel)
 		staffRelease(t, db, other.organization)
 		rec = traegerJSON(t, router, other.token, http.MethodGet, fmt.Sprintf("/traeger/staff-records/%d", record.ID), nil)
+		assertStaffRefusal(t, rec, http.StatusNotFound, "workforce.traeger_staff_record_not_found")
+		rec = traegerJSON(t, router, other.token, http.MethodPut, fmt.Sprintf("/traeger/staff-records/%d/person", record.ID),
+			map[string]any{"first_name": "Fremd", "last_name": "Fremd", "birthday": nil})
 		assertStaffRefusal(t, rec, http.StatusNotFound, "workforce.traeger_staff_record_not_found")
 		rec = traegerJSON(t, router, other.token, http.MethodGet, "/traeger/staff-records/", nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

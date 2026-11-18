@@ -1,6 +1,7 @@
 "use client";
 
-// Eine Personalakte des Trägers (#4705, ADR 0089): die Person, die
+// Eine Personalakte des Trägers (#4705, ADR 0089): die Person (Name und
+// Geburtstag korrigiert die Personalverwaltung, #7379), die
 // Personalnummer des Trägers, die Einsatzorte, die Kontingente (#4710), das
 // Stundenkonto mit dem Monatsabschluss (#4711), die
 // Bank- und Steuerdaten und der Verlauf. Die Personalnummer und die Bankdaten ändert nur die
@@ -10,11 +11,8 @@ import { EyeIcon, PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { Suspense, useState } from "react";
-import {
-  STAFF_FIELD_LABELS,
-  schoolCount,
-  staffChangeText,
-} from "~/components/traeger/staff/staff-record-format";
+import { staffChangeText } from "~/components/traeger/staff/staff-record-format";
+import { StaffPersonCard } from "~/components/traeger/staff/staff-person-card";
 import { StaffProofsCard } from "~/components/traeger/staff/staff-proofs-card";
 import { StaffAbsenceAccountsCard } from "~/components/traeger/staff/staff-absence-accounts-card";
 import { useStaffOverviewReturn } from "~/components/traeger/staff/staff-overview-tab";
@@ -40,7 +38,7 @@ import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
 import { payrollConcept } from "~/lib/concepts/payroll";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { staffConcept } from "~/lib/concepts/staff";
-import { formatBerlinDate, formatDate } from "~/lib/date-helpers";
+import { formatBerlinDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import { useInvalidateFamily } from "~/lib/swr";
 import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
@@ -379,8 +377,8 @@ function StaffRecordContent() {
   const dissolveErrors = useApiFormError();
   const invalidateFamily = useInvalidateFamily();
 
-  // Name, Personalnummer, Einsatzorte and Bank und Steuer of a record also
-  // stand in the list of records.
+  // Name, Geburtstag, Personalnummer, Einsatzorte and Bank und Steuer of a
+  // record also stand in the list of records.
   const refreshOverview = () =>
     void invalidateFamily(traegerStaffKeys.overviewFamily);
   const replace = (next: StaffRecordDetail) => {
@@ -493,26 +491,7 @@ function StaffRecordContent() {
     >
       {record ? (
         <>
-          <SectionCard
-            concept={staffConcept}
-            title="Person"
-            description="Name und Geburtstag stammen vom Verknüpfen, vom Einstellen oder aus dem Import. Die Schulen pflegen ihre eigenen Angaben weiter selbst."
-          >
-            <DataGrid columns={4}>
-              <DataField label={STAFF_FIELD_LABELS.first_name}>
-                {record.firstName}
-              </DataField>
-              <DataField label={STAFF_FIELD_LABELS.last_name}>
-                {record.lastName}
-              </DataField>
-              <DataField label={STAFF_FIELD_LABELS.birthday}>
-                {record.birthday ? formatDate(record.birthday) : "–"}
-              </DataField>
-              <DataField label="Schulen">
-                {schoolCount(record.employments.length)}
-              </DataField>
-            </DataGrid>
-          </SectionCard>
+          <StaffPersonCard record={record} onSaved={replace} />
 
           <div className="grid gap-6 lg:grid-cols-2">
             <PersonnelNumberCard record={record} onSaved={replace} />
