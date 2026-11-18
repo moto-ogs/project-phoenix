@@ -1002,6 +1002,8 @@ export const portalRoutes = {
     timetable["POST /api/timetable/instances/{id}/reopen"],
     timetable["POST /api/timetable/instances/{id}/start"],
     timetable["POST /api/timetable/instances/{instance_id}/students/{student_id}/correction"],
+    timetable["POST /api/timetable/lists/options"],
+    timetable["POST /api/timetable/lists/preview"],
     timetable["POST /api/timetable/materialize"],
     timetable["POST /api/timetable/operations/instances/{id}/complete"],
     timetable["POST /api/timetable/operations/instances/{id}/reopen"],

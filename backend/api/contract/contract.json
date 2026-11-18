@@ -8858,6 +8858,36 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/timetable/lists/options",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "slotListOptionsRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OptionsResult"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/lists/preview",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "slotListRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "Result"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/timetable/materialize",
       "portals": [
         "tenant"
@@ -28368,6 +28398,42 @@
       ]
     },
     {
+      "name": "Counters",
+      "go_type": "classday.Counters",
+      "fields": [
+        {
+          "name": "planned",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "present",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "missing",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "excused",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "unplanned",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "Counts",
       "go_type": "studentdeletion.Counts",
       "fields": [
@@ -33176,6 +33242,24 @@
           "schema": {
             "kind": "json",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupOption",
+      "go_type": "classday.GroupOption",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -40464,6 +40548,42 @@
       ]
     },
     {
+      "name": "ListKindOption",
+      "go_type": "classday.ListKindOption",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "available",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "slot_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "row_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "Mailing",
       "go_type": "carecontract.Mailing",
       "fields": [
@@ -44252,6 +44372,51 @@
       ]
     },
     {
+      "name": "OptionsResult",
+      "go_type": "classday.OptionsResult",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slots",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Slot"
+            }
+          }
+        },
+        {
+          "name": "pickup_cohorts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PickupCohortOption"
+            }
+          }
+        },
+        {
+          "name": "list_kinds",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ListKindOption"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "OrderChangeResponse",
       "go_type": "mealplan.OrderChangeResponse",
       "fields": [
@@ -47426,6 +47591,36 @@
       ]
     },
     {
+      "name": "PickupCohortOption",
+      "go_type": "classday.PickupCohortOption",
+      "fields": [
+        {
+          "name": "cohort",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "available",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "row_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "PickupDataResponse",
       "go_type": "careplanhttp.PickupDataResponse",
       "fields": [
@@ -50213,6 +50408,119 @@
         {
           "name": "note",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Result",
+      "go_type": "classday.Result",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_cohort",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "list_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "list_label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_by",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "provenance",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slots",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Slot"
+            }
+          }
+        },
+        {
+          "name": "groups",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "GroupOption"
+            }
+          }
+        },
+        {
+          "name": "classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "counters",
+          "schema": {
+            "kind": "ref",
+            "ref": "Counters"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SlotListRow"
+            }
+          }
+        },
+        {
+          "name": "signature",
           "schema": {
             "kind": "string"
           }
@@ -56031,6 +56339,151 @@
           "name": "has_full_access",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Slot",
+      "go_type": "classday.Slot",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "time_range",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "list_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SlotListRow",
+      "go_type": "classday.SlotListRow",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "instance_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "slot",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "planned",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "present",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "unplanned",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "excused",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "status_label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -77576,6 +78029,116 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "slotListOptionsRequest",
+      "go_type": "classdayhttp.slotListOptionsRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "slotListRequest",
+      "go_type": "classdayhttp.slotListRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_cohort",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "list_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "instance_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "group_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "classes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "group_by",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_signature",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

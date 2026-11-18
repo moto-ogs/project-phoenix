@@ -361,8 +361,8 @@ type GroupOption struct {
 	Name string `json:"name"`
 }
 
-// Row is one child on the list.
-type Row struct {
+// SlotListRow is one child on the list.
+type SlotListRow struct {
 	StudentID   int64  `json:"student_id,string"`
 	Name        string `json:"name"`
 	SchoolClass string `json:"school_class"`
@@ -415,7 +415,7 @@ type Result struct {
 	Groups       []GroupOption `json:"groups"`
 	Classes      []string      `json:"classes"`
 	Counters     Counters      `json:"counters"`
-	Rows         []Row         `json:"rows"`
+	Rows         []SlotListRow `json:"rows"`
 	// Signature is a stable content hash of the rendered list (label,
 	// provenance, counters and every row). The export endpoint re-derives the
 	// list in a second request after the client verified this preview, so live

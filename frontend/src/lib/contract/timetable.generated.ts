@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   instant,
+  int64String,
   int64StringOrNumber,
   noData,
   object,
@@ -1740,6 +1741,192 @@ export interface CorrectAttendanceRequest {
   reason?: string;
 }
 
+/** Go: classdayhttp.slotListOptionsRequest */
+export interface slotListOptionsRequest {
+  date?: string;
+}
+
+/** Go: classday.Slot */
+export interface Slot {
+  instance_id: string;
+  title: string;
+  time_range: string;
+  status: string;
+  list_kind?: string;
+  room_name?: string;
+}
+
+export const SlotSchema: z.ZodType<Slot, unknown> = object<Slot>({
+  instance_id: int64String,
+  title: z.string(),
+  time_range: z.string(),
+  status: z.string(),
+  list_kind: z.string().optional(),
+  room_name: z.string().optional(),
+});
+
+/** Go: classday.PickupCohortOption */
+export interface PickupCohortOption {
+  cohort: string;
+  label: string;
+  available: boolean;
+  row_count: number;
+}
+
+export const PickupCohortOptionSchema: z.ZodType<PickupCohortOption, unknown> = object<PickupCohortOption>({
+  cohort: z.string(),
+  label: z.string(),
+  available: z.boolean(),
+  row_count: safeInt,
+});
+
+/** Go: classday.ListKindOption */
+export interface ListKindOption {
+  kind: string;
+  label: string;
+  available: boolean;
+  slot_count: number;
+  row_count: number;
+}
+
+export const ListKindOptionSchema: z.ZodType<ListKindOption, unknown> = object<ListKindOption>({
+  kind: z.string(),
+  label: z.string(),
+  available: z.boolean(),
+  slot_count: safeInt,
+  row_count: safeInt,
+});
+
+/** Go: classday.OptionsResult */
+export interface OptionsResult {
+  date: string;
+  slots: Slot[] | null;
+  pickup_cohorts: PickupCohortOption[] | null;
+  list_kinds: ListKindOption[] | null;
+}
+
+export const OptionsResultSchema: z.ZodType<OptionsResult, unknown> = object<OptionsResult>({
+  date: z.string(),
+  slots: z.array(SlotSchema).nullable(),
+  pickup_cohorts: z.array(PickupCohortOptionSchema).nullable(),
+  list_kinds: z.array(ListKindOptionSchema).nullable(),
+});
+
+/** Go: classdayhttp.slotListRequest */
+export interface slotListRequest {
+  date?: string;
+  target?: string;
+  pickup_cohort?: string;
+  source?: string;
+  format?: string;
+  list_kind?: string;
+  instance_ids?: string[] | null;
+  group_ids?: string[] | null;
+  classes?: string[] | null;
+  group_by?: string;
+  expected_signature?: string;
+}
+
+/** Go: classday.GroupOption */
+export interface GroupOption {
+  id: string;
+  name: string;
+}
+
+export const GroupOptionSchema: z.ZodType<GroupOption, unknown> = object<GroupOption>({
+  id: int64String,
+  name: z.string(),
+});
+
+/** Go: classday.Counters */
+export interface Counters {
+  planned: number;
+  present: number;
+  missing: number;
+  excused: number;
+  unplanned: number;
+}
+
+export const CountersSchema: z.ZodType<Counters, unknown> = object<Counters>({
+  planned: safeInt,
+  present: safeInt,
+  missing: safeInt,
+  excused: safeInt,
+  unplanned: safeInt,
+});
+
+/** Go: classday.SlotListRow */
+export interface SlotListRow {
+  student_id: string;
+  name: string;
+  school_class: string;
+  group_name: string;
+  group_id?: string;
+  instance_id?: string;
+  slot: string;
+  room_name?: string;
+  pickup_time?: string;
+  planned: boolean;
+  present: boolean;
+  unplanned: boolean;
+  excused: boolean;
+  status_label: string;
+  group_title?: string;
+}
+
+export const SlotListRowSchema: z.ZodType<SlotListRow, unknown> = object<SlotListRow>({
+  student_id: int64String,
+  name: z.string(),
+  school_class: z.string(),
+  group_name: z.string(),
+  group_id: int64String.optional(),
+  instance_id: int64String.optional(),
+  slot: z.string(),
+  room_name: z.string().optional(),
+  pickup_time: z.string().optional(),
+  planned: z.boolean(),
+  present: z.boolean(),
+  unplanned: z.boolean(),
+  excused: z.boolean(),
+  status_label: z.string(),
+  group_title: z.string().optional(),
+});
+
+/** Go: classday.Result */
+export interface Result {
+  date: string;
+  target: string;
+  pickup_cohort?: string;
+  list_kind?: string;
+  list_label: string;
+  source: string;
+  group_by?: string;
+  provenance: string;
+  slots: Slot[] | null;
+  groups: GroupOption[] | null;
+  classes: string[] | null;
+  counters: Counters;
+  rows: SlotListRow[] | null;
+  signature: string;
+}
+
+export const ResultSchema: z.ZodType<Result, unknown> = object<Result>({
+  date: z.string(),
+  target: z.string(),
+  pickup_cohort: z.string().optional(),
+  list_kind: z.string().optional(),
+  list_label: z.string(),
+  source: z.string(),
+  group_by: z.string().optional(),
+  provenance: z.string(),
+  slots: z.array(SlotSchema).nullable(),
+  groups: z.array(GroupOptionSchema).nullable(),
+  classes: z.array(z.string()).nullable(),
+  counters: CountersSchema,
+  rows: z.array(SlotListRowSchema).nullable(),
+  signature: z.string(),
+});
+
 /** Go: timetablehttp.materializeRequest */
 export interface materializeRequest {
   from_date?: string | null;
@@ -2718,6 +2905,20 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<CorrectAttendanceRequest>(),
     response: success(AttendanceResponseSchema),
+  },
+  "POST /api/timetable/lists/options": {
+    method: "POST",
+    pattern: "/api/timetable/lists/options",
+    portals: ["tenant"],
+    request: requestBody<slotListOptionsRequest>(),
+    response: success(OptionsResultSchema),
+  },
+  "POST /api/timetable/lists/preview": {
+    method: "POST",
+    pattern: "/api/timetable/lists/preview",
+    portals: ["tenant"],
+    request: requestBody<slotListRequest>(),
+    response: success(ResultSchema),
   },
   "POST /api/timetable/materialize": {
     method: "POST",

@@ -62,7 +62,7 @@ func (s *service) buildList(ctx context.Context, params listRequest) (*classday.
 		GroupBy:      params.GroupBy,
 		Provenance:   s.provenance(params, listLabel),
 		Slots:        []classday.Slot{},
-		Rows:         []classday.Row{},
+		Rows:         []classday.SlotListRow{},
 	}
 
 	var entries []mergedEntry
@@ -126,7 +126,7 @@ func (s *service) validateListRequest(params listRequest) error {
 
 // completeListResult derives filter options, ordered rows, counters and hashes
 // from the same unfiltered source rows.
-func completeListResult(params listRequest, result *classday.Result, allRows []classday.Row) {
+func completeListResult(params listRequest, result *classday.Result, allRows []classday.SlotListRow) {
 	result.Groups, result.Classes = availableOptions(allRows)
 
 	rows := filterRows(allRows, params)
@@ -147,7 +147,7 @@ func completeListResult(params listRequest, result *classday.Result, allRows []c
 	result.Signature = listSignature(result)
 }
 
-func listRowLess(left, right *classday.Row) bool {
+func listRowLess(left, right *classday.SlotListRow) bool {
 	// Keep grouped rows contiguous: section heading first, then the same
 	// slot/name order within each section.
 	if left.GroupTitle != right.GroupTitle {
@@ -217,7 +217,7 @@ func groupIDSignatureField(id *int64) string {
 // applyGrouping stamps each row's GroupTitle from the chosen dimension. With
 // GroupByNone every title stays empty (a flat list). Rows whose group value is
 // empty fall into a generic "Ohne …" bucket so they never silently vanish.
-func applyGrouping(rows []classday.Row, groupBy classday.GroupBy) {
+func applyGrouping(rows []classday.SlotListRow, groupBy classday.GroupBy) {
 	if groupBy == classday.GroupByNone {
 		return
 	}
@@ -258,7 +258,7 @@ func applyGrouping(rows []classday.Row, groupBy classday.GroupBy) {
 // its room name where that uniquely identifies it, otherwise a running ordinal —
 // guaranteeing a distinct, deterministic heading without leaking raw IDs. Returns
 // nil for any non-slot grouping (no suffix ever applied).
-func slotHeadingDisambiguation(rows []classday.Row, groupBy classday.GroupBy) map[int64]string {
+func slotHeadingDisambiguation(rows []classday.SlotListRow, groupBy classday.GroupBy) map[int64]string {
 	if groupBy != classday.GroupBySlot {
 		return nil
 	}
@@ -296,7 +296,7 @@ type slotLabelInfo struct {
 	known map[int64]struct{}
 }
 
-func slotLabelInfos(rows []classday.Row) map[string]*slotLabelInfo {
+func slotLabelInfos(rows []classday.SlotListRow) map[string]*slotLabelInfo {
 	byLabel := map[string]*slotLabelInfo{}
 	for _, r := range rows {
 		li := byLabel[r.Slot]
@@ -347,7 +347,7 @@ func addOrdinalSuffixes(suffix map[int64]string, ids []int64, used map[string]st
 
 // availableOptions derives the distinct education groups and school classes
 // present in the unfiltered rows, sorted for stable UI dropdowns.
-func availableOptions(rows []classday.Row) ([]classday.GroupOption, []string) {
+func availableOptions(rows []classday.SlotListRow) ([]classday.GroupOption, []string) {
 	groupByID := map[int64]string{}
 	classSet := map[string]struct{}{}
 	for _, row := range rows {
@@ -373,9 +373,9 @@ func availableOptions(rows []classday.Row) ([]classday.GroupOption, []string) {
 
 // filterRows applies the offering/group/class filters (AND). An empty filter
 // slice means "no restriction" on that dimension.
-func filterRows(rows []classday.Row, params listRequest) []classday.Row {
+func filterRows(rows []classday.SlotListRow, params listRequest) []classday.SlotListRow {
 	if params.Target == classday.TargetSlots && params.InstanceIDsSet && len(params.InstanceIDs) == 0 {
-		return []classday.Row{}
+		return []classday.SlotListRow{}
 	}
 	instanceSet := int64Set(params.InstanceIDs)
 	groupSet := int64Set(params.GroupIDs)
@@ -384,7 +384,7 @@ func filterRows(rows []classday.Row, params listRequest) []classday.Row {
 		classSet[c] = struct{}{}
 	}
 
-	out := make([]classday.Row, 0, len(rows))
+	out := make([]classday.SlotListRow, 0, len(rows))
 	for _, row := range rows {
 		if !rowMatchesFilters(&row, params.Target, instanceSet, groupSet, classSet) {
 			continue
@@ -395,7 +395,7 @@ func filterRows(rows []classday.Row, params listRequest) []classday.Row {
 }
 
 // rowMatchesFilters applies the three independent list dimensions to one row.
-func rowMatchesFilters(row *classday.Row, target classday.Target, instanceSet, groupSet map[int64]bool, classSet map[string]struct{}) bool {
+func rowMatchesFilters(row *classday.SlotListRow, target classday.Target, instanceSet, groupSet map[int64]bool, classSet map[string]struct{}) bool {
 	// InstanceIDs are a slot-list filter only; they are ignored for pickup
 	// cohorts (whose rows carry InstanceID 0), where a non-empty selection
 	// would otherwise drop every row (#1565 review).

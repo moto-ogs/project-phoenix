@@ -474,7 +474,7 @@ func (f *mensaFixture) addPlannedPresent(t *testing.T, n int) {
 	}
 }
 
-func rowByStudent(rows []classday.Row, studentID int64) *classday.Row {
+func rowByStudent(rows []classday.SlotListRow, studentID int64) *classday.SlotListRow {
 	for i := range rows {
 		if rows[i].StudentID == studentID {
 			return &rows[i]

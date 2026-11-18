@@ -82,7 +82,7 @@ func TestPreviewSlotListParsesExplicitEmptySlotSelection(t *testing.T) {
 			Date:   "2030-09-04",
 			Target: classday.TargetSlots,
 			Source: classday.SourceReconciliation,
-			Rows:   []classday.Row{},
+			Rows:   []classday.SlotListRow{},
 		},
 	}
 	rs := NewSlotListResource(mock)
@@ -110,7 +110,7 @@ func TestPreviewSlotListParsesStringIDs(t *testing.T) {
 			Date:   "2030-09-04",
 			Target: classday.TargetSlots,
 			Source: classday.SourcePlanned,
-			Rows:   []classday.Row{},
+			Rows:   []classday.SlotListRow{},
 		},
 	}
 	rs := NewSlotListResource(mock)

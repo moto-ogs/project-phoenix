@@ -2,6 +2,10 @@
 //
 //	POST /api/timetable/lists/options  → available list types for one date
 //	POST /api/timetable/lists/preview  → JSON rows + counters for the UI
+//
+// Options and preview answer in the shared envelope since #2352; before,
+// they answered the bare result.
+//
 //	POST /api/timetable/lists/export   → rendered PDF/XLSX file
 //
 // Both endpoints share one request shape (the export adds a format field) and
@@ -153,7 +157,7 @@ func (rs *SlotListResource) listSlotListOptions(w http.ResponseWriter, r *http.R
 		common.RenderError(w, r, common.ErrorInternalServerWrap("build slot list options failed", err))
 		return
 	}
-	render.JSON(w, r, result)
+	common.Respond(w, r, http.StatusOK, result, "")
 }
 
 // previewSlotList handles POST /api/timetable/lists/preview.
@@ -182,7 +186,7 @@ func (rs *SlotListResource) previewSlotList(w http.ResponseWriter, r *http.Reque
 		common.RenderError(w, r, common.ErrorInternalServerWrap("build slot list failed", err))
 		return
 	}
-	render.JSON(w, r, result)
+	common.Respond(w, r, http.StatusOK, result, "")
 }
 
 // exportSlotList handles POST /api/timetable/lists/export.

@@ -1,6 +1,7 @@
 package api
 
 import (
+	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	presenceAPI "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence"
 	supervisionDashboardHTTP "github.com/moto-ogs/project-phoenix/modules/supervisiondashboard/http"
 	openRoomMoveHTTP "github.com/moto-ogs/project-phoenix/workflows/openroommove/http"
@@ -13,5 +14,6 @@ func staffPortalLiveContractMounts() []contractMount {
 		{"/api/active", presenceAPI.RouteContracts()},
 		{"/api/active", openRoomMoveHTTP.RouteContracts()},
 		{"/api/active", supervisionDashboardHTTP.SchulhofRouteContracts()},
+		{"/api/timetable", classdayHTTP.SlotListRouteContracts()},
 	}
 }
