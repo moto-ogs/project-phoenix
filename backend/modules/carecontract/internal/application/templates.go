@@ -41,6 +41,19 @@ func acceptanceTexts(terms carecontract.TemplateInput) []string {
 	return []string{current, acceptanceTextWith(terms, "Ja\n"+terms.SpecialTerminationNote)}
 }
 
+// versionDetails are the trail details of one saved template version: every
+// conditions text it gives (acceptanceTexts), empty without a contract
+// partner, never null, so the entry marks the version as recorded. A ticked
+// text is then found among the saved versions by equality, without ordering
+// any instants (ADR 0281).
+func versionDetails(offeringID, templateID int64, terms carecontract.TemplateInput) map[string]any {
+	texts := acceptanceTexts(terms)
+	if texts == nil {
+		texts = []string{}
+	}
+	return map[string]any{"care_offering_id": offeringID, "template_id": templateID, VersionsDetail: texts}
+}
+
 // specialTerminationText is the date and notice period of a special
 // termination: the half year with the notice months of the terms, as
 // noticeDates offers it (#4682, #6349).

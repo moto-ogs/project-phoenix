@@ -62,6 +62,12 @@ import {
   useSWRAuth,
   useTenantMutateMatching,
 } from "~/lib/swr";
+import { timeTrackingKeys } from "~/lib/swr/portal-keys";
+import {
+  staffAbsenceKeys,
+  staffMonthSummaryKeys,
+  staffTimeKeys,
+} from "~/lib/swr/staff-keys";
 
 import { StaffExportButton } from "./staff-export-button";
 import { StaffSessionTable } from "./staff-session-table";
@@ -135,7 +141,7 @@ export function ZeiterfassungTab({
   ]);
   const canBackfill = canBookAbsences && staff !== undefined;
   const { data: absenceTypes } = useSWRAuth(
-    canBackfill ? "staff-absence-types" : null,
+    canBackfill ? staffAbsenceKeys.types() : null,
     () => absenceTypeService.getAbsenceTypes(),
   );
   // The Berlin day, not the browser's, and re-rendered on the rollover: this
@@ -159,7 +165,7 @@ export function ZeiterfassungTab({
     isLoading: scheduleLoading,
     error: scheduleError,
     mutate: mutateSchedule,
-  } = useSWRAuth(`staff-schedule-${staffId}`, () =>
+  } = useSWRAuth(staffTimeKeys.schedule(staffId), () =>
     staffScheduleService.getSchedule(staffId),
   );
 
@@ -168,7 +174,9 @@ export function ZeiterfassungTab({
     isLoading: timeTrackingConfigLoading,
     error: timeTrackingConfigError,
     mutate: mutateTimeTrackingConfig,
-  } = useSWRAuth("time-tracking-config", () => timeTrackingService.getConfig());
+  } = useSWRAuth(timeTrackingKeys.config(), () =>
+    timeTrackingService.getConfig(),
+  );
 
   // Week, month and Stundenkonto all come from the server-computed model: only
   // the backend resolves each day against the schedule that was valid on that
@@ -213,7 +221,7 @@ export function ZeiterfassungTab({
     error: visibleSessionsError,
     mutate: mutateVisibleSessions,
   } = useSWRAuth<StaffHistoryDetails>(
-    `staff-history-${staffId}-${historyFrom}-${historyTo}`,
+    staffTimeKeys.history(staffId, historyFrom, historyTo),
     () =>
       staffHistoryService.getHistoryDetails(staffId, historyFrom, historyTo),
   );
@@ -224,7 +232,7 @@ export function ZeiterfassungTab({
     isLoading: visibleAbsencesLoading,
     error: visibleAbsencesError,
   } = useSWRAuth<readonly StaffAbsenceRow[]>(
-    `staff-absences-${staffId}-${visibleFromKey}-${visibleToKey}`,
+    staffAbsenceKeys.list(staffId, visibleFromKey, visibleToKey),
     () =>
       staffAbsenceService.getAbsences(staffId, visibleFromKey, visibleToKey),
   );
@@ -240,7 +248,7 @@ export function ZeiterfassungTab({
     error: shiftsError,
     mutate: mutateShifts,
   } = useSWRAuth<StaffShift[]>(
-    `staff-shifts-visible-${staffId}-${visibleFromKey}-${visibleToKey}`,
+    staffTimeKeys.shiftsVisible(staffId, visibleFromKey, visibleToKey),
     () =>
       staffShiftService.getShiftsForStaff(
         staffId,
@@ -264,7 +272,7 @@ export function ZeiterfassungTab({
     isLoading: dailyProjectionLoading,
     mutate: mutateDailyProjection,
   } = useSWRAuth<ReadonlyMap<string, DayProjection>>(
-    `staff-schedule-targets-${staffId}-${visibleFromKey}-${visibleToKey}`,
+    staffTimeKeys.scheduleTargets(staffId, visibleFromKey, visibleToKey),
     () =>
       staffMonthSummaryService.getDailyProjection(
         staffId,
@@ -278,7 +286,7 @@ export function ZeiterfassungTab({
   // (Bundesland-Setting), daher derselbe Endpunkt wie die MA-Sicht; die
   // Route akzeptiert time_tracking:own ODER :manage.
   const { data: tableHolidays } = useSWRAuth(
-    `time-tracking-holidays-${visibleFromKey}-${visibleToKey}`,
+    timeTrackingKeys.holidays(visibleFromKey, visibleToKey),
     () => timeTrackingService.getHolidays(visibleFromKey, visibleToKey),
     { keepPreviousData: true, revalidateOnFocus: false },
   );
@@ -286,7 +294,7 @@ export function ZeiterfassungTab({
   // OGS-Schließtage im sichtbaren Zeitraum (#1418 3b), analog zu den
   // Feiertagen tenant-global über denselben Endpunkt-Pfad.
   const { data: tableClosingDays } = useSWRAuth(
-    `time-tracking-closing-days-${visibleFromKey}-${visibleToKey}`,
+    timeTrackingKeys.closingDays(visibleFromKey, visibleToKey),
     () => timeTrackingService.getClosingDays(visibleFromKey, visibleToKey),
     { keepPreviousData: true, revalidateOnFocus: false },
   );
@@ -339,7 +347,7 @@ export function ZeiterfassungTab({
     mutate: mutateMonthSummary,
   } = useSWRAuth<MonthSummary>(
     viewMode === "month"
-      ? `staff-month-summary-${staffId}-${monthYear}-${monthNumber}`
+      ? staffMonthSummaryKeys.month(staffId, monthYear, monthNumber)
       : null,
     () =>
       staffMonthSummaryService.getMonthSummary(staffId, monthYear, monthNumber),

@@ -5,6 +5,7 @@ import { useCallback } from "react";
 import { useUserContext } from "~/lib/hooks/use-user-context";
 import { staffScheduleService, type StaffSchedule } from "~/lib/staff-api";
 import { useSWRAuth } from "~/lib/swr";
+import { timeTrackingKeys } from "~/lib/swr/portal-keys";
 
 export interface OwnStaffSchedule {
   /** The caller's staff ID, or null while unknown or without a staff record. */
@@ -48,7 +49,7 @@ export function useOwnStaffSchedule(): OwnStaffSchedule {
     error: scheduleError,
     mutate: mutateSchedule,
   } = useSWRAuth(
-    ownStaffId ? `time-tracking-own-schedule-${ownStaffId}` : null,
+    ownStaffId ? timeTrackingKeys.ownSchedule(ownStaffId) : null,
     () => staffScheduleService.getSchedule(ownStaffId as string),
     { revalidateOnFocus: false },
   );

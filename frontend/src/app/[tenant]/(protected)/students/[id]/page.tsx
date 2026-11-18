@@ -45,6 +45,7 @@ import { useSidebarMemory } from "~/lib/sidebar-memory";
 import { useSWRAuth, useTenantMutate, useSWRSeedFrom } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import type { Student, SupervisorContact } from "~/lib/student-helpers";
 import {
@@ -120,7 +121,6 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useModuleBooked, useWeekendFollowsFriday } from "~/lib/tenant-context";
 import { careWithdrawalNotice } from "~/lib/care-withdrawal-notice";
 import { fetchStudentCareWithdrawal } from "~/lib/care-exit-api";
-import { fetchStudentCarePlanDay } from "~/lib/student-care-plan-api";
 import {
   deleteStudentPartialAbsence,
   fetchStudentPartialAbsences,
@@ -562,7 +562,7 @@ function StudentDetailPageContent() {
   // Zwischenspeicher teilen; ohne Schreibrecht wird gar nicht erst geladen.
   const { data: groupOptions = EMPTY_GROUP_OPTIONS } = useSWRAuth<
     ReadonlyArray<{ value: string; label: string }>
-  >(hasWriteAccess ? "database-groups-dropdown" : null, async () => {
+  >(hasWriteAccess ? tenantAdminKeys.groupOptions() : null, async () => {
     const groups = await groupService.getGroups();
     return groups
       .map((group) => ({ value: String(group.id), label: group.name }))
@@ -825,22 +825,6 @@ function StudentDetailPageContent() {
   const ensureStatusDayRange = useCallback((from: string, to: string) => {
     setStatusDayRange((current) => extendStatusDayRange(current, [from, to]));
   }, []);
-  const loadPlannedStatusExistingDays = useCallback(
-    (from: string, to: string) => {
-      ensureStatusDayRange(from, to);
-      return fetchStudentStatusDays(studentId, from, to);
-    },
-    [ensureStatusDayRange, studentId],
-  );
-  const loadPlannedPartialAbsences = useCallback(
-    (from: string, to: string) =>
-      fetchStudentPartialAbsences(studentId, from, to),
-    [studentId],
-  );
-  const loadPlannedCarePlanDay = useCallback(
-    (date: string) => fetchStudentCarePlanDay(studentId, date),
-    [studentId],
-  );
   // Reason attached to today's sick day (set by staff or by a parent via the
   // portal), shown next to the absence badge in the header.
   const currentSickReason = useMemo(() => {
@@ -1743,6 +1727,7 @@ function StudentDetailPageContent() {
                 : hasSickExcusedWriteAccess)
             }
             status={plannedStatusModal ?? "sick"}
+            studentId={studentId}
             studentName={student.name}
             isSubmitting={plannedStatusLoading}
             existingDays={statusDays}
@@ -1750,9 +1735,7 @@ function StudentDetailPageContent() {
             canPlanPartialExcusal={canPlanPartialExcusal}
             deletingStatusDayId={deletingPlannedStatusDayId}
             onClose={() => setPlannedStatusModal(null)}
-            loadExistingDays={loadPlannedStatusExistingDays}
-            loadPartialAbsences={loadPlannedPartialAbsences}
-            loadCarePlanDay={loadPlannedCarePlanDay}
+            onCheckRange={ensureStatusDayRange}
             onSubmit={handleCreatePlannedStatus}
             onDeleteStatusDay={handleDeletePlannedStatus}
             canDeleteStatusDay={canDeleteStatusDay}

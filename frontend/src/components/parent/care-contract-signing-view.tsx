@@ -107,6 +107,7 @@ export function ContractSigningView({
     }
   }, [source, clearLoadError, showLoadError, t]);
 
+  // oxlint-disable-next-line swr/no-effect-load -- one path serves the sessionless mail link and the inbox; the link has no session for useSWRAuth
   useEffect(() => {
     void load();
   }, [load]);
@@ -249,6 +250,7 @@ function ContractDocument({
   const url = useObjectUrl(blob);
   const documentUrl = signingDocumentUrl(source);
 
+  // oxlint-disable-next-line swr/no-effect-load -- loads the PDF as a blob for an object URL preview, also for the sessionless mail link
   useEffect(() => {
     let cancelled = false;
     transportFetch(documentUrl, { method: "GET", cache: "no-store" })

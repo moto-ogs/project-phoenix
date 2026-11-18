@@ -41,6 +41,7 @@ import { createLogger } from "~/lib/logger";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import { schoolSupervisionsApi } from "~/lib/school-supervisions-api";
 import { useSWRAuth } from "~/lib/swr";
+import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import type {
@@ -172,7 +173,7 @@ export function SchoolSupervisionsView() {
     error: listError,
     mutate: reloadList,
   } = useSWRAuth(
-    `school-supervisions-${today}`,
+    schoolPortalKeys.supervisions(today),
     () => schoolSupervisionsApi.myDay(),
     { revalidateOnFocus: true, focusThrottleInterval: 60_000 },
   );
@@ -213,7 +214,7 @@ export function SchoolSupervisionsView() {
     error: rosterError,
     mutate: reloadRoster,
   } = useSWRAuth(
-    openId && wantsRoster ? `school-supervision-roster-${openId}` : null,
+    openId && wantsRoster ? schoolPortalKeys.supervisionRoster(openId) : null,
     () => schoolSupervisionsApi.roster(openId as string),
     { keepPreviousData: false, revalidateOnFocus: false },
   );

@@ -1,10 +1,12 @@
 import { ApiError, apiErrorFromResponse } from "./api-error";
 import { sessionFetch } from "./session-cache";
 import { createLogger } from "./logger";
+import { shellResourceKeys } from "./swr/shell-keys";
 
 const logger = createLogger({ component: "SettingsApi" });
 
-export const SETTINGS_SCHEMA_SWR_KEY = "settings-schema";
+/** The schema's SWR key; readers use `shellResourceKeys.settingsSchema()`. */
+export const SETTINGS_SCHEMA_SWR_KEY = shellResourceKeys.settingsSchema();
 
 // --- Types ---
 

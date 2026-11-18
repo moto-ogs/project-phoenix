@@ -13,17 +13,15 @@ import { TodayNoticeList } from "~/components/staff-notices/today-notice-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useApiLoadError } from "~/contexts/ToastContext";
-import {
-  SCHOOL_NOTICES_TODAY_KEY,
-  schoolStaffNoticesApi,
-} from "~/lib/school-staff-notices-api";
+import { schoolStaffNoticesApi } from "~/lib/school-staff-notices-api";
 import type { StaffNotice } from "~/lib/staff-notices-api";
 import { useSWRAuth } from "~/lib/swr";
+import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 
 export default function SchoolNoticesPage() {
   const { data: session } = useSession();
   const { data, error, isLoading, mutate } = useSWRAuth<StaffNotice[]>(
-    session ? SCHOOL_NOTICES_TODAY_KEY : null,
+    session ? schoolPortalKeys.noticesToday() : null,
     schoolStaffNoticesApi.fetchTodaysNotices,
     { revalidateOnFocus: false },
   );

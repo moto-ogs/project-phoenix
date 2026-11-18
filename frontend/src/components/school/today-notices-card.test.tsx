@@ -29,7 +29,6 @@ vi.mock("next-auth/react", () => ({
 vi.mock("~/lib/swr", () => ({ useSWRAuth }));
 
 vi.mock("~/lib/school-staff-notices-api", () => ({
-  SCHOOL_NOTICES_TODAY_KEY: "school-staff-notices-today",
   schoolStaffNoticesApi: { fetchTodaysNotices: vi.fn() },
 }));
 

@@ -29,7 +29,7 @@ type TemplateRequest struct {
 	Closing    string `json:"closing"`
 	// Invoice is the layout of the table of amounts (#5691); missing is the
 	// standard table.
-	Invoice templates.InvoiceLayout `json:"invoice"`
+	Invoice InvoiceLayoutRequest `json:"invoice"`
 	// LegalRemedy is the Rechtsbehelfsbelehrung of a fee notice (#4688);
 	// every other kind refuses one.
 	LegalRemedy string `json:"legal_remedy"`
@@ -39,7 +39,17 @@ type TemplateRequest struct {
 func (req *TemplateRequest) Bind(*http.Request) error { return nil }
 
 func (req *TemplateRequest) template() templates.Template {
-	return templates.Template(*req)
+	return templates.Template{
+		Subject: req.Subject, Salutation: req.Salutation, Body: req.Body, Closing: req.Closing,
+		Invoice: templates.InvoiceLayout(req.Invoice), LegalRemedy: req.LegalRemedy,
+	}
+}
+
+// InvoiceLayoutRequest is the invoice layout as a request names it; the
+// contract keeps a request type apart from the answer's (ADR 0270).
+type InvoiceLayoutRequest struct {
+	GroupByChild   bool `json:"group_by_child"`
+	HideTimeModels bool `json:"hide_time_models"`
 }
 
 func templateKind(r *http.Request) templates.Kind {

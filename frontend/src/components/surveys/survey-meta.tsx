@@ -71,9 +71,6 @@ export function participantLabel(count: number): string {
   return `${count} ${count === 1 ? "Teilnahme" : "Teilnahmen"}`;
 }
 
-/** SWR-Schlüssel der Liste; die Objektseite lädt sie nach jeder Aktion neu. */
-export const SURVEY_LIST_KEY = "surveys-list";
-
 /** Der Erfolgstoast nach „Erinnern“: nur die Zahl, nie wer. */
 export function remindedMessage(count: number): string {
   return count === 0

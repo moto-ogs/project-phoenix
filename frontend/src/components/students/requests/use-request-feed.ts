@@ -62,6 +62,7 @@ import {
   useListOverlays,
 } from "~/lib/list-overlays";
 import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
+import { requestFeedKeys, type RequestFeedName } from "~/lib/swr/portal-keys";
 import { useTenantSlugSafe } from "~/lib/tenant-context";
 import { itemKey, type AnyItem } from "./case-model";
 import type { AggregatedRequestFilters } from "./filters";
@@ -115,17 +116,6 @@ interface RequestFeedSnapshot extends PagedSnapshot<AnyItem> {
   readonly pages: number;
   readonly feed: FeedState<AnyItem>;
   readonly reviewAccess?: RequestReviewAccess;
-}
-
-/** Der Cache-Schlüssel: Konto, Ansicht und alles, was die Quellen abfragen. */
-function requestFeedKey(
-  name: string,
-  accountId: string | undefined,
-  view: "open" | "history",
-  parts: readonly unknown[],
-): string | null {
-  if (!accountId) return null;
-  return `${name}:${accountId}:${view}:${JSON.stringify(parts)}`;
 }
 
 export function useRequestSources(
@@ -253,8 +243,9 @@ interface PagedSnapshot<T> {
  * Sperre.
  */
 function usePagedFeed<T, S extends PagedSnapshot<T>>({
-  key,
-  family,
+  name,
+  accountId,
+  parts,
   view,
   object,
   logEvent,
@@ -264,9 +255,13 @@ function usePagedFeed<T, S extends PagedSnapshot<T>>({
   applyUpdate,
   itemId,
 }: {
-  key: string | null;
-  /** Gemeinsamer Teil aller Schlüssel dieser Liste für das Konto. */
-  family: string;
+  name: RequestFeedName;
+  accountId: string | undefined;
+  /**
+   * Was die Quellen abfragen; mit Konto und Ansicht der Cache-Schlüssel.
+   * `null` lädt nichts.
+   */
+  parts: readonly unknown[] | null;
   view: "open" | "history";
   /** Objekt der Ladefehler im Katalogsatz. */
   object: string;
@@ -281,6 +276,9 @@ function usePagedFeed<T, S extends PagedSnapshot<T>>({
   /** Die ID eines Eintrags; keine Liste zeigt dieselbe ID zweimal. */
   itemId: (item: T) => string;
 }) {
+  const key = parts ? requestFeedKeys.key(name, accountId, view, parts) : null;
+  // Gemeinsamer Teil aller Schlüssel dieser Liste für das Konto.
+  const family = requestFeedKeys.family(name, accountId);
   // Nachladefehler gehören nur zu dieser Quelle, nicht zum anderen Feed.
   const {
     error: pageError,
@@ -391,6 +389,7 @@ function usePagedFeed<T, S extends PagedSnapshot<T>>({
   useEffect(() => {
     loadMoreRef.current = loadMore;
   });
+  // oxlint-disable-next-line swr/no-effect-load -- lädt Folgeseiten zur gecachten ersten Seite nach (#2267, #4988); der Cache hält nur die erste Seite, Folgeseiten gelten nur zu ihr und leben im Stand dieser Instanz
   useEffect(() => {
     if (
       view === "open" &&
@@ -483,13 +482,9 @@ export function useMergedRequestFeed(
     [],
   );
   const feed = usePagedFeed<AnyItem, RequestFeedSnapshot>({
-    key: requestFeedKey(
-      "request-feed",
-      accountId,
-      view,
-      requestFeedParts(view, filters),
-    ),
-    family: `request-feed:${accountId}:`,
+    name: "request-feed",
+    accountId,
+    parts: requestFeedParts(view, filters),
     view,
     object: LIST_OBJECT,
     logEvent: "aggregated_request_list_load_more_failed",
@@ -574,13 +569,9 @@ export function useWithdrawalFeed(
     [filters, view],
   );
   const feed = usePagedFeed<CareWithdrawalCompletion, WithdrawalFeedSnapshot>({
-    key: included
-      ? requestFeedKey("care-withdrawal-feed", accountId, view, [
-          filters.search,
-          filters.studentId ?? null,
-        ])
-      : null,
-    family: `care-withdrawal-feed:${accountId}:`,
+    name: "care-withdrawal-feed",
+    accountId,
+    parts: included ? [filters.search, filters.studentId ?? null] : null,
     view,
     object: WITHDRAWAL_OBJECT,
     logEvent: "care_withdrawal_list_load_more_failed",

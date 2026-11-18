@@ -215,6 +215,7 @@ function MessagesSection({ studentId }: Readonly<{ studentId: string }>) {
     [clear, showLoadError, studentId],
   );
 
+  // oxlint-disable-next-line swr/no-effect-load -- each opening fetches the thread details, which marks that message snapshot as personally read (server side effect) and refreshes the unread counters; a cached answer would skip the marking
   useEffect(() => {
     loadRef.current = load;
     void load();

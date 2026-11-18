@@ -2,12 +2,10 @@
 
 import { useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { SETTINGS_SCHEMA_SWR_KEY } from "~/lib/settings-api";
 import { subscribeSettingsChanged } from "~/lib/settings-broadcast";
 import { useTenantMutate, useTenantMutateMatching } from "~/lib/swr";
-import { CHANGE_REQUEST_ACCESS_SWR_KEY } from "./use-change-request-access";
-import { USER_CONTEXT_SWR_KEY } from "./use-user-context";
-import { STUDENT_KEY_FAMILIES } from "~/lib/swr/portal-keys";
+import { homeKeys, STUDENT_KEY_FAMILIES } from "~/lib/swr/portal-keys";
+import { shellResourceKeys } from "~/lib/swr/shell-keys";
 import { announceChangeRequestsChanged } from "~/lib/change-requests-refresh";
 
 /**
@@ -31,20 +29,20 @@ export function useSettingsCacheBridge(): void {
     "timetable-day-",
     "timetable-week-",
     "active-supervision-dashboard-",
-    "home-day-flow",
+    homeKeys.dayFlow(),
   ]);
   const accountId = session?.user.id;
 
   useEffect(() => {
     const invalidate = () => {
-      void tenantMutate(SETTINGS_SCHEMA_SWR_KEY);
+      void tenantMutate(shellResourceKeys.settingsSchema());
       // The navigation context carries the school switches the app shell
       // reads outside the settings page (#4996).
-      void tenantMutate(USER_CONTEXT_SWR_KEY);
+      void tenantMutate(shellResourceKeys.userContext());
       void refreshActionAccess();
       announceChangeRequestsChanged();
       if (accountId) {
-        void tenantMutate(`${CHANGE_REQUEST_ACCESS_SWR_KEY}:${accountId}`);
+        void tenantMutate(shellResourceKeys.changeRequestAccess(accountId));
       }
     };
     const unsubscribeBroadcast = subscribeSettingsChanged(invalidate);

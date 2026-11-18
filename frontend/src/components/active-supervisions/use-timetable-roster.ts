@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import type { TimetableRoster } from "~/lib/timetable-operations-types";
-import { activeSupervisionRosterKey } from "~/components/active-supervisions/view-model";
 
 export interface TimetableRosterState {
   /** The roster iff it belongs to the current selection, else null. */
@@ -37,7 +37,7 @@ export function useTimetableRoster(options: {
   const [missingRosterActiveGroupIds, setMissingRosterActiveGroupIds] =
     useState<Set<string>>(() => new Set());
 
-  const timetableRosterKey = activeSupervisionRosterKey({
+  const timetableRosterKey = tenantDailyKeys.activeSupervisionRoster({
     selectedTimetableInstanceId,
     currentRoomId,
     missingRosterActiveGroupIds,

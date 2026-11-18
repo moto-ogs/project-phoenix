@@ -445,7 +445,6 @@ export default function TraegerFinanceExportsPage() {
                 unavailable={data.runs.total === 0}
               />
             }
-            flush
             footer={
               data.runs.nextOffset === null ? null : (
                 <MorePages
@@ -509,7 +508,6 @@ export default function TraegerFinanceExportsPage() {
                 unavailable={data.protocol.total === 0}
               />
             }
-            flush
             footer={
               data.protocol.nextOffset === null ? null : (
                 <MorePages

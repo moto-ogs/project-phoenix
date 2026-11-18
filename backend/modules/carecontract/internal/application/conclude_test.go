@@ -95,35 +95,108 @@ func TestAcceptanceIssueNeedsTickedConditionsShownBeforeTheAcceptance(t *testing
 	}
 	before := submitted.Add(-time.Hour)
 
-	assert.Empty(t, acceptanceIssue(draft(&accepted, proof), before), "proof before the acceptance, conditions older")
-	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(&accepted), before), "approval alone is no proof")
-	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(nil, proof), before), "no acceptance instant")
+	assert.Empty(t, acceptanceIssue(draft(&accepted, proof), legacyHistory(before)), "proof before the acceptance, conditions older")
+	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(&accepted), legacyHistory(before)), "approval alone is no proof")
+	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(nil, proof), legacyHistory(before)), "no acceptance instant")
 	unsigned := proof
 	unsigned.SHA256 = ""
-	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(&accepted, unsigned), before), "no checksum of the shown text")
+	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(&accepted, unsigned), legacyHistory(before)), "no checksum of the shown text")
 	optional := proof
 	optional.Required = false
-	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(&accepted, optional), before),
+	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(&accepted, optional), legacyHistory(before)),
 		"an optional block the parents ticked is no proof of the conditions (#4682)")
 	late := proof
 	late.SubmittedAt = accepted.Add(time.Minute)
-	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(&accepted, late), before), "a submission after the acceptance")
+	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(&accepted, late), legacyHistory(before)), "a submission after the acceptance")
 	unrelated := proof
 	unrelated.Text = "Ich stimme der Schulordnung zu."
-	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(&accepted, unrelated), before),
+	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(&accepted, unrelated), legacyHistory(before)),
 		"a checked terms block must cover the actual contract conditions")
-	assert.Empty(t, acceptanceIssue(draft(&accepted, proof), submitted.Add(time.Minute)),
+	assert.Empty(t, acceptanceIssue(draft(&accepted, proof), legacyHistory(submitted.Add(time.Minute))),
 		"saving identical conditions does not invalidate consent")
 	changed := draft(&accepted, proof)
 	changed.Version.Terms.NoticeMonths++
-	assert.Equal(t, carecontract.SkipAcceptanceChanged, acceptanceIssue(changed, submitted.Add(time.Minute)),
+	assert.Equal(t, carecontract.SkipAcceptanceChanged, acceptanceIssue(changed, legacyHistory(submitted.Add(time.Minute))),
 		"different conditions after the submission")
-	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(changed, before),
+	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(changed, legacyHistory(before)),
 		"a pre-existing template does not prove consent to its different conditions")
 	unrelated.SubmittedAt = submitted.Add(time.Minute)
 	matched, ok := acceptanceProof(draft(&accepted, proof, unrelated))
 	require.True(t, ok)
 	assert.Equal(t, proof, matched, "the trail must record the matching block, not a later unrelated one")
+}
+
+// legacyHistory is a template saved before the trail recorded its versions:
+// only the change of its row is known.
+func legacyHistory(changedAt time.Time) templateHistory {
+	return templateHistory{updatedAt: changedAt}
+}
+
+// recordedHistory is a template whose every save recorded the conditions
+// texts of its version, changed at changedAt on the database clock.
+func recordedHistory(changedAt time.Time, versions ...carecontract.TemplateInput) templateHistory {
+	history := templateHistory{updatedAt: changedAt, complete: true}
+	for _, terms := range versions {
+		details := versionDetails(1, 1, terms)
+		history.versions = append(history.versions, details[VersionsDetail].([]string)...)
+	}
+	return history
+}
+
+// TestAcceptanceIssueComparesTheTickedTextWithTheSavedVersions pins the
+// decision between changed and missing conditions without ordering two
+// clocks (#7295, ADR 0281): Enrollment stamps the parents' submission on its
+// clock, the database the template row. Whether the database stamp lies a
+// month before or after the submission, a ticked text of a saved earlier
+// version is a change, an untouched template proves the consent, and a text
+// that was never a version of the template is no proof.
+func TestAcceptanceIssueComparesTheTickedTextWithTheSavedVersions(t *testing.T) {
+	t.Parallel()
+	submitted := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
+	accepted := submitted.Add(24 * time.Hour)
+	ticked := carecontract.TemplateInput{TermKind: carecontract.TermOpenEnded, NoticeMonths: 1,
+		NoticeTo: carecontract.NoticeMonthEnd, ContractPartner: "Träger"}
+	current := ticked
+	current.NoticeMonths = 3
+	other := ticked
+	other.ContractPartner = "Anderer Träger"
+	proof := carecontract.AcceptedText{Key: "terms", Text: acceptanceText(ticked), SHA256: "abc", SubmittedAt: submitted, Required: true}
+	draft := func(terms carecontract.TemplateInput) NewContract {
+		return NewContract{AcceptedAt: &accepted, Acceptances: []carecontract.AcceptedText{proof}, Version: carecontract.Version{Terms: terms}}
+	}
+	for _, shift := range []time.Duration{-31 * 24 * time.Hour, 31 * 24 * time.Hour} {
+		changedAt := submitted.Add(shift)
+		assert.Equal(t, carecontract.SkipAcceptanceChanged, acceptanceIssue(draft(current), recordedHistory(changedAt, ticked, current)),
+			"the parents ticked a saved version the template no longer has (database clock %v from the submission)", shift)
+		assert.Empty(t, acceptanceIssue(draft(ticked), recordedHistory(changedAt, ticked)),
+			"the untouched template proves the consent (database clock %v from the submission)", shift)
+		assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(current), recordedHistory(changedAt, other, current)),
+			"a text that was never a version of the template is no proof (database clock %v from the submission)", shift)
+	}
+	assert.Equal(t, carecontract.SkipAcceptanceChanged, acceptanceIssue(draft(current), templateHistory{updatedAt: submitted.Add(-time.Hour),
+		versions: recordedHistory(submitted, ticked).versions}),
+		"a recorded version counts in an incomplete history as well")
+	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(current), legacyHistory(submitted.Add(-time.Hour))),
+		"an incomplete history keeps the earlier guard on the template row")
+	assert.Equal(t, carecontract.SkipAcceptanceChanged, acceptanceIssue(draft(current), legacyHistory(submitted.Add(time.Hour))),
+		"an incomplete history keeps the earlier guard on the template row")
+}
+
+func TestTemplateHistoryIsCompleteOnlyForEveryOffering(t *testing.T) {
+	t.Parallel()
+	at := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
+	changes := templateChanges{
+		{1, 10}: {updatedAt: at, versions: []string{"a"}, complete: true},
+		{1, 11}: {updatedAt: at.Add(time.Hour), versions: []string{"b"}},
+		{1, 12}: {updatedAt: at, versions: []string{"c"}, complete: true},
+	}
+	joined := changes.since(1, []int64{10, 11})
+	assert.False(t, joined.complete, "one offering without a recorded history")
+	assert.Equal(t, at.Add(time.Hour), joined.updatedAt)
+	assert.ElementsMatch(t, []string{"a", "b"}, joined.versions)
+	assert.True(t, changes.since(1, []int64{10, 12}).complete)
+	assert.False(t, changes.since(1, []int64{10, 13}).complete, "an offering without template")
+	assert.False(t, changes.since(1, nil).complete)
 }
 
 func TestAcceptanceTextBindsEveryTemplateCondition(t *testing.T) {

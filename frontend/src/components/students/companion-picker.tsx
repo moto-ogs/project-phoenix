@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Search, X } from "lucide-react";
 
 import { Alert } from "~/components/ui/alert";
@@ -10,6 +10,9 @@ import { Input } from "~/components/ui/input";
 import { WeekdayToggleGroup } from "~/components/ui/weekday-toggle-group";
 import { useApiLoadError } from "~/contexts/ToastContext";
 import { fetchStudents } from "~/lib/student-api";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
+import { useDebounce } from "~/lib/use-debounce";
 import {
   allowedModesIncludeAccompanied,
   DEPARTURE_WEEKDAYS,
@@ -76,10 +79,6 @@ export function CompanionPicker({
 }>) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  // Eine gescheiterte Suche ist kein „Kein Kind gefunden“ (#2513).
-  const [searchAttempt, setSearchAttempt] = useState(0);
   const searchError = useApiLoadError();
   const showSearchError = searchError.show;
   const clearSearchError = searchError.clear;
@@ -128,78 +127,64 @@ export function CompanionPicker({
     if (changed) onChange(trimmed);
   }, [allowedKey, allowedDays, value, onChange]);
 
-  // Debounced child search. The current child and everyone already linked are
-  // filtered out client-side so the list only offers valid additions.
+  // Debounced child search through the shared cache. The current child and
+  // everyone already linked are filtered out client-side so the list only
+  // offers valid additions.
+  const trimmedQuery = query.trim();
+  const searchable = pickerOpen && trimmedQuery.length >= MIN_QUERY_LENGTH;
+  const debouncedQuery = useDebounce(trimmedQuery, SEARCH_DEBOUNCE_MS);
+  const asked = searchable && debouncedQuery === trimmedQuery;
+  const searchFilters = { search: debouncedQuery, pageSize: 25 };
+  const search = useSWRAuth(
+    asked ? tenantStudentKeys.studentPage(searchFilters) : null,
+    () => fetchStudents(searchFilters),
+    { keepPreviousData: false },
+  );
+  // Eine gescheiterte Suche ist kein „Kein Kind gefunden“ (#2513).
+  const failure = asked ? search.error : undefined;
+  const searching =
+    searchable && failure === undefined && (!asked || search.isLoading);
+  const found = searchable && failure === undefined ? search.data : undefined;
+  const results = useMemo<SearchResult[]>(() => {
+    if (!found) return [];
+    const linked = new Set(
+      value.map((companion) => companion.companion_student_id),
+    );
+    return found.students
+      .filter(
+        (student) =>
+          String(student.id) !== String(excludeStudentId) &&
+          !linked.has(String(student.id)),
+      )
+      .slice(0, SEARCH_RESULT_LIMIT)
+      .map((student) => ({
+        id: String(student.id),
+        name:
+          student.name?.trim() ||
+          `${student.first_name ?? ""} ${student.second_name ?? ""}`.trim(),
+        schoolClass: student.school_class ?? "",
+        allowedDepartureModes: student.allowed_departure_modes,
+      }));
+  }, [found, value, excludeStudentId]);
+  const retrySearch = search.mutate;
+
   useEffect(() => {
-    if (!pickerOpen) return;
-    const trimmed = query.trim();
-    clearSearchError();
-    if (trimmed.length < MIN_QUERY_LENGTH) {
-      setResults([]);
+    if (failure === undefined) {
+      clearSearchError();
       return;
     }
-
-    let cancelled = false;
-    setSearching(true);
-    const timer = setTimeout(() => {
-      fetchStudents({ search: trimmed, pageSize: 25 })
-        .then(({ students }) => {
-          if (cancelled) return;
-          const linked = new Set(
-            value.map((companion) => companion.companion_student_id),
-          );
-          setResults(
-            students
-              .filter(
-                (student) =>
-                  String(student.id) !== String(excludeStudentId) &&
-                  !linked.has(String(student.id)),
-              )
-              .slice(0, SEARCH_RESULT_LIMIT)
-              .map((student) => ({
-                id: String(student.id),
-                name:
-                  student.name?.trim() ||
-                  `${student.first_name ?? ""} ${student.second_name ?? ""}`.trim(),
-                schoolClass: student.school_class ?? "",
-                allowedDepartureModes: student.allowed_departure_modes,
-              })),
-          );
-        })
-        .catch((err: unknown) => {
-          if (cancelled) return;
-          logger.error("child search failed", {
-            error: err instanceof Error ? err.message : String(err),
-          });
-          setResults([]);
-          void showSearchError(err, {
-            object: "die Kindersuche",
-            retry: () => setSearchAttempt((count) => count + 1),
-          });
-        })
-        .finally(() => {
-          if (!cancelled) setSearching(false);
-        });
-    }, SEARCH_DEBOUNCE_MS);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [
-    query,
-    pickerOpen,
-    value,
-    excludeStudentId,
-    searchAttempt,
-    showSearchError,
-    clearSearchError,
-  ]);
+    logger.error("child search failed", {
+      error: failure instanceof Error ? failure.message : String(failure),
+    });
+    void showSearchError(failure, {
+      object: "die Kindersuche",
+      retry: () => void retrySearch(),
+    });
+  }, [failure, retrySearch, showSearchError, clearSearchError]);
 
   const closePicker = useCallback(() => {
     setPickerOpen(false);
     setQuery("");
-    setResults([]);
     setPending(null);
   }, []);
 

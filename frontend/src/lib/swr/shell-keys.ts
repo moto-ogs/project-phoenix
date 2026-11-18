@@ -24,6 +24,39 @@ export const ownSupervisionKeys = {
   sessions: () => "active-supervisions-own-sessions",
 } as const;
 
+// Resources of the always-mounted shell hooks: sidebar badges, bell, mode
+// and settings. Per-account keys carry the account so a switch never shows
+// the previous account's answer.
+export const shellResourceKeys = {
+  userContext: () => "user-context",
+  settingsSchema: () => "settings-schema",
+  reminders: () => "reminders",
+  changeRequestAccess: (accountId: string) =>
+    `change-request-access:${accountId}`,
+  /** Matched with `includes`; the account follows after a colon. */
+  enrollmentsUnreadPrefix: "enrollments-unread-count",
+  enrollmentsUnread: (accountId: string) =>
+    `enrollments-unread-count:${accountId}`,
+  // Sidebar badges (useUnreadCount). The tenant layout seeds them from the
+  // server snapshot (ShellCounts) under the same keys.
+  messagesUnread: (accountId: string) => `badge-messages-unread:${accountId}`,
+  teamChatUnread: (accountId: string) => `badge-team-chat-unread:${accountId}`,
+  changeRequestsPending: (accountId: string) =>
+    `badge-change-requests-pending:${accountId}`,
+  enrollmentRequestsPending: (accountId: string) =>
+    `badge-enrollment-requests-pending:${accountId}`,
+  careWithdrawalsPending: (accountId: string) =>
+    `badge-care-withdrawals-pending:${accountId}`,
+  staffAbsencesPending: (accountId: string) =>
+    `badge-staff-absences-pending:${accountId}`,
+  // The school portal shell. Its session scope (`school:{tenantId}:{id}`)
+  // binds them to school and account.
+  schoolTeamChatUnread: () => "school-team-chat-unread",
+  // Today's notices: the badge counts the pending acknowledgements in the
+  // same entry the page and the class-view card show.
+  schoolNoticesToday: () => "school-staff-notices-today",
+} as const;
+
 // Family prefixes of the shared resource factories, here so the
 // always-mounted SSE invalidator carries no key factory.
 export const SWR_FAMILIES = {

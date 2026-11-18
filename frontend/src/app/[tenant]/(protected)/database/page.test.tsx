@@ -15,7 +15,7 @@ import {
 } from "~/test/helpers/viewport";
 import DatabasePage from "./page";
 import { mockSessionData } from "~/test/mocks/next-auth";
-import useSWR from "swr";
+import { useSWR } from "~/lib/swr/testing";
 
 // Die Kacheln folgen den Rechten der Sitzung (#3469); die Leitung hält den
 // Adminzuschnitt und sieht jede.

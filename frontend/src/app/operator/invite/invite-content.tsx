@@ -115,6 +115,7 @@ export function InviteContent() {
   // Process token on mount. Query-string changes trigger a full navigation
   // (unlike fragment changes), so no event listener is needed — the component
   // remounts and this effect re-fires when the user clicks a fresh invite link.
+  // oxlint-disable-next-line swr/no-effect-load -- consumes the invite token from the fragment once, before any operator session exists
   useEffect(() => {
     processToken();
   }, [processToken]);

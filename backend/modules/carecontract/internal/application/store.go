@@ -30,6 +30,7 @@ const (
 	ActionDiscard  = ports.ActionDiscard
 	ActionTemplate = ports.ActionTemplate
 	ActionConclude = ports.ActionConclude
+	VersionsDetail = ports.VersionsDetail
 )
 
 type LetterRenderer interface {

@@ -65,12 +65,13 @@ func (m *SchoolInvitationMaintenance) DeleteExpiredSchoolInvitations(ctx context
 }
 
 func (m *SchoolInvitationMaintenance) inUnitCleanupExpiredInvitations(ctx context.Context) (int, error) {
-	now := m.now()
-	deleted, _, err := m.store.DeleteExpiredSchoolInvitations(ctx, now)
+	// School invitations expire on the database clock (ADR 0285, Nachtrag),
+	// Träger invitations on the owner's.
+	deleted, _, err := m.store.DeleteExpiredSchoolInvitations(ctx)
 	if err != nil {
 		return 0, failed("cleanup invitations", err)
 	}
-	traeger, _, err := m.store.DeleteExpiredTraegerInvitations(ctx, now)
+	traeger, _, err := m.store.DeleteExpiredTraegerInvitations(ctx, m.now())
 	if err != nil {
 		return 0, failed("cleanup Träger invitations", err)
 	}

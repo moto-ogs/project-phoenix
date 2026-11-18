@@ -3,6 +3,7 @@
 // schedules already in the system; the frontend renders and badge-counts it.
 
 import { authFetch } from "./api-helpers";
+import { shellResourceKeys } from "./swr/shell-keys";
 
 export type ReminderType =
   | "pickup_upcoming"
@@ -44,7 +45,7 @@ interface ProxyResponse {
 }
 
 // Shared SWR key so the page and the header bell badge dedupe to one request.
-export const REMINDERS_SWR_KEY = "reminders";
+export const REMINDERS_SWR_KEY = shellResourceKeys.reminders();
 
 export async function fetchReminders(): Promise<RemindersResult> {
   const response = await authFetch<ProxyResponse>("/api/reminders");

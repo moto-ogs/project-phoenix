@@ -60,4 +60,34 @@ export const tenantAdminKeys = {
   /** One account's second-factor state at this school (`adminGetMFAState`). */
   accountMfaState: (accountId: string) =>
     `account-mfa-state-${encodeURIComponent(accountId)}`,
+  /** Stammdaten-Kataloge (#3114). */
+  absenceTypes: () => "database-absence-types",
+  categories: () => "database-categories",
+  planningTracks: () => "database-planning-tracks",
+  shiftTypes: () => "database-shift-types",
+  /** Kategorien mit ihrer aktuellen Schichtart (#1837). */
+  shiftTypeCategories: () => "database-shift-type-categories",
+  /** Every activity of the Datenverwaltung (first 500). */
+  activities: () => "database-activities-list",
+  /** Every device of the Datenverwaltung (first 500). */
+  devices: () => "database-devices-list",
+  /**
+   * Every child of the Datenverwaltung with arrival times and pending
+   * withdrawals; the SSE hook refreshes every key containing this name.
+   */
+  students: () => "database-students-list",
+  /** The school's child quota (#3569). */
+  studentChildQuota: () => "database-students-child-quota",
+  /** The school's groups as select options, shared by the child forms. */
+  groupOptions: () => "database-groups-dropdown",
+  /** Every survey the school manages (`fetchSurveys`, #4781). */
+  surveys: () => "surveys-list",
+  /** The surveys the signed-in person still answers (`fetchSurveysToAnswer`). */
+  surveysToAnswer: () => "surveys-to-answer",
+  /** One survey (`fetchSurvey`). */
+  survey: (id: string) => `survey-${id}`,
+  /** The evaluation of one survey (`fetchSurveyResults`). */
+  surveyResults: (id: string) => `survey-results-${id}`,
+  /** Who answered one non-anonymous survey (`fetchSurveyRespondents`). */
+  surveyRespondents: (id: string) => `survey-respondents-${id}`,
 } as const;

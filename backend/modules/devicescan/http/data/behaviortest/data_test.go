@@ -152,7 +152,7 @@ func TestGetAvailableTeachers_OffersOnlyAssignableExternals(t *testing.T) {
 		require.NoError(t, err)
 	}
 	role := testpkg.GetOrCreateTestRole(t, db, "user")
-	invitation := testpkg.CreateTestInvitationToken(t, db, "ina", role.ID, creator.ID, time.Now().Add(48*time.Hour))
+	invitation := testpkg.CreateTestInvitationToken(t, db, "ina", role.ID, creator.ID, testpkg.DatabaseNow(t, db).Add(48*time.Hour))
 	_, err := db.ExecContext(context.Background(),
 		`UPDATE auth.invitation_tokens SET person_id = ? WHERE id = ?`, invited.Staff.PersonID, invitation.ID)
 	require.NoError(t, err)

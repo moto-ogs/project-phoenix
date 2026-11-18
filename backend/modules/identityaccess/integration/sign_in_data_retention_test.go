@@ -35,7 +35,8 @@ func TestGuardianInvitationsAreDeletedThirtyDaysAfterExpiryOrRedemption(t *testi
 	profile := testpkg.CreateTestGuardianProfile(t, db, "retention-guardian@example.com")
 	otherSchool, _ := testpkg.CreateTestTenant(t, db)
 	otherProfile := testpkg.CreateTestGuardianProfileForTenant(t, db, otherSchool, "Andere", "Schule", "retention-other@example.com")
-	now := time.Now()
+	// The database clock stamps and judges the invitation (ADR 0285, Nachtrag).
+	now := testpkg.DatabaseNow(t, db)
 	invitation := func(tenantID, profileID int64, expiresAt time.Time, acceptedAt *time.Time) int64 {
 		return testpkg.InsertTestGuardianInvitation(t, db, &testpkg.GuardianInvitation{
 			TenantID: tenantID, Token: uuid.Must(uuid.NewV4()).String(), GuardianProfileID: profileID,

@@ -12,6 +12,7 @@ import {
   type DashboardSummary,
 } from "~/lib/staff-overview-api";
 import { useSWRAuth } from "~/lib/swr";
+import { homeKeys } from "~/lib/swr/portal-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { staffConcept } from "~/lib/concepts/staff";
 
@@ -38,7 +39,7 @@ export function StaffTodayBlock({
     isLoading,
     mutate,
   } = useSWRAuth<DashboardSummary>(
-    "home-staff-summary",
+    homeKeys.staffSummary(),
     () => staffOverviewService.getDashboardSummary("week"),
     { refreshInterval: 5 * 60 * 1000 },
   );

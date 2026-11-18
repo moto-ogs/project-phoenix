@@ -128,6 +128,7 @@ export const activitiesConfig = defineEntityConfig<Activity>({
             label: "Kategorie",
             type: "select",
             required: true,
+            optionsResource: "activity-category-choice",
             options: async () => {
               // A failure throws the ApiError: the form shows the catalog
               // text with retry instead of an empty choice (#2517).
@@ -181,6 +182,7 @@ export const activitiesConfig = defineEntityConfig<Activity>({
             type: "select",
             required: false,
             placeholder: "Kein Hauptbetreuer",
+            optionsResource: "activity-supervisor-choice",
             options: async () => {
               // Not getSupervisors(): it answers a failure with an empty
               // list, which would look like a school without supervisors.

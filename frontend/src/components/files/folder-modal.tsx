@@ -24,6 +24,7 @@ import { useApiFormError } from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useSWRAuth } from "~/lib/swr";
+import { fileKeys } from "~/lib/swr/portal-keys";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
 const logger = createLogger({ component: "FolderModal" });
@@ -75,7 +76,7 @@ export function FolderModal({
     data: audience,
     error: audienceError,
     mutate: reloadAudience,
-  } = useSWRAuth<AudienceOptions>(isOpen ? "files-audience" : null, () =>
+  } = useSWRAuth<AudienceOptions>(isOpen ? fileKeys.audience() : null, () =>
     filesService.listAudience(),
   );
   const audienceLoadError = useSwrLoadError(

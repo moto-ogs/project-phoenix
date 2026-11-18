@@ -87,27 +87,34 @@ export default function RemindersPage() {
           : null
       }
     >
-      {REMINDER_SECTIONS.map((section) => {
-        const items = reminders.filter((r) => r.type === section.type);
-        if (items.length === 0) return null;
-        return (
-          <SectionCard
-            key={section.type}
-            title={section.title}
-            actions={
-              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-gray-100 px-2 text-xs font-semibold text-gray-600">
-                {items.length}
-              </span>
-            }
-          >
-            <ul className="divide-y divide-gray-100">
-              {items.map((reminder) => (
-                <ReminderRow key={reminderKey(reminder)} reminder={reminder} />
-              ))}
-            </ul>
-          </SectionCard>
-        );
-      })}
+      {/* Equal reminder cards in a grid: grids do not grow (TenantPage body
+          rule), so the last kind keeps its height like its siblings. */}
+      <div className="compact:gap-4 grid gap-6 max-sm:gap-3">
+        {REMINDER_SECTIONS.map((section) => {
+          const items = reminders.filter((r) => r.type === section.type);
+          if (items.length === 0) return null;
+          return (
+            <SectionCard
+              key={section.type}
+              title={section.title}
+              actions={
+                <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-gray-100 px-2 text-xs font-semibold text-gray-600">
+                  {items.length}
+                </span>
+              }
+            >
+              <ul className="divide-y divide-gray-100">
+                {items.map((reminder) => (
+                  <ReminderRow
+                    key={reminderKey(reminder)}
+                    reminder={reminder}
+                  />
+                ))}
+              </ul>
+            </SectionCard>
+          );
+        })}
+      </div>
     </TenantPage>
   );
 }

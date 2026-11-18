@@ -49,12 +49,12 @@ func (l *AccountLifecycle) CreateGuardianInvitation(ctx context.Context, request
 		if profileErr != nil {
 			return failed(opGuardianInviteCreate, profileErr)
 		}
-		expiry, err := l.delivery.InvitationExpiry(txCtx)
+		expiresAt, err := l.invitationExpiry(txCtx)
 		if err != nil {
 			return failed(opGuardianInviteCreate, err)
 		}
 		var insertErr error
-		invitation, insertErr = l.issueGuardianInvitation(txCtx, request, profile, l.sessions.now().Add(expiry))
+		invitation, insertErr = l.issueGuardianInvitation(txCtx, request, profile, expiresAt)
 		return insertErr
 	})
 	if err != nil {
@@ -78,7 +78,7 @@ func (l *AccountLifecycle) issueGuardianInvitation(ctx context.Context, request 
 		ExpiresAt:         expiresAt,
 		ApprovalStatus:    domain.GuardianInvitationApprovalNotRequired,
 	}
-	if err := l.invitations.InvalidateGuardianInvitations(ctx, profile.ID, l.sessions.now(), false); err != nil {
+	if err := l.invitations.InvalidateGuardianInvitations(ctx, profile.ID, false); err != nil {
 		return domain.GuardianInvitation{}, failed(opGuardianInviteCreate, err)
 	}
 	issueGuardianInvitationLink(&draft, profile)
@@ -190,8 +190,12 @@ func mailWouldStayBack(err error) bool {
 // invitation whose mail the outbox did not take must not be kept, so the
 // failure is returned for the caller's transaction to roll back (#4602).
 func (l *AccountLifecycle) mailNewInvitation(ctx context.Context, invitation domain.GuardianInvitation, profile domain.GuardianProfile) error {
+	lifetime, err := l.delivery.InvitationExpiry(ctx)
+	if err != nil {
+		return err
+	}
 	schoolName := l.delivery.SchoolName(ctx, invitation.TenantID)
-	precedingOutboxID, err := l.enqueueInvitationEmail(ctx, invitation, profile, schoolName)
+	precedingOutboxID, err := l.enqueueInvitationEmail(ctx, invitation, lifetime, profile, schoolName)
 	if err != nil {
 		return err
 	}
@@ -201,7 +205,13 @@ func (l *AccountLifecycle) mailNewInvitation(ctx context.Context, invitation dom
 
 // enqueueInvitationEmail queues the link mail alone and classifies its
 // failure.
-func (l *AccountLifecycle) enqueueInvitationEmail(ctx context.Context, invitation domain.GuardianInvitation, profile domain.GuardianProfile, schoolName string) (int64, error) {
+//
+// The mail counts the link's remaining hours on the composition's clock,
+// while the link expires on the database clock (ADR 0285, Nachtrag). So the
+// mail gets the expiry on the composition's clock: its time plus remaining,
+// what is left of the link at the database time of the operation.
+func (l *AccountLifecycle) enqueueInvitationEmail(ctx context.Context, invitation domain.GuardianInvitation, remaining time.Duration, profile domain.GuardianProfile, schoolName string) (int64, error) {
+	invitation.ExpiresAt = l.sessions.now().Add(remaining)
 	outboxID, err := l.delivery.EnqueueInvitationEmail(ctx, invitation, profile, schoolName)
 	if err != nil {
 		return 0, fmt.Errorf("%w: %w", domain.ErrGuardianAccessMailNotQueued, err)
@@ -353,7 +363,7 @@ func (l *AccountLifecycle) grantGuardianAccess(ctx context.Context, invitation d
 	if err := l.guardians.LinkGuardianProfileToAccount(ctx, profile.ID, account.ID); err != nil {
 		return failed(opGuardianInviteAccept, fmt.Errorf("link guardian profile to account: %w", err))
 	}
-	accepted, err := l.invitations.AcceptGuardianInvitation(ctx, invitation.ID, invitation.Token, l.sessions.now())
+	accepted, err := l.invitations.AcceptGuardianInvitation(ctx, invitation.ID, invitation.Token)
 	if err != nil {
 		return failed(opGuardianInviteAccept, err)
 	}
@@ -426,7 +436,11 @@ func (l *AccountLifecycle) ResendGuardianInvitation(ctx context.Context, invitat
 		if !found {
 			return failed(opGuardianInviteResend, domain.ErrInvitationNotFound)
 		}
-		if redeemErr := invitation.Redeemable(l.sessions.now()); redeemErr != nil {
+		now, err := l.invitationTime(ctx)
+		if err != nil {
+			return failed(opGuardianInviteResend, err)
+		}
+		if redeemErr := invitation.Redeemable(now); redeemErr != nil {
 			return failed(opGuardianInviteResend, redeemErr)
 		}
 		profile, err := l.resendableGuardianProfile(ctx, invitation)
@@ -446,7 +460,7 @@ func (l *AccountLifecycle) ResendGuardianInvitation(ctx context.Context, invitat
 			slog.Int64("invitation_id", invitation.ID),
 			slog.Int64("actor_account_id", actorAccountID),
 		)
-		if _, err := l.enqueueInvitationEmail(ctx, invitation, profile, l.delivery.SchoolName(ctx, invitation.TenantID)); err != nil {
+		if _, err := l.enqueueInvitationEmail(ctx, invitation, invitation.ExpiresAt.Sub(now), profile, l.delivery.SchoolName(ctx, invitation.TenantID)); err != nil {
 			return failed(opGuardianInviteResend, err)
 		}
 		return nil
@@ -495,7 +509,11 @@ func (l *AccountLifecycle) redeemableGuardianInvitation(ctx context.Context, tok
 	if !found {
 		return domain.GuardianInvitation{}, failed(opGuardianInviteFetch, domain.ErrInvitationNotFound)
 	}
-	if err := invitation.Redeemable(l.sessions.now()); err != nil {
+	now, err := l.invitationTime(ctx)
+	if err != nil {
+		return domain.GuardianInvitation{}, failed(opGuardianInviteFetch, err)
+	}
+	if err := invitation.Redeemable(now); err != nil {
 		return domain.GuardianInvitation{}, failed(opGuardianInviteFetch, err)
 	}
 	return invitation, nil

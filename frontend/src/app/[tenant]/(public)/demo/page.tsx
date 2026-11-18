@@ -72,6 +72,7 @@ export default function DemoEntryPage() {
     setPhase("failed");
   };
 
+  // oxlint-disable-next-line swr/no-effect-load -- sessionless demo entry: consumes the fragment token, polls the demo school setup and redeems demo access; no session for useSWRAuth
   useEffect(() => {
     const run = { cancelled: false };
 
