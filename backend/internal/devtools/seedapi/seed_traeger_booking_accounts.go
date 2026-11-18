@@ -11,8 +11,10 @@ import (
 // centers (#4821) before its monthly runs are released, so their positions
 // carry them and the accounts page is filled: one account per Leistung, an
 // own account and KOST2 for the first Angebot, a KOST1 per school and one
-// for the holiday care from the first billed month. Invented values in the
-// ranges DATEV accepts. A second seed finds the cost centers in place.
+// for the holiday care from the first billed month. The first school books
+// its holiday care on a KOST1 of its own (#7357); the others show the
+// fallback to their KOST1. Invented values in the ranges DATEV accepts. A
+// second seed finds the cost centers in place.
 func seedBookingAccounts(client *Client, auth AuthRef, from calendar.Date) (int, error) {
 	raw, err := client.GetWithAuth(auth, "/traeger/finance-exports/booking-accounts")
 	if err != nil {
@@ -38,6 +40,9 @@ func seedBookingAccounts(client *Client, auth AuthRef, from calendar.Date) (int,
 	centers := []map[string]any{{"scope": "holiday", "scope_id": 0, "code": "FER"}}
 	for i, school := range envelope.Data.Schools {
 		centers = append(centers, map[string]any{"scope": "school", "scope_id": school.ID, "code": fmt.Sprintf("KST%d00", i+1)})
+		if i == 0 {
+			centers = append(centers, map[string]any{"scope": "school_holiday", "scope_id": school.ID, "code": "KST190"})
+		}
 	}
 	if len(envelope.Data.Offerings) > 0 {
 		offering := envelope.Data.Offerings[0].CareOfferingID

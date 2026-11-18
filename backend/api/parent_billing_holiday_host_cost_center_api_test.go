@@ -11,10 +11,11 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 )
 
-// The release of a holiday run writes on each position the KOST1 of the
+// The release of a holiday run writes on each position a KOST1 of the
 // school that hosts its week, read through Enrollment, valid on the first
-// day of the week; without one it writes the holiday care's with the reason
-// (#6624). A later KOST1 changes no issued position.
+// day of the week: the school's holiday KOST1 before its KOST1 (#7357);
+// without either it writes the holiday care's with the reason (#6624). A
+// later KOST1 changes no issued position.
 func TestHolidayReleaseBooksEachWeekOnItsHostSchool(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Träger Gastgeber-KOST1")
@@ -29,8 +30,12 @@ func TestHolidayReleaseBooksEachWeekOnItsHostSchool(t *testing.T) {
 	}
 	// The first week (4 January) is hosted by the first school, the second
 	// (11 January) by the second, whose KOST1 starts only on 12 January.
-	addCenter("school", f.office.schools[0], "2027-01-01", "ISP")
+	// The first school books its holiday care on 5469, its monthly
+	// contributions on 5467; the second gets its holiday KOST1 too late.
+	addCenter("school", f.office.schools[0], "2027-01-01", "5467")
+	addCenter("school_holiday", f.office.schools[0], "2027-01-01", "5469")
 	addCenter("school", f.office.schools[1], "2027-01-12", "BIR")
+	addCenter("school_holiday", f.office.schools[1], "2027-01-12", "BIRFER")
 	addCenter("holiday", 0, "2026-01-01", "FER")
 
 	setNumberRange(t, f, billing, "FE-{NNNN}")
@@ -67,12 +72,13 @@ func TestHolidayReleaseBooksEachWeekOnItsHostSchool(t *testing.T) {
 		got = append(got, [3]string{text(p.WeekStartsOn), text(p.CostCenter), text(p.Fallback)})
 	}
 	assert.Equal(t, [][3]string{
-		{"2027-01-04", "ISP", ""},
-		{"2027-01-04", "ISP", ""},
+		{"2027-01-04", "5469", ""},
+		{"2027-01-04", "5469", ""},
 		{"2027-01-11", "FER", "no_school_cost_center"},
 	}, got)
 
 	// A KOST1 entered after the release reaches no issued position.
 	addCenter("school", f.office.schools[1], "2027-01-01", "BIR0")
+	addCenter("school_holiday", f.office.schools[1], "2027-01-01", "BIRFER0")
 	assert.Equal(t, positions, read())
 }
