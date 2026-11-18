@@ -380,7 +380,7 @@ export const parameters = {
   "parent_billing.number_range_invalid": [],
   "parent_billing.number_range_missing": [],
   "parent_billing.number_range_start_invalid": [],
-  "parent_billing.number_range_start_taken": ["last_number"],
+  "parent_billing.number_range_start_taken": ["last_number", "last_sequence"],
   "parent_billing.online_mandate_disabled": [],
   "parent_billing.parent_document_not_found": [],
   "parent_billing.payment_text_debtor_number_missing": ["count"],

@@ -22,7 +22,6 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
-import { formatInvoiceNumber } from "~/lib/number-range-format";
 import {
   type NumberRange,
   saveCareNumberRange,
@@ -154,11 +153,9 @@ export function NumberRangeCard({
             <DataField label={nextLabel}>
               <span className="font-mono">{numberRange.example}</span>
             </DataField>
-            <DataField label="Letzte vergebene Nummer">
+            <DataField label="Letzte laufende Nummer">
               {lastNumber > 0 ? (
-                <span className="font-mono">
-                  {formatInvoiceNumber(numberRange.pattern, year, lastNumber)}
-                </span>
+                <span className="font-mono">{lastNumber}</span>
               ) : (
                 <span className="font-normal text-gray-600">
                   Noch keine Rechnung

@@ -96,12 +96,32 @@ describe("NumberRangeCard: the next number (#7358)", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows the next and the last issued number of a running range", () => {
+  it("shows the next invoice number and the last issued sequence", () => {
     renderCard(RUNNING);
 
     expect(screen.getByText("Nächste Nummer 2026")).toBeInTheDocument();
     expect(screen.getByText("FE-2026-0242")).toBeInTheDocument();
-    expect(screen.getByText("FE-2026-0241")).toBeInTheDocument();
+    expect(screen.getByText("Letzte laufende Nummer")).toBeInTheDocument();
+    expect(screen.getByText("241")).toBeInTheDocument();
+  });
+
+  it("does not reconstruct an issued number with a changed pattern", async () => {
+    renderCard({
+      ...RUNNING,
+      pattern: "NEW-{JJJJ}-{NNNN}",
+      example: "NEW-2026-0242",
+    });
+
+    expect(screen.getByText("NEW-2026-0242")).toBeInTheDocument();
+    expect(screen.getByText("241")).toBeInTheDocument();
+    expect(screen.queryByText("NEW-2026-0241")).not.toBeInTheDocument();
+
+    await openStart();
+    expect(
+      screen.getByText(
+        "Die letzte laufende Nummer ist 241. Die neue Nummer muss größer sein.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("offers the next number only once the pattern is set", () => {
@@ -176,7 +196,7 @@ describe("NumberRangeCard: the next number (#7358)", () => {
     const field = await openStart();
     expect(
       screen.getByText(
-        "Die letzte vergebene Nummer ist FE-2026-0241. Die neue Nummer muss größer sein.",
+        "Die letzte laufende Nummer ist 241. Die neue Nummer muss größer sein.",
       ),
     ).toBeInTheDocument();
     fireEvent.change(field, { target: { value: "241" } });
@@ -184,7 +204,7 @@ describe("NumberRangeCard: the next number (#7358)", () => {
 
     expect(
       await screen.findByText(
-        "Die letzte vergebene Nummer ist FE-2026-0241. Bitte geben Sie eine größere Nummer ein.",
+        "Die letzte laufende Nummer ist 241. Bitte geben Sie eine größere Nummer ein.",
       ),
     ).toBeInTheDocument();
     expect(field).toHaveAttribute("aria-invalid", "true");
@@ -222,7 +242,7 @@ describe("NumberRangeCard: the next number (#7358)", () => {
     api.saveHolidayNumberRangeStart.mockRejectedValue(
       new ApiError("taken", 409, {
         code: "parent_billing.number_range_start_taken",
-        details: { last_number: "FE-2026-0250" },
+        details: { last_number: "FE-2026-0250", last_sequence: 250 },
       }),
     );
     const onChanged = renderCard(RUNNING);
@@ -232,7 +252,7 @@ describe("NumberRangeCard: the next number (#7358)", () => {
 
     expect(
       await screen.findByText(
-        "Diese Nummer ist zu klein. Die letzte vergebene Nummer ist FE-2026-0250. Bitte geben Sie eine größere Nummer ein.",
+        "Diese Nummer ist zu klein. Die letzte laufende Nummer ist 250. Bitte geben Sie eine größere Nummer ein.",
       ),
     ).toBeInTheDocument();
     expect(onChanged).not.toHaveBeenCalled();

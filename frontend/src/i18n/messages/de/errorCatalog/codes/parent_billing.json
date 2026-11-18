@@ -42,7 +42,7 @@
   "number_range_invalid": "Bitte prüfen Sie das Muster. Es braucht genau eine laufende Nummer und darf nur Buchstaben, Ziffern und . / _ - enthalten.",
   "number_range_missing": "Es fehlt das Muster der Rechnungsnummern. Bitte legen Sie es unter „Abrechnungsvorgaben“ fest.",
   "number_range_start_invalid": "Bitte geben Sie eine ganze Zahl von 1 bis 99999999 ein.",
-  "number_range_start_taken": "Diese Nummer ist zu klein. Die letzte vergebene Nummer ist {last_number}. Bitte geben Sie eine größere Nummer ein.",
+  "number_range_start_taken": "Diese Nummer ist zu klein. Die letzte laufende Nummer ist {last_sequence}. Bitte geben Sie eine größere Nummer ein.",
   "parent_document_not_found": "Dieses Dokument gibt es nicht mehr. Bitte laden Sie die Seite neu.",
   "payment_text_debtor_number_missing": "Rechnungen ohne Debitorennummer: {count}. Ihr Zahlungstext nennt aber die Debitorennummer. Löschen Sie den eigenen Zahlungstext in den Einstellungen unter „Allgemein“ im Bereich „Ferienbetreuung“ oder nehmen Sie dort den Platzhalter für die Debitorennummer heraus. Das darf, wer das Recht „Einstellungen“ hat.",
   "recipient_email_missing": "Für diese Familie gibt es keine E-Mail-Adresse. Bitte drucken Sie das Schreiben und geben Sie es der Familie.",

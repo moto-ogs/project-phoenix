@@ -1130,7 +1130,7 @@ export const ERROR_CATALOG = {
       "parent_billing.number_range_start_invalid":
         "Bitte geben Sie eine ganze Zahl von 1 bis 99999999 ein.",
       "parent_billing.number_range_start_taken":
-        "Diese Nummer ist zu klein. Die letzte vergebene Nummer ist {last_number}. Bitte geben Sie eine größere Nummer ein.",
+        "Diese Nummer ist zu klein. Die letzte laufende Nummer ist {last_sequence}. Bitte geben Sie eine größere Nummer ein.",
       "parent_billing.online_mandate_disabled":
         "Ihr Träger nimmt das Lastschrift-Mandat gerade nicht in der App an.",
       "parent_billing.parent_document_not_found":

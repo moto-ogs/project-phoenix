@@ -58,12 +58,10 @@ export function NumberRangeStartModal({
 
   const number = parseStart(value);
   const fieldError = formErrors.fieldError("next_number") ?? undefined;
-  const lastIssued =
-    lastNumber > 0 ? formatInvoiceNumber(pattern, year, lastNumber) : null;
-
-  const hint = lastIssued
-    ? `Die letzte vergebene Nummer ist ${lastIssued}. Die neue Nummer muss größer sein.`
-    : "Noch keine Rechnung ausgestellt. Sie können jede Zahl ab 1 nehmen.";
+  const hint =
+    lastNumber > 0
+      ? `Die letzte laufende Nummer ist ${lastNumber}. Die neue Nummer muss größer sein.`
+      : "Noch keine Rechnung ausgestellt. Sie können jede Zahl ab 1 nehmen.";
 
   const submit = async () => {
     formErrors.clear();
@@ -75,7 +73,7 @@ export function NumberRangeStartModal({
     }
     if (number <= lastNumber) {
       formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", {
-        next_number: `Die letzte vergebene Nummer ist ${lastIssued}. Bitte geben Sie eine größere Nummer ein.`,
+        next_number: `Die letzte laufende Nummer ist ${lastNumber}. Bitte geben Sie eine größere Nummer ein.`,
       });
       return;
     }
