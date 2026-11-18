@@ -13,6 +13,7 @@ const (
 )
 
 type SeedState = demoprofile.SeedState
+type NeighbourAttendance = demoprofile.NeighbourAttendance
 type SeedOrganization = demoprofile.SeedOrganization
 type SeedProfile = demoprofile.SeedProfile
 type SeedOrganizationRef = demoprofile.SeedOrganizationRef

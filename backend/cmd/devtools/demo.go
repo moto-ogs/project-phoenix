@@ -17,7 +17,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	seedapi "github.com/moto-ogs/project-phoenix/internal/devtools/seedapi"
 	"github.com/moto-ogs/project-phoenix/internal/devtools/simulate"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
@@ -284,7 +283,7 @@ func loadDemoSchool(ctx context.Context, schools *DemoRuntime, slug, baseURL str
 	}, nil
 }
 
-func neighbourOpenStays(runtime *DemoRuntime, school demoprofile.NeighbourAttendance) func(context.Context, timezone.Date) ([]string, error) {
+func neighbourOpenStays(runtime *DemoRuntime, school seedapi.NeighbourAttendance) func(context.Context, timezone.Date) ([]string, error) {
 	students := make(map[int64]bool, len(school.Children))
 	for _, child := range school.Children {
 		students[child.StudentID] = true

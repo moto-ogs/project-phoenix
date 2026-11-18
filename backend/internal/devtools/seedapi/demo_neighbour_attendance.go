@@ -22,7 +22,7 @@ type NeighbourAttendanceTicker struct {
 	calendarLoaded bool
 	closed         bool
 	openLoaded     bool
-	staffCheck     bool
+	staffSynced    bool
 	arrived, open  []string
 }
 
@@ -34,7 +34,7 @@ func (t *NeighbourAttendanceTicker) Tick(ctx context.Context, now time.Time) err
 	today := calendar.DateFromTime(now)
 	if t.day != today {
 		t.day, t.calendarLoaded, t.closed = today, false, false
-		t.openLoaded, t.staffCheck = false, true
+		t.openLoaded, t.staffSynced = false, false
 		t.arrived, t.open = nil, nil
 	}
 	if !t.openLoaded {
@@ -43,7 +43,7 @@ func (t *NeighbourAttendanceTicker) Tick(ctx context.Context, now time.Time) err
 		}
 	}
 	arrivals, departures := t.changes(now)
-	if len(arrivals)+len(departures) == 0 && !(t.staffCheck && len(t.open) == 0) {
+	if len(arrivals)+len(departures) == 0 && t.staffSynced {
 		return nil
 	}
 	return t.apply(ctx, arrivals, departures)
@@ -51,7 +51,7 @@ func (t *NeighbourAttendanceTicker) Tick(ctx context.Context, now time.Time) err
 
 // Close settles the demo's own check-ins when its visitor goes idle.
 func (t *NeighbourAttendanceTicker) Close(ctx context.Context, now time.Time) error {
-	if calendar.DateFromTime(now) != t.day || !t.staffCheck {
+	if calendar.DateFromTime(now) != t.day || (t.staffSynced && len(t.open) == 0) {
 		return nil
 	}
 	if !t.openLoaded {
@@ -151,7 +151,7 @@ func (t *NeighbourAttendanceTicker) sync(ctx context.Context, arrivals, departur
 		t.open = owned
 		departures = slices.DeleteFunc(slices.Clone(departures), func(id string) bool { return !slices.Contains(owned, id) })
 	}
-	t.staffCheck = true
+	t.staffSynced = false
 	if _, err := t.batch(ctx, "out", departures); err != nil {
 		return err
 	}
@@ -162,24 +162,23 @@ func (t *NeighbourAttendanceTicker) sync(ctx context.Context, arrivals, departur
 	}
 	t.open = append(t.open, opened...)
 	t.arrived = append(t.arrived, arrivals...)
-	if len(t.open) == 0 {
-		return t.checkOutStaff(ctx)
-	}
-	return nil
+	return t.syncStaff(ctx)
 }
 
-func (t *NeighbourAttendanceTicker) checkOutStaff(ctx context.Context) error {
+func (t *NeighbourAttendanceTicker) syncStaff(ctx context.Context) error {
 	open, err := hasOpenWorkSession(ctx, t.client)
 	if err != nil {
 		return err
 	}
-	if open {
-		if _, _, err := t.client.adapter.Raw(ctx, t.client.auth, "POST", "/api/time-tracking/check-out", nil, nil); err != nil {
-			return err
-		}
+	switch {
+	case open && len(t.open) == 0:
+		_, _, err = t.client.adapter.Raw(ctx, t.client.auth, "POST", "/api/time-tracking/check-out", nil, nil)
+	case !open && len(t.open) > 0:
+		// Automatic stamping cannot open a second block on the same day.
+		_, _, err = t.client.adapter.Raw(ctx, t.client.auth, "POST", "/api/time-tracking/check-in", map[string]any{"status": "present"}, nil)
 	}
-	t.staffCheck = false
-	return nil
+	t.staffSynced = err == nil
+	return err
 }
 
 func (t *NeighbourAttendanceTicker) batch(ctx context.Context, action string, ids []string) ([]string, error) {

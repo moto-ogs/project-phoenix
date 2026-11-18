@@ -25,8 +25,9 @@ func TestNeighbourDemoAttendanceFollowsBookedTimes(t *testing.T) {
 	var mu sync.Mutex
 	var calls []attendanceCall
 	var owned []string
-	var staffOnDuty bool
-	var staffCheckouts int
+	var staffOnDuty, staffEnded bool
+	var staffCheckins, staffCheckouts int
+	var stampedDay calendar.Date
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
@@ -44,14 +45,22 @@ func TestNeighbourDemoAttendanceFollowsBookedTimes(t *testing.T) {
 		case "/api/time-tracking/check-out":
 			assert.True(t, staffOnDuty)
 			staffOnDuty = false
+			staffEnded = true
 			staffCheckouts++
+			_, _ = w.Write([]byte(`{"data":{}}`))
+		case "/api/time-tracking/check-in":
+			assert.False(t, staffOnDuty)
+			staffOnDuty = true
+			staffCheckins++
 			_, _ = w.Write([]byte(`{"data":{}}`))
 		case "/api/students/school-checkin/batch":
 			assert.Equal(t, "Bearer neighbour-token", r.Header.Get("Authorization"))
 			var call attendanceCall
 			assert.NoError(t, json.NewDecoder(r.Body).Decode(&call))
 			calls = append(calls, call)
-			staffOnDuty = true
+			if !staffEnded {
+				staffOnDuty = true
+			}
 			results := make([]map[string]any, 0, len(call.IDs))
 			for _, id := range call.IDs {
 				// Child 2 was already checked in by the visitor.
@@ -83,9 +92,13 @@ func TestNeighbourDemoAttendanceFollowsBookedTimes(t *testing.T) {
 		},
 	}
 	newTicker := func() *NeighbourAttendanceTicker {
-		return NewNeighbourAttendanceTicker(school, newSeedTestAdapter(server.URL), func(context.Context, calendar.Date) ([]string, error) {
+		return NewNeighbourAttendanceTicker(school, newSeedTestAdapter(server.URL), func(_ context.Context, day calendar.Date) ([]string, error) {
 			mu.Lock()
 			defer mu.Unlock()
+			if day != stampedDay {
+				stampedDay = day
+				staffEnded = false
+			}
 			return slices.Clone(owned), nil
 		})
 	}
@@ -102,17 +115,26 @@ func TestNeighbourDemoAttendanceFollowsBookedTimes(t *testing.T) {
 	ticker = newTicker()
 	check(thursday.Add(14 * time.Hour))
 	require.NoError(t, ticker.Close(t.Context(), thursday.Add(15*time.Hour)))
+	ticker = newTicker()
+	check(thursday.Add(15*time.Hour + time.Minute))
+	mu.Lock()
+	assert.True(t, staffOnDuty, "returning on the same day opens a new work block")
+	assert.Equal(t, 1, staffCheckins)
+	mu.Unlock()
+	check(thursday.Add(17 * time.Hour))
 	check(thursday.AddDate(0, 0, 1).Add(13 * time.Hour))
 	check(thursday.AddDate(0, 0, 1).Add(17 * time.Hour))
 	check(thursday.AddDate(0, 0, 2).Add(13 * time.Hour))
 	mu.Lock()
 	defer mu.Unlock()
 	assert.False(t, staffOnDuty)
-	assert.Equal(t, 2, staffCheckouts)
+	assert.Equal(t, 3, staffCheckouts)
 	assert.Equal(t, []attendanceCall{
 		{Action: "in", IDs: []string{"1", "2", "3"}},
 		{Action: "out", IDs: []string{"1"}},
 		{Action: "in", IDs: []string{"2"}}, // Idempotent: the visitor's stay is still open.
+		{Action: "out", IDs: []string{"3"}},
+		{Action: "in", IDs: []string{"2", "3"}},
 		{Action: "out", IDs: []string{"3"}},
 		{Action: "in", IDs: []string{"2", "3"}},
 		{Action: "out", IDs: []string{"3"}},
