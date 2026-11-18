@@ -253,16 +253,23 @@ export function contractImportDebtorText(
 export type ContractImportFilter =
   "all" | "ready" | "no_email" | "problems" | "duplicate";
 
+/** Ob moto die Zeile übernimmt oder übernommen hat. */
+function takenOver(row: ContractImportRow): boolean {
+  return row.status === "ready" || row.status === "imported";
+}
+
 /**
- * Ob moto die Zeile ohne Mail-Adresse der Eltern übernimmt oder übernommen
- * hat. Eine solche Familie kennt moto nur über ihren Vertrag (ADR 0232
- * Punkt 7): keine Mail, keine Eltern-App, Geschwister getrennt. Zeilen, die
- * draußen bleiben, bekommen keinen Vertrag und zählen nicht.
+ * Ob moto die Zeile mit Eltern, aber ohne deren Mail-Adresse übernimmt oder
+ * übernommen hat. Eine solche Familie kennt moto nur über ihren Vertrag
+ * (ADR 0232 Punkt 7): keine Mail, keine Eltern-App, Geschwister getrennt.
+ * Zeilen, die draußen bleiben, bekommen keinen Vertrag und zählen nicht.
+ * Eine Zeile ganz ohne Eltern (`no_party`) hat ihren eigenen Hinweis und
+ * eine andere Folge (Punkt 9): Ihr fehlt der Rechnungsempfänger, nicht nur
+ * die Adresse.
  */
 export function takenOverWithoutEmail(row: ContractImportRow): boolean {
   return (
-    (row.status === "ready" || row.status === "imported") &&
-    row.partyEmail === ""
+    takenOver(row) && row.partyEmail === "" && !row.hints.includes("no_party")
   );
 }
 
@@ -287,7 +294,7 @@ export function matchesContractImportFilter(
     case "all":
       return true;
     case "ready":
-      return row.status === "ready" || row.status === "imported";
+      return takenOver(row);
     case "no_email":
       return takenOverWithoutEmail(row);
     case "problems":

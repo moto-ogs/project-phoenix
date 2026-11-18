@@ -96,7 +96,7 @@ function WithoutEmailAlert({
           </ul>
           <p className="mt-2 font-medium">
             {emailColumnMapped
-              ? "Haben Sie die Adressen? Tragen Sie sie in die Datei ein und laden Sie die Datei noch einmal."
+              ? "Haben Sie die Adressen? Dann tragen Sie sie in die Datei ein. Laden Sie die Datei danach noch einmal."
               : "Hat Ihre Datei eine Spalte mit Mail-Adressen? Ordnen Sie sie oben bei „E-Mail der Eltern“ zu."}
           </p>
         </>
@@ -116,16 +116,15 @@ function PartyCell({ row }: Readonly<{ row: ContractImportRow }>) {
           {row.partyEmail}
         </span>
       ) : takenOverWithoutEmail(row) ? (
-        // The rows the warning above counts, findable at a glance.
+        // The rows the warning above counts, findable at a glance. A row
+        // moto leaves out shows nothing here: it gets no contract.
         <StatusBadge
-          tone="orange"
+          tone="warning"
           size="xs"
           label="Ohne Mail-Adresse"
           className="mt-0.5"
         />
-      ) : (
-        <span className="block text-xs text-gray-500">ohne Mail-Adresse</span>
-      )}
+      ) : null}
     </span>
   );
 }
@@ -153,12 +152,13 @@ export function CareContractImportPreviewCard({
   disabled?: boolean;
   onApply: () => void;
 }>) {
-  const [chosen, setFilter] = useState<ContractImportFilter>("all");
+  const [chosenFilter, setFilter] = useState<ContractImportFilter>("all");
   const counts = result.counts;
   const withoutEmail = contractsWithoutEmail(result);
   // A new mapping may bring the addresses: the filter for rows without one
   // then has no segment left and falls back to every row.
-  const filter = chosen === "no_email" && withoutEmail === 0 ? "all" : chosen;
+  const filter =
+    chosenFilter === "no_email" && withoutEmail === 0 ? "all" : chosenFilter;
   const shown = useMemo(
     () => result.rows.filter((row) => matchesContractImportFilter(row, filter)),
     [result.rows, filter],

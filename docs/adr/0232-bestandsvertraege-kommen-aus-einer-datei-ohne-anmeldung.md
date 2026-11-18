@@ -101,7 +101,8 @@ entschieden, den Import für SJR Pforzheim vorzuziehen (Kommentar in #4723).
    „ohne Mail-Adresse“, zeigt sie in einem eigenen Filter und nennt die
    Folgen: keine Mail, kein Zugang zur Eltern-App, Rechnung nur auf Papier,
    Geschwister bleiben getrennte Familien. Zeilen, die draußen bleiben,
-   zählen nicht. Die Zahl entsteht in der Oberfläche aus den Zeilen der
+   zählen nicht. Eine Zeile ganz ohne Eltern zählt auch nicht: Sie behält
+   ihren Hinweis aus Punkt 9, denn ihr fehlt der Rechnungsempfänger. Die Zahl entsteht in der Oberfläche aus den Zeilen der
    Vorschau; das Backend bleibt unverändert.
 8. **Zugriff und Protokoll.** Der Import liest die Angebote jeder Schule in
    deren Tenant-Transaktion (Stammdaten, keine Personendaten), schreibt in der

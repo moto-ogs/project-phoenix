@@ -166,6 +166,7 @@ describe("Vertragsimport", () => {
     expect(
       screen.getAllByText("Debitorennummer 70001 wird eingetragen.").length,
     ).toBeGreaterThan(0);
+    // Anker: the preview with its rows is on screen.
     expect(
       screen.getAllByText("Das Kind hat an dieser Schule schon einen Vertrag.")
         .length,
@@ -310,11 +311,22 @@ describe("Vertragsimport", () => {
         ...base.mapping,
         columns: { ...base.mapping.columns, party_email: "E-Mail" },
       },
-      counts: { ...base.counts, ready: 3, duplicate: 1 },
+      counts: { ...base.counts, ready: 4, duplicate: 1 },
       rows: [
         row(2),
         row(3, { childFirstName: "Ben", partyEmail: "" }),
-        row(4, { childFirstName: "Lea", partyName: "", partyEmail: "" }),
+        row(4, {
+          childFirstName: "Lea",
+          partyName: "Jan Beispiel",
+          partyEmail: "",
+        }),
+        // No parent at all: its own hint, not counted as a family without mail.
+        row(6, {
+          childFirstName: "Ole",
+          partyName: "",
+          partyEmail: "",
+          hints: ["no_party"],
+        }),
         // Left out: no contract, so no family without mail.
         row(5, {
           status: "duplicate",
@@ -340,12 +352,12 @@ describe("Vertragsimport", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Haben Sie die Adressen? Tragen Sie sie in die Datei ein und laden Sie die Datei noch einmal.",
+        "Haben Sie die Adressen? Dann tragen Sie sie in die Datei ein. Laden Sie die Datei danach noch einmal.",
       ),
     ).toBeInTheDocument();
     // A warning, not a block: every ready row is taken over.
     expect(
-      screen.getByRole("button", { name: "3 Verträge übernehmen" }),
+      screen.getByRole("button", { name: "4 Verträge übernehmen" }),
     ).not.toHaveAttribute("aria-disabled", "true");
 
     const onlyWithout = screen.getByRole("button", {
@@ -353,22 +365,24 @@ describe("Vertragsimport", () => {
     });
     fireEvent.click(onlyWithout);
     expect(onlyWithout).toHaveAttribute("aria-pressed", "true");
+    // Anker: the filter shows a row without an address.
     expect(screen.getAllByText("Ben Beispiel").length).toBeGreaterThan(0);
     expect(screen.queryByText("Mia Beispiel")).not.toBeInTheDocument();
     expect(screen.queryByText("Tom Beispiel")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ole Beispiel")).not.toBeInTheDocument();
 
     api.applyContractImport.mockResolvedValueOnce({
       ...withoutEmail,
       applied: true,
-      counts: { ...withoutEmail.counts, ready: 0, imported: 3 },
+      counts: { ...withoutEmail.counts, ready: 0, imported: 4 },
       rows: withoutEmail.rows.map((r) =>
         r.status === "ready" ? { ...r, status: "imported" as const } : r,
       ),
     });
     fireEvent.click(
-      screen.getByRole("button", { name: "3 Verträge übernehmen" }),
+      screen.getByRole("button", { name: "4 Verträge übernehmen" }),
     );
-    await screen.findByText("3 Verträge übernommen");
+    await screen.findByText("4 Verträge übernommen");
     expect(
       screen.getByText(
         /2 davon ohne Mail-Adresse: Diese Familien bekommen ihre Rechnungen auf Papier\./,

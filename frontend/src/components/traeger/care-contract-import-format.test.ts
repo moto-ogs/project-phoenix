@@ -107,6 +107,10 @@ describe("care contract import format", () => {
     // A row moto leaves out gets no contract, so no family without mail.
     expect(takenOverWithoutEmail({ ...row, status: "duplicate" })).toBe(false);
     expect(takenOverWithoutEmail({ ...row, status: "invalid" })).toBe(false);
+    // Without any parent the row has its own hint: no recipient at all.
+    expect(
+      takenOverWithoutEmail({ ...row, partyName: "", hints: ["no_party"] }),
+    ).toBe(false);
     expect(matchesContractImportFilter(row, "no_email")).toBe(true);
     expect(
       matchesContractImportFilter({ ...row, status: "invalid" }, "no_email"),
