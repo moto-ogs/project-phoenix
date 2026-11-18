@@ -1422,6 +1422,9 @@ describe("Enhanced rendering: action buttons and search/filter interaction", () 
   });
 
   it("shows 'Beaufsichtigen' button when Schulhof tab selected but not supervising", async () => {
+    // Der Knopf steht auf der Raumseite des Schulhofs (#4372). Ohne Raum
+    // zeigt die Seite nur den Leertext.
+    navigationMockState.roomParam = "schulhof-r1";
     vi.mocked(useSWRAuth)
       .mockReturnValueOnce({
         data: {
@@ -1471,9 +1474,9 @@ describe("Enhanced rendering: action buttons and search/filter interaction", () 
     render(<MeinRaumPage />);
 
     await waitFor(() => {
-      // The "Beaufsichtigen" button should appear both in action area and main view
-      const claimButtons = screen.getAllByText(/Beaufsichtigen|beaufsichtigen/);
-      expect(claimButtons.length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getByRole("button", { name: "Beaufsichtigen" }),
+      ).toBeInTheDocument();
     });
   });
 
