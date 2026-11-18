@@ -48,6 +48,7 @@ const notificationFeedCatererUpSQL = `
 			INNER JOIN auth.accounts AS account ON account.id = link.account_id AND account.active
 			WHERE supply.tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::bigint
 				AND supply.ended_at IS NULL
+				AND supply.started_at <= statement_timestamp()
 			ORDER BY link.account_id
 		$body$;
 		REVOKE ALL ON FUNCTION platform.delivery_caterer_feed_audience() FROM PUBLIC;
@@ -59,7 +60,9 @@ const notificationFeedCatererUpSQL = `
 			SELECT school.id, school.name::text, link.account_id
 			FROM auth.caterer_accounts AS link
 			INNER JOIN auth.accounts AS account ON account.id = link.account_id AND account.active
-			INNER JOIN auth.caterer_schools AS supply ON supply.caterer_id = link.caterer_id AND supply.ended_at IS NULL
+			INNER JOIN auth.caterer_schools AS supply ON supply.caterer_id = link.caterer_id
+				AND supply.ended_at IS NULL
+				AND supply.started_at <= statement_timestamp()
 			INNER JOIN platform.schools AS school ON school.id = supply.tenant_id AND school.deleted_at IS NULL
 			WHERE link.account_id = p_account_id
 		$body$;

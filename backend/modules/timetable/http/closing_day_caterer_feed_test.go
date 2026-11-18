@@ -82,6 +82,13 @@ func supply(t *testing.T, db *bun.DB, catererID, schoolID int64) {
 	require.NoError(t, err)
 }
 
+// supplyStartingLater records a supply whose delivery period has not begun.
+func supplyStartingLater(t *testing.T, db *bun.DB, catererID, schoolID int64) {
+	t.Helper()
+	_, err := db.ExecContext(context.Background(), `INSERT INTO auth.caterer_schools (caterer_id, tenant_id, delivery_address, started_at) VALUES (?, ?, 'Hof', statement_timestamp() + INTERVAL '1 hour')`, catererID, schoolID)
+	require.NoError(t, err)
+}
+
 // endSupply ends the caterer's running supply of the school.
 func endSupply(t *testing.T, db *bun.DB, schoolID int64) {
 	t.Helper()
@@ -200,6 +207,32 @@ func TestClosingDayReachesTheBellOfTheSchoolsCatererOnly(t *testing.T) {
 	var stored int
 	require.NoError(t, db.NewRaw(`SELECT count(*) FROM platform.notification_feed_entries WHERE account_id = ?`, kitchen.ID).Scan(context.Background(), &stored))
 	assert.Equal(t, 4, stored, "the entries before the end stay until their retention")
+}
+
+func TestFutureCatererSupplyCannotReceiveOrReadFeedEntries(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	school := catererFeedSchool(t, db, "Grundschule Zukunft")
+	f := newClosingFeedFixtureIn(t, db, school)
+	leitung := f.staff(t, "Leitung")
+	kitchen := testpkg.CreateTestAccount(t, db, "caterer-future")
+	caterer := newTestCaterer(t, db, "Küche Zukunft", kitchen.ID)
+	supplyStartingLater(t, db, caterer, school)
+
+	f.save(t, leitung, http.MethodPost, 0, closingDayBody("2030-06-12", "2030-06-12", "Pädagogischer Tag"))
+	var published int
+	require.NoError(t, db.NewRaw(`SELECT count(*) FROM platform.notification_feed_entries WHERE tenant_id = ? AND account_id = ?`, school, kitchen.ID).Scan(context.Background(), &published))
+	assert.Zero(t, published, "a caterer receives no entry before its supply starts")
+
+	var entryID int64
+	require.NoError(t, db.NewRaw(`INSERT INTO platform.notification_feed_entries
+		(tenant_id, account_id, type, title, body, deep_link, related_type, related_id)
+		VALUES (?, ?, ?, 'Neuer Schließtag', '', '/caterer', 'closing_day', 1)
+		RETURNING id`, school, kitchen.ID, deliveryContract.NotificationCatererSchoolClosingDayChanged).Scan(context.Background(), &entryID))
+	entries, unread := f.catererFeed(t, kitchen.ID)
+	assert.Empty(t, entries, "a caterer cannot read an entry before its supply starts")
+	assert.Zero(t, unread)
+	assert.Equal(t, http.StatusNotFound, f.catererFeedCall(t, kitchen.ID, http.MethodPost, fmt.Sprintf("/%d/read", entryID), nil), "a caterer cannot mark an entry read before its supply starts")
 }
 
 // N is the number of entries of a caterer account across the schools its
