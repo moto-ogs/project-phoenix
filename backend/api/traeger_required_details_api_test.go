@@ -51,7 +51,7 @@ func TestTraegerRequiredDetailsNameOnlyWhatTheBookedModulesNeed(t *testing.T) {
 	assert.Equal(t, []string{"letterhead"}, requiredDetails(t, f, office.token), "contracts need the letterhead only")
 
 	book(south, configModels.KeyModuleFerienbetreuung, true)
-	assert.Equal(t, []string{"letterhead", "bank_account", "number_range_holiday"}, requiredDetails(t, f, office.token),
+	assert.Equal(t, []string{"letterhead", "bank_account", "sepa_creditor", "number_range_holiday"}, requiredDetails(t, f, office.token),
 		"one school booking holiday care is enough")
 
 	book(north, configModels.KeyModuleElternbeitraege, true)

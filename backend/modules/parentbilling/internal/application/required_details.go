@@ -58,7 +58,7 @@ func (r *RequiredDetails) RequiredDetails(ctx context.Context, organizationID in
 		return result.done(), fmt.Errorf("parent billing: read bank account: %w", err)
 	}
 	result.add(parentbilling.RequiredBankAccount, !hasAccount)
-	if modules.CareBilling {
+	if billing {
 		creditor, err := r.store.SEPACreditor(ctx, organizationID)
 		if err != nil {
 			return result.done(), fmt.Errorf("parent billing: read creditor: %w", err)
