@@ -61,7 +61,11 @@ Später erteilen Eltern das Mandat digital ([#4696](https://github.com/moto-ogs/
    `SELECT, INSERT`). Ein Lauf, der die Maske zeigt, schreibt `read` mit der
    Quelle `run`; das Öffnen für die Datei `reveal`. Auch eine Änderung ohne
    Unterschied und das Lesen des Trails selbst schreiben `read`, weil ihre
-   Antwort das Konto zeigt.
+   Antwort das Konto zeigt. Die Briefvorschau und die Brieferstellung öffnen
+   die Kopie des Kontoinhabers aus der Rechnung. Der bestehende Lauf-Trail
+   (`run_events` oder `care_run_events`) speichert dafür die Rechnungs-IDs in
+   `account_holder_snapshot_ids`. Die Spur bleibt am Abrechnungslauf,
+   auch wenn das ursprüngliche Mandat gelöscht wird.
 6. **Gläubiger und Vorlauf** (`parent_billing.sepa_creditors`): die
    Gläubiger-ID, der Vorlauf der Vorabankündigung (Standard 14 Tage, 1–30
    laut Vereinbarung) und das Verhalten ohne Mandat. Sie stehen bei den
@@ -83,10 +87,13 @@ Später erteilen Eltern das Mandat digital ([#4696](https://github.com/moto-ogs/
    den Lauf ab (`parent_billing.direct_debit_without_mandate`). Beides steht im
    Fingerabdruck, weil die Zahlung der Rechnung Teil davon ist.
 9. **Snapshot.** Die Freigabe kopiert Mandats-ID, Referenz, Datum, Gläubiger-ID,
-   maskierte IBAN und Sequenztyp auf die Rechnung (Monats- und Ferienrechnung),
-   außerdem den Grund einer Rückfallüberweisung. Das Schreiben druckt daraus die
-   Vorabankündigung: Betrag, Einzugsdatum, Konto (maskiert), Gläubiger-ID,
-   Mandatsreferenz. Ältere Rechnungen behalten NULL.
+   maskierte IBAN, Sequenztyp und den versiegelten Kontoinhaber auf die Rechnung
+   (Monats- und Ferienrechnung). Bei einer Rückfallüberweisung speichert sie
+   den Grund. Die versiegelte Kopie behält ihre Bindung an Feld, Träger und
+   Mandatsreferenz. Das Schreiben nennt Betrag, Einzugsdatum, Kontoinhaber,
+   maskierte IBAN, Gläubiger-ID und Mandatsreferenz. Bei einem anderen
+   Kontoinhaber bittet es um Weitergabe. Ältere Rechnungen behalten NULL für
+   Felder, die bei ihrer Freigabe noch fehlten.
 
 ## Folgen
 

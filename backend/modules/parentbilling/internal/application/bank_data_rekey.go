@@ -25,30 +25,30 @@ func NewBankDataRekey(store BankDataRekeyStore, cipher parentbilling.BankDataRew
 }
 
 // bankDataSources are the tables of sealed bank data a batch rewraps.
-var bankDataSources = []string{"mandates", "debits", "consents", "debit_files"}
+var bankDataSources = []string{"mandates", "debits", "consents", "debit_files", "care_invoices", "documents"}
+
+// singleBankDataContexts identify sources with one sealed value.
+var singleBankDataContexts = map[string]func(int64, string) []byte{
+	"consents":      consentTextContext,
+	"debit_files":   debitFileContext,
+	"care_invoices": holderContext,
+	"documents":     holderContext,
+}
 
 func (r *BankDataRekey) Batch(ctx context.Context, organizationID int64, source string, afterID int64, limit int) (parentbilling.BankDataRekeyResult, error) {
 	if !slices.Contains(bankDataSources, source) || organizationID <= 0 || afterID < 0 || limit < 1 || limit > 1000 {
 		return parentbilling.BankDataRekeyResult{}, errors.New("bank data rekey requires organization, nonnegative cursor and batch size 1..1000")
 	}
-	if source == "debit_files" {
-		// One sealed value per row: the stored PAIN.008 file (ADR 0187).
-		return r.store.RewriteBankData(ctx, organizationID, source, afterID, limit, func(messageID string, file, _ []byte) ([]byte, []byte, error) {
-			rewrapped, err := r.cipher.Rewrap(file, debitFileContext(organizationID, messageID))
+	if contextFor := singleBankDataContexts[source]; contextFor != nil {
+		return r.store.RewriteBankData(ctx, organizationID, source, afterID, limit, func(reference string, sealed, _ []byte) ([]byte, []byte, error) {
+			rewrapped, err := r.cipher.Rewrap(sealed, contextFor(organizationID, reference))
 			if err != nil {
-				return nil, nil, errors.New("bank data rekey: sealed SEPA debit file does not open")
+				return nil, nil, errors.New("bank data rekey: sealed value does not open")
 			}
 			return rewrapped, nil, nil
 		})
 	}
 	return r.store.RewriteBankData(ctx, organizationID, source, afterID, limit, func(reference string, iban, holder []byte) ([]byte, []byte, error) {
-		if source == "consents" {
-			text, err := r.cipher.Rewrap(iban, consentTextContext(organizationID, reference))
-			if err != nil {
-				return nil, nil, errors.New("bank data rekey: sealed consent text does not open")
-			}
-			return text, nil, nil
-		}
 		newIBAN, err := r.cipher.Rewrap(iban, ibanContext(organizationID, reference))
 		if err != nil {
 			return nil, nil, errors.New("bank data rekey: sealed IBAN does not open")

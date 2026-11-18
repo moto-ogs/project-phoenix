@@ -260,6 +260,8 @@ type InvoiceMandate struct {
 	CreditorID   string        `json:"creditor_id"`
 	IBANMasked   string        `json:"iban_masked"`
 	SequenceType string        `json:"sequence_type"`
+	// HolderSealed is copied on release and opened only for the invoice letter.
+	HolderSealed []byte `json:"-"`
 	// NoticeShort tells the review that the debit comes sooner after the
 	// invoice date than the pre-notification days of the Träger; it is not
 	// copied onto the invoice.
@@ -284,7 +286,8 @@ func ResolveDebit(payment InvoicePayment, terms ServiceTerms, run RunDueDates, f
 	if gap == "" {
 		payment.Mandate = &InvoiceMandate{MandateID: mandate.ID, Reference: mandate.Reference, SignedOn: mandate.SignedOn,
 			CreditorID: mandate.CreditorID, IBANMasked: mandate.IBANMasked, SequenceType: mandate.SequenceType(),
-			NoticeShort: payment.DueOn.Before(issuedOn.AddDays(creditor.PrenotificationDays))}
+			HolderSealed: mandate.HolderSealed,
+			NoticeShort:  payment.DueOn.Before(issuedOn.AddDays(creditor.PrenotificationDays))}
 		return payment
 	}
 	if creditor.MissingMandate == MissingMandateBlock {

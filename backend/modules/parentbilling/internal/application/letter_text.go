@@ -72,12 +72,13 @@ type LetterRenderer interface {
 // cancellation or a credit also names its invoice and what the invoice
 // still asks for after it (#4690).
 type letterContent struct {
-	run        parentbilling.BillingRun
-	document   parentbilling.BillingDocument
-	input      parentbilling.BillingLetterInput
-	letterhead parentbilling.Letterhead
-	invoice    *parentbilling.BillingDocument
-	leftCents  int64
+	run           parentbilling.BillingRun
+	document      parentbilling.BillingDocument
+	input         parentbilling.BillingLetterInput
+	letterhead    parentbilling.Letterhead
+	invoice       *parentbilling.BillingDocument
+	leftCents     int64
+	accountHolder string
 }
 
 // confirmationLetter writes the letter of one issued invoice in the kind of
@@ -92,8 +93,10 @@ func confirmationLetter(content letterContent) Letter {
 	document, head := content.document, content.letterhead
 	kind := templateKindOf(document.DocumentKind)
 	filled := templates.Fill(letterTemplate(head.Template, kind), letterValues(content))
-	blocks := withTransferCode(letterBlocks(filled.Blocks), paymentText(content), transferCodeOf(head, document.Payment,
+	payment := paymentText(content)
+	blocks := withTransferCode(letterBlocks(filled.Blocks), payment, transferCodeOf(head, document.Payment,
 		document.TotalCents, documentReference(document.Number, document.DebtorNumber, document.DocumentKind)))
+	blocks = withDirectDebitNotice(blocks, payment, document.Payment, document.TotalCents)
 	if kind != templates.KindConfirmation {
 		if notes := strings.TrimSpace(content.input.Notes); notes != "" {
 			blocks = append(blocks, LetterBlock{Heading: "Hinweise", Text: notes})
@@ -394,7 +397,9 @@ func paymentText(content letterContent) string {
 	}
 	if isDirectDebit(content.document.Payment) {
 		return directDebitText(content.document.TotalCents, due, strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(reference, "die "), "Ihre "), "Ihr "),
-			paymentMandate(content.document.Payment))
+			paymentMandate(content.document.Payment), content.accountHolder,
+			fullName(content.document.RecipientFirstName, content.document.RecipientLastName),
+			secondLetterRecipient(content.document.RecipientKind, content.document.RecipientSecondName))
 	}
 	if text := strings.TrimSpace(content.letterhead.PaymentText); text != "" {
 		return strings.NewReplacer(

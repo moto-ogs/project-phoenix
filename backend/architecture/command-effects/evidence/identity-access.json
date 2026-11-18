@@ -21993,6 +21993,14 @@
       "target_owner": "organization-tenancy"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.TraegerMembershipDirectory.TraegerMemberName",
+      "binding_digest": "a31f640107236c63f3639cfe64a89356",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerMemberships.TraegerMemberName",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMemberNames.ListTraegerMemberNames",
+      "target_owner": "organization-tenancy"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/tenant.ClaimScope.BindOrganization",
       "binding_digest": "4750be9bd804c6919de4e1f1d69502f3",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.TenantScope.BindOrganization",

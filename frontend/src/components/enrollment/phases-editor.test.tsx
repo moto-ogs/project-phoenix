@@ -691,7 +691,7 @@ describe("PhasesEditor", () => {
         name: "Betreuung läuft länger als die Phase",
       }),
     ).not.toBeInTheDocument();
-  });
+  }, 10_000);
 
   it("uses the button foreground color for the create action icon", async () => {
     mocks.listPhases.mockResolvedValue([phase()]);

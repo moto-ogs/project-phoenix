@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
@@ -90,7 +91,7 @@ func (s *AccountAuthentication) requireTraegerSchoolSwitch(ctx context.Context, 
 
 // traegerSchoolClaims is the claims material of a Träger school session: the
 // school's admin role and its permissions (ADR 0084 section 5), the person's
-// names, and the mark via_traeger.
+// name, and the mark via_traeger.
 func (s *AccountAuthentication) traegerSchoolClaims(ctx context.Context, account domain.LoginAccount, schoolID, organizationID int64) (*domain.AccountClaimsPayload, error) {
 	role, permissions, found, _, err := s.store.FindTraegerSchoolRole(ctx, domain.AdminRoleName, schoolID)
 	if err != nil {
@@ -99,7 +100,7 @@ func (s *AccountAuthentication) traegerSchoolClaims(ctx context.Context, account
 	if !found {
 		return nil, fmt.Errorf("school %d has no %s role for a Träger school session", schoolID, domain.AdminRoleName)
 	}
-	firstName, lastName, err := s.loadPersonNamesForTenant(ctx, account.ID, schoolID)
+	firstName, lastName, err := s.traegerSchoolNames(ctx, account.ID, schoolID, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -117,6 +118,29 @@ func (s *AccountAuthentication) traegerSchoolClaims(ctx context.Context, account
 		Scope:       domain.PortalTenant.Claim,
 		ViaTraeger:  true,
 	}, nil
+}
+
+// traegerSchoolNames names a Träger school session (#7305): by the name the
+// person carries at the Träger, else by their person at the school. A
+// person at another school never names it: the name comes from the account's
+// Träger or from the school itself, never across the tenant boundary. The
+// Träger name is one text and fills the first name.
+func (s *AccountAuthentication) traegerSchoolNames(ctx context.Context, accountID, schoolID, organizationID int64) (string, string, error) {
+	if s.traeger == nil {
+		return "", "", errTraegerMembershipsUnavailable
+	}
+	name, err := s.traeger.TraegerMemberName(ctx, organizationID, accountID)
+	if err != nil {
+		return "", "", fmt.Errorf("load the Träger name of account %d at Träger %d: %w", accountID, organizationID, err)
+	}
+	if name = strings.TrimSpace(name); name != "" {
+		return name, "", nil
+	}
+	firstName, lastName, err := s.loadPersonNames(s.runtime.WithTenantID(ctx, schoolID), accountID)
+	if err != nil {
+		return "", "", fmt.Errorf("load person names for account %d at tenant %d: %w", accountID, schoolID, err)
+	}
+	return firstName, lastName, nil
 }
 
 // traegerSessionMFAProof reads the second-factor proof of the Träger session

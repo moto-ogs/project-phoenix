@@ -60,7 +60,7 @@ func bankRekeyTransaction(ctx context.Context, organizationID int64) (bun.IDB, e
 
 // No skipped locks: the cursor must never pass a concurrent writer. All
 // sources keep their own organization filter even under RLS bypass.
-// For consents, IBAN carries the single sealed text through the rewriter.
+// For single-value sources, IBAN carries that value through the rewriter.
 func lockedBankRekeyRows(ctx context.Context, tx bun.IDB, organizationID int64, source string, afterID int64, limit int) ([]bankRekeyRow, error) {
 	var rows []bankRekeyRow
 	switch source {
@@ -84,6 +84,11 @@ func lockedBankRekeyRows(ctx context.Context, tx bun.IDB, organizationID int64, 
 		err := tx.NewRaw(`SELECT id, message_id AS reference, file_sealed AS iban_sealed, NULL::bytea AS account_holder_sealed
    FROM parent_billing.sepa_debit_files WHERE organization_id = ? AND id > ? AND file_sealed IS NOT NULL ORDER BY id LIMIT ? FOR UPDATE`,
 			organizationID, afterID, limit).Scan(ctx, &rows)
+		return rows, err
+	case "care_invoices", "documents":
+		err := tx.NewRaw(`SELECT id, mandate_reference AS reference, account_holder_sealed AS iban_sealed
+   FROM ? WHERE organization_id = ? AND id > ? AND account_holder_sealed IS NOT NULL ORDER BY id LIMIT ? FOR UPDATE`,
+			bun.Ident("parent_billing."+source), organizationID, afterID, limit).Scan(ctx, &rows)
 		return rows, err
 	default:
 		return nil, errors.New("unsupported bank data source")
@@ -129,6 +134,10 @@ func updateBankRekeyRow(ctx context.Context, tx bun.IDB, organizationID int64, s
 	case "debit_files":
 		_, err := tx.NewRaw(`UPDATE parent_billing.sepa_debit_files SET file_sealed = ?
    WHERE organization_id = ? AND id = ?`, iban, organizationID, id).Exec(ctx)
+		return err
+	case "care_invoices", "documents":
+		_, err := tx.NewRaw(`UPDATE ? SET account_holder_sealed = ? WHERE organization_id = ? AND id = ?`,
+			bun.Ident("parent_billing."+source), iban, organizationID, id).Exec(ctx)
 		return err
 	default:
 		return errors.New("unsupported bank data source")

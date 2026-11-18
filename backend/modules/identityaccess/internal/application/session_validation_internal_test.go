@@ -49,6 +49,10 @@ func (s validationMemberships) LiveTraegers(context.Context, []int64, bool) ([]i
 	return nil, s.err
 }
 
+func (s validationMemberships) TraegerMemberName(context.Context, int64, int64) (string, error) {
+	return "", s.err
+}
+
 func TestValidateSessionTokensPreservesLookupErrors(t *testing.T) {
 	t.Parallel()
 	for _, lookup := range []string{"account", "operator", "mapping", "membership", "switch-membership", "switch-roles", "school", "account-session", "operator-session"} {

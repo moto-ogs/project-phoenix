@@ -11,17 +11,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// childlessGuardian stores a parent contact of the school that has had no
-// child for daysAgo days. The Worker composes the guardian retention on the
-// wall clock, not the root clock (newGuardianRetention): its People
-// Directory reads mark the contacts and set the cutoff. The guardian rows
-// are dated there. The invitations are not: Identity & Access stamps and
-// judges their expiry on the database clock (ADR 0285), so the fixtures
-// issue them the same way, from statement_timestamp().
+// childlessGuardian dates a contact on the People Directory clock.
+// Identity & Access dates invitation expiry on the database clock (ADR 0285).
 func (s retentionSuite) childlessGuardian(t *testing.T, tenantID int64, email string, daysAgo int) int64 {
 	t.Helper()
 	return s.insertID(t, `INSERT INTO users.guardian_profiles (tenant_id, first_name, last_name, email, childless_since)
-		VALUES (?, 'Ohne', 'Kind', ?, WALL_NOW - make_interval(days => ?)) RETURNING id`, tenantID, email, daysAgo)
+		VALUES (?, 'Ohne', 'Kind', ?, ROOT_NOW - make_interval(days => ?)) RETURNING id`, tenantID, email, daysAgo)
 }
 
 // The nightly run deletes a parent contact 90 days after its last child went
@@ -34,6 +29,7 @@ func TestNightlyRetentionDeletesParentContactsWithoutAChild(t *testing.T) {
 	school := testpkg.Tenant(t)
 	otherSchool, _ := testpkg.CreateTestTenant(t, suite.admin)
 	inviter := testpkg.CreateTestAccount(t, suite.admin, "guardian-retention-inviter")
+	databaseNow := testpkg.DatabaseNow(t, suite.admin)
 
 	expired := suite.childlessGuardian(t, school, "retention-expired@example.com", 91)
 	phone := suite.insertID(t, `INSERT INTO users.guardian_phone_numbers (tenant_id, guardian_profile_id, phone_number)
@@ -41,10 +37,10 @@ func TestNightlyRetentionDeletesParentContactsWithoutAChild(t *testing.T) {
 	payment := suite.insertID(t, `INSERT INTO users.guardian_financial_data (tenant_id, guardian_profile_id, iban_sealed, iban_masked)
 		VALUES (?, ?, '\x01', '•••• 2051') RETURNING id`, school, expired)
 	spent := suite.insertID(t, `INSERT INTO auth.guardian_invitations (tenant_id, token, guardian_profile_id, created_by, expires_at)
-		VALUES (?, encode(sha256('retention-spent'::bytea), 'hex'), ?, ?, statement_timestamp() - INTERVAL '1 hour') RETURNING id`, school, expired, inviter.ID)
+		VALUES (?, encode(sha256('retention-spent'::bytea), 'hex'), ?, ?, ?) RETURNING id`, school, expired, inviter.ID, databaseNow.Add(-time.Hour))
 	invited := suite.childlessGuardian(t, school, "retention-invited@example.com", 91)
 	suite.insertID(t, `INSERT INTO auth.guardian_invitations (tenant_id, token, guardian_profile_id, created_by, expires_at)
-		VALUES (?, encode(sha256('retention-open'::bytea), 'hex'), ?, ?, statement_timestamp() + INTERVAL '48 hours') RETURNING id`, school, invited, inviter.ID)
+		VALUES (?, encode(sha256('retention-open'::bytea), 'hex'), ?, ?, ?) RETURNING id`, school, invited, inviter.ID, databaseNow.Add(48*time.Hour))
 	recent := suite.childlessGuardian(t, school, "retention-recent@example.com", 89)
 	linked := testpkg.CreateTestGuardianProfileForTenant(t, suite.admin, school, "Mit", "Kind", "retention-linked")
 	child := testpkg.CreateTestStudentForTenant(t, suite.admin, school, "Bleibt", "Kind", "1a")

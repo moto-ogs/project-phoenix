@@ -7,6 +7,10 @@ import {
 } from "@testing-library/react";
 import { SessionProvider } from "next-auth/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  currentPushPublicKey,
+  setPushPublicKey,
+} from "~/test/push-public-key-mock";
 import { ModalProvider } from "~/components/ui/modal-context";
 import { ParentNotificationOnboarding } from "./parent-notification-onboarding";
 
@@ -17,7 +21,6 @@ const mocks = vi.hoisted(() => ({
   isPushSupported: vi.fn(),
   syncSubscription: vi.fn(),
   subscribePush: vi.fn(),
-  verifyPushConfiguration: vi.fn(),
   isStandaloneApp: vi.fn(),
   isAndroidDevice: vi.fn(),
   isSamsungInternet: vi.fn(),
@@ -37,10 +40,13 @@ vi.mock("~/lib/push-api", () => ({
   isPushSupported: mocks.isPushSupported,
   syncExistingPushSubscription: mocks.syncSubscription,
   subscribePush: mocks.subscribePush,
-  verifyPushConfiguration: mocks.verifyPushConfiguration,
   isStandaloneApp: mocks.isStandaloneApp,
 }));
 
+vi.mock(
+  "~/lib/hooks/use-push-public-key",
+  async () => (await import("~/test/push-public-key-mock")).pushPublicKeyModule,
+);
 vi.mock("~/lib/pwa-install-prompt", () => ({
   isAndroidDevice: mocks.isAndroidDevice,
   isSamsungInternet: mocks.isSamsungInternet,
@@ -91,7 +97,7 @@ describe("ParentNotificationOnboarding", () => {
     mocks.isPushSupported.mockReturnValue(true);
     mocks.syncSubscription.mockResolvedValue(null);
     mocks.subscribePush.mockResolvedValue(undefined);
-    mocks.verifyPushConfiguration.mockResolvedValue(undefined);
+    setPushPublicKey("ready");
     mocks.isStandaloneApp.mockReturnValue(false);
     mocks.isAndroidDevice.mockReturnValue(false);
     mocks.isSamsungInternet.mockReturnValue(false);
@@ -112,7 +118,10 @@ describe("ParentNotificationOnboarding", () => {
     );
 
     await waitFor(() => {
-      expect(mocks.subscribePush).toHaveBeenCalledWith("parent");
+      expect(mocks.subscribePush).toHaveBeenCalledWith(
+        "parent",
+        currentPushPublicKey().load,
+      );
       expect(mocks.setPreference).toHaveBeenCalledWith(
         "parent_message",
         true,
@@ -171,7 +180,10 @@ describe("ParentNotificationOnboarding", () => {
     fireEvent.click(enableButton);
 
     await waitFor(() => {
-      expect(mocks.subscribePush).toHaveBeenCalledWith("parent");
+      expect(mocks.subscribePush).toHaveBeenCalledWith(
+        "parent",
+        currentPushPublicKey().load,
+      );
       expect(mocks.triggerInstallPrompt).not.toHaveBeenCalled();
     });
   });

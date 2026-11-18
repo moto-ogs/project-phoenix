@@ -323,7 +323,7 @@ in one administrative unit whose statements keep only the Träger's schools
 while the account is an active member. The bell reloads its count on every
 page change and every minute. The caterer that currently supplies the school
 (`auth.caterer_schools`, active account) reads it in the bell of the caterer
-portal (`caterer_school_closing_day_changed`, #7147, ADR 0290), on the same
+portal (`caterer_school_closing_day_changed`, #7147, ADR 0292), on the same
 terms; see the meal plan below.
 
 A block that moves to another room (#7141) comes from Timetable's edit of a
@@ -409,7 +409,7 @@ week and links to `/meal-plan?week=<Monday>`. The school switch is
 `notifications.meal_plan_changed_enabled`.
 
 The caterer that currently supplies the school reads the same change in the
-bell of the caterer portal (`caterer_meal_plan_changed`, #7147, ADR 0290):
+bell of the caterer portal (`caterer_meal_plan_changed`, #7147, ADR 0292):
 one entry per active account of the caterer, in the school it is about,
 naming the week and linked to the order overview `/caterer`, without push
 and without live signal, under the same school switch and the same rules

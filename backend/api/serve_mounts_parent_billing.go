@@ -68,7 +68,7 @@ func mountParentBillingRoutes(root, publicLink chi.Router, organizations Holiday
 	// The quote belongs to the public holiday registration and shares its
 	// request limit (#6726).
 	publicLink.Mount(holidayQuoteMount, holiday.QuoteRouter())
-	runs, documentKinds := NewBillingRunHTTP(settings, delivery, outcomes, healthData, today, now)
+	runs, documentKinds := NewBillingRunHTTP(settings, delivery, outcomes, healthData, bankData, today, now)
 	root.Mount("/traeger/billing-runs", runs.RunRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/number-ranges", runs.NumberRangeRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/billing-document-kinds", documentKinds.Router(ProtectedTraegerRoutes))
@@ -79,7 +79,7 @@ func mountParentBillingRoutes(root, publicLink chi.Router, organizations Holiday
 	families := parentBillingHTTP.NewBillingFamilyResource(billingFamilies, common.RequiresPermission(identityaccess.TraegerRightBillingManage),
 		traegerListRenderer(NewSimpleListRenderer()))
 	root.Mount("/traeger/billing-families", families.Router(ProtectedTraegerRoutes))
-	care, reductions, meals, familyChildren := NewCareBillingHTTP(organizations, settings, schoolSettings, marks, delivery, outcomes, today, now)
+	care, reductions, meals, familyChildren := NewCareBillingHTTP(organizations, settings, schoolSettings, marks, delivery, outcomes, bankData, today, now)
 	root.Mount("/traeger/care-tariffs", care.TariffRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/care-billing-runs", care.RunRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/care-rules", reductions.RuleRouter(ProtectedTraegerRoutes))
@@ -141,14 +141,14 @@ func NewBillingTermsHTTP(settings TraegerBrandingSettings, today func() calendar
 // the Träger and to Delivery like the holiday letters (ADR 0165); today and
 // now are the root's clocks.
 func NewCareBillingHTTP(organizations HolidayOrganizations, settings TraegerBrandingSettings, schoolSettings owners.MealAttendanceSchoolSettings,
-	marks owners.MealAttendanceMarks, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, today func() calendar.Date, now func() time.Time,
+	marks owners.MealAttendanceMarks, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, bankData parentbilling.BankDataCipher, today func() calendar.Date, now func() time.Time,
 ) (*parentBillingHTTP.CareBillingResource, *parentBillingHTTP.CareReductionResource, *parentBillingHTTP.CareMealTariffResource, *parentBillingHTTP.FamilyChildrenResource) {
 	contracts := parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}
 	billing, reductions := parentBillingCompose.NewCareBilling(contracts,
 		parentBillingCareSchools{organizations: organizations}, parentBillingSettings{settings: settings}, newParentBillingCareMeals(schoolSettings, marks),
 		newParentBillingLetterheads(settings), today, now)
 	post := parentBillingLetterPost{settings: settings, delivery: delivery, outcomes: outcomes}
-	letters := parentBillingCompose.NewCareLetters(newParentBillingLetterheads(settings), contracts, post, post, today, now)
+	letters := parentBillingCompose.NewCareLetters(newParentBillingLetterheads(settings), contracts, post, post, bankData, today, now)
 	requireBilling, lists := common.RequiresPermission(identityaccess.TraegerRightBillingManage), traegerListRenderer(NewSimpleListRenderer())
 	return parentBillingHTTP.NewCareBillingResource(billing, billing, letters, requireBilling, lists), parentBillingHTTP.NewCareReductionResource(reductions, requireBilling, lists),
 		parentBillingHTTP.NewCareMealTariffResource(billing, requireBilling), parentBillingHTTP.NewFamilyChildrenResource(reductions, requireBilling, lists)
@@ -258,14 +258,14 @@ func (c parentBillingCareContracts) Recipients(ctx context.Context, organization
 // mail of the letters to Delivery and the letterhead of the Träger; and the
 // kind of document per service (#4688) to the document templates of the
 // Träger; today and now are the root's clocks.
-func NewBillingRunHTTP(settings TraegerBrandingSettings, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, healthData enrollmentOwner.HolidayHealthCipher, today func() calendar.Date, now func() time.Time) (*parentBillingHTTP.BillingRunResource, *parentBillingHTTP.DocumentKindResource) {
+func NewBillingRunHTTP(settings TraegerBrandingSettings, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, healthData enrollmentOwner.HolidayHealthCipher, bankData parentbilling.BankDataCipher, today func() calendar.Date, now func() time.Time) (*parentBillingHTTP.BillingRunResource, *parentBillingHTTP.DocumentKindResource) {
 	review, _, _, _ := enrollmentCompose.NewHolidayRegistrationReview(healthData, nil, nil, nil, nil, now)
 	registrations := parentBillingBillingRegistrations{periods: enrollmentCompose.NewHolidayPeriods(now, nil), review: review,
 		hosts: enrollmentCompose.NewHolidayWeekHosts()}
 	requireBilling := common.RequiresPermission(identityaccess.TraegerRightBillingManage)
 	runs, kinds := parentBillingCompose.NewBillingRuns(registrations, parentBillingSettings{settings: settings}, newParentBillingLetterheads(settings), parentBillingActorNames{names: owners.NewTraegerMemberNames()}, today, now)
 	return parentBillingHTTP.NewBillingRunResource(runs, runs, runs,
-			parentBillingCompose.NewBillingLetters(newParentBillingLetterheads(settings), today, now),
+			parentBillingCompose.NewBillingLetters(newParentBillingLetterheads(settings), bankData, today, now),
 			parentBillingCompose.NewBillingLetterMail(parentBillingLetterPost{settings: settings, delivery: delivery, outcomes: outcomes}, now),
 			requireBilling, traegerListRenderer(NewSimpleListRenderer())),
 		parentBillingHTTP.NewDocumentKindResource(kinds, requireBilling)

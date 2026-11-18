@@ -35,8 +35,6 @@ read [frontend API and server boundaries](../docs/agents/frontend-api.md).
 
 The proxy (`src/proxy.ts`) routes by hostname from one `PortalHost` table: each portal host → `/<portal>/*`, `{slug}.TENANT_DOMAIN` → `/[tenant]/*`; reserved slugs (`src/lib/reserved-slugs.ts`) are blocked. A new page folder needs `pnpm generate:portal-pages`, a new BFF route of a portal page an entry in its API allow-list. Cross-host paths redirect (307) back to their canonical subdomain (defense-in-depth on top of cookie isolation). Portal/session/cookie details: `docs/agents/contracts.md`.
 
-Inspect `src/app/` for the current page tree instead of copying a cached layout.
-
 ### Tenant Context & Navigation
 
 - **`TenantProvider`** (`lib/tenant-context.tsx`): context holding `tenantSlug` + resolved tenant metadata
@@ -83,8 +81,10 @@ Only three files may use raw `console.*`: `src/lib/logger.ts`, `src/lib/client-l
 
 Read through the shared cache: `useSWRAuth` with a key factory of `~/lib/swr`
 (Träger portal: `useTraegerResource`), never `useEffect` + `useState`. A load
-in an effect is gone at the next page switch. oxlint `swr/no-effect-load`
-fails it; `scripts/swr-effect-load-baseline.json` stays empty.
+in an effect is gone at the next page switch; oxlint `swr/no-effect-load`
+fails it. After a write, refresh its family with `useInvalidateFamily`; no
+lint checks this. Refused read: branch on the predicates of
+`~/lib/access-refusal`, not on status numbers.
 Contract and exceptions: `src/lib/swr/README.md`.
 
 ## Real-time updates

@@ -1,5 +1,6 @@
 "use client";
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { useAccessControlledData } from "~/lib/hooks/use-access-controlled-data";
@@ -263,10 +264,7 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
   const discardRefused = useDiscardRefusedEntity();
   const rejectRead = useCallback(
     (key: string, error: unknown): never => {
-      if (
-        error instanceof ApiError &&
-        (error.status === 401 || error.status === 403)
-      ) {
+      if (error instanceof ApiError && isAccessRefusal(error)) {
         discardRefused(error, {
           codes: error.code ? [error.code] : [],
           matches: (candidate) => candidate === key,

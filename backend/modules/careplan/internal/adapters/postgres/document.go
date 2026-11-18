@@ -277,7 +277,7 @@ func (s *Store) CompleteCareDocumentCleanup(ctx context.Context, cleanupID int64
 	}
 	return execAny(ctx, db.NewUpdate().Model((*careDocumentCleanupRow)(nil)).
 		ModelTableExpr(`users.student_document_file_cleanup AS "care_document_cleanup"`).
-		Set("cleaned_at = ?", s.currentTime()).
+		Set("cleaned_at = "+cleanupDatabaseClock).
 		Where(`"care_document_cleanup".id = ?`, cleanupID).
 		Where(`"care_document_cleanup".cleaned_at IS NULL`).
 		Where(`"care_document_cleanup".tenant_id = ?`, tenantID), "complete care document cleanup")
@@ -290,7 +290,7 @@ func (s *Store) CompleteCareDocumentCleanupByFilename(ctx context.Context, filen
 	}
 	return execAny(ctx, db.NewUpdate().Model((*careDocumentCleanupRow)(nil)).
 		ModelTableExpr(`users.student_document_file_cleanup AS "care_document_cleanup"`).
-		Set("cleaned_at = ?", s.currentTime()).
+		Set("cleaned_at = "+cleanupDatabaseClock).
 		Where(`"care_document_cleanup".filename_stored = ?`, filename).
 		Where(`"care_document_cleanup".cleaned_at IS NULL`).
 		Where(`"care_document_cleanup".tenant_id = ?`, tenantID), "complete care document cleanup by filename")
@@ -338,7 +338,7 @@ func careDocumentToDomain(row careDocumentRow) (domain.CareDocument, error) {
 }
 
 func careDocumentCleanupFromDomain(value domain.CareDocumentCleanup) careDocumentCleanupRow {
-	return careDocumentCleanupRow{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, OwnerID: value.OwnerID, FilenameStored: value.FilenameStored, RetryAfter: value.RetryAfter, CleanedAt: value.CleanedAt}
+	return careDocumentCleanupRow{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, OwnerID: value.OwnerID, FilenameStored: value.FilenameStored, RetryAfter: value.RetryAfter}
 }
 
 func careDocumentCleanupToDomain(row careDocumentCleanupRow) domain.CareDocumentCleanup {
