@@ -57,10 +57,8 @@ type StaffHire struct {
 // refused contract value is a ContractError, like in the contract dialog.
 func NormalizeStaffHire(hire StaffHire, today calendar.Date) (StaffHire, error) {
 	hire.FirstName, hire.LastName = strings.TrimSpace(hire.FirstName), strings.TrimSpace(hire.LastName)
-	for _, name := range []struct{ field, value string }{{"first_name", hire.FirstName}, {"last_name", hire.LastName}} {
-		if name.value == "" || len(name.value) > maxHireNameLength {
-			return StaffHire{}, hireInvalid(name.field, "a name of at most 255 characters is required")
-		}
+	if field, ok := invalidStaffName(hire.FirstName, hire.LastName); ok {
+		return StaffHire{}, hireInvalid(field, "a name of at most 255 characters is required")
 	}
 	hire.Birthday = strings.TrimSpace(hire.Birthday)
 	if birthday, err := calendar.ParseDate(hire.Birthday); err != nil || birthday.After(today) {

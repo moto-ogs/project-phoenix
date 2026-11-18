@@ -10,10 +10,11 @@ import (
 )
 
 // UpdatePerson corrects first name, last name and birthday of the record
-// (#7379). Every changed field writes its old value into the trail in the
-// same Träger transaction; unchanged values write nothing. The schools keep
-// their own person rows (ADR 0089 section 3): the correction reaches the
-// Träger's lists, exports and the duplicate check of a hire.
+// (#7379). Every changed or removed field writes its old value into the
+// trail in the same Träger transaction; unchanged values write nothing. The
+// schools keep their own person rows (ADR 0089 section 3): the correction
+// reaches the Träger's lists, exports, the proposals and the duplicate check
+// of a hire.
 func (t *TraegerStaff) UpdatePerson(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64, input workforce.TraegerStaffPerson) (workforce.TraegerStaffRecordDetail, error) {
 	person, err := domain.NormalizeStaffPerson(domain.StaffPerson{
 		FirstName: input.FirstName, LastName: input.LastName, Birthday: domain.Deref(input.Birthday),
@@ -36,7 +37,7 @@ func (t *TraegerStaff) UpdatePerson(ctx context.Context, actor workforce.Traeger
 		trail := make([]domain.TraegerStaffChange, 0, len(changed))
 		for _, change := range changed {
 			entry, err := t.trailChange(actor.OrganizationID, domain.TraegerStaffChange{
-				RecordID: recordID, Kind: domain.StaffChangeChanged, Field: change.Field, AccountID: actor.AccountID,
+				RecordID: recordID, Kind: change.Kind, Field: change.Field, AccountID: actor.AccountID,
 			}, change.Before)
 			if err != nil {
 				return err

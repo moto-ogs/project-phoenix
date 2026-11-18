@@ -105,7 +105,7 @@ export function StaffPersonCard({
       logger.error("traeger_staff_person_save_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      void errors.show(err, { object: "Die Angaben zur Person" });
+      void errors.show(err, { object: "die Person" });
     } finally {
       setSaving(false);
     }
@@ -115,7 +115,7 @@ export function StaffPersonCard({
     <SectionCard
       concept={staffConcept}
       title="Person"
-      description="So steht die Person in Ihren Listen und Exporten. moto prüft damit auch beim Einstellen, ob es die Person schon gibt. Die Schulen pflegen ihre eigenen Angaben selbst."
+      description="So steht die Person in Ihren Listen und Exporten. Daran erkennt moto sie auch in den Vorschlägen und beim Einstellen. Die Schulen pflegen ihre eigenen Angaben selbst."
       action={
         editing ? undefined : (
           <Button

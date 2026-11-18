@@ -31,7 +31,12 @@ func TestNormalizeStaffPersonNamesTheRefusedField(t *testing.T) {
 		assert.ErrorIs(t, err, ErrStaffStammdatenInvalid, tc.name)
 	}
 
-	person, err := NormalizeStaffPerson(StaffPerson{FirstName: " Jonas ", LastName: "Keller ", Birthday: " 2026-09-09 "}, today)
+	umlauts := strings.Repeat("ü", 255)
+	person, err := NormalizeStaffPerson(StaffPerson{FirstName: umlauts, LastName: "Keller"}, today)
+	require.NoError(t, err, "the column counts characters: 255 umlauts fit although they take 510 bytes")
+	assert.Equal(t, umlauts, person.FirstName)
+
+	person, err = NormalizeStaffPerson(StaffPerson{FirstName: " Jonas ", LastName: "Keller ", Birthday: " 2026-09-09 "}, today)
 	require.NoError(t, err)
 	assert.Equal(t, StaffPerson{FirstName: "Jonas", LastName: "Keller", Birthday: "2026-09-09"}, person, "today is a birthday that has come")
 }
@@ -41,7 +46,10 @@ func TestPersonChangesKeepTheOldValueOfEveryChangedField(t *testing.T) {
 	record := TraegerStaffRecord{FirstName: "Mira", LastName: "Sommer", Birthday: ""}
 	assert.Empty(t, record.PersonChanges(StaffPerson{FirstName: "Mira", LastName: "Sommer"}))
 	assert.Equal(t, []StaffPersonChange{
-		{Field: StaffFieldFirstName, Before: "Mira"},
-		{Field: StaffFieldBirthday, Before: ""},
+		{Field: StaffFieldFirstName, Kind: StaffChangeChanged, Before: "Mira"},
+		{Field: StaffFieldBirthday, Kind: StaffChangeChanged, Before: ""},
 	}, record.PersonChanges(StaffPerson{FirstName: "Myra", LastName: "Sommer", Birthday: "1990-04-12"}))
+	record.Birthday = "1990-04-12"
+	assert.Equal(t, []StaffPersonChange{{Field: StaffFieldBirthday, Kind: StaffChangeRemoved, Before: "1990-04-12"}},
+		record.PersonChanges(StaffPerson{FirstName: "Mira", LastName: "Sommer"}), "an emptied birthday is removed")
 }

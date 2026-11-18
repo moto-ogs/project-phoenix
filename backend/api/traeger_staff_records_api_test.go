@@ -476,6 +476,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		cleared := decode[staffRecordBody](t, rec)
 		assert.Empty(t, cleared.Birthday)
 		require.NotEmpty(t, cleared.Changes)
+		assert.Equal(t, workforce.TraegerStaffChangeRemoved, cleared.Changes[0].Kind, "an emptied birthday is removed, not replaced")
 		assert.Equal(t, "birthday", cleared.Changes[0].Field)
 		assert.Equal(t, "1990-04-12", cleared.Changes[0].Value)
 

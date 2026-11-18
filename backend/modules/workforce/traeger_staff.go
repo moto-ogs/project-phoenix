@@ -53,6 +53,9 @@ const (
 	TraegerStaffChangeLinked    = "linked"
 	TraegerStaffChangeNotChosen = "not_chosen"
 	TraegerStaffChangeChanged   = "changed"
+	// TraegerStaffChangeRemoved is a value the Personalverwaltung emptied,
+	// such as a birthday (#7379); the entry keeps the value before.
+	TraegerStaffChangeRemoved = "removed"
 )
 
 // The access log views of the Träger-Portal on staff data (ADR 0084
