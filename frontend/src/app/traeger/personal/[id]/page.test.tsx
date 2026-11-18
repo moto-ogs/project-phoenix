@@ -333,6 +333,10 @@ describe("TraegerStaffRecordPage", () => {
     expect(api.updateStaffPerson).not.toHaveBeenCalled();
 
     fireEvent.change(firstName, { target: { value: " Myra " } });
+    expect(
+      within(card!).queryByText("Bitte tragen Sie den Vornamen ein."),
+    ).not.toBeInTheDocument();
+    expect(firstName).not.toHaveAttribute("aria-invalid", "true");
     fireEvent.change(
       within(card!).getByRole("textbox", { name: /Geburtstag/ }),
       {

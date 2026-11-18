@@ -81,6 +81,13 @@ export function StaffPersonCard({
     setEditing(true);
   };
 
+  // A refusal belongs to the values it refused: the first edit after it
+  // takes the marks away, the next save checks again.
+  const edit = (patch: Partial<StaffPersonInput>) => {
+    setDraft((current) => ({ ...current, ...patch }));
+    if (errors.error) errors.clear();
+  };
+
   const save = async (event: FormEvent) => {
     event.preventDefault();
     const next = trimmed(draft);
@@ -155,7 +162,9 @@ export function StaffPersonCard({
         <form
           ref={formRef}
           noValidate
-          className="space-y-4"
+          // SectionCard gives the body no bottom padding above its footer;
+          // the fields keep the card's 20 px (16 px on a phone) to it.
+          className="compact:pb-4 space-y-4 pb-5 max-sm:pb-4"
           onSubmit={(event) => void save(event)}
         >
           <FormErrorAlert message={errors.error} />
@@ -165,32 +174,24 @@ export function StaffPersonCard({
               name="first_name"
               label={STAFF_FIELD_LABELS.first_name}
               required
+              controlSize="touch"
               autoComplete="off"
               maxLength={255}
               value={draft.firstName}
               error={errors.fieldError("first_name")}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  firstName: event.target.value,
-                }))
-              }
+              onChange={(event) => edit({ firstName: event.target.value })}
             />
             <Input
               id="traeger-staff-last-name"
               name="last_name"
               label={STAFF_FIELD_LABELS.last_name}
               required
+              controlSize="touch"
               autoComplete="off"
               maxLength={255}
               value={draft.lastName}
               error={errors.fieldError("last_name")}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  lastName: event.target.value,
-                }))
-              }
+              onChange={(event) => edit({ lastName: event.target.value })}
             />
             <ISODateInput
               id="traeger-staff-birthday"
@@ -200,9 +201,7 @@ export function StaffPersonCard({
               maxDateError="Der Geburtstag darf nicht in der Zukunft liegen."
               error={errors.fieldError("birthday")}
               onValidityChange={setBirthdayValid}
-              onChange={(birthday) =>
-                setDraft((current) => ({ ...current, birthday }))
-              }
+              onChange={(birthday) => edit({ birthday })}
             />
           </div>
         </form>
