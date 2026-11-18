@@ -81,9 +81,14 @@ export function StaffPersonCard({
     setEditing(true);
   };
 
-  // A refusal belongs to the values it refused: the first edit after it
-  // takes the marks away, the next save checks again.
+  // A refusal belongs to the values it refused: the first real change
+  // after it takes the marks away, the next save checks again. Leaving the
+  // date field reports its value again; that is no change.
   const edit = (patch: Partial<StaffPersonInput>) => {
+    const changed = (Object.keys(patch) as (keyof StaffPersonInput)[]).some(
+      (key) => patch[key] !== draft[key],
+    );
+    if (!changed) return;
     setDraft((current) => ({ ...current, ...patch }));
     if (errors.error) errors.clear();
   };
@@ -177,6 +182,7 @@ export function StaffPersonCard({
               controlSize="touch"
               autoComplete="off"
               maxLength={255}
+              disabled={saving}
               value={draft.firstName}
               error={errors.fieldError("first_name")}
               onChange={(event) => edit({ firstName: event.target.value })}
@@ -189,6 +195,7 @@ export function StaffPersonCard({
               controlSize="touch"
               autoComplete="off"
               maxLength={255}
+              disabled={saving}
               value={draft.lastName}
               error={errors.fieldError("last_name")}
               onChange={(event) => edit({ lastName: event.target.value })}
@@ -200,6 +207,7 @@ export function StaffPersonCard({
               max={today}
               maxDateError="Der Geburtstag darf nicht in der Zukunft liegen."
               error={errors.fieldError("birthday")}
+              disabled={saving}
               onValidityChange={setBirthdayValid}
               onChange={(birthday) => edit({ birthday })}
             />

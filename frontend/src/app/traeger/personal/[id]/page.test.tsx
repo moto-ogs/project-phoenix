@@ -302,7 +302,13 @@ describe("TraegerStaffRecordPage", () => {
 
   // #7379: Name und Geburtstag korrigiert die Personalverwaltung in der Akte.
   it("corrects name and birthday and refuses an empty name", async () => {
-    api.updateStaffPerson.mockResolvedValue({
+    let answer: (record: StaffRecordDetail) => void = () => undefined;
+    api.updateStaffPerson.mockReturnValue(
+      new Promise<StaffRecordDetail>((resolve) => {
+        answer = resolve;
+      }),
+    );
+    const saved: StaffRecordDetail = {
       ...RECORD,
       firstName: "Myra",
       birthday: "1990-04-12",
@@ -311,11 +317,12 @@ describe("TraegerStaffRecordPage", () => {
           kind: "changed",
           field: "birthday",
           value: "1990-04-02",
+          schoolName: "",
           occurredAt: "2026-11-18T10:00:00Z",
         },
         ...RECORD.changes,
       ],
-    });
+    };
     renderPage();
     const card = (
       await screen.findByText("Person", { selector: "h2" })
@@ -331,6 +338,12 @@ describe("TraegerStaffRecordPage", () => {
       await within(card!).findByText("Bitte tragen Sie den Vornamen ein."),
     ).toBeInTheDocument();
     expect(api.updateStaffPerson).not.toHaveBeenCalled();
+
+    // Leaving the untouched birthday is no change: the refusal stays.
+    fireEvent.blur(within(card!).getByRole("textbox", { name: /Geburtstag/ }));
+    expect(
+      within(card!).getByText("Bitte tragen Sie den Vornamen ein."),
+    ).toBeInTheDocument();
 
     fireEvent.change(firstName, { target: { value: " Myra " } });
     expect(
@@ -351,6 +364,9 @@ describe("TraegerStaffRecordPage", () => {
         birthday: "1990-04-12",
       }),
     );
+    // While saving, nothing typed can get lost.
+    expect(firstName).toBeDisabled();
+    answer(saved);
     expect(await within(card!).findByText("12.04.1990")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 1, name: "Myra Sommer-Berg" }),
