@@ -95,7 +95,8 @@ const COLUMNS: DataTableColumn<CountRow>[] = [
   {
     key: "keyDate",
     header: "Stichtag",
-    render: (row) => formatDate(rowKeyDate(row)),
+    render: (row) =>
+      rowKeyDate(row) ? formatDate(rowKeyDate(row)) : "unbekannt",
     sortValue: rowKeyDate,
     stacked: "field",
   },
@@ -123,7 +124,7 @@ const COLUMNS: DataTableColumn<CountRow>[] = [
     header: "Erfasst am",
     render: (row) =>
       row.kind === "pending" ? (
-        row.keyDate < berlinTodayISO() ? (
+        row.keyDate !== "" && row.keyDate < berlinTodayISO() ? (
           <StatusBadge
             tone="warning"
             label="Zahlen fehlen"
@@ -277,28 +278,32 @@ function OperatorBillingPageContent() {
     { revalidateOnFocus: false },
   );
   const pending = useMemo<CountRow[]>(() => {
-    if (!showsCurrentMonth || !keyDay || !schools.data || !organizations.data) {
+    if (!showsCurrentMonth || !schools.data || !organizations.data) {
       return [];
     }
     const captured = new Set(rows.map((row) => row.schoolId));
     const names = new Map(organizations.data.map((org) => [org.id, org.name]));
     const own = (scope: string, id: string) =>
-      keyDay.overrides.find(
+      keyDay?.overrides.find(
         (override) => override.scope === scope && override.id === id,
       )?.keyDay;
     return schools.data
       .filter((school) => school.deletedAt == null && !captured.has(school.id))
       .map((school) => {
+        // Without the key days (they failed to load) the school stays
+        // listed, its key date unknown.
         const day =
           own("school", school.id) ??
           own("organization", school.organizationId) ??
-          keyDay.keyDay;
+          keyDay?.keyDay;
         return {
           kind: "pending" as const,
           schoolId: school.id,
           schoolName: school.name,
           organizationName: names.get(school.organizationId) ?? "",
-          keyDate: `${currentPeriod.slice(0, 8)}${String(day).padStart(2, "0")}`,
+          keyDate: day
+            ? `${currentPeriod.slice(0, 8)}${String(day).padStart(2, "0")}`
+            : "",
         };
       });
   }, [
@@ -365,11 +370,9 @@ function OperatorBillingPageContent() {
       <SectionCard
         title="Erfasste Zahlen"
         description={
-          pending.length === 1
-            ? `Eine Schule hat für ${monthName} noch keine Zahlen. Die anderen stehen so, wie moto sie am Stichtag erfasst hat.`
-            : pending.length > 1
-              ? `${pending.length} Schulen haben für ${monthName} noch keine Zahlen. Die anderen stehen so, wie moto sie am Stichtag erfasst hat.`
-              : "Je Schule, so wie moto sie am Stichtag erfasst hat."
+          pending.length > 0
+            ? "Je Schule, so wie moto sie am Stichtag erfasst hat. Schulen ohne Zahlen stehen mit ihrem Stichtag dabei."
+            : "Je Schule, so wie moto sie am Stichtag erfasst hat."
         }
         action={
           hasCounts ? (

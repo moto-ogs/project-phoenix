@@ -200,7 +200,7 @@ describe("OperatorBillingPage", () => {
     expect(screen.getByText("1 von 2")).toBeInTheDocument();
     expect(screen.getByText("Schulen erfasst")).toBeInTheDocument();
     expect(
-      screen.getByText(/^Eine Schule hat für .* noch keine Zahlen\./),
+      screen.getByText(/Schulen ohne Zahlen stehen mit ihrem Stichtag dabei\./),
     ).toBeInTheDocument();
   });
 
@@ -449,5 +449,27 @@ describe("OperatorBillingPage", () => {
     expect(screen.queryByText("key day out of range")).toBeNull();
     expect(mockToastError).not.toHaveBeenCalled();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("keeps the schools without figures listed when the key days fail to load (#7301)", async () => {
+    const month = testClockDay(0).slice(0, 7);
+    mockListKeyDateCounts.mockResolvedValue([
+      count({ period: `${month}-01`, keyDate: `${month}-05` }),
+    ]);
+    mockGetKeyDay.mockRejectedValue(new ApiError("boom", 503));
+    mockListOrganizations.mockResolvedValue([
+      { id: "4", name: "Träger Nord", deletedAt: null },
+    ]);
+    mockListSchools.mockResolvedValue([
+      { id: "11", organizationId: "4", name: "OGS Am Berg", deletedAt: null },
+      { id: "13", organizationId: "4", name: "OGS Neu", deletedAt: null },
+    ]);
+    renderPage();
+
+    const neu = (await screen.findAllByText("OGS Neu"))
+      .map((cell) => cell.closest("tr"))
+      .find(Boolean) as HTMLElement;
+    expect(within(neu).getByText("unbekannt")).toBeInTheDocument();
+    expect(screen.getByText("1 von 2")).toBeInTheDocument();
   });
 });
