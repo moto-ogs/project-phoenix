@@ -61,6 +61,7 @@ describe("DevicesMasterDetail", () => {
   const onSelect = vi.fn();
   const onSaveDevice = vi.fn(async () => undefined);
   const onDeleteClick = vi.fn();
+  const onSetBlocked = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -75,6 +76,8 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
       />,
     );
 
@@ -91,6 +94,8 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
       />,
     );
 
@@ -110,6 +115,8 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
       />,
     );
 
@@ -137,6 +144,8 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
       />,
     );
 
@@ -150,6 +159,8 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
       />,
     );
 
@@ -187,6 +198,8 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
       />,
     );
 
@@ -204,6 +217,8 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
       />,
     );
 
@@ -234,6 +249,8 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
       />,
     );
 
@@ -254,6 +271,8 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
       />,
     );
 
@@ -270,9 +289,64 @@ describe("DevicesMasterDetail", () => {
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
         onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
       />,
     );
 
     expect(screen.getByText("Online")).toBeInTheDocument();
+  });
+  it("blocks an active device from the header (#2317)", () => {
+    render(
+      <DevicesMasterDetail
+        groupDefinitions={flatGroup([onlineDevice])}
+        selectedId="1"
+        selectedDevice={onlineDevice}
+        onSelect={onSelect}
+        onSaveDevice={onSaveDevice}
+        onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^Sperren$/ }));
+
+    expect(onSetBlocked).toHaveBeenCalledWith(true);
+    expect(
+      screen.queryByText(/Dieses Gerät ist gesperrt/),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByText("Online").length).toBeGreaterThan(0);
+  });
+
+  it("shows a blocked device as blocked and unblocks it (#2317)", () => {
+    const blockedDevice: Device = { ...onlineDevice, status: "inactive" };
+    render(
+      <DevicesMasterDetail
+        groupDefinitions={flatGroup([blockedDevice])}
+        selectedId="1"
+        selectedDevice={blockedDevice}
+        onSelect={onSelect}
+        onSaveDevice={onSaveDevice}
+        onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+      />,
+    );
+
+    // The list pill and the status field name the block, not the
+    // connection the device last reported.
+    expect(screen.getAllByText("Gesperrt")).toHaveLength(2);
+    expect(screen.getAllByText("Online")).toHaveLength(1);
+    expect(
+      screen.getByText(
+        /Dieses Gerät ist gesperrt\. Es kann sich nicht anmelden/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Foyer")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /^Entsperren$/ }));
+
+    expect(onSetBlocked).toHaveBeenCalledWith(false);
   });
 });

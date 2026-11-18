@@ -32,6 +32,7 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
@@ -485,7 +486,7 @@ function SepaDebitsLeftCard({
                 {debit.left ? SEPA_DEBIT_LEFT_LABELS[debit.left] : ""}
               </p>
             </div>
-            <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
+            <ResponsiveRowActions>
               <ButtonLink
                 href={mandateHref(debit)}
                 variant="surface"
@@ -495,7 +496,7 @@ function SepaDebitsLeftCard({
               >
                 Mandat prüfen
               </ButtonLink>
-            </div>
+            </ResponsiveRowActions>
           </ResponsiveActionRow>
         ))}
       </ResponsiveActionList>

@@ -138,7 +138,7 @@ func (b *builder) field(declaring, root reflect.Type, sf reflect.StructField, na
 		field.Optional = true
 		return field, nil
 	}
-	omission(&field, sf.Type, options)
+	b.omission(&field, sf.Type, options)
 	return field, nil
 }
 
@@ -159,7 +159,7 @@ func (b *builder) mark(field *Field, key string) error {
 
 // omission applies omitempty and omitzero: when the key is absent, and that
 // an omitted nil is never null.
-func omission(field *Field, t reflect.Type, options []string) {
+func (b *builder) omission(field *Field, t reflect.Type, options []string) {
 	nilable := t.Kind() == reflect.Pointer || t.Kind() == reflect.Slice || t.Kind() == reflect.Map || t.Kind() == reflect.Interface
 	if slices.Contains(options, "omitempty") {
 		switch {
@@ -169,14 +169,14 @@ func omission(field *Field, t reflect.Type, options []string) {
 			// encoding/json never omits a struct value.
 		default:
 			field.Optional = true
-			if t == dateType {
+			if b.dates[t] {
 				field.Schema.Nullable = false
 			}
 		}
 	}
 	if slices.Contains(options, "omitzero") {
 		field.Optional = true
-		if t.Kind() == reflect.Pointer || t == dateType {
+		if t.Kind() == reflect.Pointer || b.dates[t] {
 			field.Schema.Nullable = false
 		}
 	}

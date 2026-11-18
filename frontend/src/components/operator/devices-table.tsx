@@ -7,6 +7,8 @@ import {
   getDeviceTypeDisplayName,
   getDeviceStatusDisplayName,
   formatLastSeen,
+  isDeviceBlocked,
+  isSystemDevice,
 } from "~/lib/iot-helpers";
 import { DataTable } from "~/components/ui/data-table";
 import type { DataTableColumn } from "~/components/ui/data-table";
@@ -14,7 +16,7 @@ import {
   OverflowMenu,
   type OverflowMenuEntry,
 } from "~/components/ui/page-header/OverflowMenu";
-import { ArrowRightLeft, KeyRound, Trash2 } from "lucide-react";
+import { ArrowRightLeft, KeyRound, Lock, LockOpen, Trash2 } from "lucide-react";
 import {
   StatusBadge,
   type StatusBadgeTone,
@@ -26,6 +28,10 @@ function DeviceStatusBadge({
   status,
   isOnline,
 }: Readonly<{ status: string; isOnline: boolean }>) {
+  // A blocked device is refused whatever its last connection says (#2317).
+  if (isDeviceBlocked({ status })) {
+    return <StatusBadge tone="red" compact label="Gesperrt" />;
+  }
   if (isOnline) {
     return <StatusBadge tone="green" compact label="Online" />;
   }
@@ -50,6 +56,8 @@ interface DevicesTableProps {
   isLoading?: boolean;
   onSetKey?: (device: OperatorDevice) => void;
   onTransfer?: (device: OperatorDevice) => void;
+  /** Blocks (true) or unblocks (false) a device (#2317). */
+  onSetBlocked?: (device: OperatorDevice, blocked: boolean) => void;
   onDelete?: (device: OperatorDevice) => void;
 }
 
@@ -59,6 +67,7 @@ export function DevicesTable({
   isLoading = false,
   onSetKey,
   onTransfer,
+  onSetBlocked,
   onDelete,
 }: Readonly<DevicesTableProps>) {
   const columns = useMemo<DataTableColumn<OperatorDevice>[]>(() => {
@@ -138,7 +147,7 @@ export function DevicesTable({
       },
     );
 
-    if (onSetKey || onTransfer || onDelete) {
+    if (onSetKey || onTransfer || onSetBlocked || onDelete) {
       cols.push({
         key: "actions",
         header: "Aktionen",
@@ -156,6 +165,21 @@ export function DevicesTable({
               label: "API-Key ändern",
               icon: <KeyRound className="h-4 w-4" aria-hidden="true" />,
               onClick: () => onSetKey(row),
+            });
+          }
+          if (onSetBlocked && !isSystemDevice(row)) {
+            const blocked = isDeviceBlocked(row);
+            items.push({
+              label: blocked ? "Entsperren" : "Sperren",
+              description: blocked
+                ? "Gibt dem Gerät sofort wieder Zugang."
+                : "Weist den Kiosk sofort ab. Gerät, Raum und Verlauf bleiben.",
+              icon: blocked ? (
+                <LockOpen className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Lock className="h-4 w-4" aria-hidden="true" />
+              ),
+              onClick: () => onSetBlocked(row, !blocked),
             });
           }
           if (onDelete) {
@@ -179,7 +203,7 @@ export function DevicesTable({
     }
 
     return cols;
-  }, [showSchool, onSetKey, onTransfer, onDelete]);
+  }, [showSchool, onSetKey, onTransfer, onSetBlocked, onDelete]);
 
   return (
     <DataTable

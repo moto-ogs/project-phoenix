@@ -22,6 +22,7 @@ import {
   type TraegerDocumentSchool,
 } from "~/lib/traeger-documents-api";
 import { releaseAudienceLabel, schoolNamesOf } from "./traeger-document-format";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
 const logger = createLogger({ component: "TraegerDocumentReleaseModal" });
@@ -253,10 +254,11 @@ export function TraegerDocumentReleaseModal({
           />
         )}
         <InsetPanel padding="md">
-          <p className="text-xs font-medium text-gray-500">Sichtbar für</p>
-          <p className="mt-0.5 text-sm font-semibold text-gray-900">
-            {preview ?? "Bitte wähle oben aus."}
-          </p>
+          <DataGrid columns={1}>
+            <DataField label="Sichtbar für">
+              {preview ?? "Bitte wähle oben aus."}
+            </DataField>
+          </DataGrid>
           <p className="mt-1 text-sm text-gray-600">{WHERE[audience]}</p>
         </InsetPanel>
       </form>

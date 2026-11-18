@@ -28,7 +28,7 @@ const portals = [
     scope: "parent",
     cookie: "parent.session-token",
     logout: "/api/parent/auth/logout",
-    read: "/api/parent/calendar",
+    read: "/api/parent/me/calendar",
   },
   {
     name: "Schule",

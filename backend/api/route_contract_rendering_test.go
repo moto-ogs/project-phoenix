@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
+	"github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -100,7 +101,7 @@ func fillRendered(v reflect.Value, own, shape renderShape, format string, depth 
 	case reflect.TypeFor[time.Time]():
 		v.Set(reflect.ValueOf(renderedInstant))
 		return
-	case reflect.TypeFor[calendar.Date]():
+	case reflect.TypeFor[calendar.Date](), reflect.TypeFor[appointments.Date]():
 		if own != shapeNil {
 			v.SetString("2026-09-09")
 		}

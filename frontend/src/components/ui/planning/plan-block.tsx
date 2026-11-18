@@ -17,7 +17,11 @@ import { PLANNING_COLORS } from "./planning-colors";
  * whose height comes from a short time span and holds no more than the line.
  */
 type PlanBlockSize = "default" | "compact" | "flush";
-type PlanBlockStatus = "default" | "hatched" | "cancelled";
+/**
+ * `suggested`: a block moto proposes but nobody has planned yet (#7381), with
+ * a dashed frame and no tint, so it never reads as a planned shift.
+ */
+type PlanBlockStatus = "default" | "hatched" | "cancelled" | "suggested";
 
 interface PlanBlockProps {
   /** Zeitspanne, z. B. "12:00–14:00". */
@@ -124,7 +128,8 @@ export function PlanBlock({
   const edgeColor = isCancelled
     ? PLANNING_COLORS.cancelled
     : (color ?? COLOR_BAR_FALLBACK);
-  const showTint = tinted && !isCancelled;
+  const isSuggested = status === "suggested";
+  const showTint = tinted && !isCancelled && !isSuggested;
 
   // Aufrufer-Positionierung UNTER die Rezeptur mergen: die Rezeptur-Keys sind
   // autoritativ und dürfen nicht per style-Prop überschrieben werden.
@@ -136,7 +141,8 @@ export function PlanBlock({
   };
 
   const containerClassName = [
-    "relative w-full rounded-md border border-gray-200 bg-white text-left",
+    "relative w-full rounded-md border bg-white text-left",
+    isSuggested ? "border-dashed border-gray-300" : "border-gray-200",
     interactive &&
       "transition-shadow hover:shadow-sm focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none",
     selected && "ring-2 ring-gray-900 ring-offset-1",

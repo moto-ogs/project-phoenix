@@ -10,14 +10,12 @@ import { useMemo, useState } from "react";
 import { CalendarOff, School } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { Alert } from "~/components/ui/alert";
+import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DateRangePicker } from "~/components/ui/date-range-picker";
 import { EmptyState } from "~/components/ui/empty-state";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import type {
-  ActiveFilter,
-  FilterConfig,
-} from "~/components/ui/page-header/types";
+import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -33,7 +31,8 @@ import {
   limitPeriod,
 } from "~/components/traeger/daily-attendance-model";
 import { useTraegerDailyAttendance } from "~/components/traeger/use-traeger-daily-attendance";
-import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
+import { shiftWindow } from "~/components/traeger/utilization-model";
 import { childrenConcept } from "~/lib/concepts/children";
 import { pickupConcept } from "~/lib/concepts/pickup";
 import { presentConcept } from "~/lib/concepts/present";
@@ -267,7 +266,7 @@ const SCHOOL_COLUMNS: DataTableColumn<TraegerSchoolDailyAttendance>[] = [
       <div className="min-w-0">
         <span className="font-medium text-gray-900">{school.name}</span>
         {school.city ? (
-          <span className="block text-xs text-gray-500 max-md:hidden">
+          <span className="block text-sm text-gray-500 max-md:hidden">
             {school.city}
           </span>
         ) : null}
@@ -332,6 +331,26 @@ export default function TraegerDailyAttendancePage() {
   const { report, error, reportError, loading } =
     useTraegerDailyAttendance(period);
 
+  // Die Pfeile schieben den Zeitraum um seine Länge, innerhalb der Auswahl.
+  const bounds = {
+    min: toISODate(daysBefore(yesterday, PICKER_DAYS - 1)),
+    max: toISODate(yesterday),
+  };
+  const previousPeriod = shiftWindow(period, -1, bounds);
+  const nextPeriod = shiftWindow(period, 1, bounds);
+  const initialRange = defaultRange(yesterday);
+  const defaultPeriod = {
+    from: toISODate(initialRange.from!),
+    to: toISODate(initialRange.to!),
+  };
+  const onDefault =
+    period.from === defaultPeriod.from && period.to === defaultPeriod.to;
+  function showPeriod(next: DailyAttendancePeriod) {
+    setPeriod(next);
+    setRange({ from: parseISODate(next.from), to: parseISODate(next.to) });
+    setClamped(false);
+  }
+
   const schools = report?.schools ?? [];
   const selected = schools.find((school) => school.id === schoolId) ?? null;
   const days = selected?.days ?? report?.days ?? [];
@@ -353,34 +372,14 @@ export default function TraegerDailyAttendancePage() {
     }
   }
 
-  const filters: FilterConfig[] =
-    schools.length > 1
-      ? [
-          {
-            id: "school",
-            label: "Schule",
-            type: "dropdown",
-            value: schoolId,
-            onChange: (value) => setSchoolId(value as string),
-            options: [
-              { value: "", label: "Alle Schulen" },
-              ...schools.map((school) => ({
-                value: school.id,
-                label: school.name,
-              })),
-            ],
-          },
-        ]
-      : [];
-  const activeFilters: ActiveFilter[] = selected
-    ? [
-        {
-          id: "school",
-          label: selected.name,
-          onRemove: () => setSchoolId(""),
-        },
-      ]
-    : [];
+  const exportItems = useTraegerListExportItems({
+    download: (format) => downloadTraegerDailyAttendance(period, format),
+    scope: "Alle Schulen in Mecklenburg-Vorpommern",
+    fallbackName: `tagesmeldung-mv-${period.from}-bis-${period.to}`,
+    errorObject: "die Datei der Tagesmeldung",
+    unavailable: !report || schools.length === 0,
+    onError: reportError,
+  });
 
   const statItems = report
     ? [
@@ -417,31 +416,7 @@ export default function TraegerDailyAttendancePage() {
           Zeile je Kind und Tag, ohne Namen. Heute zählt erst morgen mit.
         </>
       }
-      actions={
-        <>
-          <DateRangePicker
-            value={range}
-            onChange={changeRange}
-            presets={rangePresets(yesterday)}
-            toMax={yesterday}
-            fromMin={daysBefore(yesterday, PICKER_DAYS - 1)}
-            className="w-full sm:w-auto"
-            triggerClassName="w-full sm:w-auto"
-          />
-          <TraegerListExportMenu
-            download={(format) =>
-              downloadTraegerDailyAttendance(period, format)
-            }
-            scope="Alle Schulen in Mecklenburg-Vorpommern"
-            ariaLabel="Tagesmeldung herunterladen"
-            tooltip="Zeigt die Formate der Datei für das Land. Sie enthält keine Namen."
-            fallbackName={`tagesmeldung-mv-${period.from}-bis-${period.to}`}
-            errorObject="die Datei der Tagesmeldung"
-            unavailable={!report || schools.length === 0}
-            onError={reportError}
-          />
-        </>
-      }
+      overflowMenu={exportItems}
       stats={report ? <TenantPageStats items={statItems} /> : null}
       statsLoading={loading}
       error={error}
@@ -455,9 +430,48 @@ export default function TraegerDailyAttendancePage() {
             }
           : null
       }
-      filters={filters.length > 0 ? filters : undefined}
-      activeFilters={activeFilters}
-      onClearAllFilters={() => setSchoolId("")}
+      searchSlot={
+        <PlanningContextBar
+          withoutContextRow
+          navigationInGroup
+          navigationSlot={
+            <DateRangePicker
+              value={range}
+              onChange={changeRange}
+              presets={rangePresets(yesterday)}
+              toMax={yesterday}
+              fromMin={daysBefore(yesterday, PICKER_DAYS - 1)}
+              className="min-w-0"
+              embedded
+            />
+          }
+          onPrevious={
+            previousPeriod ? () => showPeriod(previousPeriod) : undefined
+          }
+          onNext={nextPeriod ? () => showPeriod(nextPeriod) : undefined}
+          previousLabel="Zeitraum davor"
+          nextLabel="Zeitraum danach"
+          onToday={onDefault ? undefined : () => showPeriod(defaultPeriod)}
+          todayLabel="Letzte 7 Tage"
+          actions={
+            schools.length > 1 ? (
+              <CustomSelect
+                ariaLabel="Schule"
+                value={schoolId}
+                onChange={setSchoolId}
+                options={[
+                  { value: "", label: "Alle Schulen" },
+                  ...schools.map((school) => ({
+                    value: school.id,
+                    label: school.name,
+                  })),
+                ]}
+                className="min-w-0 md:w-64"
+              />
+            ) : undefined
+          }
+        />
+      }
     >
       <Alert
         type="info"

@@ -12,12 +12,13 @@ import {
   StaffProofTypeModal,
   type StaffProofTypeTarget,
 } from "~/components/traeger/staff/staff-proof-type-modal";
-import { Button, ButtonLink } from "~/components/ui/button";
+import { Button } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import NavigationLink from "~/components/ui/navigation-link";
 import type {
   ActiveFilter,
   FilterConfig,
@@ -25,6 +26,7 @@ import type {
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -33,12 +35,12 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { formatDate } from "~/lib/date-helpers";
 import { formatCount } from "~/lib/format-utils";
-import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { createLogger } from "~/lib/logger";
 import { traegerReportKeys } from "~/lib/swr/traeger-report-keys";
 import { foldForSearch } from "~/lib/search-fold";
-import { staffName } from "~/lib/traeger-staff-api";
+import { staffName, staffTableName } from "~/lib/traeger-staff-api";
 import {
   downloadStaffProofList,
   fetchSchoolProofKinds,
@@ -70,7 +72,7 @@ const STATUS_ORDER: readonly StaffProofStatus[] = [
 const NO_MAPPING = "";
 
 const INFO =
-  "Hier siehst du, welcher Nachweis fehlt, abgelaufen ist oder bald abläuft. Den Nachweis trägst du in der Personalakte ein. Vor dem Ablauf warnt moto die Leitung jedes Einsatzorts und die Person. Wie früh, legst du je Nachweisart fest. Vom Führungszeugnis speichert moto keine Kopie. Jedes Anzeigen dieser Liste steht im Zugriffsprotokoll der Schulen.";
+  "Hier siehst du, welcher Nachweis fehlt, abgelaufen ist oder bald abläuft. Den Nachweis trägst du in der Personalakte ein. Eine Nachweisart legt fest, wie lange ein Nachweis gilt. Vor dem Ablauf warnt moto die Leitung jedes Einsatzorts und die Person. Wie früh, legst du je Nachweisart fest. Vom Führungszeugnis speichert moto keine Kopie. Eine Nachweisart öffnest du im Reiter „Nachweisarten“, um sie zu bearbeiten oder zu archivieren. Jedes Anzeigen und jeder Download dieser Liste steht im Zugriffsprotokoll der Schulen.";
 
 const errorMessage = (err: unknown) =>
   err instanceof Error ? err.message : String(err);
@@ -129,6 +131,7 @@ function useProofListView(loaded: StaffProofList | null) {
         (kind === "all" || entry.typeId === kind) &&
         (needle === "" ||
           foldForSearch(staffName(entry)).includes(needle) ||
+          foldForSearch(staffTableName(entry)).includes(needle) ||
           foldForSearch(entry.typeName).includes(needle) ||
           entry.schools.some((school) =>
             foldForSearch(school).includes(needle),
@@ -136,22 +139,30 @@ function useProofListView(loaded: StaffProofList | null) {
     );
   }, [list.entries, search, status, kind]);
 
+  // #7405: the export is the only head action of the Ablaufliste, so it sits
+  // in the page menu under „Herunterladen“ (no visible text action).
+  const exportItems = useTraegerListExportItems({
+    download: downloadStaffProofList,
+    scope: "Alle Nachweise, der Download steht im Zugriffsprotokoll",
+    fallbackName: `nachweise-${list.today || "heute"}`,
+    errorObject: "die Ablaufliste",
+    unavailable: list.entries.length === 0,
+  });
+
   const columns: DataTableColumn<StaffProofEntry>[] = [
     {
       key: "person",
       header: "Person",
       stacked: "title",
-      sortValue: (entry) =>
-        `${entry.lastName} ${entry.firstName}`.toLowerCase(),
+      sortValue: (entry) => staffTableName(entry).toLowerCase(),
       render: (entry) => (
         <span className="block min-w-0">
-          <ButtonLink
+          <NavigationLink
             href={traegerPath(`/traeger/personal/${entry.recordId}`)}
-            tooltip="Öffnet die Personalakte. Dort trägst du den Nachweis ein."
-            variant="link"
+            className="font-medium text-gray-900 hover:underline"
           >
-            {staffName(entry)}
-          </ButtonLink>
+            {staffTableName(entry)}
+          </NavigationLink>
           {entry.personnelNumber ? (
             <span className="block font-mono text-xs text-gray-500 tabular-nums">
               Nr. {entry.personnelNumber}
@@ -272,51 +283,37 @@ function useProofListView(loaded: StaffProofList | null) {
       setStatus("open");
       setKind("all");
     },
-    actions: (
-      <TraegerListExportMenu
-        download={downloadStaffProofList}
-        scope="Alle Nachweise"
-        ariaLabel="Ablaufliste herunterladen"
-        tooltip="Zeigt die Formate für alle Nachweise. Jeder Download steht im Zugriffsprotokoll der Schulen."
-        fallbackName={`nachweise-${list.today || "heute"}`}
-        errorObject="die Ablaufliste"
-        unavailable={list.entries.length === 0}
-      />
-    ),
+    overflowMenu: exportItems,
     body: (
-      <SectionCard>
-        <DataTable
-          rows={rows}
-          columns={columns}
-          getRowKey={entryKey}
-          stackedOnMobile
-          emptyState={
-            list.entries.length === 0 ? (
-              <EmptyState
-                icon={
-                  <CertificateIcon className="h-12 w-12" aria-hidden="true" />
-                }
-                title="Noch keine Personalakte mit Nachweisen."
-                description="Sobald dein Träger Personalakten führt, steht hier für jede Person der Stand ihrer Nachweise."
-              />
-            ) : status === "open" && kind === "all" && search.trim() === "" ? (
-              <EmptyState
-                tone="success"
-                icon={
-                  <CertificateIcon className="h-6 w-6" aria-hidden="true" />
-                }
-                title="Alle Nachweise sind gültig."
-                description="Kein Nachweis fehlt, keiner ist abgelaufen und keiner läuft bald ab."
-              />
-            ) : (
-              <EmptyState
-                title="Kein Nachweis gefunden."
-                description="Ändere die Suche oder die Filter."
-              />
-            )
-          }
-        />
-      </SectionCard>
+      <DataTable
+        rows={rows}
+        columns={columns}
+        getRowKey={entryKey}
+        stackedOnMobile
+        emptyState={
+          list.entries.length === 0 ? (
+            <EmptyState
+              icon={
+                <CertificateIcon className="h-12 w-12" aria-hidden="true" />
+              }
+              title="Noch keine Personalakte mit Nachweisen."
+              description="Sobald dein Träger Personalakten führt, steht hier für jede Person der Stand ihrer Nachweise."
+            />
+          ) : status === "open" && kind === "all" && search.trim() === "" ? (
+            <EmptyState
+              tone="success"
+              icon={<CertificateIcon className="h-6 w-6" aria-hidden="true" />}
+              title="Alle Nachweise sind gültig."
+              description="Kein Nachweis fehlt, keiner ist abgelaufen und keiner läuft bald ab."
+            />
+          ) : (
+            <EmptyState
+              title="Kein Nachweis gefunden."
+              description="Ändere die Suche oder die Filter."
+            />
+          )
+        }
+      />
     ),
   };
 }
@@ -377,32 +374,31 @@ function ProofTypes({
     },
   ];
   return (
-    <SectionCard
-      title="Nachweisarten"
-      description="Welche Nachweise dein Träger verlangt, wie lange sie gelten und wie früh moto vor dem Ablauf warnt. Öffne eine Art, um sie zu ändern oder zu archivieren."
-      action={
-        <Button
-          type="button"
-          size="md"
-          variant="primary"
-          className="gap-2"
-          tooltip="Öffnet das Formular für eine neue Nachweisart."
-          onClick={() => onEdit("new")}
-        >
-          <PlusIcon className="size-4" aria-hidden="true" />
-          Nachweisart anlegen
-        </Button>
-      }
-    >
-      <DataTable
-        rows={[...types]}
-        columns={columns}
-        getRowKey={(kind) => kind.id}
-        stackedOnMobile
-        onRowClick={(kind) => onEdit(kind)}
-        emptyState={<EmptyState title="Noch keine Nachweisart." />}
-      />
-    </SectionCard>
+    <DataTable
+      heading={{
+        title: "Nachweisarten",
+        level: 2,
+        action: (
+          <Button
+            type="button"
+            size="md"
+            variant="primary"
+            className="gap-2"
+            tooltip="Öffnet das Formular für eine neue Nachweisart."
+            onClick={() => onEdit("new")}
+          >
+            <PlusIcon className="size-4" aria-hidden="true" />
+            Nachweisart anlegen
+          </Button>
+        ),
+      }}
+      rows={[...types]}
+      columns={columns}
+      getRowKey={(kind) => kind.id}
+      stackedOnMobile
+      onRowClick={(kind) => onEdit(kind)}
+      emptyState={<EmptyState title="Noch keine Nachweisart." />}
+    />
   );
 }
 
@@ -500,7 +496,7 @@ function SchoolKinds({
                   {kind.name}
                 </p>
               </div>
-              <div className="sm:w-72">
+              <ResponsiveRowActions field>
                 <CustomSelect
                   ariaLabel={`Art des Trägers für ${kind.name}`}
                   value={draft[kind.schoolTypeId] ?? NO_MAPPING}
@@ -513,7 +509,7 @@ function SchoolKinds({
                   }
                   controlSize="dense"
                 />
-              </div>
+              </ResponsiveRowActions>
             </ResponsiveActionRow>
           ))}
         </ResponsiveActionList>
@@ -599,7 +595,9 @@ export default function TraegerStaffProofsPage() {
       onClearAllFilters={
         tab === "ablaufliste" && list ? listView.onClearAllFilters : undefined
       }
-      actions={tab === "ablaufliste" && list ? listView.actions : undefined}
+      overflowMenu={
+        tab === "ablaufliste" && list ? listView.overflowMenu : undefined
+      }
       overlays={
         <StaffProofTypeModal
           target={editing}

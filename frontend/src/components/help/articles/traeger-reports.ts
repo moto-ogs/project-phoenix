@@ -21,7 +21,7 @@ export function traegerReportsTopic(): HelpTopic {
       "Prüfe den Stichtag. moto schlägt den letzten 15. Oktober vor. Mit den Pfeilen springst du ein Jahr vor oder zurück.",
       "Hat die Vorlage Sozialräume, wähle `Je Schule` oder `Je Sozialraum`.",
       "Wähle in der Tabelle der Kinder eine Zeile, um die Betreuungsformen zu sehen.",
-      "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+      "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
     ],
     result:
       "Du hast eine Datei mit den Zahlen aller Schulen und einer Zeile „Gesamt“. Du kannst sie an Jugendamt oder Kommune schicken.",

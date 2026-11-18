@@ -1301,7 +1301,7 @@ func (s *FixedSeeder) seedDevices(_ context.Context, result *FixedResult) error 
 	if s.verbose {
 		fmt.Printf("  ✓ %d IoT devices created\n", result.DeviceCount)
 	}
-	return nil
+	return s.seedBlockedDevice()
 }
 
 // fetchRoles retrieves available roles from the API

@@ -27,8 +27,8 @@ export function traegerArrivalPickupTimesTopic(): HelpTopic {
       "Lies oben die Hauptzeiten: `Meiste Ankünfte` und `Meiste Abholungen`.",
       "Lies die Felder unter `Ankunft` und `Abholung`. Je dunkler ein Feld, desto mehr Kinder. Die Zahl im Feld ist der Durchschnitt eines Tages.",
       "Zeige auf ein Feld oder tippe darauf. Darunter steht dann die genaue Zahl.",
-      "Wähle unter `Je Schule` eine Schule oder oben den Filter `Schule`. Dann siehst du nur diese Schule.",
-      "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Mit einer gewählten Schule enthält die Datei nur diese Schule.",
+      "Wähle unter `Je Schule` eine Schule oder oben neben dem Zeitraum eine Schule. Dann siehst du nur diese Schule.",
+      "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Mit einer gewählten Schule enthält die Datei nur diese Schule.",
     ],
     result:
       "Du siehst, wann an jeder Schule viele Kinder kommen und gehen. Plane für diese Zeiten mehr Personal ein.",

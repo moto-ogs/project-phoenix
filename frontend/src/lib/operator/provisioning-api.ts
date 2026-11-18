@@ -380,6 +380,17 @@ class OperatorProvisioningService {
     return mapDeviceTransferStatus(result);
   }
 
+  /**
+   * Blocks or unblocks a device (Gerätesperre, #2317). The route answers
+   * without data; the caller reloads the device list.
+   */
+  async setDeviceBlocked(deviceId: string, blocked: boolean): Promise<void> {
+    await operatorFetch<null>(
+      `/api/operator/devices/${encodeURIComponent(deviceId)}/${blocked ? "block" : "unblock"}`,
+      { method: "POST" },
+    );
+  }
+
   async transferDevice(
     deviceId: string,
     targetSchoolId: string,

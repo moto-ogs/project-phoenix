@@ -89,3 +89,22 @@ it("shows a failed load of the schools with a retry", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
   expect(retrySchools).toHaveBeenCalled();
 });
+
+// #7405: the list of documents has no visible text action besides the
+// upload; its export sits in the page menu under „Herunterladen“.
+it("offers the export in the page menu, not as a head button", async () => {
+  render(
+    <ToastProvider>
+      <TraegerDocumentsPage />
+    </ToastProvider>,
+  );
+
+  expect(
+    screen.queryByRole("button", { name: "Dokumente herunterladen" }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Weitere Aktionen" }),
+  );
+  expect(await screen.findByText("Herunterladen")).toBeInTheDocument();
+  expect(screen.getByRole("menuitem", { name: /CSV/ })).toBeInTheDocument();
+});

@@ -305,7 +305,7 @@ export function getStaffCalendar(from: Date, to: Date) {
 
 export function getParentCalendar(from: Date, to: Date) {
   return fetchJSON<CalendarResponse>(
-    `/api/parent/calendar?${buildCalendarQuery(from, to)}`,
+    `/api/parent/me/calendar?${buildCalendarQuery(from, to)}`,
   );
 }
 
@@ -349,7 +349,7 @@ export function respondParentCalendar(
   occurrenceDate?: string,
 ) {
   return fetchJSON(
-    `/api/parent/calendar/recipients/${encodeURIComponent(recipientId)}/response`,
+    `/api/parent/me/calendar/recipients/${encodeURIComponent(recipientId)}/response`,
     {
       method: "POST",
       body: answerBody(status, occurrenceDate),
@@ -388,7 +388,7 @@ export function getParentAppointmentOverview(
   occurrenceDate?: string,
 ) {
   return fetchJSON<CalendarAppointmentOverview>(
-    `/api/parent/calendar/appointments/${encodeURIComponent(appointmentId)}/overview${occurrenceQuery(occurrenceDate)}`,
+    `/api/parent/me/calendar/appointments/${encodeURIComponent(appointmentId)}/overview${occurrenceQuery(occurrenceDate)}`,
   );
 }
 
@@ -403,11 +403,11 @@ export interface CalendarFeedInfo {
 }
 
 export function getParentCalendarFeed() {
-  return fetchJSON<CalendarFeedInfo>("/api/parent/calendar/feed");
+  return fetchJSON<CalendarFeedInfo>("/api/parent/me/calendar/feed");
 }
 
 export function rotateParentCalendarFeed() {
-  return fetchJSON<CalendarFeedInfo>("/api/parent/calendar/feed/rotate", {
+  return fetchJSON<CalendarFeedInfo>("/api/parent/me/calendar/feed/rotate", {
     method: "POST",
   });
 }

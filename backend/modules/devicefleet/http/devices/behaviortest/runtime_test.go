@@ -54,8 +54,9 @@ func testRuntime() devices.Runtime {
 		},
 		// The behaviour suite runs no kiosk sessions; the API suite
 		// (api/device_removal_test.go) covers the session guard.
-		ActiveSession: func(context.Context, int64) (*devices.RemovalSession, error) { return nil, nil },
-		AuditRemoval:  func(*http.Request, devices.RemovalAudit) {},
+		ActiveSession:     func(context.Context, int64) (*devices.RemovalSession, error) { return nil, nil },
+		AuditRemoval:      func(*http.Request, devices.RemovalAudit) {},
+		AuditStatusChange: func(*http.Request, devices.StatusAudit) {},
 		ConstraintViolation: func(err error) bool {
 			state := testpkg.PostgresSQLState(err)
 			return state == "23503" || state == "23502"

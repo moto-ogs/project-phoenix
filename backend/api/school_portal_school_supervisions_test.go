@@ -353,3 +353,53 @@ func TestSchoolSupervisionsRequirePermission(t *testing.T) {
 	rec := testutil.ExecuteWithAuthPermissions(t, supervisionRouter, req, supervisionClaims, []string{"class_day:read"})
 	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 }
+
+// TestSchoolSupervisionCheckOutAndComplete drives the two writes that close a
+// block in moto schule through the real router and data: the Lehrkraft checks
+// a child out and ends the block.
+func TestSchoolSupervisionCheckOutAndComplete(t *testing.T) {
+	t.Parallel()
+	supervisionDB, _, supervisionTenantID, supervisionRouter, supervisionClaims, supervisionStaffID := setupSupervisionFixture(t)
+	mine := schoolSupervisionTodayInstance(t, supervisionDB, supervisionTenantID, "Lernzeit")
+	testpkg.CreateTestInstanceStaff(t, supervisionDB, mine.ID, supervisionStaffID, testpkg.InstanceStaffOpts{IsPrimary: true})
+	child := testpkg.CreateTestStudentForTenant(t, supervisionDB, supervisionTenantID, "Geht", "Frueher", "2a")
+	testpkg.CreateTestInstanceStudent(t, supervisionDB, mine.ID, child.ID, testpkg.ScheduleAttendanceStatusExpected)
+	block := fmt.Sprintf("/supervisions/%d", mine.ID)
+	childPath := fmt.Sprintf("%s/students/%d", block, child.ID)
+
+	rec := schoolSupervisionRequest(t, supervisionRouter, supervisionClaims, http.MethodPost, block+"/start", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	rec = schoolSupervisionRequest(t, supervisionRouter, supervisionClaims, http.MethodPost, childPath+"/check-in", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	rec = schoolSupervisionRequest(t, supervisionRouter, supervisionClaims, http.MethodPost, childPath+"/check-out", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var roster struct {
+		Data struct {
+			Rows []struct {
+				StudentID        int64   `json:"student_id"`
+				CurrentlyPresent bool    `json:"currently_present"`
+				CheckedOutAt     *string `json:"checked_out_at"`
+			} `json:"rows"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &roster), rec.Body.String())
+	require.Len(t, roster.Data.Rows, 1)
+	assert.Equal(t, child.ID, roster.Data.Rows[0].StudentID)
+	assert.False(t, roster.Data.Rows[0].CurrentlyPresent, rec.Body.String())
+	assert.NotNil(t, roster.Data.Rows[0].CheckedOutAt, rec.Body.String())
+
+	rec = schoolSupervisionRequest(t, supervisionRouter, supervisionClaims, http.MethodPost, block+"/complete", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var completed struct {
+		Data struct {
+			ID          int64   `json:"id"`
+			Status      string  `json:"status"`
+			CompletedAt *string `json:"completed_at"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &completed), rec.Body.String())
+	assert.Equal(t, mine.ID, completed.Data.ID)
+	assert.Equal(t, "completed", completed.Data.Status, rec.Body.String())
+	assert.NotNil(t, completed.Data.CompletedAt, rec.Body.String())
+}

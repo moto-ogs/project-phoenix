@@ -91,7 +91,7 @@ function SchoolName({
         {school.name}
       </NavigationLink>
       {sub ? (
-        <span className="block text-xs text-gray-500 max-md:hidden">{sub}</span>
+        <span className="block text-sm text-gray-500 max-md:hidden">{sub}</span>
       ) : null}
     </div>
   );
@@ -115,7 +115,7 @@ function NamedCell({
           />
         ) : null}
       </span>
-      <span className="block text-xs text-gray-500">{school.name}</span>
+      <span className="block text-sm text-gray-500">{school.name}</span>
     </div>
   );
 }
@@ -189,7 +189,7 @@ export function schoolColumns(
           <span className="inline-flex flex-col items-end">
             <Figure>Ø {formatAverage(row.averagePresent)}</Figure>
             {later ? (
-              <span className="text-xs text-gray-500">
+              <span className="text-sm text-gray-500">
                 ab {formatDate(later)}
               </span>
             ) : null}

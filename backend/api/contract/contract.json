@@ -35,6 +35,39 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/work-time-models/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "DeletedResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/school/calendar/appointments/{appointmentId}",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CalendarStatusResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/school/calendar/parent-conferences/{conferenceId}",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CalendarStatusResponse"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/school/class-day/absence-reports/{schoolClass}/{date}/students/{studentId}",
       "portals": [
         "school"
@@ -565,6 +598,51 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/work-time-models/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "with_usage",
+          "kind": "bool"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ModelResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/work-time-models/staff-facts",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "StaffFactResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/work-time-models/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ModelResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/caterer/notifications/feed/",
       "portals": [
         "caterer"
@@ -619,6 +697,55 @@
     },
     {
       "method": "GET",
+      "pattern": "/parent/me/calendar",
+      "portals": [
+        "parent"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ParentCalendarResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/calendar/appointments/{appointmentId}/overview",
+      "portals": [
+        "parent"
+      ],
+      "query": [
+        {
+          "name": "occurrence_date",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AppointmentOverview"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/calendar/feed",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ParentCalendarFeedResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/parent/me/enrollable-schools",
       "portals": [
         "parent"
@@ -629,6 +756,60 @@
           "kind": "ref",
           "ref": "EnrollablePhaseResponse"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/calendar/feed",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CalendarFeedResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/calendar/my",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolCalendarResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/calendar/parent-conferences",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolParentConferenceList"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/calendar/parent-conferences/{conferenceId}",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ParentConferenceView"
       }
     },
     {
@@ -1299,6 +1480,58 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/work-time-models/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ModelRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ModelResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/work-time-models/{id}/archive",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ModelResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/work-time-models/{id}/assignments",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "AssignRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AssignResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/work-time-models/{id}/restore",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ModelResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/caterer/notifications/feed/read-all",
       "portals": [
         "caterer"
@@ -1317,6 +1550,104 @@
       "response": {
         "kind": "ref",
         "ref": "feedCountResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/devices/{id}/block",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/devices/{id}/unblock",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/parent/me/calendar/feed/rotate",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ParentCalendarFeedResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/parent/me/calendar/recipients/{recipientId}/response",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "InvitationAnswer"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ParentInvitationStatusResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/calendar/appointments",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SchoolAppointmentRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AppointmentDetail"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/calendar/feed/rotate",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CalendarFeedResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/calendar/parent-conferences",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ParentConferenceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ParentConferenceView"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/calendar/recipients/{recipientId}/response",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "InvitationAnswer"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "CalendarStatusResponse"
       }
     },
     {
@@ -1719,6 +2050,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/work-time-models/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ModelRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ModelResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/operator/billing/key-day",
       "portals": [
         "platform"
@@ -1730,6 +2076,36 @@
       "response": {
         "kind": "ref",
         "ref": "billingKeyDayResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/school/calendar/appointments/{appointmentId}",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SchoolAppointmentRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AppointmentDetail"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/school/calendar/parent-conferences/{conferenceId}",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ParentConferenceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ParentConferenceView"
       }
     },
     {
@@ -2216,6 +2592,430 @@
       ]
     },
     {
+      "name": "Appointment",
+      "go_type": "appointments.Appointment",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "organizer_staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "location",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "all_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "delivery_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "overview_visibility",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cancelled_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "deleted_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "notify_guardians",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "school_event_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "revision",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AppointmentAttendee",
+      "go_type": "portal.AppointmentAttendee",
+      "fields": [
+        {
+          "name": "recipient_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "recipient_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "responded_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AppointmentDetail",
+      "go_type": "portal.AppointmentDetail",
+      "fields": [
+        {
+          "name": "appointment",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "Appointment"
+          }
+        },
+        {
+          "name": "recurrence",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "RecurrenceRule"
+          }
+        },
+        {
+          "name": "recipients",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "nullable": true,
+              "ref": "AppointmentRecipient"
+            }
+          }
+        },
+        {
+          "name": "targets",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "nullable": true,
+              "ref": "AppointmentTarget"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AppointmentOverview",
+      "go_type": "portal.AppointmentOverview",
+      "fields": [
+        {
+          "name": "appointment_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "occurrence_date",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "delivery_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "overview_visibility",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "AppointmentResponseCounts"
+          }
+        },
+        {
+          "name": "attendees",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AppointmentAttendee"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AppointmentRecipient",
+      "go_type": "appointments.AppointmentRecipient",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "appointment_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "recipient_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "guardian_profile_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "responded_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "occurrence_responses",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AppointmentResponseCounts",
+      "go_type": "portal.AppointmentResponseCounts",
+      "fields": [
+        {
+          "name": "accepted",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "declined",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "pending",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AppointmentTarget",
+      "go_type": "appointments.AppointmentTarget",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "appointment_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "target_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "target_value",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ArrivalExceptionBlockStartResponse",
       "go_type": "classdayhttp.ArrivalExceptionBlockStartResponse",
       "fields": [
@@ -2358,6 +3158,63 @@
           "schema": {
             "kind": "string",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "AssignRequest",
+      "go_type": "worktimemodels.AssignRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "staff_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "valid_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AssignResponse",
+      "go_type": "worktimemodels.AssignResponse",
+      "fields": [
+        {
+          "name": "assigned_staff_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "unchanged_staff_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "valid_from",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -2506,6 +3363,36 @@
               "kind": "ref",
               "ref": "Row"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CalendarFeedResponse",
+      "go_type": "staffcalendarhttp.CalendarFeedResponse",
+      "fields": [
+        {
+          "name": "url",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "webcal_url",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CalendarStatusResponse",
+      "go_type": "staffcalendarhttp.CalendarStatusResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -3253,6 +4140,18 @@
       ]
     },
     {
+      "name": "DeletedResponse",
+      "go_type": "worktimemodels.DeletedResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        }
+      ]
+    },
+    {
       "name": "EnrollablePhaseResponse",
       "go_type": "parent.EnrollablePhaseResponse",
       "fields": [
@@ -3346,6 +4245,276 @@
           "schema": {
             "kind": "enum",
             "ref": "EnrollmentPhaseAudience"
+          }
+        }
+      ]
+    },
+    {
+      "name": "EntryRequest",
+      "go_type": "worktimemodels.EntryRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "week_index",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "day_of_week",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "EntryResponse",
+      "go_type": "worktimemodels.EntryResponse",
+      "fields": [
+        {
+          "name": "week_index",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "day_of_week",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Event",
+      "go_type": "portal.Event",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "appointment_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "occurrence_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "timetable_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "activity_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "location",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "all_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "cancelled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "recurring",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "delivery_mode",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "response_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "series_response_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "has_occurrence_answers",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "recipient_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "organizer_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "can_respond",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_edit",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_view_overview",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "school_event_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -3580,6 +4749,28 @@
       ]
     },
     {
+      "name": "InvitationAnswer",
+      "go_type": "portal.InvitationAnswer",
+      "request": true,
+      "fields": [
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "occurrence_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "InvoiceLayout",
       "go_type": "templates.InvoiceLayout",
       "fields": [
@@ -3718,6 +4909,111 @@
               "kind": "ref",
               "ref": "AttachmentResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ModelRequest",
+      "go_type": "worktimemodels.ModelRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "rotation_length",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "rotation_anchor_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "entries",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "EntryRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ModelResponse",
+      "go_type": "worktimemodels.ModelResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "rotation_length",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "rotation_anchor_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "entries",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "EntryResponse"
+            }
+          }
+        },
+        {
+          "name": "weekly_totals",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "archived_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "assigned_staff_count",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -4839,6 +6135,285 @@
       ]
     },
     {
+      "name": "ParentCalendarFeedResponse",
+      "go_type": "parent.ParentCalendarFeedResponse",
+      "fields": [
+        {
+          "name": "url",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "webcal_url",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentCalendarResponse",
+      "go_type": "parent.ParentCalendarResponse",
+      "fields": [
+        {
+          "name": "from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "to",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "events",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Event"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentConferenceBreak",
+      "go_type": "staffcalendarhttp.ParentConferenceBreak",
+      "request": true,
+      "fields": [
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentConferenceRequest",
+      "go_type": "staffcalendarhttp.ParentConferenceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slot_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "breaks",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ParentConferenceBreak"
+            }
+          }
+        },
+        {
+          "name": "location",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentConferenceSlot",
+      "go_type": "portal.ParentConferenceSlot",
+      "fields": [
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "booked",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentConferenceView",
+      "go_type": "portal.ParentConferenceView",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slot_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "breaks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ParentConferenceWindow"
+            }
+          }
+        },
+        {
+          "name": "location",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "booked_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "slots",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ParentConferenceSlot"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentConferenceWindow",
+      "go_type": "portal.ParentConferenceWindow",
+      "fields": [
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentInvitationStatusResponse",
+      "go_type": "parent.ParentInvitationStatusResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "PersonRequest",
       "go_type": "traegerstaff.PersonRequest",
       "request": true,
@@ -5005,6 +6580,88 @@
           "name": "role_kind",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RecurrenceRule",
+      "go_type": "appointments.RecurrenceRule",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "appointment_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "frequency",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "interval_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "month_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "ends_on",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "occurrence_count",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -5391,6 +7048,161 @@
       ]
     },
     {
+      "name": "SchoolAppointmentRequest",
+      "go_type": "staffcalendarhttp.SchoolAppointmentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "location",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "all_day",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "school_event_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "parents",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "classes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolCalendarResponse",
+      "go_type": "staffcalendarhttp.SchoolCalendarResponse",
+      "fields": [
+        {
+          "name": "from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "to",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "events",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Event"
+            }
+          }
+        },
+        {
+          "name": "closing_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolDays"
+            }
+          }
+        },
+        {
+          "name": "holidays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolDays"
+            }
+          }
+        },
+        {
+          "name": "classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolDayChild",
       "go_type": "classday.SchoolDayChild",
       "fields": [
@@ -5630,6 +7442,63 @@
           "name": "changes",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolDays",
+      "go_type": "portal.SchoolDays",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolParentConferenceList",
+      "go_type": "portal.SchoolParentConferenceList",
+      "fields": [
+        {
+          "name": "conferences",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ParentConferenceView"
+            }
+          }
+        },
+        {
+          "name": "classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
           }
         }
       ]
@@ -6014,6 +7883,44 @@
           "name": "has_full_access",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffFactResponse",
+      "go_type": "worktimemodels.StaffFactResponse",
+      "fields": [
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "work_time_model_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "has_schedule",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "soll_kept_by_traeger",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "closed_through",
+          "schema": {
+            "kind": "string",
+            "nullable": true
           }
         }
       ]

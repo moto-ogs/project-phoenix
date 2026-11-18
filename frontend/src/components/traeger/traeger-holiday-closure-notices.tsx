@@ -24,6 +24,7 @@ import { Button } from "~/components/ui/button";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -257,7 +258,7 @@ export function TraegerHolidayClosureNotices({
           ) : null}
         </div>
         {notice.canNotify ? (
-          <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
+          <ResponsiveRowActions>
             <Button
               type="button"
               variant="surface"
@@ -269,7 +270,7 @@ export function TraegerHolidayClosureNotices({
               <Mail className="h-4 w-4" aria-hidden="true" />
               Eltern informieren
             </Button>
-          </div>
+          </ResponsiveRowActions>
         ) : null}
       </ResponsiveActionRow>
     );
