@@ -16,7 +16,7 @@ describe("CompleteInstanceModal (#2517)", () => {
         isOpen
         roster={roster}
         isCompleting={false}
-        error="Der Termin hat sich inzwischen geändert. Bitte laden Sie die Seite neu."
+        error="Der Termin hat sich inzwischen geändert. Bitte lade die Seite neu."
         onClose={vi.fn()}
         onConfirm={vi.fn()}
       />,
@@ -25,7 +25,7 @@ describe("CompleteInstanceModal (#2517)", () => {
     const dialog = screen.getByRole("dialog");
     expect(
       within(dialog).getByText(
-        "Der Termin hat sich inzwischen geändert. Bitte laden Sie die Seite neu.",
+        "Der Termin hat sich inzwischen geändert. Bitte lade die Seite neu.",
       ),
     ).toBeInTheDocument();
   });

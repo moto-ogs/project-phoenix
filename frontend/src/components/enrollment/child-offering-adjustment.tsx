@@ -386,7 +386,7 @@ export function ChildOfferingAdjustment({
   const handleSave = async () => {
     const trimmedReason = reason.trim();
     if (trimmedReason === "") {
-      errors.invalid("Bitte tragen Sie eine Begründung ein.", {
+      errors.invalid("Bitte trage eine Begründung ein.", {
         reason: "Die Begründung fehlt.",
       });
       return;

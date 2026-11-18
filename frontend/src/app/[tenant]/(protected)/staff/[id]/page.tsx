@@ -804,7 +804,7 @@ export default function StaffDetailContent() {
                 mode: "textConfirm",
                 expected: recordLabel,
                 inputId: "confirm-delete-staff-name",
-                label: "Tippen Sie zur Bestätigung den Namen der Person:",
+                label: "Tippe zur Bestätigung den Namen der Person:",
                 preview: recordLabel,
                 placeholder: "Vorname Nachname",
               }}

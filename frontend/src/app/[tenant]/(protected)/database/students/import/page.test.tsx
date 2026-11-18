@@ -171,9 +171,7 @@ describe("StudentImportPage", () => {
     render(<StudentImportPage />);
 
     expect(screen.getByText("Import-Anleitung")).toBeInTheDocument();
-    expect(
-      screen.getByText(/Laden Sie die Vorlage herunter/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Lade die Vorlage herunter/)).toBeInTheDocument();
     expect(
       screen.getByText(/Für Geburtstage sind diese Formate erlaubt/),
     ).toBeInTheDocument();
@@ -1255,7 +1253,7 @@ describe("StudentImportPage", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "Diese Datei passt nicht. Bitte laden Sie eine CSV- oder Excel-Datei hoch.",
+          "Diese Datei passt nicht. Bitte lade eine CSV- oder Excel-Datei hoch.",
         ),
       ).toBeInTheDocument();
     });
@@ -1572,7 +1570,7 @@ describe("StudentImportPage", () => {
 
       await waitFor(() => {
         expect(screen.getByTestId("alert-error")).toHaveTextContent(
-          "50 Zeilen sind gespeichert. Das Kinderkontingent Ihrer Schule ist voll. Die Kontingentzahl beträgt 200 von 200 Kindern. Für weitere Kinder melden Sie sich bitte beim moto-Team. Die gespeicherten Zeilen bleiben.",
+          "50 Zeilen sind gespeichert. Das Kinderkontingent deiner Schule ist voll. Die Kontingentzahl beträgt 200 von 200 Kindern. Für weitere Kinder melde dich bitte beim moto-Team. Die gespeicherten Zeilen bleiben.",
         );
       });
       expect(screen.getByTestId("stat-new")).toHaveTextContent("50");

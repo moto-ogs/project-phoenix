@@ -22,11 +22,11 @@ export const SEPA_SEQUENCE_BADGES: Record<
 
 export const SEPA_DEBIT_LEFT_LABELS: Record<SepaDebitLeft, string> = {
   mandate_missing:
-    "Die Familie hat kein gültiges Lastschriftmandat. Erfassen Sie das Mandat, oder die Familie überweist die Rate.",
+    "Die Familie hat kein gültiges Lastschriftmandat. Erfasse das Mandat, oder die Familie überweist die Rate.",
   one_off_used:
     "Dieses Einmalmandat wurde bereits genutzt. Die Familie braucht ein neues Mandat.",
   one_off_multiple:
-    "Mehrere Rechnungen nutzen dieses Einmalmandat. Klären Sie mit der Familie, wie sie zahlt.",
+    "Mehrere Rechnungen nutzen dieses Einmalmandat. Kläre mit der Familie, wie sie zahlt.",
   cancelled: "Die Rechnung ist storniert oder gutgeschrieben.",
   revoked: "Das Mandat ist widerrufen.",
   expired:

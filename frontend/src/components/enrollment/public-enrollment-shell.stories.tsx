@@ -67,7 +67,8 @@ export const BackLink: Story = {
 export const InfoCard: Story = {
   render: () => (
     <PublicInfoCard icon={<ShieldCheck className="h-5 w-5" />} title="DSGVO">
-      Ihre Daten werden gemäß den geltenden Datenschutzbestimmungen verarbeitet.
+      Deine Daten werden gemäß den geltenden Datenschutzbestimmungen
+      verarbeitet.
     </PublicInfoCard>
   ),
 };
@@ -88,7 +89,7 @@ export const Composition: Story = {
           icon={<ShieldCheck className="h-5 w-5" />}
           title="DSGVO"
         >
-          Ihre Daten werden gemäß den geltenden Datenschutzbestimmungen
+          Deine Daten werden gemäß den geltenden Datenschutzbestimmungen
           verarbeitet.
         </PublicInfoCard>
       </div>

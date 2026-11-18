@@ -56,7 +56,7 @@ describe("StudentEnrollmentsTab", () => {
 
     expect(
       await screen.findByText(
-        "Die Liste der Anmeldungen konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Liste der Anmeldungen konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
@@ -84,7 +84,7 @@ describe("StudentEnrollmentsTab", () => {
 
     expect(
       await screen.findByText(
-        "Die Exportdatei ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Exportdatei ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Wiederholen/ }));

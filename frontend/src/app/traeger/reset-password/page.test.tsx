@@ -35,7 +35,7 @@ describe("TraegerResetPasswordPage", () => {
 
     expect(
       screen.getByText(
-        "Der Link ist unvollständig. Bitte fordern Sie einen neuen Link an.",
+        "Der Link ist unvollständig. Bitte fordere einen neuen Link an.",
       ),
     ).toBeInTheDocument();
     expect(

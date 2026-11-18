@@ -82,7 +82,7 @@ describe("thresholdsSentence", () => {
         openEnrollments: 1,
       }),
     ).toBe(
-      "Ihre Grenzen: mehr als 20 Kinder je Betreuungskraft · ab 10 % kranke Kinder · ab 1 offenen Anmeldung",
+      "Deine Grenzen: mehr als 20 Kinder je Betreuungskraft · ab 10 % kranke Kinder · ab 1 offenen Anmeldung",
     );
     expect(
       thresholdsSentence({
@@ -91,7 +91,7 @@ describe("thresholdsSentence", () => {
         openEnrollments: 3,
       }),
     ).toBe(
-      "Ihre Grenzen: Personal: aus · Krankmeldungen: aus · ab 3 offenen Anmeldungen",
+      "Deine Grenzen: Personal: aus · Krankmeldungen: aus · ab 3 offenen Anmeldungen",
     );
   });
 });

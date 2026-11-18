@@ -349,7 +349,7 @@ describe("CarePlanImpact", () => {
 
     expect(
       screen.getByText(
-        "Regeltermine für eine Klasse, einen Jahrgang oder eine Gruppe planen alle Kinder darin ein. Bei der nächsten Planung steht das Kind wieder im Plan. Verbinden Sie den Regeltermin mit dem Angebot.",
+        "Regeltermine für eine Klasse, einen Jahrgang oder eine Gruppe planen alle Kinder darin ein. Bei der nächsten Planung steht das Kind wieder im Plan. Verbinde den Regeltermin mit dem Angebot.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -370,7 +370,7 @@ describe("CarePlanImpact", () => {
 
     expect(
       screen.getAllByText(
-        `${SHARED_HINT} Verbinden Sie den Regeltermin mit dem Angebot.`,
+        `${SHARED_HINT} Verbinde den Regeltermin mit dem Angebot.`,
       ),
     ).toHaveLength(1);
     const rows = screen.getAllByRole("listitem");
@@ -411,7 +411,7 @@ describe("CarePlanImpact", () => {
 
     // Anker: der gemeinsame Hinweis steht, nur ohne den letzten Satz.
     expect(screen.getAllByText(SHARED_HINT)).toHaveLength(1);
-    expect(screen.queryByText(/Verbinden Sie/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Verbinde/)).not.toBeInTheDocument();
     // Anker: alle drei Zeilen stehen, sie tragen weder Hinweis noch Marke.
     const rows = screen.getAllByRole("listitem");
     expect(rows).toHaveLength(3);
@@ -632,7 +632,7 @@ describe("CarePlanImpact", () => {
       );
       expect(
         screen.getByText(
-          "Donnerstags gilt die eingetragene Zeit bis zum genannten Tag weiter. Ab diesem Tag setzen Sie sie unter „Betreuungszeiten“ zurück.",
+          "Donnerstags gilt die eingetragene Zeit bis zum genannten Tag weiter. Ab diesem Tag setze sie unter „Betreuungszeiten“ zurück.",
         ),
       ).toBeInTheDocument();
 

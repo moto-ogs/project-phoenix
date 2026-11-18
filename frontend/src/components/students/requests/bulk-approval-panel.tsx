@@ -31,7 +31,7 @@ export function BulkApprovalPanel({
       title="Gemeinsam freigeben"
       description={
         count === 1
-          ? "Wählen Sie noch eine passende Anfrage aus."
+          ? "Wähle noch eine passende Anfrage aus."
           : "Alle ausgewählten Anfragen werden freigegeben. Klappt eine nicht, wird keine freigegeben."
       }
       bodyClassName="compact:mt-3 mt-4 space-y-3"
@@ -56,8 +56,8 @@ export function BulkApprovalPanel({
         tooltip="Gibt alle ausgewählten Anfragen frei, moto fragt vorher nach."
         disabledReason={
           count < 2
-            ? "Wählen Sie mindestens zwei Anfragen aus."
-            : "Tragen Sie zuerst eine gemeinsame Begründung ein."
+            ? "Wähle mindestens zwei Anfragen aus."
+            : "Trage zuerst eine gemeinsame Begründung ein."
         }
         onClick={open}
       >

@@ -73,7 +73,7 @@ func newAttachmentFrameRig(t *testing.T) *attachmentFrameRig {
 
 	database := testpkg.NewDatabase(t, pool)
 	unit := testpkg.TenantRuntime(t, pool)
-	store, err := objects.PrivateUploadsBackend()
+	store, err := objects.SealedPrivateUploadsBackend(objects.FileKeys{})
 	require.NoError(t, err)
 	files, _, err := rootAPI.NewFileStoreTestModule(database, unit, store)
 	require.NoError(t, err)

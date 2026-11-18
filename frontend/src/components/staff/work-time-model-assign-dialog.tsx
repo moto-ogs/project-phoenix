@@ -179,9 +179,9 @@ export function WorkTimeModelAssignDialog({
       : `${peopleCount(selectedIds.length)} zuordnen`;
   let disabledReason: string | undefined;
   if (selectedIds.length === 0) {
-    disabledReason = "Wählen Sie zuerst mindestens eine Person aus.";
+    disabledReason = "Wähle zuerst mindestens eine Person aus.";
   } else if (retroactive && !confirmed) {
-    disabledReason = "Bestätigen Sie zuerst den rückwirkenden Start.";
+    disabledReason = "Bestätige zuerst den rückwirkenden Start.";
   }
 
   return (

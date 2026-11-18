@@ -83,9 +83,9 @@ export interface ResetPasswordPageCopy {
 
 const DEFAULT_RESET_PASSWORD_PAGE_COPY: ResetPasswordPageCopy = {
   missingToken:
-    "Der Link ist unvollständig. Bitte fordern Sie einen neuen Link an.",
+    "Der Link ist unvollständig. Bitte fordere einen neuen Link an.",
   requestNewLink: "Neuen Link anfordern",
-  newLinkSubtitle: "Dafür brauchen Sie einen neuen Link.",
+  newLinkSubtitle: "Dafür brauchst du einen neuen Link.",
   backToLogin: "Zurück zur Anmeldung",
   errorObject: "das Zurücksetzen des Passworts",
   passwordTooShort: "Das Passwort muss mindestens 8 Zeichen lang sein.",
@@ -98,10 +98,10 @@ const DEFAULT_RESET_PASSWORD_PAGE_COPY: ResetPasswordPageCopy = {
     "Das Passwort muss mindestens ein Sonderzeichen enthalten.",
   passwordMismatch: "Die Passwörter stimmen nicht überein.",
   successTitle: "Passwort erfolgreich geändert",
-  successSubtitle: "Sie werden automatisch zur Anmeldeseite weitergeleitet.",
+  successSubtitle: "Du wirst automatisch zur Anmeldeseite weitergeleitet.",
   successBody: "Die Anmeldung ist gleich wieder möglich.",
   formTitle: "Neues Passwort festlegen",
-  formSubtitle: "Wählen Sie ein starkes Passwort für Ihr Konto.",
+  formSubtitle: "Wähle ein starkes Passwort für dein Konto.",
   passwordLabel: "Neues Passwort",
   confirmPasswordLabel: "Passwort bestätigen",
   showPassword: "Passwort anzeigen",

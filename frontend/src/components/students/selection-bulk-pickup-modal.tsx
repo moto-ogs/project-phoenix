@@ -69,7 +69,7 @@ export function SelectionBulkPickupModal({
   const handleSubmit = async () => {
     errors.clear();
     if (schedules.length === 0) {
-      errors.invalid("Bitte tragen Sie mindestens eine Gehzeit ein.");
+      errors.invalid("Bitte trage mindestens eine Gehzeit ein.");
       return;
     }
     await save.run(async (op) => {
@@ -151,9 +151,9 @@ export function SelectionBulkPickupModal({
             }
             disabledReason={
               schedules.length === 0
-                ? "Tragen Sie zuerst mindestens eine Gehzeit ein."
+                ? "Trage zuerst mindestens eine Gehzeit ein."
                 : needsExceptionConfirmation && !exceptionConfirmed
-                  ? "Bestätigen Sie zuerst die Ausnahmen mit dem Häkchen."
+                  ? "Bestätige zuerst die Ausnahmen mit dem Häkchen."
                   : undefined
             }
           >

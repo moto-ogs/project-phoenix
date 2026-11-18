@@ -114,7 +114,7 @@ export function StaffProofsCard({
     <SectionCard
       concept={documentsConcept}
       title="Nachweise"
-      description="Führungszeugnis, Masernschutz und die anderen Nachweise, die Ihr Träger verlangt. Die Leitung jedes Einsatzorts sieht nur den Stand."
+      description="Führungszeugnis, Masernschutz und die anderen Nachweise, die dein Träger verlangt. Die Leitung jedes Einsatzorts sieht nur den Stand."
       action={
         open > 0 ? (
           <StatusBadge
@@ -197,8 +197,8 @@ export function StaffProofsCard({
       ) : (
         <EmptyState
           variant="compact"
-          title="Ihr Träger verlangt noch keinen Nachweis."
-          description="Legen Sie die Nachweisarten unter „Personalnachweise“ an."
+          title="Dein Träger verlangt noch keinen Nachweis."
+          description="Lege die Nachweisarten unter „Personalnachweise“ an."
         />
       )}
       {target ? (

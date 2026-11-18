@@ -214,7 +214,7 @@ describe("SettingsField", () => {
     expect(consequences.map((item) => item.textContent)).toEqual([
       "moto löscht sofort alle Kinderfotos.",
       "Alle Foto-Einwilligungen der Eltern enden.",
-      "Schalten Sie Fotos wieder ein, braucht jedes Foto eine neue Einwilligung.",
+      "Schaltest du Fotos wieder ein, braucht jedes Foto eine neue Einwilligung.",
     ]);
     expect(dialog).toHaveTextContent("Das lässt sich nicht rückgängig machen.");
     const confirm = getByRole("button", { name: "Ausschalten und löschen" });
@@ -222,7 +222,7 @@ describe("SettingsField", () => {
 
     fireEvent.change(
       getByRole("textbox", {
-        name: "Geben Sie LÖSCHEN ein, um alle Kinderfotos endgültig zu löschen.",
+        name: "Gib LÖSCHEN ein, um alle Kinderfotos endgültig zu löschen.",
       }),
       { target: { value: "LÖSCHEN" } },
     );

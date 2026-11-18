@@ -70,8 +70,8 @@ import TraegerVorlagePage from "./page";
 
 const STANDARD = {
   subject: "Rechnung {{rechnungsnummer}}: {{zeitraum}}",
-  salutation: "Sehr geehrte Familie {{familienname}},",
-  body: "für {{kinder}} berechnen wir Ihnen:\n\n{{positionen}}",
+  salutation: "Liebe Familie {{familienname}},",
+  body: "für {{kinder}} berechnen wir euch:\n\n{{positionen}}",
   closing: "Mit freundlichen Grüßen\n{{traeger}}",
 };
 
@@ -97,16 +97,16 @@ function detail(
 
 const PREVIEW: DocumentTemplatePreview = {
   subject: "Rechnung FE-2026-0001: Herbstferien 2026",
-  salutation: "Sehr geehrte Familie Muster,",
+  salutation: "Liebe Familie Muster,",
   blocks: [
     {
       heading: "",
-      text: "für Lina und Ben berechnen wir Ihnen:",
+      text: "für Lina und Ben berechnen wir euch:",
       bold: false,
       rows: [{ label: "Gesamtbetrag", value: "92,50 €", bold: true }],
     },
   ],
-  closing: ["Mit freundlichen Grüßen", "Ihr Träger"],
+  closing: ["Mit freundlichen Grüßen", "Träger Musterstadt"],
 };
 
 const MASTER_DATA: TraegerMasterData = {
@@ -250,7 +250,9 @@ describe("TraegerVorlagePage", () => {
 
     fireEvent.change(subject, { target: { value: "Ihre Rechnung" } });
     expect(
-      screen.getByText(/Die Vorschau zeigt noch den Text vor Ihren Änderungen/),
+      screen.getByText(
+        /Die Vorschau zeigt noch den Text vor deinen Änderungen/,
+      ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Vorschau zeigen" }));
     await waitFor(() =>
@@ -440,7 +442,7 @@ describe("TraegerVorlagePage", () => {
     renderPage();
     expect(await screen.findByLabelText(/Betreff/)).toBeDisabled();
     expect(
-      screen.getByText(/Sie können die Vorlage nur ansehen/),
+      screen.getByText(/Du kannst die Vorlage nur ansehen/),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Standardtext laden" }),
@@ -578,7 +580,7 @@ describe("TraegerVorlagePage", () => {
     renderPage();
     expect(
       screen.getByText(
-        "Diese Vorlage gibt es nicht. Wählen Sie eine aus der Liste.",
+        "Diese Vorlage gibt es nicht. Wähle eine aus der Liste.",
       ),
     ).toBeInTheDocument();
     expect(templatesApi.fetchDocumentTemplate).not.toHaveBeenCalled();

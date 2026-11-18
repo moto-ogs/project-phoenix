@@ -172,7 +172,7 @@ it("shows a handover that did not arrive with its reason and a retry", async () 
     ),
   ).toBeInTheDocument();
   expect(
-    screen.getByText(/Bitte prüfen Sie den Fingerabdruck beim Empfänger/),
+    screen.getByText(/Bitte prüfe den Fingerabdruck beim Empfänger/),
   ).toBeInTheDocument();
   fireEvent.click(
     screen.getByRole("button", { name: "Noch einmal übergeben" }),

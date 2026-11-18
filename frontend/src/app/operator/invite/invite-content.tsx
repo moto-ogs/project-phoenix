@@ -133,8 +133,8 @@ export function InviteContent() {
       clearFormError();
 
       if (!displayName.trim()) {
-        invalidForm("Bitte geben Sie einen Anzeigenamen ein.", {
-          display_name: "Bitte geben Sie einen Anzeigenamen ein.",
+        invalidForm("Bitte gib einen Anzeigenamen ein.", {
+          display_name: "Bitte gib einen Anzeigenamen ein.",
         });
         return;
       }

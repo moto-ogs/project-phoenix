@@ -58,7 +58,7 @@ describe("FolderModal errors", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(
-      await screen.findByText("Bitte geben Sie einen Namen ein."),
+      await screen.findByText("Bitte gib einen Namen ein."),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Name")).toHaveAttribute(
       "aria-invalid",

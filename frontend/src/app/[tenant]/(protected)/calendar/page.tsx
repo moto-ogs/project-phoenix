@@ -798,7 +798,7 @@ function StaffCalendarPageInner() {
     } catch (err) {
       logFailure("calendar_response_failed", err);
       void showActionError(err, {
-        object: "das Speichern Ihrer Antwort",
+        object: "das Speichern deiner Antwort",
         retry: () =>
           latestRespondRef.current(recipientId, status, occurrenceDate),
       });
@@ -818,11 +818,11 @@ function StaffCalendarPageInner() {
     // Prüfung vor dem Senden: Hinweis am Feld, Sammelsatz oben im Panel.
     const fields = appointmentFieldErrors(title, startDate, endDate);
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", fields);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fields);
       return;
     }
     if (!editingId && targets.length === 0) {
-      formErrors.invalid("Bitte wählen Sie mindestens einen Empfänger aus.");
+      formErrors.invalid("Bitte wähle mindestens einen Empfänger aus.");
       return;
     }
 
@@ -1015,8 +1015,8 @@ function StaffCalendarPageInner() {
       ? {
           title: calendarEmptyLabel(viewMode),
           description: canManageCalendar
-            ? "Legen Sie einen Termin an oder wechseln Sie den Zeitraum."
-            : "Wechseln Sie den Zeitraum, um andere Termine zu sehen.",
+            ? "Lege einen Termin an oder wechsle den Zeitraum."
+            : "Wechsle den Zeitraum, um andere Termine zu sehen.",
         }
       : null;
 
@@ -1124,8 +1124,8 @@ function StaffCalendarPageInner() {
                       />
                       <p className="text-sm text-gray-600">
                         {editingId
-                          ? "Passen Sie Zeitpunkt und Details an. Empfänger und Antwortregel bleiben unverändert."
-                          : "Legen Sie Zeitpunkt, Antwortregel und Empfängergruppen fest."}
+                          ? "Passe Zeitpunkt und Details an. Empfänger und Antwortregel bleiben unverändert."
+                          : "Lege Zeitpunkt, Antwortregel und Empfängergruppen fest."}
                       </p>
                     </div>
 
@@ -1591,7 +1591,7 @@ function StaffCalendarPageInner() {
             isDismissDisabled={Boolean(busyAppointmentId)}
           >
             <p className="text-sm text-gray-700">
-              Möchten Sie diesen Termin absagen? Die Empfänger sehen ihn als
+              Möchtest du diesen Termin absagen? Die Empfänger sehen ihn als
               „Abgesagt“.
             </p>
           </ConfirmationModal>
@@ -1640,9 +1640,9 @@ function appointmentFieldErrors(
   endDate: string,
 ): Record<string, string> {
   const fields: Record<string, string> = {};
-  if (!title.trim()) fields.title = "Bitte geben Sie einen Titel ein.";
-  if (!startDate) fields.start_date = "Bitte wählen Sie den ersten Tag.";
-  if (!endDate) fields.end_date = "Bitte wählen Sie den letzten Tag.";
+  if (!title.trim()) fields.title = "Bitte gib einen Titel ein.";
+  if (!startDate) fields.start_date = "Bitte wähle den ersten Tag.";
+  if (!endDate) fields.end_date = "Bitte wähle den letzten Tag.";
   return fields;
 }
 

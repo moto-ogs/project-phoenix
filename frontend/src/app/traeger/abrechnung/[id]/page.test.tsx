@@ -314,7 +314,7 @@ describe("TraegerBillingRunPage", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Korrigieren" }));
     expect(
-      await screen.findByText("Bitte geben Sie eine Begründung an."),
+      await screen.findByText("Bitte gib eine Begründung an."),
     ).toBeInTheDocument();
     expect(api.correctBillingRun).not.toHaveBeenCalled();
 
@@ -501,7 +501,7 @@ describe("TraegerBillingRunPage", () => {
 
     expect(
       await screen.findByText(
-        "3 Anmeldungen haben noch keine Debitorennummer. Tragen Sie sie vor dem Freigeben ein.",
+        "3 Anmeldungen haben noch keine Debitorennummer. Trage sie vor dem Freigeben ein.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -535,7 +535,7 @@ describe("TraegerBillingRunPage", () => {
     renderPage();
 
     const warning = await screen.findByText(
-      "2 Rechnungen mit Betrag haben keine Debitorennummer. Ihr Zahlungstext nennt aber die Debitorennummer. Nach dem Freigeben können Sie sie nicht mehr eintragen. Schreiben gehen dann nur ohne den Platzhalter im Zahlungstext. Tragen Sie die Nummern vor dem Freigeben bei den Anmeldungen ein.",
+      "2 Rechnungen mit Betrag haben keine Debitorennummer. Dein Zahlungstext nennt aber die Debitorennummer. Nach dem Freigeben kannst du sie nicht mehr eintragen. Schreiben gehen dann nur ohne den Platzhalter im Zahlungstext. Trage die Nummern vor dem Freigeben bei den Anmeldungen ein.",
     );
     expect(warning.closest('[role="alert"]')).toHaveTextContent(
       "Schreiben brauchen die Debitorennummer",
@@ -555,7 +555,7 @@ describe("TraegerBillingRunPage", () => {
     const dialog = await screen.findByRole("dialog");
     expect(
       within(dialog).getByText(
-        "2 Rechnungen mit Betrag haben keine Debitorennummer. Ihr Zahlungstext nennt aber die Debitorennummer. Nach dem Freigeben können Sie sie nicht mehr eintragen. Schreiben gehen dann nur ohne den Platzhalter im Zahlungstext.",
+        "2 Rechnungen mit Betrag haben keine Debitorennummer. Dein Zahlungstext nennt aber die Debitorennummer. Nach dem Freigeben kannst du sie nicht mehr eintragen. Schreiben gehen dann nur ohne den Platzhalter im Zahlungstext.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(
@@ -575,7 +575,7 @@ describe("TraegerBillingRunPage", () => {
 
     expect(
       await screen.findByText(
-        "1 Rechnung mit Betrag hat keine Debitorennummer. Ihr Zahlungstext nennt aber die Debitorennummer. Nach dem Freigeben können Sie sie nicht mehr eintragen. Schreiben gehen dann nur ohne den Platzhalter im Zahlungstext. Tragen Sie die Nummern vor dem Freigeben bei den Anmeldungen ein. Das Feld dafür erscheint, wenn in den Einstellungen unter „Allgemein“ im Bereich „Ferienbetreuung“ „Debitorennummer beim Bestätigen abfragen“ an ist.",
+        "1 Rechnung mit Betrag hat keine Debitorennummer. Dein Zahlungstext nennt aber die Debitorennummer. Nach dem Freigeben kannst du sie nicht mehr eintragen. Schreiben gehen dann nur ohne den Platzhalter im Zahlungstext. Trage die Nummern vor dem Freigeben bei den Anmeldungen ein. Das Feld dafür erscheint, wenn in den Einstellungen unter „Allgemein“ im Bereich „Ferienbetreuung“ „Debitorennummer beim Bestätigen abfragen“ an ist.",
       ),
     ).toBeInTheDocument();
     // Without the right to the registrations only the settings link (#7054).
@@ -682,7 +682,7 @@ describe("TraegerBillingRunPage", () => {
     create();
     expect(
       await screen.findByText(
-        "Bitte geben Sie zu jeder Notfallnummer Betreuung und Telefon an.",
+        "Bitte gib zu jeder Notfallnummer Betreuung und Telefon an.",
       ),
     ).toBeInTheDocument();
     expect(api.createBillingLetters).not.toHaveBeenCalled();
@@ -954,7 +954,7 @@ describe("TraegerBillingRunPage", () => {
         within(dialog).getByRole("button", { name: "Stornieren" }),
       );
       expect(
-        await within(dialog).findByText("Bitte geben Sie eine Begründung an."),
+        await within(dialog).findByText("Bitte gib eine Begründung an."),
       ).toBeInTheDocument();
       expect(api.cancelBillingDocument).not.toHaveBeenCalled();
 

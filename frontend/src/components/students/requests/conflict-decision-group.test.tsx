@@ -229,7 +229,7 @@ describe("ConflictDecisionGroup", () => {
     ).toBeVisible();
     expect(
       screen.getByText(
-        "1 weiterer Wunsch ist noch nicht geladen. Laden Sie zuerst weitere Einträge.",
+        "1 weiterer Wunsch ist noch nicht geladen. Lade zuerst weitere Einträge.",
       ),
     ).toBeVisible();
     fireEvent.click(screen.getAllByRole("radio")[0]!);

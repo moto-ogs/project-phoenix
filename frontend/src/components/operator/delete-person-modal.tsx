@@ -60,7 +60,7 @@ export function DeletePersonModal({
       description={
         person ? (
           <p>
-            Möchten Sie{" "}
+            Möchtest du{" "}
             <span className="font-medium">
               {person.firstName} {person.lastName}
             </span>{" "}
@@ -96,7 +96,7 @@ export function DeletePersonModal({
               mode: "textConfirm",
               expected: person.fullName,
               inputId: "delete-person-confirm-shared",
-              label: "Geben Sie den vollständigen Namen ein:",
+              label: "Gib den vollständigen Namen ein:",
               placeholder: person.fullName,
               preview: person.fullName,
             }

@@ -8,5 +8,5 @@ export const SCHOOL_SIGN_IN_LABEL = "Zur Schulanmeldung";
 
 /** What the button does, for its tooltip. */
 export function schoolSignInTooltip(schoolName: string): string {
-  return `Meldet Sie ab und öffnet die Anmeldung von ${schoolName}.`;
+  return `Meldet dich ab und öffnet die Anmeldung von ${schoolName}.`;
 }

@@ -44,7 +44,7 @@ export function NotificationFeedBell() {
   return (
     <NotificationsBell
       badgeCount={unreadCount}
-      tooltip="Zeigt Ihre Hinweise, ohne die Seite zu verlassen."
+      tooltip="Zeigt deine Hinweise, ohne die Seite zu verlassen."
       renderPanel={(close) => (
         <NotificationFeedPanelContent onNavigate={close} />
       )}

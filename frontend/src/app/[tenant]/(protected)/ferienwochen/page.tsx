@@ -417,7 +417,7 @@ export default function FerienwochenPage() {
   return (
     <TenantPage
       title="Ferienwochen"
-      info="Hier stehen die Ferienwochen, die Ihre OGS für den Träger ausrichtet. Unter „Kinder bei anderen OGS“ sehen Sie Kinder Ihrer OGS, die in den Ferien eine andere OGS des Trägers betreut. Sie sehen nur Kinder, deren Anmeldung der Träger bestätigt hat. Nach dem letzten Tag der Woche sind sie nicht mehr da. Gesundheitsangaben stehen nur in der Teilnehmerliste, nicht in der Excel- oder CSV-Datei."
+      info="Hier stehen die Ferienwochen, die deine OGS für den Träger ausrichtet. Unter „Kinder bei anderen OGS“ siehst du Kinder deiner OGS, die in den Ferien eine andere OGS des Trägers betreut. Du siehst nur Kinder, deren Anmeldung der Träger bestätigt hat. Nach dem letzten Tag der Woche sind sie nicht mehr da. Gesundheitsangaben stehen nur in der Teilnehmerliste, nicht in der Excel- oder CSV-Datei."
       stats={stats}
       statsLoading={loadingWeeks}
       loading={loading}
@@ -467,9 +467,9 @@ export default function FerienwochenPage() {
       empty={
         weeks.data && !hostsWeeks && homeSchool.data?.length === 0
           ? {
-              title: "Ihre OGS richtet gerade keine Ferienwoche aus",
+              title: "Deine OGS richtet gerade keine Ferienwoche aus",
               description:
-                "Die Ferienwochen plant der Träger. Kein Kind Ihrer OGS ist gerade für die Ferienwoche einer anderen OGS bestätigt. Sobald der Träger eine solche Anmeldung bestätigt, steht das Kind hier.",
+                "Die Ferienwochen plant der Träger. Kein Kind deiner OGS ist gerade für die Ferienwoche einer anderen OGS bestätigt. Sobald der Träger eine solche Anmeldung bestätigt, steht das Kind hier.",
             }
           : null
       }
@@ -560,7 +560,7 @@ function ParticipantList({
         description={[
           "Nur zur Information. Anmeldungen prüft und bestätigt der Träger.",
           list.questions.length > 0
-            ? "Dazu kommen Antworten der Eltern, die der Träger für Sie freigibt."
+            ? "Dazu kommen Antworten der Eltern, die der Träger für dich freigibt."
             : "",
           list.participants.some((child) => child.health !== null)
             ? "Gesundheitsangaben stehen bei den Kindern, deren Eltern zugestimmt haben."

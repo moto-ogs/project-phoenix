@@ -265,7 +265,7 @@ describe("CareExitModal", () => {
 
     expect(
       await screen.findByText(
-        "Das Betreuungsende konnte nicht geändert werden. Bitte prüfen Sie den aktuellen Stand.",
+        "Das Betreuungsende konnte nicht geändert werden. Bitte prüfe den aktuellen Stand.",
       ),
     ).toBeVisible();
     await waitFor(() => expect(mockPreview).toHaveBeenCalledTimes(2));
@@ -288,7 +288,7 @@ describe("CareExitModal", () => {
 
     expect(
       await screen.findByText(
-        "Die Vorschau ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Vorschau ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));

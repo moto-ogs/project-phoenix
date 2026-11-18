@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	provisioningHTTP "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
@@ -45,7 +46,7 @@ func NewSettingsBudgetRouterForTest(ctx context.Context, db transactionruntime.D
 	}
 	r := chi.NewRouter()
 	r.Use(auth.Verifier())
-	r.Mount("/api/settings", newSettingsResource(db, writes.Tenant, home, requireDevicePINOperations(settings.Service), owners.NewEnrollmentBookings(time.Now).SchemaReferencesLegalDocument, time.Now, schools).SettingsRouter())
+	r.Mount("/api/settings", newSettingsResource(db, writes.Tenant, home, requireDevicePINOperations(settings.Service), owners.NewEnrollmentBookings(time.Now).SchemaReferencesLegalDocument, time.Now, schools, nativeUploads.UploadFiles{}).SettingsRouter())
 	traeger := settingsHTTP.NewTraegerSettingsResource(settings.Traeger, identityaccess.TraegerRightOverviewRead,
 		identityaccess.TraegerRightSettingsManage, identityaccess.TraegerRightStaffManage, identityaccess.TraegerRightBillingManage)
 	r.Mount("/traeger/settings", traeger.TraegerRouter(ProtectedTraegerRoutes))

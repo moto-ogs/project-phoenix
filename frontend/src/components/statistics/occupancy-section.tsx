@@ -99,7 +99,7 @@ export function OccupancySection({
     return (
       <EmptyState
         title="Kein Betreuungstag im Zeitraum"
-        description="An Wochenenden, Feiertagen, Schließtagen und in den Ferien gibt es keine Zahlen. Wählen Sie einen anderen Zeitraum."
+        description="An Wochenenden, Feiertagen, Schließtagen und in den Ferien gibt es keine Zahlen. Wähle einen anderen Zeitraum."
       />
     );
   }

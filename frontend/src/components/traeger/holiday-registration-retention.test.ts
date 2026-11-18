@@ -12,7 +12,7 @@ describe("holidayDeletionNotice", () => {
         { deletesOn: "2028-01-16", healthDeletesOn: "2027-04-18" },
       ]),
     ).toBe(
-      "moto löscht diese Anmeldungen am 16.01.2028. Laden Sie sie vorher herunter, wenn Sie sie länger brauchen. Gesundheitsangaben löscht moto schon am 18.04.2027.",
+      "moto löscht diese Anmeldungen am 16.01.2028. Lade sie vorher herunter, wenn du sie länger brauchst. Gesundheitsangaben löscht moto schon am 18.04.2027.",
     );
   });
 
@@ -23,7 +23,7 @@ describe("holidayDeletionNotice", () => {
         { deletesOn: "2027-04-18", healthDeletesOn: "2027-04-18" },
       ]),
     ).toBe(
-      "moto löscht diese Anmeldungen zwischen dem 18.04.2027 und dem 16.01.2028. Den Tag sehen Sie in jeder Anmeldung. Laden Sie sie vorher herunter, wenn Sie sie länger brauchen.",
+      "moto löscht diese Anmeldungen zwischen dem 18.04.2027 und dem 16.01.2028. Den Tag siehst du in jeder Anmeldung. Lade sie vorher herunter, wenn du sie länger brauchst.",
     );
   });
 
@@ -43,7 +43,7 @@ describe("holidayRegistrationDeletionNotice", () => {
         healthDeletesOn: "2027-04-18",
       }),
     ).toBe(
-      "moto löscht diese Anmeldung am 16.01.2028. Laden Sie sie vorher herunter, wenn Sie sie länger brauchen. Gesundheitsangaben löscht moto schon am 18.04.2027.",
+      "moto löscht diese Anmeldung am 16.01.2028. Lade sie vorher herunter, wenn du sie länger brauchst. Gesundheitsangaben löscht moto schon am 18.04.2027.",
     );
   });
 
@@ -54,7 +54,7 @@ describe("holidayRegistrationDeletionNotice", () => {
         healthDeletesOn: "2027-04-18",
       }),
     ).toBe(
-      "moto löscht diese Anmeldung am 18.04.2027. Laden Sie sie vorher herunter, wenn Sie sie länger brauchen.",
+      "moto löscht diese Anmeldung am 18.04.2027. Lade sie vorher herunter, wenn du sie länger brauchst.",
     );
     expect(
       holidayRegistrationDeletionNotice({

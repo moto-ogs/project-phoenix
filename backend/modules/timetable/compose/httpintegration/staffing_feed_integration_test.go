@@ -153,12 +153,12 @@ func TestStaffingFeedOfASingleSave(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	assert.Equal(t, []feedEntry{{Type: "staffing_changed", Title: "Sie vertreten", Body: "Sie vertreten Anna Feed am Di. 11.06.", DeepLink: "/mein-dienstplan?d=2030-06-11"}}, f.entries(t, substitute))
-	assert.Equal(t, []feedEntry{{Type: "staffing_changed", Title: "Sie werden vertreten", Body: "Ben Feed vertritt Sie am Di. 11.06.", DeepLink: "/mein-dienstplan?d=2030-06-11"}}, f.entries(t, absent))
+	assert.Equal(t, []feedEntry{{Type: "staffing_changed", Title: "Du vertrittst", Body: "Du vertrittst Anna Feed am Di. 11.06.", DeepLink: "/mein-dienstplan?d=2030-06-11"}}, f.entries(t, substitute))
+	assert.Equal(t, []feedEntry{{Type: "staffing_changed", Title: "Du wirst vertreten", Body: "Ben Feed vertritt dich am Di. 11.06.", DeepLink: "/mein-dienstplan?d=2030-06-11"}}, f.entries(t, absent))
 	teacher := f.entries(t, lead)
 	require.Len(t, teacher, 1)
 	assert.Equal(t, feedEntry{
-		Type: "group_staffing_changed", Title: "Vertretung in Ihrer Gruppe", Body: "Ben Feed vertritt Anna Feed am Di. 11.06.",
+		Type: "group_staffing_changed", Title: "Vertretung in deiner Gruppe", Body: "Ben Feed vertritt Anna Feed am Di. 11.06.",
 		DeepLink: "/vertretung?d=2030-06-11&block=" + int64String(instanceID),
 	}, teacher[0])
 	for _, person := range []feedPerson{substitute, absent, lead} {
@@ -221,9 +221,9 @@ func TestStaffingFeedTreatsPlannedCoSupervisorAsAnAbsence(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	assert.Equal(t, []feedEntry{{Type: "staffing_changed", Title: "Dienstplan geändert", Body: "Sie sind am Di. 11.06. als nicht da eingetragen.", DeepLink: "/mein-dienstplan?d=2030-06-11"}}, f.entries(t, absent))
+	assert.Equal(t, []feedEntry{{Type: "staffing_changed", Title: "Dienstplan geändert", Body: "Du bist am Di. 11.06. als nicht da eingetragen.", DeepLink: "/mein-dienstplan?d=2030-06-11"}}, f.entries(t, absent))
 	assert.Empty(t, f.entries(t, coSupervisor), "a planned co-supervisor did not become a substitute")
-	assert.Equal(t, []feedEntry{{Type: "group_staffing_changed", Title: "Ausfall in Ihrer Gruppe", Body: "Anna Feed ist am Di. 11.06. nicht da.", DeepLink: "/vertretung?d=2030-06-11&block=" + int64String(instanceID)}}, f.entries(t, lead))
+	assert.Equal(t, []feedEntry{{Type: "group_staffing_changed", Title: "Ausfall in deiner Gruppe", Body: "Anna Feed ist am Di. 11.06. nicht da.", DeepLink: "/vertretung?d=2030-06-11&block=" + int64String(instanceID)}}, f.entries(t, lead))
 }
 
 func TestStaffingFeedOfASammelVertretungIsOneEntry(t *testing.T) {
@@ -246,13 +246,13 @@ func TestStaffingFeedOfASammelVertretungIsOneEntry(t *testing.T) {
 
 	own := f.entries(t, substitute)
 	require.Len(t, own, 1, "one entry for the whole Sammel-Vertretung")
-	assert.Equal(t, "Sie vertreten Anna Feed an 5 Tagen (17.–21.06.).", own[0].Body)
+	assert.Equal(t, "Du vertrittst Anna Feed an 5 Tagen (17.–21.06.).", own[0].Body)
 	assert.Equal(t, "/mein-dienstplan?d=2030-06-17", own[0].DeepLink)
 	teacher := f.entries(t, lead)
 	require.Len(t, teacher, 1)
 	assert.Equal(t, "Ben Feed vertritt Anna Feed an 5 Tagen (17.–21.06.).", teacher[0].Body)
 	assert.Equal(t, 1, f.typedPushes(t, substitute, "staffing_changed"), "one push, not one per day")
-	assert.Equal(t, "Ben Feed vertritt Sie an 5 Tagen (17.–21.06.).", f.entries(t, absent)[0].Body)
+	assert.Equal(t, "Ben Feed vertritt dich an 5 Tagen (17.–21.06.).", f.entries(t, absent)[0].Body)
 	assert.Empty(t, f.entries(t, actor))
 	assert.Empty(t, f.entries(t, unrelated))
 }
@@ -269,9 +269,9 @@ func TestStaffingFeedOfAnAbsenceFarAheadAndTheSchoolSwitch(t *testing.T) {
 		Absences: []timetable.DeviationAbsenceInput{{StaffID: absent.staffID}}, ActorAccountID: &actor.accountID,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, []feedEntry{{Type: "group_staffing_changed", Title: "Ausfall in Ihrer Gruppe", Body: "Anna Feed ist am Mo. 01.07. nicht da.",
+	assert.Equal(t, []feedEntry{{Type: "group_staffing_changed", Title: "Ausfall in deiner Gruppe", Body: "Anna Feed ist am Mo. 01.07. nicht da.",
 		DeepLink: "/vertretung?d=2030-07-01&block=" + int64String(later)}}, f.entries(t, lead))
-	assert.Equal(t, "Sie sind am Mo. 01.07. als nicht da eingetragen.", f.entries(t, absent)[0].Body)
+	assert.Equal(t, "Du bist am Mo. 01.07. als nicht da eingetragen.", f.entries(t, absent)[0].Body)
 	assert.Zero(t, f.typedPushes(t, lead, "group_staffing_changed"), "more than 14 days ahead reaches the feed only")
 
 	testpkg.SetTestTenantSetting(t, f.s.db, testpkg.Tenant(t), "notifications.staffing_changed_enabled", `false`)

@@ -21,7 +21,7 @@ interface EmptyStudentResultsProps {
 export function EmptyStudentResults({
   totalCount,
   filteredCount,
-  description = "Versuchen Sie, Ihre Suchkriterien anzupassen.",
+  description = "Versuche, deine Suchkriterien anzupassen.",
 }: Readonly<EmptyStudentResultsProps>) {
   return (
     <EmptyState

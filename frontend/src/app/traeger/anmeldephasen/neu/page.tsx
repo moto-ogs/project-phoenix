@@ -21,7 +21,7 @@ export default function NewTraegerCatalogPhasePage() {
   return (
     <TenantPage
       title="Neue Anmeldephase"
-      info="Die Schulen sehen die Anmeldephase erst, wenn Sie sie freigeben und übertragen."
+      info="Die Schulen sehen die Anmeldephase erst, wenn du sie freigibst und überträgst."
       back
       backHref={listHref}
       backLabel="Zurück zu den Anmeldephasen"

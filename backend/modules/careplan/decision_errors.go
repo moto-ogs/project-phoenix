@@ -49,7 +49,7 @@ var (
 	ErrOfferingAdjustmentInvalid = errors.New("offering adjustment is invalid")
 	// ErrCompleteWithdrawalConfirmationRequired means the change removes every
 	// care day and the caller has not confirmed the complete withdrawal.
-	ErrCompleteWithdrawalConfirmationRequired = errors.New("alle Betreuungstage werden entfernt. Bitte bestätigen Sie die Komplett-Abmeldung")
+	ErrCompleteWithdrawalConfirmationRequired = errors.New("alle Betreuungstage werden entfernt. Bitte bestätige die Komplett-Abmeldung")
 
 	// ErrCourseRequestsDisabled means the school has parent course requests
 	// switched off (or the offering-change machinery they run on).

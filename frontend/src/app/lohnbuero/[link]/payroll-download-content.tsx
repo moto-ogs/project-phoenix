@@ -50,7 +50,7 @@ export function PayrollDownloadContent({ link }: { readonly link: string }) {
   return (
     <AuthShell
       title="Monatsdatei herunterladen"
-      subtitle="Eine Schule schickt Ihnen die Arbeitszeiten ihres Teams für einen Monat."
+      subtitle="Eine Schule schickt dir die Arbeitszeiten ihres Teams für einen Monat."
       variant="tenant"
       brand={<MotoBrand />}
       formMaxWidth="max-w-[32rem]"
@@ -65,8 +65,8 @@ export function PayrollDownloadContent({ link }: { readonly link: string }) {
         ) : state === "gone" ? null : (
           <>
             <p className="text-sm leading-6 text-gray-600">
-              Sie können die Datei nur einmal herunterladen. Speichern Sie sie
-              danach gut.
+              Du kannst die Datei nur einmal herunterladen. Speichere sie danach
+              gut.
             </p>
             <Button
               type="button"

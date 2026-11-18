@@ -123,7 +123,7 @@ type OpenMobileHelpDrawer = (
   trigger: HTMLButtonElement,
 ) => void;
 const DOCUMENTATION_SECTIONS = {
-  requirements: { id: "voraussetzungen", label: "Das brauchen Sie" },
+  requirements: { id: "voraussetzungen", label: "Das brauchst du" },
   instructions: { id: "anleitung", label: "So geht es" },
   result: { id: "danach", label: "Danach" },
   tip: { id: "tipp", label: "Tipp" },
@@ -431,7 +431,7 @@ function GroupOverview({
       <p className="mt-4 max-w-2xl text-lg leading-8 text-gray-600">
         {groupTopics.length === 1
           ? "Zu diesem Bereich gibt es eine Anleitung."
-          : `Zu diesem Bereich gibt es ${groupTopics.length} Anleitungen. Wählen Sie die passende.`}
+          : `Zu diesem Bereich gibt es ${groupTopics.length} Anleitungen. Wähle die passende.`}
       </p>
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         {groupTopics.map((item) => {
@@ -553,7 +553,7 @@ function DocumentationArticle({
 
   return (
     <div className="xl:grid xl:grid-cols-[minmax(0,42rem)_12rem] xl:gap-x-16">
-      <nav aria-label="Sie sind hier" className="mb-8 xl:col-span-2">
+      <nav aria-label="Du bist hier" className="mb-8 xl:col-span-2">
         <ol className="flex flex-wrap items-center gap-2 text-base">
           <li>
             <Link
@@ -907,8 +907,8 @@ function HelpMobileDrawer({
             </DrawerTitle>
             <DrawerDescription className="mt-1">
               {drawerMode === "search"
-                ? "Suchen Sie nach einer Aufgabe."
-                : "Wählen Sie ein Thema."}
+                ? "Suche nach einer Aufgabe."
+                : "Wähle ein Thema."}
             </DrawerDescription>
           </div>
           <DrawerClose asChild>
@@ -1150,7 +1150,7 @@ function HelpDocumentationShell({
               Dieses Thema gibt es nicht.
             </h1>
             <p className="mt-2 text-gray-600">
-              Öffnen Sie die Übersicht und wählen Sie ein vorhandenes Thema.
+              Öffne die Übersicht und wähle ein vorhandenes Thema.
             </p>
             <ButtonLink
               href={hrefFor()}
@@ -1182,11 +1182,11 @@ function HelpDocumentationShell({
         ) : (
           <section className="max-w-4xl">
             <h1 className="text-4xl font-semibold tracking-tight text-gray-950 sm:text-5xl">
-              Was möchten Sie erledigen?
+              Was möchtest du erledigen?
             </h1>
             <p className="mt-3 text-sm text-gray-600">{ROLE_LINE[role]}</p>
             <p className="mt-4 max-w-2xl text-lg leading-8 text-gray-600">
-              Wählen Sie ein Thema. Jede Seite erklärt eine Aufgabe.
+              Wähle ein Thema. Jede Seite erklärt eine Aufgabe.
             </p>
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               {topics

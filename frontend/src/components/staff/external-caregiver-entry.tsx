@@ -30,7 +30,7 @@ export const EXTERNAL_FIELDS = {
 
 /** Shown above the fields wherever an external person is recorded. */
 export const EXTERNAL_CAREGIVER_HINT =
-  "Zum Beispiel jemand von der Musikschule oder vom Sportverein. Sie können die Person sofort einplanen.";
+  "Zum Beispiel jemand von der Musikschule oder vom Sportverein. Du kannst die Person sofort einplanen.";
 
 /** Shown at the email field while the chosen access sends an invitation. */
 const EXTERNAL_INVITATION_HINT =
@@ -113,11 +113,10 @@ function validate(
   const missingName =
     EXTERNAL_FIELDS.firstName in fields || EXTERNAL_FIELDS.lastName in fields;
   if (missingName && emailHint)
-    return { message: "Bitte füllen Sie die markierten Felder aus.", fields };
+    return { message: "Bitte fülle die markierten Felder aus.", fields };
   if (missingName)
-    return { message: "Bitte geben Sie Vor- und Nachnamen ein.", fields };
-  if (emailHint)
-    return { message: "Bitte prüfen Sie die E-Mail-Adresse.", fields };
+    return { message: "Bitte gib Vor- und Nachnamen ein.", fields };
+  if (emailHint) return { message: "Bitte prüfe die E-Mail-Adresse.", fields };
   return null;
 }
 

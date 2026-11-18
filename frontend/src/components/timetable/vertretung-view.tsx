@@ -979,7 +979,7 @@ function VertretungDisabledState() {
     <PlanningDisabledState
       pageTitle="Vertretungsplan"
       heading="Der Vertretungsplan ist ausgeschaltet"
-      description="Der Vertretungsplan gehört zum Betreuungsplan. Dieser ist für die Schule ausgeschaltet. Sie können ihn unter „Betrieb“ einschalten."
+      description="Der Vertretungsplan gehört zum Betreuungsplan. Dieser ist für die Schule ausgeschaltet. Du kannst ihn unter „Betrieb“ einschalten."
       testId="vertretung-disabled-state"
     />
   );

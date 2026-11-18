@@ -852,7 +852,7 @@ export function CareWeeklyPlanEditForm({
         if (requestId !== offeringPreviewRequestId.current) return;
         if (!preview) {
           errors.invalid(
-            "Das Angebot konnte nicht geprüft werden. Bitte wählen Sie es noch einmal.",
+            "Das Angebot konnte nicht geprüft werden. Bitte wähle es noch einmal.",
           );
           return;
         }
@@ -875,7 +875,7 @@ export function CareWeeklyPlanEditForm({
         ) {
           setWeeklyAdjustment(preview);
           errors.invalid(
-            "Dieses Angebot hat keinen freien Platz mehr. Bitte wählen Sie ein anderes.",
+            "Dieses Angebot hat keinen freien Platz mehr. Bitte wähle ein anderes.",
           );
           return;
         }
@@ -954,8 +954,8 @@ export function CareWeeklyPlanEditForm({
         </p>
         {careDaysSource === "bookings" ? (
           <p className="text-sm font-medium text-gray-700">
-            Die Betreuungstage kommen aus den Buchungen. Ändern Sie die Tage bei
-            den Buchungen.
+            Die Betreuungstage kommen aus den Buchungen. Ändere die Tage bei den
+            Buchungen.
           </p>
         ) : null}
         <CareWeeklyPlanGrid

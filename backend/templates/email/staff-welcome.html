@@ -10,23 +10,23 @@
     <p>Guten Tag,</p>
     {{end}}
     {{if .SchoolName}}
-    <p>Schön, dass Sie bei <strong>{{.SchoolName}}</strong> mit moto arbeiten.</p>
+    <p>Schön, dass du bei <strong>{{.SchoolName}}</strong> mit moto arbeitest.</p>
     {{else}}
-    <p>Schön, dass Sie mit moto arbeiten.</p>
+    <p>Schön, dass du mit moto arbeitest.</p>
     {{end}}
-    <p>Ihre Einladung kommt in einer eigenen E-Mail. In der Hilfe steht Schritt für Schritt, wie Sie sie annehmen.</p>
+    <p>Deine Einladung kommt in einer eigenen E-Mail. In der Hilfe steht Schritt für Schritt, wie du sie annimmst.</p>
 
     <div class="button-wrapper" style="text-align: center;">
         <a class="button" href="{{.HelpURL}}">Zur Hilfe</a>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:</p>
+    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopiere bitte diesen Link:</p>
     <div class="link-box">
         <a href="{{.HelpURL}}">{{.HelpURL}}</a>
     </div>
 
     {{if .ReplyGoesToSchool}}
-    <p class="security-note">Haben Sie eine Frage? Antworten Sie einfach auf diese E-Mail.{{if .SchoolName}} Die Antwort geht an {{.SchoolName}}.{{end}}</p>
+    <p class="security-note">Hast du eine Frage? Antworte einfach auf diese E-Mail.{{if .SchoolName}} Die Antwort geht an {{.SchoolName}}.{{end}}</p>
     {{end}}
 </div>
 

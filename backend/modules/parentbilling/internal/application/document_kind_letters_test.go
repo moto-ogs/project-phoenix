@@ -85,7 +85,7 @@ func TestFeeNoticeFollowsPageOneOfTheHardtNotice(t *testing.T) {
 		"für die Betreuung von Lina und Ben setzen wir für Winterferien 2027 folgende Gebühren fest:",
 		"Gesamtbetrag: 92,50 €",
 		"Bitte geben Sie bei allen Zahlungen das Buchungszeichen 5.0311.000123.4 an.",
-		"Geben Sie als Verwendungszweck Ihr Buchungszeichen 5.0311.000123.4 an.",
+		"Gebt als Verwendungszweck euer Buchungszeichen 5.0311.000123.4 an.",
 	} {
 		assert.Contains(t, text, want)
 	}
@@ -116,7 +116,7 @@ func TestInvoiceKindWritesAnInvoiceWithoutConfirmation(t *testing.T) {
 	assert.Equal(t, "Rechnung FE-2026-0007: Winterferien 2027", letter.Subject)
 	assert.Equal(t, LetterFact{Label: "Rechnungsnummer", Value: "FE-2026-0007"}, letter.Facts[0])
 	text := blockText(letter)
-	assert.Contains(t, text, "für Lina und Ben berechnen wir Ihnen:")
+	assert.Contains(t, text, "für Lina und Ben berechnen wir euch:")
 	assert.NotContains(t, text, "Rechtsbehelfsbelehrung")
 	assert.Contains(t, text, "Notfallnummern", "the invoice keeps the emergency numbers entered for its letter")
 	assert.Equal(t, "rechnung-", letterFilePrefix(parentbilling.DocumentKindInvoice))
@@ -165,7 +165,7 @@ func TestCreditOnAFeeNoticeIsAnAenderungsbescheid(t *testing.T) {
 	text := blockText(creditLetter(content))
 	assert.Contains(t, text, "Änderungsbescheid FE-2026-0012 zum Bescheid FE-2026-0007")
 	assert.Contains(t, text, "setzen den Beitrag um 20,00 € niedriger fest. Grund: Ausflug fiel aus.")
-	assert.Contains(t, text, "Nach dem Bescheid FE-2026-0007 müssen Sie jetzt noch 72,50 € bezahlen.")
+	assert.Contains(t, text, "Nach dem Bescheid FE-2026-0007 müsst ihr jetzt noch 72,50 € bezahlen.")
 	assert.Contains(t, text, "# Rechtsbehelfsbelehrung")
 }
 
@@ -210,16 +210,16 @@ func TestMailOfAFeeNoticeSaysWhatItIs(t *testing.T) {
 		mail              parentbilling.BillingLetterMail
 		subject, template string
 	}{
-		{parentbilling.BillingLetterMail{LetterKind: parentbilling.DocumentKindFeeNotice}, "Ihr Gebührenbescheid", noticeLetterMailTemplate},
+		{parentbilling.BillingLetterMail{LetterKind: parentbilling.DocumentKindFeeNotice}, "Dein Gebührenbescheid", noticeLetterMailTemplate},
 		{parentbilling.BillingLetterMail{LetterKind: parentbilling.DocumentKindFeeNotice, DocumentKind: parentbilling.DocumentCancellation},
-			"Aufhebung Ihres Gebührenbescheids", noticeCorrectionMailTemplate},
+			"Aufhebung deines Gebührenbescheids", noticeCorrectionMailTemplate},
 		{parentbilling.BillingLetterMail{LetterKind: parentbilling.DocumentKindFeeNotice, DocumentKind: parentbilling.MailDocumentCareCancellation},
-			"Aufhebung Ihres Gebührenbescheids", noticeCorrectionMailTemplate},
+			"Aufhebung deines Gebührenbescheids", noticeCorrectionMailTemplate},
 		{parentbilling.BillingLetterMail{LetterKind: parentbilling.DocumentKindFeeNotice, DocumentKind: parentbilling.DocumentCredit},
-			"Änderung Ihres Gebührenbescheids", noticeCorrectionMailTemplate},
+			"Änderung deines Gebührenbescheids", noticeCorrectionMailTemplate},
 		{parentbilling.BillingLetterMail{LetterKind: parentbilling.DocumentKindFeeNotice, DocumentKind: parentbilling.MailDocumentCareInvoice},
-			"Ihr Gebührenbescheid", noticeLetterMailTemplate},
-		{parentbilling.BillingLetterMail{LetterKind: parentbilling.DocumentKindInvoice}, "Ihre Rechnung", invoiceLetterMailTemplate},
+			"Dein Gebührenbescheid", noticeLetterMailTemplate},
+		{parentbilling.BillingLetterMail{LetterKind: parentbilling.DocumentKindInvoice}, "Deine Rechnung", invoiceLetterMailTemplate},
 		{parentbilling.BillingLetterMail{}, "Bestätigung und Rechnung", letterMailTemplate},
 	} {
 		subject, template := letterMailOf(tc.mail)
@@ -512,7 +512,7 @@ func TestCareFeeNoticePrintsTheSharesOfCostBearers(t *testing.T) {
 	text := blockText(careNoticeLetter(content))
 	assert.Contains(t, text, "Monatsbeitrag: 54,01 €")
 	assert.Contains(t, text, "Übernimmt Jugendamt Enzkreis (Jugendamt, 50 %): -27,00 €")
-	assert.Contains(t, text, "Ihr Anteil: 27,01 €")
+	assert.Contains(t, text, "Euer Anteil: 27,01 €")
 }
 
 // TestMensaInvoiceOfItsOwnStaysAnInvoice: the kind of document belongs to

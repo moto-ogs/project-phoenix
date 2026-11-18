@@ -373,7 +373,7 @@ export default function OperatorSchoolsPage() {
           activeSummaries.length === 0 ? (
           <ProvisioningEmptyState
             title="Keine Schulen"
-            description="Erstellen Sie eine neue Schule unter einem Träger."
+            description="Erstelle eine neue Schule unter einem Träger."
             buttonLabel="Neue Schule"
             onAction={() => setCreateSchoolOpen(true)}
           />

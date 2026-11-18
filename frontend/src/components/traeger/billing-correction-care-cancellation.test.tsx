@@ -69,7 +69,7 @@ describe("BillingCorrectionModal monthly cancellation (#4684)", () => {
     renderModal({ ...INVOICE, status: "sent", sends: 1 });
     expect(
       screen.getByText(
-        "Die Familie bekommt ein Storno-Schreiben. Senden Sie es danach.",
+        "Die Familie bekommt ein Storno-Schreiben. Sende es danach.",
       ),
     ).toBeInTheDocument();
   });
@@ -78,7 +78,7 @@ describe("BillingCorrectionModal monthly cancellation (#4684)", () => {
     renderModal({ ...INVOICE, printed: true });
     expect(
       screen.getByText(
-        "Die Rechnung wurde zum Drucken heruntergeladen. Geben Sie der Familie das Storno-Schreiben auf Papier.",
+        "Die Rechnung wurde zum Drucken heruntergeladen. Gib der Familie das Storno-Schreiben auf Papier.",
       ),
     ).toBeInTheDocument();
   });
@@ -87,7 +87,7 @@ describe("BillingCorrectionModal monthly cancellation (#4684)", () => {
     renderModal(INVOICE);
     fireEvent.click(screen.getByRole("button", { name: "Stornieren" }));
     expect(
-      await screen.findByText("Bitte geben Sie eine Begründung an."),
+      await screen.findByText("Bitte gib eine Begründung an."),
     ).toBeInTheDocument();
     expect(cancelCareInvoice).not.toHaveBeenCalled();
   });
@@ -129,7 +129,7 @@ describe("BillingCorrectionModal monthly cancellation (#4684)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Stornieren" }));
     expect(
       await screen.findByText(
-        "Storno MB-2026-0002 ist ausgestellt. Geben Sie der Familie das Storno-Schreiben auf Papier.",
+        "Storno MB-2026-0002 ist ausgestellt. Gib der Familie das Storno-Schreiben auf Papier.",
       ),
     ).toBeInTheDocument();
   });

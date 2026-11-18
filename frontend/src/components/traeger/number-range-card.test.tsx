@@ -150,7 +150,7 @@ describe("NumberRangeCard: the next number (#7358)", () => {
       exportedAtLabel(RUNNING.starts[0]!.setAt),
     );
     expect(rows[1]).toHaveTextContent("FE-2026-0100");
-    expect(rows[1]).toHaveTextContent("von Ihnen");
+    expect(rows[1]).toHaveTextContent("von dir");
   });
 
   it("previews the number and saves the start value", async () => {
@@ -204,7 +204,7 @@ describe("NumberRangeCard: the next number (#7358)", () => {
 
     expect(
       await screen.findByText(
-        "Die letzte laufende Nummer ist 241. Bitte geben Sie eine größere Nummer ein.",
+        "Die letzte laufende Nummer ist 241. Bitte gib eine größere Nummer ein.",
       ),
     ).toBeInTheDocument();
     expect(field).toHaveAttribute("aria-invalid", "true");
@@ -222,7 +222,7 @@ describe("NumberRangeCard: the next number (#7358)", () => {
       fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
       expect(
         await screen.findByText(
-          "Bitte geben Sie eine ganze Zahl von 1 bis 99999999 ein.",
+          "Bitte gib eine ganze Zahl von 1 bis 99999999 ein.",
         ),
       ).toBeInTheDocument();
     }
@@ -252,7 +252,7 @@ describe("NumberRangeCard: the next number (#7358)", () => {
 
     expect(
       await screen.findByText(
-        "Diese Nummer ist zu klein. Die letzte laufende Nummer ist 250. Bitte geben Sie eine größere Nummer ein.",
+        "Diese Nummer ist zu klein. Die letzte laufende Nummer ist 250. Bitte gib eine größere Nummer ein.",
       ),
     ).toBeInTheDocument();
     expect(onChanged).not.toHaveBeenCalled();

@@ -31,27 +31,27 @@ export const SCHOOL_SETUP_STEP_CONTENT: Readonly<
     // Singular mit „erste/n“: Ein Datensatz hakt den Schritt ab (#2832).
     // Der Satz darunter sagt, dass die übrigen danach genauso gehen.
     title: "Erste Person ins Team einladen",
-    description: "Laden Sie eine Person per E-Mail ein.",
-    hints: ["Die übrigen laden Sie danach genauso ein."],
+    description: "Lade eine Person per E-Mail ein.",
+    hints: ["Die übrigen lädst du danach genauso ein."],
     href: "/database/personal",
     actionLabel: "Zum Personal",
     helpTopic: HELP_TOPICS.leadInviteStaff,
   },
   rooms: {
     title: "Ersten Raum anlegen",
-    description: "Legen Sie einen Raum an, in dem Kinder betreut werden.",
-    hints: ["Die übrigen legen Sie danach genauso an."],
+    description: "Lege einen Raum an, in dem Kinder betreut werden.",
+    hints: ["Die übrigen legst du danach genauso an."],
     href: "/database/rooms",
     actionLabel: "Zu den Räumen",
     helpTopic: HELP_TOPICS.leadRooms,
   },
   groups: {
     title: "Erste Gruppe anlegen",
-    description: "Legen Sie eine Ihrer festen Gruppen an.",
+    description: "Lege eine deiner festen Gruppen an.",
     hints: [
-      "Die übrigen legen Sie danach genauso an.",
+      "Die übrigen legst du danach genauso an.",
       "Gruppenleitung kann nur werden, wer die Einladung schon angenommen hat.",
-      "Die Gruppenleitung tragen Sie deshalb oft später nach.",
+      "Die Gruppenleitung trägst du deshalb oft später nach.",
     ],
     href: "/database/groups",
     actionLabel: "Zu den Gruppen",
@@ -59,10 +59,10 @@ export const SCHOOL_SETUP_STEP_CONTENT: Readonly<
   },
   students: {
     title: "Erstes Kind anlegen",
-    description: "Legen Sie ein Kind an.",
+    description: "Lege ein Kind an.",
     hints: [
-      "Haben Sie eine Liste? Mit „Importieren“ kommen alle auf einmal.",
-      "Die Betreuungszeiten tragen Sie direkt beim Kind ein.",
+      "Hast du eine Liste? Mit „Importieren“ kommen alle auf einmal.",
+      "Die Betreuungszeiten trägst du direkt beim Kind ein.",
     ],
     href: "/database/students",
     actionLabel: "Zu den Kindern",
@@ -70,10 +70,10 @@ export const SCHOOL_SETUP_STEP_CONTENT: Readonly<
   },
   guardians: {
     title: "Erste Eltern einladen",
-    description: "Laden Sie die Eltern eines Kindes in die Eltern-App ein.",
+    description: "Lade die Eltern eines Kindes in die Eltern-App ein.",
     hints: [
-      "Die übrigen laden Sie danach genauso ein.",
-      "Beim Kind tragen Sie die Eltern mit E-Mail-Adresse ein und laden sie ein.",
+      "Die übrigen lädst du danach genauso ein.",
+      "Beim Kind trägst du die Eltern mit E-Mail-Adresse ein und lädst sie ein.",
       "Für viele Kinder auf einmal: In der Kinderliste „Auswählen“, dann „Eltern einladen“.",
     ],
     href: "/database/students",
@@ -89,10 +89,10 @@ export const SCHOOL_SETUP_STEP_CONTENT: Readonly<
     // Soll ist (#6919). Die Zahl dazu zeigt die Checkliste selbst.
     title: "Arbeitszeitmodelle eintragen",
     description:
-      "Tragen Sie für jede Person im Team ein Arbeitszeitmodell ein. Daraus rechnet moto das Soll.",
+      "Trage für jede Person im Team ein Arbeitszeitmodell ein. Daraus rechnet moto das Soll.",
     hints: [
       "Ohne Soll zählen Krankheit, Urlaub und Fortbildung 0 Stunden.",
-      "Teilen mehrere Personen ein Modell? Dann legen Sie es einmal als Vorlage an.",
+      "Teilen mehrere Personen ein Modell? Dann lege es einmal als Vorlage an.",
     ],
     href: staffWithoutTargetHref(),
     actionLabel: "Zu den Zeitkonten",
@@ -137,17 +137,17 @@ const FILL_TOPICS: Readonly<
 > = {
   team: {
     title: "Das ganze Team einladen",
-    description: "Laden Sie alle Mitarbeitenden ein.",
+    description: "Lade alle Mitarbeitenden ein.",
     link: { topic: HELP_TOPICS.leadInviteStaff },
   },
   rooms: {
     title: "Alle Räume anlegen",
-    description: "Legen Sie jeden Raum an, in dem Kinder betreut werden.",
+    description: "Lege jeden Raum an, in dem Kinder betreut werden.",
     link: { topic: HELP_TOPICS.leadRooms },
   },
   groups: {
     title: "Alle Gruppen anlegen",
-    description: "Tragen Sie auch die Gruppenleitungen nach.",
+    description: "Trage auch die Gruppenleitungen nach.",
     link: { topic: HELP_TOPICS.leadGroups },
   },
   students: {
@@ -212,7 +212,7 @@ export const NEXT_HELP_GROUPS: readonly SchoolSetupNextTopic[] = [
   },
   {
     title: "Anmeldungen",
-    description: "Lassen Sie neue Kinder online zur Betreuung anmelden.",
+    description: "Lass neue Kinder online zur Betreuung anmelden.",
     link: { group: "anmeldeverwaltung" },
   },
   {

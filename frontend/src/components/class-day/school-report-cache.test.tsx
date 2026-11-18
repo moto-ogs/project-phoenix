@@ -395,7 +395,7 @@ describe("school report cache", () => {
     });
     const denied = (
       await screen.findByText(
-        /Für die Übersicht für Klasse 4a fehlt Ihnen die Berechtigung/,
+        /Für die Übersicht für Klasse 4a fehlt dir die Berechtigung/,
       )
     ).closest<HTMLElement>('[role="alert"]')!;
     const unavailable = (
@@ -435,13 +435,13 @@ describe("school report cache", () => {
     render(<ClassDayOverview {...options} />, options);
     const failure = await screen.findByRole("alert");
     expect(failure).toHaveTextContent(
-      "Die Liste Ihrer Klassen ist gerade nicht erreichbar",
+      "Die Liste deiner Klassen ist gerade nicht erreichbar",
     );
     expect(
       within(failure).getByRole("button", { name: "Wiederholen" }),
     ).toBeVisible();
     expect(
-      screen.queryByRole("heading", { name: "Ihre Klassen" }),
+      screen.queryByRole("heading", { name: "Deine Klassen" }),
     ).not.toBeInTheDocument();
     expect(
       failure.parentElement?.querySelector(".grid"),
@@ -455,7 +455,7 @@ describe("school report cache", () => {
       within(failure).getByRole("button", { name: "Wiederholen" }),
     );
     expect(
-      await screen.findByRole("heading", { name: "Ihre Klassen" }),
+      await screen.findByRole("heading", { name: "Deine Klassen" }),
     ).toBeVisible();
     expect(await screen.findAllByText(/1 Kinder · 1 bleiben/)).toHaveLength(2);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();

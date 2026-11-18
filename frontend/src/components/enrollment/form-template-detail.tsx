@@ -60,9 +60,9 @@ export function FormTemplateDetail({
                     {schema.name}
                   </h2>
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">
-                    Prüfen Sie die Formularvorschau und ordnen Sie diese Vorlage
-                    einer Anmeldephase zu, wenn Eltern die angepassten
-                    Pflichtangaben oder Zusatzfragen sehen sollen.
+                    Prüfe die Formularvorschau und ordne diese Vorlage einer
+                    Anmeldephase zu, wenn Eltern die angepassten Pflichtangaben
+                    oder Zusatzfragen sehen sollen.
                   </p>
                 </div>
                 <Button

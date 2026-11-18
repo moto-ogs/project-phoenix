@@ -200,7 +200,7 @@ describe("ParentNotificationOnboarding", () => {
     // Seit #2831 dieselben nummerierten Schritte wie auf iPhone und iPad
     // statt eines Fließtextes.
     expect(
-      await screen.findByText(/Tippen Sie oben rechts im Browser/),
+      await screen.findByText(/Tippe oben rechts im Browser/),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Zum Startbildschirm hinzufügen/),

@@ -38,11 +38,11 @@ describe("presentError", () => {
   it.each([
     [
       "display.manage_forbidden",
-      "Sie dürfen Info-Displays ansehen, aber nicht ändern. Bitte fragen Sie Ihre Schulleitung.",
+      "Du darfst Info-Displays ansehen, aber nicht ändern. Bitte frage deine Schulleitung.",
     ],
     [
       "meals.participation_manage_denied",
-      "Sie dürfen die Essensanmeldung ansehen, aber nicht ändern. Bitte wenden Sie sich an die OGS.",
+      "Du darfst die Essensanmeldung ansehen, aber nicht ändern. Bitte wende dich an die OGS.",
     ],
   ] as const)(
     "explains read-only access for %s without retry",
@@ -103,7 +103,7 @@ describe("presentError", () => {
       details: { filename: "Bescheid.pdf" },
     });
     expect(presentError(error, "Nachweis").message).toBe(
-      "Der Inhalt von „Bescheid.pdf“ passt nicht zur Dateiart. Bitte wählen Sie eine andere Datei. Umbenennen reicht nicht.",
+      "Der Inhalt von „Bescheid.pdf“ passt nicht zur Dateiart. Bitte wähle eine andere Datei. Umbenennen reicht nicht.",
     );
   });
 
@@ -116,7 +116,7 @@ describe("presentError", () => {
     const result = presentError(error, "Der Raum");
     expect(result.kind).toBe("api");
     expect(result.message).toBe(
-      "Im Raum Sonnenraum ist kein Platz mehr. Bitte wählen Sie einen anderen Raum.",
+      "Im Raum Sonnenraum ist kein Platz mehr. Bitte wähle einen anderen Raum.",
     );
     expect(result.message).not.toContain(error.message);
     expect(result.requestId).toBeUndefined();
@@ -148,7 +148,7 @@ describe("presentError", () => {
     );
 
     expect(result.message).toBe(
-      "Die Personalliste konnte nicht bearbeitet werden. Bitte löschen Sie im Browser die Cookies dieser Seite. Melden Sie sich danach neu an.",
+      "Die Personalliste konnte nicht bearbeitet werden. Bitte lösche im Browser die Cookies dieser Seite. Melde dich danach neu an.",
     );
     expect(result.retryable).toBe(false);
     expect(result.requestId).toBeUndefined();
@@ -191,7 +191,7 @@ describe("presentError", () => {
       code: "care.announcement_ack_not_required",
     });
     expect(presentError(error, "Der Elternbrief").message).toBe(
-      "Der Elternbrief konnte nicht übernommen werden. Bitte prüfen Sie Ihre Angaben.",
+      "Der Elternbrief konnte nicht übernommen werden. Bitte prüfe deine Angaben.",
     );
   });
 
@@ -199,7 +199,7 @@ describe("presentError", () => {
   describe("contact of a missing right", () => {
     const refusal = new ApiError("Forbidden", 403);
     const traegerText =
-      "Für die Personen des Träger-Büros fehlt Ihnen die Berechtigung. Bitte fragen Sie die Leitung Ihres Träger-Büros.";
+      "Für die Personen des Träger-Büros fehlt dir die Berechtigung. Bitte frage die Leitung deines Träger-Büros.";
 
     it("sends a Träger-Büro to its Leitung, not to a school", () => {
       expect(
@@ -213,7 +213,7 @@ describe("presentError", () => {
       ).toMatchObject({
         errorClass: "permission",
         message:
-          "Für die Personen des Träger-Büros fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
+          "Für die Personen des Träger-Büros fehlt dir die Berechtigung. Bitte frage die Schule.",
       });
     });
 
@@ -262,7 +262,7 @@ describe("presentError", () => {
       code: "iot.room_capacity_exceeded",
     });
     expect(presentError(error, "Der Raum").message).toBe(
-      "Der Raum konnte nicht geändert werden. Bitte prüfen Sie den aktuellen Stand.",
+      "Der Raum konnte nicht geändert werden. Bitte prüfe den aktuellen Stand.",
     );
   });
 });
@@ -272,7 +272,7 @@ describe("errorCodeMessage", () => {
     expect(
       errorCodeMessage("enrollment.traeger_copy_rejected", "die Anmeldephase"),
     ).toBe(
-      "Die Schule kann diese Angaben so nicht übernehmen. Bitte prüfen Sie die Angaben oder die Einstellungen der Schule.",
+      "Die Schule kann diese Angaben so nicht übernehmen. Bitte prüfe die Angaben oder die Einstellungen der Schule.",
     );
   });
 

@@ -392,9 +392,7 @@ function MessageThreadContent() {
     if ((!body && attachments.length === 0) || isSending || !messagingEnabled)
       return;
     if (snapshotUnavailable) {
-      sendError.invalid(
-        "Bitte warten Sie, bis der Nachrichtenverlauf geladen ist.",
-      );
+      sendError.invalid("Bitte warte, bis der Nachrichtenverlauf geladen ist.");
       return;
     }
     sentFiles.current = attachments;
@@ -743,7 +741,7 @@ function MessageThreadContent() {
             ) : (
               <Alert
                 type="info"
-                message="Die Eltern-Nachrichten sind für diese Schule ausgeschaltet. Sie können den Verlauf weiterhin lesen, aber nicht antworten."
+                message="Die Eltern-Nachrichten sind für diese Schule ausgeschaltet. Du kannst den Verlauf weiterhin lesen, aber nicht antworten."
               />
             )}
           </div>

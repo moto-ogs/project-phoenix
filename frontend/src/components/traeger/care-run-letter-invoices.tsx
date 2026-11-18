@@ -52,7 +52,7 @@ function SendCell({
     return (
       <p className="text-sm text-gray-600">
         {letter.printed
-          ? "Zum Drucken heruntergeladen. Geben Sie der Familie das Storno-Schreiben."
+          ? "Zum Drucken heruntergeladen. Gib der Familie das Storno-Schreiben."
           : "Nicht gesendet. Die Familie bekommt nichts."}
       </p>
     );
@@ -60,7 +60,7 @@ function SendCell({
   return (
     <LetterSendCell
       letter={letter}
-      printInstruction="Bitte drucken Sie das Schreiben."
+      printInstruction="Bitte drucke das Schreiben."
     />
   );
 }

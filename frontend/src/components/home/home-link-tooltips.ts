@@ -7,4 +7,4 @@ export const STUDENT_SEARCH_LINK_TOOLTIP =
 
 /** Erklärung am Weg zu allen Erinnerungen, gleich in Karte und „Mehr“ (#6777). */
 export const REMINDERS_LINK_TOOLTIP =
-  "Öffnet die Liste aller Ihrer Erinnerungen.";
+  "Öffnet die Liste aller deiner Erinnerungen.";

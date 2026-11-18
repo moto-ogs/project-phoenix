@@ -120,8 +120,8 @@ describe("validatePhaseInput", () => {
     expect(blank.serviceStartDate).toBe("2027-08-01");
     expect(blank.serviceEndDate).toBe("2028-07-31");
     expect(validatePhaseInput({ ...blank, allSchools: false })).toEqual({
-      name: "Bitte geben Sie einen Namen ein.",
-      school_ids: "Bitte wählen Sie mindestens eine Schule.",
+      name: "Bitte gib einen Namen ein.",
+      school_ids: "Bitte wähle mindestens eine Schule.",
     });
     expect(
       validatePhaseInput({

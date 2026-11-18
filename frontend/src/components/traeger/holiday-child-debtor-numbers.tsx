@@ -73,7 +73,7 @@ export function childNumberHints(
     const value = (values[child.childId] ?? "").trim();
     const error =
       required && !value.trim()
-        ? "Bitte geben Sie die Debitorennummer ein."
+        ? "Bitte gib die Debitorennummer ein."
         : value === child.debtorNumber
           ? null
           : debtorNumberFormatError(value, format);
@@ -180,7 +180,7 @@ export function ChildDebtorNumbersField({
     formErrors.clear();
     const hints = childNumberHints(children, values, required, format);
     if (hints) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", hints);
+      formErrors.invalid("Bitte prüfe deine Angaben.", hints);
       return;
     }
     setSaving(true);

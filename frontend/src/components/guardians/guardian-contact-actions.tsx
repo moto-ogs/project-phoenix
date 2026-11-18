@@ -73,7 +73,7 @@ export function GuardianContactActions({
             variant="outline"
             size="compact"
             onClick={handleEmailClick}
-            tooltip="Öffnet Ihr Mailprogramm mit einer neuen Mail an diese Person."
+            tooltip="Öffnet dein Mailprogramm mit einer neuen Mail an diese Person."
           >
             <Mail className="h-3.5 w-3.5" aria-hidden="true" />
             E-Mail
@@ -107,7 +107,7 @@ export function GuardianContactActions({
               variant="primary"
               size="compact"
               onClick={() => handlePhoneClick(singlePhoneNumber ?? "")}
-              tooltip="Öffnet Ihre Telefon-App mit der Nummer dieser Person."
+              tooltip="Öffnet deine Telefon-App mit der Nummer dieser Person."
             >
               <Phone className="h-3.5 w-3.5" aria-hidden="true" />
               Anrufen

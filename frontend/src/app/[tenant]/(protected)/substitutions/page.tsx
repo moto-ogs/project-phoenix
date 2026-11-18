@@ -109,7 +109,7 @@ function RunningSection({
       <EmptyState
         variant="compact"
         title="Keine laufenden Betreuungen"
-        description="Zurzeit läuft keine Betreuung in Ihrem Sichtbereich."
+        description="Zurzeit läuft keine Betreuung in deinem Sichtbereich."
       />
     );
   }
@@ -172,7 +172,7 @@ function ScheduleSection({
       <EmptyState
         variant="compact"
         title="Keine Vertretungen verfügbar"
-        description="Bitten Sie einen Admin um Zugriff auf Vertretungen."
+        description="Frag einen Admin nach Zugriff auf Vertretungen."
       />
     );
   }
@@ -440,8 +440,8 @@ function AssignmentFields(props: AssignmentFieldsProps) {
     <>
       <p className="text-sm text-gray-600">
         {admin
-          ? "Wählen Sie die Gruppe, die Person und den Zeitraum."
-          : "Sie können nur eigene Gruppen für heute übergeben."}
+          ? "Wähle die Gruppe, die Person und den Zeitraum."
+          : "Du kannst nur eigene Gruppen für heute übergeben."}
       </p>
       <LabeledSelect
         id="handover-group"
@@ -527,8 +527,8 @@ function assignmentMissing(
   start: string,
   end: string,
 ): string | undefined {
-  if (!groupId) return "Wählen Sie zuerst eine Gruppe aus.";
-  if (!staffId) return "Wählen Sie zuerst eine Betreuungskraft aus.";
+  if (!groupId) return "Wähle zuerst eine Gruppe aus.";
+  if (!staffId) return "Wähle zuerst eine Betreuungskraft aus.";
   if (end < start) return "Das Enddatum darf nicht vor dem Startdatum liegen.";
   return undefined;
 }
@@ -774,7 +774,7 @@ function RunningCard({
       bodyClassName="compact:mt-3 mt-4 flex min-h-0 flex-1 flex-col space-y-3"
     >
       <p className="text-sm text-gray-600">
-        Hier sehen Sie laufende Aufsichten in Ihrem Sichtbereich.
+        Hier siehst du laufende Aufsichten in deinem Sichtbereich.
       </p>
       <RunningSection rows={rows} onAssign={onAssign} />
     </SectionCard>
@@ -822,7 +822,7 @@ function ScheduleCard({
       bodyClassName="compact:mt-3 mt-4 flex min-h-0 flex-1 flex-col space-y-3"
     >
       <p className="text-sm text-gray-600">
-        Hier sehen Sie Vertretungen für heutige Termine.
+        Hier siehst du Vertretungen für heutige Termine.
       </p>
       <ScheduleCardContent data={data} />
       {data.canManageSchedules ? (
@@ -859,7 +859,7 @@ function GroupCard({
       bodyClassName="compact:mt-3 mt-4 flex min-h-0 flex-1 flex-col space-y-3"
     >
       <p className="text-sm text-gray-600">
-        Hier verwalten Sie zeitlich begrenzte Gruppenübergaben.
+        Hier verwaltest du zeitlich begrenzte Gruppenübergaben.
       </p>
       <GroupSection
         overview={overview}

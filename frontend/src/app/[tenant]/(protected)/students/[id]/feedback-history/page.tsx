@@ -39,7 +39,7 @@ import { PlanLegend } from "~/components/ui/planning/plan-legend";
 import { ListGroupHeader } from "~/components/ui/list-group-header";
 
 const FEATURE_DISABLED_DESCRIPTION =
-  "Die Feedbackhistorie ist für Ihre Schule ausgeschaltet. Sie lässt sich in den Einstellungen unter Datenschutz einschalten.";
+  "Die Feedbackhistorie ist für deine Schule ausgeschaltet. Sie lässt sich in den Einstellungen unter Datenschutz einschalten.";
 
 const FEEDBACK_HISTORY_DESCRIPTION =
   "Rückmeldungen dieses Kindes im Zeitverlauf.";
@@ -297,7 +297,7 @@ function StudentFeedbackHistoryPageContent() {
               ? {
                   title:
                     "Kein Feedback für den ausgewählten Zeitraum vorhanden.",
-                  description: "Wählen Sie einen anderen Zeitraum.",
+                  description: "Wähle einen anderen Zeitraum.",
                 }
               : null
         }

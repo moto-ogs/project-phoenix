@@ -7,7 +7,7 @@ export function teacherCalendarTopic(): HelpTopic {
     title: "Den Kalender nutzen",
     question: "Wie trage ich einen Ausflug oder Schultermin ein?",
     summary:
-      "Der Kalender zeigt Termine der OGS, Schließtage, Ferien und Ihre Schultermine.",
+      "Der Kalender zeigt Termine der OGS, Schließtage, Ferien und deine Schultermine.",
     group: "nachrichten",
     audience: "teacher",
     icon: "CalendarDays",
@@ -16,33 +16,33 @@ export function teacherCalendarTopic(): HelpTopic {
       {
         title: "Einen Schultermin eintragen",
         steps: [
-          "Öffnen Sie `Kalender`.",
-          "Wählen Sie `Neuer Termin`.",
-          "Geben Sie einen Titel ein und wählen Sie die Art, zum Beispiel `Ausflug`.",
-          "Wählen Sie Tag und Uhrzeit. Oder setzen Sie den Haken bei `Ganztägig`.",
-          "Wählen Sie unter `Wer sieht den Termin?`, ob auch Eltern ihn sehen.",
-          "Wählen Sie `Speichern`.",
+          "Öffne `Kalender`.",
+          "Wähle `Neuer Termin`.",
+          "Gib einen Titel ein und wähle die Art, zum Beispiel `Ausflug`.",
+          "Wähle Tag und Uhrzeit. Oder setze den Haken bei `Ganztägig`.",
+          "Wähle unter `Wer sieht den Termin?`, ob auch Eltern ihn sehen.",
+          "Wähle `Speichern`.",
         ],
       },
       {
         title: "Auf eine Einladung der OGS antworten",
         steps: [
-          "Wählen Sie den Termin im Kalender.",
-          "Bei einer Reihe: Wählen Sie unter `Ihre Antwort gilt für`, ob die Antwort nur für diesen Termin oder für `Alle Termine` gilt.",
-          "Wählen Sie `Zusagen` oder `Absagen`.",
+          "Wähle den Termin im Kalender.",
+          "Bei einer Reihe: Wähle unter `Deine Antwort gilt für`, ob die Antwort nur für diesen Termin oder für `Alle Termine` gilt.",
+          "Wähle `Zusagen` oder `Absagen`.",
         ],
       },
     ],
     result:
-      "Die OGS und alle Lehrkräfte sehen Ihren Schultermin. Die Eltern sehen ihn nur, wenn Sie das gewählt haben.",
+      "Die OGS und alle Lehrkräfte sehen deinen Schultermin. Die Eltern sehen ihn nur, wenn du das gewählt hast.",
     notes: [
-      "Ihre eigenen Schultermine öffnen Sie im Kalender. Dort finden Sie `Bearbeiten` und `Löschen`.",
+      "Deine eigenen Schultermine öffnest du im Kalender. Dort findest du `Bearbeiten` und `Löschen`.",
       "Schließtage und Ferien trägt die OGS ein. Sie stehen ganztägig im Kalender.",
-      "Unter `Kalender abonnieren` holen Sie die Termine in Ihren Handy-Kalender.",
+      "Unter `Kalender abonnieren` holst du die Termine in deinen Handy-Kalender.",
     ],
     differences: [
-      "Wer den Termin sieht, wählen Sie nur beim Anlegen. Beim Ändern bleibt es gleich.",
-      "`Eltern meiner Klassen` ist grau? Dann ist Ihnen keine Klasse zugeordnet.",
+      "Wer den Termin sieht, wählst du nur beim Anlegen. Beim Ändern bleibt es gleich.",
+      "`Eltern meiner Klassen` ist grau? Dann ist dir keine Klasse zugeordnet.",
     ],
     related: [
       HELP_TOPICS.teacherNotices,

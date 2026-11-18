@@ -33,15 +33,15 @@ const PROBLEM_LABEL: Record<BulkInviteProblem["reason"], string> = {
 };
 
 const PROBLEM_ACTION: Record<BulkInviteProblem["reason"], string> = {
-  missing_email: "Tragen Sie die E-Mail-Adresse beim Kind ein.",
-  invalid_email: "Prüfen Sie die E-Mail-Adresse beim Kind.",
-  duplicate_email: "Prüfen Sie die E-Mail-Adressen bei den Eltern.",
-  email_not_queued: "Versuchen Sie es später noch einmal.",
+  missing_email: "Trage die E-Mail-Adresse beim Kind ein.",
+  invalid_email: "Prüfe die E-Mail-Adresse beim Kind.",
+  duplicate_email: "Prüfe die E-Mail-Adressen bei den Eltern.",
+  email_not_queued: "Versuche es später noch einmal.",
   address_blocked:
-    "Den Grund sehen Sie beim Kind unter „Erziehungsberechtigte“.",
-  mail_delayed: "Bitte warten Sie, sonst kommt die Mail doppelt an.",
+    "Den Grund siehst du beim Kind unter „Erziehungsberechtigte“.",
+  mail_delayed: "Bitte warte, sonst kommt die Mail doppelt an.",
   provider_blocked: "Der moto-Support muss das klären.",
-  block_unreadable: "Bitte versuchen Sie es später noch einmal.",
+  block_unreadable: "Bitte versuche es später noch einmal.",
 };
 
 function parents(count: number): string {
@@ -254,7 +254,7 @@ function PreviewSummary({
       </p>
       {preview.invited + preview.resent > 0 ? (
         <p className="text-sm text-gray-600">
-          Sagen Sie den Eltern vorher Bescheid, dass eine E-Mail von moto kommt.
+          Sage den Eltern vorher Bescheid, dass eine E-Mail von moto kommt.
         </p>
       ) : null}
       <ul className="space-y-1 text-sm text-gray-700">
@@ -334,7 +334,7 @@ function ProblemList({ problems }: { problems: BulkInviteProblem[] }) {
     <div className="space-y-2">
       <Alert
         type="warning"
-        message={`${parents(problems.length)} ${problems.length === 1 ? "kann" : "können"} nicht eingeladen werden. Prüfen Sie die Hinweise bei den Eltern.`}
+        message={`${parents(problems.length)} ${problems.length === 1 ? "kann" : "können"} nicht eingeladen werden. Prüfe die Hinweise bei den Eltern.`}
       />
       <ul className="max-h-48 space-y-1 overflow-y-auto text-sm text-gray-700">
         {problems.map((problem) => (

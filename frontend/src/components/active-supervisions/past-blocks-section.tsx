@@ -300,7 +300,7 @@ function PastBlockCard({
       {reopenUntil && onReopen ? (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-gray-700">
-            Aus Versehen beendet? Sie können ihn bis {reopenUntil} Uhr wieder
+            Aus Versehen beendet? Du kannst ihn bis {reopenUntil} Uhr wieder
             öffnen.
           </p>
           <Button

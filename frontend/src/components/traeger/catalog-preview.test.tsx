@@ -29,7 +29,7 @@ describe("care beyond a shortened phase", () => {
     render(<SchoolPlanCard plan={plan} schools={schools} />);
     expect(
       screen.getByText(/^2 Kinder werden länger betreut/),
-    ).toHaveTextContent("Sagen Sie der Schule Bescheid.");
+    ).toHaveTextContent("Sage der Schule Bescheid.");
   });
 
   it("names the count in the result of the school", () => {

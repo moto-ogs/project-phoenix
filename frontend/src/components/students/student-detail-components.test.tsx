@@ -929,7 +929,7 @@ describe("PersonalInfoReadOnly", () => {
 
     expect(
       await screen.findByText(
-        "Die Laufgemeinschaft ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Laufgemeinschaft ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));

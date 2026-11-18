@@ -138,7 +138,7 @@ func careNoticePaymentText(notice parentbilling.CareNotice) string {
 	if notice.PaymentMethod == parentbilling.PaymentDirectDebit {
 		return "Die fälligen Raten werden per SEPA-Lastschrift eingezogen. Bitte nicht überweisen."
 	}
-	return "Bitte überweisen Sie jede Rate bis zum Fälligkeitstag auf das Konto unten. Geben Sie dabei die Bescheid-Nr. " +
+	return "Bitte überweist jede Rate bis zum Fälligkeitstag auf das Konto unten. Gebt dabei die Bescheid-Nr. " +
 		notice.Number + " an."
 }
 

@@ -25,7 +25,7 @@ describe("ModuleNotBookedAlert", () => {
       </ModulePortalProvider>,
     );
     expect(
-      screen.getByText(/Ihre Schule nutzt das Elternportal zurzeit nicht./),
+      screen.getByText(/Deine Schule nutzt das Elternportal zurzeit nicht./),
     ).toBeInTheDocument();
   });
 
@@ -36,7 +36,7 @@ describe("ModuleNotBookedAlert", () => {
       </ModulePortalProvider>,
     );
     expect(
-      screen.getByText(/Ihre Schule nutzt moto schule zurzeit nicht./),
+      screen.getByText(/Deine Schule nutzt moto schule zurzeit nicht./),
     ).toBeInTheDocument();
   });
 });

@@ -197,7 +197,7 @@ describe("CompanionPicker search", () => {
 
     expect(
       await screen.findByText(
-        "Die Kindersuche ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Kindersuche ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText("Kein Kind gefunden.")).not.toBeInTheDocument();

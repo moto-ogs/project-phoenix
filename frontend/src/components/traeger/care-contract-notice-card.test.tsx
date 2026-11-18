@@ -553,7 +553,7 @@ describe("RejectReasonModal", () => {
   it.each([
     [
       "letterhead_missing",
-      "Im Briefkopf fehlt der Absender. Tragen Sie ihn unter „Briefkopf und Vorlagen“ ein.",
+      "Im Briefkopf fehlt der Absender. Trage ihn unter „Briefkopf und Vorlagen“ ein.",
     ],
     [
       "missing_student",
@@ -603,7 +603,7 @@ describe("RejectReasonModal", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        `${explanation} Schicken Sie den Eltern die Mitteilung unten per Brief.`,
+        `${explanation} Schicke den Eltern die Mitteilung unten per Brief.`,
       ),
     ).toBeInTheDocument();
     expect(

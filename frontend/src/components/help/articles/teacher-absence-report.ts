@@ -17,26 +17,26 @@ export function teacherAbsenceReportTopic(): HelpTopic {
     icon: "ShieldAlert",
     requirements: ["Die Rolle `Schulverwaltung`."],
     steps: [
-      "Öffnen Sie die `Klassenansicht`.",
-      "Wählen Sie unter `Ganze Schule` die Zahl `Fehlen ohne Meldung`.",
-      "Suchen Sie das Kind in der Liste.",
-      "Wählen Sie neben dem Namen `Meldung eintragen`.",
-      "Wählen Sie `Krank` oder `Entschuldigt`.",
+      "Öffne die `Klassenansicht`.",
+      "Wähle unter `Ganze Schule` die Zahl `Fehlen ohne Meldung`.",
+      "Suche das Kind in der Liste.",
+      "Wähle neben dem Namen `Meldung eintragen`.",
+      "Wähle `Krank` oder `Entschuldigt`.",
     ],
     result:
       "Das Kind steht nicht mehr unter `Fehlen ohne Meldung`. Die Lehrkraft und die OGS sehen den Status für heute.",
     notes: [
       "Die Meldung gilt nur für heute.",
-      "Jede Meldung steht mit Ihrem Namen im Änderungsverlauf des Kindes.",
-      "Falsch eingetragen? Öffnen Sie die Liste `Krank` oder `Entschuldigt`. Wählen Sie neben dem Kind `Zurücknehmen`. Das Kind steht dann wieder unter `Fehlen ohne Meldung`.",
+      "Jede Meldung steht mit deinem Namen im Änderungsverlauf des Kindes.",
+      "Falsch eingetragen? Öffne die Liste `Krank` oder `Entschuldigt`. Wähle neben dem Kind `Zurücknehmen`. Das Kind steht dann wieder unter `Fehlen ohne Meldung`.",
     ],
     differences: [
-      "Kein `Meldung eintragen` neben dem Namen? Dann haben Sie nicht die Rolle `Schulverwaltung`, oder der Tag ist nicht heute.",
-      "Kinder mit `Keine Betreuung` stehen nur in dieser Liste, wenn Ihre Schule Kinder ohne OGS-Platz als eigene Kinder führt. Einträge der Klassenliste stehen hier nicht.",
+      "Kein `Meldung eintragen` neben dem Namen? Dann hast du nicht die Rolle `Schulverwaltung`, oder der Tag ist nicht heute.",
+      "Kinder mit `Keine Betreuung` stehen nur in dieser Liste, wenn deine Schule Kinder ohne OGS-Platz als eigene Kinder führt. Einträge der Klassenliste stehen hier nicht.",
     ],
     troubleshootingDetails: [
-      "moto sagt, für das Kind steht heute schon etwas? Dann hat die OGS zum Beispiel eine frühere Abholung eingetragen. Es wurde nichts gespeichert. Sprechen Sie mit der OGS.",
-      "`Zurücknehmen` fehlt? Sie können nur Meldungen zurücknehmen, die die Schulverwaltung eingetragen hat. Eine Krankmeldung der Eltern oder der OGS ändert die OGS.",
+      "moto sagt, für das Kind steht heute schon etwas? Dann hat die OGS zum Beispiel eine frühere Abholung eingetragen. Es wurde nichts gespeichert. Sprich mit der OGS.",
+      "`Zurücknehmen` fehlt? Du kannst nur Meldungen zurücknehmen, die die Schulverwaltung eingetragen hat. Eine Krankmeldung der Eltern oder der OGS ändert die OGS.",
     ],
     related: [
       HELP_TOPICS.teacherClassDay,

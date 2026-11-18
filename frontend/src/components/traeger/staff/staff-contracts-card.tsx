@@ -432,7 +432,7 @@ export function StaffContractsCard({
       {record.unsyncedSchools.length > 0 ? (
         <Alert
           type="warning"
-          message={`Gespeichert, aber noch nicht bei ${record.unsyncedSchools.join(", ")} angekommen. Bis dahin rechnet die Schule mit dem alten Soll. Speichern Sie später eine Änderung, dann holt moto es nach.`}
+          message={`Gespeichert, aber noch nicht bei ${record.unsyncedSchools.join(", ")} angekommen. Bis dahin rechnet die Schule mit dem alten Soll. Speichere später eine Änderung, dann holt moto es nach.`}
         />
       ) : null}
       {record.contracts.length === 0 ? (

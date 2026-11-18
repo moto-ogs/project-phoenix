@@ -354,11 +354,11 @@ function TraegerComparisonContent() {
       title="Standortvergleich"
       info={
         <>
-          Hier vergleichen Sie Ihre Schulen über einen Zeitraum. moto zählt die
+          Hier vergleichst du deine Schulen über einen Zeitraum. moto zählt die
           Wochentage im Zeitraum. „Ø“ ist der Durchschnitt je Tag. Unter den
           Schulen stehen der Schnitt der Schulen und alle Schulen zusammen. Eine
           Schule ohne Zahl hat „–“, etwa ohne Platzgrenze oder ohne Check-in.
-          Mit „Herunterladen“ bekommen Sie die Tabelle mit den gewählten Schulen
+          Mit „Herunterladen“ bekommst du die Tabelle mit den gewählten Schulen
           und Kennzahlen als PDF, Excel oder CSV.
         </>
       }
@@ -407,7 +407,7 @@ function TraegerComparisonContent() {
           ? {
               title: "Noch keine Schulen",
               description:
-                "Sobald das moto-Team Ihrem Träger Schulen zuordnet, können Sie sie hier vergleichen.",
+                "Sobald das moto-Team deinem Träger Schulen zuordnet, kannst du sie hier vergleichen.",
               icon: <School className="h-12 w-12" aria-hidden="true" />,
             }
           : null
@@ -537,7 +537,7 @@ function TraegerComparisonContent() {
           <EmptyState
             variant="compact"
             title="Keine Zahlen im Zeitraum"
-            description="Wählen Sie eine andere Kennzahl, einen anderen Zeitraum oder andere Schulen."
+            description="Wähle eine andere Kennzahl, einen anderen Zeitraum oder andere Schulen."
           />
         ) : (
           <ComparisonChart
@@ -580,7 +580,7 @@ function TraegerComparisonContent() {
         emptyState={
           <EmptyState
             title="Keine Schule im Vergleich"
-            description="Sobald Ihrem Träger Schulen zugeordnet sind, stehen sie hier."
+            description="Sobald deinem Träger Schulen zugeordnet sind, stehen sie hier."
           />
         }
       />

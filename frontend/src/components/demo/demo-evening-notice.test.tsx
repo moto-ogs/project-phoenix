@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setTestClock } from "~/test/clock";
 import { DemoEveningRow, isOutsideSchoolDay } from "./demo-evening-notice";
 
-const TITLE = "Der Demo-Tag läuft zu Ihrer Uhrzeit";
+const TITLE = "Der Demo-Tag läuft zu deiner Uhrzeit";
 
 // The notice opens by itself only after a settle delay (SETTLE_MS in
 // demo-weekend-notice.tsx). Fake timers skip that wait; shouldAdvanceTime keeps
@@ -101,7 +101,7 @@ describe("DemoEveningRow", () => {
 
     expect(
       await screen.findByText(
-        "Deshalb hat Ihr Kind heute ungewohnte Abholzeiten.",
+        "Deshalb hat dein Kind heute ungewohnte Abholzeiten.",
         {},
         { timeout: 4000 },
       ),

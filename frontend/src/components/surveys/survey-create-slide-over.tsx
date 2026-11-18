@@ -36,8 +36,7 @@ import { SurveyEditorFields } from "./survey-editor-fields";
 
 const logger = createLogger({ component: "SurveyCreate" });
 
-export const SURVEY_FORM_CHECK_MESSAGE =
-  "Bitte prüfen Sie die markierten Angaben.";
+export const SURVEY_FORM_CHECK_MESSAGE = "Bitte prüfe die markierten Angaben.";
 
 export function SurveyCreateSlideOver({
   onClose,

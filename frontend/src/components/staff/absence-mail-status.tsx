@@ -107,10 +107,7 @@ export function AbsenceDecisionMail({
     <MailLine
       label={question ? "Mail zur Rückfrage" : "Mail zur Entscheidung"}
       badge={<MailOutcomeBadge outcome={outcome} />}
-      note={undeliveredMailNote(
-        outcome,
-        "Sagen Sie der Person direkt Bescheid.",
-      )}
+      note={undeliveredMailNote(outcome, "Sage der Person direkt Bescheid.")}
     />
   );
 }
@@ -140,10 +137,7 @@ export function AbsenceRequestMails({
     <MailLine
       label="Mail an die Leitung"
       badge={<MailOutcomeBadges counts={counts} envelope />}
-      note={undeliveredMailsNote(
-        counts,
-        "Sagen Sie der Leitung direkt Bescheid.",
-      )}
+      note={undeliveredMailsNote(counts, "Sage der Leitung direkt Bescheid.")}
     />
   );
 }

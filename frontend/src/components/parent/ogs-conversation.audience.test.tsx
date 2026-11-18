@@ -95,7 +95,7 @@ describe("OgsConversation readers and audience", () => {
     render(<OgsConversation studentId="42" />);
 
     const lines = await screen.findAllByText(
-      "Lesen können: Sie und alle Mitarbeitenden der OGS.",
+      "Lesen können: du und alle Mitarbeitenden der OGS.",
     );
     expect(lines).toHaveLength(2);
     // Without the school's offer and without a leadership conversation there
@@ -126,7 +126,7 @@ describe("OgsConversation readers and audience", () => {
     ).toBeInTheDocument();
     expect(
       screen.getAllByText(
-        "Lesen können: Sie und die Leitung: Swantje M., Tom K.",
+        "Lesen können: du und die Leitung: Swantje M., Tom K.",
       ),
     ).toHaveLength(2);
     expect(mockGetConversation).toHaveBeenLastCalledWith("42", "leadership");
@@ -204,7 +204,7 @@ describe("OgsConversation without a leadership left", () => {
     ).toBeInTheDocument();
     expect(
       screen.getAllByText(
-        "Zurzeit liest niemand aus der Leitung mit. Bitte schreiben Sie an das ganze OGS-Team.",
+        "Zurzeit liest niemand aus der Leitung mit. Bitte schreibe an das ganze OGS-Team.",
       ).length,
     ).toBeGreaterThan(0);
     expect(screen.queryByLabelText("Nachricht")).not.toBeInTheDocument();
@@ -233,7 +233,7 @@ describe("OgsConversation leadership not offered", () => {
     expect(
       (
         await screen.findAllByText(
-          "Nachrichten nur an die Leitung sind hier zurzeit nicht möglich. Bitte schreiben Sie an das ganze OGS-Team.",
+          "Nachrichten nur an die Leitung sind hier zurzeit nicht möglich. Bitte schreibe an das ganze OGS-Team.",
         )
       ).length,
     ).toBeGreaterThan(0);

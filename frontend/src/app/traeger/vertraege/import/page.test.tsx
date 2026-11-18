@@ -235,7 +235,7 @@ describe("Vertragsimport", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Ordnen Sie alle Pflichtfelder zu. Dann zeigt moto die Zeilen.",
+        "Ordne alle Pflichtfelder zu. Dann zeigt moto die Zeilen.",
       ),
     ).toBeInTheDocument();
     // Anker: the mapping is on screen, so the preview could show.
@@ -352,7 +352,7 @@ describe("Vertragsimport", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Haben Sie die Adressen? Dann tragen Sie sie in die Datei ein. Laden Sie die Datei danach noch einmal.",
+        "Hast du die Adressen? Dann trage sie in die Datei ein. Lade die Datei danach noch einmal.",
       ),
     ).toBeInTheDocument();
     // A warning, not a block: every ready row is taken over.
@@ -385,7 +385,7 @@ describe("Vertragsimport", () => {
     await screen.findByText("4 Verträge übernommen");
     expect(
       screen.getByText(
-        /2 Verträge ohne Mail-Adresse: Diesen Familien geben Sie die Rechnungen auf Papier\./,
+        /2 Verträge ohne Mail-Adresse: Diesen Familien gibst du die Rechnungen auf Papier\./,
       ),
     ).toBeInTheDocument();
   });
@@ -400,7 +400,7 @@ describe("Vertragsimport", () => {
     expect(screen.getByText("1 Vertrag ohne Mail-Adresse")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Hat Ihre Datei eine Spalte mit Mail-Adressen? Ordnen Sie sie oben bei „E-Mail der Eltern“ zu.",
+        "Hat deine Datei eine Spalte mit Mail-Adressen? Ordne sie oben bei „E-Mail der Eltern“ zu.",
       ),
     ).toBeInTheDocument();
   });

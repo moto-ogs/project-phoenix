@@ -100,7 +100,7 @@ function holidaysDescription(
     ? `für „${window.schoolYearName}“`
     : "in den nächsten zwölf Monaten";
   const state = data ? ` in ${data.federalStateName}` : "";
-  return `Nur zur Information: die gesetzlichen Feiertage${state} ${scope}. moto richtet sie nach dem Bundesland der Schule. Stimmt das Bundesland nicht, wenden Sie sich an das moto-Team.`;
+  return `Nur zur Information: die gesetzlichen Feiertage${state} ${scope}. moto richtet sie nach dem Bundesland der Schule. Stimmt das Bundesland nicht, wende dich an das moto-Team.`;
 }
 
 export function SchoolHolidaysList({

@@ -555,7 +555,7 @@ describe("Feriengruppe vor ihrer Woche", () => {
     expect(holidayGuestGroupHint(week, "2026-11-11", 0)).toEqual({
       label: "Feriengruppe 04.–08.01.2027",
       message:
-        "3 Feriengäste kommen am 04.01. in die Gruppe. Bis zum 04.01. steht die Gruppe nicht unter „Gruppen“. Raum und Gruppenleitung können Sie schon jetzt festlegen.",
+        "3 Feriengäste kommen am 04.01. in die Gruppe. Bis zum 04.01. steht die Gruppe nicht unter „Gruppen“. Raum und Gruppenleitung kannst du schon jetzt festlegen.",
     });
   });
 
@@ -563,12 +563,12 @@ describe("Feriengruppe vor ihrer Woche", () => {
     expect(
       holidayGuestGroupHint({ ...week, guests: 1 }, "2026-11-11", 12).message,
     ).toBe(
-      "1 Feriengast kommt am 04.01. in die Gruppe. Raum und Gruppenleitung können Sie schon jetzt festlegen.",
+      "1 Feriengast kommt am 04.01. in die Gruppe. Raum und Gruppenleitung kannst du schon jetzt festlegen.",
     );
     expect(
       holidayGuestGroupHint({ ...week, guests: 0 }, "2026-11-11", 0).message,
     ).toBe(
-      "Noch sind keine Feriengäste angemeldet. Bis zum 04.01. steht die Gruppe nicht unter „Gruppen“. Raum und Gruppenleitung können Sie schon jetzt festlegen.",
+      "Noch sind keine Feriengäste angemeldet. Bis zum 04.01. steht die Gruppe nicht unter „Gruppen“. Raum und Gruppenleitung kannst du schon jetzt festlegen.",
     );
   });
 

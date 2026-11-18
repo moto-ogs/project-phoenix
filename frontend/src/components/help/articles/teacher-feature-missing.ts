@@ -13,22 +13,22 @@ export function teacherFeatureMissingTopic(): HelpTopic {
     audience: "teacher",
     icon: "EyeSlash",
     steps: [
-      "Prüfen Sie, welcher Bereich genau fehlt.",
-      "Schreiben Sie der OGS, wenn Sie ihn brauchen.",
+      "Prüfe, welcher Bereich genau fehlt.",
+      "Schreibe der OGS, wenn du ihn brauchst.",
     ],
-    result: "Die OGS kann den Bereich für Ihre Schule einschalten.",
+    result: "Die OGS kann den Bereich für deine Schule einschalten.",
     notes: [
       "moto blendet einen Bereich aus, statt ihn zu sperren. Ein fehlender Eintrag ist kein Fehler.",
-      "moto schule zeigt bewusst wenig: Ihre Klassen und Ihre eigenen Aufsichten.",
+      "moto schule zeigt bewusst wenig: deine Klassen und deine eigenen Aufsichten.",
     ],
     differences: [
-      "Fehlt `Nachrichten`? Dann nutzt Ihre OGS den Team-Chat nicht.",
+      "Fehlt `Nachrichten`? Dann nutzt deine OGS den Team-Chat nicht.",
       "Fehlt `Ankunft heute ändern`? Dann hat die OGS das Eintragen nicht freigegeben.",
       "Fehlt `Hinweis für die OGS`? Auch das muss die OGS erst freigeben.",
       "Abhol- und Notfallkontakte gibt es nur in einer laufenden Aufsicht.",
     ],
     troubleshootingDetails: [
-      "Sie brauchen Stammdaten oder Kontaktdaten? Die zeigt moto schule nicht. Fragen Sie im OGS-Team nach.",
+      "Du brauchst Stammdaten oder Kontaktdaten? Die zeigt moto schule nicht. Frage im OGS-Team nach.",
     ],
     related: [
       HELP_TOPICS.teacherMessages,

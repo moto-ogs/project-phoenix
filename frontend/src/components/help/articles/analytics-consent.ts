@@ -11,7 +11,7 @@ export function analyticsConsentTopic(): HelpTopic {
     title: "Nutzungsanalyse erlauben oder ablehnen",
     question: "Darf moto zählen, wie ich die App nutze?",
     summary:
-      "Das entscheiden nur Sie. Wenn Sie ablehnen, können Sie moto genauso nutzen.",
+      "Das entscheidest nur du. Wenn du ablehnst, kannst du moto genauso nutzen.",
     group: "einstieg",
     // Das Träger-Portal (#4649) erfasst nichts und fragt deshalb nicht.
     audience: ["caregiver", "lead", "parent", "teacher"],
@@ -21,38 +21,38 @@ export function analyticsConsentTopic(): HelpTopic {
       {
         title: "Nach der Anmeldung",
         description:
-          "moto fragt einmal, ob es zählen darf, welche Seiten und Schaltflächen Sie nutzen. Namen und Eingaben sieht moto dabei nicht.",
-        steps: ["Wählen Sie `Erlauben` oder `Ablehnen`."],
+          "moto fragt einmal, ob es zählen darf, welche Seiten und Schaltfläche nutzen. Namen und Eingaben sieht moto dabei nicht.",
+        steps: ["Wähle `Erlauben` oder `Ablehnen`."],
       },
       {
         title: "Später ändern im OGS-Portal",
         steps: [
-          "Öffnen Sie oben rechts Ihr `Profil`.",
-          "Gehen Sie zu `Nutzungsanalyse`.",
-          "Schalten Sie `Nutzungsanalyse erlauben` ein oder aus.",
+          "Öffne oben rechts dein `Profil`.",
+          "Gehe zu `Nutzungsanalyse`.",
+          "Schalte `Nutzungsanalyse erlauben` ein oder aus.",
         ],
       },
       {
         title: "Später ändern in der Eltern-App",
         steps: [
-          "Tippen Sie unten auf `Mehr` und dann auf `Einstellungen`.",
-          "Schalten Sie bei `Nutzungsanalyse` den Schalter ein oder aus.",
+          "Tippe unten auf `Mehr` und dann auf `Einstellungen`.",
+          "Schalte bei `Nutzungsanalyse` den Schalter ein oder aus.",
         ],
       },
       {
         title: "Später ändern in moto schule",
         steps: [
-          "Öffnen Sie `Einstellungen`.",
-          "Schalten Sie bei `Nutzungsanalyse` den Schalter ein oder aus.",
+          "Öffne `Einstellungen`.",
+          "Schalte bei `Nutzungsanalyse` den Schalter ein oder aus.",
         ],
       },
     ],
     result:
-      "Ihre Wahl gilt für Ihr Konto, in jeder Schule. Schalten Sie aus, endet die Zählung sofort.",
+      "Deine Wahl gilt für dein Konto, in jeder Schule. Schalte aus, endet die Zählung sofort.",
     notes: [
-      "Ihre Schule kann die Nutzungsanalyse für alle ausschalten. Dann fragt moto Sie nicht. Ihre Wahl gilt wieder, sobald die Schule einschaltet.",
-      "Im OGS-Portal gilt Ihre Wahl auch für Aufzeichnungen, wenn Ihre Schule sie erlaubt. Texte, Eingaben und Bilder sind darin unkenntlich.",
-      "Sie haben die Frage über das Kreuz oben rechts geschlossen? Dann zählt moto nichts. moto fragt beim nächsten Öffnen noch einmal.",
+      "Deine Schule kann die Nutzungsanalyse für alle ausschalten. Dann fragt moto dich nicht. Deine Wahl gilt wieder, sobald die Schule einschaltet.",
+      "Im OGS-Portal gilt deine Wahl auch für Aufzeichnungen, wenn deine Schule sie erlaubt. Texte, Eingaben und Bilder sind darin unkenntlich.",
+      "Du hast die Frage über das Kreuz oben rechts geschlossen? Dann zählt moto nichts. moto fragt beim nächsten Öffnen noch einmal.",
     ],
     differences: [
       "Am Computer steht `Einstellungen` in der Eltern-App in der Navigation statt hinter `Mehr`.",

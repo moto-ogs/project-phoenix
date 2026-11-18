@@ -66,16 +66,14 @@ const WRONG_PORTAL_COPY = {
   parents: {
     // Kurz halten: das Ziel steht schon auf dem Link daneben, sonst
     // quetscht sich die Meldung im Kartenlayout.
-    redirecting: "Dieses Konto ist ein Elternkonto. Sie werden weitergeleitet.",
+    redirecting: "Dieses Konto ist ein Elternkonto. Du wirst weitergeleitet.",
     manual:
-      "Dieses Konto ist ein Elternkonto. Bitte melden Sie sich im Elternportal an.",
+      "Dieses Konto ist ein Elternkonto. Bitte melde dich im Elternportal an.",
     action: "Jetzt zum Elternportal",
   },
   school: {
-    redirecting:
-      "Dieses Konto gehört zu moto schule. Sie werden weitergeleitet.",
-    manual:
-      "Dieses Konto gehört zu moto schule. Bitte melden Sie sich dort an.",
+    redirecting: "Dieses Konto gehört zu moto schule. Du wirst weitergeleitet.",
+    manual: "Dieses Konto gehört zu moto schule. Bitte melde dich dort an.",
     action: "Jetzt zu moto schule",
   },
 } as const;
@@ -242,7 +240,7 @@ export default function HomePage() {
       subtitle={
         isSmartRedirecting || isCheckingAuth
           ? undefined
-          : "Melden Sie sich mit Ihrem Konto an."
+          : "Melde dich mit deinem Konto an."
       }
       variant="tenant"
       showMotoAttribution={hasTenantLoginLogo}
@@ -270,20 +268,20 @@ export default function HomePage() {
             // had a session as the page opened; after a sign-in here it has
             // long answered and shown the form.
             isCheckingAuth
-              ? "Sie sind schon angemeldet"
+              ? "Du bist schon angemeldet"
               : "Anmeldung erfolgreich"
           }
           description={
             opensSchoolPortal
               ? "moto öffnet jetzt moto schule …"
-              : "moto öffnet jetzt Ihre Startseite …"
+              : "moto öffnet jetzt deine Startseite …"
           }
         />
       ) : isCheckingAuth ? (
         <AuthProgress
           state="checking"
           title="Einen Moment bitte"
-          description="moto prüft Ihre Anmeldung."
+          description="moto prüft deine Anmeldung."
         />
       ) : mfaStep ? (
         <MFAChallengeForm

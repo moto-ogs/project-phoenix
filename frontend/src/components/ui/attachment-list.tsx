@@ -122,7 +122,7 @@ export function AttachmentList({
                     </a>
                   </ActionHint>
                 ) : null}
-                <ActionHint text="Speichert die Datei auf Ihrem Gerät.">
+                <ActionHint text="Speichert die Datei auf deinem Gerät.">
                   <a
                     href={downloadHref}
                     download={attachment.filename}

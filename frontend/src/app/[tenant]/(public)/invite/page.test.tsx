@@ -206,9 +206,7 @@ describe("InvitePage", () => {
     render(<InvitePage />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Nehmen Sie die Einladung an/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Nimm die Einladung an/)).toBeInTheDocument();
     });
 
     expect(screen.getByText("Konto einrichten")).toBeInTheDocument();

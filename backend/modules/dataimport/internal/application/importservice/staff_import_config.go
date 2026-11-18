@@ -495,7 +495,7 @@ func normalizeStaffDate(value *string, field, label string, errs *[]importModels
 	if err != nil {
 		*errs = append(*errs, importModels.ValidationError{
 			Field:    field,
-			Message:  fmt.Sprintf("Ungültiges Datumsformat für '%s'. Bitte verwenden Sie JJJJ-MM-TT, TT.MM.JJJJ oder TT.MM.JJ.", label),
+			Message:  fmt.Sprintf("Ungültiges Datumsformat für '%s'. Bitte verwende JJJJ-MM-TT, TT.MM.JJJJ oder TT.MM.JJ.", label),
 			Code:     "invalid_date_format",
 			Severity: importModels.ErrorSeverityError,
 		})
@@ -510,7 +510,7 @@ func normalizeStaffBirthday(row *importModels.StaffImportRow, now time.Time) []i
 	var errs []importModels.ValidationError
 	if row.Birthday != "" {
 		if _, err := parseSupportedDate(row.Birthday, now); err != nil {
-			message := "Ungültiges Datumsformat für 'Geburtstag'. Bitte verwenden Sie JJJJ-MM-TT, TT.MM.JJJJ oder TT.MM.JJ."
+			message := "Ungültiges Datumsformat für 'Geburtstag'. Bitte verwende JJJJ-MM-TT, TT.MM.JJJJ oder TT.MM.JJ."
 			if errors.Is(err, errFutureBirthday) {
 				message = "Ungültiges Geburtsdatum. Geburtstage in der Zukunft sind nicht erlaubt."
 			}
@@ -656,7 +656,7 @@ func (c *StaffImportConfig) unresolvedStaffRole(name string) []importModels.Vali
 		ActualValue: name,
 	}
 	if len(suggestions) > 0 {
-		verr.Message = fmt.Sprintf("Rolle '%s' nicht gefunden. Meinten Sie: %s?", name, strings.Join(suggestions, ", "))
+		verr.Message = fmt.Sprintf("Rolle '%s' nicht gefunden. Meintest du: %s?", name, strings.Join(suggestions, ", "))
 		verr.Suggestions = suggestions
 		verr.AutoFix = &importModels.AutoFix{
 			Action:      "replace",

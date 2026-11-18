@@ -356,7 +356,7 @@ export function SetupChecklist<K extends string>({
                               tooltip={
                                 step.done
                                   ? "Startet die Tour zu diesem Schritt noch einmal."
-                                  : "Startet eine Tour, die Sie Schritt für Schritt hinführt."
+                                  : "Startet eine Tour, die dich Schritt für Schritt hinführt."
                               }
                             >
                               {step.done ? "Noch einmal zeigen" : "Zeig es mir"}
@@ -424,13 +424,13 @@ export function SetupChecklist<K extends string>({
             size="compact"
             disabled={busy}
             onClick={onDismiss}
-            tooltip="Blendet die Checkliste für Sie aus. moto fragt vorher nach."
+            tooltip="Blendet die Checkliste für dich aus. moto fragt vorher nach."
           >
             Nicht mehr anzeigen
           </Button>
         )}
         <p className="px-2 pt-1 pb-1 text-xs text-gray-500">
-          Die Anleitungen zu allen Schritten finden Sie jederzeit unter „Hilfe“.
+          Die Anleitungen zu allen Schritten findest du jederzeit unter „Hilfe“.
         </p>
       </footer>
     </section>
@@ -517,8 +517,8 @@ export function SchoolSetupChecklist({
             {/* Ein Eintrag hakt einen Schritt ab: Jetzt kommen die übrigen
                 Daten, nicht „fertig“. */}
             <p className="text-sm text-gray-700">
-              Die ersten Einträge stehen. Legen Sie jetzt die übrigen Daten
-              Ihrer OGS an. Die Anleitungen zeigen, wie es geht.
+              Die ersten Einträge stehen. Lege jetzt die übrigen Daten deiner
+              OGS an. Die Anleitungen zeigen, wie es geht.
             </p>
           </div>
           <TopicList

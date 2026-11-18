@@ -10,7 +10,7 @@ import (
 
 // letterIntro is the opening line of an Elternbrief mail. The body follows it,
 // then the acknowledgement notice for recipients who can use the parent portal.
-const letterIntro = "die folgende Mitteilung ist ein Elternbrief. Den vollständigen Text finden Sie unten."
+const letterIntro = "die folgende Mitteilung ist ein Elternbrief. Den vollständigen Text findest du unten."
 
 const (
 	reachabilityOK       = "ok"
@@ -511,7 +511,7 @@ func (s *service) remindUnacknowledged(ctx context.Context, a *StaffParentAnnoun
 		return 0, nil
 	}
 
-	intro := "für Ihr Kind fehlt noch die Bestätigung dieses Elternbriefs. Sie können ihn im Eltern-Portal öffnen und dort bestätigen. Es genügt, wenn eine sorgeberechtigte Person pro Kind bestätigt."
+	intro := "für dein Kind fehlt noch die Bestätigung dieses Elternbriefs. Du kannst ihn im Eltern-Portal öffnen und dort bestätigen. Es genügt, wenn eine sorgeberechtigte Person pro Kind bestätigt."
 	emailed, err := s.enqueueReminderEmails(ctx, a, recipients, letterReminderKicker, intro, s.letterPortalURL(a.ID))
 	if err != nil {
 		return 0, err

@@ -185,7 +185,7 @@ func TestTeamFeedOfATeacherHoldingAnotherGroupAndThePreference(t *testing.T) {
 		ActorAccountID: &actor.accountID,
 	}))
 	assert.ElementsMatch(t, []feedEntry{
-		{Type: "group_staffing_changed", Title: "Ausfall in Ihrer Gruppe", Body: "Anna Feed ist am Fr. 14.06. nicht da.", DeepLink: "/vertretung?d=2030-06-14&block=" + int64String(ownBlock)},
+		{Type: "group_staffing_changed", Title: "Ausfall in deiner Gruppe", Body: "Anna Feed ist am Fr. 14.06. nicht da.", DeepLink: "/vertretung?d=2030-06-14&block=" + int64String(ownBlock)},
 		{Type: "team_member_absent", Title: "Dienstplan geändert", Body: "Anna Feed ist am Fr. 14.06. doch da.", DeepLink: "/tagesplan?d=2030-06-14"},
 	}, f.entries(t, teacher), "the absence as the teacher does not swallow the return as the team")
 	assert.Equal(t, 1, f.typedPushes(t, teacher, "team_member_absent"))

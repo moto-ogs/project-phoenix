@@ -52,7 +52,7 @@ export function SepaMandateStatusCard({
         failed
           ? "Der Stand des Mandats konnte nicht geladen werden."
           : inForce && !inForce.creditorCurrent
-            ? "Das Mandat gilt für Ihre frühere Gläubiger-ID. Bis ein neues da ist, bekommt die Familie eine Rechnung zum Überweisen."
+            ? "Das Mandat gilt für deine frühere Gläubiger-ID. Bis ein neues da ist, bekommt die Familie eine Rechnung zum Überweisen."
             : inForce
               ? `Mandatsreferenz ${inForce.reference} · Konto ${inForce.ibanMasked}`
               : "Ohne Mandat bekommt die Familie eine Rechnung zum Überweisen."
@@ -66,7 +66,7 @@ export function SepaMandateStatusCard({
           tooltip={
             inForce
               ? "Öffnet die Mandatsseite mit Verlauf und Widerruf."
-              : "Öffnet die Mandatsseite, auf der Sie das Mandat erfassen."
+              : "Öffnet die Mandatsseite, auf der du das Mandat erfasst."
           }
         >
           {inForce ? "Mandat ansehen" : "Mandat erfassen"}

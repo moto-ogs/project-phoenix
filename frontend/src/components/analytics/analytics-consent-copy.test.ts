@@ -14,19 +14,19 @@ vi.mock("next-intl", () => ({
 describe("analytics consent copy", () => {
   it("names the account scope and the place where the answer changes", () => {
     expect(TENANT_ANALYTICS_CONSENT_COPY.promptChangeLater).toBe(
-      "Ihre Wahl gilt für Ihr Konto. Sie können sie jederzeit unter „Profil“ ändern.",
+      "Deine Wahl gilt für dein Konto. Du kannst sie jederzeit unter „Profil“ ändern.",
     );
     expect(SCHOOL_ANALYTICS_CONSENT_COPY.promptChangeLater).toBe(
-      "Ihre Wahl gilt für Ihr Konto. Sie können sie jederzeit unter „Einstellungen“ ändern.",
+      "Deine Wahl gilt für dein Konto. Du kannst sie jederzeit unter „Einstellungen“ ändern.",
     );
   });
 
   it("names recordings only in the OGS portal, before and while they run", () => {
     expect(TENANT_ANALYTICS_CONSENT_COPY.recordingPossible).toMatch(
-      /gilt Ihre Wahl auch dafür/,
+      /gilt deine Wahl auch dafür/,
     );
     expect(TENANT_ANALYTICS_CONSENT_COPY.recordingActive).toMatch(
-      /Ihre Schule hat zusätzlich Aufzeichnungen erlaubt/,
+      /Deine Schule hat zusätzlich Aufzeichnungen erlaubt/,
     );
     expect(SCHOOL_ANALYTICS_CONSENT_COPY.recordingPossible).toBe("");
     expect(SCHOOL_ANALYTICS_CONSENT_COPY.recordingActive).toBe("");

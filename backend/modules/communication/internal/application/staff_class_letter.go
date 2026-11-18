@@ -93,7 +93,7 @@ func classLetterMailIntro(a *StaffParentAnnouncement, schoolName, intro string) 
 		from += ", " + schoolName
 	}
 	if intro == "" {
-		intro = "Den vollständigen Inhalt finden Sie im Eltern-Portal."
+		intro = "Den vollständigen Inhalt findest du im Eltern-Portal."
 	}
 	runes := []rune(intro)
 	return from + ". " + strings.ToUpper(string(runes[0])) + string(runes[1:])

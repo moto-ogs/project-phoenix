@@ -116,7 +116,7 @@ export function TraegerRequiredDetailsNotice() {
                 href={traegerPath(page.path)}
                 variant="surface"
                 size="compact"
-                tooltip="Öffnet die Seite, auf der Sie die Angaben eintragen."
+                tooltip="Öffnet die Seite, auf der du die Angaben einträgst."
               >
                 {page.label}
               </ButtonLink>

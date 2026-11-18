@@ -86,10 +86,10 @@ export function FamilyDebtorNumberConflictDialog({
 }>) {
   const multiple = (conflict?.families.length ?? 0) > 1;
   const description = multiple
-    ? `Für diese Familien sind andere Nummern gemerkt: ${conflict?.families.map((family) => `${familyKeyLabel(family.familyEmail)}: ${family.familyNumber}`).join("; ")}. Bitte wählen Sie für alle genannten Familien.`
+    ? `Für diese Familien sind andere Nummern gemerkt: ${conflict?.families.map((family) => `${familyKeyLabel(family.familyEmail)}: ${family.familyNumber}`).join("; ")}. Bitte wähle für alle genannten Familien.`
     : conflict?.familyEmail
-      ? `Für die Familie ${familyKeyLabel(conflict.familyEmail)} ist schon eine andere Nummer gemerkt. Bitte wählen Sie.`
-      : "Für diese Familie ist schon eine andere Nummer gemerkt. Bitte wählen Sie.";
+      ? `Für die Familie ${familyKeyLabel(conflict.familyEmail)} ist schon eine andere Nummer gemerkt. Bitte wähle.`
+      : "Für diese Familie ist schon eine andere Nummer gemerkt. Bitte wähle.";
   return (
     <ChoiceModal
       isOpen={conflict !== null}

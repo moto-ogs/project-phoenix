@@ -321,7 +321,7 @@ describe("useActivityForm", () => {
       const error = result.current.validateForm();
 
       expect(error).toEqual({
-        message: "Bitte geben Sie einen Namen für die Aktivität ein.",
+        message: "Bitte gib einen Namen für die Aktivität ein.",
         field: "name",
       });
     });
@@ -337,7 +337,7 @@ describe("useActivityForm", () => {
       const error = result.current.validateForm();
 
       expect(error).toEqual({
-        message: "Bitte geben Sie einen Namen für die Aktivität ein.",
+        message: "Bitte gib einen Namen für die Aktivität ein.",
         field: "name",
       });
     });
@@ -353,7 +353,7 @@ describe("useActivityForm", () => {
       const error = result.current.validateForm();
 
       expect(error).toEqual({
-        message: "Bitte wählen Sie eine Kategorie.",
+        message: "Bitte wähle eine Kategorie.",
         field: "category_id",
       });
     });
@@ -465,7 +465,7 @@ describe("useActivityForm", () => {
       // Initially invalid (empty name)
       let error = result.current.validateForm();
       expect(error).toEqual({
-        message: "Bitte geben Sie einen Namen für die Aktivität ein.",
+        message: "Bitte gib einen Namen für die Aktivität ein.",
         field: "name",
       });
 
@@ -481,7 +481,7 @@ describe("useActivityForm", () => {
       // Now category is missing
       error = result.current.validateForm();
       expect(error).toEqual({
-        message: "Bitte wählen Sie eine Kategorie.",
+        message: "Bitte wähle eine Kategorie.",
         field: "category_id",
       });
 

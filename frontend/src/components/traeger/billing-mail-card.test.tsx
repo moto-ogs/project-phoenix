@@ -98,7 +98,7 @@ describe("BillingMailCard", () => {
     expect(screen.getByText("Gesendet")).toBeInTheDocument();
     expect(screen.getByText("am 09.09.2026, 10:01 Uhr")).toBeInTheDocument();
     expect(
-      screen.getByText(/Kam eine Mail nicht an, senden Sie sie erneut/),
+      screen.getByText(/Kam eine Mail nicht an, sende sie erneut/),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Senden" })).toBeInTheDocument();
     expect(
@@ -161,7 +161,7 @@ describe("BillingMailCard", () => {
 
       expect(await screen.findByText(label)).toBeInTheDocument();
       expect(screen.queryByText("Gesendet")).toBeNull();
-      expect(screen.getByText(/drucken Sie das Schreiben/)).toBeInTheDocument();
+      expect(screen.getByText(/drucke das Schreiben/)).toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: "Erneut senden" }),
       ).toBeNull();
@@ -232,7 +232,7 @@ describe("BillingMailCard", () => {
 
     expect(await screen.findByText("Wird gesendet")).toBeInTheDocument();
     expect(
-      screen.getByText("Keine Mail-Adresse: Bitte drucken Sie das Schreiben."),
+      screen.getByText("Keine Mail-Adresse: Bitte drucke das Schreiben."),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Alle Schreiben drucken" }),
@@ -283,7 +283,7 @@ describe("BillingMailCard", () => {
     );
     expect(
       await screen.findByText(
-        "1 Mail wird jetzt gesendet. 1 Familie hat keine Mail-Adresse: Bitte drucken Sie ihr Schreiben.",
+        "1 Mail wird jetzt gesendet. 1 Familie hat keine Mail-Adresse: Bitte drucke ihr Schreiben.",
       ),
     ).toBeInTheDocument();
     await waitFor(() =>

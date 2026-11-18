@@ -7,7 +7,7 @@ export const CHILD_QUOTA_DEFAULT_BUNDLE_SIZE = 50;
 const CHILD_QUOTA_MAX = 1000;
 const WHOLE_NUMBER_RE = /^\d+$/;
 
-const WHOLE_NUMBER_ERROR = `Bitte geben Sie eine ganze Zahl von 1 bis ${CHILD_QUOTA_MAX} ein.`;
+const WHOLE_NUMBER_ERROR = `Bitte gib eine ganze Zahl von 1 bis ${CHILD_QUOTA_MAX} ein.`;
 
 export type ChildQuotaDraftResult =
   | {

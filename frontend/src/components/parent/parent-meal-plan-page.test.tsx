@@ -648,7 +648,7 @@ describe("ParentMealPlanPage", () => {
     const childSelect = screen.getByRole("combobox", { name: "Kind" });
     expect(
       await screen.findByText(
-        "Bis wann Sie ändern können, steht bei jedem Tag.",
+        "Bis wann du ändern kannst, steht bei jedem Tag.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Montag und Mittwoch")).toBeInTheDocument();
@@ -656,7 +656,7 @@ describe("ParentMealPlanPage", () => {
     expect(screen.getByText("mit Salat")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Eine bestätigte Krankmeldung oder Abwesenheit bis zur Frist eines Tages meldet Ihr Kind vom Essen ab. Danach bleibt das Essen bestellt.",
+        "Eine bestätigte Krankmeldung oder Abwesenheit bis zur Frist eines Tages meldet dein Kind vom Essen ab. Danach bleibt das Essen bestellt.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -673,7 +673,7 @@ describe("ParentMealPlanPage", () => {
     );
     expect(
       screen.getByText(
-        "Speichern oder abbrechen, bevor Sie ein anderes Kind oder eine andere Woche wählen.",
+        "Speichern oder abbrechen, bevor du ein anderes Kind oder eine andere Woche wählst.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("checkbox", { name: "Dienstag" }));
@@ -708,7 +708,7 @@ describe("ParentMealPlanPage", () => {
     );
     expect(
       screen.getByText(
-        "Speichern oder abbrechen, bevor Sie ein anderes Kind oder eine andere Woche wählen.",
+        "Speichern oder abbrechen, bevor du ein anderes Kind oder eine andere Woche wählst.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Anmelden" }));
@@ -917,12 +917,12 @@ describe("ParentMealPlanPage", () => {
 
     expect(
       await screen.findByText(
-        "Bis wann Sie ändern können, steht bei jedem Tag.",
+        "Bis wann du ändern kannst, steht bei jedem Tag.",
       ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Eine bestätigte Krankmeldung oder Abwesenheit bis zur Frist eines Tages meldet Ihr Kind vom Essen ab. Danach bleibt das Essen bestellt.",
+        "Eine bestätigte Krankmeldung oder Abwesenheit bis zur Frist eines Tages meldet dein Kind vom Essen ab. Danach bleibt das Essen bestellt.",
       ),
     ).toBeInTheDocument();
   });
@@ -1030,7 +1030,7 @@ describe("ParentMealPlanPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByText(
-        "Für Ihre Schule ist der Speiseplan derzeit nicht freigeschaltet.",
+        "Für deine Schule ist der Speiseplan derzeit nicht freigeschaltet.",
       ),
     ).not.toBeInTheDocument();
 
@@ -1052,7 +1052,7 @@ describe("ParentMealPlanPage", () => {
 
     expect(
       await screen.findByText(
-        "Für Ihre Schule ist der Speiseplan derzeit nicht freigeschaltet.",
+        "Für deine Schule ist der Speiseplan derzeit nicht freigeschaltet.",
       ),
     ).toBeInTheDocument();
   });
@@ -1085,8 +1085,8 @@ describe("ParentMealPlanPage", () => {
   });
 
   const SUBTITLE_WITH_REGISTRATION =
-    "Hier sehen Sie, wann Ihr Kind mitisst und was es gibt.";
-  const SUBTITLE_MEALS_ONLY = "Hier sehen Sie, was es zu essen gibt.";
+    "Hier siehst du, wann dein Kind mitisst und was es gibt.";
+  const SUBTITLE_MEALS_ONLY = "Hier siehst du, was es zu essen gibt.";
   const MEAL_PLAN_ENTRY = {
     date: "2026-08-12",
     position: 0,
@@ -1203,7 +1203,7 @@ describe("ParentMealPlanPage", () => {
     view = render(<ParentMealPlanPage key="disabled-school" />);
     expect(
       await screen.findByText(
-        "Für Ihre Schule ist der Speiseplan derzeit nicht freigeschaltet.",
+        "Für deine Schule ist der Speiseplan derzeit nicht freigeschaltet.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(SUBTITLE_MEALS_ONLY)).not.toBeInTheDocument();
@@ -1525,7 +1525,7 @@ describe("ParentMealPlanPage", () => {
 
       expect(
         await screen.findByText(
-          "Eine bestätigte Krankmeldung oder Abwesenheit bis zum Essenstag meldet Ihr Kind vom Essen ab.",
+          "Eine bestätigte Krankmeldung oder Abwesenheit bis zum Essenstag meldet dein Kind vom Essen ab.",
         ),
       ).toBeInTheDocument();
     });
@@ -1552,7 +1552,7 @@ describe("ParentMealPlanPage", () => {
       const dialog = await screen.findByRole("dialog");
       expect(
         within(dialog).getByText(
-          "Mia Muster wird an allen Tagen dieser Woche abgemeldet, die Sie noch ändern können.",
+          "Mia Muster wird an allen Tagen dieser Woche abgemeldet, die du noch ändern kannst.",
         ),
       ).toBeInTheDocument();
       fireEvent.click(within(dialog).getByRole("button", { name: "Abmelden" }));
@@ -1683,7 +1683,7 @@ describe("ParentMealPlanPage", () => {
       render(<ParentMealPlanPage />);
 
       expect(
-        await screen.findByText("Abgemeldet, weil Ihr Kind fehlt"),
+        await screen.findByText("Abgemeldet, weil dein Kind fehlt"),
       ).toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: "Woche anmelden" }),
@@ -1814,7 +1814,7 @@ describe("ParentMealPlanPage", () => {
       render(<ParentMealPlanPage />);
 
       expect(
-        await screen.findByText("Abgemeldet, weil Ihr Kind fehlt"),
+        await screen.findByText("Abgemeldet, weil dein Kind fehlt"),
       ).toBeInTheDocument();
       expect(
         screen.getByText("An diesem Tag ist die OGS zu"),

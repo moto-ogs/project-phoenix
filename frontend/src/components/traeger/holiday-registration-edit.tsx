@@ -548,7 +548,7 @@ export function ContactsEditor(props: HolidayRegistrationEditorProps) {
       {(fieldError) => (
         <>
           <p className="text-sm text-gray-700">
-            Einen Eintrag entfernen Sie, indem Sie alle seine Felder leeren.
+            Einen Eintrag entfernst du, indem du alle seine Felder leerst.
           </p>
           <ContactFields
             title="Notfallkontakte"
@@ -710,7 +710,7 @@ export function ChildEditor(
       {(fieldError) => (
         <>
           <p className="text-sm text-gray-700">
-            Die Wochen ändern Sie mit „Umbuchen“. Gesundheitsangaben lassen sich
+            Die Wochen änderst du mit „Umbuchen“. Gesundheitsangaben lassen sich
             hier nicht ändern.
           </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

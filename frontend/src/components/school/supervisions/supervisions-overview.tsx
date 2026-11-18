@@ -120,8 +120,8 @@ export function SupervisionsOverview({
 
   const description =
     instances.length === 0
-      ? `Ihr Tag am ${formatDate(today)}.`
-      : `Ihre Aufsichten am ${formatDate(today)}. Sie sehen nur die Termine, für die Sie im Betreuungsplan eingeteilt sind.`;
+      ? `Dein Tag am ${formatDate(today)}.`
+      : `Deine Aufsichten am ${formatDate(today)}. Du siehst nur die Termine, für die du im Betreuungsplan eingeteilt bist.`;
 
   return (
     <SectionCard
@@ -130,8 +130,8 @@ export function SupervisionsOverview({
     >
       {instances.length === 0 ? (
         <EmptyState
-          title="Heute keine Aufsicht für Sie"
-          description="Für heute sind Sie im Betreuungsplan keiner Aufsicht zugeteilt. Die Einteilung macht das OGS-Büro."
+          title="Heute keine Aufsicht für dich"
+          description="Für heute bist du im Betreuungsplan keiner Aufsicht zugeteilt. Die Einteilung macht das OGS-Büro."
         />
       ) : (
         <div className="space-y-4">
@@ -157,7 +157,7 @@ export function SupervisionsOverview({
 
           <FramedList
             header={
-              <h2 className="text-sm font-semibold text-gray-900">Ihr Tag</h2>
+              <h2 className="text-sm font-semibold text-gray-900">Dein Tag</h2>
             }
           >
             {instances.map((instance) => (

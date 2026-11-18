@@ -190,7 +190,7 @@ describe("Gruppennachricht: Objektseite", () => {
     );
     expect(
       screen.getByText(
-        "Eine Mail kam nicht an. Welche Adresse betroffen ist, sehen Sie beim Kind unter „Erziehungsberechtigte“.",
+        "Eine Mail kam nicht an. Welche Adresse betroffen ist, siehst du beim Kind unter „Erziehungsberechtigte“.",
       ),
     ).toBeInTheDocument();
   });

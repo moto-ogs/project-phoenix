@@ -147,7 +147,7 @@ describe("PasswordResetModal", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "Bitte prüfen Sie Ihr Postfach",
+        name: "Bitte prüfe dein Postfach",
       }),
     ).toBeInTheDocument();
     // The answer is the same for every address (#7213): no claim of a mail.
@@ -235,11 +235,11 @@ describe("PasswordResetModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /Link senden/i }));
 
     expect(await screen.findByTestId("alert-error")).toHaveTextContent(
-      "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+      "Bitte gib eine gültige E-Mail-Adresse ein.",
     );
     expect(screen.getByTestId("input-reset-email")).toHaveAttribute(
       "error",
-      "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+      "Bitte gib eine gültige E-Mail-Adresse ein.",
     );
     expect(mockRequestPasswordReset).not.toHaveBeenCalled();
   });
@@ -275,7 +275,7 @@ describe("PasswordResetModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /Link senden/i }));
 
     expect(await screen.findByTestId("alert-warning")).toHaveTextContent(
-      "Für diese Adresse wurde schon mehrmals ein Link angefordert. Einen neuen Link können Sie in 01:00 anfordern.",
+      "Für diese Adresse wurde schon mehrmals ein Link angefordert. Einen neuen Link kannst du in 01:00 anfordern.",
     );
     // A wait is no failure of the dialog: no error alert.
     expect(screen.queryByTestId("alert-error")).not.toBeInTheDocument();
@@ -301,7 +301,7 @@ describe("PasswordResetModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /Link senden/i }));
     expect(
       await screen.findByRole("heading", {
-        name: "Bitte prüfen Sie Ihr Postfach",
+        name: "Bitte prüfe dein Postfach",
       }),
     ).toBeInTheDocument();
     expect(mockRequestPasswordReset).toHaveBeenLastCalledWith(

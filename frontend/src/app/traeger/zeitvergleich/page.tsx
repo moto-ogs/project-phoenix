@@ -504,7 +504,7 @@ function TraegerZeitvergleichContent() {
       title="Länger als gebucht"
       info={
         <>
-          Hier sehen Sie, wie oft Kinder länger da waren als gebucht. moto
+          Hier siehst du, wie oft Kinder länger da waren als gebucht. moto
           vergleicht dafür die Zeiten im Vertrag mit dem Ein- und Auschecken.
           Ohne Vertrag gilt der Betreuungsplan der Schule. Mehr als 15 Minuten
           früher oder später zählt. Ein Tag ohne Buchung zählt ganz.

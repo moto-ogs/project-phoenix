@@ -131,7 +131,7 @@ export default function TraegerDocumentsPage() {
   return (
     <TenantPage
       title="Dokumente"
-      info="Hier teilen Sie vorhandene Dokumente und Listen mit Eltern und Schulen, zum Beispiel eine Hausordnung oder einen Elternbrief. Ein hochgeladenes Dokument sieht noch niemand. Erst wenn Sie es freigeben, finden Eltern es in der Eltern-App und die OGS-Leitung in moto unter „Dateien“. Hochladen, freigeben und löschen darf, wer die Rolle „Dokumente“ hat."
+      info="Hier teilst du vorhandene Dokumente und Listen mit Eltern und Schulen, zum Beispiel eine Hausordnung oder einen Elternbrief. Ein hochgeladenes Dokument sieht noch niemand. Erst wenn du es freigibst, finden Eltern es in der Eltern-App und die OGS-Leitung in moto unter „Dateien“. Hochladen, freigeben und löschen darf, wer die Rolle „Dokumente“ hat."
       stats={
         documents.length > 0 ? (
           <span className="flex flex-wrap items-center gap-2">
@@ -204,7 +204,7 @@ export default function TraegerDocumentsPage() {
             title="Noch kein Dokument."
             description={
               canManage
-                ? "Laden Sie oben ein Dokument hoch. Danach geben Sie es für Eltern oder Schulen frei."
+                ? "Lade oben ein Dokument hoch. Danach gibst du es für Eltern oder Schulen frei."
                 : "Sobald jemand mit der Rolle „Dokumente“ ein Dokument hochlädt, steht es hier."
             }
           />

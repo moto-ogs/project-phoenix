@@ -18,12 +18,6 @@ type PrivateUploads struct {
 	keys    FileKeys
 }
 
-// PrivateUploadsBackend resolves the same uploads root as other document flows.
-// It holds no file keys: it writes plaintext and does not open sealed objects.
-func PrivateUploadsBackend() (*PrivateUploads, error) {
-	return SealedPrivateUploadsBackend(FileKeys{})
-}
-
 // SealedPrivateUploadsBackend resolves the uploads root with the rings the
 // process may seal and open objects with.
 func SealedPrivateUploadsBackend(keys FileKeys) (*PrivateUploads, error) {

@@ -87,7 +87,7 @@ export function StaffExportButton({
           )
         : Promise.resolve(),
     validate: () =>
-      range?.from && range.to ? null : "Bitte wählen Sie einen Zeitraum aus.",
+      range?.from && range.to ? null : "Bitte wähle einen Zeitraum aus.",
     errorObject: "den Zeitnachweis",
     onDone: () => setOpen(false),
     logName: "time_tracking",

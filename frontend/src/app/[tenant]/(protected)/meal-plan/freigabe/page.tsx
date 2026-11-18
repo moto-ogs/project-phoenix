@@ -251,7 +251,7 @@ export default function MealBillingReleasePage() {
       back
       backHref="/meal-plan"
       backLabel="Zurück zum Speiseplan"
-      info="Prüfen Sie am Monatsende, wer gegessen hat. Ein Essen zählt, wenn das Kind angemeldet und da war. Abgemeldete Tage, Ferien und Feiertage zählen nicht. Mit der Freigabe rechnet der Träger die Mensa ab."
+      info="Prüfe am Monatsende, wer gegessen hat. Ein Essen zählt, wenn das Kind angemeldet und da war. Abgemeldete Tage, Ferien und Feiertage zählen nicht. Mit der Freigabe rechnet der Träger die Mensa ab."
       searchSlot={
         months ? (
           <div className="w-full sm:max-w-xs">
@@ -307,7 +307,7 @@ export default function MealBillingReleasePage() {
           isConfirmLoading={releasing}
           loadingText="Wird freigegeben …"
           isConfirmDisabled={Boolean(month?.current) && reason.trim() === ""}
-          confirmDisabledReason="Geben Sie zuerst einen Grund ein."
+          confirmDisabledReason="Gib zuerst einen Grund ein."
           confirmTooltip={
             month?.current
               ? "Gibt den Monat sofort erneut frei, der Träger sieht die Änderung."
@@ -335,7 +335,7 @@ export default function MealBillingReleasePage() {
               {month.childCount} {month.childCount === 1 ? "Kind" : "Kinder"}{" "}
               mit {month.mealCount} Essen. Danach rechnet der Träger den Monat
               ab. Zurücknehmen lässt sich die Freigabe nicht. Ändert sich später
-              eine Anwesenheit, geben Sie den Monat erneut frei.
+              eine Anwesenheit, gib den Monat erneut frei.
             </p>
           ) : null}
         </ConfirmationModal>
@@ -348,19 +348,19 @@ export default function MealBillingReleasePage() {
           {month.status === "running" ? (
             <Alert
               type="info"
-              message={`Der Monat läuft noch. Sie können ihn ab dem ${nextMonthStart(month.month)} freigeben.`}
+              message={`Der Monat läuft noch. Du kannst ihn ab dem ${nextMonthStart(month.month)} freigeben.`}
             />
           ) : null}
           {month.status === "open" ? (
             <Alert
               type="warning"
-              message="Bitte prüfen Sie die Tage, an denen Kinder nicht da waren. Fehlt eine Anwesenheit, tragen Sie sie zuerst nach. Danach geben Sie den Monat frei."
+              message="Bitte prüfe die Tage, an denen Kinder nicht da waren. Fehlt eine Anwesenheit, trage sie zuerst nach. Danach gibst du den Monat frei."
             />
           ) : null}
           {month.current ? (
             <Alert
               type="warning"
-              message={`Seit der Freigabe hat sich die Anwesenheit geändert: jetzt ${month.current.mealCount} Essen statt ${month.mealCount}. Prüfen Sie die Liste und geben Sie den Monat erneut frei.`}
+              message={`Seit der Freigabe hat sich die Anwesenheit geändert: jetzt ${month.current.mealCount} Essen statt ${month.mealCount}. Prüfe die Liste und gib den Monat erneut frei.`}
             />
           ) : null}
           {showsRelease && month.releasedAt ? (
@@ -400,17 +400,16 @@ export default function MealBillingReleasePage() {
           {month.status === "released" ? (
             <SectionCard
               title="Zahlen korrigieren"
-              description="Eine Freigabe lässt sich nicht zurücknehmen. So korrigieren Sie einen freigegebenen Monat:"
+              description="Eine Freigabe lässt sich nicht zurücknehmen. So korrigierst du einen freigegebenen Monat:"
             >
               <ol
                 aria-label="Schritte zur Korrektur"
                 className="list-decimal space-y-2 pl-5 text-sm text-gray-700 marker:font-semibold marker:text-gray-500"
               >
-                <li>Tragen Sie die fehlende oder falsche Anwesenheit nach.</li>
+                <li>Trage die fehlende oder falsche Anwesenheit nach.</li>
                 <li>
                   Oben steht dann „Seit der Freigabe hat sich die Anwesenheit
-                  geändert“. Wählen Sie „Erneut freigeben“ und nennen Sie den
-                  Grund.
+                  geändert“. Wähle „Erneut freigeben“ und nenne den Grund.
                 </li>
                 <li>
                   Hat der Träger den Monat schon abgerechnet, sieht er die neue

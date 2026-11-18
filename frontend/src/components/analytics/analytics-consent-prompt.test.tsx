@@ -92,7 +92,7 @@ describe("AnalyticsConsentPrompt", () => {
       name: "Nutzungsanalyse erlauben?",
     });
     expect(dialog).toHaveTextContent(
-      "Wenn Sie ablehnen, können Sie moto genauso nutzen.",
+      "Wenn du ablehnst, kannst du moto genauso nutzen.",
     );
     expect(dialog).toHaveTextContent(
       "Namen und Eingaben sieht moto dabei nicht.",
@@ -104,9 +104,9 @@ describe("AnalyticsConsentPrompt", () => {
     expect(document.activeElement).not.toBe(refuse);
     // The consent covers recordings a school may allow later (#4901).
     expect(dialog).toHaveTextContent(
-      "Erlaubt Ihre Schule Aufzeichnungen, gilt Ihre Wahl auch dafür.",
+      "Erlaubt deine Schule Aufzeichnungen, gilt deine Wahl auch dafür.",
     );
-    expect(dialog).toHaveTextContent("Ihre Wahl gilt für Ihr Konto.");
+    expect(dialog).toHaveTextContent("Deine Wahl gilt für dein Konto.");
     expect(lastConsent()).toBe(false);
   });
 
@@ -116,7 +116,7 @@ describe("AnalyticsConsentPrompt", () => {
 
     expect(
       await screen.findByText(
-        /Ihre Schule hat zusätzlich Aufzeichnungen erlaubt/,
+        /Deine Schule hat zusätzlich Aufzeichnungen erlaubt/,
       ),
     ).toBeInTheDocument();
   });

@@ -7,7 +7,8 @@ import (
 	"image"
 	_ "image/jpeg" // the login image may be JPEG
 	_ "image/png"
-	"os"
+	"io"
+	"path/filepath"
 	"strings"
 
 	_ "golang.org/x/image/webp" // the login image may be WebP
@@ -45,7 +46,7 @@ type ParentLetterArrivals interface {
 // owners a root has built: the People Directory, the school structure, Care
 // Plan's weekly plans, the access log and the signed-in account of the
 // request.
-func BuildParentLetters(students ParentLetterStudents, groups schoolstructure.Query, schedules CarePlanSchedules, audit AuditOwner, tokens TokenAdapter) communicationCompose.ParentLetterPorts {
+func BuildParentLetters(students ParentLetterStudents, groups schoolstructure.Query, schedules CarePlanSchedules, audit AuditOwner, tokens TokenAdapter, uploads objects.UploadFiles) communicationCompose.ParentLetterPorts {
 	return communicationCompose.ParentLetterPorts{
 		Sources: communicationPorts.ParentLetterSources{
 			Students: parentLetterStudents{source: students},
@@ -53,7 +54,7 @@ func BuildParentLetters(students ParentLetterStudents, groups schoolstructure.Qu
 			Pickups:  parentLetterPickups{source: schedules.Pickups},
 			Arrivals: parentLetterArrivals{source: schedules.Arrivals},
 		},
-		Logos: parentLetterLogos{},
+		Logos: parentLetterLogos{uploads: uploads},
 		Access: parentLetterAccessLog{writer: audit.Persistence.DataAccessLog, actor: func(ctx context.Context) int64 {
 			claims, _ := tokens.Claims(ctx)
 			return claims.AccountID
@@ -64,7 +65,7 @@ func BuildParentLetters(students ParentLetterStudents, groups schoolstructure.Qu
 // parentLetterLogos reads the school's uploaded logo for the printed letters.
 // Only uploads under the login image folder are read; anything else, and
 // any file the renderer cannot embed, prints no logo.
-type parentLetterLogos struct{}
+type parentLetterLogos struct{ uploads objects.UploadFiles }
 
 const (
 	letterLogoPublicDir = "public"
@@ -72,17 +73,18 @@ const (
 	letterLogoMaxBytes  = 2 << 20
 )
 
-func (parentLetterLogos) ParentLetterLogo(_ context.Context, logoURL string) []byte {
-	path, err := objects.ResolveStoredPath(letterLogoPublicDir, strings.TrimSpace(logoURL), letterLogoPrefix)
+func (l parentLetterLogos) ParentLetterLogo(ctx context.Context, logoURL string) []byte {
+	path, err := l.uploads.StoredPath(letterLogoPublicDir, strings.TrimSpace(logoURL), letterLogoPrefix)
 	if err != nil {
 		return nil
 	}
-	info, err := os.Stat(path)
-	if err != nil || info.IsDir() || info.Size() > letterLogoMaxBytes {
+	content, _, err := l.uploads.Open(ctx, filepath.Dir(path), filepath.Base(path))
+	if err != nil {
 		return nil
 	}
-	data, err := os.ReadFile(path) //nolint:gosec // the path is resolved inside the upload folder
-	if err != nil {
+	defer func() { _ = content.Close() }()
+	data, err := io.ReadAll(io.LimitReader(content, letterLogoMaxBytes+1))
+	if err != nil || len(data) > letterLogoMaxBytes {
 		return nil
 	}
 	return letterLogoImage(data)

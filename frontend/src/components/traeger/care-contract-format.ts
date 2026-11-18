@@ -165,11 +165,11 @@ export const TEMPLATE_ISSUE_REASONS: Partial<Record<TemplateIssue, string>> = {
   recipient_missing:
     "Die Schule ergänzt die E-Mail-Adresse in der Anmeldung. Danach versucht moto es erneut. Bis dahin entsteht kein Vertrag.",
   acceptance_missing:
-    "Die Eltern haben in der Anmeldung den Vertragsbedingungen nicht zugestimmt. Es entsteht kein Vertrag. Zum Senden stellen Sie die Schule auf „Später verschicken“.",
+    "Die Eltern haben in der Anmeldung den Vertragsbedingungen nicht zugestimmt. Es entsteht kein Vertrag. Zum Senden stellst du die Schule auf „Später verschicken“.",
   acceptance_missing_renewal:
-    "Das Kind wurde wieder angemeldet. Die Eltern haben den Bedingungen für den neuen Zeitraum nicht zugestimmt, bevor die Schule angenommen hat. Es entsteht kein Vertrag. Zum Senden stellen Sie die Schule auf „Später verschicken“.",
+    "Das Kind wurde wieder angemeldet. Die Eltern haben den Bedingungen für den neuen Zeitraum nicht zugestimmt, bevor die Schule angenommen hat. Es entsteht kein Vertrag. Zum Senden stellst du die Schule auf „Später verschicken“.",
   acceptance_changed:
-    "Die Eltern haben anderen Bedingungen zugestimmt als den aktuellen. Es entsteht kein Vertrag. Zum Senden stellen Sie die Schule auf „Später verschicken“.",
+    "Die Eltern haben anderen Bedingungen zugestimmt als den aktuellen. Es entsteht kein Vertrag. Zum Senden stellst du die Schule auf „Später verschicken“.",
 };
 
 export const NOTICE_TO_LABELS: Record<ContractNoticeTo, string> = {
@@ -181,7 +181,7 @@ export const NOTICE_TO_LABELS: Record<ContractNoticeTo, string> = {
 export const SEND_SKIP_LABELS: Record<SendSkipReason, string> = {
   recipient_missing: "keine E-Mail-Adresse",
   partner_missing:
-    "der Name des Vertragspartners fehlt. Ergänzen Sie den Briefkopf. Oder erstellen Sie den Entwurf mit eingetragenem Vertragspartner neu",
+    "der Name des Vertragspartners fehlt. Ergänze den Briefkopf. Oder erstelle den Entwurf mit eingetragenem Vertragspartner neu",
   mail_pending: "die letzte Mail wird noch gesendet",
   mail_delayed: "die letzte Mail ist verzögert und kommt später an",
   mail_blocked: "eine Mail an diese Adresse würde nicht rausgehen",

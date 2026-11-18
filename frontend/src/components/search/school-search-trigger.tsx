@@ -147,7 +147,7 @@ function SearchLoadFailed({ onShown }: Readonly<{ onShown: () => void }>) {
   const { showMessage } = useApiErrorDisplay();
   useEffect(() => {
     showMessage(
-      "Die Suche konnte nicht geöffnet werden. Bitte versuchen Sie es noch einmal.",
+      "Die Suche konnte nicht geöffnet werden. Bitte versuche es noch einmal.",
     );
     onShown();
   }, [showMessage, onShown]);

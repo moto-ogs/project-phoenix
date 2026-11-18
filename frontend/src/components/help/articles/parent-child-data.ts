@@ -13,7 +13,7 @@ export function parentChildDataTopic(): HelpTopic {
     id: HELP_TOPICS.parentChildData,
     title: "Angaben zu meinem Kind ansehen und ändern",
     question: "Wie ändere ich die Angaben zu meinem Kind?",
-    summary: "Manches ändern Sie selbst. Anderes prüft die OGS zuerst.",
+    summary: "Manches änderst du selbst. Anderes prüft die OGS zuerst.",
     group: "mein-kind",
     audience: "parent",
     icon: "FileText",
@@ -21,34 +21,31 @@ export function parentChildDataTopic(): HelpTopic {
     instructionGroups: [
       {
         title: "Die Angaben öffnen",
-        steps: [
-          "Tippen Sie unten auf `Mein Kind`.",
-          "Wählen Sie den Reiter `Angaben`.",
-        ],
+        steps: ["Tippe unten auf `Mein Kind`.", "Wähle den Reiter `Angaben`."],
       },
       {
         title: "Name, Geburtsdatum oder Klasse ändern",
         steps: [
-          "Gehen Sie zum Abschnitt `Persönliche Angaben`.",
-          "Tippen Sie auf `Änderungen anfragen`.",
-          "Ändern Sie nur die Angaben, die nicht mehr stimmen.",
-          "Tippen Sie auf `Anfrage an OGS senden`.",
+          "Gehe zum Abschnitt `Persönliche Angaben`.",
+          "Tippe auf `Änderungen anfragen`.",
+          "Ändere nur die Angaben, die nicht mehr stimmen.",
+          "Tippe auf `Anfrage an OGS senden`.",
         ],
       },
       {
         title: "Gesundheitshinweise eintragen",
         steps: [
-          "Gehen Sie zum Abschnitt `Gesundheit`.",
-          "Tragen Sie bei `Gesundheitshinweise und Allergien` ein, was wichtig ist.",
+          "Gehe zum Abschnitt `Gesundheit`.",
+          "Trage bei `Gesundheitshinweise und Allergien` ein, was wichtig ist.",
           "Die Eingabe wird automatisch gespeichert.",
         ],
       },
       {
         title: "Foto-Einwilligung widerrufen",
         steps: [
-          "Gehen Sie zum Abschnitt `Einwilligungen und Bestätigungen`.",
-          "Tippen Sie bei `Foto-Einwilligung` auf `Widerrufen`.",
-          "Tippen Sie auf `Jetzt widerrufen`.",
+          "Gehe zum Abschnitt `Einwilligungen und Bestätigungen`.",
+          "Tippe bei `Foto-Einwilligung` auf `Widerrufen`.",
+          "Tippe auf `Jetzt widerrufen`.",
         ],
       },
     ],
@@ -56,16 +53,16 @@ export function parentChildDataTopic(): HelpTopic {
       "Unter dem Feld steht dann `Beantragte Änderung` mit dem neuen Wert und `In Prüfung`. Bis zur Bestätigung gilt der Wert darüber.",
     notes: [
       "Gesundheitshinweise gehen sofort an das Team, ohne Prüfung.",
-      "Sie möchten eine offene Anfrage ändern? Tippen Sie unter `Beantragte Änderung` auf `Anfrage bearbeiten`.",
-      "Nach dem Widerruf löscht moto ein gespeichertes Foto Ihres Kindes.",
-      "Nach dem letzten Betreuungstag löscht moto das Foto und die Foto-Einwilligung in der Nacht danach von selbst. Bis dahin können Sie weiter widerrufen. Neu geben können Sie die Einwilligung dann nicht mehr.",
+      "Du möchtest eine offene Anfrage ändern? Tippe unter `Beantragte Änderung` auf `Anfrage bearbeiten`.",
+      "Nach dem Widerruf löscht moto ein gespeichertes Foto deines Kindes.",
+      "Nach dem letzten Betreuungstag löscht moto das Foto und die Foto-Einwilligung in der Nacht danach von selbst. Bis dahin kannst du weiter widerrufen. Neu geben kannst du die Einwilligung dann nicht mehr.",
     ],
     differences: [
       "Unter einem Feld steht schon `Beantragte Änderung`? Dann wartet diese Änderung noch auf die OGS.",
     ],
     troubleshootingDetails: [
-      "Sie sehen bei `Foto-Einwilligung` kein `Widerrufen` oder haben kein Elternportal? Sagen Sie der OGS Bescheid. Die OGS trägt den Widerruf für Sie ein.",
-      "moto sagt, das Bearbeiten sei deaktiviert? Dann nimmt Ihre OGS keine Änderungen über die App an. Schreiben Sie ihr eine Nachricht.",
+      "Du siehst bei `Foto-Einwilligung` kein `Widerrufen` oder hast kein Elternportal? Sage der OGS Bescheid. Die OGS trägt den Widerruf für dich ein.",
+      "moto sagt, das Bearbeiten sei deaktiviert? Dann nimmt deine OGS keine Änderungen über die App an. Schreibe ihr eine Nachricht.",
     ],
     related: [
       HELP_TOPICS.parentGuardians,

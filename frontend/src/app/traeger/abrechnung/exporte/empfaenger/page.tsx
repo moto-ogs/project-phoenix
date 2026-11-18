@@ -27,7 +27,7 @@ import { traegerPath } from "~/lib/traeger-url";
 const EXPORTS_PATH = "/traeger/abrechnung/exporte";
 
 const INFO =
-  "Hier legen Sie fest, wohin moto Ihre Exporte übergibt. Zum Beispiel geht die Sollstellung an die Kämmerei und die DATEV-Datei an das Steuerbüro. moto legt jede Datei sicher beim Empfänger ab und schreibt in das Exportprotokoll, ob sie angekommen ist. Herunterladen können Sie die Dateien weiterhin.";
+  "Hier legst du fest, wohin moto deine Exporte übergibt. Zum Beispiel geht die Sollstellung an die Kämmerei und die DATEV-Datei an das Steuerbüro. moto legt jede Datei sicher beim Empfänger ab und schreibt in das Exportprotokoll, ob sie angekommen ist. Herunterladen kannst du die Dateien weiterhin.";
 
 export default function TraegerExportRecipientsPage() {
   const {

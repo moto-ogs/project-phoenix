@@ -11,24 +11,24 @@ export function teacherSharedNotesTopic(): HelpTopic {
     title: "Beobachtungen der OGS lesen",
     question: "Was hat die OGS über ein Kind meiner Klasse notiert?",
     summary:
-      "Sie lesen die Notizen, die die OGS für die Schule freigegeben hat.",
+      "Du liest die Notizen, die die OGS für die Schule freigegeben hat.",
     group: "klasse",
     audience: "teacher",
     icon: "FileText",
     steps: [
-      "Öffnen Sie die Liste Ihrer Klasse.",
-      "Wählen Sie beim Kind `Beobachtungen der OGS`.",
-      "Lesen Sie die Notizen. Die neueste steht oben.",
+      "Öffne die Liste deiner Klasse.",
+      "Wähle beim Kind `Beobachtungen der OGS`.",
+      "Lies die Notizen. Die neueste steht oben.",
     ],
     result:
-      "Sie sehen jede Notiz mit Tag und dem Namen der Person aus der OGS, die sie geschrieben hat.",
+      "Du siehst jede Notiz mit Tag und dem Namen der Person aus der OGS, die sie geschrieben hat.",
     notes: [
-      "Sie können die Notizen nur lesen. Ändern oder beantworten können Sie sie nicht.",
+      "Du kannst die Notizen nur lesen. Ändern oder beantworten kannst du sie nicht.",
       "Jeder Abruf wird protokolliert.",
-      "Fragen zu einer Notiz klären Sie direkt mit der OGS, zum Beispiel über `Nachrichten`.",
+      "Fragen zu einer Notiz klärst du direkt mit der OGS, zum Beispiel über `Nachrichten`.",
     ],
     differences: [
-      "Fehlt `Beobachtungen der OGS`? Dann sind Sie der Klasse nicht als Lehrkraft zugewiesen. Die Schulverwaltung sieht die Notizen nicht.",
+      "Fehlt `Beobachtungen der OGS`? Dann bist du der Klasse nicht als Lehrkraft zugewiesen. Die Schulverwaltung sieht die Notizen nicht.",
       "Steht dort `Keine Beobachtungen`? Dann hat die OGS für dieses Kind nichts freigegeben.",
     ],
     troubleshootingDetails: [

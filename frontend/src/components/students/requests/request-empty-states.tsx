@@ -36,7 +36,7 @@ export function RequestEmptyState({
       <SectionCard>
         <EmptyState
           icon={REQUESTS_ICON}
-          title="Sie dürfen Elternanfragen zurzeit nicht entscheiden."
+          title="Du darfst Elternanfragen zurzeit nicht entscheiden."
           description="Die Leitung der OGS kann das erlauben. Der Schalter steht in den Einstellungen im Bereich Elternportal."
         />
       </SectionCard>
@@ -71,8 +71,8 @@ export function NoCaseSelectedState() {
     <SectionCard>
       <EmptyState
         icon={REQUESTS_ICON}
-        title="Wählen Sie links ein Kind."
-        description="Dann sehen Sie hier alle Anfragen dieses Kindes und können entscheiden."
+        title="Wähle links ein Kind."
+        description="Dann siehst du hier alle Anfragen dieses Kindes und kannst entscheiden."
       />
     </SectionCard>
   );

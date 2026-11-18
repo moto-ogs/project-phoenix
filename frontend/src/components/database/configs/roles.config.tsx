@@ -89,7 +89,7 @@ export const rolesConfig = defineEntityConfig<Role>({
             required: true,
             placeholder: "Vorlage wählen",
             helperText:
-              "Die neue Rolle startet mit den Rechten der Vorlage. Danach können Sie die Rechte frei ändern.",
+              "Die neue Rolle startet mit den Rechten der Vorlage. Danach kannst du die Rechte frei ändern.",
             options: ROLE_TEMPLATES.map(({ value, label }) => ({
               value,
               label,
@@ -162,7 +162,7 @@ export const rolesConfig = defineEntityConfig<Role>({
 
   list: {
     title: "Rollen verwalten",
-    description: "Legen Sie fest, wer in moto was darf.",
+    description: "Lege fest, wer in moto was darf.",
     searchPlaceholder: "Rollen durchsuchen…",
 
     // Frontend search configuration
@@ -214,6 +214,6 @@ export const rolesConfig = defineEntityConfig<Role>({
     editModalTitle: "Rolle bearbeiten",
     detailModalTitle: "Rollendetails",
     deleteConfirmation:
-      "Sind Sie sicher, dass Sie diese Rolle löschen möchten? Alle Benutzer mit dieser Rolle verlieren ihre Berechtigungen.",
+      "Bist du sicher, dass du diese Rolle löschen möchtest? Alle Benutzer mit dieser Rolle verlieren ihre Berechtigungen.",
   },
 });

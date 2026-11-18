@@ -143,7 +143,7 @@ function ProfileContent() {
       lastName: formData.lastName,
     });
     setIsEditing(false);
-    toastSuccess("Ihr Profil ist gespeichert.");
+    toastSuccess("Dein Profil ist gespeichert.");
     // Profil und Sitzung laden nach dem Speichern; ein Fehler dabei ist ein
     // Ladefehler, kein Fehler des Speicherns (#6652).
     await profileAfterWrite.refresh({
@@ -170,7 +170,7 @@ function ProfileContent() {
       setIsSaving(false);
       return;
     }
-    toastSuccess("Ihr Profilbild ist gespeichert.");
+    toastSuccess("Dein Profilbild ist gespeichert.");
     await profileAfterWrite.refresh();
   };
 
@@ -224,7 +224,7 @@ function ProfileContent() {
             className="gap-2"
             onClick={() => avatarInputRef.current?.click()}
             disabled={isSaving}
-            tooltip="Ersetzt Ihr Profilbild sofort durch ein Bild von Ihrem Gerät."
+            tooltip="Ersetzt dein Profilbild sofort durch ein Bild von deinem Gerät."
           >
             <Camera className="h-4 w-4" aria-hidden="true" />
             Profilbild ändern
@@ -292,7 +292,7 @@ function ProfileContent() {
                   formErrors.clear();
                   resetFormFromProfile();
                 }}
-                tooltip="Verwirft Ihre Änderungen am Namen."
+                tooltip="Verwirft deine Änderungen am Namen."
               >
                 Abbrechen
               </Button>
@@ -328,7 +328,7 @@ function ProfileContent() {
             variant="outline"
             size="md"
             onClick={() => setShowPasswordModal(true)}
-            tooltip="Öffnet ein Fenster, um Ihr Passwort zu ändern."
+            tooltip="Öffnet ein Fenster, um dein Passwort zu ändern."
           >
             Ändern
           </Button>
@@ -360,7 +360,7 @@ function ProfileContent() {
           onClose={handleClosePasswordModal}
           onSuccess={() => {
             handleClosePasswordModal();
-            toastSuccess("Ihr Passwort ist geändert.");
+            toastSuccess("Dein Passwort ist geändert.");
           }}
         />
       )}

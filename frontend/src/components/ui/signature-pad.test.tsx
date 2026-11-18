@@ -78,7 +78,7 @@ describe("SignaturePad", () => {
 
     expect(onValue).not.toHaveBeenCalled();
     expect(
-      screen.getByText("Bitte unterschreiben Sie im Feld."),
+      screen.getByText("Bitte unterschreibe im Feld."),
     ).toBeInTheDocument();
   });
 
@@ -98,12 +98,12 @@ describe("SignaturePad", () => {
       method: "drawn",
       imagePngBase64: "iVBORw0KGgoAAAANSUhEUg==",
     });
-    expect(screen.getByAltText("Ihre Unterschrift")).toHaveAttribute(
+    expect(screen.getByAltText("Deine Unterschrift")).toHaveAttribute(
       "src",
       PNG_DATA_URL,
     );
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Ihre Unterschrift ist bereit.",
+      "Deine Unterschrift ist bereit.",
     );
   });
 
@@ -136,13 +136,11 @@ describe("SignaturePad", () => {
     render(<Harness onValue={onValue} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Namen tippen" }));
-    const input = screen.getByLabelText("Ihr Name");
+    const input = screen.getByLabelText("Dein Name");
     fireEvent.change(input, { target: { value: "E" } });
     fireEvent.keyDown(input, { key: "Enter" });
     expect(onValue).not.toHaveBeenCalled();
-    expect(
-      screen.getByText("Bitte tippen Sie Ihren Namen."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Bitte tippe deinen Namen.")).toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "  Erika Muster " } });
     expect(context.fillText).toHaveBeenLastCalledWith(
@@ -158,7 +156,7 @@ describe("SignaturePad", () => {
       typedName: "Erika Muster",
     });
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Ihr getippter Name ist bereit.",
+      "Dein getippter Name ist bereit.",
     );
   });
 
@@ -167,14 +165,12 @@ describe("SignaturePad", () => {
     render(<Harness onValue={onValue} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Namen tippen" }));
-    const input = screen.getByLabelText("Ihr Name");
+    const input = screen.getByLabelText("Dein Name");
     fireEvent.change(input, { target: { value: "😀" } });
     fireEvent.keyDown(input, { key: "Enter" });
 
     expect(onValue).not.toHaveBeenCalled();
-    expect(
-      screen.getByText("Bitte tippen Sie Ihren Namen."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Bitte tippe deinen Namen.")).toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "😀A" } });
     fireEvent.keyDown(input, { key: "Enter" });
@@ -186,7 +182,7 @@ describe("SignaturePad", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Neu unterschreiben" }));
-    const nextInput = screen.getByLabelText("Ihr Name");
+    const nextInput = screen.getByLabelText("Dein Name");
     const atLimit = `${"A".repeat(119)}😀`;
     fireEvent.change(nextInput, { target: { value: `${atLimit}B` } });
     expect(nextInput).toHaveValue(atLimit);
@@ -204,7 +200,7 @@ describe("SignaturePad", () => {
 
     const canvas = screen.getByRole("img", { name: "Feld zum Unterschreiben" });
     expect(canvas).toHaveAccessibleDescription(
-      /Unterschreiben Sie mit dem Finger.*Bitte noch einmal\./,
+      /Unterschreibe mit dem Finger.*Bitte noch einmal\./,
     );
   });
 

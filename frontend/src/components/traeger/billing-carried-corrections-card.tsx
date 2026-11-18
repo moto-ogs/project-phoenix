@@ -103,7 +103,7 @@ export function BillingCarriedCorrectionsCard({
       {rows.length > 0 ? (
         <SectionCard
           title="Übernommene Korrekturen"
-          description="Diese Korrekturen stammen aus der stornierten Rechnung und zählen schon in der neuen. Stimmt ein Betrag nicht, ändern Sie ihn im Menü der Zeile."
+          description="Diese Korrekturen stammen aus der stornierten Rechnung und zählen schon in der neuen. Stimmt ein Betrag nicht, änderst du ihn im Menü der Zeile."
         >
           <ResponsiveActionList>
             {rows.map((row) => (
@@ -160,7 +160,7 @@ export function BillingCarriedCorrectionsCard({
             )
             .join(
               " ",
-            )} Eine Gutschrift ist ein eigenes Dokument und wird nicht übernommen. Prüfen Sie, ob die neue Rechnung das berücksichtigen muss.`}
+            )} Eine Gutschrift ist ein eigenes Dokument und wird nicht übernommen. Prüfe, ob die neue Rechnung das berücksichtigen muss.`}
         />
       ) : null}
       <ConfirmDeleteModal

@@ -82,8 +82,8 @@ function GroupOverviewContent() {
       statsLoading={isLoadingGroups}
       info={
         <>
-          „Meine Gruppe“: Sie sind dort als Gruppenleitung eingetragen.
-          „Vertretung“: Sie vertreten die Gruppe gerade.
+          „Meine Gruppe“: Du bist dort als Gruppenleitung eingetragen.
+          „Vertretung“: Du vertrittst die Gruppe gerade.
         </>
       }
       loading={isLoadingGroups || onlyGroup !== undefined}
@@ -116,7 +116,7 @@ function GroupOverviewContent() {
               icon: <MotoConceptIcon concept={groupsConcept} size={48} />,
               title: "Keine Gruppe sichtbar",
               description:
-                "Ihre Leitung kann Sie einer Gruppe als Gruppenleitung zuordnen.",
+                "Deine Leitung kann dich einer Gruppe als Gruppenleitung zuordnen.",
             }
           : null
       }

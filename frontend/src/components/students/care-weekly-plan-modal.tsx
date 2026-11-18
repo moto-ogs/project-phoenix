@@ -150,13 +150,12 @@ function CareWeeklyPlanModalForm({
         <p className="text-sm leading-6 text-gray-600">
           {careDaysSource === "bookings" ? (
             <>
-              Die Betreuungstage kommen aus den Buchungen. Abholzeiten können
-              Sie nur an gebuchten Tagen eintragen.
+              Die Betreuungstage kommen aus den Buchungen. Abholzeiten kannst du
+              nur an gebuchten Tagen eintragen.
             </>
           ) : (
             <>
-              Wählen Sie die Betreuungstage. Ohne eigene Zeit gilt die
-              Klassenzeit.
+              Wähle die Betreuungstage. Ohne eigene Zeit gilt die Klassenzeit.
             </>
           )}
         </p>

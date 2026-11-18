@@ -256,7 +256,7 @@ export default function TraegerNachweisePage() {
   return (
     <TenantPage
       title={billingAreaTitle("nachweise")}
-      info="Hier tragen Sie ein, welche Einkommensstufe ein Kind hat und ob die Ermäßigung für Alleinerziehende gilt. moto speichert nur die Art des Nachweises und das Prüfdatum, kein Dokument und kein Einkommen. Jedes Öffnen dieser Seite steht im Zugriffsprotokoll."
+      info="Hier trägst du ein, welche Einkommensstufe ein Kind hat und ob die Ermäßigung für Alleinerziehende gilt. moto speichert nur die Art des Nachweises und das Prüfdatum, kein Dokument und kein Einkommen. Jedes Öffnen dieser Seite steht im Zugriffsprotokoll."
       stats={
         data && data.contracts.length > 0 ? (
           <TenantPageStats
@@ -332,13 +332,13 @@ export default function TraegerNachweisePage() {
         <EmptyState
           icon={<FileCheck2 className="h-12 w-12" aria-hidden="true" />}
           title="Noch kein Vertrag."
-          description="Nachweise tragen Sie für Kinder mit Betreuungsvertrag ein."
+          description="Nachweise trägst du für Kinder mit Betreuungsvertrag ein."
         />
       ) : null}
       {data && data.contracts.length > 0 && data.levels.length === 0 ? (
         <Alert
           type="info"
-          message="Für Einkommensstufen legen Sie zuerst Stufen unter „Ermäßigungen“ an."
+          message="Für Einkommensstufen legst du zuerst Stufen unter „Ermäßigungen“ an."
           action={
             <ButtonLink
               href={traegerPath("/traeger/abrechnung/ermaessigungen")}
@@ -360,7 +360,7 @@ export default function TraegerNachweisePage() {
           emptyState={
             <EmptyState
               title="Kein Kind passt zur Suche."
-              description="Ändern Sie die Suche."
+              description="Ändere die Suche."
             />
           }
         />

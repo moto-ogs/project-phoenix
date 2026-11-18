@@ -179,7 +179,7 @@ describe("TraegerStaffRecordsPage", () => {
     );
     expect(
       await within(dialog).findByText(
-        "Bitte wählen Sie bei jedem Feld, welcher Wert gilt.",
+        "Bitte wähle bei jedem Feld, welcher Wert gilt.",
       ),
     ).toBeInTheDocument();
     expect(api.linkStaff).not.toHaveBeenCalled();

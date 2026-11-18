@@ -80,7 +80,7 @@ export function useClassHomework({
     if (!api || !draft) return;
     const description = draft.description.trim();
     if (description === "") {
-      formErrors.invalid("Bitte schreiben Sie, was zu tun ist.", {
+      formErrors.invalid("Bitte schreibe, was zu tun ist.", {
         description: "Bitte ausfüllen.",
       });
       return;

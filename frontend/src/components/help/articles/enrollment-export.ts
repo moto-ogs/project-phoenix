@@ -12,23 +12,23 @@ export function enrollmentExportTopic(): HelpTopic {
     audience: "lead",
     icon: "Download",
     steps: [
-      "Öffnen Sie `Anmeldungen` und danach `Überblick`.",
-      "Wählen Sie bei der Phase `Anmeldungen ansehen`.",
-      "Öffnen Sie oben das Menü mit den drei Punkten.",
-      "Wählen Sie unter `Exportieren` `PDF`, `Word` oder `Excel`.",
+      "Öffne `Anmeldungen` und danach `Überblick`.",
+      "Wähle bei der Phase `Anmeldungen ansehen`.",
+      "Öffne oben das Menü mit den drei Punkten.",
+      "Wähle unter `Exportieren` `PDF`, `Word` oder `Excel`.",
     ],
     result: "Die Datei wird erstellt und heruntergeladen.",
     notes: [
       "Oben steht, wie viele Eingänge die Phase hat und wie viele davon offen sind.",
       "Die Seite hat drei Exporte: `Exportieren` im Menü für die Anmeldungen sowie `Klassenliste exportieren` und `Auswertung exportieren` weiter unten.",
-      "`Klassenliste exportieren` gilt für die Klasse, die Sie unter `Klasse für Klassenliste` wählen.",
+      "`Klassenliste exportieren` gilt für die Klasse, die du unter `Klasse für Klassenliste` wählst.",
       "`Auswertung exportieren` bietet PDF und Word `ausführlich` oder als `kompakte Tabelle`.",
     ],
     differences: [
       "Auf dem Handy erscheint nur ein Hinweis. Der Export läuft am Computer.",
     ],
     troubleshootingDetails: [
-      "Brauchen Sie Listen aus dem laufenden Betrieb? Die stehen unter `Exporte` in der `Datenverwaltung`.",
+      "Brauchst du Listen aus dem laufenden Betrieb? Die stehen unter `Exporte` in der `Datenverwaltung`.",
     ],
     related: [
       HELP_TOPICS.enrollments,

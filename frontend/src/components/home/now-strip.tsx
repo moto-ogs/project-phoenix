@@ -233,7 +233,7 @@ export function NowStrip({
                   className="gap-2 whitespace-nowrap max-sm:flex-1"
                   tooltip={
                     action.href === tenantPath("/active-supervisions")
-                      ? "Öffnet Ihre laufende Aufsicht."
+                      ? "Öffnet deine laufende Aufsicht."
                       : STUDENT_SEARCH_LINK_TOOLTIP
                   }
                 >

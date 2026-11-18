@@ -11,27 +11,27 @@ export function teacherDayHintTopic(): HelpTopic {
     title: "Der OGS einen Hinweis für heute geben",
     question: "Wie sage ich der OGS, was sie heute wissen muss?",
     summary:
-      "Sie schreiben einen kurzen Hinweis für Ihre Klasse oder ein Kind.",
+      "Du schreibst einen kurzen Hinweis für deine Klasse oder ein Kind.",
     group: "klasse",
     audience: "teacher",
     icon: "MessageSquareText",
     steps: [
-      "Öffnen Sie die Liste Ihrer Klasse für heute.",
-      "Wählen Sie `Hinweis für die OGS`.",
-      "Wählen Sie bei `Für wen ist der Hinweis?` die ganze Klasse oder ein Kind.",
-      "Schreiben Sie den Hinweis. Er darf bis zu 500 Zeichen lang sein.",
-      "Wählen Sie `Speichern`.",
+      "Öffne die Liste deiner Klasse für heute.",
+      "Wähle `Hinweis für die OGS`.",
+      "Wähle bei `Für wen ist der Hinweis?` die ganze Klasse oder ein Kind.",
+      "Schreibe den Hinweis. Er darf bis zu 500 Zeichen lang sein.",
+      "Wähle `Speichern`.",
     ],
     result:
       "Die OGS sieht den Hinweis sofort am Kind: in der Aufsicht, in der Gruppe und in der Kindersuche. Dort steht `Hinweis der Lehrkraft`.",
     notes: [
       "Der Hinweis gilt nur heute. Morgen ist er aus diesen Ansichten verschwunden.",
-      "Wählen Sie das Kind oder die Klasse noch einmal, um Ihren Hinweis zu ändern.",
-      "Mit `Hinweis löschen` nehmen Sie ihn zurück.",
+      "Wähle das Kind oder die Klasse noch einmal, um deinen Hinweis zu ändern.",
+      "Mit `Hinweis löschen` nimmst du ihn zurück.",
     ],
     differences: [
-      "Fehlt `Hinweis für die OGS`? Dann hat Ihre OGS das nicht freigegeben, oder Sie sehen einen anderen Tag als heute.",
-      "Für Kinder ohne OGS-Betreuung können Sie keinen eigenen Hinweis schreiben.",
+      "Fehlt `Hinweis für die OGS`? Dann hat deine OGS das nicht freigegeben, oder du siehst einen anderen Tag als heute.",
+      "Für Kinder ohne OGS-Betreuung kannst du keinen eigenen Hinweis schreiben.",
     ],
     related: [
       HELP_TOPICS.teacherClassDay,

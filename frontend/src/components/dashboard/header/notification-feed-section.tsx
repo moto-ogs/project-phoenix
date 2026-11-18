@@ -29,7 +29,7 @@ const STAFF_COPY: NotificationFeedCopy = {
   loading: "Hinweise werden geladen.",
   emptyTitle: "Keine Hinweise.",
   emptyDescription:
-    "Hier steht zum Beispiel, wenn einer Ihrer Termine ausfällt.",
+    "Hier steht zum Beispiel, wenn einer deiner Termine ausfällt.",
   unread: "Neu",
   loadMore: "Weitere laden",
   loadingMore: "Weitere Hinweise werden geladen.",

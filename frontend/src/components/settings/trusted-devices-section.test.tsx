@@ -101,7 +101,7 @@ describe("TrustedDevicesSection", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Sie haben aktuell keine vertrauten Geräte/),
+        screen.getByText(/Du hast aktuell keine vertrauten Geräte/),
       ).toBeInTheDocument();
     });
     expect(global.fetch).toHaveBeenCalledWith(
@@ -157,7 +157,7 @@ describe("TrustedDevicesSection", () => {
     });
     expect(mockGetSession).not.toHaveBeenCalled();
     expect(
-      await screen.findByText(/Sie haben aktuell keine vertrauten Geräte/),
+      await screen.findByText(/Du hast aktuell keine vertrauten Geräte/),
     ).toBeInTheDocument();
   });
 
@@ -237,7 +237,7 @@ describe("TrustedDevicesSection", () => {
     expect(screen.queryByText(/boom/)).toBeNull();
     expect(
       screen.queryByText(
-        "Sie haben aktuell keine vertrauten Geräte gespeichert.",
+        "Du hast aktuell keine vertrauten Geräte gespeichert.",
       ),
     ).toBeNull();
   });
@@ -294,7 +294,7 @@ describe("TrustedDevicesSection", () => {
       fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
       expect(
         await screen.findByText(
-          "Sie haben aktuell keine vertrauten Geräte gespeichert.",
+          "Du hast aktuell keine vertrauten Geräte gespeichert.",
         ),
       ).toBeInTheDocument();
       expect(fetchMock).toHaveBeenCalledTimes(4);

@@ -143,14 +143,14 @@ const CONFIRM_DIALOGS: Record<
 > = {
   complete: {
     title: "Termin beenden?",
-    body: "Der laufende Termin wird beendet. Bis zum geplanten Ende, mindestens fünf Minuten lang, können Sie ihn wieder öffnen.",
+    body: "Der laufende Termin wird beendet. Bis zum geplanten Ende, mindestens fünf Minuten lang, kannst du ihn wieder öffnen.",
     confirmText: "Beenden",
     confirmTooltip:
       "Beendet den Termin, bis zum geplanten Ende lässt er sich wieder öffnen.",
   },
   cancel: {
     title: "Termin absagen?",
-    body: "Der Termin wird im Plan als abgesagt markiert. Bis zum Ende des Termins können Sie die Absage zurücknehmen.",
+    body: "Der Termin wird im Plan als abgesagt markiert. Bis zum Ende des Termins kannst du die Absage zurücknehmen.",
     confirmText: "Absagen",
   },
   reopen: {
@@ -1333,7 +1333,7 @@ export function InstanceDetailModal({
           <div className="space-y-3">
             <p className="text-sm leading-relaxed text-gray-600">
               {pendingConfirm === "cancel" && instance?.status === "active"
-                ? "Die laufende Betreuung wird gestoppt und der Termin als abgesagt markiert. Bis zum Ende des Termins können Sie die Absage zurücknehmen."
+                ? "Die laufende Betreuung wird gestoppt und der Termin als abgesagt markiert. Bis zum Ende des Termins kannst du die Absage zurücknehmen."
                 : CONFIRM_DIALOGS[pendingConfirm].body}
             </p>
             {pendingConfirm === "cancel" && (

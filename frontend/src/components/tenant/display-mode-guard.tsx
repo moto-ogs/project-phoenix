@@ -26,7 +26,7 @@ export function DisplayModeGuard({
       <FeatureOffPage
         title={title}
         description="Info-Displays zeigen Anwesenheit auf einem großen Bildschirm im Eingangsbereich."
-        whoCanEnable="Ihre Leitung kann sie in den Einstellungen einschalten."
+        whoCanEnable="Deine Leitung kann sie in den Einstellungen einschalten."
       />
     );
   }

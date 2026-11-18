@@ -198,7 +198,7 @@ function filteredEmptyText(
       ? `Noch kein Abrechnungslauf für ${filterName}.`
       : "Noch kein Abrechnungslauf für diesen Ferienzeitraum.",
     description: canStart
-      ? "Starten Sie ihn oben mit „Lauf starten“. Der Zeitraum ist dort schon gewählt."
+      ? "Starte ihn oben mit „Lauf starten“. Der Zeitraum ist dort schon gewählt."
       : "Einen Lauf gibt es erst, wenn der Ferienzeitraum veröffentlicht ist.",
   };
 }
@@ -300,7 +300,7 @@ function BillingRunsPage() {
   return (
     <TenantPage
       title={billingAreaTitle("laeufe")}
-      info="Hier rechnen Sie die Ferienbetreuung im Voraus ab, nach den bestätigten Buchungen. Ein Lauf erstellt die Rechnungen für einen Ferienzeitraum. Sie prüfen die Vorschau und geben den Lauf dann frei."
+      info="Hier rechnest du die Ferienbetreuung im Voraus ab, nach den bestätigten Buchungen. Ein Lauf erstellt die Rechnungen für einen Ferienzeitraum. Du prüfst die Vorschau und gibst den Lauf dann frei."
       stats={
         shownRuns.length > 0 ? (
           <TenantPageStats

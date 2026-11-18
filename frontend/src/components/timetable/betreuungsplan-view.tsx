@@ -235,7 +235,7 @@ function linkedBulkCancelRange(
 const FILTERED_EMPTY_STATE = {
   title: "Für diese Auswahl ist nichts geplant",
   description:
-    "Stellen Sie die Filter wieder auf „Alle“, um den ganzen Plan zu sehen.",
+    "Stelle die Filter wieder auf „Alle“, um den ganzen Plan zu sehen.",
 };
 type PeriodCoverage = "none" | "partial" | "full";
 
@@ -1164,7 +1164,7 @@ function TimetablesContent() {
       return;
     }
     showConnectMessage(
-      `moto findet für „${template.name}“ kein passendes Angebot. Wählen Sie es selbst: „Bearbeiten“, dann „Personal und Kinder“.`,
+      `moto findet für „${template.name}“ kein passendes Angebot. Wähle es selbst: „Bearbeiten“, dann „Personal und Kinder“.`,
     );
   }, [
     connectTemplateID,
@@ -1453,22 +1453,22 @@ function TimetablesContent() {
       return {
         title: "Diese Woche hat noch keine Termine",
         description: canManageSchedules
-          ? "Einige Tage sind nicht planbar. An den anderen Tagen können Sie Termine planen."
-          : "Für diese Woche ist noch nichts geplant. Geplant wird von den Admins Ihrer Schule.",
+          ? "Einige Tage sind nicht planbar. An den anderen Tagen kannst du Termine planen."
+          : "Für diese Woche ist noch nichts geplant. Geplant wird von den Admins deiner Schule.",
       };
     }
     if (weekPeriodCoverage === "full") {
       return {
         title: "Diese Woche hat noch keine Termine",
         description: canManageSchedules
-          ? "Planen Sie Angebote als Regeltermin oder legen Sie einen einzelnen Termin an."
+          ? "Plane Angebote als Regeltermin oder lege einen einzelnen Termin an."
           : "Für diese Woche ist noch nichts geplant.",
       };
     }
     return {
       title: "Diese Woche hat keinen Planungszeitraum",
       description: canManageSchedules
-        ? "Legen Sie zuerst einen aktiven Planungszeitraum an."
+        ? "Lege zuerst einen aktiven Planungszeitraum an."
         : "Für diese Woche ist noch nichts geplant.",
     };
   }, [
@@ -2100,7 +2100,7 @@ function TimetablesContent() {
           {
             label: `Ausgeblendete Konflikte anzeigen`,
             badge: hiddenConflicts.length,
-            description: "Zeigt die Konflikte, die Sie ausgeblendet haben",
+            description: "Zeigt die Konflikte, die du ausgeblendet hast",
             onClick: () => setHiddenConflictsPanelOpen(true),
           },
         ]
@@ -2269,7 +2269,7 @@ function TimetablesContent() {
             ? (instance) => {
                 if (assignedPeriods.length === 0) {
                   toast.warning(
-                    "Bitte legen Sie zuerst einen Planungszeitraum für diese Woche an.",
+                    "Bitte lege zuerst einen Planungszeitraum für diese Woche an.",
                   );
                   openPeriodCreate();
                   return;
@@ -2485,7 +2485,7 @@ function TimetablesContent() {
             <StatusBadge
               label="Nur ansehen"
               tone="gray"
-              title="Sie können den Betreuungsplan ansehen. Ändern können ihn nur Admins."
+              title="Du kannst den Betreuungsplan ansehen. Ändern können ihn nur Admins."
             />
           )}
           {/* Ein Menü statt dreier Einstiege: Zeilenhöhe, ausgeblendete
@@ -2581,7 +2581,7 @@ function TimetablesContent() {
               icon: <MotoConceptIcon concept={closingDaysConcept} size={42} />,
               title: "Noch kein Planungszeitraum",
               description: canManageSchedules
-                ? "Legen Sie einen Planungszeitraum an, um Angebote und Termine im Betreuungsplan zu planen."
+                ? "Lege einen Planungszeitraum an, um Angebote und Termine im Betreuungsplan zu planen."
                 : "Es gibt noch keinen Planungszeitraum. Eine Person mit Administrationsrechten muss ihn zuerst anlegen.",
               action: canManageSchedules ? (
                 <Button
@@ -2700,9 +2700,9 @@ function TimetablesContent() {
                         // — stattdessen, wer den Tag plant.
                         canManageSchedules
                         ? dayHasPeriodCoverage
-                          ? "Planen Sie Angebote als Regeltermin oder legen Sie einen einzelnen Termin an."
-                          : "Legen Sie zuerst einen aktiven Planungszeitraum an."
-                        : "Geplant wird von den Admins Ihrer Schule.",
+                          ? "Plane Angebote als Regeltermin oder lege einen einzelnen Termin an."
+                          : "Lege zuerst einen aktiven Planungszeitraum an."
+                        : "Geplant wird von den Admins deiner Schule.",
                   }
                 : undefined
           }

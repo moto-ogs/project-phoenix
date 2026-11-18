@@ -57,7 +57,7 @@ export function HolidayContributionCard({
           type="warning"
           className="mb-4"
           title="Rechnung prüfen"
-          message="Der Beitrag hat sich geändert, zum Beispiel durch ein Storno bei den Geschwistern. Die Rechnung zeigt noch den alten Betrag. Stornieren Sie die Rechnung. Der nächste Abrechnungslauf stellt dann den neuen Betrag aus."
+          message="Der Beitrag hat sich geändert, zum Beispiel durch ein Storno bei den Geschwistern. Die Rechnung zeigt noch den alten Betrag. Storniere die Rechnung. Der nächste Abrechnungslauf stellt dann den neuen Betrag aus."
         />
       ) : null}
       <ContributionBreakdown

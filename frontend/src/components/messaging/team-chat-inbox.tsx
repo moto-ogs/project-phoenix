@@ -40,7 +40,7 @@ const logger = createLogger({ component: "TeamChatInbox" });
 
 const DISABLED_TITLE = "Der Team-Chat ist ausgeschaltet";
 const DISABLED_DESCRIPTION =
-  "Ihre Schule hat den Team-Chat ausgeschaltet. Wenden Sie sich an die OGS-Leitung, wenn Sie ihn nutzen möchten.";
+  "Deine Schule hat den Team-Chat ausgeschaltet. Wende dich an die OGS-Leitung, wenn du ihn nutzen möchtest.";
 
 export type { TeamChatInboxParts } from "~/components/messaging/team-chat-frame-parts";
 
@@ -209,7 +209,7 @@ export function TeamChatInbox({
         ? {
             icon: emptyIcon,
             title: "Keine passenden Unterhaltungen",
-            description: "Ändern Sie die Suche oder den Filter.",
+            description: "Ändere die Suche oder den Filter.",
           }
         : {
             icon: emptyIcon,
@@ -349,9 +349,9 @@ function memberCountLabel(count: number): string {
   return `${count} ${count === 1 ? "Mitglied" : "Mitglieder"}`;
 }
 
-/** „Sie: “ vor der eigenen Nachricht, in einer Gruppe der Vorname sonst. */
+/** „Du: “ vor der eigenen Nachricht, in einer Gruppe der Vorname sonst. */
 function previewSender(thread: StaffInboxThread): string {
-  if (thread.last_message_mine) return "Sie: ";
+  if (thread.last_message_mine) return "Du: ";
   if (isGroupThread(thread) && thread.last_sender_name) {
     return `${thread.last_sender_name.split(" ")[0]}: `;
   }

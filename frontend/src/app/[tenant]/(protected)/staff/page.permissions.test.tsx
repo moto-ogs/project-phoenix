@@ -230,9 +230,7 @@ describe("/staff — Berechtigungs-Split", () => {
 
     render(<StaffPage />);
 
-    expect(
-      screen.queryByText(/Wählen Sie eine Person/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Wähle eine Person/)).not.toBeInTheDocument();
     expect(getAllStaff).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: /Dokumente Test/ }));
     expect(routerPush).toHaveBeenCalledWith("/staff/42?tab=dokumente");
@@ -317,7 +315,7 @@ describe("/staff — Berechtigungs-Split", () => {
       expect(screen.getByRole("button", { name: /Recht Test/ })).toBeEnabled();
       expect(
         screen.queryByText(
-          /Personalakten sind für Ihr Konto nicht freigegeben/,
+          /Personalakten sind für dein Konto nicht freigegeben/,
         ),
       ).not.toBeInTheDocument();
     },
@@ -342,15 +340,13 @@ describe("/staff — Berechtigungs-Split", () => {
 
     render(<StaffPage />);
 
-    expect(
-      screen.queryByText(/Wählen Sie eine Person/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Wähle eine Person/)).not.toBeInTheDocument();
     expect(getDocumentDirectory).not.toHaveBeenCalled();
     expect(getTimeAccounts).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole("tab", { name: "Personalunterlagen" }));
 
-    expect(screen.getByText(/Wählen Sie eine Person/)).toBeInTheDocument();
+    expect(screen.getByText(/Wähle eine Person/)).toBeInTheDocument();
     expect(getDocumentDirectory).toHaveBeenCalled();
     // Die Zahl stand früher als Zähler-Badge im Kopf; sie steht jetzt in der
     // Statuszeile der Kopfkarte.
@@ -364,9 +360,7 @@ describe("/staff — Berechtigungs-Split", () => {
 
     // Anker: die Statusansicht der vollen Rechte ist geladen.
     expect(screen.getByTestId("schul-uebersicht")).toBeInTheDocument();
-    expect(
-      screen.queryByText(/Wählen Sie eine Person/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Wähle eine Person/)).not.toBeInTheDocument();
     expect(getDocumentDirectory).not.toHaveBeenCalled();
   });
 

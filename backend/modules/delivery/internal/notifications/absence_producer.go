@@ -23,10 +23,10 @@ import (
 // permission-filtered view shows who it is.
 const (
 	absenceReportedTitle           = "Krankmeldung"
-	absenceReportedBodyParent      = "Eine Familie hat ein Kind aus Ihrer Gruppe für heute krankgemeldet."
-	absenceReportedBodyStaff       = "Für ein Kind aus Ihrer Gruppe wurde heute eine Krankmeldung eingetragen."
+	absenceReportedBodyParent      = "Eine Familie hat ein Kind aus deiner Gruppe für heute krankgemeldet."
+	absenceReportedBodyStaff       = "Für ein Kind aus deiner Gruppe wurde heute eine Krankmeldung eingetragen."
 	absenceReportedBodySickMany    = "%d Kinder wurden für heute krankgemeldet."
-	absenceReportedBodyExcused     = "Für ein Kind aus Ihrer Gruppe wurde heute eine Entschuldigung eingetragen."
+	absenceReportedBodyExcused     = "Für ein Kind aus deiner Gruppe wurde heute eine Entschuldigung eingetragen."
 	absenceReportedBodyExcusedMany = "%d Kinder wurden für heute entschuldigt."
 )
 

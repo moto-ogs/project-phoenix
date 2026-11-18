@@ -88,7 +88,7 @@ export function AttendanceExportDialog({
   }, [isOpen, earliest, today]);
 
   const rangeError = (() => {
-    if (!from || !to) return "Bitte wählen Sie Von und Bis aus.";
+    if (!from || !to) return "Bitte wähle Von und Bis aus.";
     if (to < from) return "Das Bis-Datum liegt vor dem Von-Datum.";
     if (from < earliest || to > today)
       return `Es lassen sich nur die letzten ${visibleDays} Tage exportieren.`;

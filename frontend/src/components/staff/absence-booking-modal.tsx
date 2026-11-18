@@ -655,9 +655,9 @@ export function AbsenceBookingModal({
   // Warum „Eintragen“ gesperrt ist: steht im Fehlerfeld oben im Formular.
   let allowanceBlocker: string | null = null;
   if (shortfall && selected) {
-    allowanceBlocker = `Nicht genug Tage: ${selected.label}${projections.length > 1 ? ` ${shortfall.year}` : ""} hat noch ${formatDayCount(shortfall.remaining)}, diese Eintragung braucht ${formatDayCount(shortfall.needed)}. Ändern Sie zuerst den Anspruch oder wählen Sie eine andere Art.`;
+    allowanceBlocker = `Nicht genug Tage: ${selected.label}${projections.length > 1 ? ` ${shortfall.year}` : ""} hat noch ${formatDayCount(shortfall.remaining)}, diese Eintragung braucht ${formatDayCount(shortfall.needed)}. Ändere zuerst den Anspruch oder wähle eine andere Art.`;
   } else if (customBlocked && selected) {
-    allowanceBlocker = `Nicht genug Tage: Diese Eintragung braucht Tage aus dem Vorjahr, die für spätere Eintragungen von ${selected.label} schon verplant sind. Ändern Sie zuerst den Anspruch.`;
+    allowanceBlocker = `Nicht genug Tage: Diese Eintragung braucht Tage aus dem Vorjahr, die für spätere Eintragungen von ${selected.label} schon verplant sind. Ändere zuerst den Anspruch.`;
   }
   const isOverdraft =
     isCompTime && preview !== null && preview.projectedBalanceMinutes < 0;
@@ -685,20 +685,20 @@ export function AbsenceBookingModal({
   const blockedReason = saving
     ? undefined
     : !selected
-      ? "Wählen Sie zuerst eine Art aus."
+      ? "Wähle zuerst eine Art aus."
       : !dateStart || !effectiveEnd
-        ? "Wählen Sie zuerst den Zeitraum aus."
+        ? "Wähle zuerst den Zeitraum aus."
         : effectiveEnd < dateStart
           ? "Das Ende muss nach dem Beginn liegen."
           : quotaPending
             ? "moto rechnet die verfügbaren Tage noch aus."
             : quotaFailed
-              ? "Laden Sie zuerst die verfügbaren Tage oben neu."
+              ? "Lade zuerst die verfügbaren Tage oben neu."
               : (selected.kind === "quota" && shortfall !== undefined) ||
                   (customTypeId !== null && customBlocked)
-                ? "Ändern Sie zuerst den Anspruch, die Tage reichen nicht."
+                ? "Ändere zuerst den Anspruch, die Tage reichen nicht."
                 : isOverdraft && !overdraftConfirmed
-                  ? "Bestätigen Sie zuerst das Minus im Stundenkonto."
+                  ? "Bestätige zuerst das Minus im Stundenkonto."
                   : undefined;
 
   const save = async () => {

@@ -97,7 +97,7 @@ describe("TenantPage bei nicht gebuchtem Modul", () => {
     expect(
       screen.getByText("Zeiterfassung ist nicht gebucht"),
     ).toBeInTheDocument();
-    expect(screen.getByText(/wenden Sie sich an das moto-Team/)).toBeVisible();
+    expect(screen.getByText(/wende dich an das moto-Team/)).toBeVisible();
     expect(
       screen.getByRole("link", { name: "Gebuchte Module ansehen" }),
     ).toHaveAttribute("href", "/settings?tab=modules");
@@ -111,9 +111,7 @@ describe("TenantPage bei nicht gebuchtem Modul", () => {
     renderGate();
 
     expect(screen.queryByText("Inhalt der Seite")).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/sprechen Sie mit Ihrer Leitung/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/sprich mit deiner Leitung/)).toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: "Gebuchte Module ansehen" }),
     ).not.toBeInTheDocument();

@@ -98,7 +98,7 @@ export function SurveyEditorFields({
           maxLength={SURVEY_TITLE_MAX_LENGTH}
           error={errors?.title}
           onChange={(event) => update({ title: event.target.value })}
-          placeholder="z. B. Wie zufrieden sind Sie mit der OGS?"
+          placeholder="z. B. Wie zufrieden bist du mit der OGS?"
         />
         <Textarea
           label="Einleitung (optional)"
@@ -162,7 +162,7 @@ export function SurveyEditorFields({
         ) : (
           <>
             <p className="text-sm text-gray-600">
-              Alle Mitarbeitenden der OGS können antworten. Sie finden die
+              Alle Mitarbeitenden der OGS können antworten. Du findest die
               Umfrage in moto unter „Umfragen“. Lehrkräfte, die nur das
               Schulportal nutzen, bekommen sie nicht.
             </p>
@@ -170,7 +170,7 @@ export function SurveyEditorFields({
               type="info"
               announce="off"
               title="Vorher klären: Betriebsrat oder Personalrat"
-              message="Eine Befragung der Beschäftigten kann mitbestimmungspflichtig sein. Bitte klären Sie das vor dem Veröffentlichen mit Ihrem Betriebsrat oder Personalrat. moto prüft das nicht."
+              message="Eine Befragung der Beschäftigten kann mitbestimmungspflichtig sein. Bitte kläre das vor dem Veröffentlichen mit deinem Betriebsrat oder Personalrat. moto prüft das nicht."
             />
           </>
         )}
@@ -383,7 +383,7 @@ function QuestionEditor({
       {question.kind === "scale" && (
         <p className="text-sm text-gray-600">
           Wer antwortet, wählt einen Wert von 1 (trifft gar nicht zu) bis 5
-          (trifft voll zu). Formulieren Sie die Frage deshalb als Aussage.
+          (trifft voll zu). Formuliere die Frage deshalb als Aussage.
         </p>
       )}
       {question.kind === "text" && (

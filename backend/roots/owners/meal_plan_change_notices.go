@@ -179,7 +179,7 @@ func (n mealPlanChangeNotices) notifyCaterer(ctx context.Context, change mealpla
 // German only.
 func catererMealPlanChangedCopy(monday calendar.Date) (string, string) {
 	return "Speiseplan geändert", fmt.Sprintf(
-		"Die Schule hat den Speiseplan für die Woche vom %s bis %s geändert. Bitte prüfen Sie Ihre Planung.",
+		"Die Schule hat den Speiseplan für die Woche vom %s bis %s geändert. Bitte prüfe deine Planung.",
 		monday.Format("02.01."), monday.AddDays(4).Format("02.01.2006"))
 }
 

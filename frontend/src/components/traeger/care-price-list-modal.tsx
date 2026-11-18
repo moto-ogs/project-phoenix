@@ -211,14 +211,11 @@ export function CarePriceListModal({
       Object.assign(fieldErrors, result.errors);
     }
     if (Object.keys(fieldErrors).length > 0) {
-      formErrors.invalid(
-        "Bitte prüfen Sie die markierten Preise.",
-        fieldErrors,
-      );
+      formErrors.invalid("Bitte prüfe die markierten Preise.", fieldErrors);
       return;
     }
     if (prices.length === 0 && freeMonths.length === 0) {
-      formErrors.invalid("Bitte tragen Sie mindestens einen Preis ein.", {});
+      formErrors.invalid("Bitte trage mindestens einen Preis ein.", {});
       return;
     }
     await save.run(async (op) => {

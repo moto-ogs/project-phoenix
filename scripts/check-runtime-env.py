@@ -23,12 +23,18 @@ OPTIONAL_VALUES = {
 # The mail provider group (#5933) waits for its SOPS keys: #5935 adds them per
 # environment. `${KEY-}` lets the stack deploy without them, and the backend
 # requires the whole group once EMAIL_PROVIDER names a provider. #5935 moves these
-# keys to the fail-fast forms and empties this set.
+# keys to the fail-fast forms. The upload group is required only in S3 mode.
 PENDING_SOPS_VALUES = {
     "EMAIL_PROVIDER", "EMAIL_FROM_SECURITY_ADDRESS", "EMAIL_FROM_NOTICES_ADDRESS",
     "EMAIL_WEBHOOK_SECRETS", "LETTERMINT_TEAM_API_TOKEN", "LETTERMINT_WEBHOOK_ID",
     "EMAIL_FALLBACK_SMTP_HOST", "EMAIL_FALLBACK_SMTP_PORT", "EMAIL_FALLBACK_SMTP_USER",
     "EMAIL_FALLBACK_SMTP_PASSWORD", "EMAIL_FALLBACK_FROM_ADDRESS",
+    "UPLOADS_BACKEND",
+    "UPLOADS_S3_ENDPOINT",
+    "UPLOADS_S3_REGION",
+    "UPLOADS_S3_BUCKET",
+    "UPLOADS_S3_ACCESS_KEY",
+    "UPLOADS_S3_SECRET_KEY",
 }
 
 
@@ -139,7 +145,7 @@ def check_missing_config(path, directory):
     fixture = Path(directory) / "pending.env"
     fixture.write_text("\n".join(line for line in lines if line.split("=")[0] not in PENDING_SOPS_VALUES) + "\n")
     compose_config(path, True, fixture)
-    print("Mail provider keys missing from SOPS: stack still deploys")
+    print("Optional provider keys missing from SOPS: stack still deploys")
 
 
 def main():

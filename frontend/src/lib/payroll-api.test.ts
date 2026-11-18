@@ -315,7 +315,7 @@ describe("payrollDispatchReasonText", () => {
         channel: "sftp",
       }),
     ).toBe(
-      "Die Übertragung an das Lohnbüro hat viermal nicht geklappt. Die Gegenstelle war nicht erreichbar. Bitte versuchen Sie es später noch einmal.",
+      "Die Übertragung an das Lohnbüro hat viermal nicht geklappt. Die Gegenstelle war nicht erreichbar. Bitte versuche es später noch einmal.",
     );
   });
 

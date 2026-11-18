@@ -24,7 +24,7 @@ export default function TraegerHolidayCriteriaPage() {
         <p>
           Die Kriterien gelten für alle Ferien, die ihre Plätze nach Kriterien
           vergeben. Eltern beantworten jede Frage mit Ja oder Nein. moto
-          sortiert die Anmeldungen damit vor. Das ist nur ein Vorschlag. Ihr
+          sortiert die Anmeldungen damit vor. Das ist nur ein Vorschlag. Dein
           Büro entscheidet über jeden Platz. Eltern sehen nie die Angaben
           anderer Familien.
         </p>

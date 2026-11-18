@@ -42,7 +42,7 @@ export function EmploymentCarryover({
   return (
     <fieldset className="space-y-2" disabled={disabled}>
       <legend className="font-semibold">Diese Daten übernehmen</legend>
-      <p>Entfernen Sie ein Häkchen, um den Bereich zurückzusetzen.</p>
+      <p>Entferne ein Häkchen, um den Bereich zurückzusetzen.</p>
       {AREAS.map(({ key, label, retainedDescription, resetDescription }) => (
         <label
           key={key}
@@ -65,8 +65,8 @@ export function EmploymentCarryover({
       <p>Frühere Angaben bleiben als Historie erhalten.</p>
       {value.resetWorkTime ? (
         <p>
-          Der Urlaub startet mit dem vollen Jahresanspruch ohne Übertrag. Sie
-          können den Jahresanspruch danach anpassen.
+          Der Urlaub startet mit dem vollen Jahresanspruch ohne Übertrag. Du
+          kannst den Jahresanspruch danach anpassen.
         </p>
       ) : null}
       <p>Vergangene Schichten und Abwesenheiten bleiben erhalten.</p>

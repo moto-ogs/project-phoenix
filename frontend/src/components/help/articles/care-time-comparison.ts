@@ -21,28 +21,28 @@ export function careTimeComparisonTopic(): HelpTopic {
       {
         title: "Bei einem Kind nachsehen",
         steps: [
-          "Öffnen Sie das Kind und wählen Sie den Bereich `Betreuungszeiten`.",
-          "Scrollen Sie nach unten zu `Soll und Ist`.",
-          "Wählen Sie den Zeitraum. Am Anfang ist es der laufende Monat.",
-          "Lesen Sie je Tag `Gebucht`, `Tatsächlich` und `Abweichung`.",
+          "Öffne das Kind und wähle den Bereich `Betreuungszeiten`.",
+          "Scrolle nach unten zu `Soll und Ist`.",
+          "Wähle den Zeitraum. Am Anfang ist es der laufende Monat.",
+          "Lies je Tag `Gebucht`, `Tatsächlich` und `Abweichung`.",
         ],
       },
       {
         title: "Alle Kinder mit Überschreitungen sehen",
         description: "Nur für die Leitung.",
         steps: [
-          "Öffnen Sie in der Seitenleiste `Verwaltung` und danach `Statistik`.",
-          "Wählen Sie oben den Bereich `Soll und Ist`.",
-          "Wählen Sie den Zeitraum und, wenn nötig, Klassen oder Gruppen.",
-          "Tippen Sie auf eine Spalte, um nach ihr zu sortieren.",
+          "Öffne in der Seitenleiste `Verwaltung` und danach `Statistik`.",
+          "Wähle oben den Bereich `Soll und Ist`.",
+          "Wähle den Zeitraum und, wenn nötig, Klassen oder Gruppen.",
+          "Tippe auf eine Spalte, um nach ihr zu sortieren.",
           "Über das Menü mit den drei Punkten geht `Exportieren` als `PDF` oder `Excel`.",
         ],
       },
     ],
     result:
-      "Überschreitungen tragen den Text `Außerhalb der Buchung` oder `Da ohne Buchung`. Ihre `Abweichung` steht in Rot.",
+      "Überschreitungen tragen den Text `Außerhalb der Buchung` oder `Da ohne Buchung`. Deine `Abweichung` steht in Rot.",
     notes: [
-      "Ändern Sie die Zeiten eines Zeitmodells? Die neuen Zeiten gelten ab dem Änderungstag. Vergangene gebuchte Tage behalten ihre bisherigen Zeiten. Auch nach Umbuchung oder Archivierung bleiben diese Zeiten erhalten.",
+      "Änderst du die Zeiten eines Zeitmodells? Die neuen Zeiten gelten ab dem Änderungstag. Vergangene gebuchte Tage behalten ihre bisherigen Zeiten. Auch nach Umbuchung oder Archivierung bleiben diese Zeiten erhalten.",
       "`Gebucht` ist die Betreuungszeit, die in moto hinterlegt ist: Ankunft bis Abholung laut Wochenplan, mit Ausnahmen für einzelne Tage.",
       "Hat das Kind einen Vertrag vom Träger, gilt der Vertrag. Dann steht unter `Gebucht` der Hinweis `laut Vertrag`. Das Ende ist die Endzeit des letzten Moduls an diesem Wochentag. Die Ankunft kommt weiter aus dem Wochenplan.",
       "An einem Tag mit bestätigter Ferienbuchung gilt die Ferienbuchung, auch vor dem Vertrag. Dann steht unter `Gebucht` der Hinweis `laut Ferienbuchung`. Ankunft und Ende sind die Zeiten des gebuchten `Zeitmodell`.",
@@ -61,7 +61,7 @@ export function careTimeComparisonTopic(): HelpTopic {
       "Steht `Abholzeit fehlt`? Für diesen Tag ist keine Abholzeit gebucht, zum Beispiel ein Modul im Vertrag ohne Endzeit. Dann lässt sich das Gehen nicht vergleichen.",
     ],
     troubleshootingDetails: [
-      "Fehlt `Soll und Ist` beim Kind? Ihr Konto darf die Kinderdaten nicht lesen.",
+      "Fehlt `Soll und Ist` beim Kind? Dein Konto darf die Kinderdaten nicht lesen.",
     ],
     related: [
       HELP_TOPICS.leadCareTimes,

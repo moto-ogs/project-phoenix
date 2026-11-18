@@ -179,7 +179,7 @@ func (s *surveyService) notifyStaff(ctx context.Context, survey *communication.S
 	if err != nil {
 		return 0, fmt.Errorf("survey: filter opted-in staff: %w", err)
 	}
-	title, body := "Neue Umfrage", fmt.Sprintf("Bitte nehmen Sie an der Umfrage „%s“ teil.", survey.Title)
+	title, body := "Neue Umfrage", fmt.Sprintf("Bitte nimm an der Umfrage „%s“ teil.", survey.Title)
 	if reminder {
 		title = "Erinnerung an eine Umfrage"
 		body = fmt.Sprintf("Die Umfrage „%s“ läuft noch bis zum %s.", survey.Title, survey.ClosesAt.In(calendar.Berlin).Format("02.01.2006"))

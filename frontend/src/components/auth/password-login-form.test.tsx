@@ -40,8 +40,8 @@ describe("PasswordLoginForm", () => {
     );
 
     expect(
-      await screen.findByText(/Sie sind auf diesem Gerät abgemeldet\./),
-    ).toHaveTextContent("Dann ändern Sie bitte Ihr Passwort.");
+      await screen.findByText(/Du bist auf diesem Gerät abgemeldet\./),
+    ).toHaveTextContent("Dann ändere bitte dein Passwort.");
     expect(sessionStorage.getItem("logoutNotRevoked")).toBeNull();
     unmount();
 
@@ -51,7 +51,7 @@ describe("PasswordLoginForm", () => {
     // Anker: das Formular steht, der Hinweis kommt nach einem Neuladen nicht wieder.
     expect(screen.getByLabelText("E-Mail-Adresse")).toBeInTheDocument();
     expect(
-      screen.queryByText(/Sie sind auf diesem Gerät abgemeldet\./),
+      screen.queryByText(/Du bist auf diesem Gerät abgemeldet\./),
     ).not.toBeInTheDocument();
   });
 
@@ -89,7 +89,7 @@ describe("PasswordLoginForm", () => {
     await signIn(() => Promise.reject(refused(429, "general.unavailable")));
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Zu viele Anmeldeversuche. Bitte versuchen Sie es später erneut.",
+      "Zu viele Anmeldeversuche. Bitte versuche es später erneut.",
     );
   });
 
@@ -102,7 +102,7 @@ describe("PasswordLoginForm", () => {
     });
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bitte geben Sie E-Mail-Adresse und Passwort ein.",
+      "Bitte gib E-Mail-Adresse und Passwort ein.",
     );
     expect(onSubmit).not.toHaveBeenCalled();
   });
@@ -138,7 +138,7 @@ describe("PasswordLoginForm", () => {
     });
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bitte geben Sie E-Mail-Adresse und Passwort ein.",
+      "Bitte gib E-Mail-Adresse und Passwort ein.",
     );
     expect(
       screen.queryByText("REFUSAL_OF_THE_LAST_ATTEMPT"),

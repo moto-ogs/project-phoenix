@@ -177,7 +177,7 @@ describe("StudentExportModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Herunterladen" }));
 
     expect(
-      screen.getByText("Bitte wählen Sie mindestens eine Spalte aus."),
+      screen.getByText("Bitte wähle mindestens eine Spalte aus."),
     ).toBeInTheDocument();
     expect(mockToastError).not.toHaveBeenCalled();
     expect(mockExportStudents).not.toHaveBeenCalled();
@@ -275,7 +275,7 @@ describe("StudentExportModal", () => {
 
     expect(
       await screen.findByText(
-        "Die Exportdatei konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Exportdatei konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/PDF kaputt/)).not.toBeInTheDocument();

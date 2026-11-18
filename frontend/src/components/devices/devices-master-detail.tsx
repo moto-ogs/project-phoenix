@@ -325,14 +325,14 @@ function ApiKeySection({ apiKey }: { apiKey: string }) {
             variant="primary"
             size="compact"
             onClick={() => void copy(apiKey)}
-            tooltip="Kopiert den Schlüssel, damit Sie ihn am Gerät einfügen."
+            tooltip="Kopiert den Schlüssel, damit du ihn am Gerät einfügst."
           >
             {copied ? "Kopiert!" : "Kopieren"}
           </Button>
         </div>
         <Alert
           type="warning"
-          message="Bewahren Sie diesen Schlüssel sicher auf. Er ist nur bei der Erstellung sichtbar."
+          message="Bewahre diesen Schlüssel sicher auf. Er ist nur bei der Erstellung sichtbar."
         />
       </div>
     </InfoSection>

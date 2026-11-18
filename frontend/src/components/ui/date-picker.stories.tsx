@@ -196,7 +196,7 @@ function ISOInputDemo() {
         label="Geburtsdatum"
         value={value}
         onChange={setValue}
-        error="Bitte geben Sie das Geburtsdatum ein."
+        error="Bitte gib das Geburtsdatum ein."
       />
     </div>
   );

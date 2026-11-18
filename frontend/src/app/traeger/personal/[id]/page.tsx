@@ -122,7 +122,7 @@ function PersonnelNumberCard({
   const save = async () => {
     const value = draft.trim();
     if (value !== "" && !/^\d{1,9}$/.test(value)) {
-      errors.invalid("Bitte prüfen Sie die Personalnummer.", {
+      errors.invalid("Bitte prüfe die Personalnummer.", {
         personnel_number: "Die Personalnummer hat 1 bis 9 Ziffern.",
       });
       return;
@@ -147,7 +147,7 @@ function PersonnelNumberCard({
     <SectionCard
       concept={payrollConcept}
       title="Personalnummer"
-      description="Die Nummer aus Ihrem Lohnsystem. Sie gilt an allen Schulen dieser Person und ist bei Ihrem Träger nur einmal vergeben."
+      description="Die Nummer aus deinem Lohnsystem. Sie gilt an allen Schulen dieser Person und ist bei deinem Träger nur einmal vergeben."
       action={
         editing ? undefined : (
           <Button

@@ -102,7 +102,7 @@ export function PlanExportModal({
   const weekCount = useMemo(() => countWeeks(range.from, range.to), [range]);
   const rangeError = useMemo(() => {
     if (rangeMode === "week") return null;
-    if (!from || !to) return "Bitte wählen Sie Von und Bis aus.";
+    if (!from || !to) return "Bitte wähle Von und Bis aus.";
     if (weekCount === null) return "Das Bis-Datum liegt vor dem Von-Datum.";
     if (weekCount > MAX_WEEKS)
       return `Es lassen sich höchstens ${MAX_WEEKS} Wochen auf einmal drucken.`;

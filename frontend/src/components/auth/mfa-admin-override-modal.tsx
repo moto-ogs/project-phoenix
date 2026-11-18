@@ -186,7 +186,7 @@ export function MFAAdminOverrideModal({
   async function handleReset() {
     const trimmed = reason.trim();
     if (trimmed.length < MIN_REASON_LENGTH) {
-      const hint = `Bitte geben Sie einen Grund mit mindestens ${MIN_REASON_LENGTH} Zeichen an.`;
+      const hint = `Bitte gib einen Grund mit mindestens ${MIN_REASON_LENGTH} Zeichen an.`;
       resetErrors.invalid(hint, { reason: hint });
       return;
     }
@@ -230,7 +230,7 @@ export function MFAAdminOverrideModal({
     if (selectedGlobalOverride === globalOverride) return;
     const trimmed = globalReason.trim();
     if (trimmed.length < MIN_REASON_LENGTH) {
-      const hint = `Bitte geben Sie eine Begründung mit mindestens ${MIN_REASON_LENGTH} Zeichen an.`;
+      const hint = `Bitte gib eine Begründung mit mindestens ${MIN_REASON_LENGTH} Zeichen an.`;
       globalErrors.invalid(hint, { reason: hint });
       return;
     }
@@ -278,7 +278,7 @@ export function MFAAdminOverrideModal({
     }
     const trimmed = overrideReason.trim();
     if (trimmed.length < MIN_REASON_LENGTH) {
-      const hint = `Bitte geben Sie eine Begründung mit mindestens ${MIN_REASON_LENGTH} Zeichen an.`;
+      const hint = `Bitte gib eine Begründung mit mindestens ${MIN_REASON_LENGTH} Zeichen an.`;
       overrideErrors.invalid(hint, { reason: hint });
       return;
     }
@@ -363,8 +363,8 @@ export function MFAAdminOverrideModal({
               <FormErrorAlert message={resetErrors.error} />
               <p className="text-sm text-gray-600">
                 {scope === "caterer"
-                  ? "Die 2FA-Einrichtung und alle vertrauenswürdigen Geräte des Caterers werden entfernt; seine Passkeys bleiben. Danach meldet er sich mit seinem Passwort an und kann die 2FA im Konto wieder einschalten. Er bekommt eine E-Mail. Die Aktion wird im Audit-Log mit Ihrem Konto und dem angegebenen Grund erfasst."
-                  : `Die bestehende 2FA-Einrichtung und alle vertrauenswürdigen Geräte werden entfernt. Beim nächsten Login wird der Account neu durch das 2FA-Setup geführt.${scope === "traeger" ? "" : " Die Person bekommt eine E-Mail."} Die Aktion wird im Audit-Log mit Ihrem Konto und dem angegebenen Grund erfasst.`}
+                  ? "Die 2FA-Einrichtung und alle vertrauenswürdigen Geräte des Caterers werden entfernt; seine Passkeys bleiben. Danach meldet er sich mit seinem Passwort an und kann die 2FA im Konto wieder einschalten. Er bekommt eine E-Mail. Die Aktion wird im Audit-Log mit deinem Konto und dem angegebenen Grund erfasst."
+                  : `Die bestehende 2FA-Einrichtung und alle vertrauenswürdigen Geräte werden entfernt. Beim nächsten Login wird der Account neu durch das 2FA-Setup geführt.${scope === "traeger" ? "" : " Die Person bekommt eine E-Mail."} Die Aktion wird im Audit-Log mit deinem Konto und dem angegebenen Grund erfasst.`}
               </p>
               <div className="space-y-2">
                 <Textarea
@@ -410,10 +410,10 @@ export function MFAAdminOverrideModal({
                 Für Verwaltung bleibt der zusätzliche Nachweis immer Pflicht.
                 Ebenso für Personalstammdaten, Personaldokumente und
                 Personalfinanzen. Das gilt auch für Gesundheitsdokumente und das
-                Verwalten fremder Arbeitszeiten. Ebenso, wenn Sie Urlaub
-                genehmigen dürfen. Sie können diese Pflicht nicht ausschalten.
+                Verwalten fremder Arbeitszeiten. Ebenso, wenn du Urlaub
+                genehmigen darfst. Du kannst diese Pflicht nicht ausschalten.
                 Gesundheitshinweise der Kinder allein lösen diese Pflicht nicht
-                aus. Bei verlorenem Zugang helfen Sie zuerst, den Zugang zum
+                aus. Bei verlorenem Zugang hilf zuerst, den Zugang zum
                 E-Mail-Postfach wiederherzustellen.
               </p>
               <Alert

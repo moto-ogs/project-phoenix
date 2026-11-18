@@ -270,7 +270,7 @@ func TestPersonalRemindersReachOnlyTheConsenting(t *testing.T) {
 	assert.Equal(t, []int64{caregiverAccountID}, notice.StaffAccountIDs)
 	assert.Equal(t, testTenant, notice.TenantID)
 	assert.Equal(t, "Abholung steht an", notice.Title)
-	assert.Equal(t, "Ein Kind aus Ihrer Aufsicht wird bald abgeholt.", notice.Body)
+	assert.Equal(t, "Ein Kind aus deiner Aufsicht wird bald abgeholt.", notice.Body)
 	assert.Equal(t, "/reminders", notice.DeepLink)
 	assert.NotContains(t, notice.Body, "Kind Name", "student names must never leave the reminder list")
 
@@ -401,7 +401,7 @@ func TestPersonalRemindersAggregatePerTypeAndDedupPerPerson(t *testing.T) {
 	setup.notify(context.Background(), now)
 
 	require.Len(t, setup.notifier.notices, 3, "two kinds for the caregiver, one for the admin")
-	assert.Equal(t, "2 Kinder aus Ihrer Aufsicht werden bald abgeholt.", setup.notifier.notices[0].Body)
+	assert.Equal(t, "2 Kinder aus deiner Aufsicht werden bald abgeholt.", setup.notifier.notices[0].Body)
 	assert.Equal(t, TypeActivityStart, setup.notifier.notices[1].Type)
 	assert.Equal(t, []int64{adminAccountID}, setup.notifier.notices[2].StaffAccountIDs)
 
@@ -442,7 +442,7 @@ func TestPersonalRemindersClassifyAssignedActivities(t *testing.T) {
 		require.Len(t, setup.computer.scopes, 1)
 		assert.True(t, setup.computer.scopes[0].IncludeAssignedActivityStart)
 		assert.Equal(t, TypeMyActivityStarting, setup.notifier.notices[0].Type)
-		assert.Equal(t, "Ihr Einsatz beginnt", setup.notifier.notices[0].Title)
+		assert.Equal(t, "Dein Einsatz beginnt", setup.notifier.notices[0].Title)
 	})
 
 	t.Run("the room consent does not cover an own slot", func(t *testing.T) {

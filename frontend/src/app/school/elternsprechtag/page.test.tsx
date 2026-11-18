@@ -128,12 +128,12 @@ describe("Elternsprechtag in moto schule (#4801)", () => {
     });
     expect(create).toHaveAttribute("aria-disabled", "true");
     expect(create).toHaveAccessibleDescription(
-      "Dafür brauchen Sie eine eigene Klasse, die OGS-Leitung ordnet sie zu.",
+      "Dafür brauchst du eine eigene Klasse, die OGS-Leitung ordnet sie zu.",
     );
     fireEvent.click(create);
     expect(screen.queryByLabelText("Tag")).toBeNull();
     expect(
-      screen.getByText(/Ihnen ist keine Klasse zugeordnet/),
+      screen.getByText(/Dir ist keine Klasse zugeordnet/),
     ).toBeInTheDocument();
   });
 

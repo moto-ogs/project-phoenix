@@ -1,11 +1,14 @@
 package owners
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
 	carePlanCompose "github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	communicationCompose "github.com/moto-ogs/project-phoenix/modules/communication/composition"
+	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
+	uploadCompose "github.com/moto-ogs/project-phoenix/modules/delivery/objects/compose"
 	filestorageCompose "github.com/moto-ogs/project-phoenix/modules/filestorage/compose"
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -84,4 +87,13 @@ func clockOrReal(now func() time.Time) func() time.Time {
 		return time.Now
 	}
 	return now
+}
+
+func BuildUploadFiles(ctx context.Context, read func(string) string) (nativeUploads.UploadFiles, *nativeUploads.PrivateUploads, error) {
+	backend, err := uploadCompose.NewBackend(ctx, nativeUploads.UploadStorageConfigFrom(read), "")
+	if err != nil {
+		return nativeUploads.UploadFiles{}, nil, err
+	}
+	files, err := nativeUploads.NewUploadFiles(backend)
+	return files, nativeUploads.NewPrivateUploads(backend, nativeUploads.FileKeys{}), err
 }

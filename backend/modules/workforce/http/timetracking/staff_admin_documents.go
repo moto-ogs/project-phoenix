@@ -5,8 +5,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -38,17 +36,12 @@ const (
 // them for download, sealed or legacy plaintext. The root binds the uploads
 // backend with the health and bank rings.
 type StaffDocumentObjects interface {
+	workforce.StaffDocumentObjectRemover
 	SaveSealed(ctx context.Context, kind string, tenantID int64, storedName string, source io.Reader, ring string) (int64, error)
 	OpenPrivate(ctx context.Context, kind string, tenantID int64, storedName string) (interface {
 		io.ReadSeekCloser
 		ModTime() time.Time
 	}, error)
-}
-
-// staffDocumentsDir is the per-tenant document directory
-// (workforce.StaffDocumentsDir).
-func staffDocumentsDir(tenantID int64, uploads common.UploadStorage) string {
-	return workforce.StaffDocumentsDir(tenantID, uploads)
 }
 
 // documentActor builds the service actor from the JWT: account id for audit
@@ -267,7 +260,7 @@ func (rs *StaffAdminResource) uploadStaffDocument(w http.ResponseWriter, r *http
 	defer cancelUpload()
 
 	category := r.FormValue("category")
-	filePath, size, err := rs.writeUploadedDocumentFile(r.Context(), id, uploaded.File, storedName, category)
+	size, err := rs.documentObjects.SaveSealed(uploadCtx, workforce.StaffDocumentStorageKind, tenant.FromContext(uploadCtx), storedName, uploaded.File, workforce.StaffDocumentKeyRing(category))
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
@@ -281,7 +274,7 @@ func (rs *StaffAdminResource) uploadStaffDocument(w http.ResponseWriter, r *http
 		ContentType:     uploaded.ContentType,
 	}, actor)
 	if err != nil {
-		rs.releaseFailedDocumentUpload(r.Context(), id, filePath, storedName, err)
+		rs.releaseFailedDocumentUpload(r.Context(), id, storedName, err)
 		renderDocumentError(w, r, err)
 		return
 	}
@@ -314,26 +307,6 @@ func (rs *StaffAdminResource) queueUploadFileCleanup(ctx context.Context, staffI
 		return err
 	}
 	return nil
-}
-
-// writeUploadedDocumentFile stores the upload in the tenant's document
-// directory, sealed when the category asks for it, and returns its path and
-// plaintext size. When the write fails nothing is left to clean up, so the
-// queued intent is completed right away.
-func (rs *StaffAdminResource) writeUploadedDocumentFile(ctx context.Context, staffID int64, file io.Reader, storedName, category string) (string, int64, error) {
-	tenantID := tenant.FromContext(ctx)
-	filePath := filepath.Join(staffDocumentsDir(tenantID, rs.uploads), storedName)
-	size, err := rs.documentObjects.SaveSealed(ctx, workforce.StaffDocumentStorageKind, tenantID, storedName, file, workforce.StaffDocumentKeyRing(category))
-	if err != nil {
-		if completeErr := rs.StaffDocumentService.MarkQueuedStaffDocumentFileCleanupCompleteByFilename(ctx, storedName); completeErr != nil {
-			rs.logger.Warn("staff document cleanup intent completion failed after upload write error",
-				"staff_id", staffID,
-				"error", completeErr,
-			)
-		}
-		return "", 0, err
-	}
-	return filePath, size, nil
 }
 
 // downloadStaffDocument serves GET /{id}/documents/{documentId}/download.
@@ -451,7 +424,7 @@ func isUnresolvedUploadError(err error) bool {
 // strand a committed document row. The intent decides instead: a committed
 // transaction marks it complete (the file must stay), a rolled-back one leaves
 // it queued for the scheduler.
-func (rs *StaffAdminResource) releaseFailedDocumentUpload(ctx context.Context, staffID int64, filePath, storedName string, cause error) {
+func (rs *StaffAdminResource) releaseFailedDocumentUpload(ctx context.Context, staffID int64, storedName string, cause error) {
 	if isUnresolvedUploadError(cause) {
 		rs.logger.Warn("staff document upload interrupted, leaving cleanup to the queued intent",
 			"staff_id", staffID,
@@ -459,7 +432,7 @@ func (rs *StaffAdminResource) releaseFailedDocumentUpload(ctx context.Context, s
 		)
 		return
 	}
-	if err := rs.removeUploadedDocument(filePath); err != nil {
+	if err := workforce.RemoveStoredDocument(ctx, rs.documentObjects, tenant.FromContext(ctx), storedName); err != nil {
 		rs.logger.Error("staff document cleanup failed after upload error",
 			"staff_id", staffID,
 			"error", err,
@@ -482,7 +455,7 @@ func (rs *StaffAdminResource) releaseFailedDocumentUpload(ctx context.Context, s
 
 func (rs *StaffAdminResource) cleanupStaffDocumentFile(ctx context.Context, staffID, documentID int64, storedName, source string) {
 	tenantID := tenant.FromContext(ctx)
-	if err := rs.documentFiles.RemoveStoredDocument(tenantID, storedName); err != nil {
+	if err := workforce.RemoveStoredDocument(ctx, rs.documentObjects, tenantID, storedName); err != nil {
 		rs.logger.Warn("staff document cleanup failed",
 			"staff_id", staffID,
 			"document_id", documentID,
@@ -503,7 +476,7 @@ func (rs *StaffAdminResource) cleanupStaffDocumentFile(ctx context.Context, staf
 
 func (rs *StaffAdminResource) cleanupQueuedStaffDocumentFile(ctx context.Context, staffID, cleanupID int64, storedName, source string) {
 	tenantID := tenant.FromContext(ctx)
-	if err := rs.documentFiles.RemoveStoredDocument(tenantID, storedName); err != nil {
+	if err := workforce.RemoveStoredDocument(ctx, rs.documentObjects, tenantID, storedName); err != nil {
 		rs.logger.Warn("staff document orphan cleanup failed",
 			"staff_id", staffID,
 			"cleanup_id", cleanupID,
@@ -520,13 +493,6 @@ func (rs *StaffAdminResource) cleanupQueuedStaffDocumentFile(ctx context.Context
 			"error", err,
 		)
 	}
-}
-
-func (rs *StaffAdminResource) removeUploadedDocument(path string) error {
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		return errors.New("failed to remove stored document")
-	}
-	return nil
 }
 
 // ResolveEditorStaffID exposes the JWT-account-to-staff resolution for the

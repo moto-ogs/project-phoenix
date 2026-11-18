@@ -119,7 +119,7 @@ export function BetreuungsplanHeuteCard({
   useEffect(() => {
     if (error) {
       void showLoadError(error, {
-        object: "die Liste Ihrer Einsätze",
+        object: "die Liste deiner Einsätze",
         retry: () => void mutate(),
       });
     } else {
@@ -163,8 +163,8 @@ export function BetreuungsplanHeuteCard({
       >
         <EmptyState
           className="py-4"
-          title="Heute ist für Sie nichts geplant"
-          description="Ihre Einsätze aus dem Betreuungsplan erscheinen hier."
+          title="Heute ist für dich nichts geplant"
+          description="Deine Einsätze aus dem Betreuungsplan erscheinen hier."
         />
       </SectionCard>
     );

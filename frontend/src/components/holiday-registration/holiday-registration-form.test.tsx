@@ -195,7 +195,9 @@ function fillRegistration(timeModel: RegExp = WEEK_TIME_MODEL) {
     screen.getByRole("combobox", { name: "Schule" }),
     "Eine andere Schule",
   );
-  expect(screen.getByText(/Ihr Kind kommt als Feriengast/)).toBeInTheDocument();
+  expect(
+    screen.getByText(/Dein Kind kommt als Feriengast/),
+  ).toBeInTheDocument();
   choose(
     screen.getByRole("combobox", { name: /04\.01\.2027 bis 08\.01\.2027/ }),
     timeModel,
@@ -215,7 +217,7 @@ function fillRegistration(timeModel: RegExp = WEEK_TIME_MODEL) {
   fireEvent.click(
     screen.getByLabelText(/Ich darf die Anmeldung allein abgeben/),
   );
-  type(screen.getByLabelText("Ihr Vor- und Nachname"), "Eva Maria Muster");
+  type(screen.getByLabelText("Dein Vor- und Nachname"), "Eva Maria Muster");
 }
 
 async function renderFilledForm() {
@@ -224,7 +226,7 @@ async function renderFilledForm() {
   fireEvent.click(
     screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
   );
-  await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+  await screen.findByText("Bitte prüfe deine Angaben");
 }
 
 describe("HolidayRegistrationForm", () => {
@@ -248,7 +250,7 @@ describe("HolidayRegistrationForm", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
-    await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+    await screen.findByText("Bitte prüfe deine Angaben");
     fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
     fireEvent.click(
       screen.getByRole("button", { name: "Verbindlich anmelden" }),
@@ -317,7 +319,7 @@ describe("HolidayRegistrationForm", () => {
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
     expect(
-      await screen.findByText("Bitte prüfen Sie Ihre Angaben"),
+      await screen.findByText("Bitte prüfe deine Angaben"),
     ).toBeInTheDocument();
     expect(screen.getByText(/Tante · 0123/)).toHaveTextContent(
       "Notfallkontakt, Darf die Kinder abholen",
@@ -339,10 +341,10 @@ describe("HolidayRegistrationForm", () => {
   });
 
   it.each([
-    ["noRole", "Bitte wählen Sie mindestens eine Aufgabe."],
-    ["noEmergency", "Bitte wählen Sie mindestens einen Notfallkontakt."],
-    ["noPhone", "Bitte füllen Sie dieses Feld aus."],
-    ["tooMany", "Sie können höchstens drei Notfallkontakte angeben."],
+    ["noRole", "Bitte wähle mindestens eine Aufgabe."],
+    ["noEmergency", "Bitte wähle mindestens einen Notfallkontakt."],
+    ["noPhone", "Bitte fülle dieses Feld aus."],
+    ["tooMany", "Du kannst höchstens drei Notfallkontakte angeben."],
   ])("blocks the summary and submission for %s", async (scenario, message) => {
     renderForm();
     fillRegistration();
@@ -396,13 +398,13 @@ describe("HolidayRegistrationForm", () => {
     );
 
     expect(
-      await screen.findByText("Bitte prüfen Sie die markierten Felder."),
+      await screen.findByText("Bitte prüfe die markierten Felder."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Bitte wählen Sie mindestens eine Woche."),
+      screen.getByText("Bitte wähle mindestens eine Woche."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Bitte wählen Sie die Schule Ihres Kindes."),
+      screen.getByText("Bitte wähle die Schule deines Kindes."),
     ).toBeInTheDocument();
     // The date of birth carries its hint like every other field (quorum
     // round 2): the day select is named, all three are described by it.
@@ -414,14 +416,14 @@ describe("HolidayRegistrationForm", () => {
     }
     expect(
       document.getElementById("children.0-birth-date-error"),
-    ).toHaveTextContent("Bitte füllen Sie dieses Feld aus.");
+    ).toHaveTextContent("Bitte fülle dieses Feld aus.");
     expect(
       document.querySelector(
         'input[type="hidden"][name="children.0.birth_date"]',
       ),
     ).not.toBeNull();
     expect(
-      screen.queryByText("Bitte prüfen Sie Ihre Angaben"),
+      screen.queryByText("Bitte prüfe deine Angaben"),
     ).not.toBeInTheDocument();
     expect(mockSubmit).not.toHaveBeenCalled();
   });
@@ -451,19 +453,17 @@ describe("HolidayRegistrationForm", () => {
       `${HOLIDAY_CONSENT_TEXTS.custodyConfirmed} *`,
     );
     fireEvent.click(custody);
-    const name = screen.getByLabelText("Ihr Vor- und Nachname");
+    const name = screen.getByLabelText("Dein Vor- und Nachname");
     type(name, "  ");
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
     expect(
       await screen.findByText(
-        "Bitte bestätigen Sie, dass Sie die Anmeldung abgeben dürfen.",
+        "Bitte bestätige, dass du die Anmeldung abgeben darfst.",
       ),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("Bitte geben Sie Ihren Namen ein."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Bitte gib deinen Namen ein.")).toBeInTheDocument();
     expect(custody).toHaveAttribute("aria-invalid", "true");
     expect(name).toHaveAttribute("aria-invalid", "true");
     expect(mockSubmit).not.toHaveBeenCalled();
@@ -474,7 +474,7 @@ describe("HolidayRegistrationForm", () => {
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
     const declaration = within(
-      (await screen.findByRole("heading", { name: "Ihre Erklärung" })).closest(
+      (await screen.findByRole("heading", { name: "Deine Erklärung" })).closest(
         "section",
       )!,
     );
@@ -509,7 +509,7 @@ describe("HolidayRegistrationForm", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Verbindlich anmelden" }),
     );
-    const name = await screen.findByLabelText("Ihr Vor- und Nachname");
+    const name = await screen.findByLabelText("Dein Vor- und Nachname");
     await waitFor(() => expect(name).toHaveAttribute("aria-invalid", "true"));
   });
 
@@ -536,7 +536,7 @@ describe("HolidayRegistrationForm", () => {
     });
     expect(
       screen.getByText(
-        "Das Büro vergibt die Plätze nach festen Regeln. Ihre Angaben helfen dabei. Das Büro kann nach einem Nachweis fragen.",
+        "Das Büro vergibt die Plätze nach festen Regeln. Deine Angaben helfen dabei. Das Büro kann nach einem Nachweis fragen.",
       ),
     ).toBeInTheDocument();
     fillRegistration();
@@ -544,7 +544,7 @@ describe("HolidayRegistrationForm", () => {
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
     expect(
-      await screen.findAllByText("Bitte wählen Sie Ja oder Nein."),
+      await screen.findAllByText("Bitte wähle Ja oder Nein."),
     ).toHaveLength(2);
     expect(screen.getByText("Für Ben Muster")).toBeInTheDocument();
 
@@ -560,7 +560,7 @@ describe("HolidayRegistrationForm", () => {
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
     expect(
-      await screen.findByText("Bitte prüfen Sie Ihre Angaben"),
+      await screen.findByText("Bitte prüfe deine Angaben"),
     ).toBeInTheDocument();
     expect(
       screen.getByText("Sind beide Eltern berufstätig?"),
@@ -579,9 +579,7 @@ describe("HolidayRegistrationForm", () => {
     );
     expect(await screen.findByText("Platz offen")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Das Büro vergibt die Plätze. Sie bekommen eine E-Mail.",
-      ),
+      screen.getByText("Das Büro vergibt die Plätze. Du bekommst eine E-Mail."),
     ).toBeInTheDocument();
   });
 
@@ -640,7 +638,7 @@ describe("HolidayRegistrationForm", () => {
       fireEvent.click(
         screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
       );
-      await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+      await screen.findByText("Bitte prüfe deine Angaben");
       fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
       fireEvent.click(
         screen.getByRole("button", { name: "Verbindlich anmelden" }),
@@ -660,12 +658,12 @@ describe("HolidayRegistrationForm", () => {
       fireEvent.click(
         screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
       );
-      await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+      await screen.findByText("Bitte prüfe deine Angaben");
       fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
       fireEvent.click(
         screen.getByRole("button", { name: "Verbindlich anmelden" }),
       );
-      await screen.findByText("Ihre Anmeldung ist eingegangen");
+      await screen.findByText("Deine Anmeldung ist eingegangen");
       expect(mockSubmit).toHaveBeenCalledTimes(2);
       expect(mockSubmit.mock.calls[1]?.[1]).toMatchObject({
         criteria:
@@ -690,7 +688,7 @@ describe("HolidayRegistrationForm", () => {
     await waitFor(() =>
       expect(
         screen.getByRole("heading", {
-          name: "Bitte prüfen Sie Ihre Angaben",
+          name: "Bitte prüfe deine Angaben",
         }),
       ).toHaveFocus(),
     );
@@ -711,7 +709,7 @@ describe("HolidayRegistrationForm", () => {
     await waitFor(() =>
       expect(
         screen.getByRole("heading", {
-          name: "Ihre Anmeldung ist eingegangen",
+          name: "Deine Anmeldung ist eingegangen",
         }),
       ).toHaveFocus(),
     );
@@ -728,7 +726,7 @@ describe("HolidayRegistrationForm", () => {
     );
 
     expect(
-      await screen.findByText("Bitte prüfen Sie Ihre Angaben"),
+      await screen.findByText("Bitte prüfe deine Angaben"),
     ).toBeInTheDocument();
     // The page shows the required-field hint only on the form step (#5334).
     expect(onStepChange).toHaveBeenLastCalledWith("summary");
@@ -740,7 +738,7 @@ describe("HolidayRegistrationForm", () => {
     });
     expect(blockedSubmit).toHaveAttribute("aria-disabled", "true");
     expect(blockedSubmit).toHaveAccessibleDescription(
-      "Schließen Sie zuerst die Sicherheitsprüfung ab.",
+      "Schließe zuerst die Sicherheitsprüfung ab.",
     );
     fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
     fireEvent.click(
@@ -766,12 +764,10 @@ describe("HolidayRegistrationForm", () => {
       }),
     );
     expect(
-      await screen.findByText("Ihre Anmeldung ist eingegangen"),
+      await screen.findByText("Deine Anmeldung ist eingegangen"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Wir schicken Ihnen eine Bestätigung an eva@example.org.",
-      ),
+      screen.getByText("Wir schicken dir eine Bestätigung an eva@example.org."),
     ).toBeInTheDocument();
     expect(onStepChange).toHaveBeenLastCalledWith("done");
   });
@@ -898,7 +894,7 @@ describe("HolidayRegistrationForm", () => {
 
     fireEvent.click(benefits);
     expect(
-      screen.getByText(/Freiwillig\. Laden Sie hier zum Beispiel/),
+      screen.getByText(/Freiwillig\. Lade hier zum Beispiel/),
     ).toBeInTheDocument();
     const file = new File(["%PDF-1.4"], "bescheid.pdf", {
       type: "application/pdf",
@@ -915,14 +911,14 @@ describe("HolidayRegistrationForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
     // The send button waits until the file has arrived.
     expect(
-      screen.getByText("Bitte warten Sie, bis alle Dateien hochgeladen sind."),
+      screen.getByText("Bitte warte, bis alle Dateien hochgeladen sind."),
     ).toBeInTheDocument();
     const waitingSubmit = screen.getByRole("button", {
       name: "Verbindlich anmelden",
     });
     expect(waitingSubmit).toHaveAttribute("aria-disabled", "true");
     expect(waitingSubmit).toHaveAccessibleDescription(
-      "Warten Sie, bis alle Dateien hochgeladen sind.",
+      "Warte, bis alle Dateien hochgeladen sind.",
     );
     finishUpload({
       token: "proof-token",
@@ -993,7 +989,7 @@ describe("HolidayRegistrationForm", () => {
     renderForm();
     expect(
       screen.getByText(
-        /Der Preis gilt pro Woche und Kind, ohne Ermäßigung oder Befreiung\. Ihren Beitrag sehen Sie in der Zusammenfassung\./,
+        /Der Preis gilt pro Woche und Kind, ohne Ermäßigung oder Befreiung\. Deinen Beitrag siehst du in der Zusammenfassung\./,
       ),
     ).toBeInTheDocument();
     fireEvent.click(
@@ -1024,7 +1020,7 @@ describe("HolidayRegistrationForm", () => {
 
     expect(
       screen.getByText(
-        "Diese Woche gibt es an mehreren Schulen. Wählen Sie eine Schule und die Zeit.",
+        "Diese Woche gibt es an mehreren Schulen. Wähle eine Schule und die Zeit.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(
@@ -1082,7 +1078,7 @@ describe("HolidayRegistrationForm", () => {
 
     expect(
       await screen.findByText(
-        "Der Beitrag lässt sich gerade nicht anzeigen. Sie können trotzdem absenden. Der Träger nennt Ihnen dann den Beitrag.",
+        "Der Beitrag lässt sich gerade nicht anzeigen. Du kannst trotzdem absenden. Der Träger nennt dir dann den Beitrag.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
@@ -1124,11 +1120,11 @@ describe("HolidayRegistrationForm", () => {
     fireEvent.click(
       screen.getByLabelText(/Ich darf die Anmeldung allein abgeben/),
     );
-    type(screen.getByLabelText("Ihr Vor- und Nachname"), "Sabine Schneider");
+    type(screen.getByLabelText("Dein Vor- und Nachname"), "Sabine Schneider");
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
-    await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+    await screen.findByText("Bitte prüfe deine Angaben");
     fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
     fireEvent.click(
       screen.getByRole("button", { name: "Verbindlich anmelden" }),
@@ -1248,12 +1244,12 @@ describe("HolidayRegistrationForm", () => {
     // The school knows no number for this emergency contact: the parent types it.
     expect(
       contacts.getByText(
-        "Für diese Person kennt die Schule keine Nummer. Bitte tragen Sie sie ein.",
+        "Für diese Person kennt die Schule keine Nummer. Bitte trage sie ein.",
       ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Gesundheitsangaben übernehmen wir nicht. Bitte tragen Sie sie hier ein.",
+        "Gesundheitsangaben übernehmen wir nicht. Bitte trage sie hier ein.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -1298,7 +1294,7 @@ describe("HolidayRegistrationForm", () => {
     expect(phone).toHaveValue("");
     expect(
       contacts.queryByText(
-        "Für diese Person kennt die Schule keine Nummer. Bitte tragen Sie sie ein.",
+        "Für diese Person kennt die Schule keine Nummer. Bitte trage sie ein.",
       ),
     ).not.toBeInTheDocument();
   });
@@ -1307,7 +1303,7 @@ describe("HolidayRegistrationForm", () => {
     renderForm();
     expect(screen.getByText("Kind 1")).toBeInTheDocument();
     expect(
-      screen.queryByText("Ihre Kinder aus dem Elternkonto"),
+      screen.queryByText("Deine Kinder aus dem Elternkonto"),
     ).not.toBeInTheDocument();
   });
 });
@@ -1370,7 +1366,7 @@ describe("second guardian card", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
-    await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+    await screen.findByText("Bitte prüfe deine Angaben");
     expect(card().getByText("Tom Anders")).toBeInTheDocument();
     expect(card().getByText("tom@example.org")).toBeInTheDocument();
     expect(card().getByText("0151 2345678")).toBeInTheDocument();
@@ -1449,7 +1445,7 @@ describe("address card (#5625)", () => {
   it("shows no address card when the form does not ask", () => {
     renderForm(null, asking("off"));
     expect(
-      screen.getByRole("heading", { name: "Ihre Angaben" }),
+      screen.getByRole("heading", { name: "Deine Angaben" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: /^Anschrift/ }),
@@ -1467,7 +1463,7 @@ describe("address card (#5625)", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
-    await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+    await screen.findByText("Bitte prüfe deine Angaben");
     expect((await send()).guardian_address).toBeUndefined();
   });
 
@@ -1493,7 +1489,7 @@ describe("address card (#5625)", () => {
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
     expect(
-      await card.findByText("Bitte geben Sie eine PLZ mit 5 Ziffern ein."),
+      await card.findByText("Bitte gib eine PLZ mit 5 Ziffern ein."),
     ).toBeInTheDocument();
     expect(card.getByLabelText("PLZ")).toHaveAttribute("aria-invalid", "true");
   });
@@ -1510,7 +1506,7 @@ describe("address card (#5625)", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
-    await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+    await screen.findByText("Bitte prüfe deine Angaben");
     expect(
       screen.getByText("Musterweg 12, 01234 Bissendorf"),
     ).toBeInTheDocument();
@@ -1539,7 +1535,7 @@ describe("address card (#5625)", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
-    await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+    await screen.findByText("Bitte prüfe deine Angaben");
     await send();
     await waitFor(() =>
       expect(
@@ -1622,7 +1618,7 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
     );
 
     expect(
-      await screen.findByText("Bitte wählen Sie Ja oder Nein."),
+      await screen.findByText("Bitte wähle Ja oder Nein."),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("textbox", {
@@ -1671,7 +1667,7 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
     );
     expect(
       await screen.findByText(
-        "Bitte stimmen Sie zu oder löschen Sie die Gesundheitsangaben.",
+        "Bitte stimme zu oder lösche die Gesundheitsangaben.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(
@@ -1683,7 +1679,7 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
 
-    await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+    await screen.findByText("Bitte prüfe deine Angaben");
     // The summary repeats the answers with the question.
     expect(
       screen.getByText("Darf an Ausflügen teilnehmen"),
@@ -1756,7 +1752,7 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
-    await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+    await screen.findByText("Bitte prüfe deine Angaben");
     fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
     fireEvent.click(
       screen.getByRole("button", { name: "Verbindlich anmelden" }),
@@ -1765,7 +1761,7 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
     await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
     expect(
       await screen.findByText(
-        "Der Träger hat das Formular gerade geändert. Bitte prüfen Sie Ihre Angaben und senden Sie die Anmeldung noch einmal.",
+        "Der Träger hat das Formular gerade geändert. Bitte prüfe deine Angaben und sende die Anmeldung noch einmal.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -1817,7 +1813,7 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
     expect(
-      await screen.findByText("Bitte prüfen Sie die markierten Felder."),
+      await screen.findByText("Bitte prüfe die markierten Felder."),
     ).toBeInTheDocument();
     const acknowledgement = screen.getByRole("checkbox", {
       name: /Ich habe die Ferienhinweise gelesen/,
@@ -1838,7 +1834,7 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
     expect(
-      await screen.findByText("Bitte prüfen Sie Ihre Angaben"),
+      await screen.findByText("Bitte prüfe deine Angaben"),
     ).toBeInTheDocument();
     expect(screen.getByText("Ferienhinweise")).toBeInTheDocument();
     expect(screen.getByText("Bestätigt")).toBeInTheDocument();
@@ -1895,7 +1891,7 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
-    await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+    await screen.findByText("Bitte prüfe deine Angaben");
     fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
     fireEvent.click(
       screen.getByRole("button", { name: "Verbindlich anmelden" }),
@@ -1985,11 +1981,11 @@ describe("HolidayRegistrationForm parent account (#6673)", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
-    await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+    await screen.findByText("Bitte prüfe deine Angaben");
   }
 
   const question = () =>
-    screen.getByRole("group", { name: /Möchten Sie ein Elternkonto anlegen/ });
+    screen.getByRole("group", { name: /Möchtest du ein Elternkonto anlegen/ });
 
   it("asks without a preselection and holds the send until the parent answers", async () => {
     mockSubmit.mockResolvedValue({ placements: [], statusToken: "" });
@@ -2012,7 +2008,7 @@ describe("HolidayRegistrationForm parent account (#6673)", () => {
     );
 
     expect(
-      await within(group).findByText("Bitte wählen Sie Ja oder Nein."),
+      await within(group).findByText("Bitte wähle Ja oder Nein."),
     ).toBeInTheDocument();
     expect(group).toHaveAttribute("aria-invalid", "true");
     expect(yes).toHaveFocus();
@@ -2022,7 +2018,7 @@ describe("HolidayRegistrationForm parent account (#6673)", () => {
     // Anker: the answer is taken and the hint of the group is gone.
     expect(no).toBeChecked();
     expect(
-      within(group).queryByText("Bitte wählen Sie Ja oder Nein."),
+      within(group).queryByText("Bitte wähle Ja oder Nein."),
     ).not.toBeInTheDocument();
     fireEvent.click(
       screen.getByRole("button", { name: "Verbindlich anmelden" }),
@@ -2037,10 +2033,10 @@ describe("HolidayRegistrationForm parent account (#6673)", () => {
     );
     // Anker: the receipt shows; without „Ja“ it names no second mail.
     expect(
-      await screen.findByText("Ihre Anmeldung ist eingegangen"),
+      await screen.findByText("Deine Anmeldung ist eingegangen"),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText("Nächster Schritt: Ihr Elternkonto"),
+      screen.queryByText("Nächster Schritt: dein Elternkonto"),
     ).not.toBeInTheDocument();
     expect(mockInvalidate).not.toHaveBeenCalled();
   });
@@ -2060,7 +2056,7 @@ describe("HolidayRegistrationForm parent account (#6673)", () => {
     ).toHaveAttribute("href", "/ferienanmeldung/status/st4tus");
     expect(
       screen.getByText(
-        "Den Link zum Stand bekommen Sie auch per E-Mail. Geben Sie ihn nicht weiter.",
+        "Den Link zum Stand bekommst du auch per E-Mail. Gib ihn nicht weiter.",
       ),
     ).toBeInTheDocument();
   });
@@ -2073,7 +2069,7 @@ describe("HolidayRegistrationForm parent account (#6673)", () => {
     fireEvent.click(within(question()).getByRole("radio", { name: "Ja" }));
     expect(
       screen.getByText(
-        "Sie bekommen dazu eine E-Mail an eva@example.org. Mit dem Link darin legen Sie Ihr Passwort fest.",
+        "Du bekommst dazu eine E-Mail an eva@example.org. Mit dem Link darin legst du dein Passwort fest.",
       ),
     ).toBeInTheDocument();
 
@@ -2081,7 +2077,7 @@ describe("HolidayRegistrationForm parent account (#6673)", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
-    await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+    await screen.findByText("Bitte prüfe deine Angaben");
     expect(within(question()).getByRole("radio", { name: "Ja" })).toBeChecked();
 
     fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
@@ -2095,11 +2091,11 @@ describe("HolidayRegistrationForm parent account (#6673)", () => {
       ),
     );
     expect(
-      await screen.findByText("Nächster Schritt: Ihr Elternkonto"),
+      await screen.findByText("Nächster Schritt: dein Elternkonto"),
     ).toBeInTheDocument();
-    const next = screen.getByText(/Wir haben Ihnen eine zweite E-Mail/);
+    const next = screen.getByText(/Wir haben dir eine zweite E-Mail/);
     expect(next).toHaveTextContent(
-      "Wir haben Ihnen eine zweite E-Mail an eva@example.org geschickt. Öffnen Sie den Link darin. Dort legen Sie Ihr Passwort fest oder melden sich an.",
+      "Wir haben dir eine zweite E-Mail an eva@example.org geschickt. Öffne den Link darin. Dort legst du dein Passwort fest oder meldest dich an.",
     );
     // The receipt never says whether an account exists (ADR 0216).
     expect(next).not.toHaveTextContent(/schon ein Konto|neues Konto/);
@@ -2115,7 +2111,7 @@ describe("HolidayRegistrationForm parent account (#6673)", () => {
       screen.getByRole("button", { name: "Verbindlich anmelden" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("group", { name: /Möchten Sie ein Elternkonto/ }),
+      screen.queryByRole("group", { name: /Möchtest du ein Elternkonto/ }),
     ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
@@ -2132,7 +2128,7 @@ describe("HolidayRegistrationForm parent account (#6673)", () => {
       ),
     );
     expect(
-      await screen.findByRole("link", { name: "Zu Ihren Ferienanmeldungen" }),
+      await screen.findByRole("link", { name: "Zu deinen Ferienanmeldungen" }),
     ).toHaveAttribute("href", "/ferienanmeldungen");
     expect(mockInvalidate).toHaveBeenCalledTimes(1);
     expect(mockInvalidate).toHaveBeenCalledWith(expect.any(Function), {
@@ -2167,7 +2163,7 @@ describe("required health fields (#6686)", () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("group", {
-        name: /Hat Ihr Kind Allergien oder Unverträglichkeiten/,
+        name: /Hat dein Kind Allergien oder Unverträglichkeiten/,
       }),
     ).not.toBeInTheDocument();
   });
@@ -2176,7 +2172,7 @@ describe("required health fields (#6686)", () => {
     renderForm(null, requiring);
     const allergies = within(
       screen.getByRole("group", {
-        name: /Hat Ihr Kind Allergien oder Unverträglichkeiten/,
+        name: /Hat dein Kind Allergien oder Unverträglichkeiten/,
       }),
     );
     fireEvent.click(allergies.getByRole("radio", { name: "Ja" }));
@@ -2192,22 +2188,22 @@ describe("required health fields (#6686)", () => {
     fillRegistration();
     const allergies = within(
       screen.getByRole("group", {
-        name: /Hat Ihr Kind Allergien oder Unverträglichkeiten/,
+        name: /Hat dein Kind Allergien oder Unverträglichkeiten/,
       }),
     );
     const medication = within(
-      screen.getByRole("group", { name: /Braucht Ihr Kind Medikamente/ }),
+      screen.getByRole("group", { name: /Braucht dein Kind Medikamente/ }),
     );
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
     await waitFor(() =>
       expect(
-        allergies.getByText("Bitte wählen Sie Ja oder Nein."),
+        allergies.getByText("Bitte wähle Ja oder Nein."),
       ).toBeInTheDocument(),
     );
     expect(
-      medication.getByText("Bitte wählen Sie Ja oder Nein."),
+      medication.getByText("Bitte wähle Ja oder Nein."),
     ).toBeInTheDocument();
 
     fireEvent.click(allergies.getByRole("radio", { name: "Nein, keine" }));
@@ -2221,7 +2217,7 @@ describe("required health fields (#6686)", () => {
     await waitFor(() => expect(detail).toHaveAttribute("aria-invalid", "true"));
     expect(
       screen.getByText(
-        "Bitte stimmen Sie zu. Der Träger braucht diese Angaben für die Betreuung.",
+        "Bitte stimme zu. Der Träger braucht diese Angaben für die Betreuung.",
       ),
     ).toBeInTheDocument();
 
@@ -2234,7 +2230,7 @@ describe("required health fields (#6686)", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
-    await screen.findByText("Bitte prüfen Sie Ihre Angaben");
+    await screen.findByText("Bitte prüfe deine Angaben");
     expect(screen.getByText("Keine")).toBeInTheDocument();
     expect(screen.getByText("Asthmaspray bei Bedarf")).toBeInTheDocument();
 

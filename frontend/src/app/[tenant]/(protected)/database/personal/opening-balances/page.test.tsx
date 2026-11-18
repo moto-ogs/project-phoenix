@@ -211,7 +211,7 @@ describe("OpeningBalanceImportPage", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "Bitte geben Sie zuerst Stichtag und Begründung an. Dann wird die Vorschau erstellt.",
+          "Bitte gib zuerst Stichtag und Begründung an. Dann wird die Vorschau erstellt.",
         ),
       ).toBeInTheDocument();
     });

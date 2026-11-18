@@ -83,13 +83,13 @@ function schoolCapacityHint(error: unknown) {
  * genau ein Knopf. Mehr gibt es an dieser Stelle nicht zu entscheiden.
  */
 const START_EXPLANATIONS: Record<SupervisionStartState, string> = {
-  cancelled: "Dieser Termin findet heute nicht statt. Sie müssen nichts tun.",
+  cancelled: "Dieser Termin findet heute nicht statt. Du musst nichts tun.",
   completed: "Diese Aufsicht ist beendet.",
   startable:
-    "Starten Sie die Aufsicht, wenn die Kinder da sind. Danach können Sie die Anwesenheit führen.",
+    "Starte die Aufsicht, wenn die Kinder da sind. Danach kannst du die Anwesenheit führen.",
   too_early: "",
   expired:
-    "Diese Aufsicht ist vorbei und wurde nicht gestartet. Melden Sie sich im OGS-Büro, wenn die Anwesenheit noch nachgetragen werden soll.",
+    "Diese Aufsicht ist vorbei und wurde nicht gestartet. Melde dich im OGS-Büro, wenn die Anwesenheit noch nachgetragen werden soll.",
 };
 
 function SupervisionIntro({
@@ -131,7 +131,7 @@ function SupervisionIntro({
               startState === "too_early" && !busy ? explanation : undefined
             }
             onClick={onStart}
-            tooltip="Startet die Aufsicht sofort, danach führen Sie die Anwesenheit."
+            tooltip="Startet die Aufsicht sofort, danach führst du die Anwesenheit."
           >
             {busy ? "Wird gestartet..." : "Aufsicht starten"}
           </Button>
@@ -140,7 +140,7 @@ function SupervisionIntro({
 
       {instance.isSubstitute ? (
         <p className="mt-3 text-xs text-gray-500">
-          Sie vertreten hier eine andere Person.
+          Du vertrittst hier eine andere Person.
         </p>
       ) : null}
     </SectionCard>
@@ -222,7 +222,7 @@ export function SchoolSupervisionsView() {
   // Ladefehler mit Katalogtext, Wiederholen und Vorgangskennung (#2517).
   const listLoadError = useSwrLoadError(
     listError,
-    "die Liste Ihrer Aufsichten",
+    "die Liste deiner Aufsichten",
     () => reloadList(),
   );
   const rosterLoadError = useSwrLoadError(rosterError, "die Kinderliste", () =>
@@ -492,7 +492,7 @@ export function SchoolSupervisionsView() {
           // Ohne diesen Satz ist der unterstrichene Name nur ein
           // unterstrichener Name — die Abhol- und Notfallangaben hinter dem
           // Antippen findet sonst niemand.
-          headerNote="Tippen Sie auf einen Namen. Sie sehen dann, wann das Kind geht, wer es abholen darf und wen Sie im Notfall anrufen."
+          headerNote="Tippe auf einen Namen. Du siehst dann, wann das Kind geht, wer es abholen darf und wen du im Notfall anrufst."
           addStudentSearch=""
           isAddingStudent={false}
           isCompletingInstance={busyId === openId}

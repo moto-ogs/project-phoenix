@@ -251,7 +251,7 @@ describe("CareScheduleRequestModal Fehlerweg (#2518)", () => {
     expect(onSubmit).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Namen tippen" }));
-    fireEvent.change(screen.getByLabelText("Ihr Vor- und Nachname"), {
+    fireEvent.change(screen.getByLabelText("Dein Vor- und Nachname"), {
       target: { value: "Sabine Muster" },
     });
     fireEvent.click(
@@ -289,7 +289,7 @@ describe("CareScheduleRequestModal Fehlerweg (#2518)", () => {
     );
     await screen.findByRole("button", { name: "Namen tippen" });
     fireEvent.click(screen.getByRole("button", { name: "Namen tippen" }));
-    fireEvent.change(screen.getByLabelText("Ihr Vor- und Nachname"), {
+    fireEvent.change(screen.getByLabelText("Dein Vor- und Nachname"), {
       target: { value: "Sabine Muster" },
     });
     fireEvent.click(

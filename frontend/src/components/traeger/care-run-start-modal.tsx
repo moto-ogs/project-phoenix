@@ -140,13 +140,13 @@ export function CareRunStartModal({
     formErrors.clear();
     const invalid: Record<string, string> = {};
     if (selected.length === 0) {
-      invalid.school_ids = "Bitte wählen Sie mindestens eine Schule.";
+      invalid.school_ids = "Bitte wähle mindestens eine Schule.";
     }
     if (invoiceDate && (invoiceDate < bounds.min || invoiceDate > bounds.max)) {
       invalid.invoice_date = "Das Datum liegt zu weit vom Monat entfernt.";
     }
     if (Object.keys(invalid).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", invalid);
+      formErrors.invalid("Bitte prüfe deine Angaben.", invalid);
       return;
     }
     await save.run(async (op) => {
@@ -240,8 +240,8 @@ export function CareRunStartModal({
             type="info"
             message={
               blockedRunId
-                ? `Für ${formatMonth(month)} gibt es schon einen offenen Lauf mit allen Schulen. Öffnen Sie ihn oder wählen Sie einen anderen Monat.`
-                : `Für ${formatMonth(month)} ist jede Schule schon in einem offenen Lauf. Wählen Sie einen anderen Monat.`
+                ? `Für ${formatMonth(month)} gibt es schon einen offenen Lauf mit allen Schulen. Öffne ihn oder wähle einen anderen Monat.`
+                : `Für ${formatMonth(month)} ist jede Schule schon in einem offenen Lauf. Wähle einen anderen Monat.`
             }
           />
         ) : (
@@ -308,7 +308,7 @@ export function CareRunStartModal({
             />
             <p className="text-sm text-gray-600">
               Der Lauf rechnet jedes Kind mit gültigem Vertrag nach den
-              gebuchten Tagen ab. Sie prüfen zuerst die Vorschau. Die Rechnungen
+              gebuchten Tagen ab. Du prüfst zuerst die Vorschau. Die Rechnungen
               bekommen ihre Nummer erst bei der Freigabe.
             </p>
           </>

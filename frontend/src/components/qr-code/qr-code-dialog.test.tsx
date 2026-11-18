@@ -130,9 +130,7 @@ describe("QrCodeDialog", () => {
     });
 
     expect(
-      screen.getByText(
-        "Bitte wählen Sie ein Bild im Format PNG, JPG oder WebP.",
-      ),
+      screen.getByText("Bitte wähle ein Bild im Format PNG, JPG oder WebP."),
     ).toBeInTheDocument();
     // Still the code without a logo of its own: the file was not taken.
     expect(shownLogo().includes("<image")).toBe(false);
@@ -169,7 +167,7 @@ describe("QrCodeDialog", () => {
 
     expect(
       await screen.findByText(
-        "Der QR-Code konnte nicht gespeichert werden. Bitte versuchen Sie es noch einmal.",
+        "Der QR-Code konnte nicht gespeichert werden. Bitte versuche es noch einmal.",
       ),
     ).toBeInTheDocument();
     expect(downloadBlob).not.toHaveBeenCalled();

@@ -164,10 +164,10 @@ const registerCommonSpecifications = "Für diese Art von Dienst gibt es noch kei
 	"oben genannten offenen Standards zurück (Art. 30 Abs. 5 Data Act)."
 
 const registerTimeEstimate = "Unverbindliche Schätzung: Ein Paket erstellen und prüfen wir voraussichtlich innerhalb " +
-	"von 10 Arbeitstagen nach Ihrem Auftrag. Bei vielen gespeicherten Dateien kann es länger dauern. " +
-	"Maßgeblich sind die Fristen in Ihrem Vertrag."
+	"von 10 Arbeitstagen nach deinem Auftrag. Bei vielen gespeicherten Dateien kann es länger dauern. " +
+	"Maßgeblich sind die Fristen in deinem Vertrag."
 
-const registerRetrieval = "Wir erstellen und prüfen das Paket. Danach können Sie oder ein von Ihnen benannter neuer " +
+const registerRetrieval = "Wir erstellen und prüfen das Paket. Danach kannst du oder ein von dir benannter neuer " +
 	"Anbieter es kostenlos über HTTPS abrufen: GET /public/data-return/package/archive mit einem kurzlebigen Token, " +
 	"das wir für genau dieses Paket ausgeben. Die Schnittstelle beschreibt /public/data-return/openapi.json (OpenAPI 3.1)."
 

@@ -71,7 +71,7 @@ export default function TraegerCatalogPhasePage() {
       saved(await withdrawTraegerPhase(id));
       setWithdrawOpen(false);
       success(
-        "Die Anmeldephase ist zurückgezogen. Übertragen Sie jetzt, damit sie aus den Schulen verschwindet.",
+        "Die Anmeldephase ist zurückgezogen. Übertrage jetzt, damit sie aus den Schulen verschwindet.",
       );
     } catch (err) {
       logger.error("traeger_catalog_phase_withdraw_failed", {
@@ -105,7 +105,7 @@ export default function TraegerCatalogPhasePage() {
       back
       backHref={listHref}
       backLabel="Zurück zu den Anmeldephasen"
-      info="Jede Schule bekommt eine eigene Kopie dieser Anmeldephase. Die Schule darf sie ändern oder ausschalten; ihre Änderungen bleiben. Entfernen können Sie die Kopie nur hier mit „Zurückziehen“."
+      info="Jede Schule bekommt eine eigene Kopie dieser Anmeldephase. Die Schule darf sie ändern oder ausschalten; ihre Änderungen bleiben. Entfernen kannst du die Kopie nur hier mit „Zurückziehen“."
       stats={
         phase ? (
           <span className="flex flex-wrap items-center gap-2">
@@ -159,8 +159,8 @@ export default function TraegerCatalogPhasePage() {
               type="warning"
               message={
                 withdrawn
-                  ? "Die Anmeldephase ist zurückgezogen. In den Schulen ist sie erst weg, wenn Sie übertragen. Öffnen Sie dazu „Vorschau ansehen“."
-                  : "Die Schulen haben noch nicht den aktuellen Stand. Öffnen Sie „Vorschau ansehen“ und übertragen Sie danach."
+                  ? "Die Anmeldephase ist zurückgezogen. In den Schulen ist sie erst weg, wenn du überträgst. Öffne dazu „Vorschau ansehen“."
+                  : "Die Schulen haben noch nicht den aktuellen Stand. Öffne „Vorschau ansehen“ und übertrage danach."
               }
             />
           ) : null}
@@ -180,7 +180,7 @@ export default function TraegerCatalogPhasePage() {
               onSaved={(next) => {
                 saved(next);
                 success(
-                  "Gespeichert. Die Schulen bekommen die Änderung, wenn Sie übertragen.",
+                  "Gespeichert. Die Schulen bekommen die Änderung, wenn du überträgst.",
                 );
               }}
               onCancel={() => setFormKey((key) => key + 1)}
@@ -198,7 +198,7 @@ export default function TraegerCatalogPhasePage() {
           >
             <p className="text-sm text-gray-700">
               Die Anmeldephase und ihre Angebote verschwinden aus allen Schulen,
-              sobald Sie das nächste Mal übertragen. Gibt es dort schon
+              sobald du das nächste Mal überträgst. Gibt es dort schon
               Anmeldungen oder Buchungen, schaltet moto sie nur aus. Das lässt
               sich nicht rückgängig machen.
             </p>

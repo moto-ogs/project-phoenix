@@ -30,10 +30,10 @@ function isPatternFieldValue(value: unknown): value is PatternFieldValue {
 /** Für `validation` des Formularfelds. */
 export function validatePatternField(value: unknown): string | null {
   if (!isPatternFieldValue(value)) {
-    return "Bitte tragen Sie die Stunden ein.";
+    return "Bitte trage die Stunden ein.";
   }
   if (value.draft.rotationLength > 1 && !value.anchorDate) {
-    return "Bitte wählen Sie, wann Woche A beginnt.";
+    return "Bitte wähle, wann Woche A beginnt.";
   }
   return validatePatternDraft(value.draft);
 }
@@ -41,8 +41,8 @@ export function validatePatternField(value: unknown): string | null {
 /** Wen eine Änderung erreicht, als ganzer Satz. */
 function assigneeNotice(count: number): string {
   return count === 1
-    ? "1 Person nutzt diese Vorlage. Wenn Sie speichern, gilt das neue Soll ab heute auch für sie."
-    : `${formatCount(count)} Personen nutzen diese Vorlage. Wenn Sie speichern, gilt das neue Soll ab heute für alle ${formatCount(count)}.`;
+    ? "1 Person nutzt diese Vorlage. Wenn du speicherst, gilt das neue Soll ab heute auch für sie."
+    : `${formatCount(count)} Personen nutzen diese Vorlage. Wenn du speicherst, gilt das neue Soll ab heute für alle ${formatCount(count)}.`;
 }
 
 export function WorkTimeModelPatternField({

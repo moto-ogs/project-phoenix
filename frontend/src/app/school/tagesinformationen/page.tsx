@@ -58,7 +58,7 @@ export default function SchoolNoticesPage() {
     >
       <SectionCard
         title="Heute"
-        description="Hinweise der OGS-Leitung an die Lehrkräfte. Sie werden im OGS-Büro angelegt; hier lesen Sie, was heute gilt."
+        description="Hinweise der OGS-Leitung an die Lehrkräfte. Sie werden im OGS-Büro angelegt; hier liest du, was heute gilt."
       >
         <TodayNoticeList
           notices={notices}

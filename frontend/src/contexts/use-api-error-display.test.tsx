@@ -153,7 +153,7 @@ describe("useApiErrorDisplay", () => {
     const describedBy = age.getAttribute("aria-describedby");
     expect(describedBy).toBe("age-error");
     expect(document.getElementById(describedBy!)).toHaveTextContent(
-      "Bitte prüfen Sie dieses Feld.",
+      "Bitte prüfe dieses Feld.",
     );
     expect(
       screen.getByRole("alert", { name: /Die Gruppe/ }),
@@ -273,7 +273,7 @@ describe("useApiErrorDisplay", () => {
     expect(
       await screen.findByRole("status", { name: /^Information:/ }),
     ).toHaveTextContent(
-      "Diese Seite gehört zum Modul Zeiterfassung. Ihre Schule nutzt es nicht. Wenn Sie es brauchen, sprechen Sie mit Ihrer Leitung.",
+      "Diese Seite gehört zum Modul Zeiterfassung. Deine Schule nutzt es nicht. Wenn du es brauchst, sprich mit deiner Leitung.",
     );
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });

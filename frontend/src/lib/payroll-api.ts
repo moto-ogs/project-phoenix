@@ -362,7 +362,7 @@ export function payrollDispatchReasonText(
   if (dispatch.state !== "blocked" && dispatch.state !== "failed") return null;
   const reason = dispatch.reason ?? "internal_error";
   if (dispatch.state === "failed" && dispatch.channel === "sftp") {
-    // Ohne genauen Grund bleibt es beim ersten Satz: „Bitte versuchen Sie es
+    // Ohne genauen Grund bleibt es beim ersten Satz: „Bitte versuche es
     // noch einmal“ passt nicht zu einem Versand, den moto selbst wiederholt.
     return reason === "internal_error"
       ? SFTP_GAVE_UP_TEXT

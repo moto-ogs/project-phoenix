@@ -431,7 +431,7 @@ describe("TraegerClosingDaysPage (#4702)", () => {
     );
     // Kein zweiter Dialog: Der Klick beauftragt den Versand.
     expect(await within(card).findByText("Wird gesendet")).toBeInTheDocument();
-    expect(within(card).getByText("Bitte warten Sie.")).toBeInTheDocument();
+    expect(within(card).getByText("Bitte warte.")).toBeInTheDocument();
     expect(api.notifyTraegerHolidayClosureNotice).toHaveBeenCalledWith(
       "41",
       3,
@@ -472,7 +472,7 @@ describe("TraegerClosingDaysPage (#4702)", () => {
     ).toBeInTheDocument();
     expect(
       await screen.findByText(
-        "Der Schließtag wurde geändert. Bitte prüfen Sie den Hinweis.",
+        "Der Schließtag wurde geändert. Bitte prüfe den Hinweis.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(
@@ -530,7 +530,7 @@ describe("TraegerClosingDaysPage (#4702)", () => {
     ).closest("section")!;
     expect(within(card).getByText("Nicht angekommen")).toBeInTheDocument();
     expect(
-      within(card).getByText("Bitte versuchen Sie es erneut."),
+      within(card).getByText("Bitte versuche es erneut."),
     ).toBeInTheDocument();
     expect(
       within(card).getByRole("button", {
@@ -539,9 +539,7 @@ describe("TraegerClosingDaysPage (#4702)", () => {
     ).toBeInTheDocument();
     expect(within(card).getByText("Ergebnis unbekannt")).toBeInTheDocument();
     expect(
-      within(card).getByText(
-        "Bitte lassen Sie den Versand vom moto-Team prüfen.",
-      ),
+      within(card).getByText("Bitte lass den Versand vom moto-Team prüfen."),
     ).toBeInTheDocument();
     expect(
       within(card).queryByRole("button", {

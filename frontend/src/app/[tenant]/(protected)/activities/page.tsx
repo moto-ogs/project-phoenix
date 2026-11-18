@@ -347,7 +347,7 @@ function ActivitiesPageContent() {
                   ? "Keine Aktivitäten gefunden"
                   : "Keine Aktivitäten vorhanden",
                 description: hasFilters
-                  ? "Versuchen Sie andere Suchkriterien oder Filter."
+                  ? "Versuche andere Suchkriterien oder Filter."
                   : "Es wurden noch keine Aktivitäten erstellt.",
               }
             : null

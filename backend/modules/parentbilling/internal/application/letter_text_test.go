@@ -108,9 +108,9 @@ func TestConfirmationLetterFollowsTheBissendorfTemplate(t *testing.T) {
 			{Label: "E-Mail", Value: "ferien@ganztag.example"},
 		},
 		Subject:    "Bestätigung und Rechnung: Winterferien 2027",
-		Salutation: "Sehr geehrte Familie Beispiel,",
+		Salutation: "Liebe Familie Beispiel,",
 		Blocks: []LetterBlock{
-			{Text: "wir bestätigen die Anmeldung von Lina und Ben für „Winterferien 2027“. Sie haben gebucht:"},
+			{Text: "wir bestätigen die Anmeldung von Lina und Ben für „Winterferien 2027“. Ihr habt gebucht:"},
 			{Facts: []LetterFact{
 				{Label: "Lina: Woche 04.01. bis 08.01.2027, Vormittag", Value: "50,00 €"},
 				{Label: "Ben: Woche 04.01. bis 08.01.2027, Nachmittag mit Mittagessen", Value: "65,00 €"},
@@ -118,18 +118,18 @@ func TestConfirmationLetterFollowsTheBissendorfTemplate(t *testing.T) {
 				{Label: "Ben: Korrektur: Zusätzlicher Ausflug", Value: "20,00 €"},
 				{Label: "Gesamtbetrag", Value: "92,50 €", Bold: true},
 			}},
-			{Text: "Bitte überweisen Sie 92,50 € bis zum 15.12.2026 auf das Konto unten. Geben Sie als Verwendungszweck die Rechnungsnummer FE-2026-0007 an.", Bold: true},
+			{Text: "Bitte überweist 92,50 € bis zum 15.12.2026 auf das Konto unten. Gebt als Verwendungszweck die Rechnungsnummer FE-2026-0007 an.", Bold: true},
 			{PaymentCode: goldenPaymentCode("FE-2026-0007")},
-			{Heading: "Bitte beachten Sie", Text: "Bitte denken Sie an: Frühstück, Wechselkleidung, Hausschuhe.\nKinder mit ansteckenden Krankheiten bleiben zu Hause."},
+			{Heading: "Bitte beachtet", Text: "Bitte denken Sie an: Frühstück, Wechselkleidung, Hausschuhe.\nKinder mit ansteckenden Krankheiten bleiben zu Hause."},
 			{
 				Heading: "Notfallnummern",
-				Text:    "In dringenden Fällen und wenn Ihr Kind krank ist, erreichen Sie die Betreuung hier:",
+				Text:    "In dringenden Fällen und wenn euer Kind krank ist, erreicht ihr die Betreuung hier:",
 				Facts: []LetterFact{
 					{Label: "OGS Am Lindenhof", Value: "0170 0000001"},
 					{Label: "OGS Schule am Hang", Value: "0170 0000002"},
 				},
 			},
-			{Text: "Bei Fragen erreichen Sie Paula Kern unter 05402 1234-0 oder ferien@ganztag.example."},
+			{Text: "Bei Fragen erreicht ihr Paula Kern unter 05402 1234-0 oder ferien@ganztag.example."},
 		},
 		Closing: []string{"Mit freundlichen Grüßen", "Ganztag im Quartier e.V."},
 		Footer: []string{
@@ -150,7 +150,7 @@ func TestConfirmationLetterFollowsTheBissendorfTemplate(t *testing.T) {
 	want.Recipient = []string{"Familie Beispiel", "Erika Beispiel"}
 	want.Facts = append([]LetterFact{want.Facts[0], {Label: "Debitorennummer", Value: "10 4711"}}, want.Facts[1:]...)
 	want.Blocks[2] = LetterBlock{
-		Text: "Bitte überweisen Sie 92,50 € bis zum 15.12.2026 auf das Konto unten. Geben Sie als Verwendungszweck Ihre Debitorennummer 10 4711 an.",
+		Text: "Bitte überweist 92,50 € bis zum 15.12.2026 auf das Konto unten. Gebt als Verwendungszweck eure Debitorennummer 10 4711 an.",
 		Bold: true,
 	}
 	want.Blocks[3] = LetterBlock{PaymentCode: goldenPaymentCode("FE-2026-0007 Debitorennummer 10 4711")}
@@ -164,7 +164,7 @@ func goldenPaymentCode(reference string) *PaymentCode {
 	return &PaymentCode{
 		Payload: "BCD\n002\n1\nSCT\nBYLADEM1001\nGanztag im Quartier e.V.\nDE02120300000000202051\nEUR92.50\n\n\n" + reference,
 		Heading: "Bezahlen per QR-Code",
-		Text:    "Scannen Sie den Code mit Ihrer Banking-App und überweisen Sie.",
+		Text:    "Scannt den Code mit eurer Banking-App und überweist.",
 		Facts: []LetterFact{
 			{Label: "Empfänger", Value: "Ganztag im Quartier e.V."},
 			{Label: "IBAN", Value: "DE02 1203 0000 0000 2020 51"},
@@ -212,7 +212,7 @@ func TestConfirmationLetterWithThePaymentTextOfTheTraeger(t *testing.T) {
 
 	content.letterhead.PaymentText = bissendorfPaymentText
 	content.document.TotalCents = 0
-	assert.Equal(t, LetterBlock{Text: "Sie müssen für diese Betreuung nichts bezahlen.", Bold: true}, confirmationLetter(content).Blocks[2],
+	assert.Equal(t, LetterBlock{Text: "Ihr müsst für diese Betreuung nichts bezahlen.", Bold: true}, confirmationLetter(content).Blocks[2],
 		"an invoice of 0 € keeps the fixed sentence, also with a text of the Träger")
 }
 
@@ -264,7 +264,7 @@ func TestConfirmationLetterWithoutAmountAndOptionalParts(t *testing.T) {
 	letter := confirmationLetter(content)
 	assert.Equal(t, []LetterFact{{Label: "Rechnungsnummer", Value: "FE-2026-0007"}, {Label: "Datum", Value: "01.12.2026"}}, letter.Facts)
 	assert.Equal(t, []LetterBlock{
-		{Text: "wir bestätigen die Anmeldung von Lina für „Winterferien 2027“. Sie haben gebucht:"},
+		{Text: "wir bestätigen die Anmeldung von Lina für „Winterferien 2027“. Ihr habt gebucht:"},
 		{Facts: []LetterFact{
 			{Label: "Lina: Vormittag", Value: "50,00 €"},
 			{Label: "Lina: Befreiung bei Leistungsbezug", Value: "-50,00 €"},
@@ -272,7 +272,7 @@ func TestConfirmationLetterWithoutAmountAndOptionalParts(t *testing.T) {
 		}},
 		// The payment paragraph of the template is bold, so the sentence
 		// that nothing is to be paid is too (#4677).
-		{Text: "Sie müssen für diese Betreuung nichts bezahlen.", Bold: true},
+		{Text: "Ihr müsst für diese Betreuung nichts bezahlen.", Bold: true},
 	}, letter.Blocks)
 	assert.Equal(t, "Bankverbindung: Ganztag im Quartier e.V. · IBAN DE02 1203 0000 0000 2020 51 · Beispielbank", letter.Footer[1])
 }

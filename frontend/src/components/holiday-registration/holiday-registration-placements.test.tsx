@@ -74,7 +74,9 @@ describe("HolidayRegistrationPlacements", () => {
       within(ben as HTMLElement).getAllByText("Platz reserviert"),
     ).toHaveLength(1);
     expect(
-      screen.getByText(/Wird ein Platz frei, bekommt Ihr Kind ihn automatisch/),
+      screen.getByText(
+        /Wird ein Platz frei, bekommt dein Kind ihn automatisch/,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -91,9 +93,7 @@ describe("HolidayRegistrationPlacements", () => {
     ]);
     expect(screen.getAllByText("Platz offen")).toHaveLength(2);
     expect(
-      screen.getByText(
-        "Das Büro vergibt die Plätze. Sie bekommen eine E-Mail.",
-      ),
+      screen.getByText("Das Büro vergibt die Plätze. Du bekommst eine E-Mail."),
     ).toBeInTheDocument();
     expect(screen.queryByText("Platz reserviert")).not.toBeInTheDocument();
   });

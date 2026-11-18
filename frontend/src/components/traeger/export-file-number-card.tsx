@@ -63,7 +63,7 @@ export function ExportFileNumberCard({
           tone="blue"
         />
       }
-      description="Jede Sollstellung und jede Lastschriftdatei bekommt die nächste Nummer, auch wenn Sie dieselbe Datei noch einmal holen."
+      description="Jede Sollstellung und jede Lastschriftdatei bekommt die nächste Nummer, auch wenn du dieselbe Datei noch einmal holst."
     >
       {settings.fileNumbersStarted ? (
         <p className="text-sm text-gray-600">
@@ -87,7 +87,7 @@ export function ExportFileNumberCard({
               variant="outline"
               size="field"
               disabled={!valid}
-              disabledReason="Geben Sie zuerst eine ganze Zahl ab 1 ein."
+              disabledReason="Gib zuerst eine ganze Zahl ab 1 ein."
               tooltip="Legt die erste Dateinummer für immer fest. moto fragt vorher nach."
               onClick={() => setConfirming(true)}
             >
@@ -95,8 +95,8 @@ export function ExportFileNumberCard({
             </Button>
           </FormRow>
           <p id="export-file-number-hint" className="text-sm text-gray-500">
-            Nur einmal möglich. Nehmen Sie die Nummer nach der letzten Datei
-            Ihres bisherigen Programms.
+            Nur einmal möglich. Nimm die Nummer nach der letzten Datei deines
+            bisherigen Programms.
           </p>
         </div>
       )}

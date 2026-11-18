@@ -26,7 +26,7 @@ const logger = createLogger({ component: "InvitationPageContent" });
 
 /** Ohne Token im Link gibt es nichts zu laden. */
 const MISSING_TOKEN_TEXT =
-  "Der Link ist unvollständig. Bitte öffnen Sie den Link aus der E-Mail erneut.";
+  "Der Link ist unvollständig. Bitte öffne den Link aus der E-Mail erneut.";
 
 /**
  * Shared invitation page content used by both:
@@ -127,7 +127,7 @@ export function InvitationPageContent({
     return (
       <AuthShell
         title="Konto einrichten"
-        subtitle="Wir prüfen Ihre Einladung."
+        subtitle="Wir prüfen deine Einladung."
         variant="tenant"
         brand={brand}
         formMaxWidth="max-w-[32rem]"
@@ -146,8 +146,8 @@ export function InvitationPageContent({
       }
       subtitle={
         invitation?.requiresAccountLogin
-          ? "Nutzen Sie Ihr bestehendes Konto. Ihr Passwort bleibt unverändert."
-          : "Nehmen Sie die Einladung an und wählen Sie Ihr Passwort."
+          ? "Nutze dein bestehendes Konto. Dein Passwort bleibt unverändert."
+          : "Nimm die Einladung an und wähle dein Passwort."
       }
       variant="tenant"
       brand={brand}

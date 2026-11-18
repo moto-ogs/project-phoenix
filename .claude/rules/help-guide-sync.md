@@ -117,7 +117,7 @@ When unsure: if a school admin or supervisor would *do something differently* af
 
 1. **Register the id** in `HELP_TOPICS` (`src/lib/help-topics.ts`): the key is the camelCase id, the value the URL slug. A typo is then a compile error, not a dead link. Add the id with the article's `audience` to `HELP_TOPIC_AUDIENCE` (`src/lib/help-topic-availability.ts`); the type demands the entry.
 2. **Write the article** in `articles/<topic>.ts` as an exported `function <name>Topic(): HelpTopic`. Run `pnpm generate:help-index`, then add `articles.<name>Topic()` to the right ordered role list in `help-content.ts`, at a position its prerequisites allow. The generated index discovers files; the facade owns product order.
-3. **Write German** per `moto-einfache-sprache` (Sie-Form, short sentences, no technical vocabulary). Put every label the reader clicks in backticks, spelled exactly as the screen spells it. **Open the real screen and read the labels off it** — a remembered label is a wrong label.
+3. **Write German** per `moto-einfache-sprache` (Du-Form, short sentences, no technical vocabulary). Put every label the reader clicks in backticks, spelled exactly as the screen spells it. **Open the real screen and read the labels off it** — a remembered label is a wrong label.
 4. **Check the reverse direction:** does an existing article now contradict your change? Search `frontend/src/components/help/articles/` for the label you renamed.
 5. **Reuse the kit.** The help is frontend, so `.claude/rules/frontend-ui-kit.md` applies. `help-view.tsx` already renders every section — do not invent a new block.
 6. **Verify:**

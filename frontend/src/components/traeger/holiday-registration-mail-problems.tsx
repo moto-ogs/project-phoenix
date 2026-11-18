@@ -75,11 +75,11 @@ function holidayMailNextStep(
   outcomes: readonly MailOutcome[],
   cancelled: boolean,
 ): string {
-  const call = "Informieren Sie die Familie am besten per Telefon.";
+  const call = "Informiere die Familie am besten per Telefon.";
   if (cancelled || !outcomes.some((outcome) => ADDRESS_OUTCOMES.has(outcome))) {
     return call;
   }
-  return `${call} Prüfen Sie die E-Mail-Adresse unter „Eltern“ und ändern Sie sie, wenn sie falsch ist.`;
+  return `${call} Prüfe die E-Mail-Adresse unter „Eltern“ und ändere sie, wenn sie falsch ist.`;
 }
 
 /** One sentence per mail: which mail and what became of it. */

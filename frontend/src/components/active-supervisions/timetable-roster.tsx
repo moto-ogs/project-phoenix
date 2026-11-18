@@ -1273,7 +1273,7 @@ export function TimetableRosterContent({
   const saveHomework = async () => {
     if (!homeworkRow || !onSaveHomeworkFeedback) return;
     if (!homeworkStatus) {
-      homeworkErrors.invalid("Bitte wählen Sie eine Antwort.");
+      homeworkErrors.invalid("Bitte wähle eine Antwort.");
       return;
     }
     homeworkErrors.clear();
