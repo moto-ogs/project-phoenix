@@ -15,5 +15,6 @@
   "answerTo": "Yanıtlanan: {title}",
   "errorObjectThread": "grup mesajı",
   "errorObjectAnswer": "yanıt",
-  "errorObjectList": "grup mesajları"
+  "errorObjectList": "grup mesajları",
+  "closedNoteWithoutChat": "Bu grup mesajı kapatıldı."
 }

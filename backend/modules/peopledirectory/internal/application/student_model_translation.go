@@ -45,6 +45,10 @@ func studentModelToRecord(student *peopledirectory.StudentState) peopledirectory
 		PersonID: student.PersonID, SchoolClass: student.SchoolClass,
 		GroupID: student.GroupID, Status: string(student.Status),
 
+		// The mark travels with every write: without it the renewal of the
+		// membership gives the child an OGS place (#4803).
+		WithoutCarePlace: student.WithoutCarePlace,
+
 		AddressStreet:     student.AddressStreet,
 		AddressCity:       student.AddressCity,
 		AddressPostalCode: student.AddressPostalCode,

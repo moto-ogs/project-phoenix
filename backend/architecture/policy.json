@@ -713,6 +713,10 @@
       "class": "utility"
     },
     {
+      "path": "golang.org/x/sys/unix",
+      "class": "utility"
+    },
+    {
       "path": "golang.org/x/time/rate",
       "class": "utility"
     },

@@ -22,6 +22,10 @@ func renderParentCareWriteError(w http.ResponseWriter, r *http.Request, err erro
 		// with its own code so the portal can say why instead of showing a
 		// generic "keine Berechtigung" (#2487).
 		common.RenderError(w, r, common.ErrorForbiddenWithCode(err, common.CodeCareChildCareEnded))
+	case errors.Is(err, parentService.ErrChildWithoutCarePlace):
+		// The child belongs to its class without an OGS place (#4803): the
+		// OGS functions are refused with their own code, the school's stay.
+		common.RenderError(w, r, common.ErrorForbiddenWithCode(err, common.CodeCareChildWithoutCarePlace))
 	case errors.Is(err, parentService.ErrSickNoteDisabled):
 		common.RenderError(w, r, common.ErrorForbiddenWithCode(err, common.CodeCareSickNoteDisabled))
 	case errors.Is(err, parentService.ErrNotesDisabled):

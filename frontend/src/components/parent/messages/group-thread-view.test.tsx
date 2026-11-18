@@ -221,6 +221,36 @@ describe("ParentGroupThreadView (#4784)", () => {
     expect(screen.queryByLabelText("Antwort")).not.toBeInTheDocument();
   });
 
+  // #4803: ein Kind ohne OGS-Platz hat keinen Chat mit der OGS.
+  it("führt nur zum Chat eines Kindes mit OGS-Platz", async () => {
+    mockedChildren.mockResolvedValue([
+      { ...linked(felix), without_care_place: true },
+      linked(mia),
+    ]);
+    mockedThread.mockResolvedValue({
+      ...sommerfest,
+      closed: true,
+      children: [felix, mia],
+    });
+
+    const { unmount } = renderView();
+
+    expect(
+      await screen.findByRole("link", { name: "Zum Chat mit der OGS" }),
+    ).toHaveAttribute("href", "/parents/messages/43");
+    unmount();
+
+    mockedThread.mockResolvedValue({ ...sommerfest, closed: true });
+    renderView();
+    expect(
+      await screen.findByText("Diese Gruppennachricht ist geschlossen."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/weiter im Chat/)).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: "Zum Chat mit der OGS" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("zeigt ohne Schreibrecht keinen Antwortweg", async () => {
     mockedThread.mockResolvedValue(sommerfest);
     mockedFeatures.mockResolvedValue(features(false));

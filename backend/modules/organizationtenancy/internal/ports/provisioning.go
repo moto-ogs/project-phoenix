@@ -116,8 +116,9 @@ type ProvisioningCategories interface {
 	SeedCategories(ctx context.Context, tenantID int64, categories []domain.ActivityCategory) error
 }
 
-// ProvisioningSettings resolves the per-school device online window and
-// records the federal state of a new school.
+// ProvisioningSettings resolves the per-school device online window and the
+// reply addresses of the operator's school list, and records the federal
+// state of a new school.
 type ProvisioningSettings interface {
 	DeviceOnlineWindowMinutes(ctx context.Context, tenantID int64) (int, error)
 	// RecordFederalState records the new school's federal state in the
@@ -126,6 +127,10 @@ type ProvisioningSettings interface {
 	// the operator and the state. It reports false, recording nothing, for
 	// a region that is no federal state.
 	RecordFederalState(ctx context.Context, tenantID int64, region string) (bool, error)
+	// ReplyToAddresses resolves email.reply_to_address, the address the mail
+	// identity tries first, for the given schools in one batch on the
+	// caller's unit of work (#7174). Without a value the address is empty.
+	ReplyToAddresses(ctx context.Context, schoolIDs []int64) (map[int64]string, error)
 }
 
 // OperatorAudit appends to the platform operator audit ledger.

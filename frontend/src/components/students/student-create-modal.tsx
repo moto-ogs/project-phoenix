@@ -198,6 +198,12 @@ interface StudentCreateModalProps {
     lastName: string;
     schoolClass: string;
   }) => Promise<void>;
+  /**
+   * The school keeps children without an OGS place as children of their own
+   * (#4803): the second mode then reads „Ohne OGS-Platz“ and
+   * `onCreateListEntry` creates such a child instead of a class list entry.
+   */
+  readonly withoutCarePlace?: boolean;
   readonly groups?: Array<{ readonly value: string; readonly label: string }>;
 }
 
@@ -208,6 +214,7 @@ export function StudentCreateModal({
   onClose,
   onCreate,
   onCreateListEntry,
+  withoutCarePlace = false,
   groups = EMPTY_GROUPS,
 }: StudentCreateModalProps) {
   const tenantPath = useTenantAwarePath();
@@ -472,7 +479,7 @@ export function StudentCreateModal({
         // Eine späte Ablehnung gehört nicht in einen neueren Vorgang.
         if (!op.isCurrent()) return;
         await errors.show(error, {
-          object: "die Klassenliste",
+          object: withoutCarePlace ? "das Kind" : "die Klassenliste",
           retry: () => void latestSubmitRef.current(),
         });
         return;
@@ -591,10 +598,17 @@ export function StudentCreateModal({
                 <SegmentedControl
                   ariaLabel="Art des Eintrags"
                   fullWidth
-                  items={[
-                    { value: "student", label: "Mit OGS-Betreuung" },
-                    { value: "list-entry", label: "Nur Klassenliste" },
-                  ]}
+                  items={
+                    withoutCarePlace
+                      ? [
+                          { value: "student", label: "Mit OGS-Platz" },
+                          { value: "list-entry", label: "Ohne OGS-Platz" },
+                        ]
+                      : [
+                          { value: "student", label: "Mit OGS-Betreuung" },
+                          { value: "list-entry", label: "Nur Klassenliste" },
+                        ]
+                  }
                   value={mode}
                   onChange={(next) => {
                     setMode(next);
@@ -641,17 +655,28 @@ export function StudentCreateModal({
                     type="info"
                     announce="off"
                     message={
-                      <>
-                        Für Kinder, die nicht im Ganztag sind: Der Eintrag
-                        besteht nur aus Name und Klasse und erscheint
-                        ausschließlich auf Klassenlisten und in der
-                        Klassenansicht (
-                        <span className="font-medium">Keine Betreuung</span>).
-                        Keine Anwesenheit, keine Betreuungsplanung, keine
-                        Kontaktdaten. Verwalten lässt sich die Liste über das
-                        Menü oben rechts unter{" "}
-                        <span className="font-medium">Klassenliste</span>.
-                      </>
+                      withoutCarePlace ? (
+                        <>
+                          Für Kinder der Klasse ohne Platz in der OGS. Sie
+                          stehen in der Kinderliste und in der Klassenansicht (
+                          <span className="font-medium">Keine Betreuung</span>
+                          ). Danach können Sie die Eltern in die Eltern-App
+                          einladen. Gruppe, Abholung und Betreuungszeiten gibt
+                          es für diese Kinder nicht.
+                        </>
+                      ) : (
+                        <>
+                          Für Kinder, die nicht im Ganztag sind: Der Eintrag
+                          besteht nur aus Name und Klasse und erscheint
+                          ausschließlich auf Klassenlisten und in der
+                          Klassenansicht (
+                          <span className="font-medium">Keine Betreuung</span>).
+                          Keine Anwesenheit, keine Betreuungsplanung, keine
+                          Kontaktdaten. Verwalten lässt sich die Liste über das
+                          Menü oben rechts unter{" "}
+                          <span className="font-medium">Klassenliste</span>.
+                        </>
+                      )
                     }
                   />
                   <InsetPanel framed padding="md">
@@ -987,7 +1012,9 @@ export function StudentCreateModal({
                   data-setup-tour="student-submit"
                   tooltip={
                     mode === "list-entry"
-                      ? "Legt den Eintrag mit Name und Klasse an, ohne Betreuung."
+                      ? withoutCarePlace
+                        ? "Legt das Kind ohne OGS-Platz an, Eltern bekommen dabei keine Einladung."
+                        : "Legt den Eintrag mit Name und Klasse an, ohne Betreuung."
                       : "Legt das Kind an, Eltern bekommen dabei keine Einladung."
                   }
                   isLoading={save.pending}

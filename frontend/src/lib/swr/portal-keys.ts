@@ -45,6 +45,7 @@ export const operatorProvisioningKeys = {
   allDevices: () => "operator-all-devices",
   organizations: () => "operator-organizations",
   schoolSummaries: () => "operator-school-summaries",
+  schoolRequiredDetails: () => "operator-school-required-details",
   schoolPersons: (id: string | undefined) =>
     `operator-school-persons-${encodeURIComponent(id ?? "")}`,
   schoolAccounts: (id: string | undefined) =>

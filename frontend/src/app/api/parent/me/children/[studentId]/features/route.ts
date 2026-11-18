@@ -2,6 +2,7 @@ import { proxyGet } from "~/lib/parent/route-wrapper.server";
 import { requirePathSegmentParam } from "~/lib/route-wrapper-utils.server";
 
 interface BackendChildFeatures {
+  without_care_place?: boolean;
   sick_note_enabled: boolean;
   excused_note_enabled: boolean;
   sick_requires_approval: boolean;
@@ -11,6 +12,7 @@ interface BackendChildFeatures {
   pickup_change_enabled: boolean;
   pickup_change_mode_enabled?: boolean;
   pickup_manage_allowed: boolean;
+  emergency_contact_manage_allowed: boolean;
   guardian_contact_manage_allowed: boolean;
   absence_request_edit_enabled?: boolean;
   related_accounts_invite_enabled: boolean;

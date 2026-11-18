@@ -3,6 +3,7 @@
   "title": "Mesajlar",
   "description": "Mesajları okuyun ve doğrudan {careTerm}'ye yazın.",
   "noChildren": "Hesabınıza henüz bir çocuk bağlı değil. Bir çocuk bağlanır bağlanmaz burada {careTerm} ile yazışabilirsiniz.",
+  "withoutCarePlace": "{careTerm} ile mesajlaşma yalnızca {careTerm}'de yeri olan çocuklar için kullanılabilir.",
   "noMessagesYet": "Yazmak için dokunun.",
   "previewFromOgs": "{careTerm}: {text}",
   "previewFromYou": "Siz: {text}",

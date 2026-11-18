@@ -646,6 +646,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (s *Service) TransferClassListEntryMarks(ctx context.Context, moves []studentpresence.ClassListEntryMarkMove) error {\n\tif len(moves) == 0 {\n\t\treturn nil\n\t}\n\tfor _, move := range moves {\n\t\tif move.ClassListEntryID \u003c= 0 || move.StudentID \u003c= 0 {\n\t\t\treturn studentpresence.ErrMorningAttendanceInvalid\n\t\t}\n\t}\n\treturn s.runWrite(ctx, \"transfer_class_list_entry_marks\", func(txCtx context.Context) (ports.Stats, error) {\n\t\treturn s.store.TransferClassListEntryMarks(txCtx, moves)\n\t})\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/studentpresence/internal/application/Service.TransferClassListEntryMarks",
+      "owner": "modules/studentpresence"
+    },
+    {
+      "build": "production",
       "evidence": "func (s *Service) TransferOpenVisits(ctx context.Context, from, to int64) (result int64, err error) {\n\terr = s.runWrite(ctx, \"transfer_open_visits\", func(txCtx context.Context) (ports.Stats, error) {\n\t\tif from \u003c= 0 || to \u003c= 0 {\n\t\t\treturn ports.Stats{}, errors.New(\"student presence: invalid visit transfer\")\n\t\t}\n\t\tstats, writeErr := s.store.TransferOpenVisits(txCtx, from, to)\n\t\tresult = stats.Rows\n\t\treturn stats, writeErr\n\t})\n\treturn result, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/studentpresence/internal/application/Service.TransferOpenVisits",

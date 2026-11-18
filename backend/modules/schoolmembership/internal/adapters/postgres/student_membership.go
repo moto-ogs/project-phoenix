@@ -38,15 +38,31 @@ func (s *Store) EnrollStudent(ctx context.Context, input schoolmembership.Studen
 	firstCare := bun.SafeQuery(firstCareFromOnInsert, input.Status, from, scope.TenantID, input.StudentID)
 	err = db.NewRaw(`WITH class_write_gate AS MATERIALIZED (?)
  INSERT INTO users.student_school_memberships
-  (tenant_id, student_profile_id, school_class, status, enrolled_from, enrolled_until, group_id, first_care_from)
-  SELECT ?, ?, ?, ?, ?, ?, ?, ? FROM class_write_gate RETURNING id`,
-		gate, scope.TenantID, input.StudentID, input.SchoolClass, input.Status, from, until, input.GroupID, firstCare).Scan(ctx, &id)
+  (tenant_id, student_profile_id, school_class, status, enrolled_from, enrolled_until, group_id, first_care_from, without_care_place)
+  SELECT ?, ?, ?, ?, ?, ?, ?, ?, ? FROM class_write_gate RETURNING id`,
+		gate, scope.TenantID, input.StudentID, input.SchoolClass, input.Status, from, until, input.GroupID, firstCare,
+		input.WithoutCarePlace).Scan(ctx, &id)
 	stats.StatementDuration = time.Since(started)
 	if err == nil {
 		stats.Rows = 1
 	}
 	return id, stats, err
 }
+
+// classMemberFromNext keeps the class time before the place when a child
+// without an OGS place gets one (#4803): granting the place moves the
+// enrollment start to the place. A class time kept from an earlier class
+// does not carry over into the current one. ?0 is the renewal's
+// without-place mark.
+const classMemberFromNext = `class_member_from = CASE WHEN student.without_care_place AND NOT ?0::boolean
+	THEN COALESCE(CASE WHEN LOWER(TRIM(student.class_member_class)) = LOWER(TRIM(student.school_class))
+		THEN student.class_member_from END,
+		student.enrolled_from, (student.created_at AT TIME ZONE 'Europe/Berlin')::date)
+	ELSE student.class_member_from END`
+
+// classMemberClassNext binds that class time to the class it was spent in.
+const classMemberClassNext = `class_member_class = CASE WHEN student.without_care_place AND NOT ?0::boolean
+	THEN student.school_class ELSE student.class_member_class END`
 
 func (s *Store) RenewStudentEnrollment(ctx context.Context, input schoolmembership.StudentEnrollment, today string) (int64, domain.OperationStats, error) {
 	db, scope, err := s.database(ctx)
@@ -75,9 +91,14 @@ func (s *Store) RenewStudentEnrollment(ctx context.Context, input schoolmembersh
 	err = db.NewUpdate().TableExpr("users.student_school_memberships AS student").
 		Set("school_class = ?", input.SchoolClass).Set("status = ?", input.Status).
 		Set("enrolled_from = ?", from).Set("enrolled_until = ?", until).
-		Set(firstCareFromNext, day, input.Status, from).
+		// The first OGS place establishes a known bound even when the child
+		// previously had no care history. Other renewals retain their history.
+		Set(`first_care_from = CASE WHEN student.without_care_place AND NOT ?::boolean
+            THEN COALESCE(?::date, ?::date) ELSE (?) END`, input.WithoutCarePlace, from, day,
+			bun.SafeQuery(firstCareFromNextValue, day, input.Status, from)).
 		Set(carePausedAfterNext, restart).Set(careResumedFromNext, day, input.Status, from, restart).
-		Set("group_id = ?", input.GroupID).
+		Set(classMemberFromNext, input.WithoutCarePlace).Set(classMemberClassNext, input.WithoutCarePlace).
+		Set("group_id = ?", input.GroupID).Set("without_care_place = ?", input.WithoutCarePlace).
 		Where("student.tenant_id = ?", scope.TenantID).Where("student.student_profile_id = ?", input.StudentID).
 		Where("student.deleted_at IS NULL").
 		Where(`(student.status <> 'alumnus' AND ? <> 'alumnus') OR
@@ -107,6 +128,8 @@ func (s *Store) AssignStudentGroup(ctx context.Context, studentID int64, groupID
 	}
 	query := withStudentTenant(studentUpdate(db), scope).Set("group_id = ?", groupID).
 		Where("student.student_profile_id = ?", studentID).
+		// A child without an OGS place has no group (#4803); clearing one is allowed.
+		Where("NOT student.without_care_place OR ?::bigint IS NULL", groupID).
 		Where("student.status <> 'alumnus' OR student.group_id = ?::bigint OR (student.group_id IS NULL AND ?::bigint IS NULL)", groupID, groupID)
 	changed, stats, err := execStudents(ctx, query, "assign student group")
 	return changed == 1, stats, err
@@ -128,10 +151,13 @@ func (s *Store) LockStudentWindow(ctx context.Context, id int64) (schoolmembersh
 		EnrolledFrom  *calendar.Date `bun:"enrolled_from"`
 		EnrolledUntil *calendar.Date `bun:"enrolled_until"`
 		GroupID       *int64         `bun:"group_id"`
+		// WithoutCarePlace keeps the mark of a child without an OGS place
+		// (#4803) through the window move.
+		WithoutCarePlace bool `bun:"without_care_place"`
 	}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
-	err = db.NewRaw(`SELECT school_class, status, enrolled_from, enrolled_until, group_id
+	err = db.NewRaw(`SELECT school_class, status, enrolled_from, enrolled_until, group_id, without_care_place
  FROM users.student_school_memberships
  WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL
  FOR UPDATE`, scope.TenantID, id).Scan(ctx, &row)
@@ -143,7 +169,8 @@ func (s *Store) LockStudentWindow(ctx context.Context, id int64) (schoolmembersh
 		return schoolmembership.StudentEnrollment{}, false, stats, err
 	}
 	stats.Rows = 1
-	window := schoolmembership.StudentEnrollment{StudentID: id, GroupID: row.GroupID, SchoolClass: row.SchoolClass, Status: row.Status}
+	window := schoolmembership.StudentEnrollment{StudentID: id, GroupID: row.GroupID, SchoolClass: row.SchoolClass, Status: row.Status,
+		WithoutCarePlace: row.WithoutCarePlace}
 	if row.EnrolledFrom != nil {
 		window.EnrolledFrom = row.EnrolledFrom.String()
 	}

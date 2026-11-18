@@ -3,6 +3,7 @@
   "title": "Сообщения",
   "description": "Читайте сообщения и пишите напрямую в {careTerm}.",
   "noChildren": "К вашему аккаунту ещё не привязан ребёнок. Как только ребёнок будет привязан, вы сможете писать здесь в {careTerm}.",
+  "withoutCarePlace": "Сообщения в {careTerm} доступны только для детей, у которых есть место в {careTerm}.",
   "noMessagesYet": "Нажмите, чтобы написать.",
   "previewFromOgs": "{careTerm}: {text}",
   "previewFromYou": "Вы: {text}",

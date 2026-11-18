@@ -3,7 +3,6 @@ package imports
 
 import (
 	dataimport "github.com/moto-ogs/project-phoenix/modules/dataimport"
-
 	application "github.com/moto-ogs/project-phoenix/modules/dataimport/internal/application/importservice"
 	ports "github.com/moto-ogs/project-phoenix/modules/dataimport/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -26,4 +25,7 @@ func NewRelationshipResolver(groups, rooms dataimport.ReferenceLookup) ports.Rel
 }
 func NewImportService[T any](config ports.ImportConfig[T], runtime ports.ImportRuntime) dataimport.RowImporter[T] {
 	return application.NewImportService(config, runtime)
+}
+func NewClassListConversion(deps ports.ClassListConversionDeps, students ports.StudentImportDeps) dataimport.ClassListConverter {
+	return application.NewClassListConversion(deps, application.NewStudentImportConfig(students))
 }

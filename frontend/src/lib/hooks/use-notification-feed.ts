@@ -16,6 +16,7 @@ import { useNotificationFeedPortal } from "~/lib/notification-feed-portal";
 import { onSWRScopeReset, useLiveRefreshInterval, useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import { notificationFeedKeys, schoolPortalKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 
 /** Woher eine Glocke ihren Feed liest: das Portal und seine Aufrufe. */
 export interface NotificationFeedSource {
@@ -76,7 +77,9 @@ export function useNotificationFeedUnread(
         ? parentKeys.notificationFeed.unreadCount()
         : portal.keyScope === "school"
           ? schoolPortalKeys.notificationFeedUnread()
-          : notificationFeedKeys.unreadCount(),
+          : portal.keyScope === "traeger"
+            ? traegerKeys.notificationFeedUnread()
+            : notificationFeedKeys.unreadCount(),
     () =>
       source
         ? source.api.fetchUnreadCount()
@@ -166,7 +169,9 @@ export function useNotificationFeed(
       ? parentKeys.notificationFeed.firstPage()
       : portal.keyScope === "school"
         ? schoolPortalKeys.notificationFeedFirstPage()
-        : notificationFeedKeys.firstPage(),
+        : portal.keyScope === "traeger"
+          ? traegerKeys.notificationFeedFirstPage()
+          : notificationFeedKeys.firstPage(),
     () => (source ? source.api.fetchPage() : fetchNotificationFeed(apiBase)),
     {
       refreshInterval,

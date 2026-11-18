@@ -32,6 +32,9 @@ func (s *Service) GetChildCourses(
 		}
 		return nil, err
 	}
+	if err := child.RequireCarePlace(); err != nil {
+		return nil, err
+	}
 	if s.OfferingChanges == nil {
 		return &CourseCatalog{
 			DisabledReason: CourseRequestsReasonSchoolOff,
@@ -67,7 +70,7 @@ func (s *Service) RequestChildCourse(
 	if err != nil {
 		return nil, err
 	}
-	if err := child.RequireCareRunning(); err != nil {
+	if err := child.RequireOGSCareRunning(); err != nil {
 		return nil, err
 	}
 	if strings.TrimSpace(note) == "" && s.GuardianReasonRequired(ctx, child.TenantID) {
@@ -112,7 +115,7 @@ func (s *Service) WithdrawChildCourseRequest(
 	if err != nil {
 		return nil, err
 	}
-	if err := child.RequireCareRunning(); err != nil {
+	if err := child.RequireOGSCareRunning(); err != nil {
 		return nil, err
 	}
 	if s.OfferingChanges == nil {

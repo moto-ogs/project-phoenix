@@ -632,6 +632,30 @@ func TestEnsureTemplateAdoptsUnstampedCompleteDatabase(t *testing.T) {
 	assert.Equal(t, 0, builds)
 }
 
+func TestEnsureResolvedTemplateRebuildsMissingCurrentTemplate(t *testing.T) {
+	t.Parallel()
+	cfg := integrationConfig(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	builds := 0
+	options := []TemplateOption{
+		WithBuild(fakeBuild(&builds)),
+		WithMigrationsHash("resolved-template"),
+	}
+	templateCfg, err := EnsureTemplate(ctx, cfg, options...)
+	require.NoError(t, err)
+	maint := openSQL(cfg.MaintenanceDSN())
+	defer func() { _ = maint.Close() }()
+	require.NoError(t, dropDatabase(ctx, maint, templateCfg.TemplateName()))
+
+	restored, err := EnsureResolvedTemplate(ctx, cfg, templateCfg.TemplateName(), options...)
+	require.NoError(t, err)
+	assert.Equal(t, templateCfg.TemplateName(), restored.TemplateName())
+	assert.Equal(t, 2, builds)
+	assert.True(t, databaseExists(t, ctx, cfg, restored.TemplateName()))
+}
+
 func TestEnsureTemplateRebuildsUnstampedIncompleteDatabase(t *testing.T) {
 	t.Parallel()
 	cfg := integrationConfig(t)

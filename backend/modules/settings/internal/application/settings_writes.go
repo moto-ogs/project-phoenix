@@ -84,6 +84,9 @@ func (s *settingsService) writeDefinition(key string, permissions []string, oper
 }
 
 func (s *settingsService) validateLockedSettingWrite(ctx context.Context, key string, value any, operation string) error {
+	if err := s.lockClassListConversionSettings(ctx, key); err != nil {
+		return &config.SettingsError{Op: operation, Err: err}
+	}
 	if isParentReportSettingKey(key) {
 		if err := s.lockParentReportModes(ctx); err != nil {
 			return err

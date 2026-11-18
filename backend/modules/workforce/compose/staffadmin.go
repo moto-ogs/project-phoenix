@@ -73,6 +73,12 @@ func NewStaffBankExportFields(cipher workforce.BankDataCipher) workforce.StaffBa
 	return application.NewStaffBankExportFields(cipher)
 }
 
+// NewStaffDocumentFileSeal is the maintenance-only seal of the sick note and
+// payslip files (#3840), never HTTP.
+func NewStaffDocumentFileSeal() workforce.StaffDocumentFileSeal {
+	return application.NewStaffDocumentFileSeal(postgres.NewStaffDocumentFileSealStore())
+}
+
 // NewStaffBankDataRekey is the maintenance-only bank backfill/rekey (#6332), never HTTP.
 func NewStaffBankDataRekey(cipher workforce.BankDataRekeyCipher) workforce.StaffBankDataRekey {
 	return application.NewStaffBankDataRekey(postgres.NewStaffBankRekeyStore(), cipher)

@@ -292,13 +292,13 @@ func TestReplaceAccountRoleRevokesWhenARoleDeletionWinsTheRow(t *testing.T) {
 // review P2). The driver gives up a read that waits longer than its read
 // timeout (pgdriver: 10 s by default, not overridden in production), and
 // PostgreSQL sends nothing while a statement waits for a lock. Scaled down
-// as in #6239: under a 1 s read timeout each row is held 0.7 s from the moment
+// as in #6239: under a 2 s read timeout each row is held 1.2 s from the moment
 // the replacement is seen waiting for it, so one statement per row reads
-// within the timeout while a statement over both rows would wait about 1.4 s
+// within the timeout while a statement over both rows would wait about 2.4 s
 // in one read and answer 500.
 func TestReplaceAccountRoleWaitsForEachRoleRowSeparately(t *testing.T) {
 	t.Parallel()
-	const readTimeout, hold = time.Second, 700 * time.Millisecond
+	const readTimeout, hold = 2 * time.Second, 1200 * time.Millisecond
 	db := testpkg.SetupIsolatedTestDB(t)
 	f := newRBACBudgetFixtureOn(t, db)
 	token, _ := f.accountToken(t, "role-set-wait-admin", "users:manage")

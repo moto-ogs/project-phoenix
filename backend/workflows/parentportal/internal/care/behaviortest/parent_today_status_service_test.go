@@ -398,3 +398,24 @@ func approvedOfferingProjection(t *testing.T) *api.ApprovedOfferingTestProjectio
 	require.NoError(t, err)
 	return projection
 }
+
+// TestGetChildTodayStatusWithoutCarePlaceHasNoOGSDay liest fuer ein Kind ohne
+// OGS-Platz (#4803) keinen OGS-Tag: auch eine Anwesenheitszeile ergibt
+// "keine Betreuung", nicht "in der OGS".
+func TestGetChildTodayStatusWithoutCarePlaceHasNoOGSDay(t *testing.T) {
+	t.Parallel()
+
+	svc, db := buildTodayStatusService(t)
+	chain := testpkg.CreateTestParentGuardianChain(t, db)
+	openAttendanceToday(t, db, chain.TenantID, chain.StudentID, calendar.Now().Add(-90*time.Minute))
+	_, err := db.ExecContext(context.Background(), `UPDATE users.student_school_memberships
+		SET without_care_place = true, group_id = NULL
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, chain.TenantID, chain.StudentID)
+	require.NoError(t, err)
+
+	status, err := svc.GetChildTodayStatus(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID)
+
+	require.NoError(t, err)
+	assert.Equal(t, parentportal.DayStateNoCare, status.State)
+	assert.Nil(t, status.AtOgs)
+}

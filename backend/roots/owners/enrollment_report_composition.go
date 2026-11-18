@@ -61,13 +61,17 @@ func (b enrollmentRosterStudents) ListClassRoster(ctx context.Context, schoolCla
 		if student == nil {
 			continue
 		}
-		out = append(out, &enrollmentCompose.RosterStudent{
+		roster := &enrollmentCompose.RosterStudent{
 			ID: student.ID, PersonID: student.PersonID, SchoolClass: student.SchoolClass, GroupID: student.GroupID,
 			AllowedDepartureModes: student.AllowedDepartureModes, DepartureDays: student.DepartureDays,
 			DepartureCompanionNote: student.DepartureCompanionNote,
 			WithoutCarePlace:       student.WithoutCarePlace, Departed: student.LeftSchool(),
 			MemberFrom: student.ClassMemberFrom(), MemberUntil: student.EnrolledUntil,
-		})
+		}
+		if from, until, ok := student.ClassTimeBeforeCare(); ok {
+			roster.ClassTimeFrom, roster.ClassTimeUntil = &from, &until
+		}
+		out = append(out, roster)
 	}
 	return out, nil
 }

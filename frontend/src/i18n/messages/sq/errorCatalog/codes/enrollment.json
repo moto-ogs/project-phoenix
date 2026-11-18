@@ -113,7 +113,9 @@
   "phase_not_eligible": "Ky regjistrim nuk është i hapur për llogarinë tuaj. Hyni në aplikacionin për prindër ose pyesni shkollën.",
   "phase_not_found": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "phase_school_classes_invalid": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
+  "phase_service_end_too_far": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "phase_service_period_invalid": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
+  "phase_service_period_too_long": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "phase_window_invalid": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "pickup_time_not_allowed": "Ju lutemi zgjidhni vetëm orë marrjeje nga lista. Ora e shënuar nuk ofrohet më.",
   "request_duplicate": "Për këtë fëmijë ka tashmë një regjistrim në këtë periudhë.",
@@ -178,5 +180,6 @@
   "traeger_school_outside": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "traeger_catalog_invalid": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "traeger_preview_stale": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
-  "traeger_copy_rejected": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale."
+  "traeger_copy_rejected": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "without_care_place_school_year_only": "Një fëmijë pa vend në OGS e merr vendin me një regjistrim për vitin shkollor."
 }

@@ -96,7 +96,8 @@ var unmappedDateColumns = map[string]string{
 	// ADR 0166: School Membership writes the first-care bound in raw SQL
 	// from calendar.Date values; People Directory's projection row reads it
 	// as *calendar.Date. No table-bound model maps the column.
-	"users.student_school_memberships.first_care_from": "ADR 0166: written from calendar.Date, read by the People Directory projection as *calendar.Date",
+	"users.student_school_memberships.first_care_from":   "ADR 0166: written from calendar.Date, read by the People Directory projection as *calendar.Date",
+	"users.student_school_memberships.class_member_from": "ADR 0282: written in SQL from the row's own dates when a place is granted, read by the People Directory class-name read as *calendar.Date",
 	// ADR 0180: the care gap of a returning child, kept the same way.
 	"users.student_school_memberships.care_paused_after": "ADR 0180: written from calendar.Date, read by the People Directory projection as *calendar.Date",
 	"users.student_school_memberships.care_resumed_from": "ADR 0180: written from calendar.Date, read by the People Directory projection as *calendar.Date",

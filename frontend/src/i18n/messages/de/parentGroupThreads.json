@@ -15,5 +15,6 @@
   "answerTo": "Antwort auf: {title}",
   "errorObjectThread": "die Gruppennachricht",
   "errorObjectAnswer": "die Antwort",
-  "errorObjectList": "die Gruppennachrichten"
+  "errorObjectList": "die Gruppennachrichten",
+  "closedNoteWithoutChat": "Diese Gruppennachricht ist geschlossen."
 }

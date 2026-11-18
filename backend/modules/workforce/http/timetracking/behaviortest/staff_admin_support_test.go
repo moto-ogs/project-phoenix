@@ -27,6 +27,12 @@ func init() {
 	testutil.SeedTestJWTConfig()
 }
 
+// testUploadFileKeys binds the test configuration's health and bank rings to
+// the object store, as the roots do (#3840).
+func testUploadFileKeys() nativeUploads.FileKeys {
+	return nativeUploads.FileKeys{Health: testpkg.TestHealthDataCipher, Bank: testpkg.TestBankDataCipher}
+}
+
 // isoDay is a calendar day for the shared fixtures, which accept any value
 // rendering as YYYY-MM-DD.
 type isoDay string
@@ -93,8 +99,11 @@ func setupStaffRouteWith(t *testing.T, adjust func(*bun.DB, *timetracking.StaffA
 	qualifications, err := workforceCompose.NewQualifications(db, qualificationStaffStub{}, workforce.QualificationReminderPorts{}, nil)
 	require.NoError(t, err)
 
+	documentObjects, err := nativeUploads.SealedPrivateUploadsBackend(testUploadFileKeys())
+	require.NoError(t, err)
 	deps := timetracking.StaffAdminDependencies{
 		Uploads:            nativeUploads.UploadFiles{},
+		DocumentObjects:    documentObjects,
 		PayrollDispatch:    payrollDispatchOff{},
 		PayrollRules:       workforcetest.ComposePayrollRules(t, db),
 		OffboardingCleanup: cleanup,

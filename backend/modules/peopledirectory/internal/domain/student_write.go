@@ -93,6 +93,9 @@ func ValidateStudentRecord(
 	if strings.TrimSpace(record.SchoolClass) == "" {
 		return invalidStudentRecord("school class is required")
 	}
+	if record.WithoutCarePlace && record.GroupID != nil {
+		return ErrWithoutCarePlaceGroup
+	}
 	for _, plan := range []DeparturePlan{supplied, resolved} {
 		if err := validateDeparturePlan(plan); err != nil {
 			return err
@@ -124,6 +127,10 @@ func (e *InvalidStudentRecordError) Unwrap() error { return ErrStudentInvalid }
 
 // ErrStudentInvalid is the sentinel every record refusal unwraps to.
 var ErrStudentInvalid = errors.New("invalid student")
+
+// ErrWithoutCarePlaceGroup refuses a group for a child without an OGS place
+// (#4803, ADR 0282): a group is OGS care.
+var ErrWithoutCarePlaceGroup = errors.New("a child without an OGS place has no group")
 
 func invalidStudentRecord(reason string) error { return &InvalidStudentRecordError{Reason: reason} }
 

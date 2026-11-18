@@ -65,6 +65,12 @@ const (
 	CodePhaseNameRequired         = "enrollment.phase_name_required"
 	CodePhaseServicePeriodInvalid = "enrollment.phase_service_period_invalid"
 	CodePhaseWindowInvalid        = "enrollment.phase_window_invalid"
+	// CodePhaseServicePeriodTooLong: the service period runs longer than
+	// MaxServicePeriodYears (#5658).
+	CodePhaseServicePeriodTooLong = "enrollment.phase_service_period_too_long"
+	// CodePhaseServiceEndTooFar: the service end lies more than
+	// MaxServiceEndYearsAhead after today (#5658).
+	CodePhaseServiceEndTooFar     = "enrollment.phase_service_end_too_far"
 	CodePhaseSchoolClassesInvalid = "enrollment.phase_school_classes_invalid"
 	// CodePhaseEligibilitySettingRequired: a class or grade restriction
 	// needs the matching Klassen-/Klassenstufen-Abfrage switched on.

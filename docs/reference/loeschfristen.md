@@ -241,6 +241,8 @@ Für zwei Datenarten passt keine Frist, weil ihre Zeilen kein Ende haben. Die Sc
 | Dateiablage (`documents.files`): Dateien, die die Schule für ihr Team ablegt, etwa Konzepte, Formulare, Pläne | Eine Datei bleibt gültig, solange die Schule sie nutzt; eine Frist ab Hochladen würde gültige Unterlagen löschen | Datei oder ganzen Ordner löschen | Die Zeile einer gelöschten Datei 30 Tage nach dem Entfernen der Datei (siehe Technische Daten) |
 | Klassenlisten-Einträge (`users.class_list_entries`): Kinder ohne Betreuung, die nur auf der Klassenliste stehen, mit Vor- und Nachname und Klasse | Ein Kind steht auf der Liste, solange es die Schule besucht; moto erfährt nicht, wann es die Schule verlässt | Eintrag entfernen, wenn das Kind die Schule verlässt | Der Jahrgangswechsel entfernt Abgangsklassen; ihr Verlauf geht mit dem Jahrgangswechsel |
 
+Schaltet das moto-Team für eine Schule Kinder ohne OGS-Platz ein (`operations.children_without_care_place`, #4803, [ADR 0282](../adr/0282-kind-ohne-ogs-platz-ist-ein-kind-der-klasse-mit-eigenem-datensatz.md)), werden ihre Klassenlisten-Einträge zu Kind-Datensätzen mit dem Merkmal `users.student_school_memberships.without_care_place`. Für sie gelten dann die Fristen und Löschwege eines Kindes, ebenso für ihre Eltern (Aufbewahrung „Erziehungsberechtigte ohne Kind“, `gdpr.guardian_retention_days`). Die Spur `audit.class_list_entry_changes` hält mit der Aktion `assigned` fest, welches Kind ein Eintrag wurde, und folgt ihrer bisherigen Frist.
+
 ## Offene Lücken ohne Ticket
 
 Der Wächtertest führt keine Tabellen mehr in der Klasse `open gap` (Stand 21.10.2026).

@@ -876,13 +876,17 @@ export function PersonalInfoEditPanel({
         onChange={(value) => updateField("school_class", value)}
         parentVisibleHint={PARENT_VISIBLE_HINTS.schoolClass}
       />
-      <SelectInput
-        id="modal-student-group"
-        label="Gruppe"
-        value={editedStudent.group_id ?? ""}
-        onChange={(value) => updateField("group_id", value)}
-        options={[{ value: "", label: "Keine Gruppe" }, ...groups]}
-      />
+      {/* Ein Kind ohne OGS-Platz (#4803) hat keine Gruppe und keinen
+          Heimweg der OGS. */}
+      {student.without_care_place ? null : (
+        <SelectInput
+          id="modal-student-group"
+          label="Gruppe"
+          value={editedStudent.group_id ?? ""}
+          onChange={(value) => updateField("group_id", value)}
+          options={[{ value: "", label: "Keine Gruppe" }, ...groups]}
+        />
+      )}
       <DateInput
         id="modal-student-birthday"
         label="Geburtsdatum"
@@ -927,57 +931,59 @@ export function PersonalInfoEditPanel({
           onPhotoError={errors.invalid}
         />
       ) : null}
-      <DepartureSection
-        companions={editedStudent.companions}
-        // Editable ONLY once the stored links are known. While the fetch is
-        // pending the picker would start from an empty list and be
-        // overwritten the moment it resolves; after a failed load the edit is
-        // discarded silently, because submit deliberately sends
-        // `companions: undefined` rather than delete links it never read.
-        onCompanionsChange={
-          companionsStatus === "ready"
-            ? (companions) => updateField("companions", companions)
-            : undefined
-        }
-        companionStudentId={student.id}
-        onCompanionExtensionConfirmed={(confirmation) => {
-          updateField("extend_companion_plans", true);
-          setConfirmedExtensions((current) =>
-            mergeCompanionConfirmations(current, [confirmation]),
-          );
-        }}
-        days={
-          editedStudent.allowed_departure_modes ??
-          allowedDepartureModesFromDeparture(
-            editedStudent.departure_days ??
-              departureDaysFromLegacy(
-                editedStudent.bus_days,
-                editedStudent.pickup_days,
-              ),
-          )
-        }
-        onChange={(value) => {
-          const allowed = normalizeAllowedDepartureModes(value);
-          const departure = allowedDepartureToDepartureDays(allowed);
-          const busDays = allowedDepartureToBusDays(allowed);
-          const pickupDays = allowedDepartureToPickupDays(allowed);
-          setEditedStudent((prev) => ({
-            ...prev,
-            allowed_departure_modes: allowed,
-            departure_days: departure,
-            bus_days: busDays,
-            pickup_days: pickupDays,
-            pickup_status: pickupDaysHaveAny(pickupDays)
-              ? "Wird abgeholt"
-              : "Geht alleine nach Hause",
-          }));
-        }}
-        companionNote={editedStudent.departure_companion_note}
-        onCompanionNoteChange={(value) =>
-          updateField("departure_companion_note", value)
-        }
-        companionNoteError={errors.fieldError("departure_companion_note")}
-      />
+      {student.without_care_place ? null : (
+        <DepartureSection
+          companions={editedStudent.companions}
+          // Editable ONLY once the stored links are known. While the fetch is
+          // pending the picker would start from an empty list and be
+          // overwritten the moment it resolves; after a failed load the edit is
+          // discarded silently, because submit deliberately sends
+          // `companions: undefined` rather than delete links it never read.
+          onCompanionsChange={
+            companionsStatus === "ready"
+              ? (companions) => updateField("companions", companions)
+              : undefined
+          }
+          companionStudentId={student.id}
+          onCompanionExtensionConfirmed={(confirmation) => {
+            updateField("extend_companion_plans", true);
+            setConfirmedExtensions((current) =>
+              mergeCompanionConfirmations(current, [confirmation]),
+            );
+          }}
+          days={
+            editedStudent.allowed_departure_modes ??
+            allowedDepartureModesFromDeparture(
+              editedStudent.departure_days ??
+                departureDaysFromLegacy(
+                  editedStudent.bus_days,
+                  editedStudent.pickup_days,
+                ),
+            )
+          }
+          onChange={(value) => {
+            const allowed = normalizeAllowedDepartureModes(value);
+            const departure = allowedDepartureToDepartureDays(allowed);
+            const busDays = allowedDepartureToBusDays(allowed);
+            const pickupDays = allowedDepartureToPickupDays(allowed);
+            setEditedStudent((prev) => ({
+              ...prev,
+              allowed_departure_modes: allowed,
+              departure_days: departure,
+              bus_days: busDays,
+              pickup_days: pickupDays,
+              pickup_status: pickupDaysHaveAny(pickupDays)
+                ? "Wird abgeholt"
+                : "Geht alleine nach Hause",
+            }));
+          }}
+          companionNote={editedStudent.departure_companion_note}
+          onCompanionNoteChange={(value) =>
+            updateField("departure_companion_note", value)
+          }
+          companionNoteError={errors.fieldError("departure_companion_note")}
+        />
+      )}
       <TextAreaInput
         id="modal-student-health-info"
         label="Gesundheitsinformationen"

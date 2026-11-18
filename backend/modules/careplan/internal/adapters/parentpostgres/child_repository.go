@@ -160,6 +160,7 @@ func (r *ChildRepository) resolveChildren(ctx context.Context, links []guardianL
 			EnrolledFrom:        parseDirectoryDate(student.EnrolledFrom),
 			EnrolledUntil:       parseDirectoryDate(student.EnrolledUntil),
 			GuardianPermissions: link.Permissions,
+			WithoutCarePlace:    student.WithoutCarePlace,
 		})
 	}
 	return out, nil
