@@ -322,7 +322,9 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0151: the school figure constructor (+13).
 	// ADR 0156: the contract Soll port (+4).
 	// ADR 0241: the presence series of the utilization (+7).
-	"modules/studentpresence/compose":                 270,
+	// #2352: the session row alias the root names in the contract fits in
+	// shortened comments (-1).
+	"modules/studentpresence/compose":                 269,
 	"modules/studentpresence/compose/presenceservice": 110,
 	"modules/supervisiondashboard/compose":            11,
 	// Raised by ADR 0128: the student template days constructor (+5), by

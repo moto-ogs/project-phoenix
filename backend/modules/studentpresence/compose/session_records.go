@@ -13,8 +13,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// The session records read the display relations of other owners through
-// directories the composition root implements over those owners.
+// The session records read other owners' display relations through root
+// directories; SessionRow is the session the caller-context routes render.
 type (
 	DirectoryDevice           = ports.DirectoryDevice
 	DeviceDirectory           = ports.DeviceDirectory
@@ -29,9 +29,7 @@ type (
 	SupervisionStaffDirectory = ports.SupervisionStaffDirectory
 	RecordErrors              = ports.RecordErrors
 	CrossTenantStudent        = ports.CrossTenantStudent
-	// SessionRow is a room session as the caller-context routes render it
-	// (SessionRows); the root names it in their contract.
-	SessionRow = ports.ActiveGroup
+	SessionRow                = ports.ActiveGroup
 )
 
 // SessionRecordDependencies wire the session and supervision records.
@@ -43,14 +41,12 @@ type SessionRecordDependencies struct {
 	Devices    DeviceDirectory
 	Rooms      RoomDirectory
 	Activities ActivityDirectory
-	// Staff attaches the staff members to the session supervision reads;
-	// nil leaves them unset.
+	// Staff attaches staff to the supervision reads; nil leaves them unset.
 	Staff  SupervisionStaffDirectory
 	Errors RecordErrors
 }
 
-// SessionRecords is the bounded record capability returned by construction.
-// The implementation remains private to Student Presence.
+// SessionRecords is the bounded record capability construction returns.
 type SessionRecords interface {
 	studentpresence.SessionRecords
 	studentpresence.SupervisionRecords
