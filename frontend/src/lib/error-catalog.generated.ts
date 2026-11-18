@@ -1304,6 +1304,8 @@ export const ERROR_CATALOG = {
         "Der Buchungsmodus wurde nicht aktiviert: Für mindestens ein betreutes Kind ist kein Betreuungstag gebucht. Bitte prüfen Sie die Auswirkungen erneut.",
       "settings.device_pin_too_simple":
         "Diese PIN ist zu leicht zu erraten. Bitte nehmen Sie keine gleichen Ziffern (1111), keine Reihen (1234, 4321) und keine Paare (1212).",
+      "settings.enrollment_privacy_notice_missing":
+        "Die Online-Anmeldung braucht eine Datenschutzinformation. Schalten Sie unter „Rechtstexte“ die Datenschutzinformation ein und tragen Sie den Text ein. Danach können Sie die Online-Anmeldung einschalten.",
       "settings.invalid_value":
         "Der Wert für {object} ist nicht erlaubt. Bitte prüfen Sie die Eingabe.",
       "settings.managed_by_upload":

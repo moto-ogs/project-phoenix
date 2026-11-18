@@ -34,6 +34,9 @@ import {
 import { HomeBlocksTab } from "./home-blocks-tab";
 import { PersonalizationTab } from "./personalization-tab";
 import { EnrollmentLinkPanel } from "./enrollment-link-panel";
+import { EnrollmentActivationDialog } from "./enrollment-activation-dialog";
+import { EnrollmentPrivacyNoticeWarning } from "~/components/enrollment/enrollment-privacy-notice-warning";
+import { enrollmentPrivacyNotice } from "~/lib/enrollment-privacy-notice";
 import { useOptionalSupervision } from "~/lib/supervision-context";
 import { useNFCEnabled } from "~/lib/tenant-context";
 import { useInvalidateFamily } from "~/lib/swr";
@@ -92,6 +95,13 @@ function SettingsTabContent({
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(
     () => new Set<string>(),
+  );
+  const [enrollmentActivationOpen, setEnrollmentActivationOpen] =
+    useState(false);
+  const enrollmentNotice = enrollmentPrivacyNotice(allTabs);
+  const openEnrollmentActivation = useCallback(
+    () => setEnrollmentActivationOpen(true),
+    [],
   );
   // The deep-linked category is expanded once per (tab, key); a later schema
   // revalidation must not re-open it after the person collapsed it.
@@ -222,12 +232,18 @@ function SettingsTabContent({
               onSave={onSave}
               onReset={onReset}
               onSchemaRefresh={onSchemaRefresh}
+              onEnrollmentEnable={openEnrollmentActivation}
             />
           ))
         )
       ) : (
         <>
-          {tab.key === "enrollment" && <EnrollmentLinkPanel tab={tab} />}
+          {tab.key === "enrollment" && (
+            <>
+              <EnrollmentPrivacyNoticeWarning state={enrollmentNotice} />
+              <EnrollmentLinkPanel tab={tab} />
+            </>
+          )}
           {tab.categories.map((category) => {
             const key = expansionKey(tab.key, category.key);
             return (
@@ -241,11 +257,19 @@ function SettingsTabContent({
                 onSave={onSave}
                 onReset={onReset}
                 onSchemaRefresh={onSchemaRefresh}
+                onEnrollmentEnable={openEnrollmentActivation}
               />
             );
           })}
         </>
       )}
+      <EnrollmentActivationDialog
+        isOpen={enrollmentActivationOpen}
+        onClose={() => setEnrollmentActivationOpen(false)}
+        noticePresent={enrollmentNotice?.noticePresent ?? false}
+        currentRecipients={enrollmentNotice?.notificationRecipients ?? ""}
+        onSave={onSave}
+      />
     </div>
   );
 }

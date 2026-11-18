@@ -356,3 +356,22 @@ export async function fetchDevicePinSetupReason(): Promise<DevicePinSetupReason 
   // An unknown reason from a newer backend still asks for a PIN.
   return json.data.reason === "too_simple" ? "too_simple" : "missing";
 }
+
+/**
+ * The school's contact address (#7176). Switching the online enrollment on
+ * offers it as the recipient of new-enrollment e-mails. Empty when the school
+ * has none. A failed request throws an ApiError.
+ */
+export async function fetchSchoolContactEmail(): Promise<string> {
+  const response = await sessionFetch("/api/settings/school-contact-email", {
+    method: "GET",
+  });
+  if (!response.ok) {
+    throw await apiErrorFromResponse(
+      response,
+      `School contact address could not be loaded (${response.status})`,
+    );
+  }
+  const json = (await response.json()) as ApiResponse<{ email?: string }>;
+  return json.data?.email ?? "";
+}

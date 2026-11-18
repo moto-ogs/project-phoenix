@@ -9,5 +9,6 @@
   "attendance_retention_below_visible": "{object} could not be saved. Please check your entries.",
   "module_requires": "{object} could not be saved. Please check your entries.",
   "module_required_by": "{object} could not be saved. Please check your entries.",
-  "device_pin_too_simple": "This PIN is too easy to guess. Please do not use the same digit (1111), a run (1234, 4321) or a repeated pair (1212)."
+  "device_pin_too_simple": "This PIN is too easy to guess. Please do not use the same digit (1111), a run (1234, 4321) or a repeated pair (1212).",
+  "enrollment_privacy_notice_missing": "{object} could not be saved. Please check your entries."
 }

@@ -12,5 +12,8 @@
   ],
   "api/settings/payroll-status": [
     "GET tenant /api/settings/payroll-status"
+  ],
+  "api/settings/school-contact-email": [
+    "GET tenant /api/settings/school-contact-email"
   ]
 }

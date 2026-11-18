@@ -30,10 +30,11 @@ const (
 
 // SettingsResource defines the settings API resource.
 type SettingsResource struct {
-	operations  Operations
-	homeLayouts HomeLayoutOperations
-	devicePIN   DevicePINOperations
-	runtime     Runtime
+	operations    Operations
+	homeLayouts   HomeLayoutOperations
+	devicePIN     DevicePINOperations
+	runtime       Runtime
+	schoolContact SchoolContactEmail
 }
 
 type Operations interface {
@@ -80,8 +81,8 @@ type DevicePINOperations interface {
 	DevicePINStatus(context.Context) (any, error)
 }
 
-func NewSettingsResource(operations Operations, homeLayouts HomeLayoutOperations, devicePIN DevicePINOperations, runtime Runtime) *SettingsResource {
-	return &SettingsResource{operations: operations, homeLayouts: homeLayouts, devicePIN: devicePIN, runtime: runtime}
+func NewSettingsResource(operations Operations, homeLayouts HomeLayoutOperations, devicePIN DevicePINOperations, runtime Runtime, schoolContact SchoolContactEmail) *SettingsResource {
+	return &SettingsResource{operations: operations, homeLayouts: homeLayouts, devicePIN: devicePIN, runtime: runtime, schoolContact: schoolContact}
 }
 
 // SettingsRouter returns a configured router for settings endpoints.
@@ -107,6 +108,9 @@ func (rs *SettingsResource) SettingsRouter() chi.Router {
 		r.With(settingsWrite, withTx).Get("/values/{key}/reveal", rs.revealValue)
 		r.With(settingsWrite, withTx).Put("/values/{key}", rs.setValue)
 		r.With(settingsWrite, withTx).Delete("/values/{key}", rs.resetValue)
+		// The school's contact address, offered as the first recipient of
+		// enrollment notifications when the online form is switched on (#7176).
+		r.With(settingsWrite, withTx).Get("/school-contact-email", rs.getSchoolContactEmail)
 
 		// Login image — reads use withTx (tenant role), writes use WithAdminTx internally
 		// because platform.schools requires the phoenix_admin role for UPDATE.

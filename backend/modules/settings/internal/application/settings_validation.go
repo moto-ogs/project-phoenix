@@ -150,6 +150,8 @@ func (s *settingsService) validateCrossField(ctx context.Context, key string, va
 		return s.validateClassCollectionGuard(ctx, key, value)
 	case config.KeyEnrollmentGradeLevelMax:
 		return s.validateGradeLevelCapGuard(ctx, key, value)
+	case config.KeyEnrollmentEnabled:
+		return s.validateEnrollmentPrivacyNotice(ctx, key, value)
 	case config.KeyAttendanceVisibleDays, config.KeyGDPRAttendanceRetentionDays:
 		return s.validateAttendanceWindows(ctx, key, value)
 	}

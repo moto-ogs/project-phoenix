@@ -28,9 +28,19 @@ func checkEnrollmentSubmissionGolden(t *testing.T, api *goldenRuntime) {
 	phase := testpkg.CreateTestEnrollmentPhase(t, db)
 	staffToken := testpkg.MintLiveSessionJWT(t, db, testutil.AdminTestClaimsForTenant(int(staff.ID), testpkg.Tenant(t)))
 	parentToken := testpkg.MintLiveSessionJWT(t, db, sessiontoken.AppClaims{ID: int(parent.AccountID), Sub: parent.Email, Scope: "parent", Roles: []string{"guardian"}})
-	enabled := checkpointRequest(api, checkpointScenario{
-		Method: http.MethodPut, Path: "/api/settings/values/enrollment.enabled", Authenticated: true, Body: `{"value":true}`,
-	}, staffToken)
+	enable := checkpointScenario{Method: http.MethodPut, Path: "/api/settings/values/enrollment.enabled", Authenticated: true, Body: `{"value":true}`}
+	// The form goes online only with a privacy notice (#7176).
+	refused := checkpointRequest(api, enable, staffToken)
+	require.Equal(t, http.StatusBadRequest, refused.Code, refused.Body.String())
+	require.Contains(t, refused.Body.String(), `"code":"settings.enrollment_privacy_notice_missing"`)
+	for _, notice := range []checkpointScenario{
+		{Method: http.MethodPut, Path: "/api/settings/values/enrollment.legal_dsgvo_text", Authenticated: true, Body: `{"value":"Datenschutzinformation der Schule"}`},
+		{Method: http.MethodPut, Path: "/api/settings/values/enrollment.legal_dsgvo_enabled", Authenticated: true, Body: `{"value":true}`},
+	} {
+		written := checkpointRequest(api, notice, staffToken)
+		require.Equal(t, http.StatusOK, written.Code, written.Body.String())
+	}
+	enabled := checkpointRequest(api, enable, staffToken)
 	require.Equal(t, http.StatusOK, enabled.Code, enabled.Body.String())
 	checkEnrollmentCatalogGoldens(t, api, staffToken, staff.ID)
 	var slug, subdomain string

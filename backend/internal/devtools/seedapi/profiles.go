@@ -28,6 +28,8 @@ const (
 	profileSettingGroupMode             = "operations.group_mode"
 	profileSettingWebSpontaneous        = "attendance.web_spontaneous_activities_enabled"
 	profileSettingEnrollmentEnabled     = "enrollment.enabled"
+	profileSettingEnrollmentDSGVOOn     = "enrollment.legal_dsgvo_enabled"
+	profileSettingEnrollmentDSGVOText   = "enrollment.legal_dsgvo_text"
 	profileSettingCareOfferingsEnabled  = "enrollment.care_offerings_enabled"
 	profileSettingBookingsAuthoritative = "enrollment.bookings_authoritative"
 	profileSettingDevicePIN             = "security.ogs_device_pin"
@@ -145,6 +147,10 @@ func demoPayrollSettings() map[string]SeedSetting {
 func fullOperationSettings() map[string]SeedSetting {
 	settings := fullOperationFeatureSettings()
 	for key, setting := range notOfferedModuleSettings() {
+		settings[key] = setting
+	}
+	// The public form goes online only with a privacy notice (#7176).
+	for key, setting := range enrollmentPrivacyNoticeProfileSettings() {
 		settings[key] = setting
 	}
 	return settings
