@@ -151,6 +151,12 @@ func (r *exportRun) visitExportObject(base, key string, entry fs.DirEntry, walkE
 		return errors.New("tenant export: symbolic link in originals")
 	}
 	if !entry.IsDir() {
+		// Local.ReplaceObject stages sealed bytes under this reserved prefix.
+		// Interrupted replacements are not originals; their authenticated
+		// context belongs to the destination key, not the temporary name.
+		if strings.HasPrefix(entry.Name(), ".replace-") {
+			return nil
+		}
 		*keys = append(*keys, key)
 	}
 	return nil
