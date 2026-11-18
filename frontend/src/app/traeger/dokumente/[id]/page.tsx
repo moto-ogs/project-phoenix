@@ -28,6 +28,7 @@ import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { Button } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { EmptyState } from "~/components/ui/empty-state";
+import { EXPORT_BUSY_LABELS } from "~/components/ui/export-formats";
 import { FramedList } from "~/components/ui/framed-list";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import {
@@ -212,7 +213,9 @@ export default function TraegerDocumentPage() {
               {
                 // The menu closes on the click; the entry says the file is
                 // still coming when it is opened again.
-                label: downloading ? "Wird geladen …" : "Herunterladen",
+                label: downloading
+                  ? EXPORT_BUSY_LABELS.download
+                  : "Herunterladen",
                 description:
                   "Speichert das Dokument als Datei auf deinem Gerät.",
                 icon: (
