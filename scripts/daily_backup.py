@@ -241,7 +241,7 @@ class Recovery:
         self.uploads_target = UPLOADS_REMOTE + s3['BUCKET']
         self.rclone_env.update({
             'RCLONE_CONFIG_UPLOADS_TYPE': 's3', 'RCLONE_CONFIG_UPLOADS_PROVIDER': 'Other',
-            'RCLONE_CONFIG_UPLOADS_ENV_AUTH': 'false', 'RCLONE_CONFIG_UPLOADS_ACL': 'private',
+            'RCLONE_CONFIG_UPLOADS_ENV_AUTH': 'false',
             # Never create a bucket: a missing one is a configuration error.
             'RCLONE_CONFIG_UPLOADS_NO_CHECK_BUCKET': 'true',
             'RCLONE_CONFIG_UPLOADS_ENDPOINT': s3['ENDPOINT'],

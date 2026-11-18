@@ -91,6 +91,16 @@ for (const damage of ['missing', 'corrupt']) {
   });
 }
 
+test('release restore works when the upload bucket rejects canned ACLs', t => {
+  const f = fixture(t);
+  const extra = { RELEASE_TEST_BUCKET: 'uploads', RELEASE_TEST_FAIL: 'acl-disabled' };
+  const created = f.run('release-backup.sh', ['create', f.bundle], extra);
+  assert.equal(created.status, 0, created.stdout + created.stderr);
+  const result = f.run('restore-db.sh', [f.bundle], extra);
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(f.calls(), / sync \/tree uploads:uploads --checksum/);
+});
+
 test('demo deploy pins its backend and frontend images and can restore its own snapshot', t => {
   const f = fixture(t, 'demo');
   writeFileSync(join(f.cwd, 'docker-compose.yml.new'),

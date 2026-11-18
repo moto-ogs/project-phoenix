@@ -93,3 +93,19 @@ for container, environment in [(b'', b'[]'), (b'one\\ntwo', b'[]'),
             raise AssertionError('unreadable settings fell back to the stale volume')
 `);
 });
+
+test('daily S3 restore leaves canned ACLs unset for bucket-owner-enforced targets', () => {
+  python(`
+recovery = backup.Recovery.__new__(backup.Recovery)
+recovery.mode = 'restore'
+recovery.backup_host = None
+recovery.target = '/backup'
+recovery.rclone_env = {}
+settings = {'UPLOADS_BACKEND': 's3', 'UPLOADS_S3_ENDPOINT': 'https://s3.example.test',
+            'UPLOADS_S3_REGION': 'test', 'UPLOADS_S3_BUCKET': 'uploads',
+            'UPLOADS_S3_ACCESS_KEY': 'test', 'UPLOADS_S3_SECRET_KEY': 'test'}
+with patch.dict(os.environ, settings, clear=True):
+    recovery.configure_uploads()
+assert not recovery.rclone_env.get('RCLONE_CONFIG_UPLOADS_ACL')
+`);
+});

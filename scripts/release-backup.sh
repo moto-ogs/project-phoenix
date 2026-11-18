@@ -71,6 +71,21 @@ load_bucket() {
   [[ "bucket:$upload_bucket" =~ $bucket_pattern ]] || fail 'Invalid UPLOADS_S3_BUCKET on the server'
 }
 
+# Compose takes the last dotenv value. Override only the two credentials in
+# the restored copy, not the snapshot; keep them valid for the app restart.
+preserve_bucket_credentials() {
+  local key value
+  printf '\n' >> .env
+  for key in ACCESS_KEY SECRET_KEY; do
+    if [ "$key" = ACCESS_KEY ]; then value=$upload_access_key; else value=$upload_secret_key; fi
+    # Double-quoted dotenv: escape backslashes/quotes and disable interpolation.
+    value=${value//\\/\\\\}
+    value=${value//\"/\\\"}
+    value=${value//\$/\$\$}
+    printf 'UPLOADS_S3_%s="%s"\n' "$key" "$value" >> .env
+  done
+}
+
 # rclone against the loaded bucket, with /tree bound to the given directory.
 # Diagnostics name objects and stay off the deployment log.
 bucket_rclone() {
@@ -79,7 +94,7 @@ bucket_rclone() {
   RCLONE_CONFIG_UPLOADS_ACCESS_KEY_ID=$upload_access_key RCLONE_CONFIG_UPLOADS_SECRET_ACCESS_KEY=$upload_secret_key \
     docker run --rm --network host --user "$(id -u):$(id -g)" --mount "type=bind,src=$tree,dst=/tree" \
       -e RCLONE_CONFIG_UPLOADS_TYPE=s3 -e RCLONE_CONFIG_UPLOADS_PROVIDER=Other \
-      -e RCLONE_CONFIG_UPLOADS_ENV_AUTH=false -e RCLONE_CONFIG_UPLOADS_ACL=private \
+      -e RCLONE_CONFIG_UPLOADS_ENV_AUTH=false \
       -e RCLONE_CONFIG_UPLOADS_NO_CHECK_BUCKET=true -e RCLONE_CONFIG_UPLOADS_ENDPOINT \
       -e RCLONE_CONFIG_UPLOADS_REGION -e RCLONE_CONFIG_UPLOADS_ACCESS_KEY_ID \
       -e RCLONE_CONFIG_UPLOADS_SECRET_ACCESS_KEY "$rclone_image" \
@@ -299,6 +314,7 @@ restore() {
   compose stop $services
   ensure_stopped
   cp "$bundle/.env" .env
+  if [ -n "$tree" ]; then preserve_bucket_credentials; fi
   cp "$bundle/compose.yml" docker-compose.yml
   compose up -d --wait postgres
   compose exec -T postgres psql -X -U postgres -d template1 -v ON_ERROR_STOP=1 \

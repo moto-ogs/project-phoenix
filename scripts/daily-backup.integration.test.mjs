@@ -5,7 +5,6 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { dailyBackupRig, scripts } from './daily-backup-test-rig.mjs';
-import './daily-backup.test.mjs';
 
 // The role restore matrix runs beside this scenario in
 // daily-backup-roles-*.integration.test.mjs, one file per role profile.

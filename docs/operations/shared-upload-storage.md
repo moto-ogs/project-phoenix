@@ -68,7 +68,8 @@ Speicher erreichen, etwa über Routing an den Host mit dem Volume.
 
    ```bash
    export RCLONE_CONFIG_UPLOADS_TYPE=s3 RCLONE_CONFIG_UPLOADS_PROVIDER=Other
-   export RCLONE_CONFIG_UPLOADS_ENV_AUTH=false RCLONE_CONFIG_UPLOADS_ACL=private
+   export RCLONE_CONFIG_UPLOADS_ENV_AUTH=false
+   unset RCLONE_CONFIG_UPLOADS_ACL
    export RCLONE_CONFIG_UPLOADS_ENDPOINT="$UPLOADS_S3_ENDPOINT"
    export RCLONE_CONFIG_UPLOADS_REGION="$UPLOADS_S3_REGION"
    export RCLONE_CONFIG_UPLOADS_ACCESS_KEY_ID="$UPLOADS_S3_ACCESS_KEY"
@@ -80,6 +81,10 @@ Speicher erreichen, etwa über Routing an den Host mit dem Volume.
    rclone --config /dev/null --no-unicode-normalization check "$UPLOADS_ROOT" "$UPLOADS_REMOTE" \
      --exclude '.replace-*' --download
    ```
+
+   Die ACL bleibt ungesetzt. Der private Bucket und seine Zugriffsregeln
+   schützen die Objekte; Buckets mit deaktivierten ACLs weisen eine explizite
+   Objekt-ACL ab.
 
    `copy` behält vorhandene, übereinstimmende Objekte und überträgt fehlende.
    Den gleichen Aufruf nach einem Abbruch mit der gleichen schreibgeschützten

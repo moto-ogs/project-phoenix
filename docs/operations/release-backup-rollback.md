@@ -66,15 +66,18 @@ discarded because it names objects.
   The legacy volume from before the switch is not part of the snapshot.
 - **Restore:** Before stopping anything, restore checks that the server still
   uses the snapshot's exact endpoint and bucket name and that the bucket is
-  reachable. Current container credentials allow key rotation. A different
+  reachable. Restore uses the current container credentials for rclone and
+  writes them as dotenv overrides in the restored `.env`, so the restarted
+  application also uses the rotated key. The snapshot stays unchanged. A different
   endpoint is rejected even when its bucket has the same name. S3 snapshots
   without checksummed endpoint metadata are rejected; old volume snapshots
-  remain supported. After the
-  database, `rclone sync --checksum` returns the bucket to the snapshot:
+  remain supported. After the database, `rclone sync --checksum` returns the bucket to the snapshot:
   objects added since are deleted, changed or deleted ones come back. A
   `check --download` must then match, else the application stays stopped.
   A snapshot of one bucket never writes to another; one taken in local mode
   restores the volume and leaves the bucket alone.
+  Neither restore path sets a canned object ACL: access follows the private
+  bucket policy, including buckets with Bucket owner enforced ownership.
 
 ## Snapshot retention (Slice 3836-c)
 

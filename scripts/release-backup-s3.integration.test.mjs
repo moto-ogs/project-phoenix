@@ -99,6 +99,10 @@ INSERT INTO auth.accounts VALUES (41);`);
   assert.equal(readFileSync(join(bundle, 'uploads-endpoint'), 'utf8'), `${s3.endpoint}\n`);
   assert(!existsSync(join(bundle, 'uploads-tree')));
 
+  // Rotate at the same endpoint and revoke the snapshot's key before rollback.
+  const oldCredentials = { key: s3.key, secret: s3.secret };
+  await s3.rotateCredentials({ secretSuffix: '$\'"\\#' });
+
   sql('UPDATE auth.accounts SET id=99;');
   s3.remove('uploads', '.hidden');
   // Same size: the sync must compare checksums, not sizes.
@@ -127,6 +131,11 @@ INSERT INTO auth.accounts VALUES (41);`);
   writeFileSync(join(cwd, '.deploy-state'), 'CURRENT_SHA=bbbbbbb\nBACKUP_ID=release-20260914T010000Z-bbbbbbb\n');
   const restored = run('bash', [join(scripts, 'rollback-remote.sh'), cwd]);
   assert(!`${restored.stdout}${restored.stderr}`.includes(s3.secret));
+  assert(!`${restored.stdout}${restored.stderr}`.includes(oldCredentials.secret));
+  const server = run('docker', ['compose', 'ps', '-q', 'server']).stdout.trim();
+  const environment = JSON.parse(run('docker', ['inspect', '--format', '{{json .Config.Env}}', server]).stdout);
+  assert(environment.includes(`UPLOADS_S3_ACCESS_KEY=${s3.key}`), 'restarted server lost the rotated S3 access key');
+  assert(environment.includes(`UPLOADS_S3_SECRET_KEY=${s3.secret}`), 'restarted server lost the rotated S3 secret');
   assert.equal(sql('SELECT id FROM auth.accounts;'), '41');
   assert.deepEqual(objects(bucket), expected);
   assert.deepEqual(readdirSync(cwd).filter(name => name.startsWith('.uploads-restore')), []);

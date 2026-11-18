@@ -30,6 +30,7 @@ if ((fail === 'stop' && isCompose && args.includes('stop')) ||
     (fail === 'archive' && args.includes('-tzf')) ||
     (fail === 'server-env' && args[0] === 'inspect' && args[2].includes('.Config.Env')) ||
     (fail === 'bucket-copy' && args[0] === 'run' && args.includes('copy')) ||
+    (fail === 'acl-disabled' && args.includes('sync') && args.some(arg => /^RCLONE_CONFIG_UPLOADS_ACL=.+/.test(arg))) ||
     (fail === 'restore-uploads' && args.includes('-c'))) exit();
 if (isCompose && args.includes('ps')) { if (args.at(-1) !== 'bank-data-rekey') console.log(args.at(-1)); }
 // One container runs the image sha256:1…; sha256:3… is used by none.
