@@ -144,6 +144,7 @@ function DevicesPageContent() {
   const refreshDevices = useCallback(async () => {
     await Promise.all([
       tenantMutate(tenantAdminKeys.devices()),
+      tenantMutate(tenantAdminKeys.deviceSlots()),
       invalidateFamily(tenantAdminKeys.deviceHistoryFamily),
     ]);
   }, [tenantMutate, invalidateFamily]);
@@ -177,15 +178,6 @@ function DevicesPageContent() {
     },
   );
   const slotsFull = deviceSlots ? deviceSlotsFull(deviceSlots) : false;
-  const refreshDevices = useCallback(
-    () =>
-      Promise.all([
-        tenantMutate(tenantAdminKeys.devices()),
-        tenantMutate(tenantAdminKeys.deviceSlots()),
-      ]),
-    [tenantMutate],
-  );
-
   const error = useSwrLoadError(devicesError, "die Liste der Geräte", () =>
     mutateDevices(),
   );
