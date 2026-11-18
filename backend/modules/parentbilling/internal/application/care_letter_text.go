@@ -19,11 +19,12 @@ import (
 
 // careLetterContent is everything one monthly letter prints.
 type careLetterContent struct {
-	run          parentbilling.CareRun
-	invoice      parentbilling.CareInvoice
-	cancellation *parentbilling.CareCancellation
-	input        parentbilling.CareLetterInput
-	letterhead   parentbilling.Letterhead
+	run           parentbilling.CareRun
+	invoice       parentbilling.CareInvoice
+	cancellation  *parentbilling.CareCancellation
+	input         parentbilling.CareLetterInput
+	letterhead    parentbilling.Letterhead
+	accountHolder string
 }
 
 var germanWeekdays = map[string]string{"mon": "Mo", "tue": "Di", "wed": "Mi", "thu": "Do", "fri": "Fr", "sat": "Sa", "sun": "So"}
@@ -43,6 +44,10 @@ func careInvoiceLetter(content careLetterContent) Letter {
 	letter.Facts = careLetterFacts(content, []LetterFact{{Label: "Rechnungsnummer", Value: invoice.Number}})
 	intro, heading := careInvoiceIntro(content)
 	payment := carePaymentText(content)
+	paymentBlock := LetterBlock{Text: payment, Bold: true}
+	if invoice.TotalCents > 0 && isDirectDebit(invoice.Payment) && paymentMandate(invoice.Payment) != nil {
+		paymentBlock = LetterBlock{Heading: "SEPA-Lastschrift", Text: payment}
+	}
 	blocks := []LetterBlock{
 		{Text: intro},
 		// A table follows a paragraph: the letter layout pulls it up by one
@@ -51,7 +56,7 @@ func careInvoiceLetter(content careLetterContent) Letter {
 		{Facts: append(slices.Concat(carePositionFacts(invoice.Positions, 1), careReductionFacts(invoice.Reductions, 1),
 			careMealFacts(invoice.MealPositions, 1), careCostShareFacts(invoice, 1), careCorrectionFacts(invoice, 1)),
 			LetterFact{Label: careTotalLabel(invoice), Value: formatEuro(invoice.TotalCents), Bold: true})},
-		{Text: payment, Bold: true},
+		paymentBlock,
 	}
 	blocks = withTransferCode(blocks, payment, careTransferCode(content))
 	if notes := strings.TrimSpace(content.input.Notes); notes != "" {
@@ -207,7 +212,8 @@ func carePaymentText(content careLetterContent) string {
 	}
 	due := dueOnOf(invoice.Payment, content.input.PaymentDueOn)
 	if isDirectDebit(invoice.Payment) {
-		return directDebitText(invoice.TotalCents, due, "Rechnungsnummer "+invoice.Number, paymentMandate(invoice.Payment))
+		return directDebitText(invoice.TotalCents, due, "Rechnungsnummer "+invoice.Number, paymentMandate(invoice.Payment),
+			content.accountHolder, fullName(invoice.Recipient.FirstName, invoice.Recipient.LastName), invoice.Recipient.SecondName)
 	}
 	if text := strings.TrimSpace(content.letterhead.PaymentText); text != "" && (invoice.DebtorNumber != "" || !strings.Contains(text, placeholderDebtorNumber)) {
 		return strings.NewReplacer(
@@ -284,7 +290,9 @@ func careNoticeLetter(content careLetterContent) Letter {
 	letter.Facts = careLetterFacts(content, []LetterFact{{Label: "Bescheidnummer", Value: invoice.Number}})
 	letter.Salutation = filled.Salutation
 	letter.Closing = filled.Closing
-	letter.Blocks = withTransferCode(letterBlocks(filled.Blocks), values["zahlungshinweis"].Text, careTransferCode(content))
+	payment := values["zahlungshinweis"].Text
+	letter.Blocks = withTransferCode(letterBlocks(filled.Blocks), payment, careTransferCode(content))
+	letter.Blocks = withDirectDebitNotice(letter.Blocks, payment, invoice.Payment, invoice.TotalCents)
 	if notes := strings.TrimSpace(content.input.Notes); notes != "" {
 		letter.Blocks = append(letter.Blocks, LetterBlock{Heading: "Hinweise", Text: notes})
 	}

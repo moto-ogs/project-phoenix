@@ -178,6 +178,8 @@ func tenantExportSealedFields() (organizationtenancy.TenantExportSealedFieldsByT
 	return organizationtenancy.TenantExportSealedFieldsByTable{
 		"parent_billing.sepa_mandates":             sepa,
 		"parent_billing.sepa_debits":               sepa,
+		"parent_billing.care_invoices":             sepa,
+		"parent_billing.documents":                 sepa,
 		"parent_billing.sepa_mandate_consents":     sepa,
 		"users.guardian_financial_data":            peopleCompose.NewGuardianBankExportFields(bankData),
 		"users.staff_financial_data":               workforceCompose.NewStaffBankExportFields(bankData),

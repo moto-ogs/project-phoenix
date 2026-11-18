@@ -52,17 +52,18 @@ type BillingLetters struct {
 	store       LetterStore
 	letterheads parentbilling.BillingLetterheads
 	renderer    LetterRenderer
+	bankData    parentbilling.BankDataCipher
 	today       func() calendar.Date
 }
 
 var _ parentbilling.BillingLetterService = (*BillingLetters)(nil)
 
 // NewBillingLetters builds the letters. today bounds the payment date.
-func NewBillingLetters(store LetterStore, letterheads parentbilling.BillingLetterheads, renderer LetterRenderer, today func() calendar.Date) *BillingLetters {
-	if store == nil || letterheads == nil || renderer == nil || today == nil {
+func NewBillingLetters(store LetterStore, letterheads parentbilling.BillingLetterheads, renderer LetterRenderer, bankData parentbilling.BankDataCipher, today func() calendar.Date) *BillingLetters {
+	if store == nil || letterheads == nil || renderer == nil || bankData == nil || today == nil {
 		panic("parent billing: the store, the letterheads, the renderer and the clock are required")
 	}
-	return &BillingLetters{store: store, letterheads: letterheads, renderer: renderer, today: today}
+	return &BillingLetters{store: store, letterheads: letterheads, renderer: renderer, bankData: bankData, today: today}
 }
 
 // CreateBillingLetters renders the letter of every invoice of a released
@@ -94,7 +95,7 @@ func (b *BillingLetters) CreateBillingLetters(ctx context.Context, reviewer pare
 		return parentbilling.BillingLetters{}, err
 	}
 	for _, document := range documents {
-		file, err := b.render(runLetterContent(run, documents, document, input, head))
+		file, err := b.render(reviewer.OrganizationID, runLetterContent(run, documents, document, input, head))
 		if err != nil {
 			return parentbilling.BillingLetters{}, err
 		}
@@ -130,7 +131,7 @@ func (b *BillingLetters) PreviewBillingLetter(ctx context.Context, reviewer pare
 	if !ok {
 		return parentbilling.BillingLetterFile{}, parentbilling.ErrBillingRunEmpty
 	}
-	file, err := b.render(runLetterContent(run, documents, invoice, input, head))
+	file, err := b.render(reviewer.OrganizationID, runLetterContent(run, documents, invoice, input, head))
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
@@ -279,7 +280,7 @@ func lacksDebtorNumberForPaymentText(paymentText string, document parentbilling.
 		!isDirectDebit(document.Payment) && strings.Contains(paymentText, placeholderDebtorNumber)
 }
 
-func (b *BillingLetters) render(content letterContent) (parentbilling.BillingLetterFile, error) {
+func (b *BillingLetters) render(organizationID int64, content letterContent) (parentbilling.BillingLetterFile, error) {
 	var letter Letter
 	notice := content.document.DocumentKind == parentbilling.DocumentKindFeeNotice
 	prefix := letterFilePrefix(content.document.DocumentKind)
@@ -295,6 +296,13 @@ func (b *BillingLetters) render(content letterContent) (parentbilling.BillingLet
 			prefix = "aenderungsbescheid-"
 		}
 	default:
+		if content.document.TotalCents > 0 {
+			holder, err := invoiceAccountHolder(b.bankData, organizationID, content.document.Payment)
+			if err != nil {
+				return parentbilling.BillingLetterFile{}, err
+			}
+			content.accountHolder = holder
+		}
 		if missing := missingLetterValuesOf(templateKindOf(content.document.DocumentKind), letterValues(content)); len(missing) > 0 {
 			return parentbilling.BillingLetterFile{}, fmt.Errorf("parent billing: the letter writes no value for %s", strings.Join(missing, ", "))
 		}

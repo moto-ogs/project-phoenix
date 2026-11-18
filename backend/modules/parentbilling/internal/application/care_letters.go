@@ -72,6 +72,7 @@ type CareLetters struct {
 	carePost    parentbilling.CareLetterPost
 	renderer    LetterRenderer
 	combiner    LetterCombiner
+	bankData    parentbilling.BankDataCipher
 	today       func() calendar.Date
 }
 
@@ -83,16 +84,17 @@ type CareLetterPorts struct {
 	Recipients  CareLetterRecipients
 	Post        parentbilling.BillingLetterPost
 	CarePost    parentbilling.CareLetterPost
+	BankData    parentbilling.BankDataCipher
 }
 
 // NewCareLetters builds the letters of the monthly runs.
 func NewCareLetters(store CareLetterStore, ports CareLetterPorts, renderer LetterRenderer, combiner LetterCombiner, today func() calendar.Date) *CareLetters {
 	if store == nil || ports.Letterheads == nil || ports.Recipients == nil || ports.Post == nil || ports.CarePost == nil ||
-		renderer == nil || combiner == nil || today == nil {
+		ports.BankData == nil || renderer == nil || combiner == nil || today == nil {
 		panic("parent billing: the store, the ports, the renderer, the combiner and the clock are required")
 	}
 	return &CareLetters{store: store, letterheads: ports.Letterheads, recipients: ports.Recipients, post: ports.Post,
-		carePost: ports.CarePost, renderer: renderer, combiner: combiner, today: today}
+		carePost: ports.CarePost, renderer: renderer, combiner: combiner, bankData: ports.BankData, today: today}
 }
 
 // careLetterRun is a released monthly run with its invoices, their Storno,
@@ -202,7 +204,7 @@ func (l *CareLetters) PreviewCareLetter(ctx context.Context, reviewer parentbill
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
-	file, err := l.render(contents[0])
+	file, err := l.render(reviewer.OrganizationID, contents[0])
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
@@ -371,7 +373,7 @@ func (l *CareLetters) issueCancellation(ctx context.Context, reviewer parentbill
 
 // storeLetter renders and stores one letter and adds it to the run.
 func (l *CareLetters) storeLetter(ctx context.Context, reviewer parentbilling.HolidayReviewer, current *careLetterRun, content careLetterContent) error {
-	file, err := l.render(content)
+	file, err := l.render(reviewer.OrganizationID, content)
 	if err != nil {
 		return err
 	}
@@ -389,7 +391,14 @@ func (l *CareLetters) storeLetter(ctx context.Context, reviewer parentbilling.Ho
 	return nil
 }
 
-func (l *CareLetters) render(content careLetterContent) (parentbilling.BillingLetterFile, error) {
+func (l *CareLetters) render(organizationID int64, content careLetterContent) (parentbilling.BillingLetterFile, error) {
+	if content.cancellation == nil && content.invoice.TotalCents > 0 {
+		holder, err := invoiceAccountHolder(l.bankData, organizationID, content.invoice.Payment)
+		if err != nil {
+			return parentbilling.BillingLetterFile{}, err
+		}
+		content.accountHolder = holder
+	}
 	notice := content.invoice.DocumentKind == parentbilling.DocumentKindFeeNotice
 	var letter Letter
 	var filename string

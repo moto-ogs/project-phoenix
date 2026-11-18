@@ -390,6 +390,7 @@ type paymentSnapshot struct {
 	CreditorID       *string
 	DebtorIBANMasked *string
 	SequenceType     *string
+	HolderSealed     []byte
 	DebitGap         *string
 }
 
@@ -406,6 +407,7 @@ func snapshotOf(payment *parentbilling.InvoicePayment) paymentSnapshot {
 		snapshot.MandateID, snapshot.MandateReference, snapshot.MandateSignedOn = &id, textRef(mandate.Reference), &signedOn
 		snapshot.CreditorID, snapshot.DebtorIBANMasked = textRef(mandate.CreditorID), textRef(mandate.IBANMasked)
 		snapshot.SequenceType = textRef(mandate.SequenceType)
+		snapshot.HolderSealed = mandate.HolderSealed
 	}
 	return snapshot
 }
@@ -420,7 +422,7 @@ func (s paymentSnapshot) payment() *parentbilling.InvoicePayment {
 	if s.MandateID != nil && s.MandateSignedOn != nil {
 		payment.Mandate = &parentbilling.InvoiceMandate{MandateID: *s.MandateID, Reference: textOf(s.MandateReference),
 			SignedOn: *s.MandateSignedOn, CreditorID: textOf(s.CreditorID), IBANMasked: textOf(s.DebtorIBANMasked),
-			SequenceType: textOf(s.SequenceType)}
+			SequenceType: textOf(s.SequenceType), HolderSealed: s.HolderSealed}
 	}
 	return payment
 }

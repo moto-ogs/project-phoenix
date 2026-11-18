@@ -31,6 +31,8 @@ func (f *SEPAExportFields) OpenExportField(table, column string, row map[string]
 	referenceColumn := map[string]string{
 		"parent_billing.sepa_mandates":         "reference",
 		"parent_billing.sepa_debits":           "mandate_reference",
+		"parent_billing.care_invoices":         "mandate_reference",
+		"parent_billing.documents":             "mandate_reference",
 		"parent_billing.sepa_mandate_consents": "mandate_reference",
 	}[table]
 	bind := map[string]func(int64, string) []byte{
@@ -39,6 +41,9 @@ func (f *SEPAExportFields) OpenExportField(table, column string, row map[string]
 	}[column]
 	if table == "parent_billing.sepa_mandate_consents" {
 		bind = map[string]func(int64, string) []byte{"text_sealed": consentTextContext}[column]
+	}
+	if (table == "parent_billing.care_invoices" || table == "parent_billing.documents") && column != "account_holder_sealed" {
+		return "", errSEPAExportField
 	}
 	if referenceColumn == "" || bind == nil {
 		return "", errSEPAExportField

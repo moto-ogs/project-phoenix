@@ -11588,7 +11588,7 @@ export const traegerBriefkopfTopic =
             "Tragen Sie bei `Absender im Briefkopf` Name und Anschrift ein. Jede Zeile im Feld ist eine Zeile im Brief. Die erste Zeile steht fett und in Ihrer Farbe.",
             "Klicken Sie bei `Farbe für Briefe und Rechnungen` auf eine der Farben.",
             "Passt keine Farbe, wählen Sie `Eigene Farbe`. Klicken Sie dann auf den farbigen Kreis und wählen Sie Ihre Farbe. Steht im Logo-Entwurf ein Farbcode, tragen Sie ihn in das Feld daneben ein: eine Raute und sechs Zeichen.",
-            "Tragen Sie bei `Fußzeile` zum Beispiel Vorstand, Amtsgericht und Steuernummer ein, jede Angabe in eine eigene Zeile.",
+            "Tragen Sie bei `Fußzeile` zum Beispiel Vorstand, Amtsgericht und Steuernummer ein. Auch eine zweite Bankverbindung und Ihr Hinweis zur Umsatzsteuer können dort stehen. Schreiben Sie jede Angabe in eine eigene Zeile.",
             "moto speichert jedes Feld von selbst.",
           ],
         },
@@ -14663,7 +14663,7 @@ export const traegerSepaMandatesTopic =
       title: "Lastschrift und SEPA-Mandate",
       question: "Wie buche ich Beiträge per Lastschrift ab?",
       summary:
-        "Sie tragen Ihre Gläubiger-ID ein und erfassen das SEPA-Mandat jeder Familie. Die Rechnung kündigt die Abbuchung dann an: mit Betrag, Datum, Konto, Gläubiger-ID und Mandatsreferenz. moto bucht kein Geld ab.",
+        "Sie tragen Ihre Gläubiger-ID und die Mandate der Familien ein. Die Rechnung kündigt die Abbuchung an. moto bucht kein Geld ab.",
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "Repeat",
@@ -14746,7 +14746,7 @@ export const traegerSepaMandatesTopic =
         },
       ],
       result:
-        "Im nächsten Monatslauf steht auf jeder Rechnung mit Lastschrift die Vorabankündigung: Betrag, Tag der Abbuchung, Konto (verdeckt), Gläubiger-ID und Mandatsreferenz. Der Betrag ist das, was die Familie zahlt, also ohne den Anteil eines Kostenträgers.",
+        "Neue Lastschrift-Rechnungen nennen den Betrag, den Abbuchungstag und den Kontoinhaber. Dort stehen auch die verdeckte IBAN, die Gläubiger-ID und die Mandatsreferenz. Ist der Kontoinhaber jemand anderes? Dann bittet das Schreiben darum, es an diese Person weiterzugeben. Der Betrag enthält nur den Anteil der Familie.",
       notes: [
         "Die Mandate sehen Sie unter `Familien und Zahlung` im Reiter `Lastschrift`. Die Liste zeigt zuerst die gültigen; mit `Alle` sehen Sie auch die widerrufenen.",
         "Ein Mandat aus der Eltern-App hat die Herkunft `von den Eltern`. moto speichert dazu den bestätigten Text mit Prüfsumme, das Konto der Eltern und die Uhrzeit. Widerrufen die Eltern in der App, gilt das ab dem nächsten Monatslauf.",
