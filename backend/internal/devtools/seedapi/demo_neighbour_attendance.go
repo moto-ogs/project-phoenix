@@ -1,0 +1,161 @@
+package api
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"slices"
+	"strconv"
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/demoprofile"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+)
+
+// NeighbourAttendanceTicker changes only the selected demo children, once per
+// arrival or pickup, through the school's usual web attendance command.
+type NeighbourAttendanceTicker struct {
+	school         demoprofile.NeighbourAttendance
+	client         *Client
+	day            calendar.Date
+	calendarLoaded bool
+	closed         bool
+	arrived, open  []string
+}
+
+func NewNeighbourAttendanceTicker(school demoprofile.NeighbourAttendance, adapter Adapter) *NeighbourAttendanceTicker {
+	return &NeighbourAttendanceTicker{school: school, client: NewClientWithAdapter(adapter, false)}
+}
+
+func (t *NeighbourAttendanceTicker) Tick(ctx context.Context, now time.Time) error {
+	today := calendar.DateFromTime(now)
+	if t.day != today {
+		t.day, t.calendarLoaded, t.closed = today, false, false
+		t.arrived, t.open = nil, nil
+	}
+	if t.closed {
+		return nil
+	}
+	arrivals, departures := t.changes(now)
+	if len(arrivals)+len(departures) == 0 {
+		return nil
+	}
+	return t.apply(ctx, arrivals, departures)
+}
+
+// Close settles the demo's own check-ins when its visitor goes idle.
+func (t *NeighbourAttendanceTicker) Close(ctx context.Context, now time.Time) error {
+	if calendar.DateFromTime(now) != t.day || len(t.open) == 0 {
+		return nil
+	}
+	return t.apply(ctx, nil, t.open)
+}
+
+func (t *NeighbourAttendanceTicker) apply(ctx context.Context, arrivals, departures []string) error {
+	err := t.sync(ctx, arrivals, departures)
+	var apiErr *APIError
+	if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusUnauthorized {
+		t.client.BindAuth(AuthRef{})
+		return t.sync(ctx, arrivals, departures)
+	}
+	return err
+}
+
+func (t *NeighbourAttendanceTicker) changes(now time.Time) (arrivals, departures []string) {
+	for _, child := range t.school.Children {
+		id := strconv.FormatInt(child.StudentID, 10)
+		switch neighbourAttendanceAction(child, now) {
+		case "in":
+			if !slices.Contains(t.arrived, id) {
+				arrivals = append(arrivals, id)
+			}
+		case "out":
+			if slices.Contains(t.open, id) {
+				departures = append(departures, id)
+			}
+		}
+	}
+	return arrivals, departures
+}
+
+func neighbourAttendanceAction(child demoprofile.NeighbourChild, now time.Time) string {
+	weekday := calendar.ISOWeekday(calendar.DateFromTime(now))
+	for _, booked := range child.Weekdays {
+		if day, _ := calendar.CanonicalDayToISOWeekday(booked); day == weekday {
+			clock := now.In(calendar.Berlin).Format("15:04")
+			switch {
+			case clock >= child.Pickup:
+				return "out"
+			case clock >= child.Arrival:
+				return "in"
+			}
+		}
+	}
+	return ""
+}
+
+func (t *NeighbourAttendanceTicker) sync(ctx context.Context, arrivals, departures []string) error {
+	if t.client.auth.Token == "" {
+		admin := t.school.Admin
+		auth, err := t.client.adapter.LoginTenant(ctx, admin.Email, admin.Password, t.school.TenantSlug)
+		if err != nil {
+			return err
+		}
+		t.client.BindAuth(auth)
+	}
+	if !t.calendarLoaded {
+		closed, err := seedClosedDays(&Runtime{Client: t.client, TenantAuth: t.client.auth}, t.day, t.day)
+		if err != nil {
+			return err
+		}
+		t.calendarLoaded, t.closed = true, closed[t.day]
+		if t.closed {
+			return nil
+		}
+	}
+	if _, err := t.batch(ctx, "out", departures); err != nil {
+		return err
+	}
+	t.open = slices.DeleteFunc(t.open, func(id string) bool { return slices.Contains(departures, id) })
+	opened, err := t.batch(ctx, "in", arrivals)
+	if err != nil {
+		return err
+	}
+	t.open = append(t.open, opened...)
+	t.arrived = append(t.arrived, arrivals...)
+	return nil
+}
+
+func (t *NeighbourAttendanceTicker) batch(ctx context.Context, action string, ids []string) ([]string, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	raw, _, err := t.client.adapter.Raw(ctx, t.client.auth, http.MethodPost, "/api/students/school-checkin/batch", map[string]any{"action": action, "student_ids": ids}, nil)
+	if err != nil {
+		return nil, err
+	}
+	var response struct {
+		Data struct {
+			Results []struct {
+				StudentID string `json:"student_id"`
+				Changed   bool   `json:"changed"`
+			} `json:"results"`
+		} `json:"data"`
+	}
+	if err := parseJSON(raw, &response); err != nil {
+		return nil, err
+	}
+	// The route counts rejected IDs only for children who cannot be checked
+	// in or out anymore, such as children removed during a demo.
+	if len(response.Data.Results) != len(ids) {
+		return nil, fmt.Errorf("incomplete demo attendance response")
+	}
+	var changed []string
+	for _, result := range response.Data.Results {
+		if result.Changed {
+			changed = append(changed, result.StudentID)
+		}
+	}
+	return changed, nil
+}

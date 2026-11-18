@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"time"
 
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -112,7 +112,7 @@ func (n demoNeighbourSchool) seedBookings(rt *Runtime) error {
 }
 
 func (n demoNeighbourSchool) seedRoster(rt *Runtime, groups map[string]SeedEntityRef, phase int64, offerings []int64, count int) error {
-	var checkIns []neighbourCheckin
+	var children []demoprofile.NeighbourChild
 	for i := range count {
 		groupID := groups[fmt.Sprintf("bezugsgruppe-%d", 1+i*2/count)].ID
 		offeringIndex := 0
@@ -126,49 +126,16 @@ func (n demoNeighbourSchool) seedRoster(rt *Runtime, groups map[string]SeedEntit
 			return err
 		}
 		if i%4 == 0 {
-			checkIns = append(checkIns, neighbourCheckin{studentID: id, offering: offering})
+			children = append(children, demoprofile.NeighbourChild{
+				StudentID: id, Weekdays: offering.days, Arrival: neighbourArrivalTime, Pickup: offering.pickupTime,
+			})
 		}
 	}
-	return seedNeighbourCheckins(rt, time.Now(), checkIns)
-}
-
-type neighbourCheckin struct {
-	studentID int64
-	offering  seedCareOffering
-}
-
-func (c neighbourCheckin) due(now time.Time) bool {
-	local := now.In(calendar.Berlin)
-	weekday := calendar.ISOWeekday(calendar.DateFromTime(local))
-	for _, day := range c.offering.days {
-		if isoDay, _ := calendar.CanonicalDayToISOWeekday(day); isoDay == weekday {
-			clock := local.Format("15:04")
-			return clock >= neighbourArrivalTime && clock < c.offering.pickupTime
-		}
-	}
-	return false
-}
-
-func seedNeighbourCheckins(rt *Runtime, now time.Time, checkIns []neighbourCheckin) error {
-	var due []int64
-	for _, candidate := range checkIns {
-		if candidate.due(now) {
-			due = append(due, candidate.studentID)
-		}
-	}
-	if len(due) == 0 {
-		return nil
-	}
-	today := calendar.DateFromTime(now)
-	closed, err := seedClosedDays(rt, today, today)
-	if err != nil || closed[today] {
-		return err
-	}
-	for _, id := range due {
-		if err := postSchoolAttendance(rt, id, "in", "checked_in", nil); err != nil {
-			return err
-		}
-	}
+	rt.neighbourAttendance = append(rt.neighbourAttendance, demoprofile.NeighbourAttendance{
+		TenantSlug: rt.Bootstrap.TenantSlug,
+		Admin:      makeBootstrapSeedState(rt.Bootstrap).SchoolAdmin,
+		Children:   children,
+	})
 	return nil
 }
 

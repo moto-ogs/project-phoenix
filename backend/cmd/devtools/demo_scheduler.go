@@ -398,7 +398,8 @@ func (t *demoTickers) keepOnly(inUse []string) []string {
 	for slug, ticker := range t.running {
 		if !wanted[slug] {
 			ticker.stop()
-			delete(t.running, slug)
+			// The retiring ticker closes its simulated check-ins before
+			// remove lets another visitor start the same school again.
 		}
 	}
 	return missing

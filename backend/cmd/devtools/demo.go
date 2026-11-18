@@ -214,6 +214,8 @@ type demoSchool struct {
 	state           *simulate.SeedState
 	client          *seedapi.Client
 	ticker          *simulate.DemoTicker
+	neighbours      []*seedapi.NeighbourAttendanceTicker
+	neighbourRetry  time.Time
 	visitorID       int64
 	visitorParentID int64
 	// traegerID is the school's Träger from the seed state.
@@ -266,10 +268,14 @@ func loadDemoSchool(ctx context.Context, schools *DemoRuntime, slug, baseURL str
 	if len(state.Accounts.Admin) == 0 {
 		return nil, fmt.Errorf("stored demo has no admin")
 	}
+	neighbours := make([]*seedapi.NeighbourAttendanceTicker, 0, len(contract.NeighbourAttendance))
+	for _, neighbour := range contract.NeighbourAttendance {
+		neighbours = append(neighbours, seedapi.NewNeighbourAttendanceTicker(neighbour, schools.seedAdapter(baseURL, false)))
+	}
 	return &demoSchool{
 		slug: slug, schoolID: saved.SchoolID, seedJSON: saved.SeedJSON, state: state, client: client, ticker: ticker,
 		visitorID: seedapi.VisitorAccountID(profile), visitorParentID: visitorParentID,
-		traegerID: profile.Organization.ID,
+		traegerID: profile.Organization.ID, neighbours: neighbours,
 	}, nil
 }
 
@@ -285,16 +291,50 @@ func (s *demoSchool) tick(ctx context.Context, nextLogin *time.Time) error {
 	return s.ticker.Tick(ctx)
 }
 
+func (s *demoSchool) closeNeighbours(ctx context.Context) {
+	closeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	for _, neighbour := range s.neighbours {
+		if err := neighbour.Close(closeCtx, time.Now()); err != nil {
+			slog.Warn("close demo neighbour attendance",
+				"school", s.slug,
+				"error", err,
+			)
+		}
+	}
+}
+
+func (s *demoSchool) tickNeighbours(ctx context.Context, now time.Time) {
+	if now.Before(s.neighbourRetry) {
+		return
+	}
+	for _, neighbour := range s.neighbours {
+		if err := neighbour.Tick(ctx, now); err != nil && ctx.Err() == nil {
+			s.neighbourRetry = now.Add(time.Minute)
+			slog.Warn("demo neighbour attendance failed; retrying",
+				"school", s.slug,
+				"error", err,
+			)
+		}
+	}
+}
+
 var errDemoLogin = errors.New("demo admin login failed")
 
 // run ticks the school every 5–8 seconds until ctx ends; ticked reports every
 // successful tick. The standing demo stops on a failed login and lets the
 // container restart; one school among many only retries.
 func (s *demoSchool) run(ctx context.Context, once, stopOnLogin bool, ticked func()) error {
+	if !once {
+		defer s.closeNeighbours(ctx)
+	}
 	var nextLogin time.Time
 	for {
 		if ctx.Err() != nil {
 			return nil
+		}
+		if !once {
+			s.tickNeighbours(ctx, time.Now())
 		}
 		tickErr := s.tick(ctx, &nextLogin)
 		if once || (stopOnLogin && errors.Is(tickErr, errDemoLogin)) {

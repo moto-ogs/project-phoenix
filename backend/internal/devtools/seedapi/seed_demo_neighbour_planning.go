@@ -10,11 +10,11 @@ import (
 
 // Show two people who share their week between the visitor's school and one
 // of its neighbours. Their deployments are visible when the demo opens.
-type seedDemoNeighbourPlanningStep struct{}
+type seedDemoNeighbourPlanningStep struct{ retry bool }
 
 func (seedDemoNeighbourPlanningStep) Name() string { return "Seeding the cross-school Einsatzplanung" }
 
-func (seedDemoNeighbourPlanningStep) Run(_ context.Context, rt *Runtime) error {
+func (s seedDemoNeighbourPlanningStep) Run(_ context.Context, rt *Runtime) error {
 	if len(rt.demoNeighbourIDs) == 0 {
 		return nil
 	}
@@ -27,20 +27,29 @@ func (seedDemoNeighbourPlanningStep) Run(_ context.Context, rt *Runtime) error {
 	}
 	monday := calendar.TodayDate().StartOfISOWeek()
 	for i, schoolID := range rt.demoNeighbourIDs {
-		if err := seedNeighbourDeployment(rt, auth, monday.BerlinMidnight(), schoolID, i); err != nil {
+		personIndex := i
+		if s.retry {
+			personIndex += len(demoNeighbourSchools)
+		}
+		if err := seedNeighbourDeployment(rt, auth, monday.BerlinMidnight(), schoolID, neighbourStaff[personIndex]); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-var neighbourStaff = []struct{ first, last, birthday string }{
+type neighbourStaffMember struct{ first, last, birthday string }
+
+// A replacement order keeps the Träger and its existing records. Give the
+// new sites their own people instead of hiring duplicates by name.
+var neighbourStaff = []neighbourStaffMember{
 	{"Nora", "Jansen", "1992-04-21"},
 	{"Emil", "Karim", "1989-08-14"},
+	{"Hanna", "Krause", "1991-03-17"},
+	{"Milan", "Berger", "1988-08-22"},
 }
 
-func seedNeighbourDeployment(rt *Runtime, auth AuthRef, monday time.Time, schoolID int64, index int) error {
-	person := neighbourStaff[index]
+func seedNeighbourDeployment(rt *Runtime, auth AuthRef, monday time.Time, schoolID int64, person neighbourStaffMember) error {
 	primary := rt.Bootstrap.SchoolID
 	sites := []map[string]any{
 		{"school_id": primary, "weekday_minutes": []int{150, 150, 0, 0, 0}},
