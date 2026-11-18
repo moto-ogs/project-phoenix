@@ -20,24 +20,9 @@ import (
 //
 // Shrink only: give the route a test through its router and delete the line.
 var routesNoRouterTestAnswers = map[string]string{
-	"GET /operator/billing/key-day":                                 "handler test without a router",
-	"PUT /operator/billing/key-day":                                 "handler test without a router",
-	"GET /parent/me/enrollable-schools":                             "no test answers the route",
-	"GET /school/parent-letters/letter-placeholders":                "no test answers the route",
-	"POST /school/parent-letters/letter-preview":                    "no test answers the route",
-	"DELETE /api/parent-announcements/{announcementId}":             "only a relative test router answers it; the staff and school portals share the pattern",
-	"DELETE /school/parent-letters/{announcementId}":                "only a relative test router answers it; the staff and school portals share the pattern",
-	"GET /api/parent-announcements/{announcementId}/stats":          "only a relative test router answers it; the staff and school portals share the pattern",
-	"GET /school/parent-letters/":                                   "only the staff portal's route is tested",
-	"GET /school/parent-letters/{announcementId}/stats":             "only a relative test router answers it; the staff and school portals share the pattern",
-	"POST /api/notifications/test":                                  "the test router has no dispatch service; the route answers 500 there",
-	"POST /api/parent-announcements/{announcementId}/resend-failed": "only a relative test router answers it; the staff and school portals share the pattern",
-	"POST /school/notifications/test":                               "the test router has no dispatch service; the route answers 500 there",
-	"POST /school/parent-letters/":                                  "only the staff portal's route is tested",
-	"POST /school/parent-letters/{announcementId}/publish":          "only the staff portal's route is tested",
-	"POST /school/parent-letters/{announcementId}/remind":           "only the staff portal's route is tested",
-	"POST /school/parent-letters/{announcementId}/resend-failed":    "only a relative test router answers it; the staff and school portals share the pattern",
-	"POST /school/parent-letters/{announcementId}/unpublish":        "only the staff portal's route is tested",
+	"GET /operator/billing/key-day":     "handler test without a router",
+	"PUT /operator/billing/key-day":     "handler test without a router",
+	"GET /parent/me/enrollable-schools": "no test answers the route",
 }
 
 // The answer check writes the key of every registered route a test identified
