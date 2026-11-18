@@ -263,6 +263,8 @@ type IntakeDependencies struct {
 	// late-invite token into its stored identity.
 	Random      func([]byte) error
 	Fingerprint Fingerprint
+	// LegalPDFFingerprint hashes a tenant-owned PDF as stored. A missing legacy file returns an empty hash.
+	LegalPDFFingerprint func(ctx context.Context, tenantID int64, documentURL string) (string, error)
 	// FrontendURL is the base of staff links, ParentsURL the base of the
 	// parent-facing links; it falls back to FrontendURL.
 	FrontendURL string

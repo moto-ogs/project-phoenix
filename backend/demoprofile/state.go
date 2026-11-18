@@ -40,6 +40,7 @@ type SeedState struct {
 	Organizations       map[string]SeedOrganization `json:"organizations"`
 	Profiles            map[string]*SeedProfile     `json:"profiles"`
 	Topology            SeedStateTopology           `json:"topology"`
+	NeighbourAttendance []NeighbourAttendance       `json:"neighbour_attendance,omitempty"`
 
 	DevicePIN   string                 `json:"-"`
 	Bootstrap   SeedStateBootstrap     `json:"-"`
@@ -57,6 +58,23 @@ type SeedState struct {
 	Scenarios   SeedStateScenarios     `json:"-"`
 	Settings    map[string]SeedSetting `json:"-"`
 	Expected    SeedExpectedState      `json:"-"`
+}
+
+// NeighbourAttendance lets the demo runner use normal web attendance for a
+// small sample of children at a school without a kiosk simulation.
+type NeighbourAttendance struct {
+	SchoolID   int64                     `json:"school_id"`
+	StaffID    int64                     `json:"staff_id"`
+	TenantSlug string                    `json:"tenant_slug"`
+	Admin      BootstrapAdminCredentials `json:"admin"`
+	Children   []NeighbourChild          `json:"children"`
+}
+
+type NeighbourChild struct {
+	StudentID int64    `json:"student_id"`
+	Weekdays  []string `json:"weekdays"`
+	Arrival   string   `json:"arrival"`
+	Pickup    string   `json:"pickup"`
 }
 
 type SeedOrganization struct {

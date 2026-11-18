@@ -1,6 +1,10 @@
 package api
 
-import "context"
+import (
+	"context"
+
+	"github.com/moto-ogs/project-phoenix/demoprofile"
+)
 
 type Runtime struct {
 	Adapter            Adapter
@@ -25,6 +29,8 @@ type Runtime struct {
 	Enrollment     SeedEnrollmentState
 	// demoPresenceDays supply the feedback step with the visits just seeded.
 	demoPresenceDays    []PastPresenceDay
+	demoNeighbourIDs    []int64
+	neighbourAttendance []demoprofile.NeighbourAttendance
 	DeferredSeedPending bool
 	Values              map[string]any
 	// TraegerLock is SeedOptions.TraegerLock.

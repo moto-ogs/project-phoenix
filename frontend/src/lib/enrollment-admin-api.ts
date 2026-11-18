@@ -1,3 +1,4 @@
+import type { FormAttachment } from "~/lib/enrollment-form-schema-api";
 import type {
   EmailAddressMark,
   MailOutcome,
@@ -350,7 +351,33 @@ export interface AdminRequestSummary {
   additional_guardians?: AdminRequestGuardian[];
 }
 
+export interface AdminLegalEvidenceBlock {
+  key: string;
+  kind: string;
+  title: string;
+  label: string;
+  text: string;
+  attachments?: FormAttachment[];
+  source?: string;
+  translations?: Record<
+    string,
+    { title?: string; label?: string; text?: string }
+  >;
+}
+
+export interface AdminLegalEvidenceEntry {
+  snapshot_at: string;
+  blocks: AdminLegalEvidenceBlock[] | null;
+  consent_flags: Record<string, unknown> | null;
+  version_mismatch?: boolean;
+  version_unknown?: boolean;
+  wording_unavailable?: boolean;
+  change_request?: boolean;
+  staff_recorded?: boolean;
+}
+
 export interface AdminRequestDetail extends AdminRequestSummary {
+  legal_blocks_snapshot?: AdminLegalEvidenceEntry[];
   status_token: string;
   late_invite_guardian_email?: string;
   late_invite_email_mismatch?: boolean;

@@ -232,7 +232,8 @@ func buildLegalBlocks(texts enrollmentNative.LegalTexts) []enrollmentNative.Lega
 		blocks = append(blocks, enrollmentNative.LegalBlock{
 			Key: enrollmentNative.ConsentKeyAGB, Kind: "terms", Title: "AGB / Teilnahmebedingungen",
 			Label: "Ich akzeptiere die AGB / Teilnahmebedingungen / den Ganztag Info-Brief.",
-			Text:  agbText, Required: true, SortOrder: 10, Source: enrollmentNative.LegalBlockSourceStandard,
+			Text:  agbText, PDFURL: legalPDFURL(texts.AGBDisplayMode, texts.AGBDocumentURL),
+			Required: true, SortOrder: 10, Source: enrollmentNative.LegalBlockSourceStandard,
 		})
 	}
 	if texts.DSGVOEnabled && texts.DSGVO != "" {
@@ -266,6 +267,13 @@ func legalAGBDisplayMode(mode string) string {
 	return legalAGBDisplayModeText
 }
 
+func legalPDFURL(displayMode, documentURL string) string {
+	if legalAGBDisplayMode(displayMode) != legalAGBDisplayModePDF {
+		return ""
+	}
+	return enrollmentNative.PublicEnrollmentLegalDocumentURL(strings.TrimSpace(documentURL))
+}
+
 func legalAGBBlockText(texts enrollmentNative.LegalTexts) string {
 	if legalAGBDisplayMode(texts.AGBDisplayMode) != legalAGBDisplayModePDF {
 		return texts.AGB
@@ -286,6 +294,7 @@ func buildTemplateLegalBlocks(configured []enrollmentNative.FormLegalBlock) []en
 			Key: block.Key, Kind: block.Kind, Title: block.Title, Label: block.Label,
 			Attachments: enrollmentNative.PublicFormAttachments(block.Attachments),
 			Text:        templateLegalBlockText(block), Required: block.Required, SortOrder: block.SortOrder,
+			PDFURL: templateLegalPDFURL(block),
 			Source: block.Source, Translations: block.PublicTranslations(),
 		})
 	}
@@ -297,11 +306,16 @@ func buildTemplateLegalBlocks(configured []enrollmentNative.FormLegalBlock) []en
 	return blocks
 }
 
+func templateLegalPDFURL(block enrollmentNative.FormLegalBlock) string {
+	if block.Key != enrollmentNative.ConsentKeyAGB {
+		return ""
+	}
+	return legalPDFURL(block.DisplayMode, block.DocumentURL)
+}
+
 func templateLegalBlockText(block enrollmentNative.FormLegalBlock) string {
-	if block.Key == enrollmentNative.ConsentKeyAGB &&
-		block.DisplayMode == enrollmentNative.LegalBlockDisplayModePDF &&
-		strings.TrimSpace(block.DocumentURL) != "" {
-		return fmt.Sprintf("Die AGB / Teilnahmebedingungen sind als PDF-Datei hinterlegt: [AGB-Dokument öffnen](%s)", enrollmentNative.PublicEnrollmentLegalDocumentURL(block.DocumentURL))
+	if url := templateLegalPDFURL(block); url != "" {
+		return fmt.Sprintf("Die AGB / Teilnahmebedingungen sind als PDF-Datei hinterlegt: [AGB-Dokument öffnen](%s)", url)
 	}
 	return block.Text
 }

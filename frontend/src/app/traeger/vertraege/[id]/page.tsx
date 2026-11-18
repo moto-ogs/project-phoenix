@@ -55,7 +55,7 @@ import {
   StatusBadge,
   type StatusBadgeTone,
 } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import {
   useApiErrorDisplay,
   useApiFormError,
@@ -364,84 +364,92 @@ export default function TraegerVertragPage() {
       backLabel="Zurück zu den Verträgen"
       stats={
         contract ? (
-          <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
-            <StatusBadge
-              label={CONTRACT_STATUS_LABELS[contract.status]}
-              tone={contractStatusTone(contract)}
-            />
-            <span>
-              {contract.modulesText || "–"} · {contract.schoolName} ·{" "}
-              {/* A date keeps its word: „ab 01.08.2026“ never parts. */}
-              {`ab\u00A0${formatDate(contract.effectiveFrom)}`}
-              {contract.endsOn
-                ? ` bis\u00A0${formatDate(contract.endsOn)}`
-                : ""}
-            </span>
-          </span>
+          <TenantPageStats
+            items={[
+              { label: contract.modulesText || "–" },
+              { label: contract.schoolName },
+              {
+                // A date keeps its word: „ab 01.08.2026“ never parts.
+                label: `ab\u00A0${formatDate(contract.effectiveFrom)}${
+                  contract.endsOn
+                    ? ` bis\u00A0${formatDate(contract.endsOn)}`
+                    : ""
+                }`,
+              },
+            ]}
+          />
         ) : null
       }
       statsLoading={loading}
       actions={
-        contract ? (
-          <>
-            {sendInHead ? (
-              <Button
-                type="button"
-                variant={isDraft ? "success" : "outline"}
-                size="md"
-                disabled={sendBlocked}
-                tooltip={
-                  isDraft
-                    ? "moto fragt vorher nach, dann geht der Vertrag per E-Mail und in die Eltern-App."
-                    : "moto fragt vorher nach, dann geht der Vertrag noch einmal an die Eltern."
-                }
-                disabledReason={sendBlockedReason}
-                onClick={() => setConfirmingSend(true)}
-              >
-                <Send className="mr-2 h-4 w-4" aria-hidden="true" />
-                {sending
-                  ? "Wird gesendet …"
-                  : isDraft
-                    ? "Vertrag senden"
-                    : "Erneut senden"}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                tooltip="Speichert den Vertrag als PDF auf deinem Gerät."
-                onClick={() => void download()}
-              >
-                <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-                PDF herunterladen
-              </Button>
-            )}
-            {/* One visible action; the rest waits in the menu (TENANT-PAGE-SPEC
+        <>
+          {contract ? (
+            <StatusBadge
+              label={CONTRACT_STATUS_LABELS[contract.status]}
+              tone={contractStatusTone(contract)}
+            />
+          ) : null}
+          {contract ? (
+            <>
+              {sendInHead ? (
+                <Button
+                  type="button"
+                  variant={isDraft ? "success" : "outline"}
+                  size="md"
+                  disabled={sendBlocked}
+                  tooltip={
+                    isDraft
+                      ? "moto fragt vorher nach, dann geht der Vertrag per E-Mail und in die Eltern-App."
+                      : "moto fragt vorher nach, dann geht der Vertrag noch einmal an die Eltern."
+                  }
+                  disabledReason={sendBlockedReason}
+                  onClick={() => setConfirmingSend(true)}
+                >
+                  <Send className="mr-2 h-4 w-4" aria-hidden="true" />
+                  {sending
+                    ? "Wird gesendet …"
+                    : isDraft
+                      ? "Vertrag senden"
+                      : "Erneut senden"}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  tooltip="Speichert den Vertrag als PDF auf deinem Gerät."
+                  onClick={() => void download()}
+                >
+                  <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+                  PDF herunterladen
+                </Button>
+              )}
+              {/* One visible action; the rest waits in the menu (TENANT-PAGE-SPEC
                 rule 4). An entry that cannot run right now stays out. For an
                 active contract the menu holds only the mail actions, so it
                 is named „Versand“ instead of a bare ⋮. */}
-            {headMenu.length > 0 ? (
-              resendInCard && !isDraft ? (
-                <OverflowMenu
-                  items={headMenu}
-                  ariaLabel="Versand"
-                  triggerButton={{ variant: "outline", size: "md" }}
-                  // The arrow says that a menu opens, as on the download menus.
-                  triggerClassName="gap-2 whitespace-nowrap"
-                  triggerContent={
-                    <>
-                      Versand
-                      <ChevronDown className="h-4 w-4" aria-hidden />
-                    </>
-                  }
-                />
-              ) : (
-                <OverflowMenu items={headMenu} ariaLabel="Weitere Aktionen" />
-              )
-            ) : null}
-          </>
-        ) : null
+              {headMenu.length > 0 ? (
+                resendInCard && !isDraft ? (
+                  <OverflowMenu
+                    items={headMenu}
+                    ariaLabel="Versand"
+                    triggerButton={{ variant: "outline", size: "md" }}
+                    // The arrow says that a menu opens, as on the download menus.
+                    triggerClassName="gap-2 whitespace-nowrap"
+                    triggerContent={
+                      <>
+                        Versand
+                        <ChevronDown className="h-4 w-4" aria-hidden />
+                      </>
+                    }
+                  />
+                ) : (
+                  <OverflowMenu items={headMenu} ariaLabel="Weitere Aktionen" />
+                )
+              ) : null}
+            </>
+          ) : null}
+        </>
       }
       error={
         refused

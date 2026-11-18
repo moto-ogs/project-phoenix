@@ -135,3 +135,42 @@ Schule des Trägers arbeitet.
 - Keine neue Tabelle, keine neue Spalte, keine Migration.
 - Der Seed stellt eine erfundene Person ein, damit die Route im Seed-Lauf
   geprüft wird.
+
+## Nachtrag vom 18.11.2026: Name ohne Geburtsdatum und E-Mail fragen auch (#7378)
+
+Beim Test hat jemand eine Person eingestellt, die unter „Ohne Akte“ schon
+stand: gleicher Name, gleiche E-Mail, aber ohne Geburtsdatum an der Schule.
+Punkt 6 fragte deshalb nicht. Personal an Schulen hat oft kein
+Geburtsdatum. Punkt 6 gilt nun so:
+
+1. **Drei Gründe für die Rückfrage.** moto hält die Einstellung an, wenn
+   eine Akte des Trägers oder eine Person ohne Akte an einer seiner Schulen
+   - denselben Vornamen, Nachnamen und dasselbe Geburtsdatum hat,
+   - denselben Vornamen und Nachnamen hat und kein Geburtsdatum, oder
+   - an einer Schule unter der E-Mail-Adresse der Einstellung erreichbar
+     ist: in den Stammdaten der Schule, als Anmeldeadresse ihres Kontos oder
+     in einer unbenutzten Einladung. Auch eine abgelaufene Einladung zählt:
+     Sie verbindet die Person der Schule mit der Adresse, wie beim Import
+     (`identityaccess.SchoolEmailQuery`).
+
+   Namen vergleicht moto ohne Groß- und Kleinschreibung und ohne doppelte
+   Leerzeichen, Adressen ohne Groß- und Kleinschreibung. Ein anderes
+   Geburtsdatum unterscheidet zwei Personen. Eine Akte hat keine Adresse
+   (Punkt 8), ihre Einsatzorte haben sie; eine Person mit Akte ist der
+   Treffer ihrer Akte.
+2. **Der gleiche Name allein fragt.** Namensgleichheit ist häufig. Die
+   Rückfrage kostet einen Klick, eine doppelte Person dagegen eine
+   Bereinigung an jeder Schule. Die Rückfrage sagt deshalb je Treffer den
+   Grund, und „Trotzdem einstellen“ bleibt.
+3. **Die Antwort nennt die Person.** Jeder Treffer an einer Schule nennt
+   Schule, Beschäftigung (`staff_id`), Namen und Gründe; eine Akte ihre ID,
+   Namen und Grund. Das Formular führt damit direkt zu „Akte anlegen“ für
+   diese Person unter „Ohne Akte“. Das Zugriffsprotokoll der Schule nennt
+   wie bisher jede gezeigte Beschäftigung (Ansicht `staff_hire_check`).
+4. **Adressen kommen vom Owner.** Konten und Einladungen gehören Identity &
+   Access. Workforce fragt sie in der Tenant-Transaktion der Schule über
+   den Port `TraegerSchoolEmails`, den die Wurzel an
+   `identityaccess.SchoolEmailQuery` bindet, wie der Import der Schule. Die
+   Stammdaten liest Workforce selbst. Je Schule kommen zwei Abfragen hinzu,
+   unabhängig von der Zahl der Personen, und nur, wenn die Einstellung eine
+   Adresse hat.

@@ -607,7 +607,7 @@ describe("TeamChatInbox (#2517)", () => {
     api.fetchInbox.mockRejectedValueOnce(
       new ApiError("inbox kaputt", 503, { code: "general.unavailable" }),
     );
-    const seen: { stats: string | null; count: number | null }[] = [];
+    const seen: { stats: ReactNode; count: number | null }[] = [];
     render(
       <TeamChatInbox
         portal={portalFor(api)}
@@ -629,7 +629,8 @@ describe("TeamChatInbox (#2517)", () => {
         catalogText("general.unavailable", "die Liste der Unterhaltungen"),
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/0 Unterhaltungen/)).not.toBeInTheDocument();
+    // Wert und Wort der Statuszeile stehen in eigenen Elementen.
+    expect(document.body).not.toHaveTextContent(/0\s*Unterhaltungen/);
     expect(seen.at(-1)).toEqual({ stats: null, count: null });
   });
 });

@@ -49,6 +49,7 @@ import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useChildrenWithoutCarePlace } from "~/lib/tenant-context";
 import { childrenConcept } from "~/lib/concepts/children";
 import { foldForSearch } from "~/lib/search-fold";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 const logger = createLogger({ component: "DatabaseStudentsPage" });
 
@@ -263,15 +264,19 @@ function StudentsPageContent() {
     const classes = new Set(
       students.map((s) => s.school_class?.trim()).filter(Boolean),
     ).size;
-    const parts = [
-      `${formatCount(students.length)} ${students.length === 1 ? "Kind" : "Kinder"}`,
-    ];
-    if (classes > 0) {
-      parts.push(
-        `${formatCount(classes)} ${classes === 1 ? "Klasse" : "Klassen"}`,
-      );
-    }
-    return parts.join(" · ");
+    const label = students.length === 1 ? "Kind" : "Kinder";
+    if (classes === 0) return `${formatCount(students.length)} ${label}`;
+    return (
+      <TenantPageStats
+        items={[
+          { value: formatCount(students.length), label },
+          {
+            value: formatCount(classes),
+            label: classes === 1 ? "Klasse" : "Klassen",
+          },
+        ]}
+      />
+    );
   }, [studentsData]);
 
   const filteredStudents = useMemo(() => {

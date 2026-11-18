@@ -232,7 +232,7 @@ func checkOutStatisticsSupervisor(rt *Runtime) error {
 	if err := rt.Client.Login(cred.Email, cred.Password); err != nil {
 		return fmt.Errorf("login statistics demo supervisor %s: %w", cred.Email, err)
 	}
-	open, err := hasOpenWorkSession(rt)
+	open, err := hasOpenWorkSession(context.Background(), rt.Client)
 	if err != nil {
 		return err
 	}
@@ -248,8 +248,8 @@ func checkOutStatisticsSupervisor(rt *Runtime) error {
 // hasOpenWorkSession reports whether the logged-in staff account has a
 // running work session. GET /current answers with a null payload when there
 // is none.
-func hasOpenWorkSession(rt *Runtime) (bool, error) {
-	resp, err := rt.Client.Get("/api/time-tracking/current")
+func hasOpenWorkSession(ctx context.Context, client *Client) (bool, error) {
+	resp, _, err := client.adapter.Raw(ctx, client.auth, "GET", "/api/time-tracking/current", nil, nil)
 	if err != nil {
 		return false, fmt.Errorf("read current work session: %w", err)
 	}

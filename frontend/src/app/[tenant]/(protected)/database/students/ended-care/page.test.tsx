@@ -1,6 +1,12 @@
 // Die Ansicht "Beendete Betreuungen" (#2487).
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  within,
+} from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
 import type { EndedCarePage } from "~/lib/care-exit-api";
@@ -174,8 +180,12 @@ describe("Beendete Betreuungen", () => {
     render(<Page />);
     await screen.findByText("Muster, Mia");
 
-    expect(screen.getByText(/137 Kinder/)).toBeVisible();
-    expect(screen.getByText("Seite 1 von 3")).toBeVisible();
+    // Die Statuszeile nennt Zahl und Seite, das Blättern darunter die Seite.
+    const head = document.querySelector("header");
+    if (!head) throw new Error("page head missing");
+    expect(head).toHaveTextContent(/137 Kinder/);
+    expect(within(head).getByText("Seite 1 von 3")).toBeVisible();
+    expect(screen.getAllByText("Seite 1 von 3")).toHaveLength(2);
     expect(
       screen.getByRole("button", { name: "Vorherige Seite" }),
     ).toBeDisabled();
@@ -252,7 +262,7 @@ describe("Beendete Betreuungen", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Wiederholen" })).toBeVisible();
-    expect(screen.queryByText(/0 Kinder/)).not.toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/0\s*Kinder/);
   });
 
   it.each([403, 503])(
@@ -281,7 +291,7 @@ describe("Beendete Betreuungen", () => {
       ).toBeVisible();
       if (status === 403) {
         expect(screen.queryByText("Muster, Mia")).not.toBeInTheDocument();
-        expect(screen.queryByText(/2 Kinder/)).not.toBeInTheDocument();
+        expect(document.body).not.toHaveTextContent(/2\s*Kinder/);
         expect(
           screen.queryByRole("button", { name: "Aktionen für Muster, Mia" }),
         ).not.toBeInTheDocument();

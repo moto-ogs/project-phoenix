@@ -223,7 +223,8 @@ export const studentKeys = {
       context:
         [previewText(row.school_class), previewText(row.group_name)]
           .filter(Boolean)
-          .join(" · ") || undefined,
+          // Ohne Trennpunkt wie die Statuszeile der Kindseite (#7402).
+          .join(", ") || undefined,
     };
   },
   studentThreads: (id: string | undefined) =>

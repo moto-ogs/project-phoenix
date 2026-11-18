@@ -48,6 +48,9 @@ func TestCompareRatchetBudgetsRejectsRaisesAgainstTheBase(t *testing.T) {
 		{"register moved to another ratchet file", "test/other_ratchet_test.go", strings.Replace(ratchetBudgetBase, `"b": 3`, `"b": 4`, 1), "", `Budgets["b"]: 3 -> 4`},
 		{"register moved out of the ratchet files", "test/example_test.go", strings.Replace(ratchetBudgetBase, `"b": 3`, `"b": 4`, 1), "", "register Budgets (sum 5 at base) disappeared"},
 		{"raise with an added ADR", "test/example_ratchet_test.go", strings.Replace(ratchetBudgetBase, `"b": 3,`, "// Raised by ADR 0999.\n\t\"b\": 4,", 1), "docs/adr/0999-raise.md", ""},
+		{"raise citing an added ADR on the register only", "test/example_ratchet_test.go", strings.NewReplacer("// Budgets is a register.", "// Budgets is a register; raised by ADR 0999.", `"b": 3`, `"b": 4`).Replace(ratchetBudgetBase), "docs/adr/0999-raise.md", `Budgets["b"]: 3 -> 4`},
+		{"new entry citing an added ADR on the register only", "test/example_ratchet_test.go", strings.NewReplacer("// Budgets is a register.", "// Budgets is a register; ADR 0999 adds c.", `"b": 3,`, `"b": 3, "c": 1,`).Replace(ratchetBudgetBase), "docs/adr/0999-raise.md", "Budgets: entries sum 5 -> 6"},
+		{"new entry with an added ADR", "test/example_ratchet_test.go", strings.Replace(ratchetBudgetBase, `"b": 3,`, "\"b\": 3,\n\t// Added by ADR 0999.\n\t\"c\": 1,", 1), "docs/adr/0999-raise.md", ""},
 		{"raise citing an existing ADR", "test/example_ratchet_test.go", strings.Replace(ratchetBudgetBase, `"b": 3,`, "// Raised by ADR 0001.\n\t\"b\": 4,", 1), "docs/adr/0999-raise.md", `Budgets["b"]: 3 -> 4`},
 		{"constant raise with an added ADR", "test/example_ratchet_test.go", strings.Replace(ratchetBudgetBase, "// Total is the sum of Budgets.", "// Total is the sum of Budgets; raised by ADR 0999.", 1), "docs/adr/0999-raise.md", ""},
 	} {
@@ -310,6 +313,8 @@ func TestCompareRatchetBudgetsRetiresOnlyUnderAnAddedADR(t *testing.T) {
 		{"former exception file", "test/policy_temporary_rules_ratchet_test.go", temporaryRules, "package test\n", "constant policyTempRulesTotal (2 at base) disappeared", nil},
 		{"register with an existing ADR", "test/example_ratchet_test.go", ratchetBudgetBase, strings.Replace(ratchetBudgetBase, "// Budgets is a register.\nvar Budgets = map[string]int{\n\t\"a\": 2,\n\t\"b\": 3,\n}\n", "// Budgets is retired under ADR 0057.\n", 1), "register Budgets (sum 5 at base) disappeared", nil},
 		{"register with an added ADR", "test/example_ratchet_test.go", ratchetBudgetBase, strings.Replace(ratchetBudgetBase, "// Budgets is a register.\nvar Budgets = map[string]int{\n\t\"a\": 2,\n\t\"b\": 3,\n}\n", "// Budgets is retired under ADR 0999.\n", 1), "", map[string]bool{"0999": true}},
+		{"derived total retired under an added ADR", "test/example_ratchet_test.go", ratchetBudgetBase, strings.Replace(ratchetBudgetBase, "// Total is the sum of Budgets.\nconst Total = 5\n", "// ADR 0999 retired Total; the register sum replaces it.\n", 1), "", map[string]bool{"0999": true}},
+		{"derived total removed without an ADR", "test/example_ratchet_test.go", ratchetBudgetBase, strings.Replace(ratchetBudgetBase, "// Total is the sum of Budgets.\nconst Total = 5\n", "", 1), "constant Total (5 at base) disappeared", nil},
 		{"raise under an existing ADR", "test/policy_temporary_rules_ratchet_test.go", temporaryRules, strings.Replace(temporaryRules, "policyTempRulesTotal = 2", "// Raised under ADR 0057.\n\tpolicyTempRulesTotal = 3", 1), "constant policyTempRulesTotal: 2 -> 3", nil},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

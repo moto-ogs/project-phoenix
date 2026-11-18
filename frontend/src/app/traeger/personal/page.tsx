@@ -16,6 +16,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { StaffLinkModal } from "~/components/traeger/staff/staff-link-modal";
 import {
+  parseStaffCreateRecord,
   parseStaffOverviewTab,
   staffSubpageHref,
   type StaffOverviewTab,
@@ -246,6 +247,23 @@ function StaffRecordsContent() {
     StaffLinkInput,
     "choices"
   > | null>(null);
+  // „Akte anlegen“ aus der Rückfrage beim Einstellen (#7378) öffnet den
+  // Dialog für genau diese Person; die Adresse trägt sie, bis er schließt.
+  const requested = parseStaffCreateRecord(searchParams);
+  const requestedSchool = requested?.schoolId;
+  const requestedStaff = requested?.staffId;
+  // Dieselbe Anfrage, solange dieselbe Person in der Adresse steht: der
+  // Dialog beginnt bei einer neuen Anfrage von vorn.
+  const requestedLink = useMemo(
+    () =>
+      requestedSchool && requestedStaff
+        ? {
+            recordId: null,
+            members: [{ schoolId: requestedSchool, staffId: requestedStaff }],
+          }
+        : null,
+    [requestedSchool, requestedStaff],
+  );
 
   const records = useMemo(
     () =>
@@ -277,6 +295,28 @@ function StaffRecordsContent() {
   const changeTab = (next: string) => {
     const params = new URLSearchParams(searchParams?.toString());
     params.set("tab", next);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
+  // Nach Schließen oder Anlegen öffnet dieselbe Person in der Adresse den
+  // Dialog nicht noch einmal, auch bevor der Router die Adresse geändert hat.
+  const requestedKey =
+    requestedSchool && requestedStaff
+      ? `${requestedSchool}-${requestedStaff}`
+      : null;
+  const [dismissedKey, setDismissedKey] = useState<string | null>(null);
+  // Verlässt die Adresse die Person, gilt das Schließen nicht mehr: kommt
+  // sie wieder, öffnet der Dialog erneut.
+  if (requestedKey === null && dismissedKey !== null) setDismissedKey(null);
+  const linkRequest =
+    linking ??
+    (released && requestedKey !== dismissedKey ? requestedLink : null);
+  const closeLink = () => {
+    setLinking(null);
+    setDismissedKey(requestedKey);
+    if (!requested) return;
+    const params = new URLSearchParams(searchParams?.toString());
+    params.delete("schule");
+    params.delete("person");
     router.replace(`?${params.toString()}`, { scroll: false });
   };
   // Unterseiten merken sich auch den aufgelösten Standard-Reiter. Ein Import
@@ -368,10 +408,11 @@ function StaffRecordsContent() {
       }
       overlays={
         <StaffLinkModal
-          request={linking}
-          onClose={() => setLinking(null)}
+          request={linkRequest}
+          onClose={closeLink}
           onLinked={(record) => {
             setLinking(null);
+            setDismissedKey(requestedKey);
             success(`Die Akte von ${staffName(record)} ist verknüpft.`);
             reload();
             router.push(recordHref(record.id));

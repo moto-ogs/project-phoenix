@@ -837,6 +837,26 @@
       "target_owner": ""
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ChangeRequests.Propose",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ChangeRequests.Propose",
+      "reason": "Reads a tenant-validated legal PDF to freeze evidence of its bytes. The file is only opened for reading.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ChangeRequests.Propose",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ChangeRequests.Propose",
+      "reason": "Computes a SHA-256 digest from the legal PDF stream. No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.ReaderFingerprint",
+      "target_owner": "security-runtime"
+    },
+    {
       "adr": "0083",
       "approval_adr": "0208",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ChangeRequests.Propose",
@@ -2744,6 +2764,26 @@
       "target_owner": "audit-platform"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Intake.ConfirmRenewal",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.IntakeSubmissions.ConfirmRenewal",
+      "reason": "Reads a tenant-validated legal PDF to freeze evidence of its bytes. The file is only opened for reading.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Intake.ConfirmRenewal",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.IntakeSubmissions.ConfirmRenewal",
+      "reason": "Computes a SHA-256 digest from the legal PDF stream. No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.ReaderFingerprint",
+      "target_owner": "security-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Intake.CreateLateInvite",
       "classification": "query",
       "effect": "query",
@@ -2804,9 +2844,29 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.IntakeSubmissions.CreateManualApprovedEnrollment",
+      "reason": "Reads a tenant-validated legal PDF to freeze evidence of its bytes. The file is only opened for reading.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Intake.CreateManualApprovedEnrollment",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.IntakeSubmissions.CreateManualApprovedEnrollment",
       "reason": "Read-only newly exposed target: enrollment reaches modules/securityruntime.FillRandom (security-runtime) through modules/enrollment/internal/application.Intake.CreateManualApprovedEnrollment. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.FillRandom",
+      "target_owner": "security-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Intake.CreateManualApprovedEnrollment",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.IntakeSubmissions.CreateManualApprovedEnrollment",
+      "reason": "Computes a SHA-256 digest from the legal PDF stream. No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.ReaderFingerprint",
       "target_owner": "security-runtime"
     },
     {
@@ -2911,6 +2971,26 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.IntakeSubmissions.ReplaceEditable",
+      "reason": "Reads a tenant-validated legal PDF to freeze evidence of its bytes. The file is only opened for reading.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Intake.ReplaceEditable",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.IntakeSubmissions.ReplaceEditable",
+      "reason": "Computes a SHA-256 digest from the legal PDF stream. No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.ReaderFingerprint",
+      "target_owner": "security-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Intake.ReplaceEditable",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.IntakeSubmissions.ReplaceEditable",
       "reason": "Read-only target already reviewed as query: enrollment reaches modules/settings.DisplaySettingsSource.ResolveBool (settings-platform) through *modules/enrollment/internal/application.Intake.ReplaceEditable. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings.DisplaySettingsSource.ResolveBool",
@@ -2973,9 +3053,29 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.IntakeSubmissions.Submit",
+      "reason": "Reads a tenant-validated legal PDF to freeze evidence of its bytes. The file is only opened for reading.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Intake.Submit",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.IntakeSubmissions.Submit",
       "reason": "Read-only newly exposed target: enrollment reaches modules/securityruntime.FillRandom (security-runtime) through modules/enrollment/internal/application.Intake.Submit. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.FillRandom",
+      "target_owner": "security-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Intake.Submit",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.IntakeSubmissions.Submit",
+      "reason": "Computes a SHA-256 digest from the legal PDF stream. No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.ReaderFingerprint",
       "target_owner": "security-runtime"
     },
     {
@@ -4354,6 +4454,26 @@
       "target_owner": ""
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.changeRequestService.Create",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.ChangeRequestService.Create",
+      "reason": "Reads a tenant-validated legal PDF to freeze evidence of its bytes. The file is only opened for reading.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.changeRequestService.Create",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.ChangeRequestService.Create",
+      "reason": "Computes a SHA-256 digest from the legal PDF stream. No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.ReaderFingerprint",
+      "target_owner": "security-runtime"
+    },
+    {
       "adr": "0083",
       "approval_adr": "0208",
       "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.changeRequestService.Create",
@@ -4756,6 +4876,26 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Intake.ConfirmRenewal",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.IntakeOwner.ConfirmRenewal",
+      "reason": "Reads a tenant-validated legal PDF to freeze evidence of its bytes. The file is only opened for reading.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Intake.ConfirmRenewal",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.IntakeOwner.ConfirmRenewal",
+      "reason": "Computes a SHA-256 digest from the legal PDF stream. No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.ReaderFingerprint",
+      "target_owner": "security-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Intake.CreateLateInvite",
       "classification": "query",
       "effect": "query",
@@ -4816,9 +4956,29 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.IntakeOwner.CreateManualApprovedEnrollment",
+      "reason": "Reads a tenant-validated legal PDF to freeze evidence of its bytes. The file is only opened for reading.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Intake.CreateManualApprovedEnrollment",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.IntakeOwner.CreateManualApprovedEnrollment",
       "reason": "Read-only newly exposed target: enrollment reaches modules/securityruntime.FillRandom (security-runtime) through modules/enrollment/compose.Intake.CreateManualApprovedEnrollment. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.FillRandom",
+      "target_owner": "security-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Intake.CreateManualApprovedEnrollment",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.IntakeOwner.CreateManualApprovedEnrollment",
+      "reason": "Computes a SHA-256 digest from the legal PDF stream. No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.ReaderFingerprint",
       "target_owner": "security-runtime"
     },
     {
@@ -4923,6 +5083,26 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.IntakeOwner.ReplaceEditable",
+      "reason": "Reads a tenant-validated legal PDF to freeze evidence of its bytes. The file is only opened for reading.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Intake.ReplaceEditable",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.IntakeOwner.ReplaceEditable",
+      "reason": "Computes a SHA-256 digest from the legal PDF stream. No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.ReaderFingerprint",
+      "target_owner": "security-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Intake.ReplaceEditable",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.IntakeOwner.ReplaceEditable",
       "reason": "Read-only target already reviewed as query: enrollment reaches modules/settings.DisplaySettingsSource.ResolveBool (settings-platform) through *modules/enrollment/compose.Intake.ReplaceEditable. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings.DisplaySettingsSource.ResolveBool",
@@ -4985,9 +5165,29 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.IntakeOwner.Submit",
+      "reason": "Reads a tenant-validated legal PDF to freeze evidence of its bytes. The file is only opened for reading.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Intake.Submit",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.IntakeOwner.Submit",
       "reason": "Read-only newly exposed target: enrollment reaches modules/securityruntime.FillRandom (security-runtime) through modules/enrollment/compose.Intake.Submit. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.FillRandom",
+      "target_owner": "security-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Intake.Submit",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.IntakeOwner.Submit",
+      "reason": "Computes a SHA-256 digest from the legal PDF stream. No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.ReaderFingerprint",
       "target_owner": "security-runtime"
     },
     {
@@ -5064,6 +5264,26 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.intakeService.ConfirmRenewal",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.RequestService.ConfirmRenewal",
+      "reason": "Reads a tenant-validated legal PDF to freeze evidence of its bytes. The file is only opened for reading.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.intakeService.ConfirmRenewal",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.RequestService.ConfirmRenewal",
+      "reason": "Computes a SHA-256 digest from the legal PDF stream. No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.ReaderFingerprint",
+      "target_owner": "security-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.intakeService.CreateLateInvite",
       "classification": "query",
       "effect": "query",
@@ -5124,9 +5344,29 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.RequestService.CreateManualApprovedEnrollment",
+      "reason": "Reads a tenant-validated legal PDF to freeze evidence of its bytes. The file is only opened for reading.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.intakeService.CreateManualApprovedEnrollment",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.RequestService.CreateManualApprovedEnrollment",
       "reason": "Read-only target: enrollment reaches modules/securityruntime.FillRandom (security-runtime) through modules/enrollment/http.intakeService.CreateManualApprovedEnrollment, which ADR 0173 promotes instead of forwarding. No persistent, lock or scope effect (ADR 0098).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.FillRandom",
+      "target_owner": "security-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.intakeService.CreateManualApprovedEnrollment",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.RequestService.CreateManualApprovedEnrollment",
+      "reason": "Computes a SHA-256 digest from the legal PDF stream. No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.ReaderFingerprint",
       "target_owner": "security-runtime"
     },
     {
@@ -5231,6 +5471,26 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.RequestService.ReplaceEditable",
+      "reason": "Reads a tenant-validated legal PDF to freeze evidence of its bytes. The file is only opened for reading.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.intakeService.ReplaceEditable",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.RequestService.ReplaceEditable",
+      "reason": "Computes a SHA-256 digest from the legal PDF stream. No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.ReaderFingerprint",
+      "target_owner": "security-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.intakeService.ReplaceEditable",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.RequestService.ReplaceEditable",
       "reason": "Read-only target already reviewed as query: enrollment reaches modules/settings.DisplaySettingsSource.ResolveBool (settings-platform) through modules/enrollment/http.intakeService.ReplaceEditable. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings.DisplaySettingsSource.ResolveBool",
@@ -5293,9 +5553,29 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.RequestService.Submit",
+      "reason": "Reads a tenant-validated legal PDF to freeze evidence of its bytes. The file is only opened for reading.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.intakeService.Submit",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.RequestService.Submit",
       "reason": "Read-only target already reviewed as query: enrollment reaches modules/securityruntime.FillRandom (security-runtime) through modules/enrollment/http.intakeService.Submit. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.FillRandom",
+      "target_owner": "security-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.intakeService.Submit",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.RequestService.Submit",
+      "reason": "Computes a SHA-256 digest from the legal PDF stream. No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.ReaderFingerprint",
       "target_owner": "security-runtime"
     },
     {
@@ -5724,9 +6004,29 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.manualApprovedEnrollments.CreateManualApprovedEnrollment",
+      "reason": "Reads a tenant-validated legal PDF to freeze evidence of its bytes. The file is only opened for reading.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.IntakeOwner.CreateManualApprovedEnrollment",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.manualApprovedEnrollments.CreateManualApprovedEnrollment",
       "reason": "Read-only target: enrollment reaches modules/securityruntime.FillRandom (security-runtime) through modules/enrollment/http.IntakeOwner.CreateManualApprovedEnrollment, which ADR 0173 promotes instead of forwarding. No persistent, lock or scope effect (ADR 0098).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.FillRandom",
+      "target_owner": "security-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.IntakeOwner.CreateManualApprovedEnrollment",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.manualApprovedEnrollments.CreateManualApprovedEnrollment",
+      "reason": "Computes a SHA-256 digest from the legal PDF stream. No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.ReaderFingerprint",
       "target_owner": "security-runtime"
     },
     {

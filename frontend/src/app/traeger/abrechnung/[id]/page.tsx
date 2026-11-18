@@ -51,7 +51,6 @@ import { runDueDatesText } from "~/components/traeger/billing-payment-format";
 import { HolidayDebitHintsCard } from "~/components/traeger/care-run-review-lazy";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { formatDateRange } from "~/components/traeger/holiday-period-format";
-import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -382,79 +381,76 @@ export default function TraegerBillingRunPage() {
       backHref={traegerPath("/traeger/abrechnung")}
       backLabel="Zurück zu den Abrechnungsläufen"
       stats={
-        run ? (
-          <HolidayHeadFacts>
-            <StatusBadge
-              label={BILLING_RUN_STATUS_LABELS[run.status]}
-              tone={BILLING_RUN_STATUS_TONES[run.status]}
-            />
-            {discarded ? (
-              <span>
-                Verworfen am{" "}
-                {run.discardedAt ? formatDate(run.discardedAt) : "–"}
-              </span>
-            ) : null}
-          </HolidayHeadFacts>
-        ) : null
+        run && discarded
+          ? `Verworfen am ${run.discardedAt ? formatDate(run.discardedAt) : "–"}`
+          : null
       }
       statsLoading={loading}
       // The cross-link stands with the actions, as „Zur Abrechnung“ does on
       // the registrations; the status line carries only facts.
       actions={
-        (run && canOpenPeriod) || preview || discarded ? (
-          <>
-            {run && canOpenPeriod ? (
-              <ButtonLink
-                href={traegerPath(
-                  `/traeger/ferien/${encodeURIComponent(run.holidayPeriodId)}`,
-                )}
-                variant="outline"
-                size="md"
-                tooltip="Öffnet den Ferienzeitraum, zu dem dieser Lauf gehört."
-              >
-                <MotoConceptIcon
-                  concept={holidayWeeksConcept}
-                  size={18}
-                  className="mr-2"
-                />
-                Zum Ferienzeitraum
-              </ButtonLink>
-            ) : null}
-            {empty ? (
-              <Button
-                type="button"
-                variant="outline_danger"
-                size="md"
-                tooltip="moto fragt vorher nach, dann ist der Ferienzeitraum frei für einen neuen Lauf."
-                onClick={() => setConfirmingDiscard(true)}
-              >
-                Leeren Lauf verwerfen
-              </Button>
-            ) : discarded ? (
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                tooltip="Öffnet den offenen Lauf dieses Ferienzeitraums oder startet einen neuen."
-                onClick={() => void reissue()}
-              >
-                Neuen Lauf starten
-              </Button>
-            ) : preview ? (
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                disabled={!canRelease}
-                disabledReason={releaseBlockReason(run)}
-                tooltip="moto fragt vorher nach, dann sind alle Rechnungen mit Nummer festgeschrieben."
-                onClick={() => setConfirmingRelease(true)}
-              >
-                Lauf freigeben
-              </Button>
-            ) : null}
-          </>
-        ) : undefined
+        <>
+          {run ? (
+            <StatusBadge
+              label={BILLING_RUN_STATUS_LABELS[run.status]}
+              tone={BILLING_RUN_STATUS_TONES[run.status]}
+            />
+          ) : null}
+          {(run && canOpenPeriod) || preview || discarded ? (
+            <>
+              {run && canOpenPeriod ? (
+                <ButtonLink
+                  href={traegerPath(
+                    `/traeger/ferien/${encodeURIComponent(run.holidayPeriodId)}`,
+                  )}
+                  variant="outline"
+                  size="md"
+                  tooltip="Öffnet den Ferienzeitraum, zu dem dieser Lauf gehört."
+                >
+                  <MotoConceptIcon
+                    concept={holidayWeeksConcept}
+                    size={18}
+                    className="mr-2"
+                  />
+                  Zum Ferienzeitraum
+                </ButtonLink>
+              ) : null}
+              {empty ? (
+                <Button
+                  type="button"
+                  variant="outline_danger"
+                  size="md"
+                  tooltip="moto fragt vorher nach, dann ist der Ferienzeitraum frei für einen neuen Lauf."
+                  onClick={() => setConfirmingDiscard(true)}
+                >
+                  Leeren Lauf verwerfen
+                </Button>
+              ) : discarded ? (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  tooltip="Öffnet den offenen Lauf dieses Ferienzeitraums oder startet einen neuen."
+                  onClick={() => void reissue()}
+                >
+                  Neuen Lauf starten
+                </Button>
+              ) : preview ? (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  disabled={!canRelease}
+                  disabledReason={releaseBlockReason(run)}
+                  tooltip="moto fragt vorher nach, dann sind alle Rechnungen mit Nummer festgeschrieben."
+                  onClick={() => setConfirmingRelease(true)}
+                >
+                  Lauf freigeben
+                </Button>
+              ) : null}
+            </>
+          ) : undefined}
+        </>
       }
       error={loadError}
       loading={loading}

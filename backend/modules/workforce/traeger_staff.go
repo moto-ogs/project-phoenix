@@ -53,6 +53,9 @@ const (
 	TraegerStaffChangeLinked    = "linked"
 	TraegerStaffChangeNotChosen = "not_chosen"
 	TraegerStaffChangeChanged   = "changed"
+	// TraegerStaffChangeRemoved is a value the Personalverwaltung emptied,
+	// such as a birthday (#7379); the entry keeps the value before.
+	TraegerStaffChangeRemoved = "removed"
 )
 
 // The access log views of the Träger-Portal on staff data (ADR 0084
@@ -274,6 +277,28 @@ type TraegerStaffRecordDetail struct {
 	UnsyncedSchools []string `json:"unsynced_schools,omitempty"`
 }
 
+// TraegerStaffPerson is the person of a record as the Personalverwaltung
+// corrects it (#7379). Birthday is a calendar day as YYYY-MM-DD, nil or empty
+// for none.
+type TraegerStaffPerson struct {
+	FirstName string
+	LastName  string
+	Birthday  *string
+}
+
+// TraegerStaffPersonError names the refused field of a person correction;
+// it is a refused master data value (ErrStaffStammdatenInvalid).
+type TraegerStaffPersonError struct {
+	Field string
+	Cause error
+}
+
+func (e *TraegerStaffPersonError) Error() string {
+	return fmt.Sprintf("workforce: person %s: %v", e.Field, e.Cause)
+}
+
+func (e *TraegerStaffPersonError) Unwrap() error { return ErrStaffStammdatenInvalid }
+
 // TraegerStaffRecords is the Personalstamm in the Träger-Portal. Every
 // method checks the release; the route checks the right „Personal“. Each
 // read of personal data writes an access log entry in the tenant of every
@@ -286,6 +311,10 @@ type TraegerStaffRecords interface {
 	PreviewLink(ctx context.Context, actor TraegerStaffActor, request TraegerStaffLinkRequest) (TraegerStaffLinkPreview, error)
 	Link(ctx context.Context, actor TraegerStaffActor, request TraegerStaffLinkRequest) (TraegerStaffRecordDetail, error)
 	UpdatePersonnelNumber(ctx context.Context, actor TraegerStaffActor, recordID int64, value *string) (TraegerStaffRecordDetail, error)
+	// UpdatePerson corrects name and birthday of the record (#7379); the
+	// schools keep their own person rows. It answers no record: a reader
+	// loads it again, which writes the read into the access log.
+	UpdatePerson(ctx context.Context, actor TraegerStaffActor, recordID int64, person TraegerStaffPerson) error
 	Financial(ctx context.Context, actor TraegerStaffActor, recordID int64, reveal bool) (TraegerStaffFinancial, error)
 	UpdateFinancial(ctx context.Context, actor TraegerStaffActor, recordID int64, input StammdatenFinancialInput) error
 	Dissolve(ctx context.Context, actor TraegerStaffActor, recordID int64) error
@@ -392,4 +421,7 @@ type TraegerStaffPorts struct {
 	// of a hired person at a school (#7206); nil outside the records.
 	HirePersons     TraegerHirePersons
 	HireEmployments TraegerHireEmployments
+	// Emails finds a school's accounts and invitations of an address, for
+	// the check of a hire (#7378); nil outside the records.
+	Emails TraegerSchoolEmails
 }

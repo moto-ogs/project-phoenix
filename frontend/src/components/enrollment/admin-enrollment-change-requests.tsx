@@ -19,7 +19,7 @@ import { createLogger } from "~/lib/logger";
 import { mapRosterImpact } from "~/lib/roster-impact";
 import { CarePlanImpact } from "~/components/students/care-plan-impact";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EnrollmentChangeRequestDiff } from "~/components/enrollment/enrollment-change-request-diff";
@@ -208,17 +208,27 @@ export function AdminEnrollmentChangeRequestDetail({
     proposedSnapshot: data.proposed_snapshot,
     diff: data.diff,
   }).length;
-  const statusLine = [
-    request
-      ? `${request.guardian_first_name} ${request.guardian_last_name}`
-      : null,
-    request
-      ? `${request.children.length} ${request.children.length === 1 ? "Kind" : "Kinder"}`
-      : null,
-    `${changeCount} ${changeCount === 1 ? "Änderung" : "Änderungen"}`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const statusLine = (
+    <TenantPageStats
+      items={[
+        ...(request
+          ? [
+              {
+                label: `${request.guardian_first_name} ${request.guardian_last_name}`,
+              },
+              {
+                value: request.children.length,
+                label: request.children.length === 1 ? "Kind" : "Kinder",
+              },
+            ]
+          : []),
+        {
+          value: changeCount,
+          label: changeCount === 1 ? "Änderung" : "Änderungen",
+        },
+      ]}
+    />
+  );
 
   return (
     <TenantPage

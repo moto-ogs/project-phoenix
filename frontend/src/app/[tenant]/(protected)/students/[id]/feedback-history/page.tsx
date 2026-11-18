@@ -20,7 +20,7 @@ import { useStudentHistoryBreadcrumb } from "~/lib/breadcrumb-context";
 import { useScrollToTop } from "~/lib/hooks/use-scroll-to-top";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import {
   resolveStudentReferrer,
   studentHistoryBack,
@@ -246,19 +246,33 @@ function StudentFeedbackHistoryPageContent() {
 
   // Statuszeile: Klasse, Gruppe und die Zahl der Einträge im gewählten
   // Zeitraum, alles aus den Daten, die die Seite ohnehin geladen hat.
-  const feedbackLine =
+  const feedbackCount =
     feedbackHistory === null
       ? null
-      : `${totalFeedback} ${totalFeedback === 1 ? "Eintrag" : "Einträge"}`;
-  const studentMeta = student
+      : {
+          value: totalFeedback,
+          label: totalFeedback === 1 ? "Eintrag" : "Einträge",
+        };
+  const feedbackLine = feedbackCount
+    ? `${feedbackCount.value} ${feedbackCount.label}`
+    : null;
+  const studentFacts = student
     ? [
         student.school_class,
         student.group_name ? `Gruppe: ${student.group_name}` : null,
-        feedbackLine,
-      ]
-        .filter(Boolean)
-        .join(" · ")
-    : "";
+      ].filter((part): part is string => Boolean(part))
+    : [];
+  const studentMeta =
+    studentFacts.length + (feedbackCount ? 1 : 0) > 1 ? (
+      <TenantPageStats
+        items={[
+          ...studentFacts.map((label) => ({ label })),
+          ...(feedbackCount ? [feedbackCount] : []),
+        ]}
+      />
+    ) : (
+      (studentFacts[0] ?? null)
+    );
   const errorMessage = loading
     ? null
     : featureDisabled
@@ -283,7 +297,7 @@ function StudentFeedbackHistoryPageContent() {
         {...back}
         leading={<ConceptIconTile concept={feedbackConcept} size="page" />}
         title={student?.name ?? "Feedbackhistorie"}
-        stats={studentMeta || feedbackLine}
+        stats={studentMeta ?? feedbackLine}
         statsLoading={loading}
         loading={loading}
         error={errorMessage}

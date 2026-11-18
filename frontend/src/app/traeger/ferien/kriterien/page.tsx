@@ -6,8 +6,7 @@
 
 import { HolidayCriteriaEditor } from "~/components/traeger/holiday-criteria-editor";
 import { useTraegerHolidayCriteria } from "~/components/traeger/use-traeger-resources";
-import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { traegerPath } from "~/lib/traeger-url";
 
 export default function TraegerHolidayCriteriaPage() {
@@ -31,14 +30,15 @@ export default function TraegerHolidayCriteriaPage() {
       }
       stats={
         criteria ? (
-          <HolidayHeadFacts>
-            <span>
-              {criteria.length === 1
-                ? "1 Kriterium"
-                : `${criteria.length} Kriterien`}
-            </span>
-            <span>{active} eingeschaltet</span>
-          </HolidayHeadFacts>
+          <TenantPageStats
+            items={[
+              {
+                value: criteria.length,
+                label: criteria.length === 1 ? "Kriterium" : "Kriterien",
+              },
+              { value: active, label: "eingeschaltet" },
+            ]}
+          />
         ) : null
       }
       statsLoading={!criteria && !loadError}

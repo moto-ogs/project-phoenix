@@ -26,10 +26,7 @@ import {
   holidayTimeModelNames,
   schoolNames,
 } from "~/components/traeger/holiday-registration-format";
-import {
-  HolidayHeadFacts,
-  holidayPeriodTabs,
-} from "~/components/traeger/holiday-period-head";
+import { holidayPeriodTabs } from "~/components/traeger/holiday-period-head";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import {
   HOLIDAY_WISH_FILTER_OPTIONS,
@@ -75,7 +72,7 @@ import {
 } from "~/components/traeger/use-holiday-period-billing-href";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { billingConcept } from "~/lib/concepts/billing";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import { formatBerlinDate } from "~/lib/date-helpers";
@@ -398,26 +395,19 @@ function columns(
   ];
 }
 
-/** Die Zahlen je Status in denselben Farben wie die Plaketten der Tabelle. */
+/**
+ * Die Zahlen je Status. Die Summe steht schon als Zahl am Reiter
+ * „Anmeldungen“; die Zeile trägt höchstens drei Angaben (#7402).
+ */
 function StatusLine({ list }: Readonly<{ list: HolidayRegistrationList }>) {
   return (
-    <HolidayHeadFacts>
-      <span>
-        {list.total === 1 ? "1 Anmeldung" : `${list.total} Anmeldungen`}
-      </span>
-      <StatusBadge
-        tone={HOLIDAY_REGISTRATION_STATUS_TONES.received}
-        label={`${list.statusCounts.received} eingegangen`}
-      />
-      <StatusBadge
-        tone={HOLIDAY_REGISTRATION_STATUS_TONES.confirmed}
-        label={`${list.statusCounts.confirmed} bestätigt`}
-      />
-      <StatusBadge
-        tone={HOLIDAY_REGISTRATION_STATUS_TONES.cancelled}
-        label={`${list.statusCounts.cancelled} storniert`}
-      />
-    </HolidayHeadFacts>
+    <TenantPageStats
+      items={[
+        { value: list.statusCounts.received, label: "eingegangen" },
+        { value: list.statusCounts.confirmed, label: "bestätigt" },
+        { value: list.statusCounts.cancelled, label: "storniert" },
+      ]}
+    />
   );
 }
 

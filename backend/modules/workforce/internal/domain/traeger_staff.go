@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // The Personalstamm of ADR 0089 (#4705): the rules that need no database.
@@ -359,12 +361,13 @@ func recordNameKey(record StaffMatchRecord) []string {
 	return nameBirthdayKey(record.FirstName, record.LastName, record.Birthday)
 }
 
-// nameBirthdayKey needs a birthday: a name alone is no match.
+// nameBirthdayKey needs a birthday: a name alone is no match. Names compare
+// in NFC, so a pasted decomposed „Müller“ matches the typed one.
 func nameBirthdayKey(firstName, lastName, birthday string) []string {
 	if strings.TrimSpace(birthday) == "" || strings.TrimSpace(firstName) == "" || strings.TrimSpace(lastName) == "" {
 		return nil
 	}
-	return []string{strings.ToLower(strings.TrimSpace(firstName)) + "\x00" + strings.ToLower(strings.TrimSpace(lastName)) + "\x00" + strings.TrimSpace(birthday)}
+	return []string{strings.ToLower(textnorm.Name(firstName)) + "\x00" + strings.ToLower(textnorm.Name(lastName)) + "\x00" + strings.TrimSpace(birthday)}
 }
 
 func nonEmpty(value string) []string {

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
@@ -223,7 +224,7 @@ func validateNames(firstName, lastName string) error {
 	if lastName == "" {
 		return invalid("last name is required")
 	}
-	if len(firstName) > MaxNameLength || len(lastName) > MaxNameLength {
+	if utf8.RuneCountInString(firstName) > MaxNameLength || utf8.RuneCountInString(lastName) > MaxNameLength {
 		return invalid("names must not exceed 200 characters")
 	}
 	return nil

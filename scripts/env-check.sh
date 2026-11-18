@@ -29,9 +29,6 @@ exit_code=0
 # Keys that only exist in local dev (.env.example), not in deployed environments
 DEV_ONLY_KEYS="COMPOSE_BAKE COMPOSE_DOCKER_CLI_BUILD DB_DEBUG DOCKER_BUILDKIT FRONTEND_HOST_PORT MAILPIT_HOST_PORT MAILPIT_SMTP_HOST_PORT POSTGRES_HOST_PORT SERVER_HOST_PORT TEST_DB_DSN TEST_DB_PORT"
 
-# Optional S3 configuration belongs in SOPS when an environment selects it.
-PENDING_SOPS_KEYS="UPLOADS_BACKEND UPLOADS_S3_ENDPOINT UPLOADS_S3_REGION UPLOADS_S3_BUCKET UPLOADS_S3_ACCESS_KEY UPLOADS_S3_SECRET_KEY"
-
 # Keys that only exist in deployed environments, not in local dev
 DEPLOY_ONLY_KEYS=""
 
@@ -168,7 +165,7 @@ if [[ -f "$ENV_EXAMPLE" && ${#ENVS[@]} -ge 1 ]]; then
     has_real_missing=false
     while IFS= read -r key; do
       [[ -z "$key" ]] && continue
-      if ! is_excluded "$key" "$DEV_ONLY_KEYS $PENDING_SOPS_KEYS"; then
+      if ! is_excluded "$key" "$DEV_ONLY_KEYS"; then
         if [[ "$has_real_missing" == false ]]; then
           echo "❌ ${ENVS[0]}.sops.env is missing keys (present in .env.example):"
           has_real_missing=true

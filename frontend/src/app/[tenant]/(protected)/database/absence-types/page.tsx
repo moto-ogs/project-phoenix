@@ -32,6 +32,7 @@ import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
+import { TenantPageStats } from "~/components/ui/tenant-page";
 
 const CACHE_KEY = tenantAdminKeys.absenceTypes();
 
@@ -205,16 +206,25 @@ const config: CatalogConfig<AbsenceType> = {
     ).length;
     const active = types.length - inactive;
     const fromTraeger = types.filter((type) => type.keptByTraeger).length;
-    const parts =
+    const items: { value: string; label: string }[] =
       inactive > 0
         ? [
-            `${formatCount(active)} in der Auswahl`,
-            `${formatCount(inactive)} ausgeschaltet`,
+            { value: formatCount(active), label: "in der Auswahl" },
+            { value: formatCount(inactive), label: "ausgeschaltet" },
           ]
-        : [`${formatCount(active)} ${active === 1 ? "Art" : "Arten"}`];
+        : [
+            {
+              value: formatCount(active),
+              label: active === 1 ? "Art" : "Arten",
+            },
+          ];
     // Arten des Trägers (#4710) zählen mit, aber erkennbar.
-    if (fromTraeger > 0) parts.push(`${formatCount(fromTraeger)} vom Träger`);
-    return parts.join(" · ");
+    if (fromTraeger > 0) {
+      items.push({ value: formatCount(fromTraeger), label: "vom Träger" });
+    }
+    const [only] = items;
+    if (items.length === 1 && only) return `${only.value} ${only.label}`;
+    return <TenantPageStats items={items} />;
   },
   toRow: (type) => ({
     name: type.name,

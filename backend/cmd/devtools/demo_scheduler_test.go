@@ -76,7 +76,9 @@ func TestDemoTickersFollowTheSchoolsInUse(t *testing.T) {
 	assert.Empty(t, tickers.keepOnly([]string{"b"}))
 	assert.True(t, stopped["a"], "a school out of use gets no more ticks")
 	assert.False(t, stopped["b"])
+	assert.Empty(t, tickers.keepOnly([]string{"a", "b"}), "the old ticker can settle its check-ins first")
 
+	tickers.remove("a", tickers.running["a"])
 	assert.Equal(t, []string{"a"}, tickers.keepOnly([]string{"a", "b"}), "a returning visitor brings the ticker back")
 	assert.Empty(t, tickers.keepOnly(nil))
 	assert.True(t, stopped["b"])

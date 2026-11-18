@@ -1,7 +1,7 @@
 "use client";
 
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useReminders } from "~/lib/hooks/use-reminders";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useTenantMutate } from "~/lib/swr/hooks";
@@ -56,8 +56,13 @@ export default function RemindersPage() {
   const upcoming = count - overdue - runningOver;
   const runningOverStat =
     runningOver === 0
-      ? ""
-      : ` · ${runningOver} ${runningOver === 1 ? "AG dauert" : "AGs dauern"} länger`;
+      ? []
+      : [
+          {
+            value: runningOver,
+            label: `${runningOver === 1 ? "AG dauert" : "AGs dauern"} länger`,
+          },
+        ];
   // Bis der Text eines Ladefehlers da ist, bleibt der Ladezustand stehen:
   // keine leere Seite ohne Daten.
   const loading =
@@ -68,9 +73,15 @@ export default function RemindersPage() {
       title="Erinnerungen"
       // Ohne geladene Liste keine "0 anstehend" neben dem Ladefehler (#2517).
       stats={
-        data === undefined
-          ? null
-          : `${upcoming} anstehend · ${overdue} überfällig${runningOverStat}`
+        data === undefined ? null : (
+          <TenantPageStats
+            items={[
+              { value: upcoming, label: "anstehend" },
+              { value: overdue, label: "überfällig" },
+              ...runningOverStat,
+            ]}
+          />
+        )
       }
       statsLoading={loading}
       loading={loading}

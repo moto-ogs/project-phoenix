@@ -55,7 +55,7 @@ import {
   PlanningDayChip,
 } from "~/components/ui/planning/planning-context-bar";
 import { SegmentedControl } from "~/components/ui/segmented-control";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { BulkSubstitutionModal } from "~/components/timetable/bulk-substitution-modal";
 import { SubstitutionSlideOver } from "~/components/timetable/substitution-slide-over";
 import { cancelledToast } from "~/components/timetable/guardian-notice-toast";
@@ -683,21 +683,28 @@ function VertretungContent() {
   // Statuszeile der Kopfkarte: Zeitraum und die Zahlen der sichtbaren
   // Ansicht.
   const scopeInstanceCount = visibleInstances.length;
+  const statusItems = [
+    // Kein Datum in der Statuszeile: Woche und Tag trägt das Bedienband
+    // direkt darunter, mit Pfeilen. Zweimal dieselbe Angabe in der
+    // Kopfkarte kostete auf dem Telefon eine Zeile, die nichts sagte.
+    // Ohne geladene Woche keine "0 Termine" neben dem Ladefehler (#2517).
+    ...(data === undefined
+      ? []
+      : [
+          {
+            value: scopeInstanceCount,
+            label: scopeInstanceCount === 1 ? "Termin" : "Termine",
+          },
+        ]),
+    ...(countsUnavailable
+      ? []
+      : [
+          { value: openCount, label: "offen" },
+          { value: ackCount, label: "quittiert" },
+        ]),
+  ];
   const statusLine =
-    [
-      // Kein Datum in der Statuszeile: Woche und Tag trägt das Bedienband
-      // direkt darunter, mit Pfeilen. Zweimal dieselbe Angabe in der
-      // Kopfkarte kostete auf dem Telefon eine Zeile, die nichts sagte.
-      // Ohne geladene Woche keine "0 Termine" neben dem Ladefehler (#2517).
-      ...(data === undefined
-        ? []
-        : [
-            `${scopeInstanceCount} ${scopeInstanceCount === 1 ? "Termin" : "Termine"}`,
-          ]),
-      ...(countsUnavailable
-        ? []
-        : [`${openCount} offen`, `${ackCount} quittiert`]),
-    ].join(" · ") || null;
+    statusItems.length > 0 ? <TenantPageStats items={statusItems} /> : null;
 
   const overlays = (
     <>

@@ -113,6 +113,9 @@ export function staffChangeText(change: StaffChange): string {
   if (change.kind === "not_chosen") {
     return `${field} „${value}“ von ${school} nicht übernommen`;
   }
+  if (change.kind === "removed") {
+    return `${field} entfernt, vorher „${value}“`;
+  }
   return value === "–"
     ? `${field} eingetragen`
     : `${field} ersetzt, vorher „${value}“`;

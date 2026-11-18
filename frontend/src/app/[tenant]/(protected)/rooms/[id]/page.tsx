@@ -16,7 +16,11 @@ import { Alert } from "~/components/ui/alert";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import type { OverflowMenuItem } from "~/components/ui/page-header/types";
-import { TenantPage, type TenantPageTab } from "~/components/ui/tenant-page";
+import {
+  TenantPage,
+  TenantPageStats,
+  type TenantPageTab,
+} from "~/components/ui/tenant-page";
 import { RoomRemovalModal } from "~/components/rooms/room-removal-modal";
 import { RoomStatusBadge } from "~/components/rooms/room-status-badge";
 import {
@@ -382,21 +386,36 @@ function RoomDetailPageContent() {
   ];
 
   // Statuszeile: Ort und Art des Raums, wie sie die Sammlung auch zeigt.
-  const statusLine = [
-    room.building && room.floor !== undefined
-      ? `${room.building} · ${formatFloor(room.floor)}`
-      : (room.building ??
-        (room.floor === undefined ? null : formatFloor(room.floor))),
-    room.category ?? null,
-    room.capacity !== undefined ? `${room.capacity} Plätze` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  // Höchstens drei Angaben: sind Gebäude, Etage, Kategorie und Plätze alle
+  // da, entfällt die Etage. Sie steht unter „Rauminformationen“ im Inhalt,
+  // die Plätze dort nicht.
+  const floorLabel =
+    room.floor === undefined ? undefined : formatFloor(room.floor);
+  const statusItems: { value?: number; label: string }[] = [
+    ...(room.building ? [{ label: room.building }] : []),
+    ...(floorLabel === undefined ||
+    (room.building && room.category && room.capacity !== undefined)
+      ? []
+      : [{ label: floorLabel }]),
+    ...(room.category ? [{ label: room.category }] : []),
+    ...(room.capacity !== undefined
+      ? [{ value: room.capacity, label: "Plätze" }]
+      : []),
+  ];
+  const singleStatus = statusItems.length === 1 ? statusItems[0] : undefined;
+  const statusLine =
+    statusItems.length > 1 ? (
+      <TenantPageStats items={statusItems} />
+    ) : singleStatus ? (
+      [singleStatus.value, singleStatus.label]
+        .filter((part) => part !== undefined)
+        .join(" ")
+    ) : null;
 
   return (
     <TenantPage
       title={room.name}
-      stats={statusLine || undefined}
+      stats={statusLine ?? undefined}
       back
       backHref={referrer}
       backLabel={backLabel}
@@ -410,11 +429,7 @@ function RoomDetailPageContent() {
       actions={
         <>
           {hasOccupancy && !isArchived ? (
-            // Am Telefon streckt der Kopf seine Aktionen auf volle Breite; die
-            // Pille behält ihre eigene.
-            <span className="inline-flex">
-              <RoomStatusBadge isOccupied={room.isOccupied} />
-            </span>
+            <RoomStatusBadge isOccupied={room.isOccupied} />
           ) : null}
           {hasOccupancy && room.isOpenRoom && canOpenSupervision ? (
             <ButtonLink

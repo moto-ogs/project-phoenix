@@ -271,8 +271,10 @@ describe("DienstplanView", () => {
       screen.getByRole("button", { name: "Vorgangskennung kopieren" }),
     ).toHaveTextContent("req-plan");
     // #2517: keine Zählung aus einem Plan, der nie geladen wurde.
-    expect(screen.queryByText(/0 Dienste/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/0 Personen/)).not.toBeInTheDocument();
+    // Die Statuszeile setzt Wert und Wort in eigene Elemente; ihr Text steht
+    // deshalb ohne Leerzeichen hintereinander.
+    expect(document.body).not.toHaveTextContent(/0\s*Dienste/);
+    expect(document.body).not.toHaveTextContent(/0\s*Personen/);
 
     // Retrying reloads the batched overview, not the independent shift types.
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
@@ -1003,7 +1005,14 @@ describe("DienstplanView", () => {
 
     render(<DienstplanView />);
 
-    expect(screen.getByText(/0 Dienste · 2 Personen/)).toBeInTheDocument();
+    // Wert und Wort stehen in eigenen Elementen, die Paare ohne Trennpunkt.
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === "SPAN" &&
+          element.textContent === "0 Dienste, 2 Personen",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("falls back to the first person for an unknown staff id", () => {

@@ -15,7 +15,7 @@ import {
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { SURVEY_FORM_CHECK_MESSAGE } from "~/components/surveys/survey-create-slide-over";
 import { SurveyEditorFields } from "~/components/surveys/survey-editor-fields";
 import {
@@ -28,7 +28,6 @@ import {
 import {
   describeSurveyAudience,
   formatSurveyClosesAt,
-  participantLabel,
   remindedMessage,
   SurveyAnonymityBadge,
   SurveyStatusBadge,
@@ -250,15 +249,23 @@ function SurveyDetail({ surveyId }: Readonly<{ surveyId: string }>) {
     onDelete: () => setAction("delete"),
   });
 
-  const stats = [
-    describeSurveyAudience(survey),
-    `Teilnahme bis ${formatSurveyClosesAt(survey.closes_at)}`,
-    survey.status === "draft"
-      ? null
-      : participantLabel(survey.participant_count),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const stats = (
+    <TenantPageStats
+      items={[
+        { label: describeSurveyAudience(survey) },
+        { label: `Teilnahme bis ${formatSurveyClosesAt(survey.closes_at)}` },
+        ...(survey.status === "draft"
+          ? []
+          : [
+              {
+                value: survey.participant_count,
+                label:
+                  survey.participant_count === 1 ? "Teilnahme" : "Teilnahmen",
+              },
+            ]),
+      ]}
+    />
+  );
 
   const tabs = published
     ? {

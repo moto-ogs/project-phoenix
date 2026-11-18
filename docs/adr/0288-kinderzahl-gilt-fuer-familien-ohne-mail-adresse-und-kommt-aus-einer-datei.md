@@ -91,7 +91,7 @@ Die Entscheidung ändert diese Register (ADR 0057 Punkt 5, ADR 0070):
 
 - **Compose-Budget** (`backend/test/module_legacy_budget_ratchet_test.go`):
   `modules/parentbilling/compose` 136 → 141 (Konstruktor
-  `NewFamilyChildrenImports`), Summe 13645 → 13650. Der Konstruktor baut nur
+  `NewFamilyChildrenImports`). Der Konstruktor baut nur
   seinen Owner (ADR 0068). Ein eigener Konstruktor statt einer breiteren
   Fassade: `parentbilling.CareReductions` hat 12 Methoden, die Grenze der
   Fassaden-Ratchet (ADR 0178).

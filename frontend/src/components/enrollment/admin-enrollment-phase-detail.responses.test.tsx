@@ -259,7 +259,8 @@ describe("AdminEnrollmentPhaseDetail: Rücklauf (#3379)", () => {
     expect(
       screen.queryByRole("tab", { name: /Rücklauf/ }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("Eingänge")).toBeInTheDocument();
+    // Einmal in der Statuszeile, einmal als Kennzahl über den Eingängen.
+    expect(screen.getAllByText("Eingänge")).toHaveLength(2);
   });
 });
 

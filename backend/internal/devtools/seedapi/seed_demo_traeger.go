@@ -156,5 +156,9 @@ func (s seedDemoNeighbourSchoolsStep) seedNeighbour(ctx context.Context, rt *Run
 	if err := (configureProfileStep{definition: definition}).Run(ctx, rt); err != nil {
 		return err
 	}
-	return neighbour.seedCare(ctx, rt, s.seeder.options, definition)
+	if err := neighbour.seedCare(ctx, rt, s.seeder.options, definition); err != nil {
+		return err
+	}
+	rt.demoNeighbourIDs = append(rt.demoNeighbourIDs, schoolID)
+	return nil
 }

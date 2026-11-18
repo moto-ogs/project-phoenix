@@ -69,7 +69,12 @@ school of #3461 stays selectable as the fallback (see below).
    `<slug>-n2` „OGS Rheinblick": two groups each, distinct children, booked
    places and a month of past attendance) and records them in
    `visitor_school_ids`, then runs the Träger
-   steps over all three. The visitor's caregiver joins the Träger-Büro with
+   steps over all three. While a visitor uses the demo, the runner checks a
+   small set of booked children in and out through web attendance at each
+   neighbour. It closes its open check-ins when the school's ticker stops.
+   Two synthetic employees share their week between schools, and the deferred
+   seed signs two care contracts on paper at each neighbour.
+   The visitor's caregiver joins the Träger-Büro with
    every role of the office and the visitor's name; the deferred seed links
    the Träger's staff records without the visitor's employment. The demo role
    Träger-Büro opens the Träger-Portal on its own host. Expiry, restart and a
