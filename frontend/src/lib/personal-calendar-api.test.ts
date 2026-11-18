@@ -65,7 +65,7 @@ describe("personal calendar API", () => {
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
-      "/api/parent/calendar?from=2026-01-05&to=2026-01-11",
+      "/api/parent/me/calendar?from=2026-01-05&to=2026-01-11",
       expect.objectContaining({ credentials: "include" }),
     );
   });
@@ -88,7 +88,7 @@ describe("personal calendar API", () => {
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
-      "/api/parent/calendar/recipients/77/response",
+      "/api/parent/me/calendar/recipients/77/response",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ status: "declined" }),
@@ -288,12 +288,12 @@ describe("personal calendar API", () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      "/api/parent/calendar/feed",
+      "/api/parent/me/calendar/feed",
       expect.objectContaining({ credentials: "include" }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
-      "/api/parent/calendar/feed/rotate",
+      "/api/parent/me/calendar/feed/rotate",
       expect.objectContaining({ method: "POST" }),
     );
   });

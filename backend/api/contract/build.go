@@ -30,6 +30,7 @@ type builder struct {
 	numericIDs   map[string]bool
 	identifiers  map[reflect.Type]string
 	readers      map[reflect.Type]string
+	dates        map[reflect.Type]bool
 	used         map[string]bool
 	requestTypes map[string]bool
 }
@@ -42,6 +43,10 @@ func Build(routes []Registration, options Options) (Document, error) {
 		enumByType: map[reflect.Type]string{}, enumByField: map[string]string{},
 		deprecated: map[string]bool{}, numericIDs: map[string]bool{}, used: map[string]bool{},
 		requestTypes: map[string]bool{}, identifiers: options.Identifiers, readers: options.Readers,
+		dates: map[reflect.Type]bool{dateType: true},
+	}
+	for _, t := range options.Dates {
+		b.dates[t] = true
 	}
 	for _, key := range options.NumericIDs {
 		b.numericIDs[key] = true
@@ -206,7 +211,10 @@ func (b *builder) unused(options Options) error {
 	for t := range options.Readers {
 		registers["reader:"] = append(registers["reader:"], t.String())
 	}
-	labels := map[string]string{"id:": "numeric id ", "variants:": "query variant ", "enum:": "enum field ", "deprecated:": "deprecated field ", "reader:": "reader "}
+	for _, t := range options.Dates {
+		registers["date:"] = append(registers["date:"], t.String())
+	}
+	labels := map[string]string{"date:": "day type ", "id:": "numeric id ", "variants:": "query variant ", "enum:": "enum field ", "deprecated:": "deprecated field ", "reader:": "reader "}
 	var stale []string
 	for prefix, keys := range registers {
 		for _, key := range keys {
@@ -276,11 +284,14 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 // instants, days, identifiers and enums. It also stops at a type that writes
 // or reads itself without an entry.
 func (b *builder) named(t reflect.Type, where string, request bool) (Schema, bool, error) {
-	switch t {
-	case timeType:
+	if t == timeType {
 		return Schema{Kind: KindInstant}, true, nil
-	case dateType:
-		// calendar.Date renders its zero value as null.
+	}
+	if b.dates[t] {
+		// A day type renders its zero value as null.
+		if t != dateType {
+			b.used["date:"+t.String()] = true
+		}
 		return Schema{Kind: KindDate, Nullable: true}, true, nil
 	}
 	if kind, ok := b.identifiers[t]; ok {

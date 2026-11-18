@@ -14,6 +14,7 @@ import { StatCard } from "~/components/ui/stat-card";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import type { TimeReport } from "~/lib/traeger-staff-exports-api";
@@ -125,7 +126,7 @@ export function TimeExportPanel({
                   <p className="min-w-0 text-sm text-gray-800">
                     {name} hat noch keine Personalnummer.
                   </p>
-                  <div className="flex shrink-0 gap-2">
+                  <ResponsiveRowActions>
                     <ButtonLink
                       href={`/traeger/personal/${encodeURIComponent(person.recordId)}`}
                       variant="surface"
@@ -135,7 +136,7 @@ export function TimeExportPanel({
                     >
                       Akte öffnen
                     </ButtonLink>
-                  </div>
+                  </ResponsiveRowActions>
                 </ResponsiveActionRow>
               );
             })}

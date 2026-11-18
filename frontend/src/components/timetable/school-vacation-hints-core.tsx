@@ -30,6 +30,7 @@ import { Button, ButtonLink } from "~/components/ui/button";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
@@ -253,9 +254,7 @@ function SchoolVacationHintList({
                   {vacationRangeLabel(hint)} · {regelterminLabel(hint.count)}
                 </p>
               </div>
-              <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
-                {actions(hint, true)}
-              </div>
+              <ResponsiveRowActions>{actions(hint, true)}</ResponsiveRowActions>
             </ResponsiveActionRow>
           ))}
         </ResponsiveActionList>

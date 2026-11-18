@@ -238,3 +238,46 @@ func TestSchoolRemindersLeaveKindsTheTraegerKeepsToItsProofs(t *testing.T) {
 		assert.False(t, row.StaffID == f.mira[0] && row.Status == workforce.QualificationStatusMissing, "the list agrees with the person's view")
 	}
 }
+
+// A retired Einsatzort gets no warning (#7478): its retirement may commit
+// beside the Worker, and the Leitung read before it would keep the demo
+// visitor's name in the outbox after the erasure. The live school and the
+// person still get theirs.
+func TestTraegerProofRemindersSkipARetiredEinsatzort(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	f := newProofFixture(t, db)
+	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
+	directory := schoolStaffFake{
+		f.north: {
+			members:  []workforce.QualificationStaffMember{{StaffID: f.mira[0], FirstName: "Mira", LastName: "Sommer", AccountID: 901, Email: "mira@example.com"}},
+			managers: []workforce.QualificationStaffMember{{StaffID: 1, FirstName: "Lea", LastName: "Nord", AccountID: 900, Email: "nord@example.com"}},
+		},
+		f.south: {
+			members:  []workforce.QualificationStaffMember{{StaffID: f.mira[1], FirstName: "Mira", LastName: "Sommer", AccountID: 901, Email: "mira@example.com"}},
+			managers: []workforce.QualificationStaffMember{{StaffID: 2, FirstName: "Sven", LastName: "Süd", AccountID: 910, Email: "sued@example.com"}},
+		},
+	}
+	deliveries := &qualificationDeliveries{}
+	composed, err := NewQualifications(db, directory, workforce.QualificationReminderPorts{
+		Notify: deliveries.notify, Mail: deliveries, Schools: retiredSchoolFake{f.north: true},
+		FrontendURL:    "https://moto.example.com",
+		Traeger:        func(context.Context) ([]int64, error) { return []int64{f.organization}, nil },
+		TraegerRuntime: proofRuntime{},
+	}, func() time.Time { return calendar.NewDate(2026, 11, 8).BerlinMidnight().Add(12 * time.Hour) })
+	require.NoError(t, err)
+
+	require.NoError(t, composed.TraegerProofs.RunDue(ctx))
+	recipients := map[int64]int{}
+	for _, notice := range deliveries.notices {
+		for _, account := range notice.RecipientAccountIDs {
+			recipients[account]++
+		}
+	}
+	assert.Equal(t, map[int64]int{910: 1, 901: 1}, recipients, "the Leitung of the live school and the person, not the retired school's Leitung")
+	_, mails := deliveries.counts()
+	assert.Equal(t, 2, mails)
+	for _, mail := range deliveries.mails {
+		assert.NotEqual(t, "nord@example.com", mail.ToAddress, "no mail to the retired school")
+	}
+}

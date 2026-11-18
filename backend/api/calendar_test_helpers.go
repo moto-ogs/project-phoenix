@@ -17,8 +17,10 @@ import (
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	email "github.com/moto-ogs/project-phoenix/modules/delivery/mail"
+	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	calendarService "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	calendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/compose"
+	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -79,7 +81,7 @@ func NewCalendarTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	calendarConfig = owners.BindCalendarScheduleFacts(calendarConfig, reposTimetable.InstanceStaff, reposTimetable.ActivityInstance.Reads, reposRooms.Room, reposTimetable.StaffShift, reposTimetable.ShiftType)
 	calendarConfig = owners.BindCalendarFeedFacts(calendarConfig, reposSchools.School, feeds.ParentFeed, feeds.StaffFeed, repos.Person)
 	calendarConfig = owners.BindCalendarCaller(calendarConfig, identity.Caller())
-	calendarConfig = bindCalendarTestClockAndConferences(calendarConfig, db)
+	calendarConfig = mustBindCalendarTestClockDaysAndConferences(calendarConfig, db, settings.Settings)
 	calendarConfig.Appointments = appointments
 	calendarConfig.Runtime = calendarCompose.NewTenantRuntime(db.Pool())
 	calendarConfig.CalendarRenderer = calendarCompose.NewCalendarRenderer(schoolCalendar)
@@ -98,7 +100,14 @@ func NewCalendarTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	return CalendarTestModule{Calendar: calendarSvc}, nil
 }
 
-func bindCalendarTestClockAndConferences(cfg calendarCompose.Config, db transactionruntime.Database) calendarCompose.Config {
+// The closing days and holidays moto schule reads are composed as the serve
+// root composes them, over the tenant's federal state.
+func mustBindCalendarTestClockDaysAndConferences(cfg calendarCompose.Config, db transactionruntime.Database, settings settingsCompose.SettingsService) calendarCompose.Config {
+	days, err := owners.BuildSchoolCalendarRecords(db, func(schoolCalendarCompose.Observation) {}, settings, time.Now)
+	if err != nil {
+		panic(err)
+	}
+	cfg.SchoolDays = days
 	cfg.Now = func() time.Time { return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC) }
 	cfg.Today = func() calendarService.Date { return calendarService.Date(calendar.NewDate(2026, 1, 1)) }
 	cfg.ParentConferences = owners.BuildServeParentConferences(db)

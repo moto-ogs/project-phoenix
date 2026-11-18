@@ -67,7 +67,7 @@ const CHILD_COLUMNS: DataTableColumn<UtilizationChild>[] = [
         <span className="font-medium text-gray-900">
           {child.lastName}, {child.firstName}
         </span>
-        <span className="block text-xs text-gray-500">
+        <span className="block text-sm text-gray-500">
           {[
             child.schoolClass ? schoolClassLabel(child.schoolClass) : "",
             child.groupName,

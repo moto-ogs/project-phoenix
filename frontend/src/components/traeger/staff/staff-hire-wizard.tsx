@@ -27,6 +27,7 @@ import { ConfirmationModal } from "~/components/ui/modal";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
@@ -415,14 +416,12 @@ function DuplicateRow({
           </ul>
         </div>
       </div>
-      {/* Unter `sm` steht die Aktion in voller Breite unter dem Text. */}
-      <div className="flex sm:justify-end">
+      <ResponsiveRowActions leading={32}>
         {match.kind === "record" ? (
           <ButtonLink
             href={staffSubpageHref(`${PERSONAL}/${match.recordId}`, from)}
             variant="surface"
             size="compact"
-            className="w-full sm:w-auto"
             newTab
             aria-label={`Akte von ${shown} öffnen`}
             tooltip="Öffnet die vorhandene Akte in einem neuen Tab."
@@ -434,14 +433,13 @@ function DuplicateRow({
             href={staffCreateRecordHref(match.schoolId, match.staffId)}
             variant="surface"
             size="compact"
-            className="w-full sm:w-auto"
             aria-label={`Akte für ${shown} anlegen`}
             tooltip="Bricht das Einstellen ab und öffnet die Person unter „Ohne Akte“."
           >
             Akte anlegen
           </ButtonLink>
         )}
-      </div>
+      </ResponsiveRowActions>
     </ResponsiveActionRow>
   );
 }

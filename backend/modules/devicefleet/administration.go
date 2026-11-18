@@ -139,6 +139,9 @@ func (s *administration) GetDeviceByDeviceID(ctx context.Context, deviceID strin
 		return nil, &AdministrationError{Op: "GetDeviceByDeviceID", Err: errors.New(errDeviceIDEmpty)}
 	}
 	device, err := s.devices.FindDeviceByDeviceID(ctx, deviceID)
+	if errors.Is(err, ErrDeviceNotFound) {
+		return nil, &AdministrationError{Op: "GetDeviceByDeviceID", Err: ErrAdministrationDeviceNotFound}
+	}
 	if err != nil {
 		return nil, &AdministrationError{Op: "GetDeviceByDeviceID", Err: err}
 	}
@@ -274,6 +277,9 @@ func (s *administration) UpdateDeviceStatus(ctx context.Context, deviceID string
 	}
 
 	existing, err := s.devices.FindDeviceByDeviceID(ctx, deviceID)
+	if errors.Is(err, ErrDeviceNotFound) {
+		return &AdministrationError{Op: "UpdateDeviceStatus", Err: ErrAdministrationDeviceNotFound}
+	}
 	if err != nil {
 		return &AdministrationError{Op: "UpdateDeviceStatus", Err: err}
 	}
@@ -295,6 +301,9 @@ func (s *administration) PingDevice(ctx context.Context, deviceID string) error 
 		return &AdministrationError{Op: "PingDevice", Err: errors.New(errDeviceIDEmpty)}
 	}
 	existing, err := s.devices.FindDeviceByDeviceID(ctx, deviceID)
+	if errors.Is(err, ErrDeviceNotFound) {
+		return &AdministrationError{Op: "PingDevice", Err: ErrAdministrationDeviceNotFound}
+	}
 	if err != nil {
 		return &AdministrationError{Op: "PingDevice", Err: err}
 	}

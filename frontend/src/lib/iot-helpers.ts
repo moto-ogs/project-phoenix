@@ -44,7 +44,6 @@ interface CreateDeviceRequest {
   device_id: string;
   device_type: string;
   name?: string;
-  status?: string;
   registered_by_id?: number;
 }
 
@@ -53,7 +52,6 @@ interface UpdateDeviceRequest {
   device_id?: string;
   device_type?: string;
   name?: string;
-  status?: string;
 }
 
 /**
@@ -86,7 +84,9 @@ export function mapDeviceResponse(data: BackendDevice): Device {
 }
 
 /**
- * Prepare device data for backend API submission
+ * Prepare device data for backend API submission. The status is not sent:
+ * a new device starts active, and only Sperren/Entsperren change it
+ * (#2317), so a form opened before a block cannot undo it on save.
  */
 export function prepareDeviceForBackend(
   data: Partial<Device>,
@@ -95,7 +95,6 @@ export function prepareDeviceForBackend(
     device_id: data.device_id!,
     device_type: data.device_type!,
     name: data.name,
-    status: data.status,
     registered_by_id: data.registered_by_id
       ? Number.parseInt(data.registered_by_id)
       : undefined,
@@ -119,12 +118,30 @@ export function getDeviceTypeDisplayName(deviceType: string): string {
 }
 
 /**
+ * The virtual device of manual web check-ins; every school has one. It
+ * cannot be blocked, transferred or removed (backend WebManualDeviceID).
+ */
+export function isSystemDevice(
+  device: Readonly<{ deviceId: string }>,
+): boolean {
+  return device.deviceId === "WEB-MANUAL-001";
+}
+
+/**
+ * A blocked device (Gerätesperre, #2317) is a live device with the status
+ * "inactive": its kiosk is refused until someone unblocks it.
+ */
+export function isDeviceBlocked(device: Readonly<{ status: string }>): boolean {
+  return device.status === "inactive";
+}
+
+/**
  * Get device status display name in German
  */
 export function getDeviceStatusDisplayName(status: string): string {
   const statusMap: Record<string, string> = {
     active: "Aktiv",
-    inactive: "Inaktiv",
+    inactive: "Gesperrt",
     maintenance: "Wartung",
     offline: "Offline",
   };
@@ -138,9 +155,9 @@ export function getDeviceStatusDisplayName(status: string): string {
 export function getDeviceStatusColor(status: string): string {
   const colorMap: Record<string, string> = {
     active: LOCATION_COLORS.GROUP_ROOM,
-    inactive: LOCATION_COLORS.HOME,
+    inactive: LOCATION_COLORS.DANGER,
     maintenance: LOCATION_COLORS.WARNING,
-    offline: LOCATION_COLORS.DANGER,
+    offline: LOCATION_COLORS.HOME,
   };
 
   return Object.hasOwn(colorMap, status)

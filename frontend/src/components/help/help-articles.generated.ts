@@ -2108,6 +2108,16 @@ export const devicesTopic = function devicesTopic(): HelpTopic {
         ],
       },
       {
+        title: "Ein Gerät sperren",
+        description:
+          "Zum Beispiel, wenn ein Tablet verschwunden ist oder nicht benutzt werden soll. Du kannst es jederzeit wieder entsperren.",
+        steps: [
+          "Wähle das Gerät aus der Liste.",
+          "Wähle unter `Zugang` die Schaltfläche `Sperren`.",
+          "Zum Entsperren wähle im gelben Hinweis `Entsperren`.",
+        ],
+      },
+      {
         title: "Ein Gerät entfernen",
         description:
           "Zum Beispiel, wenn ein Tablet kaputt ist oder nicht mehr gebraucht wird.",
@@ -2125,6 +2135,7 @@ export const devicesTopic = function devicesTopic(): HelpTopic {
       "Steht bei `Letzter Standort` `Noch nicht verwendet`, wurde am Gerät noch nichts gescannt.",
       "Nach dem Anlegen zeigt moto einmalig einen Zugangscode. Nur das Gerät braucht ihn.",
       "Gib diesen Code nicht weiter. Er ist danach nicht mehr zu sehen.",
+      "Ein gesperrtes Gerät kann sich sofort nicht mehr anmelden. Es bleibt mit Raum und bisherigen Anwesenheiten in der Liste und zeigt `Gesperrt`.",
       "Ein entferntes Gerät kann sich nicht mehr anmelden. Bisherige Anwesenheiten bleiben erhalten.",
     ],
     differences: [
@@ -2133,6 +2144,7 @@ export const devicesTopic = function devicesTopic(): HelpTopic {
     troubleshootingDetails: [
       "Ein Gerät meldet sich nicht? Prüfe `Verbindung` und `Status` in der Liste.",
       "`Offline` und der Strom stimmt? Prüfe das WLAN am Standort des Geräts.",
+      "Ein Gerät meldet „gesperrt“ oder „nicht aktiv“? Prüfe, ob in der Liste `Gesperrt` steht, und wähle `Entsperren`.",
       "Entfernen klappt nicht, weil eine Sitzung läuft? Beende die Sitzung am Gerät und versuche es noch einmal.",
     ],
     related: [
@@ -11176,8 +11188,8 @@ export const traegerArrivalPickupTimesTopic =
         "Lies oben die Hauptzeiten: `Meiste Ankünfte` und `Meiste Abholungen`.",
         "Lies die Felder unter `Ankunft` und `Abholung`. Je dunkler ein Feld, desto mehr Kinder. Die Zahl im Feld ist der Durchschnitt eines Tages.",
         "Zeige auf ein Feld oder tippe darauf. Darunter steht dann die genaue Zahl.",
-        "Wähle unter `Je Schule` eine Schule oder oben den Filter `Schule`. Dann siehst du nur diese Schule.",
-        "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Mit einer gewählten Schule enthält die Datei nur diese Schule.",
+        "Wähle unter `Je Schule` eine Schule oder oben neben dem Zeitraum eine Schule. Dann siehst du nur diese Schule.",
+        "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Mit einer gewählten Schule enthält die Datei nur diese Schule.",
       ],
       result:
         "Du siehst, wann an jeder Schule viele Kinder kommen und gehen. Plane für diese Zeiten mehr Personal ein.",
@@ -12732,8 +12744,8 @@ export const traegerDailyAttendanceTopic =
         "Wähle oben den Zeitraum. Am Anfang ist es die letzte Woche bis gestern. Ein Zeitraum hat höchstens 31 Tage.",
         "Lies oben die Zahlen: `Kinder am Tag`, `Verweildauer`, `Längster Tag` und `Abwesend gemeldet`.",
         "Lies unter `Je Tag`, wie viele Kinder an jedem Tag da waren und wie viele krank, entschuldigt oder auf Klassenfahrt waren.",
-        "Wähle oben den Filter `Schule`, um nur eine Schule zu sehen.",
-        "Wähle `Herunterladen` und dann `CSV`. Diese Datei reichst du beim Land ein. `PDF` und `Excel` sind für deine eigene Ablage.",
+        "Wähle oben neben dem Zeitraum eine Schule, um nur sie zu sehen.",
+        "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `CSV`. Diese Datei reichst du beim Land ein. `PDF` und `Excel` sind für deine eigene Ablage.",
       ],
       result:
         "Du hast die Datei mit einer Zeile je Kind und Tag. Sie enthält keine Namen.",
@@ -14132,7 +14144,7 @@ export const traegerKeyDateCountsTopic =
         "Lies darunter die Zahlen jeder Schule.",
         "Wähle unter `Alle Monate` einen Monat, um seine Zahlen zu sehen.",
         "Wähle bei Bedarf oben eine Schule. Die Summe zeigt dann nur diese Schule.",
-        "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Monate, für alle Schulen oder die gewählte Schule.",
+        "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Monate, für alle Schulen oder die gewählte Schule.",
       ],
       result:
         "Du siehst für jede Schule, wie viele aktive Kinder und aktive Geräte moto am Stichtag gezählt hat.",
@@ -14282,7 +14294,7 @@ export const traegerOccupancyTopic =
         "Lies oben die Summe für alle Schulen und die freien Plätze.",
         "Wähle einen Reiter: `Schulen`, `Gruppen` oder `Betreuungsformen`.",
         "Wähle bei Bedarf oben eine Schule.",
-        "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Mit einer gewählten Schule enthält die Datei nur diese Schule.",
+        "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Mit einer gewählten Schule enthält die Datei nur diese Schule.",
       ],
       result:
         "Du siehst für jede Schule, wie viele Kinder in welcher Gruppe sind und welches Betreuungsangebot sie heute gebucht haben. Du siehst auch, wo noch Plätze frei sind.",
@@ -14436,7 +14448,7 @@ export const traegerReportsTopic = function traegerReportsTopic(): HelpTopic {
       "Prüfe den Stichtag. moto schlägt den letzten 15. Oktober vor. Mit den Pfeilen springst du ein Jahr vor oder zurück.",
       "Hat die Vorlage Sozialräume, wähle `Je Schule` oder `Je Sozialraum`.",
       "Wähle in der Tabelle der Kinder eine Zeile, um die Betreuungsformen zu sehen.",
-      "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+      "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
     ],
     result:
       "Du hast eine Datei mit den Zahlen aller Schulen und einer Zeile „Gesamt“. Du kannst sie an Jugendamt oder Kommune schicken.",
@@ -14499,7 +14511,7 @@ export const traegerSchoolComparisonTopic =
         "Wähle bei Bedarf rechts daneben die Schulen. Ohne Auswahl vergleicht moto alle Schulen.",
         "Wähle bei `Rangfolge` eine Kennzahl, zum Beispiel `Plätze belegt`. Die Schule mit der größten Zahl steht oben.",
         "Wähle bei `Kennzahlen je Schule` die Spalten, die du vergleichen willst.",
-        "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält die gewählten Schulen und Kennzahlen.",
+        "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält die gewählten Schulen und Kennzahlen.",
       ],
       result:
         "Du siehst, welche Schule voller oder leerer ist als die anderen und wie weit sie vom Schnitt entfernt ist.",
@@ -15039,8 +15051,9 @@ export const traegerStaffContractsTopic =
 /**
  * `/traeger/personal/einsatzplanung` (#4708, ADR 0242): die Woche aller
  * Personen mit Personalakte über alle Einsatzorte, das Planen einer Schicht
- * im Dienstplan einer Schule, die Prüfung der Arbeitszeitregeln und der
- * Schalter `Einsatzplanung in moto` in den Einstellungen.
+ * im Dienstplan einer Schule, die Vorschläge aus dem Arbeitsvertrag (#7381),
+ * die Prüfung der Arbeitszeitregeln und der Schalter `Einsatzplanung in moto`
+ * in den Einstellungen.
  */
 export const traegerStaffPlanningTopic =
   function traegerStaffPlanningTopic(): HelpTopic {
@@ -15066,6 +15079,15 @@ export const traegerStaffPlanningTopic =
             "Wähle in der Zeile der Person den freien Tag.",
             "Wähle den `Einsatzort` und trage `Beginn`, `Ende` und `Pause` ein.",
             "Wähle `Planen`.",
+          ],
+        },
+        {
+          title: "Einen Vorschlag aus dem Arbeitsvertrag planen",
+          steps: [
+            "Gestrichelt steht `Vorschlag`: die Stunden aus dem Arbeitsvertrag für diesen Tag an dieser Schule. Dort ist noch keine Schicht geplant.",
+            "Wähle den Vorschlag. moto trägt `Einsatzort`, `Beginn`, `Ende` und `Pause` ein.",
+            "Prüfe `Beginn` und `Ende` und ändere sie, wenn nötig.",
+            "Wähle `Planen`. Erst dann steht die Schicht im Dienstplan.",
           ],
         },
         {
@@ -15107,12 +15129,15 @@ export const traegerStaffPlanningTopic =
         "moto zählt alle Schulen der Person zusammen: die Stunden am Tag, die Ruhezeit, die Pausen und das Soll der Woche.",
         "Dieselbe Prüfung läuft, wenn eine Schule selbst eine Schicht plant.",
         "Das Soll kommt aus dem Arbeitsvertrag. Feiertage und Schließtage zählen nicht.",
+        "Der Vertrag kennt nur Stunden. Den Beginn nimmt moto von der Uhrzeit, zu der die Person in dieser Woche an der Schule meistens anfängt, sonst 8:00 Uhr. Arbeitet sie an dem Tag schon an einer anderen Schule, liegt der Vorschlag mit 30 Minuten Abstand davor oder danach. Die Pause rechnet moto nach dem Gesetz für den ganzen Tag dazu.",
+        "Alle Vorschläge zusammen führen nie über das Soll der Woche, und keiner über die Höchstzeit am Tag. Ist eine Grenze fast erreicht, schlägt moto nur noch den Rest vor und sagt das im Dialog.",
         "Jedes Anzeigen und jeder Download der Woche steht im Zugriffsprotokoll jeder Schule.",
         "moto prüft die Regeln als Hilfe. Ob eine Planung erlaubt ist, entscheidest du.",
       ],
       differences: [
         "Oben steht `Einsatzplanung in moto ist aus`: dein Träger plant außerhalb von moto. Neue Schichten sind dann überall gesperrt. Geplante Schichten bleiben.",
         "Eine Schule fehlt in der Woche: moto konnte sie gerade nicht lesen. Lade die Seite später neu.",
+        "Kein `Vorschlag` zu sehen: Der Tag ist vorbei, an der Schule steht schon eine Schicht (auch eine abgesagte), das Soll der Woche ist schon geplant, die Person ist abwesend, der Vertrag hat für den Tag kein Soll, oder der Tag ist ein Feiertag oder Schließtag der Schule.",
       ],
       troubleshootingDetails: [
         "„Die Person arbeitet … schon an einem anderen Einsatzort“: Zur selben Zeit hat die Person eine Schicht an einer anderen Schule. Wähle eine andere Zeit.",
@@ -15563,7 +15588,7 @@ export const traegerUtilizationTopic =
         "Wähle einen Reiter: `Schulen`, `Betreuungsformen` oder `Räume`.",
         "Wähle eine Zeile der Tabelle. Das Diagramm zeigt dann den Verlauf dieser Zeile.",
         "Wähle über dem Diagramm `Tage`, `Wochen` oder `Monate`.",
-        "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Zahlen je Tag. Mit einer gewählten Schule nur diese Schule.",
+        "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Zahlen je Tag. Mit einer gewählten Schule nur diese Schule.",
       ],
       result:
         "Du siehst, wie voll die Plätze im Durchschnitt waren, an welchem Tag am meisten los war und welche Betreuungsformen voll waren.",

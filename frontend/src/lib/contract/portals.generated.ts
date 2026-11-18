@@ -3,8 +3,10 @@ import { routes as catererNotifications } from "./caterer-notifications.generate
 import { routes as catererSchools } from "./caterer-schools.generated";
 import { routes as notifications } from "./notifications.generated";
 import { routes as operatorBilling } from "./operator-billing.generated";
+import { routes as operatorDevices } from "./operator-devices.generated";
 import { routes as parentAnnouncements } from "./parent-announcements.generated";
 import { routes as parentMe } from "./parent-me.generated";
+import { routes as schoolCalendar } from "./school-calendar.generated";
 import { routes as schoolClassDay } from "./school-class-day.generated";
 import { routes as schoolNotifications } from "./school-notifications.generated";
 import { routes as schoolParentLetters } from "./school-parent-letters.generated";
@@ -18,6 +20,7 @@ import { routes as traegerMasterData } from "./traeger-master-data.generated";
 import { routes as traegerNotifications } from "./traeger-notifications.generated";
 import { routes as traegerReportTemplates } from "./traeger-report-templates.generated";
 import { routes as traegerStaffRecords } from "./traeger-staff-records.generated";
+import { routes as workTimeModels } from "./work-time-models.generated";
 
 /** The registered routes of each portal, by the scope of its session token. */
 export const portalRoutes = {
@@ -55,13 +58,32 @@ export const portalRoutes = {
     traegerStaffRecords["PUT /traeger/staff-records/{id}/person"],
   ],
   parent: [
+    parentMe["GET /parent/me/calendar"],
+    parentMe["GET /parent/me/calendar/appointments/{appointmentId}/overview"],
+    parentMe["GET /parent/me/calendar/feed"],
     parentMe["GET /parent/me/enrollable-schools"],
+    parentMe["POST /parent/me/calendar/feed/rotate"],
+    parentMe["POST /parent/me/calendar/recipients/{recipientId}/response"],
   ],
   platform: [
     operatorBilling["GET /operator/billing/key-day"],
     operatorBilling["PUT /operator/billing/key-day"],
+    operatorDevices["POST /operator/devices/{id}/block"],
+    operatorDevices["POST /operator/devices/{id}/unblock"],
   ],
   school: [
+    schoolCalendar["DELETE /school/calendar/appointments/{appointmentId}"],
+    schoolCalendar["DELETE /school/calendar/parent-conferences/{conferenceId}"],
+    schoolCalendar["GET /school/calendar/feed"],
+    schoolCalendar["GET /school/calendar/my"],
+    schoolCalendar["GET /school/calendar/parent-conferences"],
+    schoolCalendar["GET /school/calendar/parent-conferences/{conferenceId}"],
+    schoolCalendar["POST /school/calendar/appointments"],
+    schoolCalendar["POST /school/calendar/feed/rotate"],
+    schoolCalendar["POST /school/calendar/parent-conferences"],
+    schoolCalendar["POST /school/calendar/recipients/{recipientId}/response"],
+    schoolCalendar["PUT /school/calendar/appointments/{appointmentId}"],
+    schoolCalendar["PUT /school/calendar/parent-conferences/{conferenceId}"],
     schoolClassDay["DELETE /school/class-day/absence-reports/{schoolClass}/{date}/students/{studentId}"],
     schoolClassDay["DELETE /school/class-day/arrival-exceptions/{schoolClass}/{date}"],
     schoolClassDay["DELETE /school/class-day/day-hints/{schoolClass}/{date}"],
@@ -171,5 +193,14 @@ export const portalRoutes = {
     students["GET /api/students/{id}"],
     students["POST /api/students/"],
     students["PUT /api/students/{id}"],
+    workTimeModels["DELETE /api/work-time-models/{id}"],
+    workTimeModels["GET /api/work-time-models/"],
+    workTimeModels["GET /api/work-time-models/staff-facts"],
+    workTimeModels["GET /api/work-time-models/{id}"],
+    workTimeModels["POST /api/work-time-models/"],
+    workTimeModels["POST /api/work-time-models/{id}/archive"],
+    workTimeModels["POST /api/work-time-models/{id}/assignments"],
+    workTimeModels["POST /api/work-time-models/{id}/restore"],
+    workTimeModels["PUT /api/work-time-models/{id}"],
   ],
 } as const;

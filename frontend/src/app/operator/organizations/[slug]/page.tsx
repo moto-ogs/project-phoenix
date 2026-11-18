@@ -45,6 +45,7 @@ import { SectionCard } from "~/components/ui/section-card";
 import { AccountsTable } from "~/components/operator/accounts-table";
 import { DevicesTable } from "~/components/operator/devices-table";
 import { DeleteDeviceModal } from "~/components/operator/delete-device-modal";
+import { useDeviceBlocking } from "~/components/operator/use-device-blocking";
 import { TransferDeviceModal } from "~/components/operator/transfer-device-modal";
 import { PersonsTable } from "~/components/operator/persons-table";
 import { DataTable, DataTableStatusBadge } from "~/components/ui/data-table";
@@ -606,6 +607,7 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
       refreshOrganizationDrillIn(),
     ]),
   );
+  const setDeviceBlocked = useDeviceBlocking(devicesAfterWrite.refresh);
   const bueroAfterWrite = useRefreshAfterWrite(
     "die Anzeige des Träger-Büros",
     reloadTraegerBuero,
@@ -1219,6 +1221,9 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
               isLoading={devicesLoading}
               onSetKey={setSetKeyDevice}
               onTransfer={setTransferDevice}
+              onSetBlocked={(device, blocked) =>
+                void setDeviceBlocked(device, blocked)
+              }
               onDelete={setDeleteDevice}
             />
           )}

@@ -33,6 +33,25 @@ func LookupSchool(ctx context.Context, schools schoolFinder, id int64) (organiza
 	return school, true, nil
 }
 
+// schoolShareFinder is the Organisation & Tenancy read of one school under a
+// share lock (#6305).
+type schoolShareFinder interface {
+	FindSchoolForShare(ctx context.Context, id int64) (organizationtenancy.School, error)
+}
+
+// lookupSchoolForShare reads one school like LookupSchool and holds it under
+// a share lock to the end of the caller's transaction (#7478).
+func lookupSchoolForShare(ctx context.Context, schools schoolShareFinder, id int64) (organizationtenancy.School, bool, error) {
+	school, err := schools.FindSchoolForShare(ctx, id)
+	if errors.Is(err, organizationtenancy.ErrSchoolNotFound) {
+		return organizationtenancy.School{}, false, nil
+	}
+	if err != nil {
+		return organizationtenancy.School{}, false, err
+	}
+	return school, true, nil
+}
+
 // schoolsByID reads the schools for ids in one query, keyed by school ID.
 // Duplicate IDs are collapsed first; a school the owner does not return is
 // absent.

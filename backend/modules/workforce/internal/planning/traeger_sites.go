@@ -3,6 +3,7 @@ package planning
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
@@ -59,7 +60,46 @@ func (t traegerSites) SiteWeek(ctx context.Context, query workforce.TraegerSiteW
 	if err != nil {
 		return workforce.TraegerSiteWeek{}, err
 	}
-	return workforce.TraegerSiteWeek{Shifts: plannedShiftsToCapability(shifts), Soll: soll, Rules: rules}, nil
+	// Absences only matter where the contract can suggest a shift: a week
+	// with Soll at the school that reaches today or later.
+	var absent []workforce.TraegerSiteAbsentDay
+	if len(soll) > 0 && !query.SollTo.Before(t.shifts.todayDate()) {
+		if absent, err = t.absentDays(ctx, query.StaffIDs, query.SollFrom, query.SollTo); err != nil {
+			return workforce.TraegerSiteWeek{}, err
+		}
+	}
+	return workforce.TraegerSiteWeek{Shifts: plannedShiftsToCapability(shifts), Soll: soll, AbsentDays: absent, Rules: rules}, nil
+}
+
+// absentDays reads the full absence days of the employments in one query,
+// by the rule a created shift takes its absence state from (#6302): a shift
+// planned on such a day is cancelled at once.
+func (t traegerSites) absentDays(ctx context.Context, staffIDs []int64, from, to calendar.Date) ([]workforce.TraegerSiteAbsentDay, error) {
+	reader := t.shifts.sickReports
+	if reader == nil || len(staffIDs) == 0 || from == "" {
+		return nil, nil
+	}
+	absences, err := reader.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{
+		StaffIDs: staffIDs, Statuses: workforce.PlanEffectiveAbsenceStatuses(), OverlapFrom: from.String(), OverlapTo: to.String(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list absences of the Einsatzplanung: %w", err)
+	}
+	byStaff := map[int64][]workforce.StaffAbsence{}
+	for _, absence := range absences {
+		byStaff[absence.StaffID] = append(byStaff[absence.StaffID], absence)
+	}
+	var result []workforce.TraegerSiteAbsentDay
+	for _, staffID := range staffIDs {
+		days, err := sickDayIndex(byStaff[staffID], from, to)
+		if err != nil {
+			return nil, err
+		}
+		for _, day := range slices.SortedFunc(maps.Keys(days), calendar.Date.Compare) {
+			result = append(result, workforce.TraegerSiteAbsentDay{StaffID: staffID, Date: day})
+		}
+	}
+	return result, nil
 }
 
 // SiteShift reads one shift of the school with its type.

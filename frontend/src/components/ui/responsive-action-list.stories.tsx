@@ -1,10 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import type { ReactNode } from "react";
 
+import { Avatar } from "./avatar";
 import { Button } from "./button";
+import { OverflowMenu } from "./page-header/OverflowMenu";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "./responsive-action-list";
 import { SectionCard } from "./section-card";
 
@@ -30,19 +33,26 @@ function RowText({
   );
 }
 
-function RowActions({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
-      {children}
-    </div>
-  );
-}
-
 function Action({ label }: Readonly<{ label: string }>) {
   return (
     <Button type="button" variant="surface" size="compact">
       {label}
     </Button>
+  );
+}
+
+function RowMenu() {
+  return (
+    <OverflowMenu
+      ariaLabel="Aktionen"
+      items={[
+        {
+          label: "Ändern",
+          description: "Öffnet die Angaben zum Ändern.",
+          onClick: () => undefined,
+        },
+      ]}
+    />
   );
 }
 
@@ -60,25 +70,25 @@ export const Default: Story = {
             title="„Fußball-AG“"
             detail="12 Kinder · 3a, 3b · Montag und Mittwoch"
           />
-          <RowActions>
+          <ResponsiveRowActions>
             <Action label="Regeltermin anlegen" />
-          </RowActions>
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
         <ResponsiveActionRow>
           <RowText
             title="„Hausaufgabenbetreuung mit einem längeren Namen“"
             detail="4 Kinder · 1a · Dienstag"
           />
-          <RowActions>
+          <ResponsiveRowActions>
             <Action label="Ansehen" />
             <Action label="Regeltermin anlegen" />
-          </RowActions>
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
         <ResponsiveActionRow>
           <RowText title="„Kunst“" detail="7 Kinder · 2b · Freitag" />
-          <RowActions>
+          <ResponsiveRowActions>
             <Action label="Regeltermin anlegen" />
-          </RowActions>
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
       </ResponsiveActionList>
     </Frame>
@@ -92,15 +102,15 @@ export const WiderGap: Story = {
       <ResponsiveActionList>
         <ResponsiveActionRow className="gap-3">
           <RowText title="Woche 1" detail="20 von 24 Plätzen vergeben" />
-          <RowActions>
+          <ResponsiveRowActions>
             <Action label="Plätze vergeben" />
-          </RowActions>
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
         <ResponsiveActionRow className="gap-3">
           <RowText title="Woche 2" detail="24 von 24 Plätzen vergeben" />
-          <RowActions>
+          <ResponsiveRowActions>
             <Action label="Plätze vergeben" />
-          </RowActions>
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
       </ResponsiveActionList>
     </Frame>
@@ -118,25 +128,25 @@ export const TopAligned: Story = {
             <p>Musterstraße 1</p>
             <p>12345 Musterstadt</p>
           </div>
-          <RowActions>
+          <ResponsiveRowActions>
             <Action label="Bearbeiten" />
-          </RowActions>
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
         <ResponsiveActionRow align="start">
           <div className="min-w-0 text-sm text-gray-700">
             <p className="font-semibold text-gray-900">Sozialamt Musterstadt</p>
             <p>Rathausplatz 2</p>
           </div>
-          <RowActions>
+          <ResponsiveRowActions>
             <Action label="Bearbeiten" />
-          </RowActions>
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
       </ResponsiveActionList>
     </Frame>
   ),
 };
 
-/** Menü neben dem Text auch auf dem Telefon (übernommene Korrekturen). */
+/** Aktion neben dem Text auch auf dem Telefon (übernommene Korrekturen). */
 export const ActionBesideText: Story = {
   render: () => (
     <Frame>
@@ -150,7 +160,9 @@ export const ActionBesideText: Story = {
             <p className="text-gray-700 tabular-nums">−12,50 €</p>
             <p className="text-gray-700">Erstattung Mittagessen</p>
           </div>
-          <Action label="Ändern" />
+          <ResponsiveRowActions>
+            <Action label="Ändern" />
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
         <ResponsiveActionRow
           align="start"
@@ -161,7 +173,9 @@ export const ActionBesideText: Story = {
             <p className="text-gray-700 tabular-nums">4,00 €</p>
             <p className="text-gray-700">Nachberechnung Ausflug</p>
           </div>
-          <Action label="Ändern" />
+          <ResponsiveRowActions>
+            <Action label="Ändern" />
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
       </ResponsiveActionList>
     </Frame>
@@ -173,17 +187,23 @@ export const BlockRow: Story = {
   render: () => (
     <Frame>
       <ResponsiveActionList>
-        <ResponsiveActionRow align="start" className="block gap-[normal] py-4">
+        <ResponsiveActionRow
+          align="start"
+          className="gap-3 py-4 sm:gap-[normal]"
+        >
           <RowText title="Fassung 2" detail="gilt ab 01.08.2026" />
-          <RowActions>
+          <ResponsiveRowActions>
             <Action label="Ansehen" />
-          </RowActions>
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
-        <ResponsiveActionRow align="start" className="block gap-[normal] py-4">
+        <ResponsiveActionRow
+          align="start"
+          className="gap-3 py-4 sm:gap-[normal]"
+        >
           <RowText title="Fassung 1" detail="gilt bis 31.07.2026" />
-          <RowActions>
+          <ResponsiveRowActions>
             <Action label="Ansehen" />
-          </RowActions>
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
       </ResponsiveActionList>
     </Frame>
@@ -199,9 +219,9 @@ export const HighlightedRow: Story = {
           <p className="text-sm text-gray-900">
             „Frühbetreuung“ hat gebuchte Tage ohne Preis.
           </p>
-          <div className="flex sm:justify-end">
+          <ResponsiveRowActions>
             <Action label="Preise ergänzen" />
-          </div>
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
       </ResponsiveActionList>
     </Frame>
@@ -215,15 +235,15 @@ export const DenseRows: Story = {
       <ResponsiveActionList>
         <ResponsiveActionRow className="py-2 first:pt-2 last:pb-2">
           <RowText title="1. Mia Muster" detail="3a · seit 02.09.2026" />
-          <RowActions>
+          <ResponsiveRowActions>
             <Action label="Platz geben" />
-          </RowActions>
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
         <ResponsiveActionRow className="py-2 first:pt-2 last:pb-2">
           <RowText title="2. Ben Beispiel" detail="2b · seit 05.09.2026" />
-          <RowActions>
+          <ResponsiveRowActions>
             <Action label="Platz geben" />
-          </RowActions>
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
       </ResponsiveActionList>
     </Frame>
@@ -237,15 +257,67 @@ export const MutedText: Story = {
       <ResponsiveActionList>
         <ResponsiveActionRow className="text-sm text-gray-700">
           <span>Mia Muster ist am Montag nicht mehr in der Fußball-AG.</span>
-          <RowActions>
+          <ResponsiveRowActions>
             <Action label="Ansehen" />
-          </RowActions>
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
         <ResponsiveActionRow className="text-sm text-gray-700">
           <span>Ben Beispiel ist am Freitag nicht mehr in „Kunst“.</span>
-          <RowActions>
+          <ResponsiveRowActions>
             <Action label="Ansehen" />
-          </RowActions>
+          </ResponsiveRowActions>
+        </ResponsiveActionRow>
+      </ResponsiveActionList>
+    </Frame>
+  ),
+};
+
+/**
+ * Avatar vor dem Text: auf dem Telefon stehen die Aktionen unter dem Text,
+ * nicht unter dem Avatar (`leading`), ab 480 px nebeneinander.
+ */
+export const LeadingAvatar: Story = {
+  render: () => (
+    <Frame>
+      <ResponsiveActionList>
+        {["Mia Muster", "Ben Beispiel"].map((name) => (
+          <ResponsiveActionRow key={name} className="gap-3">
+            <div className="flex min-w-0 items-start gap-3">
+              <Avatar name={name} tone="neutral" decorative />
+              <RowText
+                title={name}
+                detail="Grundschule am Berg · noch ohne Akte"
+              />
+            </div>
+            <ResponsiveRowActions leading={32}>
+              <Action label="Akte öffnen" />
+              <Action label="Akte anlegen" />
+            </ResponsiveRowActions>
+          </ResponsiveActionRow>
+        ))}
+      </ResponsiveActionList>
+    </Frame>
+  ),
+};
+
+/** Knopf und Kebab-Menü: das Menü bleibt auf jeder Breite neben dem Knopf. */
+export const ButtonWithMenu: Story = {
+  render: () => (
+    <Frame>
+      <ResponsiveActionList>
+        <ResponsiveActionRow>
+          <RowText title="Erste Hilfe" detail="gültig bis 31.08.2027" />
+          <ResponsiveRowActions menu={<RowMenu />}>
+            <Action label="Erneuern" />
+          </ResponsiveRowActions>
+        </ResponsiveActionRow>
+        <ResponsiveActionRow>
+          <RowText title="Führungszeugnis" detail="fehlt" />
+          <ResponsiveRowActions
+            menu={<span className="size-8 shrink-0" aria-hidden="true" />}
+          >
+            <Action label="Eintragen" />
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
       </ResponsiveActionList>
     </Frame>

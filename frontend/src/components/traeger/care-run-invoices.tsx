@@ -12,6 +12,7 @@ import { Wallet } from "lucide-react";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { ButtonLink } from "~/components/ui/button";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
@@ -554,7 +555,7 @@ export function CareUnpricedCard({
                     .join(", ")}
                 </p>
               </div>
-              <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
+              <ResponsiveRowActions>
                 <ButtonLink
                   href={traegerPath(
                     `/traeger/abrechnung/preise?schule=${encodeURIComponent(first.schoolId)}`,
@@ -566,7 +567,7 @@ export function CareUnpricedCard({
                 >
                   Preis eintragen
                 </ButtonLink>
-              </div>
+              </ResponsiveRowActions>
             </ResponsiveActionRow>
           );
         })}
@@ -685,7 +686,7 @@ export function CareDuplicatesCard({
                   {booked || "In diesem Lauf nicht abgerechnet."}
                 </p>
               </div>
-              <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
+              <ResponsiveRowActions>
                 {contracts.map((contract, index) => {
                   const label =
                     contracts.length === 1 ? "Vertrag" : `Vertrag ${index + 1}`;
@@ -704,7 +705,7 @@ export function CareDuplicatesCard({
                     </ButtonLink>
                   );
                 })}
-              </div>
+              </ResponsiveRowActions>
             </ResponsiveActionRow>
           );
         })}

@@ -24,6 +24,7 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -393,36 +394,40 @@ export function CostBearersCard({
                     </p>
                   ) : null}
                 </div>
-                <OverflowMenu
-                  ariaLabel={`Aktionen für ${bearer.name}`}
-                  items={[
-                    {
-                      icon: <Pencil className="size-4" aria-hidden />,
-                      label: "Ändern",
-                      description:
-                        "Öffnet die Angaben in dieser Zeile zum Ändern.",
-                      onClick: () => setEditingId(bearer.id),
-                    },
-                    {
-                      label: bearer.active ? "Ausschalten" : "Einschalten",
-                      description: bearer.active
-                        ? "Nimmt den Kostenträger sofort aus der Auswahl beim Bestätigen von Anmeldungen."
-                        : "Bietet den Kostenträger sofort wieder beim Bestätigen von Anmeldungen an.",
-                      onClick: () => void switchActive(bearer),
-                    },
-                    ...(bearer.inUse
-                      ? []
-                      : [
-                          {
-                            label: "Löschen",
-                            description:
-                              "Löscht den Kostenträger. moto fragt vorher nach.",
-                            icon: <Trash2 className="size-4" aria-hidden />,
-                            destructive: true,
-                            onClick: () => setDeleting(bearer),
-                          },
-                        ]),
-                  ]}
+                <ResponsiveRowActions
+                  menu={
+                    <OverflowMenu
+                      ariaLabel={`Aktionen für ${bearer.name}`}
+                      items={[
+                        {
+                          icon: <Pencil className="size-4" aria-hidden />,
+                          label: "Ändern",
+                          description:
+                            "Öffnet die Angaben in dieser Zeile zum Ändern.",
+                          onClick: () => setEditingId(bearer.id),
+                        },
+                        {
+                          label: bearer.active ? "Ausschalten" : "Einschalten",
+                          description: bearer.active
+                            ? "Nimmt den Kostenträger sofort aus der Auswahl beim Bestätigen von Anmeldungen."
+                            : "Bietet den Kostenträger sofort wieder beim Bestätigen von Anmeldungen an.",
+                          onClick: () => void switchActive(bearer),
+                        },
+                        ...(bearer.inUse
+                          ? []
+                          : [
+                              {
+                                label: "Löschen",
+                                description:
+                                  "Löscht den Kostenträger. moto fragt vorher nach.",
+                                icon: <Trash2 className="size-4" aria-hidden />,
+                                destructive: true,
+                                onClick: () => setDeleting(bearer),
+                              },
+                            ]),
+                      ]}
+                    />
+                  }
                 />
               </ResponsiveActionRow>
             ),

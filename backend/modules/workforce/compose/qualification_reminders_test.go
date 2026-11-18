@@ -364,3 +364,41 @@ func TestQualificationReminderCaughtUpAfterExpirySaysLapsed(t *testing.T) {
 	require.NoError(t, db.NewRaw(`SELECT count(*) FROM users.staff_qualification_types WHERE tenant_id = ?`, testpkg.Tenant(t)).Scan(ctx, &standardTypes))
 	assert.Equal(t, 3, standardTypes, "the reminder read initializes the school's standard types")
 }
+
+// retiredSchoolFake reads the named schools as retired (deleted_at set), as
+// the share-locked read finds a school its retirement hid (#7478).
+type retiredSchoolFake map[int64]bool
+
+func (f retiredSchoolFake) School(ctx context.Context, tenantID int64) (workforce.PayrollSchool, error) {
+	return workforce.PayrollSchool{Name: "OGS Am Park", Subdomain: "park", Retired: f[tenantID]}, nil
+}
+
+// A retired school gets no reminder (#7478): its demo visitor's erasure may
+// run beside the Worker, and a mail queued from names read before the
+// erasure committed would keep the visitor's name in the outbox.
+func TestQualificationRemindersSkipARetiredSchool(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	staff := testpkg.CreateTestStaff(t, db, "Ruhend", "Person")
+	capability := buildWorkforce(t, db)
+	_, err := capability.ReplaceStaffQualifications(ctx, staff.ID, []workforce.StaffQualification{
+		{Name: "Hygieneschulung", ExpiresOn: "2026-11-02"},
+	})
+	require.NoError(t, err)
+
+	deliveries := &qualificationDeliveries{}
+	reminders, err := NewQualifications(db, qualificationStaffFake{
+		members:  []workforce.QualificationStaffMember{{StaffID: staff.ID, FirstName: "Ruhend", LastName: "Person", AccountID: 902, Email: "person@example.com"}},
+		managers: []workforce.QualificationStaffMember{{StaffID: 1, FirstName: "Lea", LastName: "Leitung", AccountID: 900, Email: "leitung@example.com"}},
+	}, workforce.QualificationReminderPorts{
+		Notify: deliveries.notify, Mail: deliveries, Schools: retiredSchoolFake{testpkg.Tenant(t): true},
+		FrontendURL: "https://moto.example.com",
+	}, func() time.Time { return calendar.NewDate(2026, 11, 5).BerlinMidnight().Add(12 * time.Hour) })
+	require.NoError(t, err)
+
+	require.NoError(t, runWithin(t, ctx, reminders.RunDue))
+	notices, mails := deliveries.counts()
+	assert.Zero(t, notices, "a retired school notifies no one")
+	assert.Zero(t, mails, "a retired school mails no one")
+}
