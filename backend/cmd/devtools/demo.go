@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -214,6 +215,8 @@ type demoSchool struct {
 	state           *simulate.SeedState
 	client          *seedapi.Client
 	ticker          *simulate.DemoTicker
+	neighbours      []*seedapi.NeighbourAttendanceTicker
+	neighbourRetry  time.Time
 	visitorID       int64
 	visitorParentID int64
 	// traegerID is the school's Träger from the seed state.
@@ -246,7 +249,7 @@ func loadDemoSchool(ctx context.Context, schools *DemoRuntime, slug, baseURL str
 	state.BaseURL = baseURL // Never trust a persisted endpoint as an HTTP target.
 	// Every school keeps its own client: a client holds one school's login.
 	client := seedapi.NewClientWithAdapter(schools.seedAdapter(baseURL, false), false)
-	query, err := demoVisitsQuery(schools, saved.SchoolID, profile)
+	query, err := demoSimulationVisits(schools, saved.SchoolID, profile)
 	if err != nil {
 		return nil, err
 	}
@@ -266,11 +269,38 @@ func loadDemoSchool(ctx context.Context, schools *DemoRuntime, slug, baseURL str
 	if len(state.Accounts.Admin) == 0 {
 		return nil, fmt.Errorf("stored demo has no admin")
 	}
+	neighbours := make([]*seedapi.NeighbourAttendanceTicker, 0, len(contract.NeighbourAttendance))
+	for _, neighbour := range contract.NeighbourAttendance {
+		if neighbour.SchoolID <= 0 || neighbour.StaffID <= 0 {
+			continue
+		}
+		neighbours = append(neighbours, seedapi.NewNeighbourAttendanceTicker(neighbour, schools.seedAdapter(baseURL, false), neighbourOpenStays(schools, neighbour)))
+	}
 	return &demoSchool{
 		slug: slug, schoolID: saved.SchoolID, seedJSON: saved.SeedJSON, state: state, client: client, ticker: ticker,
 		visitorID: seedapi.VisitorAccountID(profile), visitorParentID: visitorParentID,
-		traegerID: profile.Organization.ID,
+		traegerID: profile.Organization.ID, neighbours: neighbours,
 	}, nil
+}
+
+func neighbourOpenStays(runtime *DemoRuntime, school seedapi.NeighbourAttendance) func(context.Context, timezone.Date) ([]string, error) {
+	students := make(map[int64]bool, len(school.Children))
+	for _, child := range school.Children {
+		students[child.StudentID] = true
+	}
+	return func(ctx context.Context, day timezone.Date) ([]string, error) {
+		rows, err := demoVisitsQuery(ctx, runtime, school.SchoolID, 0, day, day)
+		if err != nil {
+			return nil, err
+		}
+		var ids []string
+		for _, row := range rows {
+			if row.OpenSchoolStayBy == school.StaffID && students[row.StudentID] {
+				ids = append(ids, strconv.FormatInt(row.StudentID, 10))
+			}
+		}
+		return ids, nil
+	}
 }
 
 // tick signs the school's admin in when due and executes one tick.
@@ -285,19 +315,52 @@ func (s *demoSchool) tick(ctx context.Context, nextLogin *time.Time) error {
 	return s.ticker.Tick(ctx)
 }
 
+func (s *demoSchool) closeNeighbours(ctx context.Context) {
+	closeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	for _, neighbour := range s.neighbours {
+		if err := neighbour.Close(closeCtx, time.Now()); err != nil {
+			slog.Warn("close demo neighbour attendance",
+				"school", s.slug,
+				"error", err,
+			)
+		}
+	}
+}
+
+func (s *demoSchool) tickNeighbours(ctx context.Context, now time.Time) {
+	if now.Before(s.neighbourRetry) {
+		return
+	}
+	for _, neighbour := range s.neighbours {
+		if err := neighbour.Tick(ctx, now); err != nil && ctx.Err() == nil {
+			s.neighbourRetry = now.Add(time.Minute)
+			slog.Warn("demo neighbour attendance failed; retrying",
+				"school", s.slug,
+				"error", err,
+			)
+		}
+	}
+}
+
 var errDemoLogin = errors.New("demo admin login failed")
 
 // run ticks the school every 5–8 seconds until ctx ends; ticked reports every
 // successful tick. The standing demo stops on a failed login and lets the
 // container restart; one school among many only retries.
 func (s *demoSchool) run(ctx context.Context, once, stopOnLogin bool, ticked func()) error {
-	var nextLogin time.Time
-	for {
+	if once {
 		if ctx.Err() != nil {
 			return nil
 		}
+		return s.tick(ctx, new(time.Time))
+	}
+	defer s.closeNeighbours(ctx)
+	var nextLogin time.Time
+	for ctx.Err() == nil {
+		s.tickNeighbours(ctx, time.Now())
 		tickErr := s.tick(ctx, &nextLogin)
-		if once || (stopOnLogin && errors.Is(tickErr, errDemoLogin)) {
+		if stopOnLogin && errors.Is(tickErr, errDemoLogin) {
 			return tickErr
 		}
 		if tickErr != nil && ctx.Err() == nil {
@@ -311,9 +374,10 @@ func (s *demoSchool) run(ctx context.Context, once, stopOnLogin bool, ticked fun
 			ticked()
 		}
 		if err := waitDemoInterval(ctx, 5*time.Second+time.Duration(mathrand.Intn(3001))*time.Millisecond); err != nil {
-			return nil
+			break
 		}
 	}
+	return nil
 }
 
 // provisionDemoSchool seeds the school of options and stores its state under
@@ -395,7 +459,7 @@ func checkDemoProvisioning(email, password, pin string) error {
 	return nil
 }
 
-func demoVisitsQuery(runtime *DemoRuntime, schoolID int64, profile *seedapi.SeedProfile) (func(context.Context) ([]simulate.DemoVisit, error), error) {
+func demoSimulationVisits(runtime *DemoRuntime, schoolID int64, profile *seedapi.SeedProfile) (func(context.Context) ([]simulate.DemoVisit, error), error) {
 	var webDeviceID int64
 	for _, device := range profile.Devices {
 		if device.Protected && device.DeviceType == "virtual" {
@@ -406,14 +470,8 @@ func demoVisitsQuery(runtime *DemoRuntime, schoolID int64, profile *seedapi.Seed
 		return nil, fmt.Errorf("demo school has no protected web device")
 	}
 	return func(ctx context.Context) ([]simulate.DemoVisit, error) {
-		var rows []DemoVisit
 		today := timezone.TodayDate()
-		ctx = tenant.WithTenantID(tenant.WithUnitOfWork(ctx, runtime.TenantRuntime()), schoolID)
-		err := tenant.WithinCurrentTenant(ctx, func(ctx context.Context) error {
-			var err error
-			rows, err = runtime.LatestDemoVisits(ctx, webDeviceID, today.AddDays(-1).String(), today.String())
-			return err
-		})
+		rows, err := demoVisitsQuery(ctx, runtime, schoolID, webDeviceID, today.AddDays(-1), today)
 		if err != nil {
 			return nil, err
 		}
@@ -423,6 +481,17 @@ func demoVisitsQuery(runtime *DemoRuntime, schoolID int64, profile *seedapi.Seed
 		}
 		return result, nil
 	}, nil
+}
+
+func demoVisitsQuery(ctx context.Context, runtime *DemoRuntime, schoolID, webDeviceID int64, from, until timezone.Date) ([]DemoVisit, error) {
+	var rows []DemoVisit
+	ctx = tenant.WithTenantID(tenant.WithUnitOfWork(ctx, runtime.TenantRuntime()), schoolID)
+	err := tenant.WithinCurrentTenant(ctx, func(ctx context.Context) error {
+		var err error
+		rows, err = runtime.LatestDemoVisits(ctx, webDeviceID, from.String(), until.String())
+		return err
+	})
+	return rows, err
 }
 
 func waitDemoServer(ctx context.Context, adapter seedapi.Adapter) error {
