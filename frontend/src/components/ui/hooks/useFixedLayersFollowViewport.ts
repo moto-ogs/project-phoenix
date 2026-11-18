@@ -12,6 +12,16 @@ export const FIXED_LAYER_SHIFT_VAR = "--moto-fixed-shift";
  */
 export const FIXED_LAYER_SHIFT = "translate-y-[var(--moto-fixed-shift,0px)]";
 
+/**
+ * The same shift through `top`/`bottom` instead of `translate`, for a
+ * full-screen `fixed inset-0` layer that hosts fixed panels of its own (the
+ * Modal root is the portal target of the date pickers). Any `translate`
+ * makes the layer their containing block, so a panel placed at its trigger's
+ * `getBoundingClientRect()` would move by the shift twice.
+ */
+export const FIXED_LAYER_SHIFT_INSET =
+  "top-[var(--moto-fixed-shift,0px)] -bottom-[var(--moto-fixed-shift,0px)]";
+
 /** Below this the keyboard does not count as open (same as the sheets). */
 const KEYBOARD_MIN_PX = 120;
 

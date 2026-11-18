@@ -40,6 +40,7 @@ import { useTenantSafe } from "~/lib/tenant-context";
 import { DemoBookingDialog } from "./demo-booking-dialog";
 import { DemoEveningRow } from "./demo-evening-notice";
 import { DemoWeekendNotice } from "./demo-weekend-notice";
+import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
 const logger = createLogger({ component: "DemoBanner" });
 
@@ -235,7 +236,7 @@ function ActiveDemoBanner() {
     <div
       role="region"
       aria-label="Demo"
-      className="fixed inset-x-0 top-0 z-50 flex h-12 items-center gap-2 border-b border-gray-200 bg-white px-4 shadow-sm"
+      className={`fixed inset-x-0 top-0 z-50 flex h-12 items-center gap-2 border-b border-gray-200 bg-white px-4 shadow-sm ${FIXED_LAYER_SHIFT}`}
     >
       <StatusBadge tone="orange" label="Demo" compact />
       {schoolName ? (

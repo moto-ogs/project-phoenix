@@ -6,6 +6,7 @@
 
 import { cn } from "~/lib/utils";
 import { Z_LAYER } from "./overlay-styles";
+import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
 import { SpinnerIcon } from "~/components/ui/icons";
 
 interface LoadingProps {
@@ -30,7 +31,7 @@ export function Loading({
         // Moment (`moto-loading-delayed`): Ein schnelles Neuladen zeigt so
         // keinen weißen Zwischenschirm, der Browser hält die alte Seite, bis
         // die neue steht.
-        `moto-loading-delayed fixed inset-0 flex items-center justify-center bg-gray-50 px-4 ${Z_LAYER.sheet}`
+        `moto-loading-delayed fixed inset-0 flex items-center justify-center bg-gray-50 px-4 ${Z_LAYER.sheet} ${FIXED_LAYER_SHIFT}`
       : compact
         ? "flex min-h-0 items-center justify-center py-3"
         : "flex min-h-40 items-center justify-center py-8";

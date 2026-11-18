@@ -19,6 +19,7 @@ import {
   type NavigationProgressStore,
 } from "./navigation-progress-store";
 import { currentUrl, navigationTarget, normalizedUrl } from "./navigation-url";
+import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
 
 /**
  * Fortschrittsanzeige für Seitenwechsel (#2828).
@@ -345,7 +346,7 @@ export function NavigationProgressBar() {
       {pending ? (
         <div
           data-testid="navigation-progress"
-          className="moto-nav-progress"
+          className={`moto-nav-progress ${FIXED_LAYER_SHIFT}`}
           aria-hidden="true"
         />
       ) : null}
