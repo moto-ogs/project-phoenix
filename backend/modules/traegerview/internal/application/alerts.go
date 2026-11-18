@@ -19,7 +19,7 @@ func (o *Overview) SchoolsAlerts(ctx context.Context, organizationID int64) (tra
 		return traegerview.SchoolsAlerts{}, traegerview.ErrTraegerRequired
 	}
 	var (
-		schools []traegerview.School
+		schools []traegerview.TraegerSchool
 		figures map[int64]traegerview.SchoolFigures
 		open    map[int64]int
 	)
@@ -44,7 +44,7 @@ func (o *Overview) SchoolsAlerts(ctx context.Context, organizationID int64) (tra
 	now := o.now()
 	result := traegerview.SchoolsAlerts{Thresholds: thresholds, Schools: make([]traegerview.SchoolAlerts, 0, len(schools)), AsOf: now}
 	for _, school := range schools {
-		row := traegerview.SchoolAlerts{School: school, Figures: figures[school.ID], OpenEnrollments: open[school.ID]}
+		row := traegerview.SchoolAlerts{TraegerSchool: school, Figures: figures[school.ID], OpenEnrollments: open[school.ID]}
 		row.Figures.AsOf = now
 		row.Alerts = schoolAlerts(row.Figures, row.OpenEnrollments, thresholds)
 		result.Schools = append(result.Schools, row)

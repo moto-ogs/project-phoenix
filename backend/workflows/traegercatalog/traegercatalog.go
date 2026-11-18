@@ -40,10 +40,10 @@ const (
 
 // OfferingPlan is one Träger offering at one school.
 type OfferingPlan struct {
-	TraegerOfferingID int64                         `json:"traeger_offering_id"`
-	Name              string                        `json:"name"`
-	Action            string                        `json:"action"`
-	Fields            []careplan.TraegerFieldChange `json:"fields"`
+	TraegerOfferingID int64                                 `json:"traeger_offering_id"`
+	Name              string                                `json:"name"`
+	Action            string                                `json:"action"`
+	Fields            []careplan.TraegerOfferingFieldChange `json:"fields"`
 	// PricesFrom is the month a new tariff of the school starts, nil when
 	// the prices stay.
 	PricesFrom *calendar.Date `json:"prices_from,omitempty"`

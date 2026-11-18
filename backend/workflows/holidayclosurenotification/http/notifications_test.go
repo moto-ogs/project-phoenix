@@ -118,7 +118,7 @@ func (w closureWorld) createClosingDay(t *testing.T, start, end string) schoolca
 	return day
 }
 
-func (w closureWorld) schoolNotices(t *testing.T) []notification.Notice {
+func (w closureWorld) schoolNotices(t *testing.T) []notification.ClosureNotice {
 	t.Helper()
 	notices, err := w.notices.SchoolNotices(w.ctx, w.school)
 	require.NoError(t, err)
@@ -192,7 +192,7 @@ func TestSchoolClosingDayTellsParentsOnlyAfterOneClick(t *testing.T) {
 
 	// An overlapping closing day tells only the day nobody told yet.
 	w.createClosingDay(t, "2030-07-10", "2030-07-11")
-	var overlap notification.Notice
+	var overlap notification.ClosureNotice
 	for _, notice := range w.schoolNotices(t) {
 		if notice.Status == string(schoolcalendar.HolidayClosureSuggested) {
 			overlap = notice
@@ -302,7 +302,7 @@ func TestMovedAndDeletedClosingDayTellOnceWithBothSections(t *testing.T) {
 	}})
 	require.NoError(t, err)
 	assert.Len(t, w.mails(t), 2, "the change itself sends nothing")
-	var moved notification.Notice
+	var moved notification.ClosureNotice
 	for _, notice := range w.schoolNotices(t) {
 		if notice.Status == string(schoolcalendar.HolidayClosureSuggested) {
 			moved = notice
@@ -326,7 +326,7 @@ func TestMovedAndDeletedClosingDayTellOnceWithBothSections(t *testing.T) {
 	assert.Equal(t, []string{"Mittwoch, 10.07.2030"}, payload.ReopenedChildren[0].Weeks[0].ClosedDays, "Diese Tage sind doch geöffnet")
 
 	require.NoError(t, w.records.DeleteClosingDay(w.schoolCtx(), day.ID))
-	var deleted notification.Notice
+	var deleted notification.ClosureNotice
 	for _, notice := range w.schoolNotices(t) {
 		if notice.Status == string(schoolcalendar.HolidayClosureSuggested) {
 			deleted = notice
@@ -346,7 +346,7 @@ func TestMovedAndDeletedClosingDayTellOnceWithBothSections(t *testing.T) {
 	// Closing the day once more after it opened again is a new notice.
 	w.createClosingDay(t, "2030-07-11", "2030-07-11")
 	again := w.schoolNotices(t)
-	var reclosed notification.Notice
+	var reclosed notification.ClosureNotice
 	for _, notice := range again {
 		if notice.Status == string(schoolcalendar.HolidayClosureSuggested) {
 			reclosed = notice
@@ -424,7 +424,7 @@ func TestHolidayClosureNoticesKeepTheirFiltersBeneathRLS(t *testing.T) {
 		for _, notice := range notices {
 			assert.Equal(t, own.school, notice.SchoolID, "the school reads no notice of another school")
 		}
-		_, err = events.ConfirmHolidayClosureNotice(ctx, foreignNotice.ID, foreignNotice.Revision,
+		_, err = events.ConfirmHolidayClosureNotice(ctx, foreignNotice.ID, int64(foreignNotice.Revision),
 			schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool})
 		require.ErrorIs(t, err, schoolcalendar.ErrHolidayClosureNoticeNotFound, "nor confirms one")
 		return nil
@@ -489,7 +489,7 @@ func TestConfirmedNoticeRequiresTheSameCalendarRevision(t *testing.T) {
 	seen := w.schoolNotices(t)[0]
 	proposals := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 	require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-		_, err := proposals.ConfirmHolidayClosureNotice(ctx, seen.ID, seen.Revision,
+		_, err := proposals.ConfirmHolidayClosureNotice(ctx, seen.ID, int64(seen.Revision),
 			schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: seen.Token})
 		return err
 	}))
@@ -499,7 +499,7 @@ func TestConfirmedNoticeRequiresTheSameCalendarRevision(t *testing.T) {
 	assert.Equal(t, []string{schoolcalendar.HolidayClosureEventNeedsConfirmation}, w.events(t))
 	notices := w.schoolNotices(t)
 	require.Len(t, notices, 2, "the stale command must remain available for renewed confirmation")
-	var renewed notification.Notice
+	var renewed notification.ClosureNotice
 	for _, notice := range notices {
 		if notice.ID == seen.ID {
 			renewed = notice
@@ -514,7 +514,7 @@ func TestConfirmedNoticeRequiresTheSameCalendarRevision(t *testing.T) {
 	_, err = w.db.ExecContext(context.Background(), `UPDATE platform.schools SET organization_id = ? WHERE id = ?`, other.ID, w.school)
 	require.NoError(t, err)
 	err = tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-		_, err := proposals.ConfirmHolidayClosureNotice(ctx, renewed.ID, renewed.Revision,
+		_, err := proposals.ConfirmHolidayClosureNotice(ctx, renewed.ID, int64(renewed.Revision),
 			schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelTraeger, OrganizationID: w.organization, ImpactToken: renewed.Token})
 		return err
 	})
@@ -642,7 +642,7 @@ func TestUnresolvedHolidayClosureSurvivesRetirement(t *testing.T) {
 	notice := w.schoolNotices(t)[0]
 	proposals := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 	require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-		_, err := proposals.ConfirmHolidayClosureNotice(ctx, notice.ID, notice.Revision,
+		_, err := proposals.ConfirmHolidayClosureNotice(ctx, notice.ID, int64(notice.Revision),
 			schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: notice.Token})
 		return err
 	}))

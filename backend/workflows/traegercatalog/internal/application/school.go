@@ -100,7 +100,7 @@ func (c *Catalog) withdrawSchool(ctx context.Context, snap snapshot, plan *traeg
 	for _, offering := range snap.offerings {
 		plan.Offerings = append(plan.Offerings, traegercatalog.OfferingPlan{
 			TraegerOfferingID: offering.ID, Name: offering.Draft.Fields.Name, Action: traegercatalog.ActionWithdraw,
-			Fields: []careplan.TraegerFieldChange{},
+			Fields: []careplan.TraegerOfferingFieldChange{},
 		})
 	}
 	_, err := c.deps.SchoolPhases.WithdrawTraegerPhase(ctx, snap.phase.ID)

@@ -40,7 +40,7 @@ func (rs *Resource) utilizationExport(w http.ResponseWriter, r *http.Request) {
 	}
 	schoolName := ""
 	if schoolID > 0 {
-		school, found := findSchool(utilization.Schools, schoolID, func(s traegerview.SchoolUtilization) traegerview.School { return s.School })
+		school, found := findSchool(utilization.Schools, schoolID, func(s traegerview.SchoolUtilization) traegerview.TraegerSchool { return s.TraegerSchool })
 		if !found {
 			renderSchoolNotFound(w, r)
 			return

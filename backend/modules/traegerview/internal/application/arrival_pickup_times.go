@@ -114,7 +114,7 @@ func indexArrivalPickups(counts []traegerview.ArrivalPickupCount, days []traeger
 
 // buildArrivalPickupTimes applies the definitions of
 // traegerview.ArrivalPickupTimes to the counts of the schools.
-func buildArrivalPickupTimes(schools []traegerview.School, counts []traegerview.ArrivalPickupCount, days []traegerview.AttendanceDays, from, to calendar.Date) traegerview.ArrivalPickupTimes {
+func buildArrivalPickupTimes(schools []traegerview.TraegerSchool, counts []traegerview.ArrivalPickupCount, days []traegerview.AttendanceDays, from, to calendar.Date) traegerview.ArrivalPickupTimes {
 	index := indexArrivalPickups(counts, days)
 	result := traegerview.ArrivalPickupTimes{
 		From: from, To: to, SlotMinutes: traegerview.ArrivalPickupSlotMinutes,
@@ -123,7 +123,7 @@ func buildArrivalPickupTimes(schools []traegerview.School, counts []traegerview.
 		Schools: make([]traegerview.SchoolArrivalPickupTimes, 0, len(schools)),
 	}
 	for _, school := range schools {
-		entry := traegerview.SchoolArrivalPickupTimes{School: school, ArrivalPickupHeatmap: index.heatmap(school.ID, true)}
+		entry := traegerview.SchoolArrivalPickupTimes{TraegerSchool: school, ArrivalPickupHeatmap: index.heatmap(school.ID, true)}
 		if first, ok := index.firstDay[school.ID]; ok {
 			entry.FirstDay = &first
 		}

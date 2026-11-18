@@ -15,8 +15,10 @@ import {
   OrganizationSchema,
   SchoolSchema,
   SchoolSummarySchema,
+  TraegerStaffReleaseSchema,
   type Organization,
   type School,
+  type TraegerStaffRelease,
 } from "./shared.generated";
 
 /** Go: traegerstaff.withdrawnReleaseResponse */
@@ -282,17 +284,6 @@ export const OperatorPersonSchema: z.ZodType<OperatorPerson, unknown> = z.object
   organization_id: int64StringOrNumber,
   organization_name: z.string(),
   created_at: instant,
-});
-
-/** Go: workforce.TraegerStaffRelease */
-export interface TraegerStaffRelease {
-  representation: string;
-  released_at: string;
-}
-
-export const TraegerStaffReleaseSchema: z.ZodType<TraegerStaffRelease, unknown> = z.object({
-  representation: z.string(),
-  released_at: instant,
 });
 
 /** Go: workforce.TraegerStaffReleaseState */

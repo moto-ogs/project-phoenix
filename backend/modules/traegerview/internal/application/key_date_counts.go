@@ -43,7 +43,7 @@ func (o *Overview) KeyDateCounts(ctx context.Context, organizationID int64) (tra
 // the schools. counts arrive newest month first; a row of a school outside
 // schools is dropped, so the answer never carries a school the Träger does
 // not have.
-func keyDateCounts(schools []traegerview.School, counts []traegerview.SchoolKeyDateCount) traegerview.KeyDateCounts {
+func keyDateCounts(schools []traegerview.TraegerSchool, counts []traegerview.SchoolKeyDateCount) traegerview.KeyDateCounts {
 	result := traegerview.KeyDateCounts{
 		Schools: make([]traegerview.SchoolKeyDateCounts, 0, len(schools)),
 		Months:  []traegerview.KeyDateMonth{},
@@ -75,7 +75,7 @@ func keyDateCounts(schools []traegerview.School, counts []traegerview.SchoolKeyD
 		if months == nil {
 			months = []traegerview.KeyDateCount{}
 		}
-		result.Schools = append(result.Schools, traegerview.SchoolKeyDateCounts{School: school, Counts: months})
+		result.Schools = append(result.Schools, traegerview.SchoolKeyDateCounts{TraegerSchool: school, Counts: months})
 	}
 	return result
 }

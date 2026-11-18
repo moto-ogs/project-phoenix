@@ -21,7 +21,7 @@ func keyDateRow(school int64, month time.Month, students, terminals int) traeger
 func TestKeyDateCountsSumEachMonthOverTheTraegerSchools(t *testing.T) {
 	t.Parallel()
 	const bach, linden, foreign int64 = 1, 2, 3
-	schools := []traegerview.School{{ID: bach, Name: "OGS Am Bach"}, {ID: linden, Name: "OGS Lindenweg"}}
+	schools := []traegerview.TraegerSchool{{ID: bach, Name: "OGS Am Bach"}, {ID: linden, Name: "OGS Lindenweg"}}
 	got := keyDateCounts(schools, []traegerview.SchoolKeyDateCount{
 		keyDateRow(bach, time.October, 30, 2), keyDateRow(linden, time.October, 12, 1), keyDateRow(foreign, time.October, 99, 9),
 		keyDateRow(bach, time.September, 28, 2),
@@ -40,7 +40,7 @@ func TestKeyDateCountsSumEachMonthOverTheTraegerSchools(t *testing.T) {
 
 func TestKeyDateCountsWithoutRowsAnswerEmptyLists(t *testing.T) {
 	t.Parallel()
-	got := keyDateCounts([]traegerview.School{{ID: 1}}, nil)
+	got := keyDateCounts([]traegerview.TraegerSchool{{ID: 1}}, nil)
 
 	require.Len(t, got.Schools, 1)
 	assert.NotNil(t, got.Schools[0].Counts)

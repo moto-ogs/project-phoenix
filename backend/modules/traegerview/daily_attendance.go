@@ -95,7 +95,7 @@ type DailyAttendanceSummary struct {
 // SchoolDailyAttendance is one school in Mecklenburg-Vorpommern with its
 // days and its summary.
 type SchoolDailyAttendance struct {
-	School
+	TraegerSchool
 	Summary DailyAttendanceSummary `json:"summary"`
 	Days    []DailyAttendanceDay   `json:"days"`
 }
@@ -132,7 +132,7 @@ type DailyAttendanceRecord struct {
 type DailyAttendanceExport struct {
 	From    calendar.Date
 	To      calendar.Date
-	Schools []School
+	Schools []TraegerSchool
 	Records []DailyAttendanceRecord
 }
 

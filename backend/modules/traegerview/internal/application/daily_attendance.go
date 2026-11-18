@@ -95,7 +95,7 @@ func (o *Overview) FederalStates(ctx context.Context, organizationID int64) ([]s
 // dailyAttendanceData is what the owners answered for one report.
 type dailyAttendanceData struct {
 	from, to calendar.Date
-	schools  []traegerview.School
+	schools  []traegerview.TraegerSchool
 	other    int
 	days     []traegerview.ChildDay
 	absences []traegerview.AbsenceDay
@@ -126,7 +126,7 @@ func (o *Overview) dailyAttendanceData(ctx context.Context, organizationID int64
 		}
 		data.other = len(ids) - len(scope)
 		if len(scope) == 0 {
-			data.schools = []traegerview.School{}
+			data.schools = []traegerview.TraegerSchool{}
 			return nil
 		}
 		var err error
@@ -322,8 +322,8 @@ func tallyDays(data dailyAttendanceData) map[schoolDay]*dayTally {
 
 // schoolDailyAttendance lists the days of one school, Saturday and Sunday
 // only with a child on them, and adds each day to all schools together.
-func schoolDailyAttendance(school traegerview.School, from, to calendar.Date, tallies map[schoolDay]*dayTally, all map[calendar.Date]*dayTally) (traegerview.SchoolDailyAttendance, dayTally) {
-	entry := traegerview.SchoolDailyAttendance{School: school, Days: []traegerview.DailyAttendanceDay{}}
+func schoolDailyAttendance(school traegerview.TraegerSchool, from, to calendar.Date, tallies map[schoolDay]*dayTally, all map[calendar.Date]*dayTally) (traegerview.SchoolDailyAttendance, dayTally) {
+	entry := traegerview.SchoolDailyAttendance{TraegerSchool: school, Days: []traegerview.DailyAttendanceDay{}}
 	var total dayTally
 	for date := from; !to.Before(date); date = date.AddDays(1) {
 		day, recorded := tallies[schoolDay{school.ID, date}]

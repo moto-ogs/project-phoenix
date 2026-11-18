@@ -40,7 +40,7 @@ func (rs *Resource) keyDateCountsExport(w http.ResponseWriter, r *http.Request) 
 		common.WriteList(w, r, rs.lists, format, keyDateCountsTable(counts, ""))
 		return
 	}
-	school, found := findSchool(counts.Schools, schoolID, func(s traegerview.SchoolKeyDateCounts) traegerview.School { return s.School })
+	school, found := findSchool(counts.Schools, schoolID, func(s traegerview.SchoolKeyDateCounts) traegerview.TraegerSchool { return s.TraegerSchool })
 	if !found {
 		renderSchoolNotFound(w, r)
 		return

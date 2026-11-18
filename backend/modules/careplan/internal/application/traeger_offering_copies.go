@@ -122,9 +122,9 @@ func (s *TraegerOfferingCopies) create(ctx context.Context, copy careplan.Traege
 	if err := s.store.LinkTraegerOfferingCopy(ctx, created.ID, copy.SourceID, copy.Version, traeger); err != nil {
 		return careplan.TraegerOfferingApplied{}, err
 	}
-	changes := make([]careplan.TraegerFieldChange, 0, len(traeger))
+	changes := make([]careplan.TraegerOfferingFieldChange, 0, len(traeger))
 	for _, field := range sortedTraegerKeys(traeger) {
-		changes = append(changes, careplan.TraegerFieldChange{Field: field, State: traegerFieldNew, Traeger: traeger[field]})
+		changes = append(changes, careplan.TraegerOfferingFieldChange{Field: field, State: traegerFieldNew, Traeger: traeger[field]})
 	}
 	return careplan.TraegerOfferingApplied{SourceID: copy.SourceID, CopyID: created.ID, Created: true, Fields: changes}, nil
 }
@@ -207,15 +207,15 @@ func applyTraegerOfferingValues(offering *careplan.CareOffering, values map[stri
 // mergeTraegerOfferingValues takes the Träger's value for every field the
 // school did not change and keeps the school's value where it did, and
 // reports the state of each field (ADR 0195 section 6).
-func mergeTraegerOfferingValues(traeger, school map[string]any, deviations []string) (map[string]any, []careplan.TraegerFieldChange) {
+func mergeTraegerOfferingValues(traeger, school map[string]any, deviations []string) (map[string]any, []careplan.TraegerOfferingFieldChange) {
 	deviating := make(map[string]bool, len(deviations))
 	for _, field := range deviations {
 		deviating[field] = true
 	}
 	merged := make(map[string]any, len(traeger))
-	changes := make([]careplan.TraegerFieldChange, 0, len(traeger))
+	changes := make([]careplan.TraegerOfferingFieldChange, 0, len(traeger))
 	for _, field := range sortedTraegerKeys(traeger) {
-		change := careplan.TraegerFieldChange{Field: field, Traeger: traeger[field], School: school[field]}
+		change := careplan.TraegerOfferingFieldChange{Field: field, Traeger: traeger[field], School: school[field]}
 		same := sameTraegerJSON(traeger[field], school[field])
 		switch {
 		case deviating[field] && !same:

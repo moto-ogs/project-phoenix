@@ -73,7 +73,7 @@ func saveTraegerCatalogPrices(ctx context.Context, billing parentbilling.CareMod
 	for _, module := range prices {
 		list := parentbilling.CareModulePriceList{SchoolID: module.SchoolID, CareOfferingID: module.CareOfferingID, ModuleName: module.ModuleName, ValidFrom: module.ValidFrom}
 		for _, price := range module.Prices {
-			list.Prices = append(list.Prices, parentbilling.CarePrice{Weekday: price.Weekday, DaysPerWeek: price.DaysPerWeek, MonthlyCents: price.MonthlyCents, SiblingCents: price.SiblingCents, MealExtra: price.MealExtra})
+			list.Prices = append(list.Prices, parentbilling.CarePrice{Weekday: price.Weekday, DaysPerWeek: price.DaysPerWeek, MonthlyCents: int64(price.MonthlyCents), SiblingCents: wideCents(price.SiblingCents), MealExtra: price.MealExtra})
 		}
 		lists = append(lists, list)
 	}
@@ -121,4 +121,14 @@ func newTraegerCatalogBilling(organizations HolidayOrganizations, settings Traeg
 		parentBillingSettings{settings: settings}, newParentBillingCareMeals(schoolSettings, marks), newParentBillingLetterheads(settings), today, now)
 	_, intakePorts := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL, now)
 	return billing, careContractCompose.NewIntake(intakePorts, today)
+}
+
+// wideCents carries an optional amount of the catalog into the price list
+// of the Elternabrechnung, which counts cent as int64.
+func wideCents(cents *int) *int64 {
+	if cents == nil {
+		return nil
+	}
+	wide := int64(*cents)
+	return &wide
 }

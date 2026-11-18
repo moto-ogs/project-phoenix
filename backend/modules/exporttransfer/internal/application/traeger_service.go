@@ -347,7 +347,7 @@ func journalEntries(rows []domain.TraegerJournalRow) []exporttransfer.TraegerTra
 
 func journalEntry(row domain.TraegerJournalRow) exporttransfer.TraegerTransferEntry {
 	return exporttransfer.TraegerTransferEntry{ID: row.ID, CreatedAt: row.CreatedAt, Format: row.Format,
-		Filename: row.Filename, ByteSize: row.ByteSize, TargetHost: row.TargetHost, TargetDirectory: row.TargetDirectory,
+		Filename: row.Filename, ByteSize: int(row.ByteSize), TargetHost: row.TargetHost, TargetDirectory: row.TargetDirectory,
 		RecipientID: row.RecipientID, RecipientName: row.RecipientName, State: journalState(row), Reason: row.Reason}
 }
 

@@ -75,7 +75,7 @@ func (t *TraegerClosingDays) Calendar(ctx context.Context, organizationID int64,
 		return traegercalendar.Calendar{}, err
 	}
 	result := traegercalendar.Calendar{
-		ClosingDays: make([]traegercalendar.ClosingDay, 0, len(days)), Schools: make([]traegercalendar.School, 0, len(schools)),
+		ClosingDays: make([]traegercalendar.ClosingDay, 0, len(days)), Schools: make([]traegercalendar.CalendarSchool, 0, len(schools)),
 		Holidays: []traegercalendar.Holidays{},
 	}
 	for _, day := range days {
@@ -84,7 +84,7 @@ func (t *TraegerClosingDays) Calendar(ctx context.Context, organizationID int64,
 	seen := map[string]bool{}
 	for _, school := range schools {
 		region := schoolcalendar.HolidayRegion{Code: school.FederalState, Name: HolidayRegionName(school.FederalState)}
-		result.Schools = append(result.Schools, traegercalendar.School{ID: school.ID, Name: school.Name, FederalState: region})
+		result.Schools = append(result.Schools, traegercalendar.CalendarSchool{ID: school.ID, Name: school.Name, FederalState: region})
 		if seen[region.Code] || !ValidHolidayRegion(region.Code) {
 			continue
 		}

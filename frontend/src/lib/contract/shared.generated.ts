@@ -316,6 +316,17 @@ export const SchoolSummarySchema: z.ZodType<SchoolSummary, unknown> = z.object({
   device_slots: safeInt.nullable(),
 });
 
+/** Go: workforce.TraegerStaffRelease */
+export interface TraegerStaffRelease {
+  representation: string;
+  released_at: string;
+}
+
+export const TraegerStaffReleaseSchema: z.ZodType<TraegerStaffRelease, unknown> = z.object({
+  representation: z.string(),
+  released_at: instant,
+});
+
 /** Go: organizationtenancy.School */
 export interface School {
   id: string;
@@ -1739,6 +1750,33 @@ export const ShiftResponseSchema: z.ZodType<ShiftResponse, unknown> = z.object({
   planned_by_traeger: z.boolean().optional(),
 });
 
+/** Go: schoolcalendar.Holiday */
+export interface Holiday {
+  date: string;
+  name: string;
+}
+
+export const HolidaySchema: z.ZodType<Holiday, unknown> = z.object({
+  date: z.string(),
+  name: z.string(),
+});
+
+/** Go: workforce.TraegerStaffSchool */
+export interface TraegerStaffSchool {
+  id: string;
+  name: string;
+}
+
+export const TraegerStaffSchoolSchema: z.ZodType<TraegerStaffSchool, unknown> = z.object({
+  id: int64StringOrNumber,
+  name: z.string(),
+});
+
+/** Go: traegerportal.TraegerNameRequest */
+export interface TraegerNameRequest {
+  name?: string;
+}
+
 /** Go: parentbilling.RunDueDate */
 export interface RunDueDate {
   payment_method: string;
@@ -2000,6 +2038,571 @@ export const CareModuleSchema: z.ZodType<CareModule, unknown> = z.object({
   booked_weekdays: z.array(z.string()).nullable(),
   booked_days_per_week: z.array(safeInt).nullable(),
   contract_count: safeInt,
+});
+
+/** Go: enrollment.HolidayRegistrationBooking */
+export interface HolidayRegistrationBooking {
+  week_id: string;
+  week_starts_on: string | null;
+  week_ends_on: string | null;
+  host_school_id: string;
+  time_model_id: string;
+  time_model_name: string;
+  price_cents: number;
+  days?: (string | null)[];
+  lunch: boolean;
+  lunch_days: number;
+  lunch_price_cents: number;
+  placement: string;
+  waitlist_position?: number;
+  promoted_at?: string;
+}
+
+export const HolidayRegistrationBookingSchema: z.ZodType<HolidayRegistrationBooking, unknown> = z.object({
+  week_id: int64StringOrNumber,
+  week_starts_on: calendarDate.nullable(),
+  week_ends_on: calendarDate.nullable(),
+  host_school_id: int64StringOrNumber,
+  time_model_id: int64StringOrNumber,
+  time_model_name: z.string(),
+  price_cents: safeInt,
+  days: z.array(calendarDate.nullable()).optional(),
+  lunch: z.boolean(),
+  lunch_days: safeInt,
+  lunch_price_cents: safeInt,
+  placement: z.string(),
+  waitlist_position: safeInt.optional(),
+  promoted_at: instant.optional(),
+});
+
+/** Go: enrollment.HolidayRegistrationChild */
+export interface HolidayRegistrationChild {
+  id: string;
+  first_name: string;
+  last_name: string;
+  birth_date: string | null;
+  home_school_id: string | null;
+  guest_school_name: string;
+  bookings: HolidayRegistrationBooking[] | null;
+  duplicate_registration_ids: string[] | null;
+  holiday_wish: string;
+  holiday_wish_source: string;
+  holiday_wish_check: boolean;
+}
+
+export const HolidayRegistrationChildSchema: z.ZodType<HolidayRegistrationChild, unknown> = z.object({
+  id: int64StringOrNumber,
+  first_name: z.string(),
+  last_name: z.string(),
+  birth_date: calendarDate.nullable(),
+  home_school_id: int64StringOrNumber.nullable(),
+  guest_school_name: z.string(),
+  bookings: z.array(HolidayRegistrationBookingSchema).nullable(),
+  duplicate_registration_ids: z.array(int64StringOrNumber).nullable(),
+  holiday_wish: z.string(),
+  holiday_wish_source: z.string(),
+  holiday_wish_check: z.boolean(),
+});
+
+/** Go: enrollment.HolidayRegistrationMailProblem */
+export interface HolidayRegistrationMailProblem {
+  kind: string;
+  state: string;
+}
+
+export const HolidayRegistrationMailProblemSchema: z.ZodType<HolidayRegistrationMailProblem, unknown> = z.object({
+  kind: z.string(),
+  state: z.string(),
+});
+
+/** Go: enrollment.HolidayAddress */
+export interface HolidayAddress {
+  street: string;
+  postal_code: string;
+  city: string;
+}
+
+export const HolidayAddressSchema: z.ZodType<HolidayAddress, unknown> = z.object({
+  street: z.string(),
+  postal_code: z.string(),
+  city: z.string(),
+});
+
+/** Go: enrollment.HolidayGuardianInput */
+export interface HolidayGuardianInput {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+}
+
+export const HolidayGuardianInputSchema: z.ZodType<HolidayGuardianInput, unknown> = z.object({
+  first_name: z.string(),
+  last_name: z.string(),
+  email: z.string(),
+  phone: z.string(),
+});
+
+/** Go: enrollment.FormAttachment */
+export interface FormAttachment {
+  document_id?: string;
+  label: string;
+  document_url: string;
+}
+
+export const FormAttachmentSchema: z.ZodType<FormAttachment, unknown> = z.object({
+  document_id: z.string().optional(),
+  label: z.string(),
+  document_url: z.string(),
+});
+
+/** Go: enrollment.TranslatedText */
+export interface TranslatedText {
+  text: string;
+  source?: string;
+}
+
+export const TranslatedTextSchema: z.ZodType<TranslatedText, unknown> = z.object({
+  text: z.string(),
+  source: z.string().optional(),
+});
+
+/** Go: enrollment.FormLegalBlock */
+export interface FormLegalBlock {
+  attachments?: FormAttachment[];
+  key: string;
+  kind: string;
+  title: string;
+  label: string;
+  text: string;
+  required: boolean;
+  enabled: boolean;
+  sort_order: number;
+  source?: string;
+  display_mode?: string;
+  document_url?: string;
+  translations?: Record<string, Record<string, TranslatedText> | null>;
+  guardian_agreement?: boolean;
+}
+
+export const FormLegalBlockSchema: z.ZodType<FormLegalBlock, unknown> = z.object({
+  attachments: z.array(FormAttachmentSchema).optional(),
+  key: z.string(),
+  kind: z.string(),
+  title: z.string(),
+  label: z.string(),
+  text: z.string(),
+  required: z.boolean(),
+  enabled: z.boolean(),
+  sort_order: safeInt,
+  source: z.string().optional(),
+  display_mode: z.string().optional(),
+  document_url: z.string().optional(),
+  translations: z.record(z.string(), z.record(z.string(), TranslatedTextSchema).nullable()).optional(),
+  guardian_agreement: z.boolean().optional(),
+});
+
+/** Go: enrollment.FormFieldOption */
+export interface FormFieldOption {
+  label: string;
+  value: string;
+  translations?: Record<string, Record<string, TranslatedText> | null>;
+}
+
+export const FormFieldOptionSchema: z.ZodType<FormFieldOption, unknown> = z.object({
+  label: z.string(),
+  value: z.string(),
+  translations: z.record(z.string(), z.record(z.string(), TranslatedTextSchema).nullable()).optional(),
+});
+
+/** Go: enrollment.FormFieldValidation */
+export interface FormFieldValidation {
+  min?: number;
+  max?: number;
+  pattern?: string;
+}
+
+export const FormFieldValidationSchema: z.ZodType<FormFieldValidation, unknown> = z.object({
+  min: z.number().optional(),
+  max: z.number().optional(),
+  pattern: z.string().optional(),
+});
+
+/** Go: enrollment.FormFileOptions */
+export interface FormFileOptions {
+  allowed_types: string[] | null;
+  max_size_mb: number;
+  multiple?: boolean;
+}
+
+export const FormFileOptionsSchema: z.ZodType<FormFileOptions, unknown> = z.object({
+  allowed_types: z.array(z.string()).nullable(),
+  max_size_mb: safeInt,
+  multiple: z.boolean().optional(),
+});
+
+/** Go: enrollment.VisibilityCondition */
+export interface VisibilityCondition {
+  source: string;
+  field?: string;
+  operator: string;
+  value?: unknown | null;
+}
+
+export const VisibilityConditionSchema: z.ZodType<VisibilityCondition, unknown> = z.object({
+  source: z.string(),
+  field: z.string().optional(),
+  operator: z.string(),
+  value: z.unknown().nullable().optional(),
+});
+
+/** Go: enrollment.HolidayFormField */
+export interface HolidayFormField {
+  attachments?: FormAttachment[];
+  key: string;
+  label: string;
+  type: string;
+  required?: boolean;
+  help_text?: string;
+  content?: string;
+  options?: FormFieldOption[];
+  allowed_times?: string[];
+  single_mode_grades?: number[];
+  validation?: FormFieldValidation;
+  file_options?: FormFileOptions;
+  sort_order: number;
+  applies_to_child?: boolean;
+  target?: string;
+  visible_when?: VisibilityCondition;
+  translations?: Record<string, Record<string, TranslatedText> | null>;
+  health: boolean;
+  share_with_host: boolean;
+}
+
+export const HolidayFormFieldSchema: z.ZodType<HolidayFormField, unknown> = z.object({
+  attachments: z.array(FormAttachmentSchema).optional(),
+  key: z.string(),
+  label: z.string(),
+  type: z.string(),
+  required: z.boolean().optional(),
+  help_text: z.string().optional(),
+  content: z.string().optional(),
+  options: z.array(FormFieldOptionSchema).optional(),
+  allowed_times: z.array(z.string()).optional(),
+  single_mode_grades: z.array(safeInt).optional(),
+  validation: FormFieldValidationSchema.optional(),
+  file_options: FormFileOptionsSchema.optional(),
+  sort_order: safeInt,
+  applies_to_child: z.boolean().optional(),
+  target: z.string().optional(),
+  visible_when: VisibilityConditionSchema.optional(),
+  translations: z.record(z.string(), z.record(z.string(), TranslatedTextSchema).nullable()).optional(),
+  health: z.boolean(),
+  share_with_host: z.boolean(),
+});
+
+/** Go: enrollment.HolidayPeriodForm */
+export interface HolidayPeriodForm {
+  legal_blocks: FormLegalBlock[] | null;
+  version: number;
+  fields: HolidayFormField[] | null;
+  address_requirement: string;
+  health_requirement: string;
+  created_at: string;
+}
+
+export const HolidayPeriodFormSchema: z.ZodType<HolidayPeriodForm, unknown> = z.object({
+  legal_blocks: z.array(FormLegalBlockSchema).nullable(),
+  version: safeInt,
+  fields: z.array(HolidayFormFieldSchema).nullable(),
+  address_requirement: z.string(),
+  health_requirement: z.string(),
+  created_at: instant,
+});
+
+/** Go: enrollment.HolidayChildAnswers */
+export interface HolidayChildAnswers {
+  child_id: string;
+  custom_data: Record<string, unknown | null> | null;
+}
+
+export const HolidayChildAnswersSchema: z.ZodType<HolidayChildAnswers, unknown> = z.object({
+  child_id: int64StringOrNumber,
+  custom_data: z.record(z.string(), z.unknown().nullable()).nullable(),
+});
+
+/** Go: enrollment.HolidayRegistrationContact */
+export interface HolidayRegistrationContact {
+  kind: string;
+  name: string;
+  phone: string;
+  relationship: string;
+}
+
+export const HolidayRegistrationContactSchema: z.ZodType<HolidayRegistrationContact, unknown> = z.object({
+  kind: z.string(),
+  name: z.string(),
+  phone: z.string(),
+  relationship: z.string(),
+});
+
+/** Go: enrollment.HolidayConsentTexts */
+export interface HolidayConsentTexts {
+  version: number;
+  retention_days: number;
+  privacy_consent: string;
+  health_consent: string;
+  binding_confirmed: string;
+  custody_confirmed: string;
+  declaration_name: string;
+}
+
+export const HolidayConsentTextsSchema: z.ZodType<HolidayConsentTexts, unknown> = z.object({
+  version: safeInt,
+  retention_days: safeInt,
+  privacy_consent: z.string(),
+  health_consent: z.string(),
+  binding_confirmed: z.string(),
+  custody_confirmed: z.string(),
+  declaration_name: z.string(),
+});
+
+/** Go: enrollment.HolidayRegistrationProof */
+export interface HolidayRegistrationProof {
+  id: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+  uploaded_at: string;
+}
+
+export const HolidayRegistrationProofSchema: z.ZodType<HolidayRegistrationProof, unknown> = z.object({
+  id: int64StringOrNumber,
+  filename: z.string(),
+  size_bytes: safeInt,
+  content_type: z.string(),
+  uploaded_at: instant,
+});
+
+/** Go: enrollment.HolidayBookingChange */
+export interface HolidayBookingChange {
+  week_id: string;
+  time_model_id: string;
+  waitlisted?: boolean;
+  promoted_at?: string;
+  days?: (string | null)[];
+  lunch?: boolean;
+}
+
+export const HolidayBookingChangeSchema: z.ZodType<HolidayBookingChange, unknown> = z.object({
+  week_id: int64StringOrNumber,
+  time_model_id: int64StringOrNumber,
+  waitlisted: z.boolean().optional(),
+  promoted_at: instant.optional(),
+  days: z.array(calendarDate.nullable()).optional(),
+  lunch: z.boolean().optional(),
+});
+
+/** Go: enrollment.HolidayDebtorNumberChange */
+export interface HolidayDebtorNumberChange {
+  before: string;
+  after: string;
+}
+
+export const HolidayDebtorNumberChangeSchema: z.ZodType<HolidayDebtorNumberChange, unknown> = z.object({
+  before: z.string(),
+  after: z.string(),
+});
+
+/** Go: enrollment.HolidayCriterionCheck */
+export interface HolidayCriterionCheck {
+  criterion_id: string;
+  child_id: string | null;
+  checked: string | null;
+}
+
+export const HolidayCriterionCheckSchema: z.ZodType<HolidayCriterionCheck, unknown> = z.object({
+  criterion_id: int64StringOrNumber,
+  child_id: int64StringOrNumber.nullable(),
+  checked: z.string().nullable(),
+});
+
+/** Go: enrollment.HolidayRegistrationEventDetails */
+export interface HolidayRegistrationEventDetails {
+  from?: string;
+  child_id?: string;
+  before?: HolidayBookingChange[];
+  after?: HolidayBookingChange[];
+  debtor_number?: HolidayDebtorNumberChange;
+  fields?: string[];
+  siblings?: string[];
+  week_ids?: string[];
+  placement?: string;
+  proposal?: string;
+  reason?: string;
+  checks?: HolidayCriterionCheck[];
+  wish?: string;
+}
+
+export const HolidayRegistrationEventDetailsSchema: z.ZodType<HolidayRegistrationEventDetails, unknown> = z.object({
+  from: z.string().optional(),
+  child_id: int64StringOrNumber.optional(),
+  before: z.array(HolidayBookingChangeSchema).optional(),
+  after: z.array(HolidayBookingChangeSchema).optional(),
+  debtor_number: HolidayDebtorNumberChangeSchema.optional(),
+  fields: z.array(z.string()).optional(),
+  siblings: z.array(int64StringOrNumber).optional(),
+  week_ids: z.array(int64StringOrNumber).optional(),
+  placement: z.string().optional(),
+  proposal: z.string().optional(),
+  reason: z.string().optional(),
+  checks: z.array(HolidayCriterionCheckSchema).optional(),
+  wish: z.string().optional(),
+});
+
+/** Go: enrollment.HolidayRegistrationEvent */
+export interface HolidayRegistrationEvent {
+  action: string;
+  occurred_at: string;
+  actor_account_id: string | null;
+  details: HolidayRegistrationEventDetails;
+}
+
+export const HolidayRegistrationEventSchema: z.ZodType<HolidayRegistrationEvent, unknown> = z.object({
+  action: z.string(),
+  occurred_at: instant,
+  actor_account_id: int64StringOrNumber.nullable(),
+  details: HolidayRegistrationEventDetailsSchema,
+});
+
+/** Go: enrollment.HolidayRegistrationCriterion */
+export interface HolidayRegistrationCriterion {
+  criterion_id: string;
+  name: string;
+  question: string;
+  scope: string;
+  child_id: string | null;
+  stated: string;
+  checked: string | null;
+  checked_at: string | null;
+}
+
+export const HolidayRegistrationCriterionSchema: z.ZodType<HolidayRegistrationCriterion, unknown> = z.object({
+  criterion_id: int64StringOrNumber,
+  name: z.string(),
+  question: z.string(),
+  scope: z.string(),
+  child_id: int64StringOrNumber.nullable(),
+  stated: z.string(),
+  checked: z.string().nullable(),
+  checked_at: instant.nullable(),
+});
+
+/** Go: enrollment.RequestMailOutcome */
+export interface RequestMailOutcome {
+  kind: string;
+  outcome: string;
+  address_mark?: string;
+  stopped?: boolean;
+  outcome_at?: string;
+  created_at?: string;
+}
+
+export const RequestMailOutcomeSchema: z.ZodType<RequestMailOutcome, unknown> = z.object({
+  kind: z.string(),
+  outcome: z.string(),
+  address_mark: z.string().optional(),
+  stopped: z.boolean().optional(),
+  outcome_at: instant.optional(),
+  created_at: instant.optional(),
+});
+
+/** Go: enrollment.HolidayPromotion */
+export interface HolidayPromotion {
+  registration_id: string;
+  child_id: string;
+  week_id: string;
+}
+
+export const HolidayPromotionSchema: z.ZodType<HolidayPromotion, unknown> = z.object({
+  registration_id: int64StringOrNumber,
+  child_id: int64StringOrNumber,
+  week_id: int64StringOrNumber,
+});
+
+/** Go: enrollment.HolidayRegistrationDetail */
+export interface HolidayRegistrationDetail {
+  id: string;
+  status: string;
+  frozen: boolean;
+  submitted_at: string;
+  guardian_first_name: string;
+  guardian_last_name: string;
+  guardian_email: string;
+  guardian_phone: string;
+  children: HolidayRegistrationChild[] | null;
+  benefits_declared: boolean;
+  debtor_number: string;
+  retention_days: number;
+  deletes_on: string | null;
+  health_deletes_on: string | null;
+  mail_problems?: HolidayRegistrationMailProblem[];
+  guardian_address: HolidayAddress | null;
+  legal_acceptances: Record<string, string> | null;
+  second_guardian?: HolidayGuardianInput;
+  form: HolidayPeriodForm | null;
+  custom_data: Record<string, unknown | null> | null;
+  child_custom_data: HolidayChildAnswers[] | null;
+  contacts: HolidayRegistrationContact[] | null;
+  privacy_consent_at: string;
+  health_consent_at: string | null;
+  consent_version: number;
+  consent_texts: HolidayConsentTexts | null;
+  binding_confirmed_at: string | null;
+  custody_confirmed_at: string | null;
+  declaration_name: string;
+  benefits_proofs: HolidayRegistrationProof[] | null;
+  history: HolidayRegistrationEvent[] | null;
+  criteria: HolidayRegistrationCriterion[] | null;
+  mails?: RequestMailOutcome[];
+  promotions?: HolidayPromotion[];
+}
+
+export const HolidayRegistrationDetailSchema: z.ZodType<HolidayRegistrationDetail, unknown> = z.object({
+  id: int64StringOrNumber,
+  status: z.string(),
+  frozen: z.boolean(),
+  submitted_at: instant,
+  guardian_first_name: z.string(),
+  guardian_last_name: z.string(),
+  guardian_email: z.string(),
+  guardian_phone: z.string(),
+  children: z.array(HolidayRegistrationChildSchema).nullable(),
+  benefits_declared: z.boolean(),
+  debtor_number: z.string(),
+  retention_days: safeInt,
+  deletes_on: calendarDate.nullable(),
+  health_deletes_on: calendarDate.nullable(),
+  mail_problems: z.array(HolidayRegistrationMailProblemSchema).optional(),
+  guardian_address: HolidayAddressSchema.nullable(),
+  legal_acceptances: z.record(z.string(), instant).nullable(),
+  second_guardian: HolidayGuardianInputSchema.optional(),
+  form: HolidayPeriodFormSchema.nullable(),
+  custom_data: z.record(z.string(), z.unknown().nullable()).nullable(),
+  child_custom_data: z.array(HolidayChildAnswersSchema).nullable(),
+  contacts: z.array(HolidayRegistrationContactSchema).nullable(),
+  privacy_consent_at: instant,
+  health_consent_at: instant.nullable(),
+  consent_version: safeInt,
+  consent_texts: HolidayConsentTextsSchema.nullable(),
+  binding_confirmed_at: instant.nullable(),
+  custody_confirmed_at: instant.nullable(),
+  declaration_name: z.string(),
+  benefits_proofs: z.array(HolidayRegistrationProofSchema).nullable(),
+  history: z.array(HolidayRegistrationEventSchema).nullable(),
+  criteria: z.array(HolidayRegistrationCriterionSchema).nullable(),
+  mails: z.array(RequestMailOutcomeSchema).optional(),
+  promotions: z.array(HolidayPromotionSchema).optional(),
 });
 
 /** Go: parentbilling.SEPADebit */

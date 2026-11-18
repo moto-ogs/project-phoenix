@@ -64,8 +64,8 @@ func timeAccountMonth(r *http.Request) (int, int, error) {
 	return year, month, nil
 }
 
-// monthChangeRequest closes or reopens one month with its reason.
-type monthChangeRequest struct {
+// TimeAccountMonthRequest closes or reopens one month with its reason.
+type TimeAccountMonthRequest struct {
 	Year   int    `json:"year"`
 	Month  int    `json:"month"`
 	Reason string `json:"reason"`
@@ -73,7 +73,7 @@ type monthChangeRequest struct {
 
 var errReasonRequired = errors.New("a reason is required")
 
-func (req *monthChangeRequest) Bind(*http.Request) error {
+func (req *TimeAccountMonthRequest) Bind(*http.Request) error {
 	if strings.TrimSpace(req.Reason) == "" {
 		return errReasonRequired
 	}
@@ -96,7 +96,7 @@ func (rs *RecordsResource) changeTimeAccountMonth(w http.ResponseWriter, r *http
 	if !ok {
 		return
 	}
-	req := &monthChangeRequest{}
+	req := &TimeAccountMonthRequest{}
 	if err := render.Bind(r, req); err != nil {
 		// Only the missing reason belongs to a field; a broken body does not.
 		if errors.Is(err, errReasonRequired) {

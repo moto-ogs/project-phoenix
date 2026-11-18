@@ -96,9 +96,9 @@ func (o *Overview) careFormReads(ctx context.Context, scope []int64, day calenda
 // school applies the definitions of traegerview.Occupancy to one school: only
 // the children of the roster count, each child once per group and per care
 // form.
-func (r occupancyReads) school(school traegerview.School) traegerview.SchoolOccupancy {
+func (r occupancyReads) school(school traegerview.TraegerSchool) traegerview.SchoolOccupancy {
 	roster := r.roster[school.ID]
-	row := traegerview.SchoolOccupancy{School: school, Children: len(roster)}
+	row := traegerview.SchoolOccupancy{TraegerSchool: school, Children: len(roster)}
 	row.Groups, row.WithoutGroup = groupOccupancy(roster, r.groups[school.ID], r.names[school.ID])
 	row.CareForms, row.WithoutCareForm = careFormOccupancy(roster, r.bookings[school.ID], r.children[school.ID])
 	return row

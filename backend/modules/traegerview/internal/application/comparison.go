@@ -88,7 +88,7 @@ func compareSchools(schools []traegerview.SchoolUtilization, keyDates []traegerv
 	newest := newestKeyDates(keyDates, from, to)
 	for _, school := range schools {
 		values := schoolFigures(school)
-		compared := traegerview.ComparedSchool{School: school.School, Values: values}
+		compared := traegerview.ComparedSchool{TraegerSchool: school.TraegerSchool, Values: values}
 		if count, ok := newest[school.ID]; ok {
 			values[traegerview.ComparisonActiveStudents] = float64(count.ActiveStudents)
 			keyDate := count.KeyDate

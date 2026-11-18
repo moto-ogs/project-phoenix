@@ -956,7 +956,7 @@ export async function rebookHolidayChild(
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
     await traegerRequest<BackendDetail>(
-      `${registrationPath(periodId, registrationId)}/children/${encodeURIComponent(childId)}/bookings`,
+      `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/registrations/${encodeURIComponent(registrationId)}/children/${encodeURIComponent(childId)}/bookings`,
       {
         method: "PUT",
         body: {
@@ -1307,7 +1307,7 @@ export async function setHolidayWeekCapacity(
   capacity: number | null,
 ): Promise<{ readonly movedUp: readonly string[] }> {
   const change = await traegerRequest<{ moved_up?: number[] | null }>(
-    `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/weeks/${encodeURIComponent(weekId)}/capacity`,
+    `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/weeks/${encodeURIComponent(weekId)}/capacity`,
     { method: "PUT", body: { capacity } },
   );
   return { movedUp: (change.moved_up ?? []).map(String) };

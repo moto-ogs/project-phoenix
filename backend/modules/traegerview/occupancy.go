@@ -48,7 +48,7 @@ type OccupancyCareForm struct {
 // SchoolOccupancy is the occupancy of one school of the Träger. Groups and
 // CareForms are ordered by name.
 type SchoolOccupancy struct {
-	School
+	TraegerSchool
 	Children        int                 `json:"children"`
 	WithoutGroup    int                 `json:"without_group"`
 	Groups          []OccupancyGroup    `json:"groups"`

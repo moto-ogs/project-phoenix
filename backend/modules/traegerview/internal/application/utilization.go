@@ -64,7 +64,7 @@ func (o *Overview) UtilizationChildren(ctx context.Context, viewer traegerview.V
 	if err := validateUtilizationWindow(from, to, calendar.DateFromTime(o.now())); err != nil {
 		return traegerview.UtilizationChildren{}, err
 	}
-	var school traegerview.School
+	var school traegerview.TraegerSchool
 	err := o.read(ctx, viewer.OrganizationID, func(adminCtx context.Context, ids []int64) error {
 		if !slices.Contains(ids, schoolID) {
 			return traegerview.ErrSchoolOutsideTraeger
@@ -192,12 +192,12 @@ func unbookedOfferingPhases(to, today calendar.Date, running []int64) []int64 {
 }
 
 // school applies the definitions of traegerview.Utilization to one school.
-func (r utilizationReads) school(school traegerview.School, days []calendar.Date) traegerview.SchoolUtilization {
+func (r utilizationReads) school(school traegerview.TraegerSchool, days []calendar.Date) traegerview.SchoolUtilization {
 	offerings := offeringSeries(r.bookings[school.ID], r.children[school.ID], days)
 	attendance := r.attendance[school.ID]
 	visits := r.visits[school.ID]
 	return traegerview.SchoolUtilization{
-		School: school, Places: offerings.places, Booked: offerings.booked, BookedPlaces: offerings.bookedPlaces,
+		TraegerSchool: school, Places: offerings.places, Booked: offerings.booked, BookedPlaces: offerings.bookedPlaces,
 		Present: presentSeries(attendance, days), AttendanceFrom: attendance.From, RoomDataFrom: visits.From,
 		Offerings: offerings.offerings, Rooms: roomSeries(r.rooms[school.ID], visits, days),
 	}

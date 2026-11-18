@@ -86,7 +86,7 @@ type holidayWeekRow struct {
 	HostSchoolID    int64         `bun:"host_school_id"`
 	Capacity        *int          `bun:"capacity"`
 	BookingUnit     string        `bun:"booking_unit"`
-	LunchPriceCents *int64        `bun:"lunch_price_cents"`
+	LunchPriceCents *int          `bun:"lunch_price_cents"`
 	LunchBooked     bool          `bun:"lunch_booked"`
 }
 
@@ -96,7 +96,7 @@ type holidayTimeModelRow struct {
 	Name       string `bun:"name"`
 	StartsAt   string `bun:"starts_at"`
 	EndsAt     string `bun:"ends_at"`
-	PriceCents int64  `bun:"price_cents"`
+	PriceCents int    `bun:"price_cents"`
 	Archived   bool   `bun:"archived"`
 	Protected  bool   `bun:"protected"`
 }

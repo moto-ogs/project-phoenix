@@ -185,8 +185,10 @@ export async function deleteCostBearer(id: string): Promise<void> {
   );
 }
 
+// The Elternabrechnung of a holiday registration, at the backend path the
+// catalog proxy forwards (#2352).
 const registrationPath = (periodId: string, registrationId: string) =>
-  `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/registrations/${encodeURIComponent(registrationId)}`;
+  `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/registrations/${encodeURIComponent(registrationId)}`;
 
 /**
  * The frozen contribution of a registration, or what a confirmation would
@@ -207,7 +209,7 @@ export async function fetchHolidayContribution(
   const query = params.size > 0 ? `?${params.toString()}` : "";
   return contributionFromBackend(
     await traegerRequest<BackendContribution>(
-      `${registrationPath(periodId, registrationId)}/contribution${query}`,
+      `${registrationPath(periodId, registrationId)}${query}`,
     ),
   );
 }

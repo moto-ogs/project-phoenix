@@ -81,7 +81,7 @@ type UtilizationRoom struct {
 // series has one value per day of Utilization.Days. Offerings and Rooms are
 // ordered by name.
 type SchoolUtilization struct {
-	School
+	TraegerSchool
 	Places         int                   `json:"places"`
 	Booked         []int                 `json:"booked"`
 	BookedPlaces   []int                 `json:"booked_places"`
@@ -218,7 +218,7 @@ type SchoolChildAttendance interface {
 // UtilizationChildren are the children of one school of the Träger by name
 // over the window, ordered by last and first name.
 type UtilizationChildren struct {
-	School   School            `json:"school"`
+	School   TraegerSchool            `json:"school"`
 	From     calendar.Date     `json:"from"`
 	To       calendar.Date     `json:"to"`
 	Children []ChildAttendance `json:"children"`

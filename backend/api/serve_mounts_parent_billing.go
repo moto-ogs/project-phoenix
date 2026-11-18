@@ -518,11 +518,14 @@ func (b parentBillingHolidayRegistrations) HolidayWeeks(ctx context.Context, lin
 	for i, week := range offer.Weeks {
 		models := make([]parentbilling.HolidayTimeModel, len(week.TimeModels))
 		for j, model := range week.TimeModels {
-			models[j] = parentbilling.HolidayTimeModel{ID: model.ID, Name: model.Name, PriceCents: model.PriceCents}
+			models[j] = parentbilling.HolidayTimeModel{ID: model.ID, Name: model.Name, PriceCents: int64(model.PriceCents)}
 		}
 		weeks[i] = parentbilling.HolidayWeek{ID: week.ID, StartsOn: week.StartsOn, EndsOn: week.EndsOn, TimeModels: models}
 		weeks[i].CareDays = week.CareDays
-		weeks[i].LunchDayCents = week.LunchPriceCents
+		if week.LunchPriceCents != nil {
+			cents := int64(*week.LunchPriceCents)
+			weeks[i].LunchDayCents = &cents
+		}
 		weeks[i].WeekLunchDays = week.LunchDays
 	}
 	return weeks, nil
@@ -698,7 +701,7 @@ func parentBillingRegistration(detail enrollmentOwner.HolidayRegistrationDetail)
 			}
 			bookings[j] = parentbilling.HolidayBooking{
 				WeekID: booking.WeekID, WeekStartsOn: booking.WeekStartsOn, WeekEndsOn: booking.WeekEndsOn,
-				TimeModelID: booking.TimeModelID, TimeModelName: booking.TimeModelName, PriceCents: booking.PriceCents,
+				TimeModelID: booking.TimeModelID, TimeModelName: booking.TimeModelName, PriceCents: int64(booking.PriceCents),
 				BookedDays:    len(booking.Days),
 				Days:          booking.Days,
 				Waitlisted:    booking.Placement != enrollmentOwner.HolidayPlacementPlaced,
@@ -706,7 +709,7 @@ func parentBillingRegistration(detail enrollmentOwner.HolidayRegistrationDetail)
 				ReplacedWeeks: replacements,
 				Lunch:         booking.Lunch,
 				LunchDays:     booking.LunchDays,
-				LunchCents:    booking.LunchPriceCents,
+				LunchCents:    int64(booking.LunchPriceCents),
 			}
 		}
 		registration.Children[i] = parentbilling.HolidayChild{

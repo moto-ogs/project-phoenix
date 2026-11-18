@@ -77,9 +77,9 @@ type ClosingDaySpan struct {
 	SchoolIDs []int64
 }
 
-// School is a school of the Träger with the federal state its
+// CalendarSchool is a school of the Träger with the federal state its
 // statutory holidays come from.
-type School struct {
+type CalendarSchool struct {
 	ID           int64                        `json:"id"`
 	Name         string                       `json:"name"`
 	FederalState schoolcalendar.HolidayRegion `json:"federal_state"`
@@ -96,9 +96,9 @@ type Holidays struct {
 // a window: its closing days, its schools with their federal state, and the
 // statutory holidays of each state.
 type Calendar struct {
-	ClosingDays []ClosingDay `json:"closing_days"`
-	Schools     []School     `json:"schools"`
-	Holidays    []Holidays   `json:"holidays"`
+	ClosingDays []ClosingDay     `json:"closing_days"`
+	Schools     []CalendarSchool `json:"schools"`
+	Holidays    []Holidays       `json:"holidays"`
 }
 
 // ClosingDays lets the Träger-Büro plan closing days. Every operation

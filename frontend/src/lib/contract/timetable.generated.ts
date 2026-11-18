@@ -9,6 +9,7 @@ import {
   success,
 } from "./runtime";
 import {
+  HolidaySchema,
   HomeworkFeedbackResponseSchema,
   InstanceConflictWarningSchema,
   OperationPlannedInstanceSchema,
@@ -17,6 +18,7 @@ import {
   ScheduledInstanceSchema,
   startOperationResponseSchema,
   type CompleteOperationRequest,
+  type Holiday,
   type HomeworkFeedbackRequest,
   type InstanceConflictWarning,
   type OperationPlannedInstance,
@@ -217,17 +219,6 @@ export const GapsResponseSchema: z.ZodType<GapsResponse, unknown> = z.object({
   to: z.string(),
   gaps: z.array(GapInstanceSchema).nullable(),
   acknowledged: z.array(GapInstanceSchema).nullable(),
-});
-
-/** Go: schoolcalendar.Holiday */
-export interface Holiday {
-  date: string;
-  name: string;
-}
-
-export const HolidaySchema: z.ZodType<Holiday, unknown> = z.object({
-  date: z.string(),
-  name: z.string(),
 });
 
 /** Go: timetablehttp.HolidaysResponse */

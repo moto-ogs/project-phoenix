@@ -75,7 +75,7 @@ type ComparisonFilter struct {
 // ComparedSchool is one school with its figures. KeyDate is the key date of
 // its active_students, nil without one.
 type ComparedSchool struct {
-	School
+	TraegerSchool
 	Values  ComparisonValues `json:"values"`
 	KeyDate *calendar.Date   `json:"key_date"`
 }

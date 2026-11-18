@@ -55,9 +55,9 @@ func TestCareFormOccupancyCountsEachRosterChildOncePerOffer(t *testing.T) {
 
 func TestOccupancySchoolWithoutReadsIsEmpty(t *testing.T) {
 	t.Parallel()
-	school := traegerview.School{ID: 7, Name: "OGS Am Park"}
+	school := traegerview.TraegerSchool{ID: 7, Name: "OGS Am Park"}
 
 	row := occupancyReads{}.school(school)
 
-	assert.Equal(t, traegerview.SchoolOccupancy{School: school, Groups: []traegerview.OccupancyGroup{}, CareForms: []traegerview.OccupancyCareForm{}}, row)
+	assert.Equal(t, traegerview.SchoolOccupancy{TraegerSchool: school, Groups: []traegerview.OccupancyGroup{}, CareForms: []traegerview.OccupancyCareForm{}}, row)
 }

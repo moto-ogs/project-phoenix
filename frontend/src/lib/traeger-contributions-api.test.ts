@@ -33,7 +33,7 @@ describe("traeger-contributions-api", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(String(url)).toBe(
-      "/api/traeger/holiday-periods/5/registrations/7/cancel",
+      "/api/traeger/holiday-contributions/5/registrations/7/cancel",
     );
     expect(init?.method).toBe("POST");
   });

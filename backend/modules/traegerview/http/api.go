@@ -106,11 +106,11 @@ func (rs *Resource) getTraeger(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, traegerFrame{Traeger: traeger, FederalStates: states}, "Träger retrieved successfully")
+	common.Respond(w, r, http.StatusOK, TraegerFrame{Traeger: traeger, FederalStates: states}, "Träger retrieved successfully")
 }
 
-// traegerFrame is the Träger of the session as the portal frame reads it.
-type traegerFrame struct {
+// TraegerFrame is the Träger of the session as the portal frame reads it.
+type TraegerFrame struct {
 	traegerview.Traeger
 	FederalStates []string `json:"federal_states"`
 }

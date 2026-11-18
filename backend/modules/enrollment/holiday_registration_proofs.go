@@ -61,7 +61,7 @@ type HolidayProofReceipt struct {
 type HolidayRegistrationProof struct {
 	ID          int64     `json:"id"`
 	Filename    string    `json:"filename"`
-	SizeBytes   int64     `json:"size_bytes"`
+	SizeBytes   int       `json:"size_bytes"`
 	ContentType string    `json:"content_type"`
 	UploadedAt  time.Time `json:"uploaded_at"`
 }

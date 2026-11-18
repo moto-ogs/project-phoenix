@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -198,4 +199,59 @@ func TestTraegerHolidayClosurePendingQueryBudget(t *testing.T) {
 	proposeSchoolClosingDay(t, db, office.schools[1], "2030-07-10")
 	proposeSchoolClosingDay(t, db, office.schools[0], "2030-07-11")
 	assert.Len(t, read().Statements, len(single.Statements), "the waiting notices are planned in the same statements for any number of notices")
+}
+
+// The Träger-Büro tells the parents of the closing days the schools saved
+// in booked holiday weeks (#6457): one notice by its own click, the rest by
+// the click on the whole list. Each click mails the families of its notice
+// once.
+func TestTraegerOfficeTellsTheParentsOfPendingSchoolClosingDays(t *testing.T) {
+	t.Parallel()
+	db, router := newHolidayClosurePortal(t)
+	office := newTraegerOffice(t, db, router, "Träger Ferienschluss Liste", identityaccess.TraegerRoleAdministration)
+	bookHolidayWeek(t, office.organization, office.schools[0], "liste.eins@example.org")
+	bookHolidayWeek(t, office.organization, office.schools[1], "liste.zwei@example.org")
+	proposeSchoolClosingDay(t, db, office.schools[0], "2030-07-09")
+	proposeSchoolClosingDay(t, db, office.schools[1], "2030-07-10")
+	type pendingBody struct {
+		Token   string `json:"token"`
+		Notices []struct {
+			ID        int64  `json:"id"`
+			SchoolID  int64  `json:"school_id"`
+			Token     string `json:"token"`
+			Revision  int    `json:"revision"`
+			CanNotify bool   `json:"can_notify"`
+		} `json:"notices"`
+	}
+	pending := func() pendingBody {
+		t.Helper()
+		rec := traegerJSON(t, router, office.token, http.MethodGet, "/traeger/holiday-closures/pending", nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		return decodeSchoolPortalData[pendingBody](t, rec.Body.Bytes())
+	}
+
+	waiting := pending()
+	require.Len(t, waiting.Notices, 2)
+	first := waiting.Notices[0]
+	require.True(t, first.CanNotify)
+	rec := traegerJSON(t, router, office.token, http.MethodPost, fmt.Sprintf("/traeger/holiday-closures/pending/%d/notify", first.ID),
+		map[string]any{"token": first.Token, "revision": first.Revision})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	confirmed := decodeSchoolPortalData[struct {
+		ID        int64 `json:"id"`
+		CanNotify bool  `json:"can_notify"`
+	}](t, rec.Body.Bytes())
+	assert.Equal(t, first.ID, confirmed.ID)
+	assert.False(t, confirmed.CanNotify, "a told notice waits for no further click")
+	assert.Equal(t, 1, closureMails(t, db, office.organization), "the family of the first school is told")
+
+	rec = traegerJSON(t, router, office.token, http.MethodPost, "/traeger/holiday-closures/pending/notify", map[string]any{"token": pending().Token})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	all := decodeSchoolPortalData[struct {
+		Notices  int `json:"notices"`
+		Families int `json:"families"`
+	}](t, rec.Body.Bytes())
+	assert.Equal(t, 1, all.Notices, "the list tells the notice still waiting")
+	assert.Equal(t, 1, all.Families)
+	assert.Equal(t, 2, closureMails(t, db, office.organization), "every family once")
 }

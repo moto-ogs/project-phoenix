@@ -61,7 +61,7 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 // NotifyRequest confirms one notice at the revision the caller saw.
 type NotifyRequest struct {
 	Token    string `json:"token"`
-	Revision int64  `json:"revision"`
+	Revision int    `json:"revision"`
 }
 
 // Bind accepts the body.
