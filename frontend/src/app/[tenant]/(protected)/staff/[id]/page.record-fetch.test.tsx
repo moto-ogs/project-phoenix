@@ -247,7 +247,7 @@ describe("StaffDetailContent: Personal-Datensatz (#4993)", () => {
     await act(async () => tools.result.current({ clear: true }));
     // Anker: das schmale Profil lädt weiter, ohne eine verworfene Vorschau zu zeigen.
     expect(
-      screen.getByRole("heading", { name: "Mitarbeiter" }),
+      screen.getByRole("heading", { name: "Mitarbeitende" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "Profilvorschau" }),

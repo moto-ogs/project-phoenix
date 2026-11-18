@@ -1,3 +1,4 @@
+import type { StammdatenGender } from "~/lib/staff-api";
 import type {
   EmailAddressMark,
   MailProviderBlock,
@@ -35,6 +36,8 @@ export interface CreateInvitationRequest {
   firstName?: string;
   lastName?: string;
   position?: string;
+  /** Geschlecht für die Stammdaten; fehlt bei „Keine Angabe“. */
+  gender?: StammdatenGender;
 }
 
 export interface PendingInvitation {

@@ -37,7 +37,7 @@ export function StaffDetailSkeleton({
     <div
       role="status"
       aria-busy="true"
-      aria-label="Mitarbeiter wird geladen"
+      aria-label="Person wird geladen"
       data-testid="staff-detail-skeleton"
       className="w-full"
     >

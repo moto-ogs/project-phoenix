@@ -11,14 +11,6 @@ describe("getTraegerHelpTopicForPath", () => {
     }
   });
 
-  it("opens the Stichtagszahlen article on its page (#4673)", () => {
-    for (const path of ["/stichtagszahlen", "/traeger/stichtagszahlen"]) {
-      expect(getTraegerHelpTopicForPath(path)).toBe(
-        HELP_TOPICS.traegerKeyDateCounts,
-      );
-    }
-  });
-
   it("opens the arrival and pickup article on its page (#4714)", () => {
     for (const path of ["/ankunft-abholung", "/traeger/ankunft-abholung"]) {
       expect(getTraegerHelpTopicForPath(path)).toBe(

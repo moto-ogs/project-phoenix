@@ -133,7 +133,7 @@ var comparisonColumns = map[string]comparisonColumn{
 	traegerview.ComparisonBookedChange:   {head: "Veränderung gebucht"},
 	traegerview.ComparisonPresent:        {head: "Kinder anwesend (Ø je Tag)", decimal: true},
 	traegerview.ComparisonPresentPeak:    {head: "Höchstens anwesend"},
-	traegerview.ComparisonActiveStudents: {head: "Aktive Kinder am Stichtag"},
+	traegerview.ComparisonActiveStudents: {head: "Aktive Kinder am letzten Tag"},
 }
 
 // The names of the two rows under the schools.

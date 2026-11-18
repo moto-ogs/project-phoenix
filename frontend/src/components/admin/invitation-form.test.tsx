@@ -336,6 +336,47 @@ describe("InvitationForm", () => {
     });
   });
 
+  it("sends the chosen gender and omits it for Keine Angabe", async () => {
+    render(<InvitationForm />);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Rolle")).not.toBeDisabled();
+    });
+    fireEvent.change(screen.getByLabelText("E-Mail-Adresse"), {
+      target: { value: "test@example.com" },
+    });
+    fireEvent.click(screen.getByLabelText("Rolle"));
+    fireEvent.click(screen.getByRole("option", { name: "Betreuer" }));
+    fireEvent.click(screen.getByLabelText("Geschlecht (optional)"));
+    fireEvent.click(screen.getByRole("option", { name: "Weiblich" }));
+
+    skipLookupDebounce();
+    fireEvent.click(await screen.findByText("Einladung senden"));
+    await waitFor(() => {
+      expect(mockCreateInvitation).toHaveBeenCalledWith(
+        expect.objectContaining({ gender: "female" }),
+      );
+    });
+
+    // After sending, the form starts again at „Keine Angabe“.
+    await waitFor(() => {
+      expect(screen.getByLabelText("E-Mail-Adresse")).toHaveValue("");
+    });
+    mockCreateInvitation.mockClear();
+    fireEvent.change(screen.getByLabelText("E-Mail-Adresse"), {
+      target: { value: "second@example.com" },
+    });
+    fireEvent.click(screen.getByLabelText("Rolle"));
+    fireEvent.click(screen.getByRole("option", { name: "Betreuer" }));
+    skipLookupDebounce();
+    fireEvent.click(await screen.findByText("Einladung senden"));
+    await waitFor(() => {
+      expect(mockCreateInvitation).toHaveBeenCalledTimes(1);
+    });
+    expect(mockCreateInvitation.mock.calls[0]?.[0]).not.toHaveProperty(
+      "gender",
+    );
+  });
+
   it("displays success message with invitation link", async () => {
     render(<InvitationForm />);
 

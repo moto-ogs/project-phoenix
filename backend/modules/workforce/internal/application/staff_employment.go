@@ -65,6 +65,40 @@ func (e staffEmployment) StaffEmployments(ctx context.Context, membershipIDs []i
 	return result, err
 }
 
+// The staff employment owner also answers the staff directory's batched
+// gender read: it is composed early from the database alone, as School
+// Membership needs it.
+var _ workforce.StaffGenderReader = staffEmployment{}
+
+// StaffGenders implements workforce.StaffGenderReader in one statement. It
+// asks only for positive, distinct IDs and passes on only the three values of
+// the personnel record, so no stray value reaches the directory.
+func (e staffEmployment) StaffGenders(ctx context.Context, staffIDs []int64) (map[int64]string, error) {
+	ids := make([]int64, 0, len(staffIDs))
+	seen := make(map[int64]bool, len(staffIDs))
+	for _, id := range staffIDs {
+		if id > 0 && !seen[id] {
+			seen[id] = true
+			ids = append(ids, id)
+		}
+	}
+	result := make(map[int64]string, len(ids))
+	if len(ids) == 0 {
+		return result, nil
+	}
+	err := e.read(ctx, "list_staff_genders", 1, func(ctx context.Context) error {
+		values, err := e.store.StaffGenders(ctx, ids)
+		for id, value := range values {
+			switch value {
+			case workforce.GenderFemale, workforce.GenderMale, workforce.GenderDiverse:
+				result[id] = value
+			}
+		}
+		return err
+	})
+	return result, err
+}
+
 func (e staffEmployment) StaffOnWorkTimeModel(ctx context.Context, workTimeModelID int64) (ids []int64, err error) {
 	err = e.read(ctx, "list_staff_on_work_time_model", 1, func(ctx context.Context) error {
 		ids, err = e.store.StaffOnWorkTimeModel(ctx, workTimeModelID)

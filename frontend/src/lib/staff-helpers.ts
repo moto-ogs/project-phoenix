@@ -3,6 +3,7 @@
 import { EXTERNAL_CAREGIVER_LABEL, getRoleDisplayName } from "./auth-helpers";
 import type { ExternalAccountStatus, Staff } from "./staff-api";
 import { LOCATION_COLORS } from "./location-helper";
+import { positionForForm } from "./position-title";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 
 // Location status type matching the pattern from OGS groups
@@ -94,7 +95,7 @@ function formatAccountRole(role: string): string {
 export function getStaffDisplayType(staff: Staff): string {
   // Check custom position first (set on teacher profile)
   if (staff.role) {
-    return staff.role;
+    return positionForForm(staff.role, staff.roleForm);
   }
   // Fall back to specialization if available
   if (staff.isTeacher && staff.specialization) {
@@ -119,7 +120,7 @@ export function getStaffCardInfo(staff: Staff): string[] {
   // Add supervision role if currently supervising
   if (staff.isSupervising && staff.supervisionRole) {
     if (staff.supervisionRole === "primary") {
-      info.push("Hauptbetreuer");
+      info.push("Hauptbetreuung");
     } else if (staff.supervisionRole === "assistant") {
       info.push("Assistenz");
     }

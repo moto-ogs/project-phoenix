@@ -1276,7 +1276,7 @@ export default function StaffPage() {
   return (
     <Suspense
       fallback={
-        <TenantPage title="Mitarbeiter" statsLoading>
+        <TenantPage title="Mitarbeitende" statsLoading>
           <StaffCardsSkeleton />
         </TenantPage>
       }

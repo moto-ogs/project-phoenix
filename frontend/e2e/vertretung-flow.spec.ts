@@ -46,7 +46,7 @@ let cleanupStaffId: number | null = null;
 
 /**
  * URL-Vokabular-Invariante (Akzeptanzkriterium 3): der Bereich trägt nie mehr
- * als `d`, `view`, `block`, `verlauf`. Der Filterzustand ("Nur Störungen |
+ * als `d`, `view`, `block`, `verlauf`. Der Filterzustand ("Lücken |
  * Ganzer Tag") ist lokaler State und darf nie in der URL landen.
  */
 function assertUrlVocabulary(page: Page, context: string) {
@@ -241,12 +241,12 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
       assertUrlVocabulary(page, "nach Filter-Umschalter (lokaler State)");
 
       await expect(row).toBeVisible({ timeout: 15000 });
-      await expect(row).toContainText("Soll 1");
-      await expect(row).toContainText("Abwesend 0");
+      // Besetzung in Worten: eine Person geplant, eine da.
+      await expect(row).toContainText("1 von 1 da");
 
       // --- Save 1: Person abwesend melden (Ereignis `absence`) ------------
       deviationPosts = 0;
-      await row.getByRole("button", { name: "Bearbeiten" }).click();
+      await row.getByRole("button", { name: /^Bearbeiten/ }).click();
       await expect(dialog).toBeVisible();
       assertUrlVocabulary(page, "nach Editor-Öffnen");
       await expect(dialog.getByText(title)).toBeVisible();
@@ -255,9 +255,7 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
         (res) =>
           res.request().method() === "POST" && SUBSTITUTIONS_RE.test(res.url()),
       );
-      await dialog
-        .getByRole("button", { name: /als abwesend markieren/ })
-        .click();
+      await dialog.getByRole("button", { name: /: Abwesend melden$/ }).click();
       // Der sichtbare Label-Text ist das eigentliche Klickziel. Das native
       // Radio bleibt für Tastatur und Formsemantik sr-only im DOM; ein direkter
       // Koordinatenklick darauf kann hinter dem Footer landen.
@@ -268,15 +266,18 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
       await expect(
         dialog.getByRole("checkbox", { name: new RegExp(otherTitle) }),
       ).not.toBeChecked();
-      await dialog.getByRole("button", { name: "Speichern" }).click();
+      await dialog
+        .getByRole("button", { name: "Speichern", exact: true })
+        .click();
       expect((await save1).ok()).toBeTruthy();
       await expect(dialog).toBeHidden({ timeout: 10000 });
       expect(deviationPosts, "Save 1 = genau ein Speicher-POST").toBe(1);
 
       // Ohne Ersatz nennt die Liste die offene Vertretung ausdrücklich.
-      await expect(row).toContainText("Abwesend 1", DATA);
+      await expect(row).toContainText("0 von 1 da", DATA);
+      await expect(row).toContainText("1 Person fehlt", DATA);
       await expect(row).toContainText("Ersatzkräfte: keine", DATA);
-      await expect(otherRow).toContainText("Abwesend 0", DATA);
+      await expect(otherRow).toContainText("1 von 1 da", DATA);
 
       // --- Save 2: Ersatz wählen (Ereignis `substitution`) ----------------
       // Zwei Speichervorgänge, weil ein kombiniertes Abwesenheit+Ersatz-Save
@@ -284,7 +285,9 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
       // (ApplySubstitute -> logSubstitutionEvent); der Verlauf soll aber beide
       // Ereignisse zeigen. Jeder Speichervorgang bleibt ein einziger Request.
       deviationPosts = 0;
-      await row.getByRole("button", { name: "Bearbeiten" }).click();
+      // Die abwesende Person ohne Ersatz macht den Termin zur offenen Lücke:
+      // seine Zeile nennt jetzt das Ergebnis des Klicks (#7493).
+      await row.getByRole("button", { name: /^Besetzen/ }).click();
       await expect(dialog).toBeVisible();
 
       const picker = dialog.getByRole("combobox", { name: /Vertretung für/ });
@@ -302,15 +305,17 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
         (res) =>
           res.request().method() === "POST" && SUBSTITUTIONS_RE.test(res.url()),
       );
-      await dialog.getByRole("button", { name: "Speichern" }).click();
+      // Mit gewählter Ersatzperson heißt der Abschluss nach seinem Ergebnis.
+      await dialog
+        .getByRole("button", { name: "Vertretung speichern", exact: true })
+        .click();
       expect((await save2).ok()).toBeTruthy();
       await expect(dialog).toBeHidden({ timeout: 10000 });
       expect(deviationPosts, "Save 2 = genau ein Speicher-POST").toBe(1);
 
-      // Aktualisiertes Soll/Ist/Abwesend-Tripel plus gesetzter Ersatz.
-      await expect(row).toContainText("Soll 1", DATA);
-      await expect(row).toContainText("Ist 1", DATA);
-      await expect(row).toContainText("Abwesend 1", DATA);
+      // Wieder voll besetzt, die abwesende Person bleibt genannt.
+      await expect(row).toContainText("1 von 1 da", DATA);
+      await expect(row).toContainText("abwesend", DATA);
       await expect(row).toContainText(`Ersatzkräfte: ${substituteName}`, DATA);
 
       // --- Deep-Link-Roundtrip: Editor + Verlaufs-Reiter direkt anfahren --
@@ -374,7 +379,9 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
       // belegt, dass die View nach dem Seitenaufruf wieder interaktiv ist.
       await expect(row).toBeVisible(DATA);
       await page
-        .getByLabel(new RegExp(`${target.dd}\\.${target.mm}\\.$`))
+        // Ein Tag mit offenen Lücken nennt sie im vorgelesenen Namen:
+        // „Do 19.11., 2 offene Lücken“.
+        .getByLabel(new RegExp(`${target.dd}\\.${target.mm}\\.(,|$)`))
         .click();
       await expect
         .poll(() => new URL(page.url()).searchParams.get("d"))

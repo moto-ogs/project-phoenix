@@ -187,7 +187,6 @@ export interface ComparedSchool {
   subdomain: string;
   city: string;
   values: Record<string, number> | null;
-  key_date: string | null;
 }
 
 export const ComparedSchoolSchema: z.ZodType<ComparedSchool, unknown> = object<ComparedSchool>({
@@ -197,7 +196,6 @@ export const ComparedSchoolSchema: z.ZodType<ComparedSchool, unknown> = object<C
   subdomain: str,
   city: str,
   values: nullable(rec(num)),
-  key_date: nullable(calendarDate),
 });
 
 /** Go: traegerview.SchoolComparison */
@@ -319,70 +317,6 @@ export const DailyAttendanceSchema: z.ZodType<DailyAttendance, unknown> = object
   summary: DailyAttendanceSummarySchema,
   days: nullable(arr(DailyAttendanceDaySchema)),
   schools: nullable(arr(SchoolDailyAttendanceSchema)),
-});
-
-/** Go: traegerview.KeyDateCount */
-export interface KeyDateCount {
-  period: string | null;
-  key_date: string | null;
-  active_students: number;
-  active_terminals: number;
-  recorded_at: string;
-}
-
-export const KeyDateCountSchema: z.ZodType<KeyDateCount, unknown> = object<KeyDateCount>({
-  period: nullable(calendarDate),
-  key_date: nullable(calendarDate),
-  active_students: safeInt,
-  active_terminals: safeInt,
-  recorded_at: instant,
-});
-
-/** Go: traegerview.SchoolKeyDateCounts */
-export interface SchoolKeyDateCounts {
-  id: string;
-  name: string;
-  slug: string;
-  subdomain: string;
-  city: string;
-  counts: KeyDateCount[] | null;
-}
-
-export const SchoolKeyDateCountsSchema: z.ZodType<SchoolKeyDateCounts, unknown> = object<SchoolKeyDateCounts>({
-  id: int64StringOrNumber,
-  name: str,
-  slug: str,
-  subdomain: str,
-  city: str,
-  counts: nullable(arr(KeyDateCountSchema)),
-});
-
-/** Go: traegerview.KeyDateMonth */
-export interface KeyDateMonth {
-  period: string | null;
-  key_date: string | null;
-  active_students: number;
-  active_terminals: number;
-  schools: number;
-}
-
-export const KeyDateMonthSchema: z.ZodType<KeyDateMonth, unknown> = object<KeyDateMonth>({
-  period: nullable(calendarDate),
-  key_date: nullable(calendarDate),
-  active_students: safeInt,
-  active_terminals: safeInt,
-  schools: safeInt,
-});
-
-/** Go: traegerview.KeyDateCounts */
-export interface KeyDateCounts {
-  schools: SchoolKeyDateCounts[] | null;
-  months: KeyDateMonth[] | null;
-}
-
-export const KeyDateCountsSchema: z.ZodType<KeyDateCounts, unknown> = object<KeyDateCounts>({
-  schools: nullable(arr(SchoolKeyDateCountsSchema)),
-  months: nullable(arr(KeyDateMonthSchema)),
 });
 
 /** Go: traegerview.OccupancyGroup */
@@ -674,12 +608,6 @@ export const routes = {
     portals: ["org"],
     query: ["from", "to"],
     response: success(DailyAttendanceSchema),
-  },
-  "GET /traeger/schools/key-date-counts": {
-    method: "GET",
-    pattern: "/traeger/schools/key-date-counts",
-    portals: ["org"],
-    response: success(KeyDateCountsSchema),
   },
   "GET /traeger/schools/occupancy": {
     method: "GET",

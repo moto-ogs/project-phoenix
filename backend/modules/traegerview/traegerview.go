@@ -167,59 +167,6 @@ type OnSiteStaff interface {
 	OnSiteStaffIDsByTenant(ctx context.Context, schools []int64, at time.Time) (map[int64][]int64, error)
 }
 
-// KeyDateCount is one captured Stichtagszahl of a school (#4673): the
-// actively managed children and the active terminals on the key date of a
-// month. The figures are the rows of the operator billing report (#2791),
-// captured once and never changed; the binding definition of both numbers is
-// "Stichtagszahl" in CONTEXT.md. Period is the month's first day; RecordedAt
-// is a day after KeyDate when the capture ran late.
-type KeyDateCount struct {
-	Period          calendar.Date `json:"period"`
-	KeyDate         calendar.Date `json:"key_date"`
-	ActiveStudents  int           `json:"active_students"`
-	ActiveTerminals int           `json:"active_terminals"`
-	RecordedAt      time.Time     `json:"recorded_at"`
-}
-
-// SchoolKeyDateCount is a KeyDateCount with the school it belongs to.
-type SchoolKeyDateCount struct {
-	SchoolID int64
-	KeyDateCount
-}
-
-// SchoolKeyDateCounts is one school of the Träger with its captured months,
-// newest first. A school captured in no month yet has none.
-type SchoolKeyDateCounts struct {
-	TraegerSchool
-	Counts []KeyDateCount `json:"counts"`
-}
-
-// KeyDateMonth is the sum of one captured month over the schools of the
-// Träger: Schools counts the schools with a row in that month.
-type KeyDateMonth struct {
-	Period          calendar.Date `json:"period"`
-	KeyDate         calendar.Date `json:"key_date"`
-	ActiveStudents  int           `json:"active_students"`
-	ActiveTerminals int           `json:"active_terminals"`
-	Schools         int           `json:"schools"`
-}
-
-// KeyDateCounts are the Stichtagszahlen of every school of the Träger,
-// ordered by name, and the sum of every captured month, newest first.
-type KeyDateCounts struct {
-	Schools []SchoolKeyDateCounts `json:"schools"`
-	Months  []KeyDateMonth        `json:"months"`
-}
-
-// KeyDateCountReads reads the captured Stichtagszahlen of the schools of a
-// Träger at Organisation & Tenancy, the owner of the operator billing report
-// and of the Träger's school set. It joins the projection's administrative
-// transaction; a deactivated, deleted or unknown Träger is
-// ErrTraegerUnavailable.
-type KeyDateCountReads interface {
-	ListTraegerKeyDateCounts(ctx context.Context, organizationID int64) ([]SchoolKeyDateCount, error)
-}
-
 // Traeger is the Träger of the session as the portal shows it in its frame.
 // TestSystem marks a test Träger with invented sample data (#4658).
 type Traeger struct {
@@ -265,9 +212,6 @@ type Ports struct {
 	Present PresentStudents
 	Sick    SickStudents
 	OnSite  OnSiteStaff
-	// KeyDates are the captured Stichtagszahlen of Organisation & Tenancy
-	// (#4673).
-	KeyDates KeyDateCountReads
 	// Enrollments are the waiting children of Enrollment and Alerts the
 	// Träger's thresholds at the settings system, behind the hints of the
 	// dashboard (#4675).
@@ -299,9 +243,6 @@ type Overview interface {
 	// School returns one school of the Träger with its figures. Any other
 	// school is ErrSchoolOutsideTraeger.
 	School(ctx context.Context, organizationID, schoolID int64) (SchoolView, error)
-	// KeyDateCounts returns the captured Stichtagszahlen of every school of
-	// the Träger and the sum of each month (#4673).
-	KeyDateCounts(ctx context.Context, organizationID int64) (KeyDateCounts, error)
 	// SchoolsAlerts returns the hints of every school of the Träger against
 	// the Träger's thresholds (#4675).
 	SchoolsAlerts(ctx context.Context, organizationID int64) (SchoolsAlerts, error)

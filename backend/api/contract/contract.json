@@ -6700,17 +6700,6 @@
     },
     {
       "method": "GET",
-      "pattern": "/traeger/schools/key-date-counts",
-      "portals": [
-        "org"
-      ],
-      "response": {
-        "kind": "ref",
-        "ref": "KeyDateCounts"
-      }
-    },
-    {
-      "method": "GET",
       "pattern": "/traeger/schools/occupancy",
       "portals": [
         "org"
@@ -26752,13 +26741,6 @@
               "kind": "number"
             }
           }
-        },
-        {
-          "name": "key_date",
-          "schema": {
-            "kind": "date",
-            "nullable": true
-          }
         }
       ]
     },
@@ -39550,72 +39532,6 @@
       ]
     },
     {
-      "name": "KeyDateCount",
-      "go_type": "traegerview.KeyDateCount",
-      "fields": [
-        {
-          "name": "period",
-          "schema": {
-            "kind": "date",
-            "nullable": true
-          }
-        },
-        {
-          "name": "key_date",
-          "schema": {
-            "kind": "date",
-            "nullable": true
-          }
-        },
-        {
-          "name": "active_students",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "active_terminals",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "recorded_at",
-          "schema": {
-            "kind": "instant"
-          }
-        }
-      ]
-    },
-    {
-      "name": "KeyDateCounts",
-      "go_type": "traegerview.KeyDateCounts",
-      "fields": [
-        {
-          "name": "schools",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "SchoolKeyDateCounts"
-            }
-          }
-        },
-        {
-          "name": "months",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "KeyDateMonth"
-            }
-          }
-        }
-      ]
-    },
-    {
       "name": "KeyDateDistrict",
       "go_type": "traegerview.KeyDateDistrict",
       "fields": [
@@ -39749,44 +39665,6 @@
         },
         {
           "name": "demand",
-          "schema": {
-            "kind": "int"
-          }
-        }
-      ]
-    },
-    {
-      "name": "KeyDateMonth",
-      "go_type": "traegerview.KeyDateMonth",
-      "fields": [
-        {
-          "name": "period",
-          "schema": {
-            "kind": "date",
-            "nullable": true
-          }
-        },
-        {
-          "name": "key_date",
-          "schema": {
-            "kind": "date",
-            "nullable": true
-          }
-        },
-        {
-          "name": "active_students",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "active_terminals",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "schools",
           "schema": {
             "kind": "int"
           }
@@ -52979,53 +52857,6 @@
           "name": "as_of",
           "schema": {
             "kind": "instant"
-          }
-        }
-      ]
-    },
-    {
-      "name": "SchoolKeyDateCounts",
-      "go_type": "traegerview.SchoolKeyDateCounts",
-      "fields": [
-        {
-          "name": "id",
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "slug",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "subdomain",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "city",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "counts",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "KeyDateCount"
-            }
           }
         }
       ]

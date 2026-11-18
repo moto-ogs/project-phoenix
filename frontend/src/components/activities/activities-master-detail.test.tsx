@@ -205,7 +205,7 @@ describe("ActivitiesMasterDetail", () => {
       />,
     );
 
-    expect(screen.getByText("Hauptbetreuer")).toBeInTheDocument();
+    expect(screen.getByText("Hauptbetreuung")).toBeInTheDocument();
     expect(screen.getByText("Herr Fischer")).toBeInTheDocument();
   });
 

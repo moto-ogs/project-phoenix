@@ -538,7 +538,7 @@ describe("PayrollPage Versand an das Lohnbüro (#4805)", () => {
     expect(screen.getByText("Nicht zustellbar")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Die Mail kam nicht an. Prüfe oben die E-Mail-Adresse des Lohnbüros. Die Monatsdatei findest du unter Mitarbeiter im Reiter Zeitkonten bei „Exportieren“.",
+        "Die Mail kam nicht an. Prüfe oben die E-Mail-Adresse des Lohnbüros. Die Monatsdatei findest du unter Mitarbeitende im Reiter Zeitkonten bei „Exportieren“.",
       ),
     ).toBeInTheDocument();
   });

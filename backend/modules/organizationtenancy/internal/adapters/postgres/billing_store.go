@@ -61,9 +61,9 @@ ORDER BY school.id`
 const insertBillingKeyDateCountsSQL = `SELECT platform.capture_billing_key_date_counts(
  ?::bigint[], ?::text[], ?::text[], ?::text[], ?::text[], ?::integer[], ?::integer[])`
 
-// billingKeyDateCountColumns are the columns of a captured row. The operator
-// report and the Träger-Portal's read (#4673) select the same columns and map
-// them through billingKeyDateCountRow, so both show the same numbers.
+// billingKeyDateCountColumns are the columns of a captured row the operator
+// report reads through billingKeyDateCountRow. Only the operator sees them
+// (#7301).
 const billingKeyDateCountColumns = `school_id, school_name, organization_name,
   period::text AS period, key_date::text AS key_date,
   active_students, active_terminals, recorded_at`

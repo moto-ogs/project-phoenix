@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -9,30 +8,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
-
-// captureKeyDate writes the Stichtagszahl of school on keyDate, as the
-// monthly capture of the operator billing report does. The table holds no
-// tenant, so the row goes again when the test ends.
-func captureKeyDate(t *testing.T, db *bun.DB, school int64, keyDate calendar.Date, active int) {
-	t.Helper()
-	period := calendar.NewDate(keyDate.Year(), keyDate.Month(), 1)
-	_, err := db.ExecContext(context.Background(), `INSERT INTO platform.billing_key_date_counts
-		(school_id, period, key_date, school_name, organization_name, active_students, active_terminals)
-		VALUES (?, ?, ?, 'Schule', 'Träger', ?, 1)`, school, period, keyDate, active)
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		_, err := db.ExecContext(context.Background(), `DELETE FROM platform.billing_key_date_counts WHERE school_id = ?`, school)
-		assert.NoError(t, err)
-	})
-}
 
 func comparedSchool(t *testing.T, got traegerview.SchoolComparison, school int64) traegerview.ComparedSchool {
 	t.Helper()
@@ -66,10 +47,11 @@ func TestTraegerComparisonComparesTheChosenSchools(t *testing.T) {
 	presence.checkIn(anna.ID, day)
 	presence.checkIn(ben.ID, day)
 	presence.checkIn(anna.ID, day.AddDays(1))
-	captureKeyDate(t, db, bach, day.AddDays(1), 31)
-	captureKeyDate(t, db, linden, calendar.NewDate(2026, 5, 15), 12) // before the window
 
 	cem := testpkg.CreateTestStudentForTenant(t, db, linden, "Cem", "Vergleich", "2b")
+	// Dana is managed but booked on no offering: she counts as an active
+	// child, not as a booked one.
+	testpkg.CreateTestStudentForTenant(t, db, linden, "Dana", "Vergleich", "2b")
 	lindenBookings := newOccupancyBookings(t, db, linden)
 	lindenBookings.book(cem.ID, lindenBookings.offering("Frühbetreuung", true, 0), "approved", nil, nil)
 
@@ -98,11 +80,11 @@ func TestTraegerComparisonComparesTheChosenSchools(t *testing.T) {
 	assert.InDelta(t, 0, am[traegerview.ComparisonBookedChange], 1e-9)
 	assert.InDelta(t, 1.5, am[traegerview.ComparisonPresent], 1e-9, "two check-ins, then one; Friday has none")
 	assert.InDelta(t, 2, am[traegerview.ComparisonPresentPeak], 1e-9)
-	assert.InDelta(t, 31, am[traegerview.ComparisonActiveStudents], 1e-9)
+	assert.InDelta(t, 2, am[traegerview.ComparisonActiveStudents], 1e-9, "the roster of the window's last day, not a billing figure (#7301)")
 
 	lindenRow := comparedSchool(t, got, linden)
 	assert.NotContains(t, lindenRow.Values, traegerview.ComparisonPlaces, "no limited offering: no places, not 0")
-	assert.NotContains(t, lindenRow.Values, traegerview.ComparisonActiveStudents, "a key date before the window does not count")
+	assert.InDelta(t, 2, lindenRow.Values[traegerview.ComparisonActiveStudents], 1e-9, "an unbooked child still counts as active")
 	assert.NotContains(t, lindenRow.Values, traegerview.ComparisonPresent)
 	assert.InDelta(t, 1, lindenRow.Values[traegerview.ComparisonBooked], 1e-9)
 	assert.InDelta(t, 1.5, got.Average[traegerview.ComparisonBooked], 1e-9)
@@ -121,11 +103,11 @@ func TestTraegerComparisonComparesTheChosenSchools(t *testing.T) {
 	assert.Contains(t, export.Header().Get("Content-Disposition"), fmt.Sprintf("standortvergleich-%s-bis-%s.csv", day, utilizationFriday))
 	csv := strings.TrimPrefix(export.Body.String(), "\xEF\xBB\xBF")
 	for _, line := range []string{
-		"Schule;Ort;Plätze belegt (%);Kinder gebucht (Ø je Tag);Aktive Kinder am Stichtag",
-		"OGS Am Bach;;50,0;2,0;31",
-		"OGS Lindenweg;;;1,0;",
-		"Schnitt je Schule;;50,0;1,5;31",
-		"Alle zusammen;;50,0;3,0;31",
+		"Schule;Ort;Plätze belegt (%);Kinder gebucht (Ø je Tag);Aktive Kinder am letzten Tag",
+		"OGS Am Bach;;50,0;2,0;2",
+		"OGS Lindenweg;;;1,0;2",
+		"Schnitt je Schule;;50,0;1,5;2",
+		"Alle zusammen;;50,0;3,0;4",
 	} {
 		assert.Contains(t, csv, line+"\n")
 	}
@@ -144,6 +126,14 @@ func TestTraegerComparisonComparesTheChosenSchools(t *testing.T) {
 		rec := traegerOccupancyRequest(t, router, path, answer.AccessToken, nil)
 		assert.Equal(t, status, rec.Code, "%s: %s", path, rec.Body.String())
 		assert.NotContains(t, rec.Body.String(), "Fremd", path)
+	}
+
+	// #7301: moto's billing figures stay in the operator portal; the old
+	// Träger paths fall through to the school routes and answer no figures.
+	for _, path := range []string{"/traeger/schools/key-date-counts", "/traeger/schools/key-date-counts/export"} {
+		rec := traegerOccupancyRequest(t, router, path, answer.AccessToken, nil)
+		assert.GreaterOrEqual(t, rec.Code, http.StatusBadRequest, "%s: %s", path, rec.Body.String())
+		assert.NotContains(t, rec.Body.String(), "active_terminals", path)
 	}
 
 	// Leitung holds no "Berichte lesen": neither the comparison nor the export.
@@ -169,7 +159,6 @@ func TestTraegerComparisonQueryBudget(t *testing.T) {
 		bookings := newOccupancyBookings(t, db, school)
 		bookings.book(child.ID, bookings.offering("OGS", true, 10), "approved", nil, nil)
 		newUtilizationPresence(t, db, school).checkIn(child.ID, day)
-		captureKeyDate(t, db, school, day, 1)
 	}
 	for _, name := range []string{"OGS Eins", "OGS Zwei", "OGS Drei"} {
 		addSchool(name)

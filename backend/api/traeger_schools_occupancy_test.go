@@ -309,7 +309,7 @@ func TestTraegerOccupancyNeedsTheOverviewRight(t *testing.T) {
 	code, answer := traegerSignIn(t, router, withoutRole.Email, password, 0)
 	require.Equal(t, http.StatusOK, code)
 
-	for _, path := range []string{"/traeger/schools/occupancy", "/traeger/schools/occupancy/export", "/traeger/schools/key-date-counts/export"} {
+	for _, path := range []string{"/traeger/schools/occupancy", "/traeger/schools/occupancy/export"} {
 		rec := traegerOccupancyRequest(t, router, path, answer.AccessToken, nil)
 		assert.Equal(t, http.StatusForbidden, rec.Code, path+": "+rec.Body.String())
 		assert.NotContains(t, rec.Body.String(), "OGS Belegung Ohne Recht")

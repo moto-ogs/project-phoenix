@@ -124,9 +124,10 @@ describe("TraegerStaffProofsPage", () => {
     expect(
       (await screen.findByText("laufen bald ab")).parentElement?.parentElement,
     ).toHaveTextContent("1 abgelaufen, 1 fehlen, 1 laufen bald ab");
+    // Der Name öffnet die Akte im Reiter „Nachweise“ (#7414).
     expect(
-      screen.getByRole("link", { name: "Sommer, Mira" }),
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: "Sommer, Mira" }).getAttribute("href"),
+    ).toMatch(/\/personal\/\d+\?tab=nachweise$/);
     expect(
       screen.getByRole("link", { name: "Keller, Mira" }),
     ).toBeInTheDocument();

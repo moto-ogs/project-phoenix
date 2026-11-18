@@ -1,114 +1,22 @@
-# Host, backup and database-pool alerting. Created in the Grafana UI and
+# Host and database-pool alerting. Created in the Grafana UI and
 # moved to file provisioning on 2026-10-23 with unchanged UIDs, queries and
 # thresholds. Notifications use the default notification policy; contact
 # points stay on the monitoring host because they name recipients.
 
 apiVersion: 1
+# The cron DB dump and its two rules were retired on 2026-11-18 (#7458);
+# docs/operations/daily-backup.md owns backup alerting now.
+deleteRules:
+  - orgId: 1
+    uid: dfsla2b54bgg0a
+  - orgId: 1
+    uid: dfsla2b8noa2od
 groups:
   - orgId: 1
     name: Phoenix Infrastructure
     folder: Phoenix Alerts
     interval: 1m
     rules:
-      - uid: dfsla2b54bgg0a
-        title: Production Backup Missing
-        condition: C
-        data:
-          - refId: A
-            relativeTimeRange:
-              from: 93600
-              to: 0
-            datasourceUid: P8E80F9AEF21F6940
-            model:
-              expr: count_over_time({env="prod", service="backup"} |= "Backup complete"
-                [26h])
-              instant: true
-              intervalMs: 1000
-              maxDataPoints: 43200
-              refId: A
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              expression: A
-              intervalMs: 1000
-              maxDataPoints: 43200
-              reducer: last
-              refId: B
-              type: reduce
-          - refId: C
-            datasourceUid: __expr__
-            model:
-              conditions:
-                - evaluator:
-                    params:
-                      - 1
-                    type: lt
-                  operator:
-                    type: and
-                  reducer:
-                    type: last
-              expression: B
-              intervalMs: 1000
-              maxDataPoints: 43200
-              refId: C
-              type: threshold
-        noDataState: Alerting
-        execErrState: Alerting
-        annotations:
-          summary: No successful production DB backup in the last 26 hours. Check
-            /var/log/phoenix-backup.log and cron on the server.
-        labels:
-          severity: critical
-        isPaused: false
-      - uid: dfsla2b8noa2od
-        title: Backup Failed
-        condition: C
-        data:
-          - refId: A
-            relativeTimeRange:
-              from: 1800
-              to: 0
-            datasourceUid: P8E80F9AEF21F6940
-            model:
-              expr: count_over_time({service="backup"} |= "Backup FAILED" [30m])
-              instant: true
-              intervalMs: 1000
-              maxDataPoints: 43200
-              refId: A
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              expression: A
-              intervalMs: 1000
-              maxDataPoints: 43200
-              reducer: last
-              refId: B
-              type: reduce
-          - refId: C
-            datasourceUid: __expr__
-            model:
-              conditions:
-                - evaluator:
-                    params:
-                      - 0
-                    type: gt
-                  operator:
-                    type: and
-                  reducer:
-                    type: last
-              expression: B
-              intervalMs: 1000
-              maxDataPoints: 43200
-              refId: C
-              type: threshold
-        noDataState: OK
-        execErrState: OK
-        annotations:
-          summary: A DB backup run reported failure. Check /var/log/phoenix-backup*.log
-            on the server.
-        labels:
-          severity: high
-        isPaused: false
       - uid: ffsla2bbkk0lcb
         title: Host Disk Space Low
         condition: C

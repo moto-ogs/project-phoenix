@@ -139,7 +139,7 @@ function renderEditor(opts: RenderOptions = {}) {
 }
 
 function markAbsent() {
-  fireEvent.click(screen.getByRole("button", { name: /als abwesend/ }));
+  fireEvent.click(screen.getByRole("button", { name: /: Abwesend melden$/ }));
 }
 
 function chooseScope(name: "Alle noch offenen Termine" | "Bestimmte Termine") {
@@ -184,28 +184,40 @@ describe("SubstitutionSlideOver", () => {
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
   });
 
-  describe("Radio-Zweige (Absage-Exklusivität)", () => {
-    it("blendet die Besetzungs-Kontrollen aus, sobald 'Block absagen' gewählt ist, und wieder ein", () => {
+  describe("Aktionswahl (Absage-Exklusivität)", () => {
+    it("blendet die Besetzungs-Kontrollen aus, sobald 'Absage' gewählt ist, und wieder ein", () => {
       renderEditor();
 
       // Zweig A (Default): Personenliste sichtbar, kein Absage-Grund.
       expect(screen.getByText("Anna Alt")).toBeInTheDocument();
       expect(
-        screen.getByRole("radio", { name: /Besetzung bearbeiten/ }),
-      ).toBeChecked();
+        screen.getByRole("button", { name: "Besetzung bearbeiten" }),
+      ).toHaveAttribute("aria-pressed", "true");
+      // Der Abschluss heißt nach seinem Ergebnis (#7493).
+      expect(
+        screen.getByRole("button", { name: "Speichern" }),
+      ).toBeInTheDocument();
 
       // Zweig B: Personenliste weg, Absage-Grund da.
-      fireEvent.click(screen.getByRole("radio", { name: /Block absagen/ }));
+      fireEvent.click(screen.getByRole("button", { name: "Termin absagen" }));
       expect(screen.queryByText("Anna Alt")).not.toBeInTheDocument();
-      expect(screen.getByText(/Der Termin wird abgesagt/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Der Termin wird nur an diesem Tag abgesagt/),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Jetzt absagen" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Speichern" }),
+      ).not.toBeInTheDocument();
 
       // Zurück zu Zweig A: Personenliste wieder da, Absage-Grund weg.
       fireEvent.click(
-        screen.getByRole("radio", { name: /Besetzung bearbeiten/ }),
+        screen.getByRole("button", { name: "Besetzung bearbeiten" }),
       );
       expect(screen.getByText("Anna Alt")).toBeInTheDocument();
       expect(
-        screen.queryByText(/Der Termin wird abgesagt/),
+        screen.queryByText(/Der Termin wird nur an diesem Tag abgesagt/),
       ).not.toBeInTheDocument();
     });
   });
@@ -244,7 +256,9 @@ describe("SubstitutionSlideOver", () => {
       });
       pickSubstitute("Vertretung für Anna Alt", "Bernd Neu");
 
-      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Vertretung speichern" }),
+      );
 
       await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
       expect(onApply).toHaveBeenCalledWith({
@@ -306,7 +320,9 @@ describe("SubstitutionSlideOver", () => {
       markAbsent();
       chooseScope("Alle noch offenen Termine");
       pickSubstitute("Vertretung für Anna Alt", "Bernd Neu");
-      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Vertretung speichern" }),
+      );
 
       expect(
         await screen.findByText(
@@ -361,8 +377,9 @@ describe("SubstitutionSlideOver", () => {
       );
       renderEditor({ onApply });
 
-      fireEvent.click(screen.getByRole("radio", { name: /Block absagen/ }));
-      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      fireEvent.click(screen.getByRole("button", { name: "Termin absagen" }));
+      // Der Abschluss nennt sein Ergebnis (#7493).
+      fireEvent.click(screen.getByRole("button", { name: "Jetzt absagen" }));
 
       expect(
         await screen.findByText(
@@ -427,7 +444,9 @@ describe("SubstitutionSlideOver", () => {
         screen.getByRole("checkbox", { name: /11:00.*Lernzeit/ }),
       );
       pickSubstitute("Vertretung für Anna Alt", "Bernd Neu");
-      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Vertretung speichern" }),
+      );
 
       await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
       expect(onApply).toHaveBeenCalledWith({
@@ -457,7 +476,9 @@ describe("SubstitutionSlideOver", () => {
         }),
       );
       pickSubstitute("Vertretung für Anna Alt", "Bernd Neu");
-      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Vertretung speichern" }),
+      );
 
       await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
       expect(onApply).toHaveBeenCalledWith({
@@ -521,11 +542,11 @@ describe("SubstitutionSlideOver", () => {
       });
 
       fireEvent.click(
-        screen.getByRole("button", { name: "Anna Alt als abwesend markieren" }),
+        screen.getByRole("button", { name: "Anna Alt: Abwesend melden" }),
       );
       fireEvent.click(
         screen.getByRole("button", {
-          name: "Carla Klar als abwesend markieren",
+          name: "Carla Klar: Abwesend melden",
         }),
       );
       fireEvent.click(document.getElementById("vp-scope-all-11")!);
@@ -617,7 +638,9 @@ describe("SubstitutionSlideOver", () => {
       screen.getByRole("combobox", { name: "Vertretung für Anna Alt" }),
     ).toBeEnabled();
     pickSubstitute("Vertretung für Anna Alt", "Bernd Neu");
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Vertretung speichern" }),
+    );
 
     await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
     expect(onApply).toHaveBeenCalledWith({
@@ -647,7 +670,9 @@ describe("SubstitutionSlideOver", () => {
 
     chooseScope("Alle noch offenen Termine");
     pickSubstitute("Vertretung für Anna Alt", "Bernd Neu");
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Vertretung speichern" }),
+    );
 
     await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
     expect(onApply).toHaveBeenCalledWith({
@@ -821,7 +846,9 @@ describe("SubstitutionSlideOver", () => {
 
     chooseSubstituteAction("Bernd Neu", "Entfernen");
     pickSubstitute("Vertretung für Anna Alt", "Carla Klar");
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Vertretung speichern" }),
+    );
 
     await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
     expect(onApply).toHaveBeenCalledWith({
@@ -1053,7 +1080,7 @@ describe("SubstitutionSlideOver", () => {
         });
 
         expect(
-          screen.queryByRole("button", { name: "Dieser Block" }),
+          screen.queryByRole("button", { name: "Dieser Termin" }),
         ).not.toBeInTheDocument();
         // Nur der Tages-Scope existiert → Datum-Chip.
         expect(screen.getByText("13.07.2026")).toBeInTheDocument();

@@ -207,7 +207,9 @@ describe("StaffImportPage", () => {
 
     expect(screen.getByText("Import-Anleitung")).toBeInTheDocument();
     expect(
-      screen.getByText(/Fülle die Datei mit deinen Mitarbeiterdaten aus/),
+      screen.getByText(
+        /Fülle die Datei mit den Daten deiner Mitarbeitenden aus/,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -397,7 +399,7 @@ describe("StaffImportPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("5 Mitarbeiter bereit zum Import"),
+        screen.getByText("5 Mitarbeitende bereit zum Import"),
       ).toBeInTheDocument();
     });
   });
@@ -421,7 +423,7 @@ describe("StaffImportPage", () => {
     fireEvent.click(screen.getByTestId("file-select-trigger"));
 
     await waitFor(() => {
-      expect(screen.getByText("4 Mitarbeiter anlegen")).toBeInTheDocument();
+      expect(screen.getByText("4 Mitarbeitende anlegen")).toBeInTheDocument();
     });
   });
 
@@ -504,7 +506,7 @@ describe("StaffImportPage", () => {
     fireEvent.click(screen.getByTestId("file-select-trigger"));
 
     await waitFor(() => {
-      const inviteButton = screen.getByText("0 Mitarbeiter anlegen");
+      const inviteButton = screen.getByText("0 Mitarbeitende anlegen");
       expect(inviteButton).toBeDisabled();
     });
   });
@@ -571,10 +573,10 @@ describe("StaffImportPage", () => {
     fireEvent.click(screen.getByTestId("file-select-trigger"));
 
     await waitFor(() => {
-      expect(screen.getByText("3 Mitarbeiter anlegen")).toBeInTheDocument();
+      expect(screen.getByText("3 Mitarbeitende anlegen")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText("3 Mitarbeiter anlegen"));
+    fireEvent.click(screen.getByText("3 Mitarbeitende anlegen"));
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
@@ -637,10 +639,10 @@ describe("StaffImportPage", () => {
     fireEvent.click(screen.getByTestId("file-select-trigger"));
 
     await waitFor(() => {
-      expect(screen.getByText("3 Mitarbeiter anlegen")).toBeInTheDocument();
+      expect(screen.getByText("3 Mitarbeitende anlegen")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText("3 Mitarbeiter anlegen"));
+    fireEvent.click(screen.getByText("3 Mitarbeitende anlegen"));
 
     await waitFor(() => {
       expect(mockToast.warning).toHaveBeenCalledWith(
@@ -675,10 +677,10 @@ describe("StaffImportPage", () => {
     fireEvent.click(screen.getByTestId("file-select-trigger"));
 
     await waitFor(() => {
-      expect(screen.getByText("2 Mitarbeiter anlegen")).toBeInTheDocument();
+      expect(screen.getByText("2 Mitarbeitende anlegen")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText("2 Mitarbeiter anlegen"));
+    fireEvent.click(screen.getByText("2 Mitarbeitende anlegen"));
 
     expect(
       await screen.findByText(
@@ -744,9 +746,9 @@ describe("StaffImportPage", () => {
     fireEvent.click(screen.getByTestId("file-select-trigger"));
 
     await waitFor(() => {
-      expect(screen.getByText("205 Mitarbeiter anlegen")).toBeInTheDocument();
+      expect(screen.getByText("205 Mitarbeitende anlegen")).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByText("205 Mitarbeiter anlegen"));
+    fireEvent.click(screen.getByText("205 Mitarbeitende anlegen"));
 
     // A batch that stopped after saved rows is a failure of the import:
     // it stands in the form's error alert, not in a warning (#2520).
@@ -852,9 +854,9 @@ describe("StaffImportPage", () => {
     render(<StaffImportPage />);
     fireEvent.click(screen.getByTestId("file-select-trigger"));
     await waitFor(() => {
-      expect(screen.getByText("205 Mitarbeiter anlegen")).toBeInTheDocument();
+      expect(screen.getByText("205 Mitarbeitende anlegen")).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByText("205 Mitarbeiter anlegen"));
+    fireEvent.click(screen.getByText("205 Mitarbeitende anlegen"));
     await waitFor(() => {
       expect(
         screen.getByRole("button", { name: "Erneut versuchen" }),
@@ -863,9 +865,9 @@ describe("StaffImportPage", () => {
 
     fireEvent.click(screen.getByTestId("file-select-trigger"));
     await waitFor(() => {
-      expect(screen.getByText("105 Mitarbeiter anlegen")).toBeInTheDocument();
+      expect(screen.getByText("105 Mitarbeitende anlegen")).toBeInTheDocument();
     });
-    expect(screen.getByText("105 Mitarbeiter anlegen")).toBeEnabled();
+    expect(screen.getByText("105 Mitarbeitende anlegen")).toBeEnabled();
     expect(screen.getByTestId("stat-new")).toHaveTextContent("105");
     expect(screen.getByTestId("stat-existing")).toHaveTextContent("100");
     expect(screen.getByTestId("stat-errors")).toHaveTextContent("0");
@@ -937,9 +939,7 @@ describe("StaffImportPage", () => {
     });
 
     render(<StaffImportPage />);
-    expect(
-      screen.getByLabelText("Mitarbeiter-Import wird geladen…"),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Import wird geladen…")).toBeInTheDocument();
   });
 
   it("handles a stripped session gracefully", async () => {
@@ -995,12 +995,12 @@ describe("StaffImportPage", () => {
         screen.queryByRole("button", { name: "Nur bestehende aktualisieren" }),
       ).not.toBeInTheDocument();
       expect(
-        screen.getByText(/legt der Import nur neue Mitarbeiter an/),
+        screen.getByText(/legt der Import nur neue Mitarbeitende an/),
       ).toBeInTheDocument();
 
       fireEvent.click(screen.getByTestId("file-select-trigger"));
       await waitFor(() => {
-        expect(screen.getByText("1 Mitarbeiter anlegen")).toBeInTheDocument();
+        expect(screen.getByText("1 Mitarbeitende anlegen")).toBeInTheDocument();
       });
       const previewCall = (
         global.fetch as ReturnType<typeof vi.fn>
@@ -1036,7 +1036,9 @@ describe("StaffImportPage", () => {
     fireEvent.click(screen.getByTestId("file-select-trigger"));
 
     await waitFor(() => {
-      expect(screen.getByText("3 Mitarbeiter übernehmen")).toBeInTheDocument();
+      expect(
+        screen.getByText("3 Mitarbeitende übernehmen"),
+      ).toBeInTheDocument();
     });
     const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
     const previewCall = fetchMock.mock.calls.find(
@@ -1051,7 +1053,7 @@ describe("StaffImportPage", () => {
       screen.getByRole("button", { name: "Nur bestehende aktualisieren" }),
     );
     expect(
-      screen.queryByText("3 Mitarbeiter übernehmen"),
+      screen.queryByText("3 Mitarbeitende übernehmen"),
     ).not.toBeInTheDocument();
     await waitFor(() => {
       const calls = fetchMock.mock.calls.filter(
@@ -1061,6 +1063,8 @@ describe("StaffImportPage", () => {
       const secondInit = calls[1]![1] as { body: FormData };
       expect(secondInit.body.get("mode")).toBe("update");
     });
-    expect(screen.getByText("2 Mitarbeiter aktualisieren")).toBeInTheDocument();
+    expect(
+      screen.getByText("2 Mitarbeitende aktualisieren"),
+    ).toBeInTheDocument();
   });
 });

@@ -6,7 +6,6 @@ import { ApiError } from "~/lib/api-error";
 import { SWRConfig, useSWRConfig } from "~/lib/swr/testing";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { SWRScopeBoundary } from "~/lib/swr/scope-boundary";
-import { useTraegerKeyDateCounts } from "./use-traeger-key-date-counts";
 import { useTraegerSchool } from "./use-traeger-school";
 import { useTraegerSchoolsAlerts } from "./use-traeger-schools-alerts";
 
@@ -18,14 +17,12 @@ vi.unmock("swr");
 const { fetchers, sessionState } = vi.hoisted(() => ({
   fetchers: {
     alerts: vi.fn(),
-    counts: vi.fn(),
     school: vi.fn(),
   },
   sessionState: { data: null as Session | null },
 }));
 vi.mock("~/lib/traeger-api", () => ({
   fetchTraegerSchoolsAlerts: fetchers.alerts,
-  fetchTraegerKeyDateCounts: fetchers.counts,
   fetchTraegerSchool: fetchers.school,
 }));
 vi.mock("~/lib/tenant-context", () => ({ useTenantSlugSafe: () => null }));
@@ -73,15 +70,6 @@ const CASES: readonly Case[] = [
     read: () => {
       const { alerts, reload } = useTraegerSchoolsAlerts();
       return { data: alerts, reload: async () => reload() };
-    },
-  },
-  {
-    name: "useTraegerKeyDateCounts",
-    fetcher: fetchers.counts,
-    key: traegerKeys.keyDateCounts(),
-    read: () => {
-      const { counts, reload } = useTraegerKeyDateCounts();
-      return { data: counts, reload: async () => reload() };
     },
   },
   {

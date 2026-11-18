@@ -17,9 +17,10 @@ describe("VertretungListFilter", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("button", { name: "Nur Störungen" }),
-    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Lücken" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     expect(
       screen.getByRole("button", { name: "Ganze Woche" }),
     ).toBeInTheDocument();

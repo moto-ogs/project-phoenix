@@ -16,7 +16,6 @@ var window = []common.QueryParam{{Name: "from", Kind: common.QueryDate}, {Name: 
 func SchoolRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []traegerview.TraegerSchool{}},
-		{Method: "GET", Pattern: "/key-date-counts", Portals: traegerPortal, Response: traegerview.KeyDateCounts{}},
 		{Method: "GET", Pattern: "/alerts", Portals: traegerPortal, Response: traegerview.SchoolsAlerts{}},
 		{Method: "GET", Pattern: "/occupancy", Portals: traegerPortal, Response: traegerview.Occupancy{}},
 		{Method: "GET", Pattern: "/utilization", Portals: traegerPortal, Query: window, Response: traegerview.Utilization{}},

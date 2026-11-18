@@ -27,18 +27,18 @@ export function traegerSchoolComparisonTopic(): HelpTopic {
       "„Ø“ ist der Durchschnitt je Tag. Bei „Kinder anwesend“ zählen nur Tage mit Check-ins.",
       "Unter jeder Zahl steht der Abstand zum Schnitt der Schulen, zum Beispiel „12 Punkte über Schnitt“.",
       "Unter den Schulen stehen zwei Zeilen: `Schnitt je Schule` und `Alle zusammen`.",
-      "„Aktive Kinder am Stichtag“ ist dieselbe Zahl wie unter `Stichtagszahlen`. moto nimmt den letzten Stichtag im Zeitraum.",
+      "„Aktive Kinder am letzten Tag“ zählt die Kinder, die die Schule am letzten Tag des Zeitraums aktiv führt.",
       "Die Datei enthält genau die gewählten Schulen und Spalten.",
       "Den Verlauf über die Zeit siehst du unter `Auslastung`.",
     ],
     differences: [
-      "Steht bei einer Schule „–“, fehlt ihr die Zahl im Zeitraum. Das ist so ohne Platzgrenze, ohne Check-in oder ohne Stichtag.",
+      "Steht bei einer Schule „–“, fehlt ihr die Zahl im Zeitraum. Das ist so ohne Platzgrenze oder ohne Check-in.",
       "Steht `Bei einer Schule gibt es Check-ins erst ab …`, zählt „Kinder anwesend“ dort nur die Tage danach.",
       "Bei `Alle zusammen` fehlt „Höchstens anwesend“. Die vollsten Tage der Schulen liegen an verschiedenen Tagen.",
     ],
     image: "/help/screens/traeger-standortvergleich.webp",
     imageAlt:
       "Die Seite Standortvergleich: oben Zeitraum und Schulen, darunter vier Kennzahlen, die Rangfolge als liegende Balken und die Tabelle je Schule.",
-    related: [HELP_TOPICS.traegerUtilization, HELP_TOPICS.traegerKeyDateCounts],
+    related: [HELP_TOPICS.traegerUtilization, HELP_TOPICS.traegerReports],
   };
 }

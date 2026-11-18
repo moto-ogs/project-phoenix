@@ -25,6 +25,7 @@ export function traegerStaffPoolTopic(): HelpTopic {
         title: "Eine Person zum Springer machen",
         steps: [
           "Öffne `Personalakten` und dort die Akte der Person.",
+          "Öffne den Reiter `Verträge und Zeit`.",
           "Lege einen Arbeitsvertrag an, oder wähle beim Vertrag `Vertrag ändern`.",
           "Schalte `Vertretungspool` ein und speichere.",
         ],

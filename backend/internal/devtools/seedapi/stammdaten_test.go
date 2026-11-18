@@ -161,6 +161,40 @@ func TestFixedSeeder_SeedStaff(t *testing.T) {
 	assert.Len(t, fs.staffIDs, len(DemoStaff))
 }
 
+// The demo staff carry a gender in their Stammdaten, so the staff list shows
+// „Betreuerin“; the visitor's own record stays without one.
+func TestFixedSeeder_SeedStaffWritesTheDemoGender(t *testing.T) {
+	t.Parallel()
+
+	genders := map[string]any{}
+	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == seedHTTPMethodPut {
+			var body map[string]any
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			genders[fmt.Sprintf("%s %s", body["first_name"], body["last_name"])] = body["gender"]
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"id": "7"}})
+	})
+	defer srv.Close()
+
+	client := newTestClient(srv.URL, false)
+	client.token = "test-token"
+	fs := NewFixedSeeder(client, false, "")
+	fs.visitor = visitorName{first: "Jule", last: "Soll"}
+	for _, staff := range DemoStaff {
+		fs.personIDs[staff.FirstName+" "+staff.LastName] = 1
+	}
+	require.NoError(t, fs.seedStaffWithGenders(context.TODO(), &FixedResult{}))
+
+	assert.Equal(t, "male", genders["Berken Hawleri"])
+	assert.Equal(t, "female", genders["Jana Krüger"])
+	assert.NotContains(t, genders, "Mai Pham", "an unstated gender writes nothing")
+	assert.NotContains(t, genders, "Jule Soll", "the visitor's gender is not guessed")
+	visitor := DemoStaff[visitorStaffIndex]
+	assert.NotContains(t, genders, visitor.FirstName+" "+visitor.LastName)
+}
+
 func TestFixedSeeder_RetireFormerStaffRemovesActiveReferences(t *testing.T) {
 	t.Parallel()
 

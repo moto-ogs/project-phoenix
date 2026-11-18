@@ -1077,7 +1077,7 @@ function LohnbueroCard({
 // Neu senden lässt sich der Link nicht: die Adresse steht oben in dieser
 // Karte, die Datei gibt es im Export der Zeitkonten.
 const LINK_MAIL_NEXT_STEP =
-  "Prüfe oben die E-Mail-Adresse des Lohnbüros. Die Monatsdatei findest du unter Mitarbeiter im Reiter Zeitkonten bei „Exportieren“.";
+  "Prüfe oben die E-Mail-Adresse des Lohnbüros. Die Monatsdatei findest du unter Mitarbeitende im Reiter Zeitkonten bei „Exportieren“.";
 
 function dispatchStateBadge(dispatch: PayrollDispatchView): {
   label: string;

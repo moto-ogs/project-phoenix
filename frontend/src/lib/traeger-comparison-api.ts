@@ -37,8 +37,6 @@ export type ComparisonValues = Readonly<
 
 export interface ComparedSchool extends TraegerSchool {
   readonly values: ComparisonValues;
-  /** The key date of `active_students`, `YYYY-MM-DD`; `null` without one. */
-  readonly keyDate: string | null;
 }
 
 export interface TraegerComparison {
@@ -71,7 +69,6 @@ interface BackendComparison {
         subdomain: string;
         city?: string;
         values?: Record<string, number> | null;
-        key_date: string | null;
       }[]
     | null;
   average?: Record<string, number> | null;
@@ -121,7 +118,6 @@ function comparisonFromBackend(body: BackendComparison): TraegerComparison {
       subdomain: school.subdomain,
       city: school.city ?? "",
       values: knownValues(school.values),
-      keyDate: school.key_date ?? null,
     })),
     average: knownValues(body.average),
     together: knownValues(body.together),

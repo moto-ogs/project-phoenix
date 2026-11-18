@@ -434,5 +434,42 @@ func TestInvitationResetWireContract(t *testing.T) {
 	require.NotContains(t, string(body), "reset_")
 }
 
+// The optional gender travels to the module; empty means unset, and a value
+// outside the Stammdaten vocabulary is a field error before anything is stored.
+func TestInvitationGenderWireContract(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ wire, want string }{{" female ", "female"}, {"male", "male"}, {"diverse", "diverse"}, {"", ""}, {"  ", ""}} {
+		req := CreateInvitationRequest{Email: "invitee@example.com", RoleID: 42, Gender: tc.wire}
+		require.NoError(t, req.Bind(httptest.NewRequest(http.MethodPost, "/auth/invitations", nil)))
+		mapped := (&Resource{}).buildInvitationRequest(httptest.NewRequest(http.MethodPost, "/auth/invitations", nil), &req, testutil.DefaultTestClaims())
+		if tc.want == "" {
+			require.Nil(t, mapped.Gender, "no choice stores no gender")
+			continue
+		}
+		require.NotNil(t, mapped.Gender)
+		require.Equal(t, tc.want, *mapped.Gender)
+	}
+	gender := "female"
+	body, err := json.Marshal(toInvitationResponse(identityaccess.SchoolInvitation{Gender: &gender}))
+	require.NoError(t, err)
+	// The pending list reaches every account with users:list; the gender is
+	// Stammdaten and stays off it.
+	require.Contains(t, string(body), `"id"`, "anchor: the invitation is serialized")
+	require.NotContains(t, string(body), "gender")
+
+	resource := NewResource(nil, &invitationsStub{}, nil, nil, nil, transactionFailures.IsConstraintViolation, unusedTenantSettings{})
+	req := httptest.NewRequest(http.MethodPost, "/auth/invitations", bytes.NewBufferString(`{"email":"invitee@example.com","role_id":"42","gender":"weiblich"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(testutil.WithAuthenticatedContext(req.Context(), testutil.Claims{ID: 1}, nil))
+	rr := httptest.NewRecorder()
+	resource.createInvitation(rr, req)
+	require.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
+	errorBody := decodeJSONBody(t, rr)
+	assert.Equal(t, "general.input", errorBody["code"])
+	errs := errorBody["errors"].([]any)
+	require.Len(t, errs, 1)
+	assert.Equal(t, "gender", errs[0].(map[string]any)["field"])
+}
+
 // Unexpected shell reads panic in invitation-only tests.
 type unusedTenantSettings struct{ settings.TenantReader }

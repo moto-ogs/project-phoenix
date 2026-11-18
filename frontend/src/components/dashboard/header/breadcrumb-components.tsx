@@ -376,7 +376,7 @@ export function StaffDetailBreadcrumb({
           <BreadcrumbLink href={referrer}>Personal</BreadcrumbLink>
         </>
       ) : (
-        <BreadcrumbLink href="/staff">Mitarbeiter</BreadcrumbLink>
+        <BreadcrumbLink href="/staff">Mitarbeitende</BreadcrumbLink>
       )}
       <BreadcrumbSeparator />
       <BreadcrumbCurrent>{staffName}</BreadcrumbCurrent>

@@ -81,6 +81,18 @@ das Grußwort deutscher E-Mails („Liebe“/„Lieber“ mit Vornamen); ohne An
 bleibt die Begrüßung neutral. Das
 Feld gehört zum Elternkontakt und wird mit ihm zurückgegeben und gelöscht.
 
+Migration 20261118175055 ergänzt `auth.invitation_tokens.gender`: das
+Geschlecht, das die Schule beim Einladen von Personal freiwillig einträgt
+(`female`, `male`, `diverse`, leer = keine Angabe). Die Annahme schreibt es mit
+Prüfvermerk in `users.staff_master_data.gender`; danach gilt nur die
+Stammdatenangabe. Beim Anlegen einer externen Person (`POST
+/api/staff/externals`) geht die freiwillige Angabe ohne Zwischenspeicher direkt
+mit Prüfvermerk in die Stammdaten. Die Personalliste zeigt daraus die Form der Position
+(„Betreuerin“/„Betreuer“, sonst „Betreuer:in“); an alle Kolleginnen und
+Kollegen geht nur diese Form (`role_form`), nicht das Geschlecht selbst, und
+„divers“ bleibt in der Liste von „keine Angabe“ nicht unterscheidbar. Die
+Spalte gehört zur Einladung und wird mit ihr zurückgegeben und gelöscht.
+
 Migration 1.15.727 ergänzt `platform.realtime_notifications` (#5504): eine
 Kopie eines In-App-Hinweises mit Empfängern, die andere API-Prozesse zwei
 Minuten lang lesen. Bei Eltern-Hinweisen enthält das JSON zusätzlich die

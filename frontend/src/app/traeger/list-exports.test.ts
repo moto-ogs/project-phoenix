@@ -60,7 +60,6 @@ const LIST_EXPORTS: Readonly<Record<string, string>> = {
   "/personal/vertretungspool": "page",
   "/schliesstage": "page",
   "/standortvergleich": "page",
-  "/stichtagszahlen": "page",
   "/tagesmeldung": "page",
   "/uebersicht": "page",
   "/vertraege": "page",

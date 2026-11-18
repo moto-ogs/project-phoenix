@@ -245,16 +245,6 @@ func TestOperatorRoutesBlockAndUnblockADevice(t *testing.T) {
 	assert.Equal(t, 3, slots)
 }
 
-// operatorBillingRoutes mounts the operator's billing routes under
-// /operator over the given report, for the given operator.
-func operatorBillingRoutes(billing organizationtenancy.BillingReport, ctx context.Context, operatorID int64) operatorProvisioningRoutes {
-	operator := chi.NewRouter()
-	mountOperatorBillingRoutes(operator, provisioningAPI.NewBillingResource(billing, nil, nil, time.Now))
-	router := chi.NewRouter()
-	router.Mount("/operator", operator)
-	return operatorProvisioningRoutes{router: router, ctx: ctx, operatorID: operatorID}
-}
-
 // The operator's own profile and the caterer list read and write through
 // Identity & Access under /operator.
 func TestOperatorRoutesReadAndRenameTheProfileAndListCaterers(t *testing.T) {

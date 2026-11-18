@@ -40,9 +40,21 @@ type EmploymentReset struct {
 	WorkTime                bool
 }
 
+// InvitedGender is the Stammdaten gender the school entered on the
+// invitation. The invitee accepts it; InvitationID names the source in the
+// audit note.
+type InvitedGender struct {
+	StaffID      int64
+	InvitationID int64
+	Gender       string
+}
+
 // EmploymentResetCommands joins the school's persisted instruction to the
 // personnel owner. Prepare takes its locks before Membership is revived.
+// ApplyGender writes the invitation's gender into the personnel record with
+// the Stammdaten audit trail, after any reset.
 type EmploymentResetCommands struct {
-	Prepare func(context.Context, EmploymentReset) (*string, error)
-	Execute func(context.Context, EmploymentReset) error
+	Prepare     func(context.Context, EmploymentReset) (*string, error)
+	Execute     func(context.Context, EmploymentReset) error
+	ApplyGender func(context.Context, InvitedGender) error
 }

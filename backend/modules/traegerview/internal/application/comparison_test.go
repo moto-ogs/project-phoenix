@@ -27,13 +27,14 @@ func TestCompareSchoolsDerivesEveryFigureFromTheSeries(t *testing.T) {
 			AttendanceFrom: &late,
 		},
 	}
-	keyDates := []traegerview.SchoolKeyDateCount{
-		{SchoolID: 1, KeyDateCount: traegerview.KeyDateCount{KeyDate: date(t, "2026-10-15"), ActiveStudents: 99}},
-		{SchoolID: 1, KeyDateCount: traegerview.KeyDateCount{KeyDate: date(t, "2026-09-08"), ActiveStudents: 21}},
-		{SchoolID: 1, KeyDateCount: traegerview.KeyDateCount{KeyDate: date(t, "2026-08-15"), ActiveStudents: 18}},
+	// 21 actively managed children of school 1 on the window's last day:
+	// student → membership; only the count matters.
+	roster := map[int64]map[int64]int64{1: {}}
+	for student := range 21 {
+		roster[1][int64(student)+100] = int64(student) + 200
 	}
 
-	got := compareSchools(schools, keyDates, from, to, 3)
+	got := compareSchools(schools, roster, from, to, 3)
 
 	require.Len(t, got.Schools, 2)
 	bach := got.Schools[0].Values
@@ -44,16 +45,15 @@ func TestCompareSchoolsDerivesEveryFigureFromTheSeries(t *testing.T) {
 	assert.InDelta(t, 3, bach[traegerview.ComparisonBookedChange], 1e-9, "19 on the last weekday, 16 on the first")
 	assert.InDelta(t, 13.5, bach[traegerview.ComparisonPresent], 1e-9, "a day without check-ins does not count")
 	assert.InDelta(t, 15, bach[traegerview.ComparisonPresentPeak], 1e-9)
-	assert.InDelta(t, 21, bach[traegerview.ComparisonActiveStudents], 1e-9, "the newest key date inside the window")
-	require.NotNil(t, got.Schools[0].KeyDate)
-	assert.Equal(t, date(t, "2026-09-08"), *got.Schools[0].KeyDate)
+	assert.InDelta(t, 21, bach[traegerview.ComparisonActiveStudents], 1e-9, "the roster of the window's last day")
 
 	linden := got.Schools[1].Values
-	for _, key := range []string{traegerview.ComparisonPlaces, traegerview.ComparisonPlacesRate, traegerview.ComparisonFreePlaces, traegerview.ComparisonActiveStudents} {
-		assert.NotContains(t, linden, key, "%s: no figure without places or a key date, not 0", key)
+	for _, key := range []string{traegerview.ComparisonPlaces, traegerview.ComparisonPlacesRate, traegerview.ComparisonFreePlaces} {
+		assert.NotContains(t, linden, key, "%s: no figure without places, not 0", key)
 	}
+	assert.InDelta(t, 0, linden[traegerview.ComparisonActiveStudents], 1e-9, "an empty roster is a count of 0, not a missing figure")
+	assert.Contains(t, linden, traegerview.ComparisonActiveStudents)
 	assert.InDelta(t, -2, linden[traegerview.ComparisonBookedChange], 1e-9)
-	assert.Nil(t, got.Schools[1].KeyDate)
 
 	assert.InDelta(t, 20, got.Average[traegerview.ComparisonPlaces], 1e-9, "the mean over the schools that have places")
 	assert.InDelta(t, (52.0/3+10.0/3)/2, got.Average[traegerview.ComparisonBooked], 1e-9)
@@ -96,11 +96,12 @@ func TestCompareSchoolsWithOnlyWeekendDaysKeepsPlaces(t *testing.T) {
 	}, nil, from, to, len(days))
 
 	require.Len(t, got.Schools, 3)
-	assert.Equal(t, traegerview.ComparisonValues{traegerview.ComparisonPlaces: 10}, got.Schools[0].Values)
-	assert.Equal(t, traegerview.ComparisonValues{traegerview.ComparisonPlaces: 20}, got.Schools[1].Values)
-	assert.Empty(t, got.Schools[2].Values, "no figure without a place limit")
-	assert.Equal(t, traegerview.ComparisonValues{traegerview.ComparisonPlaces: 15}, got.Average)
-	assert.Equal(t, traegerview.ComparisonValues{traegerview.ComparisonPlaces: 30}, got.Together)
+	active := traegerview.ComparisonActiveStudents
+	assert.Equal(t, traegerview.ComparisonValues{traegerview.ComparisonPlaces: 10, active: 0}, got.Schools[0].Values)
+	assert.Equal(t, traegerview.ComparisonValues{traegerview.ComparisonPlaces: 20, active: 0}, got.Schools[1].Values)
+	assert.Equal(t, traegerview.ComparisonValues{active: 0}, got.Schools[2].Values, "no place figure without a place limit")
+	assert.Equal(t, traegerview.ComparisonValues{traegerview.ComparisonPlaces: 15, active: 0}, got.Average)
+	assert.Equal(t, traegerview.ComparisonValues{traegerview.ComparisonPlaces: 30, active: 0}, got.Together)
 }
 
 func TestComparisonScopeKeepsOnlySchoolsOfTheTraeger(t *testing.T) {

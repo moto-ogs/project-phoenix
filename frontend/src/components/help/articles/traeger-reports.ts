@@ -43,7 +43,7 @@ export function traegerReportsTopic(): HelpTopic {
       },
     ],
     notes: [
-      "„Kinder“ zählt die Kinder, die die Schule am Stichtag aktiv führt. Das ist dieselbe Zählung wie bei den Stichtagszahlen.",
+      "„Kinder“ zählt die Kinder, die die Schule am Stichtag aktiv führt. Das ist dieselbe Zählung wie bei der Belegung, nur für den gewählten Tag.",
       "„Fehlzeiten“ zählt Tage vom 1. August bis zum Stichtag. Gezählt werden nur Montag bis Freitag und nur Tage, an denen die Schule Check-ins hat. Ferien und Feiertage zählen also nicht.",
       "„Offen“ und „Warteliste“ zeigen immer den Stand von heute, auch bei einem früheren Stichtag.",
       "„Nachfrage“ sind gebuchte Kinder, offene Anmeldungen und Warteliste zusammen.",
@@ -57,10 +57,6 @@ export function traegerReportsTopic(): HelpTopic {
     image: "/help/screens/traeger-berichte.webp",
     imageAlt:
       "Die Seite Berichte: oben Stichtag und Vorlage, darunter Kennzahlen und die Tabelle der Kinder je Schule.",
-    related: [
-      HELP_TOPICS.traegerKeyDateCounts,
-      HELP_TOPICS.traegerOccupancy,
-      HELP_TOPICS.traegerUtilization,
-    ],
+    related: [HELP_TOPICS.traegerOccupancy, HELP_TOPICS.traegerUtilization],
   };
 }
