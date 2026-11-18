@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -98,17 +99,19 @@ func TestClosingDayReachesTheBellOfTheSchoolsTraegerOnly(t *testing.T) {
 	testpkg.CreateTestTraegerMember(t, db, own, departing.ID, identityaccess.TraegerRoleReadOnly)
 	testpkg.CreateTestTraegerMember(t, db, own, leitung.accountID, identityaccess.TraegerRoleAdministration)
 	testpkg.CreateTestTraegerMember(t, db, foreign, stranger.ID, identityaccess.TraegerRoleReadOnly)
+	// The Delivery notifier stamps feed entries with time.Now.
+	older := time.Now().Add(-time.Hour)
 	_, err := db.ExecContext(context.Background(), `INSERT INTO platform.notification_feed_entries
 		(tenant_id, account_id, type, title, body, deep_link, related_type, related_id, created_at, updated_at)
-		VALUES (?, ?, ?, 'Schließtag geändert', '', '/traeger/schulen/1', 'closing_day', 1, NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 hour')`,
-		sister, office.ID, deliveryContract.NotificationTraegerSchoolClosingDayChanged)
+		VALUES (?, ?, ?, 'Schließtag geändert', '', '/traeger/schulen/1', 'closing_day', 1, ?, ?)`,
+		sister, office.ID, deliveryContract.NotificationTraegerSchoolClosingDayChanged, older, older)
 	require.NoError(t, err)
 	// An entry of another Träger's school for the same account never reaches
 	// this Träger's bell, even though the account owns it.
 	_, err = db.ExecContext(context.Background(), `INSERT INTO platform.notification_feed_entries
-		(tenant_id, account_id, type, title, body, deep_link, related_type, related_id)
-		VALUES (?, ?, ?, 'Fremder Schließtag', '', '/traeger/schulen/1', 'closing_day', 1)`,
-		foreignSchool, office.ID, deliveryContract.NotificationTraegerSchoolClosingDayChanged)
+		(tenant_id, account_id, type, title, body, deep_link, related_type, related_id, created_at, updated_at)
+		VALUES (?, ?, ?, 'Fremder Schließtag', '', '/traeger/schulen/1', 'closing_day', 1, ?, ?)`,
+		foreignSchool, office.ID, deliveryContract.NotificationTraegerSchoolClosingDayChanged, older, older)
 	require.NoError(t, err)
 
 	first := f.save(t, leitung, http.MethodPost, 0, closingDayBody("2030-06-12", "2030-06-12", "Pädagogischer Tag"))
@@ -207,12 +210,13 @@ func TestTraegerNotificationFeedHTTPQueryBudget(t *testing.T) {
 	other := testpkg.CreateTestAccount(t, db, "traeger-budget-other")
 	testpkg.CreateTestTraegerMember(t, db, own, office.ID, identityaccess.TraegerRoleReadOnly)
 	testpkg.CreateTestTraegerMember(t, db, own, other.ID, identityaccess.TraegerRoleReadOnly)
+	seededAt := time.Now()
 	insert := func(accountID, schoolID int64, objectID int) {
 		t.Helper()
 		_, err := db.ExecContext(context.Background(), `INSERT INTO platform.notification_feed_entries
-			(tenant_id, account_id, type, title, body, deep_link, related_type, related_id)
-			VALUES (?, ?, ?, 'Neuer Schließtag', 'Am 12.06.2030 ist ein Schließtag.', '/traeger/schulen/1', 'closing_day', ?)`,
-			schoolID, accountID, deliveryContract.NotificationTraegerSchoolClosingDayChanged, objectID)
+			(tenant_id, account_id, type, title, body, deep_link, related_type, related_id, created_at, updated_at)
+			VALUES (?, ?, ?, 'Neuer Schließtag', 'Am 12.06.2030 ist ein Schließtag.', '/traeger/schulen/1', 'closing_day', ?, ?, ?)`,
+			schoolID, accountID, deliveryContract.NotificationTraegerSchoolClosingDayChanged, objectID, seededAt, seededAt)
 		require.NoError(t, err)
 	}
 	insert(other.ID, schools[0], 1)
