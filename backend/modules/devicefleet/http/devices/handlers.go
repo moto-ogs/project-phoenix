@@ -166,15 +166,16 @@ func (rs *Resource) updateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get existing device
-	device, err := rs.IoTService.GetDeviceByID(r.Context(), id)
+	// Get existing device; an edit that names a status locks the live row
+	// with the same read, so the audit compares with the committed status
+	// and a block committed meanwhile is not overwritten unnoticed (#2317).
+	device, err := rs.deviceForEdit(r, id, req.Status != "")
 	if err != nil {
 		rs.renderError(w, r, err)
 		return
 	}
 
-	// Update fields. The status the audit compares with is this read; the
-	// screen sends no status, and a block uses its own locked route.
+	// Update fields
 	previousStatus := device.Status
 	device.DeviceID = req.DeviceID
 	device.DeviceType = req.DeviceType
@@ -331,6 +332,19 @@ func (rs *Resource) lockDeviceByDeviceID(r *http.Request, deviceID string) (devi
 		return devicefleet.Device{}, &devicefleet.AdministrationError{Op: "UpdateDeviceStatus", Err: devicefleet.ErrAdministrationDeviceNotFound}
 	}
 	return device, err
+}
+
+// deviceForEdit reads the device an edit changes. With a status it locks
+// the live row in the same statement.
+func (rs *Resource) deviceForEdit(r *http.Request, id int64, lock bool) (*devicefleet.Device, error) {
+	if !lock {
+		return rs.IoTService.GetDeviceByID(r.Context(), id)
+	}
+	device, err := rs.lockLiveDevice(r, "UpdateDevice", id)
+	if err != nil {
+		return nil, err
+	}
+	return &device, nil
 }
 
 // lockLiveDevice locks the school's live device row for a write; a removed
