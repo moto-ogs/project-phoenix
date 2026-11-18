@@ -5,6 +5,7 @@
 package staffmessaging_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -199,6 +200,12 @@ func TestStaffGroupChatLifecycle(t *testing.T) {
 	// Removing Anna ends her access at once.
 	rec = f.do(t, ben, http.MethodDelete, "/threads/"+threadID+"/members/"+anna.idString(), "")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	removed := decodeData[*staffmessaging.ThreadDetailResponse](t, rec.Body.Bytes())
+	require.NotNil(t, removed, "removing another member answers the thread")
+	assert.Equal(t, threadID, removed.ThreadID)
+	for _, member := range removed.Members {
+		assert.NotEqual(t, anna.idString(), member.AccountID, "the answer no longer lists Anna")
+	}
 	rec = f.do(t, anna, http.MethodGet, "/threads/"+threadID, "")
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	rec = f.do(t, anna, http.MethodPost, "/threads/"+threadID, `{"body":"Noch da?"}`)
@@ -271,4 +278,18 @@ func TestStaffGroupChatRules(t *testing.T) {
 	// Ben keeps writing; the group does not close because one member left.
 	rec = f.do(t, ben, http.MethodPost, "/threads/"+threadID, `{"body":"Weiter geht's"}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	// Removing oneself is leaving: the answer carries data null, and the
+	// group is no longer Ben's to open.
+	rec = f.do(t, ben, http.MethodDelete, "/threads/"+threadID+"/members/"+ben.idString(), "")
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var left struct {
+		Status string          `json:"status"`
+		Data   json.RawMessage `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &left), rec.Body.String())
+	assert.Equal(t, "success", left.Status)
+	assert.JSONEq(t, "null", string(left.Data), rec.Body.String())
+	rec = f.do(t, ben, http.MethodGet, "/threads/"+threadID, "")
+	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 }

@@ -96,5 +96,5 @@ func serveDatabaseStats(w http.ResponseWriter, r *http.Request, read DatabaseSta
 		apiCommon.RenderError(w, r, apiCommon.ErrorInternalServerWrap("Internal server error", err))
 		return
 	}
-	apiCommon.RespondWithJSON(w, r, http.StatusOK, stats)
+	apiCommon.Respond(w, r, http.StatusOK, stats, "Database stats retrieved")
 }

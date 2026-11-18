@@ -19,6 +19,20 @@ type Runtime struct {
 	CurrentTenantID  func(*http.Request) int64
 	CurrentAccountID func(*http.Request) int64
 	Logger           *slog.Logger
+	// Success renders an answer of the subscription controls in the shared
+	// envelope; this package may not import api/common.
+	Success func(http.ResponseWriter, *http.Request, int, any, string)
+}
+
+// FeedStatus says whether the caller has a feed; it never carries the link.
+type FeedStatus struct {
+	Active bool `json:"active"`
+}
+
+// FeedLink is the feed's address, shown once after it was created or
+// replaced.
+type FeedLink struct {
+	URL string `json:"url"`
 }
 
 type Resource struct {
@@ -27,7 +41,7 @@ type Resource struct {
 }
 
 func NewResource(feeds requestfeed.Capability, runtime Runtime) *Resource {
-	if feeds == nil || runtime.Protected == nil || runtime.CurrentTenantID == nil || runtime.CurrentAccountID == nil || runtime.Logger == nil {
+	if feeds == nil || runtime.Protected == nil || runtime.CurrentTenantID == nil || runtime.CurrentAccountID == nil || runtime.Logger == nil || runtime.Success == nil {
 		panic("request feed HTTP: all dependencies are required")
 	}
 	return &Resource{feeds: feeds, runtime: runtime}
@@ -55,7 +69,7 @@ func (rs *Resource) status(w http.ResponseWriter, r *http.Request) {
 		rs.failure(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]bool{"active": status.Active})
+	rs.runtime.Success(w, r, http.StatusOK, FeedStatus{Active: status.Active}, "Request feed status retrieved")
 }
 
 func (rs *Resource) create(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +78,7 @@ func (rs *Resource) create(w http.ResponseWriter, r *http.Request) {
 		rs.failure(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]string{"url": created.URL})
+	rs.runtime.Success(w, r, http.StatusCreated, FeedLink{URL: created.URL}, "Request feed created")
 }
 
 func (rs *Resource) rotate(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +87,7 @@ func (rs *Resource) rotate(w http.ResponseWriter, r *http.Request) {
 		rs.failure(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"url": created.URL})
+	rs.runtime.Success(w, r, http.StatusOK, FeedLink{URL: created.URL}, "Request feed link replaced")
 }
 
 func (rs *Resource) feed(w http.ResponseWriter, r *http.Request) {

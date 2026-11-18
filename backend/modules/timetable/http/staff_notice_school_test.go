@@ -151,7 +151,11 @@ func (f *staffNoticeRouteFixture) execute(t *testing.T, router chi.Router, req *
 	claims.IsAdmin = false
 	claims.TenantID = f.tenantID
 	claims.Scope = who.scope
-	return routetest.ExecuteWithAuthPermissions(t, testpkg.MountedQueryBudgetRouter("/api/staff-notices", router), req, claims, permissions)
+	prefix := "/api/staff-notices"
+	if router == f.school {
+		prefix = "/school/staff-notices"
+	}
+	return routetest.ExecuteWithAuthPermissions(t, testpkg.MountedQueryBudgetRouter(prefix, router), req, claims, permissions)
 }
 
 func (f *staffNoticeRouteFixture) call(t *testing.T, router chi.Router, method, path string, who noticePrincipal, permissions []string) *httptest.ResponseRecorder {

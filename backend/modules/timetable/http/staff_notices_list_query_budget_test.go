@@ -133,7 +133,10 @@ func noticeBudgetDTO(notice timetable.StaffNotice, management bool, ack bool) ma
 	return out
 }
 
-func assertNoticeBudgetResponse(t *testing.T, rec *httptest.ResponseRecorder, expected []map[string]any) {
+// assertNoticeBudgetResponse pins the exact wire of the route: the today
+// routes answer in the shared envelope (#2352), the management list keeps
+// its bare data member.
+func assertNoticeBudgetResponse(t *testing.T, route noticeBudgetRoute, rec *httptest.ResponseRecorder, expected []map[string]any) {
 	t.Helper()
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var body map[string]any
@@ -142,7 +145,11 @@ func assertNoticeBudgetResponse(t *testing.T, rec *httptest.ResponseRecorder, ex
 	for _, row := range expected {
 		data = append(data, row)
 	}
-	require.Equal(t, map[string]any{"data": data}, body, "exact wire fields, order, dates and acknowledgement visibility")
+	want := map[string]any{"data": data}
+	if !route.management {
+		want["status"], want["message"] = "success", "Staff notices of today retrieved"
+	}
+	require.Equal(t, want, body, "exact wire fields, order, dates and acknowledgement visibility")
 }
 
 func assertNoticeBudgetReadOnly(t *testing.T, counter *testpkg.QueryCounter) {
@@ -216,7 +223,7 @@ func TestStaffNoticeListRouteQueryBudgets(t *testing.T) {
 					for _, i := range indices {
 						expected = append(expected, noticeBudgetDTO(notices[i], route.management, i%2 == 0))
 					}
-					assertNoticeBudgetResponse(t, rec, expected)
+					assertNoticeBudgetResponse(t, route, rec, expected)
 					assertNoticeBudgetReadOnly(t, counter)
 					assertNoticeRouteBudget(t, route, size, counter.Measurement(queries))
 				}
@@ -307,7 +314,7 @@ func TestStaffNoticeListRouteContracts(t *testing.T) {
 				counter.Start()
 				rec := routetest.ExecuteRequestForTest(t, f.router, req)
 				counter.Stop()
-				assertNoticeBudgetResponse(t, rec, expected)
+				assertNoticeBudgetResponse(t, route, rec, expected)
 				assertNoticeBudgetReadOnly(t, counter)
 				for _, denied := range []struct {
 					name, permission, scope string
@@ -351,7 +358,7 @@ func TestStaffNoticeListRouteContracts(t *testing.T) {
 					counter.Start()
 					rec := routetest.ExecuteRequestForTest(t, f.router, req)
 					counter.Stop()
-					assertNoticeBudgetResponse(t, rec, []map[string]any{
+					assertNoticeBudgetResponse(t, route, rec, []map[string]any{
 						noticeBudgetDTO(notices[5], false, false), noticeBudgetDTO(notices[0], false, false),
 					})
 					assertNoticeBudgetReadOnly(t, counter)

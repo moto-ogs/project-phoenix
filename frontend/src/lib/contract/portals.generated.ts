@@ -4,6 +4,7 @@ import { routes as announcementAttachments } from "./announcement-attachments.ge
 import { routes as catererNotifications } from "./caterer-notifications.generated";
 import { routes as catererSchools } from "./caterer-schools.generated";
 import { routes as classListEntries } from "./class-list-entries.generated";
+import { routes as database } from "./database.generated";
 import { routes as enrollment } from "./enrollment.generated";
 import { routes as files } from "./files.generated";
 import { routes as guardians } from "./guardians.generated";
@@ -37,6 +38,7 @@ import { routes as schoolNotifications } from "./school-notifications.generated"
 import { routes as schoolParentLetters } from "./school-parent-letters.generated";
 import { routes as schoolSetup } from "./school-setup.generated";
 import { routes as schoolStaffMessages } from "./school-staff-messages.generated";
+import { routes as schoolStaffNotices } from "./school-staff-notices.generated";
 import { routes as schoolSupervisions } from "./school-supervisions.generated";
 import { routes as settings } from "./settings.generated";
 import { routes as shiftTypes } from "./shift-types.generated";
@@ -46,6 +48,7 @@ import { routes as staffOnboarding } from "./staff-onboarding.generated";
 import { routes as staffPool } from "./staff-pool.generated";
 import { routes as staffShifts } from "./staff-shifts.generated";
 import { routes as students } from "./students.generated";
+import { routes as substitutions } from "./substitutions.generated";
 import { routes as surveys } from "./surveys.generated";
 import { routes as timeTracking } from "./time-tracking.generated";
 import { routes as timetable } from "./timetable.generated";
@@ -101,6 +104,7 @@ import { routes as traegerStaffPlanning } from "./traeger-staff-planning.generat
 import { routes as traegerStaffPool } from "./traeger-staff-pool.generated";
 import { routes as traegerStaffProofs } from "./traeger-staff-proofs.generated";
 import { routes as traegerStaffRecords } from "./traeger-staff-records.generated";
+import { routes as weekProtocols } from "./week-protocols.generated";
 import { routes as workTimeModels } from "./work-time-models.generated";
 
 /** The registered routes of each portal, by the scope of its session token. */
@@ -596,6 +600,8 @@ export const portalRoutes = {
     schoolStaffMessages["POST /school/staff-messages/threads/open"],
     schoolStaffMessages["POST /school/staff-messages/threads/{threadID}"],
     schoolStaffMessages["POST /school/staff-messages/threads/{threadID}/leave"],
+    schoolStaffNotices["GET /school/staff-notices/today"],
+    schoolStaffNotices["POST /school/staff-notices/{noticeId}/acknowledge"],
     schoolSupervisions["GET /school/supervisions/"],
     schoolSupervisions["GET /school/supervisions/{id}/roster"],
     schoolSupervisions["GET /school/supervisions/{id}/students/{student_id}/sheet"],
@@ -616,6 +622,7 @@ export const portalRoutes = {
     classListEntries["POST /api/class-list-entries/"],
     classListEntries["POST /api/class-list-entries/{id}/assign"],
     classListEntries["PUT /api/class-list-entries/{id}"],
+    database["GET /api/database/stats"],
     enrollment["GET /api/enrollment/phases/expiry-warnings"],
     files["DELETE /api/files/folders/{folderId}"],
     files["DELETE /api/files/folders/{folderId}/files/{fileId}"],
@@ -774,6 +781,7 @@ export const portalRoutes = {
     staff["PUT /api/staff/{id}/stammdaten/person"],
     staff["PUT /api/staff/{id}/stammdaten/qualifikationen"],
     staff["PUT /api/staff/{id}/time-tracking/sessions/{sessionId}"],
+    staffMessages["DELETE /api/staff-messages/threads/{threadID}/members/{accountID}"],
     staffMessages["GET /api/staff-messages/"],
     staffMessages["GET /api/staff-messages/recipients"],
     staffMessages["GET /api/staff-messages/threads/{threadID}"],
@@ -818,6 +826,7 @@ export const portalRoutes = {
     students["GET /api/students/change-requests"],
     students["GET /api/students/change-requests/access"],
     students["GET /api/students/change-requests/pending-count"],
+    students["GET /api/students/change-requests/rss-feed/"],
     students["GET /api/students/child-quota"],
     students["GET /api/students/class-arrival-exceptions/{schoolClass}"],
     students["GET /api/students/class-arrival-times/{schoolClass}"],
@@ -853,6 +862,8 @@ export const portalRoutes = {
     students["POST /api/students/care-withdrawals/{completionId}/care-end/preview"],
     students["POST /api/students/change-requests/bulk-approve"],
     students["POST /api/students/change-requests/conflicts/resolve"],
+    students["POST /api/students/change-requests/rss-feed/"],
+    students["POST /api/students/change-requests/rss-feed/rotate"],
     students["POST /api/students/change-requests/{kind}/{requestId}/correct"],
     students["POST /api/students/change-requests/{kind}/{requestId}/mark-done"],
     students["POST /api/students/excused-absence-requests/{requestId}/decide"],
@@ -894,6 +905,9 @@ export const portalRoutes = {
     students["PUT /api/students/{id}/pickup-notes/{noteId}"],
     students["PUT /api/students/{id}/pickup-schedules"],
     students["PUT /api/students/{id}/privacy-consent"],
+    substitutions["GET /api/substitutions/"],
+    substitutions["POST /api/substitutions/"],
+    substitutions["POST /api/substitutions/end"],
     surveys["DELETE /api/surveys/{surveyId}"],
     surveys["GET /api/surveys/"],
     surveys["GET /api/surveys/to-answer"],
@@ -1017,6 +1031,10 @@ export const portalRoutes = {
     timetable["PUT /api/timetable/templates/{id}/manual-roster"],
     timetable["PUT /api/timetable/templates/{id}/students/{studentId}/kept-days"],
     traegerDocuments["GET /api/traeger-documents/"],
+    weekProtocols["GET /api/week-protocols/"],
+    weekProtocols["GET /api/week-protocols/{protocolId}"],
+    weekProtocols["POST /api/week-protocols/{protocolId}/close"],
+    weekProtocols["PUT /api/week-protocols/{protocolId}/notes"],
     workTimeModels["DELETE /api/work-time-models/{id}"],
     workTimeModels["GET /api/work-time-models/"],
     workTimeModels["GET /api/work-time-models/staff-facts"],
