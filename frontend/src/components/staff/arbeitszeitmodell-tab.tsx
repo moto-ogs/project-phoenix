@@ -55,7 +55,7 @@ import {
   toDateKey,
 } from "~/lib/staff-metrics-helpers";
 import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
-import { workTimeModelKeys } from "~/lib/swr/staff-keys";
+import { workTimeModelKeys, staffTimeKeys } from "~/lib/swr/staff-keys";
 import { formatDuration } from "~/lib/time-tracking-helpers";
 
 import { isStaleAfterModelSave } from "./arbeitszeit-hours";
@@ -111,7 +111,7 @@ export function ArbeitszeitmodellTab({
     isLoading,
     error: scheduleError,
     mutate: mutateSchedule,
-  } = useSWRAuth(`staff-schedule-${staffId}`, () =>
+  } = useSWRAuth(staffTimeKeys.schedule(staffId), () =>
     staffScheduleService.getSchedule(staffId),
   );
 
@@ -346,7 +346,7 @@ function FourWeekPreview({
     error: projectionError,
     mutate: mutateProjection,
   } = useSWRAuth(
-    `staff-schedule-targets-preview-${staffId}-${fromKey}-${toKey}`,
+    staffTimeKeys.scheduleTargetsPreview(staffId, fromKey, toKey),
     () => staffMonthSummaryService.getDailyProjection(staffId, fromKey, toKey),
   );
   const projectionLoad = useApiLoadError();

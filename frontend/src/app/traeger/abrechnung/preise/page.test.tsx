@@ -160,4 +160,24 @@ describe("sibling prices of the displayed price list", () => {
     fireEvent.click(screen.getByRole("option", { name: /Januar 2026/ }));
     await waitFor(() => expectInactive("Modul A", false));
   });
+
+  // #7304: the school cards sit in one grid, so the last one keeps its
+  // height, and each keeps its jump anchor.
+  it("puts every school card with its jump anchor into one grid", async () => {
+    fetchCareTariffs.mockResolvedValue({
+      ...data,
+      schools: [
+        { id: "11", name: "Sonnenhof" },
+        { id: "12", name: "Am Berg" },
+      ],
+    });
+    const { container } = renderPage([rule]);
+    await screen.findAllByText("Modul A");
+    const cards = ["11", "12"].map((id) =>
+      container.querySelector(`#care-prices-${id}`),
+    );
+    const grid = cards[0]?.parentElement;
+    expect(grid).toHaveClass("grid");
+    for (const card of cards) expect(card?.parentElement).toBe(grid);
+  });
 });

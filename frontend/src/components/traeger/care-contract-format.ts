@@ -150,7 +150,7 @@ export const TEMPLATE_ISSUE_LABELS: Record<TemplateIssue, string> = {
   conclusion_automatic: "Bei der Annahme",
   acceptance_missing: "Zustimmung zum Vertrag fehlt",
   acceptance_missing_renewal: "Zustimmung zur neuen Phase fehlt",
-  acceptance_changed: "Bedingungen nach der Anmeldung geändert",
+  acceptance_changed: "Zustimmung passt nicht zum Vertrag",
   recipient_missing: "E-Mail-Adresse der Eltern fehlt",
   mail_blocked: "Mail-Adresse gesperrt",
   mail_stopped: "Mails gestoppt",
@@ -169,7 +169,7 @@ export const TEMPLATE_ISSUE_REASONS: Partial<Record<TemplateIssue, string>> = {
   acceptance_missing_renewal:
     "Das Kind wurde wieder angemeldet. Die Eltern haben den Bedingungen für den neuen Zeitraum nicht zugestimmt, bevor die Schule angenommen hat. Es entsteht kein Vertrag. Zum Senden stellen Sie die Schule auf „Später verschicken“.",
   acceptance_changed:
-    "Sie haben die Bedingungen nach der Anmeldung geändert. Die Eltern haben ihnen nicht zugestimmt. Es entsteht kein Vertrag. Zum Senden stellen Sie die Schule auf „Später verschicken“.",
+    "Die Eltern haben anderen Bedingungen zugestimmt als den aktuellen. Es entsteht kein Vertrag. Zum Senden stellen Sie die Schule auf „Später verschicken“.",
 };
 
 export const NOTICE_TO_LABELS: Record<ContractNoticeTo, string> = {

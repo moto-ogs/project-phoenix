@@ -16,6 +16,12 @@ import (
 // every school while a tenant-scoped caller stays inside its own. The token
 // column holds the hex SHA-256 of the link token only (#4902): reads by ID or
 // listings return the invitation without its token.
+//
+// Every instant of the table lives on the database clock (ADR 0285,
+// Nachtrag): auth.account_is_unused counts an unused, unexpired invitation
+// as a reason to keep an account, judged against statement_timestamp(). So
+// expiry, redemption, revocation, the open lists and the cleanup read
+// databaseClock, and created_at stays with its column default.
 
 type schoolInvitationRow struct {
 	bun.BaseModel       `bun:"table:auth.invitation_tokens,alias:invitation_token"`
@@ -94,13 +100,42 @@ func (s *Store) FindSchoolInvitation(ctx context.Context, id int64) (domain.Scho
 }
 
 func (s *Store) FindSchoolInvitationByToken(ctx context.Context, token string) (domain.SchoolInvitation, bool, domain.OperationStats, error) {
+	return s.findSchoolInvitationByToken(ctx, token, false)
+}
+
+// LockSchoolInvitation reads the invitation under a row lock. Its expiry is
+// judged with DatabaseTime read afterwards: the time of this statement would
+// lie before its lock wait.
+func (s *Store) LockSchoolInvitation(ctx context.Context, id int64) (domain.SchoolInvitation, bool, domain.OperationStats, error) {
 	db, err := s.database(ctx)
 	if err != nil {
 		return domain.SchoolInvitation{}, false, domain.OperationStats{}, err
 	}
 	var row schoolInvitationRow
 	started := time.Now()
-	err = invitationTenantFilter(s.scope(ctx), db.NewSelect().Model(&row).Where(`"invitation_token".token = ?`, domain.HashToken(token))).Scan(ctx)
+	err = invitationTenantFilter(s.scope(ctx), db.NewSelect().Model(&row).Where(`"invitation_token".id = ?`, id)).For("UPDATE").Scan(ctx)
+	found, stats, err := scanOne("lock school invitation", time.Since(started), err)
+	return row.toDomain(), found, stats, err
+}
+
+// LockSchoolInvitationByToken is FindSchoolInvitationByToken under a row
+// lock, for the acceptance; LockSchoolInvitation says why.
+func (s *Store) LockSchoolInvitationByToken(ctx context.Context, token string) (domain.SchoolInvitation, bool, domain.OperationStats, error) {
+	return s.findSchoolInvitationByToken(ctx, token, true)
+}
+
+func (s *Store) findSchoolInvitationByToken(ctx context.Context, token string, lock bool) (domain.SchoolInvitation, bool, domain.OperationStats, error) {
+	db, err := s.database(ctx)
+	if err != nil {
+		return domain.SchoolInvitation{}, false, domain.OperationStats{}, err
+	}
+	var row schoolInvitationRow
+	started := time.Now()
+	query := invitationTenantFilter(s.scope(ctx), db.NewSelect().Model(&row).Where(`"invitation_token".token = ?`, domain.HashToken(token)))
+	if lock {
+		query = query.For("UPDATE")
+	}
+	err = query.Scan(ctx)
 	found, stats, err := scanOne("find school invitation by token", time.Since(started), err)
 	invitation := row.toDomain()
 	invitation.Token = token
@@ -145,7 +180,7 @@ func (r schoolInvitationListRow) toDomain() domain.SchoolInvitation {
 	}
 }
 
-func (s *Store) ListRedeemableSchoolInvitations(ctx context.Context, now time.Time) ([]domain.SchoolInvitation, domain.OperationStats, error) {
+func (s *Store) ListRedeemableSchoolInvitations(ctx context.Context) ([]domain.SchoolInvitation, domain.OperationStats, error) {
 	db, err := s.database(ctx)
 	if err != nil {
 		return nil, domain.OperationStats{}, err
@@ -163,7 +198,7 @@ func (s *Store) ListRedeemableSchoolInvitations(ctx context.Context, now time.Ti
 		Join(`LEFT JOIN auth.roles AS "role" ON "role".id = "invitation_token".role_id`).
 		Join(`LEFT JOIN auth.accounts AS "creator" ON "creator".id = "invitation_token".created_by`).
 		Where(`"invitation_token".used_at IS NULL`).
-		Where(`"invitation_token".expires_at > ?`, now).
+		Where(`"invitation_token".expires_at > `+databaseClock).
 		OrderExpr(`"invitation_token".created_at DESC`))
 	err = query.Scan(ctx, &rows)
 	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started), Rows: int64(len(rows))}
@@ -179,11 +214,27 @@ func (s *Store) ListRedeemableSchoolInvitations(ctx context.Context, now time.Ti
 
 func (s *Store) SpendSchoolInvitation(ctx context.Context, id int64) (bool, domain.OperationStats, error) {
 	scope := s.scope(ctx)
-	rows, stats, err := s.exec(ctx, "redeem school invitation", func(db bun.IDB) executor {
+	rows, stats, err := s.exec(ctx, "spend school invitation", func(db bun.IDB) executor {
 		return invitationTenantFilter(scope, db.NewUpdate().Model((*schoolInvitationRow)(nil)).
-			Set("used_at = ?", s.now()).
+			Set("used_at = "+databaseClock).
 			Where(`"invitation_token".id = ?`, id).
 			Where(`"invitation_token".used_at IS NULL`))
+	})
+	return rows == 1, stats, err
+}
+
+// RedeemSchoolInvitation spends an invitation that is still unexpired at
+// the database time of this write. The acceptance holds the row lock, so
+// the write does not wait, and an unused invitation it does not spend has
+// expired.
+func (s *Store) RedeemSchoolInvitation(ctx context.Context, id int64) (bool, domain.OperationStats, error) {
+	scope := s.scope(ctx)
+	rows, stats, err := s.exec(ctx, "redeem school invitation", func(db bun.IDB) executor {
+		return invitationTenantFilter(scope, db.NewUpdate().Model((*schoolInvitationRow)(nil)).
+			Set("used_at = "+databaseClock).
+			Where(`"invitation_token".id = ?`, id).
+			Where(`"invitation_token".used_at IS NULL`).
+			Where(`"invitation_token".expires_at > `+databaseClock))
 	})
 	return rows == 1, stats, err
 }
@@ -192,7 +243,7 @@ func (s *Store) RevokeSchoolInvitationsForEmail(ctx context.Context, email strin
 	scope := s.scope(ctx)
 	rows, stats, err := s.exec(ctx, "revoke school invitations for email", func(db bun.IDB) executor {
 		return invitationTenantFilter(scope, db.NewUpdate().Model((*schoolInvitationRow)(nil)).
-			Set("used_at = ?", s.now()).
+			Set("used_at = "+databaseClock).
 			Where(`LOWER("invitation_token".email) = LOWER(?)`, email).
 			Where(`"invitation_token".used_at IS NULL`))
 	})
@@ -202,7 +253,7 @@ func (s *Store) RevokeSchoolInvitationsForEmail(ctx context.Context, email strin
 func (s *Store) RevokeSchoolInvitationsForTenant(ctx context.Context, tenantID int64) (int, domain.OperationStats, error) {
 	rows, stats, err := s.exec(ctx, "revoke school invitations for tenant", func(db bun.IDB) executor {
 		return db.NewUpdate().Model((*schoolInvitationRow)(nil)).
-			Set("used_at = ?", s.now()).
+			Set("used_at = "+databaseClock).
 			Where(`"invitation_token".tenant_id = ?`, tenantID).
 			Where(`"invitation_token".used_at IS NULL`)
 	})
@@ -210,7 +261,8 @@ func (s *Store) RevokeSchoolInvitationsForTenant(ctx context.Context, tenantID i
 }
 
 // ExtendSchoolInvitation moves the expiry of a redeemable invitation and
-// replaces its token: the stored hash cannot be mailed again.
+// replaces its token: the stored hash cannot be mailed again. The resend
+// holds the row lock and passes the database time it read after it.
 func (s *Store) ExtendSchoolInvitation(ctx context.Context, id int64, expiresAt, now time.Time, token string) (bool, domain.OperationStats, error) {
 	scope := s.scope(ctx)
 	rows, stats, err := s.exec(ctx, "extend school invitation", func(db bun.IDB) executor {
@@ -236,10 +288,10 @@ func (s *Store) RecordSchoolInvitationDelivery(ctx context.Context, id int64, de
 	return stats, err
 }
 
-func (s *Store) DeleteExpiredSchoolInvitations(ctx context.Context, now time.Time) (int, domain.OperationStats, error) {
+func (s *Store) DeleteExpiredSchoolInvitations(ctx context.Context) (int, domain.OperationStats, error) {
 	rows, stats, err := s.exec(ctx, "delete expired school invitations", func(db bun.IDB) executor {
 		return db.NewDelete().Model((*schoolInvitationRow)(nil)).
-			Where(`"invitation_token".expires_at < ?`, now)
+			Where(`"invitation_token".expires_at < ` + databaseClock)
 	})
 	return int(rows), stats, err
 }

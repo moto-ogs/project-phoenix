@@ -212,6 +212,7 @@ func (r guardianInvitationReads) ListByProfile(ctx context.Context, guardianProf
 		result = append(result, parentportal.GuardianInvitationRecord{
 			ID: invitation.ID, GuardianProfileID: invitation.GuardianProfileID, StudentID: invitation.StudentID,
 			ExpiresAt: invitation.ExpiresAt, AcceptedAt: invitation.AcceptedAt, Rejected: invitation.IsRejected(),
+			Expired: invitation.Expired,
 		})
 	}
 	return result, nil
@@ -226,7 +227,7 @@ func guardianListRecords(invitations []identityaccess.GuardianInvitation) []peop
 			ExpiresAt: invitation.ExpiresAt, AcceptedAt: invitation.AcceptedAt, EmailSentAt: invitation.EmailSentAt,
 			EmailError: invitation.EmailError, StudentID: invitation.StudentID,
 			ApprovalStatus: invitation.ApprovalStatus, CreatedAt: invitation.CreatedAt,
-			RecipientEmail: invitation.Email,
+			RecipientEmail: invitation.Email, Expired: invitation.Expired,
 		})
 	}
 	return result

@@ -77,8 +77,15 @@ export class StudentStatusDayConflictError extends ApiError {
 }
 
 function parseConflictError(result: ConflictBody): Error {
-  if (result.code === PARTIAL_ABSENCE_CONFLICT_CODE) {
-    return apiErrorFromBody("partial absence conflict", 409, result);
+  // Only a body naming the existing days is the overwrite question. Any
+  // other 409 (a partial absence, the Kinderkontingent) keeps its own code,
+  // so the person reads its real reason.
+  if (
+    result.code === PARTIAL_ABSENCE_CONFLICT_CODE ||
+    (!Array.isArray(result.conflicts) &&
+      typeof result.conflict_count !== "number")
+  ) {
+    return apiErrorFromBody("status day write refused", 409, result);
   }
   const conflicts = (result.conflicts ?? []).map(mapStatusDay);
   const totalCount =

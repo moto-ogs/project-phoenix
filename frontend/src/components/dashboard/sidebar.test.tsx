@@ -188,7 +188,7 @@ import {
   useTenantRoutingModeSafe,
   useTimetableEnabled,
 } from "~/lib/tenant-context";
-import useSWR from "swr";
+import { useSWR } from "~/lib/swr/testing";
 
 const mockUsePathname = vi.mocked(usePathname);
 const mockUseSearchParams = vi.mocked(useSearchParams);
@@ -2544,6 +2544,21 @@ describe("Sidebar", () => {
 
       expect(screen.getByText("Ankündigungen")).toBeInTheDocument();
       expect(screen.queryByText("Einstellungen")).not.toBeInTheDocument();
+    });
+
+    it("asks for no school switches without a school session", () => {
+      const readKeys = vi.mocked(useSWR);
+      readKeys.mockClear();
+
+      render(<Sidebar />);
+
+      // Anker: die Operator-Navigation ist geladen.
+      expect(screen.getByText("Ankündigungen")).toBeInTheDocument();
+      expect(
+        readKeys.mock.calls
+          .map(([key]) => String(key))
+          .filter((key) => key.endsWith("user-context")),
+      ).toEqual([]);
     });
 
     it("does not render teacher-specific items", () => {

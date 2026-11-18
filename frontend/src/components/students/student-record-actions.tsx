@@ -25,7 +25,11 @@ const logger = createLogger({ component: "StudentRecordActions" });
 /** Die Felder der Kindakte, an denen die Datensatz-Aktionen hängen. */
 type RecordStudent = Pick<
   Student,
-  "id" | "care_ended" | "care_ends_on" | "care_exit_recorded"
+  | "id"
+  | "care_ended"
+  | "care_ends_on"
+  | "care_exit_recorded"
+  | "without_care_place"
 >;
 
 interface StudentRecordActionsProps {
@@ -128,7 +132,8 @@ export function StudentRecordActions({
         onClick: () => setResumeOpen(true),
       });
     }
-  } else {
+  } else if (student.without_care_place !== true) {
+    // Ein Kind ohne OGS-Platz (#4803) hat keine OGS-Betreuung zu beenden.
     items.push({
       label: plannedExit ? "Ende ändern" : "Betreuung beenden",
       description: plannedExit

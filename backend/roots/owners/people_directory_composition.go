@@ -149,6 +149,7 @@ func enrollmentOf(record peopledirectory.StudentRecord) schoolmembership.Student
 		StudentID: record.ID, SchoolClass: record.SchoolClass, Status: record.Status,
 		GroupID:      record.GroupID,
 		EnrolledFrom: record.EnrolledFrom, EnrolledUntil: record.EnrolledUntil,
+		WithoutCarePlace: record.WithoutCarePlace,
 	}
 }
 

@@ -151,6 +151,10 @@ type StudentResponse struct {
 	// view. The exit REASON is NOT here — it is read behind users:delete.
 	CareEndsOn string `json:"care_ends_on,omitempty" contract:"date"`
 	CareEnded  bool   `json:"care_ended,omitempty"`
+	// WithoutCarePlace marks a child of the class without an OGS place
+	// (#4803, ADR 0282): the list labels it and the child record leaves out
+	// the OGS sections.
+	WithoutCarePlace bool `json:"without_care_place,omitempty"`
 	// CareExitRecorded says the end of care was ENTERED by the school
 	// ("Betreuung beenden"), as opposed to the interval simply carrying the end
 	// of an enrolment phase. Only such an exit can be changed or cancelled in

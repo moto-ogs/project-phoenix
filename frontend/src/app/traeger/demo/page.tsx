@@ -33,6 +33,7 @@ export default function TraegerDemoEntryPage() {
   const [attempt, setAttempt] = useState(0);
   const linkRef = useRef<DemoLink | null | undefined>(undefined);
 
+  // oxlint-disable-next-line swr/no-effect-load -- sessionless demo entry: consumes the fragment token, polls the demo school setup and starts the demo session
   useEffect(() => {
     const run = { cancelled: false };
 

@@ -207,6 +207,8 @@ func enrollmentInputFromRow(personID int64, row importModels.StudentImportRow) (
 		SchoolClass:   strings.TrimSpace(row.SchoolClass),
 		EnrolledFrom:  calendarDateString(enrolledFrom),
 		EnrolledUntil: calendarDateString(parseOptionalImportCalendarDate(row.EnrolledUntil)),
+
+		WithoutCarePlace: row.WithoutCarePlace,
 	}
 	departure, err := importDeparturePatch(ports.AllowedDepartureModesFromDeparture(departurePlanFromImportRow(row)), boundedNotePtr(row.DepartureCompanionNote))
 	if err != nil {
@@ -389,6 +391,9 @@ func (c *StudentImportConfig) Update(ctx context.Context, studentID int64, row i
 }
 
 func (c *StudentImportConfig) updateAllEntities(ctx context.Context, record ports.EnrollmentRecord, row importModels.StudentImportRow) error {
+	if record.WithoutCarePlace {
+		row = withoutOGSCells(row)
+	}
 
 	person, err := c.Persons.FindPerson(ctx, record.PersonID)
 	if err != nil {
@@ -414,6 +419,17 @@ func (c *StudentImportConfig) updateAllEntities(ctx context.Context, record port
 		return err
 	}
 	return c.createPrivacyConsentIfMissing(ctx, record.ID, row)
+}
+
+// withoutOGSCells drops the OGS cells of a row that updates a child without
+// an OGS place (#4803): such a child has no group, no OGS times and no way
+// home, as when the school edits it. The place itself comes only with an
+// accepted enrollment, so the school's file cannot give it one.
+func withoutOGSCells(row importModels.StudentImportRow) importModels.StudentImportRow {
+	row.GroupID = nil
+	row.ArrivalSchedules, row.PickupSchedules = nil, nil
+	row.DepartureDays, row.DepartureCompanionNote = nil, ""
+	return row
 }
 
 func (c *StudentImportConfig) updatePersonFromRow(ctx context.Context, person ports.Person, row importModels.StudentImportRow) error {
@@ -449,7 +465,8 @@ func (c *StudentImportConfig) updatePersonFromRow(ctx context.Context, person po
 func renewalFromRow(record ports.EnrollmentRecord, row importModels.StudentImportRow, today timezone.Date) ports.EnrollmentStudent {
 	renewal := ports.EnrollmentStudent{
 		PersonID: record.PersonID, SchoolClass: record.SchoolClass, Status: record.Status,
-		EnrolledFrom: record.EnrolledFrom, EnrolledUntil: record.EnrolledUntil,
+		PreserveCarePlaceStatus: true,
+		EnrolledFrom:            record.EnrolledFrom, EnrolledUntil: record.EnrolledUntil,
 	}
 	if class := strings.TrimSpace(row.SchoolClass); class != "" {
 		renewal.SchoolClass = class
@@ -488,6 +505,11 @@ func (c *StudentImportConfig) AddsToChildQuota(ctx context.Context, row importMo
 	}
 	today := c.todayDate()
 	day := today.String()
+	// A child without an OGS place (#4803) never counts, and an import keeps
+	// it without one.
+	if existingID == nil && row.WithoutCarePlace {
+		return false, nil
+	}
 	if existingID == nil {
 		enrolledFrom := parseOptionalImportCalendarDate(row.EnrolledFrom)
 		return c.CountsTowardChildQuota(newEnrollmentStatus(enrolledFrom, today),
@@ -496,6 +518,9 @@ func (c *StudentImportConfig) AddsToChildQuota(ctx context.Context, row importMo
 	record, err := c.Students.ReadEnrollmentStudent(ctx, *existingID, "")
 	if err != nil {
 		return false, fmt.Errorf("read student for child quota: %w", err)
+	}
+	if record.WithoutCarePlace {
+		return false, nil
 	}
 	after := renewalFromRow(record, row, today)
 	return !c.CountsTowardChildQuota(record.Status, record.EnrolledFrom, record.EnrolledUntil, day) &&

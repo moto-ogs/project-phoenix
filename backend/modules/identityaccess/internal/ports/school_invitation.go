@@ -15,20 +15,29 @@ type SchoolInvitationStore interface {
 	InsertSchoolInvitation(ctx context.Context, invitation domain.SchoolInvitation) (domain.SchoolInvitation, domain.OperationStats, error)
 	FindSchoolInvitation(ctx context.Context, id int64) (domain.SchoolInvitation, bool, domain.OperationStats, error)
 	FindSchoolInvitationByToken(ctx context.Context, token string) (domain.SchoolInvitation, bool, domain.OperationStats, error)
+	// LockSchoolInvitation and LockSchoolInvitationByToken read the
+	// invitation under a row lock; read DatabaseTime after them.
+	LockSchoolInvitation(ctx context.Context, id int64) (domain.SchoolInvitation, bool, domain.OperationStats, error)
+	LockSchoolInvitationByToken(ctx context.Context, token string) (domain.SchoolInvitation, bool, domain.OperationStats, error)
+	// DatabaseTime reads the database clock every instant of the table lives
+	// on (ADR 0285, Nachtrag), in the transaction of ctx.
+	DatabaseTime(ctx context.Context) (time.Time, domain.OperationStats, error)
 	// ListRedeemableSchoolInvitations returns the pending invitations of the
 	// tenant in context.
-	ListRedeemableSchoolInvitations(ctx context.Context, now time.Time) ([]domain.SchoolInvitation, domain.OperationStats, error)
+	ListRedeemableSchoolInvitations(ctx context.Context) ([]domain.SchoolInvitation, domain.OperationStats, error)
 	// SpendSchoolInvitation spends the invitation and reports whether it was
-	// still unused. Both redeeming and revoking spend it; only the reason
-	// differs.
+	// still unused; revoking spends it.
 	SpendSchoolInvitation(ctx context.Context, id int64) (bool, domain.OperationStats, error)
+	// RedeemSchoolInvitation spends the invitation only while it is unused
+	// and unexpired at the write's own database time.
+	RedeemSchoolInvitation(ctx context.Context, id int64) (bool, domain.OperationStats, error)
 	// RevokeSchoolInvitationsForEmail spends every unused invitation for the
 	// address in the caller's tenant scope.
 	RevokeSchoolInvitationsForEmail(ctx context.Context, email string) (int, domain.OperationStats, error)
 	RevokeSchoolInvitationsForTenant(ctx context.Context, tenantID int64) (int, domain.OperationStats, error)
 	ExtendSchoolInvitation(ctx context.Context, id int64, expiresAt, now time.Time, token string) (bool, domain.OperationStats, error)
 	RecordSchoolInvitationDelivery(ctx context.Context, id int64, delivery domain.TokenDelivery) (domain.OperationStats, error)
-	DeleteExpiredSchoolInvitations(ctx context.Context, now time.Time) (int, domain.OperationStats, error)
+	DeleteExpiredSchoolInvitations(ctx context.Context) (int, domain.OperationStats, error)
 	// DeleteExpiredTraegerInvitations deletes the expired invitations into a
 	// Träger-Büro (#4650); the same hourly cleanup removes both kinds.
 	DeleteExpiredTraegerInvitations(ctx context.Context, now time.Time) (int, domain.OperationStats, error)

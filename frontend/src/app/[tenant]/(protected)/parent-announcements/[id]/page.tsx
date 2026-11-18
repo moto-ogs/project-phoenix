@@ -179,7 +179,7 @@ function AnnouncementDetailPageContent() {
     { revalidateOnFocus: false },
   );
   const { data: activities } = useSWRAuth<Activity[]>(
-    "parent-announcements-activities",
+    parentAnnouncementKeys.targetActivities(),
     () => fetchActivities(),
     { revalidateOnFocus: false },
   );

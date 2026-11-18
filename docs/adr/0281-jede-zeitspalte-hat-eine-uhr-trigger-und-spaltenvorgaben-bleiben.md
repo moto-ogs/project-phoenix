@@ -145,3 +145,85 @@ Noch offen: `audit.delete_expired_deviation_events` bewacht den Kalendertag
 der Abweichungen mit dem Tag der Datenbank, die Grenze kommt aber aus der
 Stundenplan-Aufbewahrung, die mit derselben Grenze die Stundenplanzeilen
 löscht. Sie folgt in einem eigenen Schnitt.
+
+## Nachtrag 2026-11-17: Der Änderungsverlauf der Elternanfragen liegt auf der Datenbankuhr
+
+Der Verlauf unter „Änderungsanfragen“ ordnet fünf Quellen nach einem
+Zeitpunkt und blättert mit ihm: Betreuungszeiten und Entschuldigungen nach
+`updated_at`, das der Trigger stempelt, Stammdaten und Angebote nach
+`updated_at` ohne Trigger, direkte Korrekturen der Buchung nach
+`audit.enrollment_offering_adjustments.changed_at`. Nach Punkt 4 tragen alle
+die Uhr der Trigger, denn diese Seite zieht nur mit einer Migration um. Jeder
+Schreiber setzt `updated_at = DEFAULT` oder lässt die Spalte aus;
+`changed_at` stempelt die Spaltenvorgabe.
+
+`reviewed_at` bleibt auf der Uhr des Owners. Die Elternansicht „kürzlich
+entschieden“ filtert entschiedene Betreuungs- und Entschuldigungsanfragen
+danach, mit einer Grenze derselben Uhr; offene Anfragen zeigt sie unabhängig
+davon. Jeder Endzustand stempelt `reviewed_at`: Entscheidung mit und ohne
+entscheidende Person, Korrektur, „erledigt“ und `care_ended`. Ältere Zeilen
+ohne `reviewed_at` (Entscheidungen ohne entscheidende Person vor dieser
+Änderung) fallen aus dem höchstens zwei Monate langen Fenster; ein Rückfall
+auf `updated_at` würde zwei Uhren vergleichen.
+
+Die Korrektur einer Abholänderung ordnet keine Zeitstempel. Die Entscheidung
+liest Abholzeit, Abholart und die Abholnotiz der Tagesperson, die sie
+geschrieben hat, in ihrer Transaktion zurück und legt im
+Entscheidungsprotokoll neben der ID eine Version ab: `updated_at` auf
+Mikrosekunden und alle Felder, die das Team ändern kann (bei Abholzeit und
+Abholart samt Datum, bei der Notiz Datum oder Wochentag und Text). Die
+Korrektur nimmt eine Zeile nur zurück, solange die Version gleich ist. Der
+Start einer Transaktion folgt nicht der Reihenfolge der Commits: Eine
+Änderung des Teams, deren Transaktion vor der Genehmigung begann und nach ihr
+schrieb, trägt den älteren Stempel und wird trotzdem erkannt; die
+Inhaltsfelder fangen auch einen Schreiber, der `updated_at` nicht vorrückt.
+
+Einträge ohne Version, geschrieben vor dieser Änderung, behalten genau die
+Prüfung, unter der sie entstanden: Abholzeit und Abholart gelten als
+geändert, wenn `updated_at` der Zeile nach `reviewed_at` der Anfrage liegt
+(ohne `reviewed_at` keine Prüfung); die Notiz löscht die Korrektur ohne
+Prüfung. Ein Vergleich mit `updated_at` der Anfrage wäre für sie falsch: Die
+alte Genehmigung stempelte eine aktualisierte Abholzeit mit der Owner-Uhr
+nach dem Start ihrer Transaktion, der Trigger der Anfrage mit dem Start
+selbst. Eine unberührte Zeile liegt dann zwischen beiden Stempeln. Die
+bekannten Grenzen dieser alten Prüfung bleiben für diese Einträge:
+überlappende Transaktionen, Uhren auseinander, die ungeprüfte Notiz.
+
+## Nachtrag 2026-11-17: Geänderte Vertragsbedingungen erkennt der Träger am Text, nicht an der Zeit
+
+Die Vertragsvorbereitung unterscheidet „Zustimmung passt nicht zum Vertrag“
+(`acceptance_changed`) von „Zustimmung fehlt“
+(`acceptance_missing`), wenn der angekreuzte Bedingungsblock nicht den
+aktuellen Bedingungen der Vorlage entspricht. Bisher ordnete sie dafür
+`updated_at` der Vorlage (`care_contract.contract_templates`, Trigger) gegen
+den Zeitpunkt des Ankreuzens, den Enrollment mit seiner Uhr stempelt. Das
+sind zwei Uhren (Punkt 4).
+
+Enrollment kann die Fassung der Vorlage beim Ankreuzen nicht festhalten: Der
+Block ist ein freier Rechtsblock, den die Schule in ihr Formular kopiert,
+ohne Verweis auf eine Vorlage. Die Vorlage liegt in der Träger-Transaktion,
+das Ankreuzen in der Schul-Transaktion (ADR 0105), und Care Contract liest
+schon von Enrollment; ein Lesen in Gegenrichtung schlösse einen Zyklus
+(ADR 0058). Deshalb hält Care Contract die Fassungen selbst fest: Jede
+Speicherung einer Vorlage, einzeln oder beim Ausrollen des Katalogs, legt im
+Protokolleintrag `template` unter `acceptance_texts` alle Bedingungstexte
+dieser Fassung ab (alle Wortlaute aus `acceptanceTexts`). Gleicht der
+angekreuzte Text einer gespeicherten Fassung,
+die die Vorlage nicht mehr hat, sind die Bedingungen geändert; sonst fehlt
+die Zustimmung. Kein Zeitpunkt wird geordnet.
+
+Grenzen:
+
+- Vorlagen, deren Protokoll eine Speicherung ohne `acceptance_texts` hat
+  (gespeichert vor dieser Änderung), behalten zusätzlich die alte Prüfung:
+  geändert, wenn `updated_at` der Vorlage nach dem Ankreuzen liegt. Für sie
+  bleibt der bekannte Fehler bei auseinanderlaufenden Uhren, solange der
+  angekreuzte Text nur aus einer Fassung vor dieser Änderung stammt.
+- Kreuzen Eltern einen Text an, den die Vorlage schon vor dem Ankreuzen
+  ersetzt hatte (die Schule hat ihr Formular nicht nachgezogen), lautet der
+  Grund jetzt „Zustimmung passt nicht zum Vertrag“ statt
+  „fehlt“. In beiden Fällen entsteht kein Vertrag. Der Text sagt nur, was
+  beide Zweige belegen, auch die alte Prüfung über `updated_at`: Der
+  angekreuzte Text ist nicht der aktuelle. Ob er eine frühere Fassung war,
+  wann sie ersetzt wurde und wer das Formular nicht nachgezogen hat,
+  behauptet er nicht.

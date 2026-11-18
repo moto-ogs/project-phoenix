@@ -1,32 +1,30 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { personalStorageOwner } from "~/lib/personal-storage";
 
 import { fetchCareWithdrawals } from "~/lib/care-exit-api";
 import { canReviewCareWithdrawals } from "~/lib/change-request-access";
 import { useShellAuth } from "~/lib/shell-auth-context";
-import { useTenantSlugSafe } from "~/lib/tenant-context";
-import { useShellSeed } from "~/lib/shell-seed";
-import { useUnreadCount } from "./use-unread-count";
+import { shellResourceKeys } from "~/lib/swr/shell-keys";
+import { useUnreadCount, type UseUnreadCountResult } from "./use-unread-count";
 import { CHANGE_REQUESTS_REFRESH_EVENT } from "~/lib/change-requests-refresh";
 
-export function useCareWithdrawalsPending() {
+export function useCareWithdrawalsPending(): UseUnreadCountResult {
   const { data: session, status } = useSession();
   const { mode } = useShellAuth();
-  const tenantSlug = useTenantSlugSafe();
-  const accountId = session?.user?.id ?? "";
-  return useUnreadCount({
-    enabled:
-      status === "authenticated" &&
-      mode === "teacher" &&
-      canReviewCareWithdrawals(session),
-    fetcher: async () => (await fetchCareWithdrawals({ pageSize: 1 })).total,
-    cacheKey: `care_withdrawals_pending_count:${tenantSlug ?? ""}:${accountId}`,
-    cacheOwner: personalStorageOwner(session?.user),
-    eventNames: [CHANGE_REQUESTS_REFRESH_EVENT],
-    eventDebounceMs: 500,
-    refetchOnFocus: true,
-    initialCount: useShellSeed()?.counts.careWithdrawalsPending,
-  });
+  const accountId = session?.user?.id;
+  return useUnreadCount(
+    accountId ? shellResourceKeys.careWithdrawalsPending(accountId) : null,
+    {
+      enabled:
+        status === "authenticated" &&
+        mode === "teacher" &&
+        !!accountId &&
+        canReviewCareWithdrawals(session),
+      fetcher: async () => (await fetchCareWithdrawals({ pageSize: 1 })).total,
+      eventNames: [CHANGE_REQUESTS_REFRESH_EVENT],
+      eventDebounceMs: 500,
+      refetchOnFocus: true,
+    },
+  );
 }

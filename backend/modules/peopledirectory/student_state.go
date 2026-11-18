@@ -2,6 +2,7 @@ package peopledirectory
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
@@ -68,6 +69,11 @@ type StudentState struct {
 	// (School Membership, #4803). It never takes part in OGS care: no
 	// group, rooms, check-in, pickup, meals or OGS counts.
 	WithoutCarePlace bool `json:"without_care_place,omitempty"`
+	// ClassMemberFrom and ClassMemberClass are the class time School
+	// Membership keeps from before the child's OGS care (#4803). Not on
+	// the wire.
+	ClassMemberSince *calendar.Date `json:"-"`
+	ClassMemberClass string         `json:"-"`
 
 	PhotoPath           *string    `json:"-"`
 	PhotoConsentGivenAt *time.Time `json:"photo_consent_given_at,omitempty"`
@@ -123,6 +129,26 @@ func (s *StudentState) ClassMemberFrom() calendar.Date {
 		return *s.EnrolledFrom
 	}
 	return calendar.DateFromTime(s.CreatedAt)
+}
+
+// ClassTimeBeforeCare is the class time a child with an OGS place keeps
+// from before its care started (#4803): it had no place then, or a
+// class-list entry stood for it. ok is false when there is none, or when
+// the child has changed its class since. The class-name read
+// (ListNamesByClass) states the same rule in SQL.
+func (s *StudentState) ClassTimeBeforeCare() (from, until calendar.Date, ok bool) {
+	if s == nil || s.WithoutCarePlace || s.ClassMemberSince == nil ||
+		!strings.EqualFold(strings.TrimSpace(s.ClassMemberClass), strings.TrimSpace(s.SchoolClass)) {
+		return "", "", false
+	}
+	start := s.FirstCareFrom
+	if start == nil {
+		start = s.EnrolledFrom
+	}
+	if start == nil || !start.After(*s.ClassMemberSince) {
+		return "", "", false
+	}
+	return *s.ClassMemberSince, start.AddDays(-1), true
 }
 
 // LeftSchool reports a child that is neither active nor waiting for its
@@ -196,6 +222,8 @@ func StudentStateFromRecord(record StudentRecord) *StudentState {
 		CareResumedFrom: OptionalCalendarDate(record.CareResumedFrom),
 
 		WithoutCarePlace: record.WithoutCarePlace,
+		ClassMemberSince: OptionalCalendarDate(record.ClassMemberFrom),
+		ClassMemberClass: record.ClassMemberClass,
 
 		PhotoPath:           record.PhotoPath,
 		PhotoConsentGivenAt: record.PhotoConsentGivenAt,
@@ -253,6 +281,8 @@ func (s *StudentState) DirectoryRecord() StudentRecord {
 
 		EnrolledFrom:  RenderCalendarDate(s.EnrolledFrom),
 		EnrolledUntil: RenderCalendarDate(s.EnrolledUntil),
+
+		WithoutCarePlace: s.WithoutCarePlace,
 
 		AddressStreet:     s.AddressStreet,
 		AddressCity:       s.AddressCity,
@@ -318,6 +348,8 @@ func (s *StudentState) ApplyDirectoryRecord(record StudentRecord) {
 	s.EnrolledFrom = OptionalCalendarDate(record.EnrolledFrom)
 	s.EnrolledUntil = OptionalCalendarDate(record.EnrolledUntil)
 	s.FirstCareFrom = OptionalCalendarDate(record.FirstCareFrom)
+	s.ClassMemberSince = OptionalCalendarDate(record.ClassMemberFrom)
+	s.ClassMemberClass = record.ClassMemberClass
 	s.CarePausedAfter = OptionalCalendarDate(record.CarePausedAfter)
 	s.CareResumedFrom = OptionalCalendarDate(record.CareResumedFrom)
 

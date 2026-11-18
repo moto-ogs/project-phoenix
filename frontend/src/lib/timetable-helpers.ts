@@ -16,6 +16,7 @@ import {
 } from "./date-helpers";
 import { LOCATION_COLORS } from "./location-helper";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import {
   shouldMaterializeWeekPattern,
   type CalendarPeriod,
@@ -104,8 +105,8 @@ export function offeringPhaseStartWarning(
  * useTenantMutateMatching ist ein stiller No-op, wenn kein Key matcht — ein
  * umbenannter String-Literal fällt in keinem Test auf.
  */
-export const VERTRETUNG_WEEK_KEY_PREFIX = "vertretung-week-";
-export const VERTRETUNG_GAPS_KEY_PREFIX = "vertretung-gaps-";
+export const VERTRETUNG_WEEK_KEY_PREFIX = tenantDailyKeys.vertretungWeekFamily;
+export const VERTRETUNG_GAPS_KEY_PREFIX = tenantDailyKeys.vertretungGapsFamily;
 
 /**
  * Brand-colour key per activity type. Mirrors the timetable RFC §5.5

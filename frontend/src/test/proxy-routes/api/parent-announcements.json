@@ -1,8 +1,0 @@
-{
-  "api/parent-announcements/letter-placeholders": [
-    "GET tenant /api/parent-announcements/letter-placeholders"
-  ],
-  "api/parent-announcements/letter-preview": [
-    "POST tenant /api/parent-announcements/letter-preview"
-  ]
-}

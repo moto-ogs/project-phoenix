@@ -65,6 +65,12 @@ type RosterStudent struct {
 	// and its enrollment end (nil: open).
 	MemberFrom  calendar.Date
 	MemberUntil *calendar.Date
+	// ClassTimeFrom and ClassTimeUntil bound the class time a child with an
+	// OGS place keeps from before its care started (#4803); nil when there
+	// is none. On those days it joins the roster like a child without a
+	// place.
+	ClassTimeFrom  *calendar.Date
+	ClassTimeUntil *calendar.Date
 }
 
 // RosterPerson is a student's name.

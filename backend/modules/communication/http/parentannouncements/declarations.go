@@ -52,7 +52,7 @@ func toDeclarationSettingsResponse(a *announcementService.ParentAnnouncement) de
 type declarationAttachmentResponse struct {
 	Filename    string `json:"filename"`
 	ContentType string `json:"content_type"`
-	SizeBytes   int64  `json:"size_bytes"`
+	SizeBytes   int    `json:"size_bytes"`
 	SHA256      string `json:"sha256"`
 }
 
@@ -151,7 +151,9 @@ func toDeclarationVersionResponse(v announcementService.DeclarationVersion) decl
 		Attachments: make([]declarationAttachmentResponse, 0, len(v.Attachments)),
 	}
 	for _, a := range v.Attachments {
-		out.Attachments = append(out.Attachments, declarationAttachmentResponse(a))
+		out.Attachments = append(out.Attachments, declarationAttachmentResponse{
+			Filename: a.Filename, ContentType: a.ContentType, SizeBytes: int(a.SizeBytes), SHA256: a.SHA256,
+		})
 	}
 	return out
 }

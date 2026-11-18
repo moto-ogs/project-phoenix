@@ -33,6 +33,7 @@ import {
   staffLabel,
 } from "~/lib/timetable-helpers";
 import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableService } from "~/lib/timetable-api";
 import type {
   ApplyDeviationsInput,
@@ -1215,9 +1216,15 @@ function HistoryTab({
   const [scope, setScope] = useState<HistoryScope>(hasSlot ? "block" : "day");
   const slotFiltered = scope === "block" && hasSlot;
 
-  const swrKey = `deviation-history-${instance.date}-${
-    slotFiltered ? `${instance.activityGroupId}-${instance.startTime}` : "day"
-  }`;
+  const swrKey = tenantDailyKeys.deviationHistory(
+    instance.date,
+    slotFiltered
+      ? {
+          activityGroupId: instance.activityGroupId ?? "",
+          startTime: instance.startTime,
+        }
+      : null,
+  );
 
   const { data, isLoading, error, mutate } = useSWRAuth(swrKey, () =>
     timetableService.getDeviationHistory(

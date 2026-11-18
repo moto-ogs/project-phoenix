@@ -52,6 +52,7 @@ import {
   useListOverlays,
 } from "~/lib/list-overlays";
 import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
+import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
 import { useTenantSlugSafe } from "~/lib/tenant-context";
 
 const logger = createLogger({ component: "StaffAbsenceRequestList" });
@@ -120,9 +121,9 @@ export function StaffAbsenceRequestList({
   // „Wiederholen“ vor Ort, statt still wiederholt zu werden. Der Cache hält
   // nur Antworten des Servers; Entscheidungen gehen als Überlagerung an alle
   // Ansichten und Filter (siehe `~/lib/list-overlays`).
-  const family = `staff-absence-requests:${accountId}:`;
+  const family = staffAbsenceKeys.requestsFamily(accountId);
   const listKey = accountId
-    ? `${family}${view}:${JSON.stringify([filters.search, filters.types])}`
+    ? staffAbsenceKeys.requests(accountId, view, filters.search, filters.types)
     : null;
   const { data, error, mutate } = useSWRAuth<{
     fetchedAt: number;

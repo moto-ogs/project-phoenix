@@ -53,6 +53,12 @@ type TemplateRow struct {
 	SchoolID   int64
 	OfferingID int64
 	Template   carecontract.Template
+	// Versions are the conditions texts of every saved version of the template the trail recorded (VersionsDetail), the
+	// current one included. VersionsComplete tells that every save of the
+	// template recorded them; Templates reads both, UpsertTemplate and
+	// UpsertTemplates leave them empty.
+	Versions         []string
+	VersionsComplete bool
 }
 
 // ContractKey is the key of a contract: the application child at one
@@ -137,6 +143,11 @@ const (
 	ActionTemplate = "template"
 	ActionConclude = "conclude"
 )
+
+// VersionsDetail is the detail of a template entry of the trail with the
+// conditions texts the saved version gives (ADR 0281,
+// Nachtrag 2026-11-17 on the acceptance of the conditions).
+const VersionsDetail = "acceptance_texts"
 
 // Store persists the contracts of a Träger in its Träger transaction.
 type Store interface {

@@ -196,6 +196,7 @@ describe("TenantProviders with a server snapshot", () => {
       "seed school-a:1:user-context",
       "seed school-a:1:reminders",
       "seed school-a:1:staff-notices-today:1",
+      "seed school-a:1:badge-messages-unread:1",
       "child",
     ]);
   });
@@ -215,11 +216,13 @@ describe("TenantProviders with a server snapshot", () => {
       </TenantProviders>,
     );
 
-    expect(mockSwrMutate).toHaveBeenCalledTimes(3);
+    expect(mockSwrMutate).toHaveBeenCalledTimes(4);
     for (const [key, seed] of [
       ["school-a:1:user-context", shell.userContext],
       ["school-a:1:reminders", shell.reminders],
       ["school-a:1:staff-notices-today:1", shell.staffNoticesToday],
+      // A badge count the server loaded; a count it left out seeds nothing.
+      ["school-a:1:badge-messages-unread:1", shell.counts.messagesUnread],
     ] as const) {
       const call = mockSwrMutate.mock.calls.find(([k]) => k === key);
       expect(call?.[2]).toEqual(expect.objectContaining({ revalidate: false }));
@@ -292,7 +295,7 @@ describe("TenantProviders with a server snapshot", () => {
       fallback: {},
       cacheData: {},
     });
-    expect(mockSwrMutate).toHaveBeenCalledTimes(3);
+    expect(mockSwrMutate).toHaveBeenCalledTimes(4);
   });
 
   it("seeds SWR under the tenant-scoped keys and the providers with their slices", () => {
@@ -314,6 +317,7 @@ describe("TenantProviders with a server snapshot", () => {
       // Scoped to the school and the account the snapshot was built for
       // (#4989, #5006).
       "school-a:1:staff-notices-today:1": shell.staffNoticesToday,
+      "school-a:1:badge-messages-unread:1": shell.counts.messagesUnread,
       // The platform resource still belongs to this school/account cache.
       "school-a:1:user-announcements-unread": shell.announcements,
     };

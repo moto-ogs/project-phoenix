@@ -1,25 +1,29 @@
 "use client";
 
 import { fetchMessagesUnreadCount } from "~/lib/parent-api";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import { useUnreadCount } from "./use-unread-count";
 
 /**
  * Number of conversations with unread staff-side activity for a guardian, for
  * the parents-portal sidebar badge. Only fetches when `enabled` (parent mode) so
  * the staff/operator portals never hit the parent endpoints. Counts unread
- * entries in the visible team and group inbox lists. Refreshes
- * on mount, on window focus, and on the parent-messages-unread-refresh event
+ * entries in the visible team and group inbox lists. Loads on the first
+ * mount, then on window focus and on the parent-messages-unread-refresh event
  * (dispatched by the parent chat after it loads/sends — reading marks a thread
  * read server-side — so the badge updates without a full reload).
  */
 export function useParentMessagesUnread(enabled: boolean) {
-  const { unreadCount, refresh } = useUnreadCount({
-    enabled,
-    fetcher: fetchMessagesUnreadCount,
-    eventNames: ["parent-messages-unread-refresh"],
-    refetchOnFocus: true,
-    // Collapse a burst of parent-message events into one count refetch.
-    eventDebounceMs: 500,
-  });
+  const { unreadCount, refresh } = useUnreadCount(
+    parentKeys.messagesUnreadCount(),
+    {
+      enabled,
+      fetcher: fetchMessagesUnreadCount,
+      eventNames: ["parent-messages-unread-refresh"],
+      refetchOnFocus: true,
+      // Collapse a burst of parent-message events into one count refetch.
+      eventDebounceMs: 500,
+    },
+  );
   return { unreadCount, refresh };
 }

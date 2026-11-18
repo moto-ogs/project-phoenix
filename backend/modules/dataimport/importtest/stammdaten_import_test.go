@@ -298,3 +298,75 @@ type staffInvitationMock struct {
 func (m *staffInvitationMock) InviteStaff(ctx context.Context, invitation importModels.StaffInvitation) error {
 	return m.InviteStaffFn(ctx, invitation)
 }
+
+// TestStudentImportConfig_Update_KeepsAChildWithoutCarePlaceOutOfTheOGS
+// imports an OGS row onto a child without an OGS place (#4803 review): the
+// school's cells (address) apply, the OGS cells (times, way home) do not, and
+// the child keeps its mark.
+func TestStudentImportConfig_Update_KeepsAChildWithoutCarePlaceOutOfTheOGS(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	config, _ := newStammdatenStudentConfig(t, db)
+	ctx := testpkg.Ctx(t)
+
+	child := testpkg.CreateTestStudent(t, db, "Ida", "Ohneplatz", "1A")
+	testpkg.MarkTestStudentWithoutCarePlace(t, db, child.ID)
+
+	inTenantTx(t, db, func(ctx context.Context) error {
+		require.NoError(t, config.PreloadReferenceData(ctx))
+		return config.Update(ctx, child.ID, importModels.StudentImportRow{
+			FirstName: "Ida", LastName: "Ohneplatz", SchoolClass: "1A", AddressCity: "Bonn",
+			PickupSchedules:  []importModels.PickupScheduleImportData{{Weekday: 2, PickupTime: "15:30"}},
+			ArrivalSchedules: []importModels.ArrivalScheduleImportData{{Weekday: 2, ExpectedArrival: "13:00"}},
+			DepartureDays:    map[string]string{"mon": "alone"},
+		})
+	})
+
+	var schedules, arrivals int
+	var mark bool
+	var city *string
+	require.NoError(t, db.NewRaw(`SELECT
+		(SELECT COUNT(*) FROM schedule.student_pickup_schedules WHERE student_id = ?),
+		(SELECT COUNT(*) FROM schedule.student_arrival_schedules WHERE student_id = ?),
+		m.without_care_place, s.address_city
+		FROM users.student_school_memberships m JOIN users.student_profiles s ON s.id = m.student_profile_id
+		WHERE m.tenant_id = ? AND m.student_profile_id = ? AND m.deleted_at IS NULL`,
+		child.ID, child.ID, testpkg.Tenant(t), child.ID).Scan(ctx, &schedules, &arrivals, &mark, &city))
+	assert.Zero(t, schedules, "no OGS pickup times")
+	assert.Zero(t, arrivals, "no OGS arrival times")
+	assert.True(t, mark, "the child keeps its mark")
+	require.NotNil(t, city)
+	assert.Equal(t, "Bonn", *city, "the school's cells still apply")
+}
+
+// TestStudentImportConfig_ChildQuotaPreviewSkipsAChildWithoutCarePlace keeps
+// the import's quota preview in line with the count (#4803 review): a row
+// that extends a child without an OGS place adds nobody to the
+// Kontingentzahl, because the import keeps it without a place.
+func TestStudentImportConfig_ChildQuotaPreviewSkipsAChildWithoutCarePlace(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	config, _ := newStammdatenStudentConfig(t, db)
+	config.CountsTowardChildQuota = api.ImportChildQuotaRule()
+
+	child := testpkg.CreateTestStudent(t, db, "Ina", "Ohneplatz", "2C")
+	testpkg.MarkTestStudentWithoutCarePlace(t, db, child.ID)
+	_, err := db.ExecContext(testpkg.Ctx(t), `UPDATE users.student_school_memberships SET enrolled_until = '2020-07-31'
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), child.ID)
+	require.NoError(t, err)
+
+	inTenantTx(t, db, func(ctx context.Context) error {
+		adds, err := config.AddsToChildQuota(ctx, importModels.StudentImportRow{
+			FirstName: "Ina", LastName: "Ohneplatz", SchoolClass: "2C", EnrolledUntil: "2099-07-31",
+		}, &child.ID)
+		require.NoError(t, err)
+		assert.False(t, adds, "the import keeps the child without a place")
+
+		adds, err = config.AddsToChildQuota(ctx, importModels.StudentImportRow{
+			FirstName: "Neu", LastName: "Ohneplatz", SchoolClass: "2C", WithoutCarePlace: true,
+		}, nil)
+		require.NoError(t, err)
+		assert.False(t, adds, "a new child without an OGS place does not count")
+		return nil
+	})
+}

@@ -135,6 +135,7 @@ func newTenantResolveResponse(school *TenantSchool, resolved tenantShellSettings
 		EarlyCheckoutNoteEnabled:          resolved.earlyCheckoutNote,
 		EarlyCheckoutNoteToleranceMinutes: resolved.earlyCheckoutTolerance,
 		WeekendFollowsFriday:              resolved.weekendFollowsFriday,
+		ChildrenWithoutCarePlace:          resolved.childrenWithoutCarePlace,
 		ChildSearchOnlyNavigation:         resolved.childSearchOnlyNavigation,
 		SimpleStaffNavigation:             resolved.simpleStaffNavigation,
 		CareFacilityTerm:                  resolved.careFacilityTerm,
@@ -177,6 +178,7 @@ func tenantShellSettingKeys() []string {
 		settings.KeyEarlyCheckoutNoteEnabled,
 		settings.KeyEarlyCheckoutNoteToleranceMinutes,
 		settings.KeyWeekendFollowsFriday,
+		settings.KeyChildrenWithoutCarePlace,
 		settings.KeyChildSearchOnlyNavigation,
 		settings.KeySimpleStaffNavigation,
 		settings.KeyEnrollmentCareFacilityTerm,
@@ -297,6 +299,9 @@ func (resolved *tenantShellSettings) resolveFeatureFlags(readBool func(string) (
 		return err
 	}
 	resolved.bookedModules = booked
+	if resolved.childrenWithoutCarePlace, err = settings.ChildrenWithoutCarePlaceOn(readBool); err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -266,6 +266,9 @@ type GuardianInvitation struct {
 	// Email is the address the current link was issued for, normalized
 	// (#6294). The link redeems only while the guardian still has it.
 	Email string
+	// Expired reports whether the link ran out at the database time of the
+	// read (ADR 0285, Nachtrag).
+	Expired bool
 }
 
 func (i GuardianInvitation) IsPendingApproval() bool {

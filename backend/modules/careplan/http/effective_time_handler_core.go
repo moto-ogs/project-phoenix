@@ -156,6 +156,12 @@ func (rs *Resource) requireCareWriteAccess(
 		renderError(w, r, common.ErrorForbidden(fmt.Errorf("full access required to %s", action)))
 		return nil
 	}
+	// Arrival and pickup times, their exceptions and notes are OGS care: a
+	// child without an OGS place (#4803, ADR 0283) has none.
+	if student.WithoutCarePlace {
+		renderError(w, r, studentRequestError(ErrWithoutCarePlaceCareData))
+		return nil
+	}
 	return student
 }
 

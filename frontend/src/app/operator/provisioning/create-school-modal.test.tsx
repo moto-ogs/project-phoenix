@@ -81,4 +81,22 @@ describe("CreateSchoolModal", () => {
       }),
     );
   });
+
+  it("creates a school without a contact email", async () => {
+    mockCreateSchool.mockResolvedValue({ id: "42" });
+    const { onCreated } = renderModal();
+
+    fireEvent.change(screen.getByLabelText(/^E-Mail/), {
+      target: { value: "" },
+    });
+    expect(screen.getByLabelText(/^E-Mail/)).not.toBeRequired();
+    fireEvent.click(screen.getByLabelText(/^Bundesland/));
+    fireEvent.click(screen.getByRole("option", { name: "Baden-Württemberg" }));
+    fireEvent.click(screen.getByRole("button", { name: "Erstellen" }));
+
+    await waitFor(() => expect(onCreated).toHaveBeenCalled());
+    expect(mockCreateSchool).toHaveBeenCalledWith(
+      expect.not.objectContaining({ email: expect.anything() }),
+    );
+  });
 });
