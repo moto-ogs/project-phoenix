@@ -322,7 +322,10 @@ function TenantPageInfo({
 }
 
 /**
- * Ein Wert-Label-Paar der Statuszeile. Trennzeichen setzt `TenantPageStats`.
+ * Ein Wert-Label-Paar der Statuszeile. Die Paare stehen mit Abstand
+ * nebeneinander, ohne Trennpunkt: Punkte dazwischen wirken unruhig (#5684).
+ * Eine Angabe ohne Zahl („Eingegangen am 01.09.2026“) lässt `value` weg und
+ * steht dann als schlichter Text in der Zeile.
  *
  * Höchstens DREI Paare: die Statuszeile ist eine Orientierung, keine
  * Kennzahlenleiste. Sechs Paare (gemessen auf /staff) liest niemand mehr als
@@ -336,7 +339,8 @@ export function TenantPageStats({
   items,
 }: Readonly<{
   items: readonly {
-    readonly value: ReactNode;
+    /** Die Zahl oder der Wert, hervorgehoben. Ohne Wert zählt nur `label`. */
+    readonly value?: ReactNode;
     readonly label: string;
     /**
      * Filtert die Seite auf genau diese Zahl („0 ohne Debitorennummer“).
@@ -351,14 +355,16 @@ export function TenantPageStats({
   const kitDefault = useKitDefault();
   const shown = items.slice(0, MAX_STATS_ITEMS);
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1">
+    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
       {shown.map((item, index) => {
         const pair = (
           <>
-            <span className="font-medium text-gray-900 tabular-nums">
-              {item.value}
-            </span>
-            <span>{item.label}</span>
+            {item.value === undefined ? null : (
+              <span className="font-medium text-gray-900 tabular-nums">
+                {item.value}
+              </span>
+            )}
+            {item.label ? <span>{item.label}</span> : null}
           </>
         );
         return (
@@ -387,13 +393,6 @@ export function TenantPageStats({
               </Button>
             ) : (
               pair
-            )}
-            {/* Der Punkt hängt am Paar davor: bricht die Zeile um, endet sie
-                mit dem Punkt, statt die nächste damit zu beginnen. */}
-            {index < shown.length - 1 && (
-              <span aria-hidden="true" className="text-gray-300">
-                ·
-              </span>
             )}
           </span>
         );
