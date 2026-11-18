@@ -144,8 +144,35 @@ func (n *familyNumbers) countOn(day calendar.Date) (*parentbilling.FamilyChildCo
 		if current := n.broughtCoverageOn(day); current != nil {
 			count = current
 		}
+	} else if n.decided() {
+		if _, started := n.own.InForceOn(day); !started {
+			count = n.withBroughtCoverage(day)
+		}
 	}
 	return n.withStatement(count), differing
+}
+
+// withBroughtCoverage retains coverage before the first own confirmation
+// for the list's gap warning, without changing the import or billing input.
+func (n *familyNumbers) withBroughtCoverage(day calendar.Date) *parentbilling.FamilyChildCount {
+	current := n.broughtCoverageOn(day)
+	if current == nil {
+		return n.own
+	}
+	until := current.ValidUntil
+	for _, own := range confirmations(n.own) {
+		if own.Children != nil && own.ValidFrom != nil {
+			end := own.ValidFrom.AddDays(-1)
+			if until == nil || end.Before(*until) {
+				until = &end
+			}
+		}
+	}
+	combined := *n.own
+	combined.Confirmations = append(slices.Clone(n.own.Confirmations), parentbilling.FamilyChildConfirmation{
+		Children: current.ConfirmedChildren, ValidFrom: current.ValidFrom, ValidUntil: until,
+	})
+	return &combined
 }
 
 // broughtCoverageOn joins equal confirmations only across adjacent days.

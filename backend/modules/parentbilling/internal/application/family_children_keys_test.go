@@ -99,6 +99,81 @@ func TestBroughtFamilyNumbersKeepTheLongestConfirmation(t *testing.T) {
 	assert.Equal(t, parentbilling.FamilyChildrenConfirmed, families[0].Status, "an open confirmation outlives every finite one")
 }
 
+func TestFamilyImportRejectsConflictingCarriedConfirmations(t *testing.T) {
+	t.Parallel()
+	from, today := calendar.NewDate(2027, 1, 1), calendar.NewDate(2027, 1, 10)
+	counts := []parentbilling.FamilyChildCount{
+		{ID: 1, ContractID: 1, FamilyEmail: "contract:1", ConfirmedChildren: ptr(2), ValidFrom: &from},
+		{ID: 2, ContractID: 2, FamilyEmail: "contract:2", ConfirmedChildren: ptr(3), ValidFrom: ptr(from.AddDays(4))},
+	}
+	recipients := map[int64]parentbilling.CareRecipient{1: {Email: "family@example.org"}, 2: {Email: "family@example.org"}}
+	for _, children := range []int{2, 3, 4} {
+		numbers, _ := numbersByFamily(counts, recipients)
+		rows := []familyImportCandidate{{targets: []familyImportTarget{{family: "family@example.org", contractID: 1, firstDay: from}},
+			row: parentbilling.FamilyChildrenImportRow{Children: ptr(children)}}}
+		decideFamilyImport(rows, numbers, today)
+		assert.Equal(t, parentbilling.FamilyImportConflict, rows[0].row.Status)
+		assert.Empty(t, newImportedChildren(rows[0].decided), "a file cannot supersede conflicting carried confirmations")
+	}
+}
+
+func TestFutureOwnConfirmationKeepsCarriedCoverageVisible(t *testing.T) {
+	t.Parallel()
+	from, today, future := calendar.NewDate(2027, 1, 1), calendar.NewDate(2027, 1, 10), calendar.NewDate(2027, 2, 1)
+	for _, tc := range []struct {
+		name    string
+		until   calendar.Date
+		day     calendar.Date
+		want    string
+		history []parentbilling.FamilyChildConfirmation
+	}{
+		{"impending gap", calendar.NewDate(2027, 1, 20), today, parentbilling.FamilyChildrenExpiring, nil},
+		{"gap already started", calendar.NewDate(2027, 1, 20), calendar.NewDate(2027, 1, 21), parentbilling.FamilyChildrenExpired, nil},
+		{"adjacent own confirmation", calendar.NewDate(2027, 1, 31), today, parentbilling.FamilyChildrenUpcoming, nil},
+		{"own confirmation started", calendar.NewDate(2027, 1, 20), future, parentbilling.FamilyChildrenConfirmed, nil},
+		{"retained own confirmation ends before carried coverage", calendar.NewDate(2027, 1, 31), today, parentbilling.FamilyChildrenExpiring,
+			[]parentbilling.FamilyChildConfirmation{{Children: ptr(4), ValidFrom: ptr(calendar.NewDate(2027, 1, 15)), ValidUntil: ptr(calendar.NewDate(2027, 1, 18))}}},
+		{"expired own confirmation does not revive carried coverage", calendar.NewDate(2027, 1, 31), calendar.NewDate(2027, 1, 19), parentbilling.FamilyChildrenExpired,
+			[]parentbilling.FamilyChildConfirmation{{Children: ptr(4), ValidFrom: ptr(calendar.NewDate(2027, 1, 15)), ValidUntil: ptr(calendar.NewDate(2027, 1, 18))}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			counts := []parentbilling.FamilyChildCount{
+				{ID: 1, ContractID: 1, FamilyEmail: "contract:1", ConfirmedChildren: ptr(3), ValidFrom: &from, ValidUntil: &tc.until},
+				{ID: 2, ContractID: 2, FamilyEmail: "family@example.org", ConfirmedChildren: ptr(2), ValidFrom: &future, Confirmations: tc.history},
+			}
+			recipients := map[int64]parentbilling.CareRecipient{1: {Email: "family@example.org"}, 2: {Email: "family@example.org"}}
+			families := groupFamilies(nil, recipients, counts, tc.day)
+			require.Len(t, families, 1)
+			assert.Equal(t, tc.want, families[0].Status)
+			assert.Equal(t, tc.history, counts[1].Confirmations, "the list does not mutate stored history")
+		})
+	}
+}
+
+func TestContractImportIgnoresInvalidFamilyChildrenWitnesses(t *testing.T) {
+	t.Parallel()
+	from := calendar.NewDate(2027, 1, 1)
+	for _, tc := range []struct {
+		name     string
+		children int
+		want     string
+	}{
+		{"invalid repeated count", 99, parentbilling.ImportedChildrenNew},
+		{"valid contradictory repeated count", 3, parentbilling.ImportedChildrenRowsDiffer},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			numbers := FamilyNumbers{store: familySourceStore{}}
+			decisions, err := numbers.DecideImportedFamilyChildren(context.Background(),
+				parentbilling.HolidayReviewer{OrganizationID: 9, AccountID: 8}, []parentbilling.ImportedFamilyChildren{
+					{Line: 2, ContractID: 1, FamilyEmail: "family@example.org", Children: 2, ValidFrom: from},
+					{Line: 3, ContractID: 1, FamilyEmail: "family@example.org", Children: tc.children, ValidFrom: from, Witness: true},
+				}, false)
+			require.NoError(t, err)
+			assert.Equal(t, []parentbilling.ImportedFamilyChildrenDecision{{Line: 2, Status: tc.want}}, decisions)
+		})
+	}
+}
+
 func TestFamilyMonthResolvesBothSourcesOnTheFirstValidDay(t *testing.T) {
 	t.Parallel()
 	january, middle, february := calendar.NewDate(2027, 1, 1), calendar.NewDate(2027, 1, 15), calendar.NewDate(2027, 2, 1)

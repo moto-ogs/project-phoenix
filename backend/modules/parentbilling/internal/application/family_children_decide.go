@@ -83,7 +83,7 @@ func decideImportedChildren(rows []importedChildren, current func(family string)
 func distinctImportedChildren(rows []importedChildren) map[string]map[int]bool {
 	distinct := map[string]map[int]bool{}
 	for _, row := range rows {
-		if row.status != "" && !row.witness {
+		if row.status != "" {
 			continue
 		}
 		if distinct[row.family] == nil {

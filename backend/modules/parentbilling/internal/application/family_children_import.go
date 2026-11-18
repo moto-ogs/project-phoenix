@@ -150,6 +150,15 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 		}
 		return nil
 	}
+	// Conflicting carried confirmations still protect their earlier months.
+	// Only an explicit office confirmation may settle them for the family.
+	for i := range rows {
+		if found := numbers[rows[i].family]; found != nil {
+			if _, differing := found.count(); differing {
+				rows[i].status = parentbilling.ImportedChildrenRowsDiffer
+			}
+		}
+	}
 	decideImportedChildren(rows, current, func(importedChildren) calendar.Date { return today })
 	var shown []parentbilling.FamilyChildTarget
 	seen := map[int64]bool{}
