@@ -145,3 +145,53 @@ func TestMonthlyInvoiceAndNoticeCarryTheTransferCode(t *testing.T) {
 	assert.NotEqual(t, legalRemedyHeading, letter.Blocks[at[0]].Heading, "the legal remedy stays last")
 	assert.False(t, letter.OnePage, "a fee notice keeps its full type")
 }
+
+// A Träger that switched the GiroCode off (#5624) gets no code on any
+// letter it pays by transfer: confirmation, holiday invoice, fee notice,
+// monthly invoice and monthly fee notice. The payment text stays.
+func TestNoTransferCodeWhenTheTraegerSwitchedItOff(t *testing.T) {
+	t.Parallel()
+
+	// Each letter on the same fixture with the switch on and off: on prints
+	// exactly one code, so the off case cannot pass by a fixture that
+	// never had one.
+	letters := map[string]func(withoutCode bool) Letter{
+		"confirmation": func(withoutCode bool) Letter {
+			content := goldenLetterContent(t)
+			content.letterhead.WithoutTransferCode = withoutCode
+			return confirmationLetter(content)
+		},
+		"holiday invoice": func(withoutCode bool) Letter {
+			content := goldenLetterContent(t)
+			content.document.DocumentKind = parentbilling.DocumentKindInvoice
+			content.letterhead.WithoutTransferCode = withoutCode
+			return confirmationLetter(content)
+		},
+		"fee notice": func(withoutCode bool) Letter {
+			content := noticeContent(t)
+			content.letterhead.WithoutTransferCode = withoutCode
+			return confirmationLetter(content)
+		},
+		"care invoice": func(withoutCode bool) Letter {
+			content := careLetterSJR()
+			content.letterhead.WithoutTransferCode = withoutCode
+			return careInvoiceLetter(content)
+		},
+		"care fee notice": func(withoutCode bool) Letter {
+			content := careLetterSJR()
+			content.invoice.DocumentKind = parentbilling.DocumentKindFeeNotice
+			content.invoice.DebtorNumber = "5.0311.000123.4"
+			content.letterhead.Template = hardtNoticeTemplate()
+			content.letterhead.WithoutTransferCode = withoutCode
+			return careNoticeLetter(content)
+		},
+	}
+	for name, letter := range letters {
+		on, _ := paymentCodes(letter(false))
+		assert.Len(t, on, 1, "%s prints the code while the switch is on", name)
+		off := letter(true)
+		codes, _ := paymentCodes(off)
+		assert.Empty(t, codes, name)
+		assert.Contains(t, letterText(off), "Bitte überweisen Sie", "%s keeps the payment text", name)
+	}
+}
