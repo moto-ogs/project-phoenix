@@ -11,7 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -24,8 +23,7 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 	t.Parallel()
 	testpkg.SetupIsolatedTestDB(t)
 	c := setupGuardiansCompositionRoute(t)
-	router := chi.NewRouter()
-	router.Mount("/api", c.router)
+	router := c.router
 	db := testpkg.SetupTestDB(t)
 	counter := testpkg.CaptureQueriesForContext(t, db)
 	counter.Stop()

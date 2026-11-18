@@ -14,9 +14,11 @@ import (
 	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
 	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
+	filestoreAPI "github.com/moto-ogs/project-phoenix/modules/filestorage/http/files"
 	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
 	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
 	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+	guardiansHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
 	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
@@ -46,6 +48,9 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
 		{"/api/surveys", announcementAPI.SurveyRouteContracts()},
 		{"/api/messages", parentMessagingAPI.RouteContracts()},
+		{"/api/guardians", guardianRouteContracts()},
+		{"/api/files", filestoreAPI.RouteContracts()},
+		{"/api/announcement-attachments", filestoreAPI.AnnouncementAttachmentRouteContracts()},
 		{"/api/work-time-models", worktimemodelsHTTP.RouteContracts()},
 		// Class Day owns the child sheet the supervision route answers with.
 		{"/school/calendar", calendarAPI.SchoolRouteContracts()},
@@ -137,6 +142,41 @@ func notificationRouteContracts(portal common.PortalScope) []common.RouteContrac
 		common.RouteContract{Method: "GET", Pattern: "/email-subscriptions/{type}", Portals: portals, Response: types.EmailSubscription},
 		common.RouteContract{Method: "PUT", Pattern: "/email-subscriptions/{type}", Portals: portals, Request: types.PreferenceRequest, NoData: true},
 	)
+}
+
+// guardianRouteContracts registers the guardian routes of the staff portal,
+// with patterns relative to /api/guardians. People Directory's http role may
+// not import the contract types, so it hands over the body types only.
+func guardianRouteContracts() []common.RouteContract {
+	types := guardiansHTTP.RouteContractTypes()
+	portals := []common.PortalScope{common.PortalTenant}
+	search := []common.QueryParam{{Name: "q", Kind: common.QueryString}, {Name: "page", Kind: common.QueryInt}, {Name: "page_size", Kind: common.QueryInt}}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/search", Portals: portals, Query: search, Paginated: true, Response: types.Pickers},
+		{Method: "GET", Pattern: "/{id}/delete-preview", Portals: portals, Response: types.DeletePreview},
+		{Method: "POST", Pattern: "/{id}/email-stop", Portals: portals, NoData: true},
+		{Method: "DELETE", Pattern: "/{id}/email-stop", Portals: portals, NoData: true},
+		{Method: "DELETE", Pattern: "/{id}/email-block", Portals: portals, NoData: true},
+		{Method: "GET", Pattern: "/{id}/payment", Portals: portals, Response: types.PaymentMasked},
+		{Method: "PUT", Pattern: "/{id}/payment", Portals: portals, Request: types.PaymentRequest, NoData: true},
+		{Method: "POST", Pattern: "/{id}/payment/reveal", Portals: portals, Response: types.PaymentReveal},
+		{Method: "GET", Pattern: "/{id}/phone-numbers/", Portals: portals, Response: types.Phones},
+		{Method: "POST", Pattern: "/{id}/phone-numbers/", Portals: portals, Request: types.PhoneCreate, Response: types.Phone},
+		{Method: "PUT", Pattern: "/{id}/phone-numbers/{phoneId}", Portals: portals, Request: types.PhoneUpdate, Response: types.Phone},
+		{Method: "DELETE", Pattern: "/{id}/phone-numbers/{phoneId}", Portals: portals, NoData: true},
+		{Method: "POST", Pattern: "/{id}/phone-numbers/{phoneId}/set-primary", Portals: portals, Response: types.Phone},
+		{Method: "POST", Pattern: "/bulk-invite", Portals: portals, Request: types.BulkInviteRequest, Response: types.BulkInvite},
+		{Method: "GET", Pattern: "/invitations/pending-approval", Portals: portals, Response: types.Approvals},
+		{Method: "GET", Pattern: "/payment-overview", Portals: portals, Response: types.Overview},
+		{Method: "PUT", Pattern: "/relationships/{relationshipId}", Portals: portals, Request: types.LinkUpdate, NoData: true},
+		{Method: "GET", Pattern: "/students/{studentId}/guardians", Portals: portals, Response: types.WithRelationships},
+		{Method: "POST", Pattern: "/students/{studentId}/guardians", Portals: portals, Request: types.LinkRequest, Response: types.Link},
+		{Method: "POST", Pattern: "/students/{studentId}/guardians/batch", Portals: portals, Request: types.BatchRequest, NoData: true},
+		{Method: "DELETE", Pattern: "/students/{studentId}/guardians/{guardianId}", Portals: portals, NoData: true},
+		{Method: "GET", Pattern: "/students/{studentId}/email-status", Portals: portals, Response: types.EmailStatuses},
+		{Method: "POST", Pattern: "/students/{studentId}/invite", Portals: portals, Request: types.InviteRequest, Response: types.Invite},
+		{Method: "PUT", Pattern: "/students/{studentId}/payer", Portals: portals, Request: types.PayerRequest, NoData: true},
+	}
 }
 
 // schoolFeedRouteContracts registers the bell of a portal across schools,

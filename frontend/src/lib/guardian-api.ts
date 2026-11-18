@@ -184,7 +184,7 @@ export interface GuardianEmailState {
 }
 
 interface BackendGuardianEmailState {
-  guardian_profile_id: number;
+  guardian_profile_id: number | string;
   mail_outcome?: MailOutcome;
   address_mark?: EmailAddressMark;
   emails_stopped?: boolean;

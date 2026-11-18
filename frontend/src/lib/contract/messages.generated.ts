@@ -207,8 +207,8 @@ export const ReadersResponseSchema: z.ZodType<ReadersResponse, unknown> = z.obje
   school: SchoolReadersResponseSchema,
 });
 
-/** Go: messaging.GuardianResponse */
-export interface GuardianResponse {
+/** Go: messaging.MessageableGuardianResponse */
+export interface MessageableGuardianResponse {
   account_id: string;
   name: string;
   relationship_type?: string;
@@ -217,7 +217,7 @@ export interface GuardianResponse {
   leadership_available: boolean;
 }
 
-export const GuardianResponseSchema: z.ZodType<GuardianResponse, unknown> = z.object({
+export const MessageableGuardianResponseSchema: z.ZodType<MessageableGuardianResponse, unknown> = z.object({
   account_id: z.string(),
   name: z.string(),
   relationship_type: z.string().optional(),
@@ -301,7 +301,7 @@ export const routes = {
     pattern: "/api/messages/students/{studentId}/guardians",
     portals: ["tenant"],
     query: ["audience"],
-    response: success(z.array(GuardianResponseSchema)),
+    response: success(z.array(MessageableGuardianResponseSchema)),
   },
   "GET /api/messages/threads/{threadId}/mails": {
     method: "GET",

@@ -2,6 +2,71 @@
   "routes": [
     {
       "method": "DELETE",
+      "pattern": "/api/announcement-attachments/{announcementId}/{attachmentId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AttachmentRemovedResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/files/folders/{folderId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "FolderRemovedResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/files/folders/{folderId}/files/{fileId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "FolderRemovedResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/guardians/students/{studentId}/guardians/{guardianId}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/guardians/{id}/email-block",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/guardians/{id}/email-stop",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/guardians/{id}/phone-numbers/{phoneId}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/notifications/preferences/",
       "portals": [
         "tenant"
@@ -192,6 +257,149 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/files/audience",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AudienceResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/files/folders",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "FolderListResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/guardians/invitations/pending-approval",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "pendingApprovalResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/guardians/payment-overview",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "PaymentOverviewRow"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/guardians/search",
+      "portals": [
+        "tenant"
+      ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "page",
+          "kind": "int"
+        },
+        {
+          "name": "page_size",
+          "kind": "int"
+        },
+        {
+          "name": "q",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "GuardianPickerResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/guardians/students/{studentId}/email-status",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "guardianEmailStatusResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/guardians/students/{studentId}/guardians",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "GuardianWithRelationship"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/guardians/{id}/delete-preview",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "GuardianDeletePreview"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/guardians/{id}/payment",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "GuardianPaymentMaskedResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/guardians/{id}/phone-numbers/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "PhoneNumberResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/messages/group-threads",
       "portals": [
         "tenant"
@@ -277,7 +485,7 @@
         "kind": "array",
         "elem": {
           "kind": "ref",
-          "ref": "GuardianResponse"
+          "ref": "MessageableGuardianResponse"
         }
       }
     },
@@ -1469,6 +1677,123 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/files/folders",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "FolderRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "FolderResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/guardians/bulk-invite",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "bulkInviteRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "bulkInviteResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/guardians/students/{studentId}/guardians",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "StudentGuardianLinkRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "GuardianLinkResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/guardians/students/{studentId}/guardians/batch",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CreateStudentGuardiansRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/guardians/students/{studentId}/invite",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "inviteToStudentRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "inviteToStudentResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/guardians/{id}/email-stop",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/guardians/{id}/payment/reveal",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "GuardianPaymentRevealResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/guardians/{id}/phone-numbers/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PhoneNumberCreateRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PhoneNumberResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/guardians/{id}/phone-numbers/{phoneId}/set-primary",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PhoneNumberResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/messages/group-threads",
       "portals": [
         "tenant"
@@ -2269,6 +2594,72 @@
       "response": {
         "kind": "ref",
         "ref": "TraegerReportTemplate"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/files/folders/{folderId}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "FolderRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "FolderResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/guardians/relationships/{relationshipId}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "StudentGuardianUpdateRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/guardians/students/{studentId}/payer",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "StudentPayerRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/guardians/{id}/payment",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "GuardianPaymentRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/guardians/{id}/phone-numbers/{phoneId}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PhoneNumberUpdateRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PhoneNumberResponse"
       }
     },
     {
@@ -3527,6 +3918,18 @@
       ]
     },
     {
+      "name": "AttachmentRemovedResponse",
+      "go_type": "files.AttachmentRemovedResponse",
+      "fields": [
+        {
+          "name": "announcement_id",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "AttachmentResponse",
       "go_type": "staffmessaging.AttachmentResponse",
       "fields": [
@@ -3584,6 +3987,76 @@
         {
           "name": "name",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AudienceAccountResponse",
+      "go_type": "files.AudienceAccountResponse",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AudienceResponse",
+      "go_type": "files.AudienceResponse",
+      "fields": [
+        {
+          "name": "roles",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AudienceRoleResponse"
+            }
+          }
+        },
+        {
+          "name": "accounts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AudienceAccountResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AudienceRoleResponse",
+      "go_type": "files.AudienceRoleResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
           "schema": {
             "kind": "string"
           }
@@ -4002,6 +4475,25 @@
             "nullable": true,
             "elem": {
               "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CreateStudentGuardiansRequest",
+      "go_type": "users.CreateStudentGuardiansRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "guardians",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "NewStudentGuardian"
             }
           }
         }
@@ -4887,6 +5379,164 @@
       ]
     },
     {
+      "name": "FolderListResponse",
+      "go_type": "files.FolderListResponse",
+      "fields": [
+        {
+          "name": "folders",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FolderResponse"
+            }
+          }
+        },
+        {
+          "name": "can_manage",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_upload",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "staff_upload_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "used_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FolderRemovedResponse",
+      "go_type": "files.FolderRemovedResponse",
+      "fields": [
+        {
+          "name": "folder_id",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FolderRequest",
+      "go_type": "files.FolderRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "visibility",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "lax_id"
+            }
+          }
+        },
+        {
+          "name": "account_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "lax_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "FolderResponse",
+      "go_type": "files.FolderResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "visibility",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "file_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "role_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "account_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "GroupChildResponse",
       "go_type": "messaging.GroupChildResponse",
       "fields": [
@@ -5251,6 +5901,252 @@
       ]
     },
     {
+      "name": "GuardianDeletePreview",
+      "go_type": "users.GuardianDeletePreview",
+      "fields": [
+        {
+          "name": "linked_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "affected_names",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "affected_link_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "warning",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianLinkResponse",
+      "go_type": "users.GuardianLinkResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "guardian_profile_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "relationship_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_role",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_primary",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_emergency_contact",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_pickup",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "pickup_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "emergency_priority",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "is_payer",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "permissions",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianPaymentMaskedResponse",
+      "go_type": "users.GuardianPaymentMaskedResponse",
+      "fields": [
+        {
+          "name": "guardian_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "iban_masked",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "account_holder",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianPaymentRequest",
+      "go_type": "users.GuardianPaymentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "iban",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "account_holder",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianPaymentRevealResponse",
+      "go_type": "users.GuardianPaymentRevealResponse",
+      "fields": [
+        {
+          "name": "guardian_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "iban",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "account_holder",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianPickerResponse",
+      "go_type": "users.GuardianPickerResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "linked_children_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "GuardianReaderResponse",
       "go_type": "messaging.GuardianReaderResponse",
       "fields": [
@@ -5277,23 +6173,126 @@
     },
     {
       "name": "GuardianResponse",
-      "go_type": "messaging.GuardianResponse",
+      "go_type": "users.GuardianResponse",
       "fields": [
         {
-          "name": "account_id",
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
           "schema": {
             "kind": "string"
           }
         },
         {
-          "name": "name",
+          "name": "last_name",
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone_numbers",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "nullable": true,
+              "ref": "PhoneNumberResponse"
+            }
+          }
+        },
+        {
+          "name": "address_street",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_city",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_postal_code",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "preferred_contact_method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "language_preference",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "has_account",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "account_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianWithRelationship",
+      "go_type": "users.GuardianWithRelationship",
+      "fields": [
+        {
+          "name": "guardian",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "GuardianResponse"
+          }
+        },
+        {
+          "name": "relationship_id",
+          "schema": {
+            "kind": "legacy_id"
           }
         },
         {
           "name": "relationship_type",
-          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_role",
           "schema": {
             "kind": "string"
           }
@@ -5305,16 +6304,50 @@
           }
         },
         {
-          "name": "readers",
+          "name": "is_emergency_contact",
           "schema": {
-            "kind": "ref",
-            "ref": "ReadersResponse"
+            "kind": "bool"
           }
         },
         {
-          "name": "leadership_available",
+          "name": "can_pickup",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "pickup_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "emergency_priority",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "is_payer",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "account_status",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -5709,6 +6742,50 @@
               "kind": "ref",
               "ref": "AttachmentResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MessageableGuardianResponse",
+      "go_type": "messaging.MessageableGuardianResponse",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "relationship_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_primary",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "readers",
+          "schema": {
+            "kind": "ref",
+            "ref": "ReadersResponse"
+          }
+        },
+        {
+          "name": "leadership_available",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -7258,6 +8335,61 @@
       ]
     },
     {
+      "name": "PaymentOverviewRow",
+      "go_type": "users.PaymentOverviewRow",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_id",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "guardian_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "relationship_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_holder",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "iban_masked",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "PersonRequest",
       "go_type": "traegerstaff.PersonRequest",
       "request": true,
@@ -7281,6 +8413,132 @@
           "optional": true,
           "schema": {
             "kind": "date",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "PhoneNumberCreateRequest",
+      "go_type": "users.PhoneNumberCreateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "phone_number",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "is_primary",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PhoneNumberResponse",
+      "go_type": "users.PhoneNumberResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "phone_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_primary",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "priority",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PhoneNumberUpdateRequest",
+      "go_type": "users.PhoneNumberUpdateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "phone_number",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "phone_type",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "is_primary",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "priority",
+          "optional": true,
+          "schema": {
+            "kind": "int",
             "nullable": true
           }
         }
@@ -9381,6 +10639,148 @@
           "schema": {
             "kind": "ref",
             "ref": "AttendanceActorResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StudentGuardianLinkRequest",
+      "go_type": "users.StudentGuardianLinkRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "guardian_profile_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "relationship_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_role",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_primary",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_emergency_contact",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_pickup",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "pickup_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "emergency_priority",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StudentGuardianUpdateRequest",
+      "go_type": "users.StudentGuardianUpdateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "relationship_type",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "guardian_role",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "is_primary",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "is_emergency_contact",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "can_pickup",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "pickup_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "emergency_priority",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "StudentPayerRequest",
+      "go_type": "users.StudentPayerRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "guardian_id",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
           }
         }
       ]
@@ -11595,6 +12995,131 @@
       ]
     },
     {
+      "name": "bulkInviteProblemResponse",
+      "go_type": "users.bulkInviteProblemResponse",
+      "fields": [
+        {
+          "name": "guardian_profile_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_names",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "bulkInviteRequest",
+      "go_type": "users.bulkInviteRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "resend_open",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "dry_run",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "bulkInviteResponse",
+      "go_type": "users.bulkInviteResponse",
+      "fields": [
+        {
+          "name": "dry_run",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "invited",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "linked_existing_account",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "resent",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "skipped_active",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "skipped_open",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "skipped_restricted",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "problems",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "bulkInviteProblemResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "debtorNumberSettings",
       "go_type": "parentbillinghttp.debtorNumberSettings",
       "fields": [
@@ -12169,6 +13694,148 @@
       ]
     },
     {
+      "name": "guardianEmailStatusResponse",
+      "go_type": "users.guardianEmailStatusResponse",
+      "fields": [
+        {
+          "name": "guardian_profile_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "mail_outcome",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_mark",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "emails_stopped",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "stop_shared",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "provider_block",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "send_block",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "outcome_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "inviteToStudentRequest",
+      "go_type": "users.inviteToStudentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "relationship_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirm_role_upgrade",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "inviteToStudentResponse",
+      "go_type": "users.inviteToStudentResponse",
+      "fields": [
+        {
+          "name": "outcome",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_profile_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "invitation_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "existing_role",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "mail_held",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "letterChildResponse",
       "go_type": "announcement.letterChildResponse",
       "fields": [
@@ -12481,6 +14148,76 @@
           "name": "label",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "pendingApprovalResponse",
+      "go_type": "users.pendingApprovalResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_profile_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "requested_by_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "role_upgrade",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]

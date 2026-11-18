@@ -11,7 +11,7 @@ func RouteContracts() []common.RouteContract {
 	audience := []common.QueryParam{{Name: "audience", Kind: common.QueryString}}
 	target := []common.QueryParam{{Name: "target_type", Kind: common.QueryString}, {Name: "target_id", Kind: common.QueryString}}
 	return []common.RouteContract{
-		{Method: "GET", Pattern: "/students/{studentId}/guardians", Portals: portals, Query: audience, Response: []GuardianResponse{}},
+		{Method: "GET", Pattern: "/students/{studentId}/guardians", Portals: portals, Query: audience, Response: []MessageableGuardianResponse{}},
 		{Method: "GET", Pattern: "/reachable-students", Portals: portals, Response: ReachableStudentsResponse{}},
 		{Method: "GET", Pattern: "/threads/{threadId}/mails", Portals: portals, Response: ThreadMailsResponse{}},
 		{Method: "GET", Pattern: "/group-threads", Portals: portals, Response: []GroupThreadSummaryResponse{}},
