@@ -585,6 +585,27 @@ export interface UpdateSchoolRequest {
   child_quota?: { bundles: number; bundle_size: number } | null;
 }
 
+// What a school still lacks of its required details (#7174).
+export interface BackendSchoolRequiredDetails {
+  school_id: number;
+  reply_address_missing: boolean;
+}
+
+export interface SchoolRequiredDetails {
+  schoolId: string;
+  /** Neither the reply setting nor the contact address answers parents. */
+  replyAddressMissing: boolean;
+}
+
+export function mapSchoolRequiredDetails(
+  data: BackendSchoolRequiredDetails,
+): SchoolRequiredDetails {
+  return {
+    schoolId: data.school_id.toString(),
+    replyAddressMissing: data.reply_address_missing,
+  };
+}
+
 // Device creation / API key management
 
 export interface CreateDeviceRequest {

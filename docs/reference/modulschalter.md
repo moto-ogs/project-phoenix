@@ -37,6 +37,10 @@ Ein Modul, das es noch nicht gibt, hat trotzdem einen Schalter. Er hält fest, w
 
 `module.nfc_anwesenheit` hat `attendance.nfc_enabled` abgelöst. Migration 1.15.501 hat für jede Schule den bisherigen Wert übernommen; eine Schule ohne Wert hatte NFC aus und behält es aus.
 
+### Kinder ohne OGS-Platz
+
+Kinder der Klasse ohne OGS-Platz als eigene Kinder (#4803, [ADR 0282](../adr/0282-kind-ohne-ogs-platz-ist-ein-kind-der-klasse-mit-eigenem-datensatz.md)) schaltet kein Modul frei, sondern die Einstellung `operations.children_without_care_place`. Das moto-Team setzt sie im Operator-Portal (Reiter „Module“). Ihre Voreinstellung ist aus, und sie wirkt nur bei gebuchtem Modul Unterricht am Vormittag. Ein Modulschalter allein reicht nicht, weil jeder Modulschalter auf „gebucht“ voreingestellt ist. Sobald beides an ist, werden die Klassenlisteneinträge der Schule zu Kindern ohne OGS-Platz. Ausschalten wandelt nichts zurück.
+
 ### Abhängigkeiten
 
 - Ferienbetreuung setzt Online-Anmeldung voraus.

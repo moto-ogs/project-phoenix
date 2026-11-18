@@ -128,21 +128,25 @@ type ChildResponse struct {
 	// whether to show a card as read-only. The exit REASON is deliberately not
 	// part of this response: it is a staff-internal note behind users:delete.
 	CareEnded bool `json:"care_ended"`
+	// WithoutCarePlace says the child belongs to its class but has no OGS
+	// place (#4803, ADR 0282): the portal shows no OGS function for it.
+	WithoutCarePlace bool `json:"without_care_place,omitempty"`
 }
 
 func toChildResponse(c *parentService.ChildSummary, today timezone.Date) ChildResponse {
 	return ChildResponse{
-		StudentID:     strconv.FormatInt(c.StudentID, 10),
-		TenantID:      strconv.FormatInt(c.TenantID, 10),
-		FirstName:     c.FirstName,
-		LastName:      c.LastName,
-		SchoolClass:   c.SchoolClass,
-		Status:        c.Status,
-		EnrolledFrom:  parentResponseDatePointer(c.EnrolledFrom),
-		EnrolledUntil: parentResponseDatePointer(c.EnrolledUntil),
-		SchoolName:    c.SchoolName,
-		SchoolSlug:    c.SchoolSlug,
-		CareEnded:     c.CareEnded(today),
+		StudentID:        strconv.FormatInt(c.StudentID, 10),
+		TenantID:         strconv.FormatInt(c.TenantID, 10),
+		FirstName:        c.FirstName,
+		LastName:         c.LastName,
+		SchoolClass:      c.SchoolClass,
+		Status:           c.Status,
+		EnrolledFrom:     parentResponseDatePointer(c.EnrolledFrom),
+		EnrolledUntil:    parentResponseDatePointer(c.EnrolledUntil),
+		SchoolName:       c.SchoolName,
+		SchoolSlug:       c.SchoolSlug,
+		CareEnded:        c.CareEnded(today),
+		WithoutCarePlace: c.WithoutCarePlace,
 	}
 }
 

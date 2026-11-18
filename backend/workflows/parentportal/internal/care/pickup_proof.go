@@ -30,6 +30,9 @@ func (s *Service) PickupRequestProof(ctx context.Context, accountID, studentID, 
 	if err != nil {
 		return nil, err
 	}
+	if err := child.RequireCarePlace(); err != nil {
+		return nil, err
+	}
 	if s.CareRequests == nil || s.PickupSignatures == nil {
 		return nil, errors.New("parent: pickup permission proof is not configured")
 	}

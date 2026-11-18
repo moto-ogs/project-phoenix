@@ -48,7 +48,13 @@ type closingFeedPerson struct {
 func newClosingFeedFixture(t *testing.T) *closingFeedFixture {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
-	tenantID := testpkg.Tenant(t)
+	return newClosingFeedFixtureIn(t, db, testpkg.Tenant(t))
+}
+
+// newClosingFeedFixtureIn is the fixture in the given school, such as one of
+// a Träger (#7146).
+func newClosingFeedFixtureIn(t *testing.T, db *bun.DB, tenantID int64) *closingFeedFixture {
+	t.Helper()
 	database := testpkg.NewDatabase(t, db)
 	unit := testpkg.TenantRuntime(t, db)
 	module, err := api.NewDeliveryTestModule(database, unit)
@@ -59,8 +65,10 @@ func newClosingFeedFixture(t *testing.T) *closingFeedFixture {
 	require.NoError(t, err)
 	audience, ok := notifier.(deliveryContract.SchoolAudience)
 	require.True(t, ok)
+	traeger, ok := notifier.(deliveryContract.TraegerFeedNotifier)
+	require.True(t, ok)
 	calendar, err := api.NewSchoolCalendarWithClosingDayNotices(database, settings.Settings, owners.DeliveryNotifications{
-		Notifier: notifier, Preferences: module.NotificationPreferences, SchoolAudience: audience,
+		Notifier: notifier, Preferences: module.NotificationPreferences, SchoolAudience: audience, TraegerNotices: traeger,
 	}, closingFeedToday)
 	require.NoError(t, err)
 	// Equal bounds open the push window all day, so the test does not depend

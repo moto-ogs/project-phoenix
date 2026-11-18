@@ -9,12 +9,16 @@ type StudentImportRow struct {
 	TagID     string `json:"tag_id,omitempty"`   // RFID card
 
 	// Student fields
-	SchoolClass     string `json:"school_class"`
-	GroupName       string `json:"group_name,omitempty"` // Human-readable (e.g., "Gruppe 1A")
-	ExtraInfo       string `json:"extra_info,omitempty"`
-	SupervisorNotes string `json:"supervisor_notes,omitempty"`
-	HealthInfo      string `json:"health_info,omitempty"`
-	PickupStatus    string `json:"pickup_status,omitempty"` // "Geht alleine nach Hause" or "Wird abgeholt"
+	SchoolClass string `json:"school_class"`
+	// WithoutCarePlace creates the child without an OGS place (#4803). No
+	// file column sets it: only the conversion of class list entries and the
+	// class-list import of a school that keeps such children do.
+	WithoutCarePlace bool   `json:"-"`
+	GroupName        string `json:"group_name,omitempty"` // Human-readable (e.g., "Gruppe 1A")
+	ExtraInfo        string `json:"extra_info,omitempty"`
+	SupervisorNotes  string `json:"supervisor_notes,omitempty"`
+	HealthInfo       string `json:"health_info,omitempty"`
+	PickupStatus     string `json:"pickup_status,omitempty"` // "Geht alleine nach Hause" or "Wird abgeholt"
 
 	// Child's own address (users.students.address_*), independent of the
 	// guardians' addresses.

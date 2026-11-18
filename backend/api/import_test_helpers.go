@@ -30,6 +30,9 @@ type ImportTestModule struct {
 	StaffImport          importModels.RowImporter[importModels.StaffImportRow]
 	ClassListImport      importModels.RowImporter[importModels.ClassListEntryImportRow]
 	OpeningBalanceImport importModels.OpeningBalanceImportFactory
+	// ClassListConversion turns the class-list entries into children without
+	// an OGS place (#4803), over the same owners.
+	ClassListConversion importModels.ClassListConverter
 	// Observations collects the per-run counters the production observer
 	// receives, so tests can assert the runtime evidence contract.
 	Observations *[]importModels.ImportObservation
@@ -40,7 +43,9 @@ type ImportTestModule struct {
 // per-row savepoint and the batch rollback are observable without a
 // contrived data shape.
 type ImportTestOptions struct {
-	WrapGuardians importPorts.GuardianPortDecorator
+	// ClassListConversion runs with each written class-list batch.
+	ClassListConversion func(context.Context, int64) error
+	WrapGuardians       importPorts.GuardianPortDecorator
 	// Clock is the clock of the import and of the Workforce it books into;
 	// nil is the real one.
 	Clock func() time.Time
@@ -191,17 +196,33 @@ func NewImportTestModuleWithOwners(db transactionruntime.Database, unit tenant.U
 			studentGuardians, students.CarePlan, NewStudentPresenceForTests(db), auditCompose.NewConsentRecorder(command), options.Today, importTestCohorts(db, options),
 		),
 		Staff:     newStaffImport(runtime, rfid, auth.Invitation, organizations, persons, membership, workTime),
-		ClassList: newClassListImport(runtime, membership, persons, wrapClassListBatches(classListBatches(membership), options.WrapClassListBatches)),
+		ClassList: newClassListImport(runtime, membership, persons, wrapClassListBatches(classListBatches(membership), options.WrapClassListBatches), options.ClassListConversion),
 		OpeningBalance: newOpeningBalanceImport(runtime, importPorts.OpeningBalanceImportDeps{
 			BalanceAdjustService: workforce.TimeTracking.OpeningBalances,
 			StaffAbsenceService:  workforce.TimeTracking.VacationTakeovers,
 		}, membership, persons, workTime),
 	}
+	module, err := importTestModuleOf(dataImports, observations,
+		func() (importModels.ClassListConverter, error) {
+			return composeClassListConversion(runtime, command, rfid, groups, rooms, persons, students.CarePlan, NewStudentPresenceForTests(db), membership)
+		})
+	return module, persons, membership, err
+}
+
+// importTestModuleOf is the module a suite drives, with the class-list
+// conversion (#4803) over the same owners.
+func importTestModuleOf(
+	dataImports imports, observations *[]importModels.ImportObservation, conversion func() (importModels.ClassListConverter, error),
+) (ImportTestModule, error) {
+	converter, err := conversion()
+	if err != nil {
+		return ImportTestModule{}, err
+	}
 	return ImportTestModule{
 		Import: dataImports.Student, StaffImport: dataImports.Staff, ClassListImport: dataImports.ClassList,
-		OpeningBalanceImport: dataImports.OpeningBalance,
-		Observations:         observations,
-	}, persons, membership, nil
+		OpeningBalanceImport: dataImports.OpeningBalance, ClassListConversion: converter,
+		Observations: observations,
+	}, nil
 }
 
 func wrapClassListBatches(batches importPorts.ClassListEntryBatches, wrap func(importPorts.ClassListEntryBatches) importPorts.ClassListEntryBatches) importPorts.ClassListEntryBatches {

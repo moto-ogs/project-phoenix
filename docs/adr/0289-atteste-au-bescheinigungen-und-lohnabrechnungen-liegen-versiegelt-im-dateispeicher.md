@@ -144,8 +144,8 @@ dieser ADR umfasst `Coordinator.SaveSealed`,
 `StaffDocumentFileSeal.Batch` und den geänderten `PrivateUploads.OpenPrivate`.
 Die Konstruktoren der beiden Batches erhöhen die Compose-Fläche von Care Plan
 um 13 Zeilen (1703 → 1716) und von Workforce um 6 (937 → 943); die Summe steigt
-13645 → 13664. Das Pass-through-Budget von Workforce steigt um eins (137 → 138,
-Summe 1394 → 1395).
+13647 → 13666 (nach ADR 0283). Das Pass-through-Budget von Workforce steigt um eins (137 → 138,
+Summe 1395 → 1396 nach ADR 0283).
 
 Verworfen:
 

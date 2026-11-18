@@ -105,10 +105,12 @@ type FeedStore interface {
 	// the portal's view.
 	MarkAllFeedEntriesRead(ctx context.Context, tenantID, accountID int64, view domain.FeedView, now time.Time) (int, error)
 	GuardianFeedStore
+	TraegerFeedStore
 	// SchoolAudience lists the active accounts of the school with a role of
 	// the OGS portal or of moto schule, and its active guardians with the
 	// children they hold parent_portal.access for (#7144), under the
-	// predicates the feed readers, Web Push and SSE apply.
+	// predicates the feed readers, Web Push and SSE apply, and the active
+	// members of the school's Träger (#7146).
 	SchoolAudience(ctx context.Context, tenantID int64) ([]domain.SchoolAudienceMember, error)
 }
 
@@ -126,6 +128,20 @@ type GuardianFeedStore interface {
 	// MarkAllGuardianFeedEntriesRead marks every readable unread entry of
 	// the account read and names the schools of the entries it changed.
 	MarkAllGuardianFeedEntriesRead(ctx context.Context, accountID int64, now time.Time) (tenantIDs []int64, err error)
+}
+
+// TraegerFeedStore reads the bell of a Träger member across the schools of
+// the session's Träger (#7146). Every statement runs on an administrative
+// transaction and keeps only the entries of the given types in a school of
+// that Träger while the account is an active member of it with an active
+// account.
+type TraegerFeedStore interface {
+	ListTraegerFeedEntries(ctx context.Context, organizationID, accountID int64, types []string, after *domain.FeedCursor, limit int) ([]domain.TraegerFeedEntry, error)
+	CountUnreadTraegerFeedEntries(ctx context.Context, organizationID, accountID int64, types []string) (int, error)
+	// MarkTraegerFeedEntryRead marks one readable entry of the account read;
+	// found is false for every other entry.
+	MarkTraegerFeedEntryRead(ctx context.Context, organizationID, accountID int64, types []string, entryID int64, now time.Time) (found bool, err error)
+	MarkAllTraegerFeedEntriesRead(ctx context.Context, organizationID, accountID int64, types []string, now time.Time) (int, error)
 }
 
 // RealtimeNotificationStore keeps the in-app notifications other API

@@ -75,7 +75,6 @@ var seedCoverageExemptions = map[string]string{
 	"active.payroll_dispatches":                 "not in prod yet (migration newer than the deployed image); only a school's own month close queues a dispatch; the seeder closes a month only as the Träger (#4711), which queues none",
 	"active.staff_vacation_openings":            "empty in prod too",
 
-	"audit.class_list_entry_changes":    "not in prod yet (migration newer than the deployed image)",
 	"audit.enrollment_restorations":     "empty in prod too",
 	"audit.export_transfers":            "only a real SFTP transfer to an external counterpart writes here; the address policy refuses the loopback target a seeder could offer",
 	"audit.room_color_migration_backup": "one-time migration snapshot; only installations with legacy reserved room colors can contain rows",

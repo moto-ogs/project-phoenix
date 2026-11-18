@@ -487,6 +487,38 @@ describe("ChildPage Fehlerweg (#2518)", () => {
     ).toHaveAttribute("href", "/parents/children");
   });
 
+  // Kind ohne OGS-Platz (#4803): statt Betreuung, Kursen und Heimweg steht
+  // ein Satz, warum es sie nicht gibt; die Krankmeldung bleibt.
+  it("zeigt bei einem Kind ohne OGS-Platz einen Hinweis statt der OGS-Abschnitte", async () => {
+    mockedChildren.mockResolvedValue([{ ...felix, without_care_place: true }]);
+    careMock.value = buildCare({
+      features: {
+        without_care_place: true,
+        pickup_change_enabled: false,
+        pickup_manage_allowed: false,
+        notes_enabled: false,
+      },
+    });
+    renderPage();
+
+    expect(
+      await screen.findByText("Kein Platz in der OGS"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Ihr Kind hat keinen Platz in der OGS. Abholung, Betreuungszeiten, Essen und Nachrichten an die OGS gibt es deshalb hier nicht.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("section-care")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("section-departure")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Abholung heute um 15:00 Uhr"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Felix abmelden/ }),
+    ).toBeInTheDocument();
+  });
+
   it("meldet einen Ladefehler der Betreuungsdaten über dem Profil", async () => {
     careMock.value = {
       ...buildCare(),

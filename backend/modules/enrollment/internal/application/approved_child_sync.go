@@ -324,7 +324,11 @@ func (d *Decisions) syncApprovedChildClass(ctx context.Context, run *approvedChi
 	if d.deps.StudentEnrollment == nil {
 		return fmt.Errorf("decision: student enrollment capability is required")
 	}
-	if err := d.deps.StudentEnrollment.RenewEnrollmentStudent(ctx, student.ID, enrollmentStudentInput(student)); err != nil {
+	// An edit of the approved child writes its class only: it never gives a
+	// child without an OGS place (#4803) its place, the approval does.
+	input := enrollmentStudentInput(student)
+	input.PreserveCarePlaceStatus = true
+	if err := d.deps.StudentEnrollment.RenewEnrollmentStudent(ctx, student.ID, input); err != nil {
 		return fmt.Errorf("decision: sync approved child student: %w", err)
 	}
 	if err := d.followRewrittenClass(ctx, student.ID, previousSchoolClass, student.SchoolClass); err != nil {

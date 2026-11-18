@@ -36,6 +36,10 @@ type directoryRecordRow struct {
 	// WithoutCarePlace is School Membership's mark of a child without an
 	// OGS place (#4803).
 	WithoutCarePlace bool `bun:"without_care_place"`
+	// ClassMemberFrom and ClassMemberClass are the class time School
+	// Membership keeps for a child from before its OGS care (#4803).
+	ClassMemberFrom  *calendar.Date `bun:"class_member_from"`
+	ClassMemberClass *string        `bun:"class_member_class"`
 
 	AddressStreet     *string `bun:"address_street"`
 	AddressCity       *string `bun:"address_city"`
@@ -91,6 +95,9 @@ func (r directoryRecordRow) toDomain(health HealthOpener) (directory.StudentReco
 	if r.FirstCareFrom != nil {
 		record.FirstCareFrom = r.FirstCareFrom.String()
 	}
+	if r.ClassMemberFrom != nil && r.ClassMemberClass != nil {
+		record.ClassMemberFrom, record.ClassMemberClass = r.ClassMemberFrom.String(), *r.ClassMemberClass
+	}
 	if r.CarePausedAfter != nil {
 		record.CarePausedAfter = r.CarePausedAfter.String()
 	}
@@ -123,6 +130,7 @@ const studentRecordColumns = `"student".id, "student".created_at, "student".upda
 	"student".person_id, "student".school_class, "student".group_id, "student".status,
 	"student".enrolled_from, "student".enrolled_until, "student".first_care_from,
 	"student".care_paused_after, "student".care_resumed_from, "student".without_care_place,
+	"student".class_member_from, "student".class_member_class,
 	"student".address_street, "student".address_city, "student".address_postal_code,
 	"student".extra_info, "student".health_data, "student".membership_id, "student".pickup_status,
 	"student".departure_days, "student".allowed_departure_modes, "student".pickup_days, "student".bus_days,

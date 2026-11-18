@@ -185,6 +185,10 @@ func TestToChildResponse_StringifiesIDs(t *testing.T) {
 	in.EnrolledUntil = &enrolledUntil
 	assert.False(t, toChildResponse(in, now).CareEnded, "care runs through its last day")
 	assert.True(t, toChildResponse(in, now.AddDays(1)).CareEnded, "care_ended follows the day the resource clock gives")
+	assert.False(t, out.WithoutCarePlace)
+	in.WithoutCarePlace = true
+	assert.True(t, toChildResponse(in, now).WithoutCarePlace,
+		"the portal hides the OGS blocks of a child without an OGS place (#4803)")
 }
 
 // --- staffShortName ------------------------------------------------------

@@ -1910,16 +1910,6 @@
       "target_owner": "settings-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningSettings.DeviceOnlineWindowMinutes",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.ProvisioningSettings.DeviceOnlineWindowMinutes",
-      "reason": "Read-only newly exposed target: organization-tenancy reaches modules/settings/records.SettingsService.ResolveIntForTenant (settings-platform) through roots/owners.provisioningSettings.DeviceOnlineWindowMinutes. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "organization-tenancy",
-      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveIntForTenant",
-      "target_owner": "settings-platform"
-    },
-    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningSettings.RecordFederalState",
       "classification": "platform",
@@ -1928,6 +1918,26 @@
       "reason": "Platform protocol participation (mutation): organization-tenancy reaches modules/settings/compose.SchoolCreationSettings.RecordFederalState (settings-platform) through the embedded school-creation settings of roots/owners.provisioningSettings (#7174). Settings checks the region against the options of operations.federal_state and stores it with its audit entry in the caller's administrative unit of the school creation; no own transaction, no scope switch, failures propagate and an unsupported region records nothing, so the school and its state commit together (ADR 0067 command participation).",
       "source_owner": "organization-tenancy",
       "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.SchoolCreationSettings.RecordFederalState",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningSettings.ReplyToAddresses",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.ProvisioningSettings.ReplyToAddresses",
+      "reason": "Read-only newly exposed target: organization-tenancy reaches modules/settings/records.SettingsSnapshot.String (settings-platform) through roots/owners.provisioningSettings.ReplyToAddresses, the batch read of the operator's required school details (#7174). No persistent, lock or scope effect.",
+      "source_owner": "organization-tenancy",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsSnapshot.String",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningSettings.ReplyToAddresses",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.ProvisioningSettings.ReplyToAddresses",
+      "reason": "Read-only newly exposed target: organization-tenancy reaches modules/settings/records.BatchSettingsService.ResolveManyForTenants (settings-platform) through roots/owners.provisioningSettings.ReplyToAddresses, the batch read of the operator's required school details (#7174). No persistent, lock or scope effect.",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveManyForTenants",
       "target_owner": "settings-platform"
     }
   ]

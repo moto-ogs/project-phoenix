@@ -25,6 +25,7 @@ const (
 	ReadSchools                      OperatorReadView = "schools"
 	ReadSchool                       OperatorReadView = "school"
 	ReadSchoolSummaries              OperatorReadView = "school_summaries"
+	ReadSchoolRequiredDetails        OperatorReadView = "school_required_details"
 	ReadOrganizationSchools          OperatorReadView = "organization_schools"
 	ReadSchoolAdminInvitation        OperatorReadView = "school_admin_invitation"
 	ReadSchoolAccountCreation        OperatorReadView = "school_account_creation"

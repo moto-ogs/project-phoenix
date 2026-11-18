@@ -348,10 +348,13 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0276: the time import of the sick note retention clock in
 // modules/workforce/compose (+1) and the clock field of the staff offboarding
 // with its time import in workflows/staffoffboarding/compose (+2).
+//
+// ADR 0283: the constructor of the class-list conversion in
+// modules/dataimport/compose/imports (+2).
 
 // ADR 0289: the maintenance seal constructors of the sealed document files in
 // modules/careplan/compose (+13) and modules/workforce/compose (+6).
-const moduleComposeBudgetTotal = 13664
+const moduleComposeBudgetTotal = 13666
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -403,9 +406,10 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0212: the message attachments (+25).
 	// ADR 0248: the parent-letter child reader constructor (+6).
 	// ADR 0267: +7, the clock fields; ADR 0277: -3, message retention reads the database clock.
-	"modules/communication/composition":  384,
-	"modules/dataimport/compose":         85,
-	"modules/dataimport/compose/imports": 29,
+	"modules/communication/composition": 384,
+	"modules/dataimport/compose":        85,
+	// Raised by ADR 0283: the class-list conversion constructor (+2).
+	"modules/dataimport/compose/imports": 31,
 	// ADR 0145: +40 LOC for transport lifecycle, -8 LOC for the retired local wrapper.
 	// ADR 0267: +8, the clock fields.
 	"modules/delivery/compose": 399,

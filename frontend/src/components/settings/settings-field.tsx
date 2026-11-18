@@ -194,17 +194,23 @@ function SwitchOffConsequence({
 }
 
 // operator_managed settings (ADR 0048) say who decides them: the moto team,
-// by contract. Module switches (#4892) name the booking, every other one is
-// a retention window.
+// by contract. Module switches (#4892) name the booking, retention windows
+// (`…_retention_days`) the deletion period; any other one, such as the
+// switch for children without an OGS place (#4803), says only who decides.
 function operatorManagedNote(key: string, audience: SettingsAudience): string {
   if (MODULE_SETTING_KEYS.includes(key)) {
     return audience === "operator"
       ? "Gebuchtes Modul aus dem Vertrag. Die Schule sieht es, kann es aber nicht ändern."
       : "Welche Module Ihre Schule hat, steht im Vertrag mit moto. Für eine Änderung wenden Sie sich an das moto-Team.";
   }
+  if (key.endsWith("retention_days")) {
+    return audience === "operator"
+      ? "Löschfrist aus dem Vertrag. Die Schule sieht sie, kann sie aber nicht ändern."
+      : "Diese Frist legt moto mit Ihrer Schule fest. Für eine Änderung wenden Sie sich an moto.";
+  }
   return audience === "operator"
-    ? "Löschfrist aus dem Vertrag. Die Schule sieht sie, kann sie aber nicht ändern."
-    : "Diese Frist legt moto mit Ihrer Schule fest. Für eine Änderung wenden Sie sich an moto.";
+    ? "Legt das moto-Team mit der Schule fest. Die Schule sieht es, kann es aber nicht ändern."
+    : "Das legt moto mit Ihrer Schule fest. Für eine Änderung wenden Sie sich an moto.";
 }
 
 function toStr(v: unknown): string {

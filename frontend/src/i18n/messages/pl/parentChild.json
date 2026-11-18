@@ -5,6 +5,10 @@
     "title": "Opieka zakończona",
     "body": "Państwa dziecko nie jest już objęte opieką w tej {careTerm}. Wszystko, co było do tej pory, mogą Państwo nadal przeglądać. Nowe zgłoszenia nie są już możliwe."
   },
+  "withoutCarePlace": {
+    "title": "Brak miejsca w {careTerm}",
+    "body": "Państwa dziecko nie ma miejsca w {careTerm}. Dlatego odbiór, godziny opieki, posiłki i wiadomości do {careTerm} nie są tu dostępne."
+  },
   "notFound": "Pod tym adresem nie ma dziecka powiązanego z Państwa kontem. Proszę wybrać dziecko w przeglądzie.",
   "noChildren": "Z Państwa kontem nie jest jeszcze powiązane żadne dziecko. {careTerm} Państwa szkoły może to ustawić.",
   "sections": {
