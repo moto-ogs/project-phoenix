@@ -155,7 +155,7 @@ jobs:
       TENANT_DOMAIN: localhost
       METRICS_BEARER_TOKEN: ci-metrics-token
       # Seeder input for security.ogs_device_pin only; no runtime fallback.
-      OGS_DEVICE_PIN: "1234"
+      OGS_DEVICE_PIN: "4711"
       EMAIL_SMTP_HOST: localhost
       EMAIL_SMTP_PORT: 1025
       EMAIL_FROM_ADDRESS: noreply@localhost
