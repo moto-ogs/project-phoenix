@@ -46,7 +46,7 @@ export default function TraegerCareNoticePage() {
       printHideHeader
       info={
         notice && draft
-          ? "Der Bescheid ist ein Entwurf: Nummer und Datum kommen beim Ausstellen."
+          ? "Entwurf: Nummer und Datum kommen beim Ausstellen."
           : undefined
       }
       stats={

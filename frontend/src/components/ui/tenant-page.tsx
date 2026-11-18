@@ -90,8 +90,9 @@ export interface TenantPageProps extends TenantPageSearchRowProps {
   readonly title: string;
   /**
    * Statuszeile unter dem Titel: echte Zahlen der Seite, die sie ohnehin lädt
-   * („116 Kinder · 107 zuhause · 9 krank"). Kein Erklärsatz. Während des
-   * Ladens rendert das Gerüst an dieser Stelle ein Skelett.
+   * („116 Kinder", „9 krank"), mehrere Angaben über `TenantPageStats`, ohne
+   * Trennpunkt (#5684). Kein Erklärsatz. Während des Ladens rendert das
+   * Gerüst an dieser Stelle ein Skelett.
    */
   readonly stats?: ReactNode;
   /** Zeigt statt der Statuszeile ein Skelett. */
