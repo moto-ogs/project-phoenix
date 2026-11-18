@@ -74,6 +74,7 @@ export function JumpButton({
   targetId,
   tooltip,
   children,
+  reveal,
   "aria-label": ariaLabel,
 }: Readonly<{
   /** `id` of the card, section or field to bring into view. */
@@ -82,6 +83,11 @@ export function JumpButton({
   tooltip: string;
   /** Names the place: „Zu den Eltern“, „Zum Feld E-Mail“. */
   children: ReactNode;
+  /**
+   * Shows the place first when it sits in a closed tab of the page (#7408).
+   * The jump follows once the opened tab is drawn.
+   */
+  reveal?: () => void;
   "aria-label"?: string;
 }>) {
   return (
@@ -91,7 +97,15 @@ export function JumpButton({
       size="compact"
       aria-label={ariaLabel}
       tooltip={tooltip}
-      onClick={() => jumpTo(targetId)}
+      onClick={() => {
+        if (!reveal) {
+          jumpTo(targetId);
+          return;
+        }
+        reveal();
+        // React draws the state of a click before the next frame.
+        requestAnimationFrame(() => jumpTo(targetId));
+      }}
     >
       {children}
     </Button>

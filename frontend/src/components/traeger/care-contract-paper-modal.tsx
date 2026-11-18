@@ -104,12 +104,14 @@ export function PaperSignatureModal({
             type="button"
             variant="success"
             size="md"
-            disabled={saving || Boolean(missingText)}
-            disabledReason={saving ? undefined : missingText}
+            disabled={Boolean(missingText)}
+            disabledReason={missingText}
+            isLoading={saving}
+            loadingText="Wird erfasst …"
             tooltip="Speichert das PDF und schließt den Vertrag sofort ab."
             onClick={() => void save()}
           >
-            {saving ? "Wird erfasst …" : "Vertrag abschließen"}
+            Vertrag abschließen
           </Button>
         </>
       }
@@ -121,7 +123,7 @@ export function PaperSignatureModal({
           Vertrag aktiv.
         </p>
         <Input
-          controlSize="touch"
+          controlSize="compact"
           name="signer_name"
           label="Unterschrieben von"
           required
@@ -142,6 +144,7 @@ export function PaperSignatureModal({
           <DatePicker
             id="care-contract-signed-on"
             name="signed_on"
+            controlSize="compact"
             invalid={Boolean(signedOnError)}
             ariaDescribedBy={
               signedOnError ? "care-contract-signed-on-error" : undefined
