@@ -92,6 +92,17 @@ entschieden, den Import für SJR Pforzheim vorzuziehen (Kommentar in #4723).
    Oberfläche zeigt „Vertrag Nr. …“. Er ergänzt ADR 0164 Punkt 4, der die
    Familie über die Mail-Adresse bestimmt; die Geschwisterfolge kannte den
    Schlüssel schon (`familyOf`).
+   **Ergänzt am 18.11.2026
+   ([#7360](https://github.com/moto-ogs/project-phoenix/issues/7360)):** Die
+   Mail-Adresse ist beim Import keine Pflicht, sondern eine Warnung. Product
+   Owner Yannick Wenger hat das entschieden (Kommentar in #7360): Eine harte
+   Sperre ließe den Start an einzelnen Familien ohne Adresse scheitern. Die
+   Vorschau zählt die Verträge, die moto ohne Mail-Adresse übernimmt, als
+   „ohne Mail-Adresse“, zeigt sie in einem eigenen Filter und nennt die
+   Folgen: keine Mail, kein Zugang zur Eltern-App, Rechnung nur auf Papier,
+   Geschwister bleiben getrennte Familien. Zeilen, die draußen bleiben,
+   zählen nicht. Die Zahl entsteht in der Oberfläche aus den Zeilen der
+   Vorschau; das Backend bleibt unverändert.
 8. **Zugriff und Protokoll.** Der Import liest die Angebote jeder Schule in
    deren Tenant-Transaktion (Stammdaten, keine Personendaten), schreibt in der
    Träger-Transaktion und trägt danach in das Zugriffsprotokoll jeder Schule
@@ -141,6 +152,9 @@ Die Entscheidung ändert diese Register (ADR 0057 Punkt 5, ADR 0070):
 - **Debitorennummer am Vertrag speichern.** Die Nummer gehört der
   Elternabrechnung (ADR 0088); der Mandatsimport und die Rechnung lesen sie
   dort.
+- **Mail-Adresse als Pflicht** (#7360). Für die Anmeldung braucht jede
+  Familie eine, aber der Export von OGS Connect hat keine. Eine Sperre hielte
+  jeden Vertrag ohne Adresse zurück, auch wenn die Familie längst zahlt.
 - **Vertrag ohne Modul.** Die Elternabrechnung rechnet je Wochentag und
   Modul; ein Vertrag ohne Modul wäre nicht abrechenbar.
 

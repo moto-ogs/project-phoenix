@@ -250,7 +250,33 @@ export function contractImportDebtorText(
   }
 }
 
-export type ContractImportFilter = "all" | "ready" | "problems" | "duplicate";
+export type ContractImportFilter =
+  "all" | "ready" | "no_email" | "problems" | "duplicate";
+
+/**
+ * Ob moto die Zeile ohne Mail-Adresse der Eltern übernimmt oder übernommen
+ * hat. Eine solche Familie kennt moto nur über ihren Vertrag (ADR 0232
+ * Punkt 7): keine Mail, keine Eltern-App, Geschwister getrennt. Zeilen, die
+ * draußen bleiben, bekommen keinen Vertrag und zählen nicht.
+ */
+export function takenOverWithoutEmail(row: ContractImportRow): boolean {
+  return (
+    (row.status === "ready" || row.status === "imported") &&
+    row.partyEmail === ""
+  );
+}
+
+/** Verträge, die moto ohne Mail-Adresse der Eltern übernimmt. */
+export function contractsWithoutEmail(result: ContractImportResult): number {
+  return result.rows.filter(takenOverWithoutEmail).length;
+}
+
+/** Was einer Familie ohne Mail-Adresse fehlt (Entscheidung in #7360). */
+export const WITHOUT_EMAIL_CONSEQUENCES = [
+  "Keine Mail von moto. Rechnungen gibt es nur auf Papier.",
+  "Kein Zugang zur Eltern-App.",
+  "Geschwister bleiben getrennte Familien.",
+] as const;
 
 /** Ob eine Zeile zum gewählten Filter gehört. */
 export function matchesContractImportFilter(
@@ -262,6 +288,8 @@ export function matchesContractImportFilter(
       return true;
     case "ready":
       return row.status === "ready" || row.status === "imported";
+    case "no_email":
+      return takenOverWithoutEmail(row);
     case "problems":
       return row.status === "conflict" || row.status === "invalid";
     default:

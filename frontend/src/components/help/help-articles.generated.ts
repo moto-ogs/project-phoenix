@@ -11652,7 +11652,8 @@ export const traegerBriefkopfTopic =
  * angenommenen Anmeldungen erstellen, prüfen und senden; die Unterschrift
  * der Eltern und den Papiervertrag erfassen; Versionen nach einer Änderung;
  * Kündigung und Widerruf (#4682); Änderungswünsche der Eltern freigeben (#5979);
- * Kinder und bestehende Verträge aus einer Datei importieren (#4723).
+ * Kinder und bestehende Verträge aus einer Datei importieren (#4723), auch
+ * ohne Mail-Adresse der Eltern (#7360).
  */
 export const traegerCareContractsTopic =
   function traegerCareContractsTopic(): HelpTopic {
@@ -11770,6 +11771,7 @@ export const traegerCareContractsTopic =
             "Prüfen Sie unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Pflicht sind Vorname und Nachname des Kindes.",
             "Hat Ihre Datei keine Spalte für die Schule, das Modul oder den Vertragsbeginn? Dann wählen Sie `Schule für alle Zeilen`, `Modul für alle Zeilen` und `Vertragsbeginn für alle Zeilen`.",
             "Nennt eine Zeile keine Eltern? moto übernimmt den Vertrag trotzdem. Er hat dann keinen Vertragspartner.",
+            "Fehlt in einer Zeile die Mail-Adresse der Eltern? moto übernimmt den Vertrag trotzdem. Die Vorschau zählt diese Verträge unter `Ohne Mail-Adresse`. Die Familien bekommen keine Mail von moto und haben keinen Zugang zur Eltern-App. Rechnungen gibt es für sie nur auf Papier. Geschwister bleiben getrennte Familien. Haben Sie die Adressen? Tragen Sie sie in die Datei ein, bevor Sie übernehmen.",
             "Steht die `Debitorennummer` in der Datei? Ordnen Sie die Spalte zu. moto trägt die Nummer beim Zahler oder beim Kind ein, je nach Ihrer Einstellung. Fehlt die `E-Mail der Eltern`, gehört die Nummer zu diesem einen Vertrag. Geschwister erkennt moto nur über dieselbe E-Mail.",
             "Prüfen Sie die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. `Schon vorhanden` heißt: Das Kind hat an der Schule schon einen Vertrag. Bei `Fehlerhaft` steht der Grund in der Spalte `Hinweis`.",
             "Wählen Sie unten `übernehmen`. Die Verträge stehen danach in der Liste mit dem Status `Aktiv`.",

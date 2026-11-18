@@ -7,6 +7,7 @@ import {
   contractImportProblemText,
   contractImportWeekdays,
   matchesContractImportFilter,
+  takenOverWithoutEmail,
 } from "./care-contract-import-format";
 
 const row: ContractImportRow = {
@@ -95,5 +96,20 @@ describe("care contract import format", () => {
     expect(
       matchesContractImportFilter({ ...row, status: "duplicate" }, "duplicate"),
     ).toBe(true);
+  });
+
+  it("counts only contracts moto takes over without a parent's address", () => {
+    expect(takenOverWithoutEmail(row)).toBe(true);
+    expect(takenOverWithoutEmail({ ...row, status: "imported" })).toBe(true);
+    expect(
+      takenOverWithoutEmail({ ...row, partyEmail: "eva@example.org" }),
+    ).toBe(false);
+    // A row moto leaves out gets no contract, so no family without mail.
+    expect(takenOverWithoutEmail({ ...row, status: "duplicate" })).toBe(false);
+    expect(takenOverWithoutEmail({ ...row, status: "invalid" })).toBe(false);
+    expect(matchesContractImportFilter(row, "no_email")).toBe(true);
+    expect(
+      matchesContractImportFilter({ ...row, status: "invalid" }, "no_email"),
+    ).toBe(false);
   });
 });
