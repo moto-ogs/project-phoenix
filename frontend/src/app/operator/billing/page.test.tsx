@@ -79,6 +79,7 @@ const keyDay: BillingKeyDay = {
   keyDay: 15,
   nextKeyDate: "2026-09-15",
   updatedAt: "2026-09-01T08:00:00Z",
+  overrides: [],
 };
 
 function count(
@@ -112,6 +113,40 @@ describe("OperatorBillingPage", () => {
     vi.clearAllMocks();
     mockGetKeyDay.mockResolvedValue(keyDay);
     mockDownload.mockResolvedValue(undefined);
+  });
+
+  it("names every key date of a month when schools count on their own day (#7301)", async () => {
+    mockListKeyDateCounts.mockResolvedValue([
+      count({ schoolId: "11", keyDate: "2026-08-15" }),
+      count({
+        schoolId: "12",
+        schoolName: "OGS Lindenweg",
+        keyDate: "2026-08-05",
+      }),
+    ]);
+    renderPage();
+
+    expect(
+      await screen.findByText("Stichtage vom 05.08.2026 bis 15.08.2026"),
+    ).toBeInTheDocument();
+    const linden = screen
+      .getAllByText("OGS Lindenweg")
+      .map((cell) => cell.closest("tr"))
+      .find(Boolean) as HTMLElement;
+    expect(within(linden).getByText("05.08.2026")).toBeInTheDocument();
+  });
+
+  it("names one key date and shows no key date column when every school shares it", async () => {
+    mockListKeyDateCounts.mockResolvedValue([count()]);
+    renderPage();
+
+    expect(await screen.findByText("Stichtag 15.08.2026")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: /^Stichtag/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: /Schule/ }),
+    ).toBeInTheDocument();
   });
 
   it("shows the key day and the next key date", async () => {

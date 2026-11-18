@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/stretchr/testify/assert"
@@ -25,18 +26,37 @@ type fakeBillingReport struct {
 	seedCalls   []time.Time
 	seedWritten int
 	seedErr     error
+	overrides   []organizationtenancy.BillingKeyDayOverride
+	setTargets  []organizationtenancy.BillingKeyDayTarget
+	setOverride []*int
 }
 
 func (f *fakeBillingReport) BillingKeyDay(context.Context) (organizationtenancy.BillingKeyDay, error) {
-	return f.setResult, nil
+	result := f.setResult
+	result.Overrides = f.overrides
+	return result, nil
 }
 
-func (f *fakeBillingReport) SetBillingKeyDay(_ context.Context, keyDay int, _ int64) (organizationtenancy.BillingKeyDay, error) {
-	f.setDays = append(f.setDays, keyDay)
-	if keyDay < 1 || keyDay > 28 {
+// SetBillingKeyDay records the change. For an own day it knows the Träger
+// 4 and the school 9; any other target is unknown, as at the owner.
+func (f *fakeBillingReport) SetBillingKeyDay(_ context.Context, change organizationtenancy.BillingKeyDayChange, _ int64) (organizationtenancy.BillingKeyDay, error) {
+	if change.Day != nil && (*change.Day < 1 || *change.Day > 28) {
 		return organizationtenancy.BillingKeyDay{}, organizationtenancy.ErrInvalidBillingKeyDay
 	}
-	return organizationtenancy.BillingKeyDay{Day: keyDay, NextKeyDate: "2026-10-10"}, nil
+	if change.Target == nil {
+		f.setDays = append(f.setDays, *change.Day)
+		return organizationtenancy.BillingKeyDay{Day: *change.Day, NextKeyDate: "2026-10-10"}, nil
+	}
+	target := *change.Target
+	f.setTargets = append(f.setTargets, target)
+	f.setOverride = append(f.setOverride, change.Day)
+	switch {
+	case target.School && target.ID != 9:
+		return organizationtenancy.BillingKeyDay{}, organizationtenancy.ErrSchoolNotFound
+	case !target.School && target.ID != 4:
+		return organizationtenancy.BillingKeyDay{}, organizationtenancy.ErrOrganizationNotFound
+	}
+	return organizationtenancy.BillingKeyDay{Day: 15, NextKeyDate: "2026-11-15", Overrides: f.overrides}, nil
 }
 
 func (f *fakeBillingReport) ListBillingKeyDateCounts(context.Context) ([]organizationtenancy.BillingKeyDateCount, error) {
@@ -212,4 +232,87 @@ func TestBillingSeedCaptureAcceptsOnlyTheLocalSeeder(t *testing.T) {
 		assert.Equal(t, http.StatusForbidden, recorder.Code)
 		assert.Empty(t, report.seedCalls)
 	})
+}
+
+func TestBillingKeyDayListsTheOwnDaysOfBothScopesWithStringIDs(t *testing.T) {
+	t.Parallel()
+	var organization, school int64 = 4, 9
+	report := &fakeBillingReport{
+		setResult: organizationtenancy.BillingKeyDay{Day: 15, NextKeyDate: "2026-11-15"},
+		overrides: []organizationtenancy.BillingKeyDayOverride{
+			{OrganizationID: &organization, Name: "Träger Nord", Day: 5, NextKeyDate: "2026-12-05"},
+			{SchoolID: &school, Name: "OGS Am Bach", OrganizationName: "Träger Nord", Day: 20, NextKeyDate: "2026-11-20"},
+		},
+	}
+	recorder := httptest.NewRecorder()
+	NewBillingResource(report, nil, nil, billingClock).GetKeyDay(recorder, httptest.NewRequest(http.MethodGet, "/billing/key-day", nil))
+
+	require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
+	body := recorder.Body.String()
+	assert.Contains(t, body, `"key_day":15`)
+	assert.Contains(t, body, `{"scope":"organization","id":"4","name":"Träger Nord","organization_name":"","key_day":5,"next_key_date":"2026-12-05"`)
+	assert.Contains(t, body, `{"scope":"school","id":"9","name":"OGS Am Bach","organization_name":"Träger Nord","key_day":20,"next_key_date":"2026-11-20"`)
+}
+
+func TestBillingKeyDayWithoutOwnDaysListsNone(t *testing.T) {
+	t.Parallel()
+	recorder := httptest.NewRecorder()
+	NewBillingResource(&fakeBillingReport{}, nil, nil, billingClock).GetKeyDay(recorder, httptest.NewRequest(http.MethodGet, "/billing/key-day", nil))
+	assert.Contains(t, recorder.Body.String(), `"overrides":[]`, "an empty list, never null")
+}
+
+func TestBillingKeyDayOverrideValidatesBodyAndTarget(t *testing.T) {
+	t.Parallel()
+	ten := 10
+	cases := []struct {
+		name   string
+		method string
+		id     string
+		school bool
+		body   string
+		status int
+		code   string
+		day    *int
+	}{
+		{"missing key day never resets", http.MethodPut, "4", false, `{}`, http.StatusBadRequest, common.CodeGeneralInput, nil},
+		{"text is no day", http.MethodPut, "4", false, `{"key_day":"zehn"}`, http.StatusBadRequest, common.CodeGeneralInput, nil},
+		{"day outside 1..28", http.MethodPut, "9", true, `{"key_day":29}`, http.StatusBadRequest, common.CodeBillingInvalidKeyDay, nil},
+		{"unknown Träger", http.MethodPut, "5", false, `{"key_day":10}`, http.StatusNotFound, common.CodeProvisioningOrganizationNotFound, nil},
+		{"unknown school", http.MethodDelete, "8", true, ``, http.StatusNotFound, common.CodeProvisioningSchoolNotFound, nil},
+		{"Träger gets a day", http.MethodPut, "4", false, `{"key_day":10}`, http.StatusOK, "", &ten},
+		{"delete resets the school", http.MethodDelete, "9", true, ``, http.StatusOK, "", nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			report := &fakeBillingReport{}
+			resource := NewBillingResource(report, nil, nil, billingClock)
+			router := chi.NewRouter()
+			router.Put("/organizations/{organizationId}", resource.SetOrganizationKeyDay)
+			router.Delete("/organizations/{organizationId}", resource.ResetOrganizationKeyDay)
+			router.Put("/schools/{schoolId}", resource.SetSchoolKeyDay)
+			router.Delete("/schools/{schoolId}", resource.ResetSchoolKeyDay)
+			segment := "/organizations/"
+			if tc.school {
+				segment = "/schools/"
+			}
+			request := httptest.NewRequest(tc.method, segment+tc.id, strings.NewReader(tc.body))
+			request.Header.Set("Content-Type", "application/json")
+			recorder := httptest.NewRecorder()
+			router.ServeHTTP(recorder, request)
+
+			assert.Equal(t, tc.status, recorder.Code, recorder.Body.String())
+			if tc.code != "" {
+				assert.Contains(t, recorder.Body.String(), `"code":"`+tc.code+`"`)
+			}
+			if tc.status == http.StatusOK {
+				require.Len(t, report.setTargets, 1)
+				assert.Equal(t, tc.school, report.setTargets[0].School)
+				assert.Equal(t, tc.day, report.setOverride[0], "PUT sets the day, DELETE resets it")
+			}
+			if tc.code == common.CodeGeneralInput {
+				assert.Empty(t, report.setTargets, "a refused body reaches the owner never")
+			}
+		})
+	}
 }

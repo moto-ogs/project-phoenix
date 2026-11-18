@@ -1,0 +1,277 @@
+/**
+ * Own key days of Träger and schools on the operator billing page (#7301):
+ * the list, setting a day for a school, the warning for a day already
+ * reached this month, resetting and a refused save.
+ */
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+// eslint-disable-next-line no-restricted-imports -- operator pages are not tenant-scoped
+import { SWRConfig } from "~/lib/swr/testing";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
+import type {
+  BillingKeyDay,
+  BillingKeyDayOverride,
+} from "~/lib/operator/billing-api";
+import { setTestClock } from "~/test/clock";
+import { useState } from "react";
+
+const { mockSet, mockReset, mockOrganizations, mockSchools, mockToastSuccess } =
+  vi.hoisted(() => ({
+    mockSet: vi.fn(),
+    mockReset: vi.fn(),
+    mockOrganizations: vi.fn(),
+    mockSchools: vi.fn(),
+    mockToastSuccess: vi.fn(),
+  }));
+
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "operator-1", scope: "operator" } },
+  }),
+}));
+
+vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
+  useToast: () => ({ success: mockToastSuccess, error: vi.fn() }),
+}));
+
+vi.mock("~/lib/operator/billing-api", async () => {
+  const actual = await vi.importActual<
+    typeof import("~/lib/operator/billing-api")
+  >("~/lib/operator/billing-api");
+  return {
+    ...actual,
+    operatorBillingService: {
+      setKeyDayOverride: mockSet,
+      resetKeyDayOverride: mockReset,
+    },
+  };
+});
+
+vi.mock("~/lib/operator/provisioning-api", () => ({
+  operatorProvisioningService: {
+    listOrganizations: mockOrganizations,
+    listSchools: mockSchools,
+  },
+}));
+
+import { BillingKeyDayOverrides } from "./billing-key-day-overrides";
+
+const traegerNord: BillingKeyDayOverride = {
+  scope: "organization",
+  id: "4",
+  name: "Träger Nord",
+  organizationName: "",
+  keyDay: 5,
+  nextKeyDate: "2026-12-05",
+  updatedAt: "2026-11-01T08:00:00Z",
+};
+
+const amBach: BillingKeyDayOverride = {
+  scope: "school",
+  id: "9",
+  name: "OGS Am Bach",
+  organizationName: "Träger Nord",
+  keyDay: 20,
+  nextKeyDate: "2026-11-20",
+  updatedAt: "2026-11-01T08:00:00Z",
+};
+
+/** The page around the card: it keeps the key day the writes answer. */
+function Harness({ initial }: Readonly<{ initial: BillingKeyDayOverride[] }>) {
+  const [keyDay, setKeyDay] = useState<BillingKeyDay>({
+    keyDay: 15,
+    nextKeyDate: "2026-11-15",
+    updatedAt: "2026-11-01T08:00:00Z",
+    overrides: initial,
+  });
+  return (
+    <BillingKeyDayOverrides
+      keyDay={keyDay}
+      loading={false}
+      onChanged={setKeyDay}
+    />
+  );
+}
+
+function renderOverrides(initial: BillingKeyDayOverride[]) {
+  return render(
+    <ToastProvider>
+      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+        <Harness initial={initial} />
+      </SWRConfig>
+    </ToastProvider>,
+  );
+}
+
+function keyDayWith(overrides: BillingKeyDayOverride[]): BillingKeyDay {
+  return {
+    keyDay: 15,
+    nextKeyDate: "2026-11-15",
+    updatedAt: "2026-11-01T08:00:00Z",
+    overrides,
+  };
+}
+
+function openMenuOf(name: string) {
+  fireEvent.click(screen.getByRole("button", { name: `Aktionen für ${name}` }));
+}
+
+/** Opens a kit select by its label and picks an option. */
+async function choose(label: string, option: string) {
+  const select = screen.getByRole("combobox", { name: new RegExp(label) });
+  // The list of schools or Träger loads when the dialog opens.
+  await waitFor(() => expect(select).toBeEnabled());
+  fireEvent.click(select);
+  fireEvent.click(await screen.findByRole("option", { name: option }));
+}
+
+describe("BillingKeyDayOverrides", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setTestClock("2026-11-10T10:00:00+01:00");
+    mockOrganizations.mockResolvedValue([
+      { id: "4", name: "Träger Nord", deletedAt: null },
+      { id: "6", name: "Träger Süd", deletedAt: null },
+    ]);
+    mockSchools.mockResolvedValue([
+      { id: "9", organizationId: "4", name: "OGS Am Bach", deletedAt: null },
+      { id: "10", organizationId: "6", name: "OGS Lindenweg", deletedAt: null },
+    ]);
+  });
+
+  it("lists each own day with what it replaces and its next key date", async () => {
+    renderOverrides([traegerNord, amBach]);
+
+    expect(await screen.findByText("Träger Nord")).toBeInTheDocument();
+    expect(
+      screen.getByText("Träger, gilt für alle Schulen ohne eigenen Stichtag"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Schule von Träger Nord")).toBeInTheDocument();
+    expect(screen.getByText("Jeden Monat am 20.")).toBeInTheDocument();
+    expect(screen.getByText("nächster am 20.11.2026")).toBeInTheDocument();
+  });
+
+  it("says that every school counts on the standard when none has its own day", async () => {
+    renderOverrides([]);
+
+    expect(
+      await screen.findByText("Alle Schulen zählen am Standard-Stichtag"),
+    ).toBeInTheDocument();
+  });
+
+  it("gives a school its own day and confirms the next key date", async () => {
+    const saved = {
+      ...amBach,
+      id: "10",
+      name: "OGS Lindenweg",
+      organizationName: "Träger Süd",
+    };
+    mockSet.mockResolvedValue(keyDayWith([traegerNord, saved]));
+    renderOverrides([traegerNord]);
+    await screen.findByText("Träger Nord");
+
+    fireEvent.click(screen.getByRole("button", { name: "Stichtag festlegen" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Schule" }));
+    await choose("Schule", "OGS Lindenweg (Träger Süd)");
+    await choose("Tag im Monat", "20.");
+
+    expect(
+      within(dialog).getByText(
+        "Nächster Stichtag von OGS Lindenweg (Träger Süd): 20.11.2026. Schon erfasste Monate bleiben, wie sie sind.",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Stichtag festlegen" }),
+    );
+
+    await waitFor(() =>
+      expect(mockSet).toHaveBeenCalledWith("school", "10", 20),
+    );
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "OGS Lindenweg zählt ab jetzt am 20. Nächster Stichtag: 20.11.2026.",
+    );
+    expect(await screen.findByText("OGS Lindenweg")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("warns that a day already reached this month skips the month", async () => {
+    renderOverrides([traegerNord]);
+    await screen.findByText("Träger Nord");
+
+    openMenuOf("Träger Nord");
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /Tag ändern/ }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await choose("Tag im Monat", "8.");
+
+    expect(
+      within(dialog).getByText(
+        "Der 8. ist im November 2026 schon vorbei. Schulen ohne Zahlen für November 2026 bekommen für diesen Monat keine mehr. Nächster Stichtag von Träger Nord: 08.12.2026.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("hands a school back to its Träger's day", async () => {
+    mockReset.mockResolvedValue(keyDayWith([traegerNord]));
+    renderOverrides([traegerNord, amBach]);
+    await screen.findByText("OGS Am Bach");
+
+    openMenuOf("OGS Am Bach");
+    fireEvent.click(
+      await screen.findByRole("menuitem", {
+        name: /Eigenen Stichtag aufheben/,
+      }),
+    );
+    const confirm = await screen.findByRole("dialog");
+    expect(
+      within(confirm).getByText(
+        /OGS Am Bach zählt dann wieder am Stichtag von Träger Nord\./,
+      ),
+    ).toBeInTheDocument();
+    expect(mockReset).not.toHaveBeenCalled();
+    fireEvent.click(within(confirm).getByRole("button", { name: "Aufheben" }));
+
+    await waitFor(() => expect(mockReset).toHaveBeenCalledWith("school", "9"));
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "OGS Am Bach zählt wieder am Stichtag von Träger Nord.",
+    );
+    await waitFor(() => expect(screen.queryByText("OGS Am Bach")).toBeNull());
+  });
+
+  it("keeps the dialog open with the reason when the save is refused", async () => {
+    mockSet.mockRejectedValue(
+      new ApiError("Organization not found", 404, {
+        code: "provisioning.organization_not_found",
+      }),
+    );
+    renderOverrides([traegerNord]);
+    await screen.findByText("Träger Nord");
+
+    openMenuOf("Träger Nord");
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /Tag ändern/ }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await choose("Tag im Monat", "20.");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Stichtag festlegen" }),
+    );
+
+    expect(await within(dialog).findByRole("alert")).toBeInTheDocument();
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+});

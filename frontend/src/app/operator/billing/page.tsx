@@ -9,7 +9,9 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
+import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
+import { BillingKeyDayOverrides } from "~/components/operator/billing-key-day-overrides";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DataField, DataGrid } from "~/components/ui/data-field";
@@ -41,6 +43,11 @@ import {
   type BillingKeyDateCount,
   type BillingKeyDay,
 } from "~/lib/operator/billing-api";
+import {
+  billingMonthName,
+  keyDayPassedThisMonth,
+  nextBillingKeyDate,
+} from "~/lib/operator/billing-key-day";
 
 const logger = createLogger({ component: "OperatorBillingPage" });
 
@@ -86,6 +93,13 @@ const COLUMNS: DataTableColumn<BillingKeyDateCount>[] = [
     render: (row) => row.organizationName,
     sortValue: (row) => row.organizationName.toLowerCase(),
     stacked: "meta",
+  },
+  {
+    key: "keyDate",
+    header: "Stichtag",
+    render: (row) => formatDate(row.keyDate),
+    sortValue: (row) => row.keyDate,
+    stacked: "field",
   },
   {
     key: "students",
@@ -162,7 +176,7 @@ function KeyDaySection({
   return (
     <SectionCard
       title="Stichtag"
-      description="Am Stichtag hält moto für jede Schule fest, wie viele Kinder und Terminals aktiv sind. Diese Zahlen ändern sich danach nicht mehr."
+      description="Am Stichtag hält moto für jede Schule fest, wie viele Kinder und Terminals aktiv sind. Diese Zahlen ändern sich danach nicht mehr. Der Standard gilt für jede Schule ohne eigenen Stichtag."
       action={
         editing || !keyDay ? undefined : (
           <Button
@@ -191,6 +205,14 @@ function KeyDaySection({
               onChange={setDraft}
             />
           </div>
+          {draft !== "" &&
+          draft !== String(keyDay?.keyDay) &&
+          keyDayPassedThisMonth(Number(draft), berlinTodayISO()) ? (
+            <Alert
+              type="warning"
+              message={`Der ${draft}. ist im ${billingMonthName(berlinTodayISO())} schon vorbei. Schulen ohne Zahlen für ${billingMonthName(berlinTodayISO())} bekommen für diesen Monat keine mehr. Nächster Stichtag: ${formatDate(nextBillingKeyDate(Number(draft), berlinTodayISO()))}.`}
+            />
+          ) : null}
           <EditActions
             onCancel={() => setEditing(false)}
             onSave={() => void save()}
@@ -200,7 +222,7 @@ function KeyDaySection({
         </div>
       ) : (
         <DataGrid>
-          <DataField label="Stichtag">
+          <DataField label="Standard">
             {loading || !keyDay ? "–" : `Jeden Monat am ${keyDay.keyDay}.`}
           </DataField>
           <DataField label="Nächster Stichtag">
@@ -285,6 +307,13 @@ function OperatorBillingPageContent() {
     () => (counts ?? []).filter((row) => row.period === period),
     [counts, period],
   );
+  // One key date names the month; schools with their own day (#7301) give
+  // the month several, then every row says its own.
+  const keyDates = [...new Set(rows.map((row) => row.keyDate))].sort();
+  const keyDateLine =
+    keyDates.length > 1
+      ? `Stichtage vom ${formatDate(keyDates[0] ?? "")} bis ${formatDate(keyDates.at(-1) ?? "")}`
+      : `Stichtag ${keyDates[0] ? formatDate(keyDates[0]) : "–"}`;
   const totalStudents = rows.reduce((sum, row) => sum + row.activeStudents, 0);
   const totalTerminals = rows.reduce(
     (sum, row) => sum + row.activeTerminals,
@@ -322,6 +351,12 @@ function OperatorBillingPageContent() {
         keyDay={keyDay}
         loading={keyDayLoading}
         onSaved={(updated) => void mutateKeyDay(updated, false)}
+      />
+
+      <BillingKeyDayOverrides
+        keyDay={keyDay}
+        loading={keyDayLoading}
+        onChanged={(updated) => void mutateKeyDay(updated, false)}
       />
 
       <SectionCard
@@ -371,11 +406,7 @@ function OperatorBillingPageContent() {
           />
         ) : (
           <div className="space-y-4">
-            {period && (
-              <p className="text-sm text-gray-600">
-                Stichtag {rows[0] ? formatDate(rows[0].keyDate) : "–"}
-              </p>
-            )}
+            {period && <p className="text-sm text-gray-600">{keyDateLine}</p>}
             <div className="grid grid-cols-3 gap-3">
               <StatCard variant="tile" label="Schulen" value={rows.length} />
               <StatCard
@@ -390,7 +421,11 @@ function OperatorBillingPageContent() {
               />
             </div>
             <DataTable
-              columns={COLUMNS}
+              columns={
+                keyDates.length > 1
+                  ? COLUMNS
+                  : COLUMNS.filter((column) => column.key !== "keyDate")
+              }
               rows={rows}
               getRowKey={(row) => `${row.period}-${row.schoolId}`}
               isLoading={countsLoading}
