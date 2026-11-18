@@ -21,7 +21,9 @@ StateDirectory=moto-backup-cipher-%i
 StateDirectoryMode=0700
 # One host-wide lock serializes all instances: their plaintext shares RAM.
 # Root-only /run, not world-writable /run/lock, so no user can block it.
-ExecStart=/usr/bin/flock /run/moto-daily-backup.lock /usr/local/lib/moto-backup/daily-backup.sh
+# Waiting at most 2h keeps a hung instance from silently starving the other;
+# a timeout fails the run and alerts.
+ExecStart=/usr/bin/flock -w 7200 /run/moto-daily-backup.lock /usr/local/lib/moto-backup/daily-backup.sh
 TimeoutStartSec=6h
 KillMode=control-group
 PrivateTmp=true

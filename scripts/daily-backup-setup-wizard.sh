@@ -208,7 +208,7 @@ step "Kapazität nach Runbook messen und BACKUP_MIN_FREE_BYTES mit Wachstumsrese
 step "Upload-Ablage: bei lokaler Ablage BACKUP_UPLOADS_VOLUME setzen. Bei UPLOADS_BACKEND=s3 liest die Sicherung den Bucket aus der Compose-.env; dann keine UPLOADS_*-Werte in /etc/moto-backup/<instanz>.env."
 pause "Pflichtwerte, Platzreservierung, Werkzeuge und tatsächliche Upload-Ablage geprüft? Enter."
 stage "Erster Lauf und isolierter Restore"
-step "daily-backup.sh und daily_backup.py nach /usr/local/lib/moto-backup installieren; die drei Vorlagen-Units aus scripts/systemd nach /etc/systemd/system kopieren."
+step "daily-backup.sh und daily_backup.py nach /usr/local/lib/moto-backup installieren; die drei Vorlagen-Units und moto-daily-backup@staging.timer.d/ aus scripts/systemd nach /etc/systemd/system kopieren."
 step "Je Instanz: systemd-analyze verify moto-daily-backup@production.service moto-daily-backup@production.timer; systemctl daemon-reload; systemctl start moto-daily-backup@production.service (staging entsprechend)"
 step "Nach Runbook auf GETRENNTER Maschine mit daily-restore.compose.yml wiederherstellen, nie parallel auf dem Produktionshost. Löschungen seit Sicherungszeitpunkt vor jedem App-Start erneut umsetzen."
 warn "OnFailure schreibt ins Journal. Alloy-Anbindung und Alarmzustellung nach docs/operations/daily-backup.md einrichten und nachweisen."

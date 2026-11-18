@@ -189,16 +189,19 @@ installiert oder aktiviert nichts. Der Mensch führt die Befehle aus.
    getrennte Listenpflege `compact-erasure-ledger.py` zusammen
    unter `/usr/local/lib/moto-backup/` installieren (root, nicht durch
    App-Nutzer schreibbar). Die Vorlagen `moto-daily-backup@.service`,
-   `moto-daily-backup@.timer` und `moto-backup-failure@.service` aus
-   `scripts/systemd/` nach `/etc/systemd/system/` kopieren. Je Instanz:
-   `systemd-analyze verify moto-daily-backup@production.service moto-daily-backup@production.timer`
-   (für `staging` entsprechend), `systemctl daemon-reload`, dann zunächst
-   `systemctl start moto-daily-backup@production.service`. Ergebnis im Journal und
+   `moto-daily-backup@.timer`, `moto-backup-failure@.service` und das
+   Verzeichnis `moto-daily-backup@staging.timer.d/` aus `scripts/systemd/`
+   nach `/etc/systemd/system/` kopieren. Je Instanz (`production`, `staging`):
+   `systemd-analyze verify moto-daily-backup@<instanz>.service moto-daily-backup@<instanz>.timer`,
+   `systemctl daemon-reload`, dann zunächst
+   `systemctl start moto-daily-backup@<instanz>.service`. Ergebnis im Journal und
    verschlüsseltes Objekt am Ziel prüfen. Erst nach erfolgreichem Restore-Test
-   `systemctl enable --now moto-daily-backup@production.timer` ausführen.
-   `systemctl list-timers 'moto-daily-backup@*'` kontrollieren: täglich
-   02:15 UTC plus höchstens fünf Minuten Zufallsversatz, verpasster Lauf wird
-   nachgeholt; die zweite Instanz wartet auf den Host-Lock und startet danach.
+   `systemctl enable --now moto-daily-backup@production.timer moto-daily-backup@staging.timer`
+   ausführen. `systemctl list-timers 'moto-daily-backup@*'` kontrollieren:
+   Produktion täglich 02:15 UTC, Staging 03:45 UTC, je plus höchstens fünf
+   Minuten Zufallsversatz; ein verpasster Lauf wird nachgeholt. Läuft die
+   andere Instanz noch, wartet ein Lauf höchstens zwei Stunden auf den
+   Host-Lock und scheitert dann mit Alarm.
    Bis zur nachgewiesenen Alarmzustellung muss ein benannter Mensch
    täglich Ergebnis und Frische prüfen, Fehler bearbeiten und dies dokumentieren.
    Die folgenden Alarmregeln ersetzen diesen Übergangsschritt erst nach Abnahme.
