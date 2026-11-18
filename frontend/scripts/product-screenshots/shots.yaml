@@ -77,7 +77,9 @@ shots:
     pfad: /students/search
     geraete: [iphone, ipad, macbook]
     vorbereitung:
-      - klicken: 'role=button[name="Kinder an- und abmelden"]'
+      # Am Computer heißt der Knopf „An- & Abmelden: Kinder an- und
+      # abmelden“, auf dem Handy nur „Kinder an- und abmelden“ (#7112).
+      - klicken: 'role=button[name=/Kinder an- und abmelden/]'
   # Hilfe kindersuche, angaben-eines-kindes-verwalten; PostHog: Platz 2 (6281 Aufrufe)
   - id: kinderdetailansicht
     titel: Kinderakte mit dem heutigen Tag
@@ -441,7 +443,8 @@ shots:
       # Entschuldigung für morgen mit Grund; abgeschickt wird nicht.
       - klicken: '[role="dialog"] >> role=combobox[name="Grund der Abwesenheit"]'
       - klicken: 'role=listbox >> role=option[name="Entschuldigen"s]'
-      - klicken: '[role="dialog"] >> role=button[name="Erster Tag"s]'
+      # Das Datumsfeld nennt seinen Wert mit: „Erster Tag: 17.11.2026“.
+      - klicken: '[role="dialog"] >> role=button[name=/^Erster Tag:/]'
       - klicken: 'td[data-today] ~ td:not([data-disabled]) button, tr:has(td[data-today]) + tr td:not([data-disabled]) button'
       - tippen:
           feld: '[role="dialog"] textarea'
@@ -459,7 +462,8 @@ shots:
       - warten_auf: '[role="dialog"]'
       # Morgen statt heute (für heute hat die OGS die Abholung schon
       # festgelegt), mit Uhrzeit und Grund; abgeschickt wird nicht.
-      - klicken: '[role="dialog"] >> role=button[name="Tag"s]'
+      # Das Datumsfeld nennt seinen Wert mit: „Tag: 17.11.2026“.
+      - klicken: '[role="dialog"] >> role=button[name=/^Tag:/]'
       - klicken: 'td[data-today] ~ td:not([data-disabled]) button, tr:has(td[data-today]) + tr td:not([data-disabled]) button'
       - tippen:
           feld: '[role="dialog"] >> role=textbox[name="Abholzeit"]'
@@ -656,7 +660,9 @@ shots:
     rolle: eltern
     pfad: /settings?tab=language
     vorbereitung:
-      - klicken: '[aria-haspopup="listbox"][aria-label="Sprache"]'
+      # Die Auswahl heißt nach ihrem sichtbaren Text („Sprache Deutsch“,
+      # #7112); die untere Leiste hat einen eigenen Knopf „Sprache“.
+      - klicken: '[aria-haspopup="listbox"]:has-text("Sprache")'
       - warten_auf: 'role=listbox'
 
   # --- Träger-Portal ----------------------------------------------------------
@@ -668,7 +674,8 @@ shots:
     rolle: traeger
     pfad: /ferien
     vorbereitung:
-      - klicken: 'role=button[name=/^Ferienbetreuung/]'
+      # Die Zeile öffnet auf Klick; ihr Tastatur-Knopf ist unsichtbar (#7112).
+      - klicken: 'role=cell[name=/^Ferienbetreuung/]'
       - warten_auf: 'text=Zeitmodelle'
       - scrollen: 'role=heading[name="Wochen"s]'
   # Website: Rollen und Zugriffe im Träger-Büro
