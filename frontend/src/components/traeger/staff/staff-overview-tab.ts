@@ -8,11 +8,7 @@
 import { useSearchParams } from "next/navigation";
 import { traegerPath } from "~/lib/traeger-url";
 
-export const STAFF_OVERVIEW_TABS = [
-  "vorschlaege",
-  "akten",
-  "ohne-akte",
-] as const;
+const STAFF_OVERVIEW_TABS = ["vorschlaege", "akten", "ohne-akte"] as const;
 
 export type StaffOverviewTab = (typeof STAFF_OVERVIEW_TABS)[number];
 
