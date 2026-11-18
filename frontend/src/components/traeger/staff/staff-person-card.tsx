@@ -98,13 +98,13 @@ export function StaffPersonCard({
     const next = trimmed(draft);
     const missing: Record<string, string> = {};
     if (next.firstName === "") {
-      missing.first_name = "Bitte tragen Sie den Vornamen ein.";
+      missing.first_name = "Bitte trage den Vornamen ein.";
     }
     if (next.lastName === "") {
-      missing.last_name = "Bitte tragen Sie den Nachnamen ein.";
+      missing.last_name = "Bitte trage den Nachnamen ein.";
     }
     if (Object.keys(missing).length > 0) {
-      errors.invalid("Bitte prüfen Sie den Namen.", missing);
+      errors.invalid("Bitte prüfe den Namen.", missing);
       return;
     }
     if (sameValues(next, initial)) {
@@ -133,7 +133,7 @@ export function StaffPersonCard({
     <SectionCard
       concept={staffConcept}
       title="Person"
-      description="So steht die Person in Ihren Listen und Exporten. Daran erkennt moto sie auch in den Vorschlägen und beim Einstellen. Die Schulen pflegen ihre eigenen Angaben selbst."
+      description="So steht die Person in deinen Listen und Exporten. Daran erkennt moto sie auch in den Vorschlägen und beim Einstellen. Die Schulen pflegen ihre eigenen Angaben selbst."
       action={
         editing ? undefined : (
           <Button
@@ -157,7 +157,7 @@ export function StaffPersonCard({
             saving={saving}
             cancelDisabled={saving}
             disabled={!birthdayValid}
-            disabledReason="Bitte prüfen Sie zuerst den Geburtstag."
+            disabledReason="Bitte prüfe zuerst den Geburtstag."
             saveTooltip="Speichert die Angaben in der Akte. Die Schulen behalten ihre eigenen."
           />
         ) : undefined

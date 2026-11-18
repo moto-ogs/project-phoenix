@@ -335,19 +335,19 @@ describe("TraegerStaffRecordPage", () => {
     fireEvent.change(firstName, { target: { value: "  " } });
     fireEvent.click(within(card!).getByRole("button", { name: "Speichern" }));
     expect(
-      await within(card!).findByText("Bitte tragen Sie den Vornamen ein."),
+      await within(card!).findByText("Bitte trage den Vornamen ein."),
     ).toBeInTheDocument();
     expect(api.updateStaffPerson).not.toHaveBeenCalled();
 
     // Leaving the untouched birthday is no change: the refusal stays.
     fireEvent.blur(within(card!).getByRole("textbox", { name: /Geburtstag/ }));
     expect(
-      within(card!).getByText("Bitte tragen Sie den Vornamen ein."),
+      within(card!).getByText("Bitte trage den Vornamen ein."),
     ).toBeInTheDocument();
 
     fireEvent.change(firstName, { target: { value: " Myra " } });
     expect(
-      within(card!).queryByText("Bitte tragen Sie den Vornamen ein."),
+      within(card!).queryByText("Bitte trage den Vornamen ein."),
     ).not.toBeInTheDocument();
     expect(firstName).not.toHaveAttribute("aria-invalid", "true");
     fireEvent.change(
