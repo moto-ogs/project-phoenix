@@ -6,7 +6,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-const requestRateLimitsVersion = "20261118091226"
+const requestRateLimitsVersion = "20261118104943"
 
 func init() {
 	MigrationRegistry.Register(&Migration{
