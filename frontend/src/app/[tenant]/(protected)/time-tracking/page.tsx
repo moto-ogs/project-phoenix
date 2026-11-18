@@ -3339,9 +3339,11 @@ function TimeTrackingContent() {
     { keepPreviousData: true, revalidateOnFocus: false, errorRetryCount: 1 },
   );
 
-  const noOwnStaff = useNoOwnStaffProfileEmpty(TIME_TRACKING_EMPTY_ICON, [
-    currentSessionError,
-  ]);
+  const noOwnStaff = useNoOwnStaffProfileEmpty(
+    TIME_TRACKING_EMPTY_ICON,
+    hasPermission(authSession, "time_tracking:own"),
+    [currentSessionError],
+  );
 
   const stampAction = useOptimisticStamp(
     confirmedSession,
@@ -4343,7 +4345,11 @@ function TimeTrackingPageSkeleton() {
  * zeigt den Hinweis mit dem Weg zur Startseite.
  */
 function TimeTrackingGate() {
-  const noOwnStaff = useNoOwnStaffProfileEmpty(TIME_TRACKING_EMPTY_ICON);
+  const { data: session } = useSession();
+  const noOwnStaff = useNoOwnStaffProfileEmpty(
+    TIME_TRACKING_EMPTY_ICON,
+    hasPermission(session, "time_tracking:own"),
+  );
   if (noOwnStaff) {
     return <TenantPage title="Zeiterfassung" empty={noOwnStaff} />;
   }

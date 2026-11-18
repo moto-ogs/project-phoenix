@@ -63,6 +63,8 @@ export const STAFF_ONBOARDING_STEP_CONTENT: Readonly<
 
 /** Was an der Schule und für die Person gilt; entscheidet, welche Schritte es gibt. */
 export interface StaffOnboardingContext {
+  /** Die Person hat in dieser Schule ein eigenes Personalprofil. */
+  hasOwnStaff: boolean;
   /** Feste Gruppen und mindestens eine eigene Gruppe. */
   hasOwnGroup: boolean;
   /** An- und Abmelden geht in moto, nicht nur am Tablet. */
@@ -98,13 +100,13 @@ function applies(
     case "attendance":
       return context.webAttendance && context.canSearchChildren;
     case "calendar":
-      return context.canSeeCalendar;
+      return context.hasOwnStaff && context.canSeeCalendar;
     case "supervision":
       return context.roomsTracked && context.canSupervise;
     case "students":
       return context.canSearchChildren;
     case "work_time":
-      return context.canTrackWorkTime;
+      return context.hasOwnStaff && context.canTrackWorkTime;
   }
 }
 

@@ -37,11 +37,18 @@ function isNoOwnStaffProfile(error: unknown): boolean {
  */
 export function useNoOwnStaffProfileEmpty(
   icon: ReactNode,
+  canAccessOwnPage: boolean,
   errors: readonly unknown[] = [],
 ): PageBodyEmpty {
   const hasOwnStaff = useHasOwnStaff();
   const tenantPath = useTenantAwarePath();
-  if (hasOwnStaff && !errors.some(isNoOwnStaffProfile)) return null;
+  const refusedForMissingStaffProfile = errors.some(isNoOwnStaffProfile);
+  // Ohne das Recht auf die eigene Seite darf ein fehlendes Personalprofil
+  // keine Zugriffsablehnung überdecken. Die explizite Server-Ablehnung bleibt
+  // maßgeblich: Sie kommt erst nach der Berechtigungsprüfung.
+  if (!refusedForMissingStaffProfile && (hasOwnStaff || !canAccessOwnPage)) {
+    return null;
+  }
   return {
     icon,
     title: "Kein eigenes Personalprofil",

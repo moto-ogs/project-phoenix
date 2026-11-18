@@ -74,7 +74,7 @@ export function OwnDienstplanView() {
   });
   const tenantPath = useTenantAwarePath();
   // Ohne Personalprofil gibt es keinen eigenen Dienstplan (#7306).
-  const noOwnStaff = useNoOwnStaffProfileEmpty(STAFF_PLAN_ICON);
+  const noOwnStaff = useNoOwnStaffProfileEmpty(STAFF_PLAN_ICON, isReady);
 
   if (isDenied) {
     return (
@@ -166,7 +166,7 @@ function OwnDienstplanContent() {
   const { closingDays } = useClosingDaysState(weekFrom, weekTo);
   // Ladefehler über den gemeinsamen Fehlerpfad (Katalogtext, Wiederholen).
   // Die Ablehnung ohne Personalprofil zeigt stattdessen den Leerzustand.
-  const noOwnStaff = useNoOwnStaffProfileEmpty(STAFF_PLAN_ICON, [
+  const noOwnStaff = useNoOwnStaffProfileEmpty(STAFF_PLAN_ICON, true, [
     shiftsError,
     projectionError,
   ]);

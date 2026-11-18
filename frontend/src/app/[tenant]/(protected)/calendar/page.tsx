@@ -523,13 +523,17 @@ function StaffCalendarPageInner() {
   // Ohne Personalprofil in dieser Schule gibt es keine eigenen Termine
   // (#7306): dann fragt die Seite sie gar nicht erst ab.
   const hasOwnStaff = useHasOwnStaff();
-  const calendarKey = hasOwnStaff
-    ? tenantDailyKeys.staffCalendar(
-        viewMode,
-        toISODate(range.from),
-        toISODate(range.to),
-      )
-    : null;
+  const canSeeOwnCalendar = hasPermission(session, "calendar:own");
+  // Ohne Kalenderrecht muss der Server die bisherige Zugriffsablehnung
+  // liefern. Nur berechtigte Personen ohne Profil überspringen den Abruf.
+  const calendarKey =
+    hasOwnStaff || !canSeeOwnCalendar
+      ? tenantDailyKeys.staffCalendar(
+          viewMode,
+          toISODate(range.from),
+          toISODate(range.to),
+        )
+      : null;
   const {
     data,
     error: calendarError,
@@ -542,6 +546,7 @@ function StaffCalendarPageInner() {
   // danach aus der Ablehnung des Servers.
   const noOwnStaff = useNoOwnStaffProfileEmpty(
     <MotoConceptIcon concept={calendarConcept} size={48} />,
+    canSeeOwnCalendar,
     [calendarError],
   );
 

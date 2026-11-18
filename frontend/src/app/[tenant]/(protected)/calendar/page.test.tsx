@@ -430,6 +430,42 @@ describe("StaffCalendarPage", () => {
       ).toBeInTheDocument();
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
+
+    it("keeps the permission refusal when the person cannot open own calendars", async () => {
+      ownStaff.present = false;
+      mockUseSession.mockReturnValue({
+        data: { user: { permissions: [] } },
+        status: "authenticated",
+      });
+      mockUseSWRAuth.mockImplementation((key: unknown) => {
+        const cacheKey = typeof key === "string" ? key : "";
+        if (cacheKey.startsWith("staff-calendar")) {
+          return {
+            data: undefined,
+            error: new ApiError("permission denied", 403, {
+              code: "general.permission",
+            }),
+            isLoading: false,
+            mutate: mockMutate,
+          };
+        }
+        return {
+          data: undefined,
+          error: null,
+          isLoading: false,
+          mutate: vi.fn(),
+        };
+      });
+
+      render(<StaffCalendarPage />);
+
+      expect(
+        await screen.findByText(
+          catalogText("general.permission", "die Liste der Termine"),
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/Kein eigenes Personalprofil/)).toBeNull();
+    });
   });
 
   it("keeps the calendar subscription available when the calendar fails", async () => {

@@ -714,7 +714,13 @@ function setupDefaultMocks(overrides?: {
   laborDays?: WorkDayLaborHint[];
 }) {
   vi.mocked(useSession).mockReturnValue({
-    data: { user: { id: "1", token: "test-token" } },
+    data: {
+      user: {
+        id: "1",
+        token: "test-token",
+        permissions: ["time_tracking:own"],
+      },
+    },
     status: "authenticated",
     update: vi.fn(),
   } as never);
@@ -963,6 +969,29 @@ describe("TimeTrackingPage", () => {
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
       expect(assign).not.toHaveBeenCalled();
       assign.mockRestore();
+    });
+
+    it("keeps the permission refusal when the person cannot open own time tracking", async () => {
+      setupDefaultMocks({
+        currentSessionError: new ApiError("permission denied", 403, {
+          code: "general.permission",
+        }),
+      });
+      mockOwnStaff.inSchool = false;
+      vi.mocked(useSession).mockReturnValue({
+        data: { user: { id: "1", token: "test-token", permissions: [] } },
+        status: "authenticated",
+        update: vi.fn(),
+      } as never);
+
+      render(<TimeTrackingPage />);
+
+      expect(
+        await screen.findByText(
+          catalogText("general.permission", "die laufende Arbeitszeit"),
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/Kein eigenes Personalprofil/)).toBeNull();
     });
   });
 
