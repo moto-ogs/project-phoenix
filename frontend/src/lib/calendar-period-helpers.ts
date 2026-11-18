@@ -31,7 +31,7 @@ export const PERIOD_TYPE_LABELS: Record<PeriodType, string> = {
 export interface BackendCalendarPeriodWarning {
   code: "overlapping_active_periods" | (string & {});
   message: string;
-  overlapping_period_ids?: number[];
+  overlapping_period_ids?: (number | string)[];
   overlapping_period_names?: string[];
 }
 
@@ -44,8 +44,8 @@ export interface CalendarPeriodWarning {
 
 /** Backend wire shape (snake_case, int64 IDs). */
 export interface BackendCalendarPeriod {
-  id: number;
-  tenant_id: number;
+  id: number | string;
+  tenant_id: number | string;
   name: string;
   period_type: PeriodType;
   start_date: string; // YYYY-MM-DD

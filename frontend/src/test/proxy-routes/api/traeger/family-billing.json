@@ -1,6 +1,0 @@
-{
-  "api/traeger/family-billing": [
-    "GET traeger /traeger/family-billing",
-    "PUT traeger /traeger/family-billing"
-  ]
-}

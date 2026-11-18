@@ -77,7 +77,7 @@ type SeriesResponse struct {
 	SeriesID     int64    `json:"series_id,string"`
 	OldSeriesID  int64    `json:"old_series_id,omitempty,string"`
 	Created      int      `json:"created"`
-	Deleted      int64    `json:"deleted"`
+	Deleted      int      `json:"deleted"`
 	SkippedDates []string `json:"skipped_dates"`
 	// SkippedNonWorkingDays counts occurrences left out on statutory
 	// holidays, Ferien days and closing days (#3820).
@@ -93,7 +93,7 @@ func toSeriesResponse(result workforce.StaffShiftSeriesResult) SeriesResponse {
 		SeriesID:              result.SeriesID,
 		OldSeriesID:           result.OldSeriesID,
 		Created:               result.Created,
-		Deleted:               result.Deleted,
+		Deleted:               int(result.Deleted),
 		SkippedDates:          skipped,
 		SkippedNonWorkingDays: result.SkippedNonWorkingDays,
 	}

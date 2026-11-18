@@ -245,11 +245,11 @@ interface BackendSettings {
 }
 
 interface BackendEntry {
-  id: number;
+  id: number | string;
   file_number: number;
   format: ExportFormat;
   run_kind: ExportRunKind;
-  run_id: number;
+  run_id: number | string;
   run_label: string;
   file_name: string;
   invoice_count: number;
@@ -259,7 +259,7 @@ interface BackendEntry {
   datev_all?: boolean;
   resolved_positions?: number;
   cost_center_fallbacks?: BackendCostCenterFallback[] | null;
-  exported_by_account_id: number | null;
+  exported_by_account_id: number | string | null;
   exported_by_you: boolean;
   exported_by_name?: string | null;
   exported_at: string;
@@ -283,7 +283,7 @@ interface BackendCostCenterFallback {
 
 interface BackendRun {
   run_kind: ExportRunKind;
-  run_id: number;
+  run_id: number | string;
   label: string;
   issued_on: string;
   invoice_count: number;
@@ -299,7 +299,7 @@ interface BackendHistory {
     | {
         kind: InvoiceStepKind;
         at: string;
-        account_id: number | null;
+        account_id: number | string | null;
         account_name?: string | null;
         by_you: boolean;
         positions?: number;
@@ -577,7 +577,7 @@ interface BackendDatevRuns {
   runs:
     | {
         run_kind: ExportRunKind;
-        run_id: number;
+        run_id: number | string;
         new_bookings: number;
         fiscal_years: string[] | null;
       }[]
@@ -756,21 +756,22 @@ export interface BookingAccounts {
 interface BackendBookingAccounts {
   standard_account: string;
   cost_center_required: boolean;
-  schools: { id: number; name: string }[] | null;
+  schools: { id: number | string; name: string }[] | null;
   offerings:
     | {
-        school_id: number;
-        care_offering_id: number;
+        school_id: number | string;
+        care_offering_id: number | string;
         module_names: string[] | null;
       }[]
     | null;
   revenue_accounts:
-    { scope: RevenueScope; scope_id: number; account: string }[] | null;
+    | { scope: RevenueScope; scope_id: number | string; account: string }[]
+    | null;
   cost_centers:
     | {
-        id: number;
+        id: number | string;
         scope: CostCenterScope;
-        scope_id: number;
+        scope_id: number | string;
         valid_from: string;
         code: string;
       }[]

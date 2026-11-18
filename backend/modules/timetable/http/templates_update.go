@@ -23,8 +23,8 @@ type updateTemplateRequest struct {
 	EndTime         string        `json:"end_time"`
 	RoomID          int64         `json:"room_id"`
 	CategoryID      int64         `json:"category_id"`
-	PlanningTrackID nullableInt64 `json:"planning_track_id"`
-	MaxParticipants nullableInt   `json:"max_participants"`
+	PlanningTrackID NullableInt64 `json:"planning_track_id"`
+	MaxParticipants NullableInt   `json:"max_participants"`
 	// RequiredStaff is the optional manual Personalbedarf override (#1839);
 	// omitted/null clears the override (derive from the Betreuungsschlüssel).
 	RequiredStaff    *int   `json:"required_staff,omitempty"`
@@ -41,13 +41,13 @@ type updateTemplateRequest struct {
 	// template's stored value, only an explicit null (or explicit empty
 	// list) clears it. A client predating these fields must not strip a
 	// template's dynamic Angebots-Belegung by simply not knowing them.
-	SourceCareOfferingIDs nullableInt64Slice `json:"source_care_offering_ids"`
-	SourceGradeLevels     nullableIntSlice   `json:"source_grade_levels"`
+	SourceCareOfferingIDs NullableInt64Slice `json:"source_care_offering_ids"`
+	SourceGradeLevels     NullableIntSlice   `json:"source_grade_levels"`
 	// SourceSchoolClasses is the Klassenfilter (#2482), same presence
 	// contract. Mutually exclusive with source_grade_levels: submitting one
 	// non-empty filter drops a carried-over other one, submitting both
 	// non-empty is a 400.
-	SourceSchoolClasses nullableStringSlice `json:"source_school_classes"`
+	SourceSchoolClasses NullableStringSlice `json:"source_school_classes"`
 	// ListKind classifies the template for printable daily lists (#1565);
 	// omitted/null/empty clears it.
 	ListKind *string `json:"list_kind,omitempty"`
@@ -98,7 +98,7 @@ type updateTemplateRequest struct {
 	// it. Must lie within the planning period and not before the start.
 	// Presence-aware: omitted keeps the stored end, null removes it. Not
 	// supported on a split ("Ab jetzt"); the split rejects it.
-	EndDate nullableStr `json:"end_date"`
+	EndDate NullableStr `json:"end_date"`
 	// ReplanFuture rebuilds the series' planned occurrences from today
 	// through the end of its planning period in this request's transaction
 	// (#6838). Omitted keeps the occurrences, as a Wochennotiz-only save or
@@ -674,7 +674,7 @@ func (rs *Resource) archiveTemplate(w http.ResponseWriter, r *http.Request) {
 		renderTemplateNotFound(w, r)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]any{"id": id}, "Template archived")
+	common.Respond(w, r, http.StatusOK, TemplateArchivedResponse{ID: id}, "Template archived")
 }
 
 func templateIDFromRequest(w http.ResponseWriter, r *http.Request) (int64, bool) {

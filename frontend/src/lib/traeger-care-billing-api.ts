@@ -458,9 +458,9 @@ export interface CareFeeNoticeHold {
 }
 
 interface BackendModule {
-  school_id: number;
+  school_id: number | string;
   school_name: string;
-  care_offering_id: number;
+  care_offering_id: number | string;
   module_name: string;
   ends_at: string;
   booked_weekdays: CareWeekday[] | null;
@@ -469,9 +469,9 @@ interface BackendModule {
 }
 
 interface BackendTariff {
-  id: number;
-  school_id: number;
-  care_offering_id: number;
+  id: number | string;
+  school_id: number | string;
+  care_offering_id: number | string;
   module_name: string;
   weekday: CareWeekday | "";
   days_per_week?: number | null;
@@ -483,17 +483,21 @@ interface BackendTariff {
 }
 
 interface BackendTariffs {
-  schools: { id: number; name: string }[] | null;
+  schools: { id: number | string; name: string }[] | null;
   modules: BackendModule[] | null;
   tariffs: BackendTariff[] | null;
   lists?:
-    | { school_id: number; valid_from: string; free_months: number[] | null }[]
+    | {
+        school_id: number | string;
+        valid_from: string;
+        free_months: number[] | null;
+      }[]
     | null;
   billed_until: Record<string, string> | null;
 }
 
 interface BackendRun {
-  id: number;
+  id: number | string;
   billing_month: string;
   status: CareRunStatus;
   created_at: string;
@@ -502,19 +506,19 @@ interface BackendRun {
   document_count: number | null;
   total_cents: number | null;
   month_rule: CareMonthRule | "";
-  school_ids?: number[] | null;
+  school_ids?: (number | string)[] | null;
   invoice_date?: string | null;
   discarded_at?: string | null;
 }
 
 interface BackendInvoice {
-  id: number;
+  id: number | string;
   number: string;
   issued_on: string | null;
-  contract_id: number;
+  contract_id: number | string;
   service?: string;
   family_email?: string;
-  school_id: number;
+  school_id: number | string;
   school_name: string;
   child_first_name: string;
   child_last_name: string;
@@ -529,7 +533,7 @@ interface BackendInvoice {
   payment?: BackendInvoicePayment | null;
   positions:
     | {
-        care_offering_id: number;
+        care_offering_id: number | string;
         module_name: string;
         version_number: number;
         service_from: string;
@@ -567,7 +571,7 @@ interface BackendInvoice {
   cost_shares?:
     | {
         kind: CareCostShareKind;
-        cost_bearer_id: number;
+        cost_bearer_id: number | string;
         cost_bearer_name: string;
         share_basis_points: number | null;
         share_cents: number | null;
@@ -594,7 +598,7 @@ interface BackendAmendmentValue {
 }
 
 interface BackendAmendment {
-  id: number;
+  id: number | string;
   kind: CareAmendmentKind;
   label: string;
   amount_cents: number;
@@ -662,12 +666,12 @@ export interface BackendRunDetail extends BackendRun {
   invoices: BackendInvoice[] | null;
   unpriced:
     | {
-        contract_id: number;
-        school_id: number;
+        contract_id: number | string;
+        school_id: number | string;
         school_name: string;
         child_first_name: string;
         child_last_name: string;
-        care_offering_id: number;
+        care_offering_id: number | string;
         module_name: string;
         weekday: CareWeekday | "";
         days_per_week?: number | null;
@@ -680,7 +684,11 @@ export interface BackendRunDetail extends BackendRun {
         module_name: string;
         weekday: CareWeekday;
         contracts:
-          | { contract_id: number; school_id: number; school_name: string }[]
+          | {
+              contract_id: number | string;
+              school_id: number | string;
+              school_name: string;
+            }[]
           | null;
       }[]
     | null;
@@ -688,7 +696,7 @@ export interface BackendRunDetail extends BackendRun {
   uncounted_families?: number;
   uncounted_contracts?:
     | {
-        contract_id: number;
+        contract_id: number | string;
         school_name: string;
         child_first_name: string;
         child_last_name: string;
@@ -705,7 +713,7 @@ export interface BackendRunDetail extends BackendRun {
   meal_unbilled?: BackendMealUnbilled[] | null;
   meal_changed?: BackendMealChanged[] | null;
   due_dates?: BackendRunDueDate[] | null;
-  schools?: { id: number; name: string }[] | null;
+  schools?: { id: number | string; name: string }[] | null;
   excluded_count?: number;
   excluded_cents?: number;
   fingerprint?: string;
@@ -720,7 +728,7 @@ export interface BackendRunDetail extends BackendRun {
   legal_remedy_missing?: boolean;
   cost_bearers?:
     | {
-        cost_bearer_id: number;
+        cost_bearer_id: number | string;
         cost_bearer_name: string;
         invoice_count: number;
         amount_cents: number;
@@ -728,7 +736,7 @@ export interface BackendRunDetail extends BackendRun {
     | null;
   fee_notice_held?:
     | {
-        contract_id: number;
+        contract_id: number | string;
         child_first_name: string;
         child_last_name: string;
         notice_number: string;
@@ -739,8 +747,10 @@ export interface BackendRunDetail extends BackendRun {
 const TARIFFS_PATH = "/api/traeger/care-tariffs";
 const RUNS_PATH = "/api/traeger/care-billing-runs";
 
-function id(value: number): string {
-  return value ? String(value) : "";
+/** An ID of the backend, number or string; 0 is none. */
+function id(value: number | string): string {
+  const text = String(value);
+  return text === "0" ? "" : text;
 }
 
 function tariffsFromBackend(body: BackendTariffs): CareTariffs {
@@ -1170,7 +1180,7 @@ export interface CareLetterSeries {
 }
 
 interface BackendCareLetterMailing {
-  invoice_id: number;
+  invoice_id: number | string;
   kind: CareLetterKind;
   number: string;
   invoice_number: string;
@@ -1374,7 +1384,7 @@ export async function mailCareLetter(
 ): Promise<CareLetterMailing> {
   return careMailingFromBackend(
     await traegerRequest<BackendCareLetterMailing>(
-      `${invoicePath(runId, invoiceId)}/${kind === "cancellation" ? "cancellation/mail" : "mail"}`,
+      `${invoicePath(runId, invoiceId)}/mail${kind === "cancellation" ? "?kind=cancellation" : ""}`,
       { method: "POST" },
     ),
   );

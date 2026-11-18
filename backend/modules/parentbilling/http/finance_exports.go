@@ -85,7 +85,34 @@ var historyKinds = map[string]string{
 
 // SollstellungMappingRequest is the body of PUT …/settings/sollstellung.
 type SollstellungMappingRequest struct {
-	capability.SollstellungMapping
+	Columns          []SollstellungColumnRequest `json:"columns"`
+	Delimiter        string                      `json:"delimiter"`
+	DecimalSeparator string                      `json:"decimal_separator"`
+	DateFormat       string                      `json:"date_format"`
+	Encoding         string                      `json:"encoding"`
+	HeaderRow        bool                        `json:"header_row"`
+	FileNamePattern  string                      `json:"file_name_pattern"`
+}
+
+// SollstellungColumnRequest is one column of the mapping.
+type SollstellungColumnRequest struct {
+	Field  string `json:"field"`
+	Header string `json:"header"`
+	Value  string `json:"value,omitempty"`
+}
+
+func (req *SollstellungMappingRequest) mapping() capability.SollstellungMapping {
+	var columns []capability.SollstellungColumn
+	if req.Columns != nil {
+		columns = make([]capability.SollstellungColumn, 0, len(req.Columns))
+	}
+	for _, column := range req.Columns {
+		columns = append(columns, capability.SollstellungColumn(column))
+	}
+	return capability.SollstellungMapping{
+		Columns: columns, Delimiter: req.Delimiter, DecimalSeparator: req.DecimalSeparator, DateFormat: req.DateFormat,
+		Encoding: req.Encoding, HeaderRow: req.HeaderRow, FileNamePattern: req.FileNamePattern,
+	}
 }
 
 // Bind accepts the body; the owner validates the mapping.
@@ -93,7 +120,7 @@ func (req *SollstellungMappingRequest) Bind(*http.Request) error { return nil }
 
 // FileNumberStartRequest is the body of PUT …/settings/file-number-start.
 type FileNumberStartRequest struct {
-	Start int64 `json:"start"`
+	Start int64 `json:"start" contract:"number"`
 }
 
 // Bind accepts the body; the owner validates the start.
@@ -136,7 +163,7 @@ func (rs *FinanceExportResource) saveMapping(w http.ResponseWriter, r *http.Requ
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingExportMappingInvalid))
 		return
 	}
-	settings, err := rs.exports.SaveSollstellungMapping(r.Context(), reviewer, req.SollstellungMapping)
+	settings, err := rs.exports.SaveSollstellungMapping(r.Context(), reviewer, req.mapping())
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderExportError(w, r, err)

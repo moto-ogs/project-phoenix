@@ -117,7 +117,7 @@ func (rs *Resource) acknowledgeSchoolVacation(w http.ResponseWriter, r *http.Req
 	case err != nil:
 		common.RenderError(w, r, common.ErrorInternalServerWrap("Die Ferien konnten nicht bestätigt werden", err))
 	default:
-		common.Respond(w, r, http.StatusOK, map[string]bool{"acknowledged": true}, "School vacation acknowledged")
+		common.Respond(w, r, http.StatusOK, SchoolVacationAcknowledgedResponse{Acknowledged: true}, "School vacation acknowledged")
 	}
 }
 

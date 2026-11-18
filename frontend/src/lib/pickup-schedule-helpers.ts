@@ -22,8 +22,8 @@ export interface PickupSchedule {
 
 // Backend Pickup Schedule Response
 export interface BackendPickupSchedule {
-  id: number;
-  student_id: number;
+  id: number | string;
+  student_id: number | string;
   weekday: number;
   weekday_name: string;
   pickup_time: string; // HH:MM format
@@ -31,7 +31,7 @@ export interface BackendPickupSchedule {
   source?: string; // "staff" | "care_offering" (#2290)
   care_offering_id?: string;
   care_offering_name?: string;
-  created_by: number;
+  created_by: number | string;
   created_at: string;
   updated_at: string;
 }
@@ -55,15 +55,15 @@ export interface PickupException {
 
 // Backend Pickup Exception Response
 export interface BackendPickupException {
-  id: number;
-  student_id: number;
+  id: number | string;
+  student_id: number | string;
   exception_date: string; // YYYY-MM-DD format
   pickup_time?: string; // HH:MM format
   reason?: string;
   source?: string; // "staff" or "guardian"
   excused_from?: string;
   excused_auto?: boolean;
-  created_by: number;
+  created_by: number | string;
   created_at: string;
   updated_at: string;
 }
@@ -84,12 +84,12 @@ export interface PickupNote {
 
 // Backend Pickup Note Response
 export interface BackendPickupNote {
-  id: number;
-  student_id: number;
+  id: number | string;
+  student_id: number | string;
   note_date?: string; // YYYY-MM-DD format; absent for a recurring note
   weekday?: number;
   content: string;
-  created_by: number;
+  created_by: number | string;
   created_at: string;
   updated_at: string;
 }
@@ -107,8 +107,8 @@ export interface DepartureException {
 }
 
 export interface BackendDepartureException {
-  id: number;
-  student_id: number;
+  id: number | string;
+  student_id: number | string;
   exception_date: string;
   departure_mode: DepartureMode;
   reason?: string;

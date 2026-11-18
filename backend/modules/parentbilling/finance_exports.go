@@ -275,7 +275,7 @@ type SollstellungSettings struct {
 // number the next file gets and whether the start is fixed (a start value
 // was set or a file was made).
 type ExportFileNumbers struct {
-	Next    int64 `json:"next"`
+	Next    int64 `json:"next" contract:"number"`
 	Started bool  `json:"started"`
 }
 
@@ -290,7 +290,7 @@ type ExportSettings struct {
 // ExportProtocolEntry is one entry of the export protocol.
 type ExportProtocolEntry struct {
 	ID           int64  `json:"id"`
-	FileNumber   int64  `json:"file_number"`
+	FileNumber   int64  `json:"file_number" contract:"number"`
 	Format       string `json:"format"`
 	RunKind      string `json:"run_kind"`
 	RunID        int64  `json:"run_id"`
@@ -303,7 +303,7 @@ type ExportProtocolEntry struct {
 	Reference string `json:"reference,omitempty"`
 	// RepeatOf is the number of the earliest file of the run with the same
 	// content, 0 when the content is new.
-	RepeatOf int64 `json:"repeat_of,omitempty"`
+	RepeatOf int64 `json:"repeat_of,omitempty" contract:"number"`
 	// DatevAll marks a DATEV file of "all bookings again" (#6433).
 	DatevAll bool `json:"datev_all,omitempty"`
 	// ResolvedPositions counts the positions of the file that had no

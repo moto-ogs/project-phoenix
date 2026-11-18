@@ -171,6 +171,10 @@ func TestCareMealPricesNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, body)
 		assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	}
+	// The Träger itself deletes its price again.
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, careMealTariffsPath+fmt.Sprintf("/%d/2029-11-01", school), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.NotContains(t, rec.Body.String(), `"amount_cents":480`, "the deleted price is gone from the answer")
 }
 
 // The Mensa price list reads the same statements for any number of prices.

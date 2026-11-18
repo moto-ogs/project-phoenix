@@ -1,8 +1,8 @@
 // Types and mapping for tenant-defined shift types (Schichtarten, #1836).
-// Backend wire format: snake_case, int64 id as number, color as hex string.
+// Backend wire format: snake_case, int64 id as number or decimal string, color as hex string.
 
 export interface BackendShiftType {
-  id: number;
+  id: number | string;
   name: string;
   color: string;
   description?: string;

@@ -35,7 +35,12 @@ export async function fetchCareRunSchools(
   month: string,
 ): Promise<CareRunSchool[]> {
   const schools = await traegerRequest<
-    { id: number; name: string; open_run_id: number | null }[] | null
+    | {
+        id: number | string;
+        name: string;
+        open_run_id: number | string | null;
+      }[]
+    | null
   >(`${RUNS_PATH}/schools?month=${encodeURIComponent(month)}`);
   return (schools ?? []).map((school) => ({
     id: String(school.id),

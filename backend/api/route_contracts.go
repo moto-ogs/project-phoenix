@@ -7,17 +7,23 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
 	"github.com/moto-ogs/project-phoenix/modules/appointments"
+	careContractHTTP "github.com/moto-ogs/project-phoenix/modules/carecontract/http"
 	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
 	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
+	enrollmentHTTP "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
 	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
 	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+	peopleStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/students"
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
+	"github.com/moto-ogs/project-phoenix/modules/requestreview"
+	reviewStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/requestreview/http"
 	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
+	presenceStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/studentpresence/http"
 	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	workforceModule "github.com/moto-ogs/project-phoenix/modules/workforce"
 	absencetypesHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/absencetypes"
@@ -27,44 +33,52 @@ import (
 	worktimemodelsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/worktimemodels"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
+	deleteStudentsHTTP "github.com/moto-ogs/project-phoenix/workflows/studentdeletion/http"
 )
+
+// contractMount is the typed registration of an owner under its mount.
+type contractMount struct {
+	prefix string
+	routes []common.RouteContract
+}
+
+// traegerBillingContractMounts are the Elternabrechnung, the care contracts
+// and their evaluations in the Träger-Portal (#2352).
+func traegerBillingContractMounts() []contractMount {
+	return []contractMount{
+		{"/traeger/billing-runs", parentBillingHTTP.BillingRunRouteContracts()},
+		{"/traeger/number-ranges", parentBillingHTTP.NumberRangeRouteContracts()},
+		{"/traeger/billing-document-kinds", parentBillingHTTP.DocumentKindRouteContracts()},
+		{"/traeger/contribution-rules", parentBillingHTTP.ContributionRuleRouteContracts()},
+		{"/traeger/cost-bearers", parentBillingHTTP.CostBearerRouteContracts()},
+		{"/traeger/care-tariffs", parentBillingHTTP.CareTariffRouteContracts()},
+		{"/traeger/care-meal-tariffs", parentBillingHTTP.CareMealTariffRouteContracts()},
+		{"/traeger/care-billing-runs", parentBillingHTTP.CareRunRouteContracts()},
+		{"/traeger/care-notice-runs", parentBillingHTTP.CareNoticeRunRouteContracts()},
+		{"/traeger/care-rules", parentBillingHTTP.CareRuleRouteContracts()},
+		{"/traeger/care-evidences", parentBillingHTTP.CareEvidenceRouteContracts()},
+		{"/traeger/care-cost-shares", parentBillingHTTP.CareCostShareRouteContracts()},
+		{"/traeger/family-children", parentBillingHTTP.FamilyChildrenRouteContracts()},
+		{"/traeger/billing-terms", parentBillingHTTP.BillingTermsRouteContracts()},
+		{"/traeger/family-billing", parentBillingHTTP.FamilyBillingRouteContracts()},
+		{"/traeger/billing-run-due-dates", parentBillingHTTP.DueDateRouteContracts()},
+		{"/traeger/sepa-creditor", parentBillingHTTP.SEPACreditorRouteContracts()},
+		{"/traeger/sepa-mandates", parentBillingHTTP.SEPAMandateRouteContracts()},
+		{"/traeger/sepa-debits", parentBillingHTTP.SEPADebitRouteContracts()},
+		{"/traeger/finance-exports", parentBillingHTTP.FinanceExportRouteContracts()},
+		{"/traeger/finance-handovers", parentBillingHTTP.ExportHandoverRouteContracts()},
+		{"/traeger/contracts", careContractHTTP.ContractRouteContracts()},
+		{"/traeger/contract-templates", careContractHTTP.TemplateRouteContracts()},
+		{"/traeger/contract-notices", careContractHTTP.NoticeRouteContracts()},
+		{"/traeger/contract-changes", careContractHTTP.ChangeRouteContracts()},
+		{"/traeger/care-time-overruns", careContractHTTP.OverrunRouteContracts()},
+	}
+}
 
 // contractRegistrations lists every typed registration under its mount and
 // refuses one the route catalog does not know.
 func contractRegistrations() ([]contract.Registration, error) {
-	mounts := []struct {
-		prefix string
-		routes []common.RouteContract
-	}{
-		{"/api/students", projectionStudentsHTTP.StudentRouteContracts()},
-		// The projection renders the answer of Care Plan's student writes
-		// (studentHTTPResources binds it), so its type is named here.
-		{"/api/students", careStudentsHTTP.StudentWriteContracts(projectionStudentsHTTP.StudentResponse{})},
-		{"/parent", parentAPI.MeRouteContracts()},
-		{"/api/notifications", notificationRouteContracts(common.PortalTenant)},
-		{"/school/class-day", classdayHTTP.RouteContracts()},
-		{"/school/notifications", notificationRouteContracts(common.PortalSchool)},
-		{"/api/parent-announcements", announcementAPI.RouteContracts(common.PortalTenant)},
-		{"/school/parent-letters", announcementAPI.RouteContracts(common.PortalSchool)},
-		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
-		{"/api/time-tracking", timeTrackingRouteContracts()},
-		{"/api/work-time-models", worktimemodelsHTTP.RouteContracts()},
-		// Class Day owns the child sheet the supervision route answers with.
-		{"/school/calendar", calendarAPI.SchoolRouteContracts()},
-		{"/school/supervisions", timetableHTTP.SchoolSupervisionRouteContracts(classday.SupervisionStudentSheet{})},
-		{"/school/staff-messages", staffMessagingAPI.RouteContracts(common.PortalSchool)},
-		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
-		{"/operator/devices", provisioningOperatorAPI.DeviceRouteContracts()},
-		{"/operator/schools", provisioningOperatorAPI.SchoolDeviceSlotRouteContracts()},
-		{"/traeger/master-data", organizationTenancyTraeger.MasterDataRouteContracts()},
-		{"/traeger/documents", organizationTenancyTraeger.DocumentRouteContracts()},
-		{"/traeger/report-templates", organizationTenancyTraeger.ReportTemplateRouteContracts()},
-		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
-		{"/traeger/notifications", schoolFeedRouteContracts(common.PortalTraeger)},
-		{"/traeger/staff-records", workforceTraegerStaff.RecordRouteContracts()},
-		{"/caterer", catererPortalHTTP.RouteContracts()},
-		{"/caterer/notifications", schoolFeedRouteContracts(common.PortalCaterer)},
-	}
+	mounts := append(contractMounts(), traegerBillingContractMounts()...)
 	catalog, err := RouteCatalog()
 	if err != nil {
 		return nil, err
@@ -84,6 +98,56 @@ func contractRegistrations() ([]contract.Registration, error) {
 		}
 	}
 	return registrations, nil
+}
+
+// contractMounts lists every owner's typed registrations under its mount.
+func contractMounts() []contractMount {
+	return []contractMount{
+		{"/api/students", projectionStudentsHTTP.StudentRouteContracts()},
+		// The projection renders the answer of Care Plan's student writes
+		// (studentHTTPResources binds it), so its type is named here.
+		{"/api/students", careStudentsHTTP.StudentWriteContracts(projectionStudentsHTTP.StudentResponse{})},
+		// Request Review renders the answers of Care Plan's review routes.
+		{"/api/students", careStudentsHTTP.StudentRouteContracts(careStudentsHTTP.DecisionResponses{
+			CareDecision: requestreview.CareRequestResponse{}, CareDetail: reviewStudentsHTTP.CareRequestDetailResponse{},
+			MasterDataDecision: requestreview.MasterDataChangeRequestResponse{}, ExcusedDecision: requestreview.StaffExcusedRequestResponse{},
+		})},
+		{"/api/students", peopleStudentsHTTP.RouteContracts()},
+		{"/api/students", presenceStudentsHTTP.StudentRouteContracts()},
+		{"/api/students", deleteStudentsHTTP.StudentRouteContracts()},
+		{"/api/students", reviewStudentsHTTP.StudentRouteContracts()},
+		{"/api/students", enrollmentHTTP.StudentRouteContracts()},
+		{"/parent", parentAPI.MeRouteContracts()},
+		{"/api/notifications", notificationRouteContracts(common.PortalTenant)},
+		{"/school/class-day", classdayHTTP.RouteContracts()},
+		{"/school/notifications", notificationRouteContracts(common.PortalSchool)},
+		{"/api/parent-announcements", announcementAPI.RouteContracts(common.PortalTenant)},
+		{"/school/parent-letters", announcementAPI.RouteContracts(common.PortalSchool)},
+		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
+		{"/api/time-tracking", timeTrackingRouteContracts()},
+		{"/api/work-time-models", worktimemodelsHTTP.RouteContracts()},
+		{"/api/staff", timeTrackingHTTP.StaffAdminRouteContracts()},
+		{"/api/staff", staffMembershipRouteContracts()},
+		{"/api/absence-types", absenceTypeRouteContracts()},
+		{"/api/shift-types", shiftTypeRouteContracts()},
+		{"/api/staff-shifts", staffShiftRouteContracts()},
+		// Class Day owns the child sheet the supervision route answers with.
+		{"/school/calendar", calendarAPI.SchoolRouteContracts()},
+		{"/api/timetable", timetableHTTP.RouteContracts()},
+		{"/school/supervisions", timetableHTTP.SchoolSupervisionRouteContracts(classday.SupervisionStudentSheet{})},
+		{"/school/staff-messages", staffMessagingAPI.RouteContracts(common.PortalSchool)},
+		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
+		{"/operator/devices", provisioningOperatorAPI.DeviceRouteContracts()},
+		{"/operator/schools", provisioningOperatorAPI.SchoolDeviceSlotRouteContracts()},
+		{"/traeger/master-data", organizationTenancyTraeger.MasterDataRouteContracts()},
+		{"/traeger/documents", organizationTenancyTraeger.DocumentRouteContracts()},
+		{"/traeger/report-templates", organizationTenancyTraeger.ReportTemplateRouteContracts()},
+		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
+		{"/traeger/notifications", schoolFeedRouteContracts(common.PortalTraeger)},
+		{"/traeger/staff-records", workforceTraegerStaff.RecordRouteContracts()},
+		{"/caterer", catererPortalHTTP.RouteContracts()},
+		{"/caterer/notifications", schoolFeedRouteContracts(common.PortalCaterer)},
+	}
 }
 
 // ContractDocument builds the model of the frontend/backend contract from
@@ -109,6 +173,15 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[workforceModule.UpdateAbsenceRequest](): contract.ReadsLaxIDs,
 		// A corrected break names its id as a number or a decimal string.
 		reflect.TypeFor[workforceModule.BreakDurationUpdate](): contract.ReadsLaxIDs,
+		// A presence is an object or, from older clients, a bare staff id.
+		reflect.TypeFor[timetableHTTP.DeviationPresence](): contract.ReadsFields,
+		// The template writes tell an absent key from null.
+		reflect.TypeFor[timetableHTTP.NullableInt]():         contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableInt64]():       contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableIntSlice]():    contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableInt64Slice]():  contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableStringSlice](): contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableStr]():         contract.ReadsValue,
 	}
 	// Appointments keeps its own day type.
 	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date]()}

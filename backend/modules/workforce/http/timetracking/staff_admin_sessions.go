@@ -440,7 +440,7 @@ func (rs *StaffAdminResource) adminUpdateStaffSession(w http.ResponseWriter, r *
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, workforce.WorkSessionWire{WorkSession: session}, "Session updated")
+	common.Respond(w, r, http.StatusOK, newAdminSessionResponse(session), "Session updated")
 }
 
 // adminCreateStaffSession handles POST /api/staff/{id}/time-tracking/sessions
@@ -479,7 +479,7 @@ func (rs *StaffAdminResource) adminCreateStaffSession(w http.ResponseWriter, r *
 		return
 	}
 
-	common.Respond(w, r, http.StatusCreated, workforce.WorkSessionWire{WorkSession: session}, "Session created")
+	common.Respond(w, r, http.StatusCreated, newAdminSessionResponse(session), "Session created")
 }
 
 // getStaffSessionEdits handles GET /api/staff/{id}/time-tracking/sessions/{sessionId}/edits

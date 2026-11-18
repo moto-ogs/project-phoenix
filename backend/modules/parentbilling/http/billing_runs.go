@@ -137,7 +137,7 @@ func (req *NumberRangeRequest) Bind(*http.Request) error { return nil }
 // /traeger/number-ranges/{service}/start: the running number the next
 // invoice gets (#7358).
 type NumberRangeStartRequest struct {
-	NextNumber int64 `json:"next_number"`
+	NextNumber int64 `json:"next_number" contract:"number"`
 }
 
 // Bind accepts the body; the Owner validates the number.

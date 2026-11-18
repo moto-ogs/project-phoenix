@@ -5,25 +5,21 @@ import {
   int64String,
   int64StringOrNumber,
   noData,
+  object,
   requestBody,
   safeInt,
   success,
 } from "./runtime";
-
-/** Go: absencetypes.AllowanceCarryResponse */
-export interface AllowanceCarryResponse {
-  year: number;
-  remaining_days: number;
-  expired_days: number;
-  expires_on: string;
-}
-
-export const AllowanceCarryResponseSchema: z.ZodType<AllowanceCarryResponse, unknown> = z.object({
-  year: safeInt,
-  remaining_days: z.number(),
-  expired_days: z.number(),
-  expires_on: z.string(),
-});
+import {
+  AllowanceCarryResponseSchema,
+  DailyProjectionSchema,
+  MonthSummarySchema,
+  ShiftResponseSchema,
+  StaffAbsenceResponseSchema,
+  WorkSessionEditViewSchema,
+  type AllowanceCarryResponse,
+  type SessionUpdateRequest,
+} from "./shared.generated";
 
 /** Go: absencetypes.OwnAllowanceResponse */
 export interface OwnAllowanceResponse {
@@ -42,7 +38,7 @@ export interface OwnAllowanceResponse {
   kept_by_traeger: boolean;
 }
 
-export const OwnAllowanceResponseSchema: z.ZodType<OwnAllowanceResponse, unknown> = z.object({
+export const OwnAllowanceResponseSchema: z.ZodType<OwnAllowanceResponse, unknown> = object<OwnAllowanceResponse>({
   name: z.string(),
   staff_id: z.string(),
   absence_type_id: z.string(),
@@ -58,65 +54,12 @@ export const OwnAllowanceResponseSchema: z.ZodType<OwnAllowanceResponse, unknown
   kept_by_traeger: z.boolean(),
 });
 
-/** Go: workforce.StaffAbsenceResponse */
-export interface StaffAbsenceResponse {
-  id: string;
-  tenant_id: string;
-  staff_id: string;
-  absence_type: string;
-  absence_type_label?: string;
-  date_start: string;
-  date_end: string;
-  half_day: boolean;
-  start_half_day: boolean;
-  end_half_day: boolean;
-  note?: string;
-  status: string;
-  approved_by?: string;
-  approved_at?: string;
-  created_by: string;
-  working_days?: number;
-  decision_note?: string;
-  requested_at: string;
-  substitute_staff_id?: string;
-  created_at: string;
-  updated_at: string;
-  duration_days: number;
-  absence_type_id?: string;
-}
-
-export const StaffAbsenceResponseSchema: z.ZodType<StaffAbsenceResponse, unknown> = z.object({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
-  absence_type: z.string(),
-  absence_type_label: z.string().optional(),
-  date_start: z.string(),
-  date_end: z.string(),
-  half_day: z.boolean(),
-  start_half_day: z.boolean(),
-  end_half_day: z.boolean(),
-  note: z.string().optional(),
-  status: z.string(),
-  approved_by: int64StringOrNumber.optional(),
-  approved_at: instant.optional(),
-  created_by: int64StringOrNumber,
-  working_days: z.number().optional(),
-  decision_note: z.string().optional(),
-  requested_at: instant,
-  substitute_staff_id: int64StringOrNumber.optional(),
-  created_at: instant,
-  updated_at: instant,
-  duration_days: safeInt,
-  absence_type_id: z.string().optional(),
-});
-
 /** Go: timetracking.AbsenceRequestMailsResponse */
 export interface AbsenceRequestMailsResponse {
   absences: Record<string, Record<string, number> | null> | null;
 }
 
-export const AbsenceRequestMailsResponseSchema: z.ZodType<AbsenceRequestMailsResponse, unknown> = z.object({
+export const AbsenceRequestMailsResponseSchema: z.ZodType<AbsenceRequestMailsResponse, unknown> = object<AbsenceRequestMailsResponse>({
   absences: z.record(z.string(), z.record(z.string(), safeInt).nullable()).nullable(),
 });
 
@@ -140,7 +83,7 @@ export interface assignmentResponse {
   understaffed_ack: boolean;
 }
 
-export const assignmentResponseSchema: z.ZodType<assignmentResponse, unknown> = z.object({
+export const assignmentResponseSchema: z.ZodType<assignmentResponse, unknown> = object<assignmentResponse>({
   instance_id: int64StringOrNumber,
   title: z.string(),
   group_name: z.string().optional(),
@@ -172,7 +115,7 @@ export interface WorkSessionBreak {
   updated_at: string;
 }
 
-export const WorkSessionBreakSchema: z.ZodType<WorkSessionBreak, unknown> = z.object({
+export const WorkSessionBreakSchema: z.ZodType<WorkSessionBreak, unknown> = object<WorkSessionBreak>({
   id: int64String,
   tenant_id: int64String,
   session_id: int64String,
@@ -191,7 +134,7 @@ export interface closingDayRangeResponse {
   reason: string;
 }
 
-export const closingDayRangeResponseSchema: z.ZodType<closingDayRangeResponse, unknown> = z.object({
+export const closingDayRangeResponseSchema: z.ZodType<closingDayRangeResponse, unknown> = object<closingDayRangeResponse>({
   start_date: z.string(),
   end_date: z.string(),
   reason: z.string(),
@@ -202,7 +145,7 @@ export interface ConfigResponse {
   account_start_date: string;
 }
 
-export const ConfigResponseSchema: z.ZodType<ConfigResponse, unknown> = z.object({
+export const ConfigResponseSchema: z.ZodType<ConfigResponse, unknown> = object<ConfigResponse>({
   account_start_date: z.string(),
 });
 
@@ -225,7 +168,7 @@ export interface SessionResponse {
   updated_at: string;
 }
 
-export const SessionResponseSchema: z.ZodType<SessionResponse, unknown> = z.object({
+export const SessionResponseSchema: z.ZodType<SessionResponse, unknown> = object<SessionResponse>({
   id: int64String,
   tenant_id: int64String,
   staff_id: int64String,
@@ -270,7 +213,7 @@ export interface HistorySessionResponse {
   rounding_minutes: number;
 }
 
-export const HistorySessionResponseSchema: z.ZodType<HistorySessionResponse, unknown> = z.object({
+export const HistorySessionResponseSchema: z.ZodType<HistorySessionResponse, unknown> = object<HistorySessionResponse>({
   id: int64String,
   tenant_id: int64String,
   staff_id: int64String,
@@ -307,7 +250,7 @@ export interface WorkWeekSummary {
   is_over_weekly_max: boolean;
 }
 
-export const WorkWeekSummarySchema: z.ZodType<WorkWeekSummary, unknown> = z.object({
+export const WorkWeekSummarySchema: z.ZodType<WorkWeekSummary, unknown> = object<WorkWeekSummary>({
   week_number: safeInt,
   year: safeInt,
   total_net_minutes: safeInt,
@@ -332,7 +275,7 @@ export interface WorkDayLaborHint {
   break_too_short_required_minutes: number;
 }
 
-export const WorkDayLaborHintSchema: z.ZodType<WorkDayLaborHint, unknown> = z.object({
+export const WorkDayLaborHintSchema: z.ZodType<WorkDayLaborHint, unknown> = object<WorkDayLaborHint>({
   date: z.string(),
   net_minutes: safeInt,
   break_minutes: safeInt,
@@ -353,7 +296,7 @@ export interface HistoryResponse {
   labor_days: WorkDayLaborHint[] | null;
 }
 
-export const HistoryResponseSchema: z.ZodType<HistoryResponse, unknown> = z.object({
+export const HistoryResponseSchema: z.ZodType<HistoryResponse, unknown> = object<HistoryResponse>({
   sessions: z.array(HistorySessionResponseSchema).nullable(),
   weekly_summaries: z.array(WorkWeekSummarySchema).nullable(),
   labor_days: z.array(WorkDayLaborHintSchema).nullable(),
@@ -365,163 +308,9 @@ export interface PublicHoliday {
   name: string;
 }
 
-export const PublicHolidaySchema: z.ZodType<PublicHoliday, unknown> = z.object({
+export const PublicHolidaySchema: z.ZodType<PublicHoliday, unknown> = object<PublicHoliday>({
   date: z.string(),
   name: z.string(),
-});
-
-/** Go: workforce.AdjustmentView */
-export interface AdjustmentView {
-  id: string;
-  type: string;
-  minutes_delta: number;
-  effective_date: string;
-  note: string;
-  decided_by: string;
-  decided_at: string;
-}
-
-export const AdjustmentViewSchema: z.ZodType<AdjustmentView, unknown> = z.object({
-  id: int64StringOrNumber,
-  type: z.string(),
-  minutes_delta: safeInt,
-  effective_date: z.string(),
-  note: z.string(),
-  decided_by: int64StringOrNumber,
-  decided_at: instant,
-});
-
-/** Go: workforce.MonthSummary */
-export interface MonthSummary {
-  staff_id: string;
-  year: number;
-  month: number;
-  carry_in_minutes: number;
-  target_minutes: number;
-  target_minutes_to_date: number;
-  has_target: boolean;
-  actual_minutes: number;
-  credited_sick_minutes: number;
-  credited_vacation_minutes: number;
-  credited_training_minutes: number;
-  credited_other_minutes: number;
-  sick_days: number;
-  vacation_days: number;
-  training_days: number;
-  sick_days_without_target: number;
-  vacation_days_without_target: number;
-  training_days_without_target: number;
-  other_days_without_target: number;
-  planned_shift_minutes?: number;
-  adjustment_minutes: number;
-  adjustments?: AdjustmentView[];
-  balance_minutes: number;
-  closing_balance_minutes: number;
-  is_closed: boolean;
-  closed_at?: string;
-  closed_by?: string;
-  closed_by_traeger: boolean;
-  close_reason?: string;
-  frozen_closing_balance_minutes?: number;
-  drift_minutes: number;
-  carry_in_frozen: boolean;
-  carry_in_frozen_from_month?: string;
-}
-
-export const MonthSummarySchema: z.ZodType<MonthSummary, unknown> = z.object({
-  staff_id: int64StringOrNumber,
-  year: safeInt,
-  month: safeInt,
-  carry_in_minutes: safeInt,
-  target_minutes: safeInt,
-  target_minutes_to_date: safeInt,
-  has_target: z.boolean(),
-  actual_minutes: safeInt,
-  credited_sick_minutes: safeInt,
-  credited_vacation_minutes: safeInt,
-  credited_training_minutes: safeInt,
-  credited_other_minutes: safeInt,
-  sick_days: z.number(),
-  vacation_days: z.number(),
-  training_days: z.number(),
-  sick_days_without_target: z.number(),
-  vacation_days_without_target: z.number(),
-  training_days_without_target: z.number(),
-  other_days_without_target: z.number(),
-  planned_shift_minutes: safeInt.optional(),
-  adjustment_minutes: safeInt,
-  adjustments: z.array(AdjustmentViewSchema).optional(),
-  balance_minutes: safeInt,
-  closing_balance_minutes: safeInt,
-  is_closed: z.boolean(),
-  closed_at: instant.optional(),
-  closed_by: int64StringOrNumber.optional(),
-  closed_by_traeger: z.boolean(),
-  close_reason: z.string().optional(),
-  frozen_closing_balance_minutes: safeInt.optional(),
-  drift_minutes: safeInt,
-  carry_in_frozen: z.boolean(),
-  carry_in_frozen_from_month: z.string().optional(),
-});
-
-/** Go: workforce.DailyProjection */
-export interface DailyProjection {
-  date: string;
-  target_minutes: number;
-  target_source?: string;
-  credit_minutes: number;
-  actual_minutes: number;
-  balance_minutes: number;
-}
-
-export const DailyProjectionSchema: z.ZodType<DailyProjection, unknown> = z.object({
-  date: z.string(),
-  target_minutes: safeInt,
-  target_source: z.string().optional(),
-  credit_minutes: safeInt,
-  actual_minutes: safeInt,
-  balance_minutes: safeInt,
-});
-
-/** Go: staffshifts.ShiftResponse */
-export interface ShiftResponse {
-  id: string;
-  staff_id: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  break_minutes: number;
-  shift_type_id?: string;
-  shift_type_name?: string;
-  shift_type_color?: string;
-  notes?: string;
-  series_id?: string;
-  detached: boolean;
-  cancelled: boolean;
-  change_reason?: string;
-  origin_shift_id?: string;
-  series_occurrence_date?: string;
-  planned_by_traeger?: boolean;
-}
-
-export const ShiftResponseSchema: z.ZodType<ShiftResponse, unknown> = z.object({
-  id: int64String,
-  staff_id: int64StringOrNumber,
-  date: z.string(),
-  start_time: z.string(),
-  end_time: z.string(),
-  break_minutes: safeInt,
-  shift_type_id: int64StringOrNumber.optional(),
-  shift_type_name: z.string().optional(),
-  shift_type_color: z.string().optional(),
-  notes: z.string().optional(),
-  series_id: int64String.optional(),
-  detached: z.boolean(),
-  cancelled: z.boolean(),
-  change_reason: z.string().optional(),
-  origin_shift_id: int64String.optional(),
-  series_occurrence_date: z.string().optional(),
-  planned_by_traeger: z.boolean().optional(),
 });
 
 /** Go: workforce.StaffVacationOpening */
@@ -540,7 +329,7 @@ export interface StaffVacationOpening {
   updated_at: string;
 }
 
-export const StaffVacationOpeningSchema: z.ZodType<StaffVacationOpening, unknown> = z.object({
+export const StaffVacationOpeningSchema: z.ZodType<StaffVacationOpening, unknown> = object<StaffVacationOpening>({
   id: int64StringOrNumber,
   tenant_id: int64StringOrNumber,
   staff_id: int64StringOrNumber,
@@ -568,7 +357,7 @@ export interface VacationQuotaSummary {
   opening?: StaffVacationOpening;
 }
 
-export const VacationQuotaSummarySchema: z.ZodType<VacationQuotaSummary, unknown> = z.object({
+export const VacationQuotaSummarySchema: z.ZodType<VacationQuotaSummary, unknown> = object<VacationQuotaSummary>({
   staff_id: int64StringOrNumber,
   year: safeInt,
   entitled_days: z.number(),
@@ -578,37 +367,6 @@ export const VacationQuotaSummarySchema: z.ZodType<VacationQuotaSummary, unknown
   reserved_days: z.number(),
   remaining_days: z.number(),
   opening: StaffVacationOpeningSchema.optional(),
-});
-
-/** Go: workforce.WorkSessionEditView */
-export interface WorkSessionEditView {
-  id: string;
-  tenant_id: string;
-  session_id: string;
-  staff_id: string;
-  edited_by: string;
-  field_name: string;
-  old_value: string | null;
-  new_value: string | null;
-  notes: string | null;
-  created_at: string;
-  editor_name: string;
-  is_self_edit: boolean;
-}
-
-export const WorkSessionEditViewSchema: z.ZodType<WorkSessionEditView, unknown> = z.object({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
-  session_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
-  edited_by: int64StringOrNumber,
-  field_name: z.string(),
-  old_value: z.string().nullable(),
-  new_value: z.string().nullable(),
-  notes: z.string().nullable(),
-  created_at: instant,
-  editor_name: z.string(),
-  is_self_edit: z.boolean(),
 });
 
 /** Go: workforce.CreateAbsenceRequest */
@@ -650,23 +408,6 @@ export interface UpdateAbsenceRequest {
   date_end?: string | null;
   half_day?: boolean | null;
   note?: string | null;
-}
-
-/** Go: workforce.BreakDurationUpdate */
-export interface BreakDurationUpdate {
-  id?: string;
-  duration_minutes?: number;
-}
-
-/** Go: workforce.SessionUpdateRequest */
-export interface SessionUpdateRequest {
-  date?: string | null;
-  check_in_time?: string | null;
-  check_out_time?: string | null;
-  break_minutes?: number | null;
-  status?: string | null;
-  notes?: string | null;
-  breaks?: BreakDurationUpdate[] | null;
 }
 
 /** Query of GET /api/time-tracking/absence-allowances */

@@ -199,14 +199,14 @@ describe("traeger-care-billing-api letters (#4684)", () => {
     expect(letters.summary.letters).toBe(0);
   });
 
-  it("sends the letter of a Storno through its own route", async () => {
+  it("sends the letter of a Storno with its kind", async () => {
     fetchMock.mockResolvedValue(jsonResponse(202, { data: STORNO }));
 
     const mailing = await mailCareLetter("7", "41", "cancellation");
 
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(String(url)).toBe(
-      "/api/traeger/care-billing-runs/7/invoices/41/cancellation/mail",
+      "/api/traeger/care-billing-runs/7/invoices/41/mail?kind=cancellation",
     );
     expect(init?.method).toBe("POST");
     expect(mailing.kind).toBe("cancellation");
