@@ -478,15 +478,15 @@ export default function TraegerCareNoticeDeliveryPage() {
           description="Jede Familie bekommt das gespeicherte Original per E-Mail. Hat sie mit dieser Adresse ein Konto in der Eltern-App, liegt es dort unter „Dokumente“. Familien ohne E-Mail gibst du den gedruckten Bescheid."
           summary={summary}
           loadError={lettersError}
-          noun={{ one: "Bescheid", many: "Bescheiden" }}
-          printAriaLabel="Bescheide drucken"
-          printItems={printItems}
-          printing={printing}
+          noun={{ one: "Bescheid", many: "Bescheiden", plural: "Bescheide" }}
+          print={{
+            ariaLabel: "Bescheide drucken",
+            items: printItems,
+            running: printing,
+          }}
           sendAll={{
             sending: sendingAll,
             disabledReason: summary ? sendAllBlockReason(summary, missing) : "",
-            tooltip:
-              "moto fragt vorher nach, dann gehen die Bescheide per E-Mail an die Familien.",
             confirmText:
               toSend === 1 ? "1 Bescheid senden" : `${toSend} Bescheide senden`,
             confirmBody: (

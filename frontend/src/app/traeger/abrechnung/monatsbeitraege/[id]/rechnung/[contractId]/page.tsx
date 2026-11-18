@@ -246,8 +246,8 @@ function CareInvoiceAmendPage() {
               type="info"
               message={
                 amendmentSettingsLink
-                  ? "Weitere Änderungen schaltest du in den Einstellungen der Abrechnung ein."
-                  : "Weitere Änderungen schaltet in den Einstellungen der Abrechnung ein, wer das Recht „Einstellungen“ hat."
+                  ? "Weitere Änderungen schaltest du in den Einstellungen der Abrechnung unter „Monatsbeitrag“ ein."
+                  : "Weitere Änderungen schaltet ein, wer das Recht „Einstellungen“ hat. Das geht in den Einstellungen der Abrechnung unter „Monatsbeitrag“."
               }
               action={amendmentSettingsLink}
               actionLayout="responsive"

@@ -63,9 +63,9 @@ function seriesMessage(series: LetterSeries): string {
 function sendAllBlockReason(summary: LetterSendCounts): string {
   if (summary.letters === 0) return "Es gibt noch kein Schreiben zum Senden.";
   if (summary.notSent > 0) {
-    return "Den übrigen Familien fehlt eine Mail-Adresse. Drucke deren Schreiben.";
+    return "Den übrigen Familien fehlt eine E-Mail-Adresse. Drucke deren Schreiben.";
   }
-  return "Alle Schreiben mit Mail-Adresse sind schon gesendet.";
+  return "Alle Schreiben mit E-Mail-Adresse sind schon gesendet.";
 }
 
 /** „Storno FE-0004“; an invoice goes by its number alone. */
@@ -77,10 +77,9 @@ function letterName(mailing: LetterMailing): string {
 
 function rowMenuItems(
   mailing: LetterMailing,
-  busy: boolean,
   onSend: (mailing: LetterMailing) => void,
 ): OverflowMenuItem[] {
-  if (busy || !canSendMail(mailing)) return [];
+  if (!canSendMail(mailing)) return [];
   return [
     {
       label: mailing.status === "not_sent" ? "Senden" : "Erneut senden",
@@ -140,11 +139,14 @@ function mailColumns(
       stackedLabel: false,
       className: "align-top",
       render: (mailing) => {
-        const items = rowMenuItems(mailing, busy, onSend);
+        const items = rowMenuItems(mailing, onSend);
+        // While a mail goes out the menu stays and says why it waits.
         return items.length > 0 ? (
           <OverflowMenu
             ariaLabel={`Aktionen für das Schreiben an ${mailing.recipientFirstName} ${mailing.recipientLastName}`}
             triggerSize="sm"
+            disabled={busy}
+            disabledReason="Gerade geht eine Mail raus. Warte, bis sie gesendet ist."
             items={items}
           />
         ) : null;
@@ -239,36 +241,37 @@ export function BillingMailCard({ runId }: Readonly<{ runId: string }>) {
       description="Jede Familie bekommt ihr Schreiben als PDF im Anhang einer Mail. Hat sie mit dieser Adresse ein Konto in der Eltern-App, liegt es auch dort unter „Dokumente“. Familien ohne E-Mail gibst du das gedruckte Schreiben."
       summary={summary}
       loadError={loadError}
-      printAriaLabel="Schreiben drucken"
-      printItems={[
-        {
-          label: "Alle Schreiben drucken",
-          description: "Lädt alle Schreiben in einer PDF zum Drucken herunter",
-          onClick: () => void print(),
-        },
-      ]}
-      printing={printing}
+      print={{
+        ariaLabel: "Schreiben drucken",
+        items: [
+          {
+            label: "Alle Schreiben drucken",
+            description:
+              "Lädt alle Schreiben in einer PDF zum Drucken herunter",
+            onClick: () => void print(),
+          },
+        ],
+        running: printing,
+      }}
       sendAll={{
         sending: sendingAll,
         disabledReason: summary ? sendAllBlockReason(summary) : "",
-        tooltip:
-          "moto fragt vorher nach, dann gehen die Schreiben per Mail an die Familien.",
         confirmText:
           toSend === 1 ? "1 Schreiben senden" : `${toSend} Schreiben senden`,
         confirmBody: (
           <>
             <p>
               {toSend === 1
-                ? "1 Schreiben geht jetzt per Mail an die Familie."
-                : `${toSend} Schreiben gehen jetzt per Mail an die Familien.`}{" "}
+                ? "1 Schreiben geht jetzt per E-Mail an die Familie."
+                : `${toSend} Schreiben gehen jetzt per E-Mail an die Familien.`}{" "}
               Mit einem Konto in der Eltern-App liegt es auch dort unter
               „Dokumente“.
             </p>
             {summary && summary.withoutEmail > 0 ? (
               <p>
                 {summary.withoutEmail === 1
-                  ? "1 Familie ohne Mail-Adresse bekommt nichts."
-                  : `${summary.withoutEmail} Familien ohne Mail-Adresse bekommen nichts.`}{" "}
+                  ? "1 Familie ohne E-Mail-Adresse bekommt nichts."
+                  : `${summary.withoutEmail} Familien ohne E-Mail-Adresse bekommen nichts.`}{" "}
                 Drucke deren Schreiben über „Drucken“.
               </p>
             ) : null}

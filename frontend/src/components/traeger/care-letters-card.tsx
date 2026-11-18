@@ -130,9 +130,11 @@ export function CareLettersCard({
       description="Jede Familie bekommt ihr Schreiben per E-Mail. Hat sie mit dieser Adresse ein Konto in der Eltern-App, liegt es auch dort unter „Dokumente“, wenn das Kind einen Schülerdatensatz hat. Familien ohne E-Mail gibst du das gedruckte Schreiben."
       summary={summary}
       loadError={loadError}
-      printAriaLabel="Schreiben drucken"
-      printItems={printItems}
-      printing={printing !== null}
+      print={{
+        ariaLabel: "Schreiben drucken",
+        items: printItems,
+        running: printing !== null,
+      }}
       sendAll={{
         sending: sendingAll,
         disabledReason:
@@ -141,8 +143,6 @@ export function CareLettersCard({
             : summary.withoutEmail >= summary.notSent && summary.sent === 0
               ? "Keine Familie hat eine E-Mail-Adresse. Drucke die Schreiben."
               : "Alle Schreiben mit E-Mail-Adresse sind schon gesendet.",
-        tooltip:
-          "Sendet allen Familien mit E-Mail-Adresse ihr Schreiben, moto fragt vorher nach.",
         confirmText:
           toSend === 1 ? "1 Schreiben senden" : `${toSend} Schreiben senden`,
         confirmBody: (

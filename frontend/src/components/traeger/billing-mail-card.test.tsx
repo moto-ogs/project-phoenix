@@ -142,7 +142,13 @@ describe("BillingMailCard", () => {
     expect(rowMenus()).toHaveLength(3);
     expect(
       (await openRowMenu("Eva Muster")).map((item) => item.textContent),
-    ).toEqual([expect.stringContaining("Senden")]);
+    ).toEqual([expect.stringMatching(/^Senden/)]);
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
+    expect(
+      (await openRowMenu("Ben Kraus")).map((item) => item.textContent),
+    ).toEqual([expect.stringMatching(/^Erneut senden/)]);
     expect(api.fetchLetterMailings).toHaveBeenCalledWith("9");
   });
 

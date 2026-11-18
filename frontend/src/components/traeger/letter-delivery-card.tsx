@@ -22,12 +22,36 @@ import {
   lettersToSend,
 } from "./letter-send-state";
 
+/** What a run sends, in the words its sentences need. */
+export interface LetterNoun {
+  /** After „von 1“: „Schreiben“, „Bescheid“. */
+  readonly one: string;
+  /** After „von N“: „Schreiben“, „Bescheiden“. */
+  readonly many: string;
+  /** The subject of a sentence: „die offenen Bescheide“. */
+  readonly plural: string;
+}
+
+const LETTER_NOUN: LetterNoun = {
+  one: "Schreiben",
+  many: "Schreiben",
+  plural: "Schreiben",
+};
+
+/** The print menu: all letters in one file, or only some. */
+export interface LetterDeliveryPrint {
+  /** The name of the menu for screen readers: „Bescheide drucken“. */
+  readonly ariaLabel: string;
+  readonly items: readonly OverflowMenuItem[];
+  /** A print file is being made. */
+  readonly running: boolean;
+}
+
 export interface LetterDeliverySendAll {
   /** The send to every family runs. */
   readonly sending: boolean;
   /** Why nothing is left to send, shown on the blocked button. */
   readonly disabledReason: string;
-  readonly tooltip: string;
   /** The confirm button: „3 Bescheide senden“. */
   readonly confirmText: string;
   /** What the send does, in the question before it. */
@@ -55,10 +79,8 @@ export function LetterDeliveryCard({
   description,
   summary,
   loadError,
-  noun,
-  printAriaLabel,
-  printItems,
-  printing,
+  noun = LETTER_NOUN,
+  print,
   sendAll,
   children,
 }: Readonly<{
@@ -67,17 +89,16 @@ export function LetterDeliveryCard({
   /** null while it loads. */
   summary: LetterSendCounts | null | undefined;
   loadError?: FormErrorInput;
-  /** What is sent, after „von N“: „Schreiben“, „Bescheid/Bescheiden“. */
-  noun?: { readonly one: string; readonly many: string };
-  /** The name of the print menu for screen readers: „Bescheide drucken“. */
-  printAriaLabel: string;
-  printItems: readonly OverflowMenuItem[];
-  printing: boolean;
+  /** What is sent; „Schreiben“ when unset. */
+  noun?: LetterNoun;
+  print: LetterDeliveryPrint;
   sendAll: LetterDeliverySendAll;
   /** Notes under the state and the list of letters. */
   children?: ReactNode;
 }>) {
   const [confirming, setConfirming] = useState(false);
+  // A question about letters that are gone does not come back with them.
+  if (!summary && confirming) setConfirming(false);
 
   // Loaded letters stay when a reload fails; the error stands above them.
   if (!summary) {
@@ -93,11 +114,11 @@ export function LetterDeliveryCard({
       actions={
         <>
           <OverflowMenu
-            ariaLabel={printAriaLabel}
+            ariaLabel={print.ariaLabel}
             triggerButton={{ variant: "outline", size: "md" }}
             triggerClassName="gap-2 whitespace-nowrap"
             triggerContent={
-              printing ? (
+              print.running ? (
                 "Wird erstellt …"
               ) : (
                 <>
@@ -106,8 +127,8 @@ export function LetterDeliveryCard({
                 </>
               )
             }
-            disabled={printing}
-            items={printItems}
+            disabled={print.running}
+            items={print.items}
           />
           <Button
             type="button"
@@ -117,7 +138,7 @@ export function LetterDeliveryCard({
             loadingText="Wird gesendet …"
             disabled={toSend === 0}
             disabledReason={sendAll.disabledReason}
-            tooltip={sendAll.tooltip}
+            tooltip={`moto fragt vorher nach, dann gehen die offenen ${noun.plural} per E-Mail an die Familien.`}
             onClick={() => setConfirming(true)}
           >
             An alle senden

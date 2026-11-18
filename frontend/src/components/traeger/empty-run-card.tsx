@@ -1,6 +1,6 @@
 // Ein Lauf, der nichts abzurechnen hat oder verworfen ist (#6628), gleich für
 // Ferienlauf, Monatslauf und Jahreslauf (#7406): was mit ihm ist, und darunter
-// seine Eckdaten. Den Trennstrich zieht der Fuß der Karte.
+// seine Eckdaten, ohne eigene Trennlinie.
 
 import { ArchiveX, Inbox } from "lucide-react";
 import type { ReactNode } from "react";
@@ -28,20 +28,7 @@ export function EmptyRunCard({
   children: ReactNode;
 }>) {
   return (
-    <SectionCard
-      title={title}
-      footer={
-        <DataGrid columns={2}>
-          {children}
-          <DataField label="Gestartet am">{formatDate(createdAt)}</DataField>
-          {discarded ? (
-            <DataField label="Verworfen am">
-              {discardedAt ? formatDate(discardedAt) : "–"}
-            </DataField>
-          ) : null}
-        </DataGrid>
-      }
-    >
+    <SectionCard title={title}>
       <EmptyState
         tone="neutral"
         icon={
@@ -59,6 +46,15 @@ export function EmptyRunCard({
         description={description}
         className="py-6"
       />
+      <DataGrid columns={2}>
+        {children}
+        <DataField label="Gestartet am">{formatDate(createdAt)}</DataField>
+        {discarded ? (
+          <DataField label="Verworfen am">
+            {discardedAt ? formatDate(discardedAt) : "–"}
+          </DataField>
+        ) : null}
+      </DataGrid>
     </SectionCard>
   );
 }
