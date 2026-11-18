@@ -38,8 +38,8 @@ const PARTIAL_ABSENCE_CONFLICT_CODE: ErrorCode =
   "students.partial_absence_conflict";
 
 interface BackendStudentStatusDay {
-  id: number;
-  student_id: number;
+  id: number | string;
+  student_id: number | string;
   date: string;
   status: StudentStatusKind;
   label: string;

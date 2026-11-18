@@ -21,13 +21,14 @@ func checkedDocument() (Document, Route) {
 			{Name: "tags", Schema: array(Schema{Kind: KindString}, true)},
 			{Name: "children", Optional: true, Schema: array(Schema{Kind: KindRef, Ref: "Row"}, false)},
 			{Name: "by_day", Schema: Schema{Kind: KindMap, Elem: &Schema{Kind: KindBool}, Nullable: true}},
+			{Name: "value", Optional: true, Schema: Schema{Kind: KindJSON, Nullable: true}},
 		}},
 	}}
 	response := array(Schema{Kind: KindRef, Ref: "Row"}, false)
 	return doc, Route{Method: "GET", Pattern: "/api/rows/", Response: &response}
 }
 
-const checkedRow = `{"id":"7","legacy":8,"count":2,"day":"2026-09-09","at":"2026-09-09T12:00:00+02:00","pickup":"15:30","tags":["a"],"children":[],"by_day":{"mon":true},"extra":1}`
+const checkedRow = `{"id":"7","legacy":8,"count":2,"day":"2026-09-09","at":"2026-09-09T12:00:00+02:00","pickup":"15:30","tags":["a"],"children":[],"by_day":{"mon":true},"value":{"any":[1,"x",null]},"extra":1}`
 
 func TestViolationsAcceptsWhatTheDecoderReads(t *testing.T) {
 	t.Parallel()

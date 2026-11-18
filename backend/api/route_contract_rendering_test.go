@@ -106,6 +106,12 @@ func fillRendered(v reflect.Value, own, shape renderShape, format string, depth 
 			v.SetString("2026-09-09")
 		}
 		return
+	case reflect.TypeFor[json.RawMessage]():
+		// Stored JSON of any form.
+		if own != shapeNil {
+			v.SetBytes([]byte(`{"value":[1,"text",null]}`))
+		}
+		return
 	}
 	switch v.Kind() {
 	case reflect.Pointer:

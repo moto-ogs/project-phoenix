@@ -185,6 +185,8 @@ func scalar(kind string, raw json.RawMessage) string {
 		ok = isString && err == nil
 	case KindClock:
 		ok = isString && clockText.MatchString(text)
+	case KindJSON:
+		ok = json.Valid(raw)
 	default:
 		want = "a known kind, not " + kind
 	}

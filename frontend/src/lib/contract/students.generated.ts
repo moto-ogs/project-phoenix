@@ -5,6 +5,7 @@ import {
   clockTime,
   instant,
   int64StringOrNumber,
+  noData,
   openEnum,
   paginated,
   requestBody,
@@ -45,6 +46,42 @@ export type StudentConsentState = (typeof STUDENT_CONSENT_STATE_VALUES)[number];
 
 export const SUPERVISOR_ROLE_VALUES = ["teacher"] as const;
 export type SupervisorRole = (typeof SUPERVISOR_ROLE_VALUES)[number];
+
+/** Go: careplanhttp.studentDocumentDeletedResponse */
+export interface studentDocumentDeletedResponse {
+  student_id: string;
+}
+
+export const studentDocumentDeletedResponseSchema: z.ZodType<studentDocumentDeletedResponse, unknown> = z.object({
+  student_id: int64StringOrNumber,
+});
+
+/** Go: students.studentNoteDeletedResponse */
+export interface studentNoteDeletedResponse {
+  id: string;
+}
+
+export const studentNoteDeletedResponseSchema: z.ZodType<studentNoteDeletedResponse, unknown> = z.object({
+  id: z.string(),
+});
+
+/** Go: careplanhttp.partialAbsenceDeletedResponse */
+export interface partialAbsenceDeletedResponse {
+  deleted: boolean;
+}
+
+export const partialAbsenceDeletedResponseSchema: z.ZodType<partialAbsenceDeletedResponse, unknown> = z.object({
+  deleted: z.boolean(),
+});
+
+/** Go: studentpresencehttp.StatusDayDeletedResponse */
+export interface StatusDayDeletedResponse {
+  deleted: boolean;
+}
+
+export const StatusDayDeletedResponseSchema: z.ZodType<StatusDayDeletedResponse, unknown> = z.object({
+  deleted: z.boolean(),
+});
 
 /** Go: presenceprojectionhttp.TeacherHint */
 export interface TeacherHint {
@@ -295,6 +332,612 @@ export const SlimStudentResponseSchema: z.ZodType<SlimStudentResponse, unknown> 
   has_full_access: z.boolean(),
 });
 
+/** Go: careplanhttp.schoolPeriodResponse */
+export interface schoolPeriodResponse {
+  period: number;
+  end_time: string;
+}
+
+export const schoolPeriodResponseSchema: z.ZodType<schoolPeriodResponse, unknown> = z.object({
+  period: safeInt,
+  end_time: z.string(),
+});
+
+/** Go: careplanhttp.arrivalSettingsResponse */
+export interface arrivalSettingsResponse {
+  care_days_source: string;
+  school_periods: schoolPeriodResponse[] | null;
+  default_arrival_time: string;
+  default_pickup_time: string;
+}
+
+export const arrivalSettingsResponseSchema: z.ZodType<arrivalSettingsResponse, unknown> = z.object({
+  care_days_source: z.string(),
+  school_periods: z.array(schoolPeriodResponseSchema).nullable(),
+  default_arrival_time: z.string(),
+  default_pickup_time: z.string(),
+});
+
+/** Go: requestreview.CareRequestDiffResponse */
+export interface CareRequestDiffResponse {
+  label: string;
+  old: string;
+  new: string;
+  weekday?: number;
+  care_kind?: string;
+  old_modes?: string[];
+  new_mode?: string;
+  submitted_old?: string;
+}
+
+export const CareRequestDiffResponseSchema: z.ZodType<CareRequestDiffResponse, unknown> = z.object({
+  label: z.string(),
+  old: z.string(),
+  new: z.string(),
+  weekday: safeInt.optional(),
+  care_kind: z.string().optional(),
+  old_modes: z.array(z.string()).optional(),
+  new_mode: z.string().optional(),
+  submitted_old: z.string().optional(),
+});
+
+/** Go: requestreviewhttp.CareRequestPickupChangeResponse */
+export interface CareRequestPickupChangeResponse {
+  date: string;
+  pickup_time?: string;
+  previous_pickup_time?: string;
+  departure_mode?: string;
+  previous_departure_modes?: string[];
+  pickup_person?: string;
+}
+
+export const CareRequestPickupChangeResponseSchema: z.ZodType<CareRequestPickupChangeResponse, unknown> = z.object({
+  date: z.string(),
+  pickup_time: z.string().optional(),
+  previous_pickup_time: z.string().optional(),
+  departure_mode: z.string().optional(),
+  previous_departure_modes: z.array(z.string()).optional(),
+  pickup_person: z.string().optional(),
+});
+
+/** Go: requestreviewhttp.CareRequestDetailResponse */
+export interface CareRequestDetailResponse {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  status: string;
+  request_kind: string;
+  requested: CareRequestDiffResponse[] | null;
+  diff?: CareRequestDiffResponse[];
+  request_reason?: string;
+  decision_reason?: string;
+  created_at: string;
+  decided_at?: string;
+  decided_by_name?: string;
+  pickup_change?: CareRequestPickupChangeResponse;
+  signed?: boolean;
+}
+
+export const CareRequestDetailResponseSchema: z.ZodType<CareRequestDetailResponse, unknown> = z.object({
+  id: z.string(),
+  student_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  status: z.string(),
+  request_kind: z.string(),
+  requested: z.array(CareRequestDiffResponseSchema).nullable(),
+  diff: z.array(CareRequestDiffResponseSchema).optional(),
+  request_reason: z.string().optional(),
+  decision_reason: z.string().optional(),
+  created_at: instant,
+  decided_at: instant.optional(),
+  decided_by_name: z.string().optional(),
+  pickup_change: CareRequestPickupChangeResponseSchema.optional(),
+  signed: z.boolean().optional(),
+});
+
+/** Go: careplanhttp.careWithdrawalResponse */
+export interface careWithdrawalResponse {
+  id: string;
+  student_id?: string;
+  first_name?: string;
+  last_name?: string;
+  school_class?: string;
+  first_bookingless_day: string;
+  urgency: string;
+  state: string;
+  outcome?: string;
+  resolved_at?: string;
+}
+
+export const careWithdrawalResponseSchema: z.ZodType<careWithdrawalResponse, unknown> = z.object({
+  id: z.string(),
+  student_id: z.string().optional(),
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
+  school_class: z.string().optional(),
+  first_bookingless_day: z.string(),
+  urgency: z.string(),
+  state: z.string(),
+  outcome: z.string().optional(),
+  resolved_at: z.string().optional(),
+});
+
+/** Go: careplanhttp.careWithdrawalPageResponse */
+export interface careWithdrawalPageResponse {
+  items: careWithdrawalResponse[] | null;
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export const careWithdrawalPageResponseSchema: z.ZodType<careWithdrawalPageResponse, unknown> = z.object({
+  items: z.array(careWithdrawalResponseSchema).nullable(),
+  total: safeInt,
+  page: safeInt,
+  page_size: safeInt,
+});
+
+/** Go: studentdeletion.Counts */
+export interface Counts {
+  timetable_assignments: number;
+  activity_enrollments: number;
+  attendance_records: number;
+  care_schedules: number;
+  guardian_links: number;
+  companion_links: number;
+  communications: number;
+  consents: number;
+  enrollment_references: number;
+  other_records: number;
+}
+
+export const CountsSchema: z.ZodType<Counts, unknown> = z.object({
+  timetable_assignments: safeInt,
+  activity_enrollments: safeInt,
+  attendance_records: safeInt,
+  care_schedules: safeInt,
+  guardian_links: safeInt,
+  companion_links: safeInt,
+  communications: safeInt,
+  consents: safeInt,
+  enrollment_references: safeInt,
+  other_records: safeInt,
+});
+
+/** Go: studentdeletionhttp.studentDeletePreservedDataResponse */
+export interface studentDeletePreservedDataResponse {
+  guardian_profiles: boolean;
+  parent_accounts: boolean;
+  other_students: boolean;
+  shared_instances: boolean;
+}
+
+export const studentDeletePreservedDataResponseSchema: z.ZodType<studentDeletePreservedDataResponse, unknown> = z.object({
+  guardian_profiles: z.boolean(),
+  parent_accounts: z.boolean(),
+  other_students: z.boolean(),
+  shared_instances: z.boolean(),
+});
+
+/** Go: studentdeletionhttp.studentDeleteImpactResponse */
+export interface studentDeleteImpactResponse {
+  confirmation_name: string;
+  fingerprint: string;
+  total: number;
+  counts: Counts;
+  preserved: studentDeletePreservedDataResponse;
+}
+
+export const studentDeleteImpactResponseSchema: z.ZodType<studentDeleteImpactResponse, unknown> = z.object({
+  confirmation_name: z.string(),
+  fingerprint: z.string(),
+  total: safeInt,
+  counts: CountsSchema,
+  preserved: studentDeletePreservedDataResponseSchema,
+});
+
+/** Go: requestreview.Item */
+export interface Item {
+  request_type: string;
+  occurred_at: string;
+  student_id: string;
+  student_name: string;
+  group_name?: string;
+  expected_version: string;
+  urgent_today: boolean;
+  past: boolean;
+  bulk_eligible: boolean;
+  bulk_ineligible_reason?: string;
+  bulk_ineligible_text?: string;
+  conflict_keys?: string[];
+  conflict_key?: string;
+  conflict_group_size?: number;
+  current_value_changed?: boolean;
+  current_status_by_date?: Record<string, string>;
+  partial_absence_from_by_date?: Record<string, string>;
+  can_correct?: boolean;
+  family_protected: boolean;
+  submitted_by_name?: string;
+  submitted_by_relationship?: string;
+  data: unknown | null;
+}
+
+export const ItemSchema: z.ZodType<Item, unknown> = z.object({
+  request_type: z.string(),
+  occurred_at: instant,
+  student_id: z.string(),
+  student_name: z.string(),
+  group_name: z.string().optional(),
+  expected_version: z.string(),
+  urgent_today: z.boolean(),
+  past: z.boolean(),
+  bulk_eligible: z.boolean(),
+  bulk_ineligible_reason: z.string().optional(),
+  bulk_ineligible_text: z.string().optional(),
+  conflict_keys: z.array(z.string()).optional(),
+  conflict_key: z.string().optional(),
+  conflict_group_size: safeInt.optional(),
+  current_value_changed: z.boolean().optional(),
+  current_status_by_date: z.record(z.string(), z.string()).optional(),
+  partial_absence_from_by_date: z.record(z.string(), z.string()).optional(),
+  can_correct: z.boolean().optional(),
+  family_protected: z.boolean(),
+  submitted_by_name: z.string().optional(),
+  submitted_by_relationship: z.string().optional(),
+  data: z.unknown().nullable(),
+});
+
+/** Go: requestreview.Page */
+export interface Page {
+  items: Item[] | null;
+  next_cursor?: string;
+  review_access?: string;
+}
+
+export const PageSchema: z.ZodType<Page, unknown> = z.object({
+  items: z.array(ItemSchema).nullable(),
+  next_cursor: z.string().optional(),
+  review_access: z.string().optional(),
+});
+
+/** Go: requestreviewhttp.studentReviewCoverageBody */
+export interface studentReviewCoverageBody {
+  requests: boolean;
+  absences: boolean;
+}
+
+export const studentReviewCoverageBodySchema: z.ZodType<studentReviewCoverageBody, unknown> = z.object({
+  requests: z.boolean(),
+  absences: z.boolean(),
+});
+
+/** Go: requestreviewhttp.changeRequestAccessResponse */
+export interface changeRequestAccessResponse {
+  review_access: string;
+  student?: studentReviewCoverageBody;
+}
+
+export const changeRequestAccessResponseSchema: z.ZodType<changeRequestAccessResponse, unknown> = z.object({
+  review_access: z.string(),
+  student: studentReviewCoverageBodySchema.optional(),
+});
+
+/** Go: requestreviewhttp.ChangeRequestPendingCountResponse */
+export interface ChangeRequestPendingCountResponse {
+  pending_count: number;
+}
+
+export const ChangeRequestPendingCountResponseSchema: z.ZodType<ChangeRequestPendingCountResponse, unknown> = z.object({
+  pending_count: safeInt,
+});
+
+/** Go: students.childQuotaResponse */
+export interface childQuotaResponse {
+  limited: boolean;
+  booked_places?: number;
+  occupied_places?: number;
+}
+
+export const childQuotaResponseSchema: z.ZodType<childQuotaResponse, unknown> = z.object({
+  limited: z.boolean(),
+  booked_places: safeInt.optional(),
+  occupied_places: safeInt.optional(),
+});
+
+/** Go: careplanhttp.ClassArrivalExceptionResponse */
+export interface ClassArrivalExceptionResponse {
+  school_class: string;
+  date: string;
+  arrival_time: string;
+  reason?: string;
+  created_at: string;
+  origin: string;
+}
+
+export const ClassArrivalExceptionResponseSchema: z.ZodType<ClassArrivalExceptionResponse, unknown> = z.object({
+  school_class: z.string(),
+  date: z.string(),
+  arrival_time: z.string(),
+  reason: z.string().optional(),
+  created_at: z.string(),
+  origin: z.string(),
+});
+
+/** Go: careplanhttp.ClassArrivalExceptionListResponse */
+export interface ClassArrivalExceptionListResponse {
+  school_class: string;
+  can_edit: boolean;
+  exceptions: ClassArrivalExceptionResponse[] | null;
+}
+
+export const ClassArrivalExceptionListResponseSchema: z.ZodType<ClassArrivalExceptionListResponse, unknown> = z.object({
+  school_class: z.string(),
+  can_edit: z.boolean(),
+  exceptions: z.array(ClassArrivalExceptionResponseSchema).nullable(),
+});
+
+/** Go: careplanhttp.ClassArrivalTimesResponse */
+export interface ClassArrivalTimesResponse {
+  school_class: string;
+  times: Record<string, string> | null;
+  updated_at?: string;
+}
+
+export const ClassArrivalTimesResponseSchema: z.ZodType<ClassArrivalTimesResponse, unknown> = z.object({
+  school_class: z.string(),
+  times: z.record(z.string(), z.string()).nullable(),
+  updated_at: z.string().optional(),
+});
+
+/** Go: presenceprojectionhttp.dayLogClassPeriod */
+export interface dayLogClassPeriod {
+  from: string;
+  until?: string;
+}
+
+export const dayLogClassPeriodSchema: z.ZodType<dayLogClassPeriod, unknown> = z.object({
+  from: instant,
+  until: instant.optional(),
+});
+
+/** Go: presenceprojectionhttp.dayLogStudent */
+export interface dayLogStudent {
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  school_class: string;
+  status: string;
+  label: string;
+  check_in_time?: string;
+  check_out_time?: string;
+  check_out_note?: string;
+  class_periods?: dayLogClassPeriod[];
+  reported_at?: string;
+  source?: string;
+  hint?: string;
+}
+
+export const dayLogStudentSchema: z.ZodType<dayLogStudent, unknown> = z.object({
+  student_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  school_class: z.string(),
+  status: z.string(),
+  label: z.string(),
+  check_in_time: instant.optional(),
+  check_out_time: instant.optional(),
+  check_out_note: z.string().optional(),
+  class_periods: z.array(dayLogClassPeriodSchema).optional(),
+  reported_at: instant.optional(),
+  source: z.string().optional(),
+  hint: z.string().optional(),
+});
+
+/** Go: presenceprojectionhttp.dayLogCounters */
+export interface dayLogCounters {
+  present: number;
+  sick: number;
+  class_trip: number;
+  excused: number;
+  absent: number;
+  not_scheduled: number;
+  total: number;
+}
+
+export const dayLogCountersSchema: z.ZodType<dayLogCounters, unknown> = z.object({
+  present: safeInt,
+  sick: safeInt,
+  class_trip: safeInt,
+  excused: safeInt,
+  absent: safeInt,
+  not_scheduled: safeInt,
+  total: safeInt,
+});
+
+/** Go: presenceprojectionhttp.dayLogGroup */
+export interface dayLogGroup {
+  group_id: string;
+  name: string;
+  students: dayLogStudent[] | null;
+  counters: dayLogCounters;
+}
+
+export const dayLogGroupSchema: z.ZodType<dayLogGroup, unknown> = z.object({
+  group_id: z.string(),
+  name: z.string(),
+  students: z.array(dayLogStudentSchema).nullable(),
+  counters: dayLogCountersSchema,
+});
+
+/** Go: presenceprojectionhttp.dayLogResponse */
+export interface dayLogResponse {
+  date: string;
+  groups: dayLogGroup[] | null;
+  counters: dayLogCounters;
+}
+
+export const dayLogResponseSchema: z.ZodType<dayLogResponse, unknown> = z.object({
+  date: z.string(),
+  groups: z.array(dayLogGroupSchema).nullable(),
+  counters: dayLogCountersSchema,
+});
+
+/** Go: careplanhttp.endedCareResponse */
+export interface endedCareResponse {
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  school_class?: string;
+  last_care_day: string;
+  reason?: string;
+  reason_note?: string;
+  recorded_at?: string;
+}
+
+export const endedCareResponseSchema: z.ZodType<endedCareResponse, unknown> = z.object({
+  student_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  school_class: z.string().optional(),
+  last_care_day: z.string(),
+  reason: z.string().optional(),
+  reason_note: z.string().optional(),
+  recorded_at: z.string().optional(),
+});
+
+/** Go: careplanhttp.endedCarePageResponse */
+export interface endedCarePageResponse {
+  items: endedCareResponse[] | null;
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export const endedCarePageResponseSchema: z.ZodType<endedCarePageResponse, unknown> = z.object({
+  items: z.array(endedCareResponseSchema).nullable(),
+  total: safeInt,
+  page: safeInt,
+  page_size: safeInt,
+});
+
+/** Go: careplanhttp.pickupChangeNoticeResponse */
+export interface pickupChangeNoticeResponse {
+  request_id: string;
+  student_id: string;
+  student_first_name: string;
+  date: string;
+  pickup_time?: string;
+  withdrawn: boolean;
+  informed_at: string;
+}
+
+export const pickupChangeNoticeResponseSchema: z.ZodType<pickupChangeNoticeResponse, unknown> = z.object({
+  request_id: z.string(),
+  student_id: z.string(),
+  student_first_name: z.string(),
+  date: z.string(),
+  pickup_time: z.string().optional(),
+  withdrawn: z.boolean(),
+  informed_at: instant,
+});
+
+/** Go: studentpresencehttp.PrivacyConsentDefaultsResponse */
+export interface PrivacyConsentDefaultsResponse {
+  policy_version: string;
+  accepted: boolean;
+  data_retention_days: number;
+}
+
+export const PrivacyConsentDefaultsResponseSchema: z.ZodType<PrivacyConsentDefaultsResponse, unknown> = z.object({
+  policy_version: z.string(),
+  accepted: z.boolean(),
+  data_retention_days: safeInt,
+});
+
+/** Go: presenceprojectionhttp.statusDayOverviewGroup */
+export interface statusDayOverviewGroup {
+  id: string;
+  name: string;
+}
+
+export const statusDayOverviewGroupSchema: z.ZodType<statusDayOverviewGroup, unknown> = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
+/** Go: presenceprojectionhttp.statusDayOverviewEntry */
+export interface statusDayOverviewEntry {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  school_class: string;
+  group_id: string;
+  group_name: string;
+  date: string;
+  status: string;
+  label: string;
+  reported_at: string;
+  source: string;
+}
+
+export const statusDayOverviewEntrySchema: z.ZodType<statusDayOverviewEntry, unknown> = z.object({
+  id: z.string(),
+  student_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  school_class: z.string(),
+  group_id: z.string(),
+  group_name: z.string(),
+  date: z.string(),
+  status: z.string(),
+  label: z.string(),
+  reported_at: instant,
+  source: z.string(),
+});
+
+/** Go: presenceprojectionhttp.statusDayOverviewResponse */
+export interface statusDayOverviewResponse {
+  from: string;
+  to: string;
+  groups: statusDayOverviewGroup[] | null;
+  entries: statusDayOverviewEntry[] | null;
+  page: number;
+  page_size: number;
+  has_more: boolean;
+}
+
+export const statusDayOverviewResponseSchema: z.ZodType<statusDayOverviewResponse, unknown> = z.object({
+  from: z.string(),
+  to: z.string(),
+  groups: z.array(statusDayOverviewGroupSchema).nullable(),
+  entries: z.array(statusDayOverviewEntrySchema).nullable(),
+  page: safeInt,
+  page_size: safeInt,
+  has_more: z.boolean(),
+});
+
+/** Go: students.studentNoteTeamNoticeResponse */
+export interface studentNoteTeamNoticeResponse {
+  note_id: string;
+  student_id: string;
+  student_first_name: string;
+  student_last_name: string;
+  author_name?: string;
+  informed_at: string;
+}
+
+export const studentNoteTeamNoticeResponseSchema: z.ZodType<studentNoteTeamNoticeResponse, unknown> = z.object({
+  note_id: z.string(),
+  student_id: z.string(),
+  student_first_name: z.string(),
+  student_last_name: z.string(),
+  author_name: z.string().optional(),
+  informed_at: instant,
+});
+
 /** Go: presenceprojectionhttp.StudentPrivacyConsentResponse */
 export interface StudentPrivacyConsentResponse {
   accepted: boolean;
@@ -496,6 +1139,631 @@ export const StudentDetailResponseSchema: z.ZodType<StudentDetailResponse, unkno
   actual_pickup_by: AttendanceActorResponseSchema.optional(),
 });
 
+/** Go: careplanhttp.ArrivalScheduleResponse */
+export interface ArrivalScheduleResponse {
+  id: string;
+  student_id: string;
+  weekday: number;
+  weekday_name: string;
+  expected_arrival: string;
+  notes?: string;
+  source?: string;
+  source_class?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const ArrivalScheduleResponseSchema: z.ZodType<ArrivalScheduleResponse, unknown> = z.object({
+  id: int64StringOrNumber,
+  student_id: int64StringOrNumber,
+  weekday: safeInt,
+  weekday_name: z.string(),
+  expected_arrival: z.string(),
+  notes: z.string().optional(),
+  source: z.string().optional(),
+  source_class: z.string().optional(),
+  created_by: int64StringOrNumber,
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+/** Go: careplanhttp.StudentArrivalExceptionResponse */
+export interface StudentArrivalExceptionResponse {
+  id: string;
+  student_id: string;
+  exception_date: string;
+  expected_arrival?: string;
+  reason?: string;
+  source: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const StudentArrivalExceptionResponseSchema: z.ZodType<StudentArrivalExceptionResponse, unknown> = z.object({
+  id: int64StringOrNumber,
+  student_id: int64StringOrNumber,
+  exception_date: z.string(),
+  expected_arrival: z.string().optional(),
+  reason: z.string().optional(),
+  source: z.string(),
+  created_by: int64StringOrNumber,
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+/** Go: careplanhttp.ArrivalNoteResponse */
+export interface ArrivalNoteResponse {
+  id: string;
+  student_id: string;
+  note_date: string;
+  content: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const ArrivalNoteResponseSchema: z.ZodType<ArrivalNoteResponse, unknown> = z.object({
+  id: int64StringOrNumber,
+  student_id: int64StringOrNumber,
+  note_date: z.string(),
+  content: z.string(),
+  created_by: int64StringOrNumber,
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+/** Go: careplanhttp.ArrivalDataResponse */
+export interface ArrivalDataResponse {
+  schedules: ArrivalScheduleResponse[] | null;
+  exceptions: StudentArrivalExceptionResponse[] | null;
+  notes: ArrivalNoteResponse[] | null;
+}
+
+export const ArrivalDataResponseSchema: z.ZodType<ArrivalDataResponse, unknown> = z.object({
+  schedules: z.array(ArrivalScheduleResponseSchema).nullable(),
+  exceptions: z.array(StudentArrivalExceptionResponseSchema).nullable(),
+  notes: z.array(ArrivalNoteResponseSchema).nullable(),
+});
+
+/** Go: presenceprojectionhttp.attendanceSessionRecord */
+export interface attendanceSessionRecord {
+  check_in_time: string;
+  check_out_time?: string;
+  duration_minutes?: number;
+  check_out_note?: string;
+  check_out_reason?: string;
+}
+
+export const attendanceSessionRecordSchema: z.ZodType<attendanceSessionRecord, unknown> = z.object({
+  check_in_time: instant,
+  check_out_time: instant.optional(),
+  duration_minutes: safeInt.optional(),
+  check_out_note: z.string().optional(),
+  check_out_reason: z.string().optional(),
+});
+
+/** Go: presenceprojectionhttp.attendanceDayRecord */
+export interface attendanceDayRecord {
+  check_in_time: string;
+  check_out_time?: string;
+  duration_minutes?: number;
+  checked_in_by: string;
+  checked_out_by?: string;
+  device_id: string;
+  checked_in_actor?: AttendanceActorResponse;
+  checked_out_actor?: AttendanceActorResponse;
+  sessions: attendanceSessionRecord[] | null;
+}
+
+export const attendanceDayRecordSchema: z.ZodType<attendanceDayRecord, unknown> = z.object({
+  check_in_time: instant,
+  check_out_time: instant.optional(),
+  duration_minutes: safeInt.optional(),
+  checked_in_by: int64StringOrNumber,
+  checked_out_by: int64StringOrNumber.optional(),
+  device_id: int64StringOrNumber,
+  checked_in_actor: AttendanceActorResponseSchema.optional(),
+  checked_out_actor: AttendanceActorResponseSchema.optional(),
+  sessions: z.array(attendanceSessionRecordSchema).nullable(),
+});
+
+/** Go: presenceprojectionhttp.attendanceStatusEntry */
+export interface attendanceStatusEntry {
+  status: string;
+  label: string;
+  reported_at: string;
+  cleared_at?: string;
+}
+
+export const attendanceStatusEntrySchema: z.ZodType<attendanceStatusEntry, unknown> = z.object({
+  status: z.string(),
+  label: z.string(),
+  reported_at: instant,
+  cleared_at: instant.optional(),
+});
+
+/** Go: presenceprojectionhttp.attendanceVisitEntry */
+export interface attendanceVisitEntry {
+  room_id?: string;
+  room_name?: string;
+  entry_time: string;
+  exit_time?: string;
+  duration_minutes?: number;
+}
+
+export const attendanceVisitEntrySchema: z.ZodType<attendanceVisitEntry, unknown> = z.object({
+  room_id: int64StringOrNumber.optional(),
+  room_name: z.string().optional(),
+  entry_time: instant,
+  exit_time: instant.optional(),
+  duration_minutes: safeInt.optional(),
+});
+
+/** Go: presenceprojectionhttp.attendanceSlotEntry */
+export interface attendanceSlotEntry {
+  instance_id: string;
+  instance_status?: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  substatus?: string;
+  note?: string;
+  checked_in_at?: string;
+  checked_out_at?: string;
+  is_unplanned: boolean;
+}
+
+export const attendanceSlotEntrySchema: z.ZodType<attendanceSlotEntry, unknown> = z.object({
+  instance_id: z.string(),
+  instance_status: z.string().optional(),
+  title: z.string(),
+  start_time: z.string(),
+  end_time: z.string(),
+  status: z.string(),
+  substatus: z.string().optional(),
+  note: z.string().optional(),
+  checked_in_at: instant.optional(),
+  checked_out_at: instant.optional(),
+  is_unplanned: z.boolean(),
+});
+
+/** Go: presenceprojectionhttp.attendanceHistoryDay */
+export interface attendanceHistoryDay {
+  date: string;
+  attendance: attendanceDayRecord | null;
+  status_entries: attendanceStatusEntry[] | null;
+  room_detail_available: boolean;
+  visits: attendanceVisitEntry[] | null;
+  slots: attendanceSlotEntry[] | null;
+}
+
+export const attendanceHistoryDaySchema: z.ZodType<attendanceHistoryDay, unknown> = z.object({
+  date: z.string(),
+  attendance: attendanceDayRecordSchema.nullable(),
+  status_entries: z.array(attendanceStatusEntrySchema).nullable(),
+  room_detail_available: z.boolean(),
+  visits: z.array(attendanceVisitEntrySchema).nullable(),
+  slots: z.array(attendanceSlotEntrySchema).nullable(),
+});
+
+/** Go: presenceprojectionhttp.attendanceHistoryRange */
+export interface attendanceHistoryRange {
+  start: string;
+  end: string;
+}
+
+export const attendanceHistoryRangeSchema: z.ZodType<attendanceHistoryRange, unknown> = z.object({
+  start: instant,
+  end: instant,
+});
+
+/** Go: presenceprojectionhttp.attendanceHistoryCaps */
+export interface attendanceHistoryCaps {
+  attendance_days: number;
+  room_detail_days: number;
+}
+
+export const attendanceHistoryCapsSchema: z.ZodType<attendanceHistoryCaps, unknown> = z.object({
+  attendance_days: safeInt,
+  room_detail_days: safeInt,
+});
+
+/** Go: presenceprojectionhttp.attendanceHistoryResponse */
+export interface attendanceHistoryResponse {
+  student_id: string;
+  days: attendanceHistoryDay[] | null;
+  range: attendanceHistoryRange;
+  clamped: boolean;
+  caps: attendanceHistoryCaps;
+}
+
+export const attendanceHistoryResponseSchema: z.ZodType<attendanceHistoryResponse, unknown> = z.object({
+  student_id: z.string(),
+  days: z.array(attendanceHistoryDaySchema).nullable(),
+  range: attendanceHistoryRangeSchema,
+  clamped: z.boolean(),
+  caps: attendanceHistoryCapsSchema,
+});
+
+/** Go: students.changeHistoryEntry */
+export interface changeHistoryEntry {
+  id: string;
+  field: string;
+  old_value: string;
+  new_value: string;
+  edited_by: string;
+  changed_at: string;
+}
+
+export const changeHistoryEntrySchema: z.ZodType<changeHistoryEntry, unknown> = z.object({
+  id: z.string(),
+  field: z.string(),
+  old_value: z.string(),
+  new_value: z.string(),
+  edited_by: z.string(),
+  changed_at: instant,
+});
+
+/** Go: careplanhttp.CompanionResponse */
+export interface CompanionResponse {
+  companion_student_id: string;
+  first_name?: string;
+  last_name?: string;
+  weekdays: string[] | null;
+}
+
+export const CompanionResponseSchema: z.ZodType<CompanionResponse, unknown> = z.object({
+  companion_student_id: int64StringOrNumber,
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
+  weekdays: z.array(z.string()).nullable(),
+});
+
+/** Go: enrollmenthttp.StudentEnrollmentExtraFieldOption */
+export interface StudentEnrollmentExtraFieldOption {
+  label: string;
+  value: string;
+}
+
+export const StudentEnrollmentExtraFieldOptionSchema: z.ZodType<StudentEnrollmentExtraFieldOption, unknown> = z.object({
+  label: z.string(),
+  value: z.string(),
+});
+
+/** Go: enrollmenthttp.StudentEnrollmentExtraField */
+export interface StudentEnrollmentExtraField {
+  key: string;
+  label: string;
+  type: string;
+  target?: string;
+  options?: StudentEnrollmentExtraFieldOption[];
+  value: unknown | null;
+}
+
+export const StudentEnrollmentExtraFieldSchema: z.ZodType<StudentEnrollmentExtraField, unknown> = z.object({
+  key: z.string(),
+  label: z.string(),
+  type: z.string(),
+  target: z.string().optional(),
+  options: z.array(StudentEnrollmentExtraFieldOptionSchema).optional(),
+  value: z.unknown().nullable(),
+});
+
+/** Go: enrollmenthttp.StudentEnrollmentExtraFieldGroup */
+export interface StudentEnrollmentExtraFieldGroup {
+  request_id: string;
+  phase_name: string;
+  submitted_at: string;
+  fields: StudentEnrollmentExtraField[] | null;
+}
+
+export const StudentEnrollmentExtraFieldGroupSchema: z.ZodType<StudentEnrollmentExtraFieldGroup, unknown> = z.object({
+  request_id: z.string(),
+  phase_name: z.string(),
+  submitted_at: instant,
+  fields: z.array(StudentEnrollmentExtraFieldSchema).nullable(),
+});
+
+/** Go: students.familyProtectionResponse */
+export interface familyProtectionResponse {
+  student_id: string;
+  enabled: boolean;
+  unchanged?: boolean;
+}
+
+export const familyProtectionResponseSchema: z.ZodType<familyProtectionResponse, unknown> = z.object({
+  student_id: z.string(),
+  enabled: z.boolean(),
+  unchanged: z.boolean().optional(),
+});
+
+/** Go: students.noteSubjectActivity */
+export interface noteSubjectActivity {
+  id: string;
+  name: string;
+}
+
+export const noteSubjectActivitySchema: z.ZodType<noteSubjectActivity, unknown> = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
+/** Go: students.noteSubjectsResponse */
+export interface noteSubjectsResponse {
+  activities: noteSubjectActivity[] | null;
+}
+
+export const noteSubjectsResponseSchema: z.ZodType<noteSubjectsResponse, unknown> = z.object({
+  activities: z.array(noteSubjectActivitySchema).nullable(),
+});
+
+/** Go: students.studentNoteResponse */
+export interface studentNoteResponse {
+  id: string;
+  student_id: string;
+  kind: string;
+  visibility: string;
+  category?: string;
+  body: string;
+  origin: string;
+  author_account_id?: string;
+  author_name?: string;
+  subject_date?: string;
+  activity_group_id?: string;
+  education_group_id?: string;
+  shared_with_school: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+  edited: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const studentNoteResponseSchema: z.ZodType<studentNoteResponse, unknown> = z.object({
+  id: z.string(),
+  student_id: z.string(),
+  kind: z.string(),
+  visibility: z.string(),
+  category: z.string().optional(),
+  body: z.string(),
+  origin: z.string(),
+  author_account_id: z.string().optional(),
+  author_name: z.string().optional(),
+  subject_date: z.string().optional(),
+  activity_group_id: z.string().optional(),
+  education_group_id: z.string().optional(),
+  shared_with_school: z.boolean(),
+  can_edit: z.boolean(),
+  can_delete: z.boolean(),
+  edited: z.boolean(),
+  created_at: instant,
+  updated_at: instant,
+});
+
+/** Go: careplanhttp.PartialAbsenceResponse */
+export interface PartialAbsenceResponse {
+  id: string;
+  student_id: string;
+  date: string;
+  from_time: string;
+  reason?: string;
+  pickup_time?: string;
+  auto: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const PartialAbsenceResponseSchema: z.ZodType<PartialAbsenceResponse, unknown> = z.object({
+  id: int64StringOrNumber,
+  student_id: int64StringOrNumber,
+  date: z.string(),
+  from_time: z.string(),
+  reason: z.string().optional(),
+  pickup_time: z.string().optional(),
+  auto: z.boolean(),
+  created_by: int64StringOrNumber,
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+/** Go: careplanhttp.PickupScheduleResponse */
+export interface PickupScheduleResponse {
+  id: string;
+  student_id: string;
+  weekday: number;
+  weekday_name: string;
+  pickup_time: string;
+  notes?: string;
+  source: string;
+  care_offering_id?: string;
+  care_offering_name?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const PickupScheduleResponseSchema: z.ZodType<PickupScheduleResponse, unknown> = z.object({
+  id: int64StringOrNumber,
+  student_id: int64StringOrNumber,
+  weekday: safeInt,
+  weekday_name: z.string(),
+  pickup_time: z.string(),
+  notes: z.string().optional(),
+  source: z.string(),
+  care_offering_id: z.string().optional(),
+  care_offering_name: z.string().optional(),
+  created_by: int64StringOrNumber,
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+/** Go: careplanhttp.DatedPickupScheduleResponse */
+export interface DatedPickupScheduleResponse {
+  date: string;
+  schedule: PickupScheduleResponse | null;
+  offering_schedule: PickupScheduleResponse | null;
+}
+
+export const DatedPickupScheduleResponseSchema: z.ZodType<DatedPickupScheduleResponse, unknown> = z.object({
+  date: z.string(),
+  schedule: PickupScheduleResponseSchema.nullable(),
+  offering_schedule: PickupScheduleResponseSchema.nullable(),
+});
+
+/** Go: careplanhttp.PickupExceptionResponse */
+export interface PickupExceptionResponse {
+  id: string;
+  student_id: string;
+  exception_date: string;
+  pickup_time?: string;
+  reason?: string;
+  source: string;
+  excused_from?: string;
+  excused_auto: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const PickupExceptionResponseSchema: z.ZodType<PickupExceptionResponse, unknown> = z.object({
+  id: int64StringOrNumber,
+  student_id: int64StringOrNumber,
+  exception_date: z.string(),
+  pickup_time: z.string().optional(),
+  reason: z.string().optional(),
+  source: z.string(),
+  excused_from: z.string().optional(),
+  excused_auto: z.boolean(),
+  created_by: int64StringOrNumber,
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+/** Go: careplanhttp.PickupNoteResponse */
+export interface PickupNoteResponse {
+  id: string;
+  student_id: string;
+  note_date?: string;
+  weekday?: number;
+  content: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const PickupNoteResponseSchema: z.ZodType<PickupNoteResponse, unknown> = z.object({
+  id: int64StringOrNumber,
+  student_id: int64StringOrNumber,
+  note_date: z.string().optional(),
+  weekday: safeInt.optional(),
+  content: z.string(),
+  created_by: int64StringOrNumber,
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+/** Go: careplanhttp.DepartureExceptionResponse */
+export interface DepartureExceptionResponse {
+  id: string;
+  student_id: string;
+  exception_date: string;
+  departure_mode: string;
+  reason?: string;
+  created_by?: string;
+  updated_at: string;
+}
+
+export const DepartureExceptionResponseSchema: z.ZodType<DepartureExceptionResponse, unknown> = z.object({
+  id: int64StringOrNumber,
+  student_id: int64StringOrNumber,
+  exception_date: z.string(),
+  departure_mode: z.string(),
+  reason: z.string().optional(),
+  created_by: int64StringOrNumber.optional(),
+  updated_at: z.string(),
+});
+
+/** Go: careplanhttp.PickupDataResponse */
+export interface PickupDataResponse {
+  schedules: PickupScheduleResponse[] | null;
+  effective_schedules?: DatedPickupScheduleResponse[];
+  exceptions: PickupExceptionResponse[] | null;
+  notes: PickupNoteResponse[] | null;
+  departure_exceptions: DepartureExceptionResponse[] | null;
+}
+
+export const PickupDataResponseSchema: z.ZodType<PickupDataResponse, unknown> = z.object({
+  schedules: z.array(PickupScheduleResponseSchema).nullable(),
+  effective_schedules: z.array(DatedPickupScheduleResponseSchema).optional(),
+  exceptions: z.array(PickupExceptionResponseSchema).nullable(),
+  notes: z.array(PickupNoteResponseSchema).nullable(),
+  departure_exceptions: z.array(DepartureExceptionResponseSchema).nullable(),
+});
+
+/** Go: studentpresencehttp.PrivacyConsentResponse */
+export interface PrivacyConsentResponse {
+  id: string;
+  student_id: string;
+  policy_version: string;
+  accepted: boolean;
+  accepted_at?: string;
+  expires_at?: string;
+  duration_days?: number;
+  renewal_required: boolean;
+  data_retention_days: number;
+  details?: Record<string, unknown | null>;
+  created_at: string;
+  updated_at: string;
+}
+
+export const PrivacyConsentResponseSchema: z.ZodType<PrivacyConsentResponse, unknown> = z.object({
+  id: int64StringOrNumber,
+  student_id: int64StringOrNumber,
+  policy_version: z.string(),
+  accepted: z.boolean(),
+  accepted_at: instant.optional(),
+  expires_at: instant.optional(),
+  duration_days: safeInt.optional(),
+  renewal_required: z.boolean(),
+  data_retention_days: safeInt,
+  details: z.record(z.string(), z.unknown().nullable()).optional(),
+  created_at: instant,
+  updated_at: instant,
+});
+
+/** Go: studentpresence.StudentStatusDayResponse */
+export interface StudentStatusDayResponse {
+  id: string;
+  student_id: string;
+  date: string;
+  status: string;
+  label: string;
+  reported_at: string;
+  cleared_at?: string;
+  source: string;
+  note?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const StudentStatusDayResponseSchema: z.ZodType<StudentStatusDayResponse, unknown> = z.object({
+  id: int64StringOrNumber,
+  student_id: int64StringOrNumber,
+  date: z.string(),
+  status: z.string(),
+  label: z.string(),
+  reported_at: instant,
+  cleared_at: instant.optional(),
+  source: z.string(),
+  note: z.string().optional(),
+  created_at: instant,
+  updated_at: instant,
+});
+
 /** Go: peopledirectory.NewGuardianPhone */
 export interface NewGuardianPhone {
   phone_number?: string;
@@ -566,6 +1834,987 @@ export interface StudentRequest {
   without_care_place?: boolean;
 }
 
+/** Go: careplan.ArrivalScheduleInput */
+export interface ArrivalScheduleInput {
+  weekday?: number;
+  expected_arrival?: string;
+}
+
+/** Go: careplanhttp.BulkUpsertArrivalScheduleRequest */
+export interface BulkUpsertArrivalScheduleRequest {
+  school_class?: string;
+  group_id?: number;
+  student_ids?: number[] | null;
+  schedules?: ArrivalScheduleInput[] | null;
+}
+
+/** Go: careplan.OverwriteWarning */
+export interface OverwriteWarning {
+  student_id: string;
+  student_name: string;
+  weekday: number;
+  weekday_name: string;
+  previous_time: string;
+  new_time: string;
+}
+
+export const OverwriteWarningSchema: z.ZodType<OverwriteWarning, unknown> = z.object({
+  student_id: int64StringOrNumber,
+  student_name: z.string(),
+  weekday: safeInt,
+  weekday_name: z.string(),
+  previous_time: z.string(),
+  new_time: z.string(),
+});
+
+/** Go: careplan.BulkUpsertResult */
+export interface BulkUpsertResult {
+  students_affected: number;
+  overwritten_students?: OverwriteWarning[];
+}
+
+export const BulkUpsertResultSchema: z.ZodType<BulkUpsertResult, unknown> = z.object({
+  students_affected: safeInt,
+  overwritten_students: z.array(OverwriteWarningSchema).optional(),
+});
+
+/** Go: careplanhttp.BulkEffectiveTimeRequest */
+export interface BulkEffectiveTimeRequest {
+  student_ids?: number[] | null;
+  date?: string | null;
+}
+
+/** Go: careplanhttp.ArrivalScheduleStatusResponse */
+export interface ArrivalScheduleStatusResponse {
+  student_ids: string[] | null;
+}
+
+export const ArrivalScheduleStatusResponseSchema: z.ZodType<ArrivalScheduleStatusResponse, unknown> = z.object({
+  student_ids: z.array(int64StringOrNumber).nullable(),
+});
+
+/** Go: careplanhttp.careExitRequest */
+export interface careExitRequest {
+  student_ids?: string[] | null;
+  last_care_day?: string;
+  reason?: string;
+  reason_note?: string;
+  token?: string;
+}
+
+/** Go: careplanhttp.careExitConfirmedResponse */
+export interface careExitConfirmedResponse {
+  students_ended: number;
+  roster_rows_removed: number;
+  bookings_ended: number;
+}
+
+export const careExitConfirmedResponseSchema: z.ZodType<careExitConfirmedResponse, unknown> = z.object({
+  students_ended: safeInt,
+  roster_rows_removed: safeInt,
+  bookings_ended: safeInt,
+});
+
+/** Go: careplanhttp.careExitCancelRequest */
+export interface careExitCancelRequest {
+  student_ids?: string[] | null;
+}
+
+/** Go: careplanhttp.careExitCancelledResponse */
+export interface careExitCancelledResponse {
+  students_cancelled: number;
+}
+
+export const careExitCancelledResponseSchema: z.ZodType<careExitCancelledResponse, unknown> = z.object({
+  students_cancelled: safeInt,
+});
+
+/** Go: careplan.CareExitSourceOffering */
+export interface CareExitSourceOffering {
+  name: string;
+  days: string[] | null;
+}
+
+export const CareExitSourceOfferingSchema: z.ZodType<CareExitSourceOffering, unknown> = z.object({
+  name: z.string(),
+  days: z.array(z.string()).nullable(),
+});
+
+/** Go: careplanhttp.careExitImpactResponse */
+export interface careExitImpactResponse {
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  school_class?: string;
+  planned_roster_rows: number;
+  activity_bookings: number;
+  open_parent_requests: number;
+  has_rfid_tag: boolean;
+  currently_present: boolean;
+  source_offerings: CareExitSourceOffering[] | null;
+  weekly_plans: string[] | null;
+  planned_ends_on?: string;
+  blocker?: string;
+}
+
+export const careExitImpactResponseSchema: z.ZodType<careExitImpactResponse, unknown> = z.object({
+  student_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  school_class: z.string().optional(),
+  planned_roster_rows: safeInt,
+  activity_bookings: safeInt,
+  open_parent_requests: safeInt,
+  has_rfid_tag: z.boolean(),
+  currently_present: z.boolean(),
+  source_offerings: z.array(CareExitSourceOfferingSchema).nullable(),
+  weekly_plans: z.array(z.string()).nullable(),
+  planned_ends_on: z.string().optional(),
+  blocker: z.string().optional(),
+});
+
+/** Go: careplanhttp.careExitPreviewResponse */
+export interface careExitPreviewResponse {
+  token: string;
+  last_care_day: string;
+  reason: string;
+  reason_note?: string;
+  blocked: boolean;
+  students: careExitImpactResponse[] | null;
+}
+
+export const careExitPreviewResponseSchema: z.ZodType<careExitPreviewResponse, unknown> = z.object({
+  token: z.string(),
+  last_care_day: z.string(),
+  reason: z.string(),
+  reason_note: z.string().optional(),
+  blocked: z.boolean(),
+  students: z.array(careExitImpactResponseSchema).nullable(),
+});
+
+/** Go: careplanhttp.DecideCareRequestBody */
+export interface DecideCareRequestBody {
+  approve?: boolean | null;
+  reason?: string;
+  impact_token?: string | null;
+  expected_version?: string;
+}
+
+/** Go: requestreview.AffectedCareBlock */
+export interface AffectedCareBlock {
+  id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+}
+
+export const AffectedCareBlockSchema: z.ZodType<AffectedCareBlock, unknown> = z.object({
+  id: z.string(),
+  title: z.string(),
+  start_time: z.string(),
+  end_time: z.string(),
+});
+
+/** Go: requestreview.CareRequestResponse */
+export interface CareRequestResponse {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  status: string;
+  request_kind: string;
+  diff: CareRequestDiffResponse[] | null;
+  request_reason?: string;
+  decision_reason?: string;
+  created_at: string;
+  reviewed_at?: string;
+  affected_blocks: AffectedCareBlock[] | null;
+  impact_available: boolean;
+  impact_token: string;
+  signed?: boolean;
+}
+
+export const CareRequestResponseSchema: z.ZodType<CareRequestResponse, unknown> = z.object({
+  id: z.string(),
+  student_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  status: z.string(),
+  request_kind: z.string(),
+  diff: z.array(CareRequestDiffResponseSchema).nullable(),
+  request_reason: z.string().optional(),
+  decision_reason: z.string().optional(),
+  created_at: instant,
+  reviewed_at: instant.optional(),
+  affected_blocks: z.array(AffectedCareBlockSchema).nullable(),
+  impact_available: z.boolean(),
+  impact_token: z.string(),
+  signed: z.boolean().optional(),
+});
+
+/** Go: careplanhttp.careWithdrawalExitRequest */
+export interface careWithdrawalExitRequest {
+  last_care_day?: string;
+  reason?: string;
+  reason_note?: string;
+  token?: string;
+}
+
+/** Go: careplanhttp.bulkApproveParentRequestRef */
+export interface bulkApproveParentRequestRef {
+  kind?: string;
+  id?: string;
+  expected_version?: string;
+}
+
+/** Go: careplanhttp.bulkApproveParentRequestsBody */
+export interface bulkApproveParentRequestsBody {
+  requests?: bulkApproveParentRequestRef[] | null;
+  reason?: string;
+}
+
+/** Go: careplanhttp.parentRequestsApprovedResponse */
+export interface parentRequestsApprovedResponse {
+  approved_count: number;
+}
+
+export const parentRequestsApprovedResponseSchema: z.ZodType<parentRequestsApprovedResponse, unknown> = z.object({
+  approved_count: safeInt,
+});
+
+/** Go: careplanhttp.resolveConflictBody */
+export interface resolveConflictBody {
+  kind?: string;
+  request_ids?: string[] | null;
+  expected_versions?: string[] | null;
+  chosen_request_id?: string;
+  staff_value?: Record<string, unknown | null> | null;
+  none?: boolean;
+  conflict_key?: string;
+  reason?: string;
+}
+
+/** Go: careplanhttp.parentRequestConflictResolvedResponse */
+export interface parentRequestConflictResolvedResponse {
+  resolved_count: number;
+}
+
+export const parentRequestConflictResolvedResponseSchema: z.ZodType<parentRequestConflictResolvedResponse, unknown> = z.object({
+  resolved_count: safeInt,
+});
+
+/** Go: careplanhttp.correctRequestBody */
+export interface correctRequestBody {
+  approve?: boolean | null;
+  reason?: string;
+  expected_version?: string;
+}
+
+/** Go: careplanhttp.parentRequestCorrectedResponse */
+export interface parentRequestCorrectedResponse {
+  approved: boolean;
+}
+
+export const parentRequestCorrectedResponseSchema: z.ZodType<parentRequestCorrectedResponse, unknown> = z.object({
+  approved: z.boolean(),
+});
+
+/** Go: careplanhttp.markRequestDoneBody */
+export interface markRequestDoneBody {
+  expected_version?: string;
+  reason?: string;
+}
+
+/** Go: careplanhttp.parentRequestDoneResponse */
+export interface parentRequestDoneResponse {
+  status: string;
+}
+
+export const parentRequestDoneResponseSchema: z.ZodType<parentRequestDoneResponse, unknown> = z.object({
+  status: z.string(),
+});
+
+/** Go: careplanhttp.DecideExcusedRequestBody */
+export interface DecideExcusedRequestBody {
+  approve?: boolean | null;
+  reason?: string;
+  expected_version?: string;
+  replace_partial_absences?: boolean;
+}
+
+/** Go: requestreview.StaffExcusedRequestResponse */
+export interface StaffExcusedRequestResponse {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  absence_status: string;
+  status: string;
+  dates: string[] | null;
+  note: string;
+  reason?: string;
+  created_at: string;
+  reviewed_at?: string;
+}
+
+export const StaffExcusedRequestResponseSchema: z.ZodType<StaffExcusedRequestResponse, unknown> = z.object({
+  id: z.string(),
+  student_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  absence_status: z.string(),
+  status: z.string(),
+  dates: z.array(z.string()).nullable(),
+  note: z.string(),
+  reason: z.string().optional(),
+  created_at: instant,
+  reviewed_at: instant.optional(),
+});
+
+/** Go: careplanhttp.DecideMasterDataChangeRequestBody */
+export interface DecideMasterDataChangeRequestBody {
+  approve?: boolean | null;
+  reason?: string;
+  expected_version?: string;
+}
+
+/** Go: requestreview.MasterDataChangeRequestResponse */
+export interface MasterDataChangeRequestResponse {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  target: string;
+  field_key: string;
+  old_value?: unknown | null;
+  new_value: unknown | null;
+  status: string;
+  created_at: string;
+  reviewed_at?: string;
+}
+
+export const MasterDataChangeRequestResponseSchema: z.ZodType<MasterDataChangeRequestResponse, unknown> = z.object({
+  id: z.string(),
+  student_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  target: z.string(),
+  field_key: z.string(),
+  old_value: z.unknown().nullable().optional(),
+  new_value: z.unknown().nullable(),
+  status: z.string(),
+  created_at: instant,
+  reviewed_at: instant.optional(),
+});
+
+/** Go: careplanhttp.DecideOfferingRequestBody */
+export interface DecideOfferingRequestBody {
+  approve?: boolean | null;
+  reason?: string;
+  effective_from?: string;
+  excluded_offering_ids?: string[] | null;
+  complete_withdrawal_confirmed?: boolean;
+  expected_version?: string;
+}
+
+/** Go: careplanhttp.adjustedRosterTemplateResponse */
+export interface adjustedRosterTemplateResponse {
+  template_id: string;
+  name: string;
+  removed_weekdays: number[] | null;
+  added_weekdays: number[] | null;
+}
+
+export const adjustedRosterTemplateResponseSchema: z.ZodType<adjustedRosterTemplateResponse, unknown> = z.object({
+  template_id: z.string(),
+  name: z.string(),
+  removed_weekdays: z.array(safeInt).nullable(),
+  added_weekdays: z.array(safeInt).nullable(),
+});
+
+/** Go: careplanhttp.manualRosterTemplateResponse */
+export interface manualRosterTemplateResponse {
+  template_id: string;
+  name: string;
+  weekdays: number[] | null;
+  via_target: boolean;
+  until: string | null;
+}
+
+export const manualRosterTemplateResponseSchema: z.ZodType<manualRosterTemplateResponse, unknown> = z.object({
+  template_id: z.string(),
+  name: z.string(),
+  weekdays: z.array(safeInt).nullable(),
+  via_target: z.boolean(),
+  until: z.string().nullable(),
+});
+
+/** Go: careplanhttp.pickupOverrideResponse */
+export interface pickupOverrideResponse {
+  weekday: number;
+  date: string;
+  stored_time: string;
+  booked_time: string;
+  reset_now: boolean;
+}
+
+export const pickupOverrideResponseSchema: z.ZodType<pickupOverrideResponse, unknown> = z.object({
+  weekday: safeInt,
+  date: z.string(),
+  stored_time: z.string(),
+  booked_time: z.string(),
+  reset_now: z.boolean(),
+});
+
+/** Go: careplanhttp.rosterImpactResponse */
+export interface rosterImpactResponse {
+  effective_from: string;
+  adjusted: adjustedRosterTemplateResponse[] | null;
+  not_adjusted: manualRosterTemplateResponse[] | null;
+  pickup_overrides: pickupOverrideResponse[] | null;
+}
+
+export const rosterImpactResponseSchema: z.ZodType<rosterImpactResponse, unknown> = z.object({
+  effective_from: z.string(),
+  adjusted: z.array(adjustedRosterTemplateResponseSchema).nullable(),
+  not_adjusted: z.array(manualRosterTemplateResponseSchema).nullable(),
+  pickup_overrides: z.array(pickupOverrideResponseSchema).nullable(),
+});
+
+/** Go: careplanhttp.offeringDecisionResponse */
+export interface offeringDecisionResponse {
+  status: string;
+  roster_impact?: rosterImpactResponse;
+}
+
+export const offeringDecisionResponseSchema: z.ZodType<offeringDecisionResponse, unknown> = z.object({
+  status: z.string(),
+  roster_impact: rosterImpactResponseSchema.optional(),
+});
+
+/** Go: careplanhttp.PreviewOfferingRequestBody */
+export interface PreviewOfferingRequestBody {
+  excluded_offering_ids?: string[] | null;
+  effective_from?: string;
+}
+
+/** Go: careplanhttp.OfferingRequestPreviewSelectionResponse */
+export interface OfferingRequestPreviewSelectionResponse {
+  offering_id: string;
+  new: string;
+  removed?: boolean;
+}
+
+export const OfferingRequestPreviewSelectionResponseSchema: z.ZodType<OfferingRequestPreviewSelectionResponse, unknown> = z.object({
+  offering_id: z.string(),
+  new: z.string(),
+  removed: z.boolean().optional(),
+});
+
+/** Go: careplanhttp.ManualPlanningConflictResponse */
+export interface ManualPlanningConflictResponse {
+  activity_group_id: string;
+  activity_group_name: string;
+  days: string[] | null;
+  first_date: string;
+  occurrence_count: number;
+}
+
+export const ManualPlanningConflictResponseSchema: z.ZodType<ManualPlanningConflictResponse, unknown> = z.object({
+  activity_group_id: z.string(),
+  activity_group_name: z.string(),
+  days: z.array(z.string()).nullable(),
+  first_date: z.string(),
+  occurrence_count: safeInt,
+});
+
+/** Go: careplanhttp.OfferingRequestPreviewResponse */
+export interface OfferingRequestPreviewResponse {
+  selections: OfferingRequestPreviewSelectionResponse[] | null;
+  manual_planning_conflicts: ManualPlanningConflictResponse[] | null;
+  arrival_expectations_follow_bookings: boolean;
+}
+
+export const OfferingRequestPreviewResponseSchema: z.ZodType<OfferingRequestPreviewResponse, unknown> = z.object({
+  selections: z.array(OfferingRequestPreviewSelectionResponseSchema).nullable(),
+  manual_planning_conflicts: z.array(ManualPlanningConflictResponseSchema).nullable(),
+  arrival_expectations_follow_bookings: z.boolean(),
+});
+
+/** Go: careplan.PickupScheduleInput */
+export interface PickupScheduleInput {
+  weekday?: number;
+  pickup_time?: string;
+}
+
+/** Go: careplanhttp.BulkPickupSchedulePatchRequest */
+export interface BulkPickupSchedulePatchRequest {
+  student_ids?: number[] | null;
+  schedules?: PickupScheduleInput[] | null;
+  confirmed_exception?: boolean;
+}
+
+/** Go: studentpresencehttp.BulkCreateStudentStatusDaysRequest */
+export interface BulkCreateStudentStatusDaysRequest {
+  student_ids?: number[] | null;
+  status?: string;
+  from?: string;
+  to?: string;
+  reason?: string;
+}
+
+/** Go: studentpresencehttp.StatusDaysBulkCreatedResponse */
+export interface StatusDaysBulkCreatedResponse {
+  student_count: number;
+  date_count: number;
+}
+
+export const StatusDaysBulkCreatedResponseSchema: z.ZodType<StatusDaysBulkCreatedResponse, unknown> = z.object({
+  student_count: safeInt,
+  date_count: safeInt,
+});
+
+/** Go: careplanhttp.AccidentReportRequest */
+export interface AccidentReportRequest {
+  occurred_at?: string;
+  location?: string;
+  description?: string;
+  injured_body_parts?: string;
+  injury_kind?: string;
+  witnesses?: string;
+  first_aid?: string;
+  doctor_visited?: boolean;
+  doctor?: string;
+  parents_notified?: string;
+  parents_notified_at?: string | null;
+  supervisor?: string;
+}
+
+/** Go: careplanhttp.AccidentReportResponse */
+export interface AccidentReportResponse {
+  status: string;
+  version?: number;
+  supersedes_id?: string;
+  superseded_by_id?: string;
+  signed_at?: string;
+  signed_digitally: boolean;
+  occurred_at: string;
+  location: string;
+  description: string;
+  injured_body_parts: string;
+  injury_kind: string;
+  witnesses: string;
+  first_aid: string;
+  doctor_visited: boolean;
+  doctor: string;
+  parents_notified: string;
+  parents_notified_at?: string;
+  supervisor: string;
+}
+
+export const AccidentReportResponseSchema: z.ZodType<AccidentReportResponse, unknown> = z.object({
+  status: z.string(),
+  version: safeInt.optional(),
+  supersedes_id: z.string().optional(),
+  superseded_by_id: z.string().optional(),
+  signed_at: instant.optional(),
+  signed_digitally: z.boolean(),
+  occurred_at: instant,
+  location: z.string(),
+  description: z.string(),
+  injured_body_parts: z.string(),
+  injury_kind: z.string(),
+  witnesses: z.string(),
+  first_aid: z.string(),
+  doctor_visited: z.boolean(),
+  doctor: z.string(),
+  parents_notified: z.string(),
+  parents_notified_at: instant.optional(),
+  supervisor: z.string(),
+});
+
+/** Go: careplanhttp.StudentDocumentResponse */
+export interface StudentDocumentResponse {
+  id: string;
+  student_id: string;
+  category: string;
+  category_label: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+  uploaded_at: string;
+  sensitive: boolean;
+  has_file: boolean;
+  accident_report?: AccidentReportResponse;
+}
+
+export const StudentDocumentResponseSchema: z.ZodType<StudentDocumentResponse, unknown> = z.object({
+  id: int64StringOrNumber,
+  student_id: int64StringOrNumber,
+  category: z.string(),
+  category_label: z.string(),
+  filename: z.string(),
+  size_bytes: safeInt,
+  content_type: z.string(),
+  uploaded_at: instant,
+  sensitive: z.boolean(),
+  has_file: z.boolean(),
+  accident_report: AccidentReportResponseSchema.optional(),
+});
+
+/** Go: careplanhttp.AccidentSignatureRequest */
+export interface AccidentSignatureRequest {
+  method?: string;
+  image_png?: string;
+  typed_name?: string;
+}
+
+/** Go: careplanhttp.StudentArrivalExceptionRequest */
+export interface StudentArrivalExceptionRequest {
+  exception_date?: string;
+  expected_arrival?: string | null;
+  clear_expected_arrival?: boolean;
+  reason?: string | null;
+}
+
+/** Go: careplanhttp.ArrivalNoteRequest */
+export interface ArrivalNoteRequest {
+  note_date?: string;
+  content?: string;
+}
+
+/** Go: careplanhttp.careResumeRequest */
+export interface careResumeRequest {
+  new_start?: string;
+  checked?: boolean;
+}
+
+/** Go: careplanhttp.careResumedResponse */
+export interface careResumedResponse {
+  resumed: boolean;
+  new_start: string;
+}
+
+export const careResumedResponseSchema: z.ZodType<careResumedResponse, unknown> = z.object({
+  resumed: z.boolean(),
+  new_start: z.string(),
+});
+
+/** Go: students.studentNoteRequestBody */
+export interface studentNoteRequestBody {
+  kind?: string;
+  visibility?: string;
+  category?: string;
+  body?: string;
+  subject_date?: string | null;
+  activity_group_id?: string | null;
+  education_group_id?: string | null;
+  shared_with_school?: boolean | null;
+}
+
+/** Go: students.studentNoteTeamInformedResponse */
+export interface studentNoteTeamInformedResponse {
+  informed: number;
+}
+
+export const studentNoteTeamInformedResponseSchema: z.ZodType<studentNoteTeamInformedResponse, unknown> = z.object({
+  informed: safeInt,
+});
+
+/** Go: careplanhttp.PartialAbsenceRequest */
+export interface PartialAbsenceRequest {
+  date?: string;
+  from_time?: string;
+  reason?: string;
+}
+
+/** Go: careplanhttp.pickupChangeNoticeRevision */
+export interface pickupChangeNoticeRevision {
+  request_id?: string;
+  informed_at?: string;
+}
+
+/** Go: careplanhttp.pickupChangeNoticesReadRequest */
+export interface pickupChangeNoticesReadRequest {
+  notices?: pickupChangeNoticeRevision[] | null;
+}
+
+/** Go: careplanhttp.PickupExceptionRequest */
+export interface PickupExceptionRequest {
+  exception_date?: string;
+  pickup_time?: string | null;
+  clear_pickup_time?: boolean;
+  reason?: string | null;
+}
+
+/** Go: careplanhttp.PickupNoteRequest */
+export interface PickupNoteRequest {
+  note_date?: string;
+  weekday?: number;
+  content?: string;
+}
+
+/** Go: careplanhttp.pickupAdjustmentSelectionRequest */
+export interface pickupAdjustmentSelectionRequest {
+  offering_id?: string;
+  selected_days?: string[] | null;
+}
+
+/** Go: careplanhttp.pickupAdjustmentRequest */
+export interface pickupAdjustmentRequest {
+  schedules?: PickupScheduleRequest[] | null;
+  arrival_schedules?: ArrivalScheduleRequestItem[] | null;
+  care_days?: number[] | null;
+  effective_from?: string | null;
+  selections?: pickupAdjustmentSelectionRequest[] | null;
+  excluded_auto_offering_ids?: string[] | null;
+  preview_token?: string;
+  resolution?: string;
+  reason?: string;
+  complete_withdrawal_confirmed?: boolean;
+}
+
+/** Go: careplanhttp.pickupAdjustmentResponse */
+export interface pickupAdjustmentResponse {
+  resolution: string;
+  roster_impact?: rosterImpactResponse;
+}
+
+export const pickupAdjustmentResponseSchema: z.ZodType<pickupAdjustmentResponse, unknown> = z.object({
+  resolution: z.string(),
+  roster_impact: rosterImpactResponseSchema.optional(),
+});
+
+/** Go: careplanhttp.pickupAdjustmentSelectionResponse */
+export interface pickupAdjustmentSelectionResponse {
+  offering_id: string;
+  selected_days: string[] | null;
+}
+
+export const pickupAdjustmentSelectionResponseSchema: z.ZodType<pickupAdjustmentSelectionResponse, unknown> = z.object({
+  offering_id: z.string(),
+  selected_days: z.array(z.string()).nullable(),
+});
+
+/** Go: careplanhttp.pickupAdjustmentMatchResponse */
+export interface pickupAdjustmentMatchResponse {
+  offering_id: string;
+  name: string;
+  selected_days: string[] | null;
+  selections: pickupAdjustmentSelectionResponse[] | null;
+}
+
+export const pickupAdjustmentMatchResponseSchema: z.ZodType<pickupAdjustmentMatchResponse, unknown> = z.object({
+  offering_id: z.string(),
+  name: z.string(),
+  selected_days: z.array(z.string()).nullable(),
+  selections: z.array(pickupAdjustmentSelectionResponseSchema).nullable(),
+});
+
+/** Go: careplanhttp.pickupAdjustmentCatalogItemResponse */
+export interface pickupAdjustmentCatalogItemResponse {
+  offering_id: string;
+  name: string;
+  description?: string;
+  days_of_week_mode: string;
+  available_days: string[] | null;
+  selection_group?: string;
+  selection_rule: string;
+  is_required: boolean;
+  price_cents?: number;
+  includes_lunch: boolean;
+  includes_holiday_care: boolean;
+  selected: boolean;
+  selected_days: string[] | null;
+  automatic: boolean;
+  is_active: boolean;
+  capacity?: number;
+  free_slots?: number;
+  pickup_times: Record<string, string> | null;
+  counts_as_care: boolean;
+}
+
+export const pickupAdjustmentCatalogItemResponseSchema: z.ZodType<pickupAdjustmentCatalogItemResponse, unknown> = z.object({
+  offering_id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  days_of_week_mode: z.string(),
+  available_days: z.array(z.string()).nullable(),
+  selection_group: z.string().optional(),
+  selection_rule: z.string(),
+  is_required: z.boolean(),
+  price_cents: safeInt.optional(),
+  includes_lunch: z.boolean(),
+  includes_holiday_care: z.boolean(),
+  selected: z.boolean(),
+  selected_days: z.array(z.string()).nullable(),
+  automatic: z.boolean(),
+  is_active: z.boolean(),
+  capacity: safeInt.optional(),
+  free_slots: safeInt.optional(),
+  pickup_times: z.record(z.string(), z.string()).nullable(),
+  counts_as_care: z.boolean(),
+});
+
+/** Go: careplanhttp.pickupAdjustmentCatalogResponse */
+export interface pickupAdjustmentCatalogResponse {
+  phase_id: string;
+  phase_name: string;
+  selection_mode: string;
+  earliest_effective_from: string;
+  latest_effective_from: string;
+  items: pickupAdjustmentCatalogItemResponse[] | null;
+}
+
+export const pickupAdjustmentCatalogResponseSchema: z.ZodType<pickupAdjustmentCatalogResponse, unknown> = z.object({
+  phase_id: z.string(),
+  phase_name: z.string(),
+  selection_mode: z.string(),
+  earliest_effective_from: z.string(),
+  latest_effective_from: z.string(),
+  items: z.array(pickupAdjustmentCatalogItemResponseSchema).nullable(),
+});
+
+/** Go: careplanhttp.pickupAdjustmentConsequenceSelectionResponse */
+export interface pickupAdjustmentConsequenceSelectionResponse {
+  offering_id: string;
+  state: string;
+  days: string[] | null;
+}
+
+export const pickupAdjustmentConsequenceSelectionResponseSchema: z.ZodType<pickupAdjustmentConsequenceSelectionResponse, unknown> = z.object({
+  offering_id: z.string(),
+  state: z.string(),
+  days: z.array(z.string()).nullable(),
+});
+
+/** Go: careplanhttp.pickupAdjustmentConflictResponse */
+export interface pickupAdjustmentConflictResponse {
+  activity_group_id: string;
+  activity_group_name: string;
+  days: string[] | null;
+  first_date: string;
+  occurrence_count: number;
+}
+
+export const pickupAdjustmentConflictResponseSchema: z.ZodType<pickupAdjustmentConflictResponse, unknown> = z.object({
+  activity_group_id: z.string(),
+  activity_group_name: z.string(),
+  days: z.array(z.string()).nullable(),
+  first_date: z.string(),
+  occurrence_count: safeInt,
+});
+
+/** Go: careplanhttp.pickupAdjustmentConsequencesResponse */
+export interface pickupAdjustmentConsequencesResponse {
+  selections: pickupAdjustmentConsequenceSelectionResponse[] | null;
+  manual_planning_conflicts: pickupAdjustmentConflictResponse[] | null;
+  arrival_expectations_follow_bookings: boolean;
+}
+
+export const pickupAdjustmentConsequencesResponseSchema: z.ZodType<pickupAdjustmentConsequencesResponse, unknown> = z.object({
+  selections: z.array(pickupAdjustmentConsequenceSelectionResponseSchema).nullable(),
+  manual_planning_conflicts: z.array(pickupAdjustmentConflictResponseSchema).nullable(),
+  arrival_expectations_follow_bookings: z.boolean(),
+});
+
+/** Go: careplanhttp.pickupAdjustmentRemovedNoteResponse */
+export interface pickupAdjustmentRemovedNoteResponse {
+  weekday: number;
+  note: string;
+}
+
+export const pickupAdjustmentRemovedNoteResponseSchema: z.ZodType<pickupAdjustmentRemovedNoteResponse, unknown> = z.object({
+  weekday: safeInt,
+  note: z.string(),
+});
+
+/** Go: careplanhttp.pickupAdjustmentPreviewResponse */
+export interface pickupAdjustmentPreviewResponse {
+  preview_token: string;
+  effective_from: string;
+  current_plan: string;
+  proposed_plan: string;
+  deviates_from_offering: boolean;
+  resolution_required: boolean;
+  matching_offerings: pickupAdjustmentMatchResponse[] | null;
+  offering_catalog?: pickupAdjustmentCatalogResponse;
+  offering_consequences?: pickupAdjustmentConsequencesResponse;
+  removed_manual_notes?: pickupAdjustmentRemovedNoteResponse[];
+}
+
+export const pickupAdjustmentPreviewResponseSchema: z.ZodType<pickupAdjustmentPreviewResponse, unknown> = z.object({
+  preview_token: z.string(),
+  effective_from: z.string(),
+  current_plan: z.string(),
+  proposed_plan: z.string(),
+  deviates_from_offering: z.boolean(),
+  resolution_required: z.boolean(),
+  matching_offerings: z.array(pickupAdjustmentMatchResponseSchema).nullable(),
+  offering_catalog: pickupAdjustmentCatalogResponseSchema.optional(),
+  offering_consequences: pickupAdjustmentConsequencesResponseSchema.optional(),
+  removed_manual_notes: z.array(pickupAdjustmentRemovedNoteResponseSchema).optional(),
+});
+
+/** Go: careplanhttp.ResetOfferingPickupRequest */
+export interface ResetOfferingPickupRequest {
+  weekday?: number;
+  date?: string;
+}
+
+/** Go: studentpresencehttp.schoolCheckinRequest */
+export interface schoolCheckinRequest {
+  action?: string;
+  note?: string;
+  reason?: string;
+}
+
+/** Go: studentpresencehttp.schoolCheckinResponse */
+export interface schoolCheckinResponse {
+  student_id: string;
+  status: string;
+  check_in_time?: string;
+  check_out_time?: string;
+  yard_since?: string;
+  location: string;
+  changed: boolean;
+}
+
+export const schoolCheckinResponseSchema: z.ZodType<schoolCheckinResponse, unknown> = z.object({
+  student_id: int64StringOrNumber,
+  status: z.string(),
+  check_in_time: instant.optional(),
+  check_out_time: instant.optional(),
+  yard_since: instant.optional(),
+  location: z.string(),
+  changed: z.boolean(),
+});
+
+/** Go: studentpresencehttp.CreateStudentStatusDaysRequest */
+export interface CreateStudentStatusDaysRequest {
+  status?: string;
+  dates?: string[] | null;
+  reason?: string;
+  replace_partial_absence_dates?: string[] | null;
+}
+
+/** Go: students.studentNoteTeamNoticeRevision */
+export interface studentNoteTeamNoticeRevision {
+  note_id?: string;
+  informed_at?: string;
+}
+
+/** Go: students.studentNoteTeamReadRequest */
+export interface studentNoteTeamReadRequest {
+  notices?: studentNoteTeamNoticeRevision[] | null;
+}
+
+/** Go: careplanhttp.ClassArrivalExceptionRequest */
+export interface ClassArrivalExceptionRequest {
+  arrival_time?: string;
+  reason?: string | null;
+}
+
 /** Go: careplanhttp.CompanionEntry */
 export interface CompanionEntry {
   companion_student_id?: string;
@@ -602,6 +2851,43 @@ export interface UpdateStudentRequest {
   confirmed_companion_extensions?: CompanionEntry[] | null;
 }
 
+/** Go: careplanhttp.BulkArrivalScheduleRequest */
+export interface BulkArrivalScheduleRequest {
+  schedules?: ArrivalScheduleRequestItem[] | null;
+}
+
+/** Go: careplanhttp.DepartureExceptionRequest */
+export interface DepartureExceptionRequest {
+  departure_mode?: string;
+  reason?: string | null;
+}
+
+/** Go: students.setFamilyProtectionBody */
+export interface setFamilyProtectionBody {
+  enabled?: boolean | null;
+  reason?: string;
+}
+
+/** Go: careplanhttp.WeekdayPickupNotesRequest */
+export interface WeekdayPickupNotesRequest {
+  notes?: PickupNoteRequest[] | null;
+}
+
+/** Go: careplanhttp.BulkPickupScheduleRequest */
+export interface BulkPickupScheduleRequest {
+  schedules?: PickupScheduleRequest[] | null;
+  effective_date?: string | null;
+}
+
+/** Go: studentpresencehttp.PrivacyConsentRequest */
+export interface PrivacyConsentRequest {
+  policy_version?: string;
+  accepted?: boolean;
+  duration_days?: number | null;
+  data_retention_days?: number;
+  details?: Record<string, unknown | null> | null;
+}
+
 /** Query of GET /api/students/ */
 export interface GetStudentsQuery {
   bus?: string;
@@ -630,12 +2916,177 @@ export interface GetStudentsQuery {
   view?: "full" | "names" | "slim";
 }
 
+/** Query of GET /api/students/care-withdrawals */
+export interface GetStudentsCareWithdrawalsQuery {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  state?: "pending" | "resolved";
+  student_id?: string;
+}
+
+/** Query of GET /api/students/change-requests */
+export interface GetStudentsChangeRequestsQuery {
+  cursor?: string;
+  from?: string;
+  limit?: number;
+  search?: string;
+  status?: string;
+  student_id?: string;
+  to?: string;
+  types?: string;
+  view?: "history" | "open";
+}
+
+/** Query of GET /api/students/change-requests/access */
+export interface GetStudentsChangeRequestsAccessQuery {
+  student_id?: string;
+}
+
+/** Query of GET /api/students/class-arrival-exceptions/{schoolClass} */
+export interface GetStudentsClassArrivalExceptionsSchoolClassQuery {
+  from?: string;
+  to?: string;
+}
+
+/** Query of GET /api/students/day-log */
+export interface GetStudentsDayLogQuery {
+  date?: string;
+  group_id?: string;
+}
+
+/** Query of GET /api/students/ended-care */
+export interface GetStudentsEndedCareQuery {
+  page?: number;
+  page_size?: number;
+  school_class?: string[];
+  search?: string;
+}
+
+/** Query of GET /api/students/status-days */
+export interface GetStudentsStatusDaysQuery {
+  from?: string;
+  group_id?: string;
+  page?: number;
+  page_size?: number;
+  q?: string;
+  status?: string;
+  to?: string;
+}
+
 /** Query of GET /api/students/{id} */
 export interface GetStudentsIdQuery {
   include_privacy_consent?: boolean;
 }
 
+/** Query of GET /api/students/{id}/arrival-schedules */
+export interface GetStudentsIdArrivalSchedulesQuery {
+  date?: string;
+  to?: string;
+}
+
+/** Query of GET /api/students/{id}/attendance-history */
+export interface GetStudentsIdAttendanceHistoryQuery {
+  end?: string;
+  start?: string;
+}
+
+/** Query of GET /api/students/{id}/care-withdrawals */
+export interface GetStudentsIdCareWithdrawalsQuery {
+  page?: number;
+  page_size?: number;
+}
+
+/** Query of GET /api/students/{id}/notes */
+export interface GetStudentsIdNotesQuery {
+  kind?: string;
+}
+
+/** Query of GET /api/students/{id}/partial-absences */
+export interface GetStudentsIdPartialAbsencesQuery {
+  from?: string;
+  to?: string;
+}
+
+/** Query of GET /api/students/{id}/pickup-schedules */
+export interface GetStudentsIdPickupSchedulesQuery {
+  from?: string;
+  to?: string;
+}
+
+/** Query of GET /api/students/{id}/status-days */
+export interface GetStudentsIdStatusDaysQuery {
+  from?: string;
+  to?: string;
+}
+
 export const routes = {
+  "DELETE /api/students/class-arrival-exceptions/{schoolClass}/{date}": {
+    method: "DELETE",
+    pattern: "/api/students/class-arrival-exceptions/{schoolClass}/{date}",
+    portals: ["tenant"],
+    response: noData,
+  },
+  "DELETE /api/students/{id}/arrival-exceptions/{exceptionId}": {
+    method: "DELETE",
+    pattern: "/api/students/{id}/arrival-exceptions/{exceptionId}",
+    portals: ["tenant"],
+    response: noData,
+  },
+  "DELETE /api/students/{id}/arrival-notes/{noteId}": {
+    method: "DELETE",
+    pattern: "/api/students/{id}/arrival-notes/{noteId}",
+    portals: ["tenant"],
+    response: noData,
+  },
+  "DELETE /api/students/{id}/departure-exceptions/{date}": {
+    method: "DELETE",
+    pattern: "/api/students/{id}/departure-exceptions/{date}",
+    portals: ["tenant"],
+    response: noData,
+  },
+  "DELETE /api/students/{id}/documents/{documentId}": {
+    method: "DELETE",
+    pattern: "/api/students/{id}/documents/{documentId}",
+    portals: ["tenant"],
+    response: success(studentDocumentDeletedResponseSchema),
+  },
+  "DELETE /api/students/{id}/notes/{noteId}": {
+    method: "DELETE",
+    pattern: "/api/students/{id}/notes/{noteId}",
+    portals: ["tenant"],
+    response: success(studentNoteDeletedResponseSchema),
+  },
+  "DELETE /api/students/{id}/partial-absences/{partialAbsenceId}": {
+    method: "DELETE",
+    pattern: "/api/students/{id}/partial-absences/{partialAbsenceId}",
+    portals: ["tenant"],
+    response: success(partialAbsenceDeletedResponseSchema),
+  },
+  "DELETE /api/students/{id}/pickup-exceptions/{exceptionId}": {
+    method: "DELETE",
+    pattern: "/api/students/{id}/pickup-exceptions/{exceptionId}",
+    portals: ["tenant"],
+    response: noData,
+  },
+  "DELETE /api/students/{id}/pickup-notes/{noteId}": {
+    method: "DELETE",
+    pattern: "/api/students/{id}/pickup-notes/{noteId}",
+    portals: ["tenant"],
+    response: noData,
+  },
+  "DELETE /api/students/{id}/purge": {
+    method: "DELETE",
+    pattern: "/api/students/{id}/purge",
+    portals: ["tenant"],
+    response: noData,
+  },
+  "DELETE /api/students/{id}/status-days/{statusDayId}": {
+    method: "DELETE",
+    pattern: "/api/students/{id}/status-days/{statusDayId}",
+    portals: ["tenant"],
+    response: success(StatusDayDeletedResponseSchema),
+  },
   "GET /api/students/": {
     method: "GET",
     pattern: "/api/students/",
@@ -649,12 +3100,206 @@ export const routes = {
       slim: paginated(z.array(SlimStudentResponseSchema)),
     },
   },
+  "GET /api/students/arrival-settings": {
+    method: "GET",
+    pattern: "/api/students/arrival-settings",
+    portals: ["tenant"],
+    response: success(arrivalSettingsResponseSchema),
+  },
+  "GET /api/students/care-schedule-change-requests/{requestId}": {
+    method: "GET",
+    pattern: "/api/students/care-schedule-change-requests/{requestId}",
+    portals: ["tenant"],
+    response: success(CareRequestDetailResponseSchema),
+  },
+  "GET /api/students/care-withdrawals": {
+    method: "GET",
+    pattern: "/api/students/care-withdrawals",
+    portals: ["tenant"],
+    query: ["page", "page_size", "search", "state", "student_id"],
+    response: success(careWithdrawalPageResponseSchema),
+  },
+  "GET /api/students/care-withdrawals/{completionId}/deletion-impact": {
+    method: "GET",
+    pattern: "/api/students/care-withdrawals/{completionId}/deletion-impact",
+    portals: ["tenant"],
+    response: success(studentDeleteImpactResponseSchema),
+  },
+  "GET /api/students/change-requests": {
+    method: "GET",
+    pattern: "/api/students/change-requests",
+    portals: ["tenant"],
+    query: ["cursor", "from", "limit", "search", "status", "student_id", "to", "types", "view"],
+    response: success(PageSchema),
+  },
+  "GET /api/students/change-requests/access": {
+    method: "GET",
+    pattern: "/api/students/change-requests/access",
+    portals: ["tenant"],
+    query: ["student_id"],
+    response: success(changeRequestAccessResponseSchema),
+  },
+  "GET /api/students/change-requests/pending-count": {
+    method: "GET",
+    pattern: "/api/students/change-requests/pending-count",
+    portals: ["tenant"],
+    response: success(ChangeRequestPendingCountResponseSchema),
+  },
+  "GET /api/students/child-quota": {
+    method: "GET",
+    pattern: "/api/students/child-quota",
+    portals: ["tenant"],
+    response: success(childQuotaResponseSchema),
+  },
+  "GET /api/students/class-arrival-exceptions/{schoolClass}": {
+    method: "GET",
+    pattern: "/api/students/class-arrival-exceptions/{schoolClass}",
+    portals: ["tenant"],
+    query: ["from", "to"],
+    response: success(ClassArrivalExceptionListResponseSchema),
+  },
+  "GET /api/students/class-arrival-times/{schoolClass}": {
+    method: "GET",
+    pattern: "/api/students/class-arrival-times/{schoolClass}",
+    portals: ["tenant"],
+    response: success(ClassArrivalTimesResponseSchema),
+  },
+  "GET /api/students/day-log": {
+    method: "GET",
+    pattern: "/api/students/day-log",
+    portals: ["tenant"],
+    query: ["date", "group_id"],
+    response: success(dayLogResponseSchema),
+  },
+  "GET /api/students/ended-care": {
+    method: "GET",
+    pattern: "/api/students/ended-care",
+    portals: ["tenant"],
+    query: ["page", "page_size", "school_class", "search"],
+    response: success(endedCarePageResponseSchema),
+  },
+  "GET /api/students/pickup-change-notices": {
+    method: "GET",
+    pattern: "/api/students/pickup-change-notices",
+    portals: ["tenant"],
+    response: success(z.array(pickupChangeNoticeResponseSchema)),
+  },
+  "GET /api/students/privacy-consent/defaults": {
+    method: "GET",
+    pattern: "/api/students/privacy-consent/defaults",
+    portals: ["tenant"],
+    response: success(PrivacyConsentDefaultsResponseSchema),
+  },
+  "GET /api/students/status-days": {
+    method: "GET",
+    pattern: "/api/students/status-days",
+    portals: ["tenant"],
+    query: ["from", "group_id", "page", "page_size", "q", "status", "to"],
+    response: success(statusDayOverviewResponseSchema),
+  },
+  "GET /api/students/team-notices": {
+    method: "GET",
+    pattern: "/api/students/team-notices",
+    portals: ["tenant"],
+    response: success(z.array(studentNoteTeamNoticeResponseSchema)),
+  },
   "GET /api/students/{id}": {
     method: "GET",
     pattern: "/api/students/{id}",
     portals: ["tenant"],
     query: ["include_privacy_consent"],
     response: success(StudentDetailResponseSchema),
+  },
+  "GET /api/students/{id}/arrival-schedules": {
+    method: "GET",
+    pattern: "/api/students/{id}/arrival-schedules",
+    portals: ["tenant"],
+    query: ["date", "to"],
+    response: success(ArrivalDataResponseSchema),
+  },
+  "GET /api/students/{id}/attendance-history": {
+    method: "GET",
+    pattern: "/api/students/{id}/attendance-history",
+    portals: ["tenant"],
+    query: ["end", "start"],
+    response: success(attendanceHistoryResponseSchema),
+  },
+  "GET /api/students/{id}/care-withdrawals": {
+    method: "GET",
+    pattern: "/api/students/{id}/care-withdrawals",
+    portals: ["tenant"],
+    query: ["page", "page_size"],
+    response: success(careWithdrawalPageResponseSchema),
+  },
+  "GET /api/students/{id}/change-history": {
+    method: "GET",
+    pattern: "/api/students/{id}/change-history",
+    portals: ["tenant"],
+    response: success(z.array(changeHistoryEntrySchema)),
+  },
+  "GET /api/students/{id}/companions": {
+    method: "GET",
+    pattern: "/api/students/{id}/companions",
+    portals: ["tenant"],
+    response: success(z.array(CompanionResponseSchema)),
+  },
+  "GET /api/students/{id}/delete-impact": {
+    method: "GET",
+    pattern: "/api/students/{id}/delete-impact",
+    portals: ["tenant"],
+    response: success(studentDeleteImpactResponseSchema),
+  },
+  "GET /api/students/{id}/enrollment-extra-fields": {
+    method: "GET",
+    pattern: "/api/students/{id}/enrollment-extra-fields",
+    portals: ["tenant"],
+    response: success(z.array(StudentEnrollmentExtraFieldGroupSchema)),
+  },
+  "GET /api/students/{id}/family-protection": {
+    method: "GET",
+    pattern: "/api/students/{id}/family-protection",
+    portals: ["tenant"],
+    response: success(familyProtectionResponseSchema),
+  },
+  "GET /api/students/{id}/note-subjects": {
+    method: "GET",
+    pattern: "/api/students/{id}/note-subjects",
+    portals: ["tenant"],
+    response: success(noteSubjectsResponseSchema),
+  },
+  "GET /api/students/{id}/notes": {
+    method: "GET",
+    pattern: "/api/students/{id}/notes",
+    portals: ["tenant"],
+    query: ["kind"],
+    response: success(z.array(studentNoteResponseSchema)),
+  },
+  "GET /api/students/{id}/partial-absences": {
+    method: "GET",
+    pattern: "/api/students/{id}/partial-absences",
+    portals: ["tenant"],
+    query: ["from", "to"],
+    response: success(z.array(PartialAbsenceResponseSchema)),
+  },
+  "GET /api/students/{id}/pickup-schedules": {
+    method: "GET",
+    pattern: "/api/students/{id}/pickup-schedules",
+    portals: ["tenant"],
+    query: ["from", "to"],
+    response: success(PickupDataResponseSchema),
+  },
+  "GET /api/students/{id}/privacy-consent": {
+    method: "GET",
+    pattern: "/api/students/{id}/privacy-consent",
+    portals: ["tenant"],
+    response: success(PrivacyConsentResponseSchema),
+  },
+  "GET /api/students/{id}/status-days": {
+    method: "GET",
+    pattern: "/api/students/{id}/status-days",
+    portals: ["tenant"],
+    query: ["from", "to"],
+    response: success(z.array(StudentStatusDayResponseSchema)),
   },
   "POST /api/students/": {
     method: "POST",
@@ -663,11 +3308,360 @@ export const routes = {
     request: requestBody<StudentRequest>(),
     response: success(StudentResponseSchema),
   },
+  "POST /api/students/arrival-schedules/bulk": {
+    method: "POST",
+    pattern: "/api/students/arrival-schedules/bulk",
+    portals: ["tenant"],
+    request: requestBody<BulkUpsertArrivalScheduleRequest>(),
+    response: success(BulkUpsertResultSchema),
+  },
+  "POST /api/students/arrival-schedules/status": {
+    method: "POST",
+    pattern: "/api/students/arrival-schedules/status",
+    portals: ["tenant"],
+    request: requestBody<BulkEffectiveTimeRequest>(),
+    response: success(ArrivalScheduleStatusResponseSchema),
+  },
+  "POST /api/students/care-end": {
+    method: "POST",
+    pattern: "/api/students/care-end",
+    portals: ["tenant"],
+    request: requestBody<careExitRequest>(),
+    response: success(careExitConfirmedResponseSchema),
+  },
+  "POST /api/students/care-end/cancel": {
+    method: "POST",
+    pattern: "/api/students/care-end/cancel",
+    portals: ["tenant"],
+    request: requestBody<careExitCancelRequest>(),
+    response: success(careExitCancelledResponseSchema),
+  },
+  "POST /api/students/care-end/preview": {
+    method: "POST",
+    pattern: "/api/students/care-end/preview",
+    portals: ["tenant"],
+    request: requestBody<careExitRequest>(),
+    response: success(careExitPreviewResponseSchema),
+  },
+  "POST /api/students/care-schedule-change-requests/{requestId}/decide": {
+    method: "POST",
+    pattern: "/api/students/care-schedule-change-requests/{requestId}/decide",
+    portals: ["tenant"],
+    request: requestBody<DecideCareRequestBody>(),
+    response: success(CareRequestResponseSchema),
+  },
+  "POST /api/students/care-withdrawals/{completionId}/care-end": {
+    method: "POST",
+    pattern: "/api/students/care-withdrawals/{completionId}/care-end",
+    portals: ["tenant"],
+    request: requestBody<careWithdrawalExitRequest>(),
+    response: success(careExitConfirmedResponseSchema),
+  },
+  "POST /api/students/care-withdrawals/{completionId}/care-end/preview": {
+    method: "POST",
+    pattern: "/api/students/care-withdrawals/{completionId}/care-end/preview",
+    portals: ["tenant"],
+    request: requestBody<careWithdrawalExitRequest>(),
+    response: success(careExitPreviewResponseSchema),
+  },
+  "POST /api/students/change-requests/bulk-approve": {
+    method: "POST",
+    pattern: "/api/students/change-requests/bulk-approve",
+    portals: ["tenant"],
+    request: requestBody<bulkApproveParentRequestsBody>(),
+    response: success(parentRequestsApprovedResponseSchema),
+  },
+  "POST /api/students/change-requests/conflicts/resolve": {
+    method: "POST",
+    pattern: "/api/students/change-requests/conflicts/resolve",
+    portals: ["tenant"],
+    request: requestBody<resolveConflictBody>(),
+    response: success(parentRequestConflictResolvedResponseSchema),
+  },
+  "POST /api/students/change-requests/{kind}/{requestId}/correct": {
+    method: "POST",
+    pattern: "/api/students/change-requests/{kind}/{requestId}/correct",
+    portals: ["tenant"],
+    request: requestBody<correctRequestBody>(),
+    response: success(parentRequestCorrectedResponseSchema),
+  },
+  "POST /api/students/change-requests/{kind}/{requestId}/mark-done": {
+    method: "POST",
+    pattern: "/api/students/change-requests/{kind}/{requestId}/mark-done",
+    portals: ["tenant"],
+    request: requestBody<markRequestDoneBody>(),
+    response: success(parentRequestDoneResponseSchema),
+  },
+  "POST /api/students/excused-absence-requests/{requestId}/decide": {
+    method: "POST",
+    pattern: "/api/students/excused-absence-requests/{requestId}/decide",
+    portals: ["tenant"],
+    request: requestBody<DecideExcusedRequestBody>(),
+    response: success(StaffExcusedRequestResponseSchema),
+  },
+  "POST /api/students/master-data-change-requests/{requestId}/decide": {
+    method: "POST",
+    pattern: "/api/students/master-data-change-requests/{requestId}/decide",
+    portals: ["tenant"],
+    request: requestBody<DecideMasterDataChangeRequestBody>(),
+    response: success(MasterDataChangeRequestResponseSchema),
+  },
+  "POST /api/students/offering-change-requests/{requestId}/decide": {
+    method: "POST",
+    pattern: "/api/students/offering-change-requests/{requestId}/decide",
+    portals: ["tenant"],
+    request: requestBody<DecideOfferingRequestBody>(),
+    response: success(offeringDecisionResponseSchema),
+  },
+  "POST /api/students/offering-change-requests/{requestId}/preview": {
+    method: "POST",
+    pattern: "/api/students/offering-change-requests/{requestId}/preview",
+    portals: ["tenant"],
+    request: requestBody<PreviewOfferingRequestBody>(),
+    response: success(OfferingRequestPreviewResponseSchema),
+  },
+  "POST /api/students/pickup-schedules/bulk": {
+    method: "POST",
+    pattern: "/api/students/pickup-schedules/bulk",
+    portals: ["tenant"],
+    request: requestBody<BulkPickupSchedulePatchRequest>(),
+    response: success(BulkUpsertResultSchema),
+  },
+  "POST /api/students/status-days/bulk": {
+    method: "POST",
+    pattern: "/api/students/status-days/bulk",
+    portals: ["tenant"],
+    request: requestBody<BulkCreateStudentStatusDaysRequest>(),
+    response: success(StatusDaysBulkCreatedResponseSchema),
+  },
+  "POST /api/students/{id}/accident-reports": {
+    method: "POST",
+    pattern: "/api/students/{id}/accident-reports",
+    portals: ["tenant"],
+    request: requestBody<AccidentReportRequest>(),
+    response: success(StudentDocumentResponseSchema),
+  },
+  "POST /api/students/{id}/accident-reports/{documentId}/corrections": {
+    method: "POST",
+    pattern: "/api/students/{id}/accident-reports/{documentId}/corrections",
+    portals: ["tenant"],
+    request: requestBody<AccidentReportRequest>(),
+    response: success(StudentDocumentResponseSchema),
+  },
+  "POST /api/students/{id}/accident-reports/{documentId}/signature": {
+    method: "POST",
+    pattern: "/api/students/{id}/accident-reports/{documentId}/signature",
+    portals: ["tenant"],
+    request: requestBody<AccidentSignatureRequest>(),
+    response: success(StudentDocumentResponseSchema),
+  },
+  "POST /api/students/{id}/arrival-exceptions": {
+    method: "POST",
+    pattern: "/api/students/{id}/arrival-exceptions",
+    portals: ["tenant"],
+    request: requestBody<StudentArrivalExceptionRequest>(),
+    response: success(StudentArrivalExceptionResponseSchema),
+  },
+  "POST /api/students/{id}/arrival-notes": {
+    method: "POST",
+    pattern: "/api/students/{id}/arrival-notes",
+    portals: ["tenant"],
+    request: requestBody<ArrivalNoteRequest>(),
+    response: success(ArrivalNoteResponseSchema),
+  },
+  "POST /api/students/{id}/care-end/resume": {
+    method: "POST",
+    pattern: "/api/students/{id}/care-end/resume",
+    portals: ["tenant"],
+    request: requestBody<careResumeRequest>(),
+    response: success(careResumedResponseSchema),
+  },
+  "POST /api/students/{id}/notes": {
+    method: "POST",
+    pattern: "/api/students/{id}/notes",
+    portals: ["tenant"],
+    request: requestBody<studentNoteRequestBody>(),
+    response: success(studentNoteResponseSchema),
+  },
+  "POST /api/students/{id}/notes/{noteId}/team-notices": {
+    method: "POST",
+    pattern: "/api/students/{id}/notes/{noteId}/team-notices",
+    portals: ["tenant"],
+    response: success(studentNoteTeamInformedResponseSchema),
+  },
+  "POST /api/students/{id}/partial-absences": {
+    method: "POST",
+    pattern: "/api/students/{id}/partial-absences",
+    portals: ["tenant"],
+    request: requestBody<PartialAbsenceRequest>(),
+    response: success(PartialAbsenceResponseSchema),
+  },
+  "POST /api/students/{id}/pickup-change-notices/read": {
+    method: "POST",
+    pattern: "/api/students/{id}/pickup-change-notices/read",
+    portals: ["tenant"],
+    request: requestBody<pickupChangeNoticesReadRequest>(),
+    response: success(z.array(pickupChangeNoticeResponseSchema)),
+  },
+  "POST /api/students/{id}/pickup-exceptions": {
+    method: "POST",
+    pattern: "/api/students/{id}/pickup-exceptions",
+    portals: ["tenant"],
+    request: requestBody<PickupExceptionRequest>(),
+    response: success(PickupExceptionResponseSchema),
+  },
+  "POST /api/students/{id}/pickup-notes": {
+    method: "POST",
+    pattern: "/api/students/{id}/pickup-notes",
+    portals: ["tenant"],
+    request: requestBody<PickupNoteRequest>(),
+    response: success(PickupNoteResponseSchema),
+  },
+  "POST /api/students/{id}/pickup-schedules/apply": {
+    method: "POST",
+    pattern: "/api/students/{id}/pickup-schedules/apply",
+    portals: ["tenant"],
+    request: requestBody<pickupAdjustmentRequest>(),
+    response: success(pickupAdjustmentResponseSchema),
+  },
+  "POST /api/students/{id}/pickup-schedules/preview": {
+    method: "POST",
+    pattern: "/api/students/{id}/pickup-schedules/preview",
+    portals: ["tenant"],
+    request: requestBody<pickupAdjustmentRequest>(),
+    response: success(pickupAdjustmentPreviewResponseSchema),
+  },
+  "POST /api/students/{id}/pickup-schedules/reset-offering": {
+    method: "POST",
+    pattern: "/api/students/{id}/pickup-schedules/reset-offering",
+    portals: ["tenant"],
+    request: requestBody<ResetOfferingPickupRequest>(),
+    response: success(PickupDataResponseSchema),
+  },
+  "POST /api/students/{id}/school-checkin": {
+    method: "POST",
+    pattern: "/api/students/{id}/school-checkin",
+    portals: ["tenant"],
+    request: requestBody<schoolCheckinRequest>(),
+    response: success(schoolCheckinResponseSchema),
+  },
+  "POST /api/students/{id}/status-days": {
+    method: "POST",
+    pattern: "/api/students/{id}/status-days",
+    portals: ["tenant"],
+    request: requestBody<CreateStudentStatusDaysRequest>(),
+    response: success(z.array(StudentStatusDayResponseSchema)),
+  },
+  "POST /api/students/{id}/team-notices/read": {
+    method: "POST",
+    pattern: "/api/students/{id}/team-notices/read",
+    portals: ["tenant"],
+    request: requestBody<studentNoteTeamReadRequest>(),
+    response: success(z.array(studentNoteTeamNoticeResponseSchema)),
+  },
+  "PUT /api/students/class-arrival-exceptions/{schoolClass}/{date}": {
+    method: "PUT",
+    pattern: "/api/students/class-arrival-exceptions/{schoolClass}/{date}",
+    portals: ["tenant"],
+    request: requestBody<ClassArrivalExceptionRequest>(),
+    response: success(ClassArrivalExceptionResponseSchema),
+  },
   "PUT /api/students/{id}": {
     method: "PUT",
     pattern: "/api/students/{id}",
     portals: ["tenant"],
     request: requestBody<UpdateStudentRequest>(),
     response: success(StudentResponseSchema),
+  },
+  "PUT /api/students/{id}/accident-reports/{documentId}": {
+    method: "PUT",
+    pattern: "/api/students/{id}/accident-reports/{documentId}",
+    portals: ["tenant"],
+    request: requestBody<AccidentReportRequest>(),
+    response: success(StudentDocumentResponseSchema),
+  },
+  "PUT /api/students/{id}/arrival-exceptions/{exceptionId}": {
+    method: "PUT",
+    pattern: "/api/students/{id}/arrival-exceptions/{exceptionId}",
+    portals: ["tenant"],
+    request: requestBody<StudentArrivalExceptionRequest>(),
+    response: success(StudentArrivalExceptionResponseSchema),
+  },
+  "PUT /api/students/{id}/arrival-notes/{noteId}": {
+    method: "PUT",
+    pattern: "/api/students/{id}/arrival-notes/{noteId}",
+    portals: ["tenant"],
+    request: requestBody<ArrivalNoteRequest>(),
+    response: success(ArrivalNoteResponseSchema),
+  },
+  "PUT /api/students/{id}/arrival-schedules": {
+    method: "PUT",
+    pattern: "/api/students/{id}/arrival-schedules",
+    portals: ["tenant"],
+    request: requestBody<BulkArrivalScheduleRequest>(),
+    response: success(ArrivalDataResponseSchema),
+  },
+  "PUT /api/students/{id}/departure-exceptions/{date}": {
+    method: "PUT",
+    pattern: "/api/students/{id}/departure-exceptions/{date}",
+    portals: ["tenant"],
+    request: requestBody<DepartureExceptionRequest>(),
+    response: success(DepartureExceptionResponseSchema),
+  },
+  "PUT /api/students/{id}/family-protection": {
+    method: "PUT",
+    pattern: "/api/students/{id}/family-protection",
+    portals: ["tenant"],
+    request: requestBody<setFamilyProtectionBody>(),
+    response: success(familyProtectionResponseSchema),
+  },
+  "PUT /api/students/{id}/notes/{noteId}": {
+    method: "PUT",
+    pattern: "/api/students/{id}/notes/{noteId}",
+    portals: ["tenant"],
+    request: requestBody<studentNoteRequestBody>(),
+    response: success(studentNoteResponseSchema),
+  },
+  "PUT /api/students/{id}/partial-absences/{partialAbsenceId}": {
+    method: "PUT",
+    pattern: "/api/students/{id}/partial-absences/{partialAbsenceId}",
+    portals: ["tenant"],
+    request: requestBody<PartialAbsenceRequest>(),
+    response: success(PartialAbsenceResponseSchema),
+  },
+  "PUT /api/students/{id}/pickup-exceptions/{exceptionId}": {
+    method: "PUT",
+    pattern: "/api/students/{id}/pickup-exceptions/{exceptionId}",
+    portals: ["tenant"],
+    request: requestBody<PickupExceptionRequest>(),
+    response: success(PickupExceptionResponseSchema),
+  },
+  "PUT /api/students/{id}/pickup-notes": {
+    method: "PUT",
+    pattern: "/api/students/{id}/pickup-notes",
+    portals: ["tenant"],
+    request: requestBody<WeekdayPickupNotesRequest>(),
+    response: noData,
+  },
+  "PUT /api/students/{id}/pickup-notes/{noteId}": {
+    method: "PUT",
+    pattern: "/api/students/{id}/pickup-notes/{noteId}",
+    portals: ["tenant"],
+    request: requestBody<PickupNoteRequest>(),
+    response: success(PickupNoteResponseSchema),
+  },
+  "PUT /api/students/{id}/pickup-schedules": {
+    method: "PUT",
+    pattern: "/api/students/{id}/pickup-schedules",
+    portals: ["tenant"],
+    request: requestBody<BulkPickupScheduleRequest>(),
+    response: success(PickupDataResponseSchema),
+  },
+  "PUT /api/students/{id}/privacy-consent": {
+    method: "PUT",
+    pattern: "/api/students/{id}/privacy-consent",
+    portals: ["tenant"],
+    request: requestBody<PrivacyConsentRequest>(),
+    response: success(PrivacyConsentResponseSchema),
   },
 } as const;

@@ -13,29 +13,71 @@ import (
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
 	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
+	enrollmentHTTP "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
 	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
 	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+	peopleStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/students"
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
+	"github.com/moto-ogs/project-phoenix/modules/requestreview"
+	reviewStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/requestreview/http"
 	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
+	presenceStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/studentpresence/http"
 	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	workforceTraegerStaff "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	worktimemodelsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/worktimemodels"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
+	deleteStudentsHTTP "github.com/moto-ogs/project-phoenix/workflows/studentdeletion/http"
 )
 
 // contractRegistrations lists every typed registration under its mount and
 // refuses one the route catalog does not know.
 func contractRegistrations() ([]contract.Registration, error) {
-	mounts := []struct {
-		prefix string
-		routes []common.RouteContract
-	}{
+	mounts := contractMounts()
+	catalog, err := RouteCatalog()
+	if err != nil {
+		return nil, err
+	}
+	known := make(map[string]bool, len(catalog))
+	for _, route := range catalog {
+		known[route.Method+" "+route.Pattern] = true
+	}
+	var registrations []contract.Registration
+	for _, mount := range mounts {
+		for _, route := range mount.routes {
+			registration := contractRegistration(mount.prefix, route)
+			if !known[registration.Method+" "+registration.Pattern] {
+				return nil, fmt.Errorf("typed route %s %s is not in the route catalog", registration.Method, registration.Pattern)
+			}
+			registrations = append(registrations, registration)
+		}
+	}
+	return registrations, nil
+}
+
+type contractMount struct {
+	prefix string
+	routes []common.RouteContract
+}
+
+// contractMounts lists every owner's typed registrations under its mount.
+func contractMounts() []contractMount {
+	return []contractMount{
 		{"/api/students", projectionStudentsHTTP.StudentRouteContracts()},
 		// The projection renders the answer of Care Plan's student writes
 		// (studentHTTPResources binds it), so its type is named here.
 		{"/api/students", careStudentsHTTP.StudentWriteContracts(projectionStudentsHTTP.StudentResponse{})},
+		// Request Review renders the answers of Care Plan's review routes.
+		{"/api/students", careStudentsHTTP.StudentRouteContracts(careStudentsHTTP.DecisionResponses{
+			CareDecision: requestreview.CareRequestResponse{}, CareDetail: reviewStudentsHTTP.CareRequestDetailResponse{},
+			MasterDataDecision: requestreview.MasterDataChangeRequestResponse{}, ExcusedDecision: requestreview.StaffExcusedRequestResponse{},
+		})},
+		{"/api/students", peopleStudentsHTTP.RouteContracts()},
+		{"/api/students", presenceStudentsHTTP.StudentRouteContracts()},
+		{"/api/students", deleteStudentsHTTP.StudentRouteContracts()},
+		{"/api/students", reviewStudentsHTTP.StudentRouteContracts()},
+		{"/api/students", enrollmentHTTP.StudentRouteContracts()},
 		{"/parent", parentAPI.MeRouteContracts()},
 		{"/api/notifications", notificationRouteContracts(common.PortalTenant)},
 		{"/school/class-day", classdayHTTP.RouteContracts()},
@@ -59,25 +101,6 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/caterer", catererPortalHTTP.RouteContracts()},
 		{"/caterer/notifications", schoolFeedRouteContracts(common.PortalCaterer)},
 	}
-	catalog, err := RouteCatalog()
-	if err != nil {
-		return nil, err
-	}
-	known := make(map[string]bool, len(catalog))
-	for _, route := range catalog {
-		known[route.Method+" "+route.Pattern] = true
-	}
-	var registrations []contract.Registration
-	for _, mount := range mounts {
-		for _, route := range mount.routes {
-			registration := contractRegistration(mount.prefix, route)
-			if !known[registration.Method+" "+registration.Pattern] {
-				return nil, fmt.Errorf("typed route %s %s is not in the route catalog", registration.Method, registration.Pattern)
-			}
-			registrations = append(registrations, registration)
-		}
-	}
-	return registrations, nil
 }
 
 // ContractDocument builds the model of the frontend/backend contract from

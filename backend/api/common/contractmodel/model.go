@@ -20,6 +20,7 @@ const (
 	KindArray    = "array"
 	KindMap      = "map"
 	KindRef      = "ref"
+	KindJSON     = "json" // any JSON value; Go declares it as an empty interface
 )
 
 // Schema is one value on the wire.

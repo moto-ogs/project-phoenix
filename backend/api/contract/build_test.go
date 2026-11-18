@@ -33,25 +33,28 @@ type inner struct {
 
 type row struct {
 	inner
-	Shadowed bool           `json:"shadowed"`
-	Name     string         `json:"name"`
-	Nick     string         `json:"nick,omitempty"`
-	Note     *string        `json:"note"`
-	Hint     *string        `json:"hint,omitempty"`
-	Tags     []string       `json:"tags"`
-	Friends  []wireID       `json:"friend_ids,omitempty"`
-	Day      calendar.Date  `json:"day"`
-	Birthday *calendar.Date `json:"birthday,omitempty"`
-	Mode     mode           `json:"mode"`
-	Status   string         `json:"status"`
-	Count    int            `json:"count"`
-	Legacy   int64          `json:"legacy_id"`
-	Quoted   int64          `json:"quoted_id,string"`
-	Lax      laxID          `json:"lax_id"`
-	Weights  map[string]int `json:"weights,omitempty"`
-	Hidden   string         `json:"-"`
-	Born     string         `json:"born,omitempty" contract:"date"`
-	Pickup   *string        `json:"pickup,omitempty" contract:"clock"`
+	Shadowed bool            `json:"shadowed"`
+	Name     string          `json:"name"`
+	Nick     string          `json:"nick,omitempty"`
+	Note     *string         `json:"note"`
+	Hint     *string         `json:"hint,omitempty"`
+	Tags     []string        `json:"tags"`
+	Friends  []wireID        `json:"friend_ids,omitempty"`
+	Day      calendar.Date   `json:"day"`
+	Birthday *calendar.Date  `json:"birthday,omitempty"`
+	Mode     mode            `json:"mode"`
+	Status   string          `json:"status"`
+	Count    int             `json:"count"`
+	Legacy   int64           `json:"legacy_id"`
+	Quoted   int64           `json:"quoted_id,string"`
+	Lax      laxID           `json:"lax_id"`
+	Weights  map[string]int  `json:"weights,omitempty"`
+	Hidden   string          `json:"-"`
+	Born     string          `json:"born,omitempty" contract:"date"`
+	Pickup   *string         `json:"pickup,omitempty" contract:"clock"`
+	Value    any             `json:"value"`
+	Details  map[string]any  `json:"details,omitempty"`
+	Stored   json.RawMessage `json:"stored,omitempty"`
 }
 
 type body struct {
@@ -135,7 +138,7 @@ func TestBuildFollowsEncodingJSON(t *testing.T) {
 			assert.Truef(t, field.Schema.Nullable, "%s renders null", name)
 		}
 	}
-	assert.Len(t, fields, len(keys)+7, "the seven omitempty fields are absent for the zero value")
+	assert.Len(t, fields, len(keys)+9, "the nine omitempty fields are absent for the zero value")
 
 	schema := func(name string) Schema { return fields[name].Schema }
 	assert.Equal(t, KindBool, schema("shadowed").Kind, "the outer field wins over the embedded one")
@@ -155,6 +158,9 @@ func TestBuildFollowsEncodingJSON(t *testing.T) {
 	assert.Equal(t, KindLegacyID, schema("legacy_id").Kind)
 	assert.Equal(t, KindID, schema("quoted_id").Kind)
 	assert.Equal(t, KindLaxID, schema("lax_id").Kind)
+	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, schema("value"), "an empty interface holds any JSON, null when nil")
+	assert.Equal(t, KindJSON, schema("details").Elem.Kind)
+	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, schema("stored"), "stored JSON is absent when nil and may hold null")
 	assert.True(t, fields["nick"].Deprecated)
 	assert.NotContains(t, fields, "Hidden")
 	assert.Equal(t, []Enum{{Name: "Status", Values: []string{"off", "on"}}, {Name: "mode", Values: []string{"a", "b"}}}, doc.Enums)
