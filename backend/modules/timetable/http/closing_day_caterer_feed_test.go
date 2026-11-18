@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -125,12 +126,14 @@ func TestClosingDayReachesTheBellOfTheSchoolsCatererOnly(t *testing.T) {
 	supply(t, db, own, school)
 	supply(t, db, own, sister)
 	supply(t, db, foreign, foreignSchool)
+	// The Delivery notifier stamps feed entries with time.Now.
+	older := time.Now().Add(-time.Hour)
 	insert := func(schoolID int64, title string) {
 		t.Helper()
 		_, err := db.ExecContext(context.Background(), `INSERT INTO platform.notification_feed_entries
 			(tenant_id, account_id, type, title, body, deep_link, related_type, related_id, created_at, updated_at)
-			VALUES (?, ?, ?, ?, '', '/caterer', 'closing_day', 1, NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 hour')`,
-			schoolID, kitchen.ID, deliveryContract.NotificationCatererSchoolClosingDayChanged, title)
+			VALUES (?, ?, ?, ?, '', '/caterer', 'closing_day', 1, ?, ?)`,
+			schoolID, kitchen.ID, deliveryContract.NotificationCatererSchoolClosingDayChanged, title, older, older)
 		require.NoError(t, err)
 	}
 	insert(sister, "Schließtag geändert")
@@ -225,10 +228,11 @@ func TestFutureCatererSupplyCannotReceiveOrReadFeedEntries(t *testing.T) {
 	assert.Zero(t, published, "a caterer receives no entry before its supply starts")
 
 	var entryID int64
+	seededAt := time.Now()
 	require.NoError(t, db.NewRaw(`INSERT INTO platform.notification_feed_entries
-		(tenant_id, account_id, type, title, body, deep_link, related_type, related_id)
-		VALUES (?, ?, ?, 'Neuer Schließtag', '', '/caterer', 'closing_day', 1)
-		RETURNING id`, school, kitchen.ID, deliveryContract.NotificationCatererSchoolClosingDayChanged).Scan(context.Background(), &entryID))
+		(tenant_id, account_id, type, title, body, deep_link, related_type, related_id, created_at, updated_at)
+		VALUES (?, ?, ?, 'Neuer Schließtag', '', '/caterer', 'closing_day', 1, ?, ?)
+		RETURNING id`, school, kitchen.ID, deliveryContract.NotificationCatererSchoolClosingDayChanged, seededAt, seededAt).Scan(context.Background(), &entryID))
 	entries, unread := f.catererFeed(t, kitchen.ID)
 	assert.Empty(t, entries, "a caterer cannot read an entry before its supply starts")
 	assert.Zero(t, unread)
@@ -249,12 +253,13 @@ func TestCatererNotificationFeedHTTPQueryBudget(t *testing.T) {
 	caterer := newTestCaterer(t, db, "Budgetküche", kitchen.ID, other.ID)
 	supply(t, db, caterer, schools[0])
 	supply(t, db, caterer, schools[1])
+	seededAt := time.Now()
 	insert := func(accountID, schoolID int64, objectID int) {
 		t.Helper()
 		_, err := db.ExecContext(context.Background(), `INSERT INTO platform.notification_feed_entries
-			(tenant_id, account_id, type, title, body, deep_link, related_type, related_id)
-			VALUES (?, ?, ?, 'Neuer Schließtag', 'Am 12.06.2030 ist ein Schließtag.', '/caterer', 'closing_day', ?)`,
-			schoolID, accountID, deliveryContract.NotificationCatererSchoolClosingDayChanged, objectID)
+			(tenant_id, account_id, type, title, body, deep_link, related_type, related_id, created_at, updated_at)
+			VALUES (?, ?, ?, 'Neuer Schließtag', 'Am 12.06.2030 ist ein Schließtag.', '/caterer', 'closing_day', ?, ?, ?)`,
+			schoolID, accountID, deliveryContract.NotificationCatererSchoolClosingDayChanged, objectID, seededAt, seededAt)
 		require.NoError(t, err)
 	}
 	insert(other.ID, schools[0], 1)
