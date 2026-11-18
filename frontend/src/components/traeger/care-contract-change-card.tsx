@@ -5,7 +5,6 @@
 // Vertragsseite und gibt ihn selbst frei oder lehnt ihn ab, wie die Schule.
 // Nach der Freigabe folgt der Vertrag mit einer neuen Version.
 
-import { ArrowLeftRight } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useCallback, useState } from "react";
 import { Alert } from "~/components/ui/alert";
@@ -87,7 +86,6 @@ export function CareContractChangeCard({
 
   return (
     <SectionCard
-      icon={ArrowLeftRight}
       title="Änderungswunsch der Eltern"
       titleBadge={
         request ? (

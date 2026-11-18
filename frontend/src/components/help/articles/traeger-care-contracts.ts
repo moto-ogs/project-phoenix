@@ -84,7 +84,7 @@ export function traegerCareContractsTopic(): HelpTopic {
         description:
           "Die Eltern unterschreiben in der Eltern-App oder über den Link in der Mail. Sie zeichnen mit dem Finger oder tippen ihren Namen.",
         steps: [
-          "Öffne den Vertrag. Die Karte `Unterschrift` zeigt `Wartet auf Eltern` oder `Unterschrieben`.",
+          "Öffne den Vertrag und den Reiter `Unterschrift und Versand`. Die Karte `Unterschrift` zeigt `Wartet auf Eltern` oder `Unterschrieben`.",
           "Nach der Unterschrift ist der Vertrag `Aktiv`. Die Karte zeigt, wer wann auf welchem Weg unterschrieben hat, die Widerrufsfrist und die gespeicherte Unterschrift.",
           "Die Eltern bekommen eine Bestätigung mit dem Vertrag und der Widerrufsbelehrung per Mail.",
         ],
@@ -96,7 +96,7 @@ export function traegerCareContractsTopic(): HelpTopic {
         steps: [
           "Wähle oben `PDF herunterladen` und drucke den Vertrag.",
           "Die Eltern unterschreiben ihn. Scanne den unterschriebenen Vertrag als PDF.",
-          "Wähle auf der Vertragsseite in der Karte `Unterschrift` den Knopf `Papiervertrag erfassen`.",
+          "Wähle auf der Vertragsseite im Reiter `Unterschrift und Versand` in der Karte `Unterschrift` den Knopf `Papiervertrag erfassen`.",
           "Prüfe `Unterschrieben von` und `Unterschrieben am`. Wähle mit `PDF wählen` die Datei.",
           "Wähle `Vertrag abschließen`. Der Vertrag ist dann `Aktiv`. Mit `Papiervertrag laden` holst du das PDF später wieder.",
         ],
@@ -136,7 +136,7 @@ export function traegerCareContractsTopic(): HelpTopic {
         title: "Änderungswunsch der Eltern freigeben",
         steps: [
           "Die Eltern beantragen in der Eltern-App andere Tage oder Module. Du oder die Schule entscheidet.",
-          "Wähle in der Liste das Kind. Rechts steht die Karte `Änderungswunsch der Eltern`.",
+          "Wähle in der Liste das Kind. Im Reiter `Unterschrift und Versand` steht die Karte `Änderungswunsch der Eltern`. Wartet ein Wunsch, zeigt der Reiter eine Zahl.",
           "Je Modul siehst du die bisherige und die gewünschte Buchung. Bei festen Tagen steht dort `Gebucht (feste Tage)`.",
           "Module, die gleich bleiben, stehen darunter bei `Bleibt gebucht`.",
           "Wähle `Freigeben`. Prüfe `Gilt ab` und die angezeigten Änderungen. Wähle noch einmal `Freigeben`.",
@@ -149,7 +149,7 @@ export function traegerCareContractsTopic(): HelpTopic {
         steps: [
           "Nach einer Freigabe durch dich oder die Schule bekommt der aktive Vertrag nach wenigen Minuten eine neue Version. Sie gilt ab dem freigegebenen Tag.",
           "Wähle in der Liste das Kind. Oben steht, ab wann die neue Version gilt.",
-          "Unter `Versionen` siehst du jede Version mit ihren Tagen. `Geändert` markiert die Wochentage, die anders sind als vorher.",
+          "Im Reiter `Versionen` siehst du jede Version mit ihren Tagen. `Geändert` markiert die Wochentage, die anders sind als vorher.",
           "Mit `PDF` lädst du eine Version als PDF.",
         ],
       },
@@ -158,7 +158,7 @@ export function traegerCareContractsTopic(): HelpTopic {
         steps: [
           "Eltern kündigen selbst in der Eltern-App. Dann steht die Kündigung von allein beim Vertrag. Du musst nichts tun.",
           "Kam eine Kündigung per Mail oder Brief? Wähle in der Liste das Kind.",
-          "Rechts steht die Karte `Vertrag beenden`. Sie zeigt den Kündigungstermin und die Absendefrist für einen Widerruf.",
+          "Im Reiter `Kündigung` steht die Karte `Vertrag beenden`. Sie zeigt den Kündigungstermin und die Absendefrist für einen Widerruf.",
           "Wähle `Kündigung eintragen`.",
           "Wähle bei `Eingegangen am` den Tag, an dem die Mail oder der Brief ankam.",
           "Die Auswahl gilt für diesen Eingangstag, auch bei älteren Erklärungen. Wähle `Kündigung` oder `Widerruf`. Bei einer Kündigung wählst du den Termin oder `Außerordentlich, aus wichtigem Grund` und trägst den Grund der Eltern ein.",
@@ -171,10 +171,10 @@ export function traegerCareContractsTopic(): HelpTopic {
     result:
       "Die Eltern bekommen den Vertrag als PDF per Mail. Haben sie ein Konto in der Eltern-App, liegt er dort auch unter `Dokumente`. Wer dort `Neues Dokument vom Träger` eingeschaltet hat, bekommt dazu eine Nachricht aufs Handy. Gilt der Vertrag bei der Annahme, ist sein Status `Aktiv`. Sonst wird er `Versendet`: Der Versand ist beauftragt. Ob die Mail gesendet wurde, siehst du unter `Versand`.",
     notes: [
-      "Ein importierter Vertrag beginnt frühestens mit dem Schuljahr seines Moduls. Er endet auch mit diesem Schuljahr, wenn das Modul ein Ende hat und die Datei kein früheres nennt. Lief der Vertrag schon vorher, steht der frühere Tag unter `Abgeschlossen`. Der Vertrag ist mit keinem Kind aus den `Kinderdaten` der Schule verknüpft: moto gleicht Kinder nicht über den Namen ab. Unter `Versionen` steht bei ihm `Aus einer Datei importiert`.",
+      "Ein importierter Vertrag beginnt frühestens mit dem Schuljahr seines Moduls. Er endet auch mit diesem Schuljahr, wenn das Modul ein Ende hat und die Datei kein früheres nennt. Lief der Vertrag schon vorher, steht der frühere Tag unter `Abgeschlossen`. Der Vertrag ist mit keinem Kind aus den `Kinderdaten` der Schule verknüpft: moto gleicht Kinder nicht über den Namen ab. Im Reiter `Versionen` steht bei ihm `Aus einer Datei importiert`.",
       "Die Suche und die Filter gelten für alle Verträge. Mit `Weitere Verträge laden` zeigst du ältere Treffer an.",
       "Beim ersten Senden hält moto das PDF fest. Änderst du danach Bedingungen oder Brieftext, bleibt der versendete Vertrag gleich.",
-      "Unter `Versand` siehst du, ob die Mail gesendet wurde. Mit `Versand aktualisieren` prüfst du den neuen Stand. Mit `Erneut senden` geht dasselbe PDF noch einmal an die Eltern; moto fragt vorher. Bei einem aktiven Vertrag steht `Erneut senden` im Menü mit den drei Punkten oben rechts. Eine zweite Nachricht aufs Handy gibt es dabei nicht. Nur eine korrigierte Mail-Adresse bekommt eine eigene Nachricht.",
+      "Im Reiter `Unterschrift und Versand` siehst du in der Karte `Versand`, ob die Mail gesendet wurde. Mit `Versand aktualisieren` prüfst du den neuen Stand. Mit `Erneut senden` geht dasselbe PDF noch einmal an die Eltern; moto fragt vorher. Bei einem aktiven Vertrag steht `Erneut senden` im Menü mit den drei Punkten oben rechts. Eine zweite Nachricht aufs Handy gibt es dabei nicht. Nur eine korrigierte Mail-Adresse bekommt eine eigene Nachricht.",
       "Neben jedem Versand steht, was aus der Mail geworden ist: wie bei der Abrechnung. Der Hinweis oben nennt den Grund und den nächsten Schritt. Bei `Verzögert` wartest du. Hat die Schule die Mails gestoppt, kläre das mit der Schule. Bei `Gesperrt` klärt das der moto-Support. Solange das gilt, ist `Erneut senden` aus.",
       "Den Brieftext des Vertrags änderst du unter `Einstellungen` → `Briefkopf und Vorlagen` bei der Vorlage `Vertrag`.",
       "Mit `PDF herunterladen` bekommst du den Vertrag zum Drucken, etwa für Familien ohne Mail.",
@@ -220,7 +220,7 @@ export function traegerCareContractsTopic(): HelpTopic {
       "Ein Kind zeigt `Bedingungen der Module weichen ab`? Das Kind hat mehrere Module gebucht, und deren Vertragsbedingungen sind verschieden. Ein Vertrag hat eine Laufzeit und eine Frist. Gleiche die Bedingungen der Module an.",
       "Eine Endzeit fehlt? Das Modul hat für diesen Tag keine Gehzeit. Die Schule trägt sie beim Angebot ein.",
       "Ein Entwurf ist falsch? Wähle auf seiner Seite oben `Entwurf verwerfen`. Danach erstellst du ihn neu. Einen versendeten Vertrag kannst du nicht verwerfen.",
-      "Der Versand zeigt `Nicht angekommen`? Prüfe die Adresse mit der Schule. Trage auf der Vertragsseite unter `Versand` die `Neue Versandadresse` ein. Wähle `An diese Adresse senden`. Das geht auch bei aktiven Verträgen. Das PDF, der Abschluss, die Vertragspartei und bisherige Versanddaten bleiben gleich. Spätere Wiederholungen nutzen die letzte Versandadresse.",
+      "Der Versand zeigt `Nicht angekommen`? Prüfe die Adresse mit der Schule. Trage auf der Vertragsseite im Reiter `Unterschrift und Versand` unter `Versand` die `Neue Versandadresse` ein. Wähle `An diese Adresse senden`. Das geht auch bei aktiven Verträgen. Das PDF, der Abschluss, die Vertragspartei und bisherige Versanddaten bleiben gleich. Spätere Wiederholungen nutzen die letzte Versandadresse.",
       "Der Name des Vertragspartners fehlt? Ergänze den Briefkopf. Oder verwirf den Entwurf und erstelle ihn mit eingetragenem Vertragspartner neu.",
       "Die Eltern sagen, der Link gilt nicht mehr? Er war schon benutzt oder ist abgelaufen. Wähle `Erneut senden`. Die Eltern bekommen einen neuen Link. Oder sie unterschreiben in der Eltern-App unter `Dokumente`.",
       "Die Karte `Unterschrift` meldet, die Prüfsumme stimmt nicht? Der gespeicherte Nachweis wurde verändert. Melde das dem moto-Team.",

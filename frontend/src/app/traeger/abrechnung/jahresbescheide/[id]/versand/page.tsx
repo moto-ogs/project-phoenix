@@ -15,21 +15,18 @@ import {
 import { canSendMail } from "~/components/traeger/billing-mail-status";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { LetterSendCell } from "~/components/traeger/letter-send-cell";
+import { LetterDeliveryCard } from "~/components/traeger/letter-delivery-card";
 import {
-  TraegerListExportMenu,
   traegerExportScope,
+  useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
-import {
-  LetterSendState,
-  lettersToSend,
-} from "~/components/traeger/letter-send-state";
+import { lettersToSend } from "~/components/traeger/letter-send-state";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { ConfirmationModal } from "~/components/ui/modal";
 import {
   type OverflowMenuItem,
   OverflowMenu,
@@ -272,7 +269,6 @@ export default function TraegerCareNoticeDeliveryPage() {
   const actionErrors = useApiErrorDisplay();
   const { success } = useToast();
   const [creating, setCreating] = useState(false);
-  const [confirming, setConfirming] = useState(false);
   const [sendingAll, setSendingAll] = useState(false);
   const [sendingContract, setSendingContract] = useState<string | null>(null);
   const [printing, setPrinting] = useState(false);
@@ -324,7 +320,6 @@ export default function TraegerCareNoticeDeliveryPage() {
       void actionErrors.show(err, { object: "die Bescheide" });
     } finally {
       setSendingAll(false);
-      setConfirming(false);
       loadLetters();
     }
   };
@@ -382,6 +377,18 @@ export default function TraegerCareNoticeDeliveryPage() {
       : []),
   ];
 
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList(
+        `/api/traeger/care-notice-runs/${runId}/letters/export`,
+        format,
+      ),
+    scope: traegerExportScope(),
+    fallbackName: `bescheid-versand-${run?.year ?? ""}`,
+    errorObject: "die Versandliste",
+    unavailable: !letters || letters.notices.length === 0,
+  });
+
   return (
     <TenantPage
       title={run ? `Versand der Jahresbescheide ${run.year}` : "Versand"}
@@ -409,23 +416,15 @@ export default function TraegerCareNoticeDeliveryPage() {
         ) : null
       }
       statsLoading={loading}
-      actions={
-        run && released ? (
-          <TraegerListExportMenu
-            download={(format) =>
-              downloadTraegerList(
-                `/api/traeger/care-notice-runs/${run.id}/letters/export`,
-                format,
-              )
+      overflowMenu={run && released ? exportItems : undefined}
+      empty={
+        run && !released
+          ? {
+              title: "Noch nicht ausgestellt",
+              description:
+                "Versenden kannst du erst ausgestellte Bescheide. Stelle sie auf der Seite des Jahreslaufs aus.",
             }
-            scope={traegerExportScope()}
-            ariaLabel="Versandliste herunterladen"
-            tooltip="Zeigt die Formate für alle Bescheide des Versands. Jeder Download wird protokolliert."
-            fallbackName={`bescheid-versand-${run.year}`}
-            errorObject="die Versandliste"
-            unavailable={!letters || letters.notices.length === 0}
-          />
-        ) : undefined
+          : null
       }
       error={loadError}
       loading={loading}
@@ -443,53 +442,14 @@ export default function TraegerCareNoticeDeliveryPage() {
               }
               onClose={() => setShown(null)}
             />
-            <ConfirmationModal
-              isOpen={confirming}
-              title="An alle senden?"
-              confirmText={
-                toSend === 1
-                  ? "1 Bescheid senden"
-                  : `${toSend} Bescheide senden`
-              }
-              isConfirmLoading={sendingAll}
-              loadingText="Wird gesendet …"
-              onClose={() => setConfirming(false)}
-              onConfirm={() => void sendAll()}
-            >
-              <div className="space-y-3 text-sm text-gray-700">
-                <p>
-                  {toSend === 1
-                    ? "1 Bescheid geht jetzt per E-Mail an die Familie."
-                    : `${toSend} Bescheide gehen jetzt per E-Mail an die Familien.`}{" "}
-                  Mit einem Konto in der Eltern-App liegt er auch dort unter
-                  „Dokumente“.
-                </p>
-                {summary.withoutEmail > 0 ? (
-                  <p>
-                    {familyCount(summary.withoutEmail)} ohne E-Mail-Adresse{" "}
-                    {summary.withoutEmail === 1 ? "bekommt" : "bekommen"}{" "}
-                    nichts. Drucke deren Bescheid.
-                  </p>
-                ) : null}
-              </div>
-            </ConfirmationModal>
           </>
         ) : null
       }
     >
-      {run && !released ? (
-        <SectionCard
-          title="Noch nicht ausgestellt"
-          description="Versenden kannst du erst ausgestellte Bescheide. Stelle sie auf der Seite des Jahreslaufs aus."
-        />
-      ) : null}
-      {released && lettersError ? (
+      {released && lettersError && summary?.letters === 0 ? (
         <SectionCard title="Versand an die Familien">
           <LoadErrorAlert error={lettersError} actionLayout="responsive" />
         </SectionCard>
-      ) : null}
-      {released && !lettersError && !summary ? (
-        <SectionCard title="Versand an die Familien" loading />
       ) : null}
       {released && summary && missing > 0 ? (
         <SectionCard
@@ -512,71 +472,75 @@ export default function TraegerCareNoticeDeliveryPage() {
           }
         />
       ) : null}
-      {released && summary && summary.letters > 0 ? (
-        <SectionCard
+      {released && (!summary || summary.letters > 0) ? (
+        <LetterDeliveryCard
           title="Versand an die Familien"
           description="Jede Familie bekommt das gespeicherte Original per E-Mail. Hat sie mit dieser Adresse ein Konto in der Eltern-App, liegt es dort unter „Dokumente“. Familien ohne E-Mail gibst du den gedruckten Bescheid."
-          action={
-            <div className="flex flex-wrap gap-2">
-              <OverflowMenu
-                ariaLabel="Bescheide drucken"
-                triggerButton={{ variant: "outline", size: "md" }}
-                triggerContent={printing ? "Wird erstellt …" : "Drucken"}
-                disabled={printing}
-                items={printItems}
-              />
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                isLoading={sendingAll}
-                loadingText="Wird gesendet …"
-                disabled={toSend === 0}
-                disabledReason={sendAllBlockReason(summary, missing)}
-                tooltip="moto fragt vorher nach, dann gehen die Bescheide per E-Mail an die Familien."
-                onClick={() => setConfirming(true)}
-              >
-                An alle senden
-              </Button>
-            </div>
-          }
+          summary={summary}
+          loadError={lettersError}
+          noun={{ one: "Bescheid", many: "Bescheiden", plural: "Bescheide" }}
+          print={{
+            ariaLabel: "Bescheide drucken",
+            items: printItems,
+            running: printing,
+          }}
+          sendAll={{
+            sending: sendingAll,
+            disabledReason: summary ? sendAllBlockReason(summary, missing) : "",
+            confirmText:
+              toSend === 1 ? "1 Bescheid senden" : `${toSend} Bescheide senden`,
+            confirmBody: (
+              <>
+                <p>
+                  {toSend === 1
+                    ? "1 Bescheid geht jetzt per E-Mail an die Familie."
+                    : `${toSend} Bescheide gehen jetzt per E-Mail an die Familien.`}{" "}
+                  Mit einem Konto in der Eltern-App liegt er auch dort unter
+                  „Dokumente“.
+                </p>
+                {summary && summary.withoutEmail > 0 ? (
+                  <p>
+                    {familyCount(summary.withoutEmail)} ohne E-Mail-Adresse{" "}
+                    {summary.withoutEmail === 1 ? "bekommt" : "bekommen"}{" "}
+                    nichts. Drucke deren Bescheid.
+                  </p>
+                ) : null}
+              </>
+            ),
+            onConfirm: sendAll,
+          }}
         >
-          <div className="space-y-5">
-            <LetterSendState
-              summary={summary}
-              noun={{ one: "Bescheid", many: "Bescheiden" }}
-            />
-            <Alert
-              type="info"
-              title="Keine förmliche Zustellung"
-              message="E-Mail und Eltern-App sind kein Nachweis, dass die Familie den Bescheid bekommen hat. Brauchst du einen Nachweis? Dann stelle den Bescheid zusätzlich auf anderem Weg zu."
-            />
-            {summary.queued > 0 ? (
-              <p className="text-sm text-gray-600" role="status">
-                {summary.queued === 1
-                  ? "1 Bescheid wird noch gesendet."
-                  : `${summary.queued} Bescheide werden noch gesendet.`}{" "}
-                Die Seite zeigt den neuen Stand von selbst.
-              </p>
-            ) : null}
-            {summary.failed > 0 ? (
-              <p className="text-sm text-gray-600">
-                Einige Bescheide sind nicht angekommen. Sende diese über das
-                Menü ihrer Zeile erneut oder drucke sie.
-              </p>
-            ) : null}
-            {toSend === 0 &&
-            summary.sent > 0 &&
-            summary.queued === 0 &&
-            summary.failed === 0 &&
-            missing === 0 ? (
-              <p className="text-sm text-gray-600">
-                Alle Bescheide mit E-Mail-Adresse sind gesendet. Einzelne
-                Bescheide sendest du erneut über das Menü ihrer Zeile.
-              </p>
-            ) : null}
-          </div>
-        </SectionCard>
+          <Alert
+            type="info"
+            title="Keine förmliche Zustellung"
+            message="E-Mail und Eltern-App sind kein Nachweis, dass die Familie den Bescheid bekommen hat. Brauchst du einen Nachweis? Dann stelle den Bescheid zusätzlich auf anderem Weg zu."
+          />
+          {summary && summary.queued > 0 ? (
+            <p className="text-sm text-gray-600" role="status">
+              {summary.queued === 1
+                ? "1 Bescheid wird noch gesendet."
+                : `${summary.queued} Bescheide werden noch gesendet.`}{" "}
+              Die Seite zeigt den neuen Stand von selbst.
+            </p>
+          ) : null}
+          {summary && summary.failed > 0 ? (
+            <p className="text-sm text-gray-600">
+              Einige Bescheide sind nicht angekommen. Sende diese über das Menü
+              ihrer Zeile erneut oder drucke sie.
+            </p>
+          ) : null}
+          {summary &&
+          toSend === 0 &&
+          summary.sent > 0 &&
+          summary.queued === 0 &&
+          summary.failed === 0 &&
+          missing === 0 ? (
+            <p className="text-sm text-gray-600">
+              Alle Bescheide mit E-Mail-Adresse sind gesendet. Einzelne
+              Bescheide sendest du erneut über das Menü ihrer Zeile.
+            </p>
+          ) : null}
+        </LetterDeliveryCard>
       ) : null}
       {released && letters ? (
         <DataTable
