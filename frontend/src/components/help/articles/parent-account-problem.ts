@@ -15,7 +15,7 @@ export function parentAccountProblemTopic(): HelpTopic {
       "Lies, was auf der Seite steht.",
       "Prüfe, ob du den Link schon einmal geöffnet hast.",
       "Versuche, dich direkt anzumelden.",
-      "Klappt das nicht, bitte deine OGS um eine neue Einladung.",
+      "Klappt das nicht, frag deine OGS nach einer neuen Einladung.",
     ],
     result: "Mit einer neuen Einladung kannst du dein Passwort festlegen.",
     notes: ["Ein Einladungslink lässt sich nur einmal benutzen."],

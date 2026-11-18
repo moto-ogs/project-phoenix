@@ -34,7 +34,7 @@ export function parentAccountTopic(): HelpTopic {
       "Du siehst `Konto erstellt`? Dann hat es geklappt. Melde dich jetzt an.",
     ],
     troubleshootingDetails: [
-      "Die Seite sagt, die Einladung sei abgelaufen oder schon benutzt? Bitte deine OGS um eine neue Einladung.",
+      "Die Seite sagt, die Einladung sei abgelaufen oder schon benutzt? Frag deine OGS nach einer neuen Einladung.",
       "Die Seite sagt, für diese E-Mail gebe es schon ein Konto? Dann melde dich direkt an.",
     ],
     related: [

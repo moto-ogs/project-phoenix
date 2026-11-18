@@ -172,7 +172,7 @@ function ScheduleSection({
       <EmptyState
         variant="compact"
         title="Keine Vertretungen verfügbar"
-        description="Bitte einen Admin um Zugriff auf Vertretungen."
+        description="Frag einen Admin nach Zugriff auf Vertretungen."
       />
     );
   }

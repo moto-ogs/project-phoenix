@@ -106,7 +106,7 @@ const PREVIEW: DocumentTemplatePreview = {
       rows: [{ label: "Gesamtbetrag", value: "92,50 €", bold: true }],
     },
   ],
-  closing: ["Mit freundlichen Grüßen", "Euer Träger"],
+  closing: ["Mit freundlichen Grüßen", "Träger Musterstadt"],
 };
 
 const MASTER_DATA: TraegerMasterData = {

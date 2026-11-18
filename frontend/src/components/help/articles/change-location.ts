@@ -71,7 +71,7 @@ export function changeLocationTopic(presenceMode: HelpPresenceMode): HelpTopic {
       "Oder filtere unter `Alle Kinder` nach `Unterwegs`. Wähle dann oben die Karte `Unterwegs`.",
       "Steht hinter dem Zielraum `(offener Raum)`? Dort braucht es keine Aufsicht. Das Kind nutzt den Raum dann, ohne an einem Angebot teilzunehmen.",
       "Fehlt der Zielraum? Prüfe dort `Aktuelle Aufsicht`.",
-      "Beaufsichtigst du keinen der beiden Räume? Bitte eine zuständige Aufsicht. Oder frage deine Leitung.",
+      "Beaufsichtigst du keinen der beiden Räume? Frag eine zuständige Aufsicht. Oder frage deine Leitung.",
     ],
     troubleshooting: HELP_TOPICS.missingChildOrGroup,
     related: [

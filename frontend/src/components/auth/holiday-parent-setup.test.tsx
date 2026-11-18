@@ -199,7 +199,7 @@ describe("HolidayParentSetupView (#6673)", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/bitte den Träger um einen neuen Link/),
+      screen.getByText(/frag den Träger nach einem neuen Link/),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Anmelden" })).toHaveAttribute(
       "href",

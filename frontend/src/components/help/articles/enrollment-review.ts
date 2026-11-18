@@ -71,7 +71,7 @@ export function enrollmentReviewTopic(): HelpTopic {
       "Steht dort `Dieser Elternteil darf das Kind nicht mehr anmelden`, prüfe Name und Geburtsdatum. Ist das Kind schon angemeldet, wähle `Bestehendes Kind verwenden`. Die Eltern bekommen dadurch keinen Zugang. `Als neues Kind anlegen` wählst du nur, wenn es ein anderes Kind ist. Bei einer Anmeldung nur für angemeldete Kinder gibt es diese Wahl nicht. Passt kein Kind, lehne die Anmeldung ab.",
       "Eine Anmeldung war versehentlich abgelehnt? Wähle `Anmeldung wiederherstellen`.",
       "Bei einem Nachweis steht `Keine Berechtigung zum Öffnen`? Dann fehlt dir das Recht `Nachweise aus Anmeldungen ansehen`. Frage deine Leitung.",
-      "Bei einem Nachweis steht `Nachweis gelöscht (Löschfrist abgelaufen)`? Die Frist ist vorbei. Bitte die Eltern bei Bedarf um einen neuen Nachweis.",
+      "Bei einem Nachweis steht `Nachweis gelöscht (Löschfrist abgelaufen)`? Die Frist ist vorbei. Frag die Eltern bei Bedarf nach einem neuen Nachweis.",
       "Bei der Unterschrift steht `Der gespeicherte Eintrag wurde nachträglich verändert`? Dann passt die Unterschrift nicht mehr zu ihrer Prüfsumme. Wende dich an das moto-Team.",
       "Beim Bestätigen erscheint `Das Kinderkontingent deiner Schule ist voll`? Dann bleibt die Anmeldung offen. Für weitere Kinder melde dich beim moto-Team.",
       "Kinder, die schon aktiv oder vorgemerkt sind, kannst du auch bei vollem Kinderkontingent verlängern.",

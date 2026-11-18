@@ -12,6 +12,6 @@
   "existsSubtitle": "Melde dich an. Dann siehst du auch deine Ferienanmeldungen bei {traeger}.",
   "invalidTitle": "Dieser Link gilt nicht mehr",
   "invalidText": "Der Link ist abgelaufen oder unvollständig.",
-  "invalidNext": "Hast du schon ein Elternkonto? Dann melde dich an. Sonst bitte den Träger um einen neuen Link.",
+  "invalidNext": "Hast du schon ein Elternkonto? Dann melde dich an. Sonst frag den Träger nach einem neuen Link.",
   "errorObject": "Dein Elternkonto"
 }

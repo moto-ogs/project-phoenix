@@ -20,7 +20,7 @@ export function missingChildOrGroupTopic(groupMode: HelpGroupMode): HelpTopic {
       ...(groupMode === "fixed_groups"
         ? [
             "Fehlt das Kind nur unter `Gruppen`? Prüfe, ob du die richtige Gruppe geöffnet hast.",
-            "Bitte deine Leitung, die Gruppe des Kindes und deine Gruppenzuordnung zu prüfen.",
+            "Frag deine Leitung, ob sie die Gruppe des Kindes und deine Gruppenzuordnung prüft.",
           ]
         : groupMode === "open_care"
           ? [

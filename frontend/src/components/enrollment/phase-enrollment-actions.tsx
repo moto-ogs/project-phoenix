@@ -181,7 +181,7 @@ export function LateInviteModal({
                   url={generatedUrl}
                   componentId={`LateInvite:${phase.id}:${generatedUrl}`}
                   label="Nachzügler-Link kopieren"
-                  tooltip="Kopiert den Link, damit du ihn dieser Familie geben können."
+                  tooltip="Kopiert den Link, damit du ihn dieser Familie geben kannst."
                   qrCode={{
                     title: "QR-Code für den Nachzügler-Link",
                     fileName: "qr-code-nachzuegler-anmeldung",

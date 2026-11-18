@@ -122,7 +122,7 @@ export function traegerStaffRecordsTopic(): HelpTopic {
       "Die Verarbeitung stützt sich auf Art. 6 Abs. 1 lit. b und c DSGVO: dein Träger ist der Arbeitgeber.",
     ],
     differences: [
-      "Du siehst nur einen Hinweis, dass Personal beim Träger noch nicht freigeschaltet ist: Bitte das moto-Team um die Freigabe.",
+      "Du siehst nur einen Hinweis, dass Personal beim Träger noch nicht freigeschaltet ist: Frag das moto-Team nach der Freigabe.",
       "Du siehst `Personalakten` nicht in der Navigation: dir fehlt die Rolle `Personal`.",
     ],
     troubleshootingDetails: [

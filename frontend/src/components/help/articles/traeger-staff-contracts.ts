@@ -77,7 +77,7 @@ export function traegerStaffContractsTopic(): HelpTopic {
     troubleshootingDetails: [
       "„Die Schule hat die Zeit davor schon abgerechnet“: Wähle den genannten Tag oder einen späteren.",
       "„An der Schule gilt an diesen Tagen schon ein anderer Arbeitsvertrag“: Beende zuerst den anderen Vertrag.",
-      "„Die Schule hat für die Woche schon eine eigene Sonderarbeitszeit“: Bitte die Schule, sie zu löschen.",
+      "„Die Schule hat für die Woche schon eine eigene Sonderarbeitszeit“: Frag die Schule, ob sie sie löscht.",
       "„Noch nicht bei … angekommen“: Die Änderung ist gespeichert. Speicherst du später eine weitere Änderung, dann holt moto es nach.",
       "`Vertrag löschen` geht nicht: Der Vertrag hat schon gezählt. Trage stattdessen einen letzten Tag ein.",
     ],

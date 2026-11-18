@@ -94,7 +94,7 @@ export function HolidayClosureNotices({
   } = useNoticeList(rows, isSending);
   const title = "Eltern der Ferienbetreuung informieren";
   const description =
-    "Diese Schließtage liegen in gebuchten Ferienwochen. Die Eltern bekommen erst eine E-Mail, wenn du oder das Träger-Büro „Eltern informieren“ wählen.";
+    "Diese Schließtage liegen in gebuchten Ferienwochen. Die Eltern bekommen erst eine E-Mail, wenn du oder das Träger-Büro „Eltern informieren“ wählt.";
   const renderRow = (
     row: HolidayClosureNoticeRowContent<HolidayClosureNotice>,
   ) => {

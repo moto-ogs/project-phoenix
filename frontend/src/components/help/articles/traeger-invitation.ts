@@ -35,7 +35,7 @@ export function traegerInvitationTopic(): HelpTopic {
       "Deinen Namen änderst du später im Profil-Menü unter `Konto`.",
     ],
     troubleshootingDetails: [
-      "moto sagt, die Einladung sei abgelaufen? Bitte das Träger-Büro oder das moto-Team um eine neue Einladung.",
+      "moto sagt, die Einladung sei abgelaufen? Frag das Träger-Büro oder das moto-Team nach einer neuen Einladung.",
       "Du kennst das Passwort deines vorhandenen moto-Kontos nicht mehr? Wähle in der Anmeldung des Träger-Portals `Passwort vergessen?`.",
     ],
     related: [HELP_TOPICS.traegerLogin, HELP_TOPICS.traegerProfile],

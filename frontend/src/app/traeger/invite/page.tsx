@@ -309,7 +309,7 @@ function InviteContent() {
       <div className="space-y-4 text-left">
         <Alert
           type="warning"
-          message="Der Link ist unvollständig. Öffne den Link aus deiner Einladungs-Mail noch einmal. Klappt das nicht, bitte das Träger-Büro um eine neue Einladung."
+          message="Der Link ist unvollständig. Öffne den Link aus deiner Einladungs-Mail noch einmal. Klappt das nicht, frag das Träger-Büro nach einer neuen Einladung."
         />
         <ButtonLink
           href={traegerPath("/traeger/login")}

@@ -40,7 +40,7 @@ export function carePlanTopic(presenceMode: HelpPresenceMode): HelpTopic {
       "Betreut deine OGS am Wochenende? Dann gilt dort der Freitagsplan. Am Wochenende zeigt die Wochenansicht dieser Woche auch Samstag und Sonntag.",
     ],
     troubleshootingDetails: [
-      "Der Tab `Betreuungsplan` fehlt? Bitte deine Leitung, deinen Zugang zu prüfen.",
+      "Der Tab `Betreuungsplan` fehlt? Frag deine Leitung, ob sie deinen Zugang prüft.",
       "Steht dort `Noch kein Planungszeitraum`? Dann hat deine Leitung den Zeitraum noch nicht angelegt.",
       "Steht dort `Für diese Auswahl ist nichts geplant`? Stelle die Filter wieder auf `Alle Gruppen`, `Alle Personen` und `Alle Räume`.",
     ],

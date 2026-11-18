@@ -25,7 +25,7 @@ export function attendanceProblemTopic(
           ]
         : []),
       "Versuche die Aktion erneut.",
-      "Fehlt die Aktion weiterhin? Bitte deine Leitung, dein Recht zum An- und Abmelden zu prüfen.",
+      "Fehlt die Aktion weiterhin? Frag deine Leitung, ob sie dein Recht zum An- und Abmelden prüft.",
     ],
     result:
       "Stimmen Status und Rechte, ist die Aktion verfügbar. Sonst prüft deine Leitung den Zugang.",

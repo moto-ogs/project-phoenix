@@ -90,7 +90,7 @@ export function HolidayOwnChildrenCard({
             <p className="mb-3 text-sm text-gray-600">
               moto findet ein Kind über Vorname, Nachname und Geburtsdatum. Für
               diese Kinder ist nichts eingeplant. Ändere die Kinderakte oder
-              bitte den Träger, die Anmeldung zu ändern.
+              frag den Träger, ob er die Anmeldung ändert.
             </p>
             <ResponsiveActionList>
               {open.map(({ assignment, child }) => {

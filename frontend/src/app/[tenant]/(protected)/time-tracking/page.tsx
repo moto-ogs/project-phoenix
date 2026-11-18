@@ -2542,7 +2542,7 @@ function EditSessionModal({
       onCancel={onClose}
       onConfirm={handleSave}
       confirmLabel={saving ? "Speichern…" : "Speichern"}
-      confirmTooltip="Speichert die Korrektur im Verlauf, den du und die Leitung seht."
+      confirmTooltip="Speichert die Korrektur im Verlauf. Du und die Leitung sehen ihn."
       confirmDisabled={
         saving ||
         !startTime ||

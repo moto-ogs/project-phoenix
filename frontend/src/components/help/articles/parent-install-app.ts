@@ -41,7 +41,7 @@ export function parentInstallAppTopic(): HelpTopic {
       "Nutzt du Samsung Internet? Installiere moto darüber nicht. Öffne moto in Chrome und melde dich dort an.",
     ],
     troubleshootingDetails: [
-      "Du findest den Punkt im Menü nicht? Prüfe, ob du wirklich in Safari oder Chrome sind.",
+      "Du findest den Punkt im Menü nicht? Prüfe, ob du wirklich in Safari oder Chrome bist.",
       "Benachrichtigungen kommen erst an, wenn moto auf dem Startbildschirm liegt.",
     ],
     related: [

@@ -28,7 +28,7 @@ export function teacherAccessTopic(): HelpTopic {
       "moto schule hat eine eigene Adresse. Über die Adresse der OGS kommst du nicht hinein.",
     ],
     troubleshootingDetails: [
-      "Der Link funktioniert nicht mehr? Bitte die OGS um eine neue Einladung.",
+      "Der Link funktioniert nicht mehr? Frag die OGS nach einer neuen Einladung.",
     ],
     related: [
       HELP_TOPICS.teacherLogin,

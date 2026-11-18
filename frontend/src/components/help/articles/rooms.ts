@@ -121,7 +121,7 @@ export function roomsTopic(presenceMode: HelpPresenceMode): HelpTopic {
       "Ist `Kinder anmelden` ausgegraut? Dann läuft im Raum gerade keine Aufsicht und er ist nicht freigegeben. Sobald dort eine Aufsicht läuft, kannst du Kinder anmelden.",
       "Steht unter `Zielraum` `Keine aktiven Räume`? Dann läuft gerade keine Aufsicht, in die du Kinder setzen kannst.",
       "Fehlt unter `Unterwegs` die Auswahl der Kinder? Dann erfasst deine OGS die Anwesenheit nicht über die App. Frage deine Leitung.",
-      "Fehlt der Reiter `Plan` oder `Raumplan als PDF`? Bitte deine Leitung, deinen Zugang zu prüfen.",
+      "Fehlt der Reiter `Plan` oder `Raumplan als PDF`? Frag deine Leitung, ob sie deinen Zugang prüft.",
     ],
     related: [HELP_TOPICS.activeSupervision, HELP_TOPICS.changeLocation],
   };

@@ -75,7 +75,7 @@ export function traegerCatalogPhasesTopic(): HelpTopic {
       "Eine zurückgezogene Anmeldephase lässt sich nicht mehr ändern. Das Formular fehlt dann.",
     ],
     troubleshootingDetails: [
-      "Eine Schule `Lehnt ab`? Der Grund steht daneben. Passe deine Angaben an oder bitte die Schule um eine Änderung. Danach siehst du die Vorschau noch einmal an.",
+      "Eine Schule `Lehnt ab`? Der Grund steht daneben. Passe deine Angaben an oder frag die Schule nach einer Änderung. Danach siehst du die Vorschau noch einmal an.",
       "Beim Übertragen steht, dass sich seit der Vorschau etwas geändert hat? moto lädt die Vorschau neu. Prüfe sie und wähle noch einmal `Freigeben und übertragen`.",
       "Bei einer Schule steht `Nicht übertragen`? Die Schule hat während der Vorschau etwas geändert. Übertrage noch einmal.",
     ],

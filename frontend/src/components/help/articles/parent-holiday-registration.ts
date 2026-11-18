@@ -74,7 +74,7 @@ export function parentHolidayRegistrationTopic(): HelpTopic {
     differences: [
       "Fragt das Formular `Hat dein Kind Allergien oder Unverträglichkeiten?`? Dann braucht der Träger die Angaben zu Allergien und Medikamenten. Wähle bei jeder Frage `Nein, keine` oder `Ja`. Bei `Ja` schreibe auf, was dein Kind hat. Weitere Hinweise bleiben freiwillig.",
       "Steht in der Eltern-App `Anmeldung ab` mit einem Datum? Dann beginnt die Anmeldung an diesem Tag. Ab dann siehst du den Knopf `Jetzt anmelden`.",
-      "Du hast den Link geöffnet und bist nicht angemeldet? Oben steht `Hast du schon die Eltern-App?`. Wähle `Anmelden`. Danach kommst du zurück zum Formular.",
+      "Du hast den Link geöffnet und bist nicht angemeldet? Oben steht `Du hast schon die Eltern-App?`. Wähle `Anmelden`. Danach kommst du zurück zum Formular.",
       "Ist die Anmeldung verbindlich, heißt der Knopf `Verbindlich anmelden`.",
       "Bist du mit deinem Elternkonto in moto angemeldet? Dann steht unter `Kinder` der Abschnitt `Deine Kinder aus dem Elternkonto`. Setze den Haken bei deinem Kind. Name, Geburtsdatum und Schule stehen dann schon im Formular, deine Angaben und deine Anschrift auch.",
       "Mit dem Haken trägt moto auch die `Zweite sorgeberechtigte Person` und die `Kontakte` ein. Die Angaben kommen von der Schule. Unter jedem Feld, das moto so ausfüllt, steht `Aus dem Elternkonto`. Änderst du das Feld, verschwindet der Satz.",
@@ -90,7 +90,7 @@ export function parentHolidayRegistrationTopic(): HelpTopic {
       "moto sagt, den Anmeldelink gebe es nicht? Frage den Träger nach dem richtigen Link.",
       "Steht vor dem Absenden `Die Sicherheitsprüfung lädt nicht`? Oft blockiert ein Werbeblocker die Prüfung. Schalte ihn für die Seite aus und wähle `Prüfung neu starten`. Hilft das nicht, wähle `Link kopieren` und öffne den Link in einem anderen Browser, zum Beispiel Chrome.",
       "Steht nach `Stand ansehen` `Wir finden diese Anmeldung nicht`? Öffne den Link noch einmal aus der E-Mail. Nach den Ferien löscht der Träger die Anmeldung. Dann gilt auch der Link nicht mehr.",
-      "Der Link zum Elternkonto gilt nicht mehr? Er gilt 30 Tage. Hast du schon ein Konto, melde dich an. Sonst bitte den Träger um einen neuen Link.",
+      "Der Link zum Elternkonto gilt nicht mehr? Er gilt 30 Tage. Hast du schon ein Konto, melde dich an. Sonst frag den Träger nach einem neuen Link.",
       "Du siehst eine Anmeldung nicht unter `Ferienanmeldungen`? Dort stehen Anmeldungen mit der E-Mail-Adresse deines Kontos. Hast du eine andere Adresse eingetragen, frage den Träger.",
     ],
     related: [HELP_TOPICS.parentEnroll],

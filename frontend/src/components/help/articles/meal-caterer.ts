@@ -41,7 +41,7 @@ export function mealCatererTopic(): HelpTopic {
     troubleshootingDetails: [
       "Kam keine E-Mail an? Unter `Offene Einladungen` steht bei der Adresse, was aus der Mail wurde, zum Beispiel `Zugestellt` oder `Nicht zustellbar`. Stimmt die Adresse nicht, widerrufst du die Einladung im Menü mit den drei Punkten mit `Widerrufen`. Sende dann eine neue.",
       "Fehlt die Karte `Caterer`? Dann ist `Anmeldung zum Mittagessen` aus, oder dein Konto darf den Speiseplan nicht bearbeiten.",
-      "Steht auf der Karte nur „Einen Caterer einladen können nur Admins deiner Schule.“? Dann bitte einen Admin deiner Schule um die Einladung.",
+      "Steht auf der Karte nur „Einen Caterer einladen können nur Admins deiner Schule.“? Dann frag einen Admin deiner Schule nach der Einladung.",
       "Kommt dein Caterer nicht mehr an den Code für die Zwei-Faktor-Anmeldung? Dann meldet er sich beim moto-Team. Du als Schule kannst sie nicht zurücksetzen, weil ein Caterer mehrere Schulen beliefern kann.",
     ],
     related: [HELP_TOPICS.leadMealOrdering, HELP_TOPICS.leadMealPlan],

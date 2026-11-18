@@ -42,7 +42,7 @@ var samples = map[string]Value{
 	pRegistrant.Name:    {Text: "Erika Muster"},
 	pChildren.Name:      {Text: "Lina und Ben"},
 	pDate.Name:          {Text: "02.11.2026"},
-	pSender.Name:        {Text: "Euer Träger"},
+	pSender.Name:        {Text: "Träger Musterstadt"},
 	pContact.Name:       {Text: "Paula Kern"},
 	pQuestions.Name:     {Text: "Bei Fragen erreicht ihr Paula Kern unter 05402 1234-0."},
 	pPeriod.Name:        {Text: "Herbstferien 2026"},

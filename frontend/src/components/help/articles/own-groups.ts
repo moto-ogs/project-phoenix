@@ -75,7 +75,7 @@ export function ownGroupsTopic(
       "Ist für eine Gruppe keine Gruppenleitung eingetragen, fehlt diese Zeile auf ihrer Karte.",
       "Eine vorübergehend übernommene Gruppe ist mit `Vertretung` markiert.",
       "In der Seitenleiste stehen unter `Gruppen` deine eigenen Gruppen. Dahinter steht, wie viele Kinder gerade da sind. Hast du eine andere Gruppe geöffnet, steht sie markiert darunter.",
-      "Fehlt eine Gruppe? Bitte deine Leitung, deine Gruppenzuordnung zu prüfen.",
+      "Fehlt eine Gruppe? Frag deine Leitung, ob sie deine Gruppenzuordnung prüft.",
       // Einstellung „Kinder nur über ‚Alle Kinder‘ finden“ (#1321).
       "Fehlt `Gruppen` in der Navigation? Öffne `Alle Kinder` und wähle oben `Meine Gruppe`. Die Gruppenseite öffnest du im Menü mit den drei Punkten unter `Zur Gruppenseite`.",
     ],

@@ -36,7 +36,7 @@ export function invitationTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Du findest keine Einladungs-Mail? Prüfe auch deinen Spam-Ordner. Bitte sonst deine Leitung um eine neue Einladung.",
-      "Die Einladung ist abgelaufen oder wurde schon verwendet? Bitte deine Leitung um eine neue Einladung.",
+      "Die Einladung ist abgelaufen oder wurde schon verwendet? Frag deine Leitung nach einer neuen Einladung.",
       "Die Einladung ist nicht für dich oder die Rolle ist falsch? Nimm sie nicht an und wende dich an deine Leitung.",
     ],
     related: [HELP_TOPICS.login, HELP_TOPICS.installApp],

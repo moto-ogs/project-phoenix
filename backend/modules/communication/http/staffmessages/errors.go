@@ -62,7 +62,7 @@ var staffMessagingErrorRules = []common.ErrorRule{
 		return common.ErrorConflictMessage("Diese Person kannst du nicht anschreiben.")
 	}},
 	{Target: communication.ErrStaffMessageSelfConversation, Render: func(_ error) render.Renderer {
-		return common.ErrorInvalidRequestMessage("Du kannst dich nicht selbst schreiben.")
+		return common.ErrorInvalidRequestMessage("Du kannst dir nicht selbst schreiben.")
 	}},
 	{Target: communication.ErrStaffMessageEmptyBody, Render: func(_ error) render.Renderer {
 		return common.ErrorInvalidRequestMessage("Die Nachricht darf nicht leer sein.")
@@ -120,7 +120,7 @@ func renderStaffMessagingError(w http.ResponseWriter, r *http.Request, err error
 }
 
 // currentAccountID returns the caller's account id, or 0 when absent. Used only
-// to decorate the inbox preview with "Sie: "; authorization never depends on it.
+// to decorate the inbox preview with "Du: "; authorization never depends on it.
 func currentAccountID(r *http.Request) int64 {
 	if id := sessiontoken.ActorAccountIDFromCtx(r.Context()); id != nil {
 		return *id

@@ -58,7 +58,7 @@ export const STANDARD_LEGAL_BLOCKS: FormLegalBlock[] = [
     kind: "notice",
     title: "E-Mail-Kontakt",
     label:
-      "Die Schule nutzt deine E-Mail-Adresse für Rückfragen und Status-Benachrichtigungen zu dieser Anmeldung.",
+      "Die Schule nutzt Ihre E-Mail-Adresse für Rückfragen und Status-Benachrichtigungen zu dieser Anmeldung.",
     text: "",
     required: false,
     enabled: false,

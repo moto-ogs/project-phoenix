@@ -36,9 +36,16 @@ fort. Begrüßungen nutzten schon vorher den Vornamen.
 - Zitierte Texte Dritter und gesetzlich vorgegebene Wortlaute bleiben wörtlich.
 - Versionierte Einwilligungs- und Erklärungstexte, denen Personen schon
   zugestimmt haben, bleiben wörtlich. Eine Du-Fassung braucht eine neue Version.
+- Standardhinweise, die mit ihrem Wortlaut in Nachweise und gespeicherte
+  Formularvorlagen eingehen (E-Mail-Kontakt im Anmeldeformular), bleiben
+  wörtlich.
 - Die übrigen Sprachen und PyrePortal folgen in eigenen Schnitten.
 
 ## Folgen
+
+Schreiben mit eigener Vorlage eines Trägers behalten dessen Wortlaut. Die
+Bausteine, die moto einsetzt, stehen in der Ihr-Form; bis der Träger seine
+Vorlage anpasst, mischt ein solches Schreiben beide Formen.
 
 Neue und geänderte deutsche Texte stehen in der Du-Form. Die Regel steht in
 `.agents/skills/moto-einfache-sprache/SKILL.md`; die Verständlichkeits- und

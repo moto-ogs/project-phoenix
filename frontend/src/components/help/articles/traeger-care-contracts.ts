@@ -29,7 +29,7 @@ export function traegerCareContractsTopic(): HelpTopic {
         steps: [
           "Wähle in der Navigation `Einstellungen` → `Allgemein`.",
           "Wähle den Reiter `Anmeldung`.",
-          "Wähle bei `Wann gilt der Betreuungsvertrag?` eine Möglichkeit. `Bei der Annahme`: Nimmt die Schule eine Anmeldung an, gilt der Vertrag sofort. `Später verschicken`: Sie erstellen den Vertrag und schicken ihn den Eltern.",
+          "Wähle bei `Wann gilt der Betreuungsvertrag?` eine Möglichkeit. `Bei der Annahme`: Nimmt die Schule eine Anmeldung an, gilt der Vertrag sofort. `Später verschicken`: Du erstellst den Vertrag und schickst ihn den Eltern.",
           "Eine Schule kann in ihren eigenen Einstellungen etwas anderes wählen. Was für welche Schule gilt, siehst du unter `Verträge` in der Karte `Wann gilt der Vertrag?`.",
         ],
       },

@@ -18,9 +18,9 @@ func contractMailKind(purpose string) (string, string, error) {
 	case carecontract.MailPurposeContract:
 		return "Dein Betreuungsvertrag", contractMailTemplate, nil
 	case carecontract.MailPurposeReminder:
-		return "Erinnerung: dein Betreuungsvertrag wartet auf deine Unterschrift", contractReminderMailTemplate, nil
+		return "Erinnerung: Dein Betreuungsvertrag wartet auf deine Unterschrift", contractReminderMailTemplate, nil
 	case carecontract.MailPurposeSigned:
-		return "Bestätigung: dein Betreuungsvertrag ist unterschrieben", contractSignedMailTemplate, nil
+		return "Bestätigung: Dein Betreuungsvertrag ist unterschrieben", contractSignedMailTemplate, nil
 	}
 	return "", "", fmt.Errorf("%s payload has the unknown purpose %q", carecontract.MailKindContract, purpose)
 }

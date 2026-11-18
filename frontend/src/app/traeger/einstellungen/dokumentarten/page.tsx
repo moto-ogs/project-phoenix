@@ -40,7 +40,7 @@ export default function TraegerDocumentKindsPage() {
   );
   const remedyInstruction = canEditTemplates
     ? "Trage sie zuerst in der Vorlage ein."
-    : "Bitte eine Person mit der Rolle „Verwaltung“, sie einzutragen.";
+    : "Frag eine Person mit der Rolle „Verwaltung“, ob sie es einträgt.";
   const {
     data: overview,
     loading,

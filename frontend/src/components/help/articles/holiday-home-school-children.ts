@@ -41,7 +41,7 @@ export function holidayHomeSchoolChildrenTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Fehlt ein Kind? Offene und abgesagte Anmeldungen und Plätze auf der Warteliste stehen hier nicht. Frage beim Träger nach.",
-      "Steht bei einem Kind `Nicht zugeordnet`? Dann passen Vorname, Nachname oder Geburtsdatum zu keinem Kind in moto oder zu mehreren. Prüfe die Kinderakte oder bitte den Träger, die Anmeldung zu ändern.",
+      "Steht bei einem Kind `Nicht zugeordnet`? Dann passen Vorname, Nachname oder Geburtsdatum zu keinem Kind in moto oder zu mehreren. Prüfe die Kinderakte oder frag den Träger, ob er die Anmeldung ändert.",
     ],
     related: [HELP_TOPICS.leadHolidayWeeks],
   };

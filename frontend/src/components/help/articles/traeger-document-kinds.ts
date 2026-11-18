@@ -50,7 +50,7 @@ export function traegerDocumentKindsTopic(): HelpTopic {
       "Änderst du die Dokumentart nach der Prüfung eines Laufs, lehnt moto die Freigabe ab. Lade den Lauf neu und prüfe ihn noch einmal.",
     ],
     troubleshootingDetails: [
-      "Statt `Belehrung eintragen` siehst du `Vorlage ansehen`? Dir fehlt die Rolle `Verwaltung`. Bitte eine Person mit dieser Rolle, die Belehrung einzutragen.",
+      "Statt `Belehrung eintragen` siehst du `Vorlage ansehen`? Dir fehlt die Rolle `Verwaltung`. Frag eine Person mit dieser Rolle, ob sie die Belehrung einträgt.",
       "Im Lauf steht `Rechtsbehelfsbelehrung fehlt` und `Freigeben` geht nicht? Trage die Belehrung in der Vorlage `Gebührenbescheid` ein. Danach kannst du freigeben.",
       "Die Seite `Dokumentarten` fehlt? Dir fehlt die Rolle `Abrechnung`.",
     ],

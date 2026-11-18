@@ -170,7 +170,7 @@
   "family_children_closed": "Die Kinderzahl kann hier nicht mehr geändert werden. Sie steht dann in deinem Betreuungsvertrag.",
   "family_children_invalid": "Bitte gib eine Zahl von 1 bis 20 an.",
   "holiday_allocation_mode_locked": "Es gibt schon Anmeldungen. Darum bleibt die Platzvergabe so.",
-  "holiday_allocation_pending": "Bitte vergebe zuerst im Reiter „Vergabe“ die Plätze.",
+  "holiday_allocation_pending": "Bitte vergib zuerst im Reiter „Vergabe“ die Plätze.",
   "holiday_allocation_full": "In dieser Woche ist kein Platz mehr frei. Bitte lade die Liste neu.",
   "holiday_allocation_changed": "Die Liste hat sich geändert. Bitte prüfe deine Entscheidung neu.",
   "traeger_copy_delete": "Dieser Eintrag kommt vom Träger. Nur das Träger-Büro kann ihn entfernen. Du kannst ihn stattdessen deaktivieren.",

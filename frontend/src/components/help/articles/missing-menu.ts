@@ -22,7 +22,7 @@ export function missingMenuTopic(
       "Lade die Seite neu.",
       "Melde dich ab und wieder an, wenn deine Rolle oder Rechte gerade geändert wurden. `Abmelden` steht am Computer im Menü oben rechts, auf dem Handy unter `Mehr`.",
       "Frage deine Leitung, ob die Funktion für deine OGS eingeschaltet ist.",
-      "Bitte deine Leitung, deine Rolle und Rechte zu prüfen.",
+      "Frag deine Leitung, ob sie deine Rolle und Rechte prüft.",
     ],
     result:
       "Deine Leitung prüft die Einstellungen und deinen Zugang. Danach kann sie die Ursache klären.",

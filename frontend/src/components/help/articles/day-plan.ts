@@ -53,7 +53,7 @@ export function dayPlanTopic(presenceMode: HelpPresenceMode): HelpTopic {
       // Live geprueft: der haeufigste Leerzustand einer Betreuungskraft.
       "Steht dort `Heute ist keine Betreuung geplant`? Dann bist du für diesen Tag nicht eingeteilt. Die Einteilung macht deine Leitung.",
       "Steht dort `Der Betreuungsplan ist ausgeschaltet`? Dann nutzt deine OGS diese Funktion nicht.",
-      "Steht dort `Kein Zugriff auf den Betreuungsplan`? Bitte deine Leitung, deinen Zugang zu prüfen.",
+      "Steht dort `Kein Zugriff auf den Betreuungsplan`? Frag deine Leitung, ob sie deinen Zugang prüft.",
     ],
     related: [HELP_TOPICS.carePlan, HELP_TOPICS.activeSupervision],
   };

@@ -308,7 +308,7 @@ export const ERROR_CATALOG = {
       "communication.poll_not_open":
         "{object} ist nicht mehr geöffnet. Bitte frage deine Ansprechperson.",
       "communication.staff_group_create_forbidden":
-        "Lehrkräfte können keinen Gruppenchat anlegen. Bitte die OGS darum.",
+        "Lehrkräfte können keinen Gruppenchat anlegen. Frag die OGS danach.",
       "communication.staff_group_manage_forbidden":
         "Nur wer den Gruppenchat angelegt hat und die OGS-Leitung können ihn ändern.",
       "communication.staff_group_members_required":
@@ -505,7 +505,7 @@ export const ERROR_CATALOG = {
       "enrollment.holiday_allocation_mode_locked":
         "Es gibt schon Anmeldungen. Darum bleibt die Platzvergabe so.",
       "enrollment.holiday_allocation_pending":
-        "Bitte vergebe zuerst im Reiter „Vergabe“ die Plätze.",
+        "Bitte vergib zuerst im Reiter „Vergabe“ die Plätze.",
       "enrollment.holiday_booking_unit_booked":
         "Für diese Woche gibt es schon Anmeldungen. Darum bleiben die Buchungsart und bei einzelnen Tagen auch die Tage der Woche so.",
       "enrollment.holiday_care_wish_required":
@@ -762,7 +762,7 @@ export const ERROR_CATALOG = {
       "identity.guardian_invitation_email_not_queued":
         "Die Einladung konnte gerade nicht verschickt werden. Bitte versuche es noch einmal.",
       "identity.holiday_parent_setup_invalid":
-        "Dieser Link zum Elternkonto gilt nicht mehr. Hast du schon ein Konto? Dann melde dich an. Sonst bitte den Träger um einen neuen Link.",
+        "Dieser Link zum Elternkonto gilt nicht mehr. Hast du schon ein Konto? Dann melde dich an. Sonst frag den Träger nach einem neuen Link.",
       "identity.invalid_credentials":
         "Die E-Mail-Adresse oder das Passwort stimmt nicht. Bitte prüfe deine Eingabe.",
       "identity.invitation_account_login_required":
@@ -800,7 +800,7 @@ export const ERROR_CATALOG = {
       "identity.operator_invitation_invalid":
         "Dieser Einladungslink ist abgelaufen oder ungültig. Bitte lass dich neu einladen.",
       "identity.operator_self_deactivation":
-        "Du kannst dein eigenes Konto nicht deaktivieren. Bitte eine andere Person aus dem Team darum.",
+        "Du kannst dein eigenes Konto nicht deaktivieren. Frag eine andere Person aus dem Team danach.",
       "identity.passkey_login_failed":
         "Die Anmeldung mit Passkey hat nicht geklappt. Bitte melde dich mit E-Mail-Adresse und Passwort an.",
       "identity.passkey_not_found":
@@ -2060,7 +2060,7 @@ export const ERROR_CATALOG = {
       "workforce.traeger_contract_overlap":
         "An der Schule {school} gilt an diesen Tagen schon ein anderer Arbeitsvertrag. Beende den anderen Vertrag zuerst oder wähle andere Tage.",
       "workforce.traeger_holiday_week_school_override":
-        "Die Schule {school} hat für die Woche ab dem {day} schon eine eigene Sonderarbeitszeit. Bitte die Schule, diese zu löschen, oder wähle eine andere Woche.",
+        "Die Schule {school} hat für die Woche ab dem {day} schon eine eigene Sonderarbeitszeit. Frag die Schule, ob sie diese löscht, oder wähle eine andere Woche.",
       "workforce.traeger_month_closed_by_school":
         "Die Schule {school} hat diesen Monat selbst abgeschlossen. Nur die Schule kann ihn wieder öffnen.",
       "workforce.traeger_month_later_closed":

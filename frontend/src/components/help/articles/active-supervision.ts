@@ -133,7 +133,7 @@ export function activeSupervisionTopic(
       // #5035: mit dem Überblick über alle Aufsichten stehen auch fremde da.
       "Siehst du auch Aufsichten von anderen? Deine eigene steht zuerst und öffnet sich zuerst. Bei einer fremden steht oben `Nicht deine Aufsicht`.",
       "Welche Räume offen sind, legt deine OGS fest.",
-      "`Abgeben` ist gesperrt? Dann bist du die einzige Aufsicht. Übergebe die Aufsicht an eine Person oder beende die Aktivität.",
+      "`Abgeben` ist gesperrt? Dann bist du die einzige Aufsicht. Übergib die Aufsicht an eine Person oder beende die Aktivität.",
       "Eine externe Person steht danach unter `Personal` in der Gruppe `Extern`, mit jedem Zugang. In Zeiterfassung und Dienstplan erscheint sie nicht.",
       "`Nur ansehen` fehlt? Diesen Zugang darf nur vergeben, wer Personal verwalten darf.",
       "Fehlt `Spontane Aktivität starten`? Dann hat deine OGS in den `Einstellungen` unter `Betrieb` den Schalter `Spontane Aktivitäten erlauben` ausgeschaltet.",

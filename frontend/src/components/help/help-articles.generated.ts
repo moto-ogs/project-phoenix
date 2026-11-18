@@ -804,7 +804,7 @@ export const activeSupervisionTopic = function activeSupervisionTopic(
       // #5035: mit dem Überblick über alle Aufsichten stehen auch fremde da.
       "Siehst du auch Aufsichten von anderen? Deine eigene steht zuerst und öffnet sich zuerst. Bei einer fremden steht oben `Nicht deine Aufsicht`.",
       "Welche Räume offen sind, legt deine OGS fest.",
-      "`Abgeben` ist gesperrt? Dann bist du die einzige Aufsicht. Übergebe die Aufsicht an eine Person oder beende die Aktivität.",
+      "`Abgeben` ist gesperrt? Dann bist du die einzige Aufsicht. Übergib die Aufsicht an eine Person oder beende die Aktivität.",
       "Eine externe Person steht danach unter `Personal` in der Gruppe `Extern`, mit jedem Zugang. In Zeiterfassung und Dienstplan erscheint sie nicht.",
       "`Nur ansehen` fehlt? Diesen Zugang darf nur vergeben, wer Personal verwalten darf.",
       "Fehlt `Spontane Aktivität starten`? Dann hat deine OGS in den `Einstellungen` unter `Betrieb` den Schalter `Spontane Aktivitäten erlauben` ausgeschaltet.",
@@ -1084,7 +1084,7 @@ export const attendanceProblemTopic = function attendanceProblemTopic(
           ]
         : []),
       "Versuche die Aktion erneut.",
-      "Fehlt die Aktion weiterhin? Bitte deine Leitung, dein Recht zum An- und Abmelden zu prüfen.",
+      "Fehlt die Aktion weiterhin? Frag deine Leitung, ob sie dein Recht zum An- und Abmelden prüft.",
     ],
     result:
       "Stimmen Status und Rechte, ist die Aktion verfügbar. Sonst prüft deine Leitung den Zugang.",
@@ -1323,7 +1323,7 @@ export const carePlanTopic = function carePlanTopic(
       "Betreut deine OGS am Wochenende? Dann gilt dort der Freitagsplan. Am Wochenende zeigt die Wochenansicht dieser Woche auch Samstag und Sonntag.",
     ],
     troubleshootingDetails: [
-      "Der Tab `Betreuungsplan` fehlt? Bitte deine Leitung, deinen Zugang zu prüfen.",
+      "Der Tab `Betreuungsplan` fehlt? Frag deine Leitung, ob sie deinen Zugang prüft.",
       "Steht dort `Noch kein Planungszeitraum`? Dann hat deine Leitung den Zeitraum noch nicht angelegt.",
       "Steht dort `Für diese Auswahl ist nichts geplant`? Stelle die Filter wieder auf `Alle Gruppen`, `Alle Personen` und `Alle Räume`.",
     ],
@@ -1621,7 +1621,7 @@ export const changeLocationTopic = function changeLocationTopic(
       "Oder filtere unter `Alle Kinder` nach `Unterwegs`. Wähle dann oben die Karte `Unterwegs`.",
       "Steht hinter dem Zielraum `(offener Raum)`? Dort braucht es keine Aufsicht. Das Kind nutzt den Raum dann, ohne an einem Angebot teilzunehmen.",
       "Fehlt der Zielraum? Prüfe dort `Aktuelle Aufsicht`.",
-      "Beaufsichtigst du keinen der beiden Räume? Bitte eine zuständige Aufsicht. Oder frage deine Leitung.",
+      "Beaufsichtigst du keinen der beiden Räume? Frag eine zuständige Aufsicht. Oder frage deine Leitung.",
     ],
     troubleshooting: HELP_TOPICS.missingChildOrGroup,
     related: [
@@ -2020,7 +2020,7 @@ export const dayPlanTopic = function dayPlanTopic(
       // Live geprueft: der haeufigste Leerzustand einer Betreuungskraft.
       "Steht dort `Heute ist keine Betreuung geplant`? Dann bist du für diesen Tag nicht eingeteilt. Die Einteilung macht deine Leitung.",
       "Steht dort `Der Betreuungsplan ist ausgeschaltet`? Dann nutzt deine OGS diese Funktion nicht.",
-      "Steht dort `Kein Zugriff auf den Betreuungsplan`? Bitte deine Leitung, deinen Zugang zu prüfen.",
+      "Steht dort `Kein Zugriff auf den Betreuungsplan`? Frag deine Leitung, ob sie deinen Zugang prüft.",
     ],
     related: [HELP_TOPICS.carePlan, HELP_TOPICS.activeSupervision],
   };
@@ -2854,7 +2854,7 @@ export const enrollmentReviewTopic =
         "Steht dort `Dieser Elternteil darf das Kind nicht mehr anmelden`, prüfe Name und Geburtsdatum. Ist das Kind schon angemeldet, wähle `Bestehendes Kind verwenden`. Die Eltern bekommen dadurch keinen Zugang. `Als neues Kind anlegen` wählst du nur, wenn es ein anderes Kind ist. Bei einer Anmeldung nur für angemeldete Kinder gibt es diese Wahl nicht. Passt kein Kind, lehne die Anmeldung ab.",
         "Eine Anmeldung war versehentlich abgelehnt? Wähle `Anmeldung wiederherstellen`.",
         "Bei einem Nachweis steht `Keine Berechtigung zum Öffnen`? Dann fehlt dir das Recht `Nachweise aus Anmeldungen ansehen`. Frage deine Leitung.",
-        "Bei einem Nachweis steht `Nachweis gelöscht (Löschfrist abgelaufen)`? Die Frist ist vorbei. Bitte die Eltern bei Bedarf um einen neuen Nachweis.",
+        "Bei einem Nachweis steht `Nachweis gelöscht (Löschfrist abgelaufen)`? Die Frist ist vorbei. Frag die Eltern bei Bedarf nach einem neuen Nachweis.",
         "Bei der Unterschrift steht `Der gespeicherte Eintrag wurde nachträglich verändert`? Dann passt die Unterschrift nicht mehr zu ihrer Prüfsumme. Wende dich an das moto-Team.",
         "Beim Bestätigen erscheint `Das Kinderkontingent deiner Schule ist voll`? Dann bleibt die Anmeldung offen. Für weitere Kinder melde dich beim moto-Team.",
         "Kinder, die schon aktiv oder vorgemerkt sind, kannst du auch bei vollem Kinderkontingent verlängern.",
@@ -3545,7 +3545,7 @@ export const holidayHomeSchoolChildrenTopic =
       ],
       troubleshootingDetails: [
         "Fehlt ein Kind? Offene und abgesagte Anmeldungen und Plätze auf der Warteliste stehen hier nicht. Frage beim Träger nach.",
-        "Steht bei einem Kind `Nicht zugeordnet`? Dann passen Vorname, Nachname oder Geburtsdatum zu keinem Kind in moto oder zu mehreren. Prüfe die Kinderakte oder bitte den Träger, die Anmeldung zu ändern.",
+        "Steht bei einem Kind `Nicht zugeordnet`? Dann passen Vorname, Nachname oder Geburtsdatum zu keinem Kind in moto oder zu mehreren. Prüfe die Kinderakte oder frag den Träger, ob er die Anmeldung ändert.",
       ],
       related: [HELP_TOPICS.leadHolidayWeeks],
     };
@@ -3612,7 +3612,7 @@ export const holidayWeeksTopic = function holidayWeeksTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Fehlt ein Kind? Anmeldungen prüft und bestätigt der Träger. Frage dort nach.",
-      "Steht ein Kind unter `Noch nicht zugeordnet`? Dann passen Vorname, Nachname oder Geburtsdatum der Anmeldung zu keinem Kind in moto oder zu mehreren. Ändere die Kinderakte oder bitte den Träger, die Anmeldung zu ändern. Vorher plant moto für dieses Kind nichts ein.",
+      "Steht ein Kind unter `Noch nicht zugeordnet`? Dann passen Vorname, Nachname oder Geburtsdatum der Anmeldung zu keinem Kind in moto oder zu mehreren. Ändere die Kinderakte oder frag den Träger, ob er die Anmeldung ändert. Vorher plant moto für dieses Kind nichts ein.",
       "Steht bei einem Kind unter `Gesundheit` nichts? Dann haben die Eltern nichts angegeben oder nicht zugestimmt. Ältere Anmeldungen geben keine Gesundheitsangaben weiter.",
       "Fehlt `Ferienwochen` in der Seitenleiste? Der Bereich ist der Leitung vorbehalten.",
     ],
@@ -3803,7 +3803,7 @@ export const invitationTopic = function invitationTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Du findest keine Einladungs-Mail? Prüfe auch deinen Spam-Ordner. Bitte sonst deine Leitung um eine neue Einladung.",
-      "Die Einladung ist abgelaufen oder wurde schon verwendet? Bitte deine Leitung um eine neue Einladung.",
+      "Die Einladung ist abgelaufen oder wurde schon verwendet? Frag deine Leitung nach einer neuen Einladung.",
       "Die Einladung ist nicht für dich oder die Rolle ist falsch? Nimm sie nicht an und wende dich an deine Leitung.",
     ],
     related: [HELP_TOPICS.login, HELP_TOPICS.installApp],
@@ -4845,7 +4845,7 @@ export const mealCatererTopic = function mealCatererTopic(): HelpTopic {
     troubleshootingDetails: [
       "Kam keine E-Mail an? Unter `Offene Einladungen` steht bei der Adresse, was aus der Mail wurde, zum Beispiel `Zugestellt` oder `Nicht zustellbar`. Stimmt die Adresse nicht, widerrufst du die Einladung im Menü mit den drei Punkten mit `Widerrufen`. Sende dann eine neue.",
       "Fehlt die Karte `Caterer`? Dann ist `Anmeldung zum Mittagessen` aus, oder dein Konto darf den Speiseplan nicht bearbeiten.",
-      "Steht auf der Karte nur „Einen Caterer einladen können nur Admins deiner Schule.“? Dann bitte einen Admin deiner Schule um die Einladung.",
+      "Steht auf der Karte nur „Einen Caterer einladen können nur Admins deiner Schule.“? Dann frag einen Admin deiner Schule nach der Einladung.",
       "Kommt dein Caterer nicht mehr an den Code für die Zwei-Faktor-Anmeldung? Dann meldet er sich beim moto-Team. Du als Schule kannst sie nicht zurücksetzen, weil ein Caterer mehrere Schulen beliefern kann.",
     ],
     related: [HELP_TOPICS.leadMealOrdering, HELP_TOPICS.leadMealPlan],
@@ -4978,7 +4978,7 @@ export const missingChildOrGroupTopic = function missingChildOrGroupTopic(
       ...(groupMode === "fixed_groups"
         ? [
             "Fehlt das Kind nur unter `Gruppen`? Prüfe, ob du die richtige Gruppe geöffnet hast.",
-            "Bitte deine Leitung, die Gruppe des Kindes und deine Gruppenzuordnung zu prüfen.",
+            "Frag deine Leitung, ob sie die Gruppe des Kindes und deine Gruppenzuordnung prüft.",
           ]
         : groupMode === "open_care"
           ? [
@@ -5021,7 +5021,7 @@ export const missingMenuTopic = function missingMenuTopic(
       "Lade die Seite neu.",
       "Melde dich ab und wieder an, wenn deine Rolle oder Rechte gerade geändert wurden. `Abmelden` steht am Computer im Menü oben rechts, auf dem Handy unter `Mehr`.",
       "Frage deine Leitung, ob die Funktion für deine OGS eingeschaltet ist.",
-      "Bitte deine Leitung, deine Rolle und Rechte zu prüfen.",
+      "Frag deine Leitung, ob sie deine Rolle und Rechte prüft.",
     ],
     result:
       "Deine Leitung prüft die Einstellungen und deinen Zugang. Danach kann sie die Ursache klären.",
@@ -5674,7 +5674,7 @@ export const ownGroupsTopic = function ownGroupsTopic(
       "Ist für eine Gruppe keine Gruppenleitung eingetragen, fehlt diese Zeile auf ihrer Karte.",
       "Eine vorübergehend übernommene Gruppe ist mit `Vertretung` markiert.",
       "In der Seitenleiste stehen unter `Gruppen` deine eigenen Gruppen. Dahinter steht, wie viele Kinder gerade da sind. Hast du eine andere Gruppe geöffnet, steht sie markiert darunter.",
-      "Fehlt eine Gruppe? Bitte deine Leitung, deine Gruppenzuordnung zu prüfen.",
+      "Fehlt eine Gruppe? Frag deine Leitung, ob sie deine Gruppenzuordnung prüft.",
       // Einstellung „Kinder nur über ‚Alle Kinder‘ finden“ (#1321).
       "Fehlt `Gruppen` in der Navigation? Öffne `Alle Kinder` und wähle oben `Meine Gruppe`. Die Gruppenseite öffnest du im Menü mit den drei Punkten unter `Zur Gruppenseite`.",
     ],
@@ -5743,7 +5743,7 @@ export const parentAccountProblemTopic =
         "Lies, was auf der Seite steht.",
         "Prüfe, ob du den Link schon einmal geöffnet hast.",
         "Versuche, dich direkt anzumelden.",
-        "Klappt das nicht, bitte deine OGS um eine neue Einladung.",
+        "Klappt das nicht, frag deine OGS nach einer neuen Einladung.",
       ],
       result: "Mit einer neuen Einladung kannst du dein Passwort festlegen.",
       notes: ["Ein Einladungslink lässt sich nur einmal benutzen."],
@@ -5797,7 +5797,7 @@ export const parentAccountTopic = function parentAccountTopic(): HelpTopic {
       "Du siehst `Konto erstellt`? Dann hat es geklappt. Melde dich jetzt an.",
     ],
     troubleshootingDetails: [
-      "Die Seite sagt, die Einladung sei abgelaufen oder schon benutzt? Bitte deine OGS um eine neue Einladung.",
+      "Die Seite sagt, die Einladung sei abgelaufen oder schon benutzt? Frag deine OGS nach einer neuen Einladung.",
       "Die Seite sagt, für diese E-Mail gebe es schon ein Konto? Dann melde dich direkt an.",
     ],
     related: [
@@ -6871,7 +6871,7 @@ export const parentHolidayRegistrationTopic =
       differences: [
         "Fragt das Formular `Hat dein Kind Allergien oder Unverträglichkeiten?`? Dann braucht der Träger die Angaben zu Allergien und Medikamenten. Wähle bei jeder Frage `Nein, keine` oder `Ja`. Bei `Ja` schreibe auf, was dein Kind hat. Weitere Hinweise bleiben freiwillig.",
         "Steht in der Eltern-App `Anmeldung ab` mit einem Datum? Dann beginnt die Anmeldung an diesem Tag. Ab dann siehst du den Knopf `Jetzt anmelden`.",
-        "Du hast den Link geöffnet und bist nicht angemeldet? Oben steht `Hast du schon die Eltern-App?`. Wähle `Anmelden`. Danach kommst du zurück zum Formular.",
+        "Du hast den Link geöffnet und bist nicht angemeldet? Oben steht `Du hast schon die Eltern-App?`. Wähle `Anmelden`. Danach kommst du zurück zum Formular.",
         "Ist die Anmeldung verbindlich, heißt der Knopf `Verbindlich anmelden`.",
         "Bist du mit deinem Elternkonto in moto angemeldet? Dann steht unter `Kinder` der Abschnitt `Deine Kinder aus dem Elternkonto`. Setze den Haken bei deinem Kind. Name, Geburtsdatum und Schule stehen dann schon im Formular, deine Angaben und deine Anschrift auch.",
         "Mit dem Haken trägt moto auch die `Zweite sorgeberechtigte Person` und die `Kontakte` ein. Die Angaben kommen von der Schule. Unter jedem Feld, das moto so ausfüllt, steht `Aus dem Elternkonto`. Änderst du das Feld, verschwindet der Satz.",
@@ -6887,7 +6887,7 @@ export const parentHolidayRegistrationTopic =
         "moto sagt, den Anmeldelink gebe es nicht? Frage den Träger nach dem richtigen Link.",
         "Steht vor dem Absenden `Die Sicherheitsprüfung lädt nicht`? Oft blockiert ein Werbeblocker die Prüfung. Schalte ihn für die Seite aus und wähle `Prüfung neu starten`. Hilft das nicht, wähle `Link kopieren` und öffne den Link in einem anderen Browser, zum Beispiel Chrome.",
         "Steht nach `Stand ansehen` `Wir finden diese Anmeldung nicht`? Öffne den Link noch einmal aus der E-Mail. Nach den Ferien löscht der Träger die Anmeldung. Dann gilt auch der Link nicht mehr.",
-        "Der Link zum Elternkonto gilt nicht mehr? Er gilt 30 Tage. Hast du schon ein Konto, melde dich an. Sonst bitte den Träger um einen neuen Link.",
+        "Der Link zum Elternkonto gilt nicht mehr? Er gilt 30 Tage. Hast du schon ein Konto, melde dich an. Sonst frag den Träger nach einem neuen Link.",
         "Du siehst eine Anmeldung nicht unter `Ferienanmeldungen`? Dort stehen Anmeldungen mit der E-Mail-Adresse deines Kontos. Hast du eine andere Adresse eingetragen, frage den Träger.",
       ],
       related: [HELP_TOPICS.parentEnroll],
@@ -6935,7 +6935,7 @@ export const parentInstallAppTopic =
         "Nutzt du Samsung Internet? Installiere moto darüber nicht. Öffne moto in Chrome und melde dich dort an.",
       ],
       troubleshootingDetails: [
-        "Du findest den Punkt im Menü nicht? Prüfe, ob du wirklich in Safari oder Chrome sind.",
+        "Du findest den Punkt im Menü nicht? Prüfe, ob du wirklich in Safari oder Chrome bist.",
         "Benachrichtigungen kommen erst an, wenn moto auf dem Startbildschirm liegt.",
       ],
       related: [
@@ -8240,7 +8240,7 @@ export const roomsTopic = function roomsTopic(
       "Ist `Kinder anmelden` ausgegraut? Dann läuft im Raum gerade keine Aufsicht und er ist nicht freigegeben. Sobald dort eine Aufsicht läuft, kannst du Kinder anmelden.",
       "Steht unter `Zielraum` `Keine aktiven Räume`? Dann läuft gerade keine Aufsicht, in die du Kinder setzen kannst.",
       "Fehlt unter `Unterwegs` die Auswahl der Kinder? Dann erfasst deine OGS die Anwesenheit nicht über die App. Frage deine Leitung.",
-      "Fehlt der Reiter `Plan` oder `Raumplan als PDF`? Bitte deine Leitung, deinen Zugang zu prüfen.",
+      "Fehlt der Reiter `Plan` oder `Raumplan als PDF`? Frag deine Leitung, ob sie deinen Zugang prüft.",
     ],
     related: [HELP_TOPICS.activeSupervision, HELP_TOPICS.changeLocation],
   };
@@ -9719,7 +9719,7 @@ export const teacherAccessTopic = function teacherAccessTopic(): HelpTopic {
       "moto schule hat eine eigene Adresse. Über die Adresse der OGS kommst du nicht hinein.",
     ],
     troubleshootingDetails: [
-      "Der Link funktioniert nicht mehr? Bitte die OGS um eine neue Einladung.",
+      "Der Link funktioniert nicht mehr? Frag die OGS nach einer neuen Einladung.",
     ],
     related: [
       HELP_TOPICS.teacherLogin,
@@ -10557,7 +10557,7 @@ export const teacherParentLettersTopic =
         "Bei `Mit Lesebestätigung` setzt du unter `Für jedes Kind einsetzen` Angaben wie den Vornamen in den Text. Jede Familie liest dann den Brief mit den Angaben ihres Kindes. Unter `So liest die Familie den Brief` siehst du ihn vorher.",
         "Für Familien ohne moto wählst du im gesendeten Brief `Briefe drucken`. Das PDF hat einen Brief je Kind.",
         "Ein gesendeter Brief lässt sich nicht mehr ändern. Du kannst ihn über `Zurückziehen` zurücknehmen.",
-        "Die OGS sieht deine Briefe in ihrer Übersicht. Ändern kann sie nur du.",
+        "Die OGS sieht deine Briefe in ihrer Übersicht. Ändern kannst nur du sie.",
         "Unter `Empfänger` steht bei jeder Mail, was aus ihr geworden ist. Steht dort `Adresse prüfen`, sage der OGS Bescheid. Sie korrigiert die Adresse.",
       ],
       differences: [
@@ -11658,7 +11658,7 @@ export const traegerCareContractsTopic =
           steps: [
             "Wähle in der Navigation `Einstellungen` → `Allgemein`.",
             "Wähle den Reiter `Anmeldung`.",
-            "Wähle bei `Wann gilt der Betreuungsvertrag?` eine Möglichkeit. `Bei der Annahme`: Nimmt die Schule eine Anmeldung an, gilt der Vertrag sofort. `Später verschicken`: Sie erstellen den Vertrag und schicken ihn den Eltern.",
+            "Wähle bei `Wann gilt der Betreuungsvertrag?` eine Möglichkeit. `Bei der Annahme`: Nimmt die Schule eine Anmeldung an, gilt der Vertrag sofort. `Später verschicken`: Du erstellst den Vertrag und schickst ihn den Eltern.",
             "Eine Schule kann in ihren eigenen Einstellungen etwas anderes wählen. Was für welche Schule gilt, siehst du unter `Verträge` in der Karte `Wann gilt der Vertrag?`.",
           ],
         },
@@ -12556,7 +12556,7 @@ export const traegerCatalogPhasesTopic =
         "Eine zurückgezogene Anmeldephase lässt sich nicht mehr ändern. Das Formular fehlt dann.",
       ],
       troubleshootingDetails: [
-        "Eine Schule `Lehnt ab`? Der Grund steht daneben. Passe deine Angaben an oder bitte die Schule um eine Änderung. Danach siehst du die Vorschau noch einmal an.",
+        "Eine Schule `Lehnt ab`? Der Grund steht daneben. Passe deine Angaben an oder frag die Schule nach einer Änderung. Danach siehst du die Vorschau noch einmal an.",
         "Beim Übertragen steht, dass sich seit der Vorschau etwas geändert hat? moto lädt die Vorschau neu. Prüfe sie und wähle noch einmal `Freigeben und übertragen`.",
         "Bei einer Schule steht `Nicht übertragen`? Die Schule hat während der Vorschau etwas geändert. Übertrage noch einmal.",
       ],
@@ -12921,7 +12921,7 @@ export const traegerDocumentKindsTopic =
         "Änderst du die Dokumentart nach der Prüfung eines Laufs, lehnt moto die Freigabe ab. Lade den Lauf neu und prüfe ihn noch einmal.",
       ],
       troubleshootingDetails: [
-        "Statt `Belehrung eintragen` siehst du `Vorlage ansehen`? Dir fehlt die Rolle `Verwaltung`. Bitte eine Person mit dieser Rolle, die Belehrung einzutragen.",
+        "Statt `Belehrung eintragen` siehst du `Vorlage ansehen`? Dir fehlt die Rolle `Verwaltung`. Frag eine Person mit dieser Rolle, ob sie die Belehrung einträgt.",
         "Im Lauf steht `Rechtsbehelfsbelehrung fehlt` und `Freigeben` geht nicht? Trage die Belehrung in der Vorlage `Gebührenbescheid` ein. Danach kannst du freigeben.",
         "Die Seite `Dokumentarten` fehlt? Dir fehlt die Rolle `Abrechnung`.",
       ],
@@ -14066,7 +14066,7 @@ export const traegerInvitationTopic =
         "Deinen Namen änderst du später im Profil-Menü unter `Konto`.",
       ],
       troubleshootingDetails: [
-        "moto sagt, die Einladung sei abgelaufen? Bitte das Träger-Büro oder das moto-Team um eine neue Einladung.",
+        "moto sagt, die Einladung sei abgelaufen? Frag das Träger-Büro oder das moto-Team nach einer neuen Einladung.",
         "Du kennst das Passwort deines vorhandenen moto-Kontos nicht mehr? Wähle in der Anmeldung des Träger-Portals `Passwort vergessen?`.",
       ],
       related: [HELP_TOPICS.traegerLogin, HELP_TOPICS.traegerProfile],
@@ -14171,7 +14171,7 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Keine E-Mail mit Code? Schau im Spam-Ordner nach. Wähle sonst `Neuen Code anfordern`.",
-      "Zu oft einen falschen Code eingegeben? Warte 15 Minuten. Oder bitte das moto-Team, den Code zurückzusetzen. Dann richtest du ihn bei der nächsten Anmeldung neu ein.",
+      "Zu oft einen falschen Code eingegeben? Warte 15 Minuten. Oder frag das moto-Team, ob es den Code zurücksetzt. Dann richtest du ihn bei der nächsten Anmeldung neu ein.",
       "Kein Zugriff mehr auf deine E-Mails? Wende dich an das moto-Team.",
       "moto sagt, dein Konto habe keinen Zugang zum Träger-Portal? Wende dich an das moto-Team.",
       "moto meldet dich ab und lässt dich nicht wieder hinein? Dann ist der Zugang deines Trägers ausgeschaltet. Wende dich an das moto-Team.",
@@ -14988,7 +14988,7 @@ export const traegerStaffContractsTopic =
       troubleshootingDetails: [
         "„Die Schule hat die Zeit davor schon abgerechnet“: Wähle den genannten Tag oder einen späteren.",
         "„An der Schule gilt an diesen Tagen schon ein anderer Arbeitsvertrag“: Beende zuerst den anderen Vertrag.",
-        "„Die Schule hat für die Woche schon eine eigene Sonderarbeitszeit“: Bitte die Schule, sie zu löschen.",
+        "„Die Schule hat für die Woche schon eine eigene Sonderarbeitszeit“: Frag die Schule, ob sie sie löscht.",
         "„Noch nicht bei … angekommen“: Die Änderung ist gespeichert. Speicherst du später eine weitere Änderung, dann holt moto es nach.",
         "`Vertrag löschen` geht nicht: Der Vertrag hat schon gezählt. Trage stattdessen einen letzten Tag ein.",
       ],
@@ -15362,7 +15362,7 @@ export const traegerStaffRecordsTopic =
         "Die Verarbeitung stützt sich auf Art. 6 Abs. 1 lit. b und c DSGVO: dein Träger ist der Arbeitgeber.",
       ],
       differences: [
-        "Du siehst nur einen Hinweis, dass Personal beim Träger noch nicht freigeschaltet ist: Bitte das moto-Team um die Freigabe.",
+        "Du siehst nur einen Hinweis, dass Personal beim Träger noch nicht freigeschaltet ist: Frag das moto-Team nach der Freigabe.",
         "Du siehst `Personalakten` nicht in der Navigation: dir fehlt die Rolle `Personal`.",
       ],
       troubleshootingDetails: [

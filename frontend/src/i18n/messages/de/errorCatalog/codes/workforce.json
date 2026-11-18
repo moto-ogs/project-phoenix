@@ -72,7 +72,7 @@
   "traeger_contract_month_closed": "Die Schule {school} hat die Zeit davor schon abgerechnet. Eine Änderung geht dort erst ab dem {day}.",
   "traeger_contract_not_found": "Diesen Arbeitsvertrag gibt es nicht mehr. Bitte lade die Seite neu.",
   "traeger_contract_overlap": "An der Schule {school} gilt an diesen Tagen schon ein anderer Arbeitsvertrag. Beende den anderen Vertrag zuerst oder wähle andere Tage.",
-  "traeger_holiday_week_school_override": "Die Schule {school} hat für die Woche ab dem {day} schon eine eigene Sonderarbeitszeit. Bitte die Schule, diese zu löschen, oder wähle eine andere Woche.",
+  "traeger_holiday_week_school_override": "Die Schule {school} hat für die Woche ab dem {day} schon eine eigene Sonderarbeitszeit. Frag die Schule, ob sie diese löscht, oder wähle eine andere Woche.",
   "vacation_opening_absences_before_cutoff": "Vor dem Stichtag ist schon Urlaub eingetragen. Diese Tage würden doppelt zählen. Bitte wähle einen früheren Stichtag.",
   "vacation_opening_already_exists": "Für dieses Jahr gibt es schon eine Urlaubs-Übernahme. Bitte lösche zuerst die alte.",
   "vacation_quota_below_used": "Der Anspruch ist kleiner als die genommenen und beantragten Tage. Bitte trage einen höheren Wert ein.",

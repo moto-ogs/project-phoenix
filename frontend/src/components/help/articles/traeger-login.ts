@@ -60,7 +60,7 @@ export function traegerLoginTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Keine E-Mail mit Code? Schau im Spam-Ordner nach. Wähle sonst `Neuen Code anfordern`.",
-      "Zu oft einen falschen Code eingegeben? Warte 15 Minuten. Oder bitte das moto-Team, den Code zurückzusetzen. Dann richtest du ihn bei der nächsten Anmeldung neu ein.",
+      "Zu oft einen falschen Code eingegeben? Warte 15 Minuten. Oder frag das moto-Team, ob es den Code zurücksetzt. Dann richtest du ihn bei der nächsten Anmeldung neu ein.",
       "Kein Zugriff mehr auf deine E-Mails? Wende dich an das moto-Team.",
       "moto sagt, dein Konto habe keinen Zugang zum Träger-Portal? Wende dich an das moto-Team.",
       "moto meldet dich ab und lässt dich nicht wieder hinein? Dann ist der Zugang deines Trägers ausgeschaltet. Wende dich an das moto-Team.",
