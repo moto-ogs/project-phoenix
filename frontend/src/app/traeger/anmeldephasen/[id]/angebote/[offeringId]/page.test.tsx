@@ -96,7 +96,7 @@ describe("TraegerCatalogOfferingPage (#7413)", () => {
       await screen.findByText(/Dieses Angebot gibt es nicht\./),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Schuljahr 2027/28", { exact: false }),
-    ).toBeTruthy();
+      screen.queryByRole("button", { name: "Speichern" }),
+    ).not.toBeInTheDocument();
   });
 });

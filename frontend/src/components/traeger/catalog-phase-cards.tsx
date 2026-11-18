@@ -171,11 +171,9 @@ export function CatalogOfferingSummary({
     <SectionCard
       title="Betreuungsangebot"
       description={
-        offering.withdrawnAt
-          ? "Ein zurückgezogenes Angebot lässt sich nicht mehr ändern."
-          : phaseWithdrawn
-            ? "Die Anmeldephase ist zurückgezogen. Ihre Angebote lassen sich nicht mehr ändern."
-            : undefined
+        phaseWithdrawn && !offering.withdrawnAt
+          ? "Die Anmeldephase ist zurückgezogen. Ihre Angebote lassen sich nicht mehr ändern."
+          : "Ein zurückgezogenes Angebot lässt sich nicht mehr ändern."
       }
     >
       <DataGrid>

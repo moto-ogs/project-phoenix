@@ -12682,7 +12682,7 @@ export const traegerClosingDaysTopic =
           title: "Schließtag ändern oder löschen",
           steps: [
             "Wähle beim Schließtag die drei Punkte.",
-            "Wähle `Ändern` oder `Löschen`.",
+            "Wähle `Bearbeiten` oder `Löschen`.",
             "Unter `Ferienbetreuung an diesen Tagen` steht, welche Tage wieder geöffnet sind und wie viele Familien eine E-Mail bekommen.",
             "Wähle `Speichern` oder beim Löschen `Ja, löschen` und dann `Endgültig löschen`. Die Eltern bekommen die E-Mail sofort.",
           ],
@@ -12885,7 +12885,7 @@ export const traegerDatevExportTopic =
           steps: [
             "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
             "Wähle oben rechts das Menü mit den drei Punkten und dann `Konten und Kostenstellen`.",
-            "Unter `Erlöskonten` wählst du bei `Monatsbeiträge`, `Mensa`, `Ferienbetreuung` oder `Mittagessen in den Ferien` `Ändern`. Trage das Konto ein und wähle `Speichern`. Ein Angebot kann ein eigenes Konto haben.",
+            "Unter `Erlöskonten` wählst du bei `Monatsbeiträge`, `Mensa`, `Ferienbetreuung` oder `Mittagessen in den Ferien` `Bearbeiten`. Trage das Konto ein und wähle `Speichern`. Ein Angebot kann ein eigenes Konto haben.",
             "Ohne eigenes Konto bucht `Mittagessen in den Ferien` auf das Konto der `Ferienbetreuung`. Daneben steht dann `wie Ferienbetreuung`.",
             "Unter `Kostenstellen (KOST1)` steht jede Schule mit zwei Zeilen. Wähle bei `Monatsbeiträge und Mensa` `Neue Kostenstelle`. Wähle den Tag bei `Gilt ab` und trage die `Kostenstelle` ein.",
             "Bucht dein Steuerbüro die Ferienbetreuung einer Schule getrennt? Dann trägst du bei `Ferienbetreuung` dieser Schule eine eigene Kostenstelle ein. Ohne sie bucht eine Ferienwoche auf die Kostenstelle der Schule. Daneben steht dann `wie Monatsbeiträge`.",

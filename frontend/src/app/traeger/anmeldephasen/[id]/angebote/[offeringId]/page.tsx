@@ -4,6 +4,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { CatalogOfferingForm } from "~/components/traeger/catalog-offering-form";
+import { phaseStatusBadge } from "~/components/traeger/catalog-format";
 import {
   CatalogOfferingSummary,
   offeringStatus,
@@ -41,8 +42,13 @@ export default function TraegerCatalogOfferingPage() {
         phase ? `Zurück zu „${phase.draft.name}“` : "Zurück zur Anmeldephase"
       }
       actions={
-        offering && !editable ? (
-          <StatusBadge {...offeringStatus(offering)} />
+        phase && offering && !editable ? (
+          // A withdrawn phase withdraws its offerings too.
+          <StatusBadge
+            {...(offering.withdrawnAt
+              ? offeringStatus(offering)
+              : phaseStatusBadge(phase))}
+          />
         ) : null
       }
       error={loadError}

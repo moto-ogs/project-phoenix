@@ -245,7 +245,7 @@ export default function TraegerClosingDaysPage() {
                     ariaLabel={`Aktionen für ${day.reason}`}
                     items={[
                       {
-                        label: "Ändern",
+                        label: "Bearbeiten",
                         icon: <Pencil className="h-4 w-4" aria-hidden />,
                         description:
                           "Öffnet den Schließtag, beim Speichern bekommen betroffene Familien eine E-Mail.",
@@ -482,8 +482,8 @@ export default function TraegerClosingDaysPage() {
         <div
           className={
             regions.length > 1
-              ? "grid grid-cols-1 gap-6 lg:grid-cols-2"
-              : "grid grid-cols-1 gap-6"
+              ? "compact:gap-4 grid grid-cols-1 gap-6 max-sm:gap-3 lg:grid-cols-2"
+              : "compact:gap-4 grid grid-cols-1 gap-6 max-sm:gap-3"
           }
         >
           {regions.map((region) => (
