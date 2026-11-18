@@ -29591,6 +29591,16 @@
       "target_owner": "organization-tenancy"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.TraegerMembershipDirectory.TraegerMemberName",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerMemberships.TraegerMemberName",
+      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: #7305 names a Träger school session by the account's name at the Träger of the session (#4693). Joins the caller's administrative unit of the mint or refresh, filtered by organization_id; no mutation or locking read at this terminal. Target modules/organizationtenancy.TraegerMemberNames.ListTraegerMemberNames.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMemberNames.ListTraegerMemberNames",
+      "target_owner": "organization-tenancy"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/tenant.ClaimScope.BindOrganization",
       "classification": "platform",

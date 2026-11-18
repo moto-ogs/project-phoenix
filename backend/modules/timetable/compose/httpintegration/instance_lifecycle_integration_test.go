@@ -1138,14 +1138,8 @@ func TestInstance_Reopen_RejectsSupervisorChangedAfterComplete(t *testing.T) {
 	_, err = s.svc.Complete(s.ctx, ai.ID)
 	require.NoError(t, err)
 
-	// active.group_supervisors carries a BEFORE UPDATE trigger
-	// (update_modified_column) that overwrites updated_at with the DB clock's
-	// now(), so an explicit future timestamp cannot be written. Bump the row
-	// (the trigger stamps it "now") and move the recorded completion instant
-	// two minutes into the past instead: the conflict predicate
-	// updated_at > completed_at then holds regardless of Go-vs-Postgres clock
-	// skew. Comparing the trigger stamp against the Go-clock completed_at
-	// directly is a sub-millisecond race that made this test flaky.
+	// The trigger stamps updated_at. Backdate completed_at to verify the
+	// legacy comparison without depending on the gap between statements.
 	_, err = s.db.NewUpdate().
 		Table("active.group_supervisors").
 		Set("updated_at = now()").
@@ -1161,6 +1155,33 @@ func TestInstance_Reopen_RejectsSupervisorChangedAfterComplete(t *testing.T) {
 
 	_, err = s.svc.Reopen(s.ctx, ai.ID, 0, true)
 	require.ErrorIs(t, err, timetable.ErrTimetableOperationConflict)
+}
+
+func TestInstance_Reopen_RejectsSupervisorChangedByAnOverlappingTransaction(t *testing.T) {
+	t.Parallel()
+
+	s := buildLifecycle(t)
+	ai := seedInstance(t, s, true, false)
+	started, err := s.svc.Start(s.ctx, ai.ID, 0)
+	require.NoError(t, err)
+
+	require.NoError(t, testpkg.WithTenantTx(t, s.ctx, s.db, testpkg.Tenant(t), func(ctx context.Context, tx bun.Tx) error {
+		// Complete on its own transaction after this transaction has started.
+		if _, err := s.svc.Complete(s.ctx, ai.ID); err != nil {
+			return err
+		}
+		_, err := tx.NewUpdate().Table("active.group_supervisors").
+			Set("role = ?", "assistant").
+			Where("group_id = ?", started.ActiveGroupID).
+			Exec(ctx)
+		return err
+	}))
+
+	_, err = s.svc.Reopen(s.ctx, ai.ID, 0, true)
+	require.ErrorIs(t, err, timetable.ErrTimetableOperationConflict)
+	coded, ok := timetable.AsCoded(err)
+	require.True(t, ok)
+	assert.Equal(t, timetable.CodeReopenSupervisionChanged, coded.Code)
 }
 
 func TestInstance_Reopen_RejectsStaffNowSupervisingElsewhere(t *testing.T) {

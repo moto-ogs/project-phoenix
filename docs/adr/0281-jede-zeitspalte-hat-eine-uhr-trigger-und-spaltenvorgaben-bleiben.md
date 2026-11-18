@@ -56,7 +56,7 @@ Owner-Uhr folgen sollen. Der Bestand auf `development` `e93e86fb67`:
 | Zustell-Protokolle (`delivery`) | Owner | Der Store stempelt `created_at` und `updated_at` selbst. |
 | Zielgruppen der Elternmitteilungen (`parentannouncementaudience`) | Owner | Die Abfragen erhalten den Zeitpunkt als Parameter. |
 | Abgeschlossene Abmeldungen (`careplan`) | Owner | Die Grenze kommt als Parameter. Sie bleibt 365 Berliner Kalendertage, wie `TestNightlyRetentionCleanupCutoffsAcrossDST` sie vorschrieb, hängt aber nicht mehr an der Zeitzone der Sitzung. Dasselbe gilt für die Offboarding-Jobs von `workforce` (30 Tage). |
-| `CompletionTimestamp` (`timetable`) | beide, getrennt | `completed_at` ist die Anweisungszeit der Datenbank (`clock_timestamp()`), gelesen nach den eigenen Schreibvorgängen des Abschlusses: Reopen ordnet ihn gegen `updated_at` der Aufsichten (Trigger), der Teilnahmen und der Planzeilen. Teilnahmen und Planzeilen stempeln ihr `updated_at` ebenfalls zur Anweisungszeit, so liegt auch eine Korrektur nach dem Abschluss, deren Transaktion früher begann oder die in derselben Transaktion folgt, danach. Aufsichten stempelt der Trigger mit dem Transaktionsbeginn; eine überlappende Änderung an ihnen bleibt unerkannt wie bisher. Das Reopen-Fenster, das Ende spontaner Blöcke und der Vergleich mit dem Auschecken eines Kindes rechnen mit der Owner-Uhr; der Abschluss legt deren Zeitpunkt als `owner_completed_at` im Snapshot ab. |
+| `CompletionTimestamp` (`timetable`) | beide, getrennt | `completed_at` ist die Anweisungszeit der Datenbank (`clock_timestamp()`), gelesen nach den eigenen Schreibvorgängen des Abschlusses: Reopen ordnet ihn gegen `updated_at` der Aufsichten (Trigger), der Teilnahmen und der Planzeilen. Teilnahmen und Planzeilen stempeln ihr `updated_at` ebenfalls zur Anweisungszeit, so liegt auch eine Korrektur nach dem Abschluss, deren Transaktion früher begann oder die in derselben Transaktion folgt, danach. Seit dem Nachtrag vom 18.11.2026 stempelt auch der Trigger der laufenden Aufsichten beim Schreiben. Das Reopen-Fenster, das Ende spontaner Blöcke und der Vergleich mit dem Auschecken eines Kindes rechnen mit der Owner-Uhr; der Abschluss legt deren Zeitpunkt als `owner_completed_at` im Snapshot ab. |
 | Umfrage-Entwürfe (`communication`) | Datenbank | `users.surveys` trägt den Trigger. Die Aufbewahrung der Entwürfe vergleicht `updated_at` mit der Datenbankuhr; veröffentlichte Umfragen bleiben über `closes_at` auf der Owner-Uhr. |
 | Nummern-Ereignisse (`parentbilling`) | Owner | Der Store stempelt die Protokolle `family_billing_events` und `child_debtor_number_events` an jeder Schreibstelle selbst. Ihr Alter vergleicht die Löschung mit der Grenze des Löschtags, Mitternacht in Berlin, wie die Nummern selbst. |
 
@@ -227,3 +227,13 @@ Grenzen:
   angekreuzte Text ist nicht der aktuelle. Ob er eine frühere Fassung war,
   wann sie ersetzt wurde und wer das Formular nicht nachgezogen hat,
   behauptet er nicht.
+
+## Nachtrag 2026-11-18: Laufende Aufsichten stempeln beim Schreiben
+
+Für [#7383](https://github.com/moto-ogs/project-phoenix/issues/7383)
+stempelt der Trigger von `active.group_supervisors` Änderungen mit
+`clock_timestamp()`. Wartet eine ältere Transaktion bis nach dem
+Abschluss, liegt ihr Schreibstempel nach `completed_at`. Reopen erkennt
+die Änderung auf derselben Datenbankuhr wie Änderungen an Teilnahmen und
+Planzeilen. Die Migration stellt beim Rollback den früheren Trigger wieder
+her.

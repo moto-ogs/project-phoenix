@@ -93,11 +93,17 @@ type guardianRetention struct {
 	invitations peopleModule.OpenGuardianInvitations
 }
 
-func newGuardianRetention(db transactionruntime.Database, invitations identityaccess.GuardianInvitationReads) guardianRetention {
-	return guardianRetention{
-		people:      peopleCompose.MustNewReads(db.Pool(), StudentDirectoryReader()),
-		invitations: openGuardianInvitations(invitations),
+func newGuardianRetention(db transactionruntime.Database, invitations identityaccess.GuardianInvitationReads, now func() time.Time) (guardianRetention, error) {
+	people, err := peopleCompose.New(peopleCompose.Dependencies{
+		DB: db.Pool(), StudentDirectory: StudentDirectoryReader(), Observe: func(peopleCompose.Observation) {}, Now: now,
+	}, nil)
+	if err != nil {
+		return guardianRetention{}, fmt.Errorf("compose worker guardian retention: %w", err)
 	}
+	return guardianRetention{
+		people:      people,
+		invitations: openGuardianInvitations(invitations),
+	}, nil
 }
 
 func openGuardianInvitations(identity interface {
@@ -241,6 +247,16 @@ func dataRetentionSteps(
 type presenceRetention interface {
 	studentpresence.AttendanceRetention
 	studentpresence.MorningAttendanceRetention
+}
+
+func newAttendanceRetention(db transactionruntime.Database, now func() time.Time) (presenceRetention, error) {
+	attendance, err := presenceCompose.New(presenceCompose.Dependencies{
+		DB: db.Pool(), Observe: presenceCompose.FailureLogger(), Now: now,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("compose worker attendance retention: %w", err)
+	}
+	return attendance, nil
 }
 
 // attendanceRetentionSteps are the deletions of the daily attendance (#3957)
