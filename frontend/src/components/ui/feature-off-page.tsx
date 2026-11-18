@@ -1,7 +1,7 @@
 "use client";
 
 import { PlugsIcon } from "@phosphor-icons/react";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, type TenantPageProps } from "~/components/ui/tenant-page";
 
 interface FeatureOffPageProps {
   /** Seitentitel — derselbe wie im eingeschalteten Zustand. */
@@ -13,6 +13,10 @@ interface FeatureOffPageProps {
    * (NFC, Anwesenheitsmodus), ist das ausdrücklich NICHT die Leitung.
    */
   readonly whoCanEnable?: string;
+  /** Rückweg einer gesperrten Unterseite zur Sammlung. */
+  readonly back?: TenantPageProps["back"];
+  readonly backHref?: TenantPageProps["backHref"];
+  readonly backLabel?: TenantPageProps["backLabel"];
 }
 
 /**
@@ -32,6 +36,9 @@ export function FeatureOffPage({
   title,
   description,
   whoCanEnable = "Wende dich an moto, wenn du diese Funktion nutzen möchtest.",
+  back,
+  backHref,
+  backLabel,
 }: FeatureOffPageProps) {
   const icon = <PlugsIcon className="h-12 w-12" aria-hidden="true" />;
   const body = `${description} ${whoCanEnable}`;
@@ -39,6 +46,9 @@ export function FeatureOffPage({
   return (
     <TenantPage
       title={title}
+      back={back}
+      backHref={backHref}
+      backLabel={backLabel}
       empty={{
         title: "Diese Funktion ist nicht eingeschaltet",
         description: body,

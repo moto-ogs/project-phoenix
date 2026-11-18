@@ -205,6 +205,9 @@ function StaffImportContent() {
       <StaffNotReleasedPage
         title="Personal importieren"
         description="Bis zur Freischaltung legt jede Schule ihr Personal selbst an."
+        back
+        backHref={backHref}
+        backLabel="Zurück zu den Personalakten"
       />
     );
   }

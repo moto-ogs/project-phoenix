@@ -46,6 +46,9 @@ function StaffHireContent() {
       <StaffNotReleasedPage
         title="Person einstellen"
         description="Bis zur Freischaltung legt jede Schule ihr Personal selbst an."
+        back
+        backHref={backHref}
+        backLabel="Zurück zu den Personalakten"
       />
     );
   }

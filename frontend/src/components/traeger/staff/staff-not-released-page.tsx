@@ -6,6 +6,7 @@
 // gilt; wer freischaltet und unter welcher Bedingung, ist überall gleich.
 
 import { FeatureOffPage } from "~/components/ui/feature-off-page";
+import type { TenantPageProps } from "~/components/ui/tenant-page";
 
 /** Wer freischaltet und wann: die Bedingung aus ADR 0089. */
 const STAFF_RELEASE_CONDITION =
@@ -14,17 +15,27 @@ const STAFF_RELEASE_CONDITION =
 export function StaffNotReleasedPage({
   title,
   description,
+  back,
+  backHref,
+  backLabel,
 }: Readonly<{
   /** Der Seitentitel, derselbe wie freigeschaltet. */
   title: string;
   /** Was bis zur Freischaltung gilt, ein Satz für diese Seite. */
   description: string;
+  /** Rückweg einer gesperrten Unterseite zu den Personalakten. */
+  back?: TenantPageProps["back"];
+  backHref?: TenantPageProps["backHref"];
+  backLabel?: TenantPageProps["backLabel"];
 }>) {
   return (
     <FeatureOffPage
       title={title}
       description={description}
       whoCanEnable={STAFF_RELEASE_CONDITION}
+      back={back}
+      backHref={backHref}
+      backLabel={backLabel}
     />
   );
 }
