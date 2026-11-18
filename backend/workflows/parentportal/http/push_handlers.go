@@ -25,7 +25,7 @@ func (rs *Resource) getPushPublicKey(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorNotFound(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"public_key": key}, "")
+	common.Respond(w, r, http.StatusOK, PushPublicKeyResponse{PublicKey: key}, "")
 }
 
 // subscribePush registers the parent's device across every school the

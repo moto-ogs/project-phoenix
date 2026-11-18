@@ -127,7 +127,7 @@ type SigningContract struct {
 	PhaseName      string           `json:"phase_name"`
 	EffectiveFrom  calendar.Date    `json:"effective_from"`
 	EndsOn         *calendar.Date   `json:"ends_on"`
-	PriceCents     *int64           `json:"price_cents"`
+	PriceCents     *int             `json:"price_cents"`
 	Services       []SigningService `json:"services"`
 }
 

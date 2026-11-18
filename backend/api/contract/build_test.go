@@ -433,3 +433,28 @@ func TestARegisteredPointerAnswersTheObjectOrNull(t *testing.T) {
 	assert.Contains(t, source, "response: success(innerSchema.nullable()),")
 	assert.Contains(t, source, "response: success(innerSchema),")
 }
+
+type rawRow struct {
+	Payload json.RawMessage            `json:"payload"`
+	Values  map[string]json.RawMessage `json:"values,omitempty"`
+	Answer  any                        `json:"answer"`
+}
+
+// Raw JSON and an empty interface carry a value the owner of the field
+// shapes: any JSON value, null included, and unknown in TypeScript.
+func TestRawJSONTravelsAsAnyJSONValue(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{get("/api/raw/", rawRow{})}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	fields := fieldsOf(t, doc, "rawRow")
+	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["payload"].Schema)
+	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["answer"].Schema)
+	assert.Equal(t, KindJSON, fields["values"].Schema.Elem.Kind)
+	for _, body := range []string{`{"payload":{"a":[1,"b",null]},"answer":"x"}`, `{"payload":null,"answer":null}`, `{"payload":3,"answer":true}`} {
+		assert.Empty(t, doc.Violations(doc.Routes[0], Answer{Status: 200, Body: []byte(`{"status":"success","data":` + body + `}`)}), body)
+	}
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+	assert.Contains(t, files["raw.generated.ts"], "payload: unknown | null;")
+	assert.Contains(t, files["raw.generated.ts"], "payload: z.unknown().nullable(),")
+}

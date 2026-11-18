@@ -69,8 +69,8 @@ const ROUTES: Record<string, () => Promise<{ POST: unknown }>> = {
     import("./caterer/account/mfa/confirm/route"),
   "parent/me/mfa/disable": () => import("./parent/me/mfa/disable/route"),
   "parent/me/mfa/confirm": () => import("./parent/me/mfa/confirm/route"),
-  "parent/me/children/[studentId]/pickup-signature-statement": () =>
-    import("./parent/me/children/[studentId]/pickup-signature-statement/route"),
+  "parent/me/children/[studentId]/care-exception": () =>
+    import("./parent/me/children/[studentId]/care-exception/route"),
 };
 
 async function post(route: string, host: string, body: unknown) {
@@ -159,7 +159,7 @@ describe("routes that carry the current password or a code", () => {
 
   it("a route without a credential repeats the call with the renewed session", async () => {
     const response = await post(
-      "parent/me/children/[studentId]/pickup-signature-statement",
+      "parent/me/children/[studentId]/care-exception",
       "parents.localhost:3000",
       { note: SECRET },
     );

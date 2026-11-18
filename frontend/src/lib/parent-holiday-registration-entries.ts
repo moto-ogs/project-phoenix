@@ -39,7 +39,7 @@ export interface HolidayRegistrationEntry {
 }
 
 interface BackendHolidayRegistrationEntry {
-  id: number;
+  id: number | string;
   traeger_name: string;
   period_name: string;
   first_day?: string | null;

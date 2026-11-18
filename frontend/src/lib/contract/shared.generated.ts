@@ -709,6 +709,17 @@ export const EventSchema: z.ZodType<Event, unknown> = z.object({
   school_event_type: z.string().optional(),
 });
 
+/** Go: portal.ParentConferenceWindow */
+export interface ParentConferenceWindow {
+  start_time: string;
+  end_time: string;
+}
+
+export const ParentConferenceWindowSchema: z.ZodType<ParentConferenceWindow, unknown> = z.object({
+  start_time: z.string(),
+  end_time: z.string(),
+});
+
 /** Go: portal.InvitationAnswer */
 export interface InvitationAnswer {
   status?: string;

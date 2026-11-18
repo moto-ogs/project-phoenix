@@ -22,7 +22,6 @@ import (
 var routesNoRouterTestAnswers = map[string]string{
 	"GET /operator/billing/key-day":                                 "handler test without a router",
 	"PUT /operator/billing/key-day":                                 "handler test without a router",
-	"GET /parent/me/enrollable-schools":                             "no test answers the route",
 	"GET /school/parent-letters/letter-placeholders":                "no test answers the route",
 	"POST /school/parent-letters/letter-preview":                    "no test answers the route",
 	"DELETE /api/parent-announcements/{announcementId}":             "only a relative test router answers it; the staff and school portals share the pattern",

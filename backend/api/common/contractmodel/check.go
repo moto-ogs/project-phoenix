@@ -162,6 +162,7 @@ func scalar(kind string, raw json.RawMessage) string {
 		KindLegacyID: "an identifier as a safe integer or a decimal string",
 		KindLaxID:    "an identifier as a safe integer or a decimal string",
 		KindDate:     "a day as YYYY-MM-DD", KindInstant: "an RFC 3339 instant", KindClock: "a time as HH:MM",
+		KindJSON: "a JSON value",
 	}[kind]
 	switch kind {
 	case KindString, KindEnum:
@@ -185,6 +186,8 @@ func scalar(kind string, raw json.RawMessage) string {
 		ok = isString && err == nil
 	case KindClock:
 		ok = isString && clockText.MatchString(text)
+	case KindJSON:
+		ok = json.Valid(raw)
 	default:
 		want = "a known kind, not " + kind
 	}

@@ -17,6 +17,7 @@ var (
 	marshalerType   = reflect.TypeFor[json.Marshaler]()
 	unmarshalerType = reflect.TypeFor[json.Unmarshaler]()
 	timeType        = reflect.TypeFor[time.Time]()
+	rawJSONType     = reflect.TypeFor[json.RawMessage]()
 	dateType        = reflect.TypeFor[calendar.Date]()
 )
 
@@ -289,6 +290,10 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 func (b *builder) named(t reflect.Type, where string, request bool) (Schema, bool, error) {
 	if t == timeType {
 		return Schema{Kind: KindInstant}, true, nil
+	}
+	// Raw JSON and an empty interface carry any value, null included.
+	if t == rawJSONType || t.Kind() == reflect.Interface && t.NumMethod() == 0 {
+		return Schema{Kind: KindJSON, Nullable: true}, true, nil
 	}
 	if b.dates[t] {
 		// A day type renders its zero value as null.

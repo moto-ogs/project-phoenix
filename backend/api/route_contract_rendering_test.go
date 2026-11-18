@@ -106,6 +106,12 @@ func fillRendered(v reflect.Value, own, shape renderShape, format string, depth 
 			v.SetString("2026-09-09")
 		}
 		return
+	case reflect.TypeFor[json.RawMessage]():
+		// Raw JSON carries a value its owner shapes; bytes of filler are none.
+		if own != shapeNil {
+			v.SetBytes([]byte(`{"key":["value",1,null]}`))
+		}
+		return
 	}
 	switch v.Kind() {
 	case reflect.Pointer:

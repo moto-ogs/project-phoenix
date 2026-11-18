@@ -400,6 +400,8 @@ func (w *tsWriter) tsType(s Schema, request bool) string {
 		t = "boolean"
 	case KindInt, KindNumber:
 		t = "number"
+	case KindJSON:
+		t = "unknown"
 	case KindEnum:
 		w.helpers["type OpenEnum"] = true
 		t = "OpenEnum<" + s.Ref + ">"
@@ -435,6 +437,8 @@ func (w *tsWriter) zod(s Schema) string {
 		z = helper("safeInt")
 	case KindNumber:
 		z = "z.number()"
+	case KindJSON:
+		z = "z.unknown()"
 	case KindID:
 		z = helper("int64String")
 	case KindLegacyID, KindLaxID:

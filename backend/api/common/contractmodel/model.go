@@ -20,6 +20,9 @@ const (
 	KindArray    = "array"
 	KindMap      = "map"
 	KindRef      = "ref"
+	// KindJSON is any JSON value whose shape the owner of the field keeps to
+	// itself: json.RawMessage and an empty interface.
+	KindJSON = "json"
 )
 
 // Schema is one value on the wire.
