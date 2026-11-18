@@ -123,3 +123,29 @@ describe.each([
     },
   );
 });
+
+it("removes cached registration content after a refused school refresh", async () => {
+  render(
+    <SWRConfig value={{ provider: () => new Map() }}>
+      <ToastProvider>
+        <Refresh />
+        <RegistrationPage />
+      </ToastProvider>
+    </SWRConfig>,
+  );
+  await screen.findByRole("heading", { name: "Status" });
+
+  schools.mockRejectedValue(
+    new ApiError("schools forbidden", 403, { code: "general.permission" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Refresh metadata" }));
+
+  expect(
+    await screen.findByText(
+      catalogText("general.permission", "die Liste der Schulen"),
+    ),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Status" }),
+  ).not.toBeInTheDocument();
+});

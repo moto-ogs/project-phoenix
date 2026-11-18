@@ -60,7 +60,10 @@ import {
 import { RequestMailStatus } from "~/components/enrollment/request-mail-status";
 import { useHolidayPeriodBillingHref } from "~/components/traeger/use-holiday-period-billing-href";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
-import { useRefusalGuard } from "~/components/traeger/use-traeger-confirmed-resource";
+import {
+  isRefusal,
+  useRefusalGuard,
+} from "~/components/traeger/use-traeger-confirmed-resource";
 import { useSWRRequestGuard } from "~/lib/swr/hooks";
 import { ApiError } from "~/lib/api-error";
 import {
@@ -523,10 +526,13 @@ function HolidayRegistrationContent() {
     (registration ? null : (afterWrite.error ?? readersError)) ??
     metadataLoadError(
       periodError ?? schoolsError,
-      Boolean(registration && period && schools),
+      Boolean(registration),
       periodFailure,
       schoolsFailure,
     );
+  // A refused metadata read removes the content. Its dependent controls must
+  // disappear with it, rather than act on a registration no longer accessible.
+  const metadataRefused = [periodFailure, schoolsFailure].some(isRefusal);
   const names = schoolNames(schools);
   const known = useHolidayKnownChildren(
     periodId,
@@ -589,7 +595,7 @@ function HolidayRegistrationContent() {
 
   // Without the registration the page shows its loading or error state. With
   // it, a recoverable error stands above the content (`keepContent`).
-  if (!(registration && view && period && schools)) {
+  if (!(registration && view)) {
     return (
       <TenantPage
         {...head}
@@ -600,6 +606,10 @@ function HolidayRegistrationContent() {
     );
   }
 
+  // Metadata is needed for the cards, but the registration still owns its
+  // head while the period or schools are loading again. Cached metadata no
+  // longer permits rendering after its revalidation refused access.
+  const metadataReady = Boolean(period && schools) && !metadataRefused;
   const tabContent: Record<
     Exclude<RegistrationTab, "uebersicht">,
     ReactNode
@@ -609,7 +619,7 @@ function HolidayRegistrationContent() {
         {view.children.map((child) => (
           <HolidayRegistrationChildCard
             key={child.id}
-            period={period}
+            period={period!}
             registration={view}
             child={child}
             health={health?.children.find(
@@ -635,7 +645,7 @@ function HolidayRegistrationContent() {
                       (entry) => entry.id === child.id,
                     ) ?? child
                   }
-                  schools={schools}
+                  schools={schools!}
                 />
               ) : undefined
             }
@@ -836,6 +846,10 @@ function HolidayRegistrationContent() {
       </>
     ),
   };
+  // Keep the active form mounted when its tab is not selected. Its draft is
+  // local state, so removing the tab would silently reset unsaved changes.
+  const editingTab =
+    editing === "guardians" ? "eltern" : editing ? "kind" : null;
 
   return (
     <HolidayRegistrationStatusScope
@@ -869,13 +883,14 @@ function HolidayRegistrationContent() {
             <TenantPageStats
               items={[
                 { label: `Nr. ${registration.id}` },
-                { label: period.name },
+                ...(period ? [{ label: period.name }] : []),
                 {
                   label: `Eingegangen am ${formatBerlinDate(registration.submittedAt)}`,
                 },
               ]}
             />
           }
+          loading={!metadataReady && !loadError}
           actions={
             <>
               {/* Der Status steht als Plakette neben der Kopfaktion, nicht in
@@ -887,61 +902,73 @@ function HolidayRegistrationContent() {
               {registration.frozen ? (
                 <StatusBadge tone="gray" label="Eingefroren" />
               ) : null}
-              {status.confirmAction}
+              {metadataRefused ? null : status.confirmAction}
             </>
           }
           // Everything but „Bestätigen“ stands in the menu of the head,
           // the download under „Herunterladen“ (#7410).
-          overflowMenu={[
-            ...status.menuItems,
-            ...exportMenuItems({
-              options: pdf.options,
-              busyKey: pdf.busyKey,
-              onSelect: (option) => void pdf.download(option.key),
-            }),
-            ...(status.cancelItems.length > 0
-              ? [{ kind: "separator" as const }, ...status.cancelItems]
-              : []),
-          ]}
-          tabs={{
-            value: tab,
-            onChange: (next) => changeTab(registrationTab(next)),
-            label: "Bereiche der Anmeldung",
-            inUrl: true,
-            items: REGISTRATION_TABS,
-          }}
+          overflowMenu={
+            metadataRefused
+              ? undefined
+              : [
+                  ...status.menuItems,
+                  ...exportMenuItems({
+                    options: pdf.options,
+                    busyKey: pdf.busyKey,
+                    onSelect: (option) => void pdf.download(option.key),
+                  }),
+                  ...(status.cancelItems.length > 0
+                    ? [{ kind: "separator" as const }, ...status.cancelItems]
+                    : []),
+                ]
+          }
+          tabs={
+            metadataRefused
+              ? undefined
+              : {
+                  value: tab,
+                  onChange: (next) => changeTab(registrationTab(next)),
+                  label: "Bereiche der Anmeldung",
+                  inUrl: true,
+                  items: REGISTRATION_TABS,
+                }
+          }
           overlays={
-            <>
-              {status.overlays}
-              <ConfirmationModal
-                isOpen={confirmingSplit}
-                title="Von den Geschwistern trennen?"
-                confirmText="Trennen"
-                isConfirmLoading={splitting}
-                loadingText="Trennt …"
-                onClose={() => setConfirmingSplit(false)}
-                onConfirm={() => void splitSiblings()}
-              >
-                <p className="text-sm text-gray-700">
-                  Die Kinder dieser Anmeldung zählen dann nicht mehr mit den
-                  anderen Anmeldungen zusammen. moto berechnet den Ferienbeitrag
-                  neu, auch einen schon bestätigten. Eltern bekommen keine
-                  Nachricht von moto.
-                </p>
-              </ConfirmationModal>
-            </>
+            metadataRefused ? undefined : (
+              <>
+                {status.overlays}
+                <ConfirmationModal
+                  isOpen={confirmingSplit}
+                  title="Von den Geschwistern trennen?"
+                  confirmText="Trennen"
+                  isConfirmLoading={splitting}
+                  loadingText="Trennt …"
+                  onClose={() => setConfirmingSplit(false)}
+                  onConfirm={() => void splitSiblings()}
+                >
+                  <p className="text-sm text-gray-700">
+                    Die Kinder dieser Anmeldung zählen dann nicht mehr mit den
+                    anderen Anmeldungen zusammen. moto berechnet den
+                    Ferienbeitrag neu, auch einen schon bestätigten. Eltern
+                    bekommen keine Nachricht von moto.
+                  </p>
+                </ConfirmationModal>
+              </>
+            )
           }
         >
           <LoadErrorAlert error={previewLoad.error ?? readersError} />
           <LoadErrorAlert error={afterWrite.error} />
-          <HolidayRegistrationMailProblemsAlert
-            problems={registration.mailProblems}
-            outcomes={(registration.mails ?? []).map((mail) => mail.outcome)}
-            cancelled={cancelled}
-            parentsSectionId={PARENTS_SECTION_ID}
-            revealParents={() => changeTab("eltern")}
-          />
-          {tab === "uebersicht" ? (
+          {metadataReady ? (
+            <HolidayRegistrationMailProblemsAlert
+              problems={registration.mailProblems}
+              outcomes={(registration.mails ?? []).map((mail) => mail.outcome)}
+              cancelled={cancelled}
+              parentsSectionId={PARENTS_SECTION_ID}
+              revealParents={() => changeTab("eltern")}
+            />
+          ) : null}
+          {metadataReady && tab === "uebersicht" ? (
             <>
               {deletionNotice ? (
                 <Alert type="info" message={deletionNotice} />
@@ -1005,14 +1032,19 @@ function HolidayRegistrationContent() {
                 </SectionCard>
               ) : null}
               <HolidayRegistrationHistory
-                period={period}
+                period={period!}
                 names={names}
                 registration={registration}
               />
             </>
-          ) : (
-            tabContent[tab]
-          )}
+          ) : null}
+          {metadataReady && (tab === "kind" || editingTab === "kind") ? (
+            <div hidden={tab !== "kind"}>{tabContent.kind}</div>
+          ) : null}
+          {metadataReady && (tab === "eltern" || editingTab === "eltern") ? (
+            <div hidden={tab !== "eltern"}>{tabContent.eltern}</div>
+          ) : null}
+          {metadataReady && tab === "nachweise" ? tabContent.nachweise : null}
         </TenantPage>
       )}
     </HolidayRegistrationStatusScope>
