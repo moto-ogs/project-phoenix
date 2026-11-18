@@ -31,8 +31,8 @@ func TestAccountSecurityNoticeTemplates_Render(t *testing.T) {
 	}{
 		{
 			name: "second factor reset by the school", template: "account-mfa-reset.html",
-			data:           map[string]any{"LogoURL": "https://example.com/logo.png", "ResetAt": "12.11.2026 09:42", "Actor": "Die Verwaltung Ihrer Schule", "ByOperator": false},
-			mustContain:    []string{"Die Verwaltung Ihrer Schule hat am 12.11.2026 09:42", "gemerkten Geräte", "„Passwort vergessen?“", "bei der Verwaltung deiner Schule", `alt="moto"`},
+			data:           map[string]any{"LogoURL": "https://example.com/logo.png", "ResetAt": "12.11.2026 09:42", "Actor": "Die Verwaltung deiner Schule", "ByOperator": false},
+			mustContain:    []string{"Die Verwaltung deiner Schule hat am 12.11.2026 09:42", "gemerkten Geräte", "„Passwort vergessen?“", "bei der Verwaltung deiner Schule", `alt="moto"`},
 			mustNotContain: []string{"beim moto-Team", "href=\"http"},
 		},
 		{
@@ -43,8 +43,8 @@ func TestAccountSecurityNoticeTemplates_Render(t *testing.T) {
 		},
 		{
 			name: "login address changed by the school", template: "account-login-address-changed.html",
-			data:           map[string]any{"LogoURL": "https://example.com/logo.png", "ChangedAt": "12.11.2026 09:42", "Actor": "Die Verwaltung Ihrer Schule", "ByOperator": false},
-			mustContain:    []string{"Die Verwaltung Ihrer Schule hat am 12.11.2026 09:42", "neuen Adresse", "bei der Verwaltung deiner Schule"},
+			data:           map[string]any{"LogoURL": "https://example.com/logo.png", "ChangedAt": "12.11.2026 09:42", "Actor": "Die Verwaltung deiner Schule", "ByOperator": false},
+			mustContain:    []string{"Die Verwaltung deiner Schule hat am 12.11.2026 09:42", "neuen Adresse", "bei der Verwaltung deiner Schule"},
 			mustNotContain: []string{"beim moto-Team", "href=\"http"},
 		},
 		{

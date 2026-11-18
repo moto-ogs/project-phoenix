@@ -24,10 +24,10 @@ func TestCareContractNoticeTemplate_Renders(t *testing.T) {
 		var out bytes.Buffer
 		require.NoError(t, tpl.ExecuteTemplate(&out, "care-contract-notice.html", map[string]any{
 			"GuardianName": "Erika Muster", "SchoolName": "Ganztag im Quartier e.V.", "Withdrawal": withdrawal,
-			"Paragraphs": []string{"wir bestätigen Ihre Erklärung für Lina Muster.", "Der Vertrag endet mit Ablauf des 31.12.2026."},
+			"Paragraphs": []string{"wir bestätigen deine Erklärung für Lina Muster.", "Der Vertrag endet mit Ablauf des 31.12.2026."},
 		}))
 		body := out.String()
-		for _, want := range []string{heading, "Guten Tag Erika Muster,", "wir bestätigen Ihre Erklärung für Lina Muster.",
+		for _, want := range []string{heading, "Guten Tag Erika Muster,", "wir bestätigen deine Erklärung für Lina Muster.",
 			"Der Vertrag endet mit Ablauf des 31.12.2026.", "Ganztag im Quartier e.V."} {
 			assert.Contains(t, body, template.HTMLEscapeString(want))
 		}
