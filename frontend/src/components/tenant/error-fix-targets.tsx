@@ -8,7 +8,11 @@ import {
   ErrorFixProvider,
   type ErrorFixTarget,
 } from "~/components/ui/error-fix-slot";
-import { leadsSchool } from "~/lib/auth-utils";
+import {
+  hasEffectiveAdminScope,
+  hasPermission,
+  leadsSchool,
+} from "~/lib/auth-utils";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 
@@ -20,6 +24,31 @@ interface FixTarget {
   /** The viewer's right for the target; without it no link shows. */
   readonly permitted: (session: Session | null) => boolean;
 }
+
+/** Operational settings (`config:update`), like the enrollment form. */
+const updatesSettings = holds("config:update");
+
+/** A viewer who holds `permission` (or the admin scope). */
+function holds(permission: string): (session: Session | null) => boolean {
+  return (session) =>
+    hasEffectiveAdminScope(session) || hasPermission(session, permission);
+}
+
+/** The grade question of the enrollment form, which both codes need. */
+const GRADE_COLLECTION: FixTarget = {
+  path: "/settings?tab=enrollment&highlight=enrollment.collect_grade_level",
+  label: "Abfrage einschalten",
+  tooltip: "Öffnet die Einstellungen bei der Abfrage der Klassenstufe.",
+  permitted: updatesSettings,
+};
+
+/** The Regeltermine of the care plan; the error names the one meant. */
+const TEMPLATES: FixTarget = {
+  path: "/betreuungsplan?view=serien",
+  label: "Zu den Regelterminen",
+  tooltip: "Öffnet die Regeltermine im Betreuungsplan.",
+  permitted: holds("schedules:manage"),
+};
 
 /**
  * Where the school fixes a refusal with a known code (#7092). One table, not
@@ -35,6 +64,27 @@ const ERROR_FIX_TARGETS: Partial<Record<ErrorCode, FixTarget>> = {
     tooltip: "Öffnet die Einstellungen beim Bundesland Ihrer Schule.",
     permitted: leadsSchool,
   },
+  "enrollment.form_grade_collection_required": GRADE_COLLECTION,
+  "enrollment.phase_eligibility_setting_required": GRADE_COLLECTION,
+  "students.day_log_disabled": {
+    path: "/settings?tab=gdpr&highlight=gdpr.attendance_log_enabled",
+    label: "Protokoll einschalten",
+    tooltip: "Öffnet die Einstellungen beim Anwesenheitsprotokoll.",
+    permitted: leadsSchool,
+  },
+  // The payroll file needs the school's entries on the page Abrechnung.
+  "workforce.payroll_config_incomplete": {
+    path: "/payroll",
+    label: "Abrechnung öffnen",
+    tooltip: "Öffnet die Seite Abrechnung mit den fehlenden Angaben.",
+    permitted: leadsSchool,
+  },
+  // A Regeltermin and its „Angebote als Quelle“ change only in the plan.
+  "timetable.activity_template_protected": TEMPLATES,
+  "enrollment.care_offering_template_mixed_phases": TEMPLATES,
+  "enrollment.care_offering_template_no_active_source": TEMPLATES,
+  "enrollment.care_offering_template_outside_period": TEMPLATES,
+  "enrollment.care_offering_template_source_invalid": TEMPLATES,
 };
 
 /** Gives the kit's error alerts the link to where a refusal is fixed. */

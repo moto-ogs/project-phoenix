@@ -603,6 +603,9 @@ function TenantPageView({
   // Mit Bedienelementen trägt die Suchzeile das Kebab selbst.
   const hasSearchRow = searchRowHasControls;
   const hasHeadActions = actions != null || kebabInTitleRow;
+  const hasRowBelowTabs = Boolean(searchSlot ?? hasSearchRow);
+  // Folgt unter den Reitern nichts, schließen sie die Kopfkarte ab (#7303).
+  const tabsCloseHead = tabs != null && !hasRowBelowTabs;
 
   const headRef = useRef<HTMLElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -640,6 +643,7 @@ function TenantPageView({
         className={cn(
           "moto-content-surface rounded-2xl border",
           HEAD_PADDING,
+          tabsCloseHead && "compact:pb-0 sm:pb-0",
           printHideHeader && "print:hidden",
         )}
       >
@@ -725,7 +729,7 @@ function TenantPageView({
             ein weiteres Filterelement. */}
         {tabs && <TenantPageTabs {...tabs} />}
 
-        {(searchSlot ?? hasSearchRow) && (
+        {hasRowBelowTabs && (
           <div
             className={cn(
               "compact:mt-3 mt-4 max-sm:mt-3",
@@ -1096,16 +1100,15 @@ function TenantPageTabs({
   };
 
   return (
-    // Die Randaufhebung gehoert dem Reiterband: seine Grundlinie laeuft ueber
-    // die volle Kartenbreite, auf jedem Geraet.
-    <div className="compact:-mx-4 compact:mt-3 -mx-5 mt-4 max-sm:-mx-4 max-sm:mt-3">
+    // Die Randaufhebung gehoert dem Reiterband: es laeuft ueber die volle
+    // Kartenbreite, auf jedem Geraet.
+    <div className="group/tabs compact:-mx-4 compact:mt-3 -mx-5 mt-4 max-sm:-mx-4 max-sm:mt-3">
       {/* EIN Band auf allen Breiten. Unter sm scrollt es waagerecht und zeigt
           jeden Reiter; ab sm wird gemessen und der Ueberhang steht unter
           „Mehr". Vorher stand unter sm eine Auswahlliste -- sie zeigte nur den
           aktiven Wert („Status", „Betrieb") und las sich als Filter, nicht als
-          Seitenbereich. Ein sichtbares Band mit derselben Grundlinie wie auf
-          dem Desktop sagt auf den ersten Blick: hier wechselt man den
-          Bereich, und so viele gibt es.
+          Seitenbereich. Ein sichtbares Band sagt auf den ersten Blick: hier
+          wechselt man den Bereich, und so viele gibt es.
 
           Die Grundlinie gehört dem BAND, nicht dem einzelnen Reiter: eine
           Haarlinie über die volle Kartenbreite, der aktive Reiter färbt nur
@@ -1113,8 +1116,12 @@ function TenantPageTabs({
           und der Abstand hängt nicht mehr an einem Strich, den nur einer von
           ihnen trägt. Die Linie verbindet den Reiter zugleich sichtbar mit
           dem Inhalt darunter; eine einzeln getönte Pille sagt das nicht, sie
-          liest sich als Filter. */}
-      <div className="compact:px-4 relative border-b border-gray-200 px-5 max-sm:border-0 max-sm:px-0">
+          liest sich als Filter.
+
+          Ist das Band die letzte Zeile des Kopfes, ist ab sm die Kartenkante
+          die Grundlinie; eine eigene Linie darüber las sich als doppelter
+          Rand (#7303, Spec Regel 7). */}
+      <div className="compact:px-4 relative border-b border-gray-200 px-5 max-sm:border-0 max-sm:px-0 sm:group-last/tabs:border-b-0">
         <div ref={rowRef} className="flex items-end gap-6 max-sm:gap-0">
           <div
             ref={tablistRef}

@@ -250,6 +250,34 @@ describe("FormErrorAlert", () => {
     ).toBeInTheDocument();
   });
 
+  it.each([
+    [
+      "enrollment.phase_eligibility_setting_required",
+      "config:update",
+      "Abfrage einschalten",
+      "/test-tenant/settings?tab=enrollment&highlight=enrollment.collect_grade_level",
+    ],
+    [
+      "students.day_log_disabled",
+      "config:manage",
+      "Protokoll einschalten",
+      "/test-tenant/settings?tab=gdpr&highlight=gdpr.attendance_log_enabled",
+    ],
+  ])("leads %s to its setting with %s (#7092)", (code, right, label, href) => {
+    session.permissions = [right];
+
+    render(
+      <ErrorFixTargetsProvider>
+        <FormErrorAlert message={{ message: "Abgelehnt.", code, attempt: 1 }} />
+      </ErrorFixTargetsProvider>,
+    );
+
+    expect(screen.getByRole("link", { name: label })).toHaveAttribute(
+      "href",
+      href,
+    );
+  });
+
   it("shows no fix link without the right for the target", () => {
     render(
       <ErrorFixTargetsProvider>

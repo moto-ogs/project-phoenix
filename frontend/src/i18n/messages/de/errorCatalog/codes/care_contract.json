@@ -10,7 +10,7 @@
   "contract_not_found": "Diesen Vertrag gibt es nicht. Bitte öffnen Sie ihn über „Verträge“.",
   "contract_not_signable": "Dieser Vertrag ist schon unterschrieben oder wartet nicht auf eine Unterschrift. Bitte laden Sie die Seite neu.",
   "field_invalid": "Einige Angaben stimmen nicht. Bitte prüfen Sie Ihre Eingaben.",
-  "letterhead_too_long": "Absender oder Fußzeile sind zu lang für den Vertrag. Bitte kürzen Sie sie unter „Briefkopf und Vorlagen“.",
+  "letterhead_too_long": "Absender oder Fußzeile sind zu lang für den Vertrag. Bitte kürzen Sie sie unter „Briefkopf und Vorlagen“. Das darf, wer das Recht „Einstellungen“ hat.",
   "notice_end_not_open": "Für diesen Vertrag gibt es kein offenes Vertragsende mehr. Bitte laden Sie die Seite neu.",
   "notice_template_missing": "Der Träger hat noch keinen Text für die Bestätigung. Bitte melden Sie sich beim Träger.",
   "offering_not_found": "Dieses Angebot gibt es an der Schule nicht mehr. Bitte laden Sie die Seite neu.",
