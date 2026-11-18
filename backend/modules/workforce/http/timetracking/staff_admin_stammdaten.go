@@ -253,7 +253,7 @@ func (rs *StaffAdminResource) runStammdatenUpdate(w http.ResponseWriter, r *http
 	}
 	changedBy, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	if err := update(id, changedBy); err != nil {

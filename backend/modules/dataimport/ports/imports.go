@@ -101,6 +101,11 @@ type OpeningBalanceImportDeps struct {
 // Audit makes RecordAuditInTransaction fail. Transactions is required for
 // ImportBatches, which owns the transaction lifecycle.
 type ImportRuntime struct {
+	// BeforeBatchCommit completes written rows in the batch's tenant transaction,
+	// before its checkpoint. A failure rolls back the batch. The account is the
+	// importer; previews and batches without writes do not call it.
+	BeforeBatchCommit func(context.Context, int64) error
+
 	Transactions importModels.Transactions
 	Audit        AuditCommand
 	Observe      func(importModels.ImportObservation)
@@ -272,3 +277,28 @@ type RelationshipResolver interface {
 
 // GuardianPortDecorator binds a recording or failing owner port in tests.
 type GuardianPortDecorator func(GuardianDirectory) GuardianDirectory
+
+// ClassListEntryRemoval is School Membership's batch delete of class-list
+// entries (#4803); the conversion appends the change trail itself.
+type ClassListEntryRemoval interface {
+	RemoveClassListEntries(context.Context, []ClassListEntryJoin) error
+}
+
+// ClassListMarkTransfer is Student Presence's move of the morning marks of
+// class-list entries onto the students they became (#4803).
+type ClassListMarkTransfer interface {
+	TransferClassListEntryMarks(context.Context, []ClassListEntryMarkMove) error
+}
+
+// ClassListConversionDeps are the owner commands the conversion of a
+// school's class-list entries into children without an OGS place runs
+// through (#4803, ADR 0282). Students is the student import whose batch
+// creation the conversion reuses.
+type ClassListConversionDeps struct {
+	Membership ClassListMembership
+	Removal    ClassListEntryRemoval
+	Marks      ClassListMarkTransfer
+	Persons    PersonDirectory
+	Students   StudentDirectory
+	Audit      AuditCommand
+}

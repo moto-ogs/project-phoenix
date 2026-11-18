@@ -233,6 +233,7 @@ export const HELP_TOPICS = {
   traegerProfile: "traeger-eigenen-namen-aendern",
   traegerHolidayPeriod: "traeger-ferienzeitraum",
   traegerClosingDays: "traeger-schliesstage",
+  traegerNotificationFeed: "traeger-hinweise-in-der-glocke",
   traegerHolidayRegistration: "traeger-ferienanmeldung-teilen",
   traegerHolidayForm: "traeger-ferien-anmeldeformular",
   traegerHolidayRegistrationReview: "traeger-ferienanmeldungen-pruefen",

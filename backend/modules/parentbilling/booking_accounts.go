@@ -26,11 +26,13 @@ import (
 //     without one is refused and names the documents.
 //  4. The values saved here pass the same rules the DATEV file checks
 //     (one case list, backend/testdata/finance-booking-accounts-cases.json).
-//  5. A holiday position books on the KOST1 of the school that hosts its
-//     week, valid on the first day of the week (#6624). Without a host
-//     school, or without a KOST1 of it on that day, it books on the KOST1
-//     of the holiday care and keeps the reason (CostCenterFallback); every
-//     file that holds it names it in the protocol.
+//  5. A holiday position books on a KOST1 of the school that hosts its
+//     week, valid on the first day of the week: the holiday KOST1 of that
+//     school (#7357), else its KOST1 (#6624). Without a host school, or
+//     without either on that day, it books on the KOST1 of the holiday
+//     care of the Träger and keeps the reason (CostCenterFallback); every
+//     file that holds it names it in the protocol. Only holiday positions
+//     read the holiday KOST1 of a school.
 
 // Scopes of a revenue account: a Leistung, or an Angebot of the monthly
 // contributions (its care offering).
@@ -44,6 +46,10 @@ const (
 	BookingScopeOffering     = "offering"
 	// BookingScopeSchool is the scope of the KOST1 of a school.
 	BookingScopeSchool = "school"
+	// BookingScopeSchoolHoliday is the scope of the KOST1 of the holiday
+	// care a school hosts (#7357); without one its weeks book on the KOST1
+	// of the school.
+	BookingScopeSchoolHoliday = "school_holiday"
 )
 
 // Limits of the values (DATEV: a Sachkonto has at most 8 digits, a cost
@@ -66,8 +72,8 @@ var (
 
 // Why a holiday position books on the KOST1 of the holiday care instead of
 // its host school (#6624): its week is not one of the period (or a line
-// without a week of a child without one), or the host school has no KOST1
-// on the first day of the week.
+// without a week of a child without one), or the host school has neither a
+// holiday KOST1 nor a KOST1 on the first day of the week.
 const (
 	CostCenterFallbackNoHostSchool       = "no_host_school"
 	CostCenterFallbackNoSchoolCostCenter = "no_school_cost_center"
@@ -92,9 +98,11 @@ type RevenueAccount struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// CostCenter is a cost center from ValidFrom on: KOST1 of a school or of
-// the holiday care (scope holiday, ScopeID 0), KOST2 of an Angebot. An
-// empty Code ends the cost center of the scope from that day on.
+// CostCenter is a cost center from ValidFrom on: KOST1 of a school, of the
+// holiday care a school hosts (scope school_holiday, ScopeID the school) or
+// of the holiday care of the Träger (scope holiday, ScopeID 0), KOST2 of an
+// Angebot. An empty Code ends the cost center of the scope from that day
+// on.
 type CostCenter struct {
 	ID        int64         `json:"id"`
 	Scope     string        `json:"scope"`

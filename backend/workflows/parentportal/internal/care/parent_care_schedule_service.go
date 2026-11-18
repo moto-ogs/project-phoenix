@@ -101,6 +101,9 @@ func (s *Service) GetChildCareSchedule(ctx context.Context, accountID, studentID
 	if err != nil {
 		return nil, err
 	}
+	if err := child.RequireCarePlace(); err != nil {
+		return nil, err
+	}
 	view := &ChildCareSchedule{}
 	txErr := s.Runtime.WithinTenant(ctx, child.TenantID, func(txCtx context.Context) error {
 		if err := s.buildCareScheduleView(txCtx, view, accountID, studentID); err != nil {
@@ -151,7 +154,7 @@ func (s *Service) CreateSignedCareScheduleRequest(ctx context.Context, accountID
 	}
 	// A child whose care at this school has ended keeps read access to what
 	// happened, but nothing new can be submitted for them (#2487).
-	if err := child.RequireCareRunning(); err != nil {
+	if err := child.RequireOGSCareRunning(); err != nil {
 		return nil, err
 	}
 	capabilities, bookingsAuthoritative, err := s.resolveCareScheduleRequestCapabilities(ctx, child.TenantID)
@@ -356,7 +359,7 @@ func (s *Service) EditSignedCareScheduleRequest(
 	if err != nil {
 		return nil, err
 	}
-	if err := child.RequireCareRunning(); err != nil {
+	if err := child.RequireOGSCareRunning(); err != nil {
 		return nil, err
 	}
 	if s.CareRequests == nil {

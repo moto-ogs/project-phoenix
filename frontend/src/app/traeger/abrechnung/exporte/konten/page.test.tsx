@@ -57,6 +57,12 @@ const PAGE: BookingAccounts = {
   ],
 };
 
+/** The row of a school's group: its monthly contributions or its holiday care. */
+function schoolRow(school: string, title: string): HTMLElement {
+  const group = screen.getByRole("group", { name: school });
+  return within(group).getByText(title).closest("li")!;
+}
+
 function renderPage() {
   return render(
     <TraegerResourceTestProvider>
@@ -80,9 +86,7 @@ it("shows where each Leistung books and which cost center holds today", async ()
   const offering = screen.getAllByText("Modul 1")[0]!.closest("li")!;
   expect(within(offering).getByText("Standard-Erlöskonto")).toBeInTheDocument();
 
-  const school = screen
-    .getByText("GS Ispringen", { selector: "p.font-semibold" })
-    .closest("li")!;
+  const school = schoolRow("GS Ispringen", "Monatsbeiträge und Mensa");
   expect(within(school).getByText("ISP")).toBeInTheDocument();
   expect(
     within(school).getByText(
@@ -90,11 +94,121 @@ it("shows where each Leistung books and which cost center holds today", async ()
     ),
   ).toBeInTheDocument();
   expect(within(school).getByText("ISP27")).toBeInTheDocument();
-  const other = screen
-    .getByText("GS Birkenfeld", { selector: "p.font-semibold" })
-    .closest("li")!;
+  const other = schoolRow("GS Birkenfeld", "Monatsbeiträge und Mensa");
   expect(within(other).getByText("Keine Kostenstelle")).toBeInTheDocument();
   expect(screen.getByText("1 von 2")).toBeInTheDocument();
+});
+
+// #7357: a school books its holiday care on a cost center of its own; without
+// one the row names the cost center its holiday weeks book on instead.
+it("shows per school where its holiday care books", async () => {
+  api.fetchBookingAccounts.mockResolvedValue({
+    ...PAGE,
+    schools: [...PAGE.schools, { id: "13", name: "GS Dillweißenstein" }],
+    costCenters: [
+      ...PAGE.costCenters,
+      {
+        id: "3",
+        scope: "school_holiday",
+        scopeId: "12",
+        validFrom: CURRENT_FROM,
+        code: "5569",
+      },
+      {
+        id: "4",
+        scope: "school_holiday",
+        scopeId: "12",
+        validFrom: NEXT_FROM,
+        code: "5570",
+      },
+      {
+        id: "5",
+        scope: "holiday",
+        scopeId: "0",
+        validFrom: CURRENT_FROM,
+        code: "FER",
+      },
+    ],
+  });
+  renderPage();
+  await screen.findByRole("group", { name: "GS Ispringen" });
+
+  const inherits = schoolRow("GS Ispringen", "Ferienbetreuung");
+  expect(within(inherits).getByText("ISP")).toBeInTheDocument();
+  expect(within(inherits).getByText("wie Monatsbeiträge")).toBeInTheDocument();
+  expect(within(inherits).queryByText(/^seit /)).toBeNull();
+
+  const own = schoolRow("GS Birkenfeld", "Ferienbetreuung");
+  expect(within(own).getByText("5569")).toBeInTheDocument();
+  expect(
+    within(own).getByText(
+      `seit ${CURRENT_FROM.split("-").reverse().join(".")}`,
+    ),
+  ).toBeInTheDocument();
+  expect(within(own).getByText("5570")).toBeInTheDocument();
+  fireEvent.click(
+    within(own).getByRole("button", {
+      name: "Neue KOST1 für die Ferienbetreuung an GS Birkenfeld",
+    }),
+  );
+  expect(
+    screen.getByText("Leer lassen: Ab diesem Tag gibt es keine eigene."),
+    "an ended holiday cost center falls back, it does not end all",
+  ).toBeInTheDocument();
+  expect(
+    within(schoolRow("GS Birkenfeld", "Monatsbeiträge und Mensa")).getByText(
+      "Keine Kostenstelle",
+    ),
+    "the holiday cost center is none of the monthly contributions",
+  ).toBeInTheDocument();
+
+  const fallback = schoolRow("GS Dillweißenstein", "Ferienbetreuung");
+  expect(within(fallback).getByText("FER")).toBeInTheDocument();
+  expect(within(fallback).getByText("Ersatz-Kostenstelle")).toBeInTheDocument();
+  const all = schoolRow("Alle Schulen", "Ersatz für die Ferienbetreuung");
+  expect(within(all).getByText("FER")).toBeInTheDocument();
+});
+
+it("adds the holiday cost center of a school in its own scope", async () => {
+  api.addCostCenter.mockResolvedValueOnce({
+    ...PAGE,
+    costCenters: [
+      ...PAGE.costCenters,
+      {
+        id: "3",
+        scope: "school_holiday",
+        scopeId: "11",
+        validFrom: TEST_CLOCK_TODAY,
+        code: "5469",
+      },
+    ],
+  });
+  renderPage();
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Neue KOST1 für die Ferienbetreuung an GS Ispringen",
+    }),
+  );
+  fireEvent.change(screen.getByLabelText("Kostenstelle"), {
+    target: { value: "5469" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+  await waitFor(() =>
+    expect(api.addCostCenter).toHaveBeenCalledWith({
+      scope: "school_holiday",
+      scopeId: "11",
+      validFrom: TEST_CLOCK_TODAY,
+      code: "5469",
+    }),
+  );
+  const holiday = schoolRow("GS Ispringen", "Ferienbetreuung");
+  expect(await within(holiday).findByText("5469")).toBeInTheDocument();
+  expect(within(holiday).queryByText("wie Monatsbeiträge")).toBeNull();
+  expect(
+    within(schoolRow("GS Ispringen", "Monatsbeiträge und Mensa")).getByText(
+      "ISP",
+    ),
+  ).toBeInTheDocument();
 });
 
 it("saves the revenue account of a Leistung after checking it like the export", async () => {

@@ -54,7 +54,7 @@ func (s *Service) submitCareException(ctx context.Context, accountID, studentID 
 	}
 	// A child whose care at this school has ended keeps read access to
 	// what happened, but nothing new can be submitted for them (#2487).
-	if err := child.RequireCareRunning(); err != nil {
+	if err := child.RequireOGSCareRunning(); err != nil {
 		return nil, err
 	}
 
@@ -276,7 +276,7 @@ func (s *Service) DeleteCareException(ctx context.Context, accountID, studentID 
 	}
 	// A child whose care at this school has ended keeps read access to
 	// what happened, but nothing new can be submitted for them (#2487).
-	if err := child.RequireCareRunning(); err != nil {
+	if err := child.RequireOGSCareRunning(); err != nil {
 		return err
 	}
 

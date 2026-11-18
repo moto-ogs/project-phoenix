@@ -524,3 +524,66 @@ func TestStaffDocumentsAPI_FileValidation(t *testing.T) {
 	rec = c.upload(t, "sonstiges", "gross.pdf", big, "staff:documents")
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 }
+
+// TestStaffDocumentsAPI_SealsSickNotesAndPayslips: sick notes and payslips
+// lie sealed on disk and download as uploaded; other categories and legacy
+// plaintext files still serve, and a sealed file moved onto another document
+// does not open (#3840).
+func TestStaffDocumentsAPI_SealsSickNotesAndPayslips(t *testing.T) {
+	t.Parallel()
+	c := setupDocumentsAPI(t)
+	base := fmt.Sprintf("/staff/%d/documents", c.staffID)
+	dir := timetracking.StaffDocumentsDirForTest(testpkg.Tenant(t), nativeUploads.UploadFiles{})
+	stored := func(id int64) (string, int64) {
+		var name string
+		var size int64
+		require.NoError(t, c.tc.db.NewRaw("SELECT filename_stored, size_bytes FROM users.staff_documents WHERE id = ?", id).Scan(testpkg.Ctx(t), &name, &size))
+		return name, size
+	}
+	upload := func(category, permission string) (int64, string) {
+		rec := c.upload(t, category, category+".pdf", fakePDF, permission)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		id, _ := uploadedDocument(t, rec.Body.Bytes())
+		name, size := stored(id)
+		assert.Equal(t, int64(len(fakePDF)), size, "the document shows the size of the uploaded file")
+		return id, name
+	}
+	download := func(id int64, permission string) *httptest.ResponseRecorder {
+		return c.request(t, http.MethodGet, fmt.Sprintf("%s/%d/download", base, id), nil, "", permission)
+	}
+
+	sickNote, sickNoteName := upload("au_bescheinigung", "staff_documents:health")
+	payslip, payslipName := upload("lohnabrechnung", "staff:financial")
+	certificate, certificateName := upload("zeugnis", "staff:documents")
+	for _, name := range []string{sickNoteName, payslipName} {
+		onDisk, err := os.ReadFile(filepath.Join(dir, name))
+		require.NoError(t, err)
+		assert.True(t, bytes.HasPrefix(onDisk, []byte("MOTOSEAL")), "sealed file %s", name)
+		assert.False(t, bytes.Contains(onDisk, fakePDF[:8]), "no plaintext on disk")
+	}
+	onDisk, err := os.ReadFile(filepath.Join(dir, certificateName))
+	require.NoError(t, err)
+	assert.Equal(t, fakePDF, onDisk, "other categories stay unsealed")
+
+	for _, doc := range []struct {
+		id         int64
+		permission string
+	}{{sickNote, "staff_documents:health"}, {payslip, "staff:financial"}, {certificate, "staff:documents"}} {
+		rec := download(doc.id, doc.permission)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, fakePDF, rec.Body.Bytes())
+	}
+
+	// A sealed file under another document's name is bound to its own name
+	// and does not open.
+	sealed, err := os.ReadFile(filepath.Join(dir, payslipName))
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, sickNoteName), sealed, 0o600))
+	assert.Equal(t, http.StatusNotFound, download(sickNote, "staff_documents:health").Code)
+
+	// A file stored before #3840 is plaintext and still serves.
+	require.NoError(t, os.WriteFile(filepath.Join(dir, sickNoteName), fakePDF, 0o600))
+	rec := download(sickNote, "staff_documents:health")
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, fakePDF, rec.Body.Bytes())
+}

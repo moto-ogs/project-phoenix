@@ -402,6 +402,8 @@ import type { traegerKeyDateCountsTopic as authored_traegerKeyDateCountsTopic } 
 
 import type { traegerLoginTopic as authored_traegerLoginTopic } from "./articles/traeger-login";
 
+import type { traegerNotificationFeedTopic as authored_traegerNotificationFeedTopic } from "./articles/traeger-notification-feed";
+
 import type { traegerOccupancyTopic as authored_traegerOccupancyTopic } from "./articles/traeger-occupancy";
 
 import type { traegerPayrollExportTopic as authored_traegerPayrollExportTopic } from "./articles/traeger-payroll-export";
@@ -461,6 +463,7 @@ import type { HelpGroupMode, HelpPresenceMode, HelpTopic } from "./help-types";
 import {
   loginResult,
   missingMenuDifferences,
+  OWN_STAFF_PROFILE_TROUBLESHOOTING,
   parentAnnouncementSteps,
   SIMPLE_NAV_DIFFERENCE,
   unavailableNfcTopic,
@@ -1673,6 +1676,7 @@ export const classListEntriesTopic =
         "Schreiben Sie die Klasse genau wie bei den regulären Kindern.",
       ],
       differences: [
+        "Oben steht, dass Ihre Schule Kinder ohne OGS-Platz als eigene Kinder führt, und `+ Eintrag` fehlt? Dann hat das moto-Team das eingeschaltet. Die Einträge sind dabei zu Kindern geworden. Neue Kinder legen Sie in den `Kinderdaten` mit `Ohne OGS-Platz` an. Ein `Sammelimport` legt sie ebenfalls als Kinder an.",
         "Ein Eintrag trägt `Mögliche Dublette`? Dann gibt es ein reguläres Kind mit demselben Namen in derselben Klasse.",
         "Ein Eintrag trägt `In moto angelegt`? Dann ist es ein reguläres Kind. Gepflegt wird es unter `Kinderdaten`.",
       ],
@@ -1799,6 +1803,7 @@ export const createStudentTopic = function createStudentTopic(): HelpTopic {
     differences: [
       "`Vorname`, `Nachname` und `Klasse` tragen einen roten Stern. Sie sind Pflicht.",
       "Oben im Fenster können Sie auf `Nur Klassenliste` wechseln. Das ist für Kinder ohne OGS-Betreuung.",
+      "Statt `Nur Klassenliste` steht dort `Ohne OGS-Platz`? Dann hat das moto-Team für Ihre Schule Kinder ohne OGS-Platz eingeschaltet. Das Kind bekommt einen eigenen Eintrag. Seine Eltern können Sie in die Eltern-App einladen.",
       "Auf dem Handy steht statt `+ Kinder` ein rundes Plus unten rechts. `Importieren` fehlt dort ganz.",
     ],
     troubleshootingDetails: [
@@ -2175,6 +2180,8 @@ export const dutyRosterTopic = function dutyRosterTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Fehlt eine Person im Plan? Dann ist sie noch nicht als Personal angelegt.",
+      // #7306: die eigenen Seiten brauchen ein Personalprofil der Schule.
+      "Fehlen Ihnen selbst `Mein Dienstplan`, `Mein Kalender` und `Zeiterfassung`? Diese Seiten zeigen Ihre eigenen Zeiten und Termine. Dafür brauchen Sie in dieser Schule ein eigenes Personalprofil. Über den Träger fehlen diese Seiten deshalb.",
     ],
     related: [
       HELP_TOPICS.leadWorkTimeReview,
@@ -2908,8 +2915,13 @@ export const enrollmentSetupTopic = function enrollmentSetupTopic(): HelpTopic {
       },
       {
         title: "Die Anmeldung öffnen",
+        description:
+          "Die Online-Anmeldung lässt sich nur mit einer Datenschutzinformation einschalten. Eltern lesen sie im Formular.",
         steps: [
-          "Schalten Sie unter `Einstellungen` > `Anmeldung` die `Online-Anmeldung` ein.",
+          "Öffnen Sie `Einstellungen` > `Anmeldung` und dort den Bereich `Rechtstexte`.",
+          "Schalten Sie `Datenschutzinformation im Anmeldeformular anzeigen` ein und tragen Sie Ihren Text ein.",
+          "Schalten Sie im Bereich `Allgemein` die `Online-Anmeldung` ein.",
+          "Prüfen Sie im Fenster die `Empfänger für neue Anmeldungen`. Dort steht schon die Kontaktadresse Ihrer Schule. Sie können sie ändern oder das Feld leer lassen. Wählen Sie `Einschalten`.",
           "Öffnen Sie `Anmeldephasen`.",
           "Öffnen Sie bei der Phase das Menü mit den drei Punkten.",
           "Wählen Sie `Aktivieren`.",
@@ -2942,6 +2954,7 @@ export const enrollmentSetupTopic = function enrollmentSetupTopic(): HelpTopic {
       "Ihre Betreuung heißt nicht OGS, sondern zum Beispiel GTS? Öffnen Sie `Einstellungen`, dann den Bereich `Anmeldung`. Wählen Sie bei `Name der Betreuung in Texten für Eltern` den passenden Namen.",
       "Das `Basisformular` fragt Elternteil, Kind, Klassenstufe und das gewünschte Betreuungsangebot ab. Brauchen Sie mehr, legen Sie eine eigene Vorlage an.",
       "Eine Phase lässt sich mit einem Kalenderzeitraum verknüpfen. Dann passen die Daten automatisch.",
+      "Eine Phase dauert höchstens 2 Jahre. Ihr Ende liegt höchstens 5 Jahre in der Zukunft. Ältere Phasen außerhalb dieser Grenzen bleiben, wie sie sind, solange Sie Beginn und Ende nicht ändern.",
       "Ändern Sie später `Beginn` oder `Ende` der Phase, ziehen die Buchungen der Kinder mit. Das Betreuungsende von Kindern, die schon betreut werden, zieht aber nicht mit. Ein Angebotswechsel ab einem bestimmten Tag behält diesen Tag.",
       "Sie verlängern das `Ende` einer laufenden Phase? Dann endet die Betreuung schon betreuter Kinder trotzdem nicht später. Für einen neuen Zeitraum nehmen Sie eine Anschlussphase.",
       "Nach dem Erstellen der Anschlussphase bekommen die Eltern eine E-Mail. Darüber passen sie Angebote und Wochentage für die neue Phase an. Oder sie beenden die Betreuung zum Ende der laufenden Phase.",
@@ -2958,6 +2971,8 @@ export const enrollmentSetupTopic = function enrollmentSetupTopic(): HelpTopic {
       "Gilt die Phase nur für `Nur bereits angemeldete Kinder` oder `Nur Eltern mit Konto an der Schule`, fehlen `Formular ansehen`, `Elternansicht öffnen`, der Link zum Kopieren und der QR-Code. Diese Eltern melden sich im Elternportal an.",
     ],
     troubleshootingDetails: [
+      "Beim Einschalten steht `Zuerst die Datenschutzinformation eintragen`? Dann fehlt der Text oder sein Schalter ist aus. Wählen Sie `Zur Datenschutzinformation`. Den Text darf nur eintragen, wer alle Einstellungen der Schule ändern darf.",
+      "Oben steht `Datenschutzinformation fehlt`? Ihre Online-Anmeldung läuft schon, aber Eltern sehen keine Datenschutzinformation. Das Formular bleibt erreichbar. Schalten Sie unter „Rechtstexte“ die Datenschutzinformation ein und tragen Sie den Text ein. Dann verschwindet der Hinweis.",
       "Beim Beenden nennt moto Kinder, deren Betreuung nicht beendet werden kann? Wählen Sie unter diesen Kindern `Aus Auswahl nehmen`. Danach können Sie die Betreuung der übrigen Kinder erneut prüfen und beenden.",
       "Der Überblick sagt `Noch keine Anmeldephase`? Dann legen Sie zuerst eine Phase an.",
       "Auf `Betreuungsangebote` steht `Erst eine Anmeldephase anlegen`? Dann fehlt die Phase noch. Angebote gibt es nur innerhalb einer Phase.",
@@ -3855,6 +3870,18 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
           "Lassen Sie `Portalrolle` auf `Erziehungsberechtigte/r`.",
           "Wählen Sie unten `Hinzufügen`.",
           "Wählen Sie danach bei der Person `Einladen`.",
+        ],
+      },
+      {
+        title: "Alle Eltern einer Klasse einladen",
+        description:
+          "So laden Sie die Eltern aller Kinder einer Klasse auf einmal ein, auch von Kindern ohne OGS-Platz.",
+        steps: [
+          "Öffnen Sie `Datenverwaltung` und danach `Kinderdaten`.",
+          "Ordnen Sie die Liste nach `Klasse`.",
+          "Öffnen Sie bei der Klasse das Menü mit den drei Punkten.",
+          "Wählen Sie `Eltern einladen`.",
+          "Prüfen Sie die Übersicht und bestätigen Sie.",
         ],
       },
       {
@@ -4907,6 +4934,7 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
     result: "Der Plan erscheint sofort im Elternportal.",
     notes: [
       "Pro Tag sind mehrere Gerichte möglich.",
+      "Ändern Sie einen Tag, der schon Gerichte hatte, bekommen die Eltern einen Hinweis in moto. Das gilt nur für Kinder, die an dem Tag ein Essen gebucht haben. Mehrere Änderungen einer Woche in 10 Minuten werden ein Hinweis.",
       "Zur Auswahl stehen die 14 Hauptallergene, jedes mit einem festen Buchstaben. Die Liste ist für alle Schulen gleich.",
       "Eltern sehen die Buchstaben am Gericht und darunter die Erklärung. Dort steht auch, dass die Angaben von der Schule oder vom Caterer kommen.",
       "Mit `Vorwoche übernehmen` holen Sie die Gerichte der Vorwoche in diese Woche.",
@@ -4924,6 +4952,7 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
       "Auch beim Neuladen mit `Wiederholen` fragt moto bei offenen Änderungen nach.",
     ],
     troubleshootingDetails: [
+      "Bekommen Eltern keinen Hinweis zu Änderungen? Prüfen Sie unter `Einstellungen` den Schalter `Hinweis an Eltern bei geändertem Speiseplan`. Für vergangene Tage gibt es keinen Hinweis.",
       "Fehlt `Speiseplan` in der Seitenleiste? Dann ist die Funktion für Ihre OGS ausgeschaltet, oder Ihrer Rolle fehlt das Recht `Mittagessen: Lesen`.",
     ],
     related: [
@@ -5115,6 +5144,7 @@ export const myScheduleTopic = function myScheduleTopic(): HelpTopic {
       "Das Kalender-Abo ist nur zum Lesen. Änderungen in Ihrem persönlichen Kalender werden nicht an moto übertragen.",
       SIMPLE_NAV_DIFFERENCE,
     ],
+    troubleshootingDetails: [OWN_STAFF_PROFILE_TROUBLESHOOTING],
     related: [HELP_TOPICS.carePlan, HELP_TOPICS.trackWorkTime],
   };
 } satisfies typeof authored_myScheduleTopic;
@@ -5316,11 +5346,11 @@ export const nfcSettingsTopic = function nfcSettingsTopic(
       {
         title: "Die Geräte-PIN setzen",
         description:
-          "Bei der Auslieferung ist eine einfache PIN gesetzt. Ändern Sie sie vor dem ersten Betreuungstag.",
+          "Ohne Geräte-PIN kann sich Ihr Team nicht am Tablet anmelden. Legen Sie die PIN vor dem ersten Betreuungstag fest.",
         steps: [
           "Wählen Sie unten in der Seitenleiste `Einstellungen`.",
           "Wählen Sie den Bereich `Geräte`.",
-          "Tragen Sie unter `Geräte-PIN` eine vierstellige Zahl ein.",
+          "Tragen Sie unter `Geräte-PIN` eine vierstellige Zahl ein. Leichte PINs wie 1234, 1111 oder 1212 nimmt moto nicht an.",
           "Geben Sie die neue PIN an Ihr Team weiter.",
         ],
       },
@@ -5700,6 +5730,7 @@ export const ownShiftPlanTopic = function ownShiftPlanTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "`Mein Dienstplan` fehlt? Dann plant Ihre OGS die Schichten nicht in moto.",
+      OWN_STAFF_PROFILE_TROUBLESHOOTING,
     ],
     related: [HELP_TOPICS.trackWorkTime, HELP_TOPICS.mySchedule],
   };
@@ -6091,6 +6122,7 @@ export const parentChildOverviewTopic =
         "Ist Ihr Kind heute abgemeldet, steht dort `Heute abgemeldet, keine Abholung`.",
         "Wurde die Abholzeit für heute geändert, steht die Zeit mit dem Hinweis `geändert für heute`.",
         "Ist für heute nichts eingetragen, steht dort `Für heute ist keine Abholung eingetragen`.",
+        "Hat Ihr Kind keinen Platz in der OGS, steht unter `Betreuung` der Hinweis `Kein Platz in der OGS`. Abholung, Betreuungszeiten und Essen fehlen dann. Krankmeldung, Elternsprechtag und Angaben bleiben.",
       ],
       troubleshootingDetails: [
         "Sie sehen kein Kind? Dann hat die OGS Ihren Zugang noch nicht freigegeben.",
@@ -6516,6 +6548,7 @@ export const parentFeatureMissingTopic =
       ],
       differences: [
         "Manche Dinge dürfen Sie nur ansehen, nicht ändern. Dann fehlt der Knopf, nicht der Bereich.",
+        "Hat Ihr Kind keinen Platz in der OGS, fehlen für dieses Kind Abholung, Betreuungszeiten, Essen und Nachrichten an die OGS. Krankmeldung, Elternbriefe und Elternsprechtag nutzen Sie wie gewohnt.",
       ],
       troubleshootingDetails: [
         "Das Ändern von Angaben ist deaktiviert? Schreiben Sie der OGS, was geändert werden soll.",
@@ -6757,6 +6790,7 @@ export const parentGuardiansTopic = function parentGuardiansTopic(): HelpTopic {
       "Eine E-Mail beim Kontakt lädt niemanden ein. Der App-Zugang ist ein eigener Schritt.",
     ],
     differences: [
+      "Ihr Kind hat keinen OGS-Platz? Notfallkontakte bleiben möglich. Abholrechte und Hinweise zur Abholung fehlen dann. Bei bestehenden Kontakten öffnen Sie dafür `Notfallkontakt`.",
       "Unter `Verbundene Konten` sehen Sie, wer die Eltern-App für Ihr Kind nutzt.",
     ],
     troubleshootingDetails: [
@@ -7399,9 +7433,9 @@ export const parentNewsTopic = function parentNewsTopic(): HelpTopic {
  * Eltern-Anleitung `moto-eltern-push-benachrichtigungen.pdf`.
  *
  * Die `Hinweise` (#7140) stehen ohne Einstellung in moto: am Computer hinter
- * der Glocke oben rechts, auf dem Telefon unter `Mehr`. Erster Hinweis ist
- * die Absage einer Betreuung des Kindes, dann Raumänderungen und Schließtage
- * des Kindes (#7141, #7144).
+ * der Glocke oben rechts, auf dem Telefon unter `Mehr`. Dazu gehören die
+ * Absage einer Betreuung, Raumänderungen und Schließtage des Kindes sowie ein
+ * geänderter Speiseplan an einem Tag mit Essensbuchung (#7141, #7144, #7145).
  */
 export const parentNotificationsTopic =
   function parentNotificationsTopic(): HelpTopic {
@@ -7428,6 +7462,7 @@ export const parentNotificationsTopic =
         "moto meldet sich ab jetzt bei den gewählten Themen. Auch wenn die App geschlossen ist.",
       notes: [
         "Jeder Hinweis steht auch in moto unter `Hinweise`, zum Beispiel wenn eine Betreuung Ihres Kindes ausfällt. Dafür müssen Sie nichts einschalten.",
+        "Ändert sich das Essen an einem Tag, an dem Ihr Kind ein Essen gebucht hat, steht das auch unter `Hinweise`. Der Hinweis öffnet den Speiseplan dieser Woche. Aufs Handy kommt er nur, wenn Sie `Speiseplan geändert` einschalten.",
         "Findet ein Termin Ihres Kindes in einem anderen Raum statt, steht das auch unter `Hinweise`. Für heute und morgen bekommen Sie dazu eine Benachrichtigung, solange Sie `Raumänderung heute oder morgen` nicht ausschalten.",
         "Trägt die OGS einen Schließtag ein, ändert oder löscht ihn, steht das ebenfalls unter `Hinweise`. Das Thema `Schließtage` ist von Anfang an eingeschaltet. Eine Mitteilung aufs Handy kommt nur, wenn der Tag in den nächsten 14 Tagen liegt.",
         "Für spätere Tage schalten Sie `Raumänderung an späteren Tagen` selbst ein. Sie gilt bis 14 Tage im Voraus.",
@@ -7546,6 +7581,8 @@ export const parentReportAbsenceTopic =
         "Manche OGS bestätigen jede Meldung erst. Dann steht `Freigabe ausstehend`, und Ihr Kind gilt bis dahin als erwartet.",
         "Am Kind steht danach `Krank` oder `Entschuldigt` mit den Tagen.",
         "Wurde eine Anfrage abgelehnt, steht dort `Abgelehnt`.",
+        // #4803: die Meldung für ein Kind ohne OGS-Platz geht an die Schule.
+        "Ihr Kind hat keinen Platz in der OGS? Dann heißen das Feld `Grund / Hinweis` und der Knopf `Krankmeldung senden` oder `Entschuldigung senden`. Die Schule sieht die Meldung.",
         // #5698: Schuleinträge überschreibt keine Elternmeldung.
         "Hat die OGS einen Tag schon eingetragen, etwa ab einer Uhrzeit entschuldigt? Dann geht für diesen Tag eine Anfrage an die OGS. Sie entscheidet. Bis dahin gilt ihr Eintrag. Die anderen Tage meldet moto direkt.",
       ],
@@ -8435,7 +8472,7 @@ export const settingsGuideTopic = function settingsGuideTopic(): HelpTopic {
         description: "Wie Eltern ihr Kind bei Ihnen anmelden.",
         ordered: false,
         steps: [
-          "`Online-Anmeldung`: Eltern melden ihr Kind über ein Formular im Internet an.",
+          "`Online-Anmeldung`: Eltern melden ihr Kind über ein Formular im Internet an. Einschalten lässt sie sich erst mit einer Datenschutzinformation unter `Rechtstexte`.",
           "`Name der Betreuung in Texten für Eltern`: So heißt Ihre Betreuung in den festen Texten der Anmeldung, der Eltern-App und in den E-Mails dazu. Wählen Sie `OGS`, `GTS` oder `Eigener Name`. Ihre eigenen Texte im Formular ändern sich nicht.",
           "`Empfänger für neue Anmeldungen`: Diese Adressen bekommen bei jeder neuen Anmeldung eine E-Mail.",
           "`Rechtstexte`: Was Eltern im Formular lesen und bestätigen, zum Beispiel die Datenschutzinformation.",
@@ -9653,7 +9690,7 @@ export const teacherAbsenceReportTopic =
       ],
       differences: [
         "Kein `Meldung eintragen` neben dem Namen? Dann haben Sie nicht die Rolle `Schulverwaltung`, oder der Tag ist nicht heute.",
-        "Kinder mit `Keine Betreuung` stehen noch nicht in dieser Liste.",
+        "Kinder mit `Keine Betreuung` stehen nur in dieser Liste, wenn Ihre Schule Kinder ohne OGS-Platz als eigene Kinder führt. Einträge der Klassenliste stehen hier nicht.",
       ],
       troubleshootingDetails: [
         "moto sagt, für das Kind steht heute schon etwas? Dann hat die OGS zum Beispiel eine frühere Abholung eingetragen. Es wurde nichts gespeichert. Sprechen Sie mit der OGS.",
@@ -10868,6 +10905,7 @@ export const trackWorkTimeTopic = function trackWorkTimeTopic(): HelpTopic {
       "Steht unten `Kein Soll hinterlegt`? Dann zählen Krankheit und Urlaub 0 Stunden. Die Monatskarte zeigt diese Tage mit `ohne Soll`. Das Soll trägt die Leitung ein.",
       SIMPLE_NAV_DIFFERENCE,
     ],
+    troubleshootingDetails: [OWN_STAFF_PROFILE_TROUBLESHOOTING],
     related: [HELP_TOPICS.correctWorkTime, HELP_TOPICS.nfcWorkTime],
   };
 } satisfies typeof authored_trackWorkTimeTopic;
@@ -11480,6 +11518,7 @@ export const traegerBillingTermsTopic =
         "Die Ferienbetreuung hat immer eine eigene Rechnung. Sie steht nie auf der Rechnung der Betreuung.",
         "Bei `Lastschrift` buchen Sie den Betrag selbst ab. Dafür braucht die Familie ein SEPA-Mandat bei Ihnen, und Sie brauchen eine Gläubiger-ID. Ohne Mandat geht die Rechnung als Überweisung. moto bucht kein Geld ab.",
         "Bei `Überweisung` steht auf jedem Schreiben eines Abrechnungslaufs ein QR-Code: auf Rechnung, Gebührenbescheid und Bestätigungsschreiben. Die Familie scannt ihn mit der Banking-App. Empfänger, IBAN, Betrag und Verwendungszweck sind dann schon ausgefüllt.",
+        "Den QR-Code schalten Sie unter `Briefkopf und Vorlagen` bei `GiroCode drucken` aus. Dann steht er auf keinem neuen Schreiben.",
         "Der Verwendungszweck im QR-Code ist die Nummer der Rechnung. Hat die Familie eine Debitorennummer, steht sie dahinter. Bei einem Bescheid heißt sie Buchungszeichen.",
         "Keinen QR-Code haben: Schreiben mit `Lastschrift`, Schreiben mit 0 €, Storno, Gutschrift und Jahresbescheide. Ein Jahresbescheid wird in Raten bezahlt.",
         "Unter `Familien und Zahlung` sehen Sie bei jeder Familie den Zahlungsweg ihrer Rechnungen.",
@@ -11499,11 +11538,12 @@ export const traegerBillingTermsTopic =
         HELP_TOPICS.traegerSepaMandates,
         HELP_TOPICS.traegerCareMonths,
         HELP_TOPICS.traegerBillingRun,
+        HELP_TOPICS.traegerBriefkopf,
       ],
     };
   } satisfies typeof authored_traegerBillingTermsTopic;
 
-/** `/traeger/einstellungen/briefkopf` (#4653, #5685): Logo, Absender und Fußzeile; dazu Ansprechperson und Bankverbindungen. */
+/** `/traeger/einstellungen/briefkopf` (#4653, #5685, #5624): Logo, Absender, Fußzeile und QR-Code zum Überweisen; dazu Ansprechperson und Bankverbindungen. */
 export const traegerBriefkopfTopic =
   function traegerBriefkopfTopic(): HelpTopic {
     return {
@@ -11538,6 +11578,16 @@ export const traegerBriefkopfTopic =
           ],
         },
         {
+          title: "QR-Code zum Überweisen ein- oder ausschalten",
+          description:
+            "Der QR-Code steht auf Rechnung, Gebührenbescheid und Bestätigungsschreiben, wenn die Familie überweist. Er ist von Anfang an eingeschaltet.",
+          steps: [
+            "Wählen Sie in den Einstellungen `Briefkopf und Vorlagen`.",
+            "Schalten Sie bei `GiroCode drucken` den Schalter aus oder ein. Der GiroCode ist der QR-Code zum Überweisen.",
+            "moto speichert die Änderung sofort. Sie gilt für alle Schreiben, die Sie danach erstellen.",
+          ],
+        },
+        {
           title: "Ansprechperson eintragen",
           steps: [
             "Wählen Sie in den Einstellungen `Allgemein` und dann den Bereich `Kontakt`.",
@@ -11564,6 +11614,7 @@ export const traegerBriefkopfTopic =
         "Eine Bankverbindung ist der `Standard`. Sie steht auf allen Briefen und Rechnungen. Auch der QR-Code zum Überweisen nimmt diese Bankverbindung.",
         "Eine andere Bankverbindung machen Sie im Menü der Zeile mit `Als Standard festlegen` zum Standard.",
         "Löschen Sie den Standard, wird die älteste andere Bankverbindung der Standard.",
+        "Schreiben, die schon erstellt sind, ändern sich nicht. Sie behalten ihren QR-Code oder bleiben ohne.",
         "Jedes Ansehen und jede Änderung von Ansprechperson und Bankverbindungen steht im Protokoll des Trägers.",
       ],
       differences: [
@@ -11787,7 +11838,7 @@ export const traegerCareContractsTopic =
         "Die Schule hat angenommen, aber nach einigen Minuten steht kein aktiver Vertrag da? Dann fehlt etwas. Das Kind steht in `Verträge erstellen` mit dem Grund, zum Beispiel `Vertragsbedingungen fehlen`. Fehlt die E-Mail-Adresse der Eltern, ergänzt die Schule sie in der Anmeldung. moto versucht es danach von selbst noch einmal.",
         "Ein Kind zeigt `Mail-Adresse gesperrt`? Mails an die Adresse der Eltern kamen nicht an. Die Schule prüft die Adresse beim Kind unter `Erziehungsberechtigte` und wählt `Sperre aufheben`. Danach entsteht der Vertrag von selbst.",
         "Ein Kind zeigt `Mails gestoppt`? Die Schule hat die Mails an diese Eltern gestoppt. Der Vertrag kommt erst, wenn die Schule beim Kind unter `Erziehungsberechtigte` `Mails wieder senden` wählt.",
-        "Ein Kind zeigt `Zustimmung zum Vertrag fehlt` oder `Bedingungen nach der Anmeldung geändert`? Die Eltern haben in der Anmeldung den Vertragsbedingungen nicht zugestimmt, oder Sie haben die Bedingungen danach geändert. Dann entsteht kein aktiver Vertrag. Stellen Sie die Schule auf `Später verschicken` und schicken Sie den Vertrag. Eine frühere Anmeldung wird nicht nachträglich verbindlich.",
+        "Ein Kind zeigt `Zustimmung zum Vertrag fehlt` oder `Zustimmung passt nicht zum Vertrag`? Die Eltern haben den aktuellen Vertragsbedingungen nicht zugestimmt. Bei der zweiten Meldung haben sie anderen Bedingungen zugestimmt. Dann entsteht kein aktiver Vertrag. Stellen Sie die Schule auf `Später verschicken` und schicken Sie den Vertrag. Eine frühere Anmeldung wird nicht nachträglich verbindlich.",
         "Ein Kind zeigt `Zustimmung zur neuen Phase fehlt`? Das Kind wurde für einen neuen Zeitraum wieder angemeldet. Eine frühere Zustimmung gilt dafür nicht. Die Eltern stimmen den Bedingungen auf der Statusseite ihrer Anmeldung zu. Das zählt nur, bevor die Schule annimmt. Danach stellen Sie die Schule auf `Später verschicken` und schicken den Vertrag.",
         "Nach Änderungen an den Bedingungen: Speichern Sie diese zuerst. Ersetzen Sie danach den Text im Anmeldeformular durch den neuen gespeicherten Text. Unverändertes Speichern lässt eine passende Zustimmung weiter gelten.",
         "Schulen mit `Bei der Annahme` erlauben keine manuellen Entwürfe. Bereits vorhandene Entwürfe werden nicht automatisch abgeschlossen. Prüfen und verwerfen Sie diese bei Bedarf.",
@@ -12486,6 +12537,7 @@ export const traegerCatalogPhasesTopic =
         "Neue Preise gelten in der Schule ab dem nächsten Monatsbeginn. Ausgestellte Verträge und Rechnungen bleiben, wie sie sind.",
         "Eine Schule darf eine Kopie nicht löschen. Entfernen geht nur hier mit `Zurückziehen`. Danach übertragen Sie noch einmal.",
         "Hat ein Kind ein zurückgezogenes Angebot schon gebucht, schaltet moto es in der Schule nur aus.",
+        "Eine Phase dauert höchstens 2 Jahre. Ihr Ende liegt höchstens 5 Jahre in der Zukunft. Ältere Phasen außerhalb dieser Grenzen bleiben, wie sie sind, solange Sie Beginn und Ende nicht ändern.",
         "Sie ziehen das Ende einer Anmeldephase vor? Dann nennt die Vorschau je Schule, wie viele Kinder länger betreut werden. moto beendet keine Betreuung. Sagen Sie der Schule Bescheid.",
       ],
       differences: [
@@ -12744,8 +12796,9 @@ export const traegerDatevExportTopic =
             "Wählen Sie oben rechts `Konten und Kostenstellen`.",
             "Unter `Erlöskonten` wählen Sie bei `Monatsbeiträge`, `Mensa`, `Ferienbetreuung` oder `Mittagessen in den Ferien` `Ändern`. Tragen Sie das Konto ein und wählen Sie `Speichern`. Ein Angebot kann ein eigenes Konto haben.",
             "Ohne eigenes Konto bucht `Mittagessen in den Ferien` auf das Konto der `Ferienbetreuung`. Daneben steht dann `wie Ferienbetreuung`.",
-            "Unter `Kostenstellen (KOST1)` wählen Sie bei der Schule `Neue Kostenstelle`. Wählen Sie den Tag bei `Gilt ab` und tragen Sie die `Kostenstelle` ein.",
-            "Eine Ferienwoche bucht auf die Kostenstelle der Schule, an der sie stattfindet. Die Kostenstelle bei `Ferienbetreuung` ist der Ersatz, wenn diese Schule keine hat.",
+            "Unter `Kostenstellen (KOST1)` steht jede Schule mit zwei Zeilen. Wählen Sie bei `Monatsbeiträge und Mensa` `Neue Kostenstelle`. Wählen Sie den Tag bei `Gilt ab` und tragen Sie die `Kostenstelle` ein.",
+            "Bucht Ihr Steuerbüro die Ferienbetreuung einer Schule getrennt? Dann tragen Sie bei `Ferienbetreuung` dieser Schule eine eigene Kostenstelle ein. Ohne sie bucht eine Ferienwoche auf die Kostenstelle der Schule. Daneben steht dann `wie Monatsbeiträge`.",
+            "Eine Ferienwoche bucht auf die Schule, an der sie stattfindet. Hat diese Schule keine Kostenstelle, gilt `Ersatz für die Ferienbetreuung` unter `Alle Schulen`. Daneben steht dann `Ersatz-Kostenstelle`.",
             "Eine `Zweite Kostenstelle (KOST2)` je Angebot tragen Sie nur ein, wenn Ihr Steuerbüro sie braucht.",
           ],
         },
@@ -12788,7 +12841,7 @@ export const traegerDatevExportTopic =
         "Über der Liste steht `Die DATEV-Datei fehlt noch`? Es fehlen DATEV-Werte. Der Hinweis nennt sie. Bis dahin lässt sich `DATEV` nicht wählen.",
         "Beim Lauf steht `Alles exportiert`? Alle Buchungen sind schon in einer DATEV-Datei. Darunter steht ihre Nummer.",
         "Sie können die DATEV-Werte nur ansehen? Ändern darf, wer im Träger-Büro das Recht für die Einstellungen hat.",
-        "Im `Exportprotokoll` steht `… mit Ersatz-Kostenstelle`? Diese Ferienwochen fanden an einer Schule ohne Kostenstelle statt. Die Datei bucht sie auf die Kostenstelle der `Ferienbetreuung`. Darunter stehen Rechnung, Woche und Grund. Tragen Sie für die Schule eine Kostenstelle ein. Das gilt für neue Rechnungen.",
+        "Im `Exportprotokoll` steht `… mit Ersatz-Kostenstelle`? Diese Ferienwochen fanden an einer Schule ohne Kostenstelle statt. Die Datei bucht sie auf den `Ersatz für die Ferienbetreuung`. Darunter stehen Rechnung, Woche und Grund. Tragen Sie für die Schule eine Kostenstelle ein. Das gilt für neue Rechnungen.",
         "Im `Exportprotokoll` steht `… mit Konten vom Exporttag`? Diese Rechnungen wurden ausgestellt, bevor moto die Konten festgehalten hat. Die Datei nutzt dann die Werte vom Tag des Exports.",
       ],
       troubleshootingDetails: [
@@ -14119,6 +14172,47 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
     related: [HELP_TOPICS.errorMessages],
   };
 } satisfies typeof authored_traegerLoginTopic;
+
+/**
+ * Die Glocke oben rechts im Träger-Portal (#7146): die Hinweise aller Schulen
+ * des Trägers, jeweils mit dem Namen der Schule. Erster Typ ist der
+ * Schließtag einer Schule.
+ */
+export const traegerNotificationFeedTopic =
+  function traegerNotificationFeedTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.traegerNotificationFeed,
+      title: "Hinweise in der Glocke",
+      question: "Wo sehe ich, was sich an meinen Schulen geändert hat?",
+      summary:
+        "Die Glocke oben rechts zeigt Hinweise aus allen Schulen Ihres Trägers, zum Beispiel einen neuen Schließtag.",
+      group: "einstieg",
+      audience: "traeger",
+      icon: "Bell",
+      steps: [
+        "Wählen Sie oben rechts die Glocke. Die Zahl daran zählt neue Hinweise. Ab 10 steht dort `9+`.",
+        "Neue Hinweise sind mit `Neu` markiert. Daneben steht die Schule.",
+        "Wählen Sie einen Hinweis. moto öffnet die Seite dieser Schule.",
+        "Mit `Alle als gelesen markieren` sind alle Hinweise auf einmal gelesen.",
+      ],
+      result:
+        "Erst Ihr Klick macht einen Hinweis zu „gelesen“. Das Öffnen der Glocke allein ändert nichts.",
+      notes: [
+        "Trägt eine Schule einen Schließtag ein, ändert oder löscht ihn, sehen Sie es hier.",
+        "Die Zahl an der Glocke prüft moto bei jedem Seitenwechsel und jede Minute neu.",
+        "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
+        "Im Träger-Portal gibt es keine Mitteilung aufs Handy. Die Hinweise stehen nur in der Glocke.",
+      ],
+      differences: [
+        "Auf dem Handy öffnen sich die Hinweise über den ganzen Bildschirm. Mit dem X schließen Sie sie wieder.",
+      ],
+      troubleshootingDetails: [
+        "Es kommt kein Hinweis zu einem Schließtag? Die Schule kann `Benachrichtigung bei Schließtagen` ausschalten. Fragen Sie dort nach.",
+        "Wer den Schließtag selbst einträgt, bekommt keinen Hinweis dazu.",
+      ],
+      related: [HELP_TOPICS.traegerSchoolView, HELP_TOPICS.traegerClosingDays],
+    };
+  } satisfies typeof authored_traegerNotificationFeedTopic;
 
 /** `/traeger/belegung` (#4676): die Kinder von heute je Schule, Gruppe und Betreuungsform. */
 export const traegerOccupancyTopic =

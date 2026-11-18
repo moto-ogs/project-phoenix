@@ -247,6 +247,12 @@
       "legacy": "enrollment.child_already_enrolled"
     },
     {
+      "code": "enrollment.without_care_place_school_year_only",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "enrollment.without_care_place_school_year_only"
+    },
+    {
       "code": "enrollment.child_already_requested",
       "class": "business_rejection",
       "parameters": [],
@@ -850,6 +856,18 @@
       "class": "input",
       "parameters": [],
       "legacy": "enrollment.phase_service_period_invalid"
+    },
+    {
+      "code": "enrollment.phase_service_end_too_far",
+      "class": "input",
+      "parameters": [],
+      "legacy": "enrollment.phase_service_end_too_far"
+    },
+    {
+      "code": "enrollment.phase_service_period_too_long",
+      "class": "input",
+      "parameters": [],
+      "legacy": "enrollment.phase_service_period_too_long"
     },
     {
       "code": "enrollment.phase_window_invalid",

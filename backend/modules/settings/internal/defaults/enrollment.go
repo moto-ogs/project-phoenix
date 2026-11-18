@@ -209,7 +209,7 @@ var enrollment_registerEnrollmentLegalTexts_rechtstexte_0Definitions = []config.
 		Key:             config.KeyEnrollmentLegalDSGVOEnabled,
 		Levels:          config.LevelBoth,
 		Label:           "Datenschutzinformation im Anmeldeformular anzeigen",
-		Description:     "Eltern bestätigen im Anmeldeformular, dass sie die Datenschutzinformation gelesen haben.",
+		Description:     "Eltern bestätigen im Anmeldeformular, dass sie die Datenschutzinformation gelesen haben. Ohne Datenschutzinformation lässt sich die Online-Anmeldung nicht einschalten.",
 		Type:            config.FieldBoolean,
 		Default:         false,
 		ReadPermission:  "config:read",
@@ -217,7 +217,8 @@ var enrollment_registerEnrollmentLegalTexts_rechtstexte_0Definitions = []config.
 		Tab:             "enrollment",
 		Category:        "rechtstexte",
 		SortOrder:       81,
-		DependsOn:       dependsOnEnabled,
+		// No DependsOn on enrollment.enabled: the notice must be entered
+		// before the form can be switched on (#7176).
 	},
 	{
 		Key:    config.KeyEnrollmentLegalDSGVOText,
@@ -236,7 +237,6 @@ var enrollment_registerEnrollmentLegalTexts_rechtstexte_0Definitions = []config.
 		Tab:             "enrollment",
 		Category:        "rechtstexte",
 		SortOrder:       82,
-		DependsOn:       dependsOnEnabled,
 	},
 	{
 		Key:             config.KeyEnrollmentLegalPhotoEnabled,

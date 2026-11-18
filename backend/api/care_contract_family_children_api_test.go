@@ -103,8 +103,10 @@ func TestFamilyChildrenThroughTheMailLinkStayInItsContractsFamily(t *testing.T) 
 	_, _, found = familyNumber(t, f, foreign.organization, "erika.muster@example.org")
 	assert.False(t, found, "the other Träger has no number")
 
+	// The owner clock stamps the link and checks its expiry: the router's
+	// holidayFixtureNow, not now().
 	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_signing_links
-		SET created_at = NOW() - INTERVAL '40 days', expires_at = NOW() - INTERVAL '1 day' WHERE contract_id = ?`, otherContract)
+		SET created_at = ?, expires_at = ? WHERE contract_id = ?`, holidayFixtureNow().Add(-40*24*time.Hour), holidayFixtureNow().Add(-24*time.Hour), otherContract)
 	require.NoError(t, err)
 	rec = publicSigning(t, f.traeger, http.MethodPut, otherLink+"/family-children", map[string]any{"children": 4})
 	assert.Equal(t, http.StatusGone, rec.Code, "an expired link: %s", rec.Body.String())

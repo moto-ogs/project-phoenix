@@ -9,7 +9,7 @@ import {
   within,
 } from "@testing-library/react";
 import { useState, type ReactElement } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setTestClock } from "~/test/clock";
 
 // The date fields moved from native inputs to the kit picker; this stub keeps
@@ -50,6 +50,12 @@ const {
 
 vi.mock("~/lib/swr", () => ({
   useSWRAuth: mockUseSWRAuth,
+}));
+
+// Personalprofil in dieser Schule laut Nutzerkontext (#7306).
+const ownStaff = vi.hoisted(() => ({ present: true }));
+vi.mock("~/lib/hooks/use-user-context", () => ({
+  useHasOwnStaff: () => ownStaff.present,
 }));
 
 // Der echte Anzeigeweg (useApiFormError, useApiErrorDisplay) läuft im
@@ -363,6 +369,103 @@ describe("StaffCalendarPage", () => {
         "Legen Sie einen Termin an oder wechseln Sie den Zeitraum.",
       ),
     ).not.toBeInTheDocument();
+  });
+
+  describe("without a staff profile (#7306)", () => {
+    afterEach(() => {
+      ownStaff.present = true;
+    });
+
+    it("shows the hint and asks for no own appointments", () => {
+      ownStaff.present = false;
+
+      render(<StaffCalendarPage />);
+
+      expect(
+        screen.getByText(/Kein eigenes Personalprofil/),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: "Zur Startseite" }),
+      ).toBeInTheDocument();
+      expect(
+        mockUseSWRAuth.mock.calls.some(
+          ([key]) =>
+            typeof key === "string" && key.startsWith("staff-calendar"),
+        ),
+      ).toBe(false);
+      expect(
+        screen.queryByRole("button", { name: /Neuer Termin/ }),
+      ).not.toBeInTheDocument();
+      // Ohne eigene Termine gibt es keinen Zeitraum zum Blättern.
+      expect(
+        screen.queryByRole("button", { name: "Woche" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows the hint instead of a permission error when the server refuses", () => {
+      mockUseSWRAuth.mockImplementation((key: unknown) => {
+        const cacheKey = typeof key === "string" ? key : "";
+        if (cacheKey.startsWith("staff-calendar")) {
+          return {
+            data: undefined,
+            error: new ApiError("no staff profile", 403, {
+              code: "calendar.no_staff_profile",
+            }),
+            isLoading: false,
+            mutate: mockMutate,
+          };
+        }
+        return {
+          data: undefined,
+          error: null,
+          isLoading: false,
+          mutate: vi.fn(),
+        };
+      });
+
+      render(<StaffCalendarPage />);
+
+      expect(
+        screen.getByText(/Kein eigenes Personalprofil/),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("keeps the permission refusal when the person cannot open own calendars", async () => {
+      ownStaff.present = false;
+      mockUseSession.mockReturnValue({
+        data: { user: { permissions: [] } },
+        status: "authenticated",
+      });
+      mockUseSWRAuth.mockImplementation((key: unknown) => {
+        const cacheKey = typeof key === "string" ? key : "";
+        if (cacheKey.startsWith("staff-calendar")) {
+          return {
+            data: undefined,
+            error: new ApiError("permission denied", 403, {
+              code: "general.permission",
+            }),
+            isLoading: false,
+            mutate: mockMutate,
+          };
+        }
+        return {
+          data: undefined,
+          error: null,
+          isLoading: false,
+          mutate: vi.fn(),
+        };
+      });
+
+      render(<StaffCalendarPage />);
+
+      expect(
+        await screen.findByText(
+          catalogText("general.permission", "die Liste der Termine"),
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/Kein eigenes Personalprofil/)).toBeNull();
+    });
   });
 
   it("keeps the calendar subscription available when the calendar fails", async () => {

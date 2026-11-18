@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 )
 
@@ -58,10 +59,9 @@ func (s configureProfileStep) Run(_ context.Context, rt *Runtime) error {
 }
 
 // configureDevicePINStep makes the seed's staff PIN the school's device PIN.
-// Device auth resolves security.ogs_device_pin, whose registry default is
-// 1234. OGS_DEVICE_PIN is only a demo/seeder input, never a runtime fallback. Without
-// this write every device call of a school seeded with another PIN fails with
-// 401. The setting is admin-only, so the school admin writes it. Its
+// Device auth resolves security.ogs_device_pin, which has no registry default
+// (#7175). OGS_DEVICE_PIN is only a demo/seeder input, never a runtime fallback.
+// Without this write every device call of the seeded school fails with 401. The setting is admin-only, so the school admin writes it. Its
 // dependency on module.nfc_anwesenheit only hides it in the settings screen;
 // the write also succeeds while NFC is off, as on the public demo.
 type configureDevicePINStep struct{}
@@ -356,6 +356,11 @@ func sortedProfileSettingKeys(settings map[string]SeedSetting) []string {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
+	// The public enrollment form switches on only once its privacy notice
+	// is set (#7176), so enrollment.enabled goes after the legal texts.
+	if index := slices.Index(keys, profileSettingEnrollmentEnabled); index >= 0 {
+		keys = append(slices.Delete(keys, index, index+1), profileSettingEnrollmentEnabled)
+	}
 	// A rerun may start from any valid scope set. Expanding visibility first
 	// and restricting it last keeps every intermediate set valid; the sorted
 	// order already puts the overview scope after every action scope.

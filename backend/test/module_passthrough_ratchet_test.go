@@ -285,7 +285,10 @@ const modulePassthroughApplicationSegment = "/internal/application/"
 // room move leaves updated_at to the database trigger (-1, ADR 0268).
 // Lowered by #4496: revoking a caterer invitation also stops its unsent
 // mail instead of forwarding (-1).
-const modulePassthroughOwnerBudgetTotal = 1394
+// Raised by ADR 0283: Student Presence's mark transfer of the class-list
+// conversion, which validates the moves before its store call (+1).
+// Raised by ADR 0289: the file seal of modules/workforce (+1).
+const modulePassthroughOwnerBudgetTotal = 1396
 
 // modulePassthroughOwnerBudgets is the register: module directory →
 // pass-throughs measured in its application layer and its compositions
@@ -353,7 +356,8 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0168: the first complete attendance day, which checks
 	// the window and takes the later of its cutoff and the retention mark
 	// (+1).
-	"modules/studentpresence": 123,
+	// Raised by ADR 0283: the mark transfer of the class-list conversion (+1).
+	"modules/studentpresence": 124,
 	// Raised by ADR 0230: the assignments of several staff members in a date
 	// range, one read for the absence plan gaps (+1).
 	"modules/timetable": 204,
@@ -363,7 +367,9 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Lowered by #7058: the payroll dispatch overview reads its mails too (-1).
 	// Raised by ADR 0243: the month close of the Träger maps its close, its
 	// reopen and the staff the school leaves out onto the public failures (+3).
-	"modules/workforce":      137,
+	// Raised by ADR 0289: the maintenance seal of the sick note and payslip
+	// files (+1).
+	"modules/workforce":      138,
 	"workflows/openroommove": 1,
 	// Raised by ADR 0078: the week change of the meal plan adapter.
 	"workflows/parentportal": 18,

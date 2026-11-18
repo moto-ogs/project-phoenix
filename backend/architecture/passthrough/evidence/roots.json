@@ -1815,6 +1815,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (f traegerNotificationFeed) Page(ctx context.Context, organizationID, accountID int64, cursor string, limit int) (notificationsHTTP.TraegerFeedPage, error) {\n\tpage, err := f.TraegerNotificationFeed.Page(ctx, organizationID, accountID, cursor, limit)\n\tif err != nil {\n\t\treturn notificationsHTTP.TraegerFeedPage{}, err\n\t}\n\tout := notificationsHTTP.TraegerFeedPage{NextCursor: page.NextCursor, UnreadCount: page.UnreadCount, Entries: make([]notificationsHTTP.TraegerFeedEntry, len(page.Entries))}\n\tfor i, entry := range page.Entries {\n\t\tout.Entries[i] = notificationsHTTP.TraegerFeedEntry{FeedEntry: notificationsHTTP.FeedEntry(entry.NotificationFeedEntry), SchoolID: entry.SchoolID, SchoolName: entry.SchoolName}\n\t}\n\treturn out, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerNotificationFeed.Page",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (d traegerPersonDirectory) PersonsByAccount(ctx context.Context, accountIDs []int64) ([]traegerview.Person, error) {\n\tpersons, err := d.persons.ListPersonsByAccount(ctx, accountIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tlatest := peopledirectory.LatestPersonsByAccountSchool(persons)\n\tresult := make([]traegerview.Person, 0, len(latest))\n\tfor _, person := range latest {\n\t\tresult = append(result, traegerAccessPerson(person))\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/traegerPersonDirectory.PersonsByAccount",
@@ -7380,6 +7387,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (s provisioningSettings) ReplyToAddresses(ctx context.Context, schoolIDs []int64) (map[int64]string, error) {\n\tsnapshots, err := s.settings.ResolveManyForTenants(ctx, schoolIDs, []string{configModels.KeyEmailReplyToAddress})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]string, len(snapshots))\n\tfor schoolID, snapshot := range snapshots {\n\t\tif result[schoolID], err = snapshot.String(configModels.KeyEmailReplyToAddress); err != nil {\n\t\t\treturn nil, err\n\t\t}\n\t}\n\treturn result, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/provisioningSettings.ReplyToAddresses",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (c pwaUsageCounts) PWAUsage(ctx context.Context, tenantID int64, window time.Duration) ([]deliveryCompose.PWAUsageRow, error) {\n\trows, err := c.provisioning.ListPWAUsage(ctx, window)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]deliveryCompose.PWAUsageRow, 0, len(rows))\n\tfor _, row := range rows {\n\t\tif tenantID \u003c= 0 || row.TenantID == tenantID {\n\t\t\tresult = append(result, deliveryCompose.PWAUsageRow(row))\n\t\t}\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/pwaUsageCounts.PWAUsage",
@@ -7814,21 +7828,21 @@
     },
     {
       "build": "production",
-      "evidence": "func (c staffDirectoryCapability) PersonByAccountID(ctx context.Context, accountID int64) (*workforceModule.Person, error) {\n\tperson, err := c.people.FindByAccountID(ctx, accountID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn publicPerson(person), nil\n}",
+      "evidence": "func (c staffDirectoryCapability) PersonByAccountID(ctx context.Context, accountID int64) (*workforceModule.Person, error) {\n\tperson, err := c.people.FindByAccountID(ctx, accountID)\n\tif err != nil {\n\t\treturn nil, markNoStaffProfile(err)\n\t}\n\treturn publicPerson(person), nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/staffDirectoryCapability.PersonByAccountID",
       "owner": "roots"
     },
     {
       "build": "production",
-      "evidence": "func (c staffDirectoryCapability) ResolveStaffIDByAccountID(ctx context.Context, accountID int64) (int64, error) {\n\treturn c.people.ResolveStaffIDByAccountID(ctx, accountID)\n}",
-      "form": "forward-debt",
+      "evidence": "func (c staffDirectoryCapability) ResolveStaffIDByAccountID(ctx context.Context, accountID int64) (int64, error) {\n\tstaffID, err := c.people.ResolveStaffIDByAccountID(ctx, accountID)\n\treturn staffID, markNoStaffProfile(err)\n}",
+      "form": "unclassified-evidence",
       "id": "roots/owners/staffDirectoryCapability.ResolveStaffIDByAccountID",
       "owner": "roots"
     },
     {
       "build": "production",
-      "evidence": "func (c staffDirectoryCapability) StaffByPersonID(ctx context.Context, personID int64) (*workforceModule.StaffProfile, error) {\n\tstaff, err := c.people.StaffRows().FindMembershipByPersonID(ctx, personID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn publicStaffProfile(staff), nil\n}",
+      "evidence": "func (c staffDirectoryCapability) StaffByPersonID(ctx context.Context, personID int64) (*workforceModule.StaffProfile, error) {\n\tstaff, err := c.people.StaffRows().FindMembershipByPersonID(ctx, personID)\n\tif err != nil {\n\t\treturn nil, markNoStaffProfile(err)\n\t}\n\treturn publicStaffProfile(staff), nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/staffDirectoryCapability.StaffByPersonID",
       "owner": "roots"

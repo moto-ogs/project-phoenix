@@ -26,6 +26,7 @@ const (
 var (
 	ErrInvalidRequest = portal.ErrInvalidRequest
 	ErrForbidden      = portal.ErrForbidden
+	ErrNoStaffProfile = portal.ErrNoStaffProfile
 	ErrNotFound       = portal.ErrNotFound
 	ErrConflict       = portal.ErrConflict
 	// ErrOccurrenceUnavailable: the answered or counted date is not one the

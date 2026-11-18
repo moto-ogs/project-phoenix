@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	settingsFacts "github.com/moto-ogs/project-phoenix/modules/settings"
+
 	"github.com/go-chi/chi/v5"
 	peopleRouteValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 
@@ -72,6 +74,70 @@ var classListEntryRefusals = []struct {
 	{schoolMembershipModule.ErrClassListEntryStudentExists, apiCommon.CodeStudentsClassListEntryStudentExists},
 	{schoolMembershipModule.ErrClassListEntryStudentNotFound, apiCommon.CodeStudentsClassListEntryStudentNotFound},
 	{schoolMembershipModule.ErrClassListEntryAssignMismatch, apiCommon.CodeStudentsClassListEntryAssignMismatch},
+	{schoolMembershipModule.ErrClassListEntriesReplaced, apiCommon.CodeStudentsClassListEntriesReplaced},
+}
+
+// classListEntriesWhileChildrenKept refuses a new class-list entry while the
+// school keeps children without an OGS place as student records (#4803,
+// ADR 0282): its switch converted the entries, and such a child is now
+// created as a student. Every other command passes through.
+type classListEntriesWhileChildrenKept struct {
+	schoolMembershipModule.ClassListEntries
+	settings interface {
+		ResolveBool(context.Context, string) (bool, error)
+	}
+	lock interface {
+		LockClassListConversionShared(context.Context) error
+	}
+}
+
+// classListConversionLockOf binds the shared conversion lock of the
+// settings service; a service without it is a composition error.
+func classListConversionLockOf(settings any) settingsFacts.ClassListConversionLock {
+	lock, ok := settings.(settingsFacts.ClassListConversionLock)
+	if !ok {
+		panic("class list: settings service has no class-list conversion lock")
+	}
+	return lock
+}
+
+func (c classListEntriesWhileChildrenKept) AddClassListEntry(ctx context.Context, in schoolMembershipModule.AddClassListEntry) (schoolMembershipModule.ClassListEntry, error) {
+	// Held to commit: a concurrent switch-on waits for this entry or is seen.
+	if err := c.lock.LockClassListConversionShared(ctx); err != nil {
+		return schoolMembershipModule.ClassListEntry{}, err
+	}
+	kept, err := settingsFacts.ChildrenWithoutCarePlaceOn(func(key string) (bool, error) { return c.settings.ResolveBool(ctx, key) })
+	if err != nil {
+		return schoolMembershipModule.ClassListEntry{}, err
+	}
+	if kept {
+		return schoolMembershipModule.ClassListEntry{}, schoolMembershipModule.ErrClassListEntriesReplaced
+	}
+	return c.ClassListEntries.AddClassListEntry(ctx, in)
+}
+
+// ReviseClassListEntry, RemoveClassListEntry and ResolveClassListEntry hold
+// the same shared lock to commit, so a switch-on never converts an entry
+// under its old name or deletes one a concurrent write still changes.
+func (c classListEntriesWhileChildrenKept) ReviseClassListEntry(ctx context.Context, in schoolMembershipModule.ReviseClassListEntry) (schoolMembershipModule.ClassListEntry, error) {
+	if err := c.lock.LockClassListConversionShared(ctx); err != nil {
+		return schoolMembershipModule.ClassListEntry{}, err
+	}
+	return c.ClassListEntries.ReviseClassListEntry(ctx, in)
+}
+
+func (c classListEntriesWhileChildrenKept) RemoveClassListEntry(ctx context.Context, in schoolMembershipModule.RemoveClassListEntry) error {
+	if err := c.lock.LockClassListConversionShared(ctx); err != nil {
+		return err
+	}
+	return c.ClassListEntries.RemoveClassListEntry(ctx, in)
+}
+
+func (c classListEntriesWhileChildrenKept) ResolveClassListEntry(ctx context.Context, in schoolMembershipModule.ResolveClassListEntry) error {
+	if err := c.lock.LockClassListConversionShared(ctx); err != nil {
+		return err
+	}
+	return c.ClassListEntries.ResolveClassListEntry(ctx, in)
 }
 
 func classListEntryRefusalCode(err error) string {

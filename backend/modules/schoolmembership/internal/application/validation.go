@@ -165,6 +165,9 @@ func validateStudentEnrollment(input schoolmembership.StudentEnrollment, allowUn
 	if input.SchoolClass == "" {
 		return invalid("school class is required")
 	}
+	if input.WithoutCarePlace && input.GroupID != nil {
+		return invalid("a child without an OGS place has no group")
+	}
 	if !lifecycleStatus(input.Status) && (!allowUnchangedAlumnus || input.Status != "alumnus") {
 		return invalid("enrollment requires a non-alumni lifecycle status")
 	}

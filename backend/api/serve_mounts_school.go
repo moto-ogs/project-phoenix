@@ -1,6 +1,9 @@
 package api
 
 import (
+	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
+	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
+	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"time"
@@ -76,9 +79,9 @@ func mountStaffRoutes(
 	users peoplePorts.PersonDirectory, staffAdmin *workforceModule.StaffAdmin,
 	workforce owners.WorkforcePlanning, shifts *workforceCompose.ShiftPlanning, education schoolstructure.GroupManagement,
 	substitution SubstitutionOperations, persons peopledirectory.Capability, settings settingsCompose.SettingsService,
-	hub *realtime.Hub, identity identityaccess.Owner, caller *owners.CallerRows, calendar schoolcalendar.Calendar, now func() time.Time,
+	hub *realtime.Hub, identity identityaccess.Owner, caller *owners.CallerRows, calendar schoolcalendar.Calendar, files nativeUploads.FileKeys, now func() time.Time,
 ) error {
-	staff, _, err := newStaffComposition(membership, workTime, users, staffAdmin, workforce.TimeTracking, workforce.PayrollDispatch, workforce.SickReports, education, persons, settings, hub, identity, viper.GetString("app_env"), db, logger.With("handler", "staff"), now)
+	staff, _, err := newStaffComposition(membership, workTime, users, staffAdmin, workforce.TimeTracking, workforce.PayrollDispatch, workforce.SickReports, education, persons, settings, hub, identity, viper.GetString("app_env"), db, logger.With("handler", "staff"), files, now)
 	if err != nil {
 		return err
 	}
@@ -185,10 +188,18 @@ func mountSchoolPortalRoutes(
 	tenant.Mount("/staff-messages", staffMessaging.Router(ProtectedTenantRoutesWith(staffAttachments.Register)))
 	tenant.Mount("/staff-notices", staffNotices.Router(ProtectedTenantRoutes))
 	tenant.Mount("/timetable", timetableResource.Router(ProtectedTenantRoutesWith(classdayHTTP.NewSlotListResource(classDay.SlotLists).Register)))
-	tenant.Mount("/notifications", notificationRoutes.Router())
+	mountNotificationRoutes(root, tenant, notificationRoutes, notifications.TraegerFeed)
 	root.Mount("/school-staff-messages", schoolMessageAttachmentRouter(staffAttachments))
 	root.Mount("/school", school.RouterWithAuthRateLimiter(limiters.authMiddleware(), SchoolSessionChain, ProtectedSchoolRoutes))
 	return nil
+}
+
+// mountNotificationRoutes mounts the notification routes of the OGS portal
+// and the bell of the Träger-Portal (#7146), which reads the entries of every
+// school of the Träger across its schools.
+func mountNotificationRoutes(root, tenant chi.Router, staff *notificationsHTTP.Resource, traeger deliveryContract.TraegerNotificationFeed) {
+	tenant.Mount("/notifications", staff.Router())
+	root.Mount("/traeger/notifications", NewTraegerNotificationHTTP(traeger).Router())
 }
 
 // newTimetableResource composes the timetable routes. Dateframes belong to
@@ -258,7 +269,7 @@ func mountSchoolRoutes(
 	settings settingsCompose.SettingsService, caller *owners.CallerRows, active studentpresence.Presence, users peoplePorts.PersonDirectory,
 	education schoolstructure.GroupManagement, renderer *lists.RendererService, activities activityContract.ActivityService,
 	timetableOwner timetableModule.Capability, iot devicefleetCompose.IoTService, settingsWrites SettingsWrites,
-	holidaySchools HolidayHostSchools, holidayStudents owners.HolidayOwnChildStudents, holidayCare owners.HolidayGuestCarePlan, holidayAccessLog owners.DataAccessAppender,
+	schools HolidayHostSchools, holidayStudents owners.HolidayOwnChildStudents, holidayCare owners.HolidayGuestCarePlan, holidayAccessLog owners.DataAccessAppender,
 	membership schoolMembershipModule.Capability, classListEntries schoolMembershipModule.ClassListEntries, databaseStats DatabaseStatsReader,
 	dataImports imports, persons peopledirectory.Capability, gradeTransition *gradetransition.Workflow, enrollment *enrollmentAPI.Resource,
 	appEnv string, weekProtocolSeed schedulerPorts.WeekProtocolEvenings, healthData enrollmentOwner.HolidayHealthCipher, holidayNoCare enrollmentOwner.HolidayHostCalendar,
@@ -278,7 +289,7 @@ func mountSchoolRoutes(
 	tenant.Mount(enrollmentMount, enrollment.Router(TenantSessionChain))
 	// The hosting school's holiday participant lists (#4665) and holiday
 	// guests (#4666), on the root clock the enrollment routes carry.
-	mountHolidayHostRoutes(tenant, holidaySchools, persons, holidayStudents, holidayCare, holidayAccessLog, healthData, holidayNoCare, enrollment.Now)
+	mountHolidayHostRoutes(tenant, schools, persons, holidayStudents, holidayCare, holidayAccessLog, healthData, holidayNoCare, enrollment.Now)
 	// Info-point displays (#1325). One Device Fleet owner serves every entry
 	// point: the root composes it and the IoT service hands it back here
 	// (#2676).
@@ -287,9 +298,11 @@ func mountSchoolRoutes(
 	tenant.Mount("/schedules", timetableHTTPAdapter.NewSchedulesResource(timetableOwner).Router(ProtectedTenantRoutes))
 	// The schema-driven settings system.
 	homeLayouts := requireHomeLayoutOperations(settings)
-	tenant.Mount("/settings", newSettingsResource(db, settingsWrites.Tenant, homeLayouts, owners.NewEnrollmentBookings(enrollment.Now).SchemaReferencesLegalDocument, enrollment.Now).SettingsRouter())
+	tenant.Mount("/settings", newSettingsResource(db, settingsWrites.Tenant, homeLayouts, requireDevicePINOperations(settings), owners.NewEnrollmentBookings(enrollment.Now).SchemaReferencesLegalDocument, enrollment.Now, schools).SettingsRouter())
 	// Class-list-only entries (#2382).
-	tenant.Mount("/class-list-entries", newClassListEntriesResource(classListEntries, logger.With("handler", "class-list-entries")).Router())
+	tenant.Mount("/class-list-entries", newClassListEntriesResource(
+		classListEntriesWhileChildrenKept{ClassListEntries: classListEntries, settings: settings, lock: classListConversionLockOf(settings)},
+		logger.With("handler", "class-list-entries")).Router())
 	tenant.Mount("/database", newDatabaseStatsRouter(databaseStats, logger.With("handler", "database")))
 	// CSV/Excel import endpoints.
 	tenant.Mount("/import", importAPI.NewResource(importAPI.Dependencies{
@@ -317,6 +330,16 @@ func mountCalendarRoutes(root, tenant chi.Router, logger *slog.Logger, calendarA
 	root.Handle("/.well-known/caldav", calDAVHandler)
 	root.Handle("/api/caldav", calDAVHandler)
 	root.Handle("/api/caldav/*", calDAVHandler)
+}
+
+// requireDevicePINOperations takes the device PIN status (#7175) from the
+// settings platform like the home layout operations.
+func requireDevicePINOperations(settings any) settingsHTTP.DevicePINOperations {
+	devicePIN, ok := settings.(settingsHTTP.DevicePINOperations)
+	if !ok {
+		panic("settings platform does not provide the device PIN status")
+	}
+	return devicePIN
 }
 
 func requireHomeLayoutOperations(settings any) settingsHTTP.HomeLayoutOperations {

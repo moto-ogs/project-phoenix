@@ -39,7 +39,7 @@ func (rs *StaffAdminResource) syncAbsencePlan(w http.ResponseWriter, r *http.Req
 	}
 	actorStaffID, err := rs.resolveEditorStaffID(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
 	accountID := rs.identity(r.Context()).AccountID

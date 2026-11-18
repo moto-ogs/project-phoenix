@@ -40,6 +40,7 @@
     "phoenix tenant return purge",
     "phoenix tenant return release",
     "phoenix tenant return revoke",
+    "phoenix upload-seal",
     "phoenix worker"
   ],
   "constructor_calls": [

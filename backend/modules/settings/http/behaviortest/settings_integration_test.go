@@ -63,7 +63,7 @@ func setupSettingsModuleWithHook(t *testing.T, hook *settingsValueSetHook) *sett
 		}
 		return hook.run(hookCtx, tenantID, key, value)
 	})
-	ctx.resource = settingsHTTP.NewSettingsResource(operations, homeLayouts, runtime)
+	ctx.resource = settingsHTTP.NewSettingsResource(operations, homeLayouts, svc.Settings.(settingsHTTP.DevicePINOperations), runtime, nil)
 	return ctx
 }
 

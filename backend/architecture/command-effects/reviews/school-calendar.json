@@ -2003,7 +2003,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
-      "reason": "Reviewed school-audience read (#7144): the root lists the active accounts with a role of the OGS portal or moto schule and the active guardians with parent_portal.access for a child of the school, in the caller's tenant transaction. The target only SELECTs platform.delivery_realtime_recipients, with no row mutation or locking read.",
+      "reason": "Reviewed school-audience read (#7144): the root lists the active accounts with a role of the OGS portal or moto schule and the active guardians with parent_portal.access for a child of the school, in the caller's tenant transaction. The target only SELECTs platform.delivery_realtime_recipients, with no row mutation or locking read. Re-reviewed for #7146: the binding also writes the Träger bell through NotifyTraeger; this effect is unchanged.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.SchoolAudience.SchoolAudience",
       "target_owner": "delivery-platform"
@@ -2014,7 +2014,18 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
-      "reason": "Platform protocol participation (durable): school-calendar reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged (#7144). The notification feed entries and the push outbox entries join the unit that saves the closing day; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (durable): school-calendar reaches modules/delivery/contract.TraegerFeedNotifier.NotifyTraeger (delivery-platform) through roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged (#7146). The feed entries of the Träger-Portal bell join the unit that saves the closing day, in the school's tenant transaction; no push and no after-commit signal follow, and transaction correctness stays with the platform behavior tests (ADR 0098).",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.TraegerFeedNotifier.NotifyTraeger",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
+      "reason": "Platform protocol participation (durable): school-calendar reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged (#7144). The notification feed entries and the push outbox entries join the unit that saves the closing day; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #7146: the binding also writes the Träger bell through NotifyTraeger; this effect is unchanged.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
       "target_owner": "delivery-platform"
@@ -2024,7 +2035,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
-      "reason": "Read-only target: school-calendar reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged (#7144). No persistent, lock or scope effect.",
+      "reason": "Read-only target: school-calendar reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged (#7144). No persistent, lock or scope effect. Re-reviewed for #7146: the binding also writes the Träger bell through NotifyTraeger; this effect is unchanged.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
       "target_owner": "delivery-platform"
@@ -2034,7 +2045,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
-      "reason": "Read-only target: school-calendar reaches modules/delivery/internal/notifications.PreferenceService.FilterPermitted (delivery-platform) through roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged (#7144) to remove OGS accounts without the notification type's required permission. The permission lookup has no persistent, lock or scope effect.",
+      "reason": "Read-only target: school-calendar reaches modules/delivery/internal/notifications.PreferenceService.FilterPermitted (delivery-platform) through roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged (#7144) to remove OGS accounts without the notification type's required permission. The permission lookup has no persistent, lock or scope effect. Re-reviewed for #7146: the binding also writes the Träger bell through NotifyTraeger; this effect is unchanged.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterPermitted",
       "target_owner": "delivery-platform"
@@ -2044,7 +2055,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
-      "reason": "Read-only target (#7144): the root names the account of the request from the session claims already in the context, to leave it out of the audience. No database access, persistent, lock or scope effect.",
+      "reason": "Read-only target (#7144): the root names the account of the request from the session claims already in the context, to leave it out of the audience. No database access, persistent, lock or scope effect. Re-reviewed for #7146: the binding also writes the Träger bell through NotifyTraeger; this effect is unchanged.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.ClaimsFromCtx",
       "target_owner": "identity-access"
@@ -4279,7 +4290,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports.GuardianDirectory.ListPortalContacts",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts; modules/peopledirectory/guardian_portal_contacts.go:26. May-bind method surface, not a production-call/liveness claim. Since #7141 the binding reads the stored permission through the shared root helper guardianPortalAccessGranted, which the room change notice uses too; effect and target are unchanged. Since #7362 the binding also hands on the guardian's chosen form of address for the mail greeting; it stays a read.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts; modules/peopledirectory/guardian_portal_contacts.go:26. May-bind method surface, not a production-call/liveness claim. The binding reads stored permission through the shared root helper guardianPortalAccessGranted; room (#7141) and meal-plan (#7145) notices use the same read and interpretation, with no effect change. Since #7362 the binding also hands on the guardian's chosen form of address for the mail greeting; it stays a read.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts",
       "target_owner": "people-directory"

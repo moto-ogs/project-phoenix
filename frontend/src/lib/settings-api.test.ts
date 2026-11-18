@@ -16,6 +16,7 @@ const {
   saveSettingValue,
   clearSettingValue,
   revealSettingValue,
+  fetchDevicePinSetupReason,
   applyOptimisticSchemaUpdate,
   SETTINGS_SCHEMA_SWR_KEY,
 } = await import("./settings-api");
@@ -474,5 +475,41 @@ describe("revealSettingValue", () => {
     await expect(revealSettingValue("security.ogs_device_pin")).rejects.toBe(
       failure,
     );
+  });
+});
+
+describe("fetchDevicePinSetupReason", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("maps the backend status to the reason of the notice", async () => {
+    mockSessionFetch.mockResolvedValueOnce(
+      mockResponse(200, { data: { setup_required: true, reason: "missing" } }),
+    );
+    await expect(fetchDevicePinSetupReason()).resolves.toBe("missing");
+    expect(mockSessionFetch).toHaveBeenCalledWith(
+      "/api/settings/device-pin-status",
+    );
+
+    mockSessionFetch.mockResolvedValueOnce(
+      mockResponse(200, {
+        data: { setup_required: true, reason: "too_simple" },
+      }),
+    );
+    await expect(fetchDevicePinSetupReason()).resolves.toBe("too_simple");
+
+    mockSessionFetch.mockResolvedValueOnce(
+      mockResponse(200, { data: { setup_required: false } }),
+    );
+    await expect(fetchDevicePinSetupReason()).resolves.toBeNull();
+  });
+
+  it("throws an ApiError that keeps the status", async () => {
+    mockSessionFetch.mockResolvedValue(mockResponse(403, {}));
+
+    await expect(fetchDevicePinSetupReason()).rejects.toMatchObject({
+      status: 403,
+    });
   });
 });

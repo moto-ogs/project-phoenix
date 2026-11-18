@@ -8,7 +8,8 @@ import { ApiError, unavailableApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 
 const mockFetchSchema = vi.fn<() => Promise<unknown>>();
-const mockSetSettingValue = vi.fn<() => Promise<string | null>>();
+const mockSetSettingValue =
+  vi.fn<(key: string, value: unknown) => Promise<string | null>>();
 const mockResetSettingValue = vi.fn<() => Promise<string | null>>();
 
 // Local SWR override — global mock in test/setup.ts returns isLoading
@@ -115,8 +116,10 @@ const mockSearchParams = { value: "" };
 vi.mock("~/lib/settings-api", () => ({
   SETTINGS_SCHEMA_SWR_KEY: "settings-schema",
   fetchSettingsSchema: () => mockFetchSchema(),
-  saveSettingValue: (_k: string, _v: unknown) => mockSetSettingValue(),
+  saveSettingValue: (key: string, value: unknown) =>
+    mockSetSettingValue(key, value),
   clearSettingValue: (_k: string) => mockResetSettingValue(),
+  revealSettingValue: vi.fn(),
 }));
 
 const mockRefreshSupervision = vi.fn(() => Promise.resolve());
@@ -586,6 +589,53 @@ describe("SettingsContent (via renderTab)", () => {
     await stateChange.waitFor(() => {
       expect(mockFetchSchema.mock.calls.length).toBeGreaterThan(
         fetchCountBefore,
+      );
+    });
+  });
+
+  it("revalidates the device PIN status after saving the device PIN", async () => {
+    const devicePINSchema = {
+      tabs: [
+        {
+          key: "devices",
+          label: "Geräte",
+          categories: [
+            {
+              key: "pin",
+              label: "Geräte-PIN",
+              items: [
+                {
+                  ...schemaItem("security.ogs_device_pin"),
+                  label: "Geräte-PIN",
+                  description: "PIN für Tablets",
+                  type: "password" as const,
+                  default: "",
+                  value: "",
+                  validation: { pattern: "^\\d{4}$" },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    mockFetchSchema.mockResolvedValue(devicePINSchema);
+
+    renderWithProviders(<RenderedTab tabId="settings-devices" />);
+    await openCategory(/Zugang zum Tablet/);
+    fireEvent.click(await screen.findByRole("button", { name: "Wert ändern" }));
+    fireEvent.change(screen.getByLabelText("Neuer Wert"), {
+      target: { value: "4729" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await stateChange.waitFor(() => {
+      expect(mockSetSettingValue).toHaveBeenCalledWith(
+        "security.ogs_device_pin",
+        "4729",
+      );
+      expect(swrMutate).toHaveBeenCalledWith(
+        "test-tenant:1:settings-device-pin-status",
       );
     });
   });

@@ -81,6 +81,7 @@ import { BetreuungsplanHeuteCard } from "~/components/time-tracking/betreuungspl
 import { Monatskarte } from "~/components/time-tracking/monatskarte";
 import { LeaveRequestsCard } from "~/components/time-tracking/leave-requests-card";
 import { OwnAllowancesCard } from "~/components/time-tracking/own-allowances-card";
+import { useNoOwnStaffProfileEmpty } from "~/components/time-tracking/no-own-staff-profile";
 import type { StaffHistorySession, StaffAbsenceRow } from "~/lib/staff-api";
 import { ownShiftService } from "~/lib/shift-api";
 import type { StaffShift } from "~/lib/shift-helpers";
@@ -169,6 +170,8 @@ import { formatWeekLabel } from "~/lib/timetable-helpers";
 import { createLogger } from "~/lib/logger";
 import { errorStatus } from "~/lib/expected-failure";
 import { IconTile } from "~/components/ui/icon-tile";
+import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
+import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
@@ -3336,6 +3339,12 @@ function TimeTrackingContent() {
     { keepPreviousData: true, revalidateOnFocus: false, errorRetryCount: 1 },
   );
 
+  const noOwnStaff = useNoOwnStaffProfileEmpty(
+    TIME_TRACKING_EMPTY_ICON,
+    hasPermission(authSession, "time_tracking:own"),
+    [currentSessionError],
+  );
+
   const stampAction = useOptimisticStamp(
     confirmedSession,
     mutateCurrentSession,
@@ -3984,6 +3993,12 @@ function TimeTrackingContent() {
     ownMetrics.week === null || ownMetrics.accountBalanceMinutes === null;
   const metricsLoading = metricsPending && !ownMetrics.failed;
 
+  // Lehnt der Server die eigene Zeiterfassung ohne Personalprofil ab, steht
+  // der Hinweis statt der Seite (#7306).
+  if (noOwnStaff) {
+    return <TenantPage title="Zeiterfassung" empty={noOwnStaff} />;
+  }
+
   return (
     <TenantPage
       title="Zeiterfassung"
@@ -4305,6 +4320,10 @@ function TimeTrackingContent() {
   );
 }
 
+const TIME_TRACKING_EMPTY_ICON = (
+  <MotoConceptIcon concept={timeTrackingConcept} size={48} />
+);
+
 // ─── Page Export ───────────────────────────────────────────────────────────────
 
 /** Ladezustand der Seite: der eingebaute Zustand des Gerüsts, kein eigenes
@@ -4320,10 +4339,27 @@ function TimeTrackingPageSkeleton() {
   );
 }
 
+/**
+ * Ohne Personalprofil in dieser Schule gibt es keine eigene Zeiterfassung,
+ * etwa für eine Person des Trägers (#7306). Dann lädt die Seite nichts und
+ * zeigt den Hinweis mit dem Weg zur Startseite.
+ */
+function TimeTrackingGate() {
+  const { data: session } = useSession();
+  const noOwnStaff = useNoOwnStaffProfileEmpty(
+    TIME_TRACKING_EMPTY_ICON,
+    hasPermission(session, "time_tracking:own"),
+  );
+  if (noOwnStaff) {
+    return <TenantPage title="Zeiterfassung" empty={noOwnStaff} />;
+  }
+  return <TimeTrackingContent />;
+}
+
 export default function TimeTrackingPage() {
   return (
     <Suspense fallback={<TimeTrackingPageSkeleton />}>
-      <TimeTrackingContent />
+      <TimeTrackingGate />
     </Suspense>
   );
 }

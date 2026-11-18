@@ -30,6 +30,10 @@ const (
 	// A type registered with PortalSchool itself exists only there (#4792):
 	// the OGS portal neither offers it nor delivers it.
 	PortalSchool = "school"
+	// PortalTraeger is the Träger-Portal (#7146). Its types write the
+	// notification feed only: the portal has no push devices and no live
+	// channel, and no person decides them, so no portal offers them.
+	PortalTraeger = "traeger"
 )
 
 // Channels a notification type is delivered over.
@@ -149,6 +153,11 @@ const (
 	// TypeParentBillingDocument announces a document of the Träger in the
 	// inbox of the parents portal (#4671), such as a confirmation letter.
 	TypeParentBillingDocument = "parent_billing_document"
+	// TypeMealPlanChanged tells the guardians of the children with a meal
+	// booked on a changed day that the meal plan changed (#7145). It writes
+	// the notification feed of the parents portal; the push is off until the
+	// guardian switches it on.
+	TypeMealPlanChanged = contract.NotificationMealPlanChanged
 
 	// TypeInstanceCancelled tells the staff of an appointment's or offering's
 	// staffing that it was cancelled (#7148). It writes the notification feed
@@ -230,6 +239,10 @@ func RegisterType(def TypeDefinition) {
 	}
 	switch def.Portal {
 	case PortalStaff, PortalParent:
+	case PortalTraeger:
+		if !def.Feed || def.DefaultOn || def.Permission != "" || def.SchoolPortal || def.Channel != "" {
+			panic("notifications: Träger type " + def.Key + " must be a feed type without push, permission or other portal")
+		}
 	case PortalSchool:
 		// A school-only type is already offered there; SchoolPortal only
 		// widens a staff type.
@@ -263,8 +276,8 @@ func validateTypeChannel(def TypeDefinition) {
 		if def.DefaultOn && def.Permission == "" && def.Portal != PortalParent {
 			panic("notifications: default-on type " + def.Key + " needs a permission")
 		}
-		if def.Feed && def.Portal != PortalStaff && def.Portal != PortalParent {
-			panic("notifications: feed type " + def.Key + " needs the staff or parent portal")
+		if def.Feed && def.Portal != PortalStaff && def.Portal != PortalParent && def.Portal != PortalTraeger {
+			panic("notifications: feed type " + def.Key + " needs the staff, parent or Träger portal")
 		}
 	case ChannelEmail:
 		// An e-mail type is addressed by permission, not by a relation to a
@@ -692,6 +705,20 @@ func registerParentStatusTypes() {
 		Portal:      PortalParent,
 		TenantGate:  settingParentNotesEnabled,
 		SortOrder:   1,
+	})
+
+	// A changed meal plan (#7145) reaches the families whose child has a
+	// meal booked on the changed day. The feed entry always comes, unless the
+	// school switched the notice off; the push only for who switched it on.
+	RegisterType(TypeDefinition{
+		Key:         TypeMealPlanChanged,
+		Label:       "Speiseplan geändert",
+		Description: "Wenn sich das Essen an einem Tag ändert, an dem Ihr Kind ein Essen gebucht hat. Der Hinweis im Elternportal kommt immer. Die Mitteilung aufs Handy kommt nur, wenn Sie sie einschalten.",
+		Group:       GroupChildren,
+		Portal:      PortalParent,
+		TenantGate:  settingMealPlanChangedEnabled,
+		SortOrder:   2,
+		Feed:        true,
 	})
 }
 

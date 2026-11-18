@@ -139,7 +139,9 @@ export const codes = [
   "enrollment.phase_not_found",
   "enrollment.phase_pending_child_window_conflict",
   "enrollment.phase_school_classes_invalid",
+  "enrollment.phase_service_end_too_far",
   "enrollment.phase_service_period_invalid",
+  "enrollment.phase_service_period_too_long",
   "enrollment.phase_window_invalid",
   "enrollment.pickup_time_not_allowed",
   "enrollment.renewal_terms_changed",
@@ -180,6 +182,7 @@ export const codes = [
   "enrollment.waitlist_disabled",
   "enrollment.window_closed",
   "enrollment.withdraw_not_allowed",
+  "enrollment.without_care_place_school_year_only",
 ] as const;
 
 export const classes = {
@@ -322,7 +325,9 @@ export const classes = {
   "enrollment.phase_not_found": "business_rejection",
   "enrollment.phase_pending_child_window_conflict": "business_rejection",
   "enrollment.phase_school_classes_invalid": "input",
+  "enrollment.phase_service_end_too_far": "input",
   "enrollment.phase_service_period_invalid": "input",
+  "enrollment.phase_service_period_too_long": "input",
   "enrollment.phase_window_invalid": "input",
   "enrollment.pickup_time_not_allowed": "input",
   "enrollment.renewal_terms_changed": "business_rejection",
@@ -363,6 +368,7 @@ export const classes = {
   "enrollment.waitlist_disabled": "business_rejection",
   "enrollment.window_closed": "business_rejection",
   "enrollment.withdraw_not_allowed": "permission",
+  "enrollment.without_care_place_school_year_only": "business_rejection",
 } as const;
 
 export const parameters = {
@@ -508,7 +514,9 @@ export const parameters = {
   "enrollment.phase_not_found": [],
   "enrollment.phase_pending_child_window_conflict": [],
   "enrollment.phase_school_classes_invalid": [],
+  "enrollment.phase_service_end_too_far": [],
   "enrollment.phase_service_period_invalid": [],
+  "enrollment.phase_service_period_too_long": [],
   "enrollment.phase_window_invalid": [],
   "enrollment.pickup_time_not_allowed": [],
   "enrollment.renewal_terms_changed": [],
@@ -549,4 +557,5 @@ export const parameters = {
   "enrollment.waitlist_disabled": [],
   "enrollment.window_closed": [],
   "enrollment.withdraw_not_allowed": [],
+  "enrollment.without_care_place_school_year_only": [],
 } as const;

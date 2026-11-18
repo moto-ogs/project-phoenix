@@ -33,3 +33,25 @@ func TestSplitWithoutCarePlaceKeepsChildrenInTheirClassPeriod(t *testing.T) {
 	assert.Equal(t, []int64{3, 5}, ids("2026-09-08"), "before the new child, up to the end of the others")
 	assert.Equal(t, []int64{2}, ids("2026-09-09"), "the new child from its first day, the others gone")
 }
+
+// TestSplitWithoutCarePlaceKeepsTheClassTimeBeforeCare lists a child with an
+// OGS place on the days before its care started as a class member (#4803
+// review): its class-list entry, or its time without a place, stood for it
+// then; from its care start it passes the care participation.
+func TestSplitWithoutCarePlaceKeepsTheClassTimeBeforeCare(t *testing.T) {
+	t.Parallel()
+	from, until := calendar.Date("2026-09-01"), calendar.Date("2027-01-31")
+	student := &RosterStudent{ID: 7, ClassTimeFrom: &from, ClassTimeUntil: &until}
+
+	care, withoutPlace := splitWithoutCarePlace([]*RosterStudent{student}, "2026-12-01")
+	assert.Empty(t, care)
+	assert.Equal(t, []*RosterStudent{student}, withoutPlace, "a class member before its care starts")
+
+	care, withoutPlace = splitWithoutCarePlace([]*RosterStudent{student}, "2027-02-01")
+	assert.Equal(t, []*RosterStudent{student}, care, "from its care start it is a care candidate")
+	assert.Empty(t, withoutPlace)
+
+	care, withoutPlace = splitWithoutCarePlace([]*RosterStudent{student}, "2026-08-31")
+	assert.Equal(t, []*RosterStudent{student}, care)
+	assert.Empty(t, withoutPlace, "not before its class time")
+}

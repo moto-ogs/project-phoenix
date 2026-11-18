@@ -92,7 +92,7 @@ The setup script prints the exact seed command with your credentials. It looks l
 scripts/dev-native.sh backend go run ./cmd/devtools seed \
   --email operator@example.com \
   --password 'YOUR_PASSWORD' \
-  --pin 1234 \
+  --pin 4729 \
   --url http://localhost:8080
 ```
 
@@ -189,7 +189,7 @@ carries the slug in its domain (`anna.mueller@demo-ogs-nord.moto-ogs.de`), and
 the school joins the existing Demo-Träger:
 
 ```bash
-scripts/dev-native.sh backend go run ./cmd/devtools seed --email op@example.com --password 'Test1234%' --pin 1234 --url http://localhost:8080 \
+scripts/dev-native.sh backend go run ./cmd/devtools seed --email op@example.com --password 'Test1234%' --pin 4729 --url http://localhost:8080 \
   --profile vollbetrieb --tenant-slug ogs-nord --school-name 'OGS Nord' --state ogs-nord.seed-state.json
 ```
 

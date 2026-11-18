@@ -132,7 +132,13 @@ interface GuardiansPanelProps {
   readonly canRemove: boolean;
   readonly canAddContact?: boolean;
   readonly canManagePickup?: boolean;
+  readonly canManageEmergencyContact?: boolean;
+  /** Kind ohne OGS-Platz (#4803): es gibt keine Abholerlaubnis-Anfragen. */
+  readonly withoutCarePlace?: boolean;
 }
+
+const NO_PICKUP_PERMISSION_REQUESTS: Promise<PickupPermissionRequest[]> =
+  Promise.resolve([]);
 
 export default function GuardiansPanel({
   studentId,
@@ -140,6 +146,8 @@ export default function GuardiansPanel({
   canRemove,
   canAddContact = false,
   canManagePickup = false,
+  canManageEmergencyContact = canManagePickup,
+  withoutCarePlace = false,
 }: GuardiansPanelProps) {
   const t = useCareTermTranslations("parentChildDetail");
   const visibilityT = useCareTermTranslations("parentVisibility");
@@ -170,8 +178,9 @@ export default function GuardiansPanel({
   );
   // Offene Abholerlaubnis-Anfragen je Kontakt (#4780). Ohne die Liste fehlt
   // nur der Hinweis „Wartet auf die OGS“; die Kontakte bleiben vollständig.
+  // Kind ohne OGS-Platz (#4803): es gibt keine Abholerlaubnis-Anfragen.
   const requestsResource = useSWRAuth(
-    parentKeys.pickupPermissionRequests(studentId),
+    withoutCarePlace ? null : parentKeys.pickupPermissionRequests(studentId),
     () => listPickupPermissionRequests(studentId),
     PARENT_RESOURCE_OPTIONS,
   );
@@ -298,15 +307,24 @@ export default function GuardiansPanel({
       mutateGuardians(listChildGuardians(studentId), { revalidate: false }),
       mutateAccounts(listRelatedAccounts(studentId), { revalidate: false }),
       // Wie beim Erstabruf fehlt nur der optionale Hinweis auf offene Anfragen.
-      mutateRequests(listPickupPermissionRequests(studentId), {
-        revalidate: false,
-      }).catch((err: unknown) => {
+      mutateRequests(
+        withoutCarePlace
+          ? NO_PICKUP_PERMISSION_REQUESTS
+          : listPickupPermissionRequests(studentId),
+        { revalidate: false },
+      ).catch((err: unknown) => {
         logger.warn("pickup_permission_requests_load_failed", {
           error: err instanceof Error ? err.message : String(err),
         });
       }),
     ]);
-  }, [mutateAccounts, mutateGuardians, mutateRequests, studentId]);
+  }, [
+    mutateAccounts,
+    mutateGuardians,
+    mutateRequests,
+    studentId,
+    withoutCarePlace,
+  ]);
   const { error: reloadError, refresh: refreshAfterWrite } =
     useRefreshAfterWrite(t("guardians.reloadObject"), readGuardians, {
       savedSuffix: t("guardians.savedButStale"),
@@ -499,6 +517,7 @@ export default function GuardiansPanel({
             <GuardianRow
               key={g.guardian_profile_id}
               guardian={g}
+              withoutCarePlace={withoutCarePlace}
               access={accountById.get(g.guardian_profile_id)}
               pendingPermission={pendingByGuardian.get(g.guardian_profile_id)}
               canInvite={canInvite}
@@ -592,6 +611,7 @@ export default function GuardiansPanel({
         <PickupModal
           studentId={studentId}
           guardian={editingPickup}
+          withoutCarePlace={withoutCarePlace}
           pendingPermission={pendingByGuardian.get(
             editingPickup.guardian_profile_id,
           )}
@@ -610,7 +630,9 @@ export default function GuardiansPanel({
         <ContactModal
           mode="create"
           studentId={studentId}
-          canManagePickup={canManagePickup}
+          canManagePickup={canManagePickup && !withoutCarePlace}
+          canManageEmergencyContact={canManageEmergencyContact}
+          withoutCarePlace={withoutCarePlace}
           onClose={() => setAddMode(null)}
           onSaved={(requested) =>
             handleSaved(
@@ -827,6 +849,7 @@ function ConnectedAccountRow({
 
 function GuardianRow({
   guardian: g,
+  withoutCarePlace = false,
   access,
   pendingPermission,
   canInvite,
@@ -836,6 +859,7 @@ function GuardianRow({
   onGrantAccess,
 }: Readonly<{
   guardian: ChildGuardian;
+  withoutCarePlace?: boolean;
   access?: RelatedAccount;
   pendingPermission?: PickupPermissionRequest;
   canInvite: boolean;
@@ -1030,21 +1054,26 @@ function GuardianRow({
                 caller may edit the note OR manage pickup. A note-only editor
                 (e.g. their own row, where flags are never theirs to set) still
                 reaches the note. The label/icon reflect which capability applies. */}
-            {(g.can_edit_contact || g.can_manage_pickup) && (
+            {((!withoutCarePlace && g.can_edit_contact) ||
+              g.can_manage_pickup) && (
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 onClick={onEditPickup}
                 tooltip={
-                  g.can_manage_pickup
-                    ? t("guardians.managePickupTooltip")
-                    : t("guardians.pickupNotesTooltip")
+                  withoutCarePlace
+                    ? t("guardians.emergencyDescription")
+                    : g.can_manage_pickup
+                      ? t("guardians.managePickupTooltip")
+                      : t("guardians.pickupNotesTooltip")
                 }
                 aria-label={
-                  g.can_manage_pickup
-                    ? t("guardians.managePickup")
-                    : t("guardians.pickupNotes")
+                  withoutCarePlace
+                    ? t("guardians.emergencyLabel")
+                    : g.can_manage_pickup
+                      ? t("guardians.managePickup")
+                      : t("guardians.pickupNotes")
                 }
               >
                 {g.can_manage_pickup ? (
@@ -1106,14 +1135,18 @@ function ContactModal({
   mode,
   studentId,
   guardian,
+  withoutCarePlace = false,
   canManagePickup = false,
+  canManageEmergencyContact = canManagePickup,
   onClose,
   onSaved,
 }: Readonly<{
   mode: "create" | "edit";
   studentId: string;
   guardian?: ChildGuardian;
+  withoutCarePlace?: boolean;
   canManagePickup?: boolean;
+  canManageEmergencyContact?: boolean;
   onClose: () => void;
   /** requested: eine Abholerlaubnis ging als Anfrage an die OGS (#4780). */
   onSaved: (requested: boolean) => void;
@@ -1245,8 +1278,8 @@ function ContactModal({
                 ),
               }
             : {}),
-          is_emergency_contact: canManagePickup && isEmergency,
-          pickup_notes: pickupNotes.trim() || null,
+          is_emergency_contact: canManageEmergencyContact && isEmergency,
+          pickup_notes: withoutCarePlace ? null : pickupNotes.trim() || null,
         };
         await createGuardianContact(studentId, createPayload);
       } else if (guardian) {
@@ -1339,73 +1372,79 @@ function ContactModal({
                 }
               />
             </div>
-            {canManagePickup ? (
+            {canManagePickup || canManageEmergencyContact ? (
               <InsetPanel className="space-y-3">
-                <label
-                  htmlFor="new-contact-can-pickup"
-                  className="flex items-start gap-3"
-                >
-                  <Checkbox
-                    id="new-contact-can-pickup"
-                    checked={canPickup}
-                    onChange={(event) => setCanPickup(event.target.checked)}
-                  />
-                  <span className="text-sm">
-                    <span className="font-medium text-gray-900">
-                      {t("guardians.canPickupLabel")}
-                    </span>
-                    <span className="mt-0.5 block text-gray-500">
-                      {t("guardians.canPickupDescription")}
-                    </span>
-                  </span>
-                </label>
-                {canPickup ? (
-                  <div className="space-y-3 pl-8">
-                    <PickupWeekdaysField
-                      value={pickupWeekdays}
-                      onChange={(next) => {
-                        setPickupWeekdays(next);
-                        setPickupSignature(null);
-                      }}
-                      disabled={busy}
-                    />
-                    <p className="text-sm text-gray-600">
-                      {tPermission("waitsForOgs")}
-                    </p>
-                    {pickupStatement && (
-                      <PickupSignatureField
-                        id={CONTACT_SIGNATURE_FIELD}
-                        statement={pickupStatement}
-                        value={pickupSignature}
-                        onChange={setPickupSignature}
-                        disabled={busy}
-                        error={fieldError(CONTACT_SIGNATURE_FIELD)}
+                {canManagePickup && (
+                  <>
+                    <label
+                      htmlFor="new-contact-can-pickup"
+                      className="flex items-start gap-3"
+                    >
+                      <Checkbox
+                        id="new-contact-can-pickup"
+                        checked={canPickup}
+                        onChange={(event) => setCanPickup(event.target.checked)}
                       />
-                    )}
-                    <PickupSignatureStatementLoadError
-                      error={pickupSignatureStatement.error}
-                      retry={pickupSignatureStatement.retry}
+                      <span className="text-sm">
+                        <span className="font-medium text-gray-900">
+                          {t("guardians.canPickupLabel")}
+                        </span>
+                        <span className="mt-0.5 block text-gray-500">
+                          {t("guardians.canPickupDescription")}
+                        </span>
+                      </span>
+                    </label>
+                    {canPickup ? (
+                      <div className="space-y-3 pl-8">
+                        <PickupWeekdaysField
+                          value={pickupWeekdays}
+                          onChange={(next) => {
+                            setPickupWeekdays(next);
+                            setPickupSignature(null);
+                          }}
+                          disabled={busy}
+                        />
+                        <p className="text-sm text-gray-600">
+                          {tPermission("waitsForOgs")}
+                        </p>
+                        {pickupStatement && (
+                          <PickupSignatureField
+                            id={CONTACT_SIGNATURE_FIELD}
+                            statement={pickupStatement}
+                            value={pickupSignature}
+                            onChange={setPickupSignature}
+                            disabled={busy}
+                            error={fieldError(CONTACT_SIGNATURE_FIELD)}
+                          />
+                        )}
+                        <PickupSignatureStatementLoadError
+                          error={pickupSignatureStatement.error}
+                          retry={pickupSignatureStatement.retry}
+                        />
+                      </div>
+                    ) : null}
+                  </>
+                )}
+                {canManageEmergencyContact && (
+                  <label
+                    htmlFor="new-contact-emergency"
+                    className="flex items-start gap-3"
+                  >
+                    <Checkbox
+                      id="new-contact-emergency"
+                      checked={isEmergency}
+                      onChange={(event) => setIsEmergency(event.target.checked)}
                     />
-                  </div>
-                ) : null}
-                <label
-                  htmlFor="new-contact-emergency"
-                  className="flex items-start gap-3"
-                >
-                  <Checkbox
-                    id="new-contact-emergency"
-                    checked={isEmergency}
-                    onChange={(event) => setIsEmergency(event.target.checked)}
-                  />
-                  <span className="text-sm">
-                    <span className="font-medium text-gray-900">
-                      {t("guardians.emergencyLabel")}
+                    <span className="text-sm">
+                      <span className="font-medium text-gray-900">
+                        {t("guardians.emergencyLabel")}
+                      </span>
+                      <span className="mt-0.5 block text-gray-500">
+                        {t("guardians.emergencyDescription")}
+                      </span>
                     </span>
-                    <span className="mt-0.5 block text-gray-500">
-                      {t("guardians.emergencyDescription")}
-                    </span>
-                  </span>
-                </label>
+                  </label>
+                )}
               </InsetPanel>
             ) : null}
           </div>
@@ -1545,7 +1584,7 @@ function ContactModal({
             </Button>
           )}
         </div>
-        {mode === "create" ? (
+        {mode === "create" && !withoutCarePlace ? (
           <Textarea
             id="new-contact-pickup-notes"
             label={t("guardians.pickupNotes")}
@@ -1565,12 +1604,14 @@ function ContactModal({
 function PickupModal({
   studentId,
   guardian: g,
+  withoutCarePlace = false,
   pendingPermission,
   onClose,
   onSaved,
 }: Readonly<{
   studentId: string;
   guardian: ChildGuardian;
+  withoutCarePlace?: boolean;
   pendingPermission?: PickupPermissionRequest;
   onClose: () => void;
   /** requested: die Abholerlaubnis ging als Anfrage an die OGS (#4780). */
@@ -1592,9 +1633,10 @@ function PickupModal({
   // Erteilen und andere Tage sind eine unterschriebene Anfrage an die OGS;
   // Wegnehmen gilt sofort (#4780).
   const grants =
+    !withoutCarePlace &&
     canPickup &&
     (!g.can_pickup || !sameWeekdays(weekdays, g.pickup_weekdays ?? []));
-  const revokes = g.can_pickup && !canPickup;
+  const revokes = !withoutCarePlace && g.can_pickup && !canPickup;
   const pickupSignatureStatement = usePickupSignatureStatement(
     studentId,
     grants
@@ -1638,7 +1680,10 @@ function PickupModal({
     // otherwise valid flag-only edit (#1667 review).
     const normalizedNotes = notes.trim();
     const originalNotes = (g.pickup_notes ?? "").trim();
-    const noteChanged = g.can_edit_contact && normalizedNotes !== originalNotes;
+    const noteChanged =
+      !withoutCarePlace &&
+      g.can_edit_contact &&
+      normalizedNotes !== originalNotes;
     const payload: GuardianRelationshipPayload = {
       ...(revokes ? { can_pickup: false } : {}),
       ...(isEmergency !== g.is_emergency_contact
@@ -1692,9 +1737,11 @@ function PickupModal({
       isOpen
       onClose={onClose}
       title={
-        g.can_manage_pickup
-          ? t("guardians.pickupTitle")
-          : t("guardians.pickupNotes")
+        withoutCarePlace
+          ? t("guardians.emergencyLabel")
+          : g.can_manage_pickup
+            ? t("guardians.pickupTitle")
+            : t("guardians.pickupNotes")
       }
       closeLabel={t("guardians.close")}
       mobileSheet
@@ -1740,68 +1787,72 @@ function PickupModal({
             (a note-only editor sees just the note field below). */}
         {g.can_manage_pickup && (
           <>
-            <label
-              htmlFor="guardian-can-pickup"
-              className="flex items-start gap-3"
-            >
-              <Checkbox
-                id="guardian-can-pickup"
-                checked={canPickup}
-                disabled={Boolean(pendingPermission)}
-                onChange={(e) => setCanPickup(e.target.checked)}
-              />
-              <span className="text-sm">
-                <span className="font-medium text-gray-900">
-                  {t("guardians.canPickupLabel")}
-                </span>
-                <span className="mt-0.5 block text-gray-500">
-                  {t("guardians.canPickupDescription")}
-                </span>
-              </span>
-            </label>
-            {pendingPermission ? (
-              <Alert
-                type="info"
-                message={`${tPermission("pending", {
-                  days:
-                    pendingPermission.weekdays.length > 0
-                      ? weekdayList(pendingPermission.weekdays)
-                      : tPermission("days.all"),
-                })}. ${tPermission("waitsForOgs")}`}
-              />
-            ) : canPickup ? (
-              <div className="space-y-3 pl-8">
-                <PickupWeekdaysField
-                  value={weekdays}
-                  onChange={(next) => {
-                    setWeekdays(next);
-                    setSignature(null);
-                  }}
-                  disabled={busy}
-                />
-                {grants ? (
-                  <>
-                    <p className="text-sm text-gray-600">
-                      {tPermission("waitsForOgs")}
-                    </p>
-                    {pickupStatement && (
-                      <PickupSignatureField
-                        id={PICKUP_SIGNATURE_FIELD}
-                        statement={pickupStatement}
-                        value={signature}
-                        onChange={setSignature}
-                        disabled={busy}
-                        error={fieldError(PICKUP_SIGNATURE_FIELD)}
-                      />
-                    )}
-                    <PickupSignatureStatementLoadError
-                      error={pickupSignatureStatement.error}
-                      retry={pickupSignatureStatement.retry}
+            {!withoutCarePlace && (
+              <>
+                <label
+                  htmlFor="guardian-can-pickup"
+                  className="flex items-start gap-3"
+                >
+                  <Checkbox
+                    id="guardian-can-pickup"
+                    checked={canPickup}
+                    disabled={Boolean(pendingPermission)}
+                    onChange={(e) => setCanPickup(e.target.checked)}
+                  />
+                  <span className="text-sm">
+                    <span className="font-medium text-gray-900">
+                      {t("guardians.canPickupLabel")}
+                    </span>
+                    <span className="mt-0.5 block text-gray-500">
+                      {t("guardians.canPickupDescription")}
+                    </span>
+                  </span>
+                </label>
+                {pendingPermission ? (
+                  <Alert
+                    type="info"
+                    message={`${tPermission("pending", {
+                      days:
+                        pendingPermission.weekdays.length > 0
+                          ? weekdayList(pendingPermission.weekdays)
+                          : tPermission("days.all"),
+                    })}. ${tPermission("waitsForOgs")}`}
+                  />
+                ) : canPickup ? (
+                  <div className="space-y-3 pl-8">
+                    <PickupWeekdaysField
+                      value={weekdays}
+                      onChange={(next) => {
+                        setWeekdays(next);
+                        setSignature(null);
+                      }}
+                      disabled={busy}
                     />
-                  </>
+                    {grants ? (
+                      <>
+                        <p className="text-sm text-gray-600">
+                          {tPermission("waitsForOgs")}
+                        </p>
+                        {pickupStatement && (
+                          <PickupSignatureField
+                            id={PICKUP_SIGNATURE_FIELD}
+                            statement={pickupStatement}
+                            value={signature}
+                            onChange={setSignature}
+                            disabled={busy}
+                            error={fieldError(PICKUP_SIGNATURE_FIELD)}
+                          />
+                        )}
+                        <PickupSignatureStatementLoadError
+                          error={pickupSignatureStatement.error}
+                          retry={pickupSignatureStatement.retry}
+                        />
+                      </>
+                    ) : null}
+                  </div>
                 ) : null}
-              </div>
-            ) : null}
+              </>
+            )}
             <label
               htmlFor="guardian-emergency"
               className="flex items-start gap-3"
@@ -1826,7 +1877,7 @@ function PickupModal({
             guardian whose contact they may also edit, so gate it on
             can_edit_contact. A pickup-manage-only caller sees just the flags
             above; the backend rejects a note edit on a contact-locked guardian. */}
-        {g.can_edit_contact && (
+        {!withoutCarePlace && g.can_edit_contact && (
           <Textarea
             id="pickup-notes"
             label={t("guardians.pickupNotes")}

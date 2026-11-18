@@ -32,7 +32,7 @@ func TestDataReturnReleasesARealExport(t *testing.T) {
 	testpkg.CreateTestStudentForTenant(t, db, school, "Synthetic Return", "Fixture", "A")
 	operator := testpkg.CreateTestOperator(t, db)
 	exporter, err := compose.NewTenantExporter(db, organizationtenancy.ExportFingerprints{Bytes: testpkg.ContentFingerprint, Reader: testpkg.ReaderContentFingerprint},
-		openedSealedFields{}, projectedFields{}, &exportAuditFake{})
+		openedSealedFields{}, projectedFields{}, plainExportObjects{}, &exportAuditFake{})
 	require.NoError(t, err)
 	out := filepath.Join(t.TempDir(), "export")
 	require.NoError(t, exporter.Export(context.Background(), organizationtenancy.TenantExportOptions{SchoolID: school, OperatorID: 42, Output: out, Uploads: t.TempDir()}))

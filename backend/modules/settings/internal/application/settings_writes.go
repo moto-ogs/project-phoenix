@@ -23,6 +23,9 @@ func (s *settingsService) SetValue(ctx context.Context, key string, value any, c
 			Err: &config.InvalidValueError{Key: key, Reason: err.Error()},
 		}
 	}
+	if err := validateDevicePIN(key, value); err != nil {
+		return &config.SettingsError{Op: "set_value", Err: err}
+	}
 
 	valueJSON, err := json.Marshal(value)
 	if err != nil {
@@ -81,6 +84,9 @@ func (s *settingsService) writeDefinition(key string, permissions []string, oper
 }
 
 func (s *settingsService) validateLockedSettingWrite(ctx context.Context, key string, value any, operation string) error {
+	if err := s.lockClassListConversionSettings(ctx, key); err != nil {
+		return &config.SettingsError{Op: operation, Err: err}
+	}
 	if isParentReportSettingKey(key) {
 		if err := s.lockParentReportModes(ctx); err != nil {
 			return err
@@ -224,4 +230,17 @@ func (s *settingsService) resetStoredValue(ctx context.Context, tenantID int64, 
 	return s.runtime.WithinTenant(ctx, tenantID, func(txCtx context.Context) error {
 		return s.resetStoredValueInTx(txCtx, tenantID, key, changedBy, def)
 	})
+}
+
+// validateDevicePIN rejects a device PIN that is easy to guess (#7175). The
+// registry pattern already holds the format; the former default 1234 must not
+// come back as a school's own value.
+func validateDevicePIN(key string, value any) error {
+	if key != config.KeyOGSDevicePIN {
+		return nil
+	}
+	if pin, ok := value.(string); ok && config.IsTrivialDevicePIN(pin) {
+		return &config.DevicePINTooSimpleError{Key: key}
+	}
+	return nil
 }

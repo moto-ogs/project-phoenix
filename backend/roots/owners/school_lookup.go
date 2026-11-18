@@ -12,6 +12,9 @@ type schoolFinder interface {
 	FindSchool(ctx context.Context, id int64) (organizationtenancy.School, error)
 }
 
+// SchoolFinder is the exported name of schoolFinder for root wiring.
+type SchoolFinder = schoolFinder
+
 // schoolLister is the Organisation & Tenancy read of schools by ID.
 type schoolLister interface {
 	ListSchoolsByID(ctx context.Context, ids []int64) ([]organizationtenancy.School, error)

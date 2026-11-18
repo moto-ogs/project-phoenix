@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 func (s *StudentService) ReadEnrollment(ctx context.Context, id int64, lock string) (result peopledirectory.EnrollmentRecord, err error) {
@@ -83,7 +84,8 @@ func (s *StudentService) CreateEnrollment(ctx context.Context, input domain.Enro
 		if err != nil {
 			return err
 		}
-		record := domain.StudentRecord{ID: result.ID, PersonID: result.PersonID, SchoolClass: result.SchoolClass, Status: result.Status, EnrolledFrom: result.EnrolledFrom, EnrolledUntil: result.EnrolledUntil}
+		record := domain.StudentRecord{ID: result.ID, PersonID: result.PersonID, SchoolClass: result.SchoolClass, Status: result.Status, EnrolledFrom: result.EnrolledFrom, EnrolledUntil: result.EnrolledUntil,
+			WithoutCarePlace: input.WithoutCarePlace}
 		if input.InitialProfile != nil {
 			domain.ApplyEnrollmentPatch(&record, *input.InitialProfile)
 		}
@@ -120,6 +122,20 @@ func (s *StudentService) RenewEnrollment(ctx context.Context, id int64, input do
 		}
 		record.SchoolClass, record.Status = input.SchoolClass, input.Status
 		record.EnrolledFrom, record.EnrolledUntil = input.EnrolledFrom, input.EnrolledUntil
+		// An accepted enrollment grants an OGS place (#4803, ADR 0282); the
+		// child counts for the child quota from then on, which School
+		// Membership checks on this write. Its OGS care starts with the
+		// place: without a start date the renewal dates it today, so no past
+		// day turns into OGS participation. An administrative import keeps
+		// the status read under the student lock.
+		if !input.PreserveCarePlaceStatus {
+			// The place starts no earlier than today: a renewal dated into
+			// the running year must not turn past days into OGS care.
+			if today := s.today(); record.WithoutCarePlace && (record.EnrolledFrom == "" || calendar.Date(record.EnrolledFrom).Before(today)) {
+				record.EnrolledFrom = today.String()
+			}
+			record.WithoutCarePlace = false
+		}
 		_, err = s.owners.Renew(txCtx, record)
 		return err
 	})

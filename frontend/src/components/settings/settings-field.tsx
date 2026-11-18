@@ -51,6 +51,7 @@ import {
 } from "~/lib/traeger-payment-text";
 import { textTooLong } from "~/lib/text-length";
 import { Switch } from "~/components/ui/switch";
+import { ENROLLMENT_ENABLED_KEY } from "~/lib/enrollment-privacy-notice";
 import { NumberField } from "./fields/number-field";
 import { SettingsTimeField } from "./fields/time-field";
 import { DateField } from "./fields/date-field";
@@ -194,17 +195,23 @@ function SwitchOffConsequence({
 }
 
 // operator_managed settings (ADR 0048) say who decides them: the moto team,
-// by contract. Module switches (#4892) name the booking, every other one is
-// a retention window.
+// by contract. Module switches (#4892) name the booking, retention windows
+// (`…_retention_days`) the deletion period; any other one, such as the
+// switch for children without an OGS place (#4803), says only who decides.
 function operatorManagedNote(key: string, audience: SettingsAudience): string {
   if (MODULE_SETTING_KEYS.includes(key)) {
     return audience === "operator"
       ? "Gebuchtes Modul aus dem Vertrag. Die Schule sieht es, kann es aber nicht ändern."
       : "Welche Module Ihre Schule hat, steht im Vertrag mit moto. Für eine Änderung wenden Sie sich an das moto-Team.";
   }
+  if (key.endsWith("retention_days")) {
+    return audience === "operator"
+      ? "Löschfrist aus dem Vertrag. Die Schule sieht sie, kann sie aber nicht ändern."
+      : "Diese Frist legt moto mit Ihrer Schule fest. Für eine Änderung wenden Sie sich an moto.";
+  }
   return audience === "operator"
-    ? "Löschfrist aus dem Vertrag. Die Schule sieht sie, kann sie aber nicht ändern."
-    : "Diese Frist legt moto mit Ihrer Schule fest. Für eine Änderung wenden Sie sich an moto.";
+    ? "Legt das moto-Team mit der Schule fest. Die Schule sieht es, kann es aber nicht ändern."
+    : "Das legt moto mit Ihrer Schule fest. Für eine Änderung wenden Sie sich an moto.";
 }
 
 function toStr(v: unknown): string {
@@ -455,6 +462,12 @@ interface SettingsFieldProps {
   readonly onReset: (key: string) => Promise<void>;
   readonly onSchemaRefresh?: () => void;
   readonly onBookingAuthorityEnable?: () => Promise<void>;
+  /**
+   * Switching the online enrollment on opens the page's activation dialog
+   * instead of saving at once (#7176): it checks the privacy notice and asks
+   * for the notification recipients.
+   */
+  readonly onEnrollmentEnable?: () => void;
   // audience controls the "auch von {other side} änderbar" hint shown
   // on shared settings and the origin of a value (default, Träger, school).
   // Defaults to "admin" (tenant settings page); "traeger" is the Träger
@@ -507,6 +520,7 @@ export function SettingsField({
   onReset,
   onSchemaRefresh,
   onBookingAuthorityEnable,
+  onEnrollmentEnable,
   audience = "admin",
   revealFn,
   labelLevel = 4,
@@ -899,6 +913,14 @@ export function SettingsField({
         await onBookingAuthorityEnable();
         return;
       }
+      if (
+        setting.key === ENROLLMENT_ENABLED_KEY &&
+        value === true &&
+        onEnrollmentEnable
+      ) {
+        onEnrollmentEnable();
+        return;
+      }
       await saveOrConfirm(value);
     },
     [
@@ -914,6 +936,7 @@ export function SettingsField({
       legalActivationTextKey,
       legalActivationTextSetting?.value,
       onBookingAuthorityEnable,
+      onEnrollmentEnable,
       setting.key,
     ],
   );

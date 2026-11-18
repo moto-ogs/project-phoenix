@@ -155,3 +155,22 @@ func (s *Service) RequireAbsentMorningAttendance(ctx context.Context, studentID 
 	}
 	return nil
 }
+
+// The data import's conversion binds the mark transfer outside Owner (#4803).
+var _ studentpresence.ClassListMarkTransfer = (*Service)(nil)
+
+// TransferClassListEntryMarks moves the morning marks of class-list entries
+// onto the students they became (#4803), in two set-based statements.
+func (s *Service) TransferClassListEntryMarks(ctx context.Context, moves []studentpresence.ClassListEntryMarkMove) error {
+	if len(moves) == 0 {
+		return nil
+	}
+	for _, move := range moves {
+		if move.ClassListEntryID <= 0 || move.StudentID <= 0 {
+			return studentpresence.ErrMorningAttendanceInvalid
+		}
+	}
+	return s.runWrite(ctx, "transfer_class_list_entry_marks", func(txCtx context.Context) (ports.Stats, error) {
+		return s.store.TransferClassListEntryMarks(txCtx, moves)
+	})
+}

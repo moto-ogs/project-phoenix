@@ -29,6 +29,9 @@ type Student struct {
 	ExtraInfo         *string
 	HealthInfo        *string
 	PickupStatus      *string
+	// WithoutCarePlace marks a child without an OGS place (#4803): an
+	// approval for the next school year grants the place on its first day.
+	WithoutCarePlace bool
 	// DepartureDays, AllowedDepartureModes, BusDays and PickupDays are the
 	// child's departure plan; AllowedDepartureModes is the source of truth
 	// and the others its derived views (#1610).

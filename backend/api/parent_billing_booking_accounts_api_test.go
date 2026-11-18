@@ -77,6 +77,10 @@ func TestBookingAccountsAreFrozenOntoTheIssuedPositions(t *testing.T) {
 	require.Equal(t, http.StatusOK, put("care", 0, "4400"))
 	require.Equal(t, http.StatusOK, put("meals", 0, "4420"))
 	require.Equal(t, http.StatusCreated, addCenter("school", f.office.schools[0], "2029-01-01", "ISP"))
+	// The holiday KOST1 of the school is a scope of its own (#7357): it
+	// starts on the same day and reaches no monthly position.
+	require.Equal(t, http.StatusCreated, addCenter("school_holiday", f.office.schools[0], "2029-01-01", "ISPFER"))
+	require.Equal(t, http.StatusNotFound, addCenter("school_holiday", 0, "2029-01-01", "ISPFER"), "it names its school")
 	// The cost center of next year does not hold in June.
 	require.Equal(t, http.StatusCreated, addCenter("school", f.office.schools[0], "2030-01-01", "ISP2030"))
 	require.Equal(t, http.StatusConflict, addCenter("school", f.office.schools[0], "2030-01-01", "DOPPELT"), "one per day")
@@ -118,6 +122,7 @@ func TestBookingAccountsAreFrozenOntoTheIssuedPositions(t *testing.T) {
 	assert.Contains(t, content, ";4410;ISP")
 	assert.NotContains(t, content, "4999")
 	assert.NotContains(t, content, "NEU")
+	assert.NotContains(t, content, "ISPFER", "a monthly position never books on the holiday KOST1")
 
 	// Removing a cost center keeps what the release copied.
 	page = bookingAccountsOf(t, f)

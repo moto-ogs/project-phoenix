@@ -10,9 +10,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// NewBillingMonths builds the Mensa-Monatsfreigabe (#4686) over the kitchen
-// lists of the Meal Plan, the school calendar and the attendance the root
-// binds.
+// NewBillingMonths builds the Mensa-Monatsfreigabe (#4686) over the Meal Plan's
+// kitchen lists, the school calendar and the attendance the root binds.
 func NewBillingMonths(meals mealplan.Registration, days mealplan.CalendarFinder, presence mealplan.PresenceFinder, availableFrom mealplan.AttendanceAvailableFrom) (mealplan.BillingMonths, error) {
 	if meals == nil || days == nil || presence == nil || availableFrom == nil {
 		return nil, errors.New("meal plan billing months compose: all dependencies are required")

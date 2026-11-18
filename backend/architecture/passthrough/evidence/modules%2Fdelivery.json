@@ -9,6 +9,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (rs *TraegerFeedResource) Router() chi.Router {\n\tr := chi.NewRouter()\n\tr.Use(render.SetContentType(render.ContentTypeJSON))\n\trs.Runtime.ProtectedTraeger(r, func(r chi.Router) {\n\t\tr.Route(\"/feed\", func(r chi.Router) {\n\t\t\tr.Get(\"/\", rs.list)\n\t\t\tr.Get(\"/unread-count\", rs.unreadCount)\n\t\t\tr.Post(\"/read-all\", rs.markAllRead)\n\t\t\tr.Post(\"/{id}/read\", rs.markRead)\n\t\t})\n\t})\n\treturn r\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/delivery/http/notifications/TraegerFeedResource.Router",
+      "owner": "modules/delivery"
+    },
+    {
+      "build": "production",
       "evidence": "func (e *databaseError) Error() string {\n\tif e.Err == nil {\n\t\treturn \"database error during \" + e.Op\n\t}\n\treturn \"database error during \" + e.Op + \": \" + e.Err.Error()\n}",
       "form": "unclassified-evidence",
       "id": "modules/delivery/internal/adapters/deliverypostgres/databaseError.Error",
@@ -233,7 +240,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *PrivateUploads) OpenPrivate(ctx context.Context, kind string, tenantID int64, storedName string) (interface {\n\tio.ReadSeekCloser\n\tModTime() time.Time\n}, error) {\n\tkey, err := TenantKey(kind, tenantID, storedName)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tobject, err := s.backend.OpenObject(ctx, key)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026privateUploadObject{ReadSeekCloser: object.Content, modifiedAt: object.ModifiedAt}, nil\n}",
+      "evidence": "func (s *PrivateUploads) OpenPrivate(ctx context.Context, kind string, tenantID int64, storedName string) (interface {\n\tio.ReadSeekCloser\n\tModTime() time.Time\n}, error) {\n\tkey, err := TenantKey(kind, tenantID, storedName)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tobject, err := s.keys.openContent(ctx, s.backend, key)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026privateUploadObject{ReadSeekCloser: object.Content, modifiedAt: object.ModifiedAt}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/delivery/objects/PrivateUploads.OpenPrivate",
       "owner": "modules/delivery"
@@ -247,9 +254,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *PrivateUploads) SavePrivate(ctx context.Context, kind string, tenantID int64, storedName string, source io.Reader) (int64, error) {\n\tkey, err := TenantKey(kind, tenantID, storedName)\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\treturn s.backend.WriteObject(ctx, key, source, SaveOptions{Private: true})\n}",
+      "evidence": "func (s *PrivateUploads) RemoveStaleReplacements(ctx context.Context, kind string, tenantID int64) (int, error) {\n\tkey, err := TenantKey(kind, tenantID, \"x\")\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\treturn s.backend.RemoveStaleReplacements(ctx, path.Dir(key))\n}",
       "form": "unclassified-evidence",
-      "id": "modules/delivery/objects/PrivateUploads.SavePrivate",
+      "id": "modules/delivery/objects/PrivateUploads.RemoveStaleReplacements",
       "owner": "modules/delivery"
     },
     {

@@ -15,6 +15,7 @@
   "care_request_field_disabled": "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
   "child_care_ended": "Opieka nad tym dzieckiem zakończyła się. Zmiany nie są już możliwe. W razie pytań skontaktuj się z OGS.",
   "child_not_linked": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
+  "child_without_care_place": "Państwa dziecko nie ma miejsca w OGS. Dlatego ta funkcja nie jest dostępna dla dziecka.",
   "course_already_booked": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "course_request_invalid": "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",
   "course_request_not_own": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",

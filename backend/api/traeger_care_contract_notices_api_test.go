@@ -57,8 +57,9 @@ func concludeWithEarlyStart(t *testing.T, f careContractFixture) int64 {
 	}
 	require.NotEmpty(t, conditions)
 	require.NotEmpty(t, earlyStart)
-	var submitted time.Time
-	require.NoError(t, f.db.NewRaw(`SELECT NOW()`).Scan(ctx, &submitted))
+	// Enrollment stamps the submission and the acceptance on the clock the
+	// conclusion run and the router share; the database's day is another one.
+	submitted := careContractConclusionClock().Add(-time.Hour)
 	// As the form editor saves them: a required own block as terms, an
 	// optional one as consent.
 	block := func(key, text string, required bool) enrollment.LegalBlockSnapshot {

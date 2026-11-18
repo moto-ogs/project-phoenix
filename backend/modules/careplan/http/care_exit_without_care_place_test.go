@@ -15,10 +15,12 @@ import (
 
 // TestCareExitLeavesOutChildrenWithoutCarePlace keeps a child without an OGS
 // place (#4803 review) out of the OGS care exit: the preview names why it
-// cannot be ended, and the archive of ended care never lists it.
+// cannot be ended, and the archive of ended care never lists it. The clock
+// is fixed on studentsTestToday: the last care day 2027-06-30 lies ahead of
+// it and the ended care of 2026-01-30 behind it on every day the test runs.
 func TestCareExitLeavesOutChildrenWithoutCarePlace(t *testing.T) {
 	t.Parallel()
-	tc := setupStudentsRouteWithCareLifecycle(t, false)
+	tc := setupStudentsRouteWithCareLifecycle(t, false, fixedCalendarClock)
 	actor := testpkg.CreateTestAccount(t, tc.db, "care-exit-without-place@example.com")
 	claims := testutil.AdminTestClaims(int(actor.ID))
 

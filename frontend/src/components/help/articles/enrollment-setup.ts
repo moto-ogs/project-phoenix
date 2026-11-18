@@ -45,8 +45,13 @@ export function enrollmentSetupTopic(): HelpTopic {
       },
       {
         title: "Die Anmeldung öffnen",
+        description:
+          "Die Online-Anmeldung lässt sich nur mit einer Datenschutzinformation einschalten. Eltern lesen sie im Formular.",
         steps: [
-          "Schalten Sie unter `Einstellungen` > `Anmeldung` die `Online-Anmeldung` ein.",
+          "Öffnen Sie `Einstellungen` > `Anmeldung` und dort den Bereich `Rechtstexte`.",
+          "Schalten Sie `Datenschutzinformation im Anmeldeformular anzeigen` ein und tragen Sie Ihren Text ein.",
+          "Schalten Sie im Bereich `Allgemein` die `Online-Anmeldung` ein.",
+          "Prüfen Sie im Fenster die `Empfänger für neue Anmeldungen`. Dort steht schon die Kontaktadresse Ihrer Schule. Sie können sie ändern oder das Feld leer lassen. Wählen Sie `Einschalten`.",
           "Öffnen Sie `Anmeldephasen`.",
           "Öffnen Sie bei der Phase das Menü mit den drei Punkten.",
           "Wählen Sie `Aktivieren`.",
@@ -79,6 +84,7 @@ export function enrollmentSetupTopic(): HelpTopic {
       "Ihre Betreuung heißt nicht OGS, sondern zum Beispiel GTS? Öffnen Sie `Einstellungen`, dann den Bereich `Anmeldung`. Wählen Sie bei `Name der Betreuung in Texten für Eltern` den passenden Namen.",
       "Das `Basisformular` fragt Elternteil, Kind, Klassenstufe und das gewünschte Betreuungsangebot ab. Brauchen Sie mehr, legen Sie eine eigene Vorlage an.",
       "Eine Phase lässt sich mit einem Kalenderzeitraum verknüpfen. Dann passen die Daten automatisch.",
+      "Eine Phase dauert höchstens 2 Jahre. Ihr Ende liegt höchstens 5 Jahre in der Zukunft. Ältere Phasen außerhalb dieser Grenzen bleiben, wie sie sind, solange Sie Beginn und Ende nicht ändern.",
       "Ändern Sie später `Beginn` oder `Ende` der Phase, ziehen die Buchungen der Kinder mit. Das Betreuungsende von Kindern, die schon betreut werden, zieht aber nicht mit. Ein Angebotswechsel ab einem bestimmten Tag behält diesen Tag.",
       "Sie verlängern das `Ende` einer laufenden Phase? Dann endet die Betreuung schon betreuter Kinder trotzdem nicht später. Für einen neuen Zeitraum nehmen Sie eine Anschlussphase.",
       "Nach dem Erstellen der Anschlussphase bekommen die Eltern eine E-Mail. Darüber passen sie Angebote und Wochentage für die neue Phase an. Oder sie beenden die Betreuung zum Ende der laufenden Phase.",
@@ -95,6 +101,8 @@ export function enrollmentSetupTopic(): HelpTopic {
       "Gilt die Phase nur für `Nur bereits angemeldete Kinder` oder `Nur Eltern mit Konto an der Schule`, fehlen `Formular ansehen`, `Elternansicht öffnen`, der Link zum Kopieren und der QR-Code. Diese Eltern melden sich im Elternportal an.",
     ],
     troubleshootingDetails: [
+      "Beim Einschalten steht `Zuerst die Datenschutzinformation eintragen`? Dann fehlt der Text oder sein Schalter ist aus. Wählen Sie `Zur Datenschutzinformation`. Den Text darf nur eintragen, wer alle Einstellungen der Schule ändern darf.",
+      "Oben steht `Datenschutzinformation fehlt`? Ihre Online-Anmeldung läuft schon, aber Eltern sehen keine Datenschutzinformation. Das Formular bleibt erreichbar. Schalten Sie unter „Rechtstexte“ die Datenschutzinformation ein und tragen Sie den Text ein. Dann verschwindet der Hinweis.",
       "Beim Beenden nennt moto Kinder, deren Betreuung nicht beendet werden kann? Wählen Sie unter diesen Kindern `Aus Auswahl nehmen`. Danach können Sie die Betreuung der übrigen Kinder erneut prüfen und beenden.",
       "Der Überblick sagt `Noch keine Anmeldephase`? Dann legen Sie zuerst eine Phase an.",
       "Auf `Betreuungsangebote` steht `Erst eine Anmeldephase anlegen`? Dann fehlt die Phase noch. Angebote gibt es nur innerhalb einer Phase.",

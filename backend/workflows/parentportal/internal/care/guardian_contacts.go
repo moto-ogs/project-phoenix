@@ -77,6 +77,13 @@ func (s *Service) checkNewContactFlags(child *Child, input CreateGuardianContact
 	if (input.CanPickup || input.IsEmergencyContact) && !child.HasPermission(GuardianPermissionPickupManage) {
 		return nil, ErrGuardianPermissionDenied
 	}
+	// Any pickup field asks for OGS pickup, which a child without an OGS
+	// place (#4803) has not.
+	if input.CanPickup || len(input.PickupWeekdays) > 0 || (input.PickupNotes != nil && *input.PickupNotes != "") {
+		if err := child.RequireCarePlace(); err != nil {
+			return nil, err
+		}
+	}
 	pickupWeekdays, err := carerequests.NormalizeWeekdays(input.PickupWeekdays)
 	if err != nil {
 		return nil, ErrInvalidCareRequestPayload

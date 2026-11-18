@@ -127,5 +127,6 @@
   "pool_block_taken": "{object} could not be changed. Please check its current status.",
   "pool_springer_not_found": "{object} could not be saved. Please check your entries.",
   "pool_springer_busy": "{object} could not be changed. Please check its current status.",
-  "traeger_payroll_not_ready": "{object} could not be changed. Please check its current status."
+  "traeger_payroll_not_ready": "{object} could not be changed. Please check its current status.",
+  "no_staff_profile": "You cannot access {object}. Please contact the school."
 }

@@ -29,6 +29,7 @@ type ProvisioningResource struct {
 	appEnv                     string
 	belegRetentionAudit        organizationtenancy.BelegRetentionChangeAudit
 	traegerStaffReleaseAudit   organizationtenancy.TraegerStaffReleaseChangeAudit
+	requiredDetails            organizationtenancy.SchoolRequiredDetailsProvisioning
 }
 
 // ProvisioningConfig holds the provisioning routes' dependencies.
@@ -48,6 +49,9 @@ type ProvisioningConfig struct {
 	// TraegerStaffReleaseAudit records the grants and withdrawals of the
 	// release „Personal beim Träger“ (#4705). Without it they answer 500.
 	TraegerStaffReleaseAudit organizationtenancy.TraegerStaffReleaseChangeAudit
+	// RequiredDetails marks the schools that lack a required detail (#7174).
+	// Without it that route answers 500.
+	RequiredDetails organizationtenancy.SchoolRequiredDetailsProvisioning
 }
 
 // NewProvisioningResource creates a new provisioning resource.
@@ -58,6 +62,7 @@ func NewProvisioningResource(cfg ProvisioningConfig) *ProvisioningResource {
 		appEnv:                     cfg.AppEnv,
 		belegRetentionAudit:        cfg.BelegRetentionAudit,
 		traegerStaffReleaseAudit:   cfg.TraegerStaffReleaseAudit,
+		requiredDetails:            cfg.RequiredDetails,
 	}
 }
 

@@ -7,10 +7,12 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
 	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
+	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
 	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
 	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
+	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
 	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
@@ -31,13 +33,18 @@ func ContractDocument() (contract.Document, error) {
 		{"/api/students", careStudentsHTTP.StudentWriteContracts(projectionStudentsHTTP.StudentResponse{})},
 		{"/parent", parentAPI.MeRouteContracts()},
 		{"/api/notifications", notificationRouteContracts(common.PortalTenant)},
+		{"/school/class-day", classdayHTTP.RouteContracts()},
 		{"/school/notifications", notificationRouteContracts(common.PortalSchool)},
 		{"/api/parent-announcements", announcementAPI.RouteContracts(common.PortalTenant)},
 		{"/school/parent-letters", announcementAPI.RouteContracts(common.PortalSchool)},
 		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
 		{"/school/staff-messages", staffMessagingAPI.RouteContracts(common.PortalSchool)},
 		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
+		{"/traeger/master-data", organizationTenancyTraeger.MasterDataRouteContracts()},
+		{"/traeger/documents", organizationTenancyTraeger.DocumentRouteContracts()},
+		{"/traeger/report-templates", organizationTenancyTraeger.ReportTemplateRouteContracts()},
 		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
+		{"/traeger/notifications", traegerNotificationRouteContracts()},
 		{"/caterer", catererPortalHTTP.RouteContracts()},
 	}
 	catalog, err := RouteCatalog()
@@ -102,6 +109,20 @@ func notificationRouteContracts(portal common.PortalScope) []common.RouteContrac
 		common.RouteContract{Method: "GET", Pattern: "/email-subscriptions/{type}", Portals: portals, Response: types.EmailSubscription},
 		common.RouteContract{Method: "PUT", Pattern: "/email-subscriptions/{type}", Portals: portals, Request: types.PreferenceRequest, NoData: true},
 	)
+}
+
+// traegerNotificationRouteContracts registers the bell of the Träger-Portal
+// (#7146), with patterns relative to its /traeger/notifications mount.
+func traegerNotificationRouteContracts() []common.RouteContract {
+	types := notificationsHTTP.RouteContractTypes()
+	portals := []common.PortalScope{common.PortalTraeger}
+	page := []common.QueryParam{{Name: "limit", Kind: common.QueryInt}, {Name: "cursor", Kind: common.QueryString}}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/feed/", Portals: portals, Query: page, Response: types.TraegerFeedPage},
+		{Method: "GET", Pattern: "/feed/unread-count", Portals: portals, Response: types.FeedCount},
+		{Method: "POST", Pattern: "/feed/read-all", Portals: portals, Response: types.FeedCount},
+		{Method: "POST", Pattern: "/feed/{id}/read", Portals: portals, Response: types.FeedCount},
+	}
 }
 
 func contractRegistration(prefix string, route common.RouteContract) contract.Registration {

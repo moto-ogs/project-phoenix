@@ -1296,6 +1296,11 @@
       "reason": "ADR 0137 (#5326): root translation of Enrollment's holiday registration trail accounts into the Träger projection's actors without a school."
     },
     {
+      "decision": "0075",
+      "id": "api/traegerNotificationFeed.Page",
+      "reason": "ADR 0075 consumer-port adapter (#7146): translates Delivery's Träger bell page with each entry's school onto the Träger feed port of the HTTP adapter; the count and read-state calls reach Delivery's reader unchanged through the embedded interface. No decision or SQL."
+    },
+    {
       "decision": "0109",
       "id": "api/traegerPersonDirectory.PersonsByAccount",
       "reason": "ADR 0109 (#4655): root translation of the People Directory persons of accounts (the latest per school) into the Träger projection's person vocabulary."
@@ -5271,6 +5276,11 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0251",
+      "id": "roots/owners/provisioningSettings.ReplyToAddresses",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
       "decision": "0090",
       "id": "roots/owners/pwaUsageCounts.PWAUsage",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
@@ -5583,17 +5593,17 @@
     {
       "decision": "0090",
       "id": "roots/owners/staffDirectoryCapability.PersonByAccountID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending. #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile (owner-edge error translation)."
     },
     {
       "decision": "0090",
       "id": "roots/owners/staffDirectoryCapability.ResolveStaffIDByAccountID",
-      "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
+      "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending. #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile (owner-edge error translation)."
     },
     {
       "decision": "0090",
       "id": "roots/owners/staffDirectoryCapability.StaffByPersonID",
-      "reason": "E1 #5892: own-subject resolution consumes membership ID only. Narrow live membership query retains identity/not-found mapping; no writes or locks. ADR 0075 consumer-port translation unchanged."
+      "reason": "E1 #5892: own-subject resolution consumes membership ID only. Narrow live membership query retains identity/not-found mapping; no writes or locks. ADR 0075 consumer-port translation unchanged. #7306: marks a missing person or staff row with workforce.ErrNoStaffProfile (owner-edge error translation)."
     },
     {
       "decision": "0090",

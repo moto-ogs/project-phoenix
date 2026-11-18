@@ -110,6 +110,118 @@ func TestHolidayPositionsBookOnTheKost1OfTheirHostSchool(t *testing.T) {
 	assert.Equal(t, parentbilling.CostCenterFallbackNoSchoolCostCenter, documents[0].Children[0].Positions[1].CostCenterFallback)
 }
 
+// SJR books the holiday care of a school on a cost center of its own
+// (#7357): Ispringen 5467 for the monthly contributions and 5469 for the
+// holiday care, the three schools of Birkenfeld one value. A holiday week
+// takes the holiday KOST1 of its host school on its first day, else the
+// school's, else the holiday care's of the Träger with the reason.
+func TestHolidayPositionsBookOnTheHolidayKost1OfTheirHostSchool(t *testing.T) {
+	t.Parallel()
+	const birkenfeld2, birkenfeld3, withoutAny int64 = 13, 14, 15
+	school, schoolHoliday := parentbilling.BookingScopeSchool, parentbilling.BookingScopeSchoolHoliday
+	assignments := parentbilling.BookingAssignments{CostCenters: []parentbilling.CostCenter{
+		{Scope: school, ScopeID: ispringen, ValidFrom: onDay(2026, time.January, 1), Code: "5467"},
+		{Scope: schoolHoliday, ScopeID: ispringen, ValidFrom: onDay(2026, time.January, 1), Code: "5469"},
+		// The holiday KOST1 changes on 19 October and ends on 2 November.
+		{Scope: schoolHoliday, ScopeID: ispringen, ValidFrom: onDay(2026, time.October, 19), Code: "5470"},
+		{Scope: schoolHoliday, ScopeID: ispringen, ValidFrom: onDay(2026, time.November, 2), Code: ""},
+		// Three schools share one value; only the second has none of its own.
+		{Scope: school, ScopeID: birkenfeld, ValidFrom: onDay(2026, time.January, 1), Code: "5567"},
+		{Scope: schoolHoliday, ScopeID: birkenfeld, ValidFrom: onDay(2026, time.January, 1), Code: "5569"},
+		{Scope: school, ScopeID: birkenfeld2, ValidFrom: onDay(2026, time.January, 1), Code: "5567"},
+		{Scope: schoolHoliday, ScopeID: birkenfeld3, ValidFrom: onDay(2026, time.January, 1), Code: "5569"},
+		{Scope: parentbilling.BookingScopeHoliday, ValidFrom: onDay(2026, time.January, 1), Code: "FER"},
+	}}
+	resolver := newBookingResolver(assignments, "4400")
+	for _, c := range []struct {
+		name            string
+		host            int64
+		day             calendar.Date
+		kost1, fallback string
+	}{
+		{"the holiday KOST1 of the host school", ispringen, onDay(2026, time.October, 5), "5469", ""},
+		{"the day before its change", ispringen, onDay(2026, time.October, 18), "5469", ""},
+		{"from the day of its change", ispringen, onDay(2026, time.October, 19), "5470", ""},
+		{"ended: the school's KOST1 as before #7357", ispringen, onDay(2026, time.November, 2), "5467", ""},
+		{"a second school with the same value", birkenfeld, onDay(2026, time.October, 5), "5569", ""},
+		{"a school without a holiday KOST1 books as before #7357", birkenfeld2, onDay(2026, time.October, 5), "5567", ""},
+		{"a school with only a holiday KOST1", birkenfeld3, onDay(2026, time.October, 5), "5569", ""},
+		{"a school without any", withoutAny, onDay(2026, time.October, 5), "FER", parentbilling.CostCenterFallbackNoSchoolCostCenter},
+		{"no host school", 0, onDay(2026, time.October, 5), "FER", parentbilling.CostCenterFallbackNoHostSchool},
+	} {
+		accounts, fallback := resolver.holidayWeek(c.host, c.day)
+		assert.Equal(t, c.kost1, accounts.CostCenter, c.name)
+		assert.Equal(t, c.fallback, fallback, c.name)
+	}
+	// The monthly contributions and the Mensa never take the holiday KOST1.
+	assert.Equal(t, "5467", resolver.care(ispringen, 501, onDay(2026, time.October, 5)).CostCenter)
+	assert.Equal(t, "5467", resolver.meal(ispringen, onDay(2026, time.October, 1)).CostCenter)
+	assert.Empty(t, resolver.care(birkenfeld3, 501, onDay(2026, time.October, 5)).CostCenter, "a holiday KOST1 is no KOST1 of the school")
+
+	// The release copies it onto the position; the discount of the child
+	// follows the week, and the lunch books on the cost center of its week.
+	weeks := []parentbilling.HolidayWeekHost{
+		{WeekID: 1, StartsOn: onDay(2026, time.October, 5), EndsOn: onDay(2026, time.October, 9), HostSchoolID: ispringen}}
+	rank := 2
+	lunch := holidayBase(1, onDay(2026, time.October, 5), 2000)
+	lunch.Kind = parentbilling.LineMeal
+	documents := []parentbilling.BillingDocument{{ServiceFrom: onDay(2026, time.October, 5), Children: []parentbilling.BillingChild{
+		{ChildID: 1, Positions: []parentbilling.BillingPosition{holidayBase(1, onDay(2026, time.October, 5), 5000), lunch,
+			{Kind: parentbilling.LineSibling, AmountCents: -2000, ChildRank: &rank}}}}}}
+	store := &bookingAccountStore{assignments: assignments}
+	require.NoError(t, freezeHolidayAccounts(context.Background(), store, datevReadySettings(), sjrReviewer.OrganizationID, weeks, documents))
+	for _, position := range documents[0].Children[0].Positions {
+		assert.Equal(t, parentbilling.PositionAccounts{RevenueAccount: "4400", CostCenter: "5469", Frozen: true}, position.Accounts)
+		assert.Empty(t, position.CostCenterFallback)
+	}
+}
+
+// The DATEV file and the Sollstellung write the holiday KOST1 the release
+// froze: one invoice with a week on 5469 and one on 5569 books each on its
+// own, the monthly 5467 and 5567 appear in neither (#7357).
+func TestExportFilesBookTheHolidayKost1OfTheHostSchool(t *testing.T) {
+	t.Parallel()
+	school, schoolHoliday := parentbilling.BookingScopeSchool, parentbilling.BookingScopeSchoolHoliday
+	january := onDay(2026, time.January, 1)
+	resolver := newBookingResolver(parentbilling.BookingAssignments{CostCenters: []parentbilling.CostCenter{
+		{Scope: school, ScopeID: ispringen, ValidFrom: january, Code: "5467"},
+		{Scope: schoolHoliday, ScopeID: ispringen, ValidFrom: january, Code: "5469"},
+		{Scope: school, ScopeID: birkenfeld, ValidFrom: january, Code: "5567"},
+		{Scope: schoolHoliday, ScopeID: birkenfeld, ValidFrom: january, Code: "5569"},
+	}}, "4400")
+	part := func(host int64, day calendar.Date, cents int64) parentbilling.ExportBookingPart {
+		accounts, fallback := resolver.holidayWeek(host, day)
+		return holidayPart(accounts.CostCenter, fallback, cents, day)
+	}
+	content := parentbilling.ExportRunContent{Run: parentbilling.ExportRun{Label: "Herbstferien 2026"}, Invoices: []parentbilling.ExportInvoice{
+		{DocumentID: 1, Number: "FE-2026-0001", Kind: "invoice", IssuedOn: onDay(2026, time.October, 1), TotalCents: 8000, DebtorNumber: "10001",
+			ServiceFrom: onDay(2026, time.October, 5), Parts: []parentbilling.ExportBookingPart{
+				part(ispringen, onDay(2026, time.October, 5), 5000), part(birkenfeld, onDay(2026, time.October, 12), 3000)}}}}
+
+	store := &datevRunStore{content: content}
+	file, err := newFinanceExportsWithDatev(store, runPost{}, datevReadySettings()).
+		DatevFile(context.Background(), sjrReviewer, parentbilling.DebitRunHoliday, 5, parentbilling.DatevFileOptions{})
+	require.NoError(t, err)
+	var datev [][2]string
+	for _, line := range datevLines(t, file.Data)[2:] {
+		datev = append(datev, [2]string{line[0], line[36]})
+	}
+	assert.Equal(t, [][2]string{{"50,00", `"5469"`}, {"30,00", `"5569"`}}, datev)
+	require.Len(t, store.records, 1)
+	assert.Empty(t, store.records[0].CostCenterFallbacks, "no position on the fallback")
+
+	mapping := parentbilling.SollstellungMapping{Columns: []parentbilling.SollstellungColumn{
+		{Field: parentbilling.SollFieldInvoiceNumber, Header: "Nr"}, {Field: parentbilling.SollFieldAmount, Header: "Betrag"},
+		{Field: parentbilling.SollFieldCostCenter, Header: "KOST1"}},
+		Delimiter: ";", DecimalSeparator: ",", DateFormat: parentbilling.SollDateGerman, Encoding: parentbilling.SollEncodingUTF8,
+		HeaderRow: true, FileNamePattern: "soll-{NR}.csv"}
+	rows, _, missing := sollRows(mapping, content.Invoices, resolver)
+	require.Empty(t, missing)
+	data, err := renderSollRows(mapping, rows, 3)
+	require.NoError(t, err)
+	assert.Equal(t, "Nr;Betrag;KOST1\r\nFE-2026-0001;50,00;5469\r\nFE-2026-0001;30,00;5569\r\n", string(data))
+}
+
 // A Storno copies every position with where it booked; a credit books
 // where the child's first position booked.
 func TestHolidayStornoAndCreditKeepTheKost1OfTheirInvoice(t *testing.T) {

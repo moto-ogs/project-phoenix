@@ -30,6 +30,9 @@ type directoryStudentRow struct {
 	Excused       *bool          `bun:"excused"`
 	ExcusedSince  *time.Time     `bun:"excused_since"`
 	PhotoPath     *string        `bun:"photo_path"`
+	// WithoutCarePlace is School Membership's mark of a child without an
+	// OGS place (#4803).
+	WithoutCarePlace bool `bun:"without_care_place"`
 }
 
 // StudentDirectory is People Directory's reader port onto the student
@@ -154,11 +157,20 @@ func (s *studentDirectoryReads) ListNamesByClass(ctx context.Context, schoolClas
 		// A child without an OGS place (#4803) belongs to the class from its
 		// enrollment start, or the Berlin day it was created, to its
 		// enrollment end; a child that left the school (graduate or inactive)
-		// only with a dated end.
-		ColumnExpr(`("student".without_care_place AND ("student".status IN (?, ?) OR "student".enrolled_until IS NOT NULL)) AS school_member_only`,
+		// only with a dated end. A child that got its place later keeps its
+		// class time before the place, and a child a class-list entry joined
+		// before its care starts keeps the entry's class time
+		// (class_member_from to the day before its care starts).
+		ColumnExpr(`(("student".without_care_place AND ("student".status IN (?, ?) OR "student".enrolled_until IS NOT NULL))
+			OR (NOT "student".without_care_place AND "student".class_member_from IS NOT NULL
+				AND LOWER(TRIM("student".class_member_class)) = LOWER(TRIM("student".school_class))
+				AND COALESCE("student".first_care_from, "student".enrolled_from) > "student".class_member_from)) AS school_member_only`,
 			directory.StudentStatusActive, directory.StudentStatusPending).
-		ColumnExpr(`CASE WHEN "student".without_care_place THEN COALESCE("student".enrolled_from, ("student".created_at AT TIME ZONE 'Europe/Berlin')::date) END AS school_member_from`).
-		ColumnExpr(`CASE WHEN "student".without_care_place THEN "student".enrolled_until END AS school_member_until`).
+		ColumnExpr(`CASE WHEN "student".without_care_place THEN COALESCE("student".enrolled_from, ("student".created_at AT TIME ZONE 'Europe/Berlin')::date)
+			WHEN LOWER(TRIM("student".class_member_class)) = LOWER(TRIM("student".school_class)) THEN "student".class_member_from END AS school_member_from`).
+		ColumnExpr(`CASE WHEN "student".without_care_place THEN "student".enrolled_until
+			WHEN LOWER(TRIM("student".class_member_class)) = LOWER(TRIM("student".school_class))
+				THEN COALESCE("student".first_care_from, "student".enrolled_from) - 1 END AS school_member_until`).
 		Join(`JOIN users.persons AS "person" ON "person".tenant_id = "student".tenant_id AND "person".id = "student".person_id`).
 		Where(`LOWER(TRIM("student".school_class)) = ?`, strings.ToLower(strings.TrimSpace(schoolClass))).
 		Where(`"person".deleted_at IS NULL`), scope).
@@ -295,6 +307,7 @@ func toDirectoryStudent(row directoryStudentRow) directory.Student {
 		ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, TenantID: row.TenantID,
 		PersonID: row.PersonID, SchoolClass: row.SchoolClass, GroupID: row.GroupID, Status: row.Status,
 		Sick: row.Sick, SickSince: row.SickSince, Excused: row.Excused, ExcusedSince: row.ExcusedSince, PhotoPath: row.PhotoPath,
+		WithoutCarePlace: row.WithoutCarePlace,
 	}
 	if row.EnrolledFrom != nil {
 		student.EnrolledFrom = row.EnrolledFrom.String()

@@ -2,10 +2,12 @@ DELETE /api/settings/enrollment/legal-agb-document
 DELETE /api/settings/home-layout
 DELETE /api/settings/login-image
 DELETE /api/settings/values/{key}
+GET /api/settings/device-pin-status
 GET /api/settings/home-layout
 GET /api/settings/login-image
 GET /api/settings/payroll-status
 GET /api/settings/schema
+GET /api/settings/school-contact-email
 GET /api/settings/values/{key}/reveal
 POST /api/settings/enrollment/legal-agb-document
 POST /api/settings/login-image

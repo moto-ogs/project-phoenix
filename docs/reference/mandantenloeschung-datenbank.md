@@ -134,7 +134,14 @@ möglichen Datensatzinhalten in Logs oder Ausgaben übernehmen.
   löscht nach Ablauf der Schonfrist einen deaktivierten Träger ohne Schulen.
   Die FKs von `platform.organization_accounts`,
   `auth.organization_account_roles` und `auth.tokens` (Träger-Sitzungen)
-  laufen mit. Im selben Schritt entstehen der Operator-Audit-Eintrag `erase`
+  laufen mit, ebenso die aller Träger-Tabellen. Ein Nachweis zum
+  Monatsbeitrag verweist auf seine Beitragsregel
+  (`fk_care_evidences_rule`, `NO ACTION DEFERRABLE INITIALLY IMMEDIATE`) und
+  geht mit seinem Vertrag. Die Funktion prüft diesen Schlüssel erst nach der
+  ganzen Kaskade (`SET CONSTRAINTS … DEFERRED`, danach `IMMEDIATE`); sonst
+  hinge das Ergebnis davon ab, ob die Kaskade die Regeln vor den Verträgen
+  erreicht (#7248). Eine einzelne Regel mit Nachweis bleibt unlöschbar.
+  Im selben Schritt entstehen der Operator-Audit-Eintrag `erase`
   und der Abschluss des Auftrags mit Anzahlen; ein erneuter Aufruf liefert den
   Nachweis. `platform.billing_key_date_counts` bleibt wie bei Schulen erhalten.
 - `platform.delete_expired_organization_erasure_orders()` entfernt

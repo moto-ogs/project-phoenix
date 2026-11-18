@@ -1458,7 +1458,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged",
-      "binding_digest": "dd67df3d087a767433fffe62a11a4228",
+      "binding_digest": "1ff8b3f27093b0851e0fa0f617a9dfe2",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.SchoolAudience.SchoolAudience",
@@ -1466,7 +1466,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged",
-      "binding_digest": "93d62d3f077d743e0106679c3e44b257",
+      "binding_digest": "896c6574aad8dfad439aa7d32a79354c",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.TraegerFeedNotifier.NotifyTraeger",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged",
+      "binding_digest": "fcb61a9ed82f6be464d3e2961d41e6d7",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
@@ -1474,7 +1482,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged",
-      "binding_digest": "c6169c8f7bc597a73d282b84596982b1",
+      "binding_digest": "9b11e8566f239a7ea884f73a70f383dd",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
@@ -1482,7 +1490,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged",
-      "binding_digest": "28ff1aefa72a3dea75743f4b16bf7698",
+      "binding_digest": "b92558d7cce7ae2dbaeb32cec76841d2",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterPermitted",
@@ -1490,7 +1498,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged",
-      "binding_digest": "511dc22c644921ff431f00b6216cf1db",
+      "binding_digest": "94308d3c62d2353f4fa73e9dbdcdb09b",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.ClaimsFromCtx",

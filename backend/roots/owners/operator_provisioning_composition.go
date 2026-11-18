@@ -26,7 +26,7 @@ import (
 // settings.
 func newOperatorProvisioning(
 	organizations organizationtenancy.Capability, identity identityaccess.Owner, accounts OperatorAccountDirectory,
-	adapters OperatorProvisioningAdapters, schoolSettings settingsCompose.SettingsService, logger *slog.Logger, now func() time.Time,
+	adapters OperatorProvisioningAdapters, schoolSettings settingsCompose.BatchSettingsService, logger *slog.Logger, now func() time.Time,
 ) (organizationtenancy.OperatorProvisioning, error) {
 	// The zero runtime reads only the caller's transaction: the rows run in
 	// the administrative unit of the school creation or fail.
@@ -427,15 +427,33 @@ func (e invalidSchoolIdentityError) Unwrap() []error {
 	return []error{organizationCompose.ErrInvalidSchoolIdentity, e.err}
 }
 
-// provisioningSettings resolves the device online window of one school; the
-// embedded school-creation settings record the federal state of a new one.
+// provisioningSettings resolves the device online window of one school and
+// the reply addresses of the operator's school list; the embedded
+// school-creation settings record the federal state of a new one.
 type provisioningSettings struct {
 	*settingsCompose.SchoolCreationSettings
-	settings settingsCompose.SettingsService
+	settings settingsCompose.BatchSettingsService
 }
 
 func (s provisioningSettings) DeviceOnlineWindowMinutes(ctx context.Context, tenantID int64) (int, error) {
 	return s.settings.ResolveIntForTenant(ctx, tenantID, configModels.KeyDeviceOnlineWindowMinutes)
+}
+
+// ReplyToAddresses resolves email.reply_to_address for every school in one
+// batch read (#7174), the value the mail identity tries before the contact
+// address.
+func (s provisioningSettings) ReplyToAddresses(ctx context.Context, schoolIDs []int64) (map[int64]string, error) {
+	snapshots, err := s.settings.ResolveManyForTenants(ctx, schoolIDs, []string{configModels.KeyEmailReplyToAddress})
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[int64]string, len(snapshots))
+	for schoolID, snapshot := range snapshots {
+		if result[schoolID], err = snapshot.String(configModels.KeyEmailReplyToAddress); err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
 }
 
 // pwaUsageCounts serves the Delivery usage snapshot from the operator

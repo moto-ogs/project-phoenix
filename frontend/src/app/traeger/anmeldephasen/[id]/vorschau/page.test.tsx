@@ -124,6 +124,14 @@ describe("TraegerCatalogPreviewPage (#4704)", () => {
         /Bitte tragen Sie für jeden Betreuungstag eine Gehzeit ein\. Diese Schule behält ihren bisherigen Stand\./,
       ),
     ).toBeInTheDocument();
+
+    // #7304: the school cards sit in one grid, so the last one keeps its height.
+    const cards = ["OGS Sonnenhof", "Demo-Schule"].map((name) =>
+      screen.getByRole("heading", { name }).closest("section"),
+    );
+    const grid = cards[0]?.parentElement;
+    expect(grid).toHaveClass("grid");
+    for (const card of cards) expect(card?.parentElement).toBe(grid);
   });
 
   it("rolls out with the preview's fingerprint and shows the result per school", async () => {
