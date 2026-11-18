@@ -43,11 +43,9 @@ func (r *router) CatererAudience(ctx context.Context, tenantID int64) ([]int64, 
 // in the caller's tenant transaction of the event's school
 // (notifySchoolFeed).
 func (r *router) NotifyCaterer(ctx context.Context, event contract.CatererFeedEvent) error {
-	return r.notifySchoolFeed(ctx, PortalCaterer, schoolFeedNotice{
-		Type: event.Type, TenantID: event.TenantID, AccountIDs: event.AccountIDs,
-		Title: event.Title, Body: event.Body, DeepLink: event.DeepLink,
-		RelatedType: event.RelatedType, RelatedID: event.RelatedID,
-	})
+	// The caterer and the Träger notice share their fields; a field added to
+	// only one of them fails this conversion at compile time.
+	return r.notifySchoolFeed(ctx, PortalCaterer, schoolFeedNotice(event))
 }
 
 // catererFeed serves a caterer account the bell across the schools its
