@@ -525,7 +525,9 @@ export function ToastProvider({
           ))}
       </div>
 
-      <div className="pointer-events-none fixed right-6 bottom-6 z-[9000] hidden max-h-[70vh] max-w-sm flex-col items-stretch justify-end gap-2 overflow-y-auto md:flex">
+      <div
+        className={`pointer-events-none fixed right-6 bottom-6 z-[9000] hidden max-h-[70vh] max-w-sm flex-col items-stretch justify-end gap-2 overflow-y-auto md:flex ${FIXED_LAYER_SHIFT}`}
+      >
         {!isMobile &&
           items.map((item) => (
             <ToastRow

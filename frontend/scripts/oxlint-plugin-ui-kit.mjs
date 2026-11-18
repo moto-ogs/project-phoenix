@@ -7,6 +7,7 @@ import {
   buttonRatchetBaseline,
 } from "./ui-kit-button-baseline.mjs";
 import { contrastRatchetBaseline } from "./ui-kit-contrast-baseline.mjs";
+import { fixedLayerShiftExceptions } from "./ui-kit-fixed-layer-exceptions.mjs";
 
 // UI-kit drift ratchet (issue #1629).
 //
@@ -199,6 +200,14 @@ import { contrastRatchetBaseline } from "./ui-kit-contrast-baseline.mjs";
 //                                     (hard-zero since #6183)
 //   ui-kit/no-section-card-bleed   — no negative margin in a SectionCard
 //                                     bodyClassName; use flush or footer
+//
+// One more keeps fixed layers on screen in the installed iPhone app:
+//
+//   ui-kit/fixed-layer-follows-viewport — a class string with a standalone
+//                                     `fixed` carries FIXED_LAYER_SHIFT
+//                                     (ui/hooks/useFixedLayersFollowViewport);
+//                                     reasoned exceptions in
+//                                     ui-kit-fixed-layer-exceptions.mjs
 //
 // Test/stories files are exempt from the class-string rules. A deliberate
 // non-card match stays behind `oxlint-disable-next-line` with a reason; there
@@ -616,6 +625,156 @@ const noGenericBrandColors = makeClassStringRule({
   message:
     "Generic Tailwind hue '{{match}}…' is not a brand color. Use a moto-* semantic token, LOCATION_COLORS (~/lib/location-helper), or a kit component (see .claude/rules/frontend-ui-kit.md).",
 });
+
+// A `fixed` utility that can apply on a phone: bare or behind a variant such
+// as `max-sm:` or `md:` (a phone in landscape is wider than `md`). Only the
+// `lg:` and wider breakpoints and `print:` stay out; `fixed-…` and prose such
+// as "fixed-height" do not count.
+const DESKTOP_ONLY_VARIANT_RE = /^(?:lg|xl|2xl|print|min-\[)/;
+function hasPhoneFixed(text) {
+  return text.split(/\s+/).some((token) => {
+    const variants = token.split(":");
+    // `!fixed` (v3) and `fixed!` (v4) are the important forms of the same utility.
+    if (variants.pop()?.replace(/^!|!$/g, "") !== "fixed") return false;
+    return !variants.some((variant) => DESKTOP_ONLY_VARIANT_RE.test(variant));
+  });
+}
+// Outside a className or cn() call, a string only counts as a class list when
+// it has nothing but lower-case utility characters and at least one utility
+// with a dash, so an enum value "fixed" or English prose stays out.
+const CLASS_LIST_RE = /^[\s!a-z0-9:_\-[\]()/.,%+*#=&>~'"@]*$/;
+const CLASS_FUNCTIONS = new Set(["cn", "clsx", "cva", "twMerge"]);
+const FIXED_SHIFT_NAMES = new Set([
+  "FIXED_LAYER_SHIFT",
+  "FIXED_LAYER_SHIFT_INSET",
+]);
+const FIXED_SHIFT_VAR = "--moto-fixed-shift";
+
+function isClassAttribute(node) {
+  return (
+    node.type === "JSXAttribute" &&
+    node.name.type === "JSXIdentifier" &&
+    /(?:^c|C)lassName$/.test(node.name.name)
+  );
+}
+
+function isClassCall(node) {
+  return (
+    node.type === "CallExpression" &&
+    node.callee.type === "Identifier" &&
+    CLASS_FUNCTIONS.has(node.callee.name)
+  );
+}
+
+// Branches of a condition on the way from the `fixed` string up to its class
+// list: the other branch never renders together with that string, so a shift
+// there does not count.
+function exclusiveBranches(node, scope) {
+  const excluded = new WeakSet();
+  for (let child = node; child && child !== scope; child = child.parent) {
+    const parent = child.parent;
+    if (!parent) break;
+    if (parent.type === "ConditionalExpression") {
+      excluded.add(parent.test);
+      excluded.add(
+        parent.consequent === child ? parent.alternate : parent.consequent,
+      );
+    } else if (parent.type === "LogicalExpression") {
+      excluded.add(parent.left === child ? parent.right : parent.left);
+    }
+  }
+  return excluded;
+}
+
+function mentionsFixedShift(node, seen = new WeakSet()) {
+  if (!node || typeof node !== "object" || seen.has(node)) return false;
+  seen.add(node);
+  if (node.type === "Identifier" && FIXED_SHIFT_NAMES.has(node.name))
+    return true;
+  if (
+    (node.type === "Literal" && typeof node.value === "string") ||
+    node.type === "TemplateElement"
+  ) {
+    const text = node.type === "Literal" ? node.value : node.value.raw;
+    if (text.includes(FIXED_SHIFT_VAR)) return true;
+  }
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "parent") continue;
+    const children = Array.isArray(value) ? value : [value];
+    if (children.some((child) => mentionsFixedShift(child, seen))) return true;
+  }
+  return false;
+}
+
+const fixedLayerFollowsViewport = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Every fixed layer moves with FIXED_LAYER_SHIFT, so it stays on screen when iOS 26 leaves the visual viewport shifted in the installed app.",
+    },
+    messages: {
+      missingShift:
+        "Fixed layer without FIXED_LAYER_SHIFT ('{{match}}'). Append FIXED_LAYER_SHIFT (or FIXED_LAYER_SHIFT_INSET for a layer that hosts fixed panels) from ui/hooks/useFixedLayersFollowViewport to the same class list, or add a reasoned entry to scripts/ui-kit-fixed-layer-exceptions.mjs (anchored to getBoundingClientRect, never in the installed app).",
+    },
+    schema: [],
+  },
+  create(context) {
+    const key = fileKey(context);
+    if (!key.startsWith("src/")) return {};
+    if (EXEMPT_FILE_RE.test(key)) return {};
+    const exceptions = fixedLayerShiftExceptions.filter(
+      (entry) => entry.file === key,
+    );
+
+    const check = (node, text) => {
+      if (!hasPhoneFixed(text)) return;
+      if (exceptions.some((entry) => text.includes(entry.match))) return;
+
+      // The class list a string belongs to: the className attribute, else the
+      // cn()/clsx() call, else the constant it initialises.
+      let attribute;
+      let classCall;
+      let declaration;
+      for (let current = node.parent; current; current = current.parent) {
+        if (isClassAttribute(current)) {
+          attribute = current;
+          break;
+        }
+        if (isClassCall(current)) classCall ??= current;
+        if (
+          current.type === "VariableDeclarator" ||
+          current.type === "Property"
+        )
+          declaration ??= current;
+        if (current.type === "Program") break;
+      }
+      const inClassContext = Boolean(attribute ?? classCall);
+      const scope = attribute ?? classCall ?? declaration ?? node;
+      if (!inClassContext) {
+        const tokens = text.trim().split(/\s+/);
+        if (!CLASS_LIST_RE.test(text) || tokens.length < 2) return;
+        if (!tokens.some((token) => token !== "fixed" && token.includes("-")))
+          return;
+      }
+      if (mentionsFixedShift(scope, exclusiveBranches(node, scope))) return;
+      context.report({
+        node,
+        messageId: "missingShift",
+        data: { match: text.trim().slice(0, 60) },
+      });
+    };
+
+    return {
+      Literal(node) {
+        if (typeof node.value === "string") check(node, node.value);
+      },
+      TemplateLiteral(node) {
+        check(node, node.quasis.map((quasi) => quasi.value.raw).join(" "));
+      },
+    };
+  },
+};
 
 const noHandRolledOverlay = {
   meta: {
@@ -6904,6 +7063,7 @@ export default {
     "no-hand-rolled-notice": noHandRolledNotice,
     "no-hand-rolled-number-stepper": noHandRolledNumberStepper,
     "no-hand-rolled-overlay": noHandRolledOverlay,
+    "fixed-layer-follows-viewport": fixedLayerFollowsViewport,
     "no-hand-rolled-page-card": noHandRolledPageCard,
     "no-arbitrary-shadow": noArbitraryShadow,
     "no-hand-rolled-framed-list": noHandRolledFramedList,
