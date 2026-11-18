@@ -41,6 +41,7 @@ const { mockReplace, searchQuery } = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: mockReplace }),
   useParams: () => ({ id: "5", registrationId: "7" }),
+  usePathname: () => "/traeger/ferien/5/anmeldungen/7",
   useSearchParams: () => new URLSearchParams(searchQuery.current),
 }));
 vi.mock("~/lib/traeger-api", () => ({
@@ -604,6 +605,37 @@ describe("TraegerHolidayRegistrationPage", () => {
       expect(
         screen.queryByRole("heading", { name: "Status" }),
       ).not.toBeInTheDocument();
+    });
+
+    it("uses the tab from a later URL navigation", async () => {
+      const page = render(
+        <ToastProvider>
+          <TraegerHolidayRegistrationPage />
+        </ToastProvider>,
+      );
+
+      await openTab("Kind");
+      expect(screen.getByRole("tab", { name: "Kind" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+
+      // A history navigation replaces the URL while this client component
+      // remains mounted. Its tab, not the earlier click, must win (#7410).
+      onTab("eltern");
+      page.rerender(
+        <ToastProvider>
+          <TraegerHolidayRegistrationPage />
+        </ToastProvider>,
+      );
+
+      expect(
+        await screen.findByRole("heading", { name: "Eltern" }),
+      ).toBeVisible();
+      expect(screen.getByRole("tab", { name: "Eltern" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
     });
 
     it("shows „Bestätigen“ as the only head action and the rest in the menu", async () => {

@@ -13,8 +13,20 @@
 
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useRef, useState, type ReactNode } from "react";
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { HolidayContributionCard } from "~/components/traeger/holiday-contribution-card";
 import {
   answeredQuestions,
@@ -217,9 +229,14 @@ export default function TraegerHolidayRegistrationPage() {
 
 function HolidayRegistrationContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   // The chosen tab shows at once; the address follows for a bookmark.
   const [chosenTab, setChosenTab] = useState<RegistrationTab | null>(null);
+  const search = searchParams?.toString() ?? "";
+  // Browser history and links own the tab after navigation. The local choice
+  // only bridges the short time until `router.replace` updates the address.
+  useEffect(() => setChosenTab(null), [pathname, search]);
   const tab = chosenTab ?? registrationTab(searchParams?.get("tab"));
   const changeTab = useCallback(
     (next: RegistrationTab) => {
