@@ -46,6 +46,12 @@
  * action, and marks itself `aria-busy`; `ui-kit/slide-over-pending` fails a
  * panel without it. `isDismissDisabled` locks only the ways to close it, as
  * on `Modal` (#6575).
+ *
+ * Focus (#7502): on open the panel itself takes the focus, unless a field in
+ * it focuses itself (`autoFocus`). On close it returns to what opened the
+ * panel. A trigger that a save renders anew elsewhere (a list row moving to
+ * another group) carries a stable `data-focus-return` key; the focus then
+ * goes to the element with that key.
  */
 
 import * as React from "react";
@@ -121,6 +127,16 @@ function useSlideOverDismissDisabled(): boolean {
  */
 const SlideOverOpenContext = React.createContext(true);
 
+/**
+ * What had the focus when the panel opened, and whether it is open (#7502).
+ * Kept at the root: Vaul's instance below is rebuilt with `key={direction}`,
+ * and a caller may unmount the whole panel instead of closing it.
+ */
+type SlideOverReturnFocus = { trigger: HTMLElement | null; open: boolean };
+const SlideOverReturnFocusContext = React.createContext<{
+  readonly current: SlideOverReturnFocus;
+}>({ current: { trigger: null, open: false } });
+
 // Vaul's props are a union (with or without `fadeFromIndex`); a plain Omit
 // would merge its members.
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
@@ -189,6 +205,31 @@ const SlideOver = ({
     if (!open) setDirection(preferredDirection);
   }, [isResolved, open, preferredDirection]);
 
+  // Read in the commit that opens the panel: Radix mounts the portalled
+  // panel one commit later, so a field with `autoFocus` has not taken the
+  // focus yet.
+  const returnFocusRef = React.useRef<SlideOverReturnFocus>({
+    trigger: null,
+    open: false,
+  });
+  React.useLayoutEffect(() => {
+    const state = returnFocusRef.current;
+    if (open && !state.open) {
+      const active = document.activeElement;
+      state.trigger =
+        active instanceof HTMLElement && active !== document.body
+          ? active
+          : null;
+    }
+    state.open = open;
+  }, [open]);
+  React.useLayoutEffect(() => {
+    const state = returnFocusRef.current;
+    return () => {
+      state.open = false;
+    };
+  }, []);
+
   const handleOpenChange = React.useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen && dismissLocked) return;
@@ -203,18 +244,20 @@ const SlideOver = ({
       <SlideOverBusyContext.Provider value={busy}>
         <SlideOverDismissLockedContext.Provider value={dismissLocked}>
           <SlideOverOpenContext.Provider value={open}>
-            <DrawerPrimitive.Root
-              // Vaul liest die Richtung beim Mount für Drag-Achse und Animation.
-              // Der Key baut die Instanz erst nach dem Schließen für einen inzwischen
-              // geänderten Breakpoint neu auf.
-              key={direction}
-              direction={direction}
-              shouldScaleBackground={shouldScaleBackground}
-              open={open}
-              onOpenChange={handleOpenChange}
-              dismissible={!dismissLocked}
-              {...props}
-            />
+            <SlideOverReturnFocusContext.Provider value={returnFocusRef}>
+              <DrawerPrimitive.Root
+                // Vaul liest die Richtung beim Mount für Drag-Achse und Animation.
+                // Der Key baut die Instanz erst nach dem Schließen für einen inzwischen
+                // geänderten Breakpoint neu auf.
+                key={direction}
+                direction={direction}
+                shouldScaleBackground={shouldScaleBackground}
+                open={open}
+                onOpenChange={handleOpenChange}
+                dismissible={!dismissLocked}
+                {...props}
+              />
+            </SlideOverReturnFocusContext.Provider>
           </SlideOverOpenContext.Provider>
         </SlideOverDismissLockedContext.Provider>
       </SlideOverBusyContext.Provider>
@@ -270,6 +313,21 @@ type SlideOverContentProps = Omit<
   isBackdropDismissDisabled?: boolean;
 };
 
+/**
+ * The element the focus returns to on close: the trigger, or, when a save
+ * re-rendered it elsewhere (a list row that moves to another group), the
+ * element that now carries the trigger's `data-focus-return` key (#7502).
+ */
+function findReturnTarget(trigger: HTMLElement | null): HTMLElement | null {
+  if (!trigger) return null;
+  if (trigger.isConnected) return trigger;
+  const key = trigger.dataset.focusReturn;
+  if (!key) return null;
+  return document.querySelector<HTMLElement>(
+    `[data-focus-return="${CSS.escape(key)}"]`,
+  );
+}
+
 function isSlideOverWidth(
   size: unknown,
 ): size is keyof typeof SLIDE_OVER_WIDTH {
@@ -287,6 +345,8 @@ const SlideOverContent = React.forwardRef<
       isBackdropDismissDisabled = false,
       onInteractOutside,
       onEscapeKeyDown,
+      onOpenAutoFocus,
+      onCloseAutoFocus,
       children,
       ...props
     },
@@ -301,6 +361,7 @@ const SlideOverContent = React.forwardRef<
     useSheetAboveKeyboard(sheetRef, isSheet);
     // Keeps focus in the panel while the save disables its own button.
     useBusyFocus(sheetRef, busy);
+    const returnFocus = React.useContext(SlideOverReturnFocusContext);
     return (
       <SlideOverPortal>
         <SlideOverOverlay />
@@ -357,6 +418,36 @@ const SlideOverContent = React.forwardRef<
               )
             ) {
               event.preventDefault();
+            }
+          }}
+          // Vaul (`autoFocus` false) cancels Radix's start focus, so the
+          // focus stayed on the trigger behind the panel (#7502). It goes to
+          // the panel itself, the named dialog: a screen reader announces it,
+          // Tab continues inside, and no field opens a phone keyboard. A field
+          // the caller focuses on open keeps it; Radix then sends no event.
+          onOpenAutoFocus={(event: Event) => {
+            onOpenAutoFocus?.(event);
+            if (event.defaultPrevented) return;
+            event.preventDefault();
+            sheetRef.current?.focus({ preventScroll: true });
+          }}
+          // The panel opens without a Radix trigger, so Radix returns the
+          // focus nowhere. Back to what opened it, while that still exists
+          // and the focus is not already somewhere else on the page.
+          onCloseAutoFocus={(event: Event) => {
+            onCloseAutoFocus?.(event);
+            if (event.defaultPrevented) return;
+            event.preventDefault();
+            // Still open: Vaul's instance was rebuilt for another breakpoint.
+            const state = returnFocus.current;
+            if (state.open) return;
+            const active = document.activeElement;
+            const focusLost =
+              active === null ||
+              active === document.body ||
+              sheetRef.current?.contains(active) === true;
+            if (focusLost) {
+              findReturnTarget(state.trigger)?.focus({ preventScroll: true });
             }
           }}
           {...props}

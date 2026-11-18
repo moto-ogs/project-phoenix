@@ -554,6 +554,33 @@ describe("OverflowMenu", () => {
     expect(trigger).toHaveFocus();
   });
 
+  it.each([
+    { label: "Export", onClick: () => undefined },
+    {
+      kind: "radio" as const,
+      label: "Woche",
+      checked: false,
+      onClick: () => undefined,
+    },
+  ])(
+    "hands the focus back to the trigger after an entry is clicked ($label, #7502)",
+    (entry) => {
+      render(<OverflowMenu items={[entry]} />);
+      const trigger = screen.getByRole("button", { name: /Weitere Aktionen/ });
+      fireEvent.click(trigger, { detail: 1 });
+      const item = screen.getByRole(
+        entry.kind === "radio" ? "menuitemradio" : "menuitem",
+        { name: entry.label },
+      );
+      item.focus();
+
+      fireEvent.click(item, { detail: 1 });
+
+      expect(screen.queryByRole("menu")).toBeNull();
+      expect(trigger).toHaveFocus();
+    },
+  );
+
   it("leaves the focus on the trigger when the pointer opens the menu", () => {
     render(
       <OverflowMenu items={[{ label: "Export", onClick: () => undefined }]} />,

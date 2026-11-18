@@ -610,6 +610,10 @@ function VertretungDayListRow({
               : "Zeigt Besetzung und Verlauf dieses Termins."
           }
           aria-label={`${rowAction}: ${instance.title}, ${instance.startTime}`}
+          // Nach dem Speichern wandert die Zeile oft in eine andere Gruppe
+          // und wird neu gebaut; der Fokus findet sie über diesen Schlüssel
+          // wieder (#7502).
+          data-focus-return={`vertretung-row-${instance.id}`}
           className="shrink-0"
           onClick={() => onEdit(instance.id)}
         >
