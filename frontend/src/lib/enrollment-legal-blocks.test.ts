@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 import type { FormLegalBlock } from "~/lib/enrollment-form-schema-api";
 import {
   agbDocumentSentence,
+  asksForHealthInformation,
   isStandardLegalBlock,
+  legalBlockHasCheckbox,
   legalBlocksForTemplate,
   prepareLegalBlocksForSave,
   publicAGBDocumentURL,
+  PRIVACY_NOTICE_LABEL,
   STANDARD_LEGAL_BLOCKS,
+  withDecidedLegalRules,
 } from "~/lib/enrollment-legal-blocks";
 
 function block(overrides: Partial<FormLegalBlock>): FormLegalBlock {
@@ -115,5 +119,66 @@ describe("publicAGBDocumentURL", () => {
     ).toBe(
       "Die AGB / Teilnahmebedingungen sind als PDF-Datei hinterlegt: [AGB-Dokument öffnen](/api/public/enrollment-legal-documents/1_agb.pdf)",
     );
+  });
+});
+
+describe("legal decisions of #2787", () => {
+  const legacyPrivacy = block({
+    key: "data_processing",
+    kind: "privacy_notice",
+    label:
+      "Ich habe die Datenschutzinformation der Schule zur Kenntnis genommen.",
+    required: true,
+  });
+
+  it("shows the Datenschutzinformation without a checkbox", () => {
+    expect(legalBlockHasCheckbox("privacy_notice")).toBe(false);
+    expect(legalBlockHasCheckbox("notice")).toBe(false);
+    expect(legalBlockHasCheckbox("consent")).toBe(true);
+    expect(withDecidedLegalRules(legacyPrivacy)).toMatchObject({
+      label: PRIVACY_NOTICE_LABEL,
+      required: false,
+    });
+  });
+
+  it("keeps an unchanged block as it is", () => {
+    const consent = block({ guardian_agreement: true });
+    expect(withDecidedLegalRules(consent)).toBe(consent);
+  });
+
+  it("saves the custodians' agreement only on a consent", () => {
+    const [consent, terms, privacy] = prepareLegalBlocksForSave([
+      block({ key: "internet", guardian_agreement: true }),
+      block({
+        key: "rules",
+        kind: "terms",
+        required: true,
+        guardian_agreement: true,
+      }),
+      legacyPrivacy,
+    ]);
+    expect(consent?.guardian_agreement).toBe(true);
+    expect(terms?.guardian_agreement).toBe(false);
+    expect(privacy?.required).toBe(false);
+  });
+
+  it("does not report a saved privacy notice as a deviation from the standard", () => {
+    const merged = legalBlocksForTemplate(
+      [legacyPrivacy],
+      STANDARD_LEGAL_BLOCKS,
+    );
+    expect(
+      merged.find((entry) => entry.key === "data_processing"),
+    ).toMatchObject({ label: PRIVACY_NOTICE_LABEL, required: false });
+  });
+
+  it("knows a form asking for health information", () => {
+    expect(asksForHealthInformation([{ target: "student.extra_info" }])).toBe(
+      false,
+    );
+    expect(asksForHealthInformation([{ target: "student.health_info" }])).toBe(
+      true,
+    );
+    expect(asksForHealthInformation(undefined)).toBe(false);
   });
 });

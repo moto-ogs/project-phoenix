@@ -334,10 +334,11 @@ describe("DevicesMasterDetail", () => {
       />,
     );
 
-    // The list pill and the status field name the block, not the
-    // connection the device last reported.
+    // The list pill and the status field name the block; the connection
+    // overview says the device cannot connect instead of „Online“ (#2321).
     expect(screen.getAllByText("Gesperrt")).toHaveLength(2);
-    expect(screen.getAllByText("Online")).toHaveLength(1);
+    expect(screen.getByText("Keine Verbindung möglich")).toBeInTheDocument();
+    expect(screen.queryByText("Online")).not.toBeInTheDocument();
     expect(
       screen.getByText(
         /Dieses Gerät ist gesperrt\. Es kann sich nicht anmelden/,

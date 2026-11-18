@@ -12,8 +12,8 @@ import type { ExportRun } from "~/lib/traeger-finance-exports-api";
 vi.unmock("swr");
 
 // The handover of a run's file to the recipient of its format (#6824, ADR
-// 0218; #6911, ADR 0222) on the export page: the menu „Übergeben“ per
-// format, the result of a handover, the question before a second handover of
+// 0218; #6911, ADR 0222) on the export page: „Übergabe“ in the run's menu
+// per format, the result of a handover, the question before a second handover of
 // the same content, and the way to the recipients when a file has none.
 
 const exportsApi = vi.hoisted(() => ({
@@ -118,7 +118,7 @@ async function chooseSollstellung() {
   fireEvent.click(
     (
       await screen.findAllByRole("button", {
-        name: "Dateien von Monatsbeiträge Oktober 2026 an die Empfänger übergeben",
+        name: "Dateien von Monatsbeiträge Oktober 2026 herunterladen oder übergeben",
       })
     )[0]!,
   );
@@ -238,7 +238,7 @@ it("names the recipient of each file and leads to the recipients for a file with
   fireEvent.click(
     (
       await screen.findAllByRole("button", {
-        name: "Dateien von Monatsbeiträge Oktober 2026 an die Empfänger übergeben",
+        name: "Dateien von Monatsbeiträge Oktober 2026 herunterladen oder übergeben",
       })
     )[0]!,
   );
@@ -269,7 +269,7 @@ it("leads to the recipients while no file has a ready one and keeps the download
   fireEvent.click(
     (
       await screen.findAllByRole("button", {
-        name: "Dateien von Monatsbeiträge Oktober 2026 an die Empfänger übergeben",
+        name: "Dateien von Monatsbeiträge Oktober 2026 herunterladen oder übergeben",
       })
     )[0]!,
   );
@@ -279,11 +279,10 @@ it("leads to the recipients while no file has a ready one and keeps the download
   expect(
     screen.queryByRole("menuitem", { name: /Sollstellung übergeben/ }),
   ).not.toBeInTheDocument();
+  // The download stays in the same menu, under „Herunterladen“ (#7407).
   expect(
-    screen.getAllByRole("button", {
-      name: "Sollstellung von Monatsbeiträge Oktober 2026 herunterladen",
-    }).length,
-  ).toBeGreaterThan(0);
+    screen.getByRole("menuitem", { name: /^Sollstellung/ }),
+  ).toBeInTheDocument();
 });
 
 it("says that nothing is new when a DATEV handover has no new bookings", async () => {
@@ -300,7 +299,7 @@ it("says that nothing is new when a DATEV handover has no new bookings", async (
   fireEvent.click(
     (
       await screen.findAllByRole("button", {
-        name: "Dateien von Monatsbeiträge Oktober 2026 an die Empfänger übergeben",
+        name: "Dateien von Monatsbeiträge Oktober 2026 herunterladen oder übergeben",
       })
     )[0]!,
   );
@@ -348,7 +347,7 @@ it("hands every DATEV booking over again for a lost file, in the chosen fiscal y
   fireEvent.click(
     (
       await screen.findAllByRole("button", {
-        name: "Dateien von Monatsbeiträge Oktober 2026 an die Empfänger übergeben",
+        name: "Dateien von Monatsbeiträge Oktober 2026 herunterladen oder übergeben",
       })
     )[0]!,
   );
@@ -394,7 +393,7 @@ it("names the invoices DATEV would refuse when a DATEV handover makes no file", 
   fireEvent.click(
     (
       await screen.findAllByRole("button", {
-        name: "Dateien von Monatsbeiträge Oktober 2026 an die Empfänger übergeben",
+        name: "Dateien von Monatsbeiträge Oktober 2026 herunterladen oder übergeben",
       })
     )[0]!,
   );

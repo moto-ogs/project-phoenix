@@ -157,9 +157,15 @@ describe("TraegerKinderzahlPage", () => {
     expect(
       screen.getByText("Vertrag Nr. 77 · ohne E-Mail"),
     ).toBeInTheDocument();
+    // The import is a way to another page, so it sits in the page menu
+    // (#7407).
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Weitere Aktionen" })[0]!,
+    );
     expect(
-      screen.getByRole("link", { name: "Aus Datei nachtragen" }),
+      screen.getByRole("menuitem", { name: /Aus Datei nachtragen/ }),
     ).toHaveAttribute("href", "/abrechnung/kinderzahl/import");
+    fireEvent.keyDown(document, { key: "Escape" });
 
     confirmFamilyChildren.mockResolvedValue({ ...data, families: [imported] });
     fireEvent.click(

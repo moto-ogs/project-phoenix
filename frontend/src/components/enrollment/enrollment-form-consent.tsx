@@ -16,6 +16,8 @@ import {
 import {
   agbDocumentSentence,
   agbDocumentURL,
+  asksForHealthInformation,
+  withDecidedLegalRules,
 } from "~/lib/enrollment-legal-blocks";
 
 import type { TranslationFn } from "./enrollment-form-shared";
@@ -33,6 +35,7 @@ export function EnrollmentConsent({
   checked,
   onChange,
   required = false,
+  guardianAgreement = false,
   error,
   legalText,
   legalTitle,
@@ -41,6 +44,11 @@ export function EnrollmentConsent({
 }: {
   readonly name: string;
   readonly label: string;
+  /**
+   * Ticking also confirms the agreement of every other custodian (#2787);
+   * the sentence follows the school's label.
+   */
+  readonly guardianAgreement?: boolean;
   readonly checked: boolean;
   readonly onChange: (v: boolean) => void;
   readonly required?: boolean;
@@ -61,6 +69,13 @@ export function EnrollmentConsent({
     <ConsentCheckbox
       name={name}
       label={label}
+      description={
+        guardianAgreement ? (
+          <span className="font-medium text-gray-800">
+            {tr("legal.guardianAgreement")}
+          </span>
+        ) : undefined
+      }
       checked={checked}
       onChange={onChange}
       required={required}
@@ -82,12 +97,11 @@ export function EnrollmentConsent({
 }
 
 /**
- * Informational notice for the e-mail contact. Unlike the consent rows
- * this carries NO checkbox: the school needs the e-mail address to run
- * the enrollment (Rückfragen, Status-Link), which is contract
- * performance, not a consent the parent could decline and still enrol.
- * When the tenant configured an explanatory text it gains a localized
- * "show more" link that opens it in the shared legal modal.
+ * Informational notice without a checkbox: the e-mail contact (the school
+ * needs the address to run the enrollment, which is contract performance,
+ * not a consent) and the Datenschutzinformation (provided, not confirmed;
+ * #2787). When the tenant configured an explanatory text it gains a
+ * localized "show more" link that opens it in the shared legal modal.
  */
 export function EmailContactNotice({
   block,
@@ -164,21 +178,39 @@ export function resolvePreviewLegalTexts(
   schoolTexts: PublicLegalTexts | undefined,
 ): PublicLegalTexts {
   const fromTemplate = previewLegalTexts(schema);
-  if (fromTemplate.blocks.length > 0) return fromTemplate;
-  return schoolTexts ?? fromTemplate;
+  const texts =
+    fromTemplate.blocks.length > 0
+      ? fromTemplate
+      : (schoolTexts ?? fromTemplate);
+  // The form adds the health consent where it asks for health information
+  // (#2787); the tenant-wide read carries its wording.
+  const healthConsent = schoolTexts?.health_consent;
+  if (!healthConsent || !asksForHealthInformation(schema?.fields)) {
+    return texts;
+  }
+  return {
+    ...texts,
+    blocks: [...texts.blocks, healthConsent].sort(
+      (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
+    ),
+  };
 }
 
 /** Does this template preview need the tenant-wide legal texts? */
 export function previewNeedsSchoolLegalTexts(
   schema: PublicFormSchema | null,
 ): boolean {
-  return previewLegalTexts(schema).blocks.length === 0;
+  return (
+    previewLegalTexts(schema).blocks.length === 0 ||
+    asksForHealthInformation(schema?.fields)
+  );
 }
 
 function previewLegalTexts(schema: PublicFormSchema | null): PublicLegalTexts {
   const blocks =
     schema?.legal_blocks
       ?.filter((block) => block.enabled)
+      .map(withDecidedLegalRules)
       .map((block) => ({
         key: block.key,
         kind: block.kind,
@@ -187,6 +219,7 @@ function previewLegalTexts(schema: PublicFormSchema | null): PublicLegalTexts {
         text: legalBlockText(block),
         attachments: block.attachments,
         required: block.required,
+        guardian_agreement: block.guardian_agreement,
         sort_order: block.sort_order,
         source: block.source,
         // The preview reads the stored document; the resolver compares each

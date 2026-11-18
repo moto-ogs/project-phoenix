@@ -64,11 +64,30 @@ func withWorkerJob(id ports.JobID) context.Context {
 	return context.WithValue(context.Background(), workerJobIDKey{}, id)
 }
 
+// schoolHolds answers the share-locked read of a school (#7478): the
+// listed schools are retired, a set error fails every read.
+type schoolHolds struct {
+	ports.TenantDirectory
+	retired map[int64]bool
+	err     error
+	held    []int64
+}
+
+func (h *schoolHolds) HoldLiveSchool(_ context.Context, tenantID int64) (bool, error) {
+	h.held = append(h.held, tenantID)
+	return !h.retired[tenantID], h.err
+}
+
 func moduleScheduler(settings ports.SettingsResolver, tenantIDs ...int64) *Scheduler {
+	return moduleSchedulerHolding(settings, &schoolHolds{}, tenantIDs...)
+}
+
+func moduleSchedulerHolding(settings ports.SettingsResolver, holds *schoolHolds, tenantIDs ...int64) *Scheduler {
 	return unitScheduler(&unitSchedulerDependencies{
-		settings: settings,
-		done:     make(chan struct{}),
-		logger:   slog.Default(),
+		settings:   settings,
+		schoolRepo: holds,
+		done:       make(chan struct{}),
+		logger:     slog.Default(),
 		minuteSnapshotLoader: func(context.Context) (*schedulerMinuteSnapshot, error) {
 			snapshots := make(map[int64]ports.SettingsSnapshot, len(tenantIDs))
 			for _, tenantID := range tenantIDs {
@@ -212,5 +231,61 @@ func TestUnreadableModuleSwitchFailsTheSchool(t *testing.T) {
 		})
 
 	assert.False(t, called, "an unreadable switch never counts as booked")
+	assert.Empty(t, completed, "the school is retried on the next tick")
+}
+
+// The parent reminders read the school's people by name. They hold their
+// school and skip a retired one (#7478): a demo retirement hides the school
+// and erases its visitor in one transaction, and a reminder read before
+// that commit and queued after the erasure would keep the visitor's name.
+func TestParentRemindersSkipARetiredSchool(t *testing.T) {
+	t.Parallel()
+
+	for _, job := range []ports.JobID{"announcement-reminders", "appointment-reminders"} {
+		holds := &schoolHolds{retired: map[int64]bool{42: true}}
+		scheduler := moduleSchedulerHolding(bookedModules(), holds, 41, 42)
+
+		var ran []int64
+		completed := scheduler.forEachTenantSettings(withWorkerJob(job), string(job), func(_ context.Context, tenantID int64) error {
+			ran = append(ran, tenantID)
+			return nil
+		})
+
+		assert.Equalf(t, []int64{41}, ran, "%q skips the retired school", job)
+		assert.ElementsMatchf(t, []int64{41, 42}, completed, "%q: a retired school is done for this tick, not failed", job)
+		assert.ElementsMatchf(t, []int64{41, 42}, holds.held, "%q holds every school it would remind", job)
+	}
+}
+
+// Only the jobs that remind people by name hold their school; the others
+// leave the school row alone.
+func TestOtherJobsDoNotHoldTheSchool(t *testing.T) {
+	t.Parallel()
+
+	holds := &schoolHolds{retired: map[int64]bool{41: true}}
+	scheduler := moduleSchedulerHolding(bookedModules(), holds, 41)
+	var ran []int64
+	scheduler.forEachTenantSettings(withWorkerJob("auto-checkout"), "auto-checkout", func(_ context.Context, tenantID int64) error {
+		ran = append(ran, tenantID)
+		return nil
+	})
+
+	assert.Equal(t, []int64{41}, ran)
+	assert.Empty(t, holds.held)
+}
+
+func TestUnreadableSchoolFailsTheReminder(t *testing.T) {
+	t.Parallel()
+
+	holds := &schoolHolds{err: errors.New("school unavailable")}
+	scheduler := moduleSchedulerHolding(bookedModules(), holds, 41)
+	called := false
+	completed := scheduler.forEachTenantSettings(withWorkerJob("announcement-reminders"), "announcement-reminders",
+		func(context.Context, int64) error {
+			called = true
+			return nil
+		})
+
+	assert.False(t, called, "an unreadable school is never reminded")
 	assert.Empty(t, completed, "the school is retried on the next tick")
 }

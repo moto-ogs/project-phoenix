@@ -21,8 +21,8 @@ export function devicesTopic(): HelpTopic {
           "Klappe in der Seitenleiste `Verwaltung` auf.",
           "Öffne `Datenverwaltung` und danach `Geräte`.",
           "Wähle ein Gerät aus der Liste.",
-          "Lies bei `Verbindung`, ob das Gerät `Online` oder `Offline` ist.",
-          "Lies bei `Letzter Standort`, wo es zuletzt benutzt wurde.",
+          "Lies oben, ob das Gerät `Online` oder `Offline` ist und wann es sich zuletzt gemeldet hat.",
+          "Lies bei `Raum`, wo das Gerät steht.",
           "Lies bei `Status`, ob es `Aktiv` ist.",
         ],
       },
@@ -49,6 +49,16 @@ export function devicesTopic(): HelpTopic {
         ],
       },
       {
+        title: "Nachsehen, wer ein Gerät geändert hat",
+        description:
+          "Zum Beispiel, wenn ein Gerät plötzlich gesperrt ist oder anders heißt.",
+        steps: [
+          "Wähle das Gerät aus der Liste.",
+          "Wähle den Reiter `Verlauf`.",
+          "Lies, wer das Gerät wann angelegt, geändert, gesperrt oder entsperrt hat.",
+        ],
+      },
+      {
         title: "Ein Gerät entfernen",
         description:
           "Zum Beispiel, wenn ein Tablet kaputt ist oder nicht mehr gebraucht wird.",
@@ -61,9 +71,10 @@ export function devicesTopic(): HelpTopic {
       },
     ],
     result:
-      "Du siehst für jedes Gerät, ob es erreichbar ist und wo es zuletzt stand.",
+      "Du siehst für jedes Gerät, ob es erreichbar ist, wo es steht und wer es zuletzt geändert hat.",
     notes: [
-      "Steht bei `Letzter Standort` `Noch nicht verwendet`, wurde am Gerät noch nichts gescannt.",
+      "Steht oben `Noch nie verbunden`, hat sich das Gerät noch nie bei moto gemeldet.",
+      "Änderungen durch das moto-Team stehen im `Verlauf` als `moto-Support`.",
       "Nach dem Anlegen zeigt moto einmalig einen Zugangscode. Nur das Gerät braucht ihn.",
       "Gib diesen Code nicht weiter. Er ist danach nicht mehr zu sehen.",
       "Ein gesperrtes Gerät kann sich sofort nicht mehr anmelden. Es bleibt mit Raum und bisherigen Anwesenheiten in der Liste und zeigt `Gesperrt`.",
@@ -73,7 +84,7 @@ export function devicesTopic(): HelpTopic {
       "Arbeitet deine OGS ohne NFC, fehlt `Geräte` in der `Datenverwaltung`.",
     ],
     troubleshootingDetails: [
-      "Ein Gerät meldet sich nicht? Prüfe `Verbindung` und `Status` in der Liste.",
+      "Ein Gerät meldet sich nicht? Wähle es aus und prüfe oben `Online` oder `Offline` und den `Status`.",
       "`Offline` und der Strom stimmt? Prüfe das WLAN am Standort des Geräts.",
       "Ein Gerät meldet „gesperrt“ oder „nicht aktiv“? Prüfe, ob in der Liste `Gesperrt` steht, und wähle `Entsperren`.",
       "Entfernen klappt nicht, weil eine Sitzung läuft? Beende die Sitzung am Gerät und versuche es noch einmal.",

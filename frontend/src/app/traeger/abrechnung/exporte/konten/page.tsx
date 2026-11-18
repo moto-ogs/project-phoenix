@@ -101,7 +101,7 @@ export default function TraegerBookingAccountsPage() {
               action={
                 <ButtonLink
                   href={traegerPath(DATEV_SETTINGS_PATH)}
-                  variant="ghost_tone"
+                  variant="surface"
                   size="compact"
                   tooltip="Öffnet die DATEV-Werte in den Einstellungen."
                 >

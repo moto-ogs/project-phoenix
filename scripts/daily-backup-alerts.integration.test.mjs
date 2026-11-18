@@ -9,7 +9,16 @@ test('daily backup LogQL detects silence and failures without trusting legacy ba
   // Expressions deliberately occupy single quoted YAML scalars. YAML syntax is
   // validated separately; Loki itself parses and evaluates the extracted LogQL.
   const expressions = [...rules.matchAll(/expr: '([^']+)'/g)].map(match => match[1]);
-  assert.equal(expressions.length, 2);
+  assert.equal(expressions.length, 4);
+  // One missing/failed pair per systemd instance, told apart only by env.
+  const rule = (env, kind) => {
+    const found = expressions.filter(e => e.includes(`{env="${env}", service="daily-backup"}`)
+      && e.startsWith(kind === 'missing' ? 'absent_over_time(' : 'sum(count_over_time('));
+    assert.equal(found.length, 1, `${env} ${kind} rule`);
+    return found[0];
+  };
+  const [prodMissing, prodFailed, stagingMissing, stagingFailed] =
+    [rule('prod', 'missing'), rule('prod', 'failed'), rule('staging', 'missing'), rule('staging', 'failed')];
   const name = `moto-backup-alert-test-${process.pid}-${Date.now()}`;
   const docker = (...args) => spawnSync('docker', args, { encoding: 'utf8', timeout: 60000 });
   t.after(() => docker('rm', '-f', name));
@@ -46,21 +55,43 @@ test('daily backup LogQL detects silence and failures without trusting legacy ba
     return body.data.result.map(series => Number(series.value[1]));
   };
   const hour = 3600000;
-  assert.deepEqual(query(expressions[0]), [1]); // Includes a stream that has never existed.
-  assert.deepEqual(query(expressions[1]), []);
+  assert.deepEqual(query(prodMissing), [1]); // Includes a stream that has never existed.
+  assert.deepEqual(query(stagingMissing), [1]);
+  assert.deepEqual(query(prodFailed), []);
+  assert.deepEqual(query(stagingFailed), []);
   push('backup', now - 1000, 'Backup complete');
   push('daily-backup', now - 1000, 'backup_result=ok step=complete', 'staging');
   push('daily-backup', now - 27 * hour, 'backup_result=ok step=complete');
   assert.deepEqual(query('sum(count_over_time({env="prod", service="daily-backup"} |~ "^backup_result=ok step=complete$" [2h]))', now - 26 * hour),
     [1], 'the 27-hour-old success must be queryable before checking its expiry');
-  assert.deepEqual(query(expressions[0]), [1]); // Legacy, wrong env, expired success cannot mask silence.
+  assert.deepEqual(query(prodMissing), [1]); // Legacy, staging, expired success cannot mask silence.
+  assert.deepEqual(query(stagingMissing), []);
   push('daily-backup', now - 60000, 'backup_result=ok step=complete');
-  assert.deepEqual(query(expressions[0]), []);
+  assert.deepEqual(query(prodMissing), []);
   push('daily-backup', now - 1000, 'backup_result=failed step=upload');
   const unit = readFileSync(new URL('./systemd/moto-backup-failure@.service', import.meta.url), 'utf8');
   const failure = unit.match(/backup_result=failed[^\n]+/)[0];
   push('daily-backup', now - 500, failure);
-  assert.deepEqual(query(expressions[1]), [2]); // Both the script and systemd fallback reach the rule.
+  assert.deepEqual(query(prodFailed), [2]); // Both the script and systemd fallback reach the rule.
+  assert.deepEqual(query(stagingFailed), []); // A production failure is not a staging one.
+  push('daily-backup', now - 400, failure, 'staging');
+  assert.deepEqual(query(stagingFailed), [1]);
   push('daily-backup', now - 100, 'backup_result=ok step=complete');
-  assert.deepEqual(query(expressions[1]), [2]); // A later success does not erase a recent failure.
+  assert.deepEqual(query(prodFailed), [2]); // A later success does not erase a recent failure.
+});
+
+test('each daily backup instance reaches its own alert stream through the documented Alloy source', () => {
+  const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
+  const service = read('./systemd/moto-daily-backup@.service');
+  assert.match(service, /^SyslogIdentifier=moto-daily-backup-%i$/m);
+  assert.match(service, /^OnFailure=moto-backup-failure@%i\.service$/m);
+  assert.match(read('./systemd/moto-backup-failure@.service'), / --tag moto-daily-backup-%i /);
+  // The runbook snippet is what the operator copies into the host's Alloy.
+  const sources = [...read('../docs/operations/daily-backup.md').matchAll(
+    /matches = "SYSLOG_IDENTIFIER=moto-daily-backup-([a-z]+) _UID=0"\n\s+max_age = "27h"\n\s+labels = \{ env = "([a-z]+)", service = "daily-backup" \}/g)];
+  assert.deepEqual(Object.fromEntries(sources.map(match => [match[1], match[2]])),
+    { production: 'prod', staging: 'staging' });
+  const alerted = new Set([...read('../monitoring/grafana/provisioning/alerting/daily-backup.yml')
+    .matchAll(/\{env="([a-z]+)", service="daily-backup"\}/g)].map(match => match[1]));
+  assert.deepEqual([...alerted].sort(), ['prod', 'staging']);
 });

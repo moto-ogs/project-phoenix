@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -200,14 +201,27 @@ func (s *Intake) legalTextsForLoadedPhase(ctx context.Context, phase *enrollment
 
 // applyTemplateLegalBlocks replaces the settings-derived blocks with the
 // template's blocks when at least one of them is enabled: an all-disabled
-// template must not erase the tenant's consent contract.
+// template must not erase the tenant's consent contract. A form asking for
+// health information also gets the health consent.
 func applyTemplateLegalBlocks(texts enrollmentNative.LegalTexts, schema *enrollmentNative.FormSchema) enrollmentNative.LegalTexts {
 	if schema != nil && len(schema.LegalBlocks) > 0 {
 		if blocks := buildTemplateLegalBlocks(schema.LegalBlocks); len(blocks) > 0 {
 			texts.Blocks = blocks
 		}
 	}
+	texts.Blocks = withHealthConsent(texts.Blocks, schema)
 	return texts
+}
+
+// withHealthConsent adds the health consent to the blocks of a form that
+// asks for health information, in sort order (#2787).
+func withHealthConsent(blocks []enrollmentNative.LegalBlock, schema *enrollmentNative.FormSchema) []enrollmentNative.LegalBlock {
+	if !schema.AsksForHealthInformation() {
+		return blocks
+	}
+	out := append(slices.Clone(blocks), enrollmentNative.HealthConsentBlock())
+	sort.SliceStable(out, func(i, j int) bool { return out[i].SortOrder < out[j].SortOrder })
+	return out
 }
 
 // resolveSubmissionLegalBlocks returns the blocks a submission is validated
@@ -216,14 +230,14 @@ func applyTemplateLegalBlocks(texts enrollmentNative.LegalTexts, schema *enrollm
 func (s *Intake) resolveSubmissionLegalBlocks(ctx context.Context, schema *enrollmentNative.FormSchema) ([]enrollmentNative.LegalBlock, error) {
 	if schema != nil && len(schema.LegalBlocks) > 0 {
 		if blocks := buildTemplateLegalBlocks(schema.LegalBlocks); len(blocks) > 0 {
-			return blocks, nil
+			return withHealthConsent(blocks, schema), nil
 		}
 	}
 	texts, err := s.legalTexts(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return texts.Blocks, nil
+	return withHealthConsent(texts.Blocks, schema), nil
 }
 
 func buildLegalBlocks(texts enrollmentNative.LegalTexts) []enrollmentNative.LegalBlock {
@@ -238,9 +252,9 @@ func buildLegalBlocks(texts enrollmentNative.LegalTexts) []enrollmentNative.Lega
 	}
 	if texts.DSGVOEnabled && texts.DSGVO != "" {
 		blocks = append(blocks, enrollmentNative.LegalBlock{
-			Key: enrollmentNative.ConsentKeyDataProcessing, Kind: "privacy_notice", Title: "Datenschutzinformation",
-			Label: "Ich habe die Datenschutzinformation der Schule zur Kenntnis genommen.",
-			Text:  texts.DSGVO, Required: true, SortOrder: 20, Source: enrollmentNative.LegalBlockSourceStandard,
+			Key: enrollmentNative.ConsentKeyDataProcessing, Kind: enrollmentNative.LegalBlockKindPrivacyNotice, Title: "Datenschutzinformation",
+			Label: enrollmentNative.PrivacyNoticeLabel,
+			Text:  texts.DSGVO, SortOrder: 20, Source: enrollmentNative.LegalBlockSourceStandard,
 		})
 	}
 	if texts.PhotoEnabled && texts.Photo != "" {
@@ -290,13 +304,14 @@ func buildTemplateLegalBlocks(configured []enrollmentNative.FormLegalBlock) []en
 		if !block.Enabled {
 			continue
 		}
-		blocks = append(blocks, enrollmentNative.LegalBlock{
+		blocks = append(blocks, enrollmentNative.PublicLegalBlock(enrollmentNative.LegalBlock{
 			Key: block.Key, Kind: block.Kind, Title: block.Title, Label: block.Label,
 			Attachments: enrollmentNative.PublicFormAttachments(block.Attachments),
 			Text:        templateLegalBlockText(block), Required: block.Required, SortOrder: block.SortOrder,
 			PDFURL: templateLegalPDFURL(block),
 			Source: block.Source, Translations: block.PublicTranslations(),
-		})
+			GuardianAgreement: block.GuardianAgreement,
+		}))
 	}
 	// The editor writes blocks in display order, but API-written templates
 	// may store them out of order — enforce sort_order at render time.

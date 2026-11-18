@@ -23,4 +23,9 @@ type TenantDirectory interface {
 	// analytics, so the usage dashboards show school names instead of IDs.
 	// It returns the schools named.
 	PublishSchoolNames(ctx context.Context) (int, error)
+	// HoldLiveSchool reads the school of the running tenant transaction under
+	// a share lock held to its end (#7478) and reports whether it is still
+	// active and not deleted. A retirement that would hide it waits for the
+	// transaction; one that committed first reads as not live.
+	HoldLiveSchool(ctx context.Context, tenantID int64) (bool, error)
 }

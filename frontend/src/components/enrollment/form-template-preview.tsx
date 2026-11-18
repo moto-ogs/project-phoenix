@@ -21,7 +21,10 @@ import type {
 } from "~/lib/enrollment-form-schema-api";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { TileCard } from "~/components/ui/tile-card";
-import { legalBlockPreviewText } from "~/lib/enrollment-legal-blocks";
+import {
+  legalBlockHasCheckbox,
+  legalBlockPreviewText,
+} from "~/lib/enrollment-legal-blocks";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 
 /** The address of a template's parent preview in this tenant. */
@@ -204,18 +207,19 @@ export function FormPreview({
           <div className="space-y-2">
             {enabledLegalBlocks.map((block) => {
               const previewText = legalBlockPreviewText(block);
+              const isNotice = !legalBlockHasCheckbox(block.kind);
               return (
                 <InsetPanel key={block.key} tone="white" padding="compact">
                   <div className="flex items-start gap-2.5">
                     <span
                       className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                        block.kind === "notice"
+                        isNotice
                           ? "border-moto-blue/30 bg-moto-blue/10"
                           : "border-gray-300 bg-white"
                       }`}
                       aria-hidden="true"
                     >
-                      {block.kind === "notice" ? (
+                      {isNotice ? (
                         <Info className="text-moto-blue h-3 w-3" />
                       ) : null}
                     </span>
@@ -229,7 +233,7 @@ export function FormPreview({
                             tone="gray"
                             compact
                             label={
-                              block.kind === "notice"
+                              isNotice
                                 ? "Hinweis"
                                 : block.required
                                   ? "Pflicht"

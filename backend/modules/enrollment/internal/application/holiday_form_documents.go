@@ -159,6 +159,9 @@ func holidayLegalValidationCopy(block enrollment.FormLegalBlock) (enrollment.For
 	if block.DocumentURL != "" {
 		return block, holidayLegalInput("document_url", errors.New("use a period document ID"))
 	}
+	// The custodians' agreement belongs to the school enrollment form; the
+	// holiday registration does not ask it (#2787).
+	block.GuardianAgreement = false
 	if strings.TrimSpace(block.Kind) == enrollment.LegalBlockKindNotice && block.Required {
 		block.Kind = enrollment.LegalBlockKindTerms
 	}

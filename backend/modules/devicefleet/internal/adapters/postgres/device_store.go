@@ -83,7 +83,11 @@ func (s *DeviceStore) Create(ctx context.Context, input devicefleet.CreateDevice
 	}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
-	err = db.NewInsert().Model(&row).ModelTableExpr(`iot.devices`).Returning("*").Scan(ctx)
+	insert := db.NewInsert().Model(&row).ModelTableExpr(`iot.devices`)
+	if input.RecordedBy != nil {
+		insert = recordCreation(db, insert, &row, lifecycleRecord(*input.RecordedBy, row.CreatedAt))
+	}
+	err = insert.Returning("*").Scan(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return devicefleet.Device{}, stats, fmt.Errorf("devicefleet postgres: create device: %w", err)
@@ -527,6 +531,9 @@ func (s *DeviceStore) UpdateColumnsReturning(ctx context.Context, input domain.U
 		query = query.Where(`"device".tenant_id = ?`, scope.TenantID)
 	}
 	started := time.Now()
+	if input.RecordedBy != nil {
+		query = recordEdit(db, query, input, columns, scope, *input.RecordedBy)
+	}
 	err = query.Returning("*").Scan(ctx)
 	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started)}
 	if errors.Is(err, sql.ErrNoRows) {

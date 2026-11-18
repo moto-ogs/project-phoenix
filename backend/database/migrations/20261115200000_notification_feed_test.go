@@ -14,6 +14,8 @@ func TestNotificationFeedMigrationRoundTrip(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
 	// The letter copies (#4813) follow the notification feed at the head; they go first.
+	// The device history (#2321) follows the letter copies at the head; it goes first.
+	require.NoError(t, deviceLifecycleEventsDown(t.Context(), db))
 	require.NoError(t, parentLetterCopiesDown(t.Context(), db))
 	ctx := t.Context()
 	exists := func() bool {

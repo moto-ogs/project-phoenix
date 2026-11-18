@@ -85,7 +85,8 @@
     "weekdayRequired": "Lütfen haftanın en az bir gününü seçin.",
     "weekdayModeConfirm": "Lütfen eve gidiş ve teslim alma düzenini onaylayın.",
     "weekdayMultiModeRequired": "Lütfen her bakım günü için en az bir eve dönüş yolu seçin.",
-    "file": "Lütfen en az bir dosya yükleyin."
+    "file": "Lütfen en az bir dosya yükleyin.",
+    "healthConsent": "Sağlık bilgisi girdiniz. Sağlık bilgileri için onay kutusunu işaretleyin veya bu alanları boş bırakın."
   },
   "actions": {
     "addChild": "Başka çocuk ekle",
@@ -304,5 +305,9 @@
     "removeContact": "Bu kişiyi formdan hemen kaldırır.",
     "chooseFile": "Cihazınızda dosya seçimini açar.",
     "details": "Tam metni okumak için açar."
+  },
+  "legal": {
+    "guardianAgreement": "Çocuğumun velayetine sahip diğer tüm kişilerle mutabakat içinde hareket ediyorum.",
+    "healthFieldHint": "İsteğe bağlı. Bir şey yazarsanız aşağıda sağlık bilgileri (Gesundheitsangaben) kutusunu işaretleyin."
   }
 }

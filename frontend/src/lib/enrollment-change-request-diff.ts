@@ -116,9 +116,10 @@ export const DEFAULT_ENROLLMENT_CHANGE_REQUEST_DIFF_COPY: EnrollmentChangeReques
     ),
     consentLabels: {
       agb: "AGB der Schule",
-      data_processing: "Datenverarbeitung (DSGVO)",
+      data_processing: "Datenschutzinformation erhalten",
       email_contact: "E-Mail-Kontakt",
       photo: "Fotos bei Schulveranstaltungen",
+      health_data: "Einwilligung Gesundheitsangaben",
     },
     childEntryLabel: "Kind",
     additionalGuardianEntryLabel: "Weitere Person",

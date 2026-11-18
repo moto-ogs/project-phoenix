@@ -752,9 +752,29 @@ type fakeDevices struct {
 	created    []domain.NewDevice
 	updated    []domain.Device
 	deleted    []int64
+	lifecycle  []organizationtenancy.DeviceLifecycleEntry
+	history    map[int64][]organizationtenancy.DeviceHistoryEntry
 	createErrs []error
 	updateErrs []error
 	fail       map[string]error
+}
+
+func (f *fakeDevices) RecordDeviceLifecycle(ctx context.Context, entry organizationtenancy.DeviceLifecycleEntry) error {
+	f.guard.check(ctx, "Devices.RecordDeviceLifecycle")
+	if err := f.fail["RecordDeviceLifecycle"]; err != nil {
+		return err
+	}
+	f.lifecycle = append(f.lifecycle, entry)
+	return nil
+}
+
+func (f *fakeDevices) ListDeviceLifecycle(ctx context.Context, id int64) ([]organizationtenancy.DeviceHistoryEntry, bool, error) {
+	f.guard.check(ctx, "Devices.ListDeviceLifecycle")
+	if err := f.fail["ListDeviceLifecycle"]; err != nil {
+		return nil, false, err
+	}
+	entries, found := f.history[id]
+	return entries, found, nil
 }
 
 func (f *fakeDevices) add(device domain.Device) {

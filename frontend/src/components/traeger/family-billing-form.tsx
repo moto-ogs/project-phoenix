@@ -321,7 +321,7 @@ export function FamilyBillingForm({
       {draft.recipientKind === "both" ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id={id("second-first")}
             name="second_first_name"
             label="Vorname des zweiten Elternteils"
@@ -332,7 +332,7 @@ export function FamilyBillingForm({
             onChange={(event) => set({ secondFirstName: event.target.value })}
           />
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id={id("second-last")}
             name="second_last_name"
             label="Nachname des zweiten Elternteils"
@@ -347,7 +347,7 @@ export function FamilyBillingForm({
       {draft.recipientKind === "payer" ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id={id("payer-first")}
             name="payer_first_name"
             label="Vorname"
@@ -358,7 +358,7 @@ export function FamilyBillingForm({
             onChange={(event) => set({ payerFirstName: event.target.value })}
           />
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id={id("payer-last")}
             name="payer_last_name"
             label="Nachname"
@@ -370,7 +370,7 @@ export function FamilyBillingForm({
           />
           <div className="sm:col-span-2">
             <Input
-              controlSize="touch"
+              controlSize="compact"
               id={id("payer-email")}
               name="payer_email"
               type="email"
@@ -384,7 +384,7 @@ export function FamilyBillingForm({
           </div>
           <div className="sm:col-span-2">
             <Input
-              controlSize="touch"
+              controlSize="compact"
               id={id("street")}
               name="payer_address.street"
               label="Straße und Hausnummer"
@@ -396,7 +396,7 @@ export function FamilyBillingForm({
             />
           </div>
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id={id("postal-code")}
             name="payer_address.postal_code"
             label="Postleitzahl"
@@ -408,7 +408,7 @@ export function FamilyBillingForm({
             onChange={(event) => set({ postalCode: event.target.value })}
           />
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id={id("city")}
             name="payer_address.city"
             label="Ort"

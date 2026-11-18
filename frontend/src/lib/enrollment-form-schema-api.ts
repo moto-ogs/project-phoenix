@@ -282,6 +282,11 @@ export interface FormLegalBlock {
   document_url?: string;
   /** School-written translations of `title`, `label` and `text` (#3377). */
   translations?: Translations;
+  /**
+   * Consent only: ticking it also confirms the agreement of every other
+   * custodian (#2787).
+   */
+  guardian_agreement?: boolean;
 }
 
 export interface FormSchema {
@@ -430,6 +435,8 @@ export interface PublicLegalBlock {
   source?: LegalBlockSource;
   /** Translations that still match the German text, without source. */
   translations?: Translations;
+  /** Ticking the consent also confirms the custodians' agreement (#2787). */
+  guardian_agreement?: boolean;
 }
 
 /**
@@ -449,6 +456,11 @@ export interface PublicLegalTexts {
   email_contact_enabled: boolean;
   photo_enabled: boolean;
   blocks: PublicLegalBlock[];
+  /**
+   * The consent moto adds to a form asking for health information; only the
+   * tenant-wide read carries it, for the template preview (#2787).
+   */
+  health_consent?: PublicLegalBlock;
 }
 
 /**

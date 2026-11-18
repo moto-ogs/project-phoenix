@@ -68,6 +68,7 @@ export const portalRoutes = {
   platform: [
     operatorBilling["GET /operator/billing/key-day"],
     operatorBilling["PUT /operator/billing/key-day"],
+    operatorDevices["GET /operator/devices/{id}/history"],
     operatorDevices["POST /operator/devices/{id}/block"],
     operatorDevices["POST /operator/devices/{id}/unblock"],
   ],

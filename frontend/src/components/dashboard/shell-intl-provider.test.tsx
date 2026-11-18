@@ -89,7 +89,7 @@ describe("ShellIntlProvider", () => {
             "Eltern ändern die Foto-Einwilligung im Elternportal. Eltern ohne Elternportal sagen es dir. Dann entfernst du unter „Bearbeiten“ beim Foto den Haken.",
           items: {
             agb: "Allgemeine Geschäftsbedingungen (AGB)",
-            data_processing: "Datenschutz zur Kenntnis genommen",
+            data_processing: "Datenschutzinformation erhalten",
             photo: "Foto-Einwilligung",
           },
           states: {

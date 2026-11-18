@@ -53,6 +53,7 @@
   "companion_note_required": "Podaj, z kim dziecko wraca do domu.",
   "complete_withdrawal_confirmation_required": "Nie można jeszcze wypisać: {object}. Potwierdź, wpisując {confirmation}.",
   "consent_required": "Potwierdź wszystkie wymagane zgody.",
+  "health_consent_required": "Podano informacje o zdrowiu. Zaznacz zgodę na informacje o zdrowiu albo pozostaw te pola puste.",
   "renewal_terms_required": "Prosimy wyrazić zgodę na warunki na nowy okres.",
   "renewal_terms_changed": "Warunki zostały właśnie zmienione. Prosimy przeczytać je ponownie i wyrazić zgodę.",
   "correction_reason_required": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",

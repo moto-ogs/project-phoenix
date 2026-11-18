@@ -895,7 +895,10 @@ func TestRequestService_Submit_AGBTermsOverrideCheckFailureFailsClosed(t *testin
 	assert.ErrorContains(t, err, "check AGB terms setting override")
 }
 
-func TestRequestService_Submit_DSGVORequiredWhenPrivacyBlockConfigured(t *testing.T) {
+// The Datenschutzinformation is provided, not confirmed (#2787): a
+// submission without a tick goes through, and the evidence still records the
+// block the form showed.
+func TestRequestService_Submit_PrivacyNoticeNeedsNoTick(t *testing.T) {
 	t.Parallel()
 
 	env := setupRequestTest(t)
@@ -906,13 +909,15 @@ func TestRequestService_Submit_DSGVORequiredWhenPrivacyBlockConfigured(t *testin
 
 	req := validSubmission(t, env.phaseID)
 	req.ConsentFlags = testFormValues(map[string]any{})
-	_, err := env.svc.Submit(ctx, req)
-	require.Error(t, err)
-	assert.True(t, errors.Is(err, enrollmentNative.ErrInvalidSubmission))
-
-	req.ConsentFlags = testFormValues(map[string]any{"data_processing": true})
-	_, err = env.svc.Submit(ctx, req)
+	res, err := env.svc.Submit(ctx, req)
 	require.NoError(t, err)
+
+	entry, ok := enrollmentNative.LastSubmissionLegalSnapshot(res.Request.LegalBlocksSnapshot)
+	require.True(t, ok)
+	require.Len(t, entry.Blocks, 1)
+	assert.Equal(t, enrollmentNative.ConsentKeyDataProcessing, entry.Blocks[0].Key)
+	assert.False(t, entry.Blocks[0].Required)
+	assert.Equal(t, "Datenschutzinformation", entry.Blocks[0].Text)
 }
 
 func TestRequestService_Submit_LegalTextResolveFailureIsServerError(t *testing.T) {
