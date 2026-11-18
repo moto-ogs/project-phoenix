@@ -51,6 +51,24 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/guardians/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "expected_link_ids",
+          "kind": "string"
+        },
+        {
+          "name": "force",
+          "kind": "string"
+        }
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/guardians/{id}/email-block",
       "portals": [
         "tenant"
@@ -1032,6 +1050,17 @@
           "kind": "ref",
           "ref": "GuardianWithRelationship"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/guardians/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "GuardianResponse"
       }
     },
     {
@@ -11421,6 +11450,21 @@
         "ref": "StudentPayerRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/guardians/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "GuardianUpdateRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "GuardianResponse"
+      }
     },
     {
       "method": "PUT",
@@ -34616,6 +34660,85 @@
           "optional": true,
           "schema": {
             "kind": "legacy_id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianUpdateRequest",
+      "go_type": "users.GuardianUpdateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "address_street",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "address_city",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "address_postal_code",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "preferred_contact_method",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "language_preference",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
           }
         }
       ]

@@ -373,6 +373,19 @@ export interface StudentPayerRequest {
   guardian_id?: string | null;
 }
 
+/** Go: users.GuardianUpdateRequest */
+export interface GuardianUpdateRequest {
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  address_street?: string | null;
+  address_city?: string | null;
+  address_postal_code?: string | null;
+  preferred_contact_method?: string | null;
+  language_preference?: string | null;
+  notes?: string | null;
+}
+
 /** Go: users.GuardianPaymentRequest */
 export interface GuardianPaymentRequest {
   iban?: string | null;
@@ -389,6 +402,12 @@ export interface PhoneNumberUpdateRequest {
   priority?: number | null;
 }
 
+/** Query of DELETE /api/guardians/{id} */
+export interface DeleteGuardiansIdQuery {
+  expected_link_ids?: string;
+  force?: string;
+}
+
 /** Query of GET /api/guardians/search */
 export interface GetGuardiansSearchQuery {
   page?: number;
@@ -401,6 +420,13 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/guardians/students/{studentId}/guardians/{guardianId}",
     portals: ["tenant"],
+    response: noData,
+  },
+  "DELETE /api/guardians/{id}": {
+    method: "DELETE",
+    pattern: "/api/guardians/{id}",
+    portals: ["tenant"],
+    query: ["expected_link_ids", "force"],
     response: noData,
   },
   "DELETE /api/guardians/{id}/email-block": {
@@ -451,6 +477,12 @@ export const routes = {
     pattern: "/api/guardians/students/{studentId}/guardians",
     portals: ["tenant"],
     response: success(z.array(GuardianWithRelationshipSchema)),
+  },
+  "GET /api/guardians/{id}": {
+    method: "GET",
+    pattern: "/api/guardians/{id}",
+    portals: ["tenant"],
+    response: success(GuardianResponseSchema),
   },
   "GET /api/guardians/{id}/delete-preview": {
     method: "GET",
@@ -536,6 +568,13 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<StudentPayerRequest>(),
     response: noData,
+  },
+  "PUT /api/guardians/{id}": {
+    method: "PUT",
+    pattern: "/api/guardians/{id}",
+    portals: ["tenant"],
+    request: requestBody<GuardianUpdateRequest>(),
+    response: success(GuardianResponseSchema),
   },
   "PUT /api/guardians/{id}/payment": {
     method: "PUT",

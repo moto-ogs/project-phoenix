@@ -9,6 +9,7 @@ type GuardianContractTypes struct {
 	DeletePreview, EmailStatuses                                         any
 	PaymentMasked, PaymentReveal, PaymentRequest, PayerRequest, Overview any
 	BulkInviteRequest, BulkInvite, InviteRequest, Invite, Approvals      any
+	Guardian, GuardianUpdate                                             any
 }
 
 // RouteContractTypes names the body types of the guardian routes.
@@ -23,5 +24,6 @@ func RouteContractTypes() GuardianContractTypes {
 		PaymentRequest: GuardianPaymentRequest{}, PayerRequest: StudentPayerRequest{}, Overview: []PaymentOverviewRow{},
 		BulkInviteRequest: bulkInviteRequest{}, BulkInvite: bulkInviteResponse{},
 		InviteRequest: inviteToStudentRequest{}, Invite: inviteToStudentResponse{}, Approvals: []pendingApprovalResponse{},
+		Guardian: GuardianResponse{}, GuardianUpdate: GuardianUpdateRequest{},
 	}
 }
