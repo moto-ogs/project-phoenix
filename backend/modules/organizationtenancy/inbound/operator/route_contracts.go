@@ -13,11 +13,23 @@ func BillingRouteContracts() []common.RouteContract {
 }
 
 // DeviceRouteContracts types the operator's device block routes
-// (Gerätesperre, #2317). They answer without data; the table reloads.
+// (Gerätesperre, #2317), which answer without data, and the device history
+// (#2321).
 func DeviceRouteContracts() []common.RouteContract {
 	operator := []common.PortalScope{common.PortalOperator}
 	return []common.RouteContract{
 		{Method: "POST", Pattern: "/{id}/block", Portals: operator, NoData: true},
 		{Method: "POST", Pattern: "/{id}/unblock", Portals: operator, NoData: true},
+		// The history of a device across its schools (#2321).
+		{Method: "GET", Pattern: "/{id}/history", Portals: operator, Response: []deviceHistoryResponse{}},
+	}
+}
+
+// SchoolDeviceSlotRouteContracts types the operator's change of a school's
+// Geräteplätze (#2312). It answers without data; the school page reloads.
+func SchoolDeviceSlotRouteContracts() []common.RouteContract {
+	operator := []common.PortalScope{common.PortalOperator}
+	return []common.RouteContract{
+		{Method: "PUT", Pattern: "/{id}/device-slots", Portals: operator, Request: deviceSlotsRequest{}, NoData: true},
 	}
 }

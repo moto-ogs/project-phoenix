@@ -1,6 +1,12 @@
 import "@testing-library/jest-dom/vitest";
 import type { TenantPageSearchRowProps } from "~/components/ui/tenant-page-search-row";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { useState, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import DevicesPage from "./page";
@@ -15,9 +21,13 @@ function errorText(error: unknown): string | null {
     : (error as { message: string }).message;
 }
 
+let mockPermissions: string[] = ["devices:read", "devices:manage"];
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
-    data: { user: { id: "1", token: "test-token" }, expires: "2099-01-01" },
+    data: {
+      user: { id: "1", token: "test-token", permissions: mockPermissions },
+      expires: "2099-01-01",
+    },
     status: "authenticated",
   })),
 }));
@@ -45,6 +55,7 @@ vi.mock("~/lib/swr", () => ({
   useSWRAuth: vi.fn(),
   mutate: vi.fn(),
   useTenantMutate: vi.fn(() => vi.fn()),
+  useInvalidateFamily: vi.fn(() => vi.fn()),
 }));
 
 const mockGetList = vi.fn();
@@ -428,21 +439,118 @@ const mockDevices: Device[] = [
   },
 ];
 
-function setSwrData(devices: Device[]) {
-  vi.mocked(useSWRAuth).mockReturnValue({
-    data: devices,
-    isLoading: false,
-    error: null,
-    isValidating: false,
-    mutate: vi.fn(),
-  } as ReturnType<typeof useSWRAuth>);
+type Slots = { booked: number | null; occupied: number; free: number | null };
+
+/**
+ * Answers each SWR key with its own data: the device list, and the school's
+ * Geräteplätze (#2312), which default to no limit.
+ */
+function setSwrData(
+  devices: Device[],
+  slots: Slots = { booked: null, occupied: devices.length, free: null },
+) {
+  vi.mocked(useSWRAuth).mockImplementation(
+    (key) =>
+      ({
+        data: key === "database-devices-slots" ? slots : devices,
+        isLoading: false,
+        error: null,
+        isValidating: false,
+        mutate: vi.fn(),
+      }) as ReturnType<typeof useSWRAuth>,
+  );
 }
 
 describe("DevicesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     currentSearch = new URLSearchParams();
+    mockPermissions = ["devices:read", "devices:manage"];
     setSwrData(mockDevices);
+  });
+
+  it("shows occupied and free Geräteplätze in the status line (#2312)", () => {
+    setSwrData(mockDevices, { booked: 5, occupied: 2, free: 3 });
+
+    render(<DevicesPage />);
+
+    const status = screen.getByTestId("device-slot-status");
+    expect(status).toHaveTextContent("Geräteplätze: 2 von 5 belegt");
+    expect(status).toHaveTextContent("3 frei");
+    for (const create of screen.getAllByRole("button", {
+      name: "Gerät registrieren",
+    })) {
+      expect(create).not.toHaveAttribute("aria-disabled", "true");
+    }
+  });
+
+  it("blocks registering a device when every Geräteplatz is taken (#2312)", () => {
+    setSwrData(mockDevices, { booked: 2, occupied: 2, free: 0 });
+
+    render(<DevicesPage />);
+
+    expect(screen.getByTestId("device-slot-status")).toHaveTextContent("voll");
+    const buttons = screen.getAllByRole("button", {
+      name: "Gerät registrieren",
+    });
+    expect(buttons.length).toBeGreaterThan(0);
+    for (const create of buttons) {
+      expect(create).toHaveAttribute("aria-disabled", "true");
+      fireEvent.click(create);
+    }
+    expect(screen.queryByTestId("device-create-modal")).not.toBeInTheDocument();
+    expect(screen.getByText("Eingang Kiosk")).toBeInTheDocument();
+  });
+
+  it("asks again for the Geräteplätze on focus and while all are taken (#2312)", () => {
+    type SlotOptions = {
+      revalidateOnFocus?: boolean;
+      focusThrottleInterval?: number;
+      refreshInterval?: number;
+      onSuccess?: (slots: Slots) => void;
+    };
+    const lastSlotOptions = () =>
+      vi
+        .mocked(useSWRAuth)
+        .mock.calls.filter(([key]) => key === "database-devices-slots")
+        .at(-1)?.[2] as SlotOptions;
+    render(<DevicesPage />);
+
+    // A cold load knows nothing yet: no timer until the first answer.
+    expect(lastSlotOptions().revalidateOnFocus).toBe(true);
+    expect(lastSlotOptions().focusThrottleInterval).toBe(0);
+    expect(lastSlotOptions().refreshInterval).toBe(0);
+
+    act(() =>
+      lastSlotOptions().onSuccess?.({ booked: 2, occupied: 2, free: 0 }),
+    );
+    expect(lastSlotOptions().refreshInterval).toBe(30_000);
+
+    act(() =>
+      lastSlotOptions().onSuccess?.({ booked: 3, occupied: 2, free: 1 }),
+    );
+    expect(lastSlotOptions().refreshInterval).toBe(0);
+  });
+
+  it("shows no Geräteplatz line while moto set no limit", () => {
+    render(<DevicesPage />);
+
+    expect(screen.getByText("Eingang Kiosk")).toBeInTheDocument();
+    expect(screen.queryByTestId("device-slot-status")).not.toBeInTheDocument();
+  });
+
+  it("lets devices:read look but not register (#2312)", () => {
+    mockPermissions = ["devices:read"];
+    setSwrData([]);
+
+    render(<DevicesPage />);
+
+    expect(screen.getByTestId("page-empty")).toHaveTextContent(
+      "Deine Schule hat noch kein Gerät registriert.",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Gerät registrieren" }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders the page with devices data", async () => {

@@ -10,6 +10,9 @@ import {
   useState,
 } from "react";
 import { useSession } from "next-auth/react";
+import { hasPermission } from "~/lib/auth-utils";
+import { DeviceSlotStatus } from "~/components/devices/device-slot-status";
+import { deviceSlotsFull, fetchDeviceSlots } from "~/lib/device-slots";
 import { redirect, useSearchParams } from "next/navigation";
 import { DatabaseCreateAction } from "~/components/database/database-create-action";
 import { DatabaseGroupingToggle } from "~/components/database/database-grouping-toggle";
@@ -49,7 +52,7 @@ import { BELOW_MD, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useDeleteConfirmation } from "~/hooks/useDeleteConfirmation";
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { ModuleRouteGuard } from "~/components/tenant/module-route-guard";
 import { devicesConcept } from "~/lib/concepts/devices";
@@ -59,6 +62,9 @@ import { TenantPageStats } from "~/components/ui/tenant-page";
 const logger = createLogger({ component: "DatabaseDevicesPage" });
 
 type DevicesGroupingMode = "none" | "type" | "room";
+
+/** How often a page that shows every Geräteplatz taken asks again. */
+const FULL_DEVICE_SLOTS_POLL_MS = 30_000;
 
 const DEVICES_GROUPING_DEFAULT: DevicesGroupingMode = "type";
 
@@ -122,15 +128,26 @@ function DevicesPageContent() {
     if (showCreateModal) clearCreateErrors();
   }, [showCreateModal, clearCreateErrors]);
 
-  const { status } = useSession({
+  const { data: session, status } = useSession({
     required: true,
     onUnauthenticated() {
       redirect("/");
     },
   });
+  // Ansehen braucht devices:read, jede Verwaltung devices:manage (#2312).
+  const canManage = hasPermission(session, "devices:manage");
 
   const service = useMemo(() => createCrudService(devicesConfig), []);
   const tenantMutate = useTenantMutate();
+  const invalidateFamily = useInvalidateFamily();
+  // A write changes the device and adds to its history (#2321).
+  const refreshDevices = useCallback(async () => {
+    await Promise.all([
+      tenantMutate(tenantAdminKeys.devices()),
+      tenantMutate(tenantAdminKeys.deviceSlots()),
+      invalidateFamily(tenantAdminKeys.deviceHistoryFamily),
+    ]);
+  }, [tenantMutate, invalidateFamily]);
 
   const {
     data: devicesData,
@@ -142,6 +159,25 @@ function DevicesPageContent() {
     return Array.isArray(data.data) ? data.data : [];
   });
 
+  // Geräteplätze der Schule (#2312). Ein Fehler blendet nur die Zeile aus;
+  // das Backend prüft die Grenze beim Anlegen ohnehin selbst.
+  // moto may raise the limit while the page stays open: every return to
+  // the page, and every half minute while all places are taken, asks again,
+  // so registering unlocks without a reload. The interval is a number that
+  // changes with the answer, so SWR starts its timer once the first answer
+  // shows all places taken.
+  const [pollDeviceSlots, setPollDeviceSlots] = useState(false);
+  const { data: deviceSlots } = useSWRAuth(
+    tenantAdminKeys.deviceSlots(),
+    fetchDeviceSlots,
+    {
+      revalidateOnFocus: true,
+      focusThrottleInterval: 0,
+      refreshInterval: pollDeviceSlots ? FULL_DEVICE_SLOTS_POLL_MS : 0,
+      onSuccess: (slots) => setPollDeviceSlots(deviceSlotsFull(slots)),
+    },
+  );
+  const slotsFull = deviceSlots ? deviceSlotsFull(deviceSlots) : false;
   const error = useSwrLoadError(devicesError, "die Liste der Geräte", () =>
     mutateDevices(),
   );
@@ -290,9 +326,9 @@ function DevicesPageContent() {
       setShowCreateModal(false);
       setCreatedDevice(created);
       handleSelectDevice(created.id);
-      await tenantMutate(tenantAdminKeys.devices());
+      await refreshDevices();
     },
-    [service, handleSelectDevice, tenantMutate, toastSuccess],
+    [service, handleSelectDevice, refreshDevices, toastSuccess],
   );
 
   const handleUpdateDevice = useCallback(
@@ -309,9 +345,9 @@ function DevicesPageContent() {
       toastSuccess(
         `Das Gerät „${updatedDevice.name ?? updatedDevice.device_id}“ ist gespeichert.`,
       );
-      await tenantMutate(tenantAdminKeys.devices());
+      await refreshDevices();
     },
-    [selectedDevice, service, tenantMutate, toastSuccess],
+    [selectedDevice, service, refreshDevices, toastSuccess],
   );
 
   // Gerätesperre (#2317): sofort wirksam und sofort umkehrbar, darum ohne
@@ -358,9 +394,9 @@ function DevicesPageContent() {
           `Das Gerät „${title}“ ist entsperrt und kann sich wieder anmelden.`,
         );
       }
-      await tenantMutate(tenantAdminKeys.devices());
+      await refreshDevices();
     },
-    [showActionError, tenantMutate, toastSuccess],
+    [showActionError, refreshDevices, toastSuccess],
   );
 
   const handleDeleteDevice = useCallback(async () => {
@@ -397,14 +433,14 @@ function DevicesPageContent() {
     handleDeleteCancel();
     setCreatedDevice(null);
     handleSelectDevice(null);
-    await tenantMutate(tenantAdminKeys.devices());
+    await refreshDevices();
   }, [
     selectedDevice,
     service,
     toastSuccess,
     handleDeleteCancel,
     handleSelectDevice,
-    tenantMutate,
+    refreshDevices,
     deleteErrors,
   ]);
 
@@ -428,7 +464,9 @@ function DevicesPageContent() {
                 : "Keine Geräte vorhanden",
               description: searchTerm
                 ? "Versuche einen anderen Suchbegriff."
-                : "Registriere das erste Gerät, um Karten zu lesen.",
+                : canManage
+                  ? "Registriere das erste Gerät, um Karten zu lesen."
+                  : "Deine Schule hat noch kein Gerät registriert.",
               icon: (
                 <MotoDuotoneIcon
                   icon={devicesConcept.icon}
@@ -478,7 +516,12 @@ function DevicesPageContent() {
       className="flex w-full flex-col"
       intro={{
         title: "Geräte",
-        description: statusLine,
+        description: (
+          <>
+            {statusLine}
+            <DeviceSlotStatus slots={deviceSlots} />
+          </>
+        ),
         actions: (
           <div className="flex items-center gap-2">
             {!isMobile ? (
@@ -488,11 +531,16 @@ function DevicesPageContent() {
                 onChange={handleGroupingChange}
               />
             ) : null}
-            <DatabaseCreateAction
-              label="Gerät"
-              ariaLabel="Gerät registrieren"
-              onClick={() => setShowCreateModal(true)}
-            />
+            {canManage ? (
+              <DatabaseCreateAction
+                label="Gerät"
+                ariaLabel="Gerät registrieren"
+                onClick={() => setShowCreateModal(true)}
+                tooltip="Öffnet ein leeres Formular für ein neues Gerät."
+                disabled={slotsFull}
+                disabledReason="Alle Geräteplätze sind belegt. Entferne ein Gerät oder melde dich beim moto-Team."
+              />
+            ) : null}
           </div>
         ),
       }}
@@ -534,6 +582,7 @@ function DevicesPageContent() {
                 void handleSetBlocked(selectedDevice, blocked);
             }}
             blockPending={blockPending}
+            canManage={canManage}
           />
         </div>
       ) : null}

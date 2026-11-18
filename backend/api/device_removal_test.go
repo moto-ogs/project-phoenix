@@ -50,7 +50,7 @@ func deviceFixtureOn(t *testing.T, db *bun.DB) deviceRemovalFixture {
 	router := testutil.NewTenantRouter(db)
 	router.Use(SecurityPrincipalMiddleware)
 	router.Route("/devices", func(r chi.Router) {
-		NewIoTAdministration(devicefleet.NewAdministration(devices.IoT.Fleet(), time.Now), presence, logger, time.Now)(r, func(next http.Handler) http.Handler { return next })
+		NewIoTAdministration(devicefleet.NewAdministration(devices.IoT.Fleet(), time.Now), mustDeviceHistory(t, devices.IoT.Fleet()), routerDeviceActors{}, presence, logger, time.Now)(r, func(next http.Handler) http.Handler { return next })
 	})
 	return deviceRemovalFixture{db: db, fleet: devices.IoT.Fleet(), router: router, audit: audit}
 }
@@ -59,7 +59,7 @@ func (f deviceRemovalFixture) remove(t *testing.T, id int64) *httptest.ResponseR
 	t.Helper()
 	req := testutil.NewAuthenticatedRequest(t, http.MethodDelete, fmt.Sprintf("/devices/%d", id), nil,
 		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("iot:manage"),
+		testutil.WithPermissions("devices:manage"),
 	)
 	return testutil.ExecuteRequest(f.router, req)
 }

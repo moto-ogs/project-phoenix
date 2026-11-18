@@ -176,7 +176,7 @@ export function SepaMandateModal({
           Übernimm die Angaben aus dem unterschriebenen Mandat.
         </p>
         <Input
-          controlSize="touch"
+          controlSize="compact"
           id="sepa-mandate-holder"
           name="account_holder"
           label="Kontoinhaber"
@@ -189,7 +189,7 @@ export function SepaMandateModal({
         />
         <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id="sepa-mandate-iban"
             name="iban"
             label="IBAN"
@@ -205,7 +205,7 @@ export function SepaMandateModal({
             onChange={(event) => set({ iban: groupIBAN(event.target.value) })}
           />
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id="sepa-mandate-bic"
             name="bic"
             label="BIC"
@@ -230,7 +230,7 @@ export function SepaMandateModal({
             onChange={(value) => set({ signedOn: value })}
           />
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id="sepa-mandate-reference"
             name="reference"
             label="Mandatsreferenz"

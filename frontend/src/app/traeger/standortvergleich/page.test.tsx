@@ -208,7 +208,7 @@ describe("TraegerComparisonPage", () => {
     await screen.findByRole("table");
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Standortvergleich herunterladen" }),
+      screen.getByRole("button", { name: "Weitere Aktionen" }),
     );
     await userEvent.click(await screen.findByRole("menuitem", { name: /CSV/ }));
 

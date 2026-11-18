@@ -85,6 +85,8 @@ export const OPERATOR_PORTAL_ERROR_CODES = [
   "provisioning.device_active_session",
   "provisioning.device_other_organization",
   "provisioning.device_same_school",
+  "provisioning.device_slots_below_occupied",
+  "provisioning.device_slots_full",
   "provisioning.person_not_found",
   "provisioning.person_has_supervisions",
   "provisioning.person_has_active_profile",

@@ -72,6 +72,7 @@ AS $function$
     audit.data_access_log,
     audit.data_deletions,
     audit.data_imports,
+    audit.device_lifecycle_events,
     audit.deviation_events,
     audit.enrollment_deletions,
     audit.enrollment_offering_adjustments,
@@ -330,7 +331,7 @@ AS $function$
      WHERE f.contype='f' AND pn.nspname || '.' || pc.relname IN
       (SELECT item->>'name' FROM jsonb_array_elements(v_plan) AS item)
      GROUP BY f.oid,cn.nspname,cc.relname,f.conname,pn.nspname,pc.relname,f.confdeltype
-    ) AS edge) <> '6f662d17a6d0e688f4a456aefd8caea6d70d8521c46347486fbfc33673bef9e4' THEN
+    ) AS edge) <> '2a733e9a271eec1ff8bc41955d90a411438969a0bf87e3fca7422ca9dbbc9cf7' THEN
     RAISE EXCEPTION 'school erasure foreign keys changed; review plan' USING ERRCODE = '55000';
    END IF;
    -- Generated incoming-FK scope checks. Never cascade into foreign rows.
@@ -368,6 +369,8 @@ AS $function$
     SELECT 1 FROM audit.attendance_corrections AS c JOIN users.student_profiles AS p ON c."student_id" = p."id" WHERE (p.tenant_id = p_school_id) AND NOT COALESCE((c.tenant_id = p_school_id), FALSE)
     UNION ALL
     SELECT 1 FROM audit.data_access_log AS c JOIN users.student_profiles AS p ON c."student_id" = p."id" WHERE (p.tenant_id = p_school_id) AND NOT COALESCE((c.tenant_id = p_school_id), FALSE)
+    UNION ALL
+    SELECT 1 FROM audit.device_lifecycle_events AS c JOIN iot.devices AS p ON c."device_id" = p."id" WHERE (p.tenant_id = p_school_id) AND NOT COALESCE((c.tenant_id = p_school_id), FALSE)
     UNION ALL
     SELECT 1 FROM audit.deviation_events AS c JOIN activities.groups AS p ON c."activity_group_id" = p."id" WHERE (p.tenant_id = p_school_id) AND NOT COALESCE((c.tenant_id = p_school_id), FALSE)
     UNION ALL

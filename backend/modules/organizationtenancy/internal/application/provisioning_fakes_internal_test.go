@@ -126,6 +126,8 @@ type fakeEngine struct {
 	fail    map[string]error
 	calls   []string
 	updates []organizationtenancy.UpdateSchool
+	// deviceSlotLocks counts the taken Geräteplatz locks (#2312).
+	deviceSlotLocks int
 }
 
 func newFakeEngine() *fakeEngine {
@@ -752,9 +754,29 @@ type fakeDevices struct {
 	created    []domain.NewDevice
 	updated    []domain.Device
 	deleted    []int64
+	lifecycle  []organizationtenancy.DeviceLifecycleEntry
+	history    map[int64][]organizationtenancy.DeviceHistoryEntry
 	createErrs []error
 	updateErrs []error
 	fail       map[string]error
+}
+
+func (f *fakeDevices) RecordDeviceLifecycle(ctx context.Context, entry organizationtenancy.DeviceLifecycleEntry) error {
+	f.guard.check(ctx, "Devices.RecordDeviceLifecycle")
+	if err := f.fail["RecordDeviceLifecycle"]; err != nil {
+		return err
+	}
+	f.lifecycle = append(f.lifecycle, entry)
+	return nil
+}
+
+func (f *fakeDevices) ListDeviceLifecycle(ctx context.Context, id int64) ([]organizationtenancy.DeviceHistoryEntry, bool, error) {
+	f.guard.check(ctx, "Devices.ListDeviceLifecycle")
+	if err := f.fail["ListDeviceLifecycle"]; err != nil {
+		return nil, false, err
+	}
+	entries, found := f.history[id]
+	return entries, found, nil
 }
 
 func (f *fakeDevices) add(device domain.Device) {
@@ -1136,8 +1158,8 @@ func newHarness(t *testing.T) *provisioningHarness {
 	svc, err := NewProvisioning(ProvisioningDependencies{
 		PWAUsageWindowDays:  30,
 		Organizations:       newFakeOwner(engine),
-		ErasureOrderRecords: newFakeOwner(engine),
-		Transaction:         h.tx, Dashboard: h.dashboard, Identity: h.identity, Devices: h.devices,
+		ErasureOrderRecords: newFakeOwner(engine), DeviceSlots: newFakeOwner(engine),
+		Transaction: h.tx, Dashboard: h.dashboard, Identity: h.identity, Devices: h.devices,
 		People: h.people, Presence: h.presence, Categories: h.categories, Settings: h.settings,
 		Audit: h.audit, Secrets: h.secrets, Now: func() time.Time { return fixedTime },
 		Logger: slog.New(slog.NewTextHandler(h.logs, &slog.HandlerOptions{Level: slog.LevelDebug})),

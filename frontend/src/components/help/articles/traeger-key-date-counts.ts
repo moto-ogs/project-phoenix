@@ -19,7 +19,7 @@ export function traegerKeyDateCountsTopic(): HelpTopic {
       "Lies darunter die Zahlen jeder Schule.",
       "Wähle unter `Alle Monate` einen Monat, um seine Zahlen zu sehen.",
       "Wähle bei Bedarf oben eine Schule. Die Summe zeigt dann nur diese Schule.",
-      "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Monate, für alle Schulen oder die gewählte Schule.",
+      "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Monate, für alle Schulen oder die gewählte Schule.",
     ],
     result:
       "Du siehst für jede Schule, wie viele aktive Kinder und aktive Geräte moto am Stichtag gezählt hat.",

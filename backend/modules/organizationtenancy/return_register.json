@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "e7320709758ef0a99507a81faf9408e5723f45f513eb73907423026fd4d9b92e",
+  "catalogSHA256": "8cb986069532660a02db79705561608ed1fdbb9906e918b4ad0852304debf952",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -4622,6 +4622,90 @@
         {
           "column": "imported_by",
           "targetTable": "auth.accounts",
+          "targetColumn": "id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "platform.schools",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school"
+      ]
+    },
+    {
+      "name": "audit.device_lifecycle_events",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "tenant_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "device_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "action",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "actor_kind",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "actor_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "actor_operator_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "changes",
+          "type": "jsonb",
+          "udt": "jsonb",
+          "nullable": false
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "actor_account_id",
+          "targetTable": "auth.accounts",
+          "targetColumn": "id"
+        },
+        {
+          "column": "actor_operator_id",
+          "targetTable": "platform.operators",
+          "targetColumn": "id"
+        },
+        {
+          "column": "device_id",
+          "targetTable": "iot.devices",
           "targetColumn": "id"
         },
         {
@@ -27459,6 +27543,12 @@
           "type": "integer",
           "udt": "int4",
           "nullable": false
+        },
+        {
+          "name": "device_slots",
+          "type": "integer",
+          "udt": "int4",
+          "nullable": true
         },
         {
           "name": "exported_settings",

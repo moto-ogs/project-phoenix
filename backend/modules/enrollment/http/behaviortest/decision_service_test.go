@@ -449,6 +449,7 @@ func submitOneChildWithCustomData(
 		ConsentFlags: testFormValues(map[string]any{
 			"agb":             true,
 			"data_processing": true,
+			"health_data":     true, // the forms ask health information (#2787)
 			"email_contact":   true,
 			"photo":           true,
 		}),
@@ -479,6 +480,7 @@ func submitDecisionSiblings(t *testing.T, env *decisionTestEnv, guardianEmail st
 		ConsentFlags: testFormValues(map[string]any{
 			"agb":             true,
 			"data_processing": true,
+			"health_data":     true, // the forms ask health information (#2787)
 			"email_contact":   true,
 			"photo":           true,
 		}),
@@ -1828,6 +1830,7 @@ func TestDecisionService_Decide_ContactListSelfGuardianDoesNotAbortApproval(t *t
 		ConsentFlags: testFormValues(map[string]any{
 			"agb":             true,
 			"data_processing": true,
+			"health_data":     true, // the forms ask health information (#2787)
 			"email_contact":   true,
 			"photo":           true,
 		}),
@@ -3119,6 +3122,7 @@ func TestDecisionService_Decide_ExistingStudentAppliesWithdrawnConsent(t *testin
 		"Nele", "Widerruf", map[string]any{
 			"agb":             true,
 			"data_processing": true,
+			"health_data":     true, // the forms ask health information (#2787)
 			"email_contact":   false,
 			"photo":           false,
 		})
@@ -3395,6 +3399,7 @@ func TestDecisionService_Decide_ApprovedUsesFixedOfferingDaysForActivityEnrollme
 		ConsentFlags: testFormValues(map[string]any{
 			"agb":             true,
 			"data_processing": true,
+			"health_data":     true, // the forms ask health information (#2787)
 			"email_contact":   true,
 			"photo":           true,
 		}),
@@ -3594,6 +3599,7 @@ func TestDecisionService_Decide_ApprovedPreservesLegacyNonTemplateLinkedOffering
 		ConsentFlags: testFormValues(map[string]any{
 			"agb":             true,
 			"data_processing": true,
+			"health_data":     true, // the forms ask health information (#2787)
 			"email_contact":   true,
 			"photo":           true,
 		}),
@@ -3674,6 +3680,7 @@ func TestDecisionService_Decide_RolloverApprovalMaterializesClonedOffering(t *te
 		ConsentFlags: testFormValues(map[string]any{
 			"agb":             true,
 			"data_processing": true,
+			"health_data":     true, // the forms ask health information (#2787)
 			"email_contact":   true,
 			"photo":           true,
 		}),
@@ -3820,6 +3827,7 @@ func TestDecisionService_Decide_ApprovedRejectsEmptyDaysForTemplateOffering(t *t
 		ConsentFlags: testFormValues(map[string]any{
 			"agb":             true,
 			"data_processing": true,
+			"health_data":     true, // the forms ask health information (#2787)
 			"email_contact":   true,
 			"photo":           true,
 		}),
@@ -4342,6 +4350,7 @@ func TestDecisionService_UpdateChildOfferings_RemovesSourcedEnrollmentAfterOffer
 		ConsentFlags: testFormValues(map[string]any{
 			"agb":             true,
 			"data_processing": true,
+			"health_data":     true, // the forms ask health information (#2787)
 			"email_contact":   true,
 			"photo":           true,
 		}),
@@ -4441,6 +4450,7 @@ func TestDecisionService_UpdateChildOfferings_RemovesLegacyUnsourcedEnrollmentAf
 		ConsentFlags: testFormValues(map[string]any{
 			"agb":             true,
 			"data_processing": true,
+			"health_data":     true, // the forms ask health information (#2787)
 			"email_contact":   true,
 			"photo":           true,
 		}),
@@ -4548,6 +4558,7 @@ func TestDecisionService_UpdateChildOfferings_RemovesSourcedEnrollmentAfterPhase
 		ConsentFlags: testFormValues(map[string]any{
 			"agb":             true,
 			"data_processing": true,
+			"health_data":     true, // the forms ask health information (#2787)
 			"email_contact":   true,
 			"photo":           true,
 		}),
@@ -4638,6 +4649,7 @@ func TestDecisionService_ApprovalUsesExclusiveEndForOneDayPhase(t *testing.T) {
 		ConsentFlags: testFormValues(map[string]any{
 			"agb":             true,
 			"data_processing": true,
+			"health_data":     true, // the forms ask health information (#2787)
 			"email_contact":   true,
 			"photo":           true,
 		}),

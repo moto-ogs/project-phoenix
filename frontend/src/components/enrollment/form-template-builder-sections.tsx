@@ -44,7 +44,7 @@ const targetSuggestionDescriptions: Record<
   string
 > = {
   "student.health_info":
-    "Für Allergien, Medikamente oder andere Gesundheitsangaben.",
+    "Für Allergien, Unverträglichkeiten oder andere Gesundheitsangaben. Immer freiwillig: Das Formular fragt dazu die Einwilligung der Eltern ab.",
   "student.extra_info":
     "Für wichtige Hinweise, die im Alltag der Betreuung sichtbar sein sollen.",
   "student.allowed_departure_modes":

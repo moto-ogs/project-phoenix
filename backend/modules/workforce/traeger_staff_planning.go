@@ -68,14 +68,37 @@ type TraegerPlanningShift struct {
 // its shifts, the planned net minutes and the Soll of the week, and every
 // working-time warning of the week.
 type TraegerPlanningPerson struct {
-	RecordID       int64                     `json:"staff_record_id"`
-	FirstName      string                    `json:"first_name"`
-	LastName       string                    `json:"last_name"`
-	Sites          []TraegerPlanningSite     `json:"sites"`
-	Shifts         []TraegerPlanningShift    `json:"shifts"`
-	PlannedMinutes int                       `json:"planned_minutes"`
-	SollMinutes    *int                      `json:"soll_minutes"`
-	Warnings       []ShiftWorkingTimeWarning `json:"warnings"`
+	RecordID       int64                  `json:"staff_record_id"`
+	FirstName      string                 `json:"first_name"`
+	LastName       string                 `json:"last_name"`
+	Sites          []TraegerPlanningSite  `json:"sites"`
+	Shifts         []TraegerPlanningShift `json:"shifts"`
+	PlannedMinutes int                    `json:"planned_minutes"`
+	SollMinutes    *int                   `json:"soll_minutes"`
+	// SollDays splits the Soll of the week by school and day (#7381): the
+	// contract as a template for the shifts of the week.
+	SollDays []TraegerPlanningSollDay `json:"soll_days"`
+	// AbsentDays are the full absence days of the week per school, without
+	// the kind of absence: a shift planned there is cancelled at once, so the
+	// contract suggests none (#7381).
+	AbsentDays []TraegerPlanningAbsentDay `json:"absent_days"`
+	Warnings   []ShiftWorkingTimeWarning  `json:"warnings"`
+}
+
+// TraegerPlanningAbsentDay is a full absence day of a Personalakte at one
+// school.
+type TraegerPlanningAbsentDay struct {
+	SchoolID int64         `json:"school_id"`
+	Date     calendar.Date `json:"date"`
+}
+
+// TraegerPlanningSollDay is the Soll of a Personalakte at one school on one
+// day of the week from its Arbeitsvertrag, without the school's holidays and
+// closing days.
+type TraegerPlanningSollDay struct {
+	SchoolID int64         `json:"school_id"`
+	Date     calendar.Date `json:"date"`
+	Minutes  int           `json:"minutes"`
 }
 
 // TraegerPlanningWeek is the week plan of the Träger: Monday to Sunday.
@@ -137,7 +160,17 @@ type TraegerSiteWeekQuery struct {
 type TraegerSiteWeek struct {
 	Shifts []PlannedShift
 	Soll   []ShiftPlanSollDay
-	Rules  TraegerPlanningRules
+	// AbsentDays are the full absence days of the asked employments in
+	// [SollFrom, SollTo], as the shift writes count them; read only for a
+	// week with Soll at the school that reaches today.
+	AbsentDays []TraegerSiteAbsentDay
+	Rules      TraegerPlanningRules
+}
+
+// TraegerSiteAbsentDay is a full absence day of one employment at the school.
+type TraegerSiteAbsentDay struct {
+	StaffID int64
+	Date    calendar.Date
 }
 
 // TraegerShiftSites is what the Einsatzplanung reads and writes at one

@@ -168,7 +168,7 @@ export function traegerCareMonthsTopic(): HelpTopic {
         title: "Liste der Monatsläufe herunterladen",
         steps: [
           "Wähle `Abrechnungsläufe` und dann den Reiter `Monatsbeiträge`.",
-          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Monatsläufe.",
+          "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Monatsläufe.",
         ],
       },
     ],

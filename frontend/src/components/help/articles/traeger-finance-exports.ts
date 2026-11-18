@@ -23,7 +23,7 @@ export function traegerFinanceExportsTopic(): HelpTopic {
           "Frage deine Kämmerei, welche Spalten ihr Programm liest. Das machst du nur einmal.",
         steps: [
           "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
-          "Wähle oben rechts `Feldzuordnung`.",
+          "Wähle oben rechts das Menü mit den drei Punkten und dann `Feldzuordnung`.",
           "Wähle bei jeder Spalte den `Inhalt` und trage den `Spaltennamen` ein.",
           "Mit `Spalte` fügst du eine Spalte hinzu. Für einen Wert, der in jeder Zeile gleich ist, wähle `Fester Wert`, etwa ein Konto.",
           "Für einen Text je Rechnung wähle `Buchungstext`. Schreibe feste Wörter selbst und füge Platzhalter wie `{Monat}` und `{Kind}` mit einem Klick ein. Aus `SKB {Monat} {Kind}` wird etwa `SKB 10/2026 Lia Müller`.",
@@ -45,7 +45,7 @@ export function traegerFinanceExportsTopic(): HelpTopic {
         title: "Sollstellung herunterladen",
         steps: [
           "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
-          "Wähle beim Lauf `Sollstellung`. Die Datei wird heruntergeladen.",
+          "Wähle beim Lauf das Menü mit den drei Punkten und unter `Herunterladen` `Sollstellung`. Die Datei wird heruntergeladen.",
           "Gib die Datei an deine Kämmerei. Oder lass moto sie übergeben, siehe „Exporte an Empfänger übergeben“.",
         ],
       },
@@ -62,7 +62,7 @@ export function traegerFinanceExportsTopic(): HelpTopic {
     notes: [
       "Jeder Download ist eine neue Datei mit neuer Nummer. Steht im Protokoll `Gleicher Inhalt wie Nr. …`, enthält die Datei nichts Neues.",
       "Auch jede Lastschriftdatei und jede DATEV-Datei bekommt eine Nummer aus derselben Reihe. So nennt jede Nummer genau eine Datei.",
-      "Für dein Steuerbüro gibt es beim Lauf auch `DATEV`. Wie das geht, steht unter „DATEV-Werte eintragen“.",
+      "Für dein Steuerbüro gibt es im Menü des Laufs auch `DATEV-Datei`. Wie das geht, steht unter „DATEV-Werte eintragen“.",
       "Die Debitorennummer der Familie trägst du bei `Empfänger und Zahlung` der Familie ein. Neue Monats- und Ferienrechnungen übernehmen sie. Hat eine Ferienanmeldung eine eigene Nummer, gilt bei der Ferienrechnung diese. Beim Import der Mandate übernimmt moto die Spalte `Debitorennummer`.",
       "Eine neue Feldzuordnung gilt für jede neue Datei. Frühere Dateien bleiben, wie sie waren.",
       "Wählst du als Inhalt `Erlöskonto`, `Kostenstelle (KOST1)` oder `Zweite Kostenstelle (KOST2)`, hat die Datei eine Zeile je Konto einer Rechnung. Der `Betrag` ist dann der Teil der Rechnung auf diesem Konto. Die Konten legst du unter `Konten und Kostenstellen` fest.",

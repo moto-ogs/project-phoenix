@@ -615,7 +615,7 @@ func TestSignatureProofDocument_ReproducesFrozenLegalTextAndDocuments(t *testing
 				Attachments: []capability.FormAttachment{{Label: "Datenschutzhinweise", DocumentURL: "/dokumente/datenschutz.pdf"}},
 			},
 			{
-				Key: "photo", Kind: capability.LegalBlockKindConsent,
+				Key: "photo", Kind: capability.LegalBlockKindConsent, GuardianAgreementLabel: capability.GuardianAgreementLabel,
 				Title: "Fotos", Label: "Ich stimme Fotos zu.", Text: "Fotos zeigen den OGS-Alltag.",
 				Attachments: []capability.FormAttachment{{Label: "Fotohinweise", DocumentURL: "/dokumente/fotos.pdf"}},
 			},
@@ -630,12 +630,13 @@ func TestSignatureProofDocument_ReproducesFrozenLegalTextAndDocuments(t *testing
 	require.Equal(t, []lists.SubRecord{
 		{Title: "Datenschutz", Fields: []lists.Field{
 			{Label: "Bestätigung", Value: "Datenschutz gelesen."},
-			{Label: "Antwort", Value: "Zur Kenntnis genommen"},
+			// Shown without a checkbox since #2787.
+			{Label: "Antwort", Value: "Angezeigt"},
 			{Label: "Text", Value: "Ihre Daten bleiben bei der Schule."},
 			{Label: "Dokument: Datenschutzhinweise", Value: "/dokumente/datenschutz.pdf"},
 		}},
 		{Title: "Fotos", Fields: []lists.Field{
-			{Label: "Bestätigung", Value: "Ich stimme Fotos zu."},
+			{Label: "Bestätigung", Value: "Ich stimme Fotos zu. " + capability.GuardianAgreementLabel},
 			{Label: "Antwort", Value: "Zugestimmt"},
 			{Label: "Text", Value: "Fotos zeigen den OGS-Alltag."},
 			{Label: "Dokument: Fotohinweise", Value: "/dokumente/fotos.pdf"},
@@ -714,4 +715,27 @@ func TestSubmitCarriesTheShownFormVersion(t *testing.T) {
 	accepted, ok := out.ConsentFlags.Lookup("terms")
 	assert.True(t, ok)
 	assert.Equal(t, true, accepted)
+}
+
+func TestSignatureProofLegalAnswer(t *testing.T) {
+	t.Parallel()
+
+	ticked := map[string]any{"privacy": true, "photo": true}
+	cases := []struct {
+		name  string
+		block capability.LegalBlockSnapshot
+		want  string
+	}{
+		{"privacy notice without checkbox", capability.LegalBlockSnapshot{Key: "privacy", Kind: capability.LegalBlockKindPrivacyNotice}, "Angezeigt"},
+		{"privacy notice ticked before #2787", capability.LegalBlockSnapshot{Key: "privacy", Kind: capability.LegalBlockKindPrivacyNotice, Required: true}, "Zur Kenntnis genommen"},
+		{"notice", capability.LegalBlockSnapshot{Key: "mail", Kind: capability.LegalBlockKindNotice}, "Angezeigt"},
+		{"ticked consent", capability.LegalBlockSnapshot{Key: "photo", Kind: capability.LegalBlockKindConsent}, "Zugestimmt"},
+		{"unticked consent", capability.LegalBlockSnapshot{Key: "pool", Kind: capability.LegalBlockKindConsent}, "Nicht zugestimmt"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tc.want, signatureProofLegalAnswer(tc.block, ticked))
+		})
+	}
 }

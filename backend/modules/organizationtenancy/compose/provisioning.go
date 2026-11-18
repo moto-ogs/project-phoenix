@@ -88,7 +88,7 @@ func NewProvisioning(dependencies ProvisioningDependencies, dashboard organizati
 	provisioning, err := application.NewProvisioning(application.ProvisioningDependencies{
 		PWAUsageWindowDays: dependencies.PWAUsageWindowDays, Organizations: dependencies.Organizations,
 		ErasureOrderRecords: application.New(postgresNative.New(postgresNative.NewDatabase(), dependencies.Now), postgresNative.Transaction{}, dependencies.Observe, calendar.CalendarDateClock(dependencies.Now)),
-		Transaction:         postgresNative.Transaction{}, Dashboard: dashboard,
+		Transaction:         postgresNative.Transaction{}, Dashboard: dashboard, DeviceSlots: application.New(postgresNative.New(postgresNative.NewDatabase(), dependencies.Now), postgresNative.Transaction{}, dependencies.Observe, calendar.CalendarDateClock(dependencies.Now)),
 		Identity: dependencies.Identity, Devices: dependencies.Devices, People: dependencies.People,
 		Presence: dependencies.Presence, Categories: dependencies.Categories, Settings: dependencies.Settings,
 		Audit: dependencies.Audit, Secrets: dependencies.Secrets, Logger: dependencies.Logger, Now: dependencies.Now,
@@ -96,7 +96,7 @@ func NewProvisioning(dependencies ProvisioningDependencies, dashboard organizati
 	if err != nil {
 		return organizationtenancy.OperatorProvisioning{}, err
 	}
-	return organizationtenancy.OperatorProvisioning{Provisioning: provisioning, ErasureOrderRecords: provisioning, RequiredDetails: provisioning, DeviceBlocking: provisioning}, nil
+	return organizationtenancy.OperatorProvisioning{Provisioning: provisioning, ErasureOrderRecords: provisioning, RequiredDetails: provisioning, DeviceBlocking: provisioning, DeviceHistory: provisioning, DeviceSlots: provisioning}, nil
 }
 
 // BelegRetentionAudit answers the operator audit of the Beleg retention

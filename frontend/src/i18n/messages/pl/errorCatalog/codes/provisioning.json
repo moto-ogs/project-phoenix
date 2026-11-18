@@ -26,6 +26,8 @@
   "device_active_session": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "device_other_organization": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
   "device_same_school": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "device_slots_full": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "device_slots_below_occupied": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "person_not_found": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "person_has_supervisions": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "caregiver_capability_blocked": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",

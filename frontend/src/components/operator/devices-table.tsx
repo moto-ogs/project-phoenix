@@ -16,7 +16,14 @@ import {
   OverflowMenu,
   type OverflowMenuEntry,
 } from "~/components/ui/page-header/OverflowMenu";
-import { ArrowRightLeft, KeyRound, Lock, LockOpen, Trash2 } from "lucide-react";
+import {
+  ArrowRightLeft,
+  History,
+  KeyRound,
+  Lock,
+  LockOpen,
+  Trash2,
+} from "lucide-react";
 import {
   StatusBadge,
   type StatusBadgeTone,
@@ -59,6 +66,8 @@ interface DevicesTableProps {
   /** Blocks (true) or unblocks (false) a device (#2317). */
   onSetBlocked?: (device: OperatorDevice, blocked: boolean) => void;
   onDelete?: (device: OperatorDevice) => void;
+  /** Opens the device's history (#2321). */
+  onShowHistory?: (device: OperatorDevice) => void;
 }
 
 export function DevicesTable({
@@ -69,6 +78,7 @@ export function DevicesTable({
   onTransfer,
   onSetBlocked,
   onDelete,
+  onShowHistory,
 }: Readonly<DevicesTableProps>) {
   const columns = useMemo<DataTableColumn<OperatorDevice>[]>(() => {
     const cols: DataTableColumn<OperatorDevice>[] = [];
@@ -147,12 +157,20 @@ export function DevicesTable({
       },
     );
 
-    if (onSetKey || onTransfer || onSetBlocked || onDelete) {
+    if (onSetKey || onTransfer || onSetBlocked || onDelete || onShowHistory) {
       cols.push({
         key: "actions",
         header: "Aktionen",
         render: (row) => {
           const items: OverflowMenuEntry[] = [];
+          if (onShowHistory) {
+            items.push({
+              label: "Verlauf",
+              description: "Zeigt, wer das Gerät wann geändert hat.",
+              icon: <History className="h-4 w-4" aria-hidden="true" />,
+              onClick: () => onShowHistory(row),
+            });
+          }
           if (onTransfer) {
             items.push({
               label: "Schule wechseln",
@@ -203,7 +221,7 @@ export function DevicesTable({
     }
 
     return cols;
-  }, [showSchool, onSetKey, onTransfer, onSetBlocked, onDelete]);
+  }, [showSchool, onSetKey, onTransfer, onSetBlocked, onDelete, onShowHistory]);
 
   return (
     <DataTable

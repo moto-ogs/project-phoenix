@@ -4,6 +4,7 @@ import { ButtonLink } from "~/components/ui/button";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -109,7 +110,7 @@ export function HolidayOwnChildrenCard({
                       </p>
                       <p className="text-gray-600">{openReason(assignment)}</p>
                     </div>
-                    <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row min-[480px]:items-center sm:justify-end">
+                    <ResponsiveRowActions>
                       <ButtonLink
                         href={tenantPath(
                           `/students/search?search=${encodeURIComponent(child.lastName)}`,
@@ -121,7 +122,7 @@ export function HolidayOwnChildrenCard({
                       >
                         Kind suchen
                       </ButtonLink>
-                    </div>
+                    </ResponsiveRowActions>
                   </ResponsiveActionRow>
                 );
               })}

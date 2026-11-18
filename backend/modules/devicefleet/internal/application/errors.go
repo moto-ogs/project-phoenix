@@ -18,6 +18,10 @@ func publicError(err error) error {
 			return sentinel
 		}
 	}
+	var slotsFull *devicefleet.DeviceSlotsFullError
+	if errors.As(err, &slotsFull) {
+		return &devicefleet.DeviceSlotsFullError{DeviceSlots: slotsFull.DeviceSlots}
+	}
 	if errors.Is(err, devicefleet.ErrInvalidDisplayInput) {
 		var invalid *devicefleet.InvalidDisplayError
 		if errors.As(err, &invalid) {
@@ -28,6 +32,7 @@ func publicError(err error) error {
 	for _, sentinel := range []error{
 		devicefleet.ErrUnregisteredTagScanNotFound, devicefleet.ErrUnregisteredTagScanResolved,
 		devicefleet.ErrInvalidUnregisteredTagScan, devicefleet.ErrTenantRequired,
+		devicefleet.ErrInvalidLifecycleEvent,
 	} {
 		if errors.Is(err, sentinel) {
 			return sentinel

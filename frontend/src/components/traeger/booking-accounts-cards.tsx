@@ -31,6 +31,7 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -48,9 +49,6 @@ import { traegerPath } from "~/lib/traeger-url";
 const logger = createLogger({ component: "BookingAccountsCards" });
 
 type SubmitLike = { preventDefault: () => void };
-
-const ACTIONS =
-  "flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end";
 
 function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -179,7 +177,7 @@ function RevenueRow({
         </div>
         <AccountValue account={effective.account} source={effective.source} />
       </div>
-      <div className={ACTIONS}>
+      <ResponsiveRowActions>
         <Button
           type="button"
           variant="surface"
@@ -190,7 +188,7 @@ function RevenueRow({
         >
           Ändern
         </Button>
-      </div>
+      </ResponsiveRowActions>
     </ResponsiveActionRow>
   );
 }
@@ -234,7 +232,7 @@ export function RevenueAccountsCard({
               source={page.standardAccount ? "own" : "missing"}
             />
           </div>
-          <div className={ACTIONS}>
+          <ResponsiveRowActions>
             <ButtonLink
               href={traegerPath(DATEV_SETTINGS_PATH)}
               variant="surface"
@@ -244,7 +242,7 @@ export function RevenueAccountsCard({
             >
               DATEV-Werte
             </ButtonLink>
-          </div>
+          </ResponsiveRowActions>
         </ResponsiveActionRow>
         {REVENUE_SERVICES.map((service) => (
           <RevenueRow
@@ -492,7 +490,7 @@ function CostCenterRow({
           ) : null}
         </div>
       </div>
-      <div className={ACTIONS}>
+      <ResponsiveRowActions>
         <Button
           type="button"
           variant="surface"
@@ -504,7 +502,7 @@ function CostCenterRow({
         >
           Neue Kostenstelle
         </Button>
-      </div>
+      </ResponsiveRowActions>
       {adding ? (
         <div className="mt-3 sm:col-span-2">
           <CostCenterForm

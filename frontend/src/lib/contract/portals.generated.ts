@@ -14,6 +14,7 @@ import { routes as messages } from "./messages.generated";
 import { routes as notifications } from "./notifications.generated";
 import { routes as operatorBilling } from "./operator-billing.generated";
 import { routes as operatorDevices } from "./operator-devices.generated";
+import { routes as operatorSchools } from "./operator-schools.generated";
 import { routes as parentAnnouncements } from "./parent-announcements.generated";
 import { routes as parentMe } from "./parent-me.generated";
 import { routes as platform } from "./platform.generated";
@@ -32,6 +33,7 @@ import { routes as staffOnboarding } from "./staff-onboarding.generated";
 import { routes as staffPool } from "./staff-pool.generated";
 import { routes as students } from "./students.generated";
 import { routes as surveys } from "./surveys.generated";
+import { routes as timeTracking } from "./time-tracking.generated";
 import { routes as traegerBillingFamilies } from "./traeger-billing-families.generated";
 import { routes as traegerDocuments } from "./traeger-documents.generated";
 import { routes as traegerMasterData } from "./traeger-master-data.generated";
@@ -88,8 +90,10 @@ export const portalRoutes = {
   platform: [
     operatorBilling["GET /operator/billing/key-day"],
     operatorBilling["PUT /operator/billing/key-day"],
+    operatorDevices["GET /operator/devices/{id}/history"],
     operatorDevices["POST /operator/devices/{id}/block"],
     operatorDevices["POST /operator/devices/{id}/unblock"],
+    operatorSchools["PUT /operator/schools/{id}/device-slots"],
   ],
   school: [
     schoolCalendar["DELETE /school/calendar/appointments/{appointmentId}"],
@@ -311,6 +315,29 @@ export const portalRoutes = {
     surveys["POST /api/surveys/{surveyId}/publish"],
     surveys["POST /api/surveys/{surveyId}/remind"],
     surveys["PUT /api/surveys/{surveyId}"],
+    timeTracking["DELETE /api/time-tracking/absences/{id}"],
+    timeTracking["GET /api/time-tracking/absence-allowances"],
+    timeTracking["GET /api/time-tracking/absences"],
+    timeTracking["GET /api/time-tracking/absences/mails"],
+    timeTracking["GET /api/time-tracking/assignments"],
+    timeTracking["GET /api/time-tracking/breaks/{sessionId}"],
+    timeTracking["GET /api/time-tracking/closing-days"],
+    timeTracking["GET /api/time-tracking/config"],
+    timeTracking["GET /api/time-tracking/current"],
+    timeTracking["GET /api/time-tracking/history"],
+    timeTracking["GET /api/time-tracking/holidays"],
+    timeTracking["GET /api/time-tracking/month-summary"],
+    timeTracking["GET /api/time-tracking/schedule-targets"],
+    timeTracking["GET /api/time-tracking/shifts"],
+    timeTracking["GET /api/time-tracking/vacation/quota"],
+    timeTracking["GET /api/time-tracking/{id}/edits"],
+    timeTracking["POST /api/time-tracking/absences"],
+    timeTracking["POST /api/time-tracking/break/end"],
+    timeTracking["POST /api/time-tracking/break/start"],
+    timeTracking["POST /api/time-tracking/check-in"],
+    timeTracking["POST /api/time-tracking/vacation/request"],
+    timeTracking["PUT /api/time-tracking/absences/{id}"],
+    timeTracking["PUT /api/time-tracking/{id}"],
     traegerDocuments["GET /api/traeger-documents/"],
     workTimeModels["DELETE /api/work-time-models/{id}"],
     workTimeModels["GET /api/work-time-models/"],

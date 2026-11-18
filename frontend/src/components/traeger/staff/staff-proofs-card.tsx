@@ -16,6 +16,7 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -146,7 +147,33 @@ export function StaffProofsCard({
                   {staffProofDetail(proof)}
                 </p>
               </div>
-              <div className="flex items-center gap-2 sm:justify-end">
+              <ResponsiveRowActions
+                menu={
+                  proof.held ? (
+                    <OverflowMenu
+                      ariaLabel={`Weitere Aktionen zu ${proof.typeName}`}
+                      items={[
+                        {
+                          label: "Eintrag entfernen",
+                          description:
+                            "Für einen Eintrag aus Versehen. moto fragt vorher nach.",
+                          icon: (
+                            <TrashIcon className="size-4" aria-hidden="true" />
+                          ),
+                          destructive: true,
+                          onClick: () => {
+                            deleteErrors.clear();
+                            setRemoving(proof);
+                          },
+                        },
+                      ]}
+                    />
+                  ) : (
+                    // Keeps the buttons of every row in one column.
+                    <span className="size-8 shrink-0" aria-hidden="true" />
+                  )
+                }
+              >
                 <Button
                   type="button"
                   variant="surface"
@@ -167,30 +194,7 @@ export function StaffProofsCard({
                   )}
                   {proof.held ? "Erneuern" : "Eintragen"}
                 </Button>
-                {proof.held ? (
-                  <OverflowMenu
-                    ariaLabel={`Weitere Aktionen zu ${proof.typeName}`}
-                    items={[
-                      {
-                        label: "Eintrag entfernen",
-                        description:
-                          "Für einen Eintrag aus Versehen. moto fragt vorher nach.",
-                        icon: (
-                          <TrashIcon className="size-4" aria-hidden="true" />
-                        ),
-                        destructive: true,
-                        onClick: () => {
-                          deleteErrors.clear();
-                          setRemoving(proof);
-                        },
-                      },
-                    ]}
-                  />
-                ) : (
-                  // Keeps the buttons of every row in one column.
-                  <span className="size-8 shrink-0" aria-hidden="true" />
-                )}
-              </div>
+              </ResponsiveRowActions>
             </ResponsiveActionRow>
           ))}
         </ResponsiveActionList>

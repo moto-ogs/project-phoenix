@@ -34,6 +34,7 @@ export const operatorProvisioningKeys = {
   ],
   deviceFamilies: [
     "operator-all-devices",
+    "operator-device-history-",
     "operator-school-devices-",
     "operator-org-devices-",
     ...operatorSummaryPrefixes,
@@ -43,6 +44,9 @@ export const operatorProvisioningKeys = {
   orgDevices: (id: string | undefined) =>
     `operator-org-devices-${encodeURIComponent(id ?? "")}`,
   allDevices: () => "operator-all-devices",
+  /** The history of one device across its schools (#2321). */
+  deviceHistory: (id: string) =>
+    `operator-device-history-${encodeURIComponent(id)}`,
   organizations: () => "operator-organizations",
   schoolSummaries: () => "operator-school-summaries",
   schoolRequiredDetails: () => "operator-school-required-details",

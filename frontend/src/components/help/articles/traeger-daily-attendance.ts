@@ -27,8 +27,8 @@ export function traegerDailyAttendanceTopic(): HelpTopic {
       "Wähle oben den Zeitraum. Am Anfang ist es die letzte Woche bis gestern. Ein Zeitraum hat höchstens 31 Tage.",
       "Lies oben die Zahlen: `Kinder am Tag`, `Verweildauer`, `Längster Tag` und `Abwesend gemeldet`.",
       "Lies unter `Je Tag`, wie viele Kinder an jedem Tag da waren und wie viele krank, entschuldigt oder auf Klassenfahrt waren.",
-      "Wähle oben den Filter `Schule`, um nur eine Schule zu sehen.",
-      "Wähle `Herunterladen` und dann `CSV`. Diese Datei reichst du beim Land ein. `PDF` und `Excel` sind für deine eigene Ablage.",
+      "Wähle oben neben dem Zeitraum eine Schule, um nur sie zu sehen.",
+      "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `CSV`. Diese Datei reichst du beim Land ein. `PDF` und `Excel` sind für deine eigene Ablage.",
     ],
     result:
       "Du hast die Datei mit einer Zeile je Kind und Tag. Sie enthält keine Namen.",

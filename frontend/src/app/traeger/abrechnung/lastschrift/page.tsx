@@ -16,8 +16,8 @@ import {
   SepaMandatesCard,
   useSepaMandates,
 } from "~/components/traeger/sepa-mandates-card";
-import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
-import { ButtonLink } from "~/components/ui/button";
+import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
+import { Upload } from "lucide-react";
 import type { FilterConfig } from "~/components/ui/page-header/types";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { ListSkeleton } from "~/components/ui/page-skeletons";
@@ -85,35 +85,35 @@ export default function TraegerLastschriftPage() {
     },
   ];
 
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/sepa-mandates/export", format),
+    scope:
+      "Alle Mandate, ohne Suche und Filter. Jeder Download wird protokolliert.",
+    fallbackName: "sepa-mandate",
+    errorObject: "die SEPA-Mandate",
+    unavailable: !mandates || mandates.length === 0,
+  });
   return (
     <TenantPage
       title={billingAreaTitle("lastschrift")}
       info={INFO}
       tabs={billingTabs("lastschrift")}
-      actions={
-        canBill ? (
-          <>
-            <TraegerListExportMenu
-              download={(format) =>
-                downloadTraegerList("/api/traeger/sepa-mandates/export", format)
-              }
-              scope="Alle Mandate, ohne Suche und Filter"
-              ariaLabel="SEPA-Mandate herunterladen"
-              tooltip="Zeigt die Formate für alle Mandate, ohne Suche und Filter. Jeder Download wird protokolliert."
-              fallbackName="sepa-mandate"
-              errorObject="die SEPA-Mandate"
-              unavailable={!mandates || mandates.length === 0}
-            />
-            <ButtonLink
-              href={traegerPath("/traeger/abrechnung/lastschrift/import")}
-              variant="outline"
-              size="md"
-              tooltip="Öffnet den Import bestehender Mandate aus einer CSV-Datei."
-            >
-              Mandate importieren
-            </ButtonLink>
-          </>
-        ) : null
+      overflowMenu={
+        canBill
+          ? [
+              ...exportItems,
+              { kind: "separator" },
+              {
+                label: "Mandate importieren",
+                description:
+                  "Öffnet den Import bestehender Mandate aus einer CSV-Datei.",
+                icon: <Upload className="h-4 w-4" aria-hidden />,
+                href: traegerPath("/traeger/abrechnung/lastschrift/import"),
+                onClick: () => undefined,
+              },
+            ]
+          : undefined
       }
       error={error}
       // A list loads in the shape of its rows.

@@ -49,6 +49,7 @@ const meta: Meta<typeof DevicesMasterDetail> = {
   args: {
     onSetBlocked: () => {},
     blockPending: false,
+    canManage: true,
   },
 };
 

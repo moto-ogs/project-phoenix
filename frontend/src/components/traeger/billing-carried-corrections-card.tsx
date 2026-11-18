@@ -13,6 +13,7 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
@@ -125,24 +126,28 @@ export function BillingCarriedCorrectionsCard({
                   </p>
                   <p className="text-gray-700">{row.carried.reason}</p>
                 </div>
-                <OverflowMenu
-                  ariaLabel={`Aktionen für die Korrektur von ${row.child.firstName} über ${formatEuro(row.carried.amountCents)}`}
-                  items={[
-                    {
-                      label: "Ändern",
-                      description:
-                        "Öffnet die Korrektur, um Betrag und Begründung zu ändern.",
-                      icon: <Pencil className="size-4" aria-hidden />,
-                      onClick: () => onChange(row.child, row.carried),
-                    },
-                    {
-                      label: "Entfernen",
-                      description:
-                        "Nimmt die Korrektur aus der neuen Rechnung. moto fragt vorher nach.",
-                      icon: <Trash2 className="size-4" aria-hidden />,
-                      onClick: () => setRemoving(row),
-                    },
-                  ]}
+                <ResponsiveRowActions
+                  menu={
+                    <OverflowMenu
+                      ariaLabel={`Aktionen für die Korrektur von ${row.child.firstName} über ${formatEuro(row.carried.amountCents)}`}
+                      items={[
+                        {
+                          label: "Ändern",
+                          description:
+                            "Öffnet die Korrektur, um Betrag und Begründung zu ändern.",
+                          icon: <Pencil className="size-4" aria-hidden />,
+                          onClick: () => onChange(row.child, row.carried),
+                        },
+                        {
+                          label: "Entfernen",
+                          description:
+                            "Nimmt die Korrektur aus der neuen Rechnung. moto fragt vorher nach.",
+                          icon: <Trash2 className="size-4" aria-hidden />,
+                          onClick: () => setRemoving(row),
+                        },
+                      ]}
+                    />
+                  }
                 />
               </ResponsiveActionRow>
             ))}

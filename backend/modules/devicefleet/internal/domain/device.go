@@ -19,6 +19,18 @@ type UpdateDevice struct {
 	RoomID                *int64
 	ArchivedAt            *time.Time
 	TransferredToDeviceID *int64
+	// RecordedBy records the edit's material changes in the history in
+	// the same statement.
+	RecordedBy *LifecycleRecord
+}
+
+// LifecycleRecord is the actor and time of a write that records itself in
+// the device's history (#2321).
+type LifecycleRecord struct {
+	ActorKind  string
+	AccountID  *int64
+	OperatorID *int64
+	OccurredAt time.Time
 }
 
 type OperationStats struct {

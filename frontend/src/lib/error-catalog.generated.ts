@@ -502,6 +502,8 @@ export const ERROR_CATALOG = {
         "Bitte gib eine E-Mail-Adresse ein.",
       "enrollment.guardian_name_required": "Bitte gib Vor- und Nachnamen ein.",
       "enrollment.guardian_phone_required": "Bitte gib eine Telefonnummer ein.",
+      "enrollment.health_consent_required":
+        "Du hast Gesundheitsangaben eingetragen. Setze dafür das Häkchen bei der Einwilligung für Gesundheitsangaben oder lass die Felder leer.",
       "enrollment.holiday_allocation_changed":
         "Die Liste hat sich geändert. Bitte prüfe deine Entscheidung neu.",
       "enrollment.holiday_allocation_full":
@@ -864,6 +866,8 @@ export const ERROR_CATALOG = {
         "Diese Geräte-ID ist schon vergeben. Bitte gib eine andere ein.",
       "iot.device_in_active_session":
         "Auf diesem Gerät läuft gerade eine Sitzung. Beende sie zuerst am Gerät, dann kannst du es entfernen.",
+      "iot.device_slots_full":
+        "Alle Geräteplätze deiner Schule sind belegt. Entferne ein Gerät, das du nicht mehr brauchst, oder melde dich beim moto-Team für weitere Plätze.",
       "iot.invalid_staff_clock_request":
         "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
       "iot.invalid_staff_clock_state":
@@ -1230,6 +1234,10 @@ export const ERROR_CATALOG = {
         "Dieses Systemgerät kann nicht gelöscht werden.",
       "provisioning.device_same_school":
         "Das Gerät gehört schon zu dieser Schule. Bitte wähle eine andere Schule.",
+      "provisioning.device_slots_below_occupied":
+        "So wenige Geräteplätze gehen nicht: belegt sind schon {occupied}. Entferne erst Geräte der Schule.",
+      "provisioning.device_slots_full":
+        "Alle Geräteplätze der Schule sind belegt. Erhöhe zuerst ihre Geräteplätze.",
       "provisioning.device_transfer_protected":
         "Dieses Systemgerät kann nicht umgezogen werden.",
       "provisioning.organization_already_deleted":
@@ -2499,6 +2507,8 @@ export const ERROR_CATALOG = {
       "enrollment.guardian_name_required":
         "Please enter the first and last name.",
       "enrollment.guardian_phone_required": "Please enter a phone number.",
+      "enrollment.health_consent_required":
+        "You entered health information. Tick the consent for health information or leave these fields empty.",
       "enrollment.holiday_allocation_changed":
         "The list has changed. Please check your decision again.",
       "enrollment.holiday_allocation_full":
@@ -3238,6 +3248,8 @@ export const ERROR_CATALOG = {
       "enrollment.guardian_email_required": "Укажите адрес электронной почты.",
       "enrollment.guardian_name_required": "Укажите имя и фамилию.",
       "enrollment.guardian_phone_required": "Укажите номер телефона.",
+      "enrollment.health_consent_required":
+        "Вы указали сведения о здоровье. Отметьте согласие на сведения о здоровье или оставьте эти поля пустыми.",
       "enrollment.holiday_allocation_changed":
         "Список изменился. Проверьте решение ещё раз.",
       "enrollment.holiday_allocation_full":
@@ -3879,6 +3891,8 @@ export const ERROR_CATALOG = {
         "Ju lutemi shkruani emrin dhe mbiemrin.",
       "enrollment.guardian_phone_required":
         "Ju lutemi shkruani një numër telefoni.",
+      "enrollment.health_consent_required":
+        "Keni shënuar të dhëna shëndetësore. Shënoni pëlqimin për të dhënat shëndetësore ose lërini këto fusha bosh.",
       "enrollment.holiday_allocation_changed":
         "Lista ndryshoi. Kontrolloni vendimin përsëri.",
       "enrollment.holiday_allocation_full":
@@ -4515,6 +4529,8 @@ export const ERROR_CATALOG = {
       "enrollment.guardian_email_required": "Wpisz adres e-mail.",
       "enrollment.guardian_name_required": "Wpisz imię i nazwisko.",
       "enrollment.guardian_phone_required": "Wpisz numer telefonu.",
+      "enrollment.health_consent_required":
+        "Podano informacje o zdrowiu. Zaznacz zgodę na informacje o zdrowiu albo pozostaw te pola puste.",
       "enrollment.holiday_allocation_changed":
         "Lista się zmieniła. Proszę ponownie sprawdzić decyzję.",
       "enrollment.holiday_allocation_full":
@@ -5152,6 +5168,8 @@ export const ERROR_CATALOG = {
       "enrollment.guardian_name_required": "Lütfen adı ve soyadı girin.",
       "enrollment.guardian_phone_required":
         "Lütfen bir telefon numarası girin.",
+      "enrollment.health_consent_required":
+        "Sağlık bilgisi girdiniz. Sağlık bilgileri için onay kutusunu işaretleyin veya bu alanları boş bırakın.",
       "enrollment.holiday_allocation_changed":
         "Liste değişti. Lütfen kararınızı yeniden kontrol edin.",
       "enrollment.holiday_allocation_full":
@@ -5783,6 +5801,8 @@ export const ERROR_CATALOG = {
       "enrollment.guardian_email_required": "Вкажіть адресу електронної пошти.",
       "enrollment.guardian_name_required": "Вкажіть ім'я та прізвище.",
       "enrollment.guardian_phone_required": "Вкажіть номер телефону.",
+      "enrollment.health_consent_required":
+        "Ви вказали відомості про здоров'я. Позначте згоду на відомості про здоров'я або залиште ці поля порожніми.",
       "enrollment.holiday_allocation_changed":
         "Список змінився. Перевірте рішення ще раз.",
       "enrollment.holiday_allocation_full":

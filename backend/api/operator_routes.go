@@ -302,6 +302,7 @@ func mountOperatorProvisioningRoutes(r chi.Router, provisioning *provisioningOpe
 		r.Post("/{id}/block", provisioning.BlockDevice)
 		r.Post("/{id}/unblock", provisioning.UnblockDevice)
 		r.Delete("/{id}", provisioning.DeleteDevice)
+		r.Get("/{id}/history", provisioning.AuditReadAccess(organizationtenancy.ReadDeviceHistory, provisioning.DeviceHistory))
 	})
 
 	r.Route("/organizations", func(r chi.Router) {
@@ -409,6 +410,7 @@ func mountOperatorSchoolRoutes(
 			r.Put("/override", mfaAdmin.SetSchoolAccountMFAOverride)
 		})
 		r.Get("/{id}/devices", provisioning.ListSchoolDevices)
+		r.Put("/{id}/device-slots", provisioning.SetSchoolDeviceSlots)
 		r.Get("/{id}/persons", provisioning.AuditReadAccess(organizationtenancy.ReadSchoolPersons, provisioning.ListSchoolPersons))
 		r.Get("/{id}/pwa-usage", provisioning.GetSchoolPWAUsage)
 		if demoPresenceHistory != nil {

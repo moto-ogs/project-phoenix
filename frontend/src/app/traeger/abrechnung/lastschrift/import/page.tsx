@@ -243,177 +243,175 @@ export default function TraegerSepaImportPage() {
       error={pageError}
       loading={loading}
     >
-      <div className="flex flex-col gap-6">
-        {done ? (
-          <div ref={focusOn("done")}>
-            <SectionCard>
-              <EmptyState
-                tone="success"
-                icon={<CheckCircle aria-hidden className="size-6" />}
-                titleAs="h2"
-                title={`${importChangesLabel(done.counts.imported, done.counts.debtorNumbers)} übernommen`}
-                description={`Mandate: ${done.counts.duplicate} schon vorhanden, ${done.counts.clarify + done.counts.conflict + done.counts.invalid} nicht übernommen. Du findest Mandate unter Lastschrift und Debitorennummern bei der Familie.`}
-                action={
-                  <div className="flex flex-wrap justify-center gap-3">
-                    <ButtonLink
-                      href={traegerPath(LASTSCHRIFT)}
-                      variant="primary"
-                      size="md"
-                      tooltip="Öffnet die Lastschrift mit allen Mandaten."
-                    >
-                      Zur Lastschrift
-                    </ButtonLink>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="md"
-                      onClick={restart}
-                      disabled={applying}
-                      tooltip="Startet einen neuen Import mit einer anderen Datei."
-                    >
-                      Weitere Datei laden
-                    </Button>
-                  </div>
-                }
-              />
-            </SectionCard>
-          </div>
-        ) : (
-          <>
-            <SectionCard>
-              <WizardStepper steps={STEPS} current={step} />
-            </SectionCard>
-            {missingCreditor ? (
-              <Alert
-                type="warning"
-                title="Zuerst die Gläubiger-ID eintragen"
-                message="Ein Mandat gilt immer für eine Gläubiger-ID. Trage deine unter Einstellungen → Abrechnung ein."
-                action={
+      {done ? (
+        <div ref={focusOn("done")}>
+          <SectionCard>
+            <EmptyState
+              tone="success"
+              icon={<CheckCircle aria-hidden className="size-6" />}
+              titleAs="h2"
+              title={`${importChangesLabel(done.counts.imported, done.counts.debtorNumbers)} übernommen`}
+              description={`Mandate: ${done.counts.duplicate} schon vorhanden, ${done.counts.clarify + done.counts.conflict + done.counts.invalid} nicht übernommen. Du findest Mandate unter Lastschrift und Debitorennummern bei der Familie.`}
+              action={
+                <div className="flex flex-wrap justify-center gap-3">
                   <ButtonLink
-                    href={traegerPath("/traeger/einstellungen/abrechnung")}
-                    variant="ghost_tone"
-                    size="compact"
-                    tooltip="Öffnet die Einstellungen der Abrechnung für die Gläubiger-ID."
+                    href={traegerPath(LASTSCHRIFT)}
+                    variant="primary"
+                    size="md"
+                    tooltip="Öffnet die Lastschrift mit allen Mandaten."
                   >
-                    Zu den Einstellungen
+                    Zur Lastschrift
                   </ButtonLink>
-                }
-              />
-            ) : null}
-            {file ? (
-              <SectionCard
-                title="Datei"
-                description={
-                  // A long file name without spaces breaks anywhere instead
-                  // of running past the card on a phone.
-                  <span className="wrap-anywhere">
-                    {result
-                      ? `${file.name} · ${importFormatLabel(result.encoding, result.delimiter)} · ${result.headers.length} Spalten`
-                      : file.name}
-                  </span>
-                }
-                action={
                   <Button
                     type="button"
                     variant="outline"
                     size="md"
                     onClick={restart}
                     disabled={applying}
-                    tooltip="Verwirft die gelesene Datei, ohne etwas zu übernehmen."
+                    tooltip="Startet einen neuen Import mit einer anderen Datei."
                   >
-                    Andere Datei
+                    Weitere Datei laden
                   </Button>
-                }
-              />
-            ) : (
-              <div ref={focusOn(0)}>
-                <SectionCard
-                  title="Datei wählen"
-                  description="Eine CSV-Datei mit einer Zeile je Mandat und Überschriften in der ersten Zeile."
+                </div>
+              }
+            />
+          </SectionCard>
+        </div>
+      ) : (
+        <>
+          <SectionCard>
+            <WizardStepper steps={STEPS} current={step} />
+          </SectionCard>
+          {missingCreditor ? (
+            <Alert
+              type="warning"
+              title="Zuerst die Gläubiger-ID eintragen"
+              message="Ein Mandat gilt immer für eine Gläubiger-ID. Trage deine unter Einstellungen → Abrechnung ein."
+              action={
+                <ButtonLink
+                  href={traegerPath("/traeger/einstellungen/abrechnung")}
+                  variant="surface"
+                  size="compact"
+                  tooltip="Öffnet die Einstellungen der Abrechnung für die Gläubiger-ID."
                 >
-                  <Dropzone
-                    accept=".csv,.txt,text/csv,text/plain"
-                    legend="CSV-Datei mit Mandaten"
-                    label="CSV-Datei hierher ziehen"
-                    dragLabel="Datei hier loslassen"
-                    buttonLabel="Datei wählen"
-                    hint="Bis 2 MB. Getrennt mit Semikolon oder Komma, aus Excel oder einem anderen Programm."
-                    loading={reading}
-                    loadingLabel="Datei wird gelesen …"
-                    disabled={missingCreditor || loading}
-                    onFile={choose}
-                  />
-                </SectionCard>
-              </div>
-            )}
-            {result ? (
-              <div ref={focusOn(1)}>
-                <SepaImportMappingCard
-                  headers={result.headers}
-                  mapping={result.mapping}
-                  unmapped={result.unmapped}
-                  creditorId={result.creditorId}
+                  Zu den Einstellungen
+                </ButtonLink>
+              }
+            />
+          ) : null}
+          {file ? (
+            <SectionCard
+              title="Datei"
+              description={
+                // A long file name without spaces breaks anywhere instead
+                // of running past the card on a phone.
+                <span className="wrap-anywhere">
+                  {result
+                    ? `${file.name} · ${importFormatLabel(result.encoding, result.delimiter)} · ${result.headers.length} Spalten`
+                    : file.name}
+                </span>
+              }
+              action={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  onClick={restart}
                   disabled={applying}
-                  onChange={remap}
+                  tooltip="Verwirft die gelesene Datei, ohne etwas zu übernehmen."
+                >
+                  Andere Datei
+                </Button>
+              }
+            />
+          ) : (
+            <div ref={focusOn(0)}>
+              <SectionCard
+                title="Datei wählen"
+                description="Eine CSV-Datei mit einer Zeile je Mandat und Überschriften in der ersten Zeile."
+              >
+                <Dropzone
+                  accept=".csv,.txt,text/csv,text/plain"
+                  legend="CSV-Datei mit Mandaten"
+                  label="CSV-Datei hierher ziehen"
+                  dragLabel="Datei hier loslassen"
+                  buttonLabel="Datei wählen"
+                  hint="Bis 2 MB. Getrennt mit Semikolon oder Komma, aus Excel oder einem anderen Programm."
+                  loading={reading}
+                  loadingLabel="Datei wird gelesen …"
+                  disabled={missingCreditor || loading}
+                  onFile={choose}
                 />
-              </div>
-            ) : null}
-            {file && !verified ? (
-              <Alert
-                type="info"
-                message={
-                  reading
-                    ? "Die Datei wird geprüft …"
-                    : "Die Datei ist noch nicht geprüft. Bitte prüfe erneut."
-                }
-                action={
-                  !reading ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="md"
-                      tooltip="Liest die Datei noch einmal und prüft jede Zeile."
-                      onClick={() =>
-                        void read(file, result?.mapping ?? null, answers)
-                      }
-                    >
-                      Erneut prüfen
-                    </Button>
-                  ) : undefined
-                }
+              </SectionCard>
+            </div>
+          )}
+          {result ? (
+            <div ref={focusOn(1)}>
+              <SepaImportMappingCard
+                headers={result.headers}
+                mapping={result.mapping}
+                unmapped={result.unmapped}
+                creditorId={result.creditorId}
+                disabled={applying}
+                onChange={remap}
               />
-            ) : null}
-            {result && result.unmapped.length === 0 ? (
-              <div ref={focusOn(2)}>
-                <SepaImportPreviewCard
-                  result={result}
-                  answers={answers}
-                  applying={applying}
-                  disabled={!verified}
-                  onAnswer={answer}
-                  onApply={() => void apply()}
-                />
-              </div>
-            ) : null}
-            {result && result.unmapped.length > 0 ? (
-              <Alert
-                type="info"
-                message={
-                  result.unmapped.includes("creditor_id") &&
-                  result.unmapped.length === 1
-                    ? "Bestätige die Gläubiger-ID. Dann zeigt moto die Zeilen."
-                    : "Ordne alle Pflichtfelder zu. Dann zeigt moto die Zeilen."
-                }
+            </div>
+          ) : null}
+          {file && !verified ? (
+            <Alert
+              type="info"
+              message={
+                reading
+                  ? "Die Datei wird geprüft …"
+                  : "Die Datei ist noch nicht geprüft. Bitte prüfe erneut."
+              }
+              action={
+                !reading ? (
+                  <Button
+                    type="button"
+                    variant="ghost_tone"
+                    size="compact"
+                    tooltip="Liest die Datei noch einmal und prüft jede Zeile."
+                    onClick={() =>
+                      void read(file, result?.mapping ?? null, answers)
+                    }
+                  >
+                    Erneut prüfen
+                  </Button>
+                ) : undefined
+              }
+            />
+          ) : null}
+          {result && result.unmapped.length === 0 ? (
+            <div ref={focusOn(2)}>
+              <SepaImportPreviewCard
+                result={result}
+                answers={answers}
+                applying={applying}
+                disabled={!verified}
+                onAnswer={answer}
+                onApply={() => void apply()}
               />
-            ) : null}
-          </>
-        )}
-        {logLoad.error ? (
-          <LoadErrorAlert error={logLoad.error} />
-        ) : log ? (
-          <SepaImportLogCard entries={log} />
-        ) : null}
-      </div>
+            </div>
+          ) : null}
+          {result && result.unmapped.length > 0 ? (
+            <Alert
+              type="info"
+              message={
+                result.unmapped.includes("creditor_id") &&
+                result.unmapped.length === 1
+                  ? "Bestätige die Gläubiger-ID. Dann zeigt moto die Zeilen."
+                  : "Ordne alle Pflichtfelder zu. Dann zeigt moto die Zeilen."
+              }
+            />
+          ) : null}
+        </>
+      )}
+      {logLoad.error ? (
+        <LoadErrorAlert error={logLoad.error} />
+      ) : log ? (
+        <SepaImportLogCard entries={log} />
+      ) : null}
     </TenantPage>
   );
 }

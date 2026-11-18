@@ -76,6 +76,22 @@ describe("PlanBlock", () => {
     expect(label).toHaveClass("line-through", "text-gray-600");
   });
 
+  it("dashes the frame and drops the tint for status=suggested", () => {
+    render(
+      <PlanBlock
+        timeRange="5 h"
+        label="Vorschlag"
+        color="#3F6F12"
+        status="suggested"
+      />,
+    );
+
+    const block = screen.getByRole("button");
+    expect(block).toHaveClass("border-dashed");
+    expect(block).toHaveStyle({ borderLeft: "3px solid #3F6F12" });
+    expect(block.style.backgroundColor).toBe("");
+  });
+
   it("shows the focus/selection ring when selected", () => {
     render(<PlanBlock timeRange="12:00–14:00" label="Mensa" selected />);
 
