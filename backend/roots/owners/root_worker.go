@@ -46,7 +46,6 @@ import (
 	settingsValues "github.com/moto-ogs/project-phoenix/modules/settings"
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
-	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	arrivalTimetable "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
@@ -110,9 +109,9 @@ func workerRetentionOf(
 		return workerRetention{}, err
 	}
 	steps = append(steps, surveyRetentionSteps(settings, surveys)...)
-	attendance, err := presenceCompose.New(presenceCompose.Dependencies{DB: db.Pool(), Observe: presenceCompose.FailureLogger(), Now: now})
+	attendance, err := newAttendanceRetention(db, now)
 	if err != nil {
-		return workerRetention{}, fmt.Errorf("compose worker attendance retention: %w", err)
+		return workerRetention{}, err
 	}
 	guardians, err := newGuardianRetention(db, identity, now)
 	if err != nil {

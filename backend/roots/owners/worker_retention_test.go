@@ -11,7 +11,6 @@ import (
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
-	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -82,7 +81,7 @@ func composeRetentionSuite(t *testing.T, now, staffClock func() time.Time) reten
 	require.NoError(t, err)
 	staff, err := newStaffRetention(db, audit, settings, staffClock, nil)
 	require.NoError(t, err)
-	attendance, err := presenceCompose.New(presenceCompose.Dependencies{DB: admin, Observe: func(presenceCompose.Observation) {}, Now: now})
+	attendance, err := newAttendanceRetention(db, now)
 	require.NoError(t, err)
 	invitations, err := identityaccessCompose.NewGuardianInvitationReads(admin, nil)
 	require.NoError(t, err)

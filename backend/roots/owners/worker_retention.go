@@ -249,6 +249,16 @@ type presenceRetention interface {
 	studentpresence.MorningAttendanceRetention
 }
 
+func newAttendanceRetention(db transactionruntime.Database, now func() time.Time) (presenceRetention, error) {
+	attendance, err := presenceCompose.New(presenceCompose.Dependencies{
+		DB: db.Pool(), Observe: presenceCompose.FailureLogger(), Now: now,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("compose worker attendance retention: %w", err)
+	}
+	return attendance, nil
+}
+
 // attendanceRetentionSteps are the deletions of the daily attendance (#3957)
 // and of the morning attendance (#4790), each after its school window.
 func attendanceRetentionSteps(attendance presenceRetention, settings settingsModule.StatisticsRetentionSource) []schedulerPorts.RetentionStep {
