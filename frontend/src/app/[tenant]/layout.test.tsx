@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { fireEvent, render as renderUi, screen } from "@testing-library/react";
 import type { PortalSessionSnapshot } from "~/lib/portal-session-snapshot.server";
+import { deferred } from "~/test/helpers/form-modal-pending";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { authMock, notFoundMock, readPortalSessionSnapshotMock } = vi.hoisted(
@@ -29,30 +30,8 @@ vi.mock("next/headers", () => ({
   headers: headersMock,
 }));
 
-// Stands in for Next's data cache: entries are keyed by keyParts and
-// arguments only, as in unstable_cache, and a throwing callback stores
-// nothing.
-const { cacheStore, unstableCacheMock } = vi.hoisted(() => {
-  const cacheStore = new Map<string, unknown>();
-  const unstableCacheMock = vi.fn(
-    (
-      cb: (...args: unknown[]) => Promise<unknown>,
-      keyParts: string[],
-      _options: { revalidate: number; tags: string[] },
-    ) =>
-      async (...args: unknown[]) => {
-        const key = JSON.stringify([keyParts, args]);
-        if (cacheStore.has(key)) return cacheStore.get(key);
-        const result = await cb(...args);
-        cacheStore.set(key, result);
-        return result;
-      },
-  );
-  return { cacheStore, unstableCacheMock };
-});
-vi.mock("next/cache", () => ({
-  unstable_cache: unstableCacheMock,
-}));
+const revalidateTagMock = vi.hoisted(() => vi.fn());
+vi.mock("next/cache", () => ({ revalidateTag: revalidateTagMock }));
 
 vi.mock("~/server/auth", async () =>
   (await import("~/test/portal-binding")).mockPortalModule("tenant", {
@@ -77,6 +56,11 @@ vi.mock("~/env", () => ({
 }));
 
 const { bareTenantHost, default: TenantLayout } = await import("./layout");
+const {
+  invalidateTenantResolve,
+  resolveTenantCached,
+  TenantResolveStatusError,
+} = await import("~/lib/tenant-resolve.server");
 const { setTestClock, TEST_CLOCK_INSTANT } = await import("~/test/clock");
 const navigation = await import("next/navigation");
 
@@ -89,8 +73,8 @@ beforeEach(() => {
   headersMock.mockImplementation(
     async () => new Headers({ host: "school-a.localhost:3000" }),
   );
-  cacheStore.clear();
-  unstableCacheMock.mockClear();
+  invalidateTenantResolve("school-a");
+  revalidateTagMock.mockClear();
   vi.restoreAllMocks();
 });
 
@@ -276,14 +260,73 @@ describe("TenantLayout", () => {
       "http://server:8080/auth/tenant/resolve?slug=school-a",
       { headers: {}, cache: "no-store" },
     );
-    // The lookup stays cached for five minutes under the slug and its
-    // revalidation tag, which the settings routes purge.
-    expect(unstableCacheMock).toHaveBeenCalledWith(
-      expect.any(Function),
-      ["tenant-resolve", "school-a"],
-      { revalidate: 300, tags: ["tenant-school-a"] },
-    );
   });
+
+  it("shares a refresh and waits for current tenant settings after 60 seconds", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(tenantResponse())
+      .mockResolvedValueOnce(
+        Response.json({ data: { name: "Updated school" } }),
+      );
+
+    expect((await resolveTenantCached("school-a", {})).name).toBe("School A");
+    setTestClock(new Date(TEST_CLOCK_INSTANT.getTime() + 60_000));
+    const results = await Promise.all([
+      resolveTenantCached("school-a", {}),
+      resolveTenantCached("school-a", {}),
+    ]);
+    expect(results.map((result) => result.name)).toEqual([
+      "Updated school",
+      "Updated school",
+    ]);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps fresh settings when a lookup started before invalidation finishes later", async () => {
+    const earlier = deferred<Response>();
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockReturnValueOnce(earlier.promise)
+      .mockResolvedValueOnce(
+        Response.json({ data: { name: "Updated school" } }),
+      );
+
+    const old = resolveTenantCached("school-a", {});
+    invalidateTenantResolve("school-a");
+    expect((await resolveTenantCached("school-a", {})).name).toBe(
+      "Updated school",
+    );
+    earlier.resolve(tenantResponse());
+    expect((await old).name).toBe("School A");
+    expect((await resolveTenantCached("school-a", {})).name).toBe(
+      "Updated school",
+    );
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(revalidateTagMock).toHaveBeenCalledWith("tenant-school-a", {
+      expire: 0,
+    });
+  });
+
+  it.each([404, 429])(
+    "preserves HTTP %s across bundles sharing a lookup",
+    async (status) => {
+      vi.resetModules();
+      const other = await import("~/lib/tenant-resolve.server");
+      expect(other.TenantResolveStatusError).not.toBe(TenantResolveStatusError);
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(new Response(null, { status }));
+
+      const first = resolveTenantCached("school-a", {});
+      const second = other.resolveTenantCached("school-a", {});
+      await Promise.all([
+        expect(first).rejects.toBeInstanceOf(TenantResolveStatusError),
+        expect(second).rejects.toBeInstanceOf(other.TenantResolveStatusError),
+      ]);
+      expect(fetchSpy).toHaveBeenCalledOnce();
+    },
+  );
 
   // #4803: the switch hides the single class list entry and the OGS areas
   // of a child; a mapping without it left the switch off in every page.
@@ -357,9 +400,6 @@ describe("TenantLayout", () => {
     await expect(render("198.51.100.9")).resolves.toBeTruthy();
 
     expect(fetchSpy).toHaveBeenCalledOnce();
-    for (const [, keyParts] of unstableCacheMock.mock.calls) {
-      expect(keyParts).toEqual(["tenant-resolve", "school-a"]);
-    }
   });
 
   it("asks the backend about an unknown tenant only once per minute", async () => {
