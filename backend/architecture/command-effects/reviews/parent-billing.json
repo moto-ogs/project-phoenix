@@ -237,19 +237,9 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.Letterhead",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/settings/compose.TraegerSettings.TraegerBools: whether the session's Träger prints the GiroCode on its letters (its value of parent_billing.transfer_code or the registry default, on), read in its Träger transaction for the confirmation letters, invoices and fee notices; off leaves the transfer code out (#5624).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/settings/compose.TraegerSettings.TraegerTextsAndBools: the colour, letterhead and footer and the payment text (#5622) of the session's Träger (its value or the registry default), read in its Träger transaction for the confirmation letters (ADR 0112, ADR 0121). The same binding then reads the Träger's template of the confirmation letter (#4677, ADR 0152). Reviewed again for #5691: the binding also copies the layout of the table of amounts from the template version it read; no read or write changes. Reviewed again for #5624: the same single read of the Träger's settings now also takes its switch of the GiroCode (parent_billing.transfer_code or the registry default, on); off leaves the transfer code out of every letter. No write, no further statement.",
       "source_owner": "parent-billing",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerBools",
-      "target_owner": "settings-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.Letterhead",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.Letterhead",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/settings/compose.TraegerSettings.TraegerTexts: the colour, letterhead and footer and the payment text (#5622) of the session's Träger (its value or the registry default), read in its Träger transaction for the confirmation letters (ADR 0112, ADR 0121). The same binding then reads the Träger's template of the confirmation letter (#4677, ADR 0152). Reviewed again for #5691: the binding also copies the layout of the table of amounts from the template version it read; no read or write changes. Reviewed again for #5624: the binding also reads the Träger's switch of the GiroCode; this read is unchanged.",
-      "source_owner": "parent-billing",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTexts",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTextsAndBools",
       "target_owner": "settings-platform"
     },
     {

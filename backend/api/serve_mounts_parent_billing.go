@@ -395,10 +395,10 @@ func (b parentBillingLetterheads) Letterhead(ctx context.Context, reviewer paren
 	if err != nil {
 		return parentbilling.Letterhead{}, err
 	}
-	texts, err := b.settings.TraegerTexts(ctx, reviewer.OrganizationID, []string{
+	texts, switches, err := b.settings.TraegerTextsAndBools(ctx, reviewer.OrganizationID, []string{
 		configModels.KeyBrandingPrimaryColor, configModels.KeyBrandingLetterheadText, configModels.KeyBrandingFooterText,
 		configModels.KeyParentBillingPaymentText,
-	})
+	}, []string{configModels.KeyParentBillingTransferCode})
 	if err != nil {
 		return parentbilling.Letterhead{}, err
 	}
@@ -407,10 +407,6 @@ func (b parentBillingLetterheads) Letterhead(ctx context.Context, reviewer paren
 		FooterText: texts[configModels.KeyBrandingFooterText], ContactName: profile.Contact.Name,
 		ContactPhone: profile.Contact.Phone, ContactEmail: profile.Contact.Email,
 		PaymentText: texts[configModels.KeyParentBillingPaymentText],
-	}
-	switches, err := b.settings.TraegerBools(ctx, reviewer.OrganizationID, []string{configModels.KeyParentBillingTransferCode})
-	if err != nil {
-		return parentbilling.Letterhead{}, err
 	}
 	head.WithoutTransferCode = !switches[configModels.KeyParentBillingTransferCode]
 	template, err := b.templates.Current(ctx, reviewer.OrganizationID, templates.KindConfirmation)
