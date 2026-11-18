@@ -13,6 +13,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/class-list-entries/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/files/folders/{folderId}",
       "portals": [
         "tenant"
@@ -273,6 +281,20 @@
         "org"
       ],
       "no_data": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/class-list-entries/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ClassListEntryResponse"
+        }
+      }
     },
     {
       "method": "GET",
@@ -798,6 +820,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/school-setup/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "Status"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/staff-messages/",
       "portals": [
         "tenant"
@@ -850,6 +883,17 @@
       "response": {
         "kind": "ref",
         "ref": "unreadCountResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff-onboarding/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StaffStatus"
       }
     },
     {
@@ -1815,6 +1859,33 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/class-list-entries/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ClassListEntryRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ClassListEntryResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/class-list-entries/{id}/assign",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ClassListAssignRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "POST",
       "pattern": "/api/files/folders",
       "portals": [
         "tenant"
@@ -2132,6 +2203,17 @@
         "tenant"
       ],
       "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/school-setup/complete",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "Status"
+      }
     },
     {
       "method": "POST",
@@ -2790,6 +2872,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/class-list-entries/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ClassListEntryRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ClassListEntryResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/files/folders/{folderId}",
       "portals": [
         "tenant"
@@ -2895,6 +2992,36 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/school-setup/dismissal",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "dismissalRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "Status"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/school-setup/steps/{step}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "skipRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "Status"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/staff-messages/threads/{threadID}/name",
       "portals": [
         "tenant"
@@ -2906,6 +3033,36 @@
       "response": {
         "kind": "ref",
         "ref": "ThreadDetailResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/staff-onboarding/dismissal",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "dismissalRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StaffStatus"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/staff-onboarding/steps/{step}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "stepStateRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StaffStatus"
       }
     },
     {
@@ -4354,6 +4511,24 @@
       ]
     },
     {
+      "name": "Basics",
+      "go_type": "schoolsetup.Basics",
+      "fields": [
+        {
+          "name": "presence_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_mode",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "Block",
       "go_type": "templates.Block",
       "fields": [
@@ -4549,6 +4724,94 @@
             "nullable": true,
             "elem": {
               "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassListAssignRequest",
+      "go_type": "classlistentries.ClassListAssignRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassListEntryRequest",
+      "go_type": "classlistentries.ClassListEntryRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassListEntryResponse",
+      "go_type": "classlistentries.ClassListEntryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "matching_student_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
             }
           }
         }
@@ -11102,6 +11365,110 @@
       ]
     },
     {
+      "name": "StaffStatus",
+      "go_type": "schoolsetup.StaffStatus",
+      "fields": [
+        {
+          "name": "dismissed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "school_ready",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "done_steps",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "skipped_steps",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Status",
+      "go_type": "schoolsetup.Status",
+      "fields": [
+        {
+          "name": "completed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "dismissed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "basics",
+          "schema": {
+            "kind": "ref",
+            "ref": "Basics"
+          }
+        },
+        {
+          "name": "steps",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Step"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step",
+      "go_type": "schoolsetup.Step",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "applies",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "done",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "skipped",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "StudentConsentResponse",
       "go_type": "presenceprojectionhttp.StudentConsentResponse",
       "fields": [
@@ -14606,6 +14973,20 @@
       ]
     },
     {
+      "name": "dismissalRequest",
+      "go_type": "schoolsetuphttp.dismissalRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "dismissed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "emailSubscriptionResponse",
       "go_type": "notifications.emailSubscriptionResponse",
       "fields": [
@@ -15690,6 +16071,20 @@
       ]
     },
     {
+      "name": "skipRequest",
+      "go_type": "schoolsetuphttp.skipRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "skipped",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "startOperationResponse",
       "go_type": "timetablehttp.startOperationResponse",
       "fields": [
@@ -15750,6 +16145,20 @@
           "name": "recorded",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "stepStateRequest",
+      "go_type": "schoolsetuphttp.stepStateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "state",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

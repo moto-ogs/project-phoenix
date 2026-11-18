@@ -250,3 +250,36 @@ func TestClassListEntriesCompositionKeepsTheDisplayOrder(t *testing.T) {
 	assert.Less(t, strings.Index(body, "Ärger"), strings.Index(body, "Zander"), "Ä sorts with A in German collation")
 	assert.Less(t, strings.Index(body, "Zander"), strings.Index(body, "Berg"), "grade 2 sorts before grade 10")
 }
+
+// An entry entered by mistake is removed through the production route; the
+// list no longer holds it and the trail names the removal (#2382).
+func TestClassListEntriesCompositionRemovesAnEntry(t *testing.T) {
+	t.Parallel()
+	db, router := setupClassListEntriesRoute(t)
+	claims := classListEntryClaims(t, db, "cle-remove")
+	mounted := testpkg.MountedQueryBudgetRouter("/api/class-list-entries", router)
+	className := fmt.Sprintf("rm%d", time.Now().UnixNano()%100000)
+
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(fmt.Sprintf(`{"first_name":"Ida","last_name":"Irrtum","school_class":"%s"}`, className)))
+	req.Header.Set("Content-Type", "application/json")
+	rec := testutil.ExecuteWithAuthPermissions(t, mounted, req, claims, []string{"users:create"})
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	var created struct {
+		Data struct {
+			ID int64 `json:"id,string"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))
+
+	req = httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/%d", created.Data.ID), nil)
+	rec = testutil.ExecuteWithAuthPermissions(t, mounted, req, claims, []string{"users:delete"})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	req = httptest.NewRequest(http.MethodGet, "/", nil)
+	rec = testutil.ExecuteWithAuthPermissions(t, mounted, req, claims, []string{"users:read"})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.NotContains(t, rec.Body.String(), fmt.Sprintf(`"id":"%d"`, created.Data.ID))
+	trail := classListEntryTrail(t, db, created.Data.ID)
+	require.NotEmpty(t, trail)
+	assert.Equal(t, "deleted", trail[len(trail)-1].Action)
+}

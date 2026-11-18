@@ -755,6 +755,11 @@ export interface InvitationAnswer {
   occurrence_date?: string | null;
 }
 
+/** Go: schoolsetuphttp.dismissalRequest */
+export interface dismissalRequest {
+  dismissed?: boolean;
+}
+
 /** Go: staffmessaging.InboxThreadResponse */
 export interface InboxThreadResponse {
   thread_id: string;

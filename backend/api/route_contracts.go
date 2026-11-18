@@ -24,6 +24,9 @@ import (
 	guardiansHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
 	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
+	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
+	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
+	schoolSetupHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsetup/http"
 	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	workforceTraegerStaff "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	worktimemodelsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/worktimemodels"
@@ -59,6 +62,8 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/api/rooms", roomsHTTP.RouteContracts()},
 		{"/api/traeger-documents", organizationTenancyTraeger.SchoolDocumentRouteContracts()},
 		{"/api/meal-caterer", catererPortalHTTP.SchoolRouteContracts()},
+		{"/api/class-list-entries", classListEntryRouteContracts()},
+		{"/api", schoolSetupRouteContracts()},
 		// The platform announcements' http role may not import the contract
 		// types; the root names their answer.
 		{"/api/platform", []common.RouteContract{
@@ -194,6 +199,37 @@ func guardianRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/students/{studentId}/email-status", Portals: portals, Response: types.EmailStatuses},
 		{Method: "POST", Pattern: "/students/{studentId}/invite", Portals: portals, Request: types.InviteRequest, Response: types.Invite},
 		{Method: "PUT", Pattern: "/students/{studentId}/payer", Portals: portals, Request: types.PayerRequest, NoData: true},
+	}
+}
+
+// classListEntryRouteContracts registers the class list entries (#2352),
+// with patterns relative to /api/class-list-entries. School Membership's
+// http role may not import the contract types.
+func classListEntryRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalTenant}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: portals, Response: []classListHTTP.ClassListEntryResponse{}},
+		{Method: "POST", Pattern: "/", Portals: portals, Request: classListHTTP.ClassListEntryRequest{}, Response: classListHTTP.ClassListEntryResponse{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: classListHTTP.ClassListEntryRequest{}, Response: classListHTTP.ClassListEntryResponse{}},
+		{Method: "DELETE", Pattern: "/{id}", Portals: portals, NoData: true},
+		{Method: "POST", Pattern: "/{id}/assign", Portals: portals, Request: classListHTTP.ClassListAssignRequest{}, NoData: true},
+	}
+}
+
+// schoolSetupRouteContracts registers the onboarding wizard of a school
+// (#2832) and the first steps of a care worker (#3748), with patterns
+// relative to /api. Every write answers the fresh state.
+func schoolSetupRouteContracts() []common.RouteContract {
+	types := schoolSetupHTTP.RouteContractTypes()
+	portals := []common.PortalScope{common.PortalTenant}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/school-setup/", Portals: portals, Response: schoolsetup.Status{}},
+		{Method: "PUT", Pattern: "/school-setup/steps/{step}", Portals: portals, Request: types.Skip, Response: schoolsetup.Status{}},
+		{Method: "POST", Pattern: "/school-setup/complete", Portals: portals, Response: schoolsetup.Status{}},
+		{Method: "PUT", Pattern: "/school-setup/dismissal", Portals: portals, Request: types.Dismissal, Response: schoolsetup.Status{}},
+		{Method: "GET", Pattern: "/staff-onboarding/", Portals: portals, Response: schoolsetup.StaffStatus{}},
+		{Method: "PUT", Pattern: "/staff-onboarding/steps/{step}", Portals: portals, Request: types.StepState, Response: schoolsetup.StaffStatus{}},
+		{Method: "PUT", Pattern: "/staff-onboarding/dismissal", Portals: portals, Request: types.Dismissal, Response: schoolsetup.StaffStatus{}},
 	}
 }
 
