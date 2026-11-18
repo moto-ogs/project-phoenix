@@ -11063,7 +11063,7 @@ export const traegerAccessLogTopic =
           description: "Für einen Nachweis, zum Ablegen oder für eine Tabelle.",
           steps: [
             "Stelle die Filter ein.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "moto lädt eine Datei mit allen Einträgen zu den Filtern herunter.",
           ],
         },
@@ -11139,7 +11139,7 @@ export const traegerAccountsTopic = function traegerAccountsTopic(): HelpTopic {
         steps: [
           "Wähle unten in der Navigation `Einstellungen`.",
           "Wähle `Mitglieder und Rollen`.",
-          "Wähle oben `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Personen und offenen Einladungen.",
+          "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Personen und offenen Einladungen.",
           "Den Verlauf lädst du mit `Herunterladen` beim `Verlauf` herunter.",
         ],
       },
@@ -12820,7 +12820,7 @@ export const traegerDashboardTopic =
         "Wähle dort `Zur Schule`, um die Schule anzusehen.",
         "Lies unter `Zahlen je Schule` die Zahlen jeder Schule.",
         "Wähle eine Schule, um ihre Zahlen und Stammdaten zu sehen.",
-        "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Hast du bei `Auffälligkeiten` eine Schule gewählt, enthält die Datei nur diese Schule.",
+        "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Hast du bei `Auffälligkeiten` eine Schule gewählt, enthält die Datei nur diese Schule.",
       ],
       result:
         "Du siehst für jede Schule, wie viele Kinder gerade da sind, wie viele heute krank sind, wie viele Betreuungskräfte angemeldet sind und wie viele Anmeldungen offen sind.",
@@ -12833,13 +12833,13 @@ export const traegerDashboardTopic =
         "`Betreuungsschlüssel` heißt: Eine anwesende Betreuungskraft kommt auf so viele anwesende Kinder. Oben gilt das für alle Schulen zusammen.",
         "`Auffälligkeiten` kennt drei Hinweise: `Zu wenig Personal`, `Viele Krankmeldungen` und `Offene Anmeldungen`. In der Tabelle sind die Zahlen dazu gelb mit einem Warnzeichen.",
         "Mit dem Feld `Alle Schulen` zeigst du nur die Hinweise einer Schule.",
-        "Ab wann eine Schule auffällt, legst du selbst fest. Wähle dazu `Grenzen ändern`. Mehr dazu steht im Artikel `Einstellungen für alle Schulen festlegen`.",
+        "Ab wann eine Schule auffällt, legst du selbst fest. Wähle dazu `Grenzen bearbeiten`. Mehr dazu steht im Artikel `Einstellungen für alle Schulen festlegen`.",
         "`Offene Anmeldungen` zählt die Kinder aus der Online-Anmeldung, über die die Schule noch nicht entschieden hat.",
       ],
       differences: [
         "`Betreuungskräfte` zählt nur, wer sich in der Zeiterfassung angemeldet hat. Homeoffice zählt nicht. Nutzt eine Schule die Zeiterfassung nicht, steht dort 0 und beim Schlüssel `–`.",
         "Ohne das Recht `In OGS wechseln` fehlt die Aktion `Schul-App öffnen`. Die Zahlen siehst du trotzdem.",
-        "Ohne das Recht, Einstellungen zu ändern, steht dort `Grenzen ansehen` statt `Grenzen ändern`.",
+        "Ohne das Recht, Einstellungen zu ändern, steht dort `Grenzen ansehen` statt `Grenzen bearbeiten`.",
         "Steht unter `Auffälligkeiten` „Gerade ist an keiner Schule etwas auffällig.“? Dann erreicht keine Schule deine Grenzen.",
       ],
       related: [
@@ -13054,7 +13054,7 @@ export const traegerDocumentTemplatesTopic =
           steps: [
             "Wähle unten in der Navigation `Einstellungen`.",
             "Wähle `Briefkopf und Vorlagen` und dann `Vorlagen`.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Datei zeigt für jedes Dokument, ob es die Standardvorlage oder eine eigene Vorlage nutzt.",
           ],
         },
@@ -14202,7 +14202,7 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
     result: "moto öffnet die Seite `Schulen` mit allen Schulen deines Trägers.",
     notes: [
       "Lege dir die Adresse als Lesezeichen an.",
-      "Die Liste der Schulen lädst du mit `Herunterladen` als `PDF`, `Excel` oder `CSV` herunter.",
+      "Die Liste der Schulen lädst du über das Drei-Punkte-Menü oben rechts herunter. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
       "Ein neues Passwort gilt auch für dein Konto in der OGS.",
     ],
     differences: [
@@ -14402,6 +14402,7 @@ export const traegerProfileTopic = function traegerProfileTopic(): HelpTopic {
     steps: [
       "Öffne oben rechts das Profil-Menü.",
       "Wähle `Konto`.",
+      "Wähle bei `Name` den Knopf `Bearbeiten`.",
       "Trage bei `Dein Name` deinen Namen ein.",
       "Wähle `Speichern`.",
     ],

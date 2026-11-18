@@ -1,11 +1,14 @@
 "use client";
 
 // Konto-Seite des Träger-Portals (#4693): die Anmelde-Adresse zum Lesen und
-// der eigene Name in diesem Träger-Büro. Den Namen zeigen das
+// der eigene Name in diesem Träger-Büro, gelesen und bearbeitet wie auf der
+// Profilseite der Schul-App (#7416). Den Namen zeigen das
 // Exportprotokoll und der Verlauf jeder Rechnung statt einer E-Mail-Adresse.
 // Passwort und Code gehören zum moto-Konto und haben hier keine Karte.
 
 import { useRef, useState } from "react";
+import { Pencil } from "lucide-react";
+import { Button } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
@@ -31,7 +34,10 @@ import {
 
 const logger = createLogger({ component: "TraegerAccountPage" });
 
-/** The own name: shown in a field, saved with „Speichern“ (no autosave). */
+/**
+ * The own name, like the profile page of the school app: read first,
+ * „Bearbeiten“ opens the field, „Speichern“ saves it (no autosave).
+ */
 function NameCard({
   name,
   onSaved,
@@ -39,13 +45,12 @@ function NameCard({
   name: string;
   onSaved: (profile: TraegerProfile) => void;
 }>) {
+  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { success } = useToast();
-
-  const changed = draft !== name;
 
   const submit = async () => {
     formErrors.clear();
@@ -67,48 +72,75 @@ function NameCard({
       return;
     }
     setSaving(false);
-    // The field shows what the backend keeps (trimmed).
-    setDraft(saved.name);
+    setEditing(false);
     onSaved(saved);
     success("Dein Name ist gespeichert.");
   };
 
   return (
-    <SectionCard title="Name" description={TRAEGER_NAME_HINT}>
-      <form
-        ref={formRef}
-        noValidate
-        className="max-w-xl space-y-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void submit();
-        }}
-      >
-        <FormErrorAlert message={formErrors.error} />
-        <Input
-          controlSize="compact"
-          id="traeger-profile-name"
-          label="Dein Name"
-          name="name"
-          autoComplete="name"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          error={formErrors.fieldError("name")}
-          maxLength={TRAEGER_NAME_MAX_LENGTH}
-          disabled={saving}
-          required
-        />
-        {changed ? (
+    <SectionCard
+      title="Name"
+      description={TRAEGER_NAME_HINT}
+      actions={
+        editing ? undefined : (
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            className="gap-1.5"
+            tooltip="Zeigt das Feld, um deinen Namen zu ändern."
+            onClick={() => {
+              setDraft(name);
+              setEditing(true);
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+            Bearbeiten
+          </Button>
+        )
+      }
+    >
+      {editing ? (
+        <form
+          ref={formRef}
+          noValidate
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
+          }}
+        >
+          <FormErrorAlert message={formErrors.error} />
+          <Input
+            controlSize="compact"
+            id="traeger-profile-name"
+            label="Dein Name"
+            name="name"
+            autoComplete="name"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            error={formErrors.fieldError("name")}
+            maxLength={TRAEGER_NAME_MAX_LENGTH}
+            disabled={saving}
+            required
+          />
           <EditActions
             onCancel={() => {
+              setEditing(false);
               setDraft(name);
               formErrors.clear();
             }}
             saving={saving}
             saveType="submit"
           />
-        ) : null}
-      </form>
+        </form>
+      ) : (
+        <DataGrid>
+          <DataField label="Dein Name" fullWidth>
+            {name || "–"}
+          </DataField>
+        </DataGrid>
+      )}
     </SectionCard>
   );
 }

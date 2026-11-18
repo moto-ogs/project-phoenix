@@ -9,11 +9,9 @@ import { useState } from "react";
 import { History } from "lucide-react";
 import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
-import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { SectionCard } from "~/components/ui/section-card";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
@@ -166,59 +164,56 @@ export function TraegerAccountHistory({
     }
   };
 
+  if (error) {
+    return <LoadErrorAlert error={error} actionLayout="responsive" />;
+  }
+
   return (
-    <SectionCard
-      title="Verlauf"
-      description="Wer wann Personen eingeladen, Rollen oder Namen geändert oder entfernt hat. Nur zum Lesen."
-      action={
-        <TraegerListExportMenu
-          download={(format) =>
-            downloadTraegerList("/api/traeger/accounts/history/export", format)
-          }
-          scope="Träger-Büro"
-          ariaLabel="Verlauf herunterladen"
-          fallbackName="verlauf-traeger-buero"
-          errorObject="den Verlauf"
-          unavailable={loading || entries.length === 0}
-          onError={onExportError}
+    <DataTable
+      heading={{
+        title: "Verlauf",
+        level: 2,
+        action: (
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerList(
+                "/api/traeger/accounts/history/export",
+                format,
+              )
+            }
+            scope="Träger-Büro"
+            ariaLabel="Verlauf herunterladen"
+            fallbackName="verlauf-traeger-buero"
+            errorObject="den Verlauf"
+            unavailable={loading || entries.length === 0}
+            onError={onExportError}
+          />
+        ),
+      }}
+      columns={COLUMNS}
+      rows={[...entries]}
+      getRowKey={(entry) => entry.id}
+      isLoading={loading}
+      loadingRowCount={3}
+      stackedOnMobile
+      // Older entries load inside the list's surface, like every list.
+      moreAction={
+        hasMore && !loading
+          ? {
+              label: "Ältere Einträge laden",
+              onClick: () => void loadMore(),
+              tooltip: "Zeigt weitere, ältere Änderungen unten in der Liste.",
+              loading: loadingMore,
+              loadingText: "Lädt …",
+            }
+          : undefined
+      }
+      emptyState={
+        <EmptyState
+          icon={<History className="h-12 w-12" aria-hidden="true" />}
+          title="Noch keine Änderungen im Träger-Büro."
         />
       }
-    >
-      {error ? (
-        <LoadErrorAlert error={error} actionLayout="responsive" />
-      ) : (
-        <div className="flex flex-col gap-4">
-          <DataTable
-            columns={COLUMNS}
-            rows={[...entries]}
-            getRowKey={(entry) => entry.id}
-            isLoading={loading}
-            loadingRowCount={3}
-            stackedOnMobile
-            emptyState={
-              <EmptyState
-                icon={<History className="h-12 w-12" aria-hidden="true" />}
-                title="Noch keine Änderungen im Träger-Büro."
-              />
-            }
-          />
-          {hasMore && !loading ? (
-            <div className="flex justify-center">
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                isLoading={loadingMore}
-                loadingText="Lädt …"
-                tooltip="Zeigt weitere, ältere Änderungen unten in der Liste."
-                onClick={() => void loadMore()}
-              >
-                Ältere Einträge laden
-              </Button>
-            </div>
-          ) : null}
-        </div>
-      )}
-    </SectionCard>
+    />
   );
 }

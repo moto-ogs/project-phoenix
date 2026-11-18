@@ -8,7 +8,7 @@
 import { FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
-  TraegerListExportMenu,
+  useTraegerListExportItems,
   traegerExportScope,
 } from "~/components/traeger/traeger-list-export-menu";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -92,6 +92,17 @@ export default function TraegerVorlagenPage() {
   );
 
   const own = templates?.filter((template) => !template.standard).length ?? 0;
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList(
+        "/api/traeger/master-data/document-templates/export",
+        format,
+      ),
+    scope: traegerExportScope(),
+    fallbackName: "vorlagen",
+    errorObject: "die Liste der Vorlagen",
+    unavailable: !templates || templates.length === 0,
+  });
 
   return (
     <TenantPage
@@ -114,21 +125,7 @@ export default function TraegerVorlagenPage() {
         ) : null
       }
       statsLoading={loading}
-      actions={
-        <TraegerListExportMenu
-          download={(format) =>
-            downloadTraegerList(
-              "/api/traeger/master-data/document-templates/export",
-              format,
-            )
-          }
-          scope={traegerExportScope()}
-          ariaLabel="Vorlagen herunterladen"
-          fallbackName="vorlagen"
-          errorObject="die Liste der Vorlagen"
-          unavailable={!templates || templates.length === 0}
-        />
-      }
+      overflowMenu={exportItems}
       error={error}
       loading={loading}
     >

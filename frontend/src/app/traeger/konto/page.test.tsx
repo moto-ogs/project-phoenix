@@ -52,12 +52,17 @@ describe("TraegerAccountPage", () => {
     expect(
       await screen.findByText("kasse@traeger.example"),
     ).toBeInTheDocument();
-    const field = screen.getByRole("textbox", { name: /Dein Name/ });
-    // Anker: das Feld ist da; gespeichert wird erst nach einer Änderung.
-    expect(field).toHaveValue("");
+    // Read first, like the profile page of the school app (#7416): no field,
+    // no save, until „Bearbeiten“.
+    expect(
+      screen.queryByRole("textbox", { name: /Dein Name/ }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Speichern" }),
     ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    const field = screen.getByRole("textbox", { name: /Dein Name/ });
+    expect(field).toHaveValue("");
 
     fireEvent.change(field, { target: { value: " Karl Kasse " } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
@@ -68,24 +73,41 @@ describe("TraegerAccountPage", () => {
     expect(
       await screen.findByText("Dein Name ist gespeichert."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: /Dein Name/ })).toHaveValue(
-      "Karl Kasse",
-    );
+    // Back in the read state with what the backend keeps (trimmed).
+    expect(await screen.findByText("Karl Kasse")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: /Dein Name/ }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Speichern" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("drops the draft on „Abbrechen“", async () => {
+    api.fetchTraegerProfile.mockResolvedValue({ ...PROFILE, name: "Karl" });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
+    fireEvent.change(screen.getByRole("textbox", { name: /Dein Name/ }), {
+      target: { value: "Kurt" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+
+    expect(screen.getByText("Karl")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: /Dein Name/ }),
+    ).not.toBeInTheDocument();
+    expect(api.changeTraegerProfileName).not.toHaveBeenCalled();
   });
 
   it("asks for a name before it saves", async () => {
     api.fetchTraegerProfile.mockResolvedValue({ ...PROFILE, name: "Karl" });
     renderPage();
 
-    fireEvent.change(
-      await screen.findByRole("textbox", { name: /Dein Name/ }),
-      {
-        target: { value: "   " },
-      },
-    );
+    fireEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
+    fireEvent.change(screen.getByRole("textbox", { name: /Dein Name/ }), {
+      target: { value: "   " },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(
@@ -103,12 +125,10 @@ describe("TraegerAccountPage", () => {
     );
     renderPage();
 
-    fireEvent.change(
-      await screen.findByRole("textbox", { name: /Dein Name/ }),
-      {
-        target: { value: "Karl\u0007" },
-      },
-    );
+    fireEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
+    fireEvent.change(screen.getByRole("textbox", { name: /Dein Name/ }), {
+      target: { value: "Karl\u0007" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>

@@ -34,7 +34,7 @@ export function traegerAccessLogTopic(): HelpTopic {
         description: "Für einen Nachweis, zum Ablegen oder für eine Tabelle.",
         steps: [
           "Stelle die Filter ein.",
-          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
           "moto lädt eine Datei mit allen Einträgen zu den Filtern herunter.",
         ],
       },
