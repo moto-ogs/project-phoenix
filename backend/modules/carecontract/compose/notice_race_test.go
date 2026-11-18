@@ -34,6 +34,12 @@ func (r holdingRuntime) WithinTraeger(ctx context.Context, organizationID int64,
 
 type noticeTemplatesDouble struct{}
 
+type noticeSenderDouble struct{}
+
+func (noticeSenderDouble) TraegerLetterhead(context.Context, int64) (string, error) {
+	return "Träger e.V.\nMusterweg 1", nil
+}
+
 func (noticeTemplatesDouble) NoticeTemplate(context.Context, int64, string) (string, error) {
 	return "Kündigung für {Kind} zum {Vertragsende}. {Träger}", nil
 }
@@ -67,7 +73,7 @@ func TestTerminationHoldsTheLockAndTheAmendmentAddsNoVersion(t *testing.T) {
 	school := changedSchool{school: carecontract.School{ID: 0, Name: "OGS Am Lindenhof"}}
 	notices := compose.NewNotices(compose.ContractPorts{Holidays: holidaysDouble{}, Letterheads: letterheadDouble{}, Post: &postDouble{}, Runtime: runtime, Access: school,
 		Ledger: ledgerDouble{}, Links: testSigningLinks()},
-		compose.NoticePorts{Holidays: holidaysDouble{}, Templates: noticeTemplatesDouble{}, Post: &noticePostDouble{}}, time.Now)
+		compose.NoticePorts{Holidays: holidaysDouble{}, Templates: noticeTemplatesDouble{}, Post: &noticePostDouble{}, Sender: noticeSenderDouble{}}, time.Now)
 	terminated := make(chan error, 1)
 	go func() {
 		_, err := notices.DeclareNotice(f.ctx, carecontract.Reviewer{OrganizationID: f.organization, AccountID: account}, f.contract,

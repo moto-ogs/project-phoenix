@@ -129,5 +129,6 @@
   "export_recipient_invalid": "Der Empfänger wurde nicht gespeichert. Bitte prüfen Sie die markierten Angaben.",
   "export_recipient_not_found": "Diesen Empfänger gibt es nicht mehr. Bitte laden Sie die Seite neu.",
   "export_recipient_name_taken": "Einen Empfänger mit diesem Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
-  "export_formats_invalid": "Die Zuordnung wurde nicht gespeichert. Bitte laden Sie die Seite neu und versuchen Sie es noch einmal."
+  "export_formats_invalid": "Die Zuordnung wurde nicht gespeichert. Bitte laden Sie die Seite neu und versuchen Sie es noch einmal.",
+  "letterhead_missing": "Der Absender im Briefkopf fehlt. Ohne Name und Anschrift des Trägers entstehen keine Rechnungen oder Bescheide. Bitte tragen Sie ihn unter „Briefkopf und Vorlagen“ ein."
 }

@@ -33,6 +33,11 @@ type endDecision struct {
 	permitted []string
 }
 
+type endNoticeMailTarget struct {
+	address       string
+	notSentReason string
+}
+
 // SetNoticeEnd sets the last day of a contract the parents terminated
 // extraordinarily, once the Träger-Büro checked their reason (#4682,
 // § 312k Abs. 2 BGB). The end lies on or after the day the declaration
@@ -158,29 +163,25 @@ func (n *Notices) decideEnd(ctx context.Context, reviewer carecontract.Reviewer,
 // decision in the trail. The notice goes to the address of the
 // confirmation, else the contract's newest mailing or party address, but
 // only to one that still belongs to a guardian whose relationship to the
-// child grants the enrollment submission. Without such an address no mail
-// goes out; the decision stands and the office sees that the parents got
-// no notice (Notice.EndNoticeSent).
+// child grants the enrollment submission. Without a complete letterhead or
+// such an address no mail goes out; the decision stands and the office sees
+// that the parents got no notice (Notice.EndNoticeSent).
 func (n *Notices) tellEnd(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord, state ports.NoticeState,
 	decision endDecision, endsOn calendar.Date, traeger, text string) error {
 	org, notice := reviewer.OrganizationID, state.Notice
 	party, _ := recipient(record.Parties)
 	details := map[string]any{"ends_on": endsOn.String(), "termination_kind": notice.TerminationKind, "notice_id": state.NoticeID}
-	address, err := n.endAddress(ctx, org, record, notice.Recipient, party.Email, decision.permitted)
+	target, err := n.endNoticeMailTarget(ctx, org, record, state, decision)
 	if err != nil {
 		return err
 	}
-	details["notice_sent"] = address != ""
-	if address == "" {
-		reason := carecontract.EndNoticeNoPermittedAddress
-		if state.StudentID == nil {
-			reason = carecontract.EndNoticeMissingStudent
-		}
-		details["notice_not_sent_reason"] = reason
+	details["notice_sent"] = target.address != ""
+	if target.notSentReason != "" {
+		details["notice_not_sent_reason"] = target.notSentReason
 	}
-	if address != "" {
+	if target.address != "" {
 		outboxID, err := n.post.EnqueueNoticeMail(ctx, carecontract.NoticeMail{
-			OrganizationID: org, ContractID: record.Summary.ID, Recipient: address,
+			OrganizationID: org, ContractID: record.Summary.ID, Recipient: target.address,
 			GuardianName: fullName(party.FirstName, party.LastName), TraegerName: traeger, Kind: notice.Kind,
 			Decision: decision.decision, ConfirmationText: text, IdempotencyKey: fmt.Sprintf("care-contract-notice-end:%d", state.NoticeID),
 		})
@@ -197,6 +198,32 @@ func (n *Notices) tellEnd(ctx context.Context, reviewer carecontract.Reviewer, r
 		action = ActionRejectReason
 	}
 	return trailContract(ctx, n.store, org, reviewer.AccountID, record, action, details)
+}
+
+// endNoticeMailTarget decides whether the parents can receive the decided-end
+// mail, without turning an unavailable mail into a failed end decision.
+func (n *Notices) endNoticeMailTarget(ctx context.Context, organizationID int64, record ContractRecord, state ports.NoticeState,
+	decision endDecision) (endNoticeMailTarget, error) {
+	letterhead, err := n.sender.TraegerLetterhead(ctx, organizationID)
+	if err != nil {
+		return endNoticeMailTarget{}, fmt.Errorf("care contract: letterhead: %w", err)
+	}
+	if letterheadMissing(letterhead) {
+		return endNoticeMailTarget{notSentReason: carecontract.EndNoticeLetterheadMissing}, nil
+	}
+	party, _ := recipient(record.Parties)
+	address, err := n.endAddress(ctx, organizationID, record, state.Notice.Recipient, party.Email, decision.permitted)
+	if err != nil {
+		return endNoticeMailTarget{}, err
+	}
+	if address != "" {
+		return endNoticeMailTarget{address: address}, nil
+	}
+	reason := carecontract.EndNoticeNoPermittedAddress
+	if state.StudentID == nil {
+		reason = carecontract.EndNoticeMissingStudent
+	}
+	return endNoticeMailTarget{notSentReason: reason}, nil
 }
 
 // endAddress is the first of the confirmation's address, the contract's

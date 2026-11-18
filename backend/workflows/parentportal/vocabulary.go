@@ -150,6 +150,7 @@ var (
 	ErrContractSignatureInvalid         = care.ErrContractSignatureInvalid
 	ErrContractNotSignable              = care.ErrContractNotSignable
 	ErrContractWithdrawalNoticeRequired = care.ErrContractWithdrawalNoticeRequired
+	ErrContractLetterheadMissing        = care.ErrContractLetterheadMissing
 	ErrAnnouncementAckNotRequired       = messaging.ErrAnnouncementAckNotRequired
 	ErrAnnouncementNotAPoll             = messaging.ErrAnnouncementNotAPoll
 	ErrAnnouncementNotFound             = messaging.ErrAnnouncementNotFound

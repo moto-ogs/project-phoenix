@@ -52,6 +52,17 @@ func renderSignatureError(w http.ResponseWriter, r *http.Request, err error) {
 	renderError(w, r, err)
 }
 
+// renderParentSignatureError answers the parents on the link. A signature the
+// Träger's missing letterhead holds back tells them the Träger has to act,
+// not to edit the office's letterhead they cannot reach (#7177).
+func renderParentSignatureError(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, carecontract.ErrLetterheadMissing) {
+		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeCareContractSigningLetterheadMissing))
+		return
+	}
+	renderSignatureError(w, r, err)
+}
+
 // paperFormOverhead leaves room for the form fields beside the PDF.
 const paperFormOverhead = 64 << 10
 
@@ -178,7 +189,7 @@ func (rs *SigningResource) sign(w http.ResponseWriter, r *http.Request) {
 	}
 	view, err := rs.signing.SignByLink(r.Context(), chi.URLParam(r, "link"), req.SignatureInput)
 	if err != nil {
-		renderSignatureError(w, r, err)
+		renderParentSignatureError(w, r, err)
 		return
 	}
 	common.Respond(w, r, http.StatusOK, view, "Vertrag unterschrieben")

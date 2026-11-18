@@ -467,6 +467,9 @@ func (l *CareLetters) letterhead(ctx context.Context, reviewer parentbilling.Hol
 	if head.BankAccount == nil {
 		return parentbilling.Letterhead{}, parentbilling.ErrBankAccountMissing
 	}
+	if missingSender(head) {
+		return parentbilling.Letterhead{}, parentbilling.ErrLetterheadMissing
+	}
 	return head, nil
 }
 

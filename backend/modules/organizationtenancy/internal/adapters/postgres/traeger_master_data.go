@@ -117,6 +117,7 @@ const (
 	listTraegerBankAccountsQuery = `SELECT ` + traegerBankAccountColumns + ` FROM platform.traeger_bank_accounts
 		WHERE organization_id = ?
 		ORDER BY is_default DESC, id`
+	traegerHasBankAccountQuery    = `SELECT EXISTS (SELECT 1 FROM platform.traeger_bank_accounts WHERE organization_id = ?)`
 	insertTraegerBankAccountQuery = `INSERT INTO platform.traeger_bank_accounts
 		(organization_id, label, account_holder, iban, bic, bank_name, is_default, created_by, updated_by)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -328,6 +329,22 @@ func (s *TraegerMasterDataStore) ListBankAccounts(ctx context.Context, organizat
 		accounts = append(accounts, row.toDomain())
 	}
 	return accounts, nil
+}
+
+// HasBankAccount tells whether the Träger has a bank account, without
+// reading one and without a log: no person reads an account (#7177).
+// Deleting the default makes another one the default, so any account is one
+// the letters name.
+func (s *TraegerMasterDataStore) HasBankAccount(ctx context.Context, organizationID int64) (bool, error) {
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return false, err
+	}
+	var exists bool
+	if err := db.NewRaw(traegerHasBankAccountQuery, organizationID).Scan(ctx, &exists); err != nil {
+		return false, fmt.Errorf("organization tenancy postgres: check Träger bank account: %w", err)
+	}
+	return exists, nil
 }
 
 // InsertBankAccount adds a bank account.
