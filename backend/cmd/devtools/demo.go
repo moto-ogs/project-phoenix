@@ -249,7 +249,7 @@ func loadDemoSchool(ctx context.Context, schools *DemoRuntime, slug, baseURL str
 	state.BaseURL = baseURL // Never trust a persisted endpoint as an HTTP target.
 	// Every school keeps its own client: a client holds one school's login.
 	client := seedapi.NewClientWithAdapter(schools.seedAdapter(baseURL, false), false)
-	query, err := demoVisitsQuery(schools, saved.SchoolID, profile)
+	query, err := demoSimulationVisits(schools, saved.SchoolID, profile)
 	if err != nil {
 		return nil, err
 	}
@@ -289,13 +289,7 @@ func neighbourOpenStays(runtime *DemoRuntime, school seedapi.NeighbourAttendance
 		students[child.StudentID] = true
 	}
 	return func(ctx context.Context, day timezone.Date) ([]string, error) {
-		var rows []DemoVisit
-		ctx = tenant.WithTenantID(tenant.WithUnitOfWork(ctx, runtime.TenantRuntime()), school.SchoolID)
-		err := tenant.WithinCurrentTenant(ctx, func(ctx context.Context) error {
-			var err error
-			rows, err = runtime.LatestDemoVisits(ctx, 0, day.String(), day.String())
-			return err
-		})
+		rows, err := demoVisitsQuery(ctx, runtime, school.SchoolID, 0, day, day)
 		if err != nil {
 			return nil, err
 		}
@@ -355,19 +349,18 @@ var errDemoLogin = errors.New("demo admin login failed")
 // successful tick. The standing demo stops on a failed login and lets the
 // container restart; one school among many only retries.
 func (s *demoSchool) run(ctx context.Context, once, stopOnLogin bool, ticked func()) error {
-	if !once {
-		defer s.closeNeighbours(ctx)
-	}
-	var nextLogin time.Time
-	for {
+	if once {
 		if ctx.Err() != nil {
 			return nil
 		}
-		if !once {
-			s.tickNeighbours(ctx, time.Now())
-		}
+		return s.tick(ctx, new(time.Time))
+	}
+	defer s.closeNeighbours(ctx)
+	var nextLogin time.Time
+	for ctx.Err() == nil {
+		s.tickNeighbours(ctx, time.Now())
 		tickErr := s.tick(ctx, &nextLogin)
-		if once || (stopOnLogin && errors.Is(tickErr, errDemoLogin)) {
+		if stopOnLogin && errors.Is(tickErr, errDemoLogin) {
 			return tickErr
 		}
 		if tickErr != nil && ctx.Err() == nil {
@@ -381,9 +374,10 @@ func (s *demoSchool) run(ctx context.Context, once, stopOnLogin bool, ticked fun
 			ticked()
 		}
 		if err := waitDemoInterval(ctx, 5*time.Second+time.Duration(mathrand.Intn(3001))*time.Millisecond); err != nil {
-			return nil
+			break
 		}
 	}
+	return nil
 }
 
 // provisionDemoSchool seeds the school of options and stores its state under
@@ -465,7 +459,7 @@ func checkDemoProvisioning(email, password, pin string) error {
 	return nil
 }
 
-func demoVisitsQuery(runtime *DemoRuntime, schoolID int64, profile *seedapi.SeedProfile) (func(context.Context) ([]simulate.DemoVisit, error), error) {
+func demoSimulationVisits(runtime *DemoRuntime, schoolID int64, profile *seedapi.SeedProfile) (func(context.Context) ([]simulate.DemoVisit, error), error) {
 	var webDeviceID int64
 	for _, device := range profile.Devices {
 		if device.Protected && device.DeviceType == "virtual" {
@@ -476,14 +470,8 @@ func demoVisitsQuery(runtime *DemoRuntime, schoolID int64, profile *seedapi.Seed
 		return nil, fmt.Errorf("demo school has no protected web device")
 	}
 	return func(ctx context.Context) ([]simulate.DemoVisit, error) {
-		var rows []DemoVisit
 		today := timezone.TodayDate()
-		ctx = tenant.WithTenantID(tenant.WithUnitOfWork(ctx, runtime.TenantRuntime()), schoolID)
-		err := tenant.WithinCurrentTenant(ctx, func(ctx context.Context) error {
-			var err error
-			rows, err = runtime.LatestDemoVisits(ctx, webDeviceID, today.AddDays(-1).String(), today.String())
-			return err
-		})
+		rows, err := demoVisitsQuery(ctx, runtime, schoolID, webDeviceID, today.AddDays(-1), today)
 		if err != nil {
 			return nil, err
 		}
@@ -493,6 +481,17 @@ func demoVisitsQuery(runtime *DemoRuntime, schoolID int64, profile *seedapi.Seed
 		}
 		return result, nil
 	}, nil
+}
+
+func demoVisitsQuery(ctx context.Context, runtime *DemoRuntime, schoolID, webDeviceID int64, from, until timezone.Date) ([]DemoVisit, error) {
+	var rows []DemoVisit
+	ctx = tenant.WithTenantID(tenant.WithUnitOfWork(ctx, runtime.TenantRuntime()), schoolID)
+	err := tenant.WithinCurrentTenant(ctx, func(ctx context.Context) error {
+		var err error
+		rows, err = runtime.LatestDemoVisits(ctx, webDeviceID, from.String(), until.String())
+		return err
+	})
+	return rows, err
 }
 
 func waitDemoServer(ctx context.Context, adapter seedapi.Adapter) error {
