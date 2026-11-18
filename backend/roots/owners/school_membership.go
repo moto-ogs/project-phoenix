@@ -11,13 +11,12 @@ import (
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // NewSchoolMembership composes the School Membership owner for test graphs
 // and CLI roots that record no observations. The serving root composes the
 // observed owner (composeSchoolMembership) so runtime evidence is kept. An
-// optional clock pins the day its writes decide on.
+// optional clock supplies both instants and Berlin calendar days.
 func NewSchoolMembership(db transactionruntime.Database, clocks ...func() time.Time) (schoolmembership.Capability, error) {
 	employment, err := workforceCompose.NewStaffEmployment(db.Pool(), nil)
 	if err != nil {
@@ -28,7 +27,7 @@ func NewSchoolMembership(db transactionruntime.Database, clocks ...func() time.T
 		Observe:    func(schoolMembershipCompose.Observation) {},
 		Employment: MembershipStaffEmployment(employment),
 		ChildQuota: organizationCompose.NewChildQuotaLimits(),
-		Today:      calendar.CalendarDateClock(clocks...),
+		Now:        firstClock(clocks),
 	})
 }
 
