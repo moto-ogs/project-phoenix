@@ -33,7 +33,7 @@ export const HomeBlockPlacementSchema: z.ZodType<HomeBlockPlacement, unknown> = 
   row: safeInt,
 });
 
-/** Go: settingshttp.HomeLayoutResponse */
+/** Go: api.HomeLayoutResponse */
 export interface HomeLayoutResponse {
   overrides: Record<string, boolean> | null;
   blocks: HomeBlockPlacement[] | null;

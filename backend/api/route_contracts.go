@@ -18,7 +18,6 @@ import (
 	enrollmentHTTP "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	roomsHTTP "github.com/moto-ogs/project-phoenix/modules/facilities/http"
 	filestoreAPI "github.com/moto-ogs/project-phoenix/modules/filestorage/http/files"
-	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	mealplanHTTP "github.com/moto-ogs/project-phoenix/modules/mealplan/http"
 	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
 	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
@@ -29,7 +28,6 @@ import (
 	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
 	schoolSetupHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsetup/http"
-	settingsHTTP "github.com/moto-ogs/project-phoenix/modules/settings/http"
 	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	workforceModule "github.com/moto-ogs/project-phoenix/modules/workforce"
 	absencetypesHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/absencetypes"
@@ -42,24 +40,16 @@ import (
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
 )
 
-// contractRegistrations lists every typed registration under its mount and
-// refuses one the route catalog does not know.
-func contractRegistrations() ([]contract.Registration, error) {
-	mounts := []struct {
-		prefix string
-		routes []common.RouteContract
-	}{
-		{"/api/students", projectionStudentsHTTP.StudentRouteContracts()},
-		// The projection renders the answer of Care Plan's student writes
-		// (studentHTTPResources binds it), so its type is named here.
-		{"/api/students", careStudentsHTTP.StudentWriteContracts(projectionStudentsHTTP.StudentResponse{})},
-		{"/parent", parentAPI.MeRouteContracts()},
-		{"/api/notifications", notificationRouteContracts(common.PortalTenant)},
-		{"/school/class-day", classdayHTTP.RouteContracts()},
-		{"/school/notifications", notificationRouteContracts(common.PortalSchool)},
-		{"/api/parent-announcements", announcementAPI.RouteContracts(common.PortalTenant)},
-		{"/school/parent-letters", announcementAPI.RouteContracts(common.PortalSchool)},
-		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
+// contractMount is the routes one owner registers under their mount.
+type contractMount struct {
+	prefix string
+	routes []common.RouteContract
+}
+
+// staffPortalContractMounts lists the staff portal's routes that left their
+// pass-through route files in #2352.
+func staffPortalContractMounts() []contractMount {
+	return []contractMount{
 		{"/api/surveys", announcementAPI.SurveyRouteContracts()},
 		{"/api/messages", parentMessagingAPI.RouteContracts()},
 		{"/api/guardians", guardianRouteContracts()},
@@ -73,7 +63,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/api", schoolSetupRouteContracts()},
 		{"/api/staff-pool", workforceTraegerStaff.SchoolPoolRouteContracts()},
 		{"/api", mealPlanRouteContracts()},
-		{"/api/settings", settingsHTTP.RouteContracts()},
+		{"/api/settings", settingsRouteContracts()},
 		// The platform announcements' http role may not import the contract
 		// types; the root names their answer.
 		{"/api/platform", []common.RouteContract{
@@ -84,6 +74,24 @@ func contractRegistrations() ([]contract.Registration, error) {
 		// answers no data.
 		{"/api/pwa", []common.RouteContract{{Method: "POST", Pattern: "/usage", Portals: []common.PortalScope{common.PortalTenant}, NoData: true}}},
 		{"/api/announcement-attachments", filestoreAPI.AnnouncementAttachmentRouteContracts()},
+	}
+}
+
+// contractRegistrations lists every typed registration under its mount and
+// refuses one the route catalog does not know.
+func contractRegistrations() ([]contract.Registration, error) {
+	mounts := []contractMount{
+		{"/api/students", projectionStudentsHTTP.StudentRouteContracts()},
+		// The projection renders the answer of Care Plan's student writes
+		// (studentHTTPResources binds it), so its type is named here.
+		{"/api/students", careStudentsHTTP.StudentWriteContracts(projectionStudentsHTTP.StudentResponse{})},
+		{"/parent", parentAPI.MeRouteContracts()},
+		{"/api/notifications", notificationRouteContracts(common.PortalTenant)},
+		{"/school/class-day", classdayHTTP.RouteContracts()},
+		{"/school/notifications", notificationRouteContracts(common.PortalSchool)},
+		{"/api/parent-announcements", announcementAPI.RouteContracts(common.PortalTenant)},
+		{"/school/parent-letters", announcementAPI.RouteContracts(common.PortalSchool)},
+		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
 		{"/api/time-tracking", timeTrackingRouteContracts()},
 		{"/api/work-time-models", worktimemodelsHTTP.RouteContracts()},
 		// Class Day owns the child sheet the supervision route answers with.
@@ -102,6 +110,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/caterer", catererPortalHTTP.RouteContracts()},
 		{"/caterer/notifications", schoolFeedRouteContracts(common.PortalCaterer)},
 	}
+	mounts = append(mounts, staffPortalContractMounts()...)
 	catalog, err := RouteCatalog()
 	if err != nil {
 		return nil, err
@@ -147,8 +156,8 @@ func ContractDocument() (contract.Document, error) {
 		// A corrected break names its id as a number or a decimal string.
 		reflect.TypeFor[workforceModule.BreakDurationUpdate](): contract.ReadsLaxIDs,
 	}
-	// Appointments and the meal plan keep their own day types.
-	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date](), reflect.TypeFor[mealplan.Date]()}
+	// Appointments keeps its own day type.
+	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date]()}
 	return contract.Build(registrations, options)
 }
 

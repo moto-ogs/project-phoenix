@@ -11,7 +11,7 @@ import {
 
 /** Go: mealplan.BillingMonthSummary */
 export interface BillingMonthSummary {
-  month: string | null;
+  month: string;
   status: string;
   released_at: string | null;
   child_count: number | null;
@@ -19,7 +19,7 @@ export interface BillingMonthSummary {
 }
 
 export const BillingMonthSummarySchema: z.ZodType<BillingMonthSummary, unknown> = z.object({
-  month: calendarDate.nullable(),
+  month: z.string(),
   status: z.string(),
   released_at: instant.nullable(),
   child_count: safeInt.nullable(),
@@ -34,7 +34,7 @@ export interface BillingMonthChild {
   school_class: string;
   registered_days: number;
   meal_days: number;
-  absent_dates: (string | null)[] | null;
+  absent_dates: string[] | null;
 }
 
 export const BillingMonthChildSchema: z.ZodType<BillingMonthChild, unknown> = z.object({
@@ -44,7 +44,7 @@ export const BillingMonthChildSchema: z.ZodType<BillingMonthChild, unknown> = z.
   school_class: z.string(),
   registered_days: safeInt,
   meal_days: safeInt,
-  absent_dates: z.array(calendarDate.nullable()).nullable(),
+  absent_dates: z.array(z.string()).nullable(),
 });
 
 /** Go: mealplan.BillingMonthReleaseEntry */
@@ -66,7 +66,7 @@ export const BillingMonthReleaseEntrySchema: z.ZodType<BillingMonthReleaseEntry,
 
 /** Go: mealplan.BillingMonthState */
 export interface BillingMonthState {
-  month: string | null;
+  month: string;
   status: string;
   school_days: number;
   released_at: string | null;
@@ -80,7 +80,7 @@ export interface BillingMonthState {
 }
 
 export const BillingMonthStateSchema: z.ZodType<BillingMonthState, unknown> = z.object({
-  month: calendarDate.nullable(),
+  month: calendarDate,
   status: z.string(),
   school_days: safeInt,
   released_at: instant.nullable(),
@@ -95,7 +95,7 @@ export const BillingMonthStateSchema: z.ZodType<BillingMonthState, unknown> = z.
 
 /** Go: mealplan.BillingMonthResponse */
 export interface BillingMonthResponse {
-  month: string | null;
+  month: string;
   status: string;
   school_days: number;
   released_at: string | null;
@@ -110,7 +110,7 @@ export interface BillingMonthResponse {
 }
 
 export const BillingMonthResponseSchema: z.ZodType<BillingMonthResponse, unknown> = z.object({
-  month: calendarDate.nullable(),
+  month: calendarDate,
   status: z.string(),
   school_days: safeInt,
   released_at: instant.nullable(),

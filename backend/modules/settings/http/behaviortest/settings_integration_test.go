@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"net/http"
 	"testing"
 
@@ -51,9 +50,8 @@ func setupSettingsModuleWithHook(t *testing.T, hook *settingsValueSetHook) *sett
 			return testpkg.Tenant(t), 1, []string{"config:read", "config:update", "config:manage"}
 		},
 		Editable: func(context.Context) bool { return true },
-		// The shared envelope, so every answer is held to the contract.
-		Success:   common.Respond,
-		NoContent: common.RespondNoContent,
+		Success:   testutil.RespondSuccess,
+		NoContent: testutil.RespondNoContent,
 		Failure:   testutil.RespondError,
 	})
 	homeLayouts, ok := svc.Settings.(settingsHTTP.HomeLayoutOperations)

@@ -5367,8 +5367,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "date",
-              "nullable": true
+              "kind": "string"
             }
           }
         }
@@ -5454,8 +5453,7 @@
         {
           "name": "month",
           "schema": {
-            "kind": "date",
-            "nullable": true
+            "kind": "date"
           }
         },
         {
@@ -5546,8 +5544,7 @@
         {
           "name": "month",
           "schema": {
-            "kind": "date",
-            "nullable": true
+            "kind": "date"
           }
         },
         {
@@ -5630,8 +5627,7 @@
         {
           "name": "month",
           "schema": {
-            "kind": "date",
-            "nullable": true
+            "kind": "string"
           }
         },
         {
@@ -8732,7 +8728,7 @@
     },
     {
       "name": "HomeLayoutResponse",
-      "go_type": "settingshttp.HomeLayoutResponse",
+      "go_type": "api.HomeLayoutResponse",
       "fields": [
         {
           "name": "overrides",

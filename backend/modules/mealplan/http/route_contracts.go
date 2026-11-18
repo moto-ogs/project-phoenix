@@ -15,7 +15,7 @@ type ScheduleChangedResponse struct {
 // BillingMonthState is a Mensa month as the routes render it, without the
 // month as computed now.
 type BillingMonthState struct {
-	Month        mealplanModule.Date                       `json:"month"`
+	Month        string                                    `json:"month" contract:"date"`
 	Status       mealplanModule.BillingMonthStatus         `json:"status"`
 	SchoolDays   int                                       `json:"school_days"`
 	ReleasedAt   *time.Time                                `json:"released_at"`
@@ -37,7 +37,7 @@ type BillingMonthResponse struct {
 
 func billingMonthState(m mealplanModule.BillingMonth) BillingMonthState {
 	return BillingMonthState{
-		Month: m.Month, Status: m.Status, SchoolDays: m.SchoolDays, ReleasedAt: m.ReleasedAt, ChildCount: m.ChildCount,
+		Month: string(m.Month), Status: m.Status, SchoolDays: m.SchoolDays, ReleasedAt: m.ReleasedAt, ChildCount: m.ChildCount,
 		MealCount: m.MealCount, AbsenceCount: m.AbsenceCount, Children: m.Children, Fingerprint: m.Fingerprint,
 		Version: m.Version, Releases: m.Releases,
 	}
