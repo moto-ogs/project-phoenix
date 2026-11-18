@@ -27,7 +27,7 @@ The serving backend receives a credential-free endpoint:
 production and `sslmode=disable` in staging. These match the tracked Compose
 topology and encrypted maintenance DSN endpoints. `GetServeDSN` adds only
 `PHOENIX_AUTH_PASSWORD`, using URL encoding. The privileged SOPS `DB_DSN`
-is passed only to the one-shot `migrate` and `bank-data-rekey` services.
+is passed only to the one-shot `migrate`, `bank-data-rekey` and `upload-seal` services.
 Bank keys must be provisioned via SOPS before merge; see ADR 0183.
 
 Local development still combines migration and hot reload in its existing
@@ -71,7 +71,10 @@ enabled by the deployment service.
    `maintenance` profile excludes the job from normal `up`; explicitly running
    the service enables it. CI pins all backend service images to the same SHA. The separate
    `bank-data-rekey` maintenance job receives the bank rings with the privileged
-   DSN; the exact all-organization invocation is in ADR 0183.
+   DSN; the exact all-organization invocation is in ADR 0183. The
+   `upload-seal` maintenance job receives the privileged DSN, the health and
+   bank rings and exactly the server's uploads volume; it seals the stored
+   sick notes, payslips and child health documents per school (ADR 0289).
 2. Run `scripts/env-check.sh`. It checks SOPS key parity, example keys, parsed
    Compose allowlists, credential-free serve DSNs, and fail-fast bindings.
    `python3 scripts/check-runtime-env.py --revision HEAD` can test a historical
