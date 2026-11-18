@@ -1,10 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import {
-  DocumentAttachmentList,
-  type AttachmentLabels,
-} from "~/components/enrollment/attachment-list";
+import type { AttachmentLabels } from "~/components/enrollment/attachment-list";
 import { formatDateTime } from "~/components/enrollment/enrollment-request-display";
 import { Alert } from "~/components/ui/alert";
 import { FramedList } from "~/components/ui/framed-list";
@@ -22,6 +19,12 @@ import type {
 const LegalMarkdown = dynamic(() =>
   import("~/components/enrollment/legal-markdown").then(
     (module) => module.LegalMarkdown,
+  ),
+);
+
+const DocumentAttachmentList = dynamic(() =>
+  import("~/components/enrollment/attachment-list").then(
+    (module) => module.DocumentAttachmentList,
   ),
 );
 
@@ -130,10 +133,12 @@ function LegalEvidenceBlock({
             <p className="font-medium text-gray-900">{block.label}</p>
           )}
           {block.text && <LegalMarkdown text={block.text} />}
-          <DocumentAttachmentList
-            attachments={block.attachments}
-            labels={ATTACHMENT_LABELS}
-          />
+          {block.attachments?.length ? (
+            <DocumentAttachmentList
+              attachments={block.attachments}
+              labels={ATTACHMENT_LABELS}
+            />
+          ) : null}
           {storedLocales.length ? (
             <details>
               <summary className="cursor-pointer py-2 font-medium text-gray-900">

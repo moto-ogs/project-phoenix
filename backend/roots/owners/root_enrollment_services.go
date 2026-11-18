@@ -170,6 +170,7 @@ func BuildEnrollmentFlows(
 ) EnrollmentFlows {
 	records, links := enrollment.Bookings, env.Links
 	capacity := NewEnrollmentOfferingCapacity(notices.CareOfferings, records, settings, env.Today)
+	legalPDFFingerprint := NewEnrollmentLegalPDFFingerprint(uploads)
 	return EnrollmentFlows{
 		Capacity: capacity,
 		Intake: NewEnrollmentIntake(EnrollmentIntakeSources{
@@ -178,8 +179,9 @@ func BuildEnrollmentFlows(
 			Capacity: capacity, Catalog: records, SchoolRepo: EnrollmentSchoolDirectory{Schools: organizations},
 			Notifications: notices.Notifications, StudentRepo: people.Students,
 			GuardianHold:  NewEnrollmentGuardianHold(db, people.StudentGuardians, people.Students, people.GuardianProfiles, nil),
-			RateLimitRepo: records, Uploads: records, LegalFiles: uploads, OutboxEnqueuer: intakeMailOutbox(outbox), Settings: settings,
-			AdminSubscribers: NewEnrollmentAdminSubscribers(consent, identity), ManualDecider: decisions,
+			RateLimitRepo: records, Uploads: records, OutboxEnqueuer: intakeMailOutbox(outbox), Settings: settings,
+			LegalPDFFingerprint: legalPDFFingerprint,
+			AdminSubscribers:    NewEnrollmentAdminSubscribers(consent, identity), ManualDecider: decisions,
 			FrontendURL: links.FrontendURL, ParentsURL: links.ParentsURL, Logger: env.Logger.With("service", "enrollment-request"),
 			FamilyChildrenPurpose:  NewEnrollmentFamilyChildrenPurpose(organizations),
 			LockTemplateRecurrence: owner.RecurrenceLock.LockRecurrenceWrites, Now: env.Now,
@@ -200,7 +202,7 @@ func BuildEnrollmentFlows(
 			GuardianHold: NewEnrollmentGuardianHold(db, people.StudentGuardians, people.Students, people.GuardianProfiles, carePlanRows.Companions),
 			Decisions:    decisions, BookingGates: offerings.Bookings,
 			CompanionGraphLocker: companionGraphCoordinator{CompanionLocks: carePlanRows.Companions, strandings: people.Students},
-			LegalFiles:           uploads,
+			LegalPDFFingerprint:  legalPDFFingerprint,
 			Settings:             settings, OutboxEnqueuer: intakeMailOutbox(outbox), FrontendURL: links.FrontendURL, ParentsURL: links.ParentsURL,
 			Logger:                 env.Logger.With("service", "enrollment-change-request"),
 			LockTemplateRecurrence: owner.RecurrenceLock.LockRecurrenceWrites, Now: env.Now,

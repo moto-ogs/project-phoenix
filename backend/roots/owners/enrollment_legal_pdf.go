@@ -13,6 +13,12 @@ import (
 
 type enrollmentLegalPDFs struct{ files objects.UploadFiles }
 
+// NewEnrollmentLegalPDFFingerprint binds the enrollment PDF reader to the
+// same upload store that serves the documents.
+func NewEnrollmentLegalPDFFingerprint(files objects.UploadFiles) func(context.Context, int64, string) (string, error) {
+	return (enrollmentLegalPDFs{files: files}).fingerprint
+}
+
 func (p enrollmentLegalPDFs) fingerprint(ctx context.Context, tenantID int64, documentURL string) (string, error) {
 	storedURL, ok := enrollment.NormalizeTenantLegalDocumentURL(documentURL, tenantID)
 	if !ok {

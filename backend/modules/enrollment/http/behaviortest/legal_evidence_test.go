@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	enrollment "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentAPI "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+	"github.com/moto-ogs/project-phoenix/roots/owners"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -33,7 +34,7 @@ func TestSubmissionFreezesTheBytesOfLinkedTerms(t *testing.T) {
 	env.settings.stringValues["enrollment.legal_agb_display_mode"] = "pdf"
 	env.settings.stringValues["enrollment.legal_agb_document_url"] = documentURL
 
-	env.config.LegalFiles = files
+	env.config.LegalPDFFingerprint = owners.NewEnrollmentLegalPDFFingerprint(files)
 	service := newTestRequestService(env.config)
 	result, err := service.Submit(ctx, validSubmission(t, env.phaseID))
 	require.NoError(t, err)
