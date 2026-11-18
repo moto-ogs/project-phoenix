@@ -5,36 +5,26 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/uptrace/bun"
+
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application"
 	identityPorts "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports"
 )
 
-// PasswordResetDependencies add reset policy and delivery to the session flows.
-type PasswordResetDependencies struct {
-	// DeliveryFor builds delivery over its outcome recorder once.
-	DeliveryFor      func(identityaccess.PasswordResetDeliveryRecorder) identityPorts.PasswordResetDelivery
-	Passwords        identityPorts.PasswordPolicy
-	Expiry           time.Duration
-	RateLimitEnabled bool
-	RateLimitSecret  []byte
-	Logger           *slog.Logger
-}
-
-func newPasswordReset(auth *application.AccountAuthentication, store *postgres.Store, sessions *identityPorts.SessionDependencies, deps *PasswordResetDependencies, runtime tenantRuntime) (*application.PasswordReset, error) {
+func newPasswordReset(auth *application.AccountAuthentication, store *postgres.Store, sessions *identityPorts.SessionDependencies, deps *identityPorts.PasswordResetDependencies, runtime tenantRuntime) (*application.PasswordReset, error) {
 	if deps == nil {
 		return nil, nil
 	}
 	if auth == nil || sessions == nil {
 		return nil, errors.New("identity access compose: the password reset flows require the session dependencies")
 	}
-	attach := sessions.TenantRuntime
-	var delivery identityPorts.PasswordResetDelivery
-	if deps.DeliveryFor != nil {
-		delivery = deps.DeliveryFor(application.NewPasswordResetDeliveryRecords(store, attach, runtime))
+	if deps.DeliveryFor == nil || deps.Passwords == nil {
+		return nil, errors.New("identity access compose: every password reset dependency is required")
 	}
-	if delivery == nil || deps.Passwords == nil {
+	delivery := deps.DeliveryFor(application.NewPasswordResetDeliveryRecords(store, sessions.TenantRuntime, runtime))
+	if delivery == nil {
 		return nil, errors.New("identity access compose: every password reset dependency is required")
 	}
 	return application.NewPasswordReset(auth, application.PasswordResetDependencies{
@@ -46,4 +36,8 @@ func newPasswordReset(auth *application.AccountAuthentication, store *postgres.S
 		RateLimitSecret:  deps.RateLimitSecret,
 		Logger:           deps.Logger,
 	})
+}
+
+func NewRequestRateLimits(db *bun.DB, fingerprint func(string) string, reservation func() (string, error), now func() time.Time, logger *slog.Logger) identityaccess.RequestRateLimits {
+	return postgres.NewRequestRateLimits(db, fingerprint, reservation, now, logger)
 }

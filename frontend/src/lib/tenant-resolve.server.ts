@@ -1,5 +1,5 @@
 import "server-only";
-import { unstable_cache } from "next/cache";
+import { revalidateTag, unstable_cache } from "next/cache";
 import type { TenantSettings } from "~/lib/tenant-api";
 
 /** The backend's answer to `/auth/tenant/resolve?slug=…` (snake_case). */
@@ -64,7 +64,6 @@ async function loadTenant(
   slug: string,
   forwardHeaders: Record<string, string>,
 ): Promise<TenantCacheEntry> {
-  const expiresAt = Date.now() + TENANT_CACHE_SECONDS * 1_000;
   const { getServerApiUrl } = await import("~/lib/server-api-url");
   const res = await fetch(
     `${getServerApiUrl()}/auth/tenant/resolve?slug=${encodeURIComponent(slug)}`,
@@ -72,7 +71,27 @@ async function loadTenant(
   );
   if (!res.ok) throw new TenantResolveStatusError(res.status);
   const { data } = (await res.json()) as { data: TenantResolveResponse };
-  return { data, expiresAt };
+  return { data, expiresAt: Date.now() + TENANT_CACHE_SECONDS * 1_000 };
+}
+
+const tenantLoads = new Map<string, Promise<TenantCacheEntry>>();
+
+function refreshTenant(
+  slug: string,
+  forwardHeaders: Record<string, string>,
+): Promise<TenantCacheEntry> {
+  const active = tenantLoads.get(slug);
+  if (active) return active;
+  const pending = loadTenant(slug, forwardHeaders).finally(() => {
+    if (tenantLoads.get(slug) === pending) tenantLoads.delete(slug);
+  });
+  tenantLoads.set(slug, pending);
+  return pending;
+}
+
+export function invalidateTenantResolve(slug: string): void {
+  tenantLoads.delete(slug);
+  revalidateTag(`tenant-${slug}`, { expire: 0 });
 }
 
 /**
@@ -85,7 +104,7 @@ export async function resolveTenantCached(
   forwardHeaders: Record<string, string>,
 ): Promise<TenantResolveResponse> {
   let pending: Promise<TenantCacheEntry> | undefined;
-  const load = async () => (pending ??= loadTenant(slug, forwardHeaders));
+  const load = async () => (pending ??= refreshTenant(slug, forwardHeaders));
   const entry = await unstable_cache(load, ["tenant-resolve", slug], {
     revalidate: TENANT_CACHE_SECONDS,
     tags: [`tenant-${slug}`],

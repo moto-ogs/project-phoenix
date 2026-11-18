@@ -12,9 +12,12 @@ import (
 	"github.com/go-chi/cors"
 	customMiddleware "github.com/moto-ogs/project-phoenix/middleware"
 	enrollmentAPI "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+	identityCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
+	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/observability"
+	"github.com/moto-ogs/project-phoenix/roots/owners"
 	slogchi "github.com/samber/slog-chi"
 	"github.com/spf13/viper"
 )
@@ -289,6 +292,13 @@ func parsePositiveInt(valueStr string, defaultValue int) int {
 		return defaultValue
 	}
 	return parsed
+}
+
+func newServeRequestLimits(db transactionruntime.Database, env owners.RootEnvironment) (customMiddleware.RateLimitStore, rateLimiterFactory) {
+	store := identityCompose.NewRequestRateLimits(db.Pool(), requestRateLimitFingerprint(env.Config.JWTSecret), requestRateLimitReservation, env.Now, env.Logger)
+	return store, func(limit, burst int) *customMiddleware.RateLimiter {
+		return customMiddleware.NewSharedRateLimiter(store, limit, burst)
+	}
 }
 
 func requestRateLimitFingerprint(secret string) func(string) string {

@@ -15,8 +15,10 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	meAPI "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
+	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/observability"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -39,6 +41,14 @@ func newProductionEnvironment(logger *slog.Logger, publicAPIURL string) (owners.
 	cfg := CurrentServiceConfig()
 	cfg.PublicAPIURL = publicAPIURL
 	return newRootEnvironment(cfg, logger, nil, productionObservers())
+}
+
+func mountServeRootHost(db transactionruntime.Database, env owners.RootEnvironment, config ServeConfig, hub *realtime.Hub, metrics *httpMetrics, tracer *observability.Tracer, tracker analytics.Tracker, settings settingsCompose.SettingsService, identity identityaccess.Owner, organizations organizationtenancy.SchoolQuery, pwa deliveryCompose.PWAUsageService, newLimiter rateLimiterFactory) (chi.Router, *sessiontoken.TokenAuth, error) {
+	registerRuntimeStatsProviders(hub, pwa)
+	router := chi.NewRouter()
+	policy := analyticsCollectionPolicy(IsDemoEnvironment(env.Config.AppEnv), settings, identity, organizations)
+	auth, err := mountServeMiddleware(router, db.UnitOfWork(), env.Logger, config, tracer, metrics, tracker, settings, policy, identity, identity, identity, env.Config.RateLimitEnabled, newLimiter)
+	return router, auth, err
 }
 
 // mountServeMiddleware sets up the global middleware chain of the server

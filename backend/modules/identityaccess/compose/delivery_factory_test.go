@@ -30,7 +30,7 @@ type resetPasswords struct {
 func TestPasswordResetDeliveryFor_RecordsLikeTheModule(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	compose := func(resets *PasswordResetDependencies) (identityaccess.Owner, error) {
+	compose := func(resets *identityPorts.PasswordResetDependencies) (identityaccess.Owner, error) {
 		return New(Dependencies{
 			DB: db, Observe: func(Observation) {}, TenantRuntime: testpkg.TenantRuntime(t, db), Resets: resets,
 			Sessions: &identityPorts.SessionDependencies{
@@ -42,7 +42,7 @@ func TestPasswordResetDeliveryFor_RecordsLikeTheModule(t *testing.T) {
 	}
 
 	var built []recordingResetDelivery
-	module, err := compose(&PasswordResetDependencies{
+	module, err := compose(&identityPorts.PasswordResetDependencies{
 		Passwords: resetPasswords{}, Expiry: time.Hour,
 		DeliveryFor: func(records identityaccess.PasswordResetDeliveryRecorder) identityPorts.PasswordResetDelivery {
 			built = append(built, recordingResetDelivery{records: records})
@@ -63,6 +63,6 @@ func TestPasswordResetDeliveryFor_RecordsLikeTheModule(t *testing.T) {
 	require.Equal(t, viaModule.Error(), viaRecorder.Error())
 	require.NoError(t, built[0].records.RecordPasswordResetDelivery(testpkg.Ctx(t), resetID, delivery))
 
-	_, err = compose(&PasswordResetDependencies{Passwords: resetPasswords{}, Expiry: time.Hour})
+	_, err = compose(&identityPorts.PasswordResetDependencies{Passwords: resetPasswords{}, Expiry: time.Hour})
 	require.ErrorContains(t, err, "every password reset dependency is required")
 }

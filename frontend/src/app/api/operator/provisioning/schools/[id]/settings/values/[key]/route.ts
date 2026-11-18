@@ -1,8 +1,9 @@
+import { invalidateTenantResolve } from "~/lib/tenant-resolve.server";
 import {
   encodePathSegment,
   requireStringParam,
 } from "~/lib/route-wrapper-utils.server";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import type { NextRequest } from "next/server";
 import { createLogger } from "~/lib/logger";
 import {
@@ -73,7 +74,7 @@ async function revalidateTenantIfNeeded(
     return;
   }
 
-  revalidateTag(`tenant-${slug}`, { expire: 0 });
+  invalidateTenantResolve(slug);
   revalidatePath(`/${slug}`, "layout");
   logger.info("tenant_cache_revalidated", { slug, key });
 }

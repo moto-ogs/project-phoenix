@@ -296,9 +296,14 @@ describe("TenantLayout", () => {
 
     expect((await resolveTenantCached("school-a", {})).name).toBe("School A");
     setTestClock(new Date(new Date(TEST_CLOCK_INSTANT).getTime() + 60_000));
-    expect((await resolveTenantCached("school-a", {})).name).toBe(
+    const results = await Promise.all([
+      resolveTenantCached("school-a", {}),
+      resolveTenantCached("school-a", {}),
+    ]);
+    expect(results.map((result) => result.name)).toEqual([
       "Updated school",
-    );
+      "Updated school",
+    ]);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 

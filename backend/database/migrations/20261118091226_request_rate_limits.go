@@ -29,8 +29,9 @@ CREATE INDEX request_rate_limits_cleanup ON auth.request_rate_limits (expires_at
 REVOKE ALL ON auth.request_rate_limits FROM PUBLIC, phoenix_tenant;
 GRANT SELECT, INSERT, UPDATE, DELETE ON auth.request_rate_limits TO phoenix_auth;
 
--- A request either spends a token on admission or reserves one while its
--- handler runs. The same database clock stamps every reservation and refill.
+-- Admission spends a token. An auth request also reserves one burst slot
+-- until it finishes. A successful outcome refunds the token. A lost or
+-- expired settlement leaves the admission charged.
 -- The row lock is held for the statement only, never for the handler.
 CREATE FUNCTION auth.request_rate_limit(
 	p_key text, p_rate bigint, p_burst bigint, p_reservation text,
@@ -55,23 +56,23 @@ BEGIN
 	END LOOP;
 
 	at_time := greatest(clock_timestamp(), bucket.updated_at);
-	bucket.tokens := least(p_burst, bucket.tokens +
-		extract(epoch FROM at_time - bucket.updated_at) * p_rate / 60);
 	SELECT coalesce(jsonb_object_agg(key, value), '{}'::jsonb), count(*)
 		INTO bucket.reservations, pending
 		FROM jsonb_each_text(bucket.reservations)
 		WHERE value::timestamptz > at_time;
+	bucket.tokens := least(greatest(0, p_burst - pending), bucket.tokens +
+		extract(epoch FROM at_time - bucket.updated_at) * p_rate / 60);
 
 	IF p_settle THEN
 		IF NOT (bucket.reservations ? p_reservation) THEN RETURN false; END IF;
 		bucket.reservations := bucket.reservations - p_reservation;
-		IF p_spend THEN bucket.tokens := greatest(0, bucket.tokens - 1); END IF;
+		IF NOT p_spend THEN
+			bucket.tokens := least(p_burst - pending + 1, bucket.tokens + 1);
+		END IF;
 	ELSE
-		IF bucket.tokens < pending + 1 THEN RETURN false; END IF;
-		IF p_reservation = '' THEN
-			bucket.tokens := bucket.tokens - 1;
-		ELSE
-			-- Recover tokens held by a crashed replica.
+		IF bucket.tokens < 1 THEN RETURN false; END IF;
+		bucket.tokens := bucket.tokens - 1;
+		IF p_reservation <> '' THEN
 			bucket.reservations := bucket.reservations ||
 				jsonb_build_object(p_reservation, at_time + interval '3 minutes');
 		END IF;

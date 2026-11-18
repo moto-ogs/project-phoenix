@@ -25,7 +25,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/analytics"
-	customMiddleware "github.com/moto-ogs/project-phoenix/middleware"
 	appointmentsModule "github.com/moto-ogs/project-phoenix/modules/appointments"
 	carePlanModule "github.com/moto-ogs/project-phoenix/modules/careplan"
 	carePlanCompose "github.com/moto-ogs/project-phoenix/modules/careplan/compose"
@@ -48,7 +47,6 @@ import (
 	filestorageCompose "github.com/moto-ogs/project-phoenix/modules/filestorage/compose"
 	"github.com/moto-ogs/project-phoenix/modules/grouplive"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
-	identityCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	mealplanModule "github.com/moto-ogs/project-phoenix/modules/mealplan"
 	mealplanCompose "github.com/moto-ogs/project-phoenix/modules/mealplan/compose"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
@@ -515,13 +513,8 @@ func composeServeRoot(
 	if err != nil {
 		return nil, nil, err
 	}
-	registerRuntimeStatsProviders(hub, deliveryDevices.PWAUsage)
-	router := chi.NewRouter()
-	securityLimits := identityCompose.NewRequestRateLimits(db.Pool(), requestRateLimitFingerprint(env.Config.JWTSecret), requestRateLimitReservation, env.Now, env.Logger)
-	newSecurityLimiter := func(limit, burst int) *customMiddleware.RateLimiter {
-		return customMiddleware.NewSharedRateLimiter(securityLimits, limit, burst)
-	}
-	sessionAuth, err := mountServeMiddleware(router, unit, env.Logger, config, tracer, metrics, tracker, settings.Service, analyticsCollectionPolicy(IsDemoEnvironment(env.Config.AppEnv), settings.Service, identity, organizations), identity, identity, identity, env.Config.RateLimitEnabled, newSecurityLimiter)
+	securityLimits, newSecurityLimiter := newServeRequestLimits(db, env)
+	router, sessionAuth, err := mountServeRootHost(db, env, config, hub, metrics, tracer, tracker, settings.Service, identity, organizations, deliveryDevices.PWAUsage, newSecurityLimiter)
 	if err != nil {
 		return nil, nil, err
 	}

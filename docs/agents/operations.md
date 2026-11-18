@@ -688,7 +688,7 @@ PostgreSQL counters. Replicas need the same limiter settings and JWT signing
 key. Counter keys are purpose-scoped HMACs of the request keys, and requests
 using these quotas return 503 if PostgreSQL cannot check them. An unfinished
 auth reservation expires after three minutes, so a crashed replica cannot
-hold the quota indefinitely.
+hold a burst slot indefinitely. Requests whose outcome is lost stay charged.
 
 Each Next.js replica caches the school settings returned by the tenant
 lookup for at most 60 seconds. A settings write invalidates the tag on the
@@ -699,6 +699,7 @@ that makes a new lookup to see the change.
 | State kept in a process | Effect of adding replicas |
 | --- | --- |
 | Device last-seen debounce | Each API process can flush a heartbeat. PostgreSQL keeps the newest timestamp. |
+| Unknown tenant slug | Each Next.js process can cache a 404 for 60 seconds, so a newly created school can take that long to resolve. |
 | Client log budget | Each Next.js process caps work and log volume for its own requests. No authorization depends on the count. |
 | Session refresh deduplication | Each Next.js process can coalesce its own refreshes. PostgreSQL governs token rotation and concurrent retries across the replicas. |
 

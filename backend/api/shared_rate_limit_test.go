@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -61,4 +62,29 @@ func TestAuthRateLimitAcrossReplicas(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusUnauthorized, request(replicaB.authMiddleware()(refuse)).Code)
 	require.Equal(t, http.StatusTooManyRequests, request(replicaA.authMiddleware()(accept)).Code)
+
+	t.Run("device burst and refill", func(t *testing.T) {
+		device := testpkg.CreateTestDevice(t, db, "shared-quota")
+		allowA, allowB := deviceErrorReportQuota(a), deviceErrorReportQuota(b)
+		admit := func(allow func(context.Context, int64) (bool, error)) bool {
+			t.Helper()
+			allowed, err := allow(t.Context(), device.ID)
+			require.NoError(t, err)
+			return allowed
+		}
+		require.True(t, admit(allowA))
+		key := fingerprint(deviceErrorReportRateKey(device.ID))
+		clock := testpkg.DatabaseNow(t, db)
+		// A future stored timestamp holds refill in place for the burst.
+		_, err := db.ExecContext(t.Context(), `UPDATE auth.request_rate_limits SET updated_at = ? WHERE bucket_key = ?`, clock.Add(time.Minute), key)
+		require.NoError(t, err)
+		for range 59 {
+			require.True(t, admit(allowB))
+		}
+		require.False(t, admit(allowA))
+		_, err = db.ExecContext(t.Context(), `UPDATE auth.request_rate_limits SET updated_at = ? WHERE bucket_key = ?`,
+			testpkg.DatabaseNow(t, db).Add(-time.Second), key)
+		require.NoError(t, err)
+		require.True(t, admit(allowA))
+	})
 }
