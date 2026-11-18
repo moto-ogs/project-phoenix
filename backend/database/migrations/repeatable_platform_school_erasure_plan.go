@@ -67,6 +67,7 @@ AS $function$ SELECT $manifest$[
   {"name": "audit.data_access_log","predicate": "r.tenant_id = $1"},
   {"name": "audit.data_deletions","predicate": "r.tenant_id = $1"},
   {"name": "audit.data_imports","predicate": "r.tenant_id = $1"},
+  {"name": "audit.device_lifecycle_events","predicate": "r.tenant_id = $1"},
   {"name": "audit.deviation_events","predicate": "r.tenant_id = $1"},
   {"name": "audit.enrollment_deletions","predicate": "r.tenant_id = $1"},
   {"name": "audit.enrollment_offering_adjustments","predicate": "r.tenant_id = $1"},

@@ -302,6 +302,7 @@ func mountOperatorProvisioningRoutes(r chi.Router, provisioning *provisioningOpe
 		r.Post("/{id}/block", provisioning.BlockDevice)
 		r.Post("/{id}/unblock", provisioning.UnblockDevice)
 		r.Delete("/{id}", provisioning.DeleteDevice)
+		r.Get("/{id}/history", provisioning.AuditReadAccess(organizationtenancy.ReadDeviceHistory, provisioning.DeviceHistory))
 	})
 
 	r.Route("/organizations", func(r chi.Router) {

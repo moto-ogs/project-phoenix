@@ -226,6 +226,18 @@ type NewDevice struct {
 	MaskedAPIKey string
 }
 
+// The lifecycle changes an operator makes to a device (#2321); Device
+// Fleet keeps them in the device's history.
+const (
+	DeviceLifecycleCreated        = "created"
+	DeviceLifecycleBlocked        = "blocked"
+	DeviceLifecycleUnblocked      = "unblocked"
+	DeviceLifecycleKeyRotated     = "key_rotated"
+	DeviceLifecycleRemoved        = "removed"
+	DeviceLifecycleTransferredOut = "transferred_out"
+	DeviceLifecycleTransferredIn  = "transferred_in"
+)
+
 // DeviceSession is the open kiosk session of a device.
 type DeviceSession struct {
 	ID           int64

@@ -323,6 +323,43 @@ type DeviceBlockingProvisioning interface {
 	SetDeviceBlocked(ctx context.Context, id int64, blocked bool, operatorID int64, clientIP net.IP) error
 }
 
+// DeviceLifecycleEntry is one change an operator made to a device (#2321).
+// Changes holds the material values before and after per field (name,
+// device_id, device_type, status); it never holds a credential.
+type DeviceLifecycleEntry struct {
+	DeviceRowID int64
+	Action      string
+	OperatorID  int64
+	Changes     map[string][2]*string
+}
+
+// DeviceHistoryChange is one value of a history entry before and after.
+type DeviceHistoryChange struct {
+	Before *string
+	After  *string
+}
+
+// DeviceHistoryEntry is one change of a device as the operator reads it
+// (#2321): at which school, by the school's staff or the moto support, what
+// before and after. Staff stay unnamed: support needs the kind of actor,
+// not the person.
+type DeviceHistoryEntry struct {
+	ID         int64
+	SchoolID   int64
+	SchoolName string
+	Action     string
+	ActorKind  string
+	Changes    map[string]DeviceHistoryChange
+	OccurredAt time.Time
+}
+
+// DeviceHistoryProvisioning reads the history of one device across the
+// schools it went through, newest first (#2321). The operator provisioning
+// serves it beside its facade.
+type DeviceHistoryProvisioning interface {
+	DeviceHistory(ctx context.Context, id int64) ([]DeviceHistoryEntry, error)
+}
+
 // SchoolRequiredDetailsProvisioning reports what each school still lacks
 // (#7174). The operator provisioning serves it beside its facade.
 type SchoolRequiredDetailsProvisioning interface {

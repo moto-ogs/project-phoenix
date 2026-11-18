@@ -102,11 +102,11 @@ func New(dependencies Dependencies) (devicefleet.Capability, error) {
 		tenants = application.UncomposedDashboard{}
 	}
 	runtime := postgres.DatabaseRuntime(dependencies.DB)
-	observe := dependencies.Observe
 	service := application.New(application.Dependencies{
 		Devices:   postgres.NewDeviceStore(runtime, now),
 		Displays:  postgres.NewDisplayStore(runtime, now),
 		Scans:     postgres.NewUnregisteredTagScanStore(runtime),
+		History:   postgres.NewLifecycleEventStore(runtime),
 		Rooms:     application.RoomDirectory{Rooms: dependencies.Rooms},
 		Presence:  presence,
 		Dashboard: dashboard,
@@ -116,7 +116,7 @@ func New(dependencies Dependencies) (devicefleet.Capability, error) {
 		APIKeys:   credentials.DeviceKeys{Minter: dependencies.APIKeys},
 		Now:       ports.Clock(now),
 		Window:    devicefleet.OnlineWindowFromMinutes(dependencies.OnlineWindowMinutes),
-		Observe:   observe,
+		Observe:   dependencies.Observe,
 	})
 	return service, nil
 }

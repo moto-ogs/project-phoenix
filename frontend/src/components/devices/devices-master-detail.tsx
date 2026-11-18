@@ -26,8 +26,10 @@ import { useApiFormError } from "~/contexts/ToastContext";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { InfoSection } from "~/components/ui/info-section";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
+import { DeviceConnectionSummary } from "~/components/devices/device-connection-summary";
+import { DeviceHistoryTab } from "~/components/devices/device-history-tab";
+import { formatBerlinDate } from "~/lib/date-helpers";
 import {
-  formatRelativeLastSeen,
   getDeviceStatusColor,
   getDeviceStatusDisplayName,
   getDeviceTypeDisplayName,
@@ -204,6 +206,11 @@ function DeviceDetailContent({
         />
       ),
     },
+    {
+      id: "history",
+      label: "Verlauf",
+      content: <DeviceHistoryTab deviceId={device.id} />,
+    },
   ];
 
   return (
@@ -293,29 +300,34 @@ function DeviceStammdatenTab({
           />
         }
       >
-        <DataGrid>
-          <DataField label="Geräte-ID" mono>
-            {device.device_id}
-          </DataField>
-          <DataField label="Verbindung">
-            <span className="inline-flex items-center gap-1.5">
-              {device.is_online ? "Online" : "Offline"}
-              {!device.is_online ? (
-                <span className="text-xs font-normal text-gray-500">
-                  · {formatRelativeLastSeen(device.last_seen)}
-                </span>
-              ) : null}
-            </span>
-          </DataField>
-          <DataField label="Standort">{device.room_name ?? "–"}</DataField>
-          <DataField label="Status">
-            <StatusColorBadge
-              compact
-              label={getDeviceStatusDisplayName(device.status)}
-              color={getDeviceStatusColor(device.status)}
-            />
-          </DataField>
-        </DataGrid>
+        <div className="space-y-4">
+          <DeviceConnectionSummary
+            isOnline={device.is_online}
+            lastSeen={device.last_seen}
+            blocked={isDeviceBlocked(device)}
+          />
+          <DataGrid>
+            <DataField label="Geräte-ID" mono>
+              {device.device_id}
+            </DataField>
+            <DataField label="Typ">
+              {getDeviceTypeDisplayName(device.device_type)}
+            </DataField>
+            <DataField label="Raum">
+              {device.room_name ?? "Noch keinem Raum zugeordnet"}
+            </DataField>
+            <DataField label="Status">
+              <StatusColorBadge
+                compact
+                label={getDeviceStatusDisplayName(device.status)}
+                color={getDeviceStatusColor(device.status)}
+              />
+            </DataField>
+            <DataField label="Angelegt am">
+              {formatBerlinDate(device.created_at)}
+            </DataField>
+          </DataGrid>
+        </div>
       </InfoSection>
 
       {isDeviceBlocked(device) ? null : (

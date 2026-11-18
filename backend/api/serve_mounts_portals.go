@@ -273,5 +273,6 @@ func newProvisioningConfig(provisioning organizationtenancy.OperatorProvisioning
 		Service: provisioning, CaregiverCapability: caregivers, AppEnv: viper.GetString("app_env"), BelegRetentionAudit: audit,
 		TraegerStaffReleaseAudit: staffRelease, ErasureOrderRecords: provisioning.ErasureOrderRecords,
 		RequiredDetails: provisioning.RequiredDetails, DeviceBlocking: provisioning.DeviceBlocking,
+		DeviceHistory: provisioning.DeviceHistory,
 	}, nil
 }
