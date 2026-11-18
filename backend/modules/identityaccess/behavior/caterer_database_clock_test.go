@@ -74,4 +74,37 @@ func assertCatererInvitationOnTheDatabaseClock(t *testing.T, offset time.Duratio
 	require.NoError(t, err, "auth.create_invited_caterer finds the invitation open")
 	forgetCaterer(t, db, acceptance)
 	assert.Equal(t, school, acceptance.TenantID)
+
+	var readers int
+	require.NoError(t, db.NewRaw(`SELECT count(*) FROM platform.delivery_caterer_feed_readers(?) WHERE tenant_id = ?`,
+		acceptance.AccountID, school).Scan(context.Background(), &readers))
+	assert.Equal(t, 1, readers, "the newly accepted supply can read the bell immediately")
+
+	require.NoError(t, inSchool(t, db, school, func(ctx context.Context) error {
+		ended, err := caterers.EndCatererSchool(ctx, staff.ID)
+		assert.True(t, ended)
+		return err
+	}))
+	var supply struct {
+		StartedAt time.Time
+		EndedAt   time.Time
+	}
+	require.NoError(t, db.NewRaw(`SELECT started_at, ended_at FROM auth.caterer_schools WHERE tenant_id = ?`,
+		school).Scan(context.Background(), &supply))
+	databaseAfter := testpkg.DatabaseNow(t, db)
+	assert.False(t, supply.StartedAt.Before(databaseNow))
+	assert.False(t, supply.EndedAt.Before(supply.StartedAt))
+	assert.False(t, supply.EndedAt.After(databaseAfter))
+
+	future := databaseAfter.Add(time.Hour)
+	_, err = db.ExecContext(context.Background(), `UPDATE auth.caterer_schools SET started_at = ?, ended_at = NULL WHERE tenant_id = ?`, future, school)
+	require.NoError(t, err)
+	require.NoError(t, inSchool(t, db, school, func(ctx context.Context) error {
+		ended, err := caterers.EndCatererSchool(ctx, staff.ID)
+		assert.True(t, ended)
+		return err
+	}))
+	var legacyEnd time.Time
+	require.NoError(t, db.NewRaw(`SELECT ended_at FROM auth.caterer_schools WHERE tenant_id = ?`, school).Scan(context.Background(), &legacyEnd))
+	assert.True(t, legacyEnd.Equal(future), "a supply ended before its stored start has a zero-length period")
 }

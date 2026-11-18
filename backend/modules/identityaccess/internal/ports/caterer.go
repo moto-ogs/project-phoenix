@@ -50,8 +50,8 @@ type CatererStore interface {
 	AcceptCatererInvitation(ctx context.Context, invitationID, accountID int64) (bool, domain.OperationStats, error)
 	// InsertCatererSchool starts the school's supply by the caterer;
 	// EndCatererSchool ends the school's running supply.
-	InsertCatererSchool(ctx context.Context, catererID int64, deliveryAddress string, startedBy int64, at time.Time) (domain.OperationStats, error)
-	EndCatererSchool(ctx context.Context, endedBy int64, at time.Time) (bool, domain.OperationStats, error)
+	InsertCatererSchool(ctx context.Context, catererID int64, deliveryAddress string, startedBy int64) (domain.OperationStats, error)
+	EndCatererSchool(ctx context.Context, endedBy int64) (bool, domain.OperationStats, error)
 	// FindSchoolCaterer reads the running supply of the school in scope.
 	FindSchoolCaterer(ctx context.Context) (domain.CatererSupply, bool, domain.OperationStats, error)
 	// ListCatererSchools lists the schools the caterer supplies now, in the
