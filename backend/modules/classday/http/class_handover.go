@@ -97,5 +97,5 @@ func (rs *Resource) changeClassHandover(w http.ResponseWriter, r *http.Request, 
 		common.RenderError(w, r, classHandoverErrorRenderer(err))
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }

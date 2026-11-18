@@ -282,7 +282,7 @@ func (rs *Resource) deleteArrivalException(w http.ResponseWriter, r *http.Reques
 		common.RenderError(w, r, arrivalExceptionErrorRenderer(err))
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }
 
 // getArrivalExceptionBlockStart handles GET /school/class-day/arrival-exceptions/block-start?class=4a&date=YYYY-MM-DD:

@@ -125,7 +125,7 @@ func (rs *Resource) putDayHint(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, dayHintErrorRenderer(err))
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }
 
 // deleteDayHint handles DELETE on the same paths.
@@ -150,5 +150,5 @@ func (rs *Resource) deleteDayHint(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, dayHintErrorRenderer(err))
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }

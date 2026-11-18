@@ -224,6 +224,17 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # Fails before the install: the check reads only the register files of
+      # the base. A backend route belongs in the contract, not in a new
+      # pass-through route file (#2352).
+      - name: Refuse new pass-through route files
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          node scripts/check-proxy-routes.mjs "$BASE_SHA"
+
       - name: Enable corepack
         run: corepack enable
 

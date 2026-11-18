@@ -117,7 +117,7 @@ func (rs *Resource) deleteHomework(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, homeworkErrorRenderer(err))
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }
 
 func parseHomeworkID(w http.ResponseWriter, r *http.Request) (int64, bool) {

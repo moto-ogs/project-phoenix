@@ -148,7 +148,7 @@ func (rs *ReportTemplateResource) delete(w http.ResponseWriter, r *http.Request)
 		renderReportTemplateError(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }
 
 // renderReportTemplateError answers a refused template operation. Every
