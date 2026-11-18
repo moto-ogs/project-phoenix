@@ -23,13 +23,13 @@ func (s *Service) MealPlanWeek(ctx context.Context, accountID, studentID int64, 
 	}
 
 	monday := weekStart.StartOfISOWeek()
-	// Parents may only read the current and next work week. Staff can plan
-	// arbitrary future (and past) weeks on the staff page; those are drafts and
-	// must not be reachable through the parent proxy by supplying a crafted
-	// week_start. Compare on the normalized Monday so any day within an allowed
-	// week resolves the same.
+	// Parents may only read the current and following three work weeks. Staff
+	// can plan arbitrary future (and past) weeks on the staff page; those are
+	// drafts and must not be reachable through the parent proxy by supplying a
+	// crafted week_start. Compare on the normalized Monday so any day within an
+	// allowed week resolves the same.
 	currentMonday := s.todayDate().StartOfISOWeek()
-	if monday != currentMonday && monday != currentMonday.AddDays(7) {
+	if monday.Before(currentMonday) || monday.After(currentMonday.AddDays(21)) {
 		return nil, ErrMealPlanWeekOutOfRange
 	}
 

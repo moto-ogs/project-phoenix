@@ -574,5 +574,5 @@ func workerMealPlan(db transactionruntime.Database, settings SettingsOwner, peop
 	if err != nil {
 		return nil, err
 	}
-	return BuildServeMealPlan(db, mealPlanSettings, NewStudentRootReads(people.Students), persons, calendar)
+	return BuildServeMealPlan(db, mealPlanSettings, NewStudentRootReads(people.Students), persons, calendar, nil)
 }
