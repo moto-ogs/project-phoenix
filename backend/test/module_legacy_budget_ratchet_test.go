@@ -44,8 +44,13 @@ import (
 //     always the wrong direction.
 //   - An entry without a tree fails so the entry gets deleted — that is the
 //     success case.
-//   - moduleLegacyBudgetTotal caps the sum on top of the per-tree budgets, so
-//     shifting LOC from one legacy tree into another shows up as well.
+//
+// The registers have no hand-kept total (ADR 0296): every entry is exact, so
+// the measured sum equals the register sum, and
+// `scripts/backend-architecture.sh check` rejects a raised register sum
+// against the pull request's base. LOC shifted from one entry into another
+// therefore still fails, and two pull requests that change different entries
+// no longer edit one shared line.
 //
 // Seed: measured 2026-09-18 at merge commit ecf0003369 with a throwaway
 // program (walk modules/ and workflows/ for directories named "legacy", sum
@@ -96,20 +101,21 @@ import (
 // tree that is renamed instead of dissolved falls out of the per-tree budget:
 //
 //   - moduleLegacyFileBudgets: every non-test file named legacy_*.go anywhere
-//     in the backend outside a legacy tree, keyed by its path, with its own
-//     total. #3554 moved the last timetable nest into
-//     modules/timetable/compose, and its legacy_*.go files kept the name.
+//     in the backend outside a legacy tree, keyed by its path. #3554 moved
+//     the last timetable nest into modules/timetable/compose, and its
+//     legacy_*.go files kept the name.
 //   - moduleComposeBudgets: the production LOC of every owner composition
 //     package (a directory below modules/ or workflows/ whose path has a
-//     compose or composition segment, legacy trees excluded), with its own
-//     total. A composition constructs its owner (ADR 0053); everything else in
+//     compose or composition segment, legacy trees excluded). A
+//     composition constructs its owner (ADR 0053); everything else in
 //     it is code that still has to move (#4084). The timetable composition
 //     alone holds about 36,000 LOC.
 //
 // Both follow the same four outcomes and are shrink-only. A raise of any entry
-// or total against the pull request's base also fails
+// or of a register's sum against the pull request's base also fails
 // `scripts/backend-architecture.sh check` (ratchet budgets); it needs an ADR
-// added in the same change.
+// added in the same change and cited in the comment on the raised entry, not
+// on the register, so parallel raises of different entries do not collide.
 const moduleLegacyBudgetCheck = "legacy LOC budget"
 
 // moduleLegacyFileBudgetCheck and moduleComposeBudgetCheck name the two
@@ -119,15 +125,9 @@ const (
 	moduleComposeBudgetCheck    = "compose LOC budget"
 )
 
-// moduleLegacyBudgetTotal is the sum of every entry below, measured with the
-// same run. It catches LOC moved between two legacy trees, which leaves the
-// individual budgets looking fine. Shrink-only, like every entry.
-const moduleLegacyBudgetTotal = 0
-
-// moduleLegacyFileBudgetTotal is the sum of moduleLegacyFileBudgets.
-// Shrink-only, like every entry.
-// ADR 0082: retained Workforce translation renamed into the legacy register.
-const moduleLegacyFileBudgetTotal = 243
+// ADR 0296 retired the hand-kept totals moduleLegacyBudgetTotal,
+// moduleLegacyFileBudgetTotal and moduleComposeBudgetTotal: the register sums
+// replace them.
 
 // moduleLegacyFileBudgets maps every legacy_*.go file outside a legacy tree
 // to its LOC, first measured on 2026-10-15 on top of development c49b81c3a9:
@@ -145,244 +145,15 @@ var moduleLegacyFileBudgets = map[string]int{
 	"roots/owners/legacy_workforce_schedule_adapter.go": 243,
 }
 
-// moduleComposeBudgetTotal is the sum of moduleComposeBudgets. Shrink-only,
-// like every entry; raised by ADR 0063 and by ADR 0073 (the parent
-// announcement retention of modules/communication/composition).
-// Raised by ADR 0076: the restricted staff person repair compositions (+53).
-// Raised by ADR 0078 (the meal ordering rules) and ADR 0077 (the caterer
-// flows and the caterer portal).
-// ADR 0097: the isolated tenant return constructor adds exactly 18 LOC.
-// ADR 0102: the class-trip status-day seam of modules/classday/compose (+2).
-// ADR 0103: the signature ledger constructor adds exactly 6 LOC.
-// ADR 0104: the Träger projection composition adds exactly 22 LOC.
-// ADR 0105: the holiday period constructor of modules/enrollment/compose
-// (+13) and the Träger transaction binding of
-// modules/transactionruntime/compose (+4).
-// ADR 0106: the Träger-Büro account management adds exactly 24 LOC.
-// ADR 0107: the Träger settings of modules/settings/compose add exactly
-// 14 LOC.
-// ADR 0110: the public holiday registration constructors of
-// modules/enrollment/compose (+18).
-// ADR 0112: the Träger master data constructor of
-// modules/organizationtenancy/compose adds exactly 13 LOC.
-// ADR 0113: the holiday registration prefill's data access port of
-// workflows/parentportal/compose adds exactly 1 LOC.
-// ADR 0114: the holiday registration review constructor of
-// modules/enrollment/compose adds exactly 7 LOC.
-// ADR 0115: the new owner composition modules/parentbilling/compose of the
-// Elternabrechnung adds exactly 20 LOC.
-// ADR 0116: the participant list constructor of modules/enrollment/compose
-// adds exactly 7 LOC.
-// ADR 0119: the billing run constructor of modules/parentbilling/compose adds
-// exactly 7 LOC.
-// ADR 0121: the confirmation letter constructor of
-// modules/parentbilling/compose adds exactly 8 LOC.
-// ADR 0120: the holiday guest constructor of modules/enrollment/compose adds
-// exactly 6 LOC.
-// ADR 0124: the scan heartbeat savepoint binding adds exactly 9 LOC.
-// ADR 0125: the dev-tools presence history constructor of
-// modules/studentpresence/compose adds exactly 7 LOC.
-// ADR 0123: the mail constructor and the mail renderer of
-// modules/parentbilling/compose add exactly 9 LOC.
-// ADR 0142: the Elternsprechtag constructor of modules/schoolcalendar/compose
-// adds exactly 7 LOC.
-// ADR 0126: the document inbox constructor of modules/parentbilling/compose
-// (+6) and the inbox ports and document notices of
-// workflows/parentportal/compose (+21) add exactly 27 LOC.
-// ADR 0128: the student template days constructor of
-// modules/timetable/compose (+5) and Care Plan's manual plans port of
-// modules/careplan/compose (+1).
-// ADR 0137: the holiday access trail constructor of modules/enrollment/compose
-// adds exactly 7 LOC.
-// ADR 0141: the payroll dispatch constructor and composition field of
-// modules/workforce/compose add exactly 9 LOC.
-// ADR 0144: the school vacation constructor of modules/schoolcalendar/compose
-// (+11) and the vacation hint constructor of modules/timetable/compose (+6).
-// ADR 0145: realtime construction adds 40 LOC and retires the 8-LOC local wrapper.
-// ADR 0148: the demo school file erasure constructor of
-// modules/organizationtenancy/compose adds exactly 10 LOC.
-// ADR 0151: the school figure constructors of modules/schoolmembership/compose
-// (+6), modules/studentpresence/compose (+13), modules/careplan/compose (+13)
-// and modules/workforce/compose (+13) add exactly 45 LOC.
-// ADR 0152: the document template constructor of
-// modules/organizationtenancy/compose adds exactly 6 LOC.
-// ADR 0153: the new owner composition modules/carecontract/compose (53), the
-// contract offerings constructor of modules/careplan/compose (+9), the
-// contract applications constructor of modules/enrollment/compose (+5) and
-// the contract port of workflows/parentportal/compose (+1) add exactly 68 LOC.
-// ADR 0154: the occupancy constructors of modules/careplan/compose (+13),
-// modules/enrollment/compose (+6) and modules/schoolstructure/compose (+13)
-// add exactly 32 LOC. ADR 0157: the shared document constructors of
-// modules/organizationtenancy/compose (+10) and the shared document port of
-// workflows/parentportal/compose (+1) add exactly 11 LOC.
-// #4680 lowers modules/carecontract/compose by 3 LOC; #4681 by 2 more.
-// ADR 0156: the booked care read and the overrun evaluation of
-// modules/carecontract/compose (+19) and the contract Soll port of
-// modules/studentpresence/compose (+4) add exactly 23 LOC.
-// ADR 0155: the signature constructors of modules/carecontract/compose (+58:
-// link, inbox signing, paper signature, reminders and their ports) and the
-// Träger signature ledger of modules/auditlog/compose (+8) add exactly 66 LOC,
-// and the test hook that stores the signing link of a contract a test wrote
-// directly (+17, testhooks).
-// ADR 0159: the withdrawal and termination constructors of
-// modules/carecontract/compose (+35) and the notice port of
-// workflows/parentportal/compose (+1) add exactly 36 LOC.
-// ADR 0158: the monthly contribution constructor of
-// modules/parentbilling/compose adds exactly 5 LOC.
-// ADR 0163: the office's decision of the parents' changes of
-// modules/carecontract/compose (+5) adds exactly 5 LOC.
-// ADR 0165: the constructor of the monthly letters of
-// modules/parentbilling/compose adds exactly 7 LOC.
-// ADR 0167: the constructor of the payment terms of
-// modules/parentbilling/compose adds exactly 5 LOC.
-// ADR 0168: the Mensa-Monatsfreigabe of modules/mealplan/compose (+31) and
-// the Mensa of the monthly run of modules/parentbilling/compose (+7) add
-// exactly 38 LOC.
-// ADR 0171: the constructor of the SEPA mandates of
-// modules/parentbilling/compose adds exactly 5 LOC.
-// ADR 0175: the school-read context guard adds exactly 5 LOC in settings/compose.
-// ADR 0182: the constructor of the Jahresbescheide of
-// modules/parentbilling/compose adds exactly 7 LOC.
-// ADR 0181: the SEPA debit constructor (+5).
-// ADR 0183: bank cipher (+6), rekey (+5).
-// ADR 0184: the Beleg retention of modules/parentbilling/compose (+6), the
-// contract retention of modules/carecontract/compose (+4) and the operator
-// audit of modules/organizationtenancy/compose (+11).
-// ADR 0185: the admin-to-tenant handoff binding of
-// modules/transactionruntime/compose adds exactly 2 LOC.
-// ADR 0188: the guardian bank backfill/rekey constructor of
-// modules/peopledirectory/compose (+6), the staff bank cipher dependency and
-// backfill/rekey constructor of modules/workforce/compose (+7).
-// ADR 0192: the export opener of the sealed bank data of
-// modules/parentbilling/compose adds exactly 5 LOC.
-// ADR 0193: the export openers of health information (+5) and setting
-// values (+3).
-// ADR 0187: the Träger package constructor with its PAIN.008 files and
-// operator audit of modules/organizationtenancy/compose (+13), its records
-// command injected into the operator provisioning (+10), the operator
-// directory of modules/identityaccess/compose (+11), the PAIN.008 files of
-// the Träger package (+7) and the expiry of the unsubmitted PAIN.008
-// downloads (+5) of modules/parentbilling/compose.
-// ADR 0191: the constructor of the stored originals of the Jahresbescheide
-// of modules/parentbilling/compose adds exactly 5 LOC.
-// ADR 0198: the narrow account-retention constructor adds exactly 13 LOC.
-// ADR 0197: the export openers of the sealed guardian bank data of
-// modules/peopledirectory/compose (+5) and of the sealed staff bank and tax
-// data of modules/workforce/compose (+5).
-// ADR 0202: the pending-window command of a phase edit, the Students field of
-// modules/enrollment/compose (+2) and the NewPendingWindows constructor of
-// modules/schoolmembership/compose (+5).
-// ADR 0205: the booking-bounds command of a phase edit, the Bookings field of
-// modules/enrollment/compose (+2).
-// ADR 0203: the constructors of the HTTPS retrieval and the release CLI of
-// the return package of modules/organizationtenancy/compose add exactly 18 LOC.
-// ADR 0207: the constructor of the announced holiday periods of
-// modules/enrollment/compose (+5) and their port of
-// workflows/parentportal/compose (+1) add exactly 6 LOC.
-// ADR 0209: the new composition of workflows/holidayallocation (+13).
-// ADR 0212: the message attachments of modules/communication/composition
-// (+25) and their port of workflows/parentportal/compose (+1).
-// #6702 lowered devicescan (-8), schoolmembership (-7), identityaccess (-1).
-// ADR 0214: the registered children and the trail of the known child hint of
-// modules/enrollment/compose (+10) and the namesakes constructor of
-// modules/peopledirectory/compose (+13) add exactly 23 LOC.
-// ADR 0196: the holiday closure notices (-1).
-// ADR 0216: the holiday account adds 10 LOC to enrollment/compose and
-// 2 to parentportal/compose.
-// ADR 0215: workflows/traegercatalog (+38) and modules/enrollment/compose
-// (+2: NewTraegerPhases and NewOfferingSelectionReferences, less shortened
-// comments); modules/careplan/compose stays.
-// ADR 0218: the Träger scope of modules/exporttransfer/compose with its
-// recipient rekey (+33) and the handovers of modules/parentbilling/compose (+5).
-// ADR 0220: the pickup change team constructor of modules/careplan/compose
-// adds exactly 13 LOC.
-// ADR 0224: the cohort rosters constructor (+5) and the grade transition's
-// class follow-up port (+2).
-// ADR 0225: the Stammdaten decision's class follow-up port of
-// modules/careplan/compose (+3).
-// ADR 0231: the registration answers constructor of modules/enrollment/compose
-// (+5) and the new school search projection modules/schoolsearchview/compose
-// (+38).
-// ADR 0232: the import of existing contracts of modules/carecontract/compose
-// (+6) and its debtor numbers of modules/parentbilling/compose (+5).
-// ADR 0234: the note search of modules/peopledirectory/compose (+2).
-// ADR 0241: the utilization reads of modules/careplan/compose (+7),
-// modules/facilities/compose (+13) and modules/studentpresence/compose (+7)
-// add exactly 27 LOC.
-// ADR 0240: the clock fields of modules/careplan/compose (+8).
-// ADR 0242: the working-time check and the Einsatzplanung sites of
-// modules/workforce/compose (+11).
-// ADR 0248: Communication's parent-letter child reader constructor (+6).
-// ADR 0246: the report templates of modules/organizationtenancy/compose (+5)
-// and the export adapter of modules/traegerview/compose (+1).
-// ADR 0269: the clocks of modules/auditlog/compose (+7),
-// modules/mealplan/compose (+2) and modules/schoolcalendar/compose (+4).
-// ADR 0264: the clock field of the time-tracking cleanup in
-// modules/workforce/compose (+2).
-// ADR 0253: the Springer exits constructor of modules/workforce/compose (+6).
-// ADR 0263: the clock imports of modules/timetable/compose and the clock of
-// its repository composition (+6).
-// ADR 0265: the clock fields of modules/enrollment/compose (+7: the owner's
-// write clock NewClocked, Now of the phases and the deletion module, and
-// their time imports).
-// ADR 0267: the clock fields of modules/communication/composition (+7) and
-// modules/delivery/compose (+8).
-// ADR 0261: the clock of modules/identityaccess/compose (+16).
-// ADR 0268: the clock fields, their imports and nil defaults of
-// modules/devicefleet/compose (+6), modules/organizationtenancy/compose (+10),
-// modules/peopledirectory/compose (+6), modules/schoolmembership/compose (+5),
-// modules/schoolstructure/compose (+8) and modules/settings/compose (+3)
-// add exactly 38 LOC.
-// ADR 0273: the day clock of the Terminvertretung in
-// workflows/shiftplansync/compose (+1).
-// ADR 0278: the clock imports of modules/peopledirectory/compose (+1, the
-// guardian profile clock of its retained test suites),
-// modules/schoolcalendar/compose (+7: the notices' day clock and the
-// root's clock of the Records) and modules/schoolsearchview/compose (+1).
-// ADR 0279: the nil default of the clock of workflows/parentportal/compose
-// (+3).
-
-// ADR 0275: the root clock of modules/parentbilling/compose (+2: the time
-// import of the overview's and the exports' clock).
-
-// ADR 0276: the time import of the sick note retention clock in
-// modules/workforce/compose (+1) and the clock field of the staff offboarding
-// with its time import in workflows/staffoffboarding/compose (+2).
-//
-// ADR 0283: the constructor of the class-list conversion in
-// modules/dataimport/compose/imports (+2).
-
-// ADR 0289: the maintenance seal constructors of the sealed document files in
-// modules/careplan/compose (+13) and modules/workforce/compose (+6).
-// ADR 0293: bind the storage backend in the API, worker and demo roots (+12).
-const moduleComposeBudgetTotal = 13666
-
 // moduleComposeBudgets maps every owner composition package to its production
-// LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
-// measured on 2026-10-15 on top of development c49b81c3a9: 61 packages,
-// 90627 LOC. #4084 carries the reduction to construction only;
+// LOC, first measured on 2026-10-15 on top of development c49b81c3a9: 61
+// packages, 90627 LOC. #4084 carries the reduction to construction only;
 // modules/timetable/compose is the largest by far. Shrink-only — a new owner
-// composition starts small and is no reason to raise the total; split code
-// keeps its LOC counted. ADR 0078 raised modules/mealplan/compose and
-// workflows/parentportal/compose for the meal ordering rules.
-// ADR 0168 raised modules/mealplan/compose for the Mensa-Monatsfreigabe and
-// modules/parentbilling/compose for the Mensa of the monthly run.
-// ADR 0187 raised modules/identityaccess/compose,
-// modules/organizationtenancy/compose and modules/parentbilling/compose for
-// the audit and the PAIN.008 files of the Träger package.
-// ADR 0231 raised modules/enrollment/compose for the registration answers and
-// added modules/schoolsearchview/compose for the school search.
-// ADR 0240 raised modules/careplan/compose for the clock fields (+8).
-// ADR 0264 raised modules/workforce/compose for the cleanup clock (+2).
-// ADR 0265 raised modules/enrollment/compose for the clock fields (+7).
-// ADR 0268 raised six compositions for their clock fields (+38).
-// ADR 0278 raised modules/peopledirectory/compose,
-// modules/schoolcalendar/compose and modules/schoolsearchview/compose for the
-// import of their clocks (+1 each).
-// ADR 0275 raised modules/parentbilling/compose for the root clock (+2).
-// ADR 0276 raised modules/workforce/compose for the sick note retention clock (+1)
-// and workflows/staffoffboarding/compose for the offboarding clock (+2).
-// ADR 0293 counts the 12-line upload storage selector.
+// composition starts small and is no reason to raise the register sum; split
+// code keeps its LOC counted. A raise cites its ADR in the comment on the
+// raised entry, never here (ADR 0296): this comment is shared by every pull
+// request, and `scripts/backend-architecture.sh check` reads only the entry's
+// own comment. Earlier raises are recorded in their ADRs.
 var moduleComposeBudgets = map[string]int{
 	"modules/appointments/compose": 45,
 	// ADR 0103: the signature ledger constructor, construction only.
@@ -629,21 +400,18 @@ func TestModuleLegacyBudgetRatchet(t *testing.T) {
 	}
 
 	violations := moduleLegacyBudgetViolations(counts, moduleLegacyBudgets)
-	violations = append(violations, moduleLegacyBudgetTotalViolations(counts)...)
 
 	files, err := moduleLegacyFileScan(backendRoot)
 	if err != nil {
 		t.Fatalf("legacy_*.go LOC scan failed: %v", err)
 	}
 	violations = append(violations, moduleLOCBudgetViolations(moduleLegacyFileBudgetCheck, files, moduleLegacyFileBudgets)...)
-	violations = append(violations, moduleLOCBudgetTotalViolations(moduleLegacyFileBudgetCheck, "moduleLegacyFileBudgetTotal", files, moduleLegacyFileBudgetTotal)...)
 
 	compositions, err := moduleComposeScan(backendRoot)
 	if err != nil {
 		t.Fatalf("compose LOC scan failed: %v", err)
 	}
 	violations = append(violations, moduleLOCBudgetViolations(moduleComposeBudgetCheck, compositions, moduleComposeBudgets)...)
-	violations = append(violations, moduleLOCBudgetTotalViolations(moduleComposeBudgetCheck, "moduleComposeBudgetTotal", compositions, moduleComposeBudgetTotal)...)
 	if len(violations) > 0 {
 		sort.Strings(violations)
 		t.Errorf("Module legacy LOC budget ratchet check failed (%d issue(s)):\n\n%s",
@@ -686,30 +454,6 @@ func moduleLegacyBudgetViolations(counts, budgets map[string]int) []string {
 		}
 	}
 	return violations
-}
-
-// moduleLegacyBudgetTotalViolations checks the measured sum against
-// moduleLegacyBudgetTotal. Per-tree budgets alone accept LOC shifted from one
-// legacy tree into another as long as both entries are updated; the total does
-// not.
-func moduleLegacyBudgetTotalViolations(counts map[string]int) []string {
-	total := 0
-	for _, got := range counts {
-		total += got
-	}
-	switch {
-	case total > moduleLegacyBudgetTotal:
-		return []string{fmt.Sprintf(
-			"[%s] total: %d LOC across %d tree(s), moduleLegacyBudgetTotal %d.\n"+
-				"  The sum of all legacy trees grew. Shifting LOC from one tree into another is not a reduction; never raise it.",
-			moduleLegacyBudgetCheck, total, len(counts), moduleLegacyBudgetTotal)}
-	case total < moduleLegacyBudgetTotal:
-		return []string{fmt.Sprintf(
-			"[%s] total: %d LOC across %d tree(s), moduleLegacyBudgetTotal %d.\n"+
-				"  Nice — lower moduleLegacyBudgetTotal to %d so the reduction cannot regress.",
-			moduleLegacyBudgetCheck, total, len(counts), moduleLegacyBudgetTotal, total)}
-	}
-	return nil
 }
 
 // moduleLegacyBudgetScan returns the production LOC of every legacy tree,
@@ -775,7 +519,7 @@ func moduleLOCBudgetViolations(check string, counts, budgets map[string]int) []s
 		case !ok:
 			violations = append(violations, fmt.Sprintf(
 				"[%s] %s: %d LOC, but it has no budget entry.\n"+
-					"  Code moved here from a counted place keeps counting; a new entry needs a justification and the total may not rise.",
+					"  Code moved here from a counted place keeps counting; a new entry needs a justification and the register sum may not rise.",
 				check, key, got))
 		case got > budget:
 			violations = append(violations, fmt.Sprintf(
@@ -798,28 +542,6 @@ func moduleLOCBudgetViolations(check string, counts, budgets map[string]int) []s
 		}
 	}
 	return violations
-}
-
-// moduleLOCBudgetTotalViolations checks the measured sum against a register's
-// total, so LOC shifted between two entries shows up as well.
-func moduleLOCBudgetTotalViolations(check, name string, counts map[string]int, budgetTotal int) []string {
-	total := 0
-	for _, got := range counts {
-		total += got
-	}
-	switch {
-	case total > budgetTotal:
-		return []string{fmt.Sprintf(
-			"[%s] total: %d LOC across %d entries, %s %d.\n"+
-				"  The sum grew. Shifting LOC from one entry into another is not a reduction; never raise it.",
-			check, total, len(counts), name, budgetTotal)}
-	case total < budgetTotal:
-		return []string{fmt.Sprintf(
-			"[%s] total: %d LOC across %d entries, %s %d.\n"+
-				"  Nice — lower %s to %d so the reduction cannot regress.",
-			check, total, len(counts), name, budgetTotal, name, total)}
-	}
-	return nil
 }
 
 // moduleLegacyFileScan returns the LOC of every non-test legacy_*.go file in
