@@ -137,6 +137,40 @@ func TestDeviceBlockingFindsAHardwareIDWithAColon(t *testing.T) {
 	assert.Equal(t, devicefleet.DeviceStatusInactive, devicefleet.DeviceStatus(f.stored(t, device.ID).Status))
 }
 
+// A literal percent sign arrives as %25; Chi has already decoded it, so the
+// route must not decode it a second time.
+func TestDeviceBlockingFindsAHardwareIDWithAPercentSign(t *testing.T) {
+	t.Parallel()
+	f := newDeviceBlockingFixture(t)
+	device := testpkg.CreateTestDevice(t, f.db, "pct%id")
+
+	rr := f.setStatus(t, strings.ReplaceAll(device.DeviceID, "%", "%25"), "inactive")
+
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	assert.Equal(t, devicefleet.DeviceStatusInactive, devicefleet.DeviceStatus(f.stored(t, device.ID).Status))
+}
+
+// The general edit can carry a status too; an effective change there is
+// audited like the block route's.
+func TestDeviceEditWithAStatusChangeIsAudited(t *testing.T) {
+	t.Parallel()
+	f := newDeviceBlockingFixture(t)
+	device := testpkg.CreateTestDevice(t, f.db, "edit-status")
+	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/devices/%d", device.ID),
+		map[string]string{"device_id": device.DeviceID, "device_type": "terminal", "status": "inactive"},
+		testutil.WithClaims(t, testutil.DefaultTestClaims()),
+		testutil.WithPermissions("iot:update"),
+	)
+
+	rr := testutil.ExecuteRequest(f.router, req)
+
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	entries := auditEntriesOf(t, f.audit, "device_status")
+	require.Len(t, entries, 1)
+	assert.Equal(t, "blocked", entries[0]["outcome"])
+	assert.Equal(t, "active", entries[0]["from_status"])
+}
+
 func TestDeviceBlockingStaysInsideTheSchoolAndNeedsThePermission(t *testing.T) {
 	t.Parallel()
 	f := newDeviceBlockingFixture(t)

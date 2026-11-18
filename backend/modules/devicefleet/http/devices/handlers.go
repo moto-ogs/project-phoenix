@@ -173,7 +173,8 @@ func (rs *Resource) updateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update fields
+	// Update fields. The status the audit compares with is this read; the
+	// screen sends no status, and a block uses its own locked route.
 	previousStatus := device.Status
 	device.DeviceID = req.DeviceID
 	device.DeviceType = req.DeviceType
@@ -265,14 +266,18 @@ func (rs *Resource) removalPreflight(r *http.Request, id int64) (devicefleet.Dev
 
 // deviceIDParam reads the hardware device ID from the path. Chi routes on
 // the escaped path when the client escaped a character such as the colon of
-// a MAC address, so the parameter is unescaped once; an invalid escape
-// yields an empty ID, which the handlers reject.
+// a MAC address; only then is the parameter still escaped and unescaped
+// here once. An invalid escape yields an empty ID, which the handlers reject.
 func deviceIDParam(r *http.Request) string {
-	id, err := url.PathUnescape(chi.URLParam(r, "deviceId"))
+	id := chi.URLParam(r, "deviceId")
+	if r.URL.RawPath == "" {
+		return id
+	}
+	unescaped, err := url.PathUnescape(id)
 	if err != nil {
 		return ""
 	}
-	return id
+	return unescaped
 }
 
 // updateDeviceStatus sets the status of a live device. "inactive" blocks
@@ -319,9 +324,21 @@ func (rs *Resource) lockDeviceByDeviceID(r *http.Request, deviceID string) (devi
 	if found.DeviceID == devicefleet.WebManualDeviceID {
 		return devicefleet.Device{}, &devicefleet.AdministrationError{Op: "UpdateDeviceStatus", Err: devicefleet.ErrAdministrationDeviceProtected}
 	}
-	device, err := rs.IoTService.Fleet().FindDeviceForUpdate(r.Context(), found.ID)
-	if errors.Is(err, devicefleet.ErrDeviceNotFound) {
+	device, err := rs.lockLiveDevice(r, "UpdateDeviceStatus", found.ID)
+	if err == nil && device.DeviceID != found.DeviceID {
+		// Renamed between the lookup and the lock: the hardware ID now names
+		// no device this lock holds.
 		return devicefleet.Device{}, &devicefleet.AdministrationError{Op: "UpdateDeviceStatus", Err: devicefleet.ErrAdministrationDeviceNotFound}
+	}
+	return device, err
+}
+
+// lockLiveDevice locks the school's live device row for a write; a removed
+// or foreign device is not found.
+func (rs *Resource) lockLiveDevice(r *http.Request, op string, id int64) (devicefleet.Device, error) {
+	device, err := rs.IoTService.Fleet().FindDeviceForUpdate(r.Context(), id)
+	if errors.Is(err, devicefleet.ErrDeviceNotFound) {
+		return devicefleet.Device{}, &devicefleet.AdministrationError{Op: op, Err: devicefleet.ErrAdministrationDeviceNotFound}
 	}
 	return device, err
 }
