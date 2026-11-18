@@ -6,7 +6,7 @@ import type { StaffRecordDetail } from "~/lib/traeger-staff-api";
 
 vi.unmock("swr");
 
-const { api, mockPush } = vi.hoisted(() => ({
+const { api, mockPush, mockReplace } = vi.hoisted(() => ({
   api: {
     fetchStaffRecord: vi.fn(),
     updateStaffPersonnelNumber: vi.fn(),
@@ -17,6 +17,7 @@ const { api, mockPush } = vi.hoisted(() => ({
     createStaffContract: vi.fn(),
   },
   mockPush: vi.fn(),
+  mockReplace: vi.fn(),
 }));
 
 vi.mock("~/lib/traeger-staff-api", async (original) => ({
@@ -52,7 +53,7 @@ vi.mock("~/lib/traeger-url", () => ({
 }));
 const address = vi.hoisted(() => ({ search: "" }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush, replace: vi.fn() }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
   useParams: () => ({ id: "5" }),
   usePathname: () => "/personal/5",
   useSearchParams: () => new URLSearchParams(address.search),
@@ -180,14 +181,61 @@ describe("TraegerStaffRecordPage", () => {
     );
   });
 
-  it("shows the Einsatzorte, the masked bank values and the trail", async () => {
+  // #7414: Die Akte ist in fünf Reiter geteilt; der Reiter steht in der Adresse.
+  it("shows the Einsatzorte, the masked bank values and the trail in their tabs", async () => {
     renderPage();
     expect(await screen.findByText("Einsatzorte")).toBeInTheDocument();
     expect(screen.getByText("Beendet")).toBeInTheDocument();
-    expect(screen.getByText("•••• 3000")).toBeInTheDocument();
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Stammdaten",
+      "Verträge und Zeit",
+      "Nachweise",
+      "Bank und Steuer",
+      "Verlauf",
+    ]);
+    // Die Statuszeile wiederholt die Personalnummer der Karte nicht mehr.
+    expect(screen.getAllByText("70001")).toHaveLength(1);
+    expect(screen.queryByText("•••• 3000")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Bank und Steuer" }));
+    expect(await screen.findByText("•••• 3000")).toBeInTheDocument();
+    expect(screen.queryByText("Einsatzorte")).not.toBeInTheDocument();
+    expect(mockReplace).toHaveBeenLastCalledWith(
+      "/personal/5?tab=bank-und-steuer",
+      { scroll: false },
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: "Verlauf" }));
     expect(
-      screen.getByText("Nachname „Sommer“ von OGS Nord nicht übernommen"),
+      await screen.findByText(
+        "Nachname „Sommer“ von OGS Nord nicht übernommen",
+      ),
     ).toBeInTheDocument();
+  });
+
+  it("opens the tab from the address and keeps the way back when switching", async () => {
+    address.search = "from=akten&tab=verlauf";
+    renderPage();
+    expect(
+      await screen.findByText(
+        "Nachname „Sommer“ von OGS Nord nicht übernommen",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Verlauf" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "Stammdaten" }));
+    expect(await screen.findByText("Einsatzorte")).toBeInTheDocument();
+    expect(mockReplace).toHaveBeenLastCalledWith("/personal/5?from=akten", {
+      scroll: false,
+    });
+  });
+
+  it("opens the Stammdaten for an unknown tab in the address", async () => {
+    address.search = "tab=unbekannt";
+    renderPage();
+    expect(await screen.findByText("Einsatzorte")).toBeInTheDocument();
   });
 
   it("marks the Einsatzorte of the Vertretungspool and says when they end", async () => {
@@ -230,8 +278,9 @@ describe("TraegerStaffRecordPage", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Vertretungspool")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("tab", { name: "Verlauf" }));
     expect(
-      screen.getByText(
+      await screen.findByText(
         "Beschäftigung an der Schule OGS West nach der letzten Blockung beendet",
       ),
     ).toBeInTheDocument();
@@ -243,6 +292,7 @@ describe("TraegerStaffRecordPage", () => {
   });
 
   it("shows each proof with its status and only the result of the certificate", async () => {
+    address.search = "tab=nachweise";
     renderPage();
     const card = (
       await screen.findByText("Nachweise", { selector: "h2" })
@@ -283,7 +333,7 @@ describe("TraegerStaffRecordPage", () => {
       })
     ).closest("section");
     expect(card).not.toBeNull();
-    fireEvent.click(within(card!).getByRole("button", { name: /Ändern/ }));
+    fireEvent.click(within(card!).getByRole("button", { name: /Bearbeiten/ }));
     const input = within(card!).getByLabelText("Personalnummer");
     fireEvent.change(input, { target: { value: "70A" } });
     fireEvent.click(within(card!).getByRole("button", { name: "Speichern" }));
@@ -373,8 +423,9 @@ describe("TraegerStaffRecordPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Myra Sommer-Berg" }),
     ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Verlauf" }));
     expect(
-      screen.getByText("Geburtstag ersetzt, vorher „02.04.1990“"),
+      await screen.findByText("Geburtstag ersetzt, vorher „02.04.1990“"),
     ).toBeInTheDocument();
   });
 
@@ -397,6 +448,7 @@ describe("TraegerStaffRecordPage", () => {
       taxId: null,
       socialSecurityNumber: null,
     });
+    address.search = "tab=bank-und-steuer";
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: /Anzeigen/ }));
     expect(
@@ -412,6 +464,7 @@ describe("TraegerStaffRecordPage", () => {
       ...RECORD,
       contracts: [CONTRACT],
     });
+    address.search = "tab=vertraege";
     renderPage();
     expect(await screen.findByText("Teilzeit")).toBeInTheDocument();
     expect(screen.getByText("Läuft")).toBeInTheDocument();
@@ -429,6 +482,7 @@ describe("TraegerStaffRecordPage", () => {
       ...RECORD,
       contracts: [CONTRACT],
     });
+    address.search = "tab=vertraege";
     renderPage();
     fireEvent.click(
       await screen.findByRole("button", { name: /Vertrag anlegen/ }),

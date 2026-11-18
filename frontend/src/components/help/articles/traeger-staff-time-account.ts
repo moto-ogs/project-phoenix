@@ -25,7 +25,7 @@ export function traegerStaffTimeAccountTopic(): HelpTopic {
         title: "Stundenkonto ansehen",
         steps: [
           "Öffne die Akte im Reiter `Akten`.",
-          "Gehe zur Karte `Stundenkonto`. Sie zeigt den Vormonat.",
+          "Öffne den Reiter `Verträge und Zeit`. Die Karte `Stundenkonto` zeigt den Vormonat.",
           "Mit den Pfeilen wechselst du den Monat.",
           "Oben stehen Soll, Ist, Saldo und Kontostand über alle Schulen. Darunter steht jede Schule in einer Zeile.",
         ],
