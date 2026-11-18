@@ -101,6 +101,7 @@ const CodeParentBillingLetterMailBlockUnreadable = "parent_billing.letter_mail_b
 const CodeParentBillingLetterMailBlocked = "parent_billing.letter_mail_blocked"
 const CodeParentBillingLetterMailDelayed = "parent_billing.letter_mail_delayed"
 const CodeParentBillingLetterMailPending = "parent_billing.letter_mail_pending"
+const CodeParentBillingLetterheadMissing = "parent_billing.letterhead_missing"
 const CodeParentBillingLetterheadTooLong = "parent_billing.letterhead_too_long"
 const CodeParentBillingNumberRangeInvalid = "parent_billing.number_range_invalid"
 const CodeParentBillingNumberRangeMissing = "parent_billing.number_range_missing"
@@ -234,6 +235,7 @@ var errorCodeClassesParentBilling = []errorCodeClass{
 	{CodeParentBillingLetterMailBlocked, "business_rejection"},
 	{CodeParentBillingLetterMailDelayed, "business_rejection"},
 	{CodeParentBillingLetterMailPending, "business_rejection"},
+	{CodeParentBillingLetterheadMissing, "business_rejection"},
 	{CodeParentBillingLetterheadTooLong, "business_rejection"},
 	{CodeParentBillingNumberRangeInvalid, "input"},
 	{CodeParentBillingNumberRangeMissing, "business_rejection"},

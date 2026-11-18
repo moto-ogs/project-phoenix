@@ -90,18 +90,27 @@ func (s *InstanceLifecycleService) complete(ctx context.Context, instanceID int6
 	// The owner's clock dates what Reopen reads on it again: the reopen
 	// window, the children that left school since, the spontaneous end.
 	now := s.now()
-	if err := s.snapshotCompletion(ctx, instance, now); err != nil {
+	snapshot, err := s.snapshotCompletion(ctx, instance, now)
+	if err != nil {
 		return nil, err
 	}
 	if err := s.stampRemainingAbsent(ctx, instance); err != nil {
 		return nil, err
 	}
-	if err := s.deps.ActiveService.EndActivitySession(ctx, *instance.ActiveGroupID); err != nil {
+	snapshot.SupervisorIDs, err = s.deps.ActiveService.EndActivitySession(ctx, *instance.ActiveGroupID)
+	if err != nil {
 		return nil, &ports.ScheduleError{Op: "complete instance: end active.group", Err: err}
 	}
-	// completed_at is the database's statement time, read after the writes
-	// above: Reopen orders it against the updated_at of supervisor,
-	// attendance and plan rows, which the database stamps (ADR 0281).
+	if err := s.snapshotCompletedSupervisors(ctx, &snapshot); err != nil {
+		return nil, err
+	}
+	instance.CompletionSnapshot, err = json.Marshal(snapshot)
+	if err != nil {
+		return nil, &ports.ScheduleError{Op: "complete instance: encode snapshot", Err: err}
+	}
+	// The database stamps completed_at after completion's writes. Reopen
+	// uses it for attendance, plan rows and legacy supervisor snapshots.
+	// New supervisor snapshots compare the stored row version (ADR 0281).
 	completedAt, err := s.deps.RecoveryRepo.CompletionTimestamp(ctx)
 	if err != nil {
 		return nil, &ports.ScheduleError{Op: "complete instance: read completion timestamp", Err: err}
@@ -176,22 +185,18 @@ func (s *InstanceLifecycleService) lockCompletionState(ctx context.Context, inst
 	return nil
 }
 
-// snapshotCompletion records the open visits, the open supervisors and the
-// attendance rows on the block before the session ends. A confirmed roster
+// snapshotCompletion records open visits and attendance rows on the block
+// before the session ends. A confirmed roster
 // (WithCompletionConfirmation) must match the children still checked in.
-func (s *InstanceLifecycleService) snapshotCompletion(ctx context.Context, instance *scheduleModel.ActivityInstance, now time.Time) error {
+func (s *InstanceLifecycleService) snapshotCompletion(ctx context.Context, instance *scheduleModel.ActivityInstance, now time.Time) (scheduleModel.ActivityCompletionSnapshot, error) {
 	activeGroupID := *instance.ActiveGroupID
 	visitsBefore, err := s.deps.Presence.ListVisits(ctx, studentpresence.VisitFilter{ActiveGroupIDs: []int64{activeGroupID}})
 	if err != nil {
-		return &ports.ScheduleError{Op: "complete instance: snapshot visits", Err: err}
-	}
-	supervisorsBefore, err := s.deps.SupervisorRepo.FindByActiveGroupID(ctx, activeGroupID, true)
-	if err != nil {
-		return &ports.ScheduleError{Op: "complete instance: snapshot supervisors", Err: err}
+		return scheduleModel.ActivityCompletionSnapshot{}, &ports.ScheduleError{Op: "complete instance: snapshot visits", Err: err}
 	}
 	attendanceBefore, err := participantsOfInstance(ctx, s.deps.InstanceStudents.Reads, instance.ID)
 	if err != nil {
-		return &ports.ScheduleError{Op: "complete instance: snapshot attendance", Err: err}
+		return scheduleModel.ActivityCompletionSnapshot{}, &ports.ScheduleError{Op: "complete instance: snapshot attendance", Err: err}
 	}
 	snapshot := scheduleModel.ActivityCompletionSnapshot{ActiveGroupID: activeGroupID, OwnerCompletedAt: &now}
 	openStudentIDs := make([]int64, 0, len(visitsBefore))
@@ -205,20 +210,49 @@ func (s *InstanceLifecycleService) snapshotCompletion(ctx context.Context, insta
 		slices.Sort(confirmed)
 		slices.Sort(openStudentIDs)
 		if !slices.Equal(confirmed, openStudentIDs) {
-			return timetable.ErrCompletionConfirmationStale
+			return scheduleModel.ActivityCompletionSnapshot{}, timetable.ErrCompletionConfirmationStale
 		}
-	}
-	for _, supervisor := range supervisorsBefore {
-		snapshot.SupervisorIDs = append(snapshot.SupervisorIDs, supervisor.ID)
 	}
 	for _, row := range attendanceBefore {
 		snapshot.Attendance = append(snapshot.Attendance, completionAttendanceOf(row))
 	}
-	instance.CompletionSnapshot, err = json.Marshal(snapshot)
+	return snapshot, nil
+}
+
+// snapshotCompletedSupervisors records the locked rows after the session end
+// has changed them. Versions belong only to the supervisors Reopen restores.
+func (s *InstanceLifecycleService) snapshotCompletedSupervisors(ctx context.Context, snapshot *scheduleModel.ActivityCompletionSnapshot) error {
+	if len(snapshot.SupervisorIDs) == 0 {
+		return nil
+	}
+	rows, err := s.deps.SupervisorRepo.FindByActiveGroupID(ctx, snapshot.ActiveGroupID, false)
 	if err != nil {
-		return &ports.ScheduleError{Op: "complete instance: encode snapshot", Err: err}
+		return &ports.ScheduleError{Op: "complete instance: load completed supervisors", Err: err}
+	}
+	versions := make(map[int64]scheduleModel.CompletionSupervisorVersion, len(rows))
+	for _, row := range rows {
+		versions[row.ID] = completionSupervisorVersion(row)
+	}
+	snapshot.SupervisorVersions = make(map[int64]scheduleModel.CompletionSupervisorVersion, len(snapshot.SupervisorIDs))
+	for _, id := range snapshot.SupervisorIDs {
+		version, ok := versions[id]
+		if !ok {
+			return &ports.ScheduleError{Op: "complete instance: snapshot completed supervisors", Err: fmt.Errorf("supervisor %d missing", id)}
+		}
+		snapshot.SupervisorVersions[id] = version
 	}
 	return nil
+}
+
+func completionSupervisorVersion(row *studentpresence.StaffedSupervision) scheduleModel.CompletionSupervisorVersion {
+	version := scheduleModel.CompletionSupervisorVersion{
+		UpdatedAtMicros: row.UpdatedAt.UnixMicro(), GroupID: row.GroupID,
+		StaffID: row.StaffID, Role: row.Role, StartDate: row.StartDate,
+	}
+	if row.EndDate != nil {
+		version.EndDate = *row.EndDate
+	}
+	return version
 }
 
 func completionAttendanceOf(row *scheduleModel.InstanceStudent) scheduleModel.CompletionAttendanceSnapshot {

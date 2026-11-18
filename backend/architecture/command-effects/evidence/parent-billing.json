@@ -753,6 +753,38 @@
       "target_owner": "organization-tenancy"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.schoolModuleSwitches.BookedModules",
+      "binding_digest": "e9921933eb1f808541d358c4cfdc1a1f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.SchoolModules.BookedModules",
+      "source_owner": "parent-billing",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsSnapshot.Bool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.schoolModuleSwitches.BookedModules",
+      "binding_digest": "854fdf9be853b6d2ebf6742aacc65d35",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.SchoolModules.BookedModules",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveManyForTenants",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMasterData.HasBankAccount",
+      "binding_digest": "804a503ca1c1007bcc2cd5af5168b426",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.TraegerBankAccounts.HasBankAccount",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMasterData.HasBankAccount",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterPost.SenderText",
+      "binding_digest": "29e9cf98be9e581703ced17ddc787e6d",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.TraegerSenderText.SenderText",
+      "source_owner": "parent-billing",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTexts",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingPlaceChanges.RebookHolidayChild",
       "binding_digest": "9263355ee0714bdaac28b90a58bc104d",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http.HolidayPlaceChanges.RebookHolidayChild",

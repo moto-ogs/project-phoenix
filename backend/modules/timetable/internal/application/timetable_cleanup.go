@@ -58,6 +58,13 @@ type cleanupImpact struct {
 	samples map[int64][]int64
 }
 
+func (s *timetableCleanup) retentionCutoff(ctx context.Context, days int) (calendar.Date, error) {
+	if s.deps.DatabaseCutoff != nil {
+		return s.deps.DatabaseCutoff(ctx, days)
+	}
+	return s.today().AddDays(-days), nil
+}
+
 func (s *timetableCleanup) CleanupExpiredTimetableData(ctx context.Context) (*timetable.TimetableCleanupResult, error) {
 	tenantID := tenant.FromContext(ctx)
 	if tenantID == 0 {
@@ -68,7 +75,10 @@ func (s *timetableCleanup) CleanupExpiredTimetableData(ctx context.Context) (*ti
 	if err != nil {
 		return nil, err
 	}
-	cutoff := s.today().AddDays(-retentionDays)
+	cutoff, err := s.retentionCutoff(ctx, retentionDays)
+	if err != nil {
+		return nil, err
+	}
 
 	impact, err := s.collectStudentImpact(ctx, cutoff)
 	if err != nil {
@@ -134,7 +144,10 @@ func (s *timetableCleanup) PreviewExpiredTimetableData(ctx context.Context) (*ti
 	if err != nil {
 		return nil, err
 	}
-	cutoff := s.today().AddDays(-retentionDays)
+	cutoff, err := s.retentionCutoff(ctx, retentionDays)
+	if err != nil {
+		return nil, err
+	}
 	before := cutoff.String()
 
 	instancesToDelete, err := s.deps.Timetable.CountActivityInstances(ctx, &before)
@@ -172,7 +185,10 @@ func (s *timetableCleanup) GetStats(ctx context.Context) (*timetable.TimetableCl
 	if err != nil {
 		return nil, err
 	}
-	cutoff := s.today().AddDays(-retentionDays)
+	cutoff, err := s.retentionCutoff(ctx, retentionDays)
+	if err != nil {
+		return nil, err
+	}
 
 	totalInstances, err := s.deps.Timetable.CountActivityInstances(ctx, nil)
 	if err != nil {

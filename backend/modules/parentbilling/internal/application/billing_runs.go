@@ -424,12 +424,20 @@ func numberPatternOf(ctx context.Context, store numberRangeReader, organizationI
 	if err != nil {
 		return "", fmt.Errorf("parent billing: read number range: %w", err)
 	}
-	for _, numberRange := range ranges {
-		if numberRange.Service == service && numberRange.Pattern != "" {
-			return numberRange.Pattern, nil
-		}
+	if pattern, ok := patternOf(ranges, service); ok {
+		return pattern, nil
 	}
 	return "", parentbilling.ErrNumberRangeMissing
+}
+
+// patternOf is the pattern of the service's number range, if it is set.
+func patternOf(ranges []parentbilling.NumberRange, service string) (string, bool) {
+	for _, numberRange := range ranges {
+		if numberRange.Service == service && numberRange.Pattern != "" {
+			return numberRange.Pattern, true
+		}
+	}
+	return "", false
 }
 
 // preview reads the confirmed registrations through Enrollment, which

@@ -77,7 +77,7 @@ func TestDeviceLocation_UpdatedOnSessionStart(t *testing.T) {
 		assert.Equal(t, room1.ID, *mid.RoomID)
 
 		// End the first session
-		err = service.EndActivitySession(ctx, session1.ID)
+		_, err = service.EndActivitySession(ctx, session1.ID)
 		require.NoError(t, err)
 
 		// ACT: start second session in room2 (force start to handle any lingering state)

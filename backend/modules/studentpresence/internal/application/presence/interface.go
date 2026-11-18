@@ -58,7 +58,7 @@ type Service interface {
 	// Activity Session Management with Conflict Detection
 	StartActivitySessionWithSupervisors(ctx context.Context, activityID, deviceID int64, supervisorIDs []int64, roomID *int64) (*ports.ActiveGroup, error)
 	CheckActivityConflict(ctx context.Context, activityID, deviceID int64) (*ActivityConflictInfo, error)
-	EndActivitySession(ctx context.Context, activeGroupID int64) error
+	EndActivitySession(ctx context.Context, activeGroupID int64) ([]int64, error)
 	ForceStartActivitySessionWithSupervisors(ctx context.Context, activityID, deviceID int64, supervisorIDs []int64, roomID *int64) (*ports.ActiveGroup, error)
 	GetDeviceCurrentSession(ctx context.Context, deviceID int64) (*ports.ActiveGroup, error)
 

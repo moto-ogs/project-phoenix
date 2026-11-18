@@ -1,5 +1,5 @@
+import { invalidateTenantResolve } from "~/lib/tenant-resolve.server";
 import { apiDelete } from "~/lib/api-helpers.server";
-import { revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import {
   createFileUploadHandler,
@@ -33,7 +33,7 @@ function revalidateTenantCache(request: NextRequest) {
   if (baseDomain && hostname.endsWith(`.${baseDomain}`)) {
     const slug = hostname.slice(0, -(baseDomain.length + 1));
     if (slug && slug !== "www") {
-      revalidateTag(`tenant-${slug}`, { expire: 0 });
+      invalidateTenantResolve(slug);
       return;
     }
   }
@@ -44,7 +44,7 @@ function revalidateTenantCache(request: NextRequest) {
     const refUrl = new URL(referer);
     const pathSlug = refUrl.pathname.split("/")[1];
     if (pathSlug) {
-      revalidateTag(`tenant-${pathSlug}`, { expire: 0 });
+      invalidateTenantResolve(pathSlug);
       return;
     }
   } catch {

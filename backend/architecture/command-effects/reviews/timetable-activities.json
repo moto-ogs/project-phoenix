@@ -30167,6 +30167,36 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.timetableCleanup.CleanupExpiredTimetableData",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableCleanup.CleanupExpiredTimetableData",
+      "reason": "Read-only Audit cutoff using the same Berlin database day as the guarded deletion. The binding computes a calendar date and does not open a transaction or change data (#7383).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.TimetableRetentionCutoff",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.timetableCleanup.GetStats",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableCleanup.GetStats",
+      "reason": "Read-only Audit cutoff using the same Berlin database day as the guarded deletion. The binding computes a calendar date and does not open a transaction or change data (#7383).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.TimetableRetentionCutoff",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.timetableCleanup.PreviewExpiredTimetableData",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableCleanup.PreviewExpiredTimetableData",
+      "reason": "Read-only Audit cutoff using the same Berlin database day as the guarded deletion. The binding computes a calendar date and does not open a transaction or change data (#7383).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.TimetableRetentionCutoff",
+      "target_owner": "audit-platform"
+    },
+    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.timetableCommands.AcknowledgeConflict",
       "classification": "platform",
@@ -42002,7 +42032,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.SessionEnder.EndActivitySession",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Presence.EndActivitySession; modules/studentpresence.Presence (supplied contract method). ",
+      "reason": "The guarded Student Presence session end returns IDs of the supervision rows it closes so Timetable can version those rows in its completion snapshot. The command uses the same tenant unit, locks, writes and after-commit events (#7383).",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.EndActivitySession",
       "target_owner": "student-presence"

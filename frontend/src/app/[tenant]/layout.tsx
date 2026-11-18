@@ -33,8 +33,7 @@ import {
   type TenantResolveResponse,
 } from "~/lib/tenant-resolve.server";
 
-// Next's data cache keeps only 200 responses, so a 404 for an unknown slug
-// was never cached: every scanner request for a made-up subdomain reached the
+// The tenant lookup caches only successful responses. Before the 404 cache, every scanner request for a made-up subdomain reached the
 // backend. Its anonymous rate limit counted all of them under this server's
 // IP, so a scan burst answered real tenant lookups with 429 (FRONTEND-1B); the
 // lookup now forwards the visitor's IP as well. Unknown slugs are remembered

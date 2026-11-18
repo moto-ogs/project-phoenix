@@ -54,6 +54,9 @@ var moduleSQLClockBudget = map[string]int{
 	// keep the time their producer sets, the date of the grant. The column defaults also stamp the ledgers without a school
 	// (operator ledger, Träger account ledger, Träger document downloads),
 	// whose cutoff the database computes.
+	// Timetable's calendar-day cutoff is read through the migration function
+	// audit.timetable_retention_cutoff (outside the literal count), because
+	// audit.delete_expired_deviation_events guards it on the same DB clock.
 	"modules/auditlog": 1,
 	// cleanupDatabaseClock (1): stamps completed student document cleanups
 	// and supplies the cutoff that the database function guards (1.15.606).
@@ -189,8 +192,8 @@ var moduleSQLClockBudget = map[string]int{
 	// Named exception on the database clock (ADR 0281): statementClock (1),
 	// the clock_timestamp() of CompletionTimestamp (completed_at, read after
 	// the completion's own writes), which Reopen orders against the updated_at
-	// of supervisor, attendance and plan rows, and of updated_at of
-	// schedule.instance_students, the plan side of that comparison. The same
+	// of attendance and plan rows, and supervisors in legacy snapshots. It
+	// also stamps schedule.instance_students for the plan-side comparison. The same
 	// constant ends the window of a switched-off staff notice
 	// (databaseDayCutoff, ADR 0281 point 3): the trigger stamps its
 	// updated_at.

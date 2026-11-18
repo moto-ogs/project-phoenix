@@ -390,7 +390,8 @@ type correctionNoticeTemplates struct {
 }
 
 func (s *correctionNoticeTemplates) Letterhead(context.Context, parentbilling.HolidayReviewer) (parentbilling.Letterhead, error) {
-	return parentbilling.Letterhead{Template: parentbilling.LetterTemplate{Body: "Bestätigung"}}, nil
+	// A correction letter names its sender (#7177).
+	return parentbilling.Letterhead{SenderText: "Ganztag im Quartier e.V.\nAm Markt 4", Template: parentbilling.LetterTemplate{Body: "Bestätigung"}}, nil
 }
 
 type correctionNoticeRenderer struct {

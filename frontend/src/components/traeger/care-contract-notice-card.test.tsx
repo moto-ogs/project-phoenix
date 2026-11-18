@@ -552,6 +552,10 @@ describe("RejectReasonModal", () => {
 
   it.each([
     [
+      "letterhead_missing",
+      "Im Briefkopf fehlt der Absender. Trage ihn unter „Briefkopf und Vorlagen“ ein.",
+    ],
+    [
       "missing_student",
       "Der Vertrag ist mit keinem Kind aus den „Kinderdaten“ der Schule verknüpft.",
     ],

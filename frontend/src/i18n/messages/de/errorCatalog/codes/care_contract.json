@@ -19,6 +19,7 @@
   "school_outside_traeger": "Diese Schule gehört nicht zu deinem Träger.",
   "selection_invalid": "Diese Auswahl ist so nicht möglich. Bitte ändere die Auswahl.",
   "signature_invalid": "Die Unterschrift fehlt oder ist leer. Bitte unterschreibe noch einmal.",
+  "signing_letterhead_missing": "Deine Unterschrift ist noch nicht gespeichert. Dem Träger fehlen noch Angaben. Bitte versuche es später noch einmal oder melde dich beim Träger.",
   "signing_link_invalid": "Dieser Link gilt nicht mehr. Er war schon benutzt oder ist abgelaufen. Den Vertrag findest du in der Eltern-App unter „Dokumente“. Oder frage beim Träger nach einem neuen Link.",
   "special_termination_closed": "Dieser Vertrag sieht keine Sonderkündigung vor. Bitte wähle die normale Kündigung.",
   "template_invalid": "Bitte prüfe die markierten Felder.",
@@ -26,5 +27,6 @@
   "withdrawal_notice_required": "Bitte bestätige, dass du die Widerrufsbelehrung gelesen hast.",
   "import_file_invalid": "Die Datei lässt sich nicht lesen. Bitte wähle eine CSV-Datei mit Überschriften in der ersten Zeile.",
   "import_file_too_large": "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
-  "import_changed": "Seit der Vorschau hat sich etwas geändert. Bitte prüfe die Vorschau noch einmal und übernimm dann."
+  "import_changed": "Seit der Vorschau hat sich etwas geändert. Bitte prüfe die Vorschau noch einmal und übernimm dann.",
+  "letterhead_missing": "Der Absender im Briefkopf fehlt. Ohne Name und Anschrift des Trägers wird kein Vertrag verschickt. Bitte trage ihn unter „Briefkopf und Vorlagen“ ein."
 }

@@ -3,20 +3,20 @@ export const ERROR_CATALOG = {
   de: {
     classes: {
       input:
-        "{object} konnte nicht übernommen werden. Bitte prüfe deine Angaben.",
+        "{object} konnte nicht übernommen werden. Bitte prüfen Sie Ihre Angaben.",
       permission:
-        "Für {object} fehlt dir die Berechtigung. Bitte frage die Schule.",
+        "Für {object} fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
       business_rejection:
-        "{object} konnte nicht geändert werden. Bitte prüfe den aktuellen Stand.",
+        "{object} konnte nicht geändert werden. Bitte prüfen Sie den aktuellen Stand.",
       unavailable:
-        "{object} ist gerade nicht erreichbar. Bitte versuche es erneut.",
+        "{object} ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
       server:
-        "{object} konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
+        "{object} konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
     },
     portalClasses: {
       traeger: {
         permission:
-          "Für {object} fehlt dir die Berechtigung. Bitte frage die Leitung deines Träger-Büros.",
+          "Für {object} fehlt Ihnen die Berechtigung. Bitte fragen Sie die Leitung Ihres Träger-Büros.",
       },
     },
     actions: {
@@ -24,305 +24,311 @@ export const ERROR_CATALOG = {
       copyRequestId: "Vorgangskennung kopieren",
       requestId: "Vorgangskennung: {requestId}",
       crash:
-        "{object} konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
-      fieldCheck: "Bitte prüfe dieses Feld.",
+        "{object} konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+      fieldCheck: "Bitte prüfen Sie dieses Feld.",
     },
     codes: {
       "attendance.log_disabled":
         "Der Anwesenheitsverlauf ist an dieser Schule ausgeschaltet.",
       "attendance.web_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "billing.invalid_key_day":
-        "Der Stichtag muss zwischen dem 1. und dem 28. des Monats liegen. Bitte wähle einen dieser Tage.",
+        "Der Stichtag muss zwischen dem 1. und dem 28. des Monats liegen. Bitte wählen Sie einen dieser Tage.",
       "calendar.federal_state_missing":
         "Für die Schule ist noch kein Bundesland eingetragen. Deshalb fehlen die Feiertage. Die Leitung trägt es in den Einstellungen ein.",
       "calendar.no_staff_profile":
-        "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Bitte frage die Leitung.",
+        "Dafür brauchen Sie in dieser Schule ein eigenes Personalprofil. Bitte fragen Sie die Leitung.",
       "calendar.occurrence_unavailable":
-        "Diesen Termin gibt es nicht mehr, er wurde vielleicht abgesagt. Bitte lade den Kalender neu.",
+        "Diesen Termin gibt es nicht mehr, er wurde vielleicht abgesagt. Bitte laden Sie den Kalender neu.",
       "care_contract.application_not_found":
-        "Diese Anmeldung gibt es nicht mehr oder sie ist nicht angenommen. Bitte lade die Seite neu.",
+        "Diese Anmeldung gibt es nicht mehr oder sie ist nicht angenommen. Bitte laden Sie die Seite neu.",
       "care_contract.change_contract_not_active":
         "Dieser Vertrag gilt nicht mehr. Änderungswünsche entscheidet jetzt die Schule.",
       "care_contract.change_ends_care":
-        "Die Eltern melden damit die ganze Betreuung ab. Das ist eine Kündigung. Bitte trage sie unter „Vertrag beenden“ ein oder lehne den Wunsch ab.",
+        "Die Eltern melden damit die ganze Betreuung ab. Das ist eine Kündigung. Bitte tragen Sie sie unter „Vertrag beenden“ ein oder lehnen Sie den Wunsch ab.",
       "care_contract.change_not_applicable":
-        "Die Schule lässt diese Änderung gerade nicht zu. Bitte sprich mit der Schule.",
+        "Die Schule lässt diese Änderung gerade nicht zu. Bitte sprechen Sie mit der Schule.",
       "care_contract.change_not_found":
-        "Diesen Änderungswunsch gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diesen Änderungswunsch gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "care_contract.contract_input_invalid":
-        "Bitte wähle mindestens einen und höchstens 200 Einträge aus.",
+        "Bitte wählen Sie mindestens einen und höchstens 200 Einträge aus.",
       "care_contract.contract_not_draft":
         "Der Vertrag ist schon versendet. Er lässt sich nicht mehr verwerfen.",
       "care_contract.contract_not_endable":
-        "Dieser Vertrag ist schon gekündigt oder widerrufen oder noch nicht abgeschlossen. Bitte lade die Seite neu.",
+        "Dieser Vertrag ist schon gekündigt oder widerrufen oder noch nicht abgeschlossen. Bitte laden Sie die Seite neu.",
       "care_contract.contract_not_found":
-        "Diesen Vertrag gibt es nicht. Bitte öffne ihn über „Verträge“.",
+        "Diesen Vertrag gibt es nicht. Bitte öffnen Sie ihn über „Verträge“.",
       "care_contract.contract_not_signable":
-        "Dieser Vertrag ist schon unterschrieben oder wartet nicht auf eine Unterschrift. Bitte lade die Seite neu.",
+        "Dieser Vertrag ist schon unterschrieben oder wartet nicht auf eine Unterschrift. Bitte laden Sie die Seite neu.",
       "care_contract.field_invalid":
-        "Einige Angaben stimmen nicht. Bitte prüfe deine Eingaben.",
+        "Einige Angaben stimmen nicht. Bitte prüfen Sie Ihre Eingaben.",
       "care_contract.import_changed":
-        "Seit der Vorschau hat sich etwas geändert. Bitte prüfe die Vorschau noch einmal und übernimm dann.",
+        "Seit der Vorschau hat sich etwas geändert. Bitte prüfen Sie die Vorschau noch einmal und übernehmen Sie dann.",
       "care_contract.import_file_invalid":
-        "Die Datei lässt sich nicht lesen. Bitte wähle eine CSV-Datei mit Überschriften in der ersten Zeile.",
+        "Die Datei lässt sich nicht lesen. Bitte wählen Sie eine CSV-Datei mit Überschriften in der ersten Zeile.",
       "care_contract.import_file_too_large":
         "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
+      "care_contract.letterhead_missing":
+        "Der Absender im Briefkopf fehlt. Ohne Name und Anschrift des Trägers wird kein Vertrag verschickt. Bitte tragen Sie ihn unter „Briefkopf und Vorlagen“ ein.",
       "care_contract.letterhead_too_long":
-        "Absender oder Fußzeile sind zu lang für den Vertrag. Bitte kürze sie unter „Briefkopf und Vorlagen“. Das darf, wer das Recht „Einstellungen“ hat.",
+        "Absender oder Fußzeile sind zu lang für den Vertrag. Bitte kürzen Sie sie unter „Briefkopf und Vorlagen“. Das darf, wer das Recht „Einstellungen“ hat.",
       "care_contract.notice_end_not_open":
-        "Für diesen Vertrag gibt es kein offenes Vertragsende mehr. Bitte lade die Seite neu.",
+        "Für diesen Vertrag gibt es kein offenes Vertragsende mehr. Bitte laden Sie die Seite neu.",
       "care_contract.notice_template_missing":
-        "Der Träger hat noch keinen Text für die Bestätigung. Bitte melde dich beim Träger.",
+        "Der Träger hat noch keinen Text für die Bestätigung. Bitte melden Sie sich beim Träger.",
       "care_contract.offering_not_found":
-        "Dieses Angebot gibt es an der Schule nicht mehr. Bitte lade die Seite neu.",
+        "Dieses Angebot gibt es an der Schule nicht mehr. Bitte laden Sie die Seite neu.",
       "care_contract.paper_document_invalid":
-        "Bitte lade den unterschriebenen Vertrag als PDF hoch. Die Datei darf höchstens 10 MB groß sein.",
+        "Bitte laden Sie den unterschriebenen Vertrag als PDF hoch. Die Datei darf höchstens 10 MB groß sein.",
       "care_contract.recipient_missing":
         "Für diesen Vertrag fehlt eine E-Mail-Adresse. Ohne Adresse kann keine Bestätigung verschickt werden.",
       "care_contract.school_outside_traeger":
-        "Diese Schule gehört nicht zu deinem Träger.",
+        "Diese Schule gehört nicht zu Ihrem Träger.",
       "care_contract.selection_invalid":
-        "Diese Auswahl ist so nicht möglich. Bitte ändere die Auswahl.",
+        "Diese Auswahl ist so nicht möglich. Bitte ändern Sie die Auswahl.",
       "care_contract.signature_invalid":
-        "Die Unterschrift fehlt oder ist leer. Bitte unterschreibe noch einmal.",
+        "Die Unterschrift fehlt oder ist leer. Bitte unterschreiben Sie noch einmal.",
+      "care_contract.signing_letterhead_missing":
+        "Ihre Unterschrift ist noch nicht gespeichert. Dem Träger fehlen noch Angaben. Bitte versuchen Sie es später noch einmal oder melden Sie sich beim Träger.",
       "care_contract.signing_link_invalid":
-        "Dieser Link gilt nicht mehr. Er war schon benutzt oder ist abgelaufen. Den Vertrag findest du in der Eltern-App unter „Dokumente“. Oder frage beim Träger nach einem neuen Link.",
+        "Dieser Link gilt nicht mehr. Er war schon benutzt oder ist abgelaufen. Den Vertrag finden Sie in der Eltern-App unter „Dokumente“. Oder fragen Sie beim Träger nach einem neuen Link.",
       "care_contract.special_termination_closed":
-        "Dieser Vertrag sieht keine Sonderkündigung vor. Bitte wähle die normale Kündigung.",
-      "care_contract.template_invalid": "Bitte prüfe die markierten Felder.",
+        "Dieser Vertrag sieht keine Sonderkündigung vor. Bitte wählen Sie die normale Kündigung.",
+      "care_contract.template_invalid":
+        "Bitte prüfen Sie die markierten Felder.",
       "care_contract.withdrawal_closed":
-        "Die Widerrufsfrist ist vorbei. Du kannst den Vertrag noch kündigen.",
+        "Die Widerrufsfrist ist vorbei. Sie können den Vertrag noch kündigen.",
       "care_contract.withdrawal_notice_required":
-        "Bitte bestätige, dass du die Widerrufsbelehrung gelesen hast.",
+        "Bitte bestätigen Sie, dass Sie die Widerrufsbelehrung gelesen haben.",
       "care.announcement_stale":
-        "{object} wurde inzwischen geändert. Bitte lade die Seite neu.",
+        "{object} wurde inzwischen geändert. Bitte laden Sie die Seite neu.",
       "care.care_exception_conflict":
-        "{object} wurde inzwischen geändert. Bitte prüfe deine Angaben erneut.",
+        "{object} wurde inzwischen geändert. Bitte prüfen Sie Ihre Angaben erneut.",
       "care.care_exception_past_date":
-        "Das Datum für {object} liegt in der Vergangenheit. Bitte wähle ein anderes Datum.",
+        "Das Datum für {object} liegt in der Vergangenheit. Bitte wählen Sie ein anderes Datum.",
       "care.care_exception_reason_required":
-        "Für {object} fehlt eine Angabe. Bitte ergänze das markierte Feld.",
+        "Für {object} fehlt eine Angabe. Bitte ergänzen Sie das markierte Feld.",
       "care.care_request_already_pending":
-        "Für {object} gibt es bereits eine Anfrage. Bitte prüfe den aktuellen Stand.",
+        "Für {object} gibt es bereits eine Anfrage. Bitte prüfen Sie den aktuellen Stand.",
       "care.care_request_field_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "care.child_care_ended":
-        "Die Betreuung dieses Kindes ist beendet. Änderungen sind nicht mehr möglich. Bei Fragen wende dich bitte an die OGS.",
+        "Die Betreuung dieses Kindes ist beendet. Änderungen sind nicht mehr möglich. Bei Fragen wenden Sie sich bitte an die OGS.",
       "care.child_without_care_place":
-        "Dein Kind hat keinen Platz in der OGS. Diese Funktion gibt es für dein Kind deshalb nicht.",
+        "Ihr Kind hat keinen Platz in der OGS. Diese Funktion gibt es für Ihr Kind deshalb nicht.",
       "care.course_request_invalid":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.course_requests_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "care.declaration_action_not_allowed":
-        "Das geht gerade nicht. Bitte lade die Seite neu und prüfe den aktuellen Stand.",
+        "Das geht gerade nicht. Bitte laden Sie die Seite neu und prüfen Sie den aktuellen Stand.",
       "care.declaration_closed":
-        "Die Frist ist abgelaufen. Du kannst nicht mehr antworten. Bei Fragen wende dich bitte an die OGS.",
+        "Die Frist ist abgelaufen. Sie können nicht mehr antworten. Bei Fragen wenden Sie sich bitte an die OGS.",
       "care.declaration_not_permitted":
-        "Für dieses Kind darfst du nicht antworten. Bei Fragen wende dich an die OGS.",
+        "Für dieses Kind dürfen Sie nicht antworten. Bei Fragen wenden Sie sich an die OGS.",
       "care.declaration_password_incorrect":
-        "Das Passwort stimmt nicht. Bitte versuche es noch einmal.",
-      "care.declaration_password_required": "Bitte gib dein Passwort ein.",
+        "Das Passwort stimmt nicht. Bitte versuchen Sie es noch einmal.",
+      "care.declaration_password_required": "Bitte geben Sie Ihr Passwort ein.",
       "care.declaration_signature_invalid":
-        "Die Unterschrift konnte nicht gespeichert werden. Bitte unterschreibe noch einmal.",
+        "Die Unterschrift konnte nicht gespeichert werden. Bitte unterschreiben Sie noch einmal.",
       "care.declaration_signature_required":
-        "Bitte unterschreibe, bevor du zustimmst.",
+        "Bitte unterschreiben Sie, bevor Sie zustimmen.",
       "care.declaration_version_changed":
-        "Die Schule hat den Text geändert. Bitte lies ihn noch einmal und antworte dann neu.",
+        "Die Schule hat den Text geändert. Bitte lesen Sie ihn noch einmal und antworten Sie dann neu.",
       "care.excused_request_not_pending":
-        "{object} ist nicht mehr offen. Bitte lade die Seite neu.",
+        "{object} ist nicht mehr offen. Bitte laden Sie die Seite neu.",
       "care.excused_request_overlap":
-        "Die Zeiten für {object} überschneiden sich. Bitte prüfe die Angaben.",
+        "Die Zeiten für {object} überschneiden sich. Bitte prüfen Sie die Angaben.",
       "care.guardian_contact_invalid":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.guardian_email_conflict":
-        "Diese E-Mail-Adresse wird bereits verwendet. Bitte prüfe die Adresse.",
+        "Diese E-Mail-Adresse wird bereits verwendet. Bitte prüfen Sie die Adresse.",
       "care.guardian_has_own_account":
         "Diese Person verwaltet ihre Kontaktdaten über ein eigenes Elternkonto. Sie kann die Angaben dort selbst ändern.",
       "care.guardian_invite_unavailable":
-        "Diese Einladung konnte gerade nicht gesendet werden. Bitte wende dich an die OGS.",
+        "Diese Einladung konnte gerade nicht gesendet werden. Bitte wenden Sie sich an die OGS.",
       "care.guardian_management_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "care.guardian_no_change":
-        "Es wurde nichts geändert. Bitte prüfe deine Angaben.",
+        "Es wurde nichts geändert. Bitte prüfen Sie Ihre Angaben.",
       "care.guardian_not_linked":
-        "Dieser Kontakt gehört nicht zu diesem Kind. Bitte lade die Seite neu.",
+        "Dieser Kontakt gehört nicht zu diesem Kind. Bitte laden Sie die Seite neu.",
       "care.guardian_relationship_invalid":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.guardian_role_managed":
         "Diese Person ist erziehungsberechtigt. Ihre Angaben kann nur sie selbst oder die Schule ändern.",
       "care.guardian_shared_across_families":
-        "Dieser Kontakt ist mehreren Familien zugeordnet und kann nur von der Schule geändert werden. Bitte wende dich an die Schule.",
+        "Dieser Kontakt ist mehreren Familien zugeordnet und kann nur von der Schule geändert werden. Bitte wenden Sie sich an die Schule.",
       "care.guardian_social_worker_managed":
-        "Diese Kontaktdaten werden von der Schule verwaltet. Für Änderungen wende dich bitte an die Schule.",
+        "Diese Kontaktdaten werden von der Schule verwaltet. Für Änderungen wenden Sie sich bitte an die Schule.",
       "care.invalid_credentials":
-        "Die E-Mail-Adresse oder das Passwort stimmt nicht. Bitte prüfe deine Eingabe.",
+        "Die E-Mail-Adresse oder das Passwort stimmt nicht. Bitte prüfen Sie Ihre Eingabe.",
       "care.invalid_poll_response":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.invalid_recipients":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.invalid_request_payload":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.invite_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "care.master_data_edit_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "care.master_data_invalid_value":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.master_data_no_changes":
-        "Für {object} wurde nichts geändert. Bitte prüfe deine Angaben.",
+        "Für {object} wurde nichts geändert. Bitte prüfen Sie Ihre Angaben.",
       "care.master_data_request_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "care.notes_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "care.offering_change_already_pending":
-        "Für {object} gibt es bereits eine Anfrage. Bitte prüfe den aktuellen Stand.",
+        "Für {object} gibt es bereits eine Anfrage. Bitte prüfen Sie den aktuellen Stand.",
       "care.offering_change_invalid":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.offering_changes_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "care.photo_consent_busy":
-        "Die Foto-Einwilligung konnte gerade nicht gespeichert werden. Bitte versuche es noch einmal.",
+        "Die Foto-Einwilligung konnte gerade nicht gespeichert werden. Bitte versuchen Sie es noch einmal.",
       "care.photos_disabled":
-        "Die Schule hat Kinderfotos ausgeschaltet. Du kannst die Einwilligung später wieder geben.",
+        "Die Schule hat Kinderfotos ausgeschaltet. Sie können die Einwilligung später wieder geben.",
       "care.pickup_change_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "care.pickup_permission_request_required":
-        "Eine neue Abholerlaubnis braucht deine Unterschrift. Die OGS bestätigt sie dann.",
+        "Eine neue Abholerlaubnis braucht Ihre Unterschrift. Die OGS bestätigt sie dann.",
       "care.pickup_permission_unchanged":
         "Diese Person darf an diesen Tagen schon abholen.",
       "care.pickup_person_not_linked":
-        "Diese Person ist kein Kontakt deines Kindes. Bitte trage sie zuerst bei den Kontakten ein.",
+        "Diese Person ist kein Kontakt Ihres Kindes. Bitte tragen Sie sie zuerst bei den Kontakten ein.",
       "care.pickup_proof_not_found":
-        "Zu dieser Anfrage gibt es keinen Nachweis mit deiner Unterschrift.",
+        "Zu dieser Anfrage gibt es keinen Nachweis mit Ihrer Unterschrift.",
       "care.pickup_signature_invalid":
-        "Die Unterschrift ist nicht lesbar. Bitte unterschreibe noch einmal.",
+        "Die Unterschrift ist nicht lesbar. Bitte unterschreiben Sie noch einmal.",
       "care.pickup_signature_required":
-        "Bitte unterschreibe die Erlaubnis und bestätige die Unterschrift.",
+        "Bitte unterschreiben Sie die Erlaubnis und bestätigen Sie die Unterschrift.",
       "care.pickup_signature_too_large":
-        "Die Unterschrift ist zu groß. Bitte tippe auf „Neu unterschreiben“ und dann auf „Namen tippen“.",
+        "Die Unterschrift ist zu groß. Bitte tippen Sie auf „Neu unterschreiben“ und dann auf „Namen tippen“.",
       "care.poll_closed":
-        "{object} ist nicht mehr geöffnet. Bitte frage deine Ansprechperson.",
+        "{object} ist nicht mehr geöffnet. Bitte fragen Sie Ihre Ansprechperson.",
       "care.remove_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "care.request_not_found":
-        "{object} wurde nicht gefunden. Bitte lade die Seite neu.",
+        "{object} wurde nicht gefunden. Bitte laden Sie die Seite neu.",
       "care.request_not_open":
-        "{object} ist nicht mehr geöffnet. Bitte frage deine Ansprechperson.",
+        "{object} ist nicht mehr geöffnet. Bitte fragen Sie Ihre Ansprechperson.",
       "care.request_sharing_invalid":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.sick_note_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "classday.absence_list_invalid_period":
-        "Dieser Zeitraum geht nicht. Bis darf nicht vor Von liegen. Wähle höchstens ein Schuljahr.",
+        "Dieser Zeitraum geht nicht. Bis darf nicht vor Von liegen. Wählen Sie höchstens ein Schuljahr.",
       "classday.absence_report_conflict":
-        "Für dieses Kind steht heute schon etwas, zum Beispiel eine frühere Abholung. Es wurde nichts gespeichert. Bitte sprich mit der OGS.",
+        "Für dieses Kind steht heute schon etwas, zum Beispiel eine frühere Abholung. Es wurde nichts gespeichert. Bitte sprechen Sie mit der OGS.",
       "classday.absence_report_no_school_day":
         "Heute ist kein Schultag. Eine Meldung lässt sich nur an Schultagen eintragen.",
       "classday.absence_report_not_found":
-        "Diese Meldung gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Meldung gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "classday.absence_report_not_missing":
-        "Für dieses Kind liegt schon eine Meldung vor, oder es ist nicht als fehlend eingetragen. Bitte lade die Seite neu.",
+        "Für dieses Kind liegt schon eine Meldung vor, oder es ist nicht als fehlend eingetragen. Bitte laden Sie die Seite neu.",
       "classday.absence_report_not_today":
-        "Eine Meldung lässt sich nur für heute eintragen. Bitte öffne den heutigen Tag.",
+        "Eine Meldung lässt sich nur für heute eintragen. Bitte öffnen Sie den heutigen Tag.",
       "classday.absence_report_unknown_child":
-        "Dieses Kind ist heute nicht in dieser Klasse. Bitte lade die Seite neu.",
+        "Dieses Kind ist heute nicht in dieser Klasse. Bitte laden Sie die Seite neu.",
       "classday.arrival_exception_class_not_found":
-        "{object} wurde nicht gefunden. Bitte lade die Seite neu.",
+        "{object} wurde nicht gefunden. Bitte laden Sie die Seite neu.",
       "classday.arrival_exception_editor_required":
-        "Für {object} fehlt eine Angabe. Bitte ergänze das markierte Feld.",
+        "Für {object} fehlt eine Angabe. Bitte ergänzen Sie das markierte Feld.",
       "classday.arrival_exception_past_date":
-        "Das Datum für {object} liegt in der Vergangenheit. Bitte wähle ein anderes Datum.",
+        "Das Datum für {object} liegt in der Vergangenheit. Bitte wählen Sie ein anderes Datum.",
       "classday.class_handover_no_school_day":
         "Heute ist kein Schultag. Eine Klasse lässt sich nur an Schultagen übergeben.",
       "classday.class_handover_not_found":
-        "Die Klasse ist heute noch nicht übergeben. Bitte lade die Seite neu.",
+        "Die Klasse ist heute noch nicht übergeben. Bitte laden Sie die Seite neu.",
       "classday.class_handover_not_today":
-        "Eine Klasse lässt sich nur heute übergeben. Bitte öffne den heutigen Tag.",
+        "Eine Klasse lässt sich nur heute übergeben. Bitte öffnen Sie den heutigen Tag.",
       "classday.class_handover_unknown_child":
-        "Ein Kind gehört nicht mehr zu dieser Klasse. Bitte lade die Seite neu.",
+        "Ein Kind gehört nicht mehr zu dieser Klasse. Bitte laden Sie die Seite neu.",
       "classday.class_trip_arrival_conflict":
-        "Die OGS hat für ein Kind schon eine andere Ankunftszeit eingetragen. Es wurde nichts gespeichert. Bitte sprich mit der OGS.",
+        "Die OGS hat für ein Kind schon eine andere Ankunftszeit eingetragen. Es wurde nichts gespeichert. Bitte sprechen Sie mit der OGS.",
       "classday.class_trip_invalid_range":
-        "Dieser Zeitraum geht nicht. Bitte wähle höchstens 31 Tage, das Ende nach dem Beginn.",
-      "classday.class_trip_no_students": "Bitte wähle mindestens ein Kind aus.",
+        "Dieser Zeitraum geht nicht. Bitte wählen Sie höchstens 31 Tage, das Ende nach dem Beginn.",
+      "classday.class_trip_no_students":
+        "Bitte wählen Sie mindestens ein Kind aus.",
       "classday.class_trip_past_date":
-        "Der erste Tag liegt in der Vergangenheit. Bitte wähle heute oder einen späteren Tag.",
+        "Der erste Tag liegt in der Vergangenheit. Bitte wählen Sie heute oder einen späteren Tag.",
       "classday.class_trip_return_time_multi_day":
-        "Eine Rückkehrzeit geht nur für einen einzelnen Tag. Bitte lösche die Uhrzeit oder wähle einen Tag.",
+        "Eine Rückkehrzeit geht nur für einen einzelnen Tag. Bitte löschen Sie die Uhrzeit oder wählen Sie einen Tag.",
       "classday.class_trip_return_time_weekend":
-        "Am Wochenende kommt kein Kind in die OGS. Bitte lösche die Rückkehrzeit.",
+        "Am Wochenende kommt kein Kind in die OGS. Bitte löschen Sie die Rückkehrzeit.",
       "classday.class_trip_status_conflict":
-        "Für ein Kind steht an einem dieser Tage schon etwas, zum Beispiel krank. Es wurde nichts gespeichert. Bitte sprich mit der OGS.",
+        "Für ein Kind steht an einem dieser Tage schon etwas, zum Beispiel krank. Es wurde nichts gespeichert. Bitte sprechen Sie mit der OGS.",
       "classday.class_trip_student_not_in_class":
-        "Ein Kind ist nicht mehr in dieser Klasse. Bitte lade die Seite neu.",
+        "Ein Kind ist nicht mehr in dieser Klasse. Bitte laden Sie die Seite neu.",
       "classday.day_hint_class_empty":
         "In dieser Klasse ist kein Kind in der OGS. Ein Hinweis für die ganze Klasse ist deshalb nicht möglich.",
       "classday.day_hint_invalid":
         "Der Hinweis braucht einen Text. Er darf höchstens 500 Zeichen lang sein.",
       "classday.day_hint_not_today":
-        "Einen Hinweis für die OGS kannst du nur für heute schreiben.",
+        "Einen Hinweis für die OGS können Sie nur für heute schreiben.",
       "classday.day_hint_student_not_in_class":
-        "Dieses Kind ist heute nicht in deiner Klasse. Bitte lade die Seite neu.",
+        "Dieses Kind ist heute nicht in Ihrer Klasse. Bitte laden Sie die Seite neu.",
       "classday.homework_not_found":
-        "Diese Hausaufgabe gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Hausaufgabe gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "classday.morning_attendance_no_school_day":
         "Heute ist kein Schultag. Die Anwesenheit lässt sich nur an Schultagen eintragen.",
       "classday.morning_attendance_not_today":
-        "Die Anwesenheit lässt sich nur für heute eintragen. Bitte öffne den heutigen Tag.",
+        "Die Anwesenheit lässt sich nur für heute eintragen. Bitte öffnen Sie den heutigen Tag.",
       "classday.morning_attendance_unknown_child":
-        "Ein Kind gehört nicht mehr zu dieser Klasse. Bitte lade die Seite neu.",
+        "Ein Kind gehört nicht mehr zu dieser Klasse. Bitte laden Sie die Seite neu.",
       "classday.school_write_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "communication.announcement_not_found":
-        "Diese Ankündigung gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Ankündigung gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "communication.announcement_reminder_sent":
         "Die Erinnerung ist schon verschickt. Sie lässt sich nicht mehr ändern.",
       "communication.class_letter_class_not_reachable":
-        "Diese Klasse ist dir nicht zugeordnet. Bitte wähle eine eigene Klasse.",
+        "Diese Klasse ist Ihnen nicht zugeordnet. Bitte wählen Sie eine eigene Klasse.",
       "communication.class_letter_read_only":
         "Diesen Elternbrief hat eine Lehrkraft geschrieben. Nur sie kann ihn ändern, senden oder löschen.",
       "communication.declaration_has_submissions":
-        "Auf dieses Einverständnis haben Eltern schon geantwortet. Deshalb lässt es sich nicht löschen. Du kannst es zurückziehen, dann sehen Eltern es nicht mehr.",
+        "Auf dieses Einverständnis haben Eltern schon geantwortet. Deshalb lässt es sich nicht löschen. Sie können es zurückziehen, dann sehen Eltern es nicht mehr.",
       "communication.group_thread_closed":
         "Diese Gruppennachricht ist geschlossen. Eine Antwort ist nicht mehr möglich.",
       "communication.group_thread_no_recipients":
         "Niemand in dieser Gruppe hat Eltern mit Zugang zu moto. Die Nachricht wurde nicht verschickt.",
       "communication.leadership_messages_unavailable":
-        "Nachrichten nur an die Leitung sind hier zurzeit nicht möglich. Bitte schreibe an das ganze OGS-Team.",
+        "Nachrichten nur an die Leitung sind hier zurzeit nicht möglich. Bitte schreiben Sie an das ganze OGS-Team.",
       "communication.letter_placeholder_letter_only":
-        "Platzhalter gehen nur im Text eines Elternbriefs. Bitte nimm sie aus dem Betreff oder wähle „Elternbrief“.",
+        "Platzhalter gehen nur im Text eines Elternbriefs. Bitte nehmen Sie sie aus dem Betreff oder wählen Sie „Elternbrief“.",
       "communication.letter_placeholder_unknown":
-        "Diese Platzhalter kennt moto nicht: {placeholders}. Bitte nimm nur Platzhalter aus der Liste.",
+        "Diese Platzhalter kennt moto nicht: {placeholders}. Bitte nehmen Sie nur Platzhalter aus der Liste.",
       "communication.letter_print_not_letter":
         "Nur ein veröffentlichter Elternbrief lässt sich drucken.",
       "communication.message_send_conflict":
-        "Die Nachricht wurde bereits anders gesendet. Bitte lade den Chat neu.",
+        "Die Nachricht wurde bereits anders gesendet. Bitte laden Sie den Chat neu.",
       "communication.notifications_disabled":
-        "Deine Schule hat Benachrichtigungen ausgeschaltet. Eine Testbenachrichtigung ist deshalb nicht möglich.",
+        "Ihre Schule hat Benachrichtigungen ausgeschaltet. Eine Testbenachrichtigung ist deshalb nicht möglich.",
       "communication.parent_messaging_disabled":
         "Die Schule hat Eltern-Nachrichten ausgeschaltet. Das geht gerade nicht.",
       "communication.parent_news_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "communication.poll_not_open":
-        "{object} ist nicht mehr geöffnet. Bitte frage deine Ansprechperson.",
+        "{object} ist nicht mehr geöffnet. Bitte fragen Sie Ihre Ansprechperson.",
       "communication.staff_group_create_forbidden":
-        "Lehrkräfte können keinen Gruppenchat anlegen. Frag die OGS danach.",
+        "Lehrkräfte können keinen Gruppenchat anlegen. Bitten Sie die OGS darum.",
       "communication.staff_group_manage_forbidden":
         "Nur wer den Gruppenchat angelegt hat und die OGS-Leitung können ihn ändern.",
       "communication.staff_group_members_required":
-        "Bitte wähle mindestens eine Person aus, die noch nicht in der Gruppe ist.",
+        "Bitte wählen Sie mindestens eine Person aus, die noch nicht in der Gruppe ist.",
       "communication.staff_group_name_invalid":
-        "Bitte gib dem Gruppenchat einen Namen mit höchstens {max_characters} Zeichen.",
+        "Bitte geben Sie dem Gruppenchat einen Namen mit höchstens {max_characters} Zeichen.",
       "communication.staff_group_too_large":
         "Ein Gruppenchat hat höchstens {max_members} Mitglieder.",
       "communication.staff_messaging_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "communication.staff_notice_outdated":
-        "Dieser Hinweis hat sich inzwischen geändert. Bitte lade die Seite neu.",
+        "Dieser Hinweis hat sich inzwischen geändert. Bitte laden Sie die Seite neu.",
       "communication.survey_already_answered":
-        "Du hast an dieser Umfrage schon teilgenommen. Die Antwort lässt sich nicht mehr ändern.",
+        "Sie haben an dieser Umfrage schon teilgenommen. Die Antwort lässt sich nicht mehr ändern.",
       "communication.survey_anonymous":
         "Diese Umfrage ist anonym. Einzelne Antworten gibt es dafür nicht.",
       "communication.survey_not_draft":
@@ -330,302 +336,308 @@ export const ERROR_CATALOG = {
       "communication.survey_not_open":
         "Diese Umfrage nimmt keine Antworten mehr an.",
       "devices.tag_scan_already_resolved":
-        "Dieser Scan ist schon erledigt. Bitte lade die Seite neu.",
+        "Dieser Scan ist schon erledigt. Bitte laden Sie die Seite neu.",
       "devices.tag_scan_not_found":
-        "Diesen Scan gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diesen Scan gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "display.disabled":
         "Die Anzeigetafel ist an dieser Schule ausgeschaltet.",
       "display.manage_forbidden":
-        "Du darfst Info-Displays ansehen, aber nicht ändern. Bitte frage deine Schulleitung.",
+        "Sie dürfen Info-Displays ansehen, aber nicht ändern. Bitte fragen Sie Ihre Schulleitung.",
       "enrollment.approval_care_offering_day_conflict":
-        "Für dieses Kind sind an einem Tag zwei Angebote gebucht, die nicht zusammen gehen. Bitte ändere zuerst die Buchung.",
+        "Für dieses Kind sind an einem Tag zwei Angebote gebucht, die nicht zusammen gehen. Bitte ändern Sie zuerst die Buchung.",
       "enrollment.approval_care_offering_exactly_one":
         "Für dieses Kind muss genau ein Betreuungsangebot gebucht sein. Die Familie muss die Auswahl ändern.",
       "enrollment.approval_care_offering_missing":
         "Für dieses Kind ist kein Betreuungsangebot gebucht. Die Familie muss zuerst ein Angebot ergänzen.",
       "enrollment.approval_data_invalid":
-        "Die Angaben dieser Anmeldung sind unvollständig. Bitte korrigiere die Daten des Kindes.",
+        "Die Angaben dieser Anmeldung sind unvollständig. Bitte korrigieren Sie die Daten des Kindes.",
       "enrollment.approval_offering_terms_changed":
-        "Ein Angebot hat sich seit der Anmeldung geändert. Öffne die Anmeldung und bestätige die neuen Angaben.",
+        "Ein Angebot hat sich seit der Anmeldung geändert. Öffnen Sie die Anmeldung und bestätigen Sie die neuen Angaben.",
       "enrollment.approval_staff_profile_required":
         "Diese Anmeldung enthält Abhol- oder Bringzeiten. Freigeben kann sie nur jemand mit Personalprofil.",
       "enrollment.captcha_failed":
-        "Die Sicherheitsabfrage hat nicht geklappt. Bitte versuche es noch einmal.",
-      "enrollment.captcha_required": "Bitte bestätige die Sicherheitsabfrage.",
+        "Die Sicherheitsabfrage hat nicht geklappt. Bitte versuchen Sie es noch einmal.",
+      "enrollment.captcha_required":
+        "Bitte bestätigen Sie die Sicherheitsabfrage.",
       "enrollment.care_offering_auto_add_invalid":
-        "Die automatische Zubuchung passt so nicht. Bitte prüfe die auslösenden Angebote und die Tagesauswahl.",
+        "Die automatische Zubuchung passt so nicht. Bitte prüfen Sie die auslösenden Angebote und die Tagesauswahl.",
       "enrollment.care_offering_capacity_invalid":
-        "Bitte prüfe die Zahl der Plätze. Ein Pflichtangebot hat keine Platzgrenze.",
+        "Bitte prüfen Sie die Zahl der Plätze. Ein Pflichtangebot hat keine Platzgrenze.",
       "enrollment.care_offering_closed":
-        "Ein gewähltes Betreuungsangebot nimmt gerade keine Anmeldungen an. Bitte wähle ein anderes Angebot.",
+        "Ein gewähltes Betreuungsangebot nimmt gerade keine Anmeldungen an. Bitte wählen Sie ein anderes Angebot.",
       "enrollment.care_offering_day_conflict":
-        "An einem Tag sind zwei Angebote gewählt, die nicht zusammen gehen. Bitte wähle pro Tag nur eines.",
+        "An einem Tag sind zwei Angebote gewählt, die nicht zusammen gehen. Bitte wählen Sie pro Tag nur eines.",
       "enrollment.care_offering_days_required":
-        "Bitte wähle mindestens einen Wochentag für das Angebot.",
+        "Bitte wählen Sie mindestens einen Wochentag für das Angebot.",
       "enrollment.care_offering_exactly_one":
-        "Bitte wähle für jedes Kind genau ein Betreuungsangebot.",
+        "Bitte wählen Sie für jedes Kind genau ein Betreuungsangebot.",
       "enrollment.care_offering_full":
-        "Ein gewähltes Betreuungsangebot ist schon voll. Bitte wähle ein anderes Angebot oder frage die Schule.",
+        "Ein gewähltes Betreuungsangebot ist schon voll. Bitte wählen Sie ein anderes Angebot oder fragen Sie die Schule.",
       "enrollment.care_offering_in_use":
-        "{object} wird bereits verwendet. Bitte prüfe den aktuellen Stand.",
+        "{object} wird bereits verwendet. Bitte prüfen Sie den aktuellen Stand.",
       "enrollment.care_offering_missing":
-        "Bitte wähle für jedes Kind mindestens ein Betreuungsangebot.",
+        "Bitte wählen Sie für jedes Kind mindestens ein Betreuungsangebot.",
       "enrollment.care_offering_name_required":
-        "Bitte gib einen Namen für das Betreuungsangebot ein.",
+        "Bitte geben Sie einen Namen für das Betreuungsangebot ein.",
       "enrollment.care_offering_not_found":
-        "Dieses Betreuungsangebot gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Dieses Betreuungsangebot gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "enrollment.care_offering_pickup_time_invalid":
-        "Bitte gib die Gehzeit als Uhrzeit ein, zum Beispiel 15:30.",
+        "Bitte geben Sie die Gehzeit als Uhrzeit ein, zum Beispiel 15:30.",
       "enrollment.care_offering_pickup_times_required":
-        "Bitte trage für jeden Betreuungstag eine Gehzeit ein.",
+        "Bitte tragen Sie für jeden Betreuungstag eine Gehzeit ein.",
       "enrollment.care_offering_price_invalid":
         "Der Preis darf nicht kleiner als 0 sein.",
       "enrollment.care_offering_selection_invalid":
-        "Bitte prüfe die Auswahlregel. Alle Angebote einer Auswahlgruppe brauchen dieselbe Regel.",
+        "Bitte prüfen Sie die Auswahlregel. Alle Angebote einer Auswahlgruppe brauchen dieselbe Regel.",
       "enrollment.care_offering_template_mixed_phases":
-        "Im Regeltermin „{template}“ gehören alle Angebote zur selben Anmeldephase. Behalte die Anmeldephase von „{offering}“ bei. Oder entferne das Angebot zuerst im Regeltermin unter „Angebote als Quelle“.",
+        "Im Regeltermin „{template}“ gehören alle Angebote zur selben Anmeldephase. Behalten Sie die Anmeldephase von „{offering}“ bei. Oder entfernen Sie das Angebot zuerst im Regeltermin unter „Angebote als Quelle“.",
       "enrollment.care_offering_template_no_active_source":
-        "Der Regeltermin „{template}“ hätte dann kein eingeschaltetes Angebot mehr. Schalte „{offering}“ wieder ein. Oder ändere zuerst im Regeltermin die „Angebote als Quelle“.",
+        "Der Regeltermin „{template}“ hätte dann kein eingeschaltetes Angebot mehr. Schalten Sie „{offering}“ wieder ein. Oder ändern Sie zuerst im Regeltermin die „Angebote als Quelle“.",
       "enrollment.care_offering_template_outside_period":
-        "Die Anmeldephase von „{offering}“ passt nicht in den Zeitraum des Regeltermins „{template}“. Wähle eine passende Anmeldephase. Oder entferne das Angebot zuerst im Regeltermin unter „Angebote als Quelle“.",
+        "Die Anmeldephase von „{offering}“ passt nicht in den Zeitraum des Regeltermins „{template}“. Wählen Sie eine passende Anmeldephase. Oder entfernen Sie das Angebot zuerst im Regeltermin unter „Angebote als Quelle“.",
       "enrollment.care_offering_template_period_mismatch":
-        "Der Regeltermin muss den ganzen Betreuungszeitraum abdecken. Bitte wähle einen passenden Regeltermin.",
+        "Der Regeltermin muss den ganzen Betreuungszeitraum abdecken. Bitte wählen Sie einen passenden Regeltermin.",
       "enrollment.care_offering_template_source_invalid":
-        "„{offering}“ passt nicht mehr zum Regeltermin „{template}“. Prüfe im Regeltermin die „Angebote als Quelle“.",
+        "„{offering}“ passt nicht mehr zum Regeltermin „{template}“. Prüfen Sie im Regeltermin die „Angebote als Quelle“.",
       "enrollment.care_offering_unavailable":
-        "Ein gewähltes Angebot gibt es nicht für die Klassenstufe des Kindes. Bitte prüfe Klassenstufe und Auswahl.",
+        "Ein gewähltes Angebot gibt es nicht für die Klassenstufe des Kindes. Bitte prüfen Sie Klassenstufe und Auswahl.",
       "enrollment.care_offerings_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "enrollment.change_request_child_locked":
-        "Dieses Kind ist schon in der Betreuung. Änderungen mache bitte in der Eltern-App.",
+        "Dieses Kind ist schon in der Betreuung. Änderungen machen Sie bitte in der Eltern-App.",
       "enrollment.change_request_conflict":
-        "{object} wurde inzwischen geändert. Bitte prüfe deine Angaben erneut.",
+        "{object} wurde inzwischen geändert. Bitte prüfen Sie Ihre Angaben erneut.",
       "enrollment.change_request_guardian_linked":
-        "Diese Angaben ändere bitte in der Eltern-App.",
+        "Diese Angaben ändern Sie bitte in der Eltern-App.",
       "enrollment.change_request_not_allowed":
-        "Diese Anmeldung kann gerade nicht geändert werden. Bitte wende dich an die Schule.",
+        "Diese Anmeldung kann gerade nicht geändert werden. Bitte wenden Sie sich an die Schule.",
       "enrollment.change_request_not_found":
-        "Diese Änderungsanfrage gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Änderungsanfrage gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "enrollment.change_request_note_required":
-        "Bitte schreibe eine kurze Begründung für die Familie.",
+        "Bitte schreiben Sie eine kurze Begründung für die Familie.",
       "enrollment.change_request_parent_not_permitted":
-        "Dieser Elternteil darf das Kind nicht mehr anmelden. Lehne die Änderungsanfrage bitte ab.",
+        "Dieser Elternteil darf das Kind nicht mehr anmelden. Lehnen Sie die Änderungsanfrage bitte ab.",
       "enrollment.change_request_status_changed":
-        "Der Stand dieser Änderungsanfrage hat sich geändert. Bitte lade die Seite neu.",
+        "Der Stand dieser Änderungsanfrage hat sich geändert. Bitte laden Sie die Seite neu.",
       "enrollment.child_already_enrolled":
         "Dieses Kind ist an der Schule schon angemeldet. Diese Anmeldung ist nur für neue Kinder.",
       "enrollment.child_already_requested":
-        "Eine andere Person hat dieses Kind schon angemeldet. Bitte wende dich an die Schule.",
+        "Eine andere Person hat dieses Kind schon angemeldet. Bitte wenden Sie sich an die Schule.",
       "enrollment.child_ambiguous":
-        "Wir konnten das Kind nicht eindeutig zuordnen. Bitte wende dich an die Schule.",
+        "Wir konnten das Kind nicht eindeutig zuordnen. Bitte wenden Sie sich an die Schule.",
       "enrollment.child_birth_date_invalid":
-        "Bitte gib das Geburtsdatum des Kindes ein.",
+        "Bitte geben Sie das Geburtsdatum des Kindes ein.",
       "enrollment.child_grade_required":
-        "Bitte wähle die Klassenstufe des Kindes.",
+        "Bitte wählen Sie die Klassenstufe des Kindes.",
       "enrollment.child_name_required":
-        "Bitte gib Vor- und Nachnamen des Kindes ein.",
+        "Bitte geben Sie Vor- und Nachnamen des Kindes ein.",
       "enrollment.child_not_enrolled":
         "Dieses Kind ist an der Schule noch nicht angemeldet. Diese Anmeldung ist nur für Kinder der Schule.",
       "enrollment.child_not_permitted":
-        "Du darfst dieses Kind nicht erneut anmelden. Bitte wende dich an die Schule.",
+        "Sie dürfen dieses Kind nicht erneut anmelden. Bitte wenden Sie sich an die Schule.",
       "enrollment.child_possibly_enrolled":
-        "Ein Kind mit diesem Namen und Geburtsdatum ist schon angemeldet. Bitte prüfe, ob es dasselbe Kind ist.",
-      "enrollment.child_required": "Bitte füge mindestens ein Kind hinzu.",
+        "Ein Kind mit diesem Namen und Geburtsdatum ist schon angemeldet. Bitte prüfen Sie, ob es dasselbe Kind ist.",
+      "enrollment.child_required": "Bitte fügen Sie mindestens ein Kind hinzu.",
       "enrollment.class_not_eligible":
-        "Diese Anmeldung gilt nur für bestimmte Klassen. Bitte prüfe die Klasse deines Kindes.",
+        "Diese Anmeldung gilt nur für bestimmte Klassen. Bitte prüfen Sie die Klasse Ihres Kindes.",
       "enrollment.companion_note_required":
-        "Bitte gib an, mit wem das Kind nach Hause geht.",
+        "Bitte geben Sie an, mit wem das Kind nach Hause geht.",
       "enrollment.complete_withdrawal_confirmation_required":
-        "{object} kann noch nicht abgemeldet werden. Bitte bestätige mit {confirmation}.",
+        "{object} kann noch nicht abgemeldet werden. Bitte bestätigen Sie mit {confirmation}.",
       "enrollment.consent_required":
-        "Bitte bestätige alle Pflicht-Zustimmungen.",
+        "Bitte bestätigen Sie alle Pflicht-Zustimmungen.",
       "enrollment.correction_reason_required":
-        "Bitte gib einen Grund für die Korrektur ein.",
+        "Bitte geben Sie einen Grund für die Korrektur ein.",
       "enrollment.correction_school_class_mismatch":
-        "Die Klasse passt nicht zur Klassenstufe. Bitte wähle eine passende Klasse.",
+        "Die Klasse passt nicht zur Klassenstufe. Bitte wählen Sie eine passende Klasse.",
       "enrollment.day_selection_not_allowed":
-        "Bei diesem Angebot stehen die Tage fest. Du kannst keine Tage auswählen.",
+        "Bei diesem Angebot stehen die Tage fest. Sie können keine Tage auswählen.",
       "enrollment.day_selection_required":
-        "Bitte wähle für dieses Angebot mindestens einen Wochentag.",
+        "Bitte wählen Sie für dieses Angebot mindestens einen Wochentag.",
       "enrollment.decision_already_final":
-        "Über dieses Kind wurde schon entschieden. Bitte lade die Seite neu.",
+        "Über dieses Kind wurde schon entschieden. Bitte laden Sie die Seite neu.",
       "enrollment.deletion_reason_invalid":
-        "Bitte gib einen Grund mit 3 bis 500 Zeichen ein.",
+        "Bitte geben Sie einen Grund mit 3 bis 500 Zeichen ein.",
       "enrollment.departure_mode_limit":
-        "Bitte wähle pro Wochentag nur einen Heimweg.",
+        "Bitte wählen Sie pro Wochentag nur einen Heimweg.",
       "enrollment.disabled":
-        "Die Online-Anmeldung ist an dieser Schule gerade nicht möglich. Bitte wende dich an die Schule.",
+        "Die Online-Anmeldung ist an dieser Schule gerade nicht möglich. Bitte wenden Sie sich an die Schule.",
       "enrollment.edit_not_allowed":
-        "Diese Anmeldung kann nicht mehr geändert werden. Bitte wende dich an die Schule.",
+        "Diese Anmeldung kann nicht mehr geändert werden. Bitte wenden Sie sich an die Schule.",
       "enrollment.existing_child_choice_invalid":
-        "Deine Auswahl passt nicht mehr zu diesem Kind. Bitte lade die Seite neu.",
+        "Ihre Auswahl passt nicht mehr zu diesem Kind. Bitte laden Sie die Seite neu.",
       "enrollment.export_too_large":
-        "Diese Anmeldephase hat zu viele Anmeldungen für einen Export. Bitte melde dich beim moto-Team.",
+        "Diese Anmeldephase hat zu viele Anmeldungen für einen Export. Bitte melden Sie sich beim moto-Team.",
       "enrollment.family_children_closed":
-        "Die Kinderzahl kann hier nicht mehr geändert werden. Sie steht dann in deinem Betreuungsvertrag.",
+        "Die Kinderzahl kann hier nicht mehr geändert werden. Sie steht dann in Ihrem Betreuungsvertrag.",
       "enrollment.family_children_invalid":
-        "Bitte gib eine Zahl von 1 bis 20 an.",
-      "enrollment.field_required": "Bitte fülle alle Pflichtfelder aus.",
+        "Bitte geben Sie eine Zahl von 1 bis 20 an.",
+      "enrollment.field_required": "Bitte füllen Sie alle Pflichtfelder aus.",
       "enrollment.form_attachment_invalid":
-        "Bitte prüfe die Bezeichnung und die PDF-Datei.",
+        "Bitte prüfen Sie die Bezeichnung und die PDF-Datei.",
       "enrollment.form_field_allowed_times_invalid":
-        "Bitte prüfe die Abholzeiten. Jede Uhrzeit darf nur einmal vorkommen, zum Beispiel 15:30.",
+        "Bitte prüfen Sie die Abholzeiten. Jede Uhrzeit darf nur einmal vorkommen, zum Beispiel 15:30.",
       "enrollment.form_field_content_required":
-        "Bitte gib für den Hinweistext einen Text ein.",
+        "Bitte geben Sie für den Hinweistext einen Text ein.",
       "enrollment.form_field_file_options_invalid":
-        "Bitte prüfe die Dateifrage. Wähle mindestens eine Dateiart und eine Größe von 1 bis 10 MB.",
+        "Bitte prüfen Sie die Dateifrage. Wählen Sie mindestens eine Dateiart und eine Größe von 1 bis 10 MB.",
       "enrollment.form_field_key_duplicate":
-        "Zwei Fragen haben denselben Text. Bitte ändere den Text der markierten Frage.",
+        "Zwei Fragen haben denselben Text. Bitte ändern Sie den Text der markierten Frage.",
       "enrollment.form_field_key_invalid":
-        "Diese Frage lässt sich so nicht speichern. Bitte ändere ihren Text.",
+        "Diese Frage lässt sich so nicht speichern. Bitte ändern Sie ihren Text.",
       "enrollment.form_field_label_required":
-        "Bitte gib jedem Feld eine Beschriftung.",
+        "Bitte geben Sie jedem Feld eine Beschriftung.",
       "enrollment.form_field_options_invalid":
         "Auswahlfelder brauchen mindestens eine Option. Andere Felder haben keine Optionen.",
       "enrollment.form_field_target_duplicate":
         "Diese Zuordnung gibt es im Formular schon. Jede Zuordnung darf nur einmal vorkommen.",
       "enrollment.form_field_target_invalid":
-        "Dieses Feld passt nicht zu seiner Zuordnung. Bitte wähle die Zuordnung neu.",
+        "Dieses Feld passt nicht zu seiner Zuordnung. Bitte wählen Sie die Zuordnung neu.",
       "enrollment.form_field_visibility_invalid":
-        "Die Anzeigebedingung passt nicht. Bitte wähle als Bedingung eine Ja-Nein-Frage oder eine Auswahlfrage.",
+        "Die Anzeigebedingung passt nicht. Bitte wählen Sie als Bedingung eine Ja-Nein-Frage oder eine Auswahlfrage.",
       "enrollment.form_grade_collection_required":
-        "Die Heimweg-Beschränkung braucht die Abfrage der Klassenstufe. Bitte schalte sie in den Einstellungen ein.",
+        "Die Heimweg-Beschränkung braucht die Abfrage der Klassenstufe. Bitte schalten Sie sie in den Einstellungen ein.",
       "enrollment.form_not_found":
-        "Dieses Anmeldeformular gibt es nicht. Bitte prüfe den Link oder frage die Schule.",
+        "Dieses Anmeldeformular gibt es nicht. Bitte prüfen Sie den Link oder fragen Sie die Schule.",
       "enrollment.grade_not_eligible":
-        "Diese Anmeldung gilt nur für bestimmte Klassenstufen. Bitte prüfe die Klassenstufe deines Kindes.",
+        "Diese Anmeldung gilt nur für bestimmte Klassenstufen. Bitte prüfen Sie die Klassenstufe Ihres Kindes.",
       "enrollment.guardian_email_required":
-        "Bitte gib eine E-Mail-Adresse ein.",
-      "enrollment.guardian_name_required": "Bitte gib Vor- und Nachnamen ein.",
-      "enrollment.guardian_phone_required": "Bitte gib eine Telefonnummer ein.",
+        "Bitte geben Sie eine E-Mail-Adresse ein.",
+      "enrollment.guardian_name_required":
+        "Bitte geben Sie Vor- und Nachnamen ein.",
+      "enrollment.guardian_phone_required":
+        "Bitte geben Sie eine Telefonnummer ein.",
       "enrollment.holiday_allocation_changed":
-        "Die Liste hat sich geändert. Bitte prüfe deine Entscheidung neu.",
+        "Die Liste hat sich geändert. Bitte prüfen Sie Ihre Entscheidung neu.",
       "enrollment.holiday_allocation_full":
-        "In dieser Woche ist kein Platz mehr frei. Bitte lade die Liste neu.",
+        "In dieser Woche ist kein Platz mehr frei. Bitte laden Sie die Liste neu.",
       "enrollment.holiday_allocation_mode_locked":
         "Es gibt schon Anmeldungen. Darum bleibt die Platzvergabe so.",
       "enrollment.holiday_allocation_pending":
-        "Bitte vergib zuerst im Reiter „Vergabe“ die Plätze.",
+        "Bitte vergeben Sie zuerst im Reiter „Vergabe“ die Plätze.",
       "enrollment.holiday_booking_unit_booked":
         "Für diese Woche gibt es schon Anmeldungen. Darum bleiben die Buchungsart und bei einzelnen Tagen auch die Tage der Woche so.",
       "enrollment.holiday_care_wish_required":
-        "Bitte wähle, ob dein Kind in den Ferien Betreuung braucht.",
+        "Bitte wählen Sie, ob Ihr Kind in den Ferien Betreuung braucht.",
       "enrollment.holiday_child_day_limit":
-        "Für ein Kind sind in diesen Ferien höchstens {limit} Tage möglich. Mit allen Anmeldungen des Kindes wären es {days} Tage, davon {elsewhere} in anderen Anmeldungen. Bitte wähle weniger Tage.",
+        "Für ein Kind sind in diesen Ferien höchstens {limit} Tage möglich. Mit allen Anmeldungen des Kindes wären es {days} Tage, davon {elsewhere} in anderen Anmeldungen. Bitte wählen Sie weniger Tage.",
       "enrollment.holiday_child_day_limit_public":
-        "Für ein Kind sind in diesen Ferien höchstens {limit} Tage möglich. Das gilt für alle Anmeldungen des Kindes zusammen. Bitte wähle weniger Tage oder frage das Träger-Büro.",
+        "Für ein Kind sind in diesen Ferien höchstens {limit} Tage möglich. Das gilt für alle Anmeldungen des Kindes zusammen. Bitte wählen Sie weniger Tage oder fragen Sie das Träger-Büro.",
       "enrollment.holiday_form_field_not_allowed":
-        "Diese Frage geht im Formular der Ferienanmeldung nicht. Bitte wähle einen anderen Typ oder eine andere Bedingung.",
+        "Diese Frage geht im Formular der Ferienanmeldung nicht. Bitte wählen Sie einen anderen Typ oder eine andere Bedingung.",
       "enrollment.holiday_guest_group_invalid":
-        "Diese Gruppe gibt es nicht mehr. Bitte wähle eine andere Gruppe.",
+        "Diese Gruppe gibt es nicht mehr. Bitte wählen Sie eine andere Gruppe.",
       "enrollment.holiday_guest_not_found":
         "Die Angaben zu diesem Feriengast sind nicht mehr da. Sie bleiben nur bis 7 Tage nach der Ferienwoche.",
       "enrollment.holiday_host_school_outside_traeger":
-        "Diese Schule gehört nicht zu deinem Träger. Bitte wähle eine Schule aus der Liste.",
+        "Diese Schule gehört nicht zu Ihrem Träger. Bitte wählen Sie eine Schule aus der Liste.",
       "enrollment.holiday_lunch_booked":
-        "Für diese Woche ist schon Mittagessen gebucht. Darum bleibt das Angebot bestehen. Den Preis kannst du ändern.",
+        "Für diese Woche ist schon Mittagessen gebucht. Darum bleibt das Angebot bestehen. Den Preis können Sie ändern.",
       "enrollment.holiday_period_incomplete":
         "Der Ferienzeitraum braucht mindestens eine Woche. Jede Woche braucht mindestens ein Zeitmodell.",
-      "enrollment.holiday_period_invalid": "Bitte prüfe die markierten Felder.",
+      "enrollment.holiday_period_invalid":
+        "Bitte prüfen Sie die markierten Felder.",
       "enrollment.holiday_period_not_found":
-        "Diesen Ferienzeitraum gibt es nicht. Bitte öffne ihn aus der Liste der Ferien.",
+        "Diesen Ferienzeitraum gibt es nicht. Bitte öffnen Sie ihn aus der Liste der Ferien.",
       "enrollment.holiday_proof_limit":
         "Diese Anmeldung hat schon {max_files} Nachweise. Mehr Dateien gehen nicht.",
       "enrollment.holiday_registration_closed":
-        "Die Anmeldung für diese Ferien ist nicht offen. Bitte achte auf Anmeldebeginn und Anmeldeschluss.",
+        "Die Anmeldung für diese Ferien ist nicht offen. Bitte achten Sie auf Anmeldebeginn und Anmeldeschluss.",
       "enrollment.holiday_registration_entry_not_found":
-        "Diese Anmeldung gibt es nicht mehr. Bitte lade die Liste neu.",
+        "Diese Anmeldung gibt es nicht mehr. Bitte laden Sie die Liste neu.",
       "enrollment.holiday_registration_form_changed":
-        "Der Träger hat das Formular gerade geändert. Bitte prüfe deine Angaben und sende die Anmeldung noch einmal.",
+        "Der Träger hat das Formular gerade geändert. Bitte prüfen Sie Ihre Angaben und senden Sie die Anmeldung noch einmal.",
       "enrollment.holiday_registration_frozen":
-        "Die Anmeldung ist eingefroren. Wähle zuerst „Wieder öffnen“.",
+        "Die Anmeldung ist eingefroren. Wählen Sie zuerst „Wieder öffnen“.",
       "enrollment.holiday_registration_invalid":
-        "Bitte prüfe die markierten Felder.",
+        "Bitte prüfen Sie die markierten Felder.",
       "enrollment.holiday_registration_not_found":
-        "Diesen Anmeldelink gibt es nicht. Bitte nutze den Link, den du vom Träger bekommen hast.",
+        "Diesen Anmeldelink gibt es nicht. Bitte nutzen Sie den Link, den Sie vom Träger bekommen haben.",
       "enrollment.holiday_registration_state_conflict":
-        "Das geht bei dieser Anmeldung gerade nicht. Bitte lade die Seite neu.",
+        "Das geht bei dieser Anmeldung gerade nicht. Bitte laden Sie die Seite neu.",
       "enrollment.holiday_registration_status_not_found":
-        "Diesen Link zu einer Ferienanmeldung gibt es nicht. Bitte nutze den Link aus deiner E-Mail.",
+        "Diesen Link zu einer Ferienanmeldung gibt es nicht. Bitte nutzen Sie den Link aus Ihrer E-Mail.",
       "enrollment.holiday_week_booked":
-        "Für diese Woche gibt es schon Anmeldungen. Darum lassen sich die Woche und ihre gebuchten Zeitmodelle nicht entfernen. Ein gebuchtes Zeitmodell kannst du archivieren. Dann kann es niemand mehr neu buchen.",
+        "Für diese Woche gibt es schon Anmeldungen. Darum lassen sich die Woche und ihre gebuchten Zeitmodelle nicht entfernen. Ein gebuchtes Zeitmodell können Sie archivieren. Dann kann es niemand mehr neu buchen.",
       "enrollment.holiday_week_day_limit":
-        "Ein Kind ist schon für diese Woche angemeldet. Mit den neuen Tagen hätte es mehr Tage als erlaubt. Lass die Tage so oder erhöhe „Höchstens Tage je Kind“.",
+        "Ein Kind ist schon für diese Woche angemeldet. Mit den neuen Tagen hätte es mehr Tage als erlaubt. Lassen Sie die Tage so oder erhöhen Sie „Höchstens Tage je Kind“.",
       "enrollment.holiday_week_no_care_day":
-        "Am {date} gibt es keine Betreuung ({name}). Diese Woche kann man nicht buchen. Wähle eine andere Woche.",
+        "Am {date} gibt es keine Betreuung ({name}). Diese Woche kann man nicht buchen. Wählen Sie eine andere Woche.",
       "enrollment.holiday_week_not_found":
-        "Diese Woche gehört nicht zu diesem Ferienzeitraum. Bitte lade die Seite neu.",
+        "Diese Woche gehört nicht zu diesem Ferienzeitraum. Bitte laden Sie die Seite neu.",
       "enrollment.holiday_weeks_booked_together":
         "Ein Kind ist schon für beide Wochen angemeldet. Darum dürfen die Wochen nicht auf dieselben Tage fallen.",
       "enrollment.holiday_wish_missing":
-        "Für diese Ferien kannst du nur Kinder anmelden, für die du in der OGS-Anmeldung Ferienbetreuung gewählt hast. Bei Fragen hilft dir der Träger.",
+        "Für diese Ferien können Sie nur Kinder anmelden, für die Sie in der OGS-Anmeldung Ferienbetreuung gewählt haben. Bei Fragen hilft Ihnen der Träger.",
       "enrollment.hosted_holiday_week_not_found":
         "Für diese Woche gibt es keine Teilnehmerliste mehr. Sie ist nur bis zum letzten Tag der Woche da.",
-      "enrollment.invalid_email": "Bitte gib eine gültige E-Mail-Adresse ein.",
-      "enrollment.invalid_phone": "Bitte gib eine gültige Telefonnummer ein.",
+      "enrollment.invalid_email":
+        "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+      "enrollment.invalid_phone":
+        "Bitte geben Sie eine gültige Telefonnummer ein.",
       "enrollment.late_invite_invalid":
-        "Dieser Link ist ungültig, abgelaufen oder schon benutzt. Bitte wende dich an die Schule.",
+        "Dieser Link ist ungültig, abgelaufen oder schon benutzt. Bitte wenden Sie sich an die Schule.",
       "enrollment.legal_block_incomplete":
-        "Bitte gib jedem eingeschalteten Rechtstext einen Titel und eine Beschriftung.",
+        "Bitte geben Sie jedem eingeschalteten Rechtstext einen Titel und eine Beschriftung.",
       "enrollment.legal_block_key_duplicate":
-        "Ein Rechtstext kommt doppelt vor. Bitte entferne den doppelten Rechtstext.",
+        "Ein Rechtstext kommt doppelt vor. Bitte entfernen Sie den doppelten Rechtstext.",
       "enrollment.legal_block_key_invalid":
-        "Dieser Rechtstext lässt sich so nicht speichern. Bitte entferne ihn und lege ihn neu an.",
+        "Dieser Rechtstext lässt sich so nicht speichern. Bitte entfernen Sie ihn und legen Sie ihn neu an.",
       "enrollment.legal_block_required_not_allowed":
-        "Hinweise und Einwilligungen dürfen keine Pflicht sein. Bitte nimm den Haken bei Pflicht heraus.",
+        "Hinweise und Einwilligungen dürfen keine Pflicht sein. Bitte nehmen Sie den Haken bei Pflicht heraus.",
       "enrollment.legal_document_invalid":
-        "Bitte wähle eine PDF-Datei mit höchstens {max_mb} MB.",
-      "enrollment.message_required": "Bitte schreibe eine Nachricht.",
+        "Bitte wählen Sie eine PDF-Datei mit höchstens {max_mb} MB.",
+      "enrollment.message_required": "Bitte schreiben Sie eine Nachricht.",
       "enrollment.offering_adjustment_invalid":
-        "Diese Änderung der Angebote ist so nicht möglich. Bitte prüfe Angebote und Datum.",
+        "Diese Änderung der Angebote ist so nicht möglich. Bitte prüfen Sie Angebote und Datum.",
       "enrollment.phase_booking_bounds_conflict":
-        "Der neue Zeitraum passt nicht zur geänderten Buchung von {child}. Bitte passe zuerst die Angebote des Kindes an.",
+        "Der neue Zeitraum passt nicht zur geänderten Buchung von {child}. Bitte passen Sie zuerst die Angebote des Kindes an.",
       "enrollment.phase_care_offering_conflict":
-        "Die Änderung passt nicht zu einem Betreuungsangebot der Phase. Bitte prüfe die Angebote.",
+        "Die Änderung passt nicht zu einem Betreuungsangebot der Phase. Bitte prüfen Sie die Angebote.",
       "enrollment.phase_eligibility_setting_required":
-        "Für eine Einschränkung nach Klasse oder Klassenstufe muss die passende Abfrage eingeschaltet sein. Bitte schalte sie in den Einstellungen ein.",
+        "Für eine Einschränkung nach Klasse oder Klassenstufe muss die passende Abfrage eingeschaltet sein. Bitte schalten Sie sie in den Einstellungen ein.",
       "enrollment.phase_has_effective_bookings":
-        "Für diese Anmeldephase sind noch Kinder gebucht. Deshalb kann sie nicht gelöscht werden. Wähle stattdessen „Deaktivieren“ oder beende zuerst die Buchungen.",
+        "Für diese Anmeldephase sind noch Kinder gebucht. Deshalb kann sie nicht gelöscht werden. Wählen Sie stattdessen „Deaktivieren“ oder beenden Sie zuerst die Buchungen.",
       "enrollment.phase_has_requests":
-        "Zu dieser Anmeldephase gibt es Anmeldungen. Deshalb kann sie nicht gelöscht werden. Wähle stattdessen „Deaktivieren“.",
+        "Zu dieser Anmeldephase gibt es Anmeldungen. Deshalb kann sie nicht gelöscht werden. Wählen Sie stattdessen „Deaktivieren“.",
       "enrollment.phase_name_exists":
-        "Es gibt schon eine Anmeldephase mit diesem Namen. Bitte wähle einen anderen Namen.",
+        "Es gibt schon eine Anmeldephase mit diesem Namen. Bitte wählen Sie einen anderen Namen.",
       "enrollment.phase_name_required":
-        "Bitte gib einen Namen für die Anmeldephase ein.",
+        "Bitte geben Sie einen Namen für die Anmeldephase ein.",
       "enrollment.phase_not_eligible":
-        "Diese Anmeldung ist für dein Konto nicht freigegeben. Bitte melde dich in der Eltern-App an oder frage die Schule.",
+        "Diese Anmeldung ist für Ihr Konto nicht freigegeben. Bitte melden Sie sich in der Eltern-App an oder fragen Sie die Schule.",
       "enrollment.phase_not_found":
-        "Diese Anmeldephase gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Anmeldephase gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "enrollment.phase_pending_child_window_conflict":
-        "Der neue Zeitraum passt nicht zu einem vorgemerkten Kind. Bitte prüfe zuerst dessen Betreuungszeitraum.",
+        "Der neue Zeitraum passt nicht zu einem vorgemerkten Kind. Bitte prüfen Sie zuerst dessen Betreuungszeitraum.",
       "enrollment.phase_school_classes_invalid":
-        "Die angebotenen und die zugelassenen Klassen passen nicht zusammen. Bitte prüfe die Klassen.",
+        "Die angebotenen und die zugelassenen Klassen passen nicht zusammen. Bitte prüfen Sie die Klassen.",
       "enrollment.phase_service_end_too_far":
-        "Das Ende darf höchstens 5 Jahre in der Zukunft liegen. Bitte wähle ein früheres Ende.",
+        "Das Ende darf höchstens 5 Jahre in der Zukunft liegen. Bitte wählen Sie ein früheres Ende.",
       "enrollment.phase_service_period_invalid":
-        "Der Betreuungszeitraum ist unvollständig oder endet vor dem Beginn. Bitte prüfe Beginn und Ende.",
+        "Der Betreuungszeitraum ist unvollständig oder endet vor dem Beginn. Bitte prüfen Sie Beginn und Ende.",
       "enrollment.phase_service_period_too_long":
-        "Der Betreuungszeitraum darf höchstens 2 Jahre lang sein. Bitte wähle ein früheres Ende.",
+        "Der Betreuungszeitraum darf höchstens 2 Jahre lang sein. Bitte wählen Sie ein früheres Ende.",
       "enrollment.phase_window_invalid":
-        "Das Anmeldefenster endet vor seinem Start. Bitte prüfe Öffnung und Schließung.",
+        "Das Anmeldefenster endet vor seinem Start. Bitte prüfen Sie Öffnung und Schließung.",
       "enrollment.pickup_time_not_allowed":
-        "Bitte wähle nur Abholzeiten aus der Liste. Die markierte Zeit gibt es nicht mehr.",
+        "Bitte wählen Sie nur Abholzeiten aus der Liste. Die markierte Zeit gibt es nicht mehr.",
       "enrollment.renewal_terms_changed":
-        "Die Bedingungen wurden gerade geändert. Bitte lies sie noch einmal und stimme dann zu.",
+        "Die Bedingungen wurden gerade geändert. Bitte lesen Sie sie noch einmal und stimmen Sie dann zu.",
       "enrollment.renewal_terms_required":
-        "Bitte stimme den Bedingungen für den neuen Zeitraum zu.",
+        "Bitte stimmen Sie den Bedingungen für den neuen Zeitraum zu.",
       "enrollment.request_duplicate":
         "Für dieses Kind gibt es in dieser Anmeldephase schon eine Anmeldung.",
       "enrollment.request_not_found":
-        "Diese Anmeldung gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Anmeldung gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "enrollment.required_care_offering_missing":
-        "Bitte wähle für jedes Kind das Pflichtangebot aus.",
+        "Bitte wählen Sie für jedes Kind das Pflichtangebot aus.",
       "enrollment.restore_duplicate":
-        "Für ein Kind gibt es in dieser Phase schon eine andere aktive Anmeldung. Bitte prüfe die Anmeldungen.",
+        "Für ein Kind gibt es in dieser Phase schon eine andere aktive Anmeldung. Bitte prüfen Sie die Anmeldungen.",
       "enrollment.restore_nothing_withdrawn":
         "In dieser Anmeldung ist kein Kind abgemeldet. Es gibt nichts wiederherzustellen.",
       "enrollment.restore_offering_closed":
-        "Ein gewähltes Betreuungsangebot ist inzwischen ausgeschaltet. Bitte prüfe die Angebote der Phase.",
+        "Ein gewähltes Betreuungsangebot ist inzwischen ausgeschaltet. Bitte prüfen Sie die Angebote der Phase.",
       "enrollment.restore_phase_inactive":
         "Die Anmeldephase ist nicht mehr aktiv. Die Anmeldung kann nicht wiederhergestellt werden.",
       "enrollment.schema_has_phases":
@@ -633,559 +645,562 @@ export const ERROR_CATALOG = {
       "enrollment.schema_has_requests":
         "Mit dieser Formularvorlage gibt es schon Anmeldungen. Darum kann sie nicht gelöscht werden.",
       "enrollment.schema_name_exists":
-        "Es gibt schon eine Formularvorlage mit diesem Namen. Bitte wähle einen anderen Namen.",
+        "Es gibt schon eine Formularvorlage mit diesem Namen. Bitte wählen Sie einen anderen Namen.",
       "enrollment.schema_name_required":
-        "Bitte gib einen Namen für die Formularvorlage ein.",
+        "Bitte geben Sie einen Namen für die Formularvorlage ein.",
       "enrollment.schema_not_found":
-        "Diese Formularvorlage gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Formularvorlage gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "enrollment.selected_day_not_available":
-        "Dieser Wochentag ist für das Angebot nicht möglich. Bitte wähle nur die angezeigten Tage.",
+        "Dieser Wochentag ist für das Angebot nicht möglich. Bitte wählen Sie nur die angezeigten Tage.",
       "enrollment.signature_invalid":
-        "Die Unterschrift konnte nicht gelesen werden. Bitte unterschreibe noch einmal.",
+        "Die Unterschrift konnte nicht gelesen werden. Bitte unterschreiben Sie noch einmal.",
       "enrollment.signature_not_found":
         "Zu dieser Anmeldung gibt es keine Unterschrift.",
-      "enrollment.signature_required": "Bitte unterschreibe die Anmeldung.",
+      "enrollment.signature_required":
+        "Bitte unterschreiben Sie die Anmeldung.",
       "enrollment.status_link_invalid":
-        "Dieser Link ist ungültig oder abgelaufen. Bitte nutze den Link aus deiner E-Mail.",
+        "Dieser Link ist ungültig oder abgelaufen. Bitte nutzen Sie den Link aus Ihrer E-Mail.",
       "enrollment.student_exists":
-        "{object} gibt es bereits. Bitte wähle eine andere Angabe.",
+        "{object} gibt es bereits. Bitte wählen Sie eine andere Angabe.",
       "enrollment.submission_email_rate_limited":
-        "Mit dieser E-Mail-Adresse wurden heute schon viele Anmeldungen gesendet. Bitte versuche es morgen noch einmal.",
+        "Mit dieser E-Mail-Adresse wurden heute schon viele Anmeldungen gesendet. Bitte versuchen Sie es morgen noch einmal.",
       "enrollment.submission_rate_limited":
-        "Es wurden zu viele Anmeldungen gesendet. Bitte versuche es in einer Stunde noch einmal.",
-      "enrollment.traeger_catalog_invalid": "Bitte prüfe deine Angaben.",
+        "Es wurden zu viele Anmeldungen gesendet. Bitte versuchen Sie es in einer Stunde noch einmal.",
+      "enrollment.traeger_catalog_invalid": "Bitte prüfen Sie Ihre Angaben.",
       "enrollment.traeger_copy_delete":
-        "Dieser Eintrag kommt vom Träger. Nur das Träger-Büro kann ihn entfernen. Du kannst ihn stattdessen deaktivieren.",
+        "Dieser Eintrag kommt vom Träger. Nur das Träger-Büro kann ihn entfernen. Sie können ihn stattdessen deaktivieren.",
       "enrollment.traeger_copy_rejected":
-        "Die Schule kann diese Angaben so nicht übernehmen. Bitte prüfe die Angaben oder die Einstellungen der Schule.",
+        "Die Schule kann diese Angaben so nicht übernehmen. Bitte prüfen Sie die Angaben oder die Einstellungen der Schule.",
       "enrollment.traeger_offering_not_found":
-        "Dieses Angebot des Trägers gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Dieses Angebot des Trägers gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "enrollment.traeger_phase_not_found":
-        "Diese Anmeldephase des Trägers gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Anmeldephase des Trägers gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "enrollment.traeger_preview_stale":
-        "Seit der Vorschau hat sich etwas geändert. Bitte sieh dir die Vorschau noch einmal an.",
+        "Seit der Vorschau hat sich etwas geändert. Bitte sehen Sie sich die Vorschau noch einmal an.",
       "enrollment.traeger_school_outside":
-        "Eine gewählte Schule gehört nicht zu deinem Träger. Bitte wähle die Schulen neu.",
+        "Eine gewählte Schule gehört nicht zu Ihrem Träger. Bitte wählen Sie die Schulen neu.",
       "enrollment.traeger_withdrawn":
         "Dieser Eintrag ist zurückgezogen. Er lässt sich nicht mehr ändern.",
       "enrollment.upload_content_mismatch":
-        "Der Inhalt von „{filename}“ passt nicht zur Dateiart. Bitte wähle eine andere Datei. Umbenennen reicht nicht.",
+        "Der Inhalt von „{filename}“ passt nicht zur Dateiart. Bitte wählen Sie eine andere Datei. Umbenennen reicht nicht.",
       "enrollment.upload_expired":
-        "Eine hochgeladene Datei ist abgelaufen. Bitte lade sie erneut hoch.",
+        "Eine hochgeladene Datei ist abgelaufen. Bitte laden Sie sie erneut hoch.",
       "enrollment.upload_invalid":
-        "Diese Datei passt nicht. Bitte wähle eine erlaubte Dateiart mit höchstens {max_mb} MB.",
+        "Diese Datei passt nicht. Bitte wählen Sie eine erlaubte Dateiart mit höchstens {max_mb} MB.",
       "enrollment.upload_not_found":
-        "Diese Datei gibt es nicht mehr. Bitte lade sie erneut hoch.",
+        "Diese Datei gibt es nicht mehr. Bitte laden Sie sie erneut hoch.",
       "enrollment.upload_rate_limited":
-        "Es wurden zu viele Dateien hochgeladen. Bitte versuche es später noch einmal.",
+        "Es wurden zu viele Dateien hochgeladen. Bitte versuchen Sie es später noch einmal.",
       "enrollment.waitlist_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "enrollment.window_closed":
-        "Die Anmeldefrist ist vorbei oder hat noch nicht begonnen. Bitte wende dich an die Schule.",
+        "Die Anmeldefrist ist vorbei oder hat noch nicht begonnen. Bitte wenden Sie sich an die Schule.",
       "enrollment.withdraw_not_allowed":
-        "Diese Anmeldung kann nicht mehr zurückgezogen werden. Bitte wende dich an die Schule.",
+        "Diese Anmeldung kann nicht mehr zurückgezogen werden. Bitte wenden Sie sich an die Schule.",
       "enrollment.without_care_place_school_year_only":
         "Ein Kind ohne OGS-Platz bekommt seinen Platz über eine Anmeldung für das Schuljahr.",
       "feedback.disabled": "Rückmeldungen sind an dieser Schule ausgeschaltet.",
       "files.announcement_published":
-        "Die Mitteilung ist schon veröffentlicht. Deine Anhänge lassen sich nicht mehr ändern.",
+        "Die Mitteilung ist schon veröffentlicht. Ihre Anhänge lassen sich nicht mehr ändern.",
       "files.attachment_limit_reached":
-        "Eine Mitteilung kann höchstens 5 Anhänge haben. Bitte entferne einen Anhang.",
+        "Eine Mitteilung kann höchstens 5 Anhänge haben. Bitte entfernen Sie einen Anhang.",
       "files.file_missing":
-        "Es wurde keine Datei ausgewählt. Bitte wähle eine Datei aus.",
+        "Es wurde keine Datei ausgewählt. Bitte wählen Sie eine Datei aus.",
       "files.file_name_invalid":
-        "Der Name der Datei ist nicht erlaubt. Bitte wähle die Datei noch einmal aus.",
+        "Der Name der Datei ist nicht erlaubt. Bitte wählen Sie die Datei noch einmal aus.",
       "files.file_too_large":
         "Diese Datei ist zu groß. Erlaubt sind bis zu {max_mb} MB.",
       "files.file_type_not_allowed":
-        "Diese Dateiart ist hier nicht erlaubt. Bitte wähle eine andere Datei.",
+        "Diese Dateiart ist hier nicht erlaubt. Bitte wählen Sie eine andere Datei.",
       "files.file_unreadable":
-        "Die Datei lässt sich nicht lesen. Bitte prüfe die Datei und lade sie erneut hoch.",
+        "Die Datei lässt sich nicht lesen. Bitte prüfen Sie die Datei und laden Sie sie erneut hoch.",
       "files.folder_name_taken":
-        "Es gibt schon einen Ordner mit diesem Namen. Bitte wähle einen anderen Namen.",
+        "Es gibt schon einen Ordner mit diesem Namen. Bitte wählen Sie einen anderen Namen.",
       "files.quota_exceeded":
-        "Der Speicherplatz der Dateiablage ist voll. Bitte lösche Dateien, die du nicht mehr brauchst.",
+        "Der Speicherplatz der Dateiablage ist voll. Bitte löschen Sie Dateien, die Sie nicht mehr brauchen.",
       "general.request_too_large":
-        "{object} konnte nicht bearbeitet werden. Bitte lösche im Browser die Cookies dieser Seite. Melde dich danach neu an.",
+        "{object} konnte nicht bearbeitet werden. Bitte löschen Sie im Browser die Cookies dieser Seite. Melden Sie sich danach neu an.",
       "grade_transition.graduates_checked_in":
-        "Es sind noch Kinder mit Abgang eingecheckt. Bitte buche diese Kinder zuerst nach Hause. Wende den Schuljahreswechsel danach erneut an.",
+        "Es sind noch Kinder mit Abgang eingecheckt. Bitte buchen Sie diese Kinder zuerst nach Hause. Wenden Sie den Schuljahreswechsel danach erneut an.",
       "grade_transition.not_applied":
         "Der Schuljahreswechsel ist inzwischen schon zurückgesetzt. Die Liste ist neu geladen.",
       "grade_transition.not_draft":
-        "Der Schuljahreswechsel wurde inzwischen von einer anderen Person angewendet oder geändert. Bitte prüfe die Liste.",
+        "Der Schuljahreswechsel wurde inzwischen von einer anderen Person angewendet oder geändert. Bitte prüfen Sie die Liste.",
       "grade_transition.not_latest_transition":
         "Inzwischen gibt es einen neueren Schuljahreswechsel. Er muss zuerst zurückgesetzt werden.",
       "grade_transition.preview_stale":
-        "Klassen oder Zuordnungen haben sich seit dem Öffnen geändert. Die Vorschau ist neu geladen. Bitte prüfe sie noch einmal.",
+        "Klassen oder Zuordnungen haben sich seit dem Öffnen geändert. Die Vorschau ist neu geladen. Bitte prüfen Sie sie noch einmal.",
       "identity.access_name_required":
-        "Für diese Schule fehlt der Name der Person. Bitte gib Vor- und Nachnamen ein.",
+        "Für diese Schule fehlt der Name der Person. Bitte geben Sie Vor- und Nachnamen ein.",
       "identity.account_already_has_tenant_access":
-        "Diese Person hat schon Zugang zu dieser Schule. Du findest sie in der Personalliste.",
+        "Diese Person hat schon Zugang zu dieser Schule. Sie finden sie in der Personalliste.",
       "identity.account_inactive":
-        "Dein Konto ist gesperrt. Bitte wende dich an moto.",
+        "Ihr Konto ist gesperrt. Bitte wenden Sie sich an moto.",
       "identity.account_not_found":
-        "Dieses Konto gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Dieses Konto gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "identity.account_not_in_school":
-        "Dieses Konto gehört nicht zu dieser Schule. Bitte lade die Seite neu.",
+        "Dieses Konto gehört nicht zu dieser Schule. Bitte laden Sie die Seite neu.",
       "identity.account_shared_across_schools":
-        "Dieses Konto gehört auch zu einer anderen Schule oder einem Träger. Deshalb kannst du das hier nicht ändern. Bitte wende dich an das moto-Team.",
+        "Dieses Konto gehört auch zu einer anderen Schule oder einem Träger. Deshalb können Sie das hier nicht ändern. Bitte wenden Sie sich an das moto-Team.",
       "identity.caterer_address_taken":
-        "Diese E-Mail-Adresse gehört schon zu einem anderen moto-Konto. Bitte nimm eine andere Adresse.",
+        "Diese E-Mail-Adresse gehört schon zu einem anderen moto-Konto. Bitte nehmen Sie eine andere Adresse.",
       "identity.caterer_without_school":
-        "Du belieferst zurzeit keine Schule über moto. Bitte frage die Schule.",
+        "Sie beliefern zurzeit keine Schule über moto. Bitte fragen Sie die Schule.",
       "identity.current_password_wrong":
-        "Das aktuelle Passwort stimmt nicht. Bitte prüfe deine Eingabe.",
+        "Das aktuelle Passwort stimmt nicht. Bitte prüfen Sie Ihre Eingabe.",
       "identity.demo_access_expired":
-        "Der Demo-Zugang ist abgelaufen. Bitte fordere einen neuen Zugang an.",
+        "Der Demo-Zugang ist abgelaufen. Bitte fordern Sie einen neuen Zugang an.",
       "identity.demo_access_invalid":
-        "Der Demo-Link ist ungültig. Bitte fordere einen neuen Link an.",
+        "Der Demo-Link ist ungültig. Bitte fordern Sie einen neuen Link an.",
       "identity.demo_access_rate_limited":
-        "Das waren zu viele Versuche. Bitte warte kurz und versuche es dann erneut.",
+        "Das waren zu viele Versuche. Bitte warten Sie kurz und versuchen Sie es dann erneut.",
       "identity.demo_access_unknown":
-        "Diesen Demo-Link gibt es nicht. Bitte fordere einen neuen Link an.",
+        "Diesen Demo-Link gibt es nicht. Bitte fordern Sie einen neuen Link an.",
       "identity.demo_capacity_reached":
-        "Gerade sind alle Demo-Plätze belegt. Bitte versuche es später erneut.",
+        "Gerade sind alle Demo-Plätze belegt. Bitte versuchen Sie es später erneut.",
       "identity.demo_school_preparing":
-        "Die Demo-Schule wird gerade vorbereitet. Bitte versuche es gleich noch einmal.",
+        "Die Demo-Schule wird gerade vorbereitet. Bitte versuchen Sie es gleich noch einmal.",
       "identity.email_already_exists":
-        "Für diese E-Mail-Adresse gibt es schon ein Konto. Bitte verwende eine andere Adresse.",
+        "Für diese E-Mail-Adresse gibt es schon ein Konto. Bitte verwenden Sie eine andere Adresse.",
       "identity.email_change_link_invalid":
-        "Dieser Bestätigungslink ist abgelaufen oder ungültig. Bitte ändere die E-Mail-Adresse erneut.",
+        "Dieser Bestätigungslink ist abgelaufen oder ungültig. Bitte ändern Sie die E-Mail-Adresse erneut.",
       "identity.email_change_rate_limited":
-        "Die E-Mail-Adresse wurde zu oft geändert. Bitte versuche es in einer Stunde erneut.",
+        "Die E-Mail-Adresse wurde zu oft geändert. Bitte versuchen Sie es in einer Stunde erneut.",
       "identity.email_change_same_email":
-        "Die neue E-Mail-Adresse ist dieselbe wie die bisherige. Bitte gib eine andere ein.",
+        "Die neue E-Mail-Adresse ist dieselbe wie die bisherige. Bitte geben Sie eine andere ein.",
       "identity.guardian_email_address_blocked":
-        "Die Einladung wurde nicht gesendet, weil an diese Person keine Mails gehen. Den Grund und den nächsten Schritt sieh bei der Person.",
+        "Die Einladung wurde nicht gesendet, weil an diese Person keine Mails gehen. Den Grund und den nächsten Schritt sehen Sie bei der Person.",
       "identity.guardian_invitation_address_changed":
-        "Dieser Link gilt nicht mehr. Bitte frage die Schule nach einer neuen Einladung.",
+        "Dieser Link gilt nicht mehr. Bitte fragen Sie die Schule nach einer neuen Einladung.",
       "identity.guardian_invitation_email_not_queued":
-        "Die Einladung konnte gerade nicht verschickt werden. Bitte versuche es noch einmal.",
+        "Die Einladung konnte gerade nicht verschickt werden. Bitte versuchen Sie es noch einmal.",
       "identity.holiday_parent_setup_invalid":
-        "Dieser Link zum Elternkonto gilt nicht mehr. Hast du schon ein Konto? Dann melde dich an. Sonst frag den Träger nach einem neuen Link.",
+        "Dieser Link zum Elternkonto gilt nicht mehr. Haben Sie schon ein Konto? Dann melden Sie sich an. Sonst bitten Sie den Träger um einen neuen Link.",
       "identity.invalid_credentials":
-        "Die E-Mail-Adresse oder das Passwort stimmt nicht. Bitte prüfe deine Eingabe.",
+        "Die E-Mail-Adresse oder das Passwort stimmt nicht. Bitte prüfen Sie Ihre Eingabe.",
       "identity.invitation_account_login_required":
-        "Für diese E-Mail-Adresse gibt es schon ein Konto. Bitte melde dich zuerst damit an und öffne dann die Einladung erneut.",
+        "Für diese E-Mail-Adresse gibt es schon ein Konto. Bitte melden Sie sich zuerst damit an und öffnen Sie dann die Einladung erneut.",
       "identity.invitation_account_mismatch":
-        "Du bist mit einem anderen Konto angemeldet. Bitte melde dich mit der eingeladenen E-Mail-Adresse an.",
+        "Sie sind mit einem anderen Konto angemeldet. Bitte melden Sie sich mit der eingeladenen E-Mail-Adresse an.",
       "identity.invitation_expired":
-        "Diese Einladung ist abgelaufen oder wurde schon benutzt. Bitte frage die Person, die dich eingeladen hat, nach einer neuen Einladung.",
+        "Diese Einladung ist abgelaufen oder wurde schon benutzt. Bitte fragen Sie die Person, die Sie eingeladen hat, nach einer neuen Einladung.",
       "identity.invitation_mail_delayed":
-        "Die letzte Einladung ist noch unterwegs. Bitte warte, sonst kommt sie doppelt an.",
+        "Die letzte Einladung ist noch unterwegs. Bitte warten Sie, sonst kommt sie doppelt an.",
       "identity.invitation_not_found":
-        "Diese Einladung gibt es nicht. Bitte prüfe den Link in der E-Mail.",
+        "Diese Einladung gibt es nicht. Bitte prüfen Sie den Link in der E-Mail.",
       "identity.invitation_rate_limited":
-        "Es wurden zu viele Einladungen verschickt. Bitte versuche es in einer Stunde erneut.",
+        "Es wurden zu viele Einladungen verschickt. Bitte versuchen Sie es in einer Stunde erneut.",
       "identity.lehrkraft_role_immutable":
         "Ein Lehrkraft-Konto behält seine Rolle. Für eine andere Rolle braucht die Person ein neues Konto.",
       "identity.logout_not_revoked":
-        "Du bist auf diesem Gerät abgemeldet. moto konnte deine Anmeldung aber nicht ganz beenden. Sie endet später von selbst. Hast du ein fremdes Gerät benutzt? Dann ändere bitte dein Passwort.",
+        "Sie sind auf diesem Gerät abgemeldet. moto konnte Ihre Anmeldung aber nicht ganz beenden. Sie endet später von selbst. Haben Sie ein fremdes Gerät benutzt? Dann ändern Sie bitte Ihr Passwort.",
       "identity.mail_block_unreadable":
-        "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuche es später noch einmal.",
+        "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuchen Sie es später noch einmal.",
       "identity.mail_blocked_at_provider":
         "Diese Adresse ist gesperrt. Eine neue Mail hilft nicht. Der moto-Support muss das klären.",
       "identity.mfa_already_enrolled":
-        "Die Zwei-Faktor-Anmeldung ist schon eingerichtet. Bitte lade die Seite neu.",
+        "Die Zwei-Faktor-Anmeldung ist schon eingerichtet. Bitte laden Sie die Seite neu.",
       "identity.mfa_blocked":
-        "Das waren zu viele Versuche. Bitte warte einige Minuten und versuche es dann erneut.",
+        "Das waren zu viele Versuche. Bitte warten Sie einige Minuten und versuchen Sie es dann erneut.",
       "identity.mfa_code_invalid":
-        "Der Code stimmt nicht oder ist abgelaufen. Bitte gib ihn erneut ein oder fordere einen neuen Code an.",
+        "Der Code stimmt nicht oder ist abgelaufen. Bitte geben Sie ihn erneut ein oder fordern Sie einen neuen Code an.",
       "identity.mfa_not_enrolled":
-        "Die Zwei-Faktor-Anmeldung ist noch nicht eingerichtet. Bitte richte sie zuerst ein.",
+        "Die Zwei-Faktor-Anmeldung ist noch nicht eingerichtet. Bitte richten Sie sie zuerst ein.",
       "identity.mfa_session_required":
-        "Für die Anmeldung bei {object} brauchst du einen zweiten Anmeldenachweis. Wähle „Zur Schulanmeldung“. Du wirst abgemeldet. Melde dich danach dort neu an und bestätige die Anmeldung.",
+        "Für die Anmeldung bei {object} brauchen Sie einen zweiten Anmeldenachweis. Wählen Sie „Zur Schulanmeldung“. Sie werden abgemeldet. Melden Sie sich danach dort neu an und bestätigen Sie die Anmeldung.",
       "identity.mfa_status_unavailable":
-        "Die Sicherheitsabfrage ist gerade nicht möglich. Bitte versuche es erneut.",
+        "Die Sicherheitsabfrage ist gerade nicht möglich. Bitte versuchen Sie es erneut.",
       "identity.operator_invitation_invalid":
-        "Dieser Einladungslink ist abgelaufen oder ungültig. Bitte lass dich neu einladen.",
+        "Dieser Einladungslink ist abgelaufen oder ungültig. Bitte lassen Sie sich neu einladen.",
       "identity.operator_self_deactivation":
-        "Du kannst dein eigenes Konto nicht deaktivieren. Frag eine andere Person aus dem Team danach.",
+        "Sie können Ihr eigenes Konto nicht deaktivieren. Bitten Sie eine andere Person aus dem Team darum.",
       "identity.passkey_login_failed":
-        "Die Anmeldung mit Passkey hat nicht geklappt. Bitte melde dich mit E-Mail-Adresse und Passwort an.",
+        "Die Anmeldung mit Passkey hat nicht geklappt. Bitte melden Sie sich mit E-Mail-Adresse und Passwort an.",
       "identity.passkey_not_found":
-        "Diesen Passkey gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diesen Passkey gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "identity.password_mismatch":
-        "Die beiden Passwörter stimmen nicht überein. Bitte gib sie erneut ein.",
+        "Die beiden Passwörter stimmen nicht überein. Bitte geben Sie sie erneut ein.",
       "identity.password_reset_link_invalid":
-        "Der Link ist abgelaufen oder wurde schon benutzt. Bitte fordere einen neuen Link an.",
+        "Der Link ist abgelaufen oder wurde schon benutzt. Bitte fordern Sie einen neuen Link an.",
       "identity.password_reset_rate_limited":
-        "Du hast zu oft einen Link angefordert. Bitte warte etwas und versuche es dann erneut.",
+        "Sie haben zu oft einen Link angefordert. Bitte warten Sie etwas und versuchen Sie es dann erneut.",
       "identity.password_too_weak":
         "Das Passwort ist zu schwach. Es braucht mindestens 8 Zeichen, Groß- und Kleinbuchstaben, eine Zahl und ein Sonderzeichen.",
       "identity.preview_token_invalid":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "identity.read_only_preview":
-        "In der Vorschau kannst du nur lesen. Bitte beende die Vorschau, um etwas zu ändern.",
+        "In der Vorschau können Sie nur lesen. Bitte beenden Sie die Vorschau, um etwas zu ändern.",
       "identity.role_name_taken":
-        "Eine Rolle mit diesem Namen gibt es schon. Bitte wähle einen anderen Namen.",
+        "Eine Rolle mit diesem Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
       "identity.role_platform_permission":
         "Eigene Rollen können dieses Recht nicht bekommen.",
       "identity.session_account_inactive":
-        "Dein Konto ist ausgeschaltet. Bitte wende dich an die Leitung deiner Schule.",
+        "Ihr Konto ist ausgeschaltet. Bitte wenden Sie sich an die Leitung Ihrer Schule.",
       "identity.session_account_mismatch":
         "In einem anderen Fenster hat sich ein anderes Konto angemeldet. moto lädt diese Seite gleich neu.",
       "identity.session_tenant_mismatch":
-        "Die Schule wurde in einem anderen Fenster gewechselt. moto stellt diese Seite gleich wieder um. Bitte versuche es danach noch einmal.",
+        "Die Schule wurde in einem anderen Fenster gewechselt. moto stellt diese Seite gleich wieder um. Bitte versuchen Sie es danach noch einmal.",
       "identity.tenant_access_denied":
-        "Dein Konto hat keinen Zugang zu dieser Schule. Bitte melde dich neu an.",
+        "Ihr Konto hat keinen Zugang zu dieser Schule. Bitte melden Sie sich neu an.",
       "identity.tenant_access_not_found":
-        "Dieses Konto hat keinen Zugang zu dieser Schule mehr. Bitte lade die Seite neu.",
+        "Dieses Konto hat keinen Zugang zu dieser Schule mehr. Bitte laden Sie die Seite neu.",
       "identity.username_taken":
-        "Der erzeugte Benutzername war schon vergeben. Bitte versuche es noch einmal.",
+        "Der erzeugte Benutzername war schon vergeben. Bitte versuchen Sie es noch einmal.",
       "import.file_columns_missing":
-        "In der Datei fehlen Spalten: {columns}. Bitte nutze die Vorlage.",
-      "import.file_missing": "Bitte wähle eine Datei aus.",
+        "In der Datei fehlen Spalten: {columns}. Bitte nutzen Sie die Vorlage.",
+      "import.file_missing": "Bitte wählen Sie eine Datei aus.",
       "import.file_no_rows":
-        "Die Datei enthält keine Datenzeilen. Vielleicht hast du die leere Vorlage hochgeladen.",
+        "Die Datei enthält keine Datenzeilen. Vielleicht haben Sie die leere Vorlage hochgeladen.",
       "import.file_row_invalid":
-        "Zeile {row} der Datei enthält einen ungültigen Wert. Bitte prüfe diese Zeile.",
+        "Zeile {row} der Datei enthält einen ungültigen Wert. Bitte prüfen Sie diese Zeile.",
       "import.file_too_large":
-        "Die Datei ist zu groß. Bitte lade eine Datei bis 10 MB hoch.",
+        "Die Datei ist zu groß. Bitte laden Sie eine Datei bis 10 MB hoch.",
       "import.file_type_invalid":
-        "Diese Datei passt nicht. Bitte lade eine CSV- oder Excel-Datei hoch.",
+        "Diese Datei passt nicht. Bitte laden Sie eine CSV- oder Excel-Datei hoch.",
       "import.file_unreadable":
-        "Die Datei konnte nicht gelesen werden. Bitte nutze die Vorlage.",
+        "Die Datei konnte nicht gelesen werden. Bitte nutzen Sie die Vorlage.",
       "import.mode_forbidden":
-        "Bestehende Einträge darfst du nicht ändern. Bitte wähle „Nur neue anlegen“ oder frage die Leitung.",
+        "Bestehende Einträge dürfen Sie nicht ändern. Bitte wählen Sie „Nur neue anlegen“ oder fragen Sie die Leitung.",
       "import.not_test_traeger":
         "Das geht nur bei einem Test-Träger. Echte Träger bekommen keine Beispieldaten.",
       "import.test_traeger_inactive":
-        "Der Test-Träger ist deaktiviert. Bitte aktiviere ihn zuerst.",
+        "Der Test-Träger ist deaktiviert. Bitte aktivieren Sie ihn zuerst.",
       "iot.activity_capacity_exceeded":
-        "Im Angebot {activity_name} ist kein Platz mehr. Bitte wähle ein anderes Angebot.",
+        "Im Angebot {activity_name} ist kein Platz mehr. Bitte wählen Sie ein anderes Angebot.",
       "iot.deviation_reason_required":
-        "{object} weicht vom Plan ab. Bitte gib einen Grund an.",
+        "{object} weicht vom Plan ab. Bitte geben Sie einen Grund an.",
       "iot.device_id_taken":
-        "Diese Geräte-ID ist schon vergeben. Bitte gib eine andere ein.",
+        "Diese Geräte-ID ist schon vergeben. Bitte geben Sie eine andere ein.",
       "iot.invalid_staff_clock_request":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "iot.invalid_staff_clock_state":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "iot.planned_start_not_reached":
-        "{object} kann noch nicht beginnen. Bitte warte bis {planned_start_time} Uhr.",
+        "{object} kann noch nicht beginnen. Bitte warten Sie bis {planned_start_time} Uhr.",
       "iot.room_capacity_exceeded":
-        "Im Raum {room_name} ist kein Platz mehr. Bitte wähle einen anderen Raum.",
+        "Im Raum {room_name} ist kein Platz mehr. Bitte wählen Sie einen anderen Raum.",
       "iot.student_already_active":
-        "{object} ist bereits im Raum {room_name}. Bitte prüfe den aktuellen Aufenthalt.",
+        "{object} ist bereits im Raum {room_name}. Bitte prüfen Sie den aktuellen Aufenthalt.",
       "meals.billing_month_attendance_expired":
-        "Für diesen Monat können Anwesenheiten bereits gelöscht sein. Eine sichere Freigabe ist deshalb nicht mehr möglich. Wende dich an deinen Träger.",
+        "Für diesen Monat können Anwesenheiten bereits gelöscht sein. Eine sichere Freigabe ist deshalb nicht mehr möglich. Wenden Sie sich an Ihren Träger.",
       "meals.billing_month_changed":
-        "Seit dem Laden hat sich der Monat geändert. Bitte prüfe ihn noch einmal und gib ihn dann frei.",
+        "Seit dem Laden hat sich der Monat geändert. Bitte prüfen Sie ihn noch einmal und geben Sie ihn dann frei.",
       "meals.billing_month_invalid":
-        "Diesen Monat gibt es hier nicht. Wähle einen der letzten 12 Monate.",
+        "Diesen Monat gibt es hier nicht. Wählen Sie einen der letzten 12 Monate.",
       "meals.billing_month_no_traeger":
-        "Deine Schule gehört zu keinem Träger. Deshalb rechnet niemand die Mensa ab.",
+        "Ihre Schule gehört zu keinem Träger. Deshalb rechnet niemand die Mensa ab.",
       "meals.billing_month_reason_required":
-        "Bitte nenne den Grund für die neue Freigabe. Höchstens 500 Zeichen.",
+        "Bitte nennen Sie den Grund für die neue Freigabe. Höchstens 500 Zeichen.",
       "meals.billing_month_released":
         "Dieser Monat ist schon freigegeben. Eine Freigabe lässt sich nicht ändern.",
       "meals.billing_month_running":
-        "Der Monat ist noch nicht vorbei. Du kannst ihn ab dem 1. des nächsten Monats freigeben.",
+        "Der Monat ist noch nicht vorbei. Sie können ihn ab dem 1. des nächsten Monats freigeben.",
       "meals.child_not_enrolled":
         "{object} geht nicht. Das Kind ist an diesem Tag nicht in der Betreuung.",
       "meals.day_closed":
         "{object} geht nicht. An diesem Tag ist die Schule geschlossen.",
       "meals.day_past": "{object} geht nicht mehr. Der Tag ist schon vorbei.",
       "meals.delivery_range_too_long":
-        "Die Lieferliste umfasst höchstens sieben Tage. Bitte wähle einen kürzeren Zeitraum.",
+        "Die Lieferliste umfasst höchstens sieben Tage. Bitte wählen Sie einen kürzeren Zeitraum.",
       "meals.invalid_allergens":
-        "Die Allergene konnten nicht gespeichert werden. Bitte wähle sie neu aus.",
+        "Die Allergene konnten nicht gespeichert werden. Bitte wählen Sie sie neu aus.",
       "meals.invalid_dishes":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "meals.invalid_meal_date":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "meals.invalid_participation":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "meals.not_supplied":
-        "Du belieferst diese Schule nicht mehr. Bitte frage die Schule.",
+        "Sie beliefern diese Schule nicht mehr. Bitte fragen Sie die Schule.",
       "meals.order_not_found":
-        "Diese Bestellung gibt es nicht. Bitte lade die Seite neu.",
+        "Diese Bestellung gibt es nicht. Bitte laden Sie die Seite neu.",
       "meals.participation_manage_denied":
-        "Du darfst die Essensanmeldung ansehen, aber nicht ändern. Bitte wende dich an die OGS.",
+        "Sie dürfen die Essensanmeldung ansehen, aber nicht ändern. Bitte wenden Sie sich an die OGS.",
       "meals.plan_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "meals.registration_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "meals.supply_active":
-        "{object} geht gerade nicht. Ein Caterer beliefert die Schule noch. Beende zuerst diese Belieferung.",
+        "{object} geht gerade nicht. Ein Caterer beliefert die Schule noch. Beenden Sie zuerst diese Belieferung.",
       "module.not_booked":
-        "Deine Schule hat das Modul {module_label} nicht gebucht. Für eine Buchung wende dich an das moto-Team.",
+        "Ihre Schule hat das Modul {module_label} nicht gebucht. Für eine Buchung wenden Sie sich an das moto-Team.",
       "operator.audit_unavailable":
-        "Die Anfrage konnte nicht sicher protokolliert werden. Bitte versuche es später erneut.",
+        "Die Anfrage konnte nicht sicher protokolliert werden. Bitte versuchen Sie es später erneut.",
       "parent_billing.bank_account_missing":
-        "Für die Schreiben fehlt eine Bankverbindung. Bitte trage unter „Abrechnungsvorgaben“ ein Konto ein. Das darf, wer das Recht „Einstellungen“ hat.",
+        "Für die Schreiben fehlt eine Bankverbindung. Bitte tragen Sie unter „Abrechnungsvorgaben“ ein Konto ein. Das darf, wer das Recht „Einstellungen“ hat.",
       "parent_billing.beleg_retention_basis_cites_statute":
-        "Die Grundlage nennt § 147 AO, § 257 HGB oder § 14b UStG. Dann gelten deren Fristen. Bitte prüfe die Grundlage.",
+        "Die Grundlage nennt § 147 AO, § 257 HGB oder § 14b UStG. Dann gelten deren Fristen. Bitte prüfen Sie die Grundlage.",
       "parent_billing.benefits_exemption_unavailable":
-        "Für eine Befreiung bei Leistungsbezug braucht es eine Regel unter „Abrechnungsvorgaben“. Bitte frage die Abrechnung.",
+        "Für eine Befreiung bei Leistungsbezug braucht es eine Regel unter „Abrechnungsvorgaben“. Bitte fragen Sie die Abrechnung.",
       "parent_billing.billing_correction_invalid":
-        "Bitte prüfe die markierten Felder.",
+        "Bitte prüfen Sie die markierten Felder.",
       "parent_billing.billing_document_correction_invalid":
-        "Bitte prüfe die markierten Felder.",
+        "Bitte prüfen Sie die markierten Felder.",
       "parent_billing.billing_document_not_found":
-        "Diese Rechnung gibt es in diesem Lauf nicht. Bitte lade die Seite neu.",
+        "Diese Rechnung gibt es in diesem Lauf nicht. Bitte laden Sie die Seite neu.",
       "parent_billing.billing_family_not_found":
-        "Dieses Kind ist nicht mehr im Lauf. Bitte lade die Seite neu.",
+        "Dieses Kind ist nicht mehr im Lauf. Bitte laden Sie die Seite neu.",
       "parent_billing.billing_letter_not_found":
-        "Dieses Schreiben gibt es noch nicht. Bitte erstelle zuerst die Schreiben des Laufs.",
+        "Dieses Schreiben gibt es noch nicht. Bitte erstellen Sie zuerst die Schreiben des Laufs.",
       "parent_billing.billing_letters_exist":
         "Die Schreiben dieses Laufs sind schon erstellt. Sie lassen sich nicht ändern.",
       "parent_billing.billing_letters_invalid":
-        "Bitte prüfe die markierten Felder.",
+        "Bitte prüfen Sie die markierten Felder.",
       "parent_billing.billing_letters_missing":
-        "Es gibt noch keine Bestätigungsschreiben. Bitte erstelle zuerst die Schreiben.",
+        "Es gibt noch keine Bestätigungsschreiben. Bitte erstellen Sie zuerst die Schreiben.",
       "parent_billing.billing_run_changed":
-        "Seit deiner Prüfung hat sich der Lauf geändert. Bitte prüfe die neue Vorschau und gib dann frei.",
+        "Seit Ihrer Prüfung hat sich der Lauf geändert. Bitte prüfen Sie die neue Vorschau und geben Sie dann frei.",
       "parent_billing.billing_run_discarded":
-        "Dieser Lauf ist verworfen. Er lässt sich nicht mehr ändern. Starte bei Bedarf einen neuen Lauf.",
+        "Dieser Lauf ist verworfen. Er lässt sich nicht mehr ändern. Starten Sie bei Bedarf einen neuen Lauf.",
       "parent_billing.billing_run_empty":
         "Der Lauf hat keine Rechnung. Es gibt nichts freizugeben.",
       "parent_billing.billing_run_not_empty":
-        "Der Lauf hat inzwischen etwas abzurechnen. Er wird nicht verworfen. Bitte prüfe die Vorschau.",
+        "Der Lauf hat inzwischen etwas abzurechnen. Er wird nicht verworfen. Bitte prüfen Sie die Vorschau.",
       "parent_billing.billing_run_not_found":
-        "Diesen Abrechnungslauf gibt es nicht. Bitte öffne ihn über „Abrechnung“.",
+        "Diesen Abrechnungslauf gibt es nicht. Bitte öffnen Sie ihn über „Abrechnung“.",
       "parent_billing.billing_run_not_released":
-        "Schreiben und Übersicht gibt es erst nach der Freigabe. Bitte gib den Lauf zuerst frei.",
+        "Schreiben und Übersicht gibt es erst nach der Freigabe. Bitte geben Sie den Lauf zuerst frei.",
       "parent_billing.billing_run_open":
-        "Für diesen Ferienzeitraum gibt es schon einen Lauf in der Vorschau. Bitte öffne diesen Lauf.",
+        "Für diesen Ferienzeitraum gibt es schon einen Lauf in der Vorschau. Bitte öffnen Sie diesen Lauf.",
       "parent_billing.billing_run_released":
         "Der Lauf ist schon freigegeben. Ausgestellte Rechnungen lassen sich nicht ändern.",
       "parent_billing.billing_terms_invalid":
-        "Die Zahlungsbedingungen konnten nicht gespeichert werden. Bitte prüfe deine Eingaben.",
+        "Die Zahlungsbedingungen konnten nicht gespeichert werden. Bitte prüfen Sie Ihre Eingaben.",
       "parent_billing.care_amendment_conflict":
-        "Diese Änderung passt nicht mehr zur Rechnung. Bitte lade die Seite neu.",
+        "Diese Änderung passt nicht mehr zur Rechnung. Bitte laden Sie die Seite neu.",
       "parent_billing.care_amendment_disabled":
-        "Diese Änderung ist bei deinem Träger ausgeschaltet. Sie lässt sich in den Einstellungen unter „Monatsbeitrag“ einschalten. Das darf, wer das Recht „Einstellungen“ hat.",
+        "Diese Änderung ist bei Ihrem Träger ausgeschaltet. Sie lässt sich in den Einstellungen unter „Monatsbeitrag“ einschalten. Das darf, wer das Recht „Einstellungen“ hat.",
       "parent_billing.care_amendment_invalid":
-        "Bitte prüfe die Eingaben für die Änderung.",
+        "Bitte prüfen Sie die Eingaben für die Änderung.",
       "parent_billing.care_amendments_unresolved":
-        "Eine Änderung einer Rechnung passt nicht mehr. Nimm sie zurück, dann kannst du ausstellen.",
+        "Eine Änderung einer Rechnung passt nicht mehr. Nehmen Sie sie zurück, dann können Sie ausstellen.",
       "parent_billing.care_cost_share_invalid":
-        "Der Kostenträger-Anteil konnte nicht gespeichert werden. Bitte prüfe die markierten Felder.",
+        "Der Kostenträger-Anteil konnte nicht gespeichert werden. Bitte prüfen Sie die markierten Felder.",
       "parent_billing.care_cost_share_not_found":
-        "Diesen Kostenträger-Anteil gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diesen Kostenträger-Anteil gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "parent_billing.care_cost_share_overlap":
-        "Für diese Zeit gibt es schon einen Anteil dieser Art. Beende zuerst den alten Anteil.",
+        "Für diese Zeit gibt es schon einen Anteil dieser Art. Beenden Sie zuerst den alten Anteil.",
       "parent_billing.care_evidence_invalid":
-        "Der Nachweis konnte nicht gespeichert werden. Bitte prüfe die markierten Felder.",
+        "Der Nachweis konnte nicht gespeichert werden. Bitte prüfen Sie die markierten Felder.",
       "parent_billing.care_evidence_not_found":
-        "Diesen Nachweis gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diesen Nachweis gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "parent_billing.care_evidence_overlap":
-        "Für diese Zeit gibt es schon einen Nachweis dieser Art. Beende zuerst den alten Nachweis.",
+        "Für diese Zeit gibt es schon einen Nachweis dieser Art. Beenden Sie zuerst den alten Nachweis.",
       "parent_billing.care_exclusion_conflict":
-        "Diese Rechnung hat sich gerade geändert. Bitte lade die Seite neu.",
+        "Diese Rechnung hat sich gerade geändert. Bitte laden Sie die Seite neu.",
       "parent_billing.care_invoice_cancelled":
         "Diese Rechnung ist storniert. Sie wird nicht mehr verschickt.",
       "parent_billing.care_invoice_not_found":
-        "Diese Rechnung gibt es in diesem Lauf nicht. Bitte lade die Seite neu.",
+        "Diese Rechnung gibt es in diesem Lauf nicht. Bitte laden Sie die Seite neu.",
       "parent_billing.care_meal_tariff_invalid":
-        "Bitte prüfe den Mensa-Preis: Schule, erster Monat, Abrechnungsart und Betrag.",
+        "Bitte prüfen Sie den Mensa-Preis: Schule, erster Monat, Abrechnungsart und Betrag.",
       "parent_billing.care_meal_tariff_month_billed":
-        "Mit diesem Mensa-Preis ist schon eine Rechnung ausgestellt. Er bleibt für diese Monate. Ändere ihn ab einem späteren Monat.",
+        "Mit diesem Mensa-Preis ist schon eine Rechnung ausgestellt. Er bleibt für diese Monate. Ändern Sie ihn ab einem späteren Monat.",
       "parent_billing.care_meal_tariff_not_found":
-        "Diesen Mensa-Preis gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diesen Mensa-Preis gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "parent_billing.care_notice_not_found":
-        "Diesen Bescheid gibt es in diesem Lauf nicht. Bitte öffne den Lauf noch einmal.",
+        "Diesen Bescheid gibt es in diesem Lauf nicht. Bitte öffnen Sie den Lauf noch einmal.",
       "parent_billing.care_notice_recipient_changed":
-        "Die Person oder ihre E-Mail-Adresse hat sich seit dem Ausstellen geändert. Drucke den gespeicherten Bescheid. Gib ihn der Familie auf Papier.",
+        "Die Person oder ihre E-Mail-Adresse hat sich seit dem Ausstellen geändert. Drucken Sie den gespeicherten Bescheid. Geben Sie ihn der Familie auf Papier.",
       "parent_billing.care_notice_run_invalid":
-        "Bitte wähle einen Monat des Jahres und mindestens eine Schule.",
+        "Bitte wählen Sie einen Monat des Jahres und mindestens eine Schule.",
       "parent_billing.care_notice_run_not_found":
-        "Diesen Jahreslauf gibt es nicht. Bitte öffne ihn über „Abrechnung“ und „Jahresbescheide“.",
+        "Diesen Jahreslauf gibt es nicht. Bitte öffnen Sie ihn über „Abrechnung“ und „Jahresbescheide“.",
       "parent_billing.care_notice_run_open":
-        "Für dieses Jahr gibt es schon einen offenen Jahreslauf. Öffne ihn in der Liste und stelle ihn aus.",
+        "Für dieses Jahr gibt es schon einen offenen Jahreslauf. Öffnen Sie ihn in der Liste und stellen Sie ihn aus.",
       "parent_billing.care_recipient_changed":
-        "Die Rechnung geht an eine Person, die nicht mehr im Vertrag steht. Bitte storniere die Rechnung. Der nächste Lauf stellt sie neu aus.",
+        "Die Rechnung geht an eine Person, die nicht mehr im Vertrag steht. Bitte stornieren Sie die Rechnung. Der nächste Lauf stellt sie neu aus.",
       "parent_billing.care_rule_in_use":
-        "Diese Einkommensstufe ist bei Kindern eingetragen. Ändere oder lösche zuerst deren Nachweise.",
-      "parent_billing.care_run_invalid": "Bitte wähle einen Monat.",
+        "Diese Einkommensstufe ist bei Kindern eingetragen. Ändern oder löschen Sie zuerst deren Nachweise.",
+      "parent_billing.care_run_invalid": "Bitte wählen Sie einen Monat.",
       "parent_billing.care_run_not_found":
-        "Diesen Monatslauf gibt es nicht. Bitte öffne ihn über „Abrechnung“ und „Monatsbeiträge“.",
+        "Diesen Monatslauf gibt es nicht. Bitte öffnen Sie ihn über „Abrechnung“ und „Monatsbeiträge“.",
       "parent_billing.care_run_open":
-        "Eine gewählte Schule ist in diesem Monat schon in einem offenen Lauf. Öffne diesen Lauf oder wähle andere Schulen.",
+        "Eine gewählte Schule ist in diesem Monat schon in einem offenen Lauf. Öffnen Sie diesen Lauf oder wählen Sie andere Schulen.",
       "parent_billing.care_tariff_invalid":
-        "Bitte prüfe die Preise. Jeder Preis ist ein Betrag in Euro, nicht unter 0 €, und gilt ab dem 1. eines Monats.",
+        "Bitte prüfen Sie die Preise. Jeder Preis ist ein Betrag in Euro, nicht unter 0 €, und gilt ab dem 1. eines Monats.",
       "parent_billing.care_tariff_month_billed":
-        "Mit diesem Preis ist schon eine Rechnung ausgestellt. Er bleibt für diesen Monat. Ändere ihn ab einem späteren Monat.",
+        "Mit diesem Preis ist schon eine Rechnung ausgestellt. Er bleibt für diesen Monat. Ändern Sie ihn ab einem späteren Monat.",
       "parent_billing.care_tariff_not_found":
-        "Diese Preisliste gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Preisliste gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "parent_billing.care_versions_overlap":
-        "Ein Vertrag hat an einem Tag zwei gültige Fassungen. Bitte melde das dem Support. Der Lauf rechnet diesen Monat nicht ab.",
+        "Ein Vertrag hat an einem Tag zwei gültige Fassungen. Bitte melden Sie das dem Support. Der Lauf rechnet diesen Monat nicht ab.",
       "parent_billing.carried_correction_not_found":
-        "Diese Korrektur wird in diesem Lauf nicht mehr vorgeschlagen. Bitte lade die Seite neu.",
+        "Diese Korrektur wird in diesem Lauf nicht mehr vorgeschlagen. Bitte laden Sie die Seite neu.",
       "parent_billing.child_not_found":
-        "Dieses Kind gehört nicht zu dieser Familie. Bitte lade die Liste „Familien“ neu.",
+        "Dieses Kind gehört nicht zu dieser Familie. Bitte laden Sie die Liste „Familien“ neu.",
       "parent_billing.contribution_rule_invalid":
-        "Bitte prüfe die markierten Felder.",
+        "Bitte prüfen Sie die markierten Felder.",
       "parent_billing.contribution_rule_not_found":
-        "Diese Regel gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Regel gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "parent_billing.contribution_rule_overlap":
-        "In dieser Zeit gilt schon eine Regel dieser Art. Bitte ändere zuerst „Gilt bis“ der anderen Regel.",
+        "In dieser Zeit gilt schon eine Regel dieser Art. Bitte ändern Sie zuerst „Gilt bis“ der anderen Regel.",
       "parent_billing.cost_bearer_in_use":
-        "Dieser Kostenträger wurde schon gewählt. Du kannst ihn nur ausschalten.",
+        "Dieser Kostenträger wurde schon gewählt. Sie können ihn nur ausschalten.",
       "parent_billing.cost_bearer_inactive":
-        "Dieser Kostenträger ist ausgeschaltet. Bitte wähle einen anderen.",
+        "Dieser Kostenträger ist ausgeschaltet. Bitte wählen Sie einen anderen.",
       "parent_billing.cost_bearer_invalid":
-        "Bitte prüfe die markierten Felder.",
+        "Bitte prüfen Sie die markierten Felder.",
       "parent_billing.cost_bearer_not_found":
-        "Diesen Kostenträger gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diesen Kostenträger gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "parent_billing.cost_center_date_taken":
-        "Ab diesem Tag gibt es schon eine Kostenstelle. Wähle einen anderen Tag oder lösche die alte.",
+        "Ab diesem Tag gibt es schon eine Kostenstelle. Wählen Sie einen anderen Tag oder löschen Sie die alte.",
       "parent_billing.cost_takeover_with_exemption":
-        "Bitte wähle entweder die Befreiung oder einen Kostenträger.",
+        "Bitte wählen Sie entweder die Befreiung oder einen Kostenträger.",
       "parent_billing.datev_bookings_invalid":
-        "Einige Rechnungen passen nicht in die DATEV-Datei. Bitte prüfe die genannten Rechnungen.",
+        "Einige Rechnungen passen nicht in die DATEV-Datei. Bitte prüfen Sie die genannten Rechnungen.",
       "parent_billing.datev_bookings_taken":
-        "Jemand hat die neuen Buchungen gerade heruntergeladen. Es wurde keine Datei erstellt. Lade die Seite neu.",
+        "Jemand hat die neuen Buchungen gerade heruntergeladen. Es wurde keine Datei erstellt. Laden Sie die Seite neu.",
       "parent_billing.datev_no_new_bookings":
         "Alle Buchungen dieses Laufs sind schon in einer DATEV-Datei. Es wurde keine Datei erstellt.",
       "parent_billing.datev_not_ready":
-        "Für die DATEV-Datei fehlen noch Werte. Trage sie in den Einstellungen unter „DATEV“ ein. Das darf, wer das Recht „Einstellungen“ hat.",
+        "Für die DATEV-Datei fehlen noch Werte. Tragen Sie sie in den Einstellungen unter „DATEV“ ein. Das darf, wer das Recht „Einstellungen“ hat.",
       "parent_billing.debtor_number_digit_range":
         "Die Debitorennummer hat {min_digits} bis {max_digits} Ziffern, zum Beispiel {example}.",
       "parent_billing.debtor_number_digits":
         "Die Debitorennummer hat {digits} Ziffern, zum Beispiel {example}.",
       "parent_billing.debtor_number_invalid":
-        "Bitte prüfe die Debitorennummer.",
+        "Bitte prüfen Sie die Debitorennummer.",
       "parent_billing.debtor_number_locked":
         "Für diese Anmeldung gibt es schon eine Rechnung. Die Debitorennummer lässt sich nicht mehr ändern.",
       "parent_billing.direct_debit_without_mandate":
-        "Einige Familien zahlen per Lastschrift, haben aber kein gültiges Mandat. Bitte erfasse das Mandat oder ändere den Zahlungsweg.",
+        "Einige Familien zahlen per Lastschrift, haben aber kein gültiges Mandat. Bitte erfassen Sie das Mandat oder ändern Sie den Zahlungsweg.",
       "parent_billing.document_kind_invalid":
-        "Diese Dokumentart gibt es für diese Leistung nicht. Bitte wähle eine aus der Liste.",
+        "Diese Dokumentart gibt es für diese Leistung nicht. Bitte wählen Sie eine aus der Liste.",
       "parent_billing.due_dates_invalid":
-        "Die Fälligkeiten konnten nicht gespeichert werden. Bitte prüfe die Daten.",
+        "Die Fälligkeiten konnten nicht gespeichert werden. Bitte prüfen Sie die Daten.",
       "parent_billing.export_already_handed_over":
         "Diese Datei ist schon beim Empfänger oder noch unterwegs. Es wurde keine neue Datei erstellt.",
       "parent_billing.export_file_number_start_locked":
         "Die Dateinummern laufen schon. Die erste Nummer lässt sich nicht mehr ändern.",
       "parent_billing.export_formats_invalid":
-        "Die Zuordnung wurde nicht gespeichert. Bitte lade die Seite neu und versuche es noch einmal.",
+        "Die Zuordnung wurde nicht gespeichert. Bitte laden Sie die Seite neu und versuchen Sie es noch einmal.",
       "parent_billing.export_invoice_not_found":
-        "Diese Rechnung gibt es nicht. Lade die Seite neu.",
+        "Diese Rechnung gibt es nicht. Laden Sie die Seite neu.",
       "parent_billing.export_mapping_invalid":
-        "Die Feldzuordnung ist nicht vollständig. Bitte prüfe die markierten Felder.",
+        "Die Feldzuordnung ist nicht vollständig. Bitte prüfen Sie die markierten Felder.",
       "parent_billing.export_recipient_invalid":
-        "Der Empfänger wurde nicht gespeichert. Bitte prüfe die markierten Angaben.",
+        "Der Empfänger wurde nicht gespeichert. Bitte prüfen Sie die markierten Angaben.",
       "parent_billing.export_recipient_name_taken":
-        "Einen Empfänger mit diesem Namen gibt es schon. Bitte wähle einen anderen Namen.",
+        "Einen Empfänger mit diesem Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
       "parent_billing.export_recipient_not_found":
-        "Diesen Empfänger gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diesen Empfänger gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "parent_billing.export_recipient_not_ready":
-        "Diese Datei hat keinen bereiten Empfänger. Bitte ordne ihr unter „Empfänger der Exporte“ einen zu. Es wurde keine Datei erstellt.",
+        "Diese Datei hat keinen bereiten Empfänger. Bitte ordnen Sie ihr unter „Empfänger der Exporte“ einen zu. Es wurde keine Datei erstellt.",
       "parent_billing.export_run_empty":
         "In diesem Lauf gibt es keine Rechnung. Es gibt keine Datei zum Herunterladen.",
       "parent_billing.export_run_not_found":
-        "Diesen Lauf gibt es nicht oder er ist noch nicht ausgestellt. Lade die Seite neu.",
+        "Diesen Lauf gibt es nicht oder er ist noch nicht ausgestellt. Laden Sie die Seite neu.",
       "parent_billing.family_billing_invalid":
-        "Empfänger und Zahlung konnten nicht gespeichert werden. Bitte prüfe deine Eingaben.",
+        "Empfänger und Zahlung konnten nicht gespeichert werden. Bitte prüfen Sie Ihre Eingaben.",
       "parent_billing.family_billing_not_found":
-        "Diese Abweichung gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Abweichung gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "parent_billing.family_children_invalid":
-        "Bitte gib eine ganze Zahl von 1 bis 20 an.",
+        "Bitte geben Sie eine ganze Zahl von 1 bis 20 an.",
       "parent_billing.family_children_not_found":
-        "Zu diesem Vertrag gibt es keine Familie mehr. Bitte lade die Seite neu.",
+        "Zu diesem Vertrag gibt es keine Familie mehr. Bitte laden Sie die Seite neu.",
       "parent_billing.family_debtor_number_conflict":
-        "Die Familie hat schon die Debitorennummer {family_debtor_number}. Bitte wähle, welche Nummer gilt.",
+        "Die Familie hat schon die Debitorennummer {family_debtor_number}. Bitte wählen Sie, welche Nummer gilt.",
       "parent_billing.family_not_found":
-        "Zu dieser Familie gibt es keine Rechnung. Bitte öffne sie über die Liste „Familien“.",
+        "Zu dieser Familie gibt es keine Rechnung. Bitte öffnen Sie sie über die Liste „Familien“.",
       "parent_billing.family_unknown":
-        "Für diesen Vertrag fehlt eine E-Mail-Adresse. Bitte trage sie im Vertrag ein.",
+        "Für diesen Vertrag fehlt eine E-Mail-Adresse. Bitte tragen Sie sie im Vertrag ein.",
       "parent_billing.family_without_address":
-        "Die Rechnung dieses Vertrags hat keine E-Mail-Adresse. Trage zuerst im Vertrag eine Adresse ein.",
+        "Die Rechnung dieses Vertrags hat keine E-Mail-Adresse. Tragen Sie zuerst im Vertrag eine Adresse ein.",
       "parent_billing.holiday_quote_invalid":
-        "Der Beitrag lässt sich für diese Wochen nicht berechnen. Bitte lade die Seite neu.",
+        "Der Beitrag lässt sich für diese Wochen nicht berechnen. Bitte laden Sie die Seite neu.",
       "parent_billing.invoice_cancelled":
         "Diese Rechnung ist schon storniert. Sie lässt sich nicht mehr ändern.",
       "parent_billing.invoice_credited":
-        "Diese Rechnung hat schon eine Gutschrift. Schreibe den Rest gut, statt zu stornieren.",
+        "Diese Rechnung hat schon eine Gutschrift. Schreiben Sie den Rest gut, statt zu stornieren.",
       "parent_billing.invoice_number_taken":
-        "Diese Rechnungsnummer gibt es schon. Bitte ändere das Muster unter „Abrechnungsvorgaben“.",
+        "Diese Rechnungsnummer gibt es schon. Bitte ändern Sie das Muster unter „Abrechnungsvorgaben“.",
       "parent_billing.legal_remedy_missing":
-        "Der Gebührenbescheid braucht eine Rechtsbehelfsbelehrung. Trage sie in der Vorlage „Bescheid“ ein. Das darf, wer das Recht „Einstellungen“ hat. Danach kannst du freigeben.",
+        "Der Gebührenbescheid braucht eine Rechtsbehelfsbelehrung. Tragen Sie sie in der Vorlage „Bescheid“ ein. Das darf, wer das Recht „Einstellungen“ hat. Danach können Sie freigeben.",
       "parent_billing.letter_mail_block_unreadable":
-        "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuche es später noch einmal.",
+        "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuchen Sie es später noch einmal.",
       "parent_billing.letter_mail_blocked":
-        "Diese Adresse ist gesperrt. Bitte drucke das Schreiben. Der moto-Support klärt die Sperre.",
+        "Diese Adresse ist gesperrt. Bitte drucken Sie das Schreiben. Der moto-Support klärt die Sperre.",
       "parent_billing.letter_mail_delayed":
-        "Die letzte Mail an diese Familie ist noch unterwegs. Bitte warte, sonst kommt sie doppelt an.",
+        "Die letzte Mail an diese Familie ist noch unterwegs. Bitte warten Sie, sonst kommt sie doppelt an.",
       "parent_billing.letter_mail_pending":
-        "Die Mail an diese Familie wird gerade gesendet. Bitte warte, bis sie gesendet ist oder nicht zugestellt wurde.",
+        "Die Mail an diese Familie wird gerade gesendet. Bitte warten Sie, bis sie gesendet ist oder nicht zugestellt wurde.",
+      "parent_billing.letterhead_missing":
+        "Der Absender im Briefkopf fehlt. Ohne Name und Anschrift des Trägers entstehen keine Rechnungen oder Bescheide. Bitte tragen Sie ihn unter „Briefkopf und Vorlagen“ ein.",
       "parent_billing.letterhead_too_long":
-        "Absender oder Fußzeile im Briefkopf sind zu lang für ein Schreiben. Bitte lasse sie unter „Briefkopf und Vorlagen“ kürzen.",
+        "Absender oder Fußzeile im Briefkopf sind zu lang für ein Schreiben. Bitte lassen Sie sie unter „Briefkopf und Vorlagen“ kürzen.",
       "parent_billing.number_range_invalid":
-        "Bitte prüfe das Muster. Es braucht genau eine laufende Nummer und darf nur Buchstaben, Ziffern und . / _ - enthalten.",
+        "Bitte prüfen Sie das Muster. Es braucht genau eine laufende Nummer und darf nur Buchstaben, Ziffern und . / _ - enthalten.",
       "parent_billing.number_range_missing":
-        "Es fehlt das Muster der Rechnungsnummern. Bitte lege es unter „Abrechnungsvorgaben“ fest.",
+        "Es fehlt das Muster der Rechnungsnummern. Bitte legen Sie es unter „Abrechnungsvorgaben“ fest.",
       "parent_billing.number_range_start_invalid":
-        "Bitte gib eine ganze Zahl von 1 bis 99999999 ein.",
+        "Bitte geben Sie eine ganze Zahl von 1 bis 99999999 ein.",
       "parent_billing.number_range_start_taken":
-        "Diese Nummer ist zu klein. Die letzte laufende Nummer ist {last_sequence}. Bitte gib eine größere Nummer ein.",
+        "Diese Nummer ist zu klein. Die letzte laufende Nummer ist {last_sequence}. Bitte geben Sie eine größere Nummer ein.",
       "parent_billing.online_mandate_disabled":
-        "Dein Träger nimmt das Lastschrift-Mandat gerade nicht in der App an.",
+        "Ihr Träger nimmt das Lastschrift-Mandat gerade nicht in der App an.",
       "parent_billing.parent_document_not_found":
-        "Dieses Dokument gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Dieses Dokument gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "parent_billing.payment_text_debtor_number_missing":
-        "Rechnungen ohne Debitorennummer: {count}. Dein Zahlungstext nennt aber die Debitorennummer. Lösche den eigenen Zahlungstext in den Einstellungen unter „Allgemein“ im Bereich „Ferienbetreuung“ oder nimm dort den Platzhalter für die Debitorennummer heraus. Das darf, wer das Recht „Einstellungen“ hat.",
+        "Rechnungen ohne Debitorennummer: {count}. Ihr Zahlungstext nennt aber die Debitorennummer. Löschen Sie den eigenen Zahlungstext in den Einstellungen unter „Allgemein“ im Bereich „Ferienbetreuung“ oder nehmen Sie dort den Platzhalter für die Debitorennummer heraus. Das darf, wer das Recht „Einstellungen“ hat.",
       "parent_billing.recipient_email_missing":
-        "Für diese Familie gibt es keine E-Mail-Adresse. Bitte drucke das Schreiben und gib es der Familie.",
+        "Für diese Familie gibt es keine E-Mail-Adresse. Bitte drucken Sie das Schreiben und geben Sie es der Familie.",
       "parent_billing.sepa_account_holder_unsupported":
-        "Die Lastschriftdatei braucht Kontonamen in lateinischer Schrift. Prüfe die Kontonamen der Mandate und des Trägers.",
+        "Die Lastschriftdatei braucht Kontonamen in lateinischer Schrift. Prüfen Sie die Kontonamen der Mandate und des Trägers.",
       "parent_billing.sepa_creditor_account_missing":
-        "Es fehlt das Konto, auf das die Lastschriften gehen. Lege unter Einstellungen → Abrechnung eine Bankverbindung als Standard fest. Das darf, wer das Recht „Einstellungen“ hat.",
+        "Es fehlt das Konto, auf das die Lastschriften gehen. Legen Sie unter Einstellungen → Abrechnung eine Bankverbindung als Standard fest. Das darf, wer das Recht „Einstellungen“ hat.",
       "parent_billing.sepa_creditor_invalid":
-        "Die Angaben zur Lastschrift konnten nicht gespeichert werden. Bitte prüfe die Eingaben.",
+        "Die Angaben zur Lastschrift konnten nicht gespeichert werden. Bitte prüfen Sie die Eingaben.",
       "parent_billing.sepa_creditor_missing":
-        "Bitte trage zuerst deine Gläubiger-ID unter Einstellungen → Abrechnung ein.",
+        "Bitte tragen Sie zuerst Ihre Gläubiger-ID unter Einstellungen → Abrechnung ein.",
       "parent_billing.sepa_debit_run_not_found":
         "Diesen Lauf gibt es nicht, oder er ist noch nicht freigegeben. Eine Lastschriftdatei gibt es erst nach der Freigabe.",
       "parent_billing.sepa_debits_changed":
-        "Die Lastschriftdatei hat sich geändert. Lade die Datei neu herunter und reiche die neue Datei bei deiner Bank ein.",
+        "Die Lastschriftdatei hat sich geändert. Laden Sie die Datei neu herunter und reichen Sie die neue Datei bei Ihrer Bank ein.",
       "parent_billing.sepa_debits_empty":
         "In diesem Lauf gibt es keine offene Lastschrift. Es gibt keine Datei zum Herunterladen oder Bestätigen.",
       "parent_billing.sepa_end_to_end_duplicate":
-        "Zwei Lastschriften hätten in der Datei dieselbe Kennung. Die Bank könnte sie nicht unterscheiden. Bitte wende dich an den moto-Support.",
+        "Zwei Lastschriften hätten in der Datei dieselbe Kennung. Die Bank könnte sie nicht unterscheiden. Bitte wenden Sie sich an den moto-Support.",
       "parent_billing.sepa_import_changed":
-        "Seit der Vorschau hat sich etwas geändert. Bitte prüfe die Vorschau noch einmal und übernimm dann.",
+        "Seit der Vorschau hat sich etwas geändert. Bitte prüfen Sie die Vorschau noch einmal und übernehmen Sie dann.",
       "parent_billing.sepa_import_file_invalid":
-        "Die Datei lässt sich nicht lesen. Bitte wähle eine CSV-Datei mit Überschriften.",
+        "Die Datei lässt sich nicht lesen. Bitte wählen Sie eine CSV-Datei mit Überschriften.",
       "parent_billing.sepa_import_file_too_large":
         "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
       "parent_billing.sepa_import_mapping_invalid":
-        "Bitte ordne zuerst alle Pflichtspalten zu.",
+        "Bitte ordnen Sie zuerst alle Pflichtspalten zu.",
       "parent_billing.sepa_mandate_in_force":
-        "Die Familie hat schon ein gültiges Mandat. Bitte widerrufe es zuerst.",
+        "Die Familie hat schon ein gültiges Mandat. Bitte widerrufen Sie es zuerst.",
       "parent_billing.sepa_mandate_invalid":
-        "Das Mandat konnte nicht gespeichert werden. Bitte prüfe die markierten Felder.",
+        "Das Mandat konnte nicht gespeichert werden. Bitte prüfen Sie die markierten Felder.",
       "parent_billing.sepa_mandate_not_found":
-        "Dieses Mandat gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Dieses Mandat gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "parent_billing.sepa_mandate_reference_taken":
-        "Diese Mandatsreferenz gibt es schon. Bitte wähle eine andere.",
+        "Diese Mandatsreferenz gibt es schon. Bitte wählen Sie eine andere.",
       "parent_billing.sepa_mandate_revoked":
         "Dieses Mandat ist widerrufen. Es lässt sich nicht mehr ändern.",
       "parent_billing.sepa_mandate_text_changed":
-        "Der Text des Mandats hat sich geändert. Bitte lies und bestätige ihn noch einmal.",
+        "Der Text des Mandats hat sich geändert. Bitte lesen und bestätigen Sie ihn noch einmal.",
       "parent_billing.sibling_group_invalid":
-        "Bitte wähle mindestens zwei Anmeldungen aus, die nicht storniert sind.",
+        "Bitte wählen Sie mindestens zwei Anmeldungen aus, die nicht storniert sind.",
       "parent_billing.sibling_group_invoiced":
-        "Für diese Anmeldung gibt es schon eine Rechnung. Geschwister kannst du jetzt nicht mehr ändern.",
+        "Für diese Anmeldung gibt es schon eine Rechnung. Geschwister können Sie jetzt nicht mehr ändern.",
       "parent_billing.sibling_group_not_found":
-        "Diese Anmeldung gehört nicht mehr zu Geschwistern. Bitte lade die Seite neu.",
+        "Diese Anmeldung gehört nicht mehr zu Geschwistern. Bitte laden Sie die Seite neu.",
       "parent_billing.sollstellung_revenue_account_missing":
-        "Bei {count} Rechnungen fehlt das Erlöskonto. Trage in den DATEV-Werten ein Standard-Erlöskonto ein.",
+        "Bei {count} Rechnungen fehlt das Erlöskonto. Tragen Sie in den DATEV-Werten ein Standard-Erlöskonto ein.",
       "pickup.bulk_exception_confirmation_required":
-        "Für {object} fehlt eine Angabe. Bitte ergänze das markierte Feld.",
+        "Für {object} fehlt eine Angabe. Bitte ergänzen Sie das markierte Feld.",
       "pickup.invalid":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "pickup.offering_capacity_full":
-        "Für {object} ist kein Platz mehr frei. Bitte wähle etwas anderes.",
+        "Für {object} ist kein Platz mehr frei. Bitte wählen Sie etwas anderes.",
       "pickup.offerings_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "pickup.preview_stale":
-        "{object} wurde inzwischen geändert. Bitte lade die Seite neu.",
+        "{object} wurde inzwischen geändert. Bitte laden Sie die Seite neu.",
       "pickup.resolution_required":
-        "Für {object} fehlt eine Angabe. Bitte ergänze das markierte Feld.",
+        "Für {object} fehlt eine Angabe. Bitte ergänzen Sie das markierte Feld.",
       "presence.activity_participant_limit_reached":
         "Die Aktivität {activity_name}: {current_occupancy} von {max_participants} Kindern sind da. Freie Plätze: {free_slots}. Es sollen {incoming_students} Kinder dazukommen.",
       "presence.room_capacity_exceeded":
@@ -1195,215 +1210,217 @@ export const ERROR_CATALOG = {
       "presence.visit_overlap":
         "Das Kind war ab {conflicting_from} Uhr in einem anderen Raum. Die Zeiten dürfen sich nicht überschneiden.",
       "provisioning.caregiver_capability_blocked":
-        "Die Betreuungsrolle kann noch nicht entfernt werden, weil die Person noch eingeplant ist. Bitte löse diese Zuordnungen zuerst.",
+        "Die Betreuungsrolle kann noch nicht entfernt werden, weil die Person noch eingeplant ist. Bitte lösen Sie diese Zuordnungen zuerst.",
       "provisioning.device_active_session":
-        "Auf dem Gerät läuft gerade eine Sitzung. Bitte beende sie und versuche es dann erneut.",
+        "Auf dem Gerät läuft gerade eine Sitzung. Bitte beenden Sie sie und versuchen Sie es dann erneut.",
       "provisioning.device_api_key_taken":
-        "Diesen API-Key nutzt schon ein anderes Gerät. Bitte wähle einen anderen.",
+        "Diesen API-Key nutzt schon ein anderes Gerät. Bitte wählen Sie einen anderen.",
       "provisioning.device_id_taken":
-        "Diese Geräte-ID gibt es an der Schule schon. Bitte wähle eine andere.",
+        "Diese Geräte-ID gibt es an der Schule schon. Bitte wählen Sie eine andere.",
       "provisioning.device_in_use":
         "Mit diesem Gerät wurden schon Anwesenheiten oder Sitzungen erfasst. Es kann nicht gelöscht werden.",
       "provisioning.device_not_found":
-        "Dieses Gerät gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Dieses Gerät gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "provisioning.device_online":
-        "Das Gerät ist gerade online. Bitte schalte es aus und versuche es dann erneut.",
+        "Das Gerät ist gerade online. Bitte schalten Sie es aus und versuchen Sie es dann erneut.",
       "provisioning.device_other_organization":
-        "Ein Gerät kann nur zu einer Schule desselben Trägers umziehen. Bitte wähle eine andere Schule.",
+        "Ein Gerät kann nur zu einer Schule desselben Trägers umziehen. Bitte wählen Sie eine andere Schule.",
       "provisioning.device_protected":
         "Dieses Systemgerät kann nicht gelöscht werden.",
       "provisioning.device_same_school":
-        "Das Gerät gehört schon zu dieser Schule. Bitte wähle eine andere Schule.",
+        "Das Gerät gehört schon zu dieser Schule. Bitte wählen Sie eine andere Schule.",
       "provisioning.device_transfer_protected":
         "Dieses Systemgerät kann nicht umgezogen werden.",
       "provisioning.organization_already_deleted":
-        "Dieser Träger ist schon gelöscht. Bitte lade die Seite neu.",
+        "Dieser Träger ist schon gelöscht. Bitte laden Sie die Seite neu.",
       "provisioning.organization_deleted":
-        "Der Träger ist gelöscht. Bitte wähle einen anderen Träger.",
+        "Der Träger ist gelöscht. Bitte wählen Sie einen anderen Träger.",
       "provisioning.organization_has_schools":
-        "Zu diesem Träger gehören noch Schulen (Anzahl: {school_count}). Bitte lösche zuerst alle Schulen des Trägers.",
+        "Zu diesem Träger gehören noch Schulen (Anzahl: {school_count}). Bitte löschen Sie zuerst alle Schulen des Trägers.",
       "provisioning.organization_not_deleted":
-        "Dieser Träger ist nicht gelöscht. Bitte lade die Seite neu.",
+        "Dieser Träger ist nicht gelöscht. Bitte laden Sie die Seite neu.",
       "provisioning.organization_not_found":
-        "Diesen Träger gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diesen Träger gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "provisioning.organization_slug_taken":
-        "Diesen Slug hat schon ein anderer Träger. Bitte wähle einen anderen.",
+        "Diesen Slug hat schon ein anderer Träger. Bitte wählen Sie einen anderen.",
       "provisioning.person_has_active_profile":
         "Diese Person ist noch als Kind oder Mitarbeitende an der Schule angelegt. Das Kind löscht die Schule beim Kind. Mitarbeitende lassen sich erst nach ihrem Austritt löschen.",
       "provisioning.person_has_supervisions":
-        "Diese Person führt gerade eine Aufsicht. Bitte beende die Aufsicht zuerst.",
+        "Diese Person führt gerade eine Aufsicht. Bitte beenden Sie die Aufsicht zuerst.",
       "provisioning.person_not_found":
-        "Diese Person gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Person gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "provisioning.school_already_deleted":
-        "Diese Schule ist schon gelöscht. Bitte lade die Seite neu.",
+        "Diese Schule ist schon gelöscht. Bitte laden Sie die Seite neu.",
       "provisioning.school_inactive":
-        "Die Schule ist ausgeschaltet. Bitte schalte sie zuerst ein.",
+        "Die Schule ist ausgeschaltet. Bitte schalten Sie sie zuerst ein.",
       "provisioning.school_not_deleted":
-        "Diese Schule ist nicht gelöscht. Bitte lade die Seite neu.",
+        "Diese Schule ist nicht gelöscht. Bitte laden Sie die Seite neu.",
       "provisioning.school_not_found":
-        "Diese Schule gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Schule gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "provisioning.school_slug_taken":
-        "Diesen Slug hat schon eine andere Schule dieses Trägers. Bitte wähle einen anderen.",
+        "Diesen Slug hat schon eine andere Schule dieses Trägers. Bitte wählen Sie einen anderen.",
       "provisioning.school_subdomain_taken":
-        "Diese Subdomain hat schon eine andere Schule. Bitte wähle eine andere.",
+        "Diese Subdomain hat schon eine andere Schule. Bitte wählen Sie eine andere.",
       "provisioning.traeger_active":
-        "Der Träger ist noch aktiv. Bitte deaktiviere ihn zuerst.",
+        "Der Träger ist noch aktiv. Bitte deaktivieren Sie ihn zuerst.",
       "provisioning.traeger_erasure_order_not_found":
-        "Für diesen Träger gibt es keinen offenen Löschauftrag. Bitte lade die Seite neu.",
+        "Für diesen Träger gibt es keinen offenen Löschauftrag. Bitte laden Sie die Seite neu.",
       "provisioning.traeger_erasure_order_open":
-        "Für diesen Träger ist schon ein Löschauftrag erfasst. Bitte nimm den Löschauftrag zuerst zurück.",
+        "Für diesen Träger ist schon ein Löschauftrag erfasst. Bitte nehmen Sie den Löschauftrag zuerst zurück.",
       "provisioning.traeger_erasure_records_recorded":
         "Die Wahl des Kunden ist schon eingetragen. Sie kann nicht mehr geändert werden.",
       "provisioning.traeger_erasure_started":
         "Die Löschung hat schon begonnen. Der Löschauftrag kann nicht mehr zurückgenommen werden.",
       "rollover.deadline_required":
-        "Bitte gib eine Frist für die Rückmeldung ein.",
+        "Bitte geben Sie eine Frist für die Rückmeldung ein.",
       "rollover.duplicate_name":
-        "Es gibt schon eine Phase mit diesem Namen. Bitte wähle einen anderen Namen.",
+        "Es gibt schon eine Phase mit diesem Namen. Bitte wählen Sie einen anderen Namen.",
       "rollover.invalid_request":
-        "Die Angaben sind unvollständig. Bitte prüfe alle Pflichtfelder.",
+        "Die Angaben sind unvollständig. Bitte prüfen Sie alle Pflichtfelder.",
       "rollover.review_invalid":
         "Diese Aktion ist bei diesem Eintrag gerade nicht möglich.",
       "rollover.review_not_found":
-        "Diesen Eintrag in der Prüfliste gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diesen Eintrag in der Prüfliste gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "rollover.source_already_rolled":
-        "Aus dieser Phase gibt es schon eine Anschlussphase. Bitte lösche zuerst die bestehende Anschlussphase.",
+        "Aus dieser Phase gibt es schon eine Anschlussphase. Bitte löschen Sie zuerst die bestehende Anschlussphase.",
       "rollover.source_not_found":
-        "Die Ausgangsphase gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Die Ausgangsphase gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "rooms.archived":
-        "Dieser Raum ist archiviert. Du kannst ihn nicht mehr ändern.",
+        "Dieser Raum ist archiviert. Sie können ihn nicht mehr ändern.",
       "rooms.color_already_in_use":
-        "Diese Farbe hat schon ein anderer Raum. Bitte wähle eine andere Farbe.",
+        "Diese Farbe hat schon ein anderer Raum. Bitte wählen Sie eine andere Farbe.",
       "rooms.not_found":
-        "Diesen Raum gibt es nicht mehr. Bitte wähle ihn in der Liste neu aus.",
+        "Diesen Raum gibt es nicht mehr. Bitte wählen Sie ihn in der Liste neu aus.",
       "rooms.not_released":
-        "Dieser Raum ist nicht mehr freigegeben. Bitte wähle einen anderen Raum.",
+        "Dieser Raum ist nicht mehr freigegeben. Bitte wählen Sie einen anderen Raum.",
       "rooms.required_by_care_offering":
-        "Ein Betreuungsangebot braucht diesen Raum noch. Wähle dort zuerst einen anderen Raum.",
+        "Ein Betreuungsangebot braucht diesen Raum noch. Wählen Sie dort zuerst einen anderen Raum.",
       "rooms.session_running":
-        "In diesem Raum läuft gerade eine Aktivität. Beende sie zuerst.",
+        "In diesem Raum läuft gerade eine Aktivität. Beenden Sie sie zuerst.",
       "rooms.still_planned":
-        "Dieser Raum wird noch genutzt. Verlege zuerst Aktivitäten, Termine, Gruppen und Geräte in einen anderen Raum.",
+        "Dieser Raum wird noch genutzt. Verlegen Sie zuerst Aktivitäten, Termine, Gruppen und Geräte in einen anderen Raum.",
       "school.parent_conference_change_closed":
-        "Bis 24 Stunden vor dem Termin kannst du buchen, umbuchen oder absagen. Danach wende dich bitte direkt an die Lehrkraft.",
+        "Bis 24 Stunden vor dem Termin können Sie buchen, umbuchen oder absagen. Danach wenden Sie sich bitte direkt an die Lehrkraft.",
       "school.parent_conference_slot_taken":
-        "Dieser Termin ist gerade vergeben worden. Bitte wähle eine andere Uhrzeit.",
+        "Dieser Termin ist gerade vergeben worden. Bitte wählen Sie eine andere Uhrzeit.",
       "school.setup_completed":
-        "Die Einrichtung der Schule ist schon abgeschlossen. Bitte lade die Seite neu.",
+        "Die Einrichtung der Schule ist schon abgeschlossen. Bitte laden Sie die Seite neu.",
       "school.setup_incomplete":
-        "Die Einrichtung ist noch nicht fertig. Bitte schließe zuerst die offenen Schritte ab.",
+        "Die Einrichtung ist noch nicht fertig. Bitte schließen Sie zuerst die offenen Schritte ab.",
       "settings.admin_only": "Diese Einstellung ändert nur die Schule selbst.",
       "settings.attendance_retention_below_visible":
         "Das Team sieht die Anwesenheit {visible_days} Tage zurück. Die Aufbewahrung muss mindestens so lang sein.",
       "settings.attendance_visible_exceeds_retention":
         "Das Team kann die Anwesenheit höchstens {retention_days} Tage zurück sehen. So lange bewahrt moto sie auf.",
       "settings.booking_authority_blocked":
-        "Der Buchungsmodus wurde nicht aktiviert: Für mindestens ein betreutes Kind ist kein Betreuungstag gebucht. Bitte prüfe die Auswirkungen erneut.",
+        "Der Buchungsmodus wurde nicht aktiviert: Für mindestens ein betreutes Kind ist kein Betreuungstag gebucht. Bitte prüfen Sie die Auswirkungen erneut.",
       "settings.device_pin_too_simple":
-        "Diese PIN ist zu leicht zu erraten. Bitte nimm keine gleichen Ziffern (1111), keine Reihen (1234, 4321) und keine Paare (1212).",
+        "Diese PIN ist zu leicht zu erraten. Bitte nehmen Sie keine gleichen Ziffern (1111), keine Reihen (1234, 4321) und keine Paare (1212).",
       "settings.enrollment_privacy_notice_missing":
-        "Die Online-Anmeldung braucht eine Datenschutzinformation. Schalte unter „Rechtstexte“ die Datenschutzinformation ein und trage den Text ein. Danach kannst du die Online-Anmeldung einschalten.",
+        "Die Online-Anmeldung braucht eine Datenschutzinformation. Schalten Sie unter „Rechtstexte“ die Datenschutzinformation ein und tragen Sie den Text ein. Danach können Sie die Online-Anmeldung einschalten.",
       "settings.invalid_value":
-        "Der Wert für {object} ist nicht erlaubt. Bitte prüfe die Eingabe.",
+        "Der Wert für {object} ist nicht erlaubt. Bitte prüfen Sie die Eingabe.",
       "settings.managed_by_upload":
-        "Dieser Wert entsteht beim Hochladen der Datei. Bitte lade die Datei neu hoch.",
+        "Dieser Wert entsteht beim Hochladen der Datei. Bitte laden Sie die Datei neu hoch.",
       "settings.module_required_by":
-        "{module} kann nicht abbestellt werden, solange {dependents} gebucht ist. Bitte bestelle zuerst {dependents} ab.",
+        "{module} kann nicht abbestellt werden, solange {dependents} gebucht ist. Bitte bestellen Sie zuerst {dependents} ab.",
       "settings.module_requires":
-        "{module} braucht das Modul {required}. Bitte buche zuerst {required}.",
+        "{module} braucht das Modul {required}. Bitte buchen Sie zuerst {required}.",
       "settings.not_found":
-        "Diese Einstellung gibt es nicht. Bitte lade die Seite neu.",
+        "Diese Einstellung gibt es nicht. Bitte laden Sie die Seite neu.",
       "settings.presence_mode_switch_blocked":
-        "Der Anwesenheitsmodus kann erst nach dem Tagesabschluss gewechselt werden. Bitte beende zuerst den laufenden Tag.",
+        "Der Anwesenheitsmodus kann erst nach dem Tagesabschluss gewechselt werden. Bitte beenden Sie zuerst den laufenden Tag.",
       "staff.exit_already_due":
         "Der letzte Arbeitstag ist vorbei. Der Austritt läuft schon und lässt sich nicht mehr ändern.",
       "staff.exit_day_in_past":
-        "Der letzte Arbeitstag darf nicht in der Vergangenheit liegen. Bitte wähle heute oder einen späteren Tag.",
+        "Der letzte Arbeitstag darf nicht in der Vergangenheit liegen. Bitte wählen Sie heute oder einen späteren Tag.",
       "staff.exit_not_planned": "Für diese Person ist kein Austritt geplant.",
       "staff.external_access_invalid":
-        "Bitte wähle, welchen Zugang die Person bekommt.",
+        "Bitte wählen Sie, welchen Zugang die Person bekommt.",
       "staff.external_email_invalid":
-        "Diese E-Mail-Adresse ist nicht gültig. Bitte prüfe sie.",
+        "Diese E-Mail-Adresse ist nicht gültig. Bitte prüfen Sie sie.",
       "staff.external_email_invited":
-        "Diese E-Mail-Adresse hat schon eine offene Einladung für eine andere Person. Bitte nimm eine andere Adresse.",
-      "staff.external_email_required": "Bitte gib eine E-Mail-Adresse ein.",
+        "Diese E-Mail-Adresse hat schon eine offene Einladung für eine andere Person. Bitte nehmen Sie eine andere Adresse.",
+      "staff.external_email_required":
+        "Bitte geben Sie eine E-Mail-Adresse ein.",
       "staff.external_has_account":
         "Diese Person hat schon ein Konto. Eine Einladung ist nicht nötig.",
       "staff.not_external":
-        "Diese Person ist nicht als extern eingetragen. Bitte lade sie wie andere Mitarbeitende ein.",
+        "Diese Person ist nicht als extern eingetragen. Bitte laden Sie sie wie andere Mitarbeitende ein.",
       "students.absence_read_required":
-        "Für {object} brauchst du zusätzlich das Recht „Kinder sehen“. Bitte frage die Schulleitung.",
+        "Für {object} brauchen Sie zusätzlich das Recht „Kinder sehen“. Bitte fragen Sie die Schulleitung.",
       "students.accident_report_forbidden":
-        "Für Unfallanzeigen fehlt dir die Berechtigung. Frage die Leitung.",
+        "Für Unfallanzeigen fehlt Ihnen die Berechtigung. Fragen Sie die Leitung.",
       "students.accident_report_invalid":
-        "Die Unfallanzeige ist unvollständig. Fülle alle Pflichtfelder aus.",
+        "Die Unfallanzeige ist unvollständig. Füllen Sie alle Pflichtfelder aus.",
       "students.accident_report_not_found":
-        "Diese Unfallanzeige gibt es nicht mehr. Lade die Seite neu.",
+        "Diese Unfallanzeige gibt es nicht mehr. Laden Sie die Seite neu.",
       "students.accident_report_not_signed":
-        "Die Unfallanzeige ist nicht unterschrieben. Du kannst sie ändern.",
+        "Die Unfallanzeige ist nicht unterschrieben. Sie können sie ändern.",
       "students.accident_report_signed":
-        "Die Unfallanzeige ist unterschrieben. Lege eine Korrektur an.",
+        "Die Unfallanzeige ist unterschrieben. Legen Sie eine Korrektur an.",
       "students.accident_report_superseded":
-        "Es gibt schon eine Korrektur. Bearbeite die neue Fassung.",
+        "Es gibt schon eine Korrektur. Bearbeiten Sie die neue Fassung.",
       "students.accident_signature_invalid":
-        "Die Unterschrift wurde nicht gespeichert. Unterschreibe noch einmal.",
+        "Die Unterschrift wurde nicht gespeichert. Unterschreiben Sie noch einmal.",
       "students.bulk_approval_ineligible":
         "Mindestens eine Anfrage muss einzeln geprüft werden. Es wurde nichts freigegeben.",
       "students.care_day_managed_by_booking":
-        "Dieser Tag gehört zu einem gebuchten Angebot. Bitte ändere zuerst die Buchung.",
+        "Dieser Tag gehört zu einem gebuchten Angebot. Bitte ändern Sie zuerst die Buchung.",
       "students.care_exception_raced":
-        "{object} wurde inzwischen geändert. Bitte prüfe deine Angaben erneut.",
+        "{object} wurde inzwischen geändert. Bitte prüfen Sie Ihre Angaben erneut.",
       "students.care_exit_already_effective":
-        "Die Betreuung ist schon beendet. Bitte nutze „Betreuung wieder aufnehmen“.",
+        "Die Betreuung ist schon beendet. Bitte nutzen Sie „Betreuung wieder aufnehmen“.",
       "students.care_exit_blocked":
-        "Die Betreuung wurde nicht beendet. Bitte prüfe die Hinweise bei den Kindern.",
+        "Die Betreuung wurde nicht beendet. Bitte prüfen Sie die Hinweise bei den Kindern.",
       "students.care_exit_day_in_past":
         "Der letzte Betreuungstag darf nicht in der Vergangenheit liegen.",
-      "students.care_exit_invalid_reason": "Bitte wähle einen Grund aus.",
-      "students.care_exit_no_students": "Bitte wähle mindestens ein Kind aus.",
+      "students.care_exit_invalid_reason": "Bitte wählen Sie einen Grund aus.",
+      "students.care_exit_no_students":
+        "Bitte wählen Sie mindestens ein Kind aus.",
       "students.care_exit_not_planned":
-        "Für dieses Kind ist kein Ende der Betreuung geplant. Bitte lade die Seite neu.",
+        "Für dieses Kind ist kein Ende der Betreuung geplant. Bitte laden Sie die Seite neu.",
       "students.care_exit_note_not_allowed":
         "Eine eigene Begründung ist nur bei „Anderer Grund“ möglich.",
-      "students.care_exit_note_required": "Bitte gib den Grund ein.",
+      "students.care_exit_note_required": "Bitte geben Sie den Grund ein.",
       "students.care_exit_note_too_long":
-        "Die Begründung ist zu lang. Bitte kürze sie.",
+        "Die Begründung ist zu lang. Bitte kürzen Sie sie.",
       "students.care_exit_preview_changed":
-        "Seit der Vorschau hat sich etwas geändert. Bitte prüfe die Vorschau erneut.",
+        "Seit der Vorschau hat sich etwas geändert. Bitte prüfen Sie die Vorschau erneut.",
       "students.care_exit_too_many_students":
-        "Bitte wähle höchstens 500 Kinder auf einmal aus.",
+        "Bitte wählen Sie höchstens 500 Kinder auf einmal aus.",
       "students.care_offerings_disabled":
-        "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "students.care_request_plan_changed":
-        "Der Betreuungsplan wurde gerade geändert. Bitte lade die Seite neu. Prüfe die Anfrage dann noch einmal.",
+        "Der Betreuungsplan wurde gerade geändert. Bitte laden Sie die Seite neu. Prüfen Sie die Anfrage dann noch einmal.",
       "students.care_resume_alumnus":
-        "Dieses Kind wurde beim Schuljahreswechsel abgemeldet. Du findest es unter Schuljahreswechsel, Bereich Abgänge.",
+        "Dieses Kind wurde beim Schuljahreswechsel abgemeldet. Sie finden es unter Schuljahreswechsel, Bereich Abgänge.",
       "students.care_resume_missing":
         "Für dieses Kind ist keine beendete Betreuung hinterlegt.",
       "students.care_resume_not_checked":
-        "Bitte bestätige zuerst die Prüfung. Sonst bleiben Gruppe, Angebote, Wochenplan und Zeiten ungeprüft.",
+        "Bitte bestätigen Sie zuerst die Prüfung. Sonst bleiben Gruppe, Angebote, Wochenplan und Zeiten ungeprüft.",
       "students.care_resume_not_ended":
-        "Die Betreuung dieses Kindes läuft noch. Du musst sie nicht wieder aufnehmen.",
+        "Die Betreuung dieses Kindes läuft noch. Sie müssen sie nicht wieder aufnehmen.",
       "students.care_resume_start_in_past":
         "Der neue Beginn darf nicht in der Vergangenheit liegen.",
       "students.care_withdrawal_after_gap":
         "Der letzte Betreuungstag muss vor dem ersten Tag ohne Buchung liegen.",
       "students.care_withdrawal_date_invalid":
-        "Dieser letzte Betreuungstag ist für das Kind nicht möglich. Bitte wähle ein späteres Datum.",
+        "Dieser letzte Betreuungstag ist für das Kind nicht möglich. Bitte wählen Sie ein späteres Datum.",
       "students.care_withdrawal_not_found":
-        "{object} wurde nicht gefunden. Bitte lade die Seite neu.",
+        "{object} wurde nicht gefunden. Bitte laden Sie die Seite neu.",
       "students.change_request_not_pending":
-        "{object} ist nicht mehr offen. Bitte lade die Seite neu.",
+        "{object} ist nicht mehr offen. Bitte laden Sie die Seite neu.",
       "students.change_request_stale":
-        "{object} wurde inzwischen geändert. Bitte lade die Seite neu.",
+        "{object} wurde inzwischen geändert. Bitte laden Sie die Seite neu.",
       "students.checkin_care_ended":
-        "Die Betreuung dieses Kindes ist beendet. Bitte lade die Seite neu.",
+        "Die Betreuung dieses Kindes ist beendet. Bitte laden Sie die Seite neu.",
       "students.checkout_note_too_long":
-        "Die Notiz ist zu lang. Bitte kürze sie.",
+        "Die Notiz ist zu lang. Bitte kürzen Sie sie.",
       "students.child_quota_reached":
-        "Das Kinderkontingent deiner Schule ist voll ({occupied_places} von {booked_places} Kindern). Bitte melde dich beim moto-Team.",
+        "Das Kinderkontingent Ihrer Schule ist voll ({occupied_places} von {booked_places} Kindern). Bitte melden Sie sich beim moto-Team.",
       "students.class_list_entries_replaced":
-        "Deine Schule legt Kinder ohne OGS-Platz als Kind an. Bitte nutze dafür „Ohne OGS-Platz“ in den Kinderdaten.",
+        "Ihre Schule legt Kinder ohne OGS-Platz als Kind an. Bitte nutzen Sie dafür „Ohne OGS-Platz“ in den Kinderdaten.",
       "students.class_list_entry_assign_mismatch":
         "Das gewählte Kind passt nicht zum Eintrag. Name und Klasse müssen gleich sein.",
       "students.class_list_entry_duplicate":
@@ -1411,276 +1428,276 @@ export const ERROR_CATALOG = {
       "students.class_list_entry_student_exists":
         "Ein Kind mit diesem Namen ist in dieser Klasse schon in moto angelegt.",
       "students.class_list_entry_student_not_found":
-        "Das gewählte Kind gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Das gewählte Kind gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "students.companion_lock_busy":
-        "Gerade ändert jemand anderes die Laufgemeinschaft. Bitte versuche es gleich noch einmal.",
+        "Gerade ändert jemand anderes die Laufgemeinschaft. Bitte versuchen Sie es gleich noch einmal.",
       "students.companion_plan_conflict":
-        "Ein verknüpftes Kind darf an diesen Tagen noch nicht mitgehen. Bitte prüfe die Laufgemeinschaft.",
+        "Ein verknüpftes Kind darf an diesen Tagen noch nicht mitgehen. Bitte prüfen Sie die Laufgemeinschaft.",
       "students.companion_would_lose_departure":
-        "Ein verknüpftes Kind hätte dann keinen Heimweg mehr. Bitte passe zuerst dessen Heimweg an.",
+        "Ein verknüpftes Kind hätte dann keinen Heimweg mehr. Bitte passen Sie zuerst dessen Heimweg an.",
       "students.companions_changed":
-        "Die Laufgemeinschaft wurde inzwischen geändert. Bitte lade die Seite neu.",
+        "Die Laufgemeinschaft wurde inzwischen geändert. Bitte laden Sie die Seite neu.",
       "students.conflict_kind_unsupported":
-        "Diese Anfragen lassen sich nicht gemeinsam entscheiden. Bitte entscheide sie einzeln.",
+        "Diese Anfragen lassen sich nicht gemeinsam entscheiden. Bitte entscheiden Sie sie einzeln.",
       "students.correction_unsupported":
-        "Diese Entscheidung lässt sich nicht zurücknehmen. Bitte ändere den Eintrag direkt beim Kind.",
+        "Diese Entscheidung lässt sich nicht zurücknehmen. Bitte ändern Sie den Eintrag direkt beim Kind.",
       "students.day_log_disabled":
-        "Das Anwesenheitsprotokoll ist für deine Schule ausgeschaltet. Deine Leitung kann es in den Einstellungen unter Datenschutz einschalten.",
+        "Das Anwesenheitsprotokoll ist für Ihre Schule ausgeschaltet. Ihre Leitung kann es in den Einstellungen unter Datenschutz einschalten.",
       "students.day_log_no_groups":
-        "Für dein Konto ist keine Gruppe sichtbar. Bitte wende dich an deine Leitung.",
+        "Für Ihr Konto ist keine Gruppe sichtbar. Bitte wenden Sie sich an Ihre Leitung.",
       "students.deletion_acknowledgement_required":
-        "Für {object} fehlt eine Angabe. Bitte ergänze das markierte Feld.",
+        "Für {object} fehlt eine Angabe. Bitte ergänzen Sie das markierte Feld.",
       "students.deletion_companion_lock_busy":
-        "Gerade ändert jemand anderes die Laufgemeinschaft. Bitte versuche es gleich noch einmal.",
+        "Gerade ändert jemand anderes die Laufgemeinschaft. Bitte versuchen Sie es gleich noch einmal.",
       "students.deletion_constraints_changed":
-        "{object} wurde inzwischen geändert. Bitte lade die Seite neu.",
+        "{object} wurde inzwischen geändert. Bitte laden Sie die Seite neu.",
       "students.deletion_invalid_reason":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "students.deletion_preview_changed":
-        "{object} wurde inzwischen geändert. Bitte lade die Seite neu.",
+        "{object} wurde inzwischen geändert. Bitte laden Sie die Seite neu.",
       "students.excused_request_status_conflict":
-        "Für einen der Tage gibt es schon einen neueren Eintrag. Bitte prüfe die Tage.",
+        "Für einen der Tage gibt es schon einen neueren Eintrag. Bitte prüfen Sie die Tage.",
       "students.export_selection_too_large":
-        "Die Auswahl umfasst {total} Kinder. Eine Liste darf höchstens {limit} Kinder haben. Bitte grenze die Auswahl ein, zum Beispiel nach Gruppe oder Klasse.",
+        "Die Auswahl umfasst {total} Kinder. Eine Liste darf höchstens {limit} Kinder haben. Bitte grenzen Sie die Auswahl ein, zum Beispiel nach Gruppe oder Klasse.",
       "students.guardian_access_revoked":
-        "Die anfragende Person hat keinen Zugriff mehr auf das Kind. Bitte lehne {object} ab.",
+        "Die anfragende Person hat keinen Zugriff mehr auf das Kind. Bitte lehnen Sie {object} ab.",
       "students.guardian_account_holder_too_long":
-        "Der Name des Kontoinhabers ist zu lang. Bitte kürze ihn.",
+        "Der Name des Kontoinhabers ist zu lang. Bitte kürzen Sie ihn.",
       "students.guardian_email_block_lift_failed":
-        "Die Sperre konnte gerade nicht aufgehoben werden. Bitte versuche es noch einmal.",
+        "Die Sperre konnte gerade nicht aufgehoben werden. Bitte versuchen Sie es noch einmal.",
       "students.guardian_email_block_needs_review":
-        "Diese Sperre kannst du nicht aufheben, weil die Person eine Mail als unerwünscht gemeldet hat. Bitte sprich die Person direkt an.",
+        "Diese Sperre können Sie nicht aufheben, weil die Person eine Mail als unerwünscht gemeldet hat. Bitte sprechen Sie die Person direkt an.",
       "students.guardian_email_block_stays":
-        "Diese Sperre lässt sich hier nicht aufheben. Bitte trage eine andere Adresse ein oder melde dich beim moto-Support.",
+        "Diese Sperre lässt sich hier nicht aufheben. Bitte tragen Sie eine andere Adresse ein oder melden Sie sich beim moto-Support.",
       "students.guardian_email_taken":
-        "Diese E-Mail-Adresse gehört schon zu einer anderen Person. Bitte wähle die vorhandene Person über die Suche aus.",
+        "Diese E-Mail-Adresse gehört schon zu einer anderen Person. Bitte wählen Sie die vorhandene Person über die Suche aus.",
       "students.guardian_iban_invalid":
-        "Die IBAN ist nicht gültig. Bitte prüfe die Eingabe.",
+        "Die IBAN ist nicht gültig. Bitte prüfen Sie die Eingabe.",
       "students.offering_change_capacity_full":
-        "In einem der Angebote ist kein Platz mehr frei. Bitte prüfe die Belegung.",
+        "In einem der Angebote ist kein Platz mehr frei. Bitte prüfen Sie die Belegung.",
       "students.offering_change_date_out_of_range":
-        "Zu diesem Datum kann die Änderung nicht gelten. Bitte wähle ein anderes Datum.",
+        "Zu diesem Datum kann die Änderung nicht gelten. Bitte wählen Sie ein anderes Datum.",
       "students.offering_changes_no_enrollment":
-        "Für das Kind gibt es keine gültige Anmeldung mehr. Bitte lehne {object} ab.",
+        "Für das Kind gibt es keine gültige Anmeldung mehr. Bitte lehnen Sie {object} ab.",
       "students.partial_absence_conflict":
-        "Das Kind ist an einem gewählten Tag schon ab einer Uhrzeit entschuldigt. Entferne zuerst die Teilentschuldigung unter „Entschuldigen“ und „Ab Uhrzeit“.",
+        "Das Kind ist an einem gewählten Tag schon ab einer Uhrzeit entschuldigt. Entfernen Sie zuerst die Teilentschuldigung unter „Entschuldigen“ und „Ab Uhrzeit“.",
       "students.person_has_active_profile":
-        "Diese Person ist noch als Kind oder Mitarbeitende angelegt. Lösche das Kind direkt beim Kind. Mitarbeitende lassen sich erst nach ihrem Austritt löschen.",
+        "Diese Person ist noch als Kind oder Mitarbeitende angelegt. Löschen Sie das Kind direkt beim Kind. Mitarbeitende lassen sich erst nach ihrem Austritt löschen.",
       "students.photo_consent_required":
-        "Für ein Foto fehlt die Einwilligung der Eltern. Bitte bestätige zuerst die Einwilligung.",
+        "Für ein Foto fehlt die Einwilligung der Eltern. Bitte bestätigen Sie zuerst die Einwilligung.",
       "students.photo_consent_withdrawn":
-        "Die Eltern haben die Einwilligung für Fotos zurückgezogen. Bitte prüfe die Einwilligung erneut.",
+        "Die Eltern haben die Einwilligung für Fotos zurückgezogen. Bitte prüfen Sie die Einwilligung erneut.",
       "students.photos_disabled":
-        "Kinderfotos sind an dieser Schule ausgeschaltet. Bitte frage die Schulleitung.",
+        "Kinderfotos sind an dieser Schule ausgeschaltet. Bitte fragen Sie die Schulleitung.",
       "students.pickup_change_completed":
         "Das Kind ist schon abgemeldet. Die Abholzeit lässt sich nicht mehr ändern.",
       "students.pickup_change_conflict":
-        "Für diesen Tag hat die OGS schon etwas eingetragen. Bitte prüfe den Tag.",
+        "Für diesen Tag hat die OGS schon etwas eingetragen. Bitte prüfen Sie den Tag.",
       "students.pickup_change_expired":
-        "Der Tag liegt in der Vergangenheit. Bitte lehne {object} ab.",
+        "Der Tag liegt in der Vergangenheit. Bitte lehnen Sie {object} ab.",
       "students.pickup_change_impact_changed":
-        "Der Betreuungsplan hat sich geändert. Bitte lade die Seite neu.",
+        "Der Betreuungsplan hat sich geändert. Bitte laden Sie die Seite neu.",
       "students.pickup_permission_contact_gone":
-        "Die Person ist nicht mehr als Kontakt des Kindes eingetragen. Bitte lehne die Anfrage ab.",
+        "Die Person ist nicht mehr als Kontakt des Kindes eingetragen. Bitte lehnen Sie die Anfrage ab.",
       "students.pickup_proof_not_found":
         "Zu dieser Anfrage gibt es keine Unterschrift.",
       "students.pickup_reset_still_needed":
-        "Die gebuchte Abholzeit kannst du erst ab {possible_from} übernehmen. Bis {needed_until} gilt an diesem Wochentag noch die eingetragene Zeit.",
+        "Die gebuchte Abholzeit können Sie erst ab {possible_from} übernehmen. Bis {needed_until} gilt an diesem Wochentag noch die eingetragene Zeit.",
       "students.reason_required":
-        "Für {object} fehlt eine Begründung. Bitte trage eine ein.",
+        "Für {object} fehlt eine Begründung. Bitte tragen Sie eine ein.",
       "students.request_not_decided":
-        "{object} ist noch nicht entschieden. Bitte entscheide zuerst.",
+        "{object} ist noch nicht entschieden. Bitte entscheiden Sie zuerst.",
       "students.request_not_past":
-        "Die Anfrage betrifft noch kommende Tage. Bitte entscheide sie.",
+        "Die Anfrage betrifft noch kommende Tage. Bitte entscheiden Sie sie.",
       "students.request_past":
-        "Die Anfrage betrifft nur vergangene Tage. Du kannst sie nur ablehnen oder als erledigt markieren.",
+        "Die Anfrage betrifft nur vergangene Tage. Sie können sie nur ablehnen oder als erledigt markieren.",
       "students.sick_excused_conflict":
-        "{object} wurde inzwischen geändert. Bitte prüfe deine Angaben erneut.",
+        "{object} wurde inzwischen geändert. Bitte prüfen Sie Ihre Angaben erneut.",
       "students.staff_profile_required":
         "Diese Zeit haben die Eltern gesetzt. Ändern kann sie nur jemand mit Personalprofil.",
       "students.staff_value_invalid":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "students.staff_value_unsupported":
-        "Ein eigener Wert ist hier nicht möglich. Bitte wähle einen Wunsch oder „Keine Änderung“.",
+        "Ein eigener Wert ist hier nicht möglich. Bitte wählen Sie einen Wunsch oder „Keine Änderung“.",
       "students.status_day_conflict":
         "An einigen Tagen gibt es schon einen Eintrag. Diese Tage wurden nicht geändert.",
       "students.status_day_occupied":
-        "Für heute ist eine Klassenfahrt eingetragen. Hebe zuerst die Klassenfahrt auf.",
+        "Für heute ist eine Klassenfahrt eingetragen. Heben Sie zuerst die Klassenfahrt auf.",
       "students.without_care_place_care_data":
         "Ein Kind ohne OGS-Platz hat keine Ankunfts- und Abholzeiten und keinen Heimweg der OGS.",
       "students.without_care_place_group":
-        "Ein Kind ohne OGS-Platz ist in keiner Gruppe. Bitte lasse die Gruppe leer.",
+        "Ein Kind ohne OGS-Platz ist in keiner Gruppe. Bitte lassen Sie die Gruppe leer.",
       "students.without_care_place_off":
-        "Kinder ohne OGS-Platz kann deine Schule noch nicht anlegen. Das moto-Team schaltet das auf Wunsch ein.",
+        "Kinder ohne OGS-Platz kann Ihre Schule noch nicht anlegen. Das moto-Team schaltet das auf Wunsch ein.",
       "substitutions.invalid_period":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "substitutions.invalid_target":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "substitutions.last_supervisor":
-        "Du bist die einzige Aufsicht. Übergib die Aufsicht an eine Person oder beende die Aktivität.",
+        "Sie sind die einzige Aufsicht. Übergeben Sie die Aufsicht an eine Person oder beenden Sie die Aktivität.",
       "timetable.activity_not_owner":
-        "Du kannst nur Aktivitäten ändern, die du angelegt hast oder betreust.",
+        "Sie können nur Aktivitäten ändern, die Sie angelegt haben oder betreuen.",
       "timetable.activity_system_protected":
         "Diese Aktivität gehört fest zu moto. Sie lässt sich nicht umbenennen oder löschen.",
       "timetable.activity_template_protected":
-        "Diese Aktivität ist ein Regeltermin. Bitte ändere sie im Betreuungsplan.",
+        "Diese Aktivität ist ein Regeltermin. Bitte ändern Sie sie im Betreuungsplan.",
       "timetable.ambiguous_template_instance_delete":
         "Dieser Termin lässt sich nicht einzeln löschen. Die Serie hat an diesem Tag mehrere Termine.",
       "timetable.attendance_entry_not_found":
-        "Diesen Eintrag gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diesen Eintrag gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "timetable.attendance_frozen":
-        "Der Termin ist abgeschlossen. Bitte ändere die Anwesenheit über die Korrektur.",
+        "Der Termin ist abgeschlossen. Bitte ändern Sie die Anwesenheit über die Korrektur.",
       "timetable.attendance_invalid":
-        "Bitte prüfe die markierten Angaben zur Anwesenheit.",
+        "Bitte prüfen Sie die markierten Angaben zur Anwesenheit.",
       "timetable.calendar_period_care_offering_conflict":
-        "Ein Betreuungsangebot braucht diesen Zeitraum. Bitte passe zuerst das Angebot an.",
+        "Ein Betreuungsangebot braucht diesen Zeitraum. Bitte passen Sie zuerst das Angebot an.",
       "timetable.calendar_period_end_before_start":
-        "Das Enddatum muss nach dem Startdatum liegen. Bitte prüfe die Daten.",
+        "Das Enddatum muss nach dem Startdatum liegen. Bitte prüfen Sie die Daten.",
       "timetable.calendar_period_invalid":
-        "Bitte prüfe die markierten Angaben zum Zeitraum.",
+        "Bitte prüfen Sie die markierten Angaben zum Zeitraum.",
       "timetable.calendar_period_name_taken":
-        "Diesen Namen gibt es schon. Bitte wähle einen anderen Namen.",
+        "Diesen Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
       "timetable.calendar_period_not_found":
-        "Den Zeitraum gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Den Zeitraum gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "timetable.calendar_period_overlap_conflict":
-        "{object} überschneidet sich mit anderen Zeiträumen. Bitte prüfe die Termine.",
+        "{object} überschneidet sich mit anderen Zeiträumen. Bitte prüfen Sie die Termine.",
       "timetable.calendar_period_roster_conflict":
-        "Der Zeitraum lässt sich nicht löschen. Sonst wären Kinder oder Personal doppelt eingeteilt. Bitte passe zuerst die Regeltermine an.",
+        "Der Zeitraum lässt sich nicht löschen. Sonst wären Kinder oder Personal doppelt eingeteilt. Bitte passen Sie zuerst die Regeltermine an.",
       "timetable.calendar_period_shift_series_conflict":
-        "Der Zeitraum lässt sich nicht löschen. Schichtserien im Dienstplan nutzen ihn noch. Bitte beende diese Serien zuerst.",
+        "Der Zeitraum lässt sich nicht löschen. Schichtserien im Dienstplan nutzen ihn noch. Bitte beenden Sie diese Serien zuerst.",
       "timetable.calendar_period_week_cycle_anchor_missing":
-        "Bitte wähle das Startdatum der Wiederholung.",
+        "Bitte wählen Sie das Startdatum der Wiederholung.",
       "timetable.closing_day_end_before_start":
-        "Das Enddatum darf nicht vor dem Startdatum liegen. Bitte prüfe die Daten.",
+        "Das Enddatum darf nicht vor dem Startdatum liegen. Bitte prüfen Sie die Daten.",
       "timetable.closing_day_invalid":
-        "Bitte prüfe die markierten Angaben zum Schließtag.",
+        "Bitte prüfen Sie die markierten Angaben zum Schließtag.",
       "timetable.closing_day_not_found":
-        "Den Schließtag gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Den Schließtag gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "timetable.closing_day_notice_changed":
-        "Der Schließtag wurde geändert. Bitte prüfe den Hinweis und klicke erneut.",
+        "Der Schließtag wurde geändert. Bitte prüfen Sie den Hinweis und klicken Sie erneut.",
       "timetable.closing_day_notice_not_found":
-        "Den Hinweis gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Den Hinweis gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "timetable.complete_too_early":
         "Der Termin kann erst nach seinem Ende abgeschlossen werden.",
       "timetable.completion_confirmation_stale":
-        "{object} wurde inzwischen geändert. Bitte lade die Seite neu.",
+        "{object} wurde inzwischen geändert. Bitte laden Sie die Seite neu.",
       "timetable.correction_cancelled":
         "Ein abgesagter Termin lässt sich nicht korrigieren.",
       "timetable.correction_not_completed":
-        "Nur abgeschlossene Termine lassen sich korrigieren. Bitte lade die Seite neu.",
+        "Nur abgeschlossene Termine lassen sich korrigieren. Bitte laden Sie die Seite neu.",
       "timetable.correction_reason_missing":
-        "Bitte gib einen Grund für die Korrektur an.",
+        "Bitte geben Sie einen Grund für die Korrektur an.",
       "timetable.correction_reason_too_long":
-        "Der Grund ist zu lang. Bitte kürze ihn.",
+        "Der Grund ist zu lang. Bitte kürzen Sie ihn.",
       "timetable.date_in_past":
-        "Der Tag liegt in der Vergangenheit. Bitte wähle heute oder einen späteren Tag.",
+        "Der Tag liegt in der Vergangenheit. Bitte wählen Sie heute oder einen späteren Tag.",
       "timetable.dates_in_past":
-        "Ein gewählter Tag liegt in der Vergangenheit. Bitte wähle nur heute oder spätere Tage.",
-      "timetable.dates_required": "Bitte wähle mindestens einen Tag aus.",
+        "Ein gewählter Tag liegt in der Vergangenheit. Bitte wählen Sie nur heute oder spätere Tage.",
+      "timetable.dates_required": "Bitte wählen Sie mindestens einen Tag aus.",
       "timetable.deviation_note_too_long":
-        "Der Hinweis ist zu lang. Bitte kürze ihn.",
+        "Der Hinweis ist zu lang. Bitte kürzen Sie ihn.",
       "timetable.deviation_selection_invalid":
-        "Bitte prüfe die Auswahl der Personen.",
+        "Bitte prüfen Sie die Auswahl der Personen.",
       "timetable.duplicate_instance":
-        "Diesen Termin gibt es schon. Bitte lade die Seite neu.",
+        "Diesen Termin gibt es schon. Bitte laden Sie die Seite neu.",
       "timetable.export_end_before_start":
-        "Das Enddatum darf nicht vor dem Startdatum liegen. Bitte prüfe die Daten.",
+        "Das Enddatum darf nicht vor dem Startdatum liegen. Bitte prüfen Sie die Daten.",
       "timetable.export_internal_forbidden":
-        "Den internen Plan dürfen nur Personen mit Planungsrechten herunterladen. Bitte wähle den Aushang.",
+        "Den internen Plan dürfen nur Personen mit Planungsrechten herunterladen. Bitte wählen Sie den Aushang.",
       "timetable.export_range_too_large":
-        "Der Zeitraum ist zu lang. Bitte wähle höchstens {max_weeks} Wochen.",
+        "Der Zeitraum ist zu lang. Bitte wählen Sie höchstens {max_weeks} Wochen.",
       "timetable.group_already_ended":
-        "Die Gruppe ist schon beendet. Bitte lade die Seite neu.",
+        "Die Gruppe ist schon beendet. Bitte laden Sie die Seite neu.",
       "timetable.guardian_notice_disabled":
-        "Hinweise an Eltern sind hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+        "Hinweise an Eltern sind hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "timetable.guardian_notice_invalid":
-        "Die Nachricht an die Eltern ließ sich nicht senden. Bitte prüfe Betreff und Text.",
+        "Die Nachricht an die Eltern ließ sich nicht senden. Bitte prüfen Sie Betreff und Text.",
       "timetable.guardian_notice_past":
         "Der Termin liegt in der Vergangenheit. Eine Nachricht an die Eltern ist nicht mehr möglich.",
       "timetable.guardian_notice_text_invalid":
-        "Bitte gib Betreff und Text für die Eltern ein. Der Text darf höchstens 4000 Zeichen haben.",
+        "Bitte geben Sie Betreff und Text für die Eltern ein. Der Text darf höchstens 4000 Zeichen haben.",
       "timetable.homework_feedback_child_not_in_supervision":
-        "Dieses Kind gehört nicht zu dieser Aufsicht. Bitte lade die Seite neu.",
+        "Dieses Kind gehört nicht zu dieser Aufsicht. Bitte laden Sie die Seite neu.",
       "timetable.homework_feedback_not_allowed":
-        "Eine Rückmeldung zu Hausaufgaben geht nur in einer Lernzeit, die du betreust.",
+        "Eine Rückmeldung zu Hausaufgaben geht nur in einer Lernzeit, die Sie betreuen.",
       "timetable.homework_feedback_without_homework":
         "Für die Klasse dieses Kindes sind heute keine Hausaufgaben eingetragen.",
       "timetable.idempotency_key_reused":
-        "Dieser Termin wurde schon angelegt. Bitte lade die Seite neu.",
+        "Dieser Termin wurde schon angelegt. Bitte laden Sie die Seite neu.",
       "timetable.instance_end_before_start":
-        "Das Ende muss nach dem Beginn liegen. Bitte prüfe die Uhrzeiten.",
+        "Das Ende muss nach dem Beginn liegen. Bitte prüfen Sie die Uhrzeiten.",
       "timetable.instance_in_past":
         "Der Termin liegt in der Vergangenheit. Er lässt sich nicht mehr ändern.",
       "timetable.instance_invalid":
-        "Bitte prüfe die markierten Angaben zum Termin.",
+        "Bitte prüfen Sie die markierten Angaben zum Termin.",
       "timetable.instance_moved":
-        "Der Termin wurde inzwischen geändert. Bitte lade die Seite neu.",
+        "Der Termin wurde inzwischen geändert. Bitte laden Sie die Seite neu.",
       "timetable.instance_not_active":
-        "Der Termin läuft gerade nicht. Bitte lade die Seite neu.",
+        "Der Termin läuft gerade nicht. Bitte laden Sie die Seite neu.",
       "timetable.instance_not_convertible":
-        "Dieser Termin lässt sich nicht in eine Serie umwandeln. Bitte lade die Seite neu.",
+        "Dieser Termin lässt sich nicht in eine Serie umwandeln. Bitte laden Sie die Seite neu.",
       "timetable.instance_not_editable":
-        "Dieser Termin lässt sich nicht mehr ändern. Bitte lade die Seite neu.",
+        "Dieser Termin lässt sich nicht mehr ändern. Bitte laden Sie die Seite neu.",
       "timetable.instance_not_found":
-        "Diesen Termin gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diesen Termin gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "timetable.instance_outside_period":
-        "An diesem Tag gibt es keinen aktiven Zeitraum. Bitte wähle einen anderen Tag.",
+        "An diesem Tag gibt es keinen aktiven Zeitraum. Bitte wählen Sie einen anderen Tag.",
       "timetable.instance_selection_invalid":
-        "Bitte prüfe die Auswahl der Termine.",
+        "Bitte prüfen Sie die Auswahl der Termine.",
       "timetable.instance_weekend":
-        "Termine gibt es nur von Montag bis Freitag. Bitte wähle einen anderen Tag.",
+        "Termine gibt es nur von Montag bis Freitag. Bitte wählen Sie einen anderen Tag.",
       "timetable.instances_not_assigned":
-        "Ein gewählter Termin gehört nicht zu dieser Person. Bitte prüfe die Auswahl.",
+        "Ein gewählter Termin gehört nicht zu dieser Person. Bitte prüfen Sie die Auswahl.",
       "timetable.instances_other_day":
-        "Alle gewählten Termine müssen am selben Tag liegen. Bitte prüfe die Auswahl.",
+        "Alle gewählten Termine müssen am selben Tag liegen. Bitte prüfen Sie die Auswahl.",
       "timetable.instances_required":
-        "Bitte wähle mindestens einen Termin aus.",
+        "Bitte wählen Sie mindestens einen Termin aus.",
       "timetable.invalid_transition":
-        "Der Termin hat sich inzwischen geändert. Bitte lade die Seite neu.",
+        "Der Termin hat sich inzwischen geändert. Bitte laden Sie die Seite neu.",
       "timetable.move_other_day":
         "Personal lässt sich nur zu einem Termin am selben Tag verschieben.",
       "timetable.move_same_instance":
-        "Bitte wähle einen anderen Termin als Ziel.",
+        "Bitte wählen Sie einen anderen Termin als Ziel.",
       "timetable.no_staff_profile":
-        "Für diese Aktion brauchst du ein eigenes Personalprofil. Bitte frage die Leitung.",
+        "Für diese Aktion brauchen Sie ein eigenes Personalprofil. Bitte fragen Sie die Leitung.",
       "timetable.offering_gap_period_inactive":
-        "Dieser Planungszeitraum ist nicht mehr aktiv. Bitte lade die Seite neu.",
+        "Dieser Planungszeitraum ist nicht mehr aktiv. Bitte laden Sie die Seite neu.",
       "timetable.offering_source_inactive":
-        "Das Angebot „{offering}“ ist ausgeschaltet. Bitte wähle ein anderes Angebot.",
+        "Das Angebot „{offering}“ ist ausgeschaltet. Bitte wählen Sie ein anderes Angebot.",
       "timetable.offering_source_invalid":
-        "Diese Auswahl der Angebote passt nicht. Bitte prüfe die Angebote.",
+        "Diese Auswahl der Angebote passt nicht. Bitte prüfen Sie die Angebote.",
       "timetable.offering_source_mixed_phases":
-        "Alle Angebote müssen aus derselben Anmeldephase kommen. Bitte prüfe „{offering}“.",
+        "Alle Angebote müssen aus derselben Anmeldephase kommen. Bitte prüfen Sie „{offering}“.",
       "timetable.offering_source_not_found":
-        "Ein gewähltes Angebot gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Ein gewähltes Angebot gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "timetable.offering_source_outside_period":
-        "„{offering}“ hat keine Betreuungstage in diesem Planungszeitraum. Bitte wähle ein anderes Angebot.",
+        "„{offering}“ hat keine Betreuungstage in diesem Planungszeitraum. Bitte wählen Sie ein anderes Angebot.",
       "timetable.offering_source_too_many":
-        "Bitte wähle höchstens {max} Angebote aus.",
+        "Bitte wählen Sie höchstens {max} Angebote aus.",
       "timetable.only_supervisor_replacement_required":
-        "Für {object} fehlt eine Angabe. Bitte ergänze das markierte Feld.",
+        "Für {object} fehlt eine Angabe. Bitte ergänzen Sie das markierte Feld.",
       "timetable.operation_not_planned":
-        "Du bist für diese Aktivität nicht eingeplant. Nur eingeplante Betreuungskräfte können hier etwas eintragen oder ändern.",
+        "Sie sind für diese Aktivität nicht eingeplant. Nur eingeplante Betreuungskräfte können hier etwas eintragen oder ändern.",
       "timetable.operation_stale":
-        "Der Termin wurde gerade geändert. Bitte lade die Seite neu.",
+        "Der Termin wurde gerade geändert. Bitte laden Sie die Seite neu.",
       "timetable.pickup_extension_block_gone":
-        "Der Termin hat sich inzwischen geändert. Bitte wähle noch einmal.",
+        "Der Termin hat sich inzwischen geändert. Bitte wählen Sie noch einmal.",
       "timetable.pickup_extension_invalid":
-        "Diese Auswahl passt nicht. Bitte lade die Seite neu und wähle noch einmal.",
+        "Diese Auswahl passt nicht. Bitte laden Sie die Seite neu und wählen Sie noch einmal.",
       "timetable.pickup_extension_not_found":
-        "{object} wurde nicht gefunden. Bitte lade die Seite neu.",
+        "{object} wurde nicht gefunden. Bitte laden Sie die Seite neu.",
       "timetable.pickup_extension_too_many_blocks":
-        "Bitte wähle höchstens {max} Termine aus.",
+        "Bitte wählen Sie höchstens {max} Termine aus.",
       "timetable.planning_track_archived":
-        "Die Planungsspur ist archiviert. Bitte stelle sie zuerst wieder her.",
+        "Die Planungsspur ist archiviert. Bitte stellen Sie sie zuerst wieder her.",
       "timetable.planning_track_invalid":
-        "Bitte prüfe die markierten Angaben zur Planungsspur.",
+        "Bitte prüfen Sie die markierten Angaben zur Planungsspur.",
       "timetable.planning_track_name_taken":
-        "Diesen Namen gibt es schon. Bitte wähle einen anderen Namen.",
+        "Diesen Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
       "timetable.planning_track_not_found":
-        "Die Planungsspur gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Die Planungsspur gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "timetable.presence_would_overstaff":
-        "Der Termin ist schon voll besetzt. Bitte entferne zuerst die nicht mehr nötige Vertretung.",
+        "Der Termin ist schon voll besetzt. Bitte entfernen Sie zuerst die nicht mehr nötige Vertretung.",
       "timetable.reinstate_ended":
         "Der Termin ist schon vorbei. Eine Absage lässt sich nur bis zum Ende des Termins zurücknehmen.",
       "timetable.reopen_attendance_changed":
@@ -1694,351 +1711,352 @@ export const ERROR_CATALOG = {
       "timetable.reopen_supervision_changed":
         "Die Betreuung wurde nach dem Abschluss geändert. Der Termin lässt sich nicht wieder öffnen.",
       "timetable.room_occupied":
-        "In diesem Raum läuft schon eine andere Gruppe. Bitte wähle einen anderen Raum.",
+        "In diesem Raum läuft schon eine andere Gruppe. Bitte wählen Sie einen anderen Raum.",
       "timetable.school_vacation_not_found":
-        "Diese Ferien gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Ferien gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "timetable.series_end_before_start":
         "Die Serie beginnt am {start}. Das Enddatum darf nicht davor liegen.",
       "timetable.series_end_outside_period":
-        "Der Zeitraum endet am {end}. Bitte wähle ein früheres Enddatum.",
+        "Der Zeitraum endet am {end}. Bitte wählen Sie ein früheres Enddatum.",
       "timetable.sick_absence_scope_locked":
         "Diese Abwesenheit kommt aus einer Krankmeldung. Sie lässt sich hier nicht ändern.",
       "timetable.slot_list_drifted":
-        "Die Liste hat sich seit der Vorschau geändert. Bitte prüfe die Vorschau und exportiere erneut.",
+        "Die Liste hat sich seit der Vorschau geändert. Bitte prüfen Sie die Vorschau und exportieren Sie erneut.",
       "timetable.slot_list_grouping_invalid":
-        "Diese Gruppierung passt nicht zu dieser Liste. Bitte wähle eine andere Gruppierung.",
+        "Diese Gruppierung passt nicht zu dieser Liste. Bitte wählen Sie eine andere Gruppierung.",
       "timetable.slot_list_pickup_past_date":
-        "Ganztagslisten gibt es nur für heute und spätere Tage. Bitte wähle einen anderen Tag.",
+        "Ganztagslisten gibt es nur für heute und spätere Tage. Bitte wählen Sie einen anderen Tag.",
       "timetable.slot_list_reconciliation_future_date":
-        "Einen Abgleich gibt es nur für heute und vergangene Tage. Bitte wähle einen anderen Tag.",
+        "Einen Abgleich gibt es nur für heute und vergangene Tage. Bitte wählen Sie einen anderen Tag.",
       "timetable.slot_lists_disabled":
-        "Der Stundenplan ist an deiner Schule ausgeschaltet. Bitte frage die Leitung.",
+        "Der Stundenplan ist an Ihrer Schule ausgeschaltet. Bitte fragen Sie die Leitung.",
       "timetable.spontaneous_activities_disabled":
-        "Spontane Angebote sind an deiner Schule ausgeschaltet. Bitte frage die Leitung.",
+        "Spontane Angebote sind an Ihrer Schule ausgeschaltet. Bitte fragen Sie die Leitung.",
       "timetable.spontaneous_category_archived":
-        "Die Kategorie für spontane Angebote ist archiviert. Bitte frage die Leitung.",
+        "Die Kategorie für spontane Angebote ist archiviert. Bitte fragen Sie die Leitung.",
       "timetable.staff_absent_on_date":
-        "Die Person ist an diesem Tag abwesend. Bitte wähle eine andere Person.",
+        "Die Person ist an diesem Tag abwesend. Bitte wählen Sie eine andere Person.",
       "timetable.staff_absent_on_source":
         "Die Person ist als abwesend markiert. Sie lässt sich nicht verschieben.",
       "timetable.staff_absent_on_target":
-        "Die Person ist an diesem Tag abwesend. Bitte wähle eine andere Person.",
+        "Die Person ist an diesem Tag abwesend. Bitte wählen Sie eine andere Person.",
       "timetable.staff_already_on_target":
         "Die Person ist für diesen Termin schon eingeteilt.",
       "timetable.staff_not_found":
-        "Diese Person gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Person gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "timetable.staff_not_on_source":
-        "Die Person ist dem bisherigen Termin nicht zugeordnet. Bitte lade die Seite neu.",
+        "Die Person ist dem bisherigen Termin nicht zugeordnet. Bitte laden Sie die Seite neu.",
       "timetable.staff_present_and_absent":
-        "Eine Person kann im selben Termin nicht anwesend und abwesend sein. Bitte prüfe die Auswahl.",
+        "Eine Person kann im selben Termin nicht anwesend und abwesend sein. Bitte prüfen Sie die Auswahl.",
       "timetable.start_too_early":
-        "Der Termin kann noch nicht gestartet werden. Bitte versuche es kurz vor Beginn erneut.",
+        "Der Termin kann noch nicht gestartet werden. Bitte versuchen Sie es kurz vor Beginn erneut.",
       "timetable.start_window_expired":
         "Der Termin kann nicht mehr gestartet werden. Die Startzeit ist vorbei.",
       "timetable.student_already_active":
-        "Das Kind ist schon woanders eingecheckt. Bitte checke es dort zuerst aus.",
+        "Das Kind ist schon woanders eingecheckt. Bitte checken Sie es dort zuerst aus.",
       "timetable.student_care_ended":
         "Die Betreuung des Kindes ist beendet. Es kann nicht mehr eingecheckt werden.",
       "timetable.student_graduated":
         "Das Kind ist abgegangen. Es kann nicht mehr eingecheckt werden.",
       "timetable.student_not_checked_in":
-        "Das Kind ist hier nicht eingecheckt. Bitte lade die Seite neu.",
+        "Das Kind ist hier nicht eingecheckt. Bitte laden Sie die Seite neu.",
       "timetable.student_not_found":
-        "Dieses Kind gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Dieses Kind gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "timetable.students_not_present":
-        "Keines der gewählten Kinder ist gerade anwesend. Bitte lade die Seite neu.",
+        "Keines der gewählten Kinder ist gerade anwesend. Bitte laden Sie die Seite neu.",
       "timetable.substitute_absent":
-        "Die Ersatzperson ist in einem gewählten Termin selbst abwesend. Bitte wähle eine andere Person.",
+        "Die Ersatzperson ist in einem gewählten Termin selbst abwesend. Bitte wählen Sie eine andere Person.",
       "timetable.substitute_absent_on_date":
-        "Die Ersatzperson ist am {date} selbst abwesend. Bitte wähle eine andere Person oder lasse den Tag weg.",
+        "Die Ersatzperson ist am {date} selbst abwesend. Bitte wählen Sie eine andere Person oder lassen Sie den Tag weg.",
       "timetable.substitute_conflict":
-        "Der Termin hat schon eine andere Ersatzperson. Bitte entferne diese zuerst.",
+        "Der Termin hat schon eine andere Ersatzperson. Bitte entfernen Sie diese zuerst.",
       "timetable.substitute_not_on_instances":
-        "Die Ersatzperson ist nicht in jedem gewählten Termin eingetragen. Bitte prüfe die Auswahl.",
+        "Die Ersatzperson ist nicht in jedem gewählten Termin eingetragen. Bitte prüfen Sie die Auswahl.",
       "timetable.substitute_self":
-        "Eine Person kann sich nicht selbst vertreten. Bitte wähle eine andere Ersatzperson.",
+        "Eine Person kann sich nicht selbst vertreten. Bitte wählen Sie eine andere Ersatzperson.",
       "timetable.substitute_single_only":
-        "Bitte wähle für jede abwesende Person nur eine Ersatzperson.",
+        "Bitte wählen Sie für jede abwesende Person nur eine Ersatzperson.",
       "timetable.template_booking_gap_stale":
-        "Die Buchung wurde inzwischen geändert. Bitte lade die Seite neu.",
+        "Die Buchung wurde inzwischen geändert. Bitte laden Sie die Seite neu.",
       "timetable.template_care_offering_conflict":
-        "Ein verknüpftes Betreuungsangebot passt dann nicht mehr. Bitte passe zuerst das Angebot an.",
+        "Ein verknüpftes Betreuungsangebot passt dann nicht mehr. Bitte passen Sie zuerst das Angebot an.",
       "timetable.template_category_unavailable":
-        "Diese Kategorie ist archiviert. Bitte wähle eine andere Kategorie.",
+        "Diese Kategorie ist archiviert. Bitte wählen Sie eine andere Kategorie.",
       "timetable.template_education_group_invalid":
-        "Diese Gruppe gibt es nicht mehr. Bitte wähle eine andere Gruppe.",
+        "Diese Gruppe gibt es nicht mehr. Bitte wählen Sie eine andere Gruppe.",
       "timetable.template_end_before_start":
-        "Das Ende muss nach dem Beginn liegen. Bitte prüfe die Uhrzeiten.",
+        "Das Ende muss nach dem Beginn liegen. Bitte prüfen Sie die Uhrzeiten.",
       "timetable.template_grade_above_max":
-        "Deine Schule hat Jahrgänge bis {max}. Bitte wähle einen anderen Jahrgang.",
+        "Ihre Schule hat Jahrgänge bis {max}. Bitte wählen Sie einen anderen Jahrgang.",
       "timetable.template_invalid":
-        "Bitte prüfe die markierten Angaben zum Regeltermin.",
+        "Bitte prüfen Sie die markierten Angaben zum Regeltermin.",
       "timetable.template_max_participants_invalid":
         "Die Höchstzahl der Kinder muss größer als null sein.",
       "timetable.template_not_found":
-        "Diese Serie gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Serie gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "timetable.template_planning_track_unavailable":
-        "Diese Planungsspur ist archiviert. Bitte wähle eine andere Planungsspur.",
+        "Diese Planungsspur ist archiviert. Bitte wählen Sie eine andere Planungsspur.",
       "timetable.template_roster_rebase_conflict":
-        "Dann wären Kinder doppelt zugeordnet. Bitte bereinige zuerst die Zuordnungen.",
+        "Dann wären Kinder doppelt zugeordnet. Bitte bereinigen Sie zuerst die Zuordnungen.",
       "timetable.template_split_in_past":
-        "Das Datum der Änderung liegt in der Vergangenheit. Bitte wähle ein anderes Datum.",
+        "Das Datum der Änderung liegt in der Vergangenheit. Bitte wählen Sie ein anderes Datum.",
       "timetable.template_split_invalid":
-        "Die Änderung ab diesem Datum ist so nicht möglich. Bitte prüfe die Angaben.",
+        "Die Änderung ab diesem Datum ist so nicht möglich. Bitte prüfen Sie die Angaben.",
       "timetable.template_start_in_past":
-        "Das Datum für {object} liegt in der Vergangenheit. Bitte wähle ein anderes Datum.",
+        "Das Datum für {object} liegt in der Vergangenheit. Bitte wählen Sie ein anderes Datum.",
       "timetable.template_start_not_earlier":
         "Der Serienbeginn lässt sich nur auf ein früheres Datum vorziehen.",
       "timetable.template_start_outside_period":
         "Das Startdatum muss zwischen {start} und {end} liegen.",
       "timetable.template_start_predecessor_overlap":
-        "Die Zeiten für {object} überschneiden sich. Bitte prüfe die Angaben.",
+        "Die Zeiten für {object} überschneiden sich. Bitte prüfen Sie die Angaben.",
       "timetable.template_week_pattern_invalid":
-        "Bitte wähle, in welchen Wochen der Termin stattfindet.",
+        "Bitte wählen Sie, in welchen Wochen der Termin stattfindet.",
       "timetable.template_weekend":
-        "Regeltermine gibt es nur von Montag bis Freitag. Bitte wähle andere Tage.",
+        "Regeltermine gibt es nur von Montag bis Freitag. Bitte wählen Sie andere Tage.",
       "timetable.too_many_dates":
-        "Bitte wähle höchstens {max} Tage auf einmal.",
+        "Bitte wählen Sie höchstens {max} Tage auf einmal.",
       "timetable.understaffed_still_staffed":
-        "Für den Termin ist noch Personal eingeteilt. Bitte nimm das Personal zuerst heraus.",
+        "Für den Termin ist noch Personal eingeteilt. Bitte nehmen Sie das Personal zuerst heraus.",
       "timetable.week_protocol_not_closed":
         "Das PDF entsteht erst, wenn das Wochenprotokoll abgeschlossen ist.",
       "timetable.week_protocol_not_draft":
-        "Das Wochenprotokoll ist kein Entwurf mehr. Bitte lade die Seite neu.",
+        "Das Wochenprotokoll ist kein Entwurf mehr. Bitte laden Sie die Seite neu.",
       "timetable.week_protocol_not_found":
-        "Dieses Wochenprotokoll gibt es nicht oder du darfst es nicht sehen.",
+        "Dieses Wochenprotokoll gibt es nicht oder Sie dürfen es nicht sehen.",
       "timetable.week_protocol_notes_invalid":
-        "Bitte prüfe die Ergänzungen. Ein Text ist zu lang oder gehört nicht zu dieser Woche.",
+        "Bitte prüfen Sie die Ergänzungen. Ein Text ist zu lang oder gehört nicht zu dieser Woche.",
       "timetable.window_end_before_start":
-        "Das Enddatum darf nicht vor dem Startdatum liegen. Bitte prüfe die Daten.",
+        "Das Enddatum darf nicht vor dem Startdatum liegen. Bitte prüfen Sie die Daten.",
       "timetable.window_too_large":
-        "Der Zeitraum ist zu lang. Bitte wähle höchstens {max_days} Tage.",
+        "Der Zeitraum ist zu lang. Bitte wählen Sie höchstens {max_days} Tage.",
       "traeger.access_log_export_too_large":
-        "Der Export hat mehr als {limit} Einträge. Bitte wähle einen kürzeren Zeitraum oder weitere Filter.",
+        "Der Export hat mehr als {limit} Einträge. Bitte wählen Sie einen kürzeren Zeitraum oder weitere Filter.",
       "traeger.account_inactive":
-        "Das Konto dieser Person ist ausgeschaltet. Deshalb kannst du die Person nicht dem Träger-Büro zuordnen.",
+        "Das Konto dieser Person ist ausgeschaltet. Deshalb können Sie die Person nicht dem Träger-Büro zuordnen.",
       "traeger.already_member": "Diese Person gehört schon zum Träger-Büro.",
       "traeger.bank_account_label_taken":
-        "Diese Bezeichnung hat schon eine andere Bankverbindung. Bitte wähle eine andere Bezeichnung.",
+        "Diese Bezeichnung hat schon eine andere Bankverbindung. Bitte wählen Sie eine andere Bezeichnung.",
       "traeger.bank_account_not_found":
-        "Diese Bankverbindung gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Bankverbindung gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "traeger.closing_day_bookings_changed":
-        "Die gebuchten Ferientage haben sich gerade geändert. Bitte prüfe die betroffenen Buchungen noch einmal.",
+        "Die gebuchten Ferientage haben sich gerade geändert. Bitte prüfen Sie die betroffenen Buchungen noch einmal.",
       "traeger.closing_day_invalid":
-        "Der Schließtag ist nicht vollständig. Bitte prüfe Datum, Grund und Schulen.",
+        "Der Schließtag ist nicht vollständig. Bitte prüfen Sie Datum, Grund und Schulen.",
       "traeger.closing_day_not_found":
-        "Diesen Schließtag gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diesen Schließtag gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "traeger.closing_day_school_outside":
-        "Eine gewählte Schule gehört nicht zu deinem Träger. Bitte wähle die Schulen aus der Liste.",
+        "Eine gewählte Schule gehört nicht zu Ihrem Träger. Bitte wählen Sie die Schulen aus der Liste.",
       "traeger.document_already_released":
         "Das Dokument ist für diese Menschen schon freigegeben.",
       "traeger.document_audience_invalid":
-        "Diese Schule oder Gruppe gehört nicht zu deinem Träger. Bitte wähle neu.",
+        "Diese Schule oder Gruppe gehört nicht zu Ihrem Träger. Bitte wählen Sie neu.",
       "traeger.document_invalid":
-        "Bitte gib einen Titel ein, höchstens 120 Zeichen.",
+        "Bitte geben Sie einen Titel ein, höchstens 120 Zeichen.",
       "traeger.document_not_found":
-        "Dieses Dokument gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Dieses Dokument gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "traeger.document_release_not_found":
-        "Diese Freigabe ist schon zurückgenommen. Bitte lade die Seite neu.",
+        "Diese Freigabe ist schon zurückgenommen. Bitte laden Sie die Seite neu.",
       "traeger.document_template_invalid":
-        "Die Vorlage ist nicht vollständig. Bitte prüfe die markierten Felder.",
+        "Die Vorlage ist nicht vollständig. Bitte prüfen Sie die markierten Felder.",
       "traeger.document_template_kind_not_found":
-        "Diese Dokumentart gibt es nicht. Bitte wähle eine Vorlage aus der Liste.",
+        "Diese Dokumentart gibt es nicht. Bitte wählen Sie eine Vorlage aus der Liste.",
       "traeger.document_template_unchanged":
         "Die Vorlage hat sich nicht geändert. Es gibt keine neue Version.",
       "traeger.document_template_unknown_placeholder":
-        "Diese Platzhalter kennt moto nicht: {placeholders}. Bitte nimm nur Platzhalter aus der Liste.",
+        "Diese Platzhalter kennt moto nicht: {placeholders}. Bitte nehmen Sie nur Platzhalter aus der Liste.",
       "traeger.last_administrator":
-        "Das Träger-Büro braucht mindestens eine Person mit der Rolle Leitung. Gib die Rolle zuerst einer anderen Person.",
+        "Das Träger-Büro braucht mindestens eine Person mit der Rolle Leitung. Geben Sie die Rolle zuerst einer anderen Person.",
       "traeger.logo_invalid":
-        "Das Logo muss ein PNG- oder JPG-Bild sein, höchstens 2000 Pixel breit und hoch. Bitte wähle ein anderes Bild.",
+        "Das Logo muss ein PNG- oder JPG-Bild sein, höchstens 2000 Pixel breit und hoch. Bitte wählen Sie ein anderes Bild.",
       "traeger.logo_not_found":
-        "Es ist kein Logo hinterlegt. Bitte lade die Seite neu.",
+        "Es ist kein Logo hinterlegt. Bitte laden Sie die Seite neu.",
       "traeger.logo_too_large":
-        "Das Logo ist zu groß. Bitte wähle ein Bild bis 1 MB.",
+        "Das Logo ist zu groß. Bitte wählen Sie ein Bild bis 1 MB.",
       "traeger.master_data_invalid":
-        "Einige Angaben stimmen nicht. Bitte prüfe die markierten Felder.",
+        "Einige Angaben stimmen nicht. Bitte prüfen Sie die markierten Felder.",
       "traeger.member_not_found":
-        "Diese Person gehört nicht mehr zum Träger-Büro. Bitte lade die Seite neu.",
+        "Diese Person gehört nicht mehr zum Träger-Büro. Bitte laden Sie die Seite neu.",
       "traeger.no_membership":
-        "Dein Konto hat keinen Zugang zum Träger-Portal. Bitte wende dich an das moto-Team.",
-      "traeger.report_template_invalid": "Bitte prüfe die Angaben der Vorlage.",
+        "Ihr Konto hat keinen Zugang zum Träger-Portal. Bitte wenden Sie sich an das moto-Team.",
+      "traeger.report_template_invalid":
+        "Bitte prüfen Sie die Angaben der Vorlage.",
       "traeger.report_template_name_taken":
-        "Eine Vorlage mit diesem Namen gibt es schon. Bitte wähle einen anderen Namen.",
+        "Eine Vorlage mit diesem Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
       "traeger.report_template_not_found":
-        "Diese Vorlage gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Vorlage gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "traeger.school_not_found":
-        "Diese Schule gehört nicht zu deinem Träger. Bitte lade die Seite neu.",
+        "Diese Schule gehört nicht zu Ihrem Träger. Bitte laden Sie die Seite neu.",
       "traeger.school_requires_code":
-        "Diese Schule verlangt zum Öffnen einen Code aus deiner E-Mail.",
+        "Diese Schule verlangt zum Öffnen einen Code aus Ihrer E-Mail.",
       "traeger.second_factor_required":
-        "Zum Öffnen einer Schule brauchst du einen zweiten Anmeldenachweis. Bitte melde dich im Träger-Portal neu an.",
+        "Zum Öffnen einer Schule brauchen Sie einen zweiten Anmeldenachweis. Bitte melden Sie sich im Träger-Portal neu an.",
       "traeger.shared_document_not_found":
-        "Der Träger hat dieses Dokument nicht mehr freigegeben. Bitte lade die Seite neu.",
+        "Der Träger hat dieses Dokument nicht mehr freigegeben. Bitte laden Sie die Seite neu.",
       "workforce.absence_allowance_exceeded":
         "Für diese Art sind nicht mehr genug Tage übrig. Der Anspruch muss zuerst erhöht werden.",
       "workforce.absence_already_decided":
-        "Über {object} wurde schon entschieden. Bitte lade die Seite neu.",
+        "Über {object} wurde schon entschieden. Bitte laden Sie die Seite neu.",
       "workforce.absence_no_working_days":
-        "In diesem Zeitraum gibt es keinen Arbeitstag. Bitte wähle andere Tage.",
+        "In diesem Zeitraum gibt es keinen Arbeitstag. Bitte wählen Sie andere Tage.",
       "workforce.absence_not_cancelable":
-        "{object} kann nicht mehr zurückgezogen werden. Bitte lade die Seite neu.",
+        "{object} kann nicht mehr zurückgezogen werden. Bitte laden Sie die Seite neu.",
       "workforce.absence_not_found": "Abwesenheit nicht gefunden.",
       "workforce.absence_not_owned":
-        "Du kannst nur eigene Abwesenheiten ändern.",
+        "Sie können nur eigene Abwesenheiten ändern.",
       "workforce.absence_overlap":
-        "An diesen Tagen ist schon eine Abwesenheit eingetragen. Bitte wähle andere Tage.",
+        "An diesen Tagen ist schon eine Abwesenheit eingetragen. Bitte wählen Sie andere Tage.",
       "workforce.absence_type_inactive":
-        "Diese Abwesenheitsart ist ausgeschaltet. Bitte wähle eine andere.",
+        "Diese Abwesenheitsart ist ausgeschaltet. Bitte wählen Sie eine andere.",
       "workforce.absence_type_kept_by_traeger":
-        "Diese Abwesenheitsart legt dein Träger fest. Deine Schule ändert nur, ob sie die Art anbietet und wie viele Tage hier höchstens gehen.",
+        "Diese Abwesenheitsart legt Ihr Träger fest. Ihre Schule ändert nur, ob sie die Art anbietet und wie viele Tage hier höchstens gehen.",
       "workforce.absence_type_not_offered":
-        "Deine Schule bietet diese Abwesenheitsart nicht an. Bitte wähle eine andere Art.",
+        "Ihre Schule bietet diese Abwesenheitsart nicht an. Bitte wählen Sie eine andere Art.",
       "workforce.absence_type_school_limit_exceeded":
         "An dieser Schule sind für diese Art nicht mehr Tage erlaubt. Die Grenze legt die Schule fest.",
       "workforce.adjustment_in_closed_month":
-        "Dieser Monat ist schon abgeschlossen. Bitte wähle ein Datum im offenen Monat. Oder öffne den Monat wieder.",
+        "Dieser Monat ist schon abgeschlossen. Bitte wählen Sie ein Datum im offenen Monat. Oder öffnen Sie den Monat wieder.",
       "workforce.already_checked_in":
-        "Du bist schon eingestempelt. Bitte lade die Seite neu.",
-      "workforce.already_checked_out": "Du hast heute bereits gearbeitet.",
+        "Sie sind schon eingestempelt. Bitte laden Sie die Seite neu.",
+      "workforce.already_checked_out": "Sie haben heute bereits gearbeitet.",
       "workforce.balance_adjustment_exceeds_balance":
         "Dafür reicht das Guthaben im Stundenkonto nicht. Spätere Buchungen hängen davon ab.",
       "workforce.balance_already_reset":
         "Das Stundenkonto wurde für dieses Datum schon zurückgesetzt.",
       "workforce.break_already_active":
-        "Deine Pause läuft schon. Bitte lade die Seite neu.",
+        "Ihre Pause läuft schon. Bitte laden Sie die Seite neu.",
       "workforce.decision_note_required":
-        "Bitte schreibe eine kurze Begründung.",
+        "Bitte schreiben Sie eine kurze Begründung.",
       "workforce.dependent_balance_reset":
-        "Ein späteres Zurücksetzen des Stundenkontos hängt davon ab. Bitte prüfe zuerst dieses Zurücksetzen.",
+        "Ein späteres Zurücksetzen des Stundenkontos hängt davon ab. Bitte prüfen Sie zuerst dieses Zurücksetzen.",
       "workforce.later_month_closed":
-        "Ein späterer Monat ist schon abgeschlossen. Bitte öffne zuerst den späteren Monat.",
+        "Ein späterer Monat ist schon abgeschlossen. Bitte öffnen Sie zuerst den späteren Monat.",
       "workforce.manager_controlled_absence":
-        "Diese Abwesenheit trägt nur die Leitung ein. Bitte frage die Leitung.",
+        "Diese Abwesenheit trägt nur die Leitung ein. Bitte fragen Sie die Leitung.",
       "workforce.month_closed":
-        "Der {month} ist abgeschlossen. Öffne den Monat zuerst wieder. Das geht im Reiter Zeiterfassung.",
+        "Der {month} ist abgeschlossen. Öffnen Sie den Monat zuerst wieder. Das geht im Reiter Zeiterfassung.",
       "workforce.month_closed_by_traeger":
         "Diesen Monat hat die Personalverwaltung des Trägers abgeschlossen. Nur sie kann ihn wieder öffnen.",
       "workforce.month_not_closable":
-        "Dieser Monat ist noch nicht vorbei. Du kannst ihn erst danach abschließen.",
+        "Dieser Monat ist noch nicht vorbei. Sie können ihn erst danach abschließen.",
       "workforce.month_not_closed":
-        "Dieser Monat ist nicht abgeschlossen. Bitte lade die Seite neu.",
+        "Dieser Monat ist nicht abgeschlossen. Bitte laden Sie die Seite neu.",
       "workforce.no_active_break":
-        "Gerade läuft keine Pause. Bitte lade die Seite neu.",
+        "Gerade läuft keine Pause. Bitte laden Sie die Seite neu.",
       "workforce.no_active_session":
-        "Gerade läuft keine Arbeitszeit. Bitte lade die Seite neu.",
+        "Gerade läuft keine Arbeitszeit. Bitte laden Sie die Seite neu.",
       "workforce.no_session_for_today": "Kein Eintrag für heute vorhanden.",
       "workforce.no_staff_profile":
-        "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Bitte frage die Leitung.",
+        "Dafür brauchen Sie in dieser Schule ein eigenes Personalprofil. Bitte fragen Sie die Leitung.",
       "workforce.opening_balance_already_exists":
-        "Für diese Person gibt es schon einen Eröffnungssaldo. Bitte lösche zuerst den alten.",
+        "Für diese Person gibt es schon einen Eröffnungssaldo. Bitte löschen Sie zuerst den alten.",
       "workforce.payroll_config_incomplete":
-        "Für die Datei fehlen noch Angaben auf der Seite Abrechnung. Bitte ergänze diese zuerst.",
+        "Für die Datei fehlen noch Angaben auf der Seite Abrechnung. Bitte ergänzen Sie diese zuerst.",
       "workforce.payroll_download_unavailable":
-        "Dieser Link funktioniert nicht mehr. Er ist abgelaufen oder die Datei wurde schon heruntergeladen. Bitte wende dich an die Schule.",
+        "Dieser Link funktioniert nicht mehr. Er ist abgelaufen oder die Datei wurde schon heruntergeladen. Bitte wenden Sie sich an die Schule.",
       "workforce.payroll_rule_invalid":
-        "Die Angaben sind nicht vollständig. Bitte prüfe die markierten Felder.",
+        "Die Angaben sind nicht vollständig. Bitte prüfen Sie die markierten Felder.",
       "workforce.payroll_rule_not_found":
-        "Diesen Eintrag gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diesen Eintrag gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "workforce.payroll_wage_type_in_use":
-        "Diese Lohnart wird noch genutzt. Ändere zuerst die Zuschlagsregel oder Abwesenheitsart, die sie nutzt.",
+        "Diese Lohnart wird noch genutzt. Ändern Sie zuerst die Zuschlagsregel oder Abwesenheitsart, die sie nutzt.",
       "workforce.payroll_wage_type_name_taken":
-        "Eine Lohnart mit diesem Namen gibt es schon. Bitte wähle einen anderen Namen.",
+        "Eine Lohnart mit diesem Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
       "workforce.personnel_number_invalid":
-        "Die Personalnummer darf nur Ziffern haben, höchstens 9. Bitte prüfe die Eingabe.",
+        "Die Personalnummer darf nur Ziffern haben, höchstens 9. Bitte prüfen Sie die Eingabe.",
       "workforce.personnel_number_taken":
-        "Diese Personalnummer ist schon vergeben. Bitte wähle eine andere.",
+        "Diese Personalnummer ist schon vergeben. Bitte wählen Sie eine andere.",
       "workforce.pool_block_invalid":
-        "Bitte wähle einen Tag ab heute. Das Ende muss nach dem Beginn liegen.",
+        "Bitte wählen Sie einen Tag ab heute. Das Ende muss nach dem Beginn liegen.",
       "workforce.pool_block_not_found":
-        "Diese Blockung gibt es nicht mehr. Bitte lade die Woche neu.",
+        "Diese Blockung gibt es nicht mehr. Bitte laden Sie die Woche neu.",
       "workforce.pool_block_taken":
-        "Diese Person ist zu dieser Zeit schon geblockt. Bitte wähle eine andere Zeit.",
+        "Diese Person ist zu dieser Zeit schon geblockt. Bitte wählen Sie eine andere Zeit.",
       "workforce.pool_springer_busy":
-        "Die Person arbeitet zu dieser Zeit an einer anderen Schule. Bitte wähle eine andere Zeit.",
+        "Die Person arbeitet zu dieser Zeit an einer anderen Schule. Bitte wählen Sie eine andere Zeit.",
       "workforce.pool_springer_not_found":
-        "Diese Person ist an diesem Tag nicht im Vertretungspool. Bitte lade die Woche neu.",
+        "Diese Person ist an diesem Tag nicht im Vertretungspool. Bitte laden Sie die Woche neu.",
       "workforce.qualification_type_name_taken":
-        "Es gibt schon eine Nachweisart mit diesem Namen. Bitte wähle einen anderen Namen.",
+        "Es gibt schon eine Nachweisart mit diesem Namen. Bitte wählen Sie einen anderen Namen.",
       "workforce.qualification_type_not_found":
-        "Diese Nachweisart gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Nachweisart gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "workforce.rebooking_before_vacation_opening":
         "Der Eintrag vom {day} liegt vor der Urlaubs-Übernahme. Dort lässt sich kein Urlaub eintragen.",
       "workforce.rebooking_half_day_edge":
-        "Der Urlaub ab {day} hat einen halben Tag am Rand. Bitte lösche ihn und trage die Tage neu ein.",
+        "Der Urlaub ab {day} hat einen halben Tag am Rand. Bitte löschen Sie ihn und tragen Sie die Tage neu ein.",
       "workforce.rebooking_into_sick_report":
-        "In eine Krankmeldung lässt sich nicht umbuchen. Bitte lösche den Eintrag und trage die Krankmeldung neu ein.",
+        "In eine Krankmeldung lässt sich nicht umbuchen. Bitte löschen Sie den Eintrag und tragen Sie die Krankmeldung neu ein.",
       "workforce.rebooking_no_working_day":
         "Der Eintrag vom {day} hat keinen Arbeitstag. Urlaub braucht mindestens einen.",
       "workforce.rebooking_not_over":
-        "Der Eintrag ist noch nicht vorbei. Du kannst ihn danach ändern.",
+        "Der Eintrag ist noch nicht vorbei. Sie können ihn danach ändern.",
       "workforce.rebooking_nothing_selected":
-        "Bitte wähle mindestens einen Eintrag aus.",
+        "Bitte wählen Sie mindestens einen Eintrag aus.",
       "workforce.rebooking_outside_balance":
         "Der Eintrag vom {day} liegt außerhalb des Stundenkontos. Dort ist kein Freizeitausgleich möglich.",
       "workforce.rebooking_overlap":
-        "Der Eintrag überschneidet sich mit einer anderen Abwesenheit. Bitte lösche einen Eintrag und trage ihn neu ein.",
+        "Der Eintrag überschneidet sich mit einer anderen Abwesenheit. Bitte löschen Sie einen Eintrag und tragen Sie ihn neu ein.",
       "workforce.rebooking_reason_required":
-        "Bitte gib einen Grund für die Umbuchung an.",
+        "Bitte geben Sie einen Grund für die Umbuchung an.",
       "workforce.rebooking_request":
         "Der Eintrag vom {day} ist ein Antrag. Anträge lassen sich nicht umbuchen.",
       "workforce.rebooking_same_type":
         "Der Eintrag vom {day} hat diese Art schon.",
       "workforce.rebooking_sick_report":
-        "Die Krankmeldung vom {day} lässt sich nicht umbuchen. Bitte lösche sie und trage die richtige Art neu ein.",
+        "Die Krankmeldung vom {day} lässt sich nicht umbuchen. Bitte löschen Sie sie und tragen Sie die richtige Art neu ein.",
       "workforce.rebooking_too_many":
-        "Bitte buche höchstens {limit} Einträge auf einmal um.",
+        "Bitte buchen Sie höchstens {limit} Einträge auf einmal um.",
       "workforce.replacement_outside_origin":
         "Eine Vertretung muss am Tag und in der Zeit der ausgefallenen Schicht liegen.",
       "workforce.replacement_staff_absent":
-        "Die Vertretung ist an diesem Tag selbst abwesend. Bitte wähle eine andere Person.",
+        "Die Vertretung ist an diesem Tag selbst abwesend. Bitte wählen Sie eine andere Person.",
       "workforce.session_check_in_in_future":
-        "Der Beginn darf nicht in der Zukunft liegen. Bitte prüfe den Beginn.",
+        "Der Beginn darf nicht in der Zukunft liegen. Bitte prüfen Sie den Beginn.",
       "workforce.session_not_found": "Eintrag nicht gefunden.",
       "workforce.session_not_owned":
-        "Du kannst nur eigene Einträge bearbeiten.",
+        "Sie können nur eigene Einträge bearbeiten.",
       "workforce.session_note_required":
-        "Bitte gib einen Grund für die Änderung an.",
+        "Bitte geben Sie einen Grund für die Änderung an.",
       "workforce.session_times_invalid":
-        "Das Ende muss nach dem Beginn liegen. Bitte prüfe Beginn, Ende und Pause.",
+        "Das Ende muss nach dem Beginn liegen. Bitte prüfen Sie Beginn, Ende und Pause.",
       "workforce.shift_changed":
-        "{object} wurde inzwischen geändert. Bitte lade die Seite neu.",
+        "{object} wurde inzwischen geändert. Bitte laden Sie die Seite neu.",
       "workforce.shift_duplicate":
-        "Zu dieser Zeit beginnt schon eine Schicht dieser Person. Bitte wähle eine andere Zeit.",
+        "Zu dieser Zeit beginnt schon eine Schicht dieser Person. Bitte wählen Sie eine andere Zeit.",
       "workforce.shift_has_replacements":
-        "Für diese Schicht gibt es Vertretungen. Bitte passe zuerst die Vertretungen an.",
+        "Für diese Schicht gibt es Vertretungen. Bitte passen Sie zuerst die Vertretungen an.",
       "workforce.shift_overlap":
-        "Die Schicht überschneidet sich mit einer anderen Schicht dieser Person. Bitte prüfe die Zeiten.",
+        "Die Schicht überschneidet sich mit einer anderen Schicht dieser Person. Bitte prüfen Sie die Zeiten.",
       "workforce.shift_overlaps_other_site":
-        "Die Person arbeitet am {day} von {start} bis {end} Uhr schon an einem anderen Einsatzort. Bitte wähle eine andere Zeit.",
+        "Die Person arbeitet am {day} von {start} bis {end} Uhr schon an einem anderen Einsatzort. Bitte wählen Sie eine andere Zeit.",
       "workforce.shift_planning_off":
-        "Dein Träger plant Einsätze nicht in moto. Neue Schichten sind deshalb ausgeschaltet.",
+        "Ihr Träger plant Einsätze nicht in moto. Neue Schichten sind deshalb ausgeschaltet.",
       "workforce.shift_series_no_occurrences":
-        "Für {object} gibt es keine Termine mehr. Bitte prüfe Wochentage und „Gültig bis“.",
+        "Für {object} gibt es keine Termine mehr. Bitte prüfen Sie Wochentage und „Gültig bis“.",
       "workforce.shift_series_outside_period":
-        "Die Serie liegt außerhalb des Kalenderzeitraums. Bitte prüfe „Gültig ab“ und „Gültig bis“.",
+        "Die Serie liegt außerhalb des Kalenderzeitraums. Bitte prüfen Sie „Gültig ab“ und „Gültig bis“.",
       "workforce.shift_series_week_cycle_missing":
-        "Dieser Kalenderzeitraum hat keine Woche A und B. Bitte wähle „Jede Woche“.",
+        "Dieser Kalenderzeitraum hat keine Woche A und B. Bitte wählen Sie „Jede Woche“.",
       "workforce.shift_type_archived":
-        "Diese Dienstart wurde entfernt. Bitte wähle eine andere.",
+        "Diese Dienstart wurde entfernt. Bitte wählen Sie eine andere.",
       "workforce.shift_type_inactive":
-        "Diese Dienstart ist ausgeschaltet. Bitte wähle eine andere.",
+        "Diese Dienstart ist ausgeschaltet. Bitte wählen Sie eine andere.",
       "workforce.shift_working_time_warning":
-        "Die Schicht verstößt gegen eine Arbeitszeitregel. Bitte prüfe die Zeiten und bestätige die Planung.",
+        "Die Schicht verstößt gegen eine Arbeitszeitregel. Bitte prüfen Sie die Zeiten und bestätigen Sie die Planung.",
       "workforce.staff_kept_by_traeger":
-        "Diesen Wert führt der Träger in seiner Personalakte. Bitte wende dich an die Personalverwaltung des Trägers.",
+        "Diesen Wert führt der Träger in seiner Personalakte. Bitte wenden Sie sich an die Personalverwaltung des Trägers.",
       "workforce.staff_profile_missing":
-        "Für dein Konto gibt es keinen Personaldatensatz. Diese Einstellung gilt nur für Personal.",
+        "Für Ihr Konto gibt es keinen Personaldatensatz. Diese Einstellung gilt nur für Personal.",
       "workforce.staff_soll_kept_by_traeger":
-        "Das Soll dieser Person führt der Träger im Arbeitsvertrag. Bitte wende dich an die Personalverwaltung des Trägers.",
+        "Das Soll dieser Person führt der Träger im Arbeitsvertrag. Bitte wenden Sie sich an die Personalverwaltung des Trägers.",
       "workforce.stammdaten_invalid":
-        "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+        "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "workforce.target_override_hours_invalid":
         "Die Stunden pro Tag müssen zwischen 0 und {max_hours} liegen.",
       "workforce.target_override_overlap":
-        "Vom {start_date} bis {end_date} gibt es schon eine Sonderarbeitszeit. Bitte lösche diese zuerst oder wähle andere Tage.",
+        "Vom {start_date} bis {end_date} gibt es schon eine Sonderarbeitszeit. Bitte löschen Sie diese zuerst oder wählen Sie andere Tage.",
       "workforce.target_override_range_invalid":
-        "Das Ende liegt vor dem Anfang. Bitte prüfe den Zeitraum.",
+        "Das Ende liegt vor dem Anfang. Bitte prüfen Sie den Zeitraum.",
       "workforce.target_override_too_long":
         "Der Zeitraum ist zu lang. Erlaubt sind höchstens {max_days} Tage.",
       "workforce.traeger_absence_allowance_below_booked":
@@ -2046,89 +2064,89 @@ export const ERROR_CATALOG = {
       "workforce.traeger_absence_type_in_use":
         "Eine Schule hat diese Art schon gebucht. Der Name bleibt deshalb, wie er ist.",
       "workforce.traeger_absence_type_invalid":
-        "Die Abwesenheitsart konnte nicht gespeichert werden. Bitte prüfe Name und Tage.",
+        "Die Abwesenheitsart konnte nicht gespeichert werden. Bitte prüfen Sie Name und Tage.",
       "workforce.traeger_absence_type_name_taken":
-        "Eine Abwesenheitsart mit diesem Namen gibt es schon. Bitte wähle einen anderen Namen.",
+        "Eine Abwesenheitsart mit diesem Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
       "workforce.traeger_absence_type_not_found":
-        "Diese Abwesenheitsart gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Abwesenheitsart gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "workforce.traeger_contract_invalid":
-        "Bitte prüfe die Angaben zum Arbeitsvertrag.",
+        "Bitte prüfen Sie die Angaben zum Arbeitsvertrag.",
       "workforce.traeger_contract_month_closed":
         "Die Schule {school} hat die Zeit davor schon abgerechnet. Eine Änderung geht dort erst ab dem {day}.",
       "workforce.traeger_contract_not_found":
-        "Diesen Arbeitsvertrag gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diesen Arbeitsvertrag gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "workforce.traeger_contract_overlap":
-        "An der Schule {school} gilt an diesen Tagen schon ein anderer Arbeitsvertrag. Beende den anderen Vertrag zuerst oder wähle andere Tage.",
+        "An der Schule {school} gilt an diesen Tagen schon ein anderer Arbeitsvertrag. Beenden Sie den anderen Vertrag zuerst oder wählen Sie andere Tage.",
       "workforce.traeger_holiday_week_school_override":
-        "Die Schule {school} hat für die Woche ab dem {day} schon eine eigene Sonderarbeitszeit. Frag die Schule, ob sie diese löscht, oder wähle eine andere Woche.",
+        "Die Schule {school} hat für die Woche ab dem {day} schon eine eigene Sonderarbeitszeit. Bitte bitten Sie die Schule, diese zu löschen, oder wählen Sie eine andere Woche.",
       "workforce.traeger_month_closed_by_school":
         "Die Schule {school} hat diesen Monat selbst abgeschlossen. Nur die Schule kann ihn wieder öffnen.",
       "workforce.traeger_month_later_closed":
-        "An der Schule {school} ist {month} schon abgeschlossen. Bitte öffne zuerst diesen späteren Monat.",
+        "An der Schule {school} ist {month} schon abgeschlossen. Bitte öffnen Sie zuerst diesen späteren Monat.",
       "workforce.traeger_month_not_kept":
         "In diesem Monat gilt kein Arbeitsvertrag des Trägers. Die Schulen schließen den Monat selbst ab.",
       "workforce.traeger_payroll_not_ready":
         "Die Lohndatei kann noch nicht entstehen. Die Prüfung auf der Seite nennt, was noch fehlt.",
       "workforce.traeger_planning_shift_not_found":
-        "Die Schicht gibt es nicht mehr. Bitte lade die Woche neu.",
+        "Die Schicht gibt es nicht mehr. Bitte laden Sie die Woche neu.",
       "workforce.traeger_planning_site_invalid":
-        "Die Person arbeitet an dieser Schule nicht mehr. Bitte wähle einen anderen Einsatzort.",
+        "Die Person arbeitet an dieser Schule nicht mehr. Bitte wählen Sie einen anderen Einsatzort.",
       "workforce.traeger_proof_invalid":
-        "Der Nachweis lässt sich so nicht speichern. Bitte prüfe das markierte Feld.",
+        "Der Nachweis lässt sich so nicht speichern. Bitte prüfen Sie das markierte Feld.",
       "workforce.traeger_proof_mapping_invalid":
-        "Diese Nachweisart gibt es an der Schule nicht mehr. Bitte lade die Seite neu.",
+        "Diese Nachweisart gibt es an der Schule nicht mehr. Bitte laden Sie die Seite neu.",
       "workforce.traeger_proof_not_found":
-        "Diesen Nachweis gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diesen Nachweis gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "workforce.traeger_proof_type_name_taken":
-        "Eine Nachweisart mit diesem Namen gibt es schon. Bitte wähle einen anderen Namen.",
+        "Eine Nachweisart mit diesem Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
       "workforce.traeger_proof_type_not_found":
-        "Diese Nachweisart gibt es nicht mehr oder sie ist archiviert. Bitte lade die Seite neu.",
+        "Diese Nachweisart gibt es nicht mehr oder sie ist archiviert. Bitte laden Sie die Seite neu.",
       "workforce.traeger_staff_already_linked":
-        "Eine dieser Personen hat schon eine Personalakte. Bitte lade die Seite neu.",
+        "Eine dieser Personen hat schon eine Personalakte. Bitte laden Sie die Seite neu.",
       "workforce.traeger_staff_hire_duplicate":
-        "Diese Person gibt es vielleicht schon. Bitte prüfe die Angaben.",
+        "Diese Person gibt es vielleicht schon. Bitte prüfen Sie die Angaben.",
       "workforce.traeger_staff_hire_incomplete":
-        "Die Person ist nur zum Teil angelegt. Bitte stelle sie nicht noch einmal ein.",
+        "Die Person ist nur zum Teil angelegt. Bitte stellen Sie sie nicht noch einmal ein.",
       "workforce.traeger_staff_hire_invalid":
-        "Die Person konnte nicht eingestellt werden. Bitte prüfe deine Angaben.",
+        "Die Person konnte nicht eingestellt werden. Bitte prüfen Sie Ihre Angaben.",
       "workforce.traeger_staff_import_changed":
-        "Seit der Vorschau hat sich etwas an den Personalakten geändert. Bitte prüfe die Vorschau noch einmal und übernimm dann.",
+        "Seit der Vorschau hat sich etwas an den Personalakten geändert. Bitte prüfen Sie die Vorschau noch einmal und übernehmen Sie dann.",
       "workforce.traeger_staff_import_file_invalid":
-        "moto kann die Datei nicht lesen. Bitte wähle eine CSV-Datei mit Überschriften in der ersten Zeile und mindestens einer Person.",
+        "moto kann die Datei nicht lesen. Bitte wählen Sie eine CSV-Datei mit Überschriften in der ersten Zeile und mindestens einer Person.",
       "workforce.traeger_staff_import_file_too_large":
         "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
       "workforce.traeger_staff_import_mapping_invalid":
-        "Die Zuordnung der Spalten passt nicht zur Datei. Bitte wähle für jedes Pflichtfeld eine Spalte.",
+        "Die Zuordnung der Spalten passt nicht zur Datei. Bitte wählen Sie für jedes Pflichtfeld eine Spalte.",
       "workforce.traeger_staff_link_invalid":
-        "Die Personen lassen sich so nicht verknüpfen. Bitte prüfe deine Auswahl.",
+        "Die Personen lassen sich so nicht verknüpfen. Bitte prüfen Sie Ihre Auswahl.",
       "workforce.traeger_staff_not_released":
-        "Personal beim Träger ist für deinen Träger noch nicht freigeschaltet. Das moto-Team schaltet es frei.",
+        "Personal beim Träger ist für Ihren Träger noch nicht freigeschaltet. Das moto-Team schaltet es frei.",
       "workforce.traeger_staff_record_not_found":
-        "Diese Personalakte gibt es nicht mehr. Bitte lade die Seite neu.",
+        "Diese Personalakte gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "workforce.traeger_staff_release_exists":
         "Personal beim Träger ist für diesen Träger schon freigeschaltet.",
       "workforce.traeger_staff_release_in_use":
         "Der Träger führt noch Personalakten. Er muss sie zuerst auflösen.",
       "workforce.traeger_staff_release_invalid":
-        "Bitte wähle eine der beiden Erklärungen des Trägers.",
+        "Bitte wählen Sie eine der beiden Erklärungen des Trägers.",
       "workforce.traeger_staff_release_not_found":
         "Personal beim Träger ist für diesen Träger nicht freigeschaltet.",
       "workforce.vacation_opening_absences_before_cutoff":
-        "Vor dem Stichtag ist schon Urlaub eingetragen. Diese Tage würden doppelt zählen. Bitte wähle einen früheren Stichtag.",
+        "Vor dem Stichtag ist schon Urlaub eingetragen. Diese Tage würden doppelt zählen. Bitte wählen Sie einen früheren Stichtag.",
       "workforce.vacation_opening_already_exists":
-        "Für dieses Jahr gibt es schon eine Urlaubs-Übernahme. Bitte lösche zuerst die alte.",
+        "Für dieses Jahr gibt es schon eine Urlaubs-Übernahme. Bitte löschen Sie zuerst die alte.",
       "workforce.vacation_quota_below_used":
-        "Der Anspruch ist kleiner als die genommenen und beantragten Tage. Bitte trage einen höheren Wert ein.",
+        "Der Anspruch ist kleiner als die genommenen und beantragten Tage. Bitte tragen Sie einen höheren Wert ein.",
       "workforce.vacation_quota_exceeded":
         "Dafür reicht der Resturlaub nicht. Der Urlaubsanspruch muss zuerst erhöht werden.",
       "workforce.vacation_quota_reason_required":
-        "Für {object} fehlt eine Angabe. Bitte ergänze das markierte Feld.",
+        "Für {object} fehlt eine Angabe. Bitte ergänzen Sie das markierte Feld.",
       "workforce.vacation_request_in_past":
-        "Urlaub kannst du nur ab heute beantragen. Bitte wähle ein anderes Datum.",
+        "Urlaub können Sie nur ab heute beantragen. Bitte wählen Sie ein anderes Datum.",
       "workforce.work_session_overlap":
-        "Die Zeit überschneidet sich mit einem anderen Eintrag an diesem Tag. Bitte prüfe Beginn und Ende.",
+        "Die Zeit überschneidet sich mit einem anderen Eintrag an diesem Tag. Bitte prüfen Sie Beginn und Ende.",
       "workforce.work_time_model_archived":
-        "Diese Vorlage wird nicht mehr angeboten. Bitte wähle eine andere Vorlage.",
+        "Diese Vorlage wird nicht mehr angeboten. Bitte wählen Sie eine andere Vorlage.",
     },
   },
   en: {
@@ -2180,6 +2198,8 @@ export const ERROR_CATALOG = {
         "This contract is already signed or is not waiting for a signature. Please reload the page.",
       "care_contract.field_invalid":
         "Some details are not valid. Please check your entries.",
+      "care_contract.letterhead_missing":
+        "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -2198,6 +2218,8 @@ export const ERROR_CATALOG = {
         "This selection is not possible. Please change your selection.",
       "care_contract.signature_invalid":
         "The signature is missing or empty. Please sign again.",
+      "care_contract.signing_letterhead_missing":
+        "Your signature has not been saved yet. The provider is still missing some details. Please try again later or contact the provider.",
       "care_contract.signing_link_invalid":
         "This link is no longer valid. It was already used or has expired. You can find the contract in the parent app under “Documents”, or ask the provider for a new link.",
       "care_contract.special_termination_closed":
@@ -2730,6 +2752,8 @@ export const ERROR_CATALOG = {
         "The fee cannot be calculated for these weeks. Please reload the page.",
       "parent_billing.letter_mail_block_unreadable":
         "We cannot check right now whether this address is blocked. Please try again later.",
+      "parent_billing.letterhead_missing":
+        "The sender in the letterhead is missing. No invoices or notices are created without the provider's name and address. Please add it under “Letterhead and templates”.",
       "parent_billing.online_mandate_disabled":
         "Your provider does not accept the direct debit mandate in the app right now.",
       "parent_billing.parent_document_not_found":
@@ -2942,6 +2966,8 @@ export const ERROR_CATALOG = {
         "Этот договор уже подписан или не ожидает подписи. Пожалуйста, обновите страницу.",
       "care_contract.field_invalid":
         "Некоторые данные указаны неверно. Проверьте введённые данные.",
+      "care_contract.letterhead_missing":
+        "В шапке отсутствуют данные отправителя. Договор не будет отправлен без названия и адреса организации. Добавьте их в разделе «Шапка и шаблоны».",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -2960,6 +2986,8 @@ export const ERROR_CATALOG = {
         "Такой выбор невозможен. Измените выбор.",
       "care_contract.signature_invalid":
         "Подпись отсутствует или пуста. Пожалуйста, подпишите ещё раз.",
+      "care_contract.signing_letterhead_missing":
+        "Ваша подпись ещё не сохранена. У организации ещё не хватает данных. Пожалуйста, попробуйте позже или свяжитесь с организацией.",
       "care_contract.signing_link_invalid":
         "Эта ссылка больше не действует. Она уже была использована или срок её действия истёк. Договор находится в приложении для родителей в разделе «Документы». Или попросите у организации новую ссылку.",
       "care_contract.special_termination_closed":
@@ -3433,6 +3461,8 @@ export const ERROR_CATALOG = {
         "Не удаётся рассчитать взнос за эти недели. Пожалуйста, обновите страницу.",
       "parent_billing.letter_mail_block_unreadable":
         "Сейчас нельзя проверить, заблокирован ли этот адрес. Попробуйте позже.",
+      "parent_billing.letterhead_missing":
+        "В бланке отсутствуют данные отправителя. Без названия и адреса организации счета и решения не создаются. Добавьте их в разделе «Бланк и шаблоны».",
       "parent_billing.online_mandate_disabled":
         "Ваш попечитель сейчас не принимает мандат на прямое дебетование в приложении.",
       "parent_billing.parent_document_not_found":
@@ -3566,6 +3596,8 @@ export const ERROR_CATALOG = {
         "Kjo kontratë është nënshkruar tashmë ose nuk pret nënshkrim. Ju lutemi rifreskoni faqen.",
       "care_contract.field_invalid":
         "Disa të dhëna nuk janë të sakta. Kontrolloni të dhënat.",
+      "care_contract.letterhead_missing":
+        "Në kokën e letrës mungojnë të dhënat e dërguesit. Kontrata nuk dërgohet pa emrin dhe adresën e ofruesit. Shtojini te „Koka e letrës dhe shabllonet”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -3584,6 +3616,8 @@ export const ERROR_CATALOG = {
         "Kjo zgjedhje nuk është e mundur. Ndryshoni zgjedhjen.",
       "care_contract.signature_invalid":
         "Nënshkrimi mungon ose është bosh. Ju lutemi nënshkruani përsëri.",
+      "care_contract.signing_letterhead_missing":
+        "Nënshkrimi juaj nuk është ruajtur ende. Ofruesit i mungojnë ende disa të dhëna. Ju lutemi provoni më vonë ose kontaktoni ofruesin.",
       "care_contract.signing_link_invalid":
         "Ky link nuk është më i vlefshëm. Është përdorur tashmë ose ka skaduar. Kontratën e gjeni në aplikacionin për prindër te „Dokumente“. Ose kërkoni një link të ri nga ofruesi.",
       "care_contract.special_termination_closed":
@@ -4071,6 +4105,8 @@ export const ERROR_CATALOG = {
         "Pagesa për këto javë nuk mund të llogaritet. Ju lutemi ringarkoni faqen.",
       "parent_billing.letter_mail_block_unreadable":
         "Tani nuk mund të kontrollohet nëse kjo adresë është e bllokuar. Ju lutemi provoni përsëri më vonë.",
+      "parent_billing.letterhead_missing":
+        "Mungon dërguesi në kokën e letrës. Pa emrin dhe adresën e ofruesit nuk krijohen fatura ose vendime. Shtojini te „Koka e letrës dhe modelet“.",
       "parent_billing.online_mandate_disabled":
         "Ofruesi juaj nuk e pranon tani mandatin e debitimit direkt në aplikacion.",
       "parent_billing.parent_document_not_found":
@@ -4206,6 +4242,8 @@ export const ERROR_CATALOG = {
         "Ta umowa jest już podpisana lub nie czeka na podpis. Odśwież stronę.",
       "care_contract.field_invalid":
         "Niektóre dane są nieprawidłowe. Sprawdź wpisane dane.",
+      "care_contract.letterhead_missing":
+        "Brakuje nadawcy w nagłówku. Umowa nie zostanie wysłana bez nazwy i adresu organizatora. Dodaj je w „Nagłówek i szablony”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -4224,6 +4262,8 @@ export const ERROR_CATALOG = {
         "Taki wybór nie jest możliwy. Zmień wybór.",
       "care_contract.signature_invalid":
         "Brak podpisu lub podpis jest pusty. Podpisz jeszcze raz.",
+      "care_contract.signing_letterhead_missing":
+        "Twój podpis nie został jeszcze zapisany. Organizatorowi brakuje jeszcze danych. Proszę spróbować później lub skontaktować się z organizatorem.",
       "care_contract.signing_link_invalid":
         "Ten link jest już nieważny. Został użyty lub wygasł. Umowę znajdziesz w aplikacji dla rodziców w zakładce „Dokumenty”. Możesz też poprosić organizatora o nowy link.",
       "care_contract.special_termination_closed":
@@ -4698,6 +4738,8 @@ export const ERROR_CATALOG = {
         "Nie można obliczyć opłaty za te tygodnie. Proszę odświeżyć stronę.",
       "parent_billing.letter_mail_block_unreadable":
         "Nie można teraz sprawdzić, czy ten adres jest zablokowany. Spróbuj ponownie później.",
+      "parent_billing.letterhead_missing":
+        "Brakuje nadawcy w nagłówku. Bez nazwy i adresu organizatora nie powstaną faktury ani decyzje. Dodaj te dane w sekcji „Nagłówek i szablony”.",
       "parent_billing.online_mandate_disabled":
         "Twój organ prowadzący nie przyjmuje teraz upoważnienia do polecenia zapłaty w aplikacji.",
       "parent_billing.parent_document_not_found":
@@ -4831,6 +4873,8 @@ export const ERROR_CATALOG = {
         "Bu sözleşme zaten imzalandı veya imza beklemiyor. Lütfen sayfayı yenileyin.",
       "care_contract.field_invalid":
         "Bazı bilgiler doğru değil. Girdiğiniz bilgileri kontrol edin.",
+      "care_contract.letterhead_missing":
+        "Antette gönderen bilgileri eksik. Kurumun adı ve adresi olmadan sözleşme gönderilmez. Bunları „Antet ve şablonlar” bölümüne ekleyin.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -4849,6 +4893,8 @@ export const ERROR_CATALOG = {
         "Bu seçim mümkün değil. Lütfen seçiminizi değiştirin.",
       "care_contract.signature_invalid":
         "İmza eksik veya boş. Lütfen tekrar imzalayın.",
+      "care_contract.signing_letterhead_missing":
+        "İmzanız henüz kaydedilmedi. Kurumun bazı bilgileri hâlâ eksik. Lütfen daha sonra tekrar deneyin veya kurumla iletişime geçin.",
       "care_contract.signing_link_invalid":
         "Bu bağlantı artık geçerli değil. Daha önce kullanıldı veya süresi doldu. Sözleşmeyi veli uygulamasında „Belgeler“ altında bulabilirsiniz. Ya da kurumdan yeni bir bağlantı isteyin.",
       "care_contract.special_termination_closed":
@@ -5329,6 +5375,8 @@ export const ERROR_CATALOG = {
         "Bu haftalar için ücret hesaplanamıyor. Lütfen sayfayı yeniden yükleyin.",
       "parent_billing.letter_mail_block_unreadable":
         "Bu adresin engelli olup olmadığı şu anda kontrol edilemiyor. Lütfen daha sonra tekrar deneyin.",
+      "parent_billing.letterhead_missing":
+        "Antette gönderen bilgisi eksik. Sağlayıcının adı ve adresi olmadan fatura veya bildirim oluşturulmaz. Bunları „Antet ve şablonlar“ bölümüne ekleyin.",
       "parent_billing.online_mandate_disabled":
         "Kurumunuz şu anda otomatik ödeme talimatını uygulamada kabul etmiyor.",
       "parent_billing.parent_document_not_found":
@@ -5464,6 +5512,8 @@ export const ERROR_CATALOG = {
         "Цей договір уже підписано або він не очікує підпису. Будь ласка, оновіть сторінку.",
       "care_contract.field_invalid":
         "Деякі дані вказано неправильно. Перевірте введені дані.",
+      "care_contract.letterhead_missing":
+        "У шапці бракує даних відправника. Договір не буде надіслано без назви й адреси організації. Додайте їх у розділі «Шапка та шаблони».",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -5482,6 +5532,8 @@ export const ERROR_CATALOG = {
         "Такий вибір неможливий. Змініть вибір.",
       "care_contract.signature_invalid":
         "Підпис відсутній або порожній. Будь ласка, підпишіть ще раз.",
+      "care_contract.signing_letterhead_missing":
+        "Ваш підпис ще не збережено. В організації ще бракує даних. Будь ласка, спробуйте пізніше або зверніться до організації.",
       "care_contract.signing_link_invalid":
         "Це посилання більше не дійсне. Його вже використано або термін дії минув. Договір є в застосунку для батьків у розділі «Документи». Або попросіть в організації нове посилання.",
       "care_contract.special_termination_closed":
@@ -5954,6 +6006,8 @@ export const ERROR_CATALOG = {
         "Не вдається розрахувати внесок за ці тижні. Будь ласка, оновіть сторінку.",
       "parent_billing.letter_mail_block_unreadable":
         "Зараз неможливо перевірити, чи заблоковано цю адресу. Спробуйте пізніше.",
+      "parent_billing.letterhead_missing":
+        "У бланку відсутні дані відправника. Без назви та адреси організатора рахунки й рішення не створюються. Додайте їх у розділі «Бланк та шаблони».",
       "parent_billing.online_mandate_disabled":
         "Ваш засновник зараз не приймає мандат на пряме дебетування в застосунку.",
       "parent_billing.parent_document_not_found":

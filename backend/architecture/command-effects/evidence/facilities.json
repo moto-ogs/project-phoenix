@@ -1058,7 +1058,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.EndActivitySession",
-      "binding_digest": "f798335d0b8ef5c70c9f2db21f5b8ebb",
+      "binding_digest": "405ab21a4c98e3f2b3a6f5ec38a1a119",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.EndActivitySession",
       "source_owner": "facilities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.EndActivitySession",
@@ -1066,7 +1066,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.EndActivitySession",
-      "binding_digest": "a04d8baf3b8ca40ab4fd11f206ce5be4",
+      "binding_digest": "4daea87d00d30750cc90cf8e7db362ac",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.EndActivitySession",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.EndActivitySession",

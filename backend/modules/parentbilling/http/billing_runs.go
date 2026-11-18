@@ -434,6 +434,7 @@ func renderBillingConflict(w http.ResponseWriter, r *http.Request, err error) {
 		{capability.ErrInvoiceNumberTaken, common.CodeParentBillingInvoiceNumberTaken},
 		{capability.ErrBillingLettersExist, common.CodeParentBillingBillingLettersExist},
 		{capability.ErrBankAccountMissing, common.CodeParentBillingBankAccountMissing},
+		{capability.ErrLetterheadMissing, common.CodeParentBillingLetterheadMissing},
 		{capability.ErrLetterheadTooLong, common.CodeParentBillingLetterheadTooLong},
 		{capability.ErrBillingLettersMissing, common.CodeParentBillingBillingLettersMissing},
 		{capability.ErrLetterMailPending, common.CodeParentBillingLetterMailPending},

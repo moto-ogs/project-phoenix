@@ -22,7 +22,7 @@ import (
 // landing/health probes, the public image/legal-document servers, and the
 // bearer-protected metrics endpoint.
 // mountPublic mounts everything that needs no session.
-func mountPublic(root chi.Router, metricsToken string, db transactionruntime.Database, emailWebhooks emailWebhooksHTTP.Ingest, rateLimitEnabled bool) {
+func mountPublic(root chi.Router, metricsToken string, db transactionruntime.Database, emailWebhooks emailWebhooksHTTP.Ingest, rateLimitEnabled bool, newLimiter rateLimiterFactory) {
 	mountPublicRoutes(root, metricsToken, db.Pool().PingContext)
 	mountEmailWebhooks(root, emailWebhooks, rateLimitEnabled)
 	// The register and the retrieval of the return package (Data Act,
@@ -33,7 +33,7 @@ func mountPublic(root chi.Router, metricsToken string, db transactionruntime.Dat
 	if err != nil {
 		panic(err)
 	}
-	mountDataReturn(root, packages, dataReturnRateLimit(rateLimitEnabled))
+	mountDataReturn(root, packages, dataReturnRateLimit(rateLimitEnabled, newLimiter))
 }
 
 // mountDataReturn mounts the register, the OpenAPI description and the

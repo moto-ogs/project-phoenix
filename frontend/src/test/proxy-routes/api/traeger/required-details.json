@@ -1,0 +1,5 @@
+{
+  "api/traeger/required-details": [
+    "GET traeger /traeger/required-details"
+  ]
+}

@@ -21,6 +21,9 @@ func (fixedNoticeTemplates) TraegerTexts(_ context.Context, _ int64, keys []stri
 	texts := map[string]string{}
 	for _, key := range keys {
 		texts[key] = "Widerruf für {Kind}, eingegangen am {Eingang}. {Träger}"
+		if key == configModels.KeyBrandingLetterheadText {
+			texts[key] = "Träger e.V.\nMusterweg 1"
+		}
 		if key == configModels.KeyCareContractTerminationConfirmation {
 			texts[key] = "Kündigung für {Kind} zum {Vertragsende}. {Träger}"
 		}

@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "5bd36dff2ac146bb761ba43eeda2f1b527cb6c24fb46a4a16c8c1a2b0f4e0e8b",
+  "catalogSHA256": "e7320709758ef0a99507a81faf9408e5723f45f513eb73907423026fd4d9b92e",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -39237,6 +39237,11 @@
       "name": "auth.permissions",
       "classification": "excludeInternal",
       "reason": "Global permission vocabulary, not customer records; relevant role meaning must accompany returned data."
+    },
+    {
+      "name": "auth.request_rate_limits",
+      "classification": "excludeInternal",
+      "reason": "Internal anti-abuse state has no tenant key and is not customer export content."
     },
     {
       "name": "calendar.school_vacations",

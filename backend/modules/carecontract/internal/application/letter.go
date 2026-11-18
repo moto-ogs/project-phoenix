@@ -203,6 +203,12 @@ func traegerName(letterhead string, terms carecontract.TemplateInput) string {
 	return strings.TrimSpace(firstText(firstLine(textLines(letterhead)), terms.ContractPartner))
 }
 
+// letterheadMissing reports whether the sender text lacks either the Träger's
+// name or its address. Every new outgoing contract mail needs both.
+func letterheadMissing(senderText string) bool {
+	return len(textLines(senderText)) < 2
+}
+
 // ServiceFacts is one row per weekday Monday to Friday, and Saturday or
 // Sunday when booked: the modules of the day with their end times, or
 // "keine Betreuung".

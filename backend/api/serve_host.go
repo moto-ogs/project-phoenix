@@ -15,8 +15,10 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	meAPI "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
+	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/observability"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -41,13 +43,21 @@ func newProductionEnvironment(logger *slog.Logger, publicAPIURL string) (owners.
 	return newRootEnvironment(cfg, logger, nil, productionObservers())
 }
 
+func mountServeRootHost(db transactionruntime.Database, env owners.RootEnvironment, config ServeConfig, hub *realtime.Hub, metrics *httpMetrics, tracer *observability.Tracer, tracker analytics.Tracker, settings settingsCompose.SettingsService, identity identityaccess.Owner, organizations organizationtenancy.SchoolQuery, pwa deliveryCompose.PWAUsageService, newLimiter rateLimiterFactory) (chi.Router, *sessiontoken.TokenAuth, error) {
+	registerRuntimeStatsProviders(hub, pwa)
+	router := chi.NewRouter()
+	policy := analyticsCollectionPolicy(IsDemoEnvironment(env.Config.AppEnv), settings, identity, organizations)
+	auth, err := mountServeMiddleware(router, db.UnitOfWork(), env.Logger, config, tracer, metrics, tracker, settings, policy, identity, identity, identity, env.Config.RateLimitEnabled, newLimiter)
+	return router, auth, err
+}
+
 // mountServeMiddleware sets up the global middleware chain of the server
 // root in its fixed order and returns the session runtime it verifies with.
 func mountServeMiddleware(
 	router chi.Router, unit tenant.UnitOfWork, logger *slog.Logger, config ServeConfig, tracer *observability.Tracer,
 	metrics *httpMetrics, tracker analytics.Tracker, settings settingsCompose.SettingsService, policy analytics.CollectionPolicy,
 	consent identityaccess.AccountAnalyticsConsent, guardianSchools identityaccess.GuardianSchools, sessions identityaccess.AccessSessions,
-	rateLimitEnabled bool,
+	rateLimitEnabled bool, newLimiter rateLimiterFactory,
 ) (*sessiontoken.TokenAuth, error) {
 	router.Use(requestIDs(tracer))
 	router.Use(apiCommon.ProblemResponseMiddleware)
@@ -86,7 +96,7 @@ func mountServeMiddleware(
 	// each protected group still rejects through the Authenticator and its
 	// scope gate. A group mounted without it fails closed.
 	router.Use(sessionAuth.Verifier(), sessiontoken.ParseVerified)
-	setupRateLimiting(router, securityLogger, rateLimitEnabled, demoLoopbackExempt())
+	setupRateLimiting(router, securityLogger, rateLimitEnabled, demoLoopbackExempt(), newLimiter)
 	// Every verified access token must still rest on a live refresh-token
 	// family, so logout ends it at once on every instance (#5194).
 	router.Use(RequireLiveAccessSession(sessions))

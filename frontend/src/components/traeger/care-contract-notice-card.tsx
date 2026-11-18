@@ -323,6 +323,8 @@ function longWithdrawal(until: string): boolean {
 
 /** Why the end notice did not go out, in the words the office reads. */
 const END_NOTICE_NOT_SENT_REASONS = {
+  letterhead_missing:
+    "Im Briefkopf fehlt der Absender. Trage ihn unter „Briefkopf und Vorlagen“ ein.",
   missing_student:
     "Der Vertrag ist mit keinem Kind aus den „Kinderdaten“ der Schule verknüpft.",
   no_permitted_address:

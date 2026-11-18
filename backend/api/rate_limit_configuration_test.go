@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	customMiddleware "github.com/moto-ogs/project-phoenix/middleware"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -44,9 +45,9 @@ func TestRateLimitConfigurationAndRejectionMetrics(t *testing.T) {
 	// The login limiter spends its budget on refused attempts only.
 	refused := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusUnauthorized) })
 	general := chi.NewRouter()
-	setupRateLimiting(general, nil, cfg.RateLimitEnabled, false)
+	setupRateLimiting(general, nil, cfg.RateLimitEnabled, false, customMiddleware.NewRateLimiter)
 	general.Post("/probe", accepted)
-	auth := authRateLimitersFromEnv(cfg.RateLimitEnabled)
+	auth := authRateLimitersFromEnv(cfg.RateLimitEnabled, customMiddleware.NewRateLimiter)
 	webhook := emailWebhookRateLimit(cfg.RateLimitEnabled)
 	// passed is the status of a request the limiter lets through.
 	type rateLimitProbe struct {

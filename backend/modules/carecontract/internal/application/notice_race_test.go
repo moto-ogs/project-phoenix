@@ -26,6 +26,15 @@ import (
 // noticeTemplates answers a fixed template per kind.
 type noticeTemplates struct{}
 
+type noticeSender struct{ letterhead string }
+
+func (s noticeSender) TraegerLetterhead(context.Context, int64) (string, error) {
+	if s.letterhead != "" {
+		return s.letterhead, nil
+	}
+	return "Träger e.V.\nMusterweg 1", nil
+}
+
 func (noticeTemplates) NoticeTemplate(_ context.Context, _ int64, kind string) (string, error) {
 	if kind == carecontract.NoticeWithdrawal {
 		return "Widerruf für {Kind} am {Eingang}. {Träger}", nil
@@ -114,7 +123,7 @@ func newNoticeFixture(t *testing.T, name string, now time.Time) noticeFixture {
 	}))
 	// The contract party still holds the enrollment submission for the child.
 	addressees := &noticeAddressees{addresses: []string{"Erika@Example.org"}}
-	notices := NewNotices(store, store, NoticePorts{Holidays: schoolHolidays{}, Templates: noticeTemplates{}, Post: post, Addressees: addressees},
+	notices := NewNotices(store, store, NoticePorts{Holidays: schoolHolidays{}, Templates: noticeTemplates{}, Post: post, Sender: noticeSender{}, Addressees: addressees},
 		Clock{Now: func() time.Time { return now }}, race.contracts)
 	return noticeFixture{raceFixture: race, notices: notices, post: post, addressees: addressees}
 }
@@ -292,7 +301,7 @@ func TestDeclarationNeedsAnActiveContractAndAValidDay(t *testing.T) {
 	t.Parallel()
 	draft := newRaceFixture(t, "Träger Kündigung Entwurf")
 	store := postgres.NewStore(calendar.TodayDate)
-	notices := NewNotices(store, store, NoticePorts{Holidays: schoolHolidays{}, Templates: noticeTemplates{}, Post: &noticePost{}}, Clock{Now: func() time.Time { return noticeToday }},
+	notices := NewNotices(store, store, NoticePorts{Holidays: schoolHolidays{}, Templates: noticeTemplates{}, Post: &noticePost{}, Sender: noticeSender{}}, Clock{Now: func() time.Time { return noticeToday }},
 		draft.contracts)
 	err := testpkg.WithinTraeger(draft.ctx, draft.org, func(txCtx context.Context) error {
 		_, err := notices.declare(txCtx, declaration{organizationID: draft.org, accountID: draft.reviewer.AccountID,
@@ -330,7 +339,7 @@ func TestDelayedConclusionStartsWithdrawalAtNoticeProvision(t *testing.T) {
 	require.NoError(t, f.db.NewRaw(`SELECT outbox_id FROM care_contract.contract_mailings WHERE contract_id = ?`, f.contract).Scan(f.ctx, &outboxID))
 	post := &noticePost{deliveries: []carecontract.NoticeDelivery{{OutboxID: outboxID, ProvidedAt: provided}}}
 	store := postgres.NewStore(calendar.TodayDate)
-	notices := NewNotices(store, store, NoticePorts{Holidays: schoolHolidays{}, Templates: noticeTemplates{}, Post: post}, Clock{Now: func() time.Time { return provided }}, f.contracts)
+	notices := NewNotices(store, store, NoticePorts{Holidays: schoolHolidays{}, Templates: noticeTemplates{}, Post: post, Sender: noticeSender{}}, Clock{Now: func() time.Time { return provided }}, f.contracts)
 	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(ctx context.Context) error {
 		state, err := notices.noticeState(ctx, f.org, f.contract)
 		require.NoError(t, err)
@@ -484,7 +493,7 @@ func TestFailedMailAndCorrectedResendWaitForActualProvision(t *testing.T) {
 		return nil
 	}))
 	store, post := postgres.NewStore(calendar.TodayDate), &noticePost{}
-	notices := NewNotices(store, store, NoticePorts{Holidays: schoolHolidays{}, Templates: noticeTemplates{}, Post: post}, Clock{Now: func() time.Time { return now }}, f.contracts)
+	notices := NewNotices(store, store, NoticePorts{Holidays: schoolHolidays{}, Templates: noticeTemplates{}, Post: post, Sender: noticeSender{}}, Clock{Now: func() time.Time { return now }}, f.contracts)
 	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(ctx context.Context) error {
 		state, err := notices.noticeState(ctx, f.org, f.contract)
 		require.NoError(t, err)

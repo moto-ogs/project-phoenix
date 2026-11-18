@@ -19,6 +19,7 @@
   "school_outside_traeger": "This school does not belong to your provider.",
   "selection_invalid": "Taki wybór nie jest możliwy. Zmień wybór.",
   "signature_invalid": "Brak podpisu lub podpis jest pusty. Podpisz jeszcze raz.",
+  "signing_letterhead_missing": "Twój podpis nie został jeszcze zapisany. Organizatorowi brakuje jeszcze danych. Proszę spróbować później lub skontaktować się z organizatorem.",
   "signing_link_invalid": "Ten link jest już nieważny. Został użyty lub wygasł. Umowę znajdziesz w aplikacji dla rodziców w zakładce „Dokumenty”. Możesz też poprosić organizatora o nowy link.",
   "special_termination_closed": "Ta umowa nie przewiduje wypowiedzenia nadzwyczajnego. Proszę wybrać zwykłe wypowiedzenie.",
   "template_invalid": "Please check the marked fields.",
@@ -26,5 +27,6 @@
   "withdrawal_notice_required": "Potwierdź, że przeczytałeś pouczenie o prawie odstąpienia od umowy.",
   "import_file_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "import_file_too_large": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
-  "import_changed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan."
+  "import_changed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "letterhead_missing": "Brakuje nadawcy w nagłówku. Umowa nie zostanie wysłana bez nazwy i adresu organizatora. Dodaj je w „Nagłówek i szablony”."
 }

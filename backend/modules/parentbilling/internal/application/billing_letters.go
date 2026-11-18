@@ -215,6 +215,9 @@ func (b *BillingLetters) material(ctx context.Context, reviewer parentbilling.Ho
 	if head.BankAccount == nil {
 		return parentbilling.Letterhead{}, nil, parentbilling.ErrBankAccountMissing
 	}
+	if missingSender(head) {
+		return parentbilling.Letterhead{}, nil, parentbilling.ErrLetterheadMissing
+	}
 	documents, err := b.store.RunDocuments(ctx, reviewer.OrganizationID, run.ID)
 	if err != nil {
 		return parentbilling.Letterhead{}, nil, fmt.Errorf("parent billing: read invoices: %w", err)
@@ -378,4 +381,24 @@ func normalizeEmergencyContacts(contacts []parentbilling.BillingEmergencyContact
 		normalized = append(normalized, contact)
 	}
 	return normalized, nil
+}
+
+// mailSenderName is the first line of the letterhead, the name a mail of a
+// letter or notice is sent with. Without a letterhead no mail goes out with
+// an empty name (#7177).
+func mailSenderName(ctx context.Context, post parentbilling.BillingLetterPost, organizationID int64) (string, error) {
+	text, err := post.SenderText(ctx, organizationID)
+	if err != nil {
+		return "", fmt.Errorf("parent billing: read letterhead: %w", err)
+	}
+	if missingSender(parentbilling.Letterhead{SenderText: text}) {
+		return "", parentbilling.ErrLetterheadMissing
+	}
+	return firstLine(textLines(text)), nil
+}
+
+// missingSender tells whether the letterhead lacks the Träger's name and
+// address. A letter, a notice and their mail name the Träger from it (#7177).
+func missingSender(head parentbilling.Letterhead) bool {
+	return len(textLines(head.SenderText)) < 2
 }
