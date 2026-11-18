@@ -33,7 +33,7 @@ func (r fileCleanupRow) intent() domain.CleanupIntent {
 // the durable cleanup intents of the folder files in documents.files. An
 // intent's owner is the folder the upload was meant for; like the attachment
 // intents it carries no foreign key, so it outlives a deleted folder.
-// now is the clock of the eligibility (retry_after) and of the settle stamps.
+// now decides retry eligibility. Settlement stamps use the retention clock.
 type FileCleanupStore struct {
 	database Database
 	kind     string
@@ -132,13 +132,13 @@ func (s *FileCleanupStore) ListQueued(ctx context.Context) ([]domain.CleanupInte
 
 func (s *FileCleanupStore) MarkComplete(ctx context.Context, intentID int64) (domain.OperationStats, error) {
 	return s.settle(ctx, "mark file cleanup complete", func(query *bun.UpdateQuery) *bun.UpdateQuery {
-		return query.Set(`cleaned_at = ?`, s.now()).Where(`"intent".id = ?`, intentID)
+		return query.Set(`cleaned_at = `+databaseClock).Where(`"intent".id = ?`, intentID)
 	})
 }
 
 func (s *FileCleanupStore) MarkCompleteByFilename(ctx context.Context, storedName string) (domain.OperationStats, error) {
 	return s.settle(ctx, "mark file cleanup complete by filename", func(query *bun.UpdateQuery) *bun.UpdateQuery {
-		return query.Set(`cleaned_at = ?`, s.now()).Where(`"intent".filename_stored = ?`, storedName)
+		return query.Set(`cleaned_at = `+databaseClock).Where(`"intent".filename_stored = ?`, storedName)
 	})
 }
 

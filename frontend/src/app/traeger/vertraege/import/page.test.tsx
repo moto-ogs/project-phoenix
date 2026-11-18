@@ -171,10 +171,12 @@ describe("Vertragsimport", () => {
     expect(
       screen.getAllByText("Debitorennummer 70001 wird eingetragen.").length,
     ).toBeGreaterThan(0);
+    // Anker: the preview with its rows is on screen.
     expect(
       screen.getAllByText("Das Kind hat an dieser Schule schon einen Vertrag.")
         .length,
     ).toBeGreaterThan(0);
+    expect(screen.queryByText(/ohne Mail-Adresse$/)).not.toBeInTheDocument();
 
     const applied = preview({
       applied: true,
@@ -340,6 +342,118 @@ describe("Vertragsimport", () => {
     expect(
       screen.getByRole("button", { name: "0 Verträge übernehmen" }),
     ).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("warns about contracts without a parent's address and still takes them over", async () => {
+    const base = preview();
+    const withoutEmail = preview({
+      mapping: {
+        ...base.mapping,
+        columns: { ...base.mapping.columns, party_email: "E-Mail" },
+      },
+      counts: { ...base.counts, ready: 4, duplicate: 1 },
+      rows: [
+        row(2),
+        row(3, {
+          childFirstName: "Ben",
+          partyEmail: "",
+          familyChildren: 2,
+          familyChildrenStatus: "new",
+        }),
+        row(4, {
+          childFirstName: "Lea",
+          partyName: "Jan Beispiel",
+          partyEmail: "",
+        }),
+        // No parent at all: its own hint, not counted as a family without mail.
+        row(6, {
+          childFirstName: "Ole",
+          partyName: "",
+          partyEmail: "",
+          hints: ["no_party"],
+        }),
+        // Left out: no contract, so no family without mail.
+        row(5, {
+          status: "duplicate",
+          childFirstName: "Tom",
+          partyEmail: "",
+          debtorNumberStatus: "",
+        }),
+      ],
+    });
+    await choose(withoutEmail);
+
+    expect(
+      screen.getByText("2 Verträge ohne Mail-Adresse"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Keine Mail von moto. Rechnungen gibt es nur auf Papier.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Kein Zugang zur Eltern-App.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Geschwister bleiben getrennte Familien."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Haben Sie die Adressen? Dann tragen Sie sie in die Datei ein. Laden Sie die Datei danach noch einmal.",
+      ),
+    ).toBeInTheDocument();
+    // A warning, not a block: every ready row is taken over.
+    expect(
+      screen.getByRole("button", { name: "4 Verträge übernehmen" }),
+    ).not.toHaveAttribute("aria-disabled", "true");
+
+    const onlyWithout = screen.getByRole("button", {
+      name: "Ohne Mail 2",
+    });
+    fireEvent.click(onlyWithout);
+    expect(onlyWithout).toHaveAttribute("aria-pressed", "true");
+    // Anker: the filter shows a row without an address.
+    expect(screen.getAllByText("Ben Beispiel").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Mia Beispiel")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tom Beispiel")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ole Beispiel")).not.toBeInTheDocument();
+
+    api.applyContractImport.mockResolvedValueOnce({
+      ...withoutEmail,
+      applied: true,
+      counts: {
+        ...withoutEmail.counts,
+        ready: 0,
+        imported: 4,
+        familyChildren: 1,
+      },
+      rows: withoutEmail.rows.map((r) =>
+        r.status === "ready" ? { ...r, status: "imported" as const } : r,
+      ),
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "4 Verträge übernehmen" }),
+    );
+    await screen.findByText("4 Verträge übernommen");
+    expect(screen.getByText(/1 Kinderzahl bestätigt/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /2 Verträge ohne Mail-Adresse: Diesen Familien geben Sie die Rechnungen auf Papier\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("points to the address column when no column is mapped to it", async () => {
+    await choose(
+      preview({
+        counts: { ...preview().counts, ready: 1, duplicate: 0 },
+        rows: [row(2, { partyEmail: "" })],
+      }),
+    );
+    expect(screen.getByText("1 Vertrag ohne Mail-Adresse")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Hat Ihre Datei eine Spalte mit Mail-Adressen? Ordnen Sie sie oben bei „E-Mail der Eltern“ zu.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("reads the file again when the preview changed before the import", async () => {

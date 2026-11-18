@@ -89,7 +89,8 @@ type SessionCommands interface {
 	CreateActiveGroup(ctx context.Context, group *LiveGroup) error
 	DeleteActiveGroup(ctx context.Context, id int64) error
 	EndActiveGroupSession(ctx context.Context, id int64) error
-	EndActivitySession(ctx context.Context, activeGroupID int64) error
+	// EndActivitySession closes the session and reports the IDs of the supervision rows it closed.
+	EndActivitySession(ctx context.Context, activeGroupID int64) ([]int64, error)
 	UpdateSessionActivity(ctx context.Context, activeGroupID int64) error
 	CreateGroupSupervisor(ctx context.Context, supervision *GroupSupervision) error
 	// ReleaseSupervision ends the staff member's own supervision of the

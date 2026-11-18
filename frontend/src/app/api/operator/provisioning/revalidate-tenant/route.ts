@@ -1,4 +1,5 @@
-import { revalidatePath, revalidateTag } from "next/cache";
+import { invalidateTenantResolve } from "~/lib/tenant-resolve.server";
+import { revalidatePath } from "next/cache";
 import { createOperatorPostHandler } from "~/lib/operator/route-wrapper.server";
 import { isValidSlug } from "~/lib/operator/provisioning-helpers";
 import { createLogger } from "~/lib/logger";
@@ -18,7 +19,7 @@ export const POST = createOperatorPostHandler<
 
   for (const slug of slugs) {
     if (typeof slug === "string" && slug.length > 0 && isValidSlug(slug)) {
-      revalidateTag(`tenant-${slug}`, { expire: 0 });
+      invalidateTenantResolve(slug);
       revalidatePath(`/${slug}`, "layout");
     }
   }

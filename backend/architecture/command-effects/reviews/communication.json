@@ -691,9 +691,19 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentLetterLogos.ParentLetterLogo",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/delivery/objects.ResolveStoredPath: resolves the school's uploaded logo path inside the upload folder for the printed letters (#4813); it writes nothing.",
+      "reason": "Read the school logo through the configured byte backend. The capability does not mutate the object.",
       "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.ResolveStoredPath",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Open",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentLetterLogos.ParentLetterLogo",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentLetterLogos.ParentLetterLogo",
+      "reason": "Resolve the existing school logo path to an upload key before reading; no persistent effect.",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.StoredPath",
       "target_owner": "delivery-platform"
     },
     {

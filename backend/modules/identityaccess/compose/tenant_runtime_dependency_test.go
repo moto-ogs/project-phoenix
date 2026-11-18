@@ -41,7 +41,7 @@ type sweepPush struct {
 	identityPorts.PushSubscriptionCleanup
 }
 
-func (sweepPush) ListLinks(context.Context) ([]identityaccess.PushSubscriptionLink, error) {
+func (sweepPush) ListLinks(context.Context, int64, int) ([]identityaccess.PushSubscriptionLink, error) {
 	return nil, nil
 }
 

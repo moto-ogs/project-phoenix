@@ -4,6 +4,8 @@
 // Trägers der Sitzung. Schulen ordnet das moto-Team zu. Eine Zeile führt in die
 // Ansicht der Schule im Träger-Portal (#5686). Wer das Recht „In OGS wechseln"
 // hat, öffnet die Schul-App ohne neue Anmeldung in einem neuen Tab (#4654).
+// Fehlen dem Träger Pflichtangaben für Verträge, Rechnungen oder Bescheide,
+// nennt ein Hinweis sie (#7177).
 
 import { type MouseEvent, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -20,6 +22,7 @@ import {
   useOpenTraegerSchool,
 } from "~/components/traeger/use-open-traeger-school";
 import { TraegerCodeStepModal } from "~/components/traeger/traeger-code-step-modal";
+import { TraegerRequiredDetailsNotice } from "~/components/traeger/traeger-required-details-notice";
 import {
   TraegerListExportMenu,
   traegerExportScope,
@@ -153,6 +156,7 @@ export default function TraegerSchoolsPage() {
         />
       }
     >
+      <TraegerRequiredDetailsNotice />
       {!canOpen && (
         <Alert
           type="info"

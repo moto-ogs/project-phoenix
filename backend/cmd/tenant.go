@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/objects"
+	uploadCompose "github.com/moto-ogs/project-phoenix/modules/delivery/objects/compose"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	organizationCompose "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/compose"
@@ -33,12 +35,16 @@ func newTenantCommand() *cobra.Command {
 	var root, ledgerPath string
 	erase := &cobra.Command{Use: "erase", Short: "Erase one school, or an organization with its recorded order: its schools, then the Träger root", Args: cobra.NoArgs, SilenceUsage: true, SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			files, err := tenantErasureFiles(cmd.Context(), root)
+			if err != nil {
+				return err
+			}
 			db, err := transactionCompose.OpenDatabase()
 			if err != nil {
 				return errors.New("erasure: database connection unavailable")
 			}
 			defer func() { _ = db.Close() }()
-			service, err := organizationCompose.NewErasure(db.Pool(), objects.NewLocal(root), erasureledger.New(ledgerPath, securityruntime.Fingerprint))
+			service, err := organizationCompose.NewErasure(db.Pool(), files, erasureledger.New(ledgerPath, securityruntime.Fingerprint))
 			if err != nil {
 				return err
 			}
@@ -56,14 +62,19 @@ func newTenantCommand() *cobra.Command {
 	f.Int64Var(&request.OperatorID, "operator", 0, "Active internal operator ID, not a name")
 	f.StringVar(&request.OrderReference, "order", "", "Non-personal ticket reference: 3-40 uppercase letters/digits/hyphens")
 	f.StringVar(&request.Confirmation, "confirm", "", "Exact target: school:<id> or organization:<id>")
-	f.StringVar(&root, "uploads-root", "", "Mounted uploads directory used by this installation (required)")
+	f.StringVar(&root, "uploads-root", "", "Local uploads directory (required in local mode, optional additional source in S3 mode)")
 	f.StringVar(&ledgerPath, "erasure-ledger", "", "Absolute path to existing independent host ledger; required except for dry-run")
 	f.BoolVar(&request.DryRun, "dry-run", false, "Count rows and files without changing either")
 	f.BoolVar(&request.PrerequisitesChecked, "prerequisites-checked", false, "Order, authorization, return/deadlines and retention reviewed in internal ticket")
 	f.BoolVar(&request.WritersStopped, "writers-stopped", false, "All API, worker, upload, import and scheduled writers stopped for maintenance")
 	f.DurationVar(&request.LockTimeout, "lock-timeout", 5*time.Second, "Database lock wait limit (maximum 1m)")
 	f.DurationVar(&request.StatementTimeout, "statement-timeout", 5*time.Minute, "Per-statement database deadline (maximum 1h)")
-	_ = erase.MarkFlagRequired("uploads-root")
+
+	parent.AddCommand(erase, newErasureReceiptCommand(), newErasureLedgerInitCommand(), newTenantReturnCommand())
+	return parent
+}
+
+func newErasureReceiptCommand() *cobra.Command {
 	var receiptID int64
 	receipt := &cobra.Command{Use: "receipt", Short: "Export non-personal database/local-file phase evidence; external steps remain separate", Args: cobra.NoArgs, SilenceUsage: true, SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -83,8 +94,19 @@ func newTenantCommand() *cobra.Command {
 			return json.NewEncoder(cmd.OutOrStdout()).Encode(results[0])
 		}}
 	receipt.Flags().Int64Var(&receiptID, "id", 0, "Erasure evidence ID")
-	parent.AddCommand(erase, receipt, newErasureLedgerInitCommand(), newTenantReturnCommand())
-	return parent
+	return receipt
+}
+
+func tenantErasureFiles(ctx context.Context, root string) (objects.TenantObjectSources, error) {
+	config := objects.UploadStorageConfigFrom(viper.GetString)
+	if config.IsLocal() && root == "" {
+		return nil, errors.New("erasure: --uploads-root is required for local storage")
+	}
+	backend, err := uploadCompose.NewBackend(ctx, config, root)
+	if err != nil {
+		return nil, err
+	}
+	return objects.ErasureSources(backend, root), nil
 }
 
 func newErasureLedgerInitCommand() *cobra.Command {
@@ -178,6 +200,8 @@ func tenantExportSealedFields() (organizationtenancy.TenantExportSealedFieldsByT
 	return organizationtenancy.TenantExportSealedFieldsByTable{
 		"parent_billing.sepa_mandates":             sepa,
 		"parent_billing.sepa_debits":               sepa,
+		"parent_billing.care_invoices":             sepa,
+		"parent_billing.documents":                 sepa,
 		"parent_billing.sepa_mandate_consents":     sepa,
 		"users.guardian_financial_data":            peopleCompose.NewGuardianBankExportFields(bankData),
 		"users.staff_financial_data":               workforceCompose.NewStaffBankExportFields(bankData),

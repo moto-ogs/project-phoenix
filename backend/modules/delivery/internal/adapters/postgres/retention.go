@@ -32,7 +32,7 @@ const (
 	clearExpiredKeyOnlyEmailIntentsSQL = `UPDATE platform.email_outbox
 		SET related_entity_type = NULL, related_entity_id = NULL,
 			recipient = '{}'::jsonb, payload = '{}'::jsonb, provider_result = NULL, last_error = NULL,
-			message_id = NULL, provider_message_id = NULL, delivery_state = NULL, delivery_state_at = NULL,
+			message_id = NULL, provider_message_id = NULL, delivery_state = NULL, delivery_state_at = NULL, delivery_state_recorded_at = NULL,
 			fallback_requested_at = NULL, delivery_checked_at = NULL,
 			delivery_token = uuid_generate_v4()::text
 		WHERE tenant_id = ?0 AND ` + intentEndedBefore + `
@@ -127,7 +127,7 @@ func (s *Store) DeleteExpiredSystemEmails(ctx context.Context, before time.Time,
    UPDATE platform.email_outbox
    SET recipient = '{}'::jsonb, payload = jsonb_build_object('registration_ids', payload->'registration_ids'),
     provider_result = NULL, last_error = NULL, message_id = NULL, provider_message_id = NULL,
-    delivery_state = NULL, delivery_state_at = NULL, fallback_requested_at = NULL, delivery_checked_at = NULL,
+    delivery_state = NULL, delivery_state_at = NULL, delivery_state_recorded_at = NULL, fallback_requested_at = NULL, delivery_checked_at = NULL,
     delivery_token = uuid_generate_v4()::text
    WHERE id IN (SELECT id FROM expired)`, before, limit))
 		if clearErr != nil {

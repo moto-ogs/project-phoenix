@@ -72,13 +72,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (c TenantClosingDays) ClosingDayDates(ctx context.Context, from, to calendar.Date) (map[calendar.Date]bool, error) {\n\treturn calendarDateSet(c.Calendar.ClosingDayDates(ctx, from.String(), to.String()))\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/schoolcalendar/internal/application/TenantClosingDays.ClosingDayDates",
-      "owner": "modules/schoolcalendar"
-    },
-    {
-      "build": "production",
       "evidence": "func (h TenantHolidays) HolidayDates(ctx context.Context, from, to calendar.Date) (map[calendar.Date]bool, error) {\n\treturn calendarDateSet(h.Calendar.TenantHolidayDates(ctx, from.String(), to.String()))\n}",
       "form": "unclassified-evidence",
       "id": "modules/schoolcalendar/internal/application/TenantHolidays.HolidayDates",

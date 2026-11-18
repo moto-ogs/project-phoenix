@@ -594,6 +594,48 @@ func TestInstance_Reopen_OrdersLeavingSchoolOnTheOwnerClock(t *testing.T) {
 	assert.Equal(t, timetable.CodeReopenStudentLeft, coded.Code)
 }
 
+type sessionEndAtMidnight struct {
+	timetablePorts.SessionEnder
+	advance func()
+}
+
+func (s sessionEndAtMidnight) EndActivitySession(ctx context.Context, groupID int64) ([]int64, error) {
+	s.advance()
+	return s.SessionEnder.EndActivitySession(ctx, groupID)
+}
+
+func TestInstance_Reopen_DoesNotRestoreASupervisorWhoEndedAtMidnight(t *testing.T) {
+	t.Parallel()
+
+	day := calendar.NewDate(2030, 8, 26)
+	midnight := day.AddDays(1).BerlinMidnight()
+	now := midnight.Add(-time.Minute)
+	s := buildLifecycle(t, func() time.Time { return now })
+	s.repos = api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, s.db), func() time.Time { return now })
+	ai := seedInstanceOn(t, s, day, true, false)
+	started, err := s.svc.Start(s.ctx, ai.ID, 0)
+	require.NoError(t, err)
+	var supervisorID int64
+	require.NoError(t, s.db.NewRaw(`UPDATE active.group_supervisors SET end_date = ?
+		WHERE group_id = ? RETURNING id`, day.AddDays(1), started.ActiveGroupID).Scan(s.ctx, &supervisorID))
+
+	deps := lifecycleDependencies(s, nil)
+	deps.ActiveService = sessionEndAtMidnight{
+		SessionEnder: deps.ActiveService,
+		advance:      func() { now = midnight },
+	}
+	s.svc = newLifecycle(t, deps)
+	_, err = s.svc.Complete(s.ctx, ai.ID)
+	require.NoError(t, err)
+	_, err = s.svc.Reopen(s.ctx, ai.ID, 0, true)
+	require.NoError(t, err)
+
+	var endDate *string
+	require.NoError(t, s.db.NewRaw(`SELECT end_date::text FROM active.group_supervisors WHERE id = ?`, supervisorID).Scan(s.ctx, &endDate))
+	require.NotNil(t, endDate, "Reopen leaves the supervisor's scheduled end in place")
+	assert.Equal(t, day.AddDays(1).String(), *endDate)
+}
+
 // Attendance rows carry the database clock, the clock of completed_at
 // (#7295): with the owners' clock behind the database's, a correction after
 // the completion still blocks the reopen instead of being overwritten by the
@@ -1149,6 +1191,7 @@ func TestInstance_Reopen_RejectsSupervisorChangedAfterComplete(t *testing.T) {
 	_, err = s.db.NewUpdate().
 		Table("active.activity_sessions").
 		Set("completed_at = completed_at - interval '2 minutes'").
+		Set("completion_snapshot = completion_snapshot - 'supervisor_versions'").
 		Where("schedule_instance_id = ?", ai.ID).
 		Exec(s.ctx)
 	require.NoError(t, err)
@@ -1168,6 +1211,35 @@ func TestInstance_Reopen_RejectsSupervisorChangedByAnOverlappingTransaction(t *t
 	require.NoError(t, testpkg.WithTenantTx(t, s.ctx, s.db, testpkg.Tenant(t), func(ctx context.Context, tx bun.Tx) error {
 		// Complete on its own transaction after this transaction has started.
 		if _, err := s.svc.Complete(s.ctx, ai.ID); err != nil {
+			return err
+		}
+		_, err := tx.NewUpdate().Table("active.group_supervisors").
+			Set("role = ?", "assistant").
+			Where("group_id = ?", started.ActiveGroupID).
+			Exec(ctx)
+		return err
+	}))
+
+	_, err = s.svc.Reopen(s.ctx, ai.ID, 0, true)
+	require.ErrorIs(t, err, timetable.ErrTimetableOperationConflict)
+	coded, ok := timetable.AsCoded(err)
+	require.True(t, ok)
+	assert.Equal(t, timetable.CodeReopenSupervisionChanged, coded.Code)
+}
+
+func TestInstance_Reopen_RejectsSupervisorChangedWithoutAdvancingItsStamp(t *testing.T) {
+	t.Parallel()
+
+	s := buildLifecycle(t)
+	ai := seedInstance(t, s, true, false)
+	started, err := s.svc.Start(s.ctx, ai.ID, 0)
+	require.NoError(t, err)
+	_, err = s.svc.Complete(s.ctx, ai.ID)
+	require.NoError(t, err)
+
+	require.NoError(t, s.db.RunInTx(s.ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		// Simulate a database clock that produces the same stamp on both writes.
+		if _, err := tx.ExecContext(ctx, "SET LOCAL session_replication_role = replica"); err != nil {
 			return err
 		}
 		_, err := tx.NewUpdate().Table("active.group_supervisors").

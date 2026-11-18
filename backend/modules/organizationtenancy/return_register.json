@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "bb5a41cbd09ffdf8a58ac008adb2aae62113d981650baf84ce38d1f9470e2bf7",
+  "catalogSHA256": "e7320709758ef0a99507a81faf9408e5723f45f513eb73907423026fd4d9b92e",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -1771,6 +1771,12 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -1862,6 +1868,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -2351,6 +2363,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -2524,6 +2542,18 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
+        },
+        {
+          "name": "audit_reopen_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -2641,6 +2671,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -2816,6 +2852,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -5434,6 +5476,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -6120,6 +6168,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -6439,6 +6493,12 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": false
+        },
+        {
+          "name": "audit_recorded_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -19788,6 +19848,12 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "account_holder",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -19815,7 +19881,10 @@
       "packages": [
         "school",
         "organization"
-      ]
+      ],
+      "excludedColumns": {
+        "account_holder_sealed": "Frozen account holder opened for the Träger return; ciphertext is never exported."
+      }
     },
     {
       "name": "parent_billing.run_letters",
@@ -22557,6 +22626,12 @@
           "type": "character varying",
           "udt": "varchar",
           "nullable": true
+        },
+        {
+          "name": "account_holder",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -22584,7 +22659,10 @@
       "packages": [
         "school",
         "organization"
-      ]
+      ],
+      "excludedColumns": {
+        "account_holder_sealed": "Frozen account holder opened for the Träger return; ciphertext is never exported."
+      }
     },
     {
       "name": "parent_billing.care_meal_positions",
@@ -26815,6 +26893,12 @@
         },
         {
           "name": "delivery_checked_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
+        },
+        {
+          "name": "delivery_state_recorded_at",
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": true
@@ -39153,6 +39237,11 @@
       "name": "auth.permissions",
       "classification": "excludeInternal",
       "reason": "Global permission vocabulary, not customer records; relevant role meaning must accompany returned data."
+    },
+    {
+      "name": "auth.request_rate_limits",
+      "classification": "excludeInternal",
+      "reason": "Internal anti-abuse state has no tenant key and is not customer export content."
     },
     {
       "name": "calendar.school_vacations",

@@ -12,6 +12,7 @@ import { useCallback, useRef, useState } from "react";
 import {
   CONTRACT_IMPORT_SAMPLE,
   contractCountLabel,
+  contractsWithoutEmail,
   rowsWithoutConditions,
 } from "~/components/traeger/care-contract-import-format";
 import { CareContractImportLogCard } from "~/components/traeger/care-contract-import-log-card";
@@ -78,7 +79,12 @@ function doneDescription(done: ContractImportResult): string {
         : `${counts.familyChildren} Kinderzahlen bestätigt`,
     );
   }
-  return `${parts.join(", ")}. Sie finden die Verträge unter Verträge mit dem Stand „Aktiv“.`;
+  const withoutEmail = contractsWithoutEmail(done);
+  const paper =
+    withoutEmail > 0
+      ? ` ${contractCountLabel(withoutEmail)} ohne Mail-Adresse: Diesen Familien geben Sie die Rechnungen auf Papier.`
+      : "";
+  return `${parts.join(", ")}.${paper} Sie finden die Verträge unter Verträge mit dem Stand „Aktiv“.`;
 }
 
 export default function TraegerContractImportPage() {

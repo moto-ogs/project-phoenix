@@ -35,8 +35,8 @@ func NewBillingLetterMail(post parentbilling.BillingLetterPost, now func() time.
 func NewLetterMailRenderer() parentbilling.LetterMailRenderer { return application.RenderLetterMail }
 
 // NewBillingLetters builds the confirmation letters of the released runs (#4669, ADR 0121) over the letterhead of the Träger, which the root binds, and the letter layout of Document Rendering.
-func NewBillingLetters(letterheads parentbilling.BillingLetterheads, today func() calendar.Date, now func() time.Time) parentbilling.BillingLetterService {
-	return application.NewBillingLetters(postgres.NewStore(now), letterheads, rendering.NewLetterRenderer(), today)
+func NewBillingLetters(letterheads parentbilling.BillingLetterheads, bankData parentbilling.BankDataCipher, today func() calendar.Date, now func() time.Time) parentbilling.BillingLetterService {
+	return application.NewBillingLetters(postgres.NewStore(now), letterheads, rendering.NewLetterRenderer(), bankData, today)
 }
 
 // NewParentDocuments builds the inbox of the parents portal (#4671, ADR 0126) in the Träger transaction it opens; no write it reaches stamps from the store clock (ADR 0281).
@@ -63,14 +63,14 @@ func NewCareBilling(contracts parentbilling.CareContracts, schools parentbilling
 }
 
 // NewCareLetters builds the letters, mail, print and Storno of the monthly runs (#4684, ADR 0165) over the ports the root binds.
-func NewCareLetters(letterheads parentbilling.BillingLetterheads, contracts parentbilling.CareContracts, post parentbilling.BillingLetterPost, carePost parentbilling.CareLetterPost, today func() calendar.Date, now func() time.Time) parentbilling.CareLetterService {
-	ports := application.CareLetterPorts{Letterheads: letterheads, Recipients: contracts, Post: post, CarePost: carePost}
+func NewCareLetters(letterheads parentbilling.BillingLetterheads, contracts parentbilling.CareContracts, post parentbilling.BillingLetterPost, carePost parentbilling.CareLetterPost, bankData parentbilling.BankDataCipher, today func() calendar.Date, now func() time.Time) parentbilling.CareLetterService {
+	ports := application.CareLetterPorts{Letterheads: letterheads, Recipients: contracts, Post: post, CarePost: carePost, BankData: bankData}
 	return application.NewCareLetters(postgres.NewStore(now), ports, rendering.NewLetterRenderer(), rendering.NewLetterRenderer(), today)
 }
 
-// NewBillingTerms builds the payment terms, the bundling, the family deviations with the debtor number in the format of the Träger (#6675) and the due dates of the runs (#4689) over the contracts the root binds, and the DATEV booking batch of both payment methods (#4694) over the DATEV settings of the Träger; today and now are the root's clocks.
-func NewBillingTerms(contracts parentbilling.CareContracts, datev parentbilling.DatevBillingSettings, formats parentbilling.DebtorNumberFormats, today func() calendar.Date, now func() time.Time) (parentbilling.BillingTerms, parentbilling.DatevExport) {
-	return application.NewBillingTerms(postgres.NewStore(now), contracts, formats), application.NewDatevExport(datev, today, now)
+// NewBillingTerms builds the payment terms, the bundling, the family deviations with the debtor number in the format of the Träger (#6675) and the due dates of the runs (#4689) over the contracts the root binds, the DATEV booking batch of both payment methods (#4694) over the DATEV settings of the Träger, and the check of the details the Träger still has to enter (#7177) over the sources the root binds; today and now are the root's clocks.
+func NewBillingTerms(contracts parentbilling.CareContracts, datev parentbilling.DatevBillingSettings, formats parentbilling.DebtorNumberFormats, details parentbilling.RequiredDetailSources, today func() calendar.Date, now func() time.Time) (parentbilling.BillingTerms, parentbilling.DatevExport, parentbilling.RequiredDetailsCheck) {
+	return application.NewBillingTerms(postgres.NewStore(now), contracts, formats), application.NewDatevExport(datev, today, now), application.NewRequiredDetails(postgres.NewStore(now), details)
 }
 
 // NewCareFeeNotices builds the Jahresbescheide of the monthly care (#6219, ADR 0182) over the monthly computation and the letterhead of the Träger, which carries the template of the fee notice; the root binds the ports and the clocks.

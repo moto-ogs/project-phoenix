@@ -34,8 +34,8 @@ func NewPayrollDispatch(db *bun.DB, bound workforce.PayrollDispatchPorts) (workf
 // NewStaffDocumentFileRecovery builds the removal of stored staff document
 // files over the document service, the offboarding cleanup queue and the
 // upload directory the root binds. Every dependency is required.
-func NewStaffDocumentFileRecovery(documents workforce.StaffDocumentFileCleanups, queue workforce.DocumentCleanupQueue, uploads workforce.StaffDocumentUploads, logger *slog.Logger) (workforce.StaffDocumentFileRecovery, error) {
-	return application.NewStaffDocumentFileRecovery(documents, queue, uploads, logger)
+func NewStaffDocumentFileRecovery(documents workforce.StaffDocumentFileCleanups, queue workforce.DocumentCleanupQueue, objects workforce.StaffDocumentObjectRemover, logger *slog.Logger) (workforce.StaffDocumentFileRecovery, error) {
+	return application.NewStaffDocumentFileRecovery(documents, queue, objects, logger)
 }
 
 // NewQualifications composes the Nachweise (#4808); a nil now is the wall clock.

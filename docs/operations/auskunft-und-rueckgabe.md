@@ -90,7 +90,8 @@ Sicherungen sind nicht Bestandteil dieses PostgreSQL-/Upload-Exports.
    ersetzt werden.
 3. Eingang binnen **2 Arbeitstagen** bestätigen, Zusammenstellung binnen
    **10 Arbeitstagen** der Schule bereitstellen. Diese internen Zielwerte
-   sind **vorläufig; die organisatorische Bestätigung ist offen (3838-d)**.
+   sind bestätigt (3838-d, 16.11.2026,
+   [#3846](https://github.com/moto-ogs/project-phoenix/issues/3846)).
    Die Schule bleibt für ihre Antwortfrist verantwortlich. Gesetzliche oder kundenseitige kürzere
    Fristen haben Vorrang. Verzögerungen früh melden und eskalieren, damit
    der Kunde insbesondere seine regelmäßig einmonatige Antwortfrist bei

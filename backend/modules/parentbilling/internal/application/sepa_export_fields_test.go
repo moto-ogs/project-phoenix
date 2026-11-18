@@ -22,6 +22,13 @@ func TestSEPAExportFieldsOpenOnlyTheirOwnRow(t *testing.T) {
 	value, err = fields.OpenExportField("parent_billing.sepa_debits", "account_holder_sealed", debit, holder)
 	require.NoError(t, err)
 	require.Equal(t, "Erika Muster", value)
+	for _, invoiceTable := range []string{"parent_billing.care_invoices", "parent_billing.documents"} {
+		value, err := fields.OpenExportField(invoiceTable, "account_holder_sealed", debit, holder)
+		require.NoError(t, err, invoiceTable)
+		require.Equal(t, "Erika Muster", value, invoiceTable)
+		_, err = fields.OpenExportField(invoiceTable, "iban_sealed", debit, iban)
+		require.Error(t, err, "the invoice exports the holder only")
+	}
 
 	otherTraeger := map[string]json.RawMessage{"organization_id": json.RawMessage("8"), "reference": json.RawMessage(`"M-1"`)}
 	otherReference := map[string]json.RawMessage{"organization_id": json.RawMessage("7"), "reference": json.RawMessage(`"M-2"`)}

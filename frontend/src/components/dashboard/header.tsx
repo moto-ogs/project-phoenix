@@ -545,7 +545,8 @@ export function Header({ notificationBell }: HeaderProps = {}) {
             {mode === "teacher" ||
             mode === "parent" ||
             mode === "school" ||
-            mode === "traeger"
+            mode === "traeger" ||
+            mode === "caterer"
               ? notificationBell
               : null}
             {/* User menu */}

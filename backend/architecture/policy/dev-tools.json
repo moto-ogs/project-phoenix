@@ -130,6 +130,16 @@
       "target_role": "public"
     },
     {
+      "id": "dev-tools.compose.delivery-upload-backend",
+      "description": "ADR 0148 addendum: bind the same uploads backend as the API for retired-demo erasure.",
+      "scopes": ["production"],
+      "source_owner": "dev-tools",
+      "source_role": "compose",
+      "target_package": "modules/delivery/objects/compose",
+      "target_owner": "delivery-platform",
+      "target_role": "compose"
+    },
+    {
       "id": "dev-tools.compose.security-runtime",
       "description": "The dev tools binary draws generated seed credentials from the cryptographic entropy Security Runtime owns (#3364). The dev-tools compose role has exactly one package, the dev tools binary cmd/devtools (ADR 0060).",
       "scopes": [

@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math"
 	"net"
 	"net/http"
@@ -15,28 +17,29 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// RateLimiter manages rate limiting by request key.
-//
-// Counters are in-memory and per-process: each backend replica enforces the
-// configured limit independently, so with N replicas the effective quota per
-// key is N × limit. Phoenix currently runs a single backend process per
-// environment; before scaling to multiple replicas, a shared store (e.g.
-// Redis) is required if aggregate limits must hold (#2064).
+// RateLimitStore is the request limiter's shared admission and settlement port.
+type RateLimitStore interface {
+	Admit(ctx context.Context, key string, requestsPerMinute, burst int, reserve bool) (settle func(spend bool) error, err error)
+}
+
+// RateLimiter applies a token bucket to HTTP requests.
 type RateLimiter struct {
-	visitors       map[string]*visitor
-	mu             sync.RWMutex
-	r              rate.Limit // requests per second
-	b              int        // burst size
-	ttl            time.Duration
-	logger         *SecurityLogger // optional security logger
-	keyFunc        func(*http.Request) string
-	bucketFunc     func(*http.Request) string
-	rejectObserver func(bucket string)
-	exemptPrefixes []string
-	exemptRequests []func(*http.Request) bool
-	exemptLoopback bool
-	refusalsOnly   bool
-	alwaysSpends   func(*http.Request) bool
+	store             RateLimitStore
+	requestsPerMinute int
+	visitors          map[string]*visitor
+	mu                sync.RWMutex
+	r                 rate.Limit // requests per second
+	b                 int        // burst size
+	ttl               time.Duration
+	logger            *SecurityLogger // optional security logger
+	keyFunc           func(*http.Request) string
+	bucketFunc        func(*http.Request) string
+	rejectObserver    func(bucket string)
+	exemptPrefixes    []string
+	exemptRequests    []func(*http.Request) bool
+	exemptLoopback    bool
+	refusalsOnly      bool
+	alwaysSpends      func(*http.Request) bool
 }
 
 // visitor tracks rate limiting for a single request key. pending counts the
@@ -48,22 +51,31 @@ type visitor struct {
 	pending  int
 }
 
-// NewRateLimiter creates a new RateLimiter
-// requestsPerMinute: number of requests allowed per minute
-// burst: number of requests allowed in a burst
+// NewRateLimiter creates a per-process limiter. The general load guard uses
+// it so ordinary requests never need a database write. N replicas provide
+// N times the configured quota in aggregate.
 func NewRateLimiter(requestsPerMinute, burst int) *RateLimiter {
 	rl := &RateLimiter{
-		visitors: make(map[string]*visitor),
-		r:        rate.Limit(float64(requestsPerMinute) / 60.0), // convert to per second
-		b:        burst,
-		ttl:      3 * time.Minute, // cleanup visitors after 3 minutes of inactivity
-		logger:   nil,             // can be set with SetLogger
+		visitors:          make(map[string]*visitor),
+		requestsPerMinute: requestsPerMinute,
+		r:                 rate.Limit(float64(requestsPerMinute) / 60.0), // convert to per second
+		b:                 burst,
+		ttl:               3 * time.Minute, // cleanup visitors after 3 minutes of inactivity
+		logger:            nil,             // can be set with SetLogger
 	}
 
 	// Start cleanup goroutine
 	go rl.cleanupVisitors()
 
 	return rl
+}
+
+// NewSharedRateLimiter uses the same HTTP policy with shared counters.
+func NewSharedRateLimiter(store RateLimitStore, requestsPerMinute, burst int) *RateLimiter {
+	return &RateLimiter{
+		store: store, requestsPerMinute: requestsPerMinute,
+		r: rate.Limit(float64(requestsPerMinute) / 60), b: burst,
+	}
 }
 
 // SetLogger sets the security logger for the rate limiter
@@ -173,10 +185,10 @@ func (rl *RateLimiter) requestBucket(r *http.Request) string {
 
 func (rl *RateLimiter) requestKeyForBucket(r *http.Request, bucket string) string {
 	key := defaultRateLimitKey(r)
-	if rl.keyFunc == nil {
-		// Keep the IP key.
-	} else if customKey := rl.keyFunc(r); customKey != "" {
-		key = customKey
+	if rl.keyFunc != nil {
+		if customKey := rl.keyFunc(r); customKey != "" {
+			key = customKey
+		}
 	}
 	if bucket != "" {
 		return key + ":" + bucket
@@ -193,7 +205,7 @@ func (rl *RateLimiter) retryAfterSeconds() int {
 
 func (rl *RateLimiter) reject(w http.ResponseWriter, r *http.Request, bucket string) {
 	retryAfter := rl.retryAfterSeconds()
-	w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", int(rl.r*60)))
+	w.Header().Set("X-RateLimit-Limit", strconv.Itoa(rl.requestsPerMinute))
 	w.Header().Set("X-RateLimit-Remaining", "0")
 	w.Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", time.Now().Add(time.Duration(retryAfter)*time.Second).Unix()))
 	w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
@@ -274,18 +286,32 @@ func (rl *RateLimiter) settlePending(v *visitor, spend bool) {
 	}
 }
 
-// serveCountingFailures runs a request through a failures-only limiter.
-func (rl *RateLimiter) serveCountingFailures(w http.ResponseWriter, r *http.Request, next http.Handler, bucket string) {
-	v, ok := rl.admitPending(rl.requestKeyForBucket(r, bucket))
-	if !ok {
-		rl.reject(w, r, bucket)
-		return
+func (rl *RateLimiter) admit(r *http.Request, bucket string) (func(bool) error, error) {
+	key := rl.requestKeyForBucket(r, bucket)
+	if rl.store != nil {
+		return rl.store.Admit(r.Context(), key, rl.requestsPerMinute, rl.b, rl.refusalsOnly)
 	}
+	if rl.refusalsOnly {
+		visitor, ok := rl.admitPending(key)
+		if !ok {
+			return nil, nil
+		}
+		return func(spend bool) error { rl.settlePending(visitor, spend); return nil }, nil
+	}
+	if !rl.getVisitor(key).Allow() {
+		return nil, nil
+	}
+	return func(bool) error { return nil }, nil
+}
+
+func (rl *RateLimiter) serveCountingFailures(w http.ResponseWriter, r *http.Request, next http.Handler, settle func(bool) error) {
 	alwaysSpends := rl.alwaysSpends != nil && rl.alwaysSpends(r)
 	ww := chimiddleware.NewWrapResponseWriter(w, r.ProtoMajor)
 	defer func() {
 		status := ww.Status()
-		rl.settlePending(v, alwaysSpends || (status >= http.StatusBadRequest && status < http.StatusInternalServerError))
+		if err := settle(alwaysSpends || (status >= http.StatusBadRequest && status < http.StatusInternalServerError)); err != nil {
+			slog.ErrorContext(r.Context(), "settle request rate limit", "error", err.Error())
+		}
 	}()
 	next.ServeHTTP(ww, r)
 }
@@ -314,17 +340,23 @@ func (rl *RateLimiter) Middleware() func(http.Handler) http.Handler {
 				return
 			}
 			bucket := rl.requestBucket(r)
-			if rl.refusalsOnly {
-				rl.serveCountingFailures(w, r, next, bucket)
-				return
-			}
-			limiter := rl.getVisitor(rl.requestKeyForBucket(r, bucket))
-			if !limiter.Allow() {
+			settle, err := rl.admit(r, bucket)
+			switch {
+			case err != nil:
+				slog.ErrorContext(r.Context(), "check request rate limit", "error", err.Error())
+				w.Header().Set("Content-Type", "application/problem+json")
+				w.WriteHeader(http.StatusServiceUnavailable)
+				_ = json.NewEncoder(w).Encode(rateLimitProblem{
+					Status: http.StatusServiceUnavailable, Code: codeGeneralUnavailable,
+					Detail: "Rate limit temporarily unavailable.",
+				})
+			case settle == nil:
 				rl.reject(w, r, bucket)
-				return
+			case rl.refusalsOnly:
+				rl.serveCountingFailures(w, r, next, settle)
+			default:
+				next.ServeHTTP(w, r)
 			}
-
-			next.ServeHTTP(w, r)
 		})
 	}
 }

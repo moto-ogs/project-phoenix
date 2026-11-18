@@ -198,8 +198,8 @@ type StaffRecordStore interface {
 	// ListQueuedStaffDocumentFileCleanups returns and row-locks the eligible
 	// intents; a positive staffID narrows them to one staff member.
 	ListQueuedStaffDocumentFileCleanups(ctx context.Context, staffID int64, now time.Time) ([]domain.StaffDocumentFileCleanup, domain.OperationStats, error)
-	CompleteStaffDocumentFileCleanup(ctx context.Context, id int64, at time.Time) (domain.OperationStats, error)
-	CompleteStaffDocumentFileCleanupByFilename(ctx context.Context, filename string, at time.Time) (domain.OperationStats, error)
+	CompleteStaffDocumentFileCleanup(ctx context.Context, id int64) (domain.OperationStats, error)
+	CompleteStaffDocumentFileCleanupByFilename(ctx context.Context, filename string) (domain.OperationStats, error)
 	ActivateStaffDocumentFileCleanup(ctx context.Context, filename string, at time.Time) (domain.OperationStats, error)
 }
 

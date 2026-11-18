@@ -468,8 +468,17 @@ func TestStaffDocumentFileCleanupIntents(t *testing.T) {
 	eligible, err = capability.ListQueuedStaffDocumentFileCleanups(ctx, staff.ID)
 	require.NoError(t, err)
 	assert.Len(t, eligible, 2)
+	before := testpkg.DatabaseNow(t, db)
 	require.NoError(t, capability.CompleteStaffDocumentFileCleanupByFilename(ctx, "later-1"))
 	require.NoError(t, capability.CompleteStaffDocumentFileCleanup(ctx, mine[0].ID))
+	after := testpkg.DatabaseNow(t, db)
+	var cleanedAt []time.Time
+	require.NoError(t, db.NewRaw(`SELECT cleaned_at FROM users.staff_document_file_cleanup
+		WHERE tenant_id = ? AND filename_stored IN ('due-1', 'later-1')`, testpkg.Tenant(t)).Scan(ctx, &cleanedAt))
+	require.Len(t, cleanedAt, 2)
+	for _, stamp := range cleanedAt {
+		assert.True(t, !stamp.Before(before) && !stamp.After(after), "cleanup completed at %s outside the database interval [%s, %s]", stamp, before, after)
+	}
 	eligible, err = capability.ListQueuedStaffDocumentFileCleanups(ctx, staff.ID)
 	require.NoError(t, err)
 	assert.Empty(t, eligible)

@@ -574,7 +574,7 @@ func (s *Service) CompleteStaffDocumentFileCleanup(ctx context.Context, id int64
 	}
 	return mapStaffRecordError(s.run(ctx, "complete_staff_document_file_cleanup", func(ctx context.Context, stats *domain.OperationStats) error {
 		return s.transaction.RunWrite(ctx, func(txCtx context.Context) error {
-			writeStats, err := s.store.CompleteStaffDocumentFileCleanup(txCtx, id, s.clock.Now())
+			writeStats, err := s.store.CompleteStaffDocumentFileCleanup(txCtx, id)
 			stats.Add(writeStats)
 			return err
 		})
@@ -587,7 +587,7 @@ func (s *Service) CompleteStaffDocumentFileCleanupByFilename(ctx context.Context
 	}
 	return mapStaffRecordError(s.run(ctx, "complete_staff_document_file_cleanup_by_filename", func(ctx context.Context, stats *domain.OperationStats) error {
 		return s.transaction.RunWrite(ctx, func(txCtx context.Context) error {
-			writeStats, err := s.store.CompleteStaffDocumentFileCleanupByFilename(txCtx, filename, s.clock.Now())
+			writeStats, err := s.store.CompleteStaffDocumentFileCleanupByFilename(txCtx, filename)
 			stats.Add(writeStats)
 			return err
 		})

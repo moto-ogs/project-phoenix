@@ -103,6 +103,7 @@ const emailFinalizeSentSQL = `UPDATE platform.email_outbox
 			THEN COALESCE(fallback_requested_at, ?1) ELSE fallback_requested_at END,
 		delivery_state = CASE WHEN (?0::jsonb->>'used_fallback')::boolean THEN NULL ELSE delivery_state END,
 		delivery_state_at = CASE WHEN (?0::jsonb->>'used_fallback')::boolean THEN NULL ELSE delivery_state_at END,
+		delivery_state_recorded_at = CASE WHEN (?0::jsonb->>'used_fallback')::boolean THEN NULL ELSE delivery_state_recorded_at END,
 		sent_at = ?1, last_error = NULL,
 		lease_token = NULL, lease_expires_at = NULL, updated_at = ?1
 	WHERE id = ?2 AND status = 'claimed' AND lease_token = ?3`
@@ -169,36 +170,37 @@ const pushStatusesSQL = `SELECT * FROM platform.push_outbox
 	ORDER BY created_at, id`
 
 type intentRow struct {
-	bun.BaseModel     `bun:"-"`
-	ID                int64           `bun:"id"`
-	TenantID          int64           `bun:"tenant_id"`
-	OrganizationID    *int64          `bun:"organization_id"`
-	Kind              string          `bun:"kind"`
-	Security          bool            `bun:"security"`
-	FallbackRequested *time.Time      `bun:"fallback_requested_at"`
-	DeliveryChecked   *time.Time      `bun:"delivery_checked_at"`
-	DeliveryToken     string          `bun:"delivery_token"`
-	MessageID         *string         `bun:"message_id"`
-	ProviderMessageID *string         `bun:"provider_message_id"`
-	DeliveryState     *string         `bun:"delivery_state"`
-	DeliveryStateAt   *time.Time      `bun:"delivery_state_at"`
-	IdempotencyKey    *string         `bun:"idempotency_key"`
-	RelatedEntityType *string         `bun:"related_entity_type"`
-	RelatedEntityID   *int64          `bun:"related_entity_id"`
-	Recipient         json.RawMessage `bun:"recipient,type:jsonb"`
-	Payload           json.RawMessage `bun:"payload,type:jsonb"`
-	Status            string          `bun:"status"`
-	Attempts          int             `bun:"attempts"`
-	NextRetryAt       time.Time       `bun:"next_retry_at"`
-	LeaseToken        *string         `bun:"lease_token"`
-	LeaseExpiresAt    *time.Time      `bun:"lease_expires_at"`
-	ProviderResult    json.RawMessage `bun:"provider_result,type:jsonb"`
-	LastError         *string         `bun:"last_error"`
-	SentAt            *time.Time      `bun:"sent_at"`
-	DeadLetterAt      *time.Time      `bun:"dead_letter_at"`
-	CancelledAt       *time.Time      `bun:"cancelled_at"`
-	CreatedAt         time.Time       `bun:"created_at"`
-	UpdatedAt         time.Time       `bun:"updated_at"`
+	bun.BaseModel           `bun:"-"`
+	ID                      int64           `bun:"id"`
+	TenantID                int64           `bun:"tenant_id"`
+	OrganizationID          *int64          `bun:"organization_id"`
+	Kind                    string          `bun:"kind"`
+	Security                bool            `bun:"security"`
+	FallbackRequested       *time.Time      `bun:"fallback_requested_at"`
+	DeliveryChecked         *time.Time      `bun:"delivery_checked_at"`
+	DeliveryToken           string          `bun:"delivery_token"`
+	MessageID               *string         `bun:"message_id"`
+	ProviderMessageID       *string         `bun:"provider_message_id"`
+	DeliveryState           *string         `bun:"delivery_state"`
+	DeliveryStateAt         *time.Time      `bun:"delivery_state_at"`
+	DeliveryStateRecordedAt *time.Time      `bun:"delivery_state_recorded_at"`
+	IdempotencyKey          *string         `bun:"idempotency_key"`
+	RelatedEntityType       *string         `bun:"related_entity_type"`
+	RelatedEntityID         *int64          `bun:"related_entity_id"`
+	Recipient               json.RawMessage `bun:"recipient,type:jsonb"`
+	Payload                 json.RawMessage `bun:"payload,type:jsonb"`
+	Status                  string          `bun:"status"`
+	Attempts                int             `bun:"attempts"`
+	NextRetryAt             time.Time       `bun:"next_retry_at"`
+	LeaseToken              *string         `bun:"lease_token"`
+	LeaseExpiresAt          *time.Time      `bun:"lease_expires_at"`
+	ProviderResult          json.RawMessage `bun:"provider_result,type:jsonb"`
+	LastError               *string         `bun:"last_error"`
+	SentAt                  *time.Time      `bun:"sent_at"`
+	DeadLetterAt            *time.Time      `bun:"dead_letter_at"`
+	CancelledAt             *time.Time      `bun:"cancelled_at"`
+	CreatedAt               time.Time       `bun:"created_at"`
+	UpdatedAt               time.Time       `bun:"updated_at"`
 }
 
 type emailDeliveryRow struct {
@@ -680,7 +682,7 @@ func toDomainRows(transport domain.Transport, rows []intentRow) []domain.Intent 
 		}
 		result = append(result, domain.Intent{
 			ID: row.ID, TenantID: row.TenantID, OrganizationID: organizationID, Transport: transport, Template: row.Kind,
-			DeliveryState: deliveryState, DeliveryStateAt: row.DeliveryStateAt,
+			DeliveryState: deliveryState, DeliveryStateAt: row.DeliveryStateAt, DeliveryStateRecordedAt: row.DeliveryStateRecordedAt,
 			Security: row.Security, UseFallback: row.FallbackRequested != nil, DeliveryToken: row.DeliveryToken,
 			IdempotencyKey: row.IdempotencyKey, RelatedEntityType: row.RelatedEntityType,
 			RelatedEntityID: row.RelatedEntityID, Recipient: row.Recipient, Payload: row.Payload,

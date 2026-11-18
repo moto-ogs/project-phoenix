@@ -133,5 +133,6 @@
   "export_recipient_invalid": "The recipient was not saved. Please check the marked fields.",
   "export_recipient_not_found": "This recipient no longer exists. Please reload the page.",
   "export_recipient_name_taken": "A recipient with this name already exists. Please choose another name.",
-  "export_formats_invalid": "The assignment was not saved. Please reload the page and try again."
+  "export_formats_invalid": "The assignment was not saved. Please reload the page and try again.",
+  "letterhead_missing": "Brakuje nadawcy w nagłówku. Bez nazwy i adresu organizatora nie powstaną faktury ani decyzje. Dodaj te dane w sekcji „Nagłówek i szablony”."
 }

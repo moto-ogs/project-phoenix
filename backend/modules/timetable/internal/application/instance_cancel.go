@@ -51,7 +51,7 @@ func (s *InstanceLifecycleService) cancel(ctx context.Context, instanceID int64,
 		return nil, err
 	}
 	if instance.Status == scheduleModel.InstanceStatusActive {
-		if err := s.deps.ActiveService.EndActivitySession(ctx, *instance.ActiveGroupID); err != nil {
+		if _, err := s.deps.ActiveService.EndActivitySession(ctx, *instance.ActiveGroupID); err != nil {
 			return nil, &ports.ScheduleError{Op: "cancel instance: end active.group", Err: err}
 		}
 	}

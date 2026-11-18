@@ -4,7 +4,7 @@ import type { Session } from "next-auth";
 import { PortalAnalyticsSession } from "~/components/analytics/portal-analytics-session";
 import { SCHOOL_ANALYTICS_CONSENT_COPY } from "~/components/analytics/analytics-consent-copy";
 import { PortalProviders } from "~/components/auth/portal-providers";
-import { PushSubscriptionSync } from "~/components/notifications/service-worker-registrar";
+import { PushSubscriptionSync } from "~/components/notifications/push-subscription-sync";
 import { ModulePortalProvider } from "~/lib/module-portal-context";
 
 /**

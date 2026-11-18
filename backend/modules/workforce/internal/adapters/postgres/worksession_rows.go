@@ -45,18 +45,19 @@ type workSessionBreakRow struct {
 }
 
 type staffBalanceAdjustmentRow struct {
-	bun.BaseModel `bun:"table:active.staff_balance_adjustments,alias:staff_balance_adjustment"`
-	ID            int64        `bun:"id,pk,autoincrement"`
-	TenantID      int64        `bun:"tenant_id,notnull"`
-	StaffID       int64        `bun:"staff_id,notnull"`
-	Type          string       `bun:"type,notnull"`
-	MinutesDelta  int          `bun:"minutes_delta,notnull"`
-	EffectiveDate calendarDate `bun:"effective_date,notnull,type:date"`
-	Note          string       `bun:"note,notnull,default:''"`
-	DecidedBy     int64        `bun:"decided_by,notnull"`
-	DecidedAt     time.Time    `bun:"decided_at,nullzero,notnull"`
-	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull"`
-	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull"`
+	bun.BaseModel   `bun:"table:active.staff_balance_adjustments,alias:staff_balance_adjustment"`
+	ID              int64        `bun:"id,pk,autoincrement"`
+	TenantID        int64        `bun:"tenant_id,notnull"`
+	StaffID         int64        `bun:"staff_id,notnull"`
+	Type            string       `bun:"type,notnull"`
+	MinutesDelta    int          `bun:"minutes_delta,notnull"`
+	EffectiveDate   calendarDate `bun:"effective_date,notnull,type:date"`
+	Note            string       `bun:"note,notnull,default:''"`
+	DecidedBy       int64        `bun:"decided_by,notnull"`
+	DecidedAt       time.Time    `bun:"decided_at,nullzero,notnull"`
+	CreatedAt       time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt       time.Time    `bun:"updated_at,nullzero,notnull"`
+	AuditRecordedAt *time.Time   `bun:"audit_recorded_at,scanonly"`
 }
 
 type staffVacationOpeningRow struct {
@@ -73,6 +74,7 @@ type staffVacationOpeningRow struct {
 	DecidedAt            time.Time    `bun:"decided_at,nullzero,notnull"`
 	CreatedAt            time.Time    `bun:"created_at,nullzero,notnull"`
 	UpdatedAt            time.Time    `bun:"updated_at,nullzero,notnull"`
+	AuditRecordedAt      *time.Time   `bun:"audit_recorded_at,scanonly"`
 }
 
 type staffVacationQuotaRow struct {

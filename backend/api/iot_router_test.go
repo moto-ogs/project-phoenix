@@ -25,7 +25,7 @@ func (routerFeedback) Submit(context.Context, feedbackModule.CreateEntry) (feedb
 // routerStaffClock satisfies the kiosk staff clock contract during route
 // composition; the routes are never exercised here.
 func newIoTRouterTestResource() *iotcompose.Resource {
-	return &iotcompose.Resource{ServiceDependencies: iotcompose.ServiceDependencies{Runtime: NewIoTHTTPRuntime(time.Now), ErrorReports: NewIoTErrorReporter(nil), Administration: NewIoTAdministration(nil, time.Now),
+	return &iotcompose.Resource{ServiceDependencies: iotcompose.ServiceDependencies{Runtime: NewIoTHTTPRuntime(time.Now), ErrorReports: NewIoTErrorReporter(nil, nil), Administration: NewIoTAdministration(nil, time.Now),
 		DeviceScan:               routerDeviceScan{},
 		StaffClock:               routerStaffClock{},
 		FeedbackStudents:         routerDeviceScan{},

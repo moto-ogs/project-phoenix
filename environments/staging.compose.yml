@@ -52,6 +52,12 @@ services:
       # Encrypted return packages released for retrieval (ADR 0203).
       - staging-data-return:/app/data-return
     environment:
+      UPLOADS_BACKEND: ${UPLOADS_BACKEND-}
+      UPLOADS_S3_ENDPOINT: ${UPLOADS_S3_ENDPOINT-}
+      UPLOADS_S3_REGION: ${UPLOADS_S3_REGION-}
+      UPLOADS_S3_BUCKET: ${UPLOADS_S3_BUCKET-}
+      UPLOADS_S3_ACCESS_KEY: ${UPLOADS_S3_ACCESS_KEY-}
+      UPLOADS_S3_SECRET_KEY: ${UPLOADS_S3_SECRET_KEY-}
       # Endpoint only. The application password is added by GetServeDSN.
       # Never interpolate the privileged maintenance DB_DSN here.
       DB_DSN: postgres://phoenix_auth@postgres:5432/postgres?sslmode=disable
@@ -233,6 +239,12 @@ services:
     volumes:
       - staging-avatar-uploads:/app/public/uploads
     environment:
+      UPLOADS_BACKEND: ${UPLOADS_BACKEND-}
+      UPLOADS_S3_ENDPOINT: ${UPLOADS_S3_ENDPOINT-}
+      UPLOADS_S3_REGION: ${UPLOADS_S3_REGION-}
+      UPLOADS_S3_BUCKET: ${UPLOADS_S3_BUCKET-}
+      UPLOADS_S3_ACCESS_KEY: ${UPLOADS_S3_ACCESS_KEY-}
+      UPLOADS_S3_SECRET_KEY: ${UPLOADS_S3_SECRET_KEY-}
       TZ: ${TZ:?TZ is required}
       APP_ENV: ${APP_ENV:?APP_ENV is required}
       DB_DSN: ${DB_DSN:?DB_DSN is required}

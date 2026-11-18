@@ -52,17 +52,18 @@ type BillingLetters struct {
 	store       LetterStore
 	letterheads parentbilling.BillingLetterheads
 	renderer    LetterRenderer
+	bankData    parentbilling.BankDataCipher
 	today       func() calendar.Date
 }
 
 var _ parentbilling.BillingLetterService = (*BillingLetters)(nil)
 
 // NewBillingLetters builds the letters. today bounds the payment date.
-func NewBillingLetters(store LetterStore, letterheads parentbilling.BillingLetterheads, renderer LetterRenderer, today func() calendar.Date) *BillingLetters {
-	if store == nil || letterheads == nil || renderer == nil || today == nil {
-		panic("parent billing: the store, the letterheads, the renderer and the clock are required")
+func NewBillingLetters(store LetterStore, letterheads parentbilling.BillingLetterheads, renderer LetterRenderer, bankData parentbilling.BankDataCipher, today func() calendar.Date) *BillingLetters {
+	if store == nil || letterheads == nil || renderer == nil || bankData == nil || today == nil {
+		panic("parent billing: the store, the letterheads, the renderer, the bank data cipher and the clock are required")
 	}
-	return &BillingLetters{store: store, letterheads: letterheads, renderer: renderer, today: today}
+	return &BillingLetters{store: store, letterheads: letterheads, renderer: renderer, bankData: bankData, today: today}
 }
 
 // CreateBillingLetters renders the letter of every invoice of a released
@@ -93,17 +94,18 @@ func (b *BillingLetters) CreateBillingLetters(ctx context.Context, reviewer pare
 	if err != nil {
 		return parentbilling.BillingLetters{}, err
 	}
+	details := map[string]any{"document_count": len(documents)}
 	for _, document := range documents {
-		file, err := b.render(runLetterContent(run, documents, document, input, head))
+		file, err := b.render(reviewer.OrganizationID, runLetterContent(run, documents, document, input, head))
 		if err != nil {
 			return parentbilling.BillingLetters{}, err
 		}
 		if err := b.store.InsertDocumentLetter(ctx, reviewer.OrganizationID, run.ID, document.ID, file); err != nil {
 			return parentbilling.BillingLetters{}, fmt.Errorf("parent billing: store letter: %w", err)
 		}
+		addHolderSnapshotRead(details, document.ID, document.TotalCents, document.Payment)
 	}
-	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventLetters,
-		map[string]any{"document_count": len(documents)}); err != nil {
+	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventLetters, details); err != nil {
 		return parentbilling.BillingLetters{}, fmt.Errorf("parent billing: record letters: %w", err)
 	}
 	return letters, nil
@@ -130,11 +132,13 @@ func (b *BillingLetters) PreviewBillingLetter(ctx context.Context, reviewer pare
 	if !ok {
 		return parentbilling.BillingLetterFile{}, parentbilling.ErrBillingRunEmpty
 	}
-	file, err := b.render(runLetterContent(run, documents, invoice, input, head))
+	file, err := b.render(reviewer.OrganizationID, runLetterContent(run, documents, invoice, input, head))
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
-	if err := b.recordRead(ctx, reviewer, run.ID, invoice.ID, "preview"); err != nil {
+	details := map[string]any{"document_id": invoice.ID, "letter": "preview"}
+	addHolderSnapshotRead(details, invoice.ID, invoice.TotalCents, invoice.Payment)
+	if err := b.recordRead(ctx, reviewer, run.ID, details); err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
 	return file, nil
@@ -159,7 +163,7 @@ func (b *BillingLetters) BillingLetter(ctx context.Context, reviewer parentbilli
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
-	if err := b.recordRead(ctx, reviewer, run.ID, documentID, "download"); err != nil {
+	if err := b.recordRead(ctx, reviewer, run.ID, map[string]any{"document_id": documentID, "letter": "download"}); err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
 	return file, nil
@@ -210,6 +214,9 @@ func (b *BillingLetters) material(ctx context.Context, reviewer parentbilling.Ho
 	}
 	if head.BankAccount == nil {
 		return parentbilling.Letterhead{}, nil, parentbilling.ErrBankAccountMissing
+	}
+	if missingSender(head) {
+		return parentbilling.Letterhead{}, nil, parentbilling.ErrLetterheadMissing
 	}
 	documents, err := b.store.RunDocuments(ctx, reviewer.OrganizationID, run.ID)
 	if err != nil {
@@ -279,7 +286,7 @@ func lacksDebtorNumberForPaymentText(paymentText string, document parentbilling.
 		!isDirectDebit(document.Payment) && strings.Contains(paymentText, placeholderDebtorNumber)
 }
 
-func (b *BillingLetters) render(content letterContent) (parentbilling.BillingLetterFile, error) {
+func (b *BillingLetters) render(organizationID int64, content letterContent) (parentbilling.BillingLetterFile, error) {
 	var letter Letter
 	notice := content.document.DocumentKind == parentbilling.DocumentKindFeeNotice
 	prefix := letterFilePrefix(content.document.DocumentKind)
@@ -295,6 +302,13 @@ func (b *BillingLetters) render(content letterContent) (parentbilling.BillingLet
 			prefix = "aenderungsbescheid-"
 		}
 	default:
+		if content.document.TotalCents > 0 {
+			holder, err := invoiceAccountHolder(b.bankData, organizationID, content.document.Payment)
+			if err != nil {
+				return parentbilling.BillingLetterFile{}, err
+			}
+			content.accountHolder = holder
+		}
 		if missing := missingLetterValuesOf(templateKindOf(content.document.DocumentKind), letterValues(content)); len(missing) > 0 {
 			return parentbilling.BillingLetterFile{}, fmt.Errorf("parent billing: the letter writes no value for %s", strings.Join(missing, ", "))
 		}
@@ -318,9 +332,8 @@ func letterFilePrefix(documentKind string) string {
 	return "bestaetigung-"
 }
 
-func (b *BillingLetters) recordRead(ctx context.Context, reviewer parentbilling.HolidayReviewer, runID, documentID int64, letter string) error {
-	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, runID, reviewer.AccountID, runEventRead,
-		map[string]any{"document_id": documentID, "letter": letter}); err != nil {
+func (b *BillingLetters) recordRead(ctx context.Context, reviewer parentbilling.HolidayReviewer, runID int64, details map[string]any) error {
+	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, runID, reviewer.AccountID, runEventRead, details); err != nil {
 		return fmt.Errorf("parent billing: record letter read: %w", err)
 	}
 	return nil
@@ -368,4 +381,24 @@ func normalizeEmergencyContacts(contacts []parentbilling.BillingEmergencyContact
 		normalized = append(normalized, contact)
 	}
 	return normalized, nil
+}
+
+// mailSenderName is the first line of the letterhead, the name a mail of a
+// letter or notice is sent with. Without a letterhead no mail goes out with
+// an empty name (#7177).
+func mailSenderName(ctx context.Context, post parentbilling.BillingLetterPost, organizationID int64) (string, error) {
+	text, err := post.SenderText(ctx, organizationID)
+	if err != nil {
+		return "", fmt.Errorf("parent billing: read letterhead: %w", err)
+	}
+	if missingSender(parentbilling.Letterhead{SenderText: text}) {
+		return "", parentbilling.ErrLetterheadMissing
+	}
+	return firstLine(textLines(text)), nil
+}
+
+// missingSender tells whether the letterhead lacks the Träger's name and
+// address. A letter, a notice and their mail name the Träger from it (#7177).
+func missingSender(head parentbilling.Letterhead) bool {
+	return len(textLines(head.SenderText)) < 2
 }

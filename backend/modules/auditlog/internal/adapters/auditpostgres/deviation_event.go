@@ -61,6 +61,18 @@ func (r *deviationEventRepository) ListByRange(ctx context.Context, from, to aud
 	return rows, nil
 }
 
+func (r *deviationEventRepository) TimetableRetentionCutoff(ctx context.Context, days int) (audit.Date, error) {
+	db, err := runtimeDB(ctx, r.runtime)
+	if err != nil {
+		return "", err
+	}
+	var cutoff string
+	if err := db.NewRaw(`SELECT to_char(audit.timetable_retention_cutoff(?), 'YYYY-MM-DD')`, days).Scan(ctx, &cutoff); err != nil {
+		return "", wrapDatabase("read timetable retention cutoff", err)
+	}
+	return audit.ParseDate(cutoff)
+}
+
 func (r *deviationEventRepository) DeleteOlderThan(ctx context.Context, cutoff audit.Date) (int64, error) {
 	tenantID := runtimeTenantID(ctx, r.runtime)
 	if tenantID <= 0 {

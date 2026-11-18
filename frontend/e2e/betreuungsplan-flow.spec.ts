@@ -57,6 +57,13 @@ function assertUrlVocabulary(page: Page, context: string) {
   ).toEqual([]);
 }
 
+/** Der Block eines Termins im Raster. Sein Name beginnt mit dem, was er
+ *  zeigt (Zeit, Titel), und hängt Verstecktes an (WCAG 2.5.3, #7112); der
+ *  eindeutige Titel findet ihn, die Zeit prüft der Aufrufer am Text. */
+function planBlock(page: Page, title: string) {
+  return page.getByRole("button", { name: title });
+}
+
 /** Legt einen unterbesetzten Einzeltermin über die API an: Bedarf 2, aber
  *  niemand geplant. Die Backend-Lückenerkennung ist rein anwesenheitsbasiert
  *  (services/schedule.IsUnderstaffedCounts: present==0 || present<planned) —
@@ -67,7 +74,7 @@ async function createGapInstance(
   page: Page,
   day: string,
   title: string,
-): Promise<{ id: string; startTime: string; endTime: string }> {
+): Promise<{ id: string; startTime: string }> {
   const startTime = "11:00";
   const endTime = "12:00";
   const rooms = (await (await page.request.get(`${base}/api/rooms`)).json()) as
@@ -96,7 +103,7 @@ async function createGapInstance(
   const id = String(created.data?.id ?? created.id ?? "");
   expect(id, "Termin-Anlage muss eine ID liefern").not.toEqual("");
   createdInstanceIds.push(id);
-  return { id, startTime, endTime };
+  return { id, startTime };
 }
 
 test.describe("Betreuungsplan UI-Flow (Inkrement 4)", () => {
@@ -219,11 +226,7 @@ test.describe("Betreuungsplan UI-Flow (Inkrement 4)", () => {
     // nextWorkdayISO: die Woche zeigt Mo–Fr, ein Wochenendtag würde snappen.
     const day = nextWorkdayISO(runToday());
     const title = uniqueTitle("Playwright Betreuungsplan");
-    const { id, startTime, endTime } = await createGapInstance(
-      page,
-      day,
-      title,
-    );
+    const { id, startTime } = await createGapInstance(page, day, title);
 
     await page.goto(`${base}/betreuungsplan?d=${day}`, {
       waitUntil: "domcontentloaded",
@@ -231,10 +234,9 @@ test.describe("Betreuungsplan UI-Flow (Inkrement 4)", () => {
     assertUrlVocabulary(page, "nach Navigation");
 
     // --- Block-Klick öffnet den Slide-Over, setzt `block` -------------------
-    const block = page.getByRole("button", {
-      name: `${title}, ${startTime} bis ${endTime}`,
-    });
+    const block = planBlock(page, title);
     await expect(block).toBeVisible(DATA);
+    await expect(block).toContainText(startTime);
     await block.click();
 
     const slideOver = page.getByRole("dialog", { name: title });
@@ -342,9 +344,9 @@ test.describe("Betreuungsplan UI-Flow (Inkrement 4)", () => {
     await expect(newSlideOver).toBeHidden(DATA);
 
     // Der neue Block liegt jetzt im Wochenraster.
-    await expect(
-      page.getByRole("button", { name: `${title}, 14:00 bis 15:00` }),
-    ).toBeVisible(DATA);
+    const newBlock = planBlock(page, title);
+    await expect(newBlock).toBeVisible(DATA);
+    await expect(newBlock).toContainText("14:00");
     assertUrlVocabulary(page, "nach Neu-Anlage");
   });
 
@@ -359,7 +361,7 @@ test.describe("Betreuungsplan UI-Flow (Inkrement 4)", () => {
     // "Wiederholen" anbietet: die Konvertierung Einzeltermin -> Serie.
     const day = nextWorkdayISO(runToday());
     const title = uniqueTitle("Playwright Wiederholen");
-    const { startTime, endTime } = await createGapInstance(page, day, title);
+    const { startTime } = await createGapInstance(page, day, title);
 
     await page.goto(`${base}/betreuungsplan?d=${day}`, {
       waitUntil: "domcontentloaded",
@@ -373,10 +375,9 @@ test.describe("Betreuungsplan UI-Flow (Inkrement 4)", () => {
       DATA,
     );
 
-    const block = page.getByRole("button", {
-      name: `${title}, ${startTime} bis ${endTime}`,
-    });
+    const block = planBlock(page, title);
     await expect(block).toBeVisible(DATA);
+    await expect(block).toContainText(startTime);
     await block.click();
 
     const slideOver = page.getByRole("dialog", { name: title });

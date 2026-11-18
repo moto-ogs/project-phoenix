@@ -87,3 +87,49 @@ func assertOrphanPushCleanupOnSessionClock(t *testing.T, offset time.Duration) {
 	require.Equal(t, 0, countStaffPush(t, db, account.ID, revoked), "a revoked session loses its subscription")
 	require.Equal(t, 0, countStaffPush(t, db, account.ID, elsewhere), "a session at another school backs no unbound staff subscription")
 }
+
+func TestOrphanPushCleanupKeepsSubscriptionsOfAnInFlightLogin(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupIsolatedTestDB(t)
+	service := setupAuthService(t, db)
+	schoolID, _ := testpkg.CreateTestTenant(t, db)
+	ctx := testpkg.TenantContext(schoolID)
+
+	makeAccount := func(name string) int64 {
+		email, username := uniqueTestCredentials(name)
+		account, err := service.Register(ctx, email, username, testPassword, nil, 0)
+		require.NoError(t, err)
+		testpkg.EnsureAccountTenant(t, db, account.ID, schoolID)
+		return account.ID
+	}
+	signingIn := makeAccount("orphan-push-signing-in")
+	orphaned := makeAccount("orphan-push-no-login")
+	const loginEndpoint = "https://fcm.googleapis.com/orphan-push-signing-in"
+	const orphanEndpoint = "https://fcm.googleapis.com/orphan-push-no-login"
+	insertStaffPush(t, db, signingIn, schoolID, loginEndpoint, "")
+	insertStaffPush(t, db, orphaned, schoolID, orphanEndpoint, "")
+
+	// Token insertion takes a key-share lock on the account until commit.
+	login, err := db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = login.Rollback() })
+	token := &testpkg.TokenFixture{
+		AccountID:   signingIn,
+		Token:       sha256Hex(uniqueTestName("in-flight-login")),
+		Expiry:      time.Now().Add(time.Hour),
+		PortalScope: "tenant",
+	}
+	token.TenantID = schoolID
+	_, err = login.NewInsert().Model(token).ModelTableExpr("auth.tokens").Exec(ctx)
+	require.NoError(t, err)
+
+	_, err = service.CleanupExpiredTokens(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, countStaffPush(t, db, signingIn, loginEndpoint))
+	require.Equal(t, 0, countStaffPush(t, db, orphaned, orphanEndpoint))
+	require.NoError(t, login.Commit())
+
+	_, err = service.CleanupExpiredTokens(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, countStaffPush(t, db, signingIn, loginEndpoint))
+}

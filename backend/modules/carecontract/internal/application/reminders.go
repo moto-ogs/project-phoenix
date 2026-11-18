@@ -108,6 +108,9 @@ func (r *Reminders) remind(ctx context.Context, organizationID int64, letterhead
 	if err != nil {
 		return err
 	}
+	if letterheadMissing(letterhead) {
+		return carecontract.ErrLetterheadMissing
+	}
 	// A reminder carries no new PDF: its link keeps what the last send gave.
 	sent, err := reminderSentState(ctx, r.store, r.ports.Links.Fingerprint, organizationID, record)
 	if err != nil {

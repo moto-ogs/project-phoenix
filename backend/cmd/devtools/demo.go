@@ -68,7 +68,7 @@ var demoCmd = &cobra.Command{
 			defer func() { _ = inbox.Close() }()
 			adapterFactory = demoSeedAdapterFactory(inbox.FetchCode)
 		}
-		schools, err := NewDemoRuntime(db, time.Now, adapterFactory, uploadsRoot)
+		schools, err := NewDemoRuntime(db, time.Now, adapterFactory, uploadsRoot, viper.GetString)
 		if err != nil {
 			return err
 		}

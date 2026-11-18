@@ -284,6 +284,8 @@ describe("SectionCard als einzige Kopfkarte (#5581)", () => {
     }).parentElement!;
     expect(footer).toHaveClass("border-t");
     expect(footer).not.toHaveClass("compact:mt-3", "mt-4");
+    // The body keeps the card's bottom padding above the footer's divider.
+    expect(screen.getByText("Inhalt")).toHaveClass("pb-5", "max-sm:pb-4");
     await user.click(screen.getByRole("button", { name: "Block einklappen" }));
     expect(
       screen.queryByRole("button", { name: "Kinder" }),

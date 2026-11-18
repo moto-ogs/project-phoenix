@@ -136,7 +136,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return
 		},
 		func() (err error) {
-			objects, err = nativeUploads.PrivateUploadsBackend()
+			objects, err = nativeUploads.SealedPrivateUploadsBackend(nativeUploads.FileKeys{})
 			return owners.StepError("resolve uploads backend", err)
 		},
 		func() (err error) { audit, err = owners.BuildAuditOwner(db, env); return },
@@ -221,7 +221,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		func() (err error) {
 			mailIdentity = owners.TenantMailIdentity(organizations, settings.Service, env)
 			portalReads = owners.NewParentPortalReads(db, persons, peopleIdentity, env.Now, organizations)
-			identity, caller, err = owners.BuildIdentityAccess(db, unit, env, tokens, organizations, persons, membership, settings.Service,
+			identity, caller, err = owners.BuildIdentityAccess(db, unit, env, tokens, nativeUploads.UploadFiles{}, organizations, persons, membership, settings.Service,
 				audit, operatorAuditLog, mailSender, mailDispatcher, mailFrom, delivery.Runtime, mailIdentity, delivery.Enqueuer(), people, portalReads.ParentEnrollmentRequest,
 				structure.Groups, staffGroups, arrivalTimetable.NewCallerActivityGroups(timetableRepos.Timetable),
 				presence.SessionRecords, presence.Presence, workTime, calendar)
@@ -251,7 +251,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		},
 		func() (err error) {
 			announcements, err = owners.BuildParentAnnouncements(env, settings.Service, delivery.Outbox, owners.DeliveryModuleOf(delivery), delivery.Runtime.EmailOutcomes,
-				notifications, messaging, purger, owners.BuildParentLetters(persons, groups, schedules, audit, tokens))
+				notifications, messaging, purger, owners.BuildParentLetters(persons, groups, schedules, audit, tokens, nativeUploads.UploadFiles{}))
 			return
 		},
 		func() error {

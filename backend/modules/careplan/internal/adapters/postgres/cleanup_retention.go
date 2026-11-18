@@ -8,6 +8,10 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
+// cleanupDatabaseClock stamps completed intents and supplies the cutoff to
+// the database function that guards their retention.
+const cleanupDatabaseClock = "statement_timestamp()"
+
 // DeleteFinishedStudentDocumentFileCleanups goes through the database
 // function of 1.15.449: the direct DELETE on the intents stays revoked from
 // the tenant role, and the function deletes only finished intents of the
@@ -20,7 +24,7 @@ func (s *Store) DeleteFinishedStudentDocumentFileCleanups(ctx context.Context, w
 	var deleted int64
 	// The function's guard runs in UTC (1.15.606): subtract the same elapsed
 	// 24-hour days, not Berlin calendar days of 23 or 25 hours.
-	if err := db.NewRaw(`SELECT users.delete_finished_student_document_file_cleanups(?, statement_timestamp() - (? * INTERVAL '1 second'))`, tenantID, window.Seconds()).Scan(ctx, &deleted); err != nil {
+	if err := db.NewRaw(`SELECT users.delete_finished_student_document_file_cleanups(?, `+cleanupDatabaseClock+` - (? * INTERVAL '1 second'))`, tenantID, window.Seconds()).Scan(ctx, &deleted); err != nil {
 		return 0, fmt.Errorf("care plan postgres: delete finished student document file cleanups: %w", err)
 	}
 	return int(deleted), nil

@@ -56,7 +56,7 @@ Owner-Uhr folgen sollen. Der Bestand auf `development` `e93e86fb67`:
 | Zustell-Protokolle (`delivery`) | Owner | Der Store stempelt `created_at` und `updated_at` selbst. |
 | Zielgruppen der Elternmitteilungen (`parentannouncementaudience`) | Owner | Die Abfragen erhalten den Zeitpunkt als Parameter. |
 | Abgeschlossene Abmeldungen (`careplan`) | Owner | Die Grenze kommt als Parameter. Sie bleibt 365 Berliner Kalendertage, wie `TestNightlyRetentionCleanupCutoffsAcrossDST` sie vorschrieb, hängt aber nicht mehr an der Zeitzone der Sitzung. Dasselbe gilt für die Offboarding-Jobs von `workforce` (30 Tage). |
-| `CompletionTimestamp` (`timetable`) | beide, getrennt | `completed_at` ist die Anweisungszeit der Datenbank (`clock_timestamp()`), gelesen nach den eigenen Schreibvorgängen des Abschlusses: Reopen ordnet ihn gegen `updated_at` der Aufsichten (Trigger), der Teilnahmen und der Planzeilen. Teilnahmen und Planzeilen stempeln ihr `updated_at` ebenfalls zur Anweisungszeit, so liegt auch eine Korrektur nach dem Abschluss, deren Transaktion früher begann oder die in derselben Transaktion folgt, danach. Seit dem Nachtrag vom 18.11.2026 stempelt auch der Trigger der laufenden Aufsichten beim Schreiben. Das Reopen-Fenster, das Ende spontaner Blöcke und der Vergleich mit dem Auschecken eines Kindes rechnen mit der Owner-Uhr; der Abschluss legt deren Zeitpunkt als `owner_completed_at` im Snapshot ab. |
+| `CompletionTimestamp` (`timetable`) | beide, getrennt | `completed_at` ist die Anweisungszeit der Datenbank (`clock_timestamp()`), gelesen nach den eigenen Schreibvorgängen des Abschlusses: Reopen ordnet ihn gegen `updated_at` der Teilnahmen, Planzeilen und Aufsichten aus alten Abschlüssen. Für neue Abschlüsse vergleicht Reopen die gespeicherten Aufsichtsversionen auf Gleichheit. Teilnahmen und Planzeilen stempeln ihr `updated_at` ebenfalls zur Anweisungszeit, so liegt auch eine Korrektur nach dem Abschluss, deren Transaktion früher begann oder die in derselben Transaktion folgt, danach. Seit dem Nachtrag vom 18.11.2026 stempelt auch der Trigger der laufenden Aufsichten beim Schreiben. Das Reopen-Fenster, das Ende spontaner Blöcke und der Vergleich mit dem Auschecken eines Kindes rechnen mit der Owner-Uhr; der Abschluss legt deren Zeitpunkt als `owner_completed_at` im Snapshot ab. |
 | Umfrage-Entwürfe (`communication`) | Datenbank | `users.surveys` trägt den Trigger. Die Aufbewahrung der Entwürfe vergleicht `updated_at` mit der Datenbankuhr; veröffentlichte Umfragen bleiben über `closes_at` auf der Owner-Uhr. |
 | Nummern-Ereignisse (`parentbilling`) | Owner | Der Store stempelt die Protokolle `family_billing_events` und `child_debtor_number_events` an jeder Schreibstelle selbst. Ihr Alter vergleicht die Löschung mit der Grenze des Löschtags, Mitternacht in Berlin, wie die Nummern selbst. |
 
@@ -141,10 +141,10 @@ Grenze der Owner-Uhr.
 Ohne Wache der Datenbank bleibt es bei Punkt 2: Der Owner stempelt und
 schneidet mit seiner Uhr ab.
 
-Noch offen: `audit.delete_expired_deviation_events` bewacht den Kalendertag
-der Abweichungen mit dem Tag der Datenbank, die Grenze kommt aber aus der
-Stundenplan-Aufbewahrung, die mit derselben Grenze die Stundenplanzeilen
-löscht. Sie folgt in einem eigenen Schnitt.
+Seit #7383 berechnet `audit.timetable_retention_cutoff` die Grenze für
+Stundenplanzeilen und Abweichungen auf dem Berliner Datenbanktag.
+Vorschau, Statistik und Löschung verwenden diese Grenze.
+`audit.delete_expired_deviation_events` prüft sie weiter in PostgreSQL.
 
 ## Nachtrag 2026-11-17: Der Änderungsverlauf der Elternanfragen liegt auf der Datenbankuhr
 
@@ -219,6 +219,12 @@ Grenzen:
   geändert, wenn `updated_at` der Vorlage nach dem Ankreuzen liegt. Für sie
   bleibt der bekannte Fehler bei auseinanderlaufenden Uhren, solange der
   angekreuzte Text nur aus einer Fassung vor dieser Änderung stammt.
+  Wir behalten diese Prüfung dauerhaft für die alten Einträge (#7383).
+  Die früheren Speichervorgänge protokollieren den Wortlaut nicht. Ein
+  Nachtrag aus der heutigen Vorlage würde eine Fassung als damals gültig
+  ausgeben, für die der Nachweis fehlt. Sobald der angekreuzte Text einer
+  protokollierten Fassung oder der aktuellen Vorlage gleicht, entscheidet
+  der Textvergleich in der Verlängerung und beim Erstellen des Vertrags.
 - Kreuzen Eltern einen Text an, den die Vorlage schon vor dem Ankreuzen
   ersetzt hatte (die Schule hat ihr Formular nicht nachgezogen), lautet der
   Grund jetzt „Zustimmung passt nicht zum Vertrag“ statt
@@ -230,6 +236,11 @@ Grenzen:
 
 ## Nachtrag 2026-11-18: Laufende Aufsichten stempeln beim Schreiben
 
+Neue Abschlüsse speichern für jede wiederherstellbare Aufsicht deren
+Version nach dem Schließen der Zeile. Reopen vergleicht diese Version auf
+Gleichheit. Für Abschlüsse ohne gespeicherte Version gilt weiterhin die
+Prüfung gegen den Datenbankstempel der Fertigstellung.
+
 Für [#7383](https://github.com/moto-ogs/project-phoenix/issues/7383)
 stempelt der Trigger von `active.group_supervisors` Änderungen mit
 `clock_timestamp()`. Wartet eine ältere Transaktion bis nach dem
@@ -237,3 +248,17 @@ Abschluss, liegt ihr Schreibstempel nach `completed_at`. Reopen erkennt
 die Änderung auf derselben Datenbankuhr wie Änderungen an Teilnahmen und
 Planzeilen. Die Migration stellt beim Rollback den früheren Trigger wieder
 her.
+
+## Nachtrag 2026-11-18: Das Arbeitszeitprotokoll ordnet nach dem Datenbankstempel
+
+Seit #7383 stempelt PostgreSQL beim Schreiben `audit_recorded_at`.
+Die bestehende Sicht nimmt diesen Zeitpunkt für Datumsauswahl, Anzeige,
+Sortierung und Cursor. Die Wiedereröffnung eines Monats erhält ihren
+eigenen Stempel. Gruppen aus mehreren Feldänderungen oder Monatsabschlüssen
+behalten ihren bisherigen Gruppenschlüssel und zeigen den ersten
+Datenbankstempel der Gruppe. Arbeitsdaten, Entscheidungszeit und die Zeit
+des ursprünglichen Monatsabschlusses bleiben in ihren bisherigen Spalten.
+
+Altzeilen haben keinen solchen Stempel. Ihre gespeicherten Zeiten bleiben
+sichtbar und dienen weiterhin der Sortierung. Ein Nachtrag könnte den
+Zeitpunkt der ursprünglichen Schreibanweisung nicht rekonstruieren.

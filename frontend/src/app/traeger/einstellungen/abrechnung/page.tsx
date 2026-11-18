@@ -23,6 +23,7 @@ import { Alert } from "~/components/ui/alert";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { hasPermission } from "~/lib/auth-utils";
+import { useInvalidateFamily } from "~/lib/swr";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   fetchCareNumberRange,
@@ -172,17 +173,25 @@ export default function TraegerAbrechnungsvorgabenPage() {
   const { data: session } = useSession();
   const canBill = hasPermission(session ?? null, BILLING_RIGHT);
   const canEditBank = hasPermission(session ?? null, SETTINGS_RIGHT);
+  const invalidateFamily = useInvalidateFamily();
   const master = useTraegerMasterData("die Liste der Bankverbindungen");
   const billing = useBillingDefaults(canBill);
   const settings = useTraegerSettingsSchema();
   const afterBankWrite = useRefreshAfterWrite(
     "die Anzeige der Bankverbindungen",
-    master.read,
+    async () => {
+      void invalidateFamily(traegerKeys.requiredDetails());
+      await master.read();
+    },
   );
   const afterBillingWrite = useRefreshAfterWrite(
     "die Anzeige der Abrechnungsvorgaben",
     billing.read,
   );
+  const afterRequiredDetailsBillingWrite = useCallback(async () => {
+    void invalidateFamily(traegerKeys.requiredDetails());
+    await afterBillingWrite.refresh();
+  }, [afterBillingWrite, invalidateFamily]);
   const onlineMandate = settings.data?.tabs
     .flatMap((tab) => tab.categories)
     .flatMap((category) => category.items)
@@ -242,16 +251,16 @@ export default function TraegerAbrechnungsvorgabenPage() {
             onlineMandate={
               typeof onlineMandate === "boolean" ? onlineMandate : null
             }
-            onChanged={afterBillingWrite.refresh}
+            onChanged={afterRequiredDetailsBillingWrite}
           />
           <NumberRangeCard
             numberRange={billing.data.numberRange}
-            onChanged={afterBillingWrite.refresh}
+            onChanged={afterRequiredDetailsBillingWrite}
           />
           <NumberRangeCard
             service="care"
             numberRange={billing.data.careNumberRange}
-            onChanged={afterBillingWrite.refresh}
+            onChanged={afterRequiredDetailsBillingWrite}
           />
           <ContributionRulesCard
             kind="sibling"

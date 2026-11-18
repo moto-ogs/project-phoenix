@@ -115,6 +115,13 @@ type TraegerNames interface {
 	TraegerName(ctx context.Context, organizationID int64) (string, error)
 }
 
+// TraegerBankAccountPresence tells whether the Träger has a bank account
+// its letters name (#7177). It reads no account data, so it needs no
+// account and writes no log.
+type TraegerBankAccountPresence interface {
+	HasBankAccount(ctx context.Context, organizationID int64) (bool, error)
+}
+
 // TraegerMasterData lets the Träger-Büro keep the master data of its
 // Träger. Every operation joins the caller's Träger transaction of
 // organizationID; accountID is the acting account the log records.
@@ -130,6 +137,9 @@ type TraegerMasterData interface {
 	DocumentContact(ctx context.Context, organizationID int64) (TraegerDocumentContact, error)
 	// TraegerNames reads the Träger's own name for its mails (#6437).
 	TraegerNames
+	// TraegerBankAccountPresence tells whether the Träger has a bank
+	// account, without a log (#7177).
+	TraegerBankAccountPresence
 	// ReplaceLogo checks the image and stores it in place of the old one.
 	ReplaceLogo(ctx context.Context, organizationID, accountID int64, data []byte) (TraegerLogo, error)
 	// RemoveLogo deletes the logo.

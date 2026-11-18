@@ -31,7 +31,7 @@ func TestStudentDocumentsSealHealthCategories(t *testing.T) {
 	documents, err := api.NewStudentDocumentsTestModule(store, newStudentTestRepositories(store).CarePlan, people.Student, caller, audit.StudentFieldEdit, audit.DataAccessLog, fixedCalendarClock)
 	require.NoError(t, err)
 	tc.resource.StudentDocumentService = documents
-	tc.resource.DocumentStorage = api.NewStudentDocumentStorage(api.TestUploadFileKeys())
+	tc.resource.DocumentStorage = api.NewStudentDocumentStorage(api.TestUploadFileKeys(), nativeUploads.UploadFiles{})
 	child := testpkg.CreateTestStudent(t, tc.db, "Sealed", "Attest", "S20")
 	actor := testpkg.CreateTestAccount(t, tc.db, fmt.Sprintf("sealed-attest-%d@example.com", child.ID))
 	publicDir, err := nativeUploads.ResolvePublicDir()

@@ -6,6 +6,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -199,6 +200,42 @@ func TestSEPAMandateReachesTheInvoiceAsPrenotification(t *testing.T) {
 	assert.Equal(t, "SJR-2026-0001|2026-09-01|DE98ZZZ09999999999|DE•• •••• •••• •••• ••30 00|RCUR", copied,
 		"the release copies the mandate onto the invoice")
 
+	// A holder correction after release must not change the invoice copy.
+	var snapshot struct {
+		Holder []byte `bun:"account_holder_sealed"`
+		Same   bool
+	}
+	require.NoError(t, f.db.NewRaw(`SELECT invoice.account_holder_sealed, invoice.account_holder_sealed = mandate.account_holder_sealed AS same
+		FROM parent_billing.care_invoices invoice JOIN parent_billing.sepa_mandates mandate
+			ON mandate.organization_id = invoice.organization_id AND mandate.id = invoice.mandate_id
+		WHERE invoice.run_id = ? AND invoice.care_contract_id = ?`, run.ID, contract).Scan(context.Background(), &snapshot))
+	require.True(t, snapshot.Same, "the release keeps the sealed account holder")
+	require.NotEmpty(t, snapshot.Holder)
+	original := snapshot.Holder
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, fmt.Sprintf("%s/%d", sepaMandatesPath, mandate.ID),
+		map[string]any{"account_holder": "Jan Muster", "sequence": "recurring"})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.NoError(t, f.db.NewRaw(`SELECT invoice.account_holder_sealed, invoice.account_holder_sealed = mandate.account_holder_sealed AS same
+		FROM parent_billing.care_invoices invoice JOIN parent_billing.sepa_mandates mandate
+			ON mandate.organization_id = invoice.organization_id AND mandate.id = invoice.mandate_id
+		WHERE invoice.run_id = ? AND invoice.care_contract_id = ?`, run.ID, contract).Scan(context.Background(), &snapshot))
+	assert.False(t, snapshot.Same, "the mandate now holds the corrected name")
+	assert.Equal(t, original, snapshot.Holder, "the correction leaves the invoice copy alone")
+
+	brandCareTraeger(t, f)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/letters/preview"), careLettersInput())
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.True(t, bytes.HasPrefix(rec.Body.Bytes(), []byte("%PDF-")), "the stored holder opens for the letter")
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/letters"), careLettersInput())
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	var holderAudit []string
+	require.NoError(t, f.db.NewRaw(`SELECT event.action FROM parent_billing.care_run_events event
+		JOIN parent_billing.care_invoices invoice ON invoice.organization_id = event.organization_id AND invoice.run_id = event.run_id
+		WHERE event.run_id = ? AND invoice.care_contract_id = ?
+			AND event.details->'account_holder_snapshot_ids' = jsonb_build_array(invoice.id)
+		ORDER BY event.id`, run.ID, contract).Scan(context.Background(), &holderAudit))
+	assert.Equal(t, []string{"read", "letters"}, holderAudit, "preview and creation record the opened invoice snapshot")
+
 	// A revocation ends the mandate; the revoked one stays as history, and
 	// the issued invoice keeps its copy.
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, fmt.Sprintf("%s/%d/revoke", sepaMandatesPath, mandate.ID),
@@ -218,7 +255,7 @@ func TestSEPAMandateReachesTheInvoiceAsPrenotification(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	// The list after the revocation and the trail itself are reads of the
 	// bank data, each with its own entry.
-	assert.Equal(t, []string{"create:office", "read:run", "revoke:office", "read:office", "read:office"}, mandateEvents(t, f, mandate.ID))
+	assert.Equal(t, []string{"create:office", "read:run", "update:office", "revoke:office", "read:office", "read:office"}, mandateEvents(t, f, mandate.ID))
 	require.NoError(t, f.db.NewRaw(`SELECT mandate_reference FROM parent_billing.care_invoices WHERE run_id = ? AND care_contract_id = ?`,
 		run.ID, contract).Scan(context.Background(), &copied))
 	assert.Equal(t, "SJR-2026-0001", copied)

@@ -34,9 +34,12 @@ import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useTraegerMasterData } from "~/components/traeger/use-traeger-master-data";
 import { useTraegerSettingsSchema } from "~/components/traeger/use-traeger-resources";
 import { TRAEGER_BRANDING_TAB } from "~/lib/traeger-branding";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 
 /** The Träger right that changes the letterhead (ADR 0084 section 4). */
 const SETTINGS_RIGHT = "traeger_settings:manage";
+const LETTERHEAD_TEXT_KEY = "branding.letterhead_text";
 
 function brandingValue(tab: SchemaTab | null, key: string): string {
   const item: ResolvedSetting | undefined = tab?.categories
@@ -48,6 +51,7 @@ function brandingValue(tab: SchemaTab | null, key: string): string {
 export default function TraegerBriefkopfPage() {
   const { data: session } = useSession();
   const canEdit = hasPermission(session ?? null, SETTINGS_RIGHT);
+  const invalidateFamily = useInvalidateFamily();
   const master = useTraegerMasterData("der Briefkopf");
   const afterLogoWrite = useRefreshAfterWrite(
     "die Anzeige des Logos",
@@ -79,16 +83,22 @@ export default function TraegerBriefkopfPage() {
   const saveSetting = useCallback(
     async (key: string, value: unknown) => {
       await saveTraegerSettingValue(key, value);
+      if (key === LETTERHEAD_TEXT_KEY) {
+        void invalidateFamily(traegerKeys.requiredDetails());
+      }
       void refresh();
     },
-    [refresh],
+    [invalidateFamily, refresh],
   );
   const resetSetting = useCallback(
     async (key: string) => {
       await clearTraegerSettingValue(key);
+      if (key === LETTERHEAD_TEXT_KEY) {
+        void invalidateFamily(traegerKeys.requiredDetails());
+      }
       void refresh();
     },
-    [refresh],
+    [invalidateFamily, refresh],
   );
 
   const defaultAccount =
