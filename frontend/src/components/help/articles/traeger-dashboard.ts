@@ -19,7 +19,7 @@ export function traegerDashboardTopic(): HelpTopic {
       "Wähle dort `Zur Schule`, um die Schule anzusehen.",
       "Lies unter `Zahlen je Schule` die Zahlen jeder Schule.",
       "Wähle eine Schule, um ihre Zahlen und Stammdaten zu sehen.",
-      "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Hast du bei `Auffälligkeiten` eine Schule gewählt, enthält die Datei nur diese Schule.",
+      "Öffne das Drei-Punkte-Menü rechts neben der Suche, bei nur einer Schule rechts neben dem Titel. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Hast du bei `Auffälligkeiten` eine Schule gewählt, enthält die Datei nur diese Schule.",
     ],
     result:
       "Du siehst für jede Schule, wie viele Kinder gerade da sind, wie viele heute krank sind, wie viele Betreuungskräfte angemeldet sind und wie viele Anmeldungen offen sind.",

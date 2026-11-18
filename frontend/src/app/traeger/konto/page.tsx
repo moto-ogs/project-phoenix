@@ -6,7 +6,7 @@
 // Exportprotokoll und der Verlauf jeder Rechnung statt einer E-Mail-Adresse.
 // Passwort und Code gehören zum moto-Konto und haben hier keine Karte.
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pencil } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
@@ -34,6 +34,8 @@ import {
 
 const logger = createLogger({ component: "TraegerAccountPage" });
 
+const NAME_FIELD_ID = "traeger-profile-name";
+
 /**
  * The own name, like the profile page of the school app: read first,
  * „Bearbeiten“ opens the field, „Speichern“ saves it (no autosave).
@@ -51,6 +53,11 @@ function NameCard({
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { success } = useToast();
+
+  // Opening the edit state puts the cursor into the field.
+  useEffect(() => {
+    if (editing) document.getElementById(NAME_FIELD_ID)?.focus();
+  }, [editing]);
 
   const submit = async () => {
     formErrors.clear();
@@ -80,6 +87,7 @@ function NameCard({
   return (
     <SectionCard
       title="Name"
+      testId="traeger-account-name"
       description={TRAEGER_NAME_HINT}
       actions={
         editing ? undefined : (
@@ -113,7 +121,7 @@ function NameCard({
           <FormErrorAlert message={formErrors.error} />
           <Input
             controlSize="compact"
-            id="traeger-profile-name"
+            id={NAME_FIELD_ID}
             label="Dein Name"
             name="name"
             autoComplete="name"
@@ -132,6 +140,8 @@ function NameCard({
             }}
             saving={saving}
             saveType="submit"
+            disabled={draft === name}
+            disabledReason="Ändere zuerst deinen Namen."
           />
         </form>
       ) : (

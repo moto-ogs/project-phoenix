@@ -12,6 +12,7 @@ import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { SectionCard } from "~/components/ui/section-card";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
@@ -165,7 +166,12 @@ export function TraegerAccountHistory({
   };
 
   if (error) {
-    return <LoadErrorAlert error={error} actionLayout="responsive" />;
+    // The list's title stays, so the error names which part failed.
+    return (
+      <SectionCard title="Verlauf">
+        <LoadErrorAlert error={error} actionLayout="responsive" />
+      </SectionCard>
+    );
   }
 
   return (
@@ -198,7 +204,7 @@ export function TraegerAccountHistory({
       stackedOnMobile
       // Older entries load inside the list's surface, like every list.
       moreAction={
-        hasMore && !loading
+        hasMore
           ? {
               label: "Ältere Einträge laden",
               onClick: () => void loadMore(),
