@@ -329,6 +329,29 @@ export function useTimetableActions(
     }
   }, [activeTimetableInstanceIdRef, mutateRoster, showRosterSyncError]);
 
+  // Runs the local update after a saved write. If it fails, the write still
+  // counts: say so and offer to load the list again, never report the write
+  // as failed or offer to repeat it (#2459).
+  const updateAfterSavedWrite = useCallback(
+    async (
+      instanceId: string,
+      fields: Record<string, string | number>,
+      update: () => Promise<unknown>,
+    ) => {
+      try {
+        await update();
+      } catch (err) {
+        if (activeTimetableInstanceIdRef.current !== instanceId) return;
+        logger.warn("timetable_roster_sync_failed_after_successful_action", {
+          ...fields,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        showRosterSyncError(err);
+      }
+    },
+    [activeTimetableInstanceIdRef, showRosterSyncError],
+  );
+
   const handleStartPlannedInstance = useCallback(
     async (instance: PlannedTimetableInstance) => {
       try {
@@ -472,22 +495,18 @@ export function useTimetableActions(
         return;
       }
       if (activeTimetableInstanceIdRef.current !== instanceId) return;
-      try {
-        if (action === "check-in" && rosterResult) {
-          setMoveNotice(moveNoticeFromRoster(rosterResult, row.studentId));
-        }
-        await (rosterResult
-          ? mutateRoster(rosterResult, { revalidate: false })
-          : mutateRoster());
-      } catch (err) {
-        if (activeTimetableInstanceIdRef.current !== instanceId) return;
-        logger.warn("timetable_roster_sync_failed_after_successful_action", {
-          action,
-          student_id: row.studentId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        showRosterSyncError(err);
-      }
+      await updateAfterSavedWrite(
+        instanceId,
+        { action, student_id: row.studentId },
+        async () => {
+          if (action === "check-in" && rosterResult) {
+            setMoveNotice(moveNoticeFromRoster(rosterResult, row.studentId));
+          }
+          await (rosterResult
+            ? mutateRoster(rosterResult, { revalidate: false })
+            : mutateRoster());
+        },
+      );
     },
     [
       activeTimetableInstanceId,
@@ -495,7 +514,7 @@ export function useTimetableActions(
       mutateRoster,
       reloadAfterDenial,
       showActionError,
-      showRosterSyncError,
+      updateAfterSavedWrite,
     ],
   );
 
@@ -700,41 +719,50 @@ export function useTimetableActions(
       if (!activeTimetableInstanceId || rows.length === 0) return;
       const instanceId = activeTimetableInstanceId;
       setMoveNotice(null);
+      setIsConfirmingExpected(true);
       try {
-        setIsConfirmingExpected(true);
         let nextRoster: TimetableRoster | null = null;
+        // Each check-in answers whether it moved that child from elsewhere.
         const notices: string[] = [];
-        for (const row of rows) {
-          nextRoster = await runOwnAttendanceMutation(
-            "student_checkin",
-            row.studentId,
-            () => timetableOperationsApi.checkIn(instanceId, row.studentId),
-          );
-          if (activeTimetableInstanceIdRef.current !== instanceId) continue;
-          const notice = moveNoticeFromRoster(nextRoster, row.studentId);
-          if (notice) notices.push(notice);
+        try {
+          for (const row of rows) {
+            nextRoster = await runOwnAttendanceMutation(
+              "student_checkin",
+              row.studentId,
+              () => timetableOperationsApi.checkIn(instanceId, row.studentId),
+            );
+            const notice = moveNoticeFromRoster(nextRoster, row.studentId);
+            if (notice) notices.push(notice);
+          }
+        } catch (err) {
+          if (activeTimetableInstanceIdRef.current !== instanceId) return;
+          logger.error("failed to confirm expected timetable students", {
+            instance_id: instanceId,
+            count: rows.length,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          reloadAfterDenial(err);
+          void showActionError(err, {
+            object: "die Anwesenheit der erwarteten Kinder",
+            retry: () => retryRef.current.confirmExpected(rows),
+          });
+          return;
         }
         if (activeTimetableInstanceIdRef.current !== instanceId) return;
-        if (notices.length > 0) setMoveNotice(notices.join(" "));
-        if (nextRoster) {
-          await mutateRoster(nextRoster, { revalidate: false });
-        } else {
-          await mutateRoster();
-        }
-        await mutateDashboard();
-        if (activeTimetableInstanceIdRef.current !== instanceId) return;
-      } catch (err) {
-        if (activeTimetableInstanceIdRef.current !== instanceId) return;
-        logger.error("failed to confirm expected timetable students", {
-          instance_id: instanceId,
-          count: rows.length,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        reloadAfterDenial(err);
-        void showActionError(err, {
-          object: "die Anwesenheit der erwarteten Kinder",
-          retry: () => retryRef.current.confirmExpected(rows),
-        });
+        const savedRoster = nextRoster;
+        await updateAfterSavedWrite(
+          instanceId,
+          { action: "confirm-expected", student_count: rows.length },
+          async () => {
+            if (notices.length > 0) setMoveNotice(notices.join(" "));
+            if (savedRoster) {
+              await mutateRoster(savedRoster, { revalidate: false });
+            } else {
+              await mutateRoster();
+            }
+            await mutateDashboard();
+          },
+        );
       } finally {
         setIsConfirmingExpected(false);
       }
@@ -746,6 +774,7 @@ export function useTimetableActions(
       mutateRoster,
       reloadAfterDenial,
       showActionError,
+      updateAfterSavedWrite,
     ],
   );
 
@@ -755,29 +784,39 @@ export function useTimetableActions(
       const instanceId = activeTimetableInstanceId;
       setMoveNotice(null);
       clearAddStudentError();
+      setIsAddingStudent(true);
       try {
-        setIsAddingStudent(true);
-        const rosterResult = await runOwnAttendanceMutation(
-          "student_checkin",
-          studentId,
-          () => timetableOperationsApi.checkIn(instanceId, studentId),
-        );
+        let rosterResult: TimetableRoster;
+        try {
+          rosterResult = await runOwnAttendanceMutation(
+            "student_checkin",
+            studentId,
+            () => timetableOperationsApi.checkIn(instanceId, studentId),
+          );
+        } catch (err) {
+          if (activeTimetableInstanceIdRef.current !== instanceId) return false;
+          logger.error("failed to add unplanned timetable student", {
+            student_id: studentId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          reloadAfterDenial(err);
+          // Im Dialog; „Hinzufügen“ steht direkt darunter, deshalb ohne
+          // eigenen Wiederholen-Link.
+          void showAddStudentError(err, { object: "das Kind" });
+          return false;
+        }
         if (activeTimetableInstanceIdRef.current !== instanceId) return false;
-        setMoveNotice(moveNoticeFromRoster(rosterResult, studentId));
         setAddStudentSearch("");
-        await mutateRoster(rosterResult, { revalidate: false });
+        // Saved: the dialog closes even if the list cannot follow.
+        await updateAfterSavedWrite(
+          instanceId,
+          { action: "add-unplanned", student_id: studentId },
+          async () => {
+            setMoveNotice(moveNoticeFromRoster(rosterResult, studentId));
+            await mutateRoster(rosterResult, { revalidate: false });
+          },
+        );
         return true;
-      } catch (err) {
-        if (activeTimetableInstanceIdRef.current !== instanceId) return false;
-        logger.error("failed to add unplanned timetable student", {
-          student_id: studentId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        reloadAfterDenial(err);
-        // Im Dialog; „Hinzufügen“ steht direkt darunter, deshalb ohne
-        // eigenen Wiederholen-Link.
-        void showAddStudentError(err, { object: "das Kind" });
-        return false;
       } finally {
         setIsAddingStudent(false);
       }
@@ -789,6 +828,7 @@ export function useTimetableActions(
       mutateRoster,
       reloadAfterDenial,
       showAddStudentError,
+      updateAfterSavedWrite,
     ],
   );
 
@@ -801,28 +841,36 @@ export function useTimetableActions(
       for (const studentId of studentIds) {
         markOwnAttendanceMutation("student_checkin", studentId);
       }
+      setIsAddingStudent(true);
       try {
-        setIsAddingStudent(true);
-        const rosterResult = await timetableOperationsApi.checkInMany(
-          instanceId,
-          studentIds,
-        );
-        if (activeTimetableInstanceIdRef.current !== instanceId) return false;
-        await mutateRoster(rosterResult, { revalidate: false });
-        return true;
-      } catch (err) {
-        for (const studentId of studentIds) {
-          clearOwnAttendanceMutation("student_checkin", studentId);
+        let rosterResult: TimetableRoster;
+        try {
+          rosterResult = await timetableOperationsApi.checkInMany(
+            instanceId,
+            studentIds,
+          );
+        } catch (err) {
+          for (const studentId of studentIds) {
+            clearOwnAttendanceMutation("student_checkin", studentId);
+          }
+          if (activeTimetableInstanceIdRef.current !== instanceId) return false;
+          logger.error("failed to add present timetable students", {
+            student_count: studentIds.length,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          reloadAfterDenial(err);
+          // Im Dialog; der Knopf zum Hinzufügen steht direkt darunter.
+          void showAddStudentError(err, { object: "die Kinder" });
+          return false;
         }
         if (activeTimetableInstanceIdRef.current !== instanceId) return false;
-        logger.error("failed to add present timetable students", {
-          student_count: studentIds.length,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        reloadAfterDenial(err);
-        // Im Dialog; der Knopf zum Hinzufügen steht direkt darunter.
-        void showAddStudentError(err, { object: "die Kinder" });
-        return false;
+        // Saved: the dialog closes even if the list cannot follow.
+        await updateAfterSavedWrite(
+          instanceId,
+          { action: "add-present", student_count: studentIds.length },
+          () => mutateRoster(rosterResult, { revalidate: false }),
+        );
+        return true;
       } finally {
         setIsAddingStudent(false);
       }
@@ -834,6 +882,7 @@ export function useTimetableActions(
       mutateRoster,
       reloadAfterDenial,
       showAddStudentError,
+      updateAfterSavedWrite,
     ],
   );
 
