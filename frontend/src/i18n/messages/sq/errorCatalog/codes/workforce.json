@@ -127,5 +127,6 @@
   "pool_block_taken": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "pool_springer_not_found": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "pool_springer_busy": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
-  "traeger_payroll_not_ready": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale."
+  "traeger_payroll_not_ready": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "no_staff_profile": "Nuk keni qasje te: {object}. Kontaktoni shkollën."
 }

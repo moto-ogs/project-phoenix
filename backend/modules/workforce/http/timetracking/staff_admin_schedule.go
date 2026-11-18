@@ -289,7 +289,7 @@ func modelEntriesToResponseParts(modelEntries []workforce.WorkTimeModelEntry, ro
 func (rs *StaffAdminResource) resolveEditorStaffID(ctx context.Context) (int64, error) {
 	claims := rs.identity(ctx)
 	if claims.AccountID == 0 {
-		return 0, errors.New("invalid token")
+		return 0, errNoAccount
 	}
 	return rs.PersonService.ResolveStaffIDByAccountID(ctx, claims.AccountID)
 }

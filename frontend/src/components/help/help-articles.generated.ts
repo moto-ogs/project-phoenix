@@ -463,6 +463,7 @@ import type { HelpGroupMode, HelpPresenceMode, HelpTopic } from "./help-types";
 import {
   loginResult,
   missingMenuDifferences,
+  OWN_STAFF_PROFILE_TROUBLESHOOTING,
   parentAnnouncementSteps,
   SIMPLE_NAV_DIFFERENCE,
   unavailableNfcTopic,
@@ -2179,6 +2180,8 @@ export const dutyRosterTopic = function dutyRosterTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Fehlt eine Person im Plan? Dann ist sie noch nicht als Personal angelegt.",
+      // #7306: die eigenen Seiten brauchen ein Personalprofil der Schule.
+      "Fehlen Ihnen selbst `Mein Dienstplan`, `Mein Kalender` und `Zeiterfassung`? Diese Seiten zeigen Ihre eigenen Zeiten und Termine. Dafür brauchen Sie in dieser Schule ein eigenes Personalprofil. Über den Träger fehlen diese Seiten deshalb.",
     ],
     related: [
       HELP_TOPICS.leadWorkTimeReview,
@@ -5139,6 +5142,7 @@ export const myScheduleTopic = function myScheduleTopic(): HelpTopic {
       "Das Kalender-Abo ist nur zum Lesen. Änderungen in Ihrem persönlichen Kalender werden nicht an moto übertragen.",
       SIMPLE_NAV_DIFFERENCE,
     ],
+    troubleshootingDetails: [OWN_STAFF_PROFILE_TROUBLESHOOTING],
     related: [HELP_TOPICS.carePlan, HELP_TOPICS.trackWorkTime],
   };
 } satisfies typeof authored_myScheduleTopic;
@@ -5724,6 +5728,7 @@ export const ownShiftPlanTopic = function ownShiftPlanTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "`Mein Dienstplan` fehlt? Dann plant Ihre OGS die Schichten nicht in moto.",
+      OWN_STAFF_PROFILE_TROUBLESHOOTING,
     ],
     related: [HELP_TOPICS.trackWorkTime, HELP_TOPICS.mySchedule],
   };
@@ -10886,6 +10891,7 @@ export const trackWorkTimeTopic = function trackWorkTimeTopic(): HelpTopic {
       "Steht unten `Kein Soll hinterlegt`? Dann zählen Krankheit und Urlaub 0 Stunden. Die Monatskarte zeigt diese Tage mit `ohne Soll`. Das Soll trägt die Leitung ein.",
       SIMPLE_NAV_DIFFERENCE,
     ],
+    troubleshootingDetails: [OWN_STAFF_PROFILE_TROUBLESHOOTING],
     related: [HELP_TOPICS.correctWorkTime, HELP_TOPICS.nfcWorkTime],
   };
 } satisfies typeof authored_trackWorkTimeTopic;

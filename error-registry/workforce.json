@@ -177,6 +177,12 @@
       "legacy": "workforce.no_session_for_today"
     },
     {
+      "code": "workforce.no_staff_profile",
+      "class": "permission",
+      "parameters": [],
+      "legacy": "workforce.no_staff_profile"
+    },
+    {
       "code": "workforce.opening_balance_already_exists",
       "class": "business_rejection",
       "parameters": [],

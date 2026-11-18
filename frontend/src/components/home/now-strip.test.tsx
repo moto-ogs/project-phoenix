@@ -52,6 +52,11 @@ const router = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("~/lib/tenant-router", () => ({
   useTenantRouter: () => router,
 }));
+// Personalprofil in dieser Schule laut Nutzerkontext (#7306).
+const ownStaff = vi.hoisted(() => ({ present: true }));
+vi.mock("~/lib/hooks/use-user-context", () => ({
+  useHasOwnStaff: () => ownStaff.present,
+}));
 vi.mock("~/lib/hooks/use-berlin-today", () => ({
   useBerlinToday: () => "2026-09-08",
 }));
@@ -165,6 +170,7 @@ describe("NowStrip (#2180)", () => {
     router.push.mockReset();
     supervision.ownSupervision = false;
     supervision.hasGroups = true;
+    ownStaff.present = true;
   });
 
   it("zeigt die Uhrzeit, den laufenden Einsatz und den Weg in den Tag", () => {
@@ -367,6 +373,21 @@ describe("NowStrip (#2180)", () => {
     expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByText(/Kinder da/)).toBeInTheDocument();
     expect(screen.queryByText(/42 Kinder da ·/)).not.toBeInTheDocument();
+  });
+
+  it("fragt ohne Personalprofil keine eigenen Einsätze ab (#7306)", () => {
+    ownStaff.present = false;
+    sources.analytics = { studentsPresent: 42, supervisorsToday: 7 };
+
+    render(<NowStrip access={care} context={context(care)} />);
+
+    // Anker: die Kinderzahl kommt weiter, nur der eigene Tag fehlt.
+    expect(sources.requested).toContain("dashboard-analytics");
+    expect(
+      sources.requested.some((key) =>
+        key?.startsWith("time-tracking-own-assignments-today-"),
+      ),
+    ).toBe(false);
   });
 
   it("fragt ohne groups:read keine Kinderzahl ab", () => {

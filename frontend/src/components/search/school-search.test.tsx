@@ -55,6 +55,11 @@ vi.mock("~/lib/tenant-router", () => ({
 vi.mock("~/lib/hooks/use-module-navigation", () => ({
   useModuleNavigation: () => ({ page: () => "open", section: () => "open" }),
 }));
+// Personalprofil in dieser Schule laut Nutzerkontext (#7306).
+const ownStaff = vi.hoisted(() => ({ present: true }));
+vi.mock("~/lib/hooks/use-user-context", () => ({
+  useHasOwnStaff: () => ownStaff.present,
+}));
 vi.mock("~/lib/hooks/use-change-request-access", () => ({
   useChangeRequestAccess: () => ({ canOpenRequestsPage: false }),
 }));
@@ -181,6 +186,30 @@ describe("SchoolSearchDialog", () => {
       within(pages).queryByRole("option", { name: "Einstellungen" }),
     ).not.toBeInTheDocument();
     expect(mockSearchSchool).not.toHaveBeenCalled();
+  });
+
+  it("offers no own time, shift plan or calendar without a staff profile (#7306)", () => {
+    ownStaff.present = false;
+    try {
+      signIn(["time_tracking:own", "calendar:own", "users:read"]);
+      render(<SchoolSearchDialog isOpen onClose={vi.fn()} />);
+      const pages = screen.getByRole("group", { name: "Seiten" });
+      // Anker: andere Seiten bleiben auffindbar.
+      expect(
+        within(pages).getByRole("option", { name: "Alle Kinder" }),
+      ).toBeInTheDocument();
+      for (const name of [
+        "Zeiterfassung",
+        "Mein Dienstplan",
+        "Mein Kalender",
+      ]) {
+        expect(
+          within(pages).queryByRole("option", { name }),
+        ).not.toBeInTheDocument();
+      }
+    } finally {
+      ownStaff.present = true;
+    }
   });
 
   it("finds the family behind a phone number and opens the child's contacts", async () => {

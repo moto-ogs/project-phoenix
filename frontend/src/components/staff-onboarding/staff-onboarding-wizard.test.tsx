@@ -33,6 +33,7 @@ let openCare = false;
 let webAttendance = true;
 let tenantSlug = "school-one";
 let bookedModules: string[] = ["zeiterfassung"];
+let hasOwnStaff = true;
 
 vi.mock("next/navigation", () => ({
   usePathname: () => pathname,
@@ -67,6 +68,10 @@ vi.mock("~/lib/tenant-context", () => ({
 
 vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: () => ({ groups }),
+}));
+
+vi.mock("~/lib/hooks/use-user-context", () => ({
+  useHasOwnStaff: () => hasOwnStaff,
 }));
 
 vi.mock("~/lib/tenant-router", () => ({
@@ -159,6 +164,7 @@ describe("StaffOnboardingWizard", () => {
     webAttendance = true;
     tenantSlug = "school-one";
     bookedModules = ["zeiterfassung"];
+    hasOwnStaff = true;
   });
 
   it("opens the checklist once per school and sign-in with every step", () => {
@@ -210,6 +216,18 @@ describe("StaffOnboardingWizard", () => {
       "Ein Kind finden und Angaben ansehen",
       "Ein Kind an- und abmelden",
       "Meine Termine ansehen",
+      "Eine Aufsicht starten",
+    ]);
+  });
+
+  it("leaves out own-calendar and work-time steps without a staff profile", () => {
+    hasOwnStaff = false;
+    render(<StaffOnboardingWizard />);
+
+    expect(stepTitles()).toEqual([
+      "Meine Gruppe ansehen",
+      "Ein Kind finden und Angaben ansehen",
+      "Ein Kind an- und abmelden",
       "Eine Aufsicht starten",
     ]);
   });

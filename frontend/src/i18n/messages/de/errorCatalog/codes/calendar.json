@@ -1,4 +1,5 @@
 {
   "occurrence_unavailable": "Diesen Termin gibt es nicht mehr, er wurde vielleicht abgesagt. Bitte laden Sie den Kalender neu.",
-  "federal_state_missing": "Für die Schule ist noch kein Bundesland eingetragen. Deshalb fehlen die Feiertage. Die Leitung trägt es in den Einstellungen ein."
+  "federal_state_missing": "Für die Schule ist noch kein Bundesland eingetragen. Deshalb fehlen die Feiertage. Die Leitung trägt es in den Einstellungen ein.",
+  "no_staff_profile": "Dafür brauchen Sie in dieser Schule ein eigenes Personalprofil. Bitte fragen Sie die Leitung."
 }

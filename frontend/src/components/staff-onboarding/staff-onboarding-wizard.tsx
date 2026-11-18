@@ -27,6 +27,7 @@ import {
   type HelpTopicId,
 } from "~/lib/help-topics";
 import { createLogger } from "~/lib/logger";
+import { useHasOwnStaff } from "~/lib/hooks/use-user-context";
 import { useShellAuthSafe } from "~/lib/shell-auth-context";
 import {
   setStaffOnboardingDismissed,
@@ -120,6 +121,7 @@ function StaffOnboardingForPerson() {
   const webAttendance = useAttendanceWebEnabled();
   const tenantSlug = useTenantSlugSafe();
   const { groups } = useOptionalSupervision();
+  const hasOwnStaff = useHasOwnStaff();
 
   const hasOwnGroup =
     !openCareGroupMode && groups.some((group) => group.is_personal !== false);
@@ -143,6 +145,7 @@ function StaffOnboardingForPerson() {
     () =>
       state
         ? staffOnboardingSteps(state, {
+            hasOwnStaff,
             hasOwnGroup,
             webAttendance,
             canSeeCalendar,
@@ -154,6 +157,7 @@ function StaffOnboardingForPerson() {
         : [],
     [
       state,
+      hasOwnStaff,
       hasOwnGroup,
       webAttendance,
       canSeeCalendar,

@@ -12,6 +12,23 @@ import (
 
 // Error rules classify owner identities; the first matching rule wins.
 
+// ownStaffError renders a failed getStaffIDFromClaims: 401 only without an
+// account, 403 with its own code without a staff profile in this school, and
+// 500 for a failed lookup (#7306). Before, every failure answered 401 and the
+// frontend sent a signed-in caller back to the login page.
+func ownStaffError(err error) render.Renderer {
+	return common.RenderWithRules(err, ownStaffErrorRules, common.ErrorInternalServer)
+}
+
+var ownStaffErrorRules = []common.ErrorRule{
+	{Target: errNoAccount, Render: common.ErrorUnauthorized},
+	{Match: isNoStaffProfile, Render: forbiddenWithCode(common.CodeWorkforceNoStaffProfile)},
+}
+
+func isNoStaffProfile(err error) bool {
+	return errors.Is(err, workforce.ErrNoStaffProfile)
+}
+
 // classifyServiceError maps known business errors to appropriate HTTP status codes
 func classifyServiceError(err error) render.Renderer {
 	return common.RenderWithRules(err, serviceErrorRules, common.ErrorInternalServer)
