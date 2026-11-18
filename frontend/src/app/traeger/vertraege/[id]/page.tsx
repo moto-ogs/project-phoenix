@@ -133,14 +133,17 @@ function TraegerVertragView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   // The tab stands in the address, so a bookmark opens it again (#7408). A
-  // click shows it at once; the address follows.
-  const [selectedTab, setSelectedTab] = useState<ContractDetailTab | null>(
-    null,
-  );
+  // click shows it at once; the address follows. Until it does, the click
+  // holds; an address that changes otherwise (back, a link) wins.
+  const addressedTab = parseContractDetailTab(searchParams?.get("tab"));
+  const [clicked, setClicked] = useState<{
+    tab: ContractDetailTab;
+    from: ContractDetailTab;
+  } | null>(null);
   const activeTab =
-    selectedTab ?? parseContractDetailTab(searchParams?.get("tab"));
+    clicked && clicked.from === addressedTab ? clicked.tab : addressedTab;
   const openTab = (next: ContractDetailTab) => {
-    setSelectedTab(next);
+    setClicked({ tab: next, from: addressedTab });
     const query = new URLSearchParams(searchParams?.toString());
     if (next === "vertrag") query.delete("tab");
     else query.set("tab", next);

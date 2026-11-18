@@ -741,6 +741,34 @@ describe("TraegerVertragPage", () => {
     expect(api.resendCareContract).not.toHaveBeenCalled();
   });
 
+  it("follows the address after a click once it names another tab", async () => {
+    const view = render(
+      <TraegerResourceTestProvider>
+        <TraegerVertragPage />
+      </TraegerResourceTestProvider>,
+    );
+    fireEvent.click(await screen.findByRole("tab", { name: "Versionen" }));
+    expect(screen.getByRole("tab", { name: "Versionen" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(mockReplace).toHaveBeenCalledWith("/vertraege/7?tab=versionen", {
+      scroll: false,
+    });
+
+    // Back in the browser, or a link to another tab of the same contract.
+    mockSearch = "tab=kuendigung";
+    view.rerender(
+      <TraegerResourceTestProvider>
+        <TraegerVertragPage />
+      </TraegerResourceTestProvider>,
+    );
+    expect(screen.getByRole("tab", { name: "Kündigung" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
   it("counts a waiting change of the parents on its tab", async () => {
     mockPendingChanges = [
       {

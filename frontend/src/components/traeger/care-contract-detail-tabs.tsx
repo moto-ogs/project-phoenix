@@ -36,7 +36,12 @@ export const CONTRACT_NOTICE_SECTION_ID = "vertrag-beenden";
 /** The card „Versionen“. */
 export const CONTRACT_VERSIONS_SECTION_ID = "vertrag-versionen";
 
-const SECTION_TABS: Record<string, ContractDetailTab> = {
+type ContractSectionId =
+  | typeof CONTRACT_DELIVERY_SECTION_ID
+  | typeof CONTRACT_NOTICE_SECTION_ID
+  | typeof CONTRACT_VERSIONS_SECTION_ID;
+
+const SECTION_TABS: Record<ContractSectionId, ContractDetailTab> = {
   [CONTRACT_DELIVERY_SECTION_ID]: "versand",
   [CONTRACT_NOTICE_SECTION_ID]: "kuendigung",
   [CONTRACT_VERSIONS_SECTION_ID]: "versionen",
@@ -63,20 +68,16 @@ export function ContractSectionJump({
   tooltip,
   children,
 }: Readonly<{
-  targetId:
-    | typeof CONTRACT_DELIVERY_SECTION_ID
-    | typeof CONTRACT_NOTICE_SECTION_ID
-    | typeof CONTRACT_VERSIONS_SECTION_ID;
+  targetId: ContractSectionId;
   tooltip: string;
   children: ReactNode;
 }>) {
   const openTab = useContext(OpenTabContext);
-  const tab = SECTION_TABS[targetId];
   return (
     <JumpButton
       targetId={targetId}
       tooltip={tooltip}
-      reveal={tab ? () => openTab(tab) : undefined}
+      reveal={() => openTab(SECTION_TABS[targetId])}
     >
       {children}
     </JumpButton>
