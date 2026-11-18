@@ -2,12 +2,11 @@
 
 // Die Lastschrift der Raten eines Jahreslaufs (#4697, ADR 0181): je
 // Fälligkeitsmonat eine PAIN.008-Datei für die Bank. Eine eigene Seite wie
-// „Schreiben“ beim Monatslauf; der Jahreslauf verlinkt sie im Kopf.
+// „Schreiben“ beim Monatslauf; der Jahreslauf verlinkt sie im Menü seines Kopfs.
 
 import { useParams } from "next/navigation";
 import { NoticeSepaDebits } from "~/components/traeger/notice-sepa-debits";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
-import { EmptyState } from "~/components/ui/empty-state";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { formatDate } from "~/lib/date-helpers";
 import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
@@ -44,23 +43,23 @@ export default function TraegerNoticeDebitsPage() {
       statsLoading={loading}
       error={error}
       loading={loading}
-    >
-      {run ? (
-        issued ? (
-          <NoticeSepaDebits
-            periodFrom={run.periodFrom}
-            periodUntil={run.periodUntil}
-          />
-        ) : (
-          <EmptyState
-            title="Noch keine Lastschrift"
-            description={
-              run.status === "released"
-                ? "Dieser Jahreslauf hat keinen Bescheid. Es gibt nichts abzubuchen."
-                : "Die Datei für die Bank gibt es, sobald du die Bescheide auf der Seite des Jahreslaufs ausgestellt hast."
+      empty={
+        run && !issued
+          ? {
+              title: "Noch keine Lastschrift",
+              description:
+                run.status === "released"
+                  ? "Dieser Jahreslauf hat keinen Bescheid. Es gibt nichts abzubuchen."
+                  : "Die Datei für die Bank gibt es, sobald du die Bescheide auf der Seite des Jahreslaufs ausgestellt hast.",
             }
-          />
-        )
+          : null
+      }
+    >
+      {run && issued ? (
+        <NoticeSepaDebits
+          periodFrom={run.periodFrom}
+          periodUntil={run.periodUntil}
+        />
       ) : null}
     </TenantPage>
   );

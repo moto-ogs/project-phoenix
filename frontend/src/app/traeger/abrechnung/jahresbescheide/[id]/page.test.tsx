@@ -178,6 +178,35 @@ describe("TraegerCareNoticeRunPage", () => {
     expect(screen.queryByText(hint)).not.toBeInTheDocument();
   });
 
+  it("shows one head action and puts the rest in the page menu (#7406)", async () => {
+    api.fetchCareNoticeRun.mockResolvedValue(
+      run({
+        status: "released",
+        previewCount: 1,
+        issuedOn: "2025-09-24",
+        notices: [{ ...NOTICE, number: "1.2025.000041.1" }],
+      }),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByRole("link", { name: "An Familien senden" }),
+    ).toHaveAttribute("href", "/traeger/abrechnung/jahresbescheide/4/versand");
+    expect(
+      screen.queryByRole("link", { name: "Lastschrift der Raten" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
+    expect(
+      await screen.findByRole("menuitem", { name: /Lastschrift der Raten/ }),
+    ).toHaveAttribute(
+      "href",
+      "/traeger/abrechnung/jahresbescheide/4/lastschrift",
+    );
+    expect(screen.getByText("Herunterladen")).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /PDF/ })).toBeInTheDocument();
+  });
+
   it("holds the release back while the legal remedy is missing", async () => {
     api.fetchCareNoticeRun.mockResolvedValue(run({ legalRemedyMissing: true }));
     renderPage();

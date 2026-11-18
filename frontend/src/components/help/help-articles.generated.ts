@@ -11306,7 +11306,7 @@ export const traegerBillingRunTopic =
             "Hat der Zeitraum genau einen Lauf, öffnet sich dieser Lauf. Sonst siehst du die Abrechnung nur mit den Läufen dieses Zeitraums.",
             "Den Filter `Ferienzeitraum` entfernst du mit dem Kreuz. Dann siehst du wieder alle Läufe.",
             "Hat der Zeitraum noch keinen Lauf, wähle `Lauf starten`. Der Zeitraum ist schon gewählt.",
-            "Im Lauf führt `Zum Ferienzeitraum` unter dem Titel zurück zur Planung.",
+            "Im Lauf führt das Menü mit den drei Punkten neben dem Titel mit `Zum Ferienzeitraum` zurück zur Planung.",
           ],
         },
         {
@@ -11367,12 +11367,12 @@ export const traegerBillingRunTopic =
           description:
             "Jede Familie bekommt ihr Schreiben als PDF im Anhang einer Mail. Hat die Familie ein Konto in der Eltern-App mit derselben Mail-Adresse, liegt es auch dort unter `Dokumente`. Familien ohne E-Mail gibst du das gedruckte Schreiben.",
           steps: [
-            "Wähle im freigegebenen Lauf bei `Versand per Mail` den Knopf `An alle Familien senden`. moto schickt nur Mails, die noch nicht gesendet sind.",
+            "Wähle im freigegebenen Lauf bei `Versand per Mail` den Knopf `An alle senden`. moto fragt vorher nach und schickt nur Mails, die noch nicht gesendet sind.",
             "Neben jeder Familie steht, was aus der Mail geworden ist. `Gesendet` heißt: Die Mail ist raus. `Zugestellt` heißt: Sie ist angekommen. `Nicht angekommen` und `Nicht zustellbar` heißen: Die Mail kam nicht an. `Als unerwünscht gemeldet` heißt: Die Mail kam an. Die Familie hat sie danach als unerwünscht gemeldet.",
             "Bei `Verzögert` kommt die Mail später an. Warte dann. `Erneut senden` steht erst danach wieder bereit. Spätestens bei `Überfällig` kannst du neu senden.",
             "Bei `Nicht gesendet` und `Abgemeldet` zählt, ob die Sperre noch besteht. Besteht sie, fehlt `Erneut senden`, und der Hinweis sagt, was zu tun ist. Drucke das Schreiben dann und gib es der Familie. Ist sie weg, kannst du neu senden.",
-            "Wähle bei dieser Familie `Erneut senden`. Mit `Senden` schickst du das Schreiben an eine einzelne Familie.",
-            "Wähle `Alle Schreiben drucken`. Du bekommst alle Schreiben des Laufs in einer Datei.",
+            "Wähle bei dieser Familie im Menü mit den drei Punkten `Erneut senden`. Mit `Senden` dort schickst du das Schreiben an eine einzelne Familie.",
+            "Wähle `Drucken` und dann `Alle Schreiben drucken`. Du bekommst alle Schreiben des Laufs in einer Datei.",
           ],
         },
         {
@@ -11485,7 +11485,7 @@ export const traegerBillingRunTopic =
       differences: [
         "Du siehst in der Navigation kein `Abrechnungsläufe`? Deine Rolle ist nicht Abrechnung. Frage im Träger-Büro nach dieser Rolle.",
         "Im Ferienzeitraum fehlt `Zur Abrechnung`? Der Zeitraum ist noch ein Entwurf, oder deine Rolle ist nicht Abrechnung.",
-        "Im Lauf fehlt `Zum Ferienzeitraum`? Deine Rolle darf die Ferienbetreuung nicht öffnen.",
+        "Im Menü des Laufs fehlt `Zum Ferienzeitraum`? Deine Rolle darf die Ferienbetreuung nicht öffnen.",
         "`Lauf freigeben` lässt sich nicht wählen? Es fehlt das Muster der Rechnungsnummern, oder der Lauf hat keine Rechnung.",
         "Statt `Lauf freigeben` steht `Leeren Lauf verwerfen`? Der Lauf hat nichts abzurechnen. Verwirf ihn, dann ist der Ferienzeitraum frei.",
         "Du siehst oben in der Karte `Rechnungen` kein Menü mit den drei Punkten? Der Lauf ist noch nicht freigegeben.",
@@ -11547,7 +11547,7 @@ export const traegerBillingTermsTopic =
             "Ein Lauf kann ein festes Datum haben, bis zu dem alle Familien zahlen. Das geht nur vor der Freigabe.",
           steps: [
             "Öffne den Lauf unter `Abrechnungsläufe`, im Reiter `Monatsbeiträge` oder `Ferien`.",
-            "Beim Monatslauf wählst du in der Karte `Monatslauf` beim Feld `Fällig` den Knopf `Ändern`. Beim Ferienlauf wählst du `Fälligkeiten ändern`. Es öffnet sich eine eigene Seite.",
+            "Wähle im Monatslauf in der Karte `Monatslauf`, im Ferienlauf in der Karte `Abrechnungslauf` den Knopf `Fälligkeiten bearbeiten`. Es öffnet sich eine eigene Seite.",
             "Wähle je Zahlungsweg ein Datum. Ohne Datum gilt das Zahlungsziel der Leistung.",
             "Wähle `Speichern`. Du kommst zurück zum Lauf. Bei `Fällig` steht jetzt das Datum.",
           ],
@@ -12148,7 +12148,7 @@ export const traegerCareMonthsTopic =
             "Die Rechnung steht jetzt unter `Ausgeschlossen`. Sie zählt nicht zur Summe und bekommt bei der Freigabe keine Nummer. Die andere Rechnung des Kindes bleibt im Lauf.",
             "Mit `Wieder aufnehmen` nimmst du genau diese Rechnung zurück in den Lauf.",
             "Sind alle Rechnungen ausgeschlossen, wähle trotzdem `Lauf freigeben`. Der Lauf schließt ohne Rechnungen und gibt die Schulen wieder frei. Die Gründe bleiben im Verlauf. Ein neuer Lauf kann diese Kinder abrechnen.",
-            "Das Rechnungsdatum änderst du bei `Rechnungsdatum` mit `Ändern`.",
+            "Das Rechnungsdatum änderst du bei `Rechnungsdatum` mit `Bearbeiten`.",
           ],
         },
         {
@@ -12345,7 +12345,7 @@ export const traegerCareNoticesTopic =
             "Die Jahresläufe, die Bescheide eines Laufs und den Versand lädst du als Datei herunter.",
           steps: [
             "Wähle `Abrechnungsläufe` und dann den Reiter `Jahresbescheide`. Für die Bescheide öffnest du einen Jahreslauf, für den Versand dort `An Familien senden`.",
-            "Bei den Jahresläufen wählst du oben rechts das Menü mit den drei Punkten, sonst den Knopf `Herunterladen`. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
+            "In der Liste der Jahresläufe, im Jahreslauf und im Versand wählst du oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Bescheide und der Versand enthalten personenbezogene Daten. Jeder Download wird protokolliert.",
           ],
         },
@@ -14673,7 +14673,7 @@ export const traegerSepaDebitFileTopic =
             "Für Raten aus dem Jahresbescheid gibt es eine Datei je Monat.",
           steps: [
             "Wähle `Abrechnung`, dann den Reiter `Jahresbescheide`, und öffne den freigegebenen Lauf.",
-            "Wähle oben rechts `Lastschrift der Raten`.",
+            "Wähle oben rechts das Menü mit den drei Punkten und dann `Lastschrift der Raten`.",
             "Wähle bei `Raten fällig im` den Monat.",
             "Lade die Datei herunter und reiche sie ein wie oben.",
           ],
