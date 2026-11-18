@@ -267,24 +267,32 @@ export function CatalogOfferingsCard({
       stacked: "meta",
       render: (offering) =>
         editable && !offering.withdrawnAt ? (
-          <OverflowMenu
-            ariaLabel={`Aktionen für ${offering.draft.fields.name}`}
-            items={[
-              {
-                label: "Bearbeiten",
-                description: "Öffnet das Angebot zum Ändern",
-                href: traegerPath(`${base}/${offering.id}`),
-                onClick: () => undefined,
-              },
-              {
-                label: "Zurückziehen",
-                description:
-                  "Nimmt das Angebot aus der Anmeldephase. moto fragt vorher nach.",
-                destructive: true,
-                onClick: () => setTarget(offering),
-              },
-            ]}
-          />
+          // The row opens the offering; the menu must not open it too.
+          <span
+            data-row-control
+            role="presentation"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <OverflowMenu
+              ariaLabel={`Aktionen für ${offering.draft.fields.name}`}
+              items={[
+                {
+                  label: "Bearbeiten",
+                  description: "Öffnet das Angebot zum Ändern",
+                  href: traegerPath(`${base}/${offering.id}`),
+                  onClick: () => undefined,
+                },
+                {
+                  label: "Zurückziehen",
+                  description:
+                    "Nimmt das Angebot aus der Anmeldephase. moto fragt vorher nach.",
+                  destructive: true,
+                  onClick: () => setTarget(offering),
+                },
+              ]}
+            />
+          </span>
         ) : null,
     },
   ];
