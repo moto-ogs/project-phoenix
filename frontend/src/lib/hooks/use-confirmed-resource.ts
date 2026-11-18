@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import {
+  isRefusal,
   refusalFor,
   subscribeRefusals,
   markRefused,
   liftRefusal,
-} from "~/lib/resource-refusals";
-import { ApiError } from "~/lib/api-error";
+} from "~/lib/access-refusal";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   useSWRCacheKey,
@@ -16,15 +16,7 @@ import {
   type ReaderOptions,
 } from "~/lib/swr";
 
-/**
- * Whether a failure is a refusal (401, 403, 404): the session, the right or
- * the object is gone, so nothing loaded before may be shown again.
- */
-export function isRefusal(failure: unknown): boolean {
-  return (
-    failure instanceof ApiError && [401, 403, 404].includes(failure.status ?? 0)
-  );
-}
+export { isRefusal };
 
 /*
  * The one implementation of what every Träger read shows after a failure

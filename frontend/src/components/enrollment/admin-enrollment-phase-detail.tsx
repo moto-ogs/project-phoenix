@@ -1,5 +1,6 @@
 "use client";
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { phaseHasPublicForm } from "~/lib/enrollment-phase-rules";
 import {
   APPROVAL_WITHOUT_OFFERING_COPY,
@@ -299,10 +300,7 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
           error: err instanceof Error ? err.message : "unknown",
           phase_id: phaseId,
         });
-        if (
-          err instanceof ApiError &&
-          (err.status === 401 || err.status === 403)
-        ) {
+        if (err instanceof ApiError && isAccessRefusal(err)) {
           setDefaultOfferingIds([]);
           setExplicitOfferingIds(null);
           setClassRosterSchoolClass(ALL_VALUE);
