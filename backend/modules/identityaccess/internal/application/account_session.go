@@ -138,16 +138,16 @@ func (s *Service) ListInactiveAccountIDsWithLiveSessions(ctx context.Context) ([
 	return result, nil
 }
 
-// livePushSubscriptionLinks decides on the owner's session clock which push
-// subscription links a live session still backs. The answer names every
+// protectedPushSubscriptionLinks checks which push links a live session backs on
+// the owner's session clock or a concurrent write protects. The answer names every
 // link or the call fails, so a caller never mistakes a missing answer for a
 // dead session. It opens no unit of its own: the orphan push cleanup asks
 // inside its administrative unit.
-func (s *Service) livePushSubscriptionLinks(ctx context.Context, links []domain.PushSubscriptionLink) (map[int64]bool, error) {
+func (s *Service) protectedPushSubscriptionLinks(ctx context.Context, links []domain.PushSubscriptionLink) (map[int64]bool, error) {
 	var result map[int64]bool
 	inCaller := func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }
 	err := s.run(ctx, inCaller, "live_push_subscription_links", func(txCtx context.Context, stats *domain.OperationStats) error {
-		live, queryStats, liveErr := s.sessions.LivePushSubscriptionLinks(txCtx, links, s.now())
+		live, queryStats, liveErr := s.sessions.ProtectedPushSubscriptionLinks(txCtx, links, s.now())
 		stats.Add(queryStats)
 		if liveErr != nil {
 			return liveErr
