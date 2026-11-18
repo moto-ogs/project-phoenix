@@ -267,8 +267,14 @@ func (p *Provisioning) rotateDeviceKey(ctx context.Context, device domain.Device
 	return "", fmt.Errorf("SetDeviceAPIKey: failed to generate unique API key after %d attempts", maxAPIKeyRetries)
 }
 
-// DeleteDevice removes a device that no attendance or session row
-// references. The virtual manual web check-in device cannot be removed.
+// DeleteDevice removes a device from the fleet (Geräteentfernung, #2319).
+// Device Fleet archives the row, so attendance, sessions and audit entries
+// keep their device; the credential ends and the Geräteplatz is released.
+// An open kiosk session blocks the removal, and the virtual manual web
+// check-in device cannot be removed. The device row stays locked from the
+// session check to the archive, so a kiosk cannot open a session between
+// them. A device that is already removed is not found: a repeated removal
+// changes nothing.
 func (p *Provisioning) DeleteDevice(ctx context.Context, id int64, operatorID int64, clientIP net.IP) error {
 	if id <= 0 {
 		return invalidData("device id is required")
@@ -279,23 +285,58 @@ func (p *Provisioning) DeleteDevice(ctx context.Context, id int64, operatorID in
 			return err
 		}
 		if device.DeviceID == domain.WebManualDeviceID {
+			p.logRemovalRejection(device, operatorID, "rejected_protected", nil)
 			return &organizationtenancy.DeviceProtectedError{DeviceID: id, Reason: webManualDeviceReason}
 		}
+		if err := p.ensureNoActiveDeviceSession(adminCtx, device, operatorID); err != nil {
+			return err
+		}
 		if err := p.devices.DeleteDevice(adminCtx, id); err != nil {
-			if errors.Is(err, domain.ErrDeviceReferenced) {
-				return &organizationtenancy.DeviceInUseError{DeviceID: id}
-			}
 			return fmt.Errorf("DeleteDevice: %w", err)
 		}
-		if err := p.recordAction(adminCtx, operatorID, domain.AuditActionDelete, domain.AuditResourceDevice, &id, clientIP, map[string]any{
+		return p.recordAction(adminCtx, operatorID, domain.AuditActionDelete, domain.AuditResourceDevice, &id, clientIP, map[string]any{
 			"device_id":   device.DeviceID,
 			"device_type": device.DeviceType,
 			"school_id":   device.TenantID,
-		}); err != nil {
-			return err
-		}
-		return nil
+			"outcome":     "removed",
+		})
 	})
+}
+
+// ensureNoActiveDeviceSession rejects removing a device that runs an open
+// kiosk session.
+func (p *Provisioning) ensureNoActiveDeviceSession(ctx context.Context, device domain.Device, operatorID int64) error {
+	session, err := p.presence.ActiveDeviceSession(ctx, device.TenantID, device.ID)
+	if err != nil {
+		return fmt.Errorf("DeleteDevice: find active session: %w", err)
+	}
+	if session == nil {
+		return nil
+	}
+	p.logRemovalRejection(device, operatorID, "rejected_active_session", &session.ID)
+	return &organizationtenancy.DeviceRemovalBlockedError{
+		DeviceID: device.ID, SessionID: session.ID, StartedAt: session.StartedAt,
+		ActivityName: session.ActivityName, RoomName: session.RoomName,
+	}
+}
+
+// logRemovalRejection audits a refused removal. The refusal rolls the
+// administrative transaction back, so the entry goes to the structured log,
+// where the school portal's removal outcomes also go, not to the operator
+// audit log. It carries no credential.
+func (p *Provisioning) logRemovalRejection(device domain.Device, operatorID int64, outcome string, sessionID *int64) {
+	attrs := []any{
+		slog.String("audit", "device_removal"),
+		slog.String("outcome", outcome),
+		slog.Int64("operator_id", operatorID),
+		slog.Int64("tenant_id", device.TenantID),
+		slog.Int64("device_row_id", device.ID),
+		slog.String("device_id", device.DeviceID),
+	}
+	if sessionID != nil {
+		attrs = append(attrs, slog.Int64("session_id", *sessionID))
+	}
+	p.logger.Info("device removal", attrs...)
 }
 
 // GetDeviceTransferStatus reports the transfer blockers without changing the

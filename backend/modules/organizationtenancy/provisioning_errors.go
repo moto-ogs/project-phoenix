@@ -1,6 +1,9 @@
 package organizationtenancy
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // The provisioning errors carry the identifier the operator acted on. The
 // HTTP layer maps them by type.
@@ -110,6 +113,20 @@ type DeviceInUseError struct{ DeviceID int64 }
 
 func (e *DeviceInUseError) Error() string {
 	return fmt.Sprintf("device with ID %d is still in use and cannot be deleted", e.DeviceID)
+}
+
+// DeviceRemovalBlockedError rejects removing a device that runs an open
+// kiosk session (#2319). The session must end first.
+type DeviceRemovalBlockedError struct {
+	DeviceID     int64
+	SessionID    int64
+	StartedAt    time.Time
+	ActivityName *string
+	RoomName     *string
+}
+
+func (e *DeviceRemovalBlockedError) Error() string {
+	return fmt.Sprintf("device with ID %d runs the open session %d and cannot be removed", e.DeviceID, e.SessionID)
 }
 
 // DeviceProtectedError rejects deleting a system-managed device.

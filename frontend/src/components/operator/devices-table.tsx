@@ -161,7 +161,7 @@ export function DevicesTable({
           if (onDelete) {
             if (items.length > 0) items.push({ kind: "separator" });
             items.push({
-              label: "Löschen",
+              label: "Entfernen",
               icon: <Trash2 className="h-4 w-4" aria-hidden="true" />,
               destructive: true,
               onClick: () => onDelete(row),

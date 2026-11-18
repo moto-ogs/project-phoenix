@@ -47,6 +47,12 @@
       "legacy": "iot.device_id_taken"
     },
     {
+      "code": "iot.device_in_active_session",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "iot.device_in_active_session"
+    },
+    {
       "code": "iot.device_inactive",
       "class": "permission",
       "parameters": [],

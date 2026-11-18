@@ -678,7 +678,7 @@ func TestProvisioningDeleteDevice(t *testing.T) {
 		h.devices.add(manual)
 	}
 
-	t.Run("deletes the device and records it", func(t *testing.T) {
+	t.Run("removes the device and records it", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t)
 		seed(h)
@@ -686,10 +686,31 @@ func TestProvisioningDeleteDevice(t *testing.T) {
 		require.NoError(t, h.svc.DeleteDevice(context.Background(), 1, testOperatorID, operatorIP))
 
 		assert.Equal(t, []int64{1}, h.devices.deleted)
+		assert.Equal(t, [][2]int64{{10, 1}}, h.presence.sessionLookups, "the session is read at the device's school")
 		entry := h.onlyAudit(t, domain.AuditActionDelete, domain.AuditResourceDevice, 1)
 		assert.Equal(t, map[string]any{
-			"device_id": "BURBACH-1", "device_type": "terminal", "school_id": float64(10),
+			"device_id": "BURBACH-1", "device_type": "terminal", "school_id": float64(10), "outcome": "removed",
 		}, auditChanges(t, entry))
+	})
+
+	t.Run("an open kiosk session blocks the removal", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		seed(h)
+		activity, room := "Fußball-AG", "Turnhalle"
+		h.presence.sessions[1] = &domain.DeviceSession{ID: 300, StartedAt: fixedTime, ActivityName: &activity, RoomName: &room}
+
+		err := h.svc.DeleteDevice(context.Background(), 1, testOperatorID, operatorIP)
+
+		var blocked *organizationtenancy.DeviceRemovalBlockedError
+		require.ErrorAs(t, err, &blocked)
+		assert.Equal(t, int64(1), blocked.DeviceID)
+		assert.Equal(t, int64(300), blocked.SessionID)
+		assert.True(t, blocked.StartedAt.Equal(fixedTime))
+		assert.Equal(t, &activity, blocked.ActivityName)
+		assert.Equal(t, &room, blocked.RoomName)
+		assert.Empty(t, h.devices.deleted, "the device stays live")
+		assert.Empty(t, h.audit.entries)
 	})
 
 	t.Run("audit failure fails the transaction", func(t *testing.T) {
@@ -736,13 +757,12 @@ func TestProvisioningDeleteDevice(t *testing.T) {
 				assert.Equal(t, "system device required for manual web check-ins", protected.Reason)
 			},
 		},
-		"referenced device is in use": {
-			seed: func(h *provisioningHarness) { h.devices.fail["DeleteDevice"] = domain.ErrDeviceReferenced },
+		"session lookup failure": {
+			seed: func(h *provisioningHarness) { h.presence.sessionErr = errBoom },
 			id:   1,
 			check: func(t *testing.T, err error) {
-				var inUse *organizationtenancy.DeviceInUseError
-				require.ErrorAs(t, err, &inUse)
-				assert.Equal(t, int64(1), inUse.DeviceID)
+				require.ErrorIs(t, err, errBoom)
+				assert.Contains(t, err.Error(), "DeleteDevice: find active session")
 			},
 		},
 		"unknown delete error is wrapped": {

@@ -73,6 +73,10 @@ func (s *sessionLifecycle) StartSession(ctx context.Context, command devicescan.
 		return devicescan.SessionStartResponse{}, devicescan.Internal("at least one supervisor ID is required", nil)
 	}
 	group, err := s.store.Start(ctx, device.ID, command)
+	if errors.Is(err, devicescan.ErrDeviceUnauthorized) {
+		// The device was removed after it authenticated (#2319).
+		return devicescan.SessionStartResponse{}, err
+	}
 	if err != nil {
 		var conflict *ports.SessionStartConflict
 		if errors.As(err, &conflict) {

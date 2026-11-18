@@ -7,6 +7,7 @@ import (
 
 	scanCompose "github.com/moto-ogs/project-phoenix/modules/devicescan/compose"
 
+	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	"github.com/moto-ogs/project-phoenix/modules/devicescan"
 	"github.com/moto-ogs/project-phoenix/modules/devicescan/ports"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
@@ -47,12 +48,19 @@ type OpenVisitCounts interface {
 	CountOpenVisitsInGroupWithRevision(context.Context, int64) (int, int64, error)
 }
 
+// liveDeviceLock locks one live device row in the caller's transaction and
+// reports a removed (archived) or missing device as devicefleet.ErrDeviceNotFound.
+type liveDeviceLock interface {
+	FindDeviceForUpdate(context.Context, int64) (devicefleet.Device, error)
+}
+
 // lifecycleStore promotes CountOpenVisitsInGroupWithRevision unchanged; the
 // other lifecycle steps go through active.
 type lifecycleStore struct {
 	OpenVisitCounts
 	active   studentpresence.Presence
 	presence lifecycleSupervisionQuery
+	devices  liveDeviceLock
 }
 
 func lifecycleSession(group *studentpresence.SessionDetail) ports.LifecycleSession {
@@ -85,6 +93,17 @@ func supervisionEnded(endDate *string, today string) bool {
 }
 
 func (s lifecycleStore) Start(ctx context.Context, deviceID int64, command devicescan.StartSessionCommand) (ports.LifecycleSession, error) {
+	// A removed device opens no session (#2319). The kiosk authenticated
+	// before this request ran, so the start locks the live device row in its
+	// transaction: a removal that holds the row first makes this read wait
+	// and then find no live device; a start that holds it first makes the
+	// removal see the new session and refuse.
+	if _, err := s.devices.FindDeviceForUpdate(ctx, deviceID); err != nil {
+		if errors.Is(err, devicefleet.ErrDeviceNotFound) {
+			return ports.LifecycleSession{}, devicescan.ErrDeviceUnauthorized
+		}
+		return ports.LifecycleSession{}, err
+	}
 	var group *studentpresence.SessionDetail
 	var err error
 	if command.Force {

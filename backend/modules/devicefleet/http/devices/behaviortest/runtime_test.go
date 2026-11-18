@@ -1,7 +1,9 @@
 package devices_test
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -43,6 +45,17 @@ func testRuntime() devices.Runtime {
 				"errors": []map[string]string{{"field": field, "reason": err.Error()}},
 			})
 		},
+		ConflictWithDetails: func(w http.ResponseWriter, r *http.Request, err error, code string, details map[string]any) {
+			wire := make(map[string]string, len(details))
+			for key, value := range details {
+				wire[key] = fmt.Sprint(value)
+			}
+			testutil.RespondCoded(w, r, http.StatusConflict, code, err, wire, "")
+		},
+		// The behaviour suite runs no kiosk sessions; the API suite
+		// (api/device_removal_test.go) covers the session guard.
+		ActiveSession: func(context.Context, int64) (*devices.RemovalSession, error) { return nil, nil },
+		AuditRemoval:  func(*http.Request, devices.RemovalAudit) {},
 		ConstraintViolation: func(err error) bool {
 			state := testpkg.PostgresSQLState(err)
 			return state == "23503" || state == "23502"
