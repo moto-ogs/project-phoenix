@@ -209,7 +209,7 @@ export function StaffProofsCard({
         <StaffProofModal
           target={target}
           onClose={() => setTarget(null)}
-          onSaved={(next) => {
+          onSaved={(next: StaffProof[]) => {
             setTarget(null);
             changed(next);
           }}
