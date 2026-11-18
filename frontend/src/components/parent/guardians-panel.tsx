@@ -185,9 +185,7 @@ export default function GuardiansPanel({
     guardiansGuard.refusal !== undefined ||
     accountsGuard.refusal !== undefined ||
     [guardiansResource.error, accountsResource.error].some(
-      (error) =>
-        error instanceof ApiError &&
-        (error.status === 401 || error.status === 403),
+      (error) => error instanceof ApiError && isAccessRefusal(error),
     );
   const guardians: ChildGuardian[] = accessRefused
     ? []

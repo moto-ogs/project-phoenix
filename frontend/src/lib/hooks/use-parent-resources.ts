@@ -1,5 +1,6 @@
 "use client";
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import {
   useCallback,
   useEffect,
@@ -261,8 +262,7 @@ export function useParentFeatures(children: readonly Child[] | undefined) {
           error instanceof ParentResourceFailure &&
           Object.values(error.failures).some(
             (failure) =>
-              failure instanceof ApiError &&
-              (failure.status === 401 || failure.status === 403),
+              failure instanceof ApiError && isAccessRefusal(failure),
           )
         ),
     },
@@ -329,8 +329,7 @@ export function useParentToday(children: readonly Child[] | undefined) {
           error instanceof ParentResourceFailure &&
           Object.values(error.failures).some(
             (failure) =>
-              failure instanceof ApiError &&
-              (failure.status === 401 || failure.status === 403),
+              failure instanceof ApiError && isAccessRefusal(failure),
           )
         ),
     },

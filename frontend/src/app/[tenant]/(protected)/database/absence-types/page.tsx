@@ -5,6 +5,7 @@
 // Auswahlfelds „Art der Abwesenheit", das aus zwei Dialogen der Zeiterfassung
 // aufging. Das Feld ist jetzt reine Auswahl und verlinkt hierher.
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { Suspense, useCallback, useLayoutEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -304,8 +305,7 @@ function AbsenceTypesPageContent() {
     absenceTypeService.getAbsenceTypes(),
   );
   const accessRefused =
-    swrError instanceof ApiError &&
-    (swrError.status === 401 || swrError.status === 403);
+    swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
   useLayoutEffect(() => {
     if (!accessRefused) return;

@@ -1613,7 +1613,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Ordner bearbeiten Neuer Ordner@157",
     ],
     "src/components/planning/closing-day-modal.tsx": [
-      "Schließtag bearbeiten Schließtag anlegen@154",
+      "Schließtag bearbeiten Schließtag anlegen@155",
     ],
     "src/components/staff-notices/staff-notice-modal.tsx": [
       "Hinweis bearbeiten Neuer Hinweis@190",

@@ -6,6 +6,7 @@
 // Verwaltungsoberfläche in einem Auswahlfeld. Das Feld ist jetzt reine
 // Auswahl und verlinkt hierher.
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { Suspense, useCallback, useLayoutEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -78,8 +79,7 @@ function PlanningTracksPageContent() {
     planningTrackService.list(),
   );
   const accessRefused =
-    swrError instanceof ApiError &&
-    (swrError.status === 401 || swrError.status === 403);
+    swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
   useLayoutEffect(() => {
     if (!accessRefused) return;
