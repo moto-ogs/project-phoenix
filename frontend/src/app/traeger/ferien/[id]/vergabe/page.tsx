@@ -17,7 +17,7 @@ import {
 } from "~/components/traeger/holiday-allocation-decision-modal";
 import { HolidayAllocationHistory } from "~/components/traeger/holiday-allocation-history";
 import {
-  criterionTone,
+  criterionRankLabel,
   openWeeks,
   proposalDecisions,
   proposalSummary,
@@ -30,8 +30,8 @@ import {
 } from "~/components/traeger/holiday-period-head";
 import { schoolNames } from "~/components/traeger/holiday-registration-format";
 import {
-  TraegerListExportMenu,
   traegerExportScope,
+  useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
@@ -90,21 +90,21 @@ export default function TraegerHolidayAllocationPage() {
     null,
   );
   const [taking, setTaking] = useState(false);
-  const boardRef = useRef<HTMLDivElement>(null);
   // A decision removes the row whose button had the focus (#7111). The week
   // the person decided in takes it, or the next open one, or "Alles
   // entschieden"; `null` decides nothing, `"all"` any week.
   const focusAfterDecision = useRef<string | null>(null);
   useEffect(() => {
     const weekId = focusAfterDecision.current;
-    const list = boardRef.current;
-    if (weekId === null || !list) return;
+    if (weekId === null) return;
     focusAfterDecision.current = null;
+    // The weeks stand directly in the page body (no wrapper with its own
+    // gap, #7411); their markers are unique on the page.
     focusStepHeading(
-      list.querySelector<HTMLElement>(
+      document.querySelector<HTMLElement>(
         `[data-allocation-week="${CSS.escape(weekId)}"]`,
       ) ??
-        list.querySelector<HTMLElement>(
+        document.querySelector<HTMLElement>(
           "[data-allocation-week], [data-allocation-done]",
         ),
     );
@@ -200,6 +200,20 @@ export default function TraegerHolidayAllocationPage() {
     }
   };
 
+  // The export stands in the page menu; „Vorschlag für alle Wochen
+  // übernehmen“ stays the one visible action (#7411).
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList(
+        `/api/traeger/holiday-periods/${id}/allocation/export`,
+        format,
+      ),
+    scope: traegerExportScope(),
+    fallbackName: "vergabe",
+    errorObject: "die Vergabe",
+    unavailable: !board || (weeks.length === 0 && board.decisions.length === 0),
+  });
+
   const loadError = boardError ?? periodError;
   const loading = !loadError && (!period || (byCriteria && !board));
   const busy = taking || target !== null;
@@ -247,38 +261,50 @@ export default function TraegerHolidayAllocationPage() {
         period?.registrationCount,
         period?.allocationMode,
       )}
+      overflowMenu={byCriteria ? exportItems : undefined}
       actions={
-        byCriteria ? (
-          <>
-            <TraegerListExportMenu
-              download={(format) =>
-                downloadTraegerList(
-                  `/api/traeger/holiday-periods/${id}/allocation/export`,
-                  format,
-                )
-              }
-              scope={traegerExportScope()}
-              ariaLabel="Vergabe herunterladen"
-              fallbackName="vergabe"
-              errorObject="die Vergabe"
-              unavailable={
-                !board || (weeks.length === 0 && board.decisions.length === 0)
-              }
-            />
-            {weeks.length > 1 ? (
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                disabled={busy}
-                tooltip="moto fragt vorher nach, dann vergibt es die Plätze und schreibt den Eltern."
-                onClick={() => setProposalScope("all")}
-              >
-                Vorschlag für alle Wochen übernehmen
-              </Button>
-            ) : null}
-          </>
+        byCriteria && weeks.length > 1 ? (
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            disabled={busy}
+            tooltip="moto fragt vorher nach, dann vergibt es die Plätze und schreibt den Eltern."
+            onClick={() => setProposalScope("all")}
+          >
+            Vorschlag für alle Wochen übernehmen
+          </Button>
         ) : null
+      }
+      overlays={
+        <>
+          <HolidayAllocationDecisionModal
+            target={target}
+            onClose={() => setTarget(null)}
+            onConfirm={decideOne}
+            onStale={reloadAfterStale}
+          />
+          <ConfirmationModal
+            isOpen={proposalScope !== null}
+            title="Vorschlag übernehmen?"
+            confirmText="Vorschlag übernehmen"
+            confirmVariant="success"
+            isConfirmLoading={taking}
+            isDismissDisabled={taking}
+            loadingText="Übernimmt …"
+            onClose={() => setProposalScope(null)}
+            onConfirm={() => void takeProposal()}
+          >
+            <div className="space-y-2 text-sm text-gray-700">
+              <p>{proposalSummaryText(summary)}</p>
+              <p>
+                {summary.registrations === 1
+                  ? "Die Eltern bekommen eine E-Mail."
+                  : `Die Eltern von ${summary.registrations} Anmeldungen bekommen eine E-Mail.`}
+              </p>
+            </div>
+          </ConfirmationModal>
+        </>
       }
       error={loadError}
       loading={loading}
@@ -293,7 +319,7 @@ export default function TraegerHolidayAllocationPage() {
       }
     >
       {byCriteria && board ? (
-        <div ref={boardRef} className="flex flex-col gap-6">
+        <>
           <SectionCard
             title="So sortiert moto vor"
             description="Zuerst zählt das Kriterium mit der höchsten Priorität, dann das nächste. Bei Gleichstand zählt der Eingang. Du entscheidest."
@@ -306,7 +332,7 @@ export default function TraegerHolidayAllocationPage() {
                 tooltip={HOLIDAY_CRITERIA_HINT}
               >
                 <ListChecks className="h-4 w-4" aria-hidden="true" />
-                Kriterien ändern
+                Kriterien bearbeiten
               </ButtonLink>
             }
           >
@@ -324,9 +350,12 @@ export default function TraegerHolidayAllocationPage() {
                   <li key={criterion.id} className="max-w-full min-w-0">
                     <StatusBadge
                       wrap
-                      className="[overflow-wrap:anywhere]"
-                      tone={criterionTone(criterion.position)}
-                      label={`${criterion.position}. ${criterion.name}`}
+                      className="wrap-anywhere"
+                      tone="gray"
+                      label={criterionRankLabel(
+                        criterion.position,
+                        criterion.name,
+                      )}
                     />
                   </li>
                 ))}
@@ -372,35 +401,8 @@ export default function TraegerHolidayAllocationPage() {
             decisions={board.decisions}
             defaultCollapsed={weeks.length > 0}
           />
-        </div>
+        </>
       ) : null}
-
-      <HolidayAllocationDecisionModal
-        target={target}
-        onClose={() => setTarget(null)}
-        onConfirm={decideOne}
-        onStale={reloadAfterStale}
-      />
-      <ConfirmationModal
-        isOpen={proposalScope !== null}
-        title="Vorschlag übernehmen?"
-        confirmText="Vorschlag übernehmen"
-        confirmVariant="success"
-        isConfirmLoading={taking}
-        isDismissDisabled={taking}
-        loadingText="Übernimmt …"
-        onClose={() => setProposalScope(null)}
-        onConfirm={() => void takeProposal()}
-      >
-        <div className="space-y-2 text-sm text-gray-700">
-          <p>{proposalSummaryText(summary)}</p>
-          <p>
-            {summary.registrations === 1
-              ? "Die Eltern bekommen eine E-Mail."
-              : `Die Eltern von ${summary.registrations} Anmeldungen bekommen eine E-Mail.`}
-          </p>
-        </div>
-      </ConfirmationModal>
     </TenantPage>
   );
 }

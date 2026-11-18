@@ -7,7 +7,7 @@ import {
 import {
   allocationChips,
   capacityBoundary,
-  criterionTone,
+  criterionRankLabel,
   deviatesFromProposal,
   freePlacesText,
   openWeeks,
@@ -118,14 +118,8 @@ describe("holiday allocation model (#4700)", () => {
     ).toBe("An jedem Tag mindestens 1 Platz frei");
   });
 
-  it("gives every priority its colour and keeps purple for the open place", () => {
-    expect([1, 2, 3, 4, 5, 6].map(criterionTone)).toEqual([
-      "blue",
-      "cyan",
-      "green",
-      "orange",
-      "gray",
-      "gray",
-    ]);
+  it("names a criterion by its rank, never by a colour (#7411)", () => {
+    expect(criterionRankLabel(1, "Geschwisterkind")).toBe("1. Geschwisterkind");
+    expect(criterionRankLabel(6, "Alleinerziehend")).toBe("6. Alleinerziehend");
   });
 });
