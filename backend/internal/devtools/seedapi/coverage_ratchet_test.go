@@ -145,6 +145,7 @@ var seedCoverageDebt = map[string]string{}
 var seedCoverageTransient = map[string]string{
 	"auth.account_avatar_file_cleanup":           "transient deletion intents for anonymized accounts; drained hourly, never create orphan files as demo data",
 	"auth.invitation_tokens":                     "short-lived invitation state; the seed accepts some and leaves some open",
+	"auth.request_rate_limits":                   "short-lived API traffic quotas; the seed can run with limiting disabled",
 	"care_contract.contract_reminders":           "reminders of an unsigned care contract (#4679) go out only once the Träger's reminder days passed since the last mail; the seed sends its contracts minutes before the check",
 	"parent_billing.care_invoices":               "monthly invoices bill only active contracts (#4684); the Worker concludes the contracts of Weg b on its five-minute tick (#4680), so a seed run may finish before the first one is active, and a later seed run issues them",
 	"parent_billing.sepa_mandates":               "SEPA mandates of the families (#4695); the seed gives them to the contracts the monthly run bills, so present exactly when the run has an invoice, see parent_billing.care_invoices",

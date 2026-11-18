@@ -36,7 +36,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON auth.request_rate_limits TO phoenix_auth
 CREATE FUNCTION auth.request_rate_limit(
 	p_key text, p_rate bigint, p_burst bigint, p_reservation text,
 	p_settle boolean, p_spend boolean
-) RETURNS boolean
+) RETURNS text
 LANGUAGE plpgsql
 SET search_path = pg_catalog
 AS $$
@@ -49,7 +49,7 @@ BEGIN
 		SELECT * INTO bucket FROM auth.request_rate_limits
 			WHERE bucket_key = p_key FOR UPDATE;
 		EXIT WHEN FOUND;
-		IF p_settle THEN RETURN false; END IF;
+		IF p_settle THEN RETURN ''; END IF;
 		INSERT INTO auth.request_rate_limits (bucket_key, tokens, updated_at)
 			VALUES (p_key, p_burst, clock_timestamp())
 			ON CONFLICT (bucket_key) DO NOTHING;
@@ -64,17 +64,20 @@ BEGIN
 		extract(epoch FROM at_time - bucket.updated_at) * p_rate / 60);
 
 	IF p_settle THEN
-		IF NOT (bucket.reservations ? p_reservation) THEN RETURN false; END IF;
+		IF NOT (bucket.reservations ? p_reservation) THEN RETURN ''; END IF;
 		bucket.reservations := bucket.reservations - p_reservation;
 		IF NOT p_spend THEN
 			bucket.tokens := least(p_burst - pending + 1, bucket.tokens + 1);
 		END IF;
 	ELSE
-		IF bucket.tokens < 1 THEN RETURN false; END IF;
+		IF bucket.tokens < 1 THEN RETURN ''; END IF;
 		bucket.tokens := bucket.tokens - 1;
-		IF p_reservation <> '' THEN
+		IF NOT p_spend THEN
+			p_reservation := gen_random_uuid()::text;
 			bucket.reservations := bucket.reservations ||
 				jsonb_build_object(p_reservation, at_time + interval '3 minutes');
+		ELSE
+			p_reservation := 'charged';
 		END IF;
 	END IF;
 
@@ -83,7 +86,7 @@ BEGIN
 		expires_at = at_time + greatest(interval '3 minutes',
 			make_interval(secs => (p_burst - bucket.tokens) * 60 / p_rate))
 		WHERE bucket_key = p_key;
-	RETURN true;
+	RETURN p_reservation;
 END;
 $$;
 

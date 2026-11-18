@@ -1,5 +1,5 @@
 import "server-only";
-import { revalidateTag, unstable_cache } from "next/cache";
+import { revalidateTag } from "next/cache";
 import type { TenantSettings } from "~/lib/tenant-api";
 
 /** The backend's answer to `/auth/tenant/resolve?slug=…` (snake_case). */
@@ -53,17 +53,27 @@ export class TenantResolveStatusError extends Error {
   }
 }
 
-const TENANT_CACHE_SECONDS = 60;
+const TENANT_CACHE_TTL_MS = 60_000;
+const TENANT_CACHE_LIMIT = 1_000;
+const CACHE = Symbol.for("moto.tenant-resolve-cache");
 
 interface TenantCacheEntry {
-  data: TenantResolveResponse;
+  lookup: Promise<TenantResolveResponse>;
   expiresAt: number;
+}
+
+// The layout and the settings routes may carry separate copies of this module.
+function tenantCache(): Map<string, TenantCacheEntry> {
+  const state = globalThis as typeof globalThis & {
+    [CACHE]?: Map<string, TenantCacheEntry>;
+  };
+  return (state[CACHE] ??= new Map());
 }
 
 async function loadTenant(
   slug: string,
   forwardHeaders: Record<string, string>,
-): Promise<TenantCacheEntry> {
+): Promise<TenantResolveResponse> {
   const { getServerApiUrl } = await import("~/lib/server-api-url");
   const res = await fetch(
     `${getServerApiUrl()}/auth/tenant/resolve?slug=${encodeURIComponent(slug)}`,
@@ -71,45 +81,48 @@ async function loadTenant(
   );
   if (!res.ok) throw new TenantResolveStatusError(res.status);
   const { data } = (await res.json()) as { data: TenantResolveResponse };
-  return { data, expiresAt: Date.now() + TENANT_CACHE_SECONDS * 1_000 };
-}
-
-const tenantLoads = new Map<string, Promise<TenantCacheEntry>>();
-
-function refreshTenant(
-  slug: string,
-  forwardHeaders: Record<string, string>,
-): Promise<TenantCacheEntry> {
-  const active = tenantLoads.get(slug);
-  if (active) return active;
-  const pending = loadTenant(slug, forwardHeaders).finally(() => {
-    if (tenantLoads.get(slug) === pending) tenantLoads.delete(slug);
-  });
-  tenantLoads.set(slug, pending);
-  return pending;
+  return data;
 }
 
 export function invalidateTenantResolve(slug: string): void {
-  tenantLoads.delete(slug);
+  tenantCache().delete(slug);
   revalidateTag(`tenant-${slug}`, { expire: 0 });
 }
 
 /**
- * Each replica caches successful lookups by school slug. The client headers
- * travel in the closure, so a miss uses that visitor's IP without splitting
- * the cache by address. Settings writes invalidate the receiving replica.
+ * Each replica caches successful lookups by school slug. The visitor who
+ * starts the lookup supplies the forwarding headers. Other visitors reuse it.
  */
-export async function resolveTenantCached(
+export function resolveTenantCached(
   slug: string,
   forwardHeaders: Record<string, string>,
 ): Promise<TenantResolveResponse> {
-  let pending: Promise<TenantCacheEntry> | undefined;
-  const load = async () => (pending ??= refreshTenant(slug, forwardHeaders));
-  const entry = await unstable_cache(load, ["tenant-resolve", slug], {
-    revalidate: TENANT_CACHE_SECONDS,
-    tags: [`tenant-${slug}`],
-  })();
-  // Next can return the old entry while its refresh runs. After expiry,
-  // await that same fetch so even the first request sees current settings.
-  return (entry.expiresAt > Date.now() ? entry : await load()).data;
+  const cache = tenantCache();
+  const now = Date.now();
+  const cached = cache.get(slug);
+  if (cached && cached.expiresAt > now) return cached.lookup;
+
+  const entry: TenantCacheEntry = {
+    expiresAt: Infinity,
+    lookup: loadTenant(slug, forwardHeaders).then(
+      (data) => {
+        // This entry may have been invalidated during the lookup. Updating
+        // the entry in place cannot restore a removed entry to the cache.
+        entry.expiresAt = now + TENANT_CACHE_TTL_MS;
+        return data;
+      },
+      (error: unknown) => {
+        if (cache.get(slug) === entry) cache.delete(slug);
+        throw error;
+      },
+    ),
+  };
+
+  cache.delete(slug);
+  if (cache.size >= TENANT_CACHE_LIMIT) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
+  cache.set(slug, entry);
+  return entry.lookup;
 }

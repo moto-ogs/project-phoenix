@@ -38,6 +38,6 @@ func newPasswordReset(auth *application.AccountAuthentication, store *postgres.S
 	})
 }
 
-func NewRequestRateLimits(db *bun.DB, fingerprint func(string) string, reservation func() (string, error), now func() time.Time, logger *slog.Logger) identityaccess.RequestRateLimits {
-	return postgres.NewRequestRateLimits(db, fingerprint, reservation, now, logger)
+func NewRequestRateLimits(db *bun.DB, fingerprint func(string) string, now func() time.Time, logger *slog.Logger) identityaccess.RequestRateLimits {
+	return postgres.NewRequestRateLimits(db, fingerprint, now, logger)
 }

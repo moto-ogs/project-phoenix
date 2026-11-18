@@ -23,8 +23,8 @@ func TestAuthRateLimitAcrossReplicas(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, second.Close()) })
 
 	fingerprint := requestRateLimitFingerprint(testpkg.TestJWTSecret)
-	a := identityCompose.NewRequestRateLimits(first, fingerprint, requestRateLimitReservation, time.Now, slog.Default())
-	b := identityCompose.NewRequestRateLimits(second, fingerprint, requestRateLimitReservation, time.Now, slog.Default())
+	a := identityCompose.NewRequestRateLimits(first, fingerprint, time.Now, slog.Default())
+	b := identityCompose.NewRequestRateLimits(second, fingerprint, time.Now, slog.Default())
 	makeLimiter := func(store customMiddleware.RateLimitStore) authRateLimiters {
 		return buildAuthRateLimiters(nil, "1", false, func(limit, burst int) *customMiddleware.RateLimiter {
 			return customMiddleware.NewSharedRateLimiter(store, limit, burst)

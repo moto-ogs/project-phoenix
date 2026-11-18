@@ -295,7 +295,7 @@ func parsePositiveInt(valueStr string, defaultValue int) int {
 }
 
 func newServeRequestLimits(db transactionruntime.Database, env owners.RootEnvironment) (customMiddleware.RateLimitStore, rateLimiterFactory) {
-	store := identityCompose.NewRequestRateLimits(db.Pool(), requestRateLimitFingerprint(env.Config.JWTSecret), requestRateLimitReservation, env.Now, env.Logger)
+	store := identityCompose.NewRequestRateLimits(db.Pool(), requestRateLimitFingerprint(env.Config.JWTSecret), env.Now, env.Logger)
 	return store, func(limit, burst int) *customMiddleware.RateLimiter {
 		return customMiddleware.NewSharedRateLimiter(store, limit, burst)
 	}
@@ -306,10 +306,6 @@ func requestRateLimitFingerprint(secret string) func(string) string {
 	return func(bucket string) string {
 		return securityruntime.KeyedFingerprint(key, []byte("request-rate-limit:"+bucket))
 	}
-}
-
-func requestRateLimitReservation() (string, error) {
-	return securityruntime.RandomLowerAlphanumeric(32)
 }
 
 type rateLimiterFactory func(requestsPerMinute, burst int) *customMiddleware.RateLimiter
