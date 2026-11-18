@@ -110,6 +110,21 @@ describe("HolidayFormEditor (#5198)", () => {
     mockSavedHealth.mockReset();
   });
 
+  it("builds the editor like the OGS form editor: one card, one icon per add button (#7412)", () => {
+    renderEditor();
+    // Health and address are sections of the one editor card, no cards
+    // inside it.
+    for (const name of ["Gesundheit", "Anschrift"]) {
+      const region = screen.getByRole("region", { name });
+      expect(region).not.toHaveClass("moto-content-surface");
+      expect(region.querySelector(".moto-content-surface")).toBeNull();
+    }
+    for (const name of [/Frage hinzufügen/, /Infotext hinzufügen/]) {
+      const button = screen.getByRole("button", { name });
+      expect(button.querySelectorAll("svg")).toHaveLength(1);
+    }
+  });
+
   it("switches the address block and saves it with the next version (#5625)", async () => {
     mockSave.mockImplementation((_id: string, fields: HolidayFormField[]) =>
       Promise.resolve({

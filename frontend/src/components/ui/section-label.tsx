@@ -3,7 +3,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { RequiredMark } from "~/components/ui/field-label";
 import { cn } from "~/lib/utils";
 
-type SectionLabelElement = "h2" | "h3" | "h4" | "legend" | "p";
+type SectionLabelElement = "h2" | "h3" | "h4" | "h5" | "legend" | "p";
 
 interface SectionLabelProps extends HTMLAttributes<HTMLElement> {
   /** Das Element: eine Überschrift, die `legend` einer Gruppe oder ein Absatz. */

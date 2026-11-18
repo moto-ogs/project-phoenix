@@ -8,7 +8,7 @@
 // die Anschrift ab (#5625), der feste Baustein „Gesundheit“ macht Allergien
 // und Medikamente zur Pflicht (#6686). Speichern legt eine neue Version an.
 
-import { FileText, Plus, TextCursorInput } from "lucide-react";
+import { Info, Plus } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   FieldEditorRow,
@@ -34,6 +34,7 @@ import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { EmptyState } from "~/components/ui/empty-state";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
+import { SectionLabel } from "~/components/ui/section-label";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
@@ -262,159 +263,179 @@ export function HolidayFormEditor({
   return (
     <DraftDocumentContext.Provider value={draftDocuments.lifecycle}>
       <FieldErrorContext.Provider value={fieldError}>
-        <div
-          ref={formRef}
-          className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_380px]"
+        {/* Built like the OGS form editor (#7412): one card with the editor
+            and a dotted preview column, no cards inside it. */}
+        <SectionCard
+          padding="none"
+          // The save stays in the card and in view while the long list of
+          // questions scrolls.
+          stickyFooter
+          footer={editActions}
         >
-          <SectionCard
-            title="Fragen"
-            description={`Diese Fragen stehen in der Ferienanmeldung zusätzlich zu den festen Angaben. ${HOLIDAY_FREE_QUESTION_NOTE.text}`}
-            // The save stays in the card and in view while the long list of
-            // questions scrolls.
-            stickyFooter
-            footer={editActions}
-            action={
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="md"
-                  disabled={saving || uploading || missingTemplateFields === 0}
-                  disabledReason={
-                    missingTemplateFields === 0 && !saving && !uploading
-                      ? form.template.length === 0
-                        ? "Für dieses Formular gibt es keine Standardvorlage."
-                        : "Alle Fragen der Standardvorlage sind schon im Formular."
-                      : undefined
-                  }
-                  tooltip="Fügt die fehlenden Fragen der Standardvorlage unten im Formular an."
-                  onClick={() =>
-                    setFields((current) =>
-                      insertTemplateFields(current, form.template),
-                    )
-                  }
-                >
-                  Standardvorlage einfügen
-                </Button>
-                {/* Below xl the preview stands after all questions: the
-                    way there is one tap, not a long scroll. */}
-                <ActionHint text="Springt nach unten zur Vorschau des Formulars.">
-                  <a
-                    href="#holiday-form-preview"
-                    className={buttonClassName({
-                      variant: "ghost",
-                      size: "md",
-                      className: "xl:hidden",
-                    })}
-                  >
-                    Zur Vorschau
-                  </a>
-                </ActionHint>
-              </div>
-            }
+          <div
+            ref={formRef}
+            className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_430px]"
           >
-            <div className="space-y-4">
-              <FormErrorAlert message={errorPath.error} />
-              {missingTemplateFields === 0 && form.template.length > 0 ? (
-                <p className="text-sm text-gray-600">
-                  Alle Fragen der Standardvorlage sind im Formular.
-                </p>
-              ) : null}
-              {fields.length === 0 ? (
-                <EmptyState
-                  variant="compact"
-                  title="Noch keine Fragen"
-                  description="Eltern sehen nur die festen Angaben. Fügen Sie eine Frage oder die Standardvorlage hinzu."
-                />
-              ) : (
-                <div className="space-y-3">
-                  {fields.map((field, index) => (
-                    <FieldEditorRow
-                      key={fieldKey(field)}
-                      fold={{
-                        open: isOpen(fieldKey(field)),
-                        onToggle: () =>
-                          setOpen([fieldKey(field)], !isOpen(fieldKey(field))),
-                      }}
-                      field={field}
-                      index={index}
-                      total={fields.length}
-                      allFields={fields}
-                      onChange={(patch) => update(index, patch)}
-                      onRemove={() => remove(index)}
-                      onMoveUp={() => move(index, -1)}
-                      onMoveDown={() => move(index, 1)}
-                      disabled={saving || uploading}
-                      fieldTypes={HOLIDAY_FORM_FIELD_TYPES}
-                      conditionSources={HOLIDAY_CONDITION_SOURCES}
-                      allowAttachments={false}
-                      // Said once in the card's description, not on every
-                      // question.
-                      freeQuestionNote={null}
-                      healthToggle={
-                        field.type === "information"
-                          ? undefined
-                          : {
-                              checked: Boolean(field.health),
-                              onChange: (health) => update(index, { health }),
-                            }
-                      }
-                      hostShareToggle={
-                        field.type === "information"
-                          ? undefined
-                          : {
-                              checked: Boolean(field.share_with_host),
-                              onChange: (share_with_host) =>
-                                update(index, { share_with_host }),
-                            }
-                      }
-                    />
-                  ))}
+            <div className="compact:p-4 min-w-0 space-y-6 p-5 max-sm:p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900">
+                    Fragen
+                  </h2>
+                  <p className="mt-1 max-w-2xl text-sm text-gray-600">
+                    {`Diese Fragen stehen in der Ferienanmeldung zusätzlich zu den festen Angaben. ${HOLIDAY_FREE_QUESTION_NOTE.text}`}
+                  </p>
                 </div>
-              )}
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="md"
-                  disabled={saving || uploading}
-                  className="inline-flex items-center gap-2"
-                  tooltip="Fügt eine leere Frage an, die Eltern beantworten."
-                  onClick={() =>
-                    addField({
-                      ...blankField(fields.length),
-                      share_with_host: true,
-                    })
-                  }
-                >
-                  <Plus className="h-4 w-4" aria-hidden="true" />
-                  <TextCursorInput className="h-4 w-4" aria-hidden="true" />
-                  Frage hinzufügen
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="md"
-                  disabled={saving || uploading}
-                  className="inline-flex items-center gap-2"
-                  tooltip="Fügt einen Text an, den Eltern nur lesen."
-                  onClick={() => addField(blankInfoField(fields.length))}
-                >
-                  <Plus className="h-4 w-4" aria-hidden="true" />
-                  <FileText className="h-4 w-4" aria-hidden="true" />
-                  Infotext hinzufügen
-                </Button>
+                <div className="flex flex-wrap gap-2 sm:shrink-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="md"
+                    disabled={
+                      saving || uploading || missingTemplateFields === 0
+                    }
+                    disabledReason={
+                      missingTemplateFields === 0 && !saving && !uploading
+                        ? form.template.length === 0
+                          ? "Für dieses Formular gibt es keine Standardvorlage."
+                          : "Alle Fragen der Standardvorlage sind schon im Formular."
+                        : undefined
+                    }
+                    tooltip="Fügt die fehlenden Fragen der Standardvorlage unten im Formular an."
+                    onClick={() =>
+                      setFields((current) =>
+                        insertTemplateFields(current, form.template),
+                      )
+                    }
+                  >
+                    Standardvorlage einfügen
+                  </Button>
+                  {/* Below lg the preview stands after all questions: the
+                      way there is one tap, not a long scroll. */}
+                  <ActionHint text="Springt nach unten zur Vorschau des Formulars.">
+                    <a
+                      href="#holiday-form-preview"
+                      className={buttonClassName({
+                        variant: "ghost",
+                        size: "md",
+                        className: "lg:hidden",
+                      })}
+                    >
+                      Zur Vorschau
+                    </a>
+                  </ActionHint>
+                </div>
               </div>
-              <SectionCard
-                title="Gesundheit"
-                headingLevel={3}
-                namedRegion
-                description={
-                  health === "required"
-                    ? "Eltern beantworten für jedes Kind Allergien und Medikamente. Hat das Kind keine, wählen sie „Nein, keine“. Weitere Hinweise bleiben freiwillig."
-                    : "Eltern können Allergien, Medikamente und weitere Hinweise angeben. Sie dürfen die Felder leer lassen."
-                }
+
+              <div className="space-y-4">
+                <FormErrorAlert message={errorPath.error} />
+                {missingTemplateFields === 0 && form.template.length > 0 ? (
+                  <p className="text-sm text-gray-600">
+                    Alle Fragen der Standardvorlage sind im Formular.
+                  </p>
+                ) : null}
+                {fields.length === 0 ? (
+                  <EmptyState
+                    variant="compact"
+                    title="Noch keine Fragen"
+                    description="Eltern sehen nur die festen Angaben. Fügen Sie eine Frage oder die Standardvorlage hinzu."
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {fields.map((field, index) => (
+                      <FieldEditorRow
+                        key={fieldKey(field)}
+                        fold={{
+                          open: isOpen(fieldKey(field)),
+                          onToggle: () =>
+                            setOpen(
+                              [fieldKey(field)],
+                              !isOpen(fieldKey(field)),
+                            ),
+                        }}
+                        field={field}
+                        index={index}
+                        total={fields.length}
+                        allFields={fields}
+                        onChange={(patch) => update(index, patch)}
+                        onRemove={() => remove(index)}
+                        onMoveUp={() => move(index, -1)}
+                        onMoveDown={() => move(index, 1)}
+                        disabled={saving || uploading}
+                        fieldTypes={HOLIDAY_FORM_FIELD_TYPES}
+                        conditionSources={HOLIDAY_CONDITION_SOURCES}
+                        allowAttachments={false}
+                        // Said once under the heading, not on every
+                        // question.
+                        freeQuestionNote={null}
+                        healthToggle={
+                          field.type === "information"
+                            ? undefined
+                            : {
+                                checked: Boolean(field.health),
+                                onChange: (health) => update(index, { health }),
+                              }
+                        }
+                        hostShareToggle={
+                          field.type === "information"
+                            ? undefined
+                            : {
+                                checked: Boolean(field.share_with_host),
+                                onChange: (share_with_host) =>
+                                  update(index, { share_with_host }),
+                              }
+                        }
+                      />
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="md"
+                    disabled={saving || uploading}
+                    className="inline-flex items-center gap-2"
+                    tooltip="Fügt eine leere Frage an, die Eltern beantworten."
+                    onClick={() =>
+                      addField({
+                        ...blankField(fields.length),
+                        share_with_host: true,
+                      })
+                    }
+                  >
+                    <Plus className="h-4 w-4" aria-hidden="true" />
+                    Frage hinzufügen
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="md"
+                    disabled={saving || uploading}
+                    className="inline-flex items-center gap-2"
+                    tooltip="Fügt einen Text an, den Eltern nur lesen."
+                    onClick={() => addField(blankInfoField(fields.length))}
+                  >
+                    <Info className="h-4 w-4" aria-hidden="true" />
+                    Infotext hinzufügen
+                  </Button>
+                </div>
+              </div>
+
+              <section
+                aria-labelledby="holiday-form-health"
+                className="space-y-3 border-t border-gray-100 pt-5"
               >
+                <div>
+                  <SectionLabel id="holiday-form-health">
+                    Gesundheit
+                  </SectionLabel>
+                  <p className="mt-1 max-w-2xl text-sm text-gray-600">
+                    {health === "required"
+                      ? "Eltern beantworten für jedes Kind Allergien und Medikamente. Hat das Kind keine, wählen sie „Nein, keine“. Weitere Hinweise bleiben freiwillig."
+                      : "Eltern können Allergien, Medikamente und weitere Hinweise angeben. Sie dürfen die Felder leer lassen."}
+                  </p>
+                </div>
                 <SegmentedControl
                   ariaLabel="Allergien und Medikamente abfragen"
                   items={HOLIDAY_HEALTH_CHOICES.map((item) => ({
@@ -428,7 +449,6 @@ export function HolidayFormEditor({
                   <Alert
                     type="warning"
                     size="compact"
-                    className="mt-3"
                     message={`Allergien und Medikamente fragt das Formular schon ab. Diese eigenen Fragen fragen es noch einmal: ${repeatedHealthQuestions
                       .map((field) => `„${field.label}“`)
                       .join(
@@ -436,15 +456,23 @@ export function HolidayFormEditor({
                       )}. Entfernen Sie sie, sonst antworten Eltern doppelt.`}
                   />
                 ) : null}
-              </SectionCard>
-              <SectionCard
-                title="Anschrift"
-                headingLevel={3}
-                namedRegion
-                description="Eltern geben Straße, PLZ und Ort an. Rechnung und Bestätigungsschreiben übernehmen die Anschrift."
+              </section>
+
+              <section
+                aria-labelledby="holiday-form-address"
+                className="space-y-3 border-t border-gray-100 pt-5"
               >
-                {/* Unter sm untereinander: drei Segmente nebeneinander sind breiter
-                    als ein 320-px-Telefon abzüglich der beiden Kartenränder. */}
+                <div>
+                  <SectionLabel id="holiday-form-address">
+                    Anschrift
+                  </SectionLabel>
+                  <p className="mt-1 max-w-2xl text-sm text-gray-600">
+                    Eltern geben Straße, PLZ und Ort an. Rechnung und
+                    Bestätigungsschreiben übernehmen die Anschrift.
+                  </p>
+                </div>
+                {/* Unter sm untereinander: drei Segmente nebeneinander sind
+                    breiter als ein 320-px-Telefon abzüglich der Kartenränder. */}
                 <SegmentedControl
                   className="max-sm:grid max-sm:w-full max-sm:grid-flow-row"
                   ariaLabel="Anschrift abfragen"
@@ -455,7 +483,8 @@ export function HolidayFormEditor({
                   value={address}
                   onChange={setAddress}
                 />
-              </SectionCard>
+              </section>
+
               <LegalBlocksSection
                 blocks={legalBlocks}
                 standardBlocks={[]}
@@ -465,89 +494,88 @@ export function HolidayFormEditor({
                 disabled={saving || uploading}
               />
             </div>
-          </SectionCard>
 
-          <aside
-            id="holiday-form-preview"
-            aria-label="Vorschau für Eltern"
-            className="scroll-mt-24"
-          >
-            <FormPreview
-              title="Ferienanmeldung"
-              headerInside
-              header={
-                <FormPreviewHeading
-                  title="Vorschau für Eltern"
-                  hint={
-                    dirty
-                      ? "Noch nicht gespeichert. Eltern sehen weiter die gespeicherte Version."
-                      : "So sehen Eltern das Formular."
-                  }
-                />
-              }
+            <aside
+              id="holiday-form-preview"
+              aria-label="Vorschau für Eltern"
+              className="moto-dotted-background moto-dotted-background--split compact:p-4 scroll-mt-24 border-t border-gray-100 p-5 max-sm:p-4 lg:border-t-0 lg:border-l"
             >
-              <PreviewSection
-                title="Kind"
-                fields={[
-                  "Vorname *",
-                  "Nachname *",
-                  "Geburtsdatum *",
-                  "Schule *",
-                  "Wochen und Zeitmodell *",
-                  ...holidayHealthPreviewFields(health),
-                ]}
-              />
-              <PreviewFieldsSection
-                title={germanMessages.childQuestionsTitle}
-                fields={childFields}
-                emptyTitle="Keine Fragen oder Infos zum Kind"
-                emptyText="Bei jedem Kind stehen nur die festen Angaben."
-                fieldBadge={questionBadge}
-              />
-              <PreviewSection
-                title="Elternteil"
-                fields={["Vorname *", "Nachname *", "E-Mail *", "Telefon *"]}
-              />
-              {address === "off" ? null : (
+              <FormPreview
+                title="Ferienanmeldung"
+                header={
+                  <FormPreviewHeading
+                    title="Vorschau für Eltern"
+                    hint={
+                      dirty
+                        ? "Noch nicht gespeichert. Eltern sehen weiter die gespeicherte Version."
+                        : "So sehen Eltern das Formular."
+                    }
+                  />
+                }
+              >
                 <PreviewSection
-                  title={
-                    address === "optional"
-                      ? germanMessages.addressTitleOptional
-                      : germanMessages.addressTitle
-                  }
-                  fields={holidayAddressPreviewFields(address)}
+                  title="Kind"
+                  fields={[
+                    "Vorname *",
+                    "Nachname *",
+                    "Geburtsdatum *",
+                    "Schule *",
+                    "Wochen und Zeitmodell *",
+                    ...holidayHealthPreviewFields(health),
+                  ]}
                 />
-              )}
-              <PreviewFieldsSection
-                title={germanMessages.familyQuestionsTitle}
-                fields={familyFields}
-                emptyTitle="Keine allgemeinen Fragen oder Infos"
-                emptyText="Beim Elternteil stehen nur die festen Angaben."
-                fieldBadge={questionBadge}
-              />
-              <PreviewSection
-                title="Kontakte"
-                fields={["Personen: Notfallkontakt und/oder Abholung"]}
-              />
-              <PreviewSection
-                title="Hinweise und Einwilligungen"
-                fields={legalBlocks
-                  .filter((b) => b.enabled)
-                  .map((b) => `${b.title}${b.required ? " *" : ""}`)}
-              />
-              <PreviewSection
-                title="Zustimmungen"
-                fields={[
-                  "Datenschutz *",
-                  health === "required"
-                    ? "Gesundheitsangaben *"
-                    : "Gesundheitsangaben (wenn angegeben) *",
-                  "Verbindliche Anmeldung (wenn verbindlich) *",
-                ]}
-              />
-            </FormPreview>
-          </aside>
-        </div>
+                <PreviewFieldsSection
+                  title={germanMessages.childQuestionsTitle}
+                  fields={childFields}
+                  emptyTitle="Keine Fragen oder Infos zum Kind"
+                  emptyText="Bei jedem Kind stehen nur die festen Angaben."
+                  fieldBadge={questionBadge}
+                />
+                <PreviewSection
+                  title="Elternteil"
+                  fields={["Vorname *", "Nachname *", "E-Mail *", "Telefon *"]}
+                />
+                {address === "off" ? null : (
+                  <PreviewSection
+                    title={
+                      address === "optional"
+                        ? germanMessages.addressTitleOptional
+                        : germanMessages.addressTitle
+                    }
+                    fields={holidayAddressPreviewFields(address)}
+                  />
+                )}
+                <PreviewFieldsSection
+                  title={germanMessages.familyQuestionsTitle}
+                  fields={familyFields}
+                  emptyTitle="Keine allgemeinen Fragen oder Infos"
+                  emptyText="Beim Elternteil stehen nur die festen Angaben."
+                  fieldBadge={questionBadge}
+                />
+                <PreviewSection
+                  title="Kontakte"
+                  fields={["Personen: Notfallkontakt und/oder Abholung"]}
+                />
+                <PreviewSection
+                  title="Hinweise und Einwilligungen"
+                  fields={legalBlocks
+                    .filter((b) => b.enabled)
+                    .map((b) => `${b.title}${b.required ? " *" : ""}`)}
+                />
+                <PreviewSection
+                  title="Zustimmungen"
+                  fields={[
+                    "Datenschutz *",
+                    health === "required"
+                      ? "Gesundheitsangaben *"
+                      : "Gesundheitsangaben (wenn angegeben) *",
+                    "Verbindliche Anmeldung (wenn verbindlich) *",
+                  ]}
+                />
+              </FormPreview>
+            </aside>
+          </div>
+        </SectionCard>
       </FieldErrorContext.Provider>
     </DraftDocumentContext.Provider>
   );

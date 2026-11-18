@@ -152,7 +152,7 @@ function TimeModelRow({
         name={`${field}.name`}
         label="Name"
         required
-        controlSize="touch"
+        controlSize="compact"
         placeholder="z. B. bis 13 Uhr"
         value={model.name}
         maxLength={80}
@@ -193,7 +193,7 @@ function TimeModelRow({
         name={`${field}.price_cents`}
         label={unit === "day" ? "Preis je Tag in Euro" : "Preis in Euro"}
         required
-        controlSize="touch"
+        controlSize="compact"
         inputMode="decimal"
         placeholder="z. B. 45,00"
         value={model.price}
@@ -225,7 +225,7 @@ function TimeModelRow({
           // with that visible text, so voice control finds it (WCAG 2.5.3).
           <Button
             type="button"
-            variant="ghost"
+            variant="ghost_danger"
             size="compact"
             aria-label={`Zeitmodell entfernen: ${model.name || "ohne Namen"}`}
             tooltip="Nimmt das Zeitmodell aus der Woche, wirksam erst nach dem Speichern."
@@ -287,7 +287,7 @@ function WeekLunchFields({
   const booked = week.lunchBooked ?? false;
   return (
     <div className="space-y-3">
-      <h5 className="text-sm font-semibold text-gray-900">Mittagessen</h5>
+      <SectionLabel as="h5">Mittagessen</SectionLabel>
       <SwitchRow
         label="Mittagessen anbieten"
         description={
@@ -305,7 +305,7 @@ function WeekLunchFields({
             name={`${prefix}.lunch_price_cents`}
             label="Preis für ein Essen in Euro"
             required
-            controlSize="touch"
+            controlSize="compact"
             inputMode="decimal"
             placeholder="z. B. 4,30"
             value={week.lunchPrice ?? ""}
@@ -391,7 +391,7 @@ export function HolidayWeekEditor({
         padding="compact"
         className="flex flex-wrap items-center justify-between gap-3"
       >
-        <h4 className="text-sm font-semibold text-gray-900">{title}</h4>
+        <SectionLabel as="h4">{title}</SectionLabel>
         {booked ? (
           <p className="text-sm text-gray-600">
             Für diese Woche gibt es Anmeldungen. Sie bleibt im Zeitraum.
@@ -480,7 +480,7 @@ export function HolidayWeekEditor({
 
         <div className="space-y-3">
           {/* What a time model is stands once above the weeks. */}
-          <h5 className="text-sm font-semibold text-gray-900">Zeitmodelle</h5>
+          <SectionLabel as="h5">Zeitmodelle</SectionLabel>
           {week.timeModels.every((model) => model.archived) ? (
             <p className="text-sm text-gray-600">
               Diese Woche hat noch kein buchbares Zeitmodell. Zum

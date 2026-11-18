@@ -6,14 +6,14 @@
 
 import { Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ISODateInput } from "~/components/ui/date-picker";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
-import NavigationLink from "~/components/ui/navigation-link";
 import { SectionCard } from "~/components/ui/section-card";
+import { SectionLabel } from "~/components/ui/section-label";
 import { SwitchRow } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError } from "~/contexts/ToastContext";
@@ -220,7 +220,7 @@ export function HolidayPeriodForm({
         <fieldset disabled={saving} className="min-w-0 space-y-6 pb-4">
           <div className="space-y-4">
             <Input
-              controlSize="touch"
+              controlSize="compact"
               name="name"
               label="Name des Ferienzeitraums"
               required
@@ -293,14 +293,20 @@ export function HolidayPeriodForm({
                 <>
                   Kinder Ihrer Schulen ohne Ferienwunsch warten hinter den
                   anderen. Was ohne Ferienwunsch gilt, legen Sie in den{" "}
-                  <NavigationLink
+                  {/* In a form a link opens a new tab, so the unsaved
+                      draft stays (Bauart 1 R9). */}
+                  <ButtonLink
                     href={traegerPath(
                       `/traeger/einstellungen?bereich=${TRAEGER_HOLIDAY_TAB}`,
                     )}
-                    className="font-medium text-gray-900 underline underline-offset-2"
+                    newTab
+                    variant="link"
+                    // In running text the link stays recognisable at rest.
+                    className="underline underline-offset-2"
+                    tooltip="Öffnet die Einstellungen der Ferien in einem neuen Tab."
                   >
                     Einstellungen
-                  </NavigationLink>{" "}
+                  </ButtonLink>{" "}
                   fest. Feriengäste sind nicht betroffen.
                 </>
               }
@@ -336,7 +342,7 @@ export function HolidayPeriodForm({
 
           <div className="space-y-4 border-t border-gray-200 pt-6">
             <div>
-              <h3 className="text-sm font-semibold text-gray-600">Wochen</h3>
+              <SectionLabel as="h3">Wochen</SectionLabel>
               <p className="text-sm text-gray-600">
                 Jede Woche findet an einer Schule Ihres Trägers statt. Wollen
                 Sie dieselben Tage an mehreren Schulen anbieten? Legen Sie dafür
