@@ -17,9 +17,11 @@ import (
 // proposal is a validated, normalized change request payload ready to store
 // or apply.
 type proposal struct {
-	request    SubmitRequest
-	selections [][]selection.Selection
-	phase      *enrollmentNative.Phase
+	request     SubmitRequest
+	schema      *enrollmentNative.FormSchema
+	legalBlocks []enrollmentNative.LegalBlock
+	selections  [][]selection.Selection
+	phase       *enrollmentNative.Phase
 	// locked is the phase as the phase bounds reader read it; phase is its
 	// row. Only locked reaches the bookings.
 	locked    enrollmentNative.LockedPhase
@@ -201,6 +203,7 @@ func (s *ChangeRequests) validateProposal(ctx context.Context, req *enrollmentNa
 	if err := normalizeAdditionalGuardians(editReq); err != nil {
 		return err
 	}
+	prepared.schema, prepared.legalBlocks = schema, legalBlocks
 	consentBlocks := legalBlocks
 	if renewalRequest(children) {
 		// A renewal's acceptance of the new phase comes only with its

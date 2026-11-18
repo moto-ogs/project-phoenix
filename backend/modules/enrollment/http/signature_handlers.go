@@ -372,10 +372,10 @@ func signatureProofCustomFields(answers capability.FormValues, schema *capabilit
 // snapshot with the parent's answer, text and document references.
 func signatureProofConsents(req *capability.Request) (lists.Record, error) {
 	record := lists.Record{Title: "Rechtstexte zum Zeitpunkt der letzten Abgabe"}
-	if len(req.LegalBlocksSnapshot) == 0 {
+	entry, ok := capability.LastSubmissionLegalSnapshot(req.LegalBlocksSnapshot)
+	if !ok {
 		return record, nil
 	}
-	entry := req.LegalBlocksSnapshot[len(req.LegalBlocksSnapshot)-1]
 	flags := map[string]any{}
 	if err := decodeJSONObject(entry.ConsentFlags, &flags); err != nil {
 		return record, fmt.Errorf("decode consent flags of the legal snapshot: %w", err)

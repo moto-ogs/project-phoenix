@@ -56,8 +56,10 @@ type LegalBlockSnapshot struct {
 	Label       string           `json:"label"`
 	Text        string           `json:"text"`
 	TextSHA256  string           `json:"text_sha256,omitempty"`
-	Required    bool             `json:"required"`
-	Source      string           `json:"source,omitempty"`
+	// PDFSHA256 binds the public document URLs to the bytes available at submission.
+	PDFSHA256 map[string]string `json:"pdf_sha256,omitempty"`
+	Required  bool              `json:"required"`
+	Source    string            `json:"source,omitempty"`
 	// Translations records the translated wordings (locale → attribute →
 	// text) the form offered next to the German one (#3377). The server does
 	// not learn which language the guardian read.
@@ -73,15 +75,28 @@ type LegalBlockSnapshot struct {
 // or deleted while the request lives; they share the request's
 // retention.
 type LegalBlocksSnapshotEntry struct {
-	SnapshotAt   time.Time            `json:"snapshot_at"`
-	Blocks       []LegalBlockSnapshot `json:"blocks"`
-	ConsentFlags json.RawMessage      `json:"consent_flags"`
+	// ChangeRequest marks evidence carried over after a family proposal was approved.
+	ChangeRequest bool                 `json:"change_request,omitempty"`
+	SnapshotAt    time.Time            `json:"snapshot_at"`
+	Blocks        []LegalBlockSnapshot `json:"blocks"`
+	ConsentFlags  json.RawMessage      `json:"consent_flags"`
 	// FormSchemaID is the form version whose legal blocks the entry holds;
 	// DisplayedFormSchemaID the version the parent's form showed (#4680).
 	// They differ when the school published a new version while the form
 	// was open.
 	FormSchemaID          int64 `json:"form_schema_id,omitempty"`
 	DisplayedFormSchemaID int64 `json:"displayed_form_schema_id,omitempty"`
+}
+
+// LastSubmissionLegalSnapshot returns the latest submission or renewal evidence.
+// Change requests have their own evidence and cannot substitute for either.
+func LastSubmissionLegalSnapshot(entries []LegalBlocksSnapshotEntry) (LegalBlocksSnapshotEntry, bool) {
+	for i := len(entries) - 1; i >= 0; i-- {
+		if !entries[i].ChangeRequest {
+			return entries[i], true
+		}
+	}
+	return LegalBlocksSnapshotEntry{}, false
 }
 
 const (

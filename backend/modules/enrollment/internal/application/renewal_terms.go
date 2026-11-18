@@ -124,10 +124,10 @@ func (s *Intake) renewalTerms(ctx context.Context, req *enrollmentNative.Request
 // accepted every required block of this form version in its current wording;
 // nil otherwise. Only the latest entry counts, as for the contract.
 func renewalConfirmedAt(entries []enrollmentNative.LegalBlocksSnapshotEntry, form renewalForm, fingerprint Fingerprint) *time.Time {
-	if len(entries) == 0 {
+	entry, ok := enrollmentNative.LastSubmissionLegalSnapshot(entries)
+	if !ok {
 		return nil
 	}
-	entry := entries[len(entries)-1]
 	if entry.FormSchemaID != form.id() || entry.DisplayedFormSchemaID != form.id() {
 		return nil
 	}
@@ -185,7 +185,7 @@ func (s *Intake) acceptRenewalTerms(ctx context.Context, req *enrollmentNative.R
 	if renewalConfirmedAt(req.LegalBlocksSnapshot, form, s.deps.Fingerprint) != nil {
 		return nil
 	}
-	entry, err := legalBlocksSnapshotEntry(form.blocks, flags, formsOf(form.schema, confirmation.DisplayedFormSchemaID), s.now(), s.deps.Fingerprint)
+	entry, err := s.snapshotLegalEvidence(ctx, form.blocks, flags, formsOf(form.schema, confirmation.DisplayedFormSchemaID), s.now())
 	if err != nil {
 		return fmt.Errorf("renewal terms: snapshot: %w", err)
 	}

@@ -94,6 +94,8 @@ type ChangeRequestDependencies struct {
 	// takes before it reads the phase (#6657). The root always binds it.
 	LockTemplateRecurrence func(context.Context) error
 	Settings               IntakeSettings
+	Fingerprint            Fingerprint
+	LegalPDFFingerprint    func(context.Context, int64, string) (string, error)
 	Outbox                 MailOutbox
 	FrontendURL            string
 	ParentsURL             string
@@ -138,7 +140,7 @@ func NewChangeRequests(deps ChangeRequestDependencies) *ChangeRequests {
 	intake := NewIntake(IntakeDependencies{
 		Requests: deps.Requests, Children: deps.Children, Catalog: deps.Catalog, Offerings: deps.Offerings,
 		Capacity: deps.Capacity, Students: deps.Students, GuardianHold: deps.GuardianHold,
-		Settings: deps.Settings, Runtime: deps.Runtime, Logger: deps.Logger, LockTemplateRecurrence: deps.LockTemplateRecurrence, Now: deps.Now,
+		Settings: deps.Settings, Fingerprint: deps.Fingerprint, LegalPDFFingerprint: deps.LegalPDFFingerprint, Runtime: deps.Runtime, Logger: deps.Logger, LockTemplateRecurrence: deps.LockTemplateRecurrence, Now: deps.Now,
 	})
 	return &ChangeRequests{deps: deps, intake: intake}
 }
@@ -159,6 +161,7 @@ type ChangeRequest struct {
 	AdminDecisionNote              *string
 	BaseSnapshot                   map[string]any
 	ProposedSnapshot               map[string]any
+	LegalEvidence                  *enrollmentNative.LegalBlocksSnapshotEntry
 	Diff                           map[string]any
 	CareOfferingsEnabledAtCreation bool
 	CreatedByAccountID             *int64
@@ -331,6 +334,10 @@ func (s *ChangeRequests) createInTenant(ctx context.Context, token string, phase
 		ParentNote: trimToNil(input.ParentNote), BaseSnapshot: baseSnapshot, ProposedSnapshot: proposedSnapshot,
 		Diff: snapshotDiff(baseSnapshot, proposedSnapshot), CareOfferingsEnabledAtCreation: capabilities.CareOfferingsEnabled,
 		CreatedByAccountID: input.CreatedByAccountID,
+	}
+	row.LegalEvidence, err = s.proposedLegalEvidence(ctx, prepared, baseSnapshot, submission.ConsentFlags, renewalRequest(children))
+	if err != nil {
+		return nil, err
 	}
 	if err := createChangeRequest(ctx, s.deps.Requests, row); err != nil {
 		return nil, err

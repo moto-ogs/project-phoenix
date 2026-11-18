@@ -25,7 +25,7 @@ func NewEnrollmentIntake(src EnrollmentIntakeSources) *enrollmentCompose.Intake 
 		GuardianHold: src.GuardianHold, Outbox: src.OutboxEnqueuer,
 		Settings: intakeSettings(src.Settings), AdminSubscribers: src.AdminSubscribers, ManualDecider: src.ManualDecider,
 		ParentChanges: src.ParentChanges, Uploads: src.Uploads, Signatures: EnrollmentSignatures{Ledger: SignatureLedger()},
-		Random: securityruntime.FillRandom, Fingerprint: securityruntime.Fingerprint,
+		Random: securityruntime.FillRandom, Fingerprint: securityruntime.Fingerprint, LegalPDFFingerprint: fingerprintEnrollmentLegalPDF,
 		FrontendURL: src.FrontendURL, ParentsURL: src.ParentsURL, Logger: src.Logger, FamilyChildrenPurpose: src.FamilyChildrenPurpose,
 		LockTemplateRecurrence: src.LockTemplateRecurrence, Now: src.Now,
 	})
@@ -64,6 +64,7 @@ func NewEnrollmentChangeRequests(src EnrollmentChangeRequestSources) enrollmentO
 		CompanionLockBusy: peopledirectory.TranslateStudentWriteError(peopledirectory.ErrCompanionLockBusy), People: people,
 		GuardianInvitations: src.GuardianInvitations,
 		Settings:            intakeSettings(src.Settings), Outbox: src.OutboxEnqueuer,
+		Fingerprint: securityruntime.Fingerprint, LegalPDFFingerprint: fingerprintEnrollmentLegalPDF,
 		FrontendURL: src.FrontendURL, ParentsURL: src.ParentsURL, Logger: src.Logger,
 		LockTemplateRecurrence: src.LockTemplateRecurrence, Now: src.Now,
 	}

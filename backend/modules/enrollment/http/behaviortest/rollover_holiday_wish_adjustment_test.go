@@ -1,6 +1,7 @@
 package enrollmenthttp_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -80,7 +81,19 @@ func TestRolloverHolidayWishCanBeAnsweredWithBookingAdjustment(t *testing.T) {
 			require.NoError(t, err)
 			stored, saved, err := env.requestSvc.GetByStatusToken(ctx, request.StatusToken)
 			require.NoError(t, err)
-			require.Len(t, stored.LegalBlocksSnapshot, 1, "approval keeps the renewal evidence")
+			require.Len(t, stored.LegalBlocksSnapshot, 2, "approval preserves the renewal and adds the changed optional consent")
+			renewal, ok := enrollment.LastSubmissionLegalSnapshot(stored.LegalBlocksSnapshot)
+			require.True(t, ok)
+			var requiredFlags map[string]bool
+			require.NoError(t, json.Unmarshal(renewal.ConsentFlags, &requiredFlags))
+			for key := range confirmation.ConsentFlags.All() {
+				assert.True(t, requiredFlags[key], "the renewal separately confirms %s", key)
+			}
+			change := stored.LegalBlocksSnapshot[1]
+			require.True(t, change.ChangeRequest)
+			require.Len(t, change.Blocks, 1)
+			require.Equal(t, enrollment.ConsentKeyPhoto, change.Blocks[0].Key)
+			require.JSONEq(t, `{"photo":true}`, string(change.ConsentFlags))
 			assert.Equal(t, true, testFormValue(stored.ConsentFlags, "photo"), "approval keeps the proposed optional consent")
 			for key := range confirmation.ConsentFlags.All() {
 				assert.Equal(t, true, testFormValue(stored.ConsentFlags, key), "approval keeps accepted %s", key)

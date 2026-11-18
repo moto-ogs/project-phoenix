@@ -177,6 +177,9 @@ func (s *ChangeRequests) writeApprovedRequest(ctx context.Context, run *approval
 	req.GuardianEmail = guardianEmailKey(prepared.GuardianEmail)
 	req.GuardianPhone = prepared.GuardianPhone
 	req.ConsentFlags = formValues(prepared.ConsentFlags)
+	if run.row.LegalEvidence != nil {
+		req.LegalBlocksSnapshot = append(req.LegalBlocksSnapshot, *run.row.LegalEvidence)
+	}
 	req.CustomData = formValues(prepared.CustomData)
 	if err := s.deps.Requests.UpdateRequestGuardian(ctx, req, true); err != nil {
 		return err

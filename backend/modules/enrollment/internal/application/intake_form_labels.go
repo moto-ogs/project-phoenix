@@ -86,10 +86,10 @@ func (s *Intake) requestFormLabels(ctx context.Context, req *enrollmentNative.Re
 }
 
 func latestLegalBlocksSnapshot(req *enrollmentNative.Request) (enrollmentNative.LegalBlocksSnapshotEntry, bool) {
-	if req == nil || len(req.LegalBlocksSnapshot) == 0 {
+	if req == nil {
 		return enrollmentNative.LegalBlocksSnapshotEntry{}, false
 	}
-	return req.LegalBlocksSnapshot[len(req.LegalBlocksSnapshot)-1], true
+	return enrollmentNative.LastSubmissionLegalSnapshot(req.LegalBlocksSnapshot)
 }
 
 // formLabelsSchemaID selects the form version the parent saw. Earlier

@@ -76,10 +76,13 @@ func ContractAcceptances(raw json.RawMessage, source string, acceptedAt *time.Ti
 		return nil
 	}
 	var entries []LegalBlocksSnapshotEntry
-	if json.Unmarshal(raw, &entries) != nil || len(entries) == 0 {
+	if json.Unmarshal(raw, &entries) != nil {
 		return nil
 	}
-	entry := entries[len(entries)-1]
+	entry, ok := LastSubmissionLegalSnapshot(entries)
+	if !ok {
+		return nil
+	}
 	// The parent's form must have shown the version whose texts the entry
 	// holds; a form opened before the school published a new version proves
 	// no agreement to the new wording (#4680).
