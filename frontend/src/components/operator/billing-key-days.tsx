@@ -733,7 +733,7 @@ function KeyDayPreview({
   }
   const who =
     missing === null
-      ? "Schulen ohne Zahlen für diesen Monat bekommen"
+      ? "Schulen ohne Zahlen bekommen"
       : missing.length === 1
         ? `${schoolList(missing)} hat noch keine Zahlen für ${month} und bekommt`
         : `${schoolList(missing)} haben noch keine Zahlen für ${month} und bekommen`;

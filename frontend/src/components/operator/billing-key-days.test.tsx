@@ -377,7 +377,7 @@ describe("BillingKeyDayOverrides", () => {
 
     expect(
       await within(dialog).findByText(
-        "Der 8. ist im November 2026 schon vorbei. Schulen ohne Zahlen für diesen Monat bekommen für diesen Monat keine mehr. Nächster Stichtag: 08.12.2026.",
+        "Der 8. ist im November 2026 schon vorbei. Schulen ohne Zahlen bekommen für diesen Monat keine mehr. Nächster Stichtag: 08.12.2026.",
       ),
     ).toBeInTheDocument();
     expect(within(dialog).queryByText(/stehen schon/)).toBeNull();
