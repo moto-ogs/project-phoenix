@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { TEST_CLOCK_TODAY } from "~/test/clock-instant";
 import type { StaffProof } from "~/lib/traeger-staff-proofs-api";
 
 import { StaffProofModal } from "./staff-proof-modal";
@@ -55,4 +56,29 @@ describe("StaffProofModal dates (#7380)", () => {
       ).toBeInTheDocument();
     },
   );
+
+  // A kind may stay valid for up to 240 months (workforce
+  // maxValidityMonths), so the year list reaches 20 years ahead.
+  it("offers the expiry year of the longest validity", async () => {
+    render(
+      <ToastProvider>
+        <StaffProofModal
+          target={{
+            recordId: "7",
+            personName: "Mia Berg",
+            proof: POLICE_CERTIFICATE,
+          }}
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+
+    fireEvent.click(document.getElementById("expires_on")!);
+    await screen.findByTestId("day-picker");
+    fireEvent.click(screen.getByRole("combobox", { name: "Jahr" }));
+
+    const lastYear = String(Number(TEST_CLOCK_TODAY.slice(0, 4)) + 20);
+    expect(screen.getByRole("option", { name: lastYear })).toBeInTheDocument();
+  });
 });
