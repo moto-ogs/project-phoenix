@@ -28,6 +28,8 @@ if ((fail === 'stop' && isCompose && args.includes('stop')) ||
     (fail === 'restore-roles' && input.includes('CREATE ROLE')) ||
     (fail === 'unavailable-image' && (args[0] === 'pull' || (args[0] === 'image' && !args.includes('--format')))) ||
     (fail === 'archive' && args.includes('-tzf')) ||
+    (fail === 'server-env' && args[0] === 'inspect' && args[2].includes('.Config.Env')) ||
+    (fail === 'bucket-copy' && args[0] === 'run' && args.includes('copy')) ||
     (fail === 'restore-uploads' && args.includes('-c'))) exit();
 if (isCompose && args.includes('ps')) { if (args.at(-1) !== 'bank-data-rekey') console.log(args.at(-1)); }
 // One container runs the image sha256:1…; sha256:3… is used by none.
@@ -35,6 +37,12 @@ else if (args[0] === 'ps') console.log('container-1');
 else if (args[0] === 'images') console.log(`sha256:${'1'.repeat(64)}\nsha256:${'3'.repeat(64)}`);
 else if (args[0] === 'inspect') {
   const format = args[2];
+  // RELEASE_TEST_BUCKET puts the server in S3 mode with that bucket.
+  if (format.includes('.Config.Env') && process.env.RELEASE_TEST_BUCKET) {
+    console.log(['UPLOADS_BACKEND=s3', 'UPLOADS_S3_ENDPOINT=https://s3.example.test', 'UPLOADS_S3_REGION=test',
+      `UPLOADS_S3_BUCKET=${process.env.RELEASE_TEST_BUCKET}`, 'UPLOADS_S3_ACCESS_KEY=key', 'UPLOADS_S3_SECRET_KEY=secret'].join('\n'));
+    process.exit(0);
+  }
   console.log(format.includes('.State.Running') ? (fail === 'running' || (fail === 'running-sidecar' && args.at(-1) === 'demo-runtime') ? 'true' : 'false') :
     format.includes('.Mounts') ? 'test-uploads' :
     // Tag-created containers, and a frontend a rollback created from a digest.

@@ -42,6 +42,26 @@ test('complete snapshot restores all components and the saved deployment state',
   assert.equal(readFileSync(join(f.cwd, '.env'), 'utf8'), 'MODE=old\n');
 });
 
+// A Docker error while reading the server's settings must not pass for local
+// mode: an S3 server still mounts its old volume, which would be snapshotted.
+test('snapshot fails when the server upload settings cannot be read', t => {
+  const f = fixture(t);
+  const result = f.run('release-backup.sh', ['create', f.bundle], { RELEASE_TEST_FAIL: 'server-env' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Cannot read the upload settings of the serving container/);
+  assert(!existsSync(join(f.bundle, 'complete')));
+});
+
+test('a failed bucket copy leaves no plaintext copy of the bucket behind', t => {
+  const f = fixture(t);
+  const result = f.run('release-backup.sh', ['create', f.bundle], { RELEASE_TEST_BUCKET: 'uploads', RELEASE_TEST_FAIL: 'bucket-copy' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Copying the upload bucket failed/);
+  assert(existsSync(f.bundle));
+  assert(!existsSync(join(f.bundle, 'uploads-tree')));
+  assert(!existsSync(join(f.bundle, 'complete')));
+});
+
 test('demo deploy pins its backend and frontend images and can restore its own snapshot', t => {
   const f = fixture(t, 'demo');
   writeFileSync(join(f.cwd, 'docker-compose.yml.new'),

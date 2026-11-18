@@ -87,6 +87,7 @@ INSERT INTO auth.accounts VALUES (41);`);
   const bucket = join(buckets, 'uploads');
   s3.put('uploads', 'kept.txt', 'original');
   s3.put('uploads', '.hidden', 'hidden');
+  s3.put('uploads', 'empty', '');
   s3.put('uploads', 'documents/41/A\u0308rztliche-Bescheinigung', 'sealed');
   const expected = objects(bucket);
   run('docker', ['compose', 'stop', 'server', 'frontend']);
@@ -99,7 +100,8 @@ INSERT INTO auth.accounts VALUES (41);`);
 
   sql('UPDATE auth.accounts SET id=99;');
   s3.remove('uploads', '.hidden');
-  s3.put('uploads', 'kept.txt', 'changed');
+  // Same size: the sync must compare checksums, not sizes.
+  s3.put('uploads', 'kept.txt', 'origina1');
   s3.put('uploads', 'added.txt', 'new');
   assert.notDeepEqual(objects(bucket), expected);
   writeFileSync(join(cwd, '.deploy-state'), 'CURRENT_SHA=bbbbbbb\nBACKUP_ID=release-20260914T010000Z-bbbbbbb\n');

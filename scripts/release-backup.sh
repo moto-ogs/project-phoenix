@@ -29,22 +29,33 @@ volume() {
   printf '%s\n' "$mounted"
 }
 
-# The value the serving container ran with, the one that wrote the uploads.
-# Reads the environment without printing it; credentials never enter argv.
-server_setting() {
-  local container line
+# The environment the serving container ran with, the one that wrote the
+# uploads. Read once in this shell: a failed inspect inside a command
+# substitution would pass for an empty setting, and so for local mode.
+server_env=''
+read_server_env() {
+  local container
   container=$(compose ps -a -q server)
   [ -n "$container" ] || fail 'Serving container is missing; cannot read its upload settings'
+  server_env=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container") &&
+    [ -n "$server_env" ] || fail 'Cannot read the upload settings of the serving container'
+}
+
+# One value of that environment, without printing the rest; never in argv.
+server_setting() {
+  local line
   while IFS= read -r line; do
     if [[ "$line" == "$1="* ]]; then printf '%s\n' "${line#*=}"; return 0; fi
-  done < <(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container")
+  done <<< "$server_env"
 }
 
 # local (empty included) uses the volume, s3 the bucket; as the app decides.
 upload_store() {
-  local backend
-  backend=$(server_setting UPLOADS_BACKEND)
-  case "${backend:-local}" in local) echo local;; s3) echo s3;; *) fail 'Unknown UPLOADS_BACKEND on the server';; esac
+  read_server_env
+  case "$(server_setting UPLOADS_BACKEND)" in
+    ''|local) upload_kind=local;; s3) upload_kind=s3;;
+    *) fail 'Unknown UPLOADS_BACKEND on the server';;
+  esac
 }
 
 # Loads the server's bucket settings into this shell, not into its output.
@@ -171,8 +182,11 @@ create() {
   dedicated_cluster
   [ ! -e "$bundle" ] || fail 'Backup path already exists'
   mkdir -m 700 -p "$bundle"
+  # A failed copy must not leave the plaintext bucket filling the disk.
+  trap 'rm -rf -- "$bundle/uploads-tree"' EXIT
   local service container image_id image_ref uploads store
-  store=$(upload_store)
+  upload_store
+  store=$upload_kind
   if [ "$store" = s3 ]; then
     load_bucket
     uploads="bucket:$upload_bucket"
@@ -229,6 +243,7 @@ create() {
     fail 'Backup verification failed; migration must not start'
   fi
   printf 'moto-release-backup-v1\n' > "$bundle/complete"
+  trap - EXIT
   echo "Complete backup verified: $(basename "$bundle")"
 }
 
@@ -263,7 +278,8 @@ restore() {
   if [[ "$uploads" =~ $bucket_pattern ]]; then
     snapshot_bucket=${BASH_REMATCH[1]}
     # The restored .env names the same bucket only if the server does now.
-    [ "$(upload_store)" = s3 ] || fail 'Snapshot holds bucket uploads, but the server does not use S3'
+    upload_store
+    [ "$upload_kind" = s3 ] || fail 'Snapshot holds bucket uploads, but the server does not use S3'
     load_bucket
     [ "$upload_bucket" = "$snapshot_bucket" ] || fail 'Snapshot holds another bucket than the server uses'
     tree=$(mktemp -d "$PWD/.uploads-restore.XXXXXX")
