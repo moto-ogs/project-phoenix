@@ -181,7 +181,12 @@ export function SubstitutionSlideOver({
     canManage &&
     (instance?.status === "planned" || instance?.status === "active");
 
-  const plannedStaff = (instance?.staff ?? []).filter((s) => !s.isSubstitute);
+  // Wer fehlt, steht oben (#7493): dort ist etwas zu tun. Die Reihenfolge
+  // folgt dem gespeicherten Stand, nicht dem Formular, damit keine Karte
+  // springt, während man sie bearbeitet.
+  const plannedStaff = (instance?.staff ?? [])
+    .filter((s) => !s.isSubstitute)
+    .sort((a, b) => Number(b.isAbsent) - Number(a.isAbsent));
   const substitutes = (instance?.staff ?? []).filter((s) => s.isSubstitute);
   const assignedIds = new Set((instance?.staff ?? []).map((s) => s.staffId));
   const appointmentsByStaff = useMemo(() => {
@@ -659,7 +664,7 @@ export function SubstitutionSlideOver({
                       className="space-y-1 text-sm text-gray-500"
                     >
                       <p className="font-medium text-gray-700">
-                        Dieser Block wurde abgesagt.
+                        Dieser Termin wurde abgesagt.
                       </p>
                       {instance.cancelReason && (
                         <p>Grund: {instance.cancelReason}</p>
@@ -693,10 +698,8 @@ export function SubstitutionSlideOver({
                     value={cancel ? "cancel" : "edit"}
                     onChange={(next) => setCancel(next === "cancel")}
                     items={[
-                      // Hauptwörter für die Wahl, damit der Abschluss
-                      // „Block absagen“ der einzige Knopf dieses Namens ist.
-                      { value: "edit", label: "Besetzung" },
-                      { value: "cancel", label: "Absage" },
+                      { value: "edit", label: "Besetzung bearbeiten" },
+                      { value: "cancel", label: "Termin absagen" },
                     ]}
                   />
                 )}
@@ -710,7 +713,7 @@ export function SubstitutionSlideOver({
                       <InsetPanel framed padding="tight">
                         <EmptyState
                           variant="compact"
-                          title="Für diesen Block war niemand geplant"
+                          title="Für diesen Termin war niemand geplant"
                         />
                       </InsetPanel>
                     ) : (
@@ -771,6 +774,15 @@ export function SubstitutionSlideOver({
                       </ul>
                     )}
 
+                    {/* Lesezugriff: ob jemand vertritt, steht hier auch dann,
+                        wenn es niemand tut. */}
+                    {!canEdit &&
+                      substitutes.length === 0 &&
+                      plannedStaff.some((row) => row.isAbsent) && (
+                        <p className="pt-1 text-sm text-gray-500">
+                          Noch keine Vertretung eingetragen.
+                        </p>
+                      )}
                     {substitutes.length > 0 && (
                       <div className="space-y-1 pt-1">
                         <SectionLabel as="h4">Aktuelle Vertretung</SectionLabel>
@@ -912,7 +924,7 @@ export function SubstitutionSlideOver({
                 {/* Bewusst unbesetzt (Zweig A) */}
                 {canEdit && !cancel && (
                   <section className="space-y-2">
-                    <SectionLabel>Block</SectionLabel>
+                    <SectionLabel>Termin</SectionLabel>
                     <InsetPanel tone="white" className="space-y-3">
                       <label
                         htmlFor="vp-unstaffed"
@@ -1012,7 +1024,7 @@ export function SubstitutionSlideOver({
                         ist mehr als ein Speichern, sie kann Eltern
                         benachrichtigen. */}
                     {cancel
-                      ? "Block absagen"
+                      ? "Jetzt absagen"
                       : newReplacements > 0
                         ? "Vertretung speichern"
                         : "Speichern"}
@@ -1086,7 +1098,7 @@ const EVENT_DESCRIPTIONS: Readonly<Record<string, EventDescription>> = {
     subject
       ? `Die Vertretung durch ${subject} wurde entfernt.`
       : "Eine Vertretung wurde entfernt.",
-  cancellation: () => "Der Block wurde abgesagt.",
+  cancellation: () => "Der Termin wurde abgesagt.",
   understaffed_ack: () => "Die offene Besetzung wurde bewusst akzeptiert.",
   understaffed_unack: () =>
     "Die Kennzeichnung als bewusst unbesetzt wurde aufgehoben.",
@@ -1125,7 +1137,7 @@ function staffMovedDescription(ev: DeviationHistoryEvent): string {
     return `${subject} wurde „${to}“ aus dem Personalpool zugewiesen.`;
   }
   if (subject) {
-    return `${subject} wurde auf diesen Block verschoben.`;
+    return `${subject} wurde auf diesen Termin verschoben.`;
   }
   return "Eine Person wurde zwischen Blöcken verschoben.";
 }
@@ -1238,7 +1250,7 @@ function HistoryTab({
             value={scope}
             onChange={(next) => setScope(next as HistoryScope)}
             items={[
-              { value: "block", label: "Dieser Block" },
+              { value: "block", label: "Dieser Termin" },
               { value: "day", label: "Ganzer Tag" },
             ]}
           />
@@ -1258,7 +1270,7 @@ function HistoryTab({
           <LoadErrorAlert error={loadError} />
         ) : events.length === 0 ? (
           <p className="text-sm text-gray-500">
-            Für {scope === "block" ? "diesen Block" : "diesen Tag"} sind noch
+            Für {scope === "block" ? "diesen Termin" : "diesen Tag"} sind noch
             keine Änderungen protokolliert.
           </p>
         ) : (

@@ -181,12 +181,30 @@ describe("VertretungWeekList", () => {
     });
     renderWeekList({ instances: [monCancelledEarly, ...INSTANCES] });
 
-    const ids = within(daySection(MON))
-      .getAllByTestId(/vertretung-day-list-row-/)
-      .map((row) =>
-        row.dataset.testid?.replace("vertretung-day-list-row-", ""),
-      );
-    expect(ids).toEqual(["10", "5"]);
+    const ids = () =>
+      within(daySection(MON))
+        .getAllByTestId(/vertretung-day-list-row-/)
+        .map((row) =>
+          row.dataset.testid?.replace("vertretung-day-list-row-", ""),
+        );
+    // Was geregelt ist, steht eingeklappt unter der offenen Lücke.
+    expect(ids()).toEqual(["10"]);
+    const settled = within(daySection(MON)).getByRole("button", {
+      name: "Schon geregelt",
+    });
+    expect(settled).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(settled);
+    expect(settled).toHaveAttribute("aria-expanded", "true");
+    expect(ids()).toEqual(["10", "5"]);
+    // Ein Tag ohne offene Lücke zeigt das Geregelte ohne Klappe.
+    expect(
+      within(daySection(THU)).getByTestId("vertretung-day-list-row-30"),
+    ).toBeInTheDocument();
+    expect(
+      within(daySection(THU)).queryByRole("button", {
+        name: "Schon geregelt",
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it("zeigt im Modus 'Ganze Woche' auch ungestörte Termine", () => {
@@ -275,7 +293,8 @@ describe("VertretungWeekList", () => {
   });
 
   it("löst onEdit mit der Instanz-ID aus", () => {
-    const props = renderWeekList();
+    // Montag ist heute: an einem vergangenen Tag hieße der Knopf „Details“.
+    const props = renderWeekList({ todayISO: MON });
 
     fireEvent.click(
       within(daySection(MON)).getByRole("button", {

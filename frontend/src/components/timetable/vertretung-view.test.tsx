@@ -31,6 +31,7 @@ const {
   mockGridProps,
   mockEditorProps,
   mockApplyRejected,
+  mockStacked,
 } = vi.hoisted(() => ({
   mockSearch: { value: "" },
   mockUseSession: vi.fn(),
@@ -45,7 +46,20 @@ const {
   mockGridProps: vi.fn(),
   mockEditorProps: vi.fn(),
   mockApplyRejected: vi.fn(),
+  mockStacked: { value: false },
 }));
+
+// Nur die Frage „stehen Liste und Raster untereinander?“ wird gesteuert; alle
+// anderen Abfragen bleiben beim Rechner-Layout.
+vi.mock("~/lib/hooks/use-media-query", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("~/lib/hooks/use-media-query")>();
+  return {
+    ...original,
+    useMediaQuery: (query: string) =>
+      query === original.BELOW_LG ? mockStacked.value : false,
+  };
+});
 
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(mockSearch.value),
@@ -397,6 +411,25 @@ describe("VertretungView", () => {
     expect(
       screen.queryByRole("button", { name: "So 19.07." }),
     ).not.toBeInTheDocument();
+  });
+
+  it("klappt das Raster ein, wenn es unter der Liste steht, und zeigt es auf Wunsch", () => {
+    mockStacked.value = true;
+    try {
+      render(<VertretungView />);
+
+      // Die Liste zeigt jeden Termin; das Raster wartet hinter seiner Zeile.
+      expect(screen.getByTestId("day-list")).toBeInTheDocument();
+      expect(screen.queryByText("grid-click")).not.toBeInTheDocument();
+      const toggle = screen.getByRole("button", {
+        name: "Tag als Zeitplan ausklappen",
+      });
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      fireEvent.click(toggle);
+      expect(screen.getByText("grid-click")).toBeInTheDocument();
+    } finally {
+      mockStacked.value = false;
+    }
   });
 
   it("snaps a weekend deep link to the following Monday", () => {
@@ -878,7 +911,7 @@ describe("VertretungView", () => {
     await waitFor(() =>
       expect(mockApplyDeviations).toHaveBeenCalledWith("42", { cancel: true }),
     );
-    expect(mockToastSuccess).toHaveBeenCalledWith("Der Block ist abgesagt.");
+    expect(mockToastSuccess).toHaveBeenCalledWith("Der Termin ist abgesagt.");
     // Cache-Refresh nach dem committeten Save.
     await waitFor(() => expect(mockTenantMutate).toHaveBeenCalled());
     // block und verlauf sind aus der URL entfernt.
@@ -1287,7 +1320,9 @@ describe("VertretungView", () => {
       render(<VertretungView />);
 
       expect(
-        screen.getByText("1 Einsatz ist nicht durch den Dienstplan abgedeckt."),
+        screen.getByText(
+          "Bei 1 Einsatz fehlt die passende Schicht im Dienstplan.",
+        ),
       ).toBeInTheDocument();
       expect(
         screen.getByRole("link", { name: "Dienstplan öffnen" }),
@@ -1313,7 +1348,9 @@ describe("VertretungView", () => {
       render(<VertretungView />);
 
       expect(
-        screen.getByText("1 Einsatz ist nicht durch den Dienstplan abgedeckt."),
+        screen.getByText(
+          "Bei 1 Einsatz fehlt die passende Schicht im Dienstplan.",
+        ),
       ).toBeInTheDocument();
     });
 
@@ -1330,7 +1367,9 @@ describe("VertretungView", () => {
       // Anker: der Hinweis ist da. Trotzdem trägt kein Tag eine offene
       // Lücke, und die Liste bekommt keine.
       expect(
-        screen.getByText("1 Einsatz ist nicht durch den Dienstplan abgedeckt."),
+        screen.getByText(
+          "Bei 1 Einsatz fehlt die passende Schicht im Dienstplan.",
+        ),
       ).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "Mi 15.07." }),
@@ -1461,7 +1500,9 @@ describe("VertretungView", () => {
       render(<VertretungView />);
 
       expect(
-        screen.getByText("1 Einsatz ist nicht durch den Dienstplan abgedeckt."),
+        screen.getByText(
+          "Bei 1 Einsatz fehlt die passende Schicht im Dienstplan.",
+        ),
       ).toBeInTheDocument();
       expect(
         screen.getByRole("link", { name: "Dienstplan öffnen" }),

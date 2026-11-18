@@ -342,16 +342,17 @@ describe("VertretungDayList", () => {
         mode="stoerungen"
         canManage
         onEdit={vi.fn()}
+        carePlanHrefFor={(dateISO) => `/acme/betreuungsplan?d=${dateISO}`}
       />,
     );
 
     const row = screen.getByTestId("vertretung-day-list-row-70");
-    // Offen bleibt die Lücke, aber die Zeile sagt, was fehlt und wo man es
-    // behebt, statt „0/0“ und „Besetzen“.
+    // Offen bleibt die Lücke, aber die Zeile sagt, was fehlt, und führt
+    // dorthin, wo man es behebt, statt „0/0“ und „Besetzen“ zu zeigen.
     expect(within(row).getByText("Niemand eingeteilt")).toBeInTheDocument();
     expect(
-      within(row).getByText("Personal trägst du im Betreuungsplan ein."),
-    ).toBeInTheDocument();
+      within(row).getByRole("link", { name: "Im Betreuungsplan einteilen" }),
+    ).toHaveAttribute("href", `/acme/betreuungsplan?d=${unstaffed.date}`);
     expect(within(row).queryByText(/Soll 0/)).not.toBeInTheDocument();
     expect(
       within(row).getByRole("button", { name: /^Bearbeiten: Fußball-AG/ }),
@@ -587,7 +588,12 @@ describe("VertretungDayList", () => {
         row.dataset.testid?.replace("vertretung-day-list-row-", ""),
       );
     expect(ids).toEqual(["10", "20", "40"]);
-    expect(screen.queryAllByRole("heading", { level: 3 })).toEqual([]);
+    // Die Überschrift sagt, dass das nicht die geprüfte Lage ist.
+    expect(
+      screen
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(["Ausfälle"]);
   });
 
   it("sagt Lesenutzern, wer Vertretungen einträgt", () => {
@@ -624,6 +630,33 @@ describe("VertretungDayList", () => {
       />,
     );
     expect(screen.queryByText(hint)).not.toBeInTheDocument();
+  });
+
+  it("nennt den Knopf eines vergangenen oder abgesagten Termins 'Details', wie der Editor ihn zeigt", () => {
+    render(
+      <VertretungDayList
+        title="Termine am Mi 09.09."
+        instances={allInstances}
+        gaps={gaps}
+        acknowledged={acknowledged}
+        gapsAvailable
+        staffNames={staffNames}
+        mode="stoerungen"
+        canManage
+        onEdit={vi.fn()}
+        todayISO={gapInstance.date}
+      />,
+    );
+    // Abgesagt: der Editor lässt nichts ändern.
+    expect(
+      within(screen.getByTestId("vertretung-day-list-row-40")).getByRole(
+        "button",
+        { name: /^Details: Fußball/ },
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^Besetzen: Frühstück/ }),
+    ).toBeInTheDocument();
   });
 
   it("löst onEdit mit der Instanz-ID aus: 'Besetzen' an der offenen Lücke, sonst 'Bearbeiten', ohne canManage 'Details'", () => {

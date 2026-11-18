@@ -171,9 +171,9 @@ async function startCancel() {
   openBlock("d=2026-07-16&block=43");
   const view = render(<VertretungView />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Absage" }));
+  fireEvent.click(screen.getByRole("button", { name: "Termin absagen" }));
   // Der Abschluss nennt sein Ergebnis (#7493).
-  const save = screen.getByRole("button", { name: "Block absagen" });
+  const save = screen.getByRole("button", { name: "Jetzt absagen" });
   // Die Reichweite des Elternhinweises lädt erst; bis dahin ist der Knopf zu.
   await waitFor(() => expect(save).toBeEnabled());
   fireEvent.click(save);
@@ -238,7 +238,7 @@ describe("VertretungView: Absage aus dem Panel (#6593)", () => {
 
     await act(async () => resolveCancelled());
 
-    expect(mockToastSuccess).toHaveBeenCalledWith("Der Block ist abgesagt.");
+    expect(mockToastSuccess).toHaveBeenCalledWith("Der Termin ist abgesagt.");
     expect([...urlParams().keys()]).toEqual(["d"]);
   });
 
@@ -251,7 +251,7 @@ describe("VertretungView: Absage aus dem Panel (#6593)", () => {
 
     await act(async () => resolveCancelled());
 
-    expect(mockToastSuccess).toHaveBeenCalledWith("Der Block ist abgesagt.");
+    expect(mockToastSuccess).toHaveBeenCalledWith("Der Termin ist abgesagt.");
     expect(urlParams().get("block")).toBe("42");
     expectSlideOverUnlocked("Mensa");
   });

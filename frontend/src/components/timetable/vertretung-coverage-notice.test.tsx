@@ -9,13 +9,13 @@ import {
 describe("buildCoverageNoticeMessage", () => {
   it("formuliert einen einzelnen Einsatz im Singular", () => {
     expect(buildCoverageNoticeMessage(1)).toBe(
-      "1 Einsatz ist nicht durch den Dienstplan abgedeckt.",
+      "Bei 1 Einsatz fehlt die passende Schicht im Dienstplan.",
     );
   });
 
   it("formuliert mehrere Einsätze im Plural", () => {
     expect(buildCoverageNoticeMessage(3)).toBe(
-      "3 Einsätze sind nicht durch den Dienstplan abgedeckt.",
+      "Bei 3 Einsätzen fehlt die passende Schicht im Dienstplan.",
     );
   });
 });
@@ -41,7 +41,9 @@ describe("VertretungCoverageNotice", () => {
     );
 
     expect(
-      screen.getByText("2 Einsätze sind nicht durch den Dienstplan abgedeckt."),
+      screen.getByText(
+        "Bei 2 Einsätzen fehlt die passende Schicht im Dienstplan.",
+      ),
     ).toBeInTheDocument();
     const link = screen.getByRole("link", { name: "Dienstplan öffnen" });
     expect(link).toHaveAttribute("href", "/acme/dienstplan?d=2026-07-15");

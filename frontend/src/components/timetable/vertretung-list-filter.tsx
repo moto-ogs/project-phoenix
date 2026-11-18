@@ -38,7 +38,9 @@ export function VertretungListFilter({
       value={mode}
       onChange={(next) => onModeChange(next as VertretungDayListMode)}
       items={[
-        { value: "stoerungen", label: "Nur Störungen" },
+        // Derselbe Name wie die Gruppen der Liste: „Störung“ stand sonst
+        // nirgends mehr auf der Seite (#7493).
+        { value: "stoerungen", label: "Lücken" },
         { value: "ganzer-tag", label: allLabel },
       ]}
     />

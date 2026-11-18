@@ -255,9 +255,7 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
         (res) =>
           res.request().method() === "POST" && SUBSTITUTIONS_RE.test(res.url()),
       );
-      await dialog
-        .getByRole("button", { name: /als abwesend markieren/ })
-        .click();
+      await dialog.getByRole("button", { name: /: Abwesend melden$/ }).click();
       // Der sichtbare Label-Text ist das eigentliche Klickziel. Das native
       // Radio bleibt für Tastatur und Formsemantik sr-only im DOM; ein direkter
       // Koordinatenklick darauf kann hinter dem Footer landen.

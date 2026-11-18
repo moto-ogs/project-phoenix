@@ -34,7 +34,7 @@ import { Alert } from "~/components/ui/alert";
 import { EmptyState } from "~/components/ui/empty-state";
 import { ListGroupHeader } from "~/components/ui/list-group-header";
 import { SectionCard } from "~/components/ui/section-card";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import {
   CoverageIndicator,
   type CoverageState,
@@ -110,6 +110,17 @@ export interface VertretungDayListProps {
   onModeChange?: (mode: VertretungDayListMode) => void;
   canManage: boolean;
   onEdit: (instanceId: string) => void;
+  /**
+   * Weg in den Betreuungsplan des Tages, für eine Lücke ohne eingeteilte
+   * Person. Ohne Angabe (kein Recht dafür) nennt die Zeile nur den Zustand.
+   */
+  carePlanHrefFor?: (dateISO: string) => string;
+  /**
+   * Heute als Berlin-Kalendertag. Damit heißt der Knopf eines vergangenen
+   * Termins „Details“: der Editor lässt dort nichts mehr ändern. Ohne Angabe
+   * gilt nur `canManage`.
+   */
+  todayISO?: string;
   className?: string;
 }
 
@@ -238,11 +249,15 @@ export function VertretungRowList({
   staffNames,
   canManage,
   onEdit,
+  carePlanHrefFor,
+  todayISO,
 }: {
   rows: ClassifiedRow[];
   staffNames: Map<string, string>;
   canManage: boolean;
   onEdit: (instanceId: string) => void;
+  carePlanHrefFor?: (dateISO: string) => string;
+  todayISO?: string;
 }) {
   return (
     <ul className="divide-y divide-gray-100">
@@ -251,8 +266,16 @@ export function VertretungRowList({
           key={row.instance.id}
           row={row}
           staffNames={staffNames}
-          canManage={canManage}
+          // Dieselbe Regel wie im Editor: ändern lässt sich nur ein
+          // geplanter oder laufender Termin, der nicht vergangen ist.
+          canManage={
+            canManage &&
+            (todayISO === undefined || row.instance.date >= todayISO) &&
+            (row.instance.status === "planned" ||
+              row.instance.status === "active")
+          }
           onEdit={onEdit}
+          carePlanHref={carePlanHrefFor?.(row.instance.date)}
         />
       ))}
     </ul>
@@ -294,6 +317,8 @@ export function VertretungDayList({
   onModeChange,
   canManage,
   onEdit,
+  carePlanHrefFor,
+  todayISO,
   className,
 }: VertretungDayListProps) {
   const filter = onModeChange ? (
@@ -309,6 +334,8 @@ export function VertretungDayList({
       staffNames={staffNames}
       canManage={canManage}
       onEdit={onEdit}
+      carePlanHrefFor={carePlanHrefFor}
+      todayISO={todayISO}
     />
   );
   const group = (heading: string, rows: ClassifiedRow[]) =>
@@ -417,7 +444,8 @@ export function VertretungDayList({
     body = (
       <>
         {gapsUnavailableNotice}
-        {rowList(settled)}
+        {/* Die Überschrift sagt, dass das nicht die geprüfte Lage ist. */}
+        {group("Ausfälle", settled)}
       </>
     );
   }
@@ -446,11 +474,13 @@ function VertretungDayListRow({
   staffNames,
   canManage,
   onEdit,
+  carePlanHref,
 }: {
   row: ClassifiedRow;
   staffNames: Map<string, string>;
   canManage: boolean;
   onEdit: (instanceId: string) => void;
+  carePlanHref?: string;
 }) {
   const {
     instance,
@@ -550,10 +580,17 @@ function VertretungDayListRow({
             label="Niemand eingeteilt"
             title="Für diesen Termin ist niemand eingeteilt"
           />
-          {canManage && (
-            <span className="text-xs text-gray-500">
-              Personal trägst du im Betreuungsplan ein.
-            </span>
+          {/* Der Hinweis nennt einen anderen Ort, also führt er dorthin
+              (#7054). */}
+          {carePlanHref !== undefined && (
+            <ButtonLink
+              href={carePlanHref}
+              variant="surface"
+              size="compact"
+              tooltip="Öffnet den Betreuungsplan an diesem Tag, um Personal einzuteilen."
+            >
+              Im Betreuungsplan einteilen
+            </ButtonLink>
           )}
         </div>
       ) : (

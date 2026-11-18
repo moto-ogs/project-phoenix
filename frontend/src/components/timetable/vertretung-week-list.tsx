@@ -26,12 +26,14 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { SectionCard } from "~/components/ui/section-card";
 import { SECTION_LABEL_CLASS } from "~/components/ui/section-label";
 import { StatusBadge } from "~/components/ui/status-badge";
+import { ListGroupHeader } from "~/components/ui/list-group-header";
 import {
   classifyInstances,
   VertretungRowList,
+  type ClassifiedRow,
   type VertretungDayListMode,
 } from "~/components/timetable/vertretung-day-list";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { formatDayHeader, toISODate } from "~/lib/timetable-helpers";
 import type { EnrichedInstance, GapInstance } from "~/lib/timetable-types";
@@ -71,6 +73,8 @@ export interface VertretungWeekListProps {
   onEdit: (instanceId: string) => void;
   /** Klick auf eine Tageskopfzeile — springt in die Tagesansicht des Tages. */
   onSelectDay: (dateISO: string) => void;
+  /** Weg in den Betreuungsplan eines Tages; siehe VertretungDayList. */
+  carePlanHrefFor?: (dateISO: string) => string;
   todayISO: string;
   className?: string;
 }
@@ -93,9 +97,31 @@ export function VertretungWeekList({
   canManage,
   onEdit,
   onSelectDay,
+  carePlanHrefFor,
   todayISO,
   className,
 }: VertretungWeekListProps) {
+  // Was an einem Tag schon geregelt ist, steht eingeklappt unter seinen
+  // offenen Lücken (#7493): über die Woche fällt so auf, was noch zu tun ist.
+  const [openSettledDays, setOpenSettledDays] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
+  const toggleSettled = (iso: string) =>
+    setOpenSettledDays((current) => {
+      const next = new Set(current);
+      if (!next.delete(iso)) next.add(iso);
+      return next;
+    });
+  const rowList = (rows: ClassifiedRow[]) => (
+    <VertretungRowList
+      rows={rows}
+      staffNames={staffNames}
+      canManage={canManage}
+      onEdit={onEdit}
+      carePlanHrefFor={carePlanHrefFor}
+      todayISO={todayISO}
+    />
+  );
   // flex-col: Kopf und Hinweis bleiben stehen, nur die Liste darunter scrollt.
   return (
     <SectionCard
@@ -156,6 +182,7 @@ export function VertretungWeekList({
           const visibleRows =
             mode === "ganzer-tag" ? classified : [...open, ...settled];
           const isPast = iso < todayISO;
+          const settledExpanded = openSettledDays.has(iso);
 
           // Die Kopfzeile nennt, was an dem Tag zu tun ist: die offenen
           // Lücken. Ohne geladene Lückendaten bleibt sie still, statt eine 0
@@ -228,13 +255,30 @@ export function VertretungWeekList({
                     />
                   </div>
                 )
+              ) : mode === "ganzer-tag" ? (
+                rowList(visibleRows)
               ) : (
-                <VertretungRowList
-                  rows={visibleRows}
-                  staffNames={staffNames}
-                  canManage={canManage}
-                  onEdit={onEdit}
-                />
+                <>
+                  {rowList(open)}
+                  {/* Ohne offene Lücke ist das Geregelte alles, was der Tag
+                      zeigt: dann steht es ohne Klappe da. */}
+                  {open.length === 0 && rowList(settled)}
+                  {open.length > 0 && settled.length > 0 && (
+                    <>
+                      <ListGroupHeader
+                        as="h4"
+                        title="Schon geregelt"
+                        meta={settled.length}
+                        collapsible={{
+                          expanded: settledExpanded,
+                          onToggle: () => toggleSettled(iso),
+                        }}
+                        className={LIST_INSET}
+                      />
+                      {settledExpanded && rowList(settled)}
+                    </>
+                  )}
+                </>
               )}
             </section>
           );

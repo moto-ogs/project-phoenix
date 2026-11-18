@@ -56,6 +56,7 @@ import {
   PlanningContextBar,
   PlanningDayChip,
 } from "~/components/ui/planning/planning-context-bar";
+import { SectionCard } from "~/components/ui/section-card";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { BulkSubstitutionModal } from "~/components/timetable/bulk-substitution-modal";
@@ -83,6 +84,7 @@ import {
   toISODate,
 } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { BELOW_LG, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useTimetableDayHours } from "~/lib/hooks/use-timetable-day-hours";
 import { useUrlParams } from "~/lib/hooks/use-url-params";
 import { createLogger } from "~/lib/logger";
@@ -206,6 +208,9 @@ function VertretungContent() {
   const { dayStartHour, dayEndHour } = useTimetableDayHours();
   const weekendOpen = useWeekendFollowsFriday();
   const today = useBerlinToday();
+  // Unter lg stehen Liste und Raster untereinander; dort ist das Raster
+  // eingeklappt (siehe unten).
+  const stacked = useMediaQuery(BELOW_LG);
 
   // Lesen braucht `schedules:read` (die Listen-Endpunkte), jeder Save braucht
   // `schedules:manage`. Ohne canManage werden alle Editier-Kontrollen
@@ -678,7 +683,7 @@ function VertretungContent() {
             );
         if (result.cancelled) {
           toast.success(
-            cancelledToast("Der Block ist abgesagt.", result.guardianNotice),
+            cancelledToast("Der Termin ist abgesagt.", result.guardianNotice),
           );
           // Das Panel schließt sich selbst (closeEditor), nur solange es
           // denselben Block zeigt (#6593).
@@ -759,7 +764,7 @@ function VertretungContent() {
     // Die offenen Lücken stehen hier einmal, mit ihrem Namen (#7493); das
     // Bedienband wiederholt sie nicht mehr. Die Tagesleiste darunter zeigt
     // ihre Verteilung über die Woche.
-    ...(countsUnavailable
+    ...(countsUnavailable || scopeInstanceCount === 0
       ? []
       : [
           {
@@ -769,6 +774,11 @@ function VertretungContent() {
             }`,
           },
         ]),
+    // Ein fehlgeschlagener Abruf lässt die Zahl nicht still verschwinden:
+    // „13 Termine“ allein läse sich wie ein vollständiger Stand.
+    ...(gapsFailed && scopeInstanceCount > 0
+      ? [{ label: "Lücken nicht geladen" }]
+      : []),
     // „Bewusst unbesetzt“ heißt die Sache auch im Editor. Eine Null ändert
     // keine Entscheidung und bleibt weg.
     ...(countsUnavailable || ackCount === 0
@@ -842,6 +852,46 @@ function VertretungContent() {
 
   // Planungshinweis, keine Störung: steht bewusst außerhalb der Liste und
   // außerhalb der Zähler (siehe vertretung-coverage-notice.tsx).
+  const calendarGrid = (
+    <WeeklyCalendarGrid
+      // Bauart 3, Regel 3 + Teil 3: die Legende sitzt als Fussband im
+      // Raster, nicht frei auf dem gemusterten Grund.
+      legend={
+        planningTrackLegend.length > 0 ? (
+          <PlanLegend
+            entries={planningTrackLegend}
+            aria-label="Planungsspuren in der sichtbaren Vertretung"
+          />
+        ) : null
+      }
+      weekDays={isWeekView ? weekDays : [parseISODate(dayISO)]}
+      instances={isWeekView ? weekdayInstances : dayInstances}
+      selectedId={selectedInstanceId}
+      onInstanceClick={(inst) => openEditor(inst.id)}
+      // Bauart 3, Regel 2: dasselbe Raster, dasselbe
+      // Interaktionsversprechen. Auf der Vertretung gibt es keinen
+      // Anlege-Vorgang — sie arbeitet an Terminen, die es schon gibt.
+      // Deshalb bleibt die leere Fläche hier ohne `onSlotClick`, und
+      // WeeklyCalendarGrid rendert dann auch keine Anlege-Geste: kein
+      // Klickziel, kein Zeiger, kein Hover. Was nicht klickbar ist,
+      // sieht hier nicht klickbar aus. Angelegt wird im
+      // Betreuungsplan.
+      gapInstanceIds={isWeekView ? weekGapInstanceIds : dayGapInstanceIds}
+      staffingByInstanceId={blockStaffing}
+      todayISO={today}
+      dayStartHour={dayStartHour}
+      dayEndHour={dayEndHour}
+      hourHeightPx={HOUR_HEIGHT_PX}
+      staffNames={staffNames}
+    />
+  );
+
+  // Ein Termin ohne eingeteilte Person lässt sich nur im Betreuungsplan
+  // besetzen; die Zeile führt dorthin. Nur mit dem Recht, ihn zu bearbeiten.
+  const carePlanHrefFor = canManageSchedules
+    ? (dateISO: string) => tenantPath(`/betreuungsplan?d=${dateISO}`)
+    : undefined;
+
   const coverageNotice = (
     <VertretungCoverageNotice
       count={uncoveredCount}
@@ -1004,6 +1054,7 @@ function VertretungContent() {
                 canManage={canManageSchedules}
                 onEdit={openEditor}
                 onSelectDay={openDayView}
+                carePlanHrefFor={carePlanHrefFor}
                 todayISO={today}
                 className="lg:h-full lg:overflow-hidden"
               />
@@ -1034,6 +1085,8 @@ function VertretungContent() {
             onModeChange={setMode}
             canManage={canManageSchedules}
             onEdit={openEditor}
+            carePlanHrefFor={carePlanHrefFor}
+            todayISO={today}
           />
         )}
         {/* Das Raster läuft auch unterhalb lg mit, dort einspaltig unter der
@@ -1050,37 +1103,22 @@ function VertretungContent() {
             Liste. */}
         <div className="flex flex-col gap-4">
           {coverageNotice}
-          <WeeklyCalendarGrid
-            // Bauart 3, Regel 3 + Teil 3: die Legende sitzt als Fussband im
-            // Raster, nicht frei auf dem gemusterten Grund.
-            legend={
-              planningTrackLegend.length > 0 ? (
-                <PlanLegend
-                  entries={planningTrackLegend}
-                  aria-label="Planungsspuren in der sichtbaren Vertretung"
-                />
-              ) : null
-            }
-            weekDays={isWeekView ? weekDays : [parseISODate(dayISO)]}
-            instances={isWeekView ? weekdayInstances : dayInstances}
-            selectedId={selectedInstanceId}
-            onInstanceClick={(inst) => openEditor(inst.id)}
-            // Bauart 3, Regel 2: dasselbe Raster, dasselbe
-            // Interaktionsversprechen. Auf der Vertretung gibt es keinen
-            // Anlege-Vorgang — sie arbeitet an Terminen, die es schon gibt.
-            // Deshalb bleibt die leere Fläche hier ohne `onSlotClick`, und
-            // WeeklyCalendarGrid rendert dann auch keine Anlege-Geste: kein
-            // Klickziel, kein Zeiger, kein Hover. Was nicht klickbar ist,
-            // sieht hier nicht klickbar aus. Angelegt wird im
-            // Betreuungsplan.
-            gapInstanceIds={isWeekView ? weekGapInstanceIds : dayGapInstanceIds}
-            staffingByInstanceId={blockStaffing}
-            todayISO={today}
-            dayStartHour={dayStartHour}
-            dayEndHour={dayEndHour}
-            hourHeightPx={HOUR_HEIGHT_PX}
-            staffNames={staffNames}
-          />
+          {stacked ? (
+            // Am Telefon zeigt die Liste darüber schon jeden Termin. Das
+            // Raster bleibt einen Tipp entfernt, statt die Seite um rund
+            // tausend Pixel zu verlängern (#7493).
+            <SectionCard
+              bare
+              collapsible
+              defaultCollapsed
+              title={isWeekView ? "Woche als Zeitplan" : "Tag als Zeitplan"}
+              titleSize="sm"
+            >
+              {calendarGrid}
+            </SectionCard>
+          ) : (
+            calendarGrid
+          )}
         </div>
       </div>
     </TenantPage>

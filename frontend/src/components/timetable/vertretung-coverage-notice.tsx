@@ -42,9 +42,11 @@ export interface VertretungCoverageNoticeProps {
 
 /** Exportiert, weil die Pluralisierung direkt getestet wird. */
 export function buildCoverageNoticeMessage(count: number): string {
+  // Sagt, was fehlt (die Schicht, nicht die Person), damit der Hinweis
+  // nicht wie eine weitere offene Lücke liest (#7493).
   return count === 1
-    ? "1 Einsatz ist nicht durch den Dienstplan abgedeckt."
-    : `${count} Einsätze sind nicht durch den Dienstplan abgedeckt.`;
+    ? "Bei 1 Einsatz fehlt die passende Schicht im Dienstplan."
+    : `Bei ${count} Einsätzen fehlt die passende Schicht im Dienstplan.`;
 }
 
 export function VertretungCoverageNotice({

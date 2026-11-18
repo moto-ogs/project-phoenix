@@ -5,7 +5,6 @@ import type {
   EnrichedInstance,
   InstanceStaffSummary,
 } from "~/lib/timetable-types";
-import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { CustomSelect } from "~/components/ui/custom-select";
@@ -56,7 +55,9 @@ function PersonIdentity({ row, person, name }: PersonHeaderProps) {
       >
         {name}
       </div>
-      <div className="mt-0.5 flex items-center gap-1.5 text-xs">
+      {/* Bricht als Ganzes um, statt „• Zuständig“ mitten im Wort zu
+          teilen, wenn der Knopf daneben breit ist. */}
+      <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs">
         <span
           className={
             person.absent
@@ -66,7 +67,9 @@ function PersonIdentity({ row, person, name }: PersonHeaderProps) {
         >
           {person.absent ? "Abwesend" : "Anwesend"}
         </span>
-        {row.isPrimary && <span className="text-gray-500">• Zuständig</span>}
+        {row.isPrimary && (
+          <span className="whitespace-nowrap text-gray-500">• Zuständig</span>
+        )}
       </div>
     </div>
   );
@@ -78,7 +81,7 @@ function MarkAbsentAction({ person, name, onUpdate }: PersonHeaderProps) {
       type="button"
       variant="outline_danger"
       size="md"
-      aria-label={`${name} als abwesend markieren`}
+      aria-label={`${name}: Abwesend melden`}
       tooltip="Markiert die Person beim Speichern als abwesend."
       onClick={() =>
         onUpdate({
@@ -90,7 +93,9 @@ function MarkAbsentAction({ person, name, onUpdate }: PersonHeaderProps) {
       }
     >
       <UserMinus className="mr-1.5 h-4 w-4" aria-hidden />
-      Abwesend
+      {/* Der Knopf nennt die Handlung, damit er nicht wie der Status
+          „Anwesend“ daneben liest (#7493). */}
+      Abwesend melden
     </Button>
   );
 }
@@ -319,11 +324,6 @@ function PersonScope(props: PersonCardProps) {
           ? "Welche Termine soll die Ersatzperson übernehmen?"
           : "Welche Termine sollen geändert werden?"}
       </legend>
-      {/* Der Hinweis gehört direkt unter die Legend, Legend und Text bilden
-          einen Kopf. */}
-      <p className="mt-1 text-xs leading-5 text-gray-500">
-        Wähle vor dem Speichern.
-      </p>
       <ScopeChoices {...props} />
       {person.scope === "selected" && (
         <AppointmentList {...props} staffId={row.staffId} />
@@ -442,15 +442,14 @@ function AbsentDetails(props: PersonCardProps) {
   }
   return (
     <div className="border-moto-red/15 space-y-4 rounded-b-xl border-t bg-white/60 p-3">
+      {/* Ruhiger Satz statt einer zweiten getönten Fläche in der roten Karte
+          (#7493): er erklärt, warum hier „Anwesend melden“ fehlt. */}
       {props.person.sickLocked && (
-        <Alert
-          type="warning"
-          message={
-            props.person.lockedByOtherAbsence
-              ? "Diese Abwesenheit ist in der Zeiterfassung eingetragen. Du kannst hier nur die Vertretung ändern."
-              : "Diese Abwesenheit kommt aus einer Krankmeldung. Du kannst hier nur die Vertretung ändern."
-          }
-        />
+        <p className="text-xs leading-5 text-gray-600">
+          {props.person.lockedByOtherAbsence
+            ? "Diese Abwesenheit ist in der Zeiterfassung eingetragen. Du kannst hier nur die Vertretung ändern."
+            : "Diese Abwesenheit kommt aus einer Krankmeldung. Du kannst hier nur die Vertretung ändern."}
+        </p>
       )}
       <PersonScope {...props} />
       <SubstitutePicker {...props} />

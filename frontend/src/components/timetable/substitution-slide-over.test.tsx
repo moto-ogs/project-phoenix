@@ -139,7 +139,7 @@ function renderEditor(opts: RenderOptions = {}) {
 }
 
 function markAbsent() {
-  fireEvent.click(screen.getByRole("button", { name: /als abwesend/ }));
+  fireEvent.click(screen.getByRole("button", { name: /: Abwesend melden$/ }));
 }
 
 function chooseScope(name: "Alle noch offenen Termine" | "Bestimmte Termine") {
@@ -190,30 +190,31 @@ describe("SubstitutionSlideOver", () => {
 
       // Zweig A (Default): Personenliste sichtbar, kein Absage-Grund.
       expect(screen.getByText("Anna Alt")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Besetzung" })).toHaveAttribute(
-        "aria-pressed",
-        "true",
-      );
+      expect(
+        screen.getByRole("button", { name: "Besetzung bearbeiten" }),
+      ).toHaveAttribute("aria-pressed", "true");
       // Der Abschluss heißt nach seinem Ergebnis (#7493).
       expect(
         screen.getByRole("button", { name: "Speichern" }),
       ).toBeInTheDocument();
 
       // Zweig B: Personenliste weg, Absage-Grund da.
-      fireEvent.click(screen.getByRole("button", { name: "Absage" }));
+      fireEvent.click(screen.getByRole("button", { name: "Termin absagen" }));
       expect(screen.queryByText("Anna Alt")).not.toBeInTheDocument();
       expect(
         screen.getByText(/Der Termin wird nur an diesem Tag abgesagt/),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: "Block absagen" }),
+        screen.getByRole("button", { name: "Jetzt absagen" }),
       ).toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: "Speichern" }),
       ).not.toBeInTheDocument();
 
       // Zurück zu Zweig A: Personenliste wieder da, Absage-Grund weg.
-      fireEvent.click(screen.getByRole("button", { name: "Besetzung" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Besetzung bearbeiten" }),
+      );
       expect(screen.getByText("Anna Alt")).toBeInTheDocument();
       expect(
         screen.queryByText(/Der Termin wird nur an diesem Tag abgesagt/),
@@ -376,9 +377,9 @@ describe("SubstitutionSlideOver", () => {
       );
       renderEditor({ onApply });
 
-      fireEvent.click(screen.getByRole("button", { name: "Absage" }));
+      fireEvent.click(screen.getByRole("button", { name: "Termin absagen" }));
       // Der Abschluss nennt sein Ergebnis (#7493).
-      fireEvent.click(screen.getByRole("button", { name: "Block absagen" }));
+      fireEvent.click(screen.getByRole("button", { name: "Jetzt absagen" }));
 
       expect(
         await screen.findByText(
@@ -541,11 +542,11 @@ describe("SubstitutionSlideOver", () => {
       });
 
       fireEvent.click(
-        screen.getByRole("button", { name: "Anna Alt als abwesend markieren" }),
+        screen.getByRole("button", { name: "Anna Alt: Abwesend melden" }),
       );
       fireEvent.click(
         screen.getByRole("button", {
-          name: "Carla Klar als abwesend markieren",
+          name: "Carla Klar: Abwesend melden",
         }),
       );
       fireEvent.click(document.getElementById("vp-scope-all-11")!);
@@ -1079,7 +1080,7 @@ describe("SubstitutionSlideOver", () => {
         });
 
         expect(
-          screen.queryByRole("button", { name: "Dieser Block" }),
+          screen.queryByRole("button", { name: "Dieser Termin" }),
         ).not.toBeInTheDocument();
         // Nur der Tages-Scope existiert → Datum-Chip.
         expect(screen.getByText("13.07.2026")).toBeInTheDocument();
